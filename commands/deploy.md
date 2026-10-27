@@ -19,7 +19,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/look.py --json
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
 changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
 `same`, `differs` or `unknown`, with the board's MAC, the last deploy that spark's store record names for it, and a token. With two boards on USB, it lists them and needs
-`--port <the board's serial port>`. One board that shows on two nodes with one USB serial (a CP2104 does) is one board: the look names the other nodes in `also_on`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents.md`, "look.py and deploy.py's envelope") and relay it in words. Without `--json` the same facts are lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
+`--port <the board's serial port>`. One board that shows on two nodes with one USB serial (a CP2104 does) is one board: the look names the other nodes in `also_on`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents.md`, "look.py and deploy.py's envelope") and relay it in words. Each item of `problems` and `unchecked` has a `code` (the table is in the same section): decide on the code, and relay the sentence. Without `--json` the same facts are lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
 not propose the flash. `unknown` is not a pass. The token is not the person's yes. `look.py` is in this command's
 `allowed-tools`, and so is `deploy.py` (P242): Claude Code does not ask before it runs deploy.py. The gate is inside
 deploy.py. With no deploy grant, it asks for a yes in a real terminal, Claude's shell has none, and deploy.py exits 2
@@ -57,7 +57,7 @@ order: the look, its token, then the person's yes.
    deploy.py asks in the terminal for those. Delete the file `grants/<MAC with dashes>-deploy.json` to end it.
 4. When deploy.py prints "press the board's RESET ... once", relay that line to the person at once: only a hand
    on the board can do it. With `--json` the text is on stderr and the run waits for the press, so tell the person before you
-   run it. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line.
+   run it. A step with `needs_person: true` waits for the person's hands (the RESET press): relay it first. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line.
 
 If deploy.py refuses, relay its sentence word for word. The token is not the yes, and "go ahead" in a chat is not the
 yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. On macOS the board

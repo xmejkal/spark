@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 import golden_bench  # noqa: E402
+import board_codes  # noqa: E402
 
 
 class BenchGoldenTest(unittest.TestCase):
@@ -41,6 +42,14 @@ class BenchGoldenTest(unittest.TestCase):
     def test_every_golden_has_its_case(self):
         written = {golden.name for golden in golden_bench.GOLDEN_DIR.iterdir()}
         self.assertEqual(written, {case.golden for case in golden_bench.CASES})
+
+    def test_every_item_in_every_golden_has_a_listed_code(self):
+        # P433: look.py and deploy.py write a code in each problem and each unchecked item (look-ok and the dry run have none)
+        items = [(golden.name, item) for pattern in ("look-*.json", "deploy-*.json")
+                 for golden in sorted(golden_bench.GOLDEN_DIR.glob(pattern))
+                 for key in ("problems", "unchecked") for item in json.loads(golden.read_text())[key]]
+        self.assertTrue(items, "no golden holds an item, so the test would pass for nothing")
+        self.assertEqual([name for name, item in items if item.get("code") not in board_codes.CODES], [])
 
     def test_the_token_ends_in_the_image_hash(self):
         # The goldens print the image half as <image>, so this pins it: the first 4 hex of the image's sha256.

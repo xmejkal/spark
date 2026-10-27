@@ -8,8 +8,8 @@
  {
   "file": "scripts/deploy_gate.py",
   "name": "stop code 2",
-  "find": "EXIT_PROBLEMS)",
-  "replace": "EXIT_COULD_NOT_RUN)"
+  "find": "EXIT_PROBLEMS,\n",
+  "replace": "EXIT_COULD_NOT_RUN,\n"
  },
  {
   "file": "scripts/deploy_gate.py",

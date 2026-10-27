@@ -117,6 +117,7 @@ class TheSlowMarkTest(unittest.TestCase):
                               if isinstance(mark, ast.Call) and getattr(mark.func, "id", "") == "slow"]
         self.assertEqual(sorted((file, name) for file, name, _ in marks), [
             ("test_journey_basic.py", "TheBasicJourneyTest"),
+            ("test_json_contracts.py", "test_every_reason_raised_is_in_the_table"),
             ("test_mutate.py", "AMutantThatCannotLoadIsRefusedTest"),
             ("test_mutate.py", "AnEscapedMutationTest"),
             ("test_mutate.py", "NearTestsFirstTest"),

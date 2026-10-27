@@ -14,6 +14,7 @@ import boards
 import flasher
 import ready_check
 import tools
+import board_codes
 from project_image import DeployError
 
 
@@ -28,7 +29,7 @@ def record_of(project):
     try:
         return boards.load(project, board_of(project))
     except (OSError, ValueError, AttributeError, boards.BoardError) as cannot:
-        raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot))
+        raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot), reason=board_codes.CHIP_UNKNOWN)
 
 
 def _esptool_flasher(project):

@@ -25,6 +25,7 @@ import json
 from collections import namedtuple
 from pathlib import Path
 
+import board_codes
 import board_look
 import store
 from zone_time import say_in_local_zone, stamp  # the grant's times (P401 moved them out, to break an import cycle)
@@ -113,6 +114,10 @@ DEPLOY_MESSAGE_FOR = {
     WHY_NOT_A_GRANT: "the store's deploy grant file for this board is not a deploy grant for it, so it was not trusted"
                      ": the person runs %s again" % DEPLOY_GRANT_COMMAND,
 }
+#: The board_codes code for each WHY_ word that a GrantRefusedError is raised with (P433).
+CODE_FOR_WHY = {WHY_NOT_A_GRANT: board_codes.NOT_A_GRANT, WHY_BAD_MINUTES: board_codes.BAD_MINUTES,
+                WHY_BAD_SCOPE: board_codes.BAD_SCOPE, WHY_NO_MAC: board_codes.NO_MAC,
+                WHY_SERIAL_NOT_MAC: board_codes.SERIAL_NOT_MAC, WHY_ANSWERED_NO: board_codes.ANSWERED_NO}
 #: The exit code for a code that is no refusal but a run that could not finish: 2, as outcomes.py says.
 COULD_NOT_RUN_WHYS = (WHY_NO_MAC, WHY_BAD_MINUTES, WHY_BAD_SCOPE)
 
@@ -133,7 +138,8 @@ class GrantRefusedError(GateClosedError):
     for a code in COULD_NOT_RUN_WHYS."""
 
     def __init__(self, why):
-        super().__init__(MESSAGE_FOR[why], EXIT_COULD_NOT_RUN if why in COULD_NOT_RUN_WHYS else EXIT_PROBLEMS)
+        super().__init__(MESSAGE_FOR[why], EXIT_COULD_NOT_RUN if why in COULD_NOT_RUN_WHYS else EXIT_PROBLEMS,
+                         reason=CODE_FOR_WHY[why])
         self.why = why
 
 
@@ -184,7 +190,7 @@ class StandingConsentStrategy(ConsentStrategy):
     def require_ready(self):
         if self.grant.why_not_valid(self.now()):
             raise GateClosedError("the deploy grant ended before the erase. not flashed. The person runs %s again"
-                                  % DEPLOY_GRANT_COMMAND)
+                                  % DEPLOY_GRANT_COMMAND, reason=board_codes.GRANT_ENDED)
 
     def ask(self, question):
         self.require_ready()

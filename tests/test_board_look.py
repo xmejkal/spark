@@ -106,16 +106,31 @@ class PortFinderTest(LookCase):
         with self.assertRaises(board_look.LookStop) as stop:
             board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: failed).nodes()
         self.assertEqual(str(stop.exception), "could not list the boards on USB: mpremote: no such command")
+        self.assertEqual(stop.exception.reason, "list_failed")
+
+    def test_an_mpremote_that_cannot_start_stops_the_listing_and_an_unlisted_port_stops_the_look(self):
+        def cannot_start(argv, **kw):
+            raise OSError("no such file")
+        with self.assertRaises(board_look.LookStop) as stop:
+            board_look.PortFinder(FOUND["board-shell"], cannot_start).nodes()
+        self.assertEqual(stop.exception.reason, "list_failed")
+        listing = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-one.txt")))
+        with self.assertRaises(board_look.LookStop) as stop:
+            listing.require_one_board("look.py", "/dev/cu.not-listed")
+        self.assertEqual((str(stop.exception), stop.exception.reason),
+                         ("no board on /dev/cu.not-listed: mpremote devs does not list it.", "port_not_listed"))
 
     def test_one_port_is_required_and_the_stop_names_the_script_that_asked(self):
         none = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(""))
         with self.assertRaises(board_look.LookStop) as stop:
             none.require_one_port("reach.py")
         self.assertTrue(str(stop.exception).startswith("no board found."))
+        self.assertEqual(stop.exception.reason, "no_port")
         two = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-two.txt")))
         with self.assertRaises(board_look.LookStop) as stop:
             two.require_one_port("reach.py")
         self.assertIn("2 boards on USB:", str(stop.exception))
+        self.assertEqual(stop.exception.reason, "two_boards")
         self.assertIn("reach.py --port %s  (unplug one" % C6_PORT, str(stop.exception))
         one = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-with-bluetooth.txt")))
         self.assertEqual(one.require_one_port("reach.py"), C6_PORT)
@@ -129,10 +144,11 @@ class PortFinderTest(LookCase):
 
         def stalled(argv, **kw):
             raise subprocess.TimeoutExpired(argv, kw["timeout"])
-        for call in (lambda: board_look.PortFinder(FOUND["board-shell"], stalled).nodes(),
-                     lambda: board_look.EsptoolReader(FOUND["flasher"], stalled).read(C6_PORT)):
+        for call, reason in ((lambda: board_look.PortFinder(FOUND["board-shell"], stalled).nodes(), "list_timeout"),
+                             (lambda: board_look.EsptoolReader(FOUND["flasher"], stalled).read(C6_PORT), "read_timeout")):
             with self.assertRaises(board_look.LookStop) as stop:
                 call()
+            self.assertEqual(stop.exception.reason, reason)
             self.assertIn("took more than", str(stop.exception))
             self.assertIn("BOOT", str(stop.exception))
 
@@ -235,6 +251,14 @@ class EsptoolReaderTest(unittest.TestCase):
             self.read("wrong-chip.txt", code=2)
         self.assertIn("could not read the board on %s" % C6_PORT, str(stop.exception))
         self.assertIn("BOOT", str(stop.exception))
+        self.assertEqual(stop.exception.reason, "board_not_read")
+
+    def test_an_esptool_that_cannot_start_stops_the_read(self):
+        def cannot_start(argv, **kw):
+            raise OSError("no such file")
+        with self.assertRaises(board_look.LookStop) as stop:
+            board_look.EsptoolReader(FOUND["flasher"], cannot_start).read(C6_PORT)
+        self.assertEqual((stop.exception.port, stop.exception.reason), (C6_PORT, "board_not_read"))
 
     def test_a_failed_read_keeps_the_port_and_esptool_s_own_line_not_its_url(self):
         stderr = ("ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data received.\n"
@@ -274,6 +298,7 @@ class EsptoolReaderTest(unittest.TestCase):
         with self.assertRaises(board_look.LookStop) as stop:
             board_look.EsptoolReader(other, lambda argv, **kw: done("")).read(C6_PORT)
         self.assertIn("the look reads only esptool", str(stop.exception))
+        self.assertEqual(stop.exception.reason, "flasher_not_esptool")
 
 
 class CompareTest(unittest.TestCase):
@@ -337,7 +362,7 @@ class LookTest(LookCase):
         self.board("firebeetle2-esp32s3")
         report = self.look()
         self.assertEqual((report.verdict, report.status), ("stop", outcomes.PROBLEMS))
-        self.assertIn("this board is an esp32c6, the project is for an esp32s3", report.stops[0])
+        self.assertEqual(report.stops, [board_look.Stop("chip_differs", "this board is an esp32c6, the project is for an esp32s3")])
         self.assertIsNone(report.token())
 
     def test_a_flash_that_differs_but_holds_the_image_is_a_warning_and_keeps_its_token(self):
@@ -353,7 +378,7 @@ class LookTest(LookCase):
         self.board("firebeetle2-esp32s3")
         report = self.look(esptool="s3-flash-id-2mb.txt")
         self.assertEqual(report.verdict, "stop")
-        self.assertEqual(report.stops, ["the flash is 2 MB, the image needs 4 MB"])
+        self.assertEqual(report.stops, [board_look.Stop("flash_too_small", "the flash is 2 MB, the image needs 4 MB")])
         self.assertIsNone(report.token())
 
     def fit(self, record, megabytes, extra):
@@ -366,7 +391,7 @@ class LookTest(LookCase):
 
     def test_the_fit_check_runs_when_the_flash_is_in_the_records_list(self):
         report = self.fit("firebeetle2-esp32s3", 4, 1)  # the record says [16, 4], the board 4: same, yet too small
-        self.assertEqual((report.fields["flash"], report.stops), ("same", ["the flash is 4 MB, the image needs 5 MB"]))
+        self.assertEqual((report.fields["flash"], report.stops), ("same", [board_look.Stop("flash_too_small", "the flash is 4 MB, the image needs 5 MB")]))
         self.assertIsNone(report.token())
         self.assertEqual((report.status, report.exit_code()), (outcomes.PROBLEMS, outcomes.EXIT_PROBLEMS))
 
@@ -383,7 +408,7 @@ class LookTest(LookCase):
         self.run_the_scenario()
         self.image.write_bytes(b"x" * (1024 * 1024 + 1))
         report = self.look(text=data("c6-flash-id.txt").replace("4MB", "1MB"))
-        self.assertEqual(report.stops, ["the flash is 1 MB, the image needs 2 MB"])
+        self.assertEqual(report.stops, [board_look.Stop("flash_too_small", "the flash is 1 MB, the image needs 2 MB")])
 
     def test_a_field_it_cannot_read_is_a_warning_and_unchecked(self):
         self.run_the_scenario()
@@ -395,12 +420,13 @@ class LookTest(LookCase):
         self.run_the_scenario()
         report = self.look(esptool="c6-flash-id-no-mac.txt")
         self.assertIsNone(report.token())
-        self.assertIn("MAC", report.no_token_reason())
+        self.assertEqual((report.no_token_reason().code, "MAC" in report.no_token_reason().sentence), ("no_mac", True))
 
     def test_no_image_means_no_token_and_says_why(self):
         report = self.look()
         self.assertIsNone(report.token())
-        self.assertIn("run a scenario first", report.no_token_reason())
+        self.assertEqual(report.no_token_reason().code, "no_image")
+        self.assertIn("run a scenario first", report.no_token_reason().sentence)
         self.assertEqual(report.fields, {"chip": "same", "flash": "same"})
 
     def test_an_image_no_passed_run_names_means_no_token(self):
@@ -408,7 +434,8 @@ class LookTest(LookCase):
         self.image.write_bytes(b"x" + self.image.read_bytes()[1:])  # the same size: the fit check is not in play
         report = self.look()
         self.assertIsNone(report.token())
-        self.assertIn("no run in sim/runs/ tested", report.no_token_reason())
+        self.assertEqual(report.no_token_reason().code, "evidence_refuses")
+        self.assertIn("no run in sim/runs/ tested", report.no_token_reason().sentence)
 
     def test_a_log_that_tested_another_image_means_no_token_unless_told_to_ignore_it(self):
         self.run_the_scenario()
@@ -416,7 +443,7 @@ class LookTest(LookCase):
         (runs / "old.log").write_text("# old.scenario.yaml, run 2026-10-01\nverdict: passed\nimage sha256: 0\n\nbody\n")
         report = self.look()
         self.assertIsNone(report.token())
-        self.assertIn("old.log tested another image", report.no_token_reason())
+        self.assertIn("old.log tested another image", report.no_token_reason().sentence)
         self.assertIsNotNone(self.look(ignore_older_runs=True).token())
 
     def test_a_log_that_cannot_be_read_still_lets_the_fit_check_run(self):
@@ -424,8 +451,9 @@ class LookTest(LookCase):
         self.image.write_bytes(self.image.read_bytes() + b"x")  # 4 MB + 1 byte on a 4 MB flash
         with mock.patch.object(project_image.run_scenario, "run_record", side_effect=OSError("denied")):
             report = self.look()
-        self.assertEqual(report.stops, ["the flash is 4 MB, the image needs 5 MB"])
+        self.assertEqual(report.stops, [board_look.Stop("flash_too_small", "the flash is 4 MB, the image needs 5 MB")])
         self.assertIn("cannot read", report.image_why)
+        self.assertEqual((report.no_token_reason().code, report.image_code), ("stop_found", "log_unreadable"))
 
     def test_a_record_without_flash_says_the_record_does_not_hold_it_and_a_silent_board_says_so(self):
         self.run_the_scenario()
@@ -438,7 +466,7 @@ class LookTest(LookCase):
         for _ in range(2):
             with self.assertRaises(board_look.LookStop) as stop:
                 self.look()
-            self.assertEqual(str(stop.exception), "requirements.json names no board")
+            self.assertEqual((str(stop.exception), stop.exception.reason), ("requirements.json names no board", "no_board_named"))
             (self.project / "requirements.json").unlink(missing_ok=True)
 
     def test_a_board_with_no_record_stops_and_points_to_p230(self):
@@ -446,6 +474,13 @@ class LookTest(LookCase):
         with self.assertRaises(board_look.LookStop) as stop:
             self.look()
         self.assertIn("no board record for no-such-board: P230 will research one.", str(stop.exception))
+        self.assertEqual(stop.exception.reason, "no_board_record")
+
+    def test_a_tool_that_cannot_be_used_stops_the_look_with_its_sentence(self):
+        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("mpremote is not installed")), \
+                self.assertRaises(board_look.LookStop) as stop:
+            board_look.looker(self.project)
+        self.assertEqual((str(stop.exception), stop.exception.reason), ("mpremote is not installed", "tool_missing"))
 
     def test_another_flasher_stops_the_look(self):
         other = tools.Tool("probe-rs", "flasher", {"kind": "binary"}, ["/opt/probe-rs"])
@@ -477,7 +512,7 @@ class LookReportToDictTest(LookCase):
         as_dict = self.look().to_dict()
         self.assertEqual((as_dict["verdict"], as_dict["status"], as_dict["token"], as_dict["no_token_reason"]),
                          ("stop", outcomes.PROBLEMS, None, "the look found a stop"))
-        self.assertEqual(as_dict["stops"], ["this board is an esp32c6, the project is for an esp32s3"])
+        self.assertEqual(as_dict["stops"], ["this board is an esp32c6, the project is for an esp32s3"])  # sentences only
         json.dumps(as_dict)
 
     def test_changing_the_dict_leaves_the_report_alone(self):
@@ -485,8 +520,7 @@ class LookReportToDictTest(LookCase):
         self.board("firebeetle2-esp32s3")
         report = self.look()
         as_dict = report.to_dict()
-        as_dict["stops"].clear()
-        as_dict["fields"].clear()
+        as_dict["fields"].clear()  # the stops are a new list of sentences, so there is nothing of them to share
         self.assertEqual((len(report.stops), len(report.fields)), (1, 2))
 
     def test_an_unknown_field_with_no_scenario_run(self):
@@ -494,7 +528,7 @@ class LookReportToDictTest(LookCase):
         as_dict = report.to_dict()
         self.assertEqual((as_dict["flash_mb"], as_dict["fields"]["flash"], as_dict["unknown"], as_dict["status"]),
                          (None, "unknown", {"flash": "the board did not say"}, outcomes.COULD_NOT_RUN))
-        self.assertIn("run a scenario first", as_dict["no_token_reason"])
+        self.assertIn("run a scenario first", as_dict["no_token_reason"])  # the sentence only
         json.dumps(as_dict)
 
 
@@ -544,7 +578,7 @@ class TheLookStatesTheSimulationTest(LookCase):
 
     def test_a_log_that_cannot_be_read_gives_no_simulation_and_no_caveat(self):
         self.run_the_scenario()
-        with mock.patch.object(project_image.ProjectImage, "read_run_logs", side_effect=project_image.DeployError("cannot read")):
+        with mock.patch.object(project_image.ProjectImage, "read_run_logs", side_effect=project_image.DeployError("cannot read", reason="log_unreadable")):
             report = self.look()
         self.assertEqual((report.simulation, report.caveats), (None, []))
 

@@ -21,6 +21,7 @@ import re
 import subprocess
 from collections import namedtuple
 
+import board_codes
 import boards
 import deploy_record_store
 import flasher
@@ -55,13 +56,22 @@ def board_token(mac):
 ESPTOOL_ERROR = "ERROR: "
 
 
+# --- MVP ---
 class LookStop(Exception):
-    """The look cannot go on. The message is the whole sentence. When esptool could not read the board, `port` is its
+    """The look cannot go on. The message is the whole sentence. `reason` is the board_codes code that names why, a
+    required keyword, so no raise site goes without one (P433). When esptool could not read the board, `port` is its
     port and `tool_said` esptool's own line of the failure, shown to the person and never decided on (P282)."""
 
-    def __init__(self, message, port=None, tool_said=None):
+    def __init__(self, message, port=None, tool_said=None, *, reason):
         super().__init__(message)
-        self.port, self.tool_said = port, tool_said
+        self.port, self.tool_said, self.reason = port, tool_said, reason
+
+
+#: Value. One thing the look found that deploy.py will refuse: its board_codes code and the sentence a person reads.
+Stop = namedtuple("Stop", "code sentence")
+#: Value. Why the look gave no token: a board_codes code and the sentence a person reads.
+NoToken = namedtuple("NoToken", "code sentence")
+# --- end MVP ---
 
 
 def esptool_said(stderr):
@@ -79,13 +89,15 @@ class PortFinder:
         try:
             done = self.run(self.command, capture_output=True, text=True, timeout=LIST_TIMEOUT_S)
         except OSError as cannot:
-            raise LookStop("could not list the boards on USB: %s" % cannot)
+            raise LookStop("could not list the boards on USB: %s" % cannot, reason=board_codes.LIST_FAILED)
         except subprocess.TimeoutExpired:
             raise LookStop("could not list the boards on USB: mpremote took more than %d s. %s"
-                           % (LIST_TIMEOUT_S, flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY)))
+                           % (LIST_TIMEOUT_S, flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY)),
+                           reason=board_codes.LIST_TIMEOUT)
         if done.returncode:
             lines = (done.stderr or "").strip().splitlines()
-            raise LookStop("could not list the boards on USB: %s" % (lines[-1] if lines else "mpremote exited with %d" % done.returncode))
+            raise LookStop("could not list the boards on USB: %s" % (lines[-1] if lines else "mpremote exited with %d" % done.returncode),
+                           reason=board_codes.LIST_FAILED)
         rows = [line.split(None, 3) for line in done.stdout.splitlines()]
         return [Port(*(row + [""])[:4]) for row in rows if len(row) >= 3 and row[2] != NOT_A_BOARD]
 
@@ -101,16 +113,16 @@ class PortFinder:
         if port:
             named = [each for each in found if each.device == port]
             if not named:
-                raise LookStop("no board on %s: mpremote devs does not list it." % port)
+                raise LookStop("no board on %s: mpremote devs does not list it." % port, reason=board_codes.PORT_NOT_LISTED)
             return named[0]
         on_usb = boards_of(found)
         if not on_usb:
             raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only. "
-                           "If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.")
+                           "If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.", reason=board_codes.NO_PORT)
         if len(on_usb) > 1:
             lines = [_listed(board) for board in on_usb]
             raise LookStop("%d boards on USB:\n%s\n%s --port %s  (unplug one to tell them apart)"
-                           % (len(on_usb), "\n".join(lines), script, port_of(on_usb[0]).device))
+                           % (len(on_usb), "\n".join(lines), script, port_of(on_usb[0]).device), reason=board_codes.TWO_BOARDS)
         return port_of(on_usb[0])
 
 
@@ -158,18 +170,19 @@ class EsptoolReader(BoardReader):
 
     def read(self, port):
         if self.flasher_tool.name != "esptool":
-            raise LookStop("could not read: the look reads only esptool, and the flasher is %s" % self.flasher_tool.name)
+            raise LookStop("could not read: the look reads only esptool, and the flasher is %s" % self.flasher_tool.name,
+                           reason=board_codes.FLASHER_NOT_ESPTOOL)
         command = flasher.build_esptool_prefix(self.flasher_tool, port) + ["flash_id"]
         try:
             done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT_S)
         except OSError as cannot:
-            raise LookStop("could not read the board on %s: %s" % (port, cannot), port)
+            raise LookStop("could not read the board on %s: %s" % (port, cannot), port, reason=board_codes.BOARD_NOT_READ)
         except subprocess.TimeoutExpired:
             raise LookStop("could not read the board on %s: esptool took more than %d s. %s"
-                           % (port, READ_TIMEOUT_S, self.boot_hint), port)
+                           % (port, READ_TIMEOUT_S, self.boot_hint), port, reason=board_codes.READ_TIMEOUT)
         if done.returncode:
             raise LookStop("could not read the board on %s. %s" % (port, self.boot_hint), port,
-                           esptool_said(done.stderr))
+                           esptool_said(done.stderr), reason=board_codes.BOARD_NOT_READ)
         return self.parse(done.stdout)
 
     @staticmethod
@@ -215,22 +228,25 @@ VERDICT_STOP, VERDICT_WARNING, VERDICT_MATCH = "stop", "warning", "match"
 
 
 class LookReport:
-    """Value. What the look found. `stops` and `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
+    """Value. What the look found. `stops` are Stops (a code and a sentence), `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
     warning or stop. `simulation` and `caveats` are what the evidence says of the image, or None and [] when it refused the image.
     `last_deploy` is the deploy_record_store.LastDeploy of the board's MAC, whatever the evidence said."""
 
-    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy, also_on=None):
+    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy, also_on=None,
+                 image_code=board_codes.EVIDENCE_REFUSES):
         self.port, self.reading, self.record = port, reading, record
         self.also_on = None if also_on is None else tuple(also_on)  # None: a --port was named, so no node list was read
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
+        self.image_code = image_code  # the board_codes code of image_why
         self.simulation, self.caveats = simulation, list(caveats)
         self.last_deploy = last_deploy
         self.fields = compare(reading, record)
         self.stops, self.warnings = [], []
         if self.fields["chip"] == "differs":
-            self.stops.append("this board is an %s, the project is for an %s" % (reading.chip, record["chip"]))
+            self.stops.append(Stop(board_codes.CHIP_DIFFERS, "this board is an %s, the project is for an %s" % (reading.chip, record["chip"])))
         if image and reading.flash_mb is not None and reading.flash_mb * MB < image.stat().st_size:  # whatever compare said
-            self.stops.append("the flash is %s MB, the image needs %d MB" % (reading.flash_mb, -(-image.stat().st_size // MB)))
+            self.stops.append(Stop(board_codes.FLASH_TOO_SMALL, "the flash is %s MB, the image needs %d MB"
+                                   % (reading.flash_mb, -(-image.stat().st_size // MB))))
         elif self.fields["flash"] == "differs":
             self.warnings.append("the flash differs: %s MB, the record says %s" % (reading.flash_mb, _recorded(record["flash_mb"])))
         self.unknown = {name: "the board did not say" if getattr(reading, read_key) is None else "the record does not hold it"
@@ -262,12 +278,12 @@ class LookReport:
         return outcomes.EXIT_FOR[self.status]
 
     def no_token_reason(self):
-        """Why there is no token, or None when there is one."""
+        """Why there is no token, as a NoToken (code and sentence), or None when there is one."""
         if self.verdict == VERDICT_STOP:
-            return "the look found a stop"
+            return NoToken(board_codes.STOP_FOUND, "the look found a stop")
         if not self.reading.mac:
-            return "the board's MAC could not be read"
-        return self.image_why
+            return NoToken(board_codes.NO_MAC, "the board's MAC could not be read")
+        return NoToken(self.image_code, self.image_why) if self.image_why else None
 
     def token(self):
         """4 hex of sha256(MAC), a dash, 4 hex of sha256(image): this board, this image. None when there is no_token_reason."""
@@ -278,9 +294,10 @@ class LookReport:
     def to_dict(self):
         """The facts of the look as plain JSON values, for `--json` (P213). `board` is the record's id; the image is not in it."""
         return {"port": self.port, "also_on": None if self.also_on is None else list(self.also_on), "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
-                "board": self.record["id"], "fields": dict(self.fields), "stops": list(self.stops),
+                "board": self.record["id"], "fields": dict(self.fields), "stops": [stop.sentence for stop in self.stops],
                 "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
-                "status": self.status, "token": self.token(), "no_token_reason": self.no_token_reason(),
+                "status": self.status, "token": self.token(),
+                "no_token_reason": self.no_token_reason() and self.no_token_reason().sentence,
                 "simulation": self.simulation, "caveats": list(self.caveats), "last_deploy": self.last_deploy.to_dict()}
 
 
@@ -305,7 +322,7 @@ def report_lines(report, token=True):
     out = [RESTART_NOTICE, "port   %s%s" % (report.port, ALSO_ON % ", ".join(report.also_on) if report.also_on else ""), "mac    %s" % (reading.mac or "not read"),
            say_last_deploy(report.last_deploy)]
     out += ["%-6s %-9s %s" % (field, report.fields[field], shown[field] or "not read") for field in shown]
-    out += ["%s: deploy.py will refuse." % stop for stop in report.stops]
+    out += ["%s: deploy.py will refuse." % stop.sentence for stop in report.stops]
     out += ["%s. deploy.py will ask you to accept it." % warning for warning in report.warnings]
     if report.unknown:
         out.append("%d field%s unknown (%s): deploy.py will ask you to accept it."
@@ -320,7 +337,7 @@ def report_lines(report, token=True):
         out.append("all fields match the board record %s." % name)
     if token:
         mine = report.token()
-        out.append(TOKEN_LINE % mine if mine else "no token: %s" % report.no_token_reason())
+        out.append(TOKEN_LINE % mine if mine else "no token: %s" % report.no_token_reason().sentence)
     return ["  " + printable(line) for line in out]  # P423: one line each, so a newline in a port or a name shows as `?`
 
 
@@ -336,7 +353,7 @@ class LookService:
         listed = None if port else self.finder.require_one_board("look.py")
         port = port or listed.device
         reading = self.reader.read(port)
-        image, why, simulation, caveats = None, None, None, []
+        image, why, code, simulation, caveats = None, None, board_codes.EVIDENCE_REFUSES, None, []
         try:
             found = project_image.ProjectImage(project)
             image = found.path
@@ -345,10 +362,10 @@ class LookService:
             if why is None:  # what tested an image is stated only for one the evidence passes
                 simulation, caveats = evidence.simulation, evidence.caveats(found)
         except project_image.DeployError as cannot:
-            why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
+            why, code = str(cannot), cannot.reason  # image stays set when only the logs could not be read: the fit check needs it
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
         return LookReport(port, reading, record, image, why, simulation, caveats, deploy_record_store.DeployRecordStore().read_last_deploy(reading.mac),
-                          listed.also_on if listed else None)
+                          listed.also_on if listed else None, code)
 
     @staticmethod
     def record_of(project):
@@ -358,11 +375,11 @@ class LookService:
         except (OSError, ValueError, AttributeError):
             name = None
         if not name:
-            raise LookStop("requirements.json names no board")
+            raise LookStop("requirements.json names no board", reason=board_codes.NO_BOARD_NAMED)
         try:
             return boards.load(project, name)
         except boards.BoardError:
-            raise LookStop("no board record for %s: P230 will research one." % name)
+            raise LookStop("no board record for %s: P230 will research one." % name, reason=board_codes.NO_BOARD_RECORD)
 
 
 def looker(project, run=subprocess.run):
@@ -372,4 +389,4 @@ def looker(project, run=subprocess.run):
         return LookService(PortFinder(tools.find("board-shell", project), run),
                            EsptoolReader(tools.find("flasher", project), run, hint))
     except tools.ToolProblem as cannot:
-        raise LookStop(str(cannot))
+        raise LookStop(str(cannot), reason=board_codes.TOOL_MISSING)

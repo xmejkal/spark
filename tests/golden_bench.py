@@ -53,6 +53,8 @@ CASES = [
          "mpremote-devs-one.txt", 2, UNREADABLE_LAST_DEPLOY),
     Case("look-could-not-run-no-simulation.json", "look.py", ["--json", "--no-simulation"], "s3-flash-id-16mb.txt",
          "mpremote-devs-one.txt", 2),
+    Case("look-could-not-run-bad-argument.json", "look.py", ["--json", "--no-simulation", "--ignore-older-runs"],
+         "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 2),
     Case("deploy-ok-dry-run.json", "deploy.py", ["--dry-run", "--json"], "s3-flash-id-16mb.txt",
          "mpremote-devs-one.txt", 0),
     Case("deploy-ok-dry-run.txt", "deploy.py", ["--dry-run"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),

@@ -45,6 +45,7 @@ class TheImageTest(unittest.TestCase):
         with self.assertRaises(DeployError) as said:
             ProjectImage(Path(tempfile.mkdtemp()))
         self.assertIn("build with /spark:build --keep . first", str(said.exception))
+        self.assertEqual(said.exception.reason, "no_sim_toml")
 
     def test_a_toml_with_no_image_file_is_a_deploy_error_that_says_to_run_a_scenario(self):
         project = project_with_image()
@@ -52,6 +53,7 @@ class TheImageTest(unittest.TestCase):
         with self.assertRaises(DeployError) as said:
             ProjectImage(project)
         self.assertIn("run a scenario first", str(said.exception))
+        self.assertEqual(said.exception.reason, "no_image")
 
     def test_a_firmware_line_that_is_no_string_is_a_deploy_error_with_one_sentence(self):
         # P429: `firmware = 3` raised a TypeError
@@ -61,6 +63,7 @@ class TheImageTest(unittest.TestCase):
             ProjectImage(project)
         self.assertEqual(str(said.exception), "sim/wokwi.toml line 2 names the firmware in a form spark cannot read. "
                          'To fix it, write it as firmware = "name.bin".')
+        self.assertEqual(said.exception.reason, "firmware_line_bad")
 
     def test_an_empty_firmware_name_and_a_file_that_is_no_text_each_have_their_own_sentence(self):
         project = project_with_image()
@@ -72,6 +75,7 @@ class TheImageTest(unittest.TestCase):
         with self.assertRaises(DeployError) as unreadable:
             ProjectImage(project)
         self.assertEqual(str(unreadable.exception), "sim/wokwi.toml cannot be read: it is not text in UTF-8.")
+        self.assertEqual((empty.exception.reason, unreadable.exception.reason), ("firmware_line_bad", "firmware_line_bad"))
 
     def test_an_image_outside_sim_is_a_deploy_error_as_it_is_a_refused_run(self):
         # P429: the look and the deploy took "../x.bin" and "/abs/x.bin", which no run writes
@@ -82,6 +86,7 @@ class TheImageTest(unittest.TestCase):
                 ProjectImage(project)
             self.assertEqual(str(said.exception), "wokwi.toml names %s, outside sim/, and a run writes its image only "
                              "inside sim/" % (project / "sim" / named))
+            self.assertEqual(said.exception.reason, "firmware_line_bad")
 
     def test_a_new_project_image_after_the_file_changed_has_the_new_sha256(self):
         project = project_with_image()
@@ -119,6 +124,7 @@ class TheRunLogsTest(unittest.TestCase):
                 self.assertRaises(DeployError) as said:
             self.image.read_run_logs()
         self.assertIn("cannot read", str(said.exception))
+        self.assertEqual(said.exception.reason, "log_unreadable")
 
     def test_why_untested_is_none_for_a_passed_run_of_this_image(self):
         write_log(self.project, "a.log", "passed")

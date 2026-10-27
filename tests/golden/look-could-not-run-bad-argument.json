@@ -1,0 +1,1 @@
+{"envelope":1,"tool":"look","op":"look","status":"could-not-run","data":null,"problems":[],"unchecked":[{"code":"bad_argument","sentence":"argument --ignore-older-runs: not allowed with argument --no-simulation","fix":"look.py --help lists the arguments"}],"next":[],"truncated":null}
