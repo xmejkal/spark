@@ -1421,7 +1421,7 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
     NOT_NAMED = "not checked: the board record names no Wokwi definition. Test it on the board."
     DISPLAY = ("spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. "
                "Test it on the board.")
-    OTHER = "The other choice: tactile-button on a header pad, which the simulation can reach."
+    OTHER = "The other choice: tactile-button on a header pad, which has a Wokwi model."
     ALL_HELD = "Every other candidate for press is held by another project."
     TDISPLAY = ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json"
 
@@ -1448,7 +1448,7 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
 
     def own(self, entry, part_id, simulated=True, function=None, **fields):
         """A button part (or the `function` given) in the project, owned in the drawer under `entry`, with a Wokwi stand-in unless `simulated` is False."""
-        record = {"schema": 1, "id": part_id, "name": "A button " + part_id, "kind": "button"}
+        record = {"schema": 1, "id": part_id, "name": ("A part " if function else "A button ") + part_id, "kind": "button"}
         record.update({"function": function} if function else {})
         record.update({"simulation": {"wokwi": {"part": "wokwi-pushbutton", "pins": {"A": "1.l", "B": "2.l"}, "stand_in": "x"}}} if simulated else {})
         (self.project / "parts").mkdir(parents=True, exist_ok=True)
@@ -1489,8 +1489,8 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         self.keep_the_xiao(self.PINS, lambda board: board["pin_roles"]["onboard_led"].update(gpio=[3]))
         sentence = ("the Wokwi definition of xiao-esp32-c6 has no pin on GPIO3, so spark knows no way for a scenario to read it. "
                     "Test it on the board.")
-        # the FireBeetle's LED is the only one the person owns, and another project holds the FireBeetle
-        self.assertEqual(self.pick("blink=xiao-esp32-c6"), {"board xiao-esp32-c6 for blink": sentence + " Every other candidate for blink is held by another project."})
+        # the FireBeetle's LED is a board, not a part to wire to a pad: no choice is named, and none is said to be held
+        self.assertEqual(self.pick("blink=xiao-esp32-c6"), {"board xiao-esp32-c6 for blink": sentence})
         self.assertEqual(self.matched("blink")["limits"], [sentence])
 
     def test_the_picked_board_s_sentence_is_the_builds_sentence(self):
@@ -1505,9 +1505,17 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         self.assertEqual(self.pick("press=xiao-esp32-c6"),
                          {"board xiao-esp32-c6 for press": self.NO_PIN + " " + self.OTHER.replace("tactile-button", "x-seen")})
 
-    def test_a_part_out_of_the_simulation_is_not_the_other_choice_and_leaves_the_others_not_all_held(self):
+    def test_a_part_with_no_wokwi_model_is_not_the_other_choice_and_is_not_counted_as_held_or_free(self):
         self.hold_the_bag_of_buttons()
         self.own("unseen", "x-unseen", simulated=False)
+        self.assertEqual(self.pick("press=xiao-esp32-c6"), {"board xiao-esp32-c6 for press": self.NO_PIN + " " + self.ALL_HELD})
+
+    def test_a_free_part_that_matches_no_word_of_the_need_is_never_the_other_choice(self):
+        self.hold_the_bag_of_buttons()
+        self.own("stick", "x-stick", function=[{"does": "input", "what": "joystick"}])
+        self.assertEqual(self.matched("press", "x-stick")["score"], 0.0)
+        self.assertEqual(self.pick("press=xiao-esp32-c6"), {"board xiao-esp32-c6 for press": self.NO_PIN + " " + self.ALL_HELD})
+        (self.home / "drawer" / "buttons.json").unlink()
         self.assertEqual(self.pick("press=xiao-esp32-c6"), {"board xiao-esp32-c6 for press": self.NO_PIN})
 
     def test_every_owned_candidate_held_by_another_project_is_said_so_and_none_is_named(self):

@@ -181,7 +181,7 @@ def offer(key, project=None):
 
 # --- MVP ---
 #: What the pick's note says after the limits of a board (P397): the part to wire to a header pad, or why none is named.
-OTHER_CHOICE = "The other choice: %s on a header pad, which the simulation can reach."
+OTHER_CHOICE = "The other choice: %s on a header pad, which has a Wokwi model."
 ALL_HELD = "Every other candidate for %s is held by another project."
 
 Limits = collections.namedtuple("Limits", "sentences no_pin")
@@ -200,18 +200,19 @@ def serving_roles(need, functions):
             and wanted & set(matching.need_words(function.get("what")))]
 
 
-def board_limits(need, record, functions, read=None):
+def board_limits(need, record, functions, definitions=None, key=None):
     """
     The Limits of the board `record` for the need (P397): the sentences of `boards.role_limits` for the roles that serve it
-    (`onboard_limits` returns (component, sentence) pairs; this keeps the sentences). A sentence about a definition spark did not
+    (`onboard_limits` returns (component, sentence) pairs; the `limits` key and this keep the sentences). A sentence about a definition spark did not
     compare says "not checked" and then the bench, which the build's own text leaves to the reader. `no_pin` is true when a
     part a scenario could reach has no pin in the definition: the only limit that a part on a header pad would lift.
+    `definitions` and `key` are `boards.role_limits`'s: the caller's memo, and the offer's key that names the board in it.
     """
-    said = boards.role_limits(record, serving_roles(need, functions), read)
-    pairs = [(component, sentence) for pairs in said.values() for component, sentence in pairs]
+    said = boards.role_limits(record, serving_roles(need, functions), definitions, key)
+    pairs = [pair for each in said.values() for pair in each]
     sentences = [("%s. %s" % (sentence, boards.BENCH)) if component == boards.ONBOARD_GPIOS else sentence for component, sentence in pairs]
-    no_pin = any(boards.ONBOARD_ROLES[role].scenario_verb and pairs and pairs[0][0] != boards.ONBOARD_GPIOS
-                 for role, pairs in said.items())
+    no_pin = any(boards.ONBOARD_ROLES[role].scenario_verb and each and each[0][0] != boards.ONBOARD_GPIOS
+                 for role, each in said.items())
     return Limits(list(dict.fromkeys(sentences)), no_pin)
 
 
@@ -246,11 +247,11 @@ def _rank(need, built, mine=None, matcher=None):
                                         LAYERS.index(c["in"]) if c["in"] in LAYERS else len(LAYERS), c["id"] or c["entry"]))
 
 
-def candidates(need, known, entries, mine=None, matcher=None, read=None):
+def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
     """
     The store's candidates for one need (§6.2's code half): every offer the matcher admits, owned first, then the best
     score, then nearest. The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
-    `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397); `read` is the dict that
+    `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397); `definitions` is the dict that
     `boards.role_limits` fills, so a caller that matches several needs reads each board's Wokwi definition once.
     """
     built = offers(known, entries)
@@ -259,7 +260,7 @@ def candidates(need, known, entries, mine=None, matcher=None, read=None):
     for one in found:
         if one["kind"] == "board":
             offer, record = seen[("board", one["id"])]
-            one["limits"] = board_limits(need, record, offer.functions, read).sentences
+            one["limits"] = board_limits(need, record, offer.functions, definitions, offer.key).sentences
     return found
 
 
@@ -337,25 +338,25 @@ def _unfiled_boards(needs, known, entries):
 
 # --- MVP ---
 def _holds_wokwi(record):
-    """Whether a record gives the simulation a stand-in or a chip for the part (`simulation.wokwi`), as a table."""
+    """Whether a record has a Wokwi model for the part (`simulation.wokwi`, a table): all spark checks, not that a scenario can drive it."""
     return isinstance(record, dict) and isinstance(record.get("simulation"), dict) and isinstance(record["simulation"].get("wokwi"), dict)
 
 
-def _other_choice(need, built, mine, board_key):
+def _other_choice(need, built, mine):
     """
-    The sentence that closes a board's limits when a part on a header pad would lift them (P397): the first candidate for the
-    need, other than the board, that is a part the person owns with free stock and whose record the simulation can reach.
-    Spark looks in what the person owns first, so a part to get is never named, and never counted. When the person owns
-    candidates and each is held by another project, it says so. With none owned, it says nothing of a choice.
+    The sentence that closes a board's limits when a part on a header pad would lift them (P397). It looks only at the
+    parts the person owns whose words match the need (score from `matching.MIN_SHOWN`) and whose record has a Wokwi model:
+    spark looks in what the person owns first, so a part to get is never named, and a part that matches no word is never
+    named. It names the first with free stock. When each of them is held by another project, it says so. With none, it says
+    nothing of a choice.
     """
     records = {(offer.kind, offer.key): said["record"] for offer, said in built}
-    others = [c for c in _rank(need, built, mine) if (c["kind"], c["id"]) != ("board", board_key)]
-    named = next((c for c in others if c["kind"] == "part" and c["owned"] != 0 and c["free"] != 0
-                  and _holds_wokwi(records[("part", c["id"])])), None)
-    if named:
-        return OTHER_CHOICE % named["id"]
-    owned = [c for c in others if c["owned"] != 0]
-    return ALL_HELD % need["id"] if owned and all(c["free"] == 0 for c in owned) else ""
+    nameable = [c for c in _rank(need, built, mine) if c["kind"] == "part" and c["score"] >= matching.MIN_SHOWN
+                and c["owned"] != 0 and _holds_wokwi(records[("part", c["id"])])]
+    free = next((c for c in nameable if c["free"] != 0), None)
+    if free:
+        return OTHER_CHOICE % free["id"]
+    return ALL_HELD % need["id"] if nameable else ""
 
 
 def _limits_notes(after, picked, rows, entries, mine):
@@ -368,15 +369,15 @@ def _limits_notes(after, picked, rows, entries, mine):
                     for kind, key in pick.items() if kind == "board"), key=lambda asked: (asked[0], asked[1]["id"]))
     if not asked:
         return []
-    built, read, notes = offers(rows, entries), {}, []
+    built, definitions, notes = offers(rows, entries), {}, []
     boards_built = {offer.key: (offer, said["record"]) for offer, said in built if offer.kind == "board"}
     for key, need in asked:
         if key not in boards_built:
             continue
         offer, record = boards_built[key]
-        limits = board_limits(need, record, offer.functions, read)
+        limits = board_limits(need, record, offer.functions, definitions, key)
         if limits.sentences:
-            other = _other_choice(need, built, mine, key) if limits.no_pin else ""
+            other = _other_choice(need, built, mine) if limits.no_pin else ""
             notes.append("board %s for %s: %s" % (key, need["id"], " ".join(limits.sentences + ([other] if other else []))))
     return notes
 

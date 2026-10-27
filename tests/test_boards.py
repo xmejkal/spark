@@ -1088,6 +1088,16 @@ class TheBoardsOwnLimitsTest(unittest.TestCase):
             boards.role_limits(board, {boards.ONBOARD_BUTTON}, shared)
         self.assertEqual((read.call_count, list(shared)), (1, ["xiao-esp32-c6"]))
 
+    def test_two_records_that_share_an_id_or_have_none_do_not_share_a_cached_definition(self):
+        board, other = kept_definition_board(), kept_definition_board(DEFINITION_CHANGED)
+        other["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        shared = {}
+        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_BUTTON}, shared, "kept"), {boards.ONBOARD_BUTTON: [self.BUTTON]})
+        self.assertEqual(boards.role_limits(other, {boards.ONBOARD_BUTTON}, shared, "absent"), {boards.ONBOARD_BUTTON: [self.NOT_KEPT]})
+        del board["id"]
+        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_BUTTON}, shared, "kept")[boards.ONBOARD_BUTTON][0][0], "ONBOARD_BUTTON (GPIO9)")
+        self.assertEqual(sorted(shared), ["absent", "kept"])
+
 
 # --- end MVP ---
 

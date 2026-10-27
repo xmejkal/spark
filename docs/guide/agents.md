@@ -177,9 +177,11 @@ These only read:
   has no pin on the part's GPIO, spark did not look at the board's Wokwi definition ("not checked: ...", then the bench),
   or spark adds no part to the diagram for it. Relay each sentence as printed; none of them is a failure. `--pick`
   puts the same sentences in a `notes` entry, `board <key> for <need>: ...`, after the footprint note. When a pin is
-  missing, the note ends with the other choice: the first part the person owns with free stock whose record the
-  simulation can reach, or "Every other candidate for <need> is held by another project." when each part the person
-  owns is held. A part that the person does not own is never named there. The sentence of the note is the build's own.
+  missing, the note ends with the other choice: the first part the person owns with free stock whose words match the
+  need (score 0.5 or more) and whose record has a Wokwi model, or "Every other candidate for <need> is held by another
+  project." when every owned part that matches the need and has a Wokwi model is held. A part that the person does not
+  own, a board, and a part that matches no word of the need are never named or counted there. spark checks only that the
+  record has a Wokwi model, not that a scenario can drive it. The sentence of the note is the build's own.
 
 These write:
 
