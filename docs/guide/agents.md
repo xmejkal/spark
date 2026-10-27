@@ -496,8 +496,45 @@ it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.
 `look.py --json` and `deploy.py --json` ([P213](https://github.com/xmejkal/spark/issues/192)) print one `outcomes.envelope` (`envelope`,
 `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated`, and `notes` for deploy) on stdout. The status is
 the exit code's: `ok` 0, `problems` 1, `could-not-run` 2. With `--json`, deploy.py prints every line a person reads, and
-the flash tool's own output, on **stderr**, so stdout holds the envelope alone. An argument error prints usage and no envelope.
-A raise after the flash (a traceback) prints no envelope either; read the exit code and stderr.
+the flash tool's own output, on **stderr**, so stdout holds the envelope alone. A bad flag prints an envelope with `--json` (below).
+A raise after the flash (a traceback) prints no envelope; read the exit code and stderr.
+
+**The `code` of an item** ([P433](https://github.com/xmejkal/spark/issues/575)). Every item of `problems` and `unchecked` in
+`look.py --json` and `deploy.py --json` has `code`, the reason in one word. Decide on the code, never on the sentence. The codes
+come from one table, `scripts/board_codes.py`. The same code can come from the look and from deploy.py (`no_token` is both).
+`grant.py` and the other scripts write no `code`. In deploy.py, the reasons of a look that could not run come as an `unchecked` item of stage `look`.
+
+| code | where | means |
+|---|---|---|
+| `list_failed`, `list_timeout` | a look that could not run | mpremote could not list the boards on USB, or took too long |
+| `no_port` | a look that could not run | no board is on USB |
+| `port_not_listed` | a look that could not run | the port `--port` names is not in the list |
+| `two_boards` | a look that could not run | two or more boards are on USB and no `--port` says which |
+| `flasher_not_esptool` | a look that could not run | the look reads with esptool only, and the project's flasher is another tool |
+| `board_not_read`, `read_timeout` | a look that could not run | esptool could not read the board, or took too long. `data.doctor` has the board doctor's result |
+| `no_board_named`, `no_board_record` | a look that could not run | `requirements.json` names no board, or the project has no record of the board it names |
+| `tool_missing` | a look, a deploy | a tool the step needs is missing or cannot be used |
+| `chip_differs`, `flash_too_small` | `problems`, subject `stop` | the chip is not the record's, or the flash is smaller than the image. deploy.py will refuse |
+| `flash_differs` | `problems`, subject `flash` | the flash size is not one the record lists. deploy.py asks the person to accept it |
+| `field_unknown` | `unchecked` | the board or the record did not say a field |
+| `no_token` | `unchecked` | the look gave no token (`no_token_reason` says why). deploy.py gives it too, when the look it made has none |
+| `last_deploy_not_checked` | `unchecked` | spark's record of the board's last deploy could not be read |
+| `no_terminal` | deploy, stage `gate` | there is no terminal for the person's yes. `data.run_in_terminal` is the line |
+| `no_look`, `token_stale` | deploy, stage `gate` | no token was given, or the board or the image is not the one the token names. Run `look.py` again |
+| `answered_no`, `grant_ended` | deploy, stage `gate` | the person answered no, or the deploy grant ended before the erase |
+| `image_refused` | deploy, stage `plan` or `gate` | the evidence refuses the image, or the image changed after the yes |
+| `flash_failed` | deploy, stage `flash` | a flash command failed. `data.board_state` is `may_be_erased` |
+| `ready_not_seen` | deploy, stage `verify` | the board's files differ from the image, or the firmware printed no `ready` |
+| `ready_unknown` | deploy, stage `verify` | the board could not be read after the flash |
+| `bad_argument` | both scripts | an argument that the script cannot run with (below) |
+
+The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `no_mac` and `serial_not_mac` are in the table too. They name the reasons of
+`grant.py`'s refusals, which do not reach this envelope. With two stops, the deploy gate's `code` is the first stop's.
+
+**A bad flag.** With `--json`, `look.py` and `deploy.py` print an envelope for an argument they cannot run with, such as
+`--no-simulation` with `--ignore-older-runs`: status `could-not-run`, `data: null`, one `unchecked` item with `code`
+`bad_argument` and the parser's sentence, exit 2. The check is the word `--json` in the arguments, so an abbreviation of it
+(`--js`) gets the usage instead. Without `--json` they print the usage and the error on stderr and exit 2, as argparse does.
 
 - `look.py` `data`: `port`, `also_on`, `chip`, `flash_mb`, `mac`, `board`, `fields`, `stops`, `warnings`, `unknown`, `verdict`,
   `status`, `token`, `no_token_reason`, `simulation`, `caveats`, `last_deploy`. `simulation` is `passed`, or `none` with `--no-simulation`, or
@@ -517,6 +554,9 @@ A raise after the flash (a traceback) prints no envelope either; read the exit c
   When mpremote could not enter the raw REPL for the facts copy (seen right after the reset), the copy and its read-back make one
   retry after 2 s, for each read of the board, and `facts_line` ends with `(written on a retry after: ...)`, or names the first try
   when the retry failed too ([P420](https://github.com/xmejkal/spark/issues/550)). No other copy failure is retried.
+- `needs_person: true` on a `next` step means the person must use their hands first. Today it is the `watch` step that follows a RESET
+  press the board never got ([P433](https://github.com/xmejkal/spark/issues/575)). The key is on a step only when it is true.
+  The board doctor's `fix` and `data.person_action` are text for the person, not steps, so they carry no flag.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
   and "go ahead" in a chat is not the yes. With no terminal (the exit is 2), `next` holds the `deploy` step to relay and
   `data.run_in_terminal` is the line to give the person word for word; a `grant` step is added when a deploy grant could

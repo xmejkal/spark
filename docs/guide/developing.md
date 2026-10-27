@@ -61,7 +61,7 @@ The suite still reads source for rules about the code itself:
 
 `test_converter.py` also checks the converter's TypeScript, comments stripped, for default paths it must not have.
 
-A golden is a file with the expected output of one script run. `tests/test_golden_bench.py` keeps 15 goldens in
+A golden is a file with the expected output of one script run. `tests/test_golden_bench.py` keeps 16 goldens in
 `tests/golden/`, for `look.py`, `deploy.py`, `grant.py --check`, `live.py` and `reach.py`
 ([P380](https://github.com/xmejkal/spark/issues/487)). Each test runs one script as a child process in an S3
 project that `tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first
