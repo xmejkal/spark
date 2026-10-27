@@ -114,14 +114,14 @@ class LookJsonTest(JsonCase, LookScriptCase):
                                                  "sentence": "last deploy not checked: the board's MAC was not read",
                                                  "fix": "reconnect the board so that its MAC can be read, then run look.py again"})
         self.assertTrue(said["unchecked"][-2]["sentence"].startswith("no token: "))
-        self.assertEqual(said["unchecked"][-2]["code"], "no_token")
+        self.assertEqual(said["unchecked"][-2]["code"], "no_mac")
 
     def test_no_token_is_unchecked_and_has_no_deploy_step(self):
         code, said, _ = self.go("--json")
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["status"], said["data"]["token"]), (2, "could-not-run", None))
         self.assertRegex(said["unchecked"][-1]["sentence"], "run a scenario first")
-        self.assertEqual(said["unchecked"][-1]["code"], "no_token")
+        self.assertEqual(said["unchecked"][-1]["code"], "no_image")
         self.assertEqual(said["next"], [])
 
     def test_a_look_that_stopped_has_no_data_and_says_why(self):
@@ -221,7 +221,7 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], [s["op"] for s in said["next"]]), (2, "could-not-run", ["look"]))
         self.assertEqual(said["unchecked"][0]["fix"], "run look.py again")  # no doctor: the fix of the next op
-        self.assertEqual(said["unchecked"][0]["code"], "no_look")
+        self.assertEqual(said["unchecked"][0]["code"], "token_missing")
 
     def test_a_token_that_is_not_this_board_s_and_this_image_s_is_stale(self):
         self.run_the_scenario()
@@ -292,13 +292,58 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, _ = self.go("--token", self.token(), consent=self.ends_during_the_wait(), fails=1)
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((said["data"]["stage"], said["data"]["board_state"]), ("flash", "may_be_erased"))
+        self.assertEqual(said["unchecked"][0]["code"], "grant_ended")  # the cause the agent acts on, not the flash
+
+    def test_a_tool_that_cannot_be_used_is_tool_missing(self):
+        self.run_the_scenario()
+        with mock.patch.object(deploy_service.DeployService, "plan", side_effect=tools.ToolProblem("esptool is not installed")):
+            code, said, _ = self.go("--token", "aaaa-bbbb")
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["data"]["stage"], said["unchecked"][0]["code"]), (2, "plan", "tool_missing"))
+        self.assertEqual(said["unchecked"][0]["sentence"], "esptool is not installed")
+
+    def test_a_board_record_that_cannot_be_read_is_chip_unknown(self):
+        self.run_the_scenario()
+        (self.project / "requirements.json").write_text("{}")
+        code, said, _ = self.go("--token", "aaaa-bbbb")
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["data"]["stage"], said["unchecked"][0]["code"]), (2, "plan", "chip_unknown"))
+
+    def test_an_image_changed_while_the_person_answered_is_image_changed(self):
+        main, runs = self.project / "firmware" / "main.py", self.project / "sim" / "runs"
+        first = main.read_text()
+        main.write_text("print('ready')\nprint('new')\n")
+        self.run_the_scenario()
+        rebuilt = self.image.read_bytes(), {log.name: log.read_text() for log in runs.glob("*.log")}
+        main.write_text(first)
+        test = self
+
+        class ChangesTheImage(FakeConsent):
+            def ask(self, question):
+                test.image.write_bytes(rebuilt[0])
+                for name, text in rebuilt[1].items():
+                    (runs / name).write_text(text)
+                return True
+
+        self.run_the_scenario()  # the firmware as it was, built and passed; the token is of this image
+        code, said, _ = self.go("--token", self.token(), consent=ChangesTheImage(True))
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["unchecked"][0]["code"]), (2, "image_changed"))
+
+    def test_a_log_that_tested_another_image_is_evidence_refuses(self):
+        self.run_the_scenario()
+        (self.project / "sim" / "runs" / "old.log").write_text("# old.scenario.yaml, run 2026-10-01\nverdict: passed\nimage sha256: 0\n\nbody\n")
+        code, said, _ = self.go("--token", "aaaa-bbbb")
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["data"]["stage"], said["unchecked"][0]["code"]), (2, "plan", "evidence_refuses"))
+        self.assertIn("old.log tested another image", said["unchecked"][0]["sentence"])
 
     def test_a_plan_that_cannot_be_made_has_no_look(self):
         code, said, _ = self.go()
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["data"]["stage"], said["data"]["look"]), (2, "plan", None))
         self.assertIn("run a scenario", said["unchecked"][0]["sentence"])
-        self.assertEqual(said["unchecked"][0]["code"], "image_refused")
+        self.assertEqual(said["unchecked"][0]["code"], "no_image")
 
     def test_the_dry_run_lists_the_commands_and_points_to_the_look(self):
         self.run_the_scenario()

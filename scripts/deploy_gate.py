@@ -96,10 +96,11 @@ def require_open_gate(report, token, consent, image, caveats):
                               reason=report.stops[0].code)  # with two stops, the first one's code
     if not token:
         raise GateClosedError("run look.py first, then deploy.py --token <token>.", next_op=NEXT_LOOK,
-                              reason=board_codes.NO_LOOK)
+                              reason=board_codes.TOKEN_MISSING)
     mine = report.token()
     if not mine:
-        raise GateClosedError("no token: %s. not flashed." % report.no_token_reason(), reason=board_codes.NO_TOKEN)
+        why = report.no_token_reason()
+        raise GateClosedError("no token: %s. not flashed." % why.sentence, reason=why.code)
     theirs = (token.split("-", 1) + [""])[:2]
     changed = [what for what, given, read in zip(("the board", "the image"), theirs, mine.split("-")) if given != read]
     if changed:

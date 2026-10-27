@@ -71,8 +71,9 @@ def look_envelope(report, project, evidence):
                   "fix": "deploy.py asks the person to accept it"} for warning in report.warnings]
     unchecked = [{"code": board_codes.FIELD_UNKNOWN, "sentence": "%s unknown: %s" % each,
                   "fix": "unknown is not a pass: deploy.py names it and asks the person"} for each in report.unknown.items()]
-    if report.no_token_reason():
-        unchecked.append({"code": board_codes.NO_TOKEN, "sentence": "no token: %s" % report.no_token_reason(),
+    no_token = report.no_token_reason()
+    if no_token:
+        unchecked.append({"code": no_token.code, "sentence": "no token: %s" % no_token.sentence,
                           "fix": "fix that, then run look.py again"})
     if report.last_deploy_not_checked():
         unchecked.append({"code": board_codes.LAST_DEPLOY_NOT_CHECKED,

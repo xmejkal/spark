@@ -1210,10 +1210,10 @@ class TheGateReasonTest(GateCase):
         self.assertEqual(self.refusal(report, "aaaa-bbbb"), ("chip_differs", 1))
 
     def test_no_token_given_a_look_with_no_token_a_stale_token_and_a_no(self):
-        self.assertEqual(self.refusal(self.look(), "aaaa-bbbb"), ("no_token", 2))  # no scenario run: the look has no token
+        self.assertEqual(self.refusal(self.look(), "aaaa-bbbb"), ("no_image", 2))  # no scenario run: the look has no image, so no token
         self.run_the_scenario()
         report = self.look()
-        self.assertEqual(self.refusal(report, ""), ("no_look", 2))
+        self.assertEqual(self.refusal(report, ""), ("token_missing", 2))
         self.assertEqual(self.refusal(report, "aaaa-bbbb"), ("token_stale", 2))
         self.assertEqual(self.refusal(report, report.token(), answer=False), ("answered_no", 2))
 

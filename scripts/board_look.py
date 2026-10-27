@@ -69,6 +69,8 @@ class LookStop(Exception):
 
 #: Value. One thing the look found that deploy.py will refuse: its board_codes code and the sentence a person reads.
 Stop = namedtuple("Stop", "code sentence")
+#: Value. Why the look gave no token: a board_codes code and the sentence a person reads.
+NoToken = namedtuple("NoToken", "code sentence")
 # --- end MVP ---
 
 
@@ -230,10 +232,12 @@ class LookReport:
     warning or stop. `simulation` and `caveats` are what the evidence says of the image, or None and [] when it refused the image.
     `last_deploy` is the board_facts.LastDeploy of the board's MAC, whatever the evidence said."""
 
-    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy, also_on=None):
+    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy, also_on=None,
+                 image_code=board_codes.EVIDENCE_REFUSES):
         self.port, self.reading, self.record = port, reading, record
         self.also_on = None if also_on is None else tuple(also_on)  # None: a --port was named, so no node list was read
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
+        self.image_code = image_code  # the board_codes code of image_why
         self.simulation, self.caveats = simulation, list(caveats)
         self.last_deploy = last_deploy
         self.fields = compare(reading, record)
@@ -274,12 +278,12 @@ class LookReport:
         return outcomes.EXIT_FOR[self.status]
 
     def no_token_reason(self):
-        """Why there is no token, or None when there is one."""
+        """Why there is no token, as a NoToken (code and sentence), or None when there is one."""
         if self.verdict == VERDICT_STOP:
-            return "the look found a stop"
+            return NoToken(board_codes.STOP_FOUND, "the look found a stop")
         if not self.reading.mac:
-            return "the board's MAC could not be read"
-        return self.image_why
+            return NoToken(board_codes.NO_MAC, "the board's MAC could not be read")
+        return NoToken(self.image_code, self.image_why) if self.image_why else None
 
     def token(self):
         """4 hex of sha256(MAC), a dash, 4 hex of sha256(image): this board, this image. None when there is no_token_reason."""
@@ -292,7 +296,8 @@ class LookReport:
         return {"port": self.port, "also_on": None if self.also_on is None else list(self.also_on), "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
                 "board": self.record["id"], "fields": dict(self.fields), "stops": [stop.sentence for stop in self.stops],
                 "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
-                "status": self.status, "token": self.token(), "no_token_reason": self.no_token_reason(),
+                "status": self.status, "token": self.token(),
+                "no_token_reason": self.no_token_reason() and self.no_token_reason().sentence,
                 "simulation": self.simulation, "caveats": list(self.caveats), "last_deploy": self.last_deploy.to_dict()}
 
 
@@ -318,7 +323,7 @@ def report_lines(report, token=True):
         out.append("all fields match the board record %s." % name)
     if token:
         mine = report.token()
-        out.append(TOKEN_LINE % mine if mine else "no token: %s" % report.no_token_reason())
+        out.append(TOKEN_LINE % mine if mine else "no token: %s" % report.no_token_reason().sentence)
     return ["  " + printable(line) for line in out]  # P423: one line each, so a newline in a port or a name shows as `?`
 
 
@@ -334,7 +339,7 @@ class LookService:
         listed = None if port else self.finder.require_one_board("look.py")
         port = port or listed.device
         reading = self.reader.read(port)
-        image, why, simulation, caveats = None, None, None, []
+        image, why, code, simulation, caveats = None, None, board_codes.EVIDENCE_REFUSES, None, []
         try:
             found = project_image.ProjectImage(project)
             image = found.path
@@ -343,10 +348,10 @@ class LookService:
             if why is None:  # what tested an image is stated only for one the evidence passes
                 simulation, caveats = evidence.simulation, evidence.caveats(found)
         except project_image.DeployError as cannot:
-            why = str(cannot)  # image stays set when only the logs could not be read: the fit check needs it
+            why, code = str(cannot), cannot.reason  # image stays set when only the logs could not be read: the fit check needs it
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
         return LookReport(port, reading, record, image, why, simulation, caveats, board_facts.read_last_deploy(reading.mac),
-                          listed.also_on if listed else None)
+                          listed.also_on if listed else None, code)
 
     @staticmethod
     def record_of(project):

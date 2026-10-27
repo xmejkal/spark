@@ -11,6 +11,8 @@ and the middle word varied with the script — IMPOSSIBLE, INVALID, MISMATCH, ES
 NOTHING_TO_DO — which is fine as a local name for "ran, and the answer is no", and not fine as
 fourteen places the numbers could drift apart (sprint-4 audit B17). Scripts import the codes from
 here and alias the middle one to their own word.
+
+`AnsweringParser` is the argparse that a script with a `--json` envelope uses: a bad flag raises `BadArgument` (P433).
 """
 
 import argparse

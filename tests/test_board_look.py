@@ -420,12 +420,13 @@ class LookTest(LookCase):
         self.run_the_scenario()
         report = self.look(esptool="c6-flash-id-no-mac.txt")
         self.assertIsNone(report.token())
-        self.assertIn("MAC", report.no_token_reason())
+        self.assertEqual((report.no_token_reason().code, "MAC" in report.no_token_reason().sentence), ("no_mac", True))
 
     def test_no_image_means_no_token_and_says_why(self):
         report = self.look()
         self.assertIsNone(report.token())
-        self.assertIn("run a scenario first", report.no_token_reason())
+        self.assertEqual(report.no_token_reason().code, "no_image")
+        self.assertIn("run a scenario first", report.no_token_reason().sentence)
         self.assertEqual(report.fields, {"chip": "same", "flash": "same"})
 
     def test_an_image_no_passed_run_names_means_no_token(self):
@@ -433,7 +434,8 @@ class LookTest(LookCase):
         self.image.write_bytes(b"x" + self.image.read_bytes()[1:])  # the same size: the fit check is not in play
         report = self.look()
         self.assertIsNone(report.token())
-        self.assertIn("no run in sim/runs/ tested", report.no_token_reason())
+        self.assertEqual(report.no_token_reason().code, "evidence_refuses")
+        self.assertIn("no run in sim/runs/ tested", report.no_token_reason().sentence)
 
     def test_a_log_that_tested_another_image_means_no_token_unless_told_to_ignore_it(self):
         self.run_the_scenario()
@@ -441,7 +443,7 @@ class LookTest(LookCase):
         (runs / "old.log").write_text("# old.scenario.yaml, run 2026-10-01\nverdict: passed\nimage sha256: 0\n\nbody\n")
         report = self.look()
         self.assertIsNone(report.token())
-        self.assertIn("old.log tested another image", report.no_token_reason())
+        self.assertIn("old.log tested another image", report.no_token_reason().sentence)
         self.assertIsNotNone(self.look(ignore_older_runs=True).token())
 
     def test_a_log_that_cannot_be_read_still_lets_the_fit_check_run(self):
@@ -451,6 +453,7 @@ class LookTest(LookCase):
             report = self.look()
         self.assertEqual(report.stops, [board_look.Stop("flash_too_small", "the flash is 4 MB, the image needs 5 MB")])
         self.assertIn("cannot read", report.image_why)
+        self.assertEqual((report.no_token_reason().code, report.image_code), ("stop_found", "log_unreadable"))
 
     def test_a_record_without_flash_says_the_record_does_not_hold_it_and_a_silent_board_says_so(self):
         self.run_the_scenario()
@@ -517,8 +520,7 @@ class LookReportToDictTest(LookCase):
         self.board("firebeetle2-esp32s3")
         report = self.look()
         as_dict = report.to_dict()
-        as_dict["stops"].clear()
-        as_dict["fields"].clear()
+        as_dict["fields"].clear()  # the stops are a new list of sentences, so there is nothing of them to share
         self.assertEqual((len(report.stops), len(report.fields)), (1, 2))
 
     def test_an_unknown_field_with_no_scenario_run(self):
@@ -526,7 +528,7 @@ class LookReportToDictTest(LookCase):
         as_dict = report.to_dict()
         self.assertEqual((as_dict["flash_mb"], as_dict["fields"]["flash"], as_dict["unknown"], as_dict["status"]),
                          (None, "unknown", {"flash": "the board did not say"}, outcomes.COULD_NOT_RUN))
-        self.assertIn("run a scenario first", as_dict["no_token_reason"])
+        self.assertIn("run a scenario first", as_dict["no_token_reason"])  # the sentence only
         json.dumps(as_dict)
 
 
@@ -576,7 +578,7 @@ class TheLookStatesTheSimulationTest(LookCase):
 
     def test_a_log_that_cannot_be_read_gives_no_simulation_and_no_caveat(self):
         self.run_the_scenario()
-        with mock.patch.object(project_image.ProjectImage, "read_run_logs", side_effect=project_image.DeployError("cannot read")):
+        with mock.patch.object(project_image.ProjectImage, "read_run_logs", side_effect=project_image.DeployError("cannot read", reason="log_unreadable")):
             report = self.look()
         self.assertEqual((report.simulation, report.caveats), (None, []))
 

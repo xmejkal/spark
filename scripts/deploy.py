@@ -192,13 +192,9 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
 
 
 def reason_of(refusal):
-    """The board_codes code for a refusal that deploy.py catches: the LookStop's own reason, a flash command that failed,
-    a tool that cannot be used, else an image that the evidence refuses (P433)."""
-    if isinstance(refusal, board_look.LookStop):
-        return refusal.reason
-    if isinstance(refusal, FlashError):
-        return board_codes.FLASH_FAILED
-    return board_codes.TOOL_MISSING if isinstance(refusal, tools.ToolProblem) else board_codes.IMAGE_REFUSED
+    """The board_codes code for a refusal that deploy.py catches: the `reason` of a LookStop or a DeployError (a FlashError
+    too), and tool_missing for a tools.ToolProblem (P433)."""
+    return board_codes.TOOL_MISSING if isinstance(refusal, tools.ToolProblem) else refusal.reason
 
 
 def who_said_yes(consent):

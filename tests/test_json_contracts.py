@@ -15,6 +15,7 @@ their first key `check` where the others say `tool`. That disagreement is P43's 
 is what makes fixing it safe, and its expectations are what P43 will update.
 """
 
+import ast
 import contextlib
 import io
 import json
@@ -233,7 +234,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
         self.assertTrue(all(sentence.strip() for sentence in sentences))
         self.assertEqual(len(set(sentences)), len(sentences))
 
-    @slow("runs the look, gate, grant and doctor test modules once more under a spy, 1 test, 6 s on 2026-10-27")
+    @slow("runs the look, gate, grant and doctor test modules once more under a spy, 1 test, 15.7 s on 2026-10-27")
     def test_every_reason_raised_is_in_the_table(self):
         raised = set()
 
@@ -257,6 +258,13 @@ class TheBenchCodesTableTest(unittest.TestCase):
     def test_agents_md_names_every_code(self):
         text = (ROOT / "docs" / "guide" / "agents.md").read_text()
         self.assertEqual([code for code in board_codes.CODES if "`%s`" % code not in text], [])
+
+    def test_every_why_a_site_raises_a_grant_refusal_with_has_a_code(self):
+        tree = ast.parse(Path(board_grant.__file__).read_text())
+        raised = {node.args[0].id for node in ast.walk(tree) if isinstance(node, ast.Call) and node.args
+                  and getattr(node.func, "id", "") == "GrantRefusedError" and isinstance(node.args[0], ast.Name)}
+        self.assertTrue(raised, "the scan found no raise site")
+        self.assertEqual(sorted(name for name in raised if getattr(board_grant, name) not in board_grant.CODE_FOR_WHY), [])
 
     def test_a_grant_refusal_has_the_reason_and_the_exit_code_of_its_why(self):
         for why, reason, code in (("not a grant", "not_a_grant", 1), ("answered no", "answered_no", 1), ("bad minutes", "bad_minutes", 2),

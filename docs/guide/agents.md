@@ -505,41 +505,53 @@ the flash tool's own output, on **stderr**, so stdout holds the envelope alone. 
 A raise after the flash (a traceback) prints no envelope; read the exit code and stderr.
 
 **The `code` of an item** ([P433](https://github.com/xmejkal/spark/issues/575)). Every item of `problems` and `unchecked` in
-`look.py --json` and `deploy.py --json` has `code`, the reason in one word. Decide on the code, never on the sentence. The codes
-come from one table, `scripts/board_codes.py`. The same code can come from the look and from deploy.py (`no_token` is both).
+`look.py --json` and `deploy.py --json` has `code`, the cause in one word. Decide on the code, never on the sentence. The codes
+come from one table, `scripts/board_codes.py`. The same code can come from the look and from deploy.py (`evidence_refuses` is both).
 `grant.py` and the other scripts write no `code`. In deploy.py, the reasons of a look that could not run come as an `unchecked` item of stage `look`.
+look.py gives each stop, warning and unknown field an item of its own. deploy.py's gate gives one item for all the look's stops, with the first stop's `code`.
+The column "needs the person" says whether the next step waits on the person's hands, yes or choice.
 
-| code | where | means |
-|---|---|---|
-| `list_failed`, `list_timeout` | a look that could not run | mpremote could not list the boards on USB, or took too long |
-| `no_port` | a look that could not run | no board is on USB |
-| `port_not_listed` | a look that could not run | the port `--port` names is not in the list |
-| `two_boards` | a look that could not run | two or more boards are on USB and no `--port` says which |
-| `flasher_not_esptool` | a look that could not run | the look reads with esptool only, and the project's flasher is another tool |
-| `board_not_read`, `read_timeout` | a look that could not run | esptool could not read the board, or took too long. `data.doctor` has the board doctor's result |
-| `no_board_named`, `no_board_record` | a look that could not run | `requirements.json` names no board, or the project has no record of the board it names |
-| `tool_missing` | a look, a deploy | a tool the step needs is missing or cannot be used |
-| `chip_differs`, `flash_too_small` | `problems`, subject `stop` | the chip is not the record's, or the flash is smaller than the image. deploy.py will refuse |
-| `flash_differs` | `problems`, subject `flash` | the flash size is not one the record lists. deploy.py asks the person to accept it |
-| `field_unknown` | `unchecked` | the board or the record did not say a field |
-| `no_token` | `unchecked` | the look gave no token (`no_token_reason` says why). deploy.py gives it too, when the look it made has none |
-| `last_deploy_not_checked` | `unchecked` | spark's record of the board's last deploy could not be read |
-| `no_terminal` | deploy, stage `gate` | there is no terminal for the person's yes. `data.run_in_terminal` is the line |
-| `no_look`, `token_stale` | deploy, stage `gate` | no token was given, or the board or the image is not the one the token names. Run `look.py` again |
-| `answered_no`, `grant_ended` | deploy, stage `gate` | the person answered no, or the deploy grant ended before the erase |
-| `image_refused` | deploy, stage `plan` or `gate` | the evidence refuses the image, or the image changed after the yes |
-| `flash_failed` | deploy, stage `flash` | a flash command failed. `data.board_state` is `may_be_erased` |
-| `ready_not_seen` | deploy, stage `verify` | the board's files differ from the image, or the firmware printed no `ready` |
-| `ready_unknown` | deploy, stage `verify` | the board could not be read after the flash |
-| `bad_argument` | both scripts | an argument that the script cannot run with (below) |
+| code | where | means | next step | needs the person |
+|---|---|---|---|---|
+| `list_failed`, `list_timeout` | a look that could not run | mpremote could not list the boards on USB, or took too long | check mpremote (`/spark:setup`), reconnect, run look.py again | yes |
+| `no_port` | a look that could not run | no board is on USB | ask the person to plug it in with a data cable | yes |
+| `port_not_listed` | a look that could not run | the port `--port` names is not in the list | ask which board, or drop `--port` | yes |
+| `two_boards` | a look that could not run | two or more boards are on USB and no `--port` says which | ask which board, run again with `--port` | yes |
+| `flasher_not_esptool` | a look that could not run | the look reads with esptool only, and the project's flasher is another tool | stop and tell the person | yes |
+| `board_not_read`, `read_timeout` | a look that could not run | esptool could not read the board, or took too long. `data.doctor` has the board doctor's result | relay the `fix` (the person's hands), then run look.py again | yes |
+| `no_board_named`, `no_board_record` | a look that could not run | `requirements.json` names no board, or the project has no record of the board it names | name a board, or `/spark:research` for a record | yes |
+| `tool_missing` | a look, a deploy | a tool the step needs is missing or cannot be used | `/spark:setup` | yes |
+| `chip_differs`, `flash_too_small` | `problems`, subject `stop` | the chip is not the record's, or the flash is smaller than the image. deploy.py will refuse | stop, tell the person | yes |
+| `flash_differs` | `problems`, subject `flash` | the flash size is not one the record lists | relay it; deploy.py asks the person to accept it | yes |
+| `field_unknown` | `unchecked` | the board or the record did not say a field | relay it; deploy.py asks the person to accept it | yes |
+| `stop_found` | `unchecked` | the look found a stop, so it gave no token. The stop is its own item | as for the stop | yes |
+| `no_mac` | `unchecked` | the board's MAC could not be read, so the look gave no token | reconnect the board, run look.py again | yes |
+| `evidence_refuses` | `unchecked` of a look, deploy stage `plan` | the evidence refuses the image: no passed run names it, a run tested another image, or another check failed. The sentence names the way out | run a scenario, or what the sentence names, then look.py again | no |
+| `last_deploy_not_checked` | `unchecked` | spark's record of the board's last deploy could not be read | relay the `fix` (repair the record), run look.py again | yes |
+| `no_terminal` | deploy, stage `gate` | there is no terminal for the person's yes. `data.run_in_terminal` is the line | give the person the line, word for word | yes |
+| `token_missing` | deploy, stage `gate` | deploy.py got no token, so no look came before it | run look.py, then deploy.py with its token | no |
+| `token_stale` | deploy, stage `gate` | the board or the image is not the one the token names | run look.py again | no |
+| `answered_no` | deploy, stage `gate` | the person answered no | stop | yes |
+| `grant_ended` | deploy, stage `gate` or `flash` | the deploy grant ended before the erase | ask the person for a new grant or a typed yes | yes |
+| `no_sim_toml` | deploy, stage `plan` or a look | the project has no `sim/wokwi.toml` | build first (`/spark:build --keep`) | no |
+| `firmware_line_bad` | deploy, stage `plan` or a look | the firmware line of `sim/wokwi.toml` cannot be read, or names an image outside `sim/` | fix the line as the sentence says, build again | no |
+| `no_image` | deploy, stage `plan` or a look | the image that `sim/wokwi.toml` names is not there yet | run a scenario | no |
+| `log_unreadable` | deploy, stage `plan` or a look | a run log in `sim/runs/` cannot be read | repair or remove the log, run look.py again | yes |
+| `chip_unknown` | deploy, stage `plan` | the chip of the project's board record cannot be read | fix the board in `requirements.json` | no |
+| `image_changed` | deploy, stage `gate` | the image changed after the person's yes | run look.py again | no |
+| `flash_failed` | deploy, stage `flash` | a flash command failed. `data.board_state` is `may_be_erased` | relay the sentence (it names the BOOT and RESET places) | yes |
+| `ready_not_seen` | deploy, stage `verify` | the board's files differ from the image, the firmware stopped with an error, or it printed no `ready`. The sentence tells which | fix the firmware, then look.py and a new yes | yes |
+| `ready_unknown` | deploy, stage `verify` | the board could not be read after the flash, or the passed run's log names no files. The sentence tells which | run the `watch` step; if it has `needs_person`, tell the person first | if `needs_person` |
+| `bad_argument` | both scripts | an argument that the script cannot run with (below) | fix the flag, run again | no |
 
-The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `no_mac` and `serial_not_mac` are in the table too. They name the reasons of
+The codes `not_a_grant`, `bad_minutes`, `bad_scope` and `serial_not_mac` are in the table of `scripts/board_codes.py` too. They name the reasons of
 `grant.py`'s refusals, which do not reach this envelope. With two stops, the deploy gate's `code` is the first stop's.
 
 **A bad flag.** With `--json`, `look.py` and `deploy.py` print an envelope for an argument they cannot run with, such as
 `--no-simulation` with `--ignore-older-runs`: status `could-not-run`, `data: null`, one `unchecked` item with `code`
-`bad_argument` and the parser's sentence, exit 2. The check is the word `--json` in the arguments, so an abbreviation of it
-(`--js`) gets the usage instead. Without `--json` they print the usage and the error on stderr and exit 2, as argparse does.
+`bad_argument` and the parser's sentence, exit 2. The flag that failed is named only in that sentence: `data` holds nothing, so read
+the sentence if you must tell which. The check is the word `--json` in the arguments. `--json=...` and an abbreviation of it
+(`--js`) are not that word, so a bad flag beside them gets the usage on stderr and no envelope. Without `--json` they print the usage and the error on stderr and exit 2, as argparse does.
 
 - `look.py` `data`: `port`, `also_on`, `chip`, `flash_mb`, `mac`, `board`, `fields`, `stops`, `warnings`, `unknown`, `verdict`,
   `status`, `token`, `no_token_reason`, `simulation`, `caveats`, `last_deploy`. `simulation` is `passed`, or `none` with `--no-simulation`, or
