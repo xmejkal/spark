@@ -23,6 +23,7 @@ import board_facts  # noqa: E402
 import boards  # noqa: E402
 import outcomes  # noqa: E402
 import run_scenario  # noqa: E402
+import sim_project  # noqa: E402
 from test_boards import DEFINITION, kept_definition_board  # noqa: E402
 
 MAC = "8c:bf:ea:cc:97:70"
@@ -97,6 +98,19 @@ def read_log(text):
     return run_scenario.ScenarioSteps.from_log(log)
 
 
+def read_firmware(case):
+    """sim_project.firmware_in with `case` as the wokwi.toml: None (no file), text, ("folder", None) or ("bytes", the bytes)."""
+    folder = Path(tempfile.mkdtemp())
+    toml = folder / "wokwi.toml"
+    if isinstance(case, tuple) and case[0] == "folder":
+        toml.mkdir()
+    elif isinstance(case, tuple):
+        toml.write_bytes(case[1])
+    elif case is not None:
+        toml.write_text(case)
+    return sim_project.firmware_in(toml)
+
+
 def read_text(text):
     """ScenarioSteps.from_text with `text` as the scenario (None: an empty one)."""
     return run_scenario.ScenarioSteps.from_text(text or "")
@@ -143,6 +157,17 @@ READERS = {
         "entry with an absolute sha256": (("entry", {"sha256": "/etc", "file": "passwd"}), "not-checked"),
         "record that is a list": (("record", []), "none-recorded"),
         "good": (DEFINITION, "recorded")}),
+    "sim_project.firmware_in": (read_firmware, {
+        "missing": (None, "none-recorded"),
+        "no firmware line": ("[wokwi]\nversion = 1\n", "none-recorded"),
+        "malformed": ("firmware = {nope\n", "not-checked"),
+        "a number": ("[wokwi]\nversion = 1\nfirmware = 3\n", "not-checked"),
+        "an empty name": ('firmware = ""\n', "not-checked"),
+        "indented": ('  firmware = "x.bin"\n', "not-checked"),
+        "no spaces around the equals sign": ('firmware="x.bin"\n', "not-checked"),
+        "a folder where the file goes": (("folder", None), "not-checked"),
+        "bytes that are no text": (("bytes", b"\xff\xfe"), "not-checked"),
+        "good": ('[wokwi]\nversion = 1\nfirmware = "flash.bin"\n', "recorded")}),
     "ScenarioSteps.from_text": (read_text, {
         "missing": (None, "none-recorded"),
         "malformed": ("steps:\n  - just-a-word\n", "not-checked"),

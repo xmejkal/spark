@@ -139,6 +139,15 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(said[-2], "  all fields match the board record xiao-esp32-c6.")
         self.assertRegex(said[-1], r"^  no token: .*run a scenario first")
 
+    def test_a_firmware_line_that_is_no_string_stops_the_token_with_one_sentence_and_no_traceback(self):
+        # P429: `firmware = 3` raised a TypeError out of the look
+        (self.project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 3\n")
+        code, said, problems = self.go()
+        self.assertEqual((code, problems), (2, ""))
+        self.assertEqual(said[-1], "  no token: sim/wokwi.toml names its firmware in a form spark cannot use: line 3 is not "
+                         "firmware = and a JSON string; spark reads the value as a JSON string, while wokwi-cli reads full "
+                         'TOML; write it as firmware = "name.bin"')
+
     def test_ignore_older_runs_gives_a_token_where_an_older_log_tested_another_image(self):
         self.run_the_scenario()
         (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(2)\n")

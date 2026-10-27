@@ -53,6 +53,16 @@ class TheImageTest(unittest.TestCase):
             ProjectImage(project)
         self.assertIn("run a scenario first", str(said.exception))
 
+    def test_a_firmware_line_that_is_no_string_is_a_deploy_error_with_one_sentence(self):
+        # P429: `firmware = 3` raised a TypeError
+        project = project_with_image()
+        (project / "sim" / "wokwi.toml").write_text("[wokwi]\nfirmware = 3\n")
+        with self.assertRaises(DeployError) as said:
+            ProjectImage(project)
+        self.assertEqual(str(said.exception), "sim/wokwi.toml names its firmware in a form spark cannot use: line 2 is not "
+                         "firmware = and a JSON string; spark reads the value as a JSON string, while wokwi-cli reads full "
+                         'TOML; write it as firmware = "name.bin"')
+
     def test_a_new_project_image_after_the_file_changed_has_the_new_sha256(self):
         project = project_with_image()
         ProjectImage(project).sha256
