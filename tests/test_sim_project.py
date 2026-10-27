@@ -184,8 +184,14 @@ class TheFirmwareLineTest(unittest.TestCase):
 
     def test_a_value_that_is_no_string_is_not_checked_and_the_reason_names_the_line(self):
         self.assertEqual(self.read("[wokwi]\nversion = 1\nfirmware = 3\n"), sim_project.FirmwareLine(
-            "not-checked", None, "line 3 is not firmware = and a JSON string; spark reads the value as a JSON string, "
-                                 "while wokwi-cli reads full TOML"))
+            "not-checked", None, "line 3 names the firmware in a form spark cannot read."))
+
+    def test_an_empty_name_has_its_own_reason_and_the_fix_follows_a_line_but_not_a_file(self):
+        empty = self.read('[wokwi]\nfirmware = ""\n')
+        self.assertEqual((empty.state, empty.why), ("not-checked", "line 2 names no file."))
+        self.assertEqual(empty.fix(), ' To fix it, write it as firmware = "name.bin".')
+        self.assertEqual(sim_project.FirmwareLine("not-checked", None, "cannot be read: x.").fix(), "")
+        self.assertEqual(sim_project.FirmwareLine("recorded", "x.bin").fix(), "")
 
     def test_an_empty_name_and_a_value_that_is_not_json_are_not_checked(self):
         for line in ('firmware = ""', "firmware = 'x.bin'", "firmware = x.bin", "firmware = ", 'firmware = ["x.bin"]'):
@@ -207,10 +213,18 @@ class TheFirmwareLineTest(unittest.TestCase):
     def test_a_file_that_cannot_be_read_is_not_checked_and_never_raises(self):
         folder = Path(tempfile.mkdtemp())
         self.assertEqual(sim_project.firmware_in(folder).state, "not-checked")
-        self.assertEqual(sim_project.firmware_in(folder).why, "the file cannot be read (IsADirectoryError)")
+        self.assertEqual(sim_project.firmware_in(folder).why, "cannot be read: Is a directory.")
         binary = folder / "wokwi.toml"
         binary.write_bytes(b"\xff\xfe\x00")
-        self.assertEqual(sim_project.firmware_in(binary).why, "the file cannot be read (UnicodeDecodeError)")
+        self.assertEqual(sim_project.firmware_in(binary).why, "cannot be read: it is not text in UTF-8.")
+
+    def test_an_image_outside_the_sim_folder_has_one_sentence_and_one_inside_none(self):
+        sim = Path(tempfile.mkdtemp())
+        self.assertIsNone(sim_project.why_outside_sim(sim, sim / "flash.bin"))
+        self.assertIsNone(sim_project.why_outside_sim(sim, sim / "images" / "flash.bin"))
+        for outside in (sim / ".." / "x.bin", Path("/abs/x.bin"), sim / "a\0b"):
+            self.assertEqual(sim_project.why_outside_sim(sim, outside),
+                             "wokwi.toml names %s, outside sim/, and a run writes its image only inside sim/" % outside)
 
     def test_a_value_nested_deeper_than_the_parser_goes_is_not_checked(self):
         self.assertEqual(self.read("firmware = " + "[" * 200000 + "\n").state, "not-checked")

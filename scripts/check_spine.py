@@ -704,13 +704,10 @@ def main(argv=None):
 
     # A rebuild runs the flash image the kept wokwi.toml already names, unless --firmware names another.
     simulation = simulation_dir(args)
-    firmware = args.firmware
+    firmware, kept = args.firmware, None
     if not firmware and simulation:
         kept = sim_project.firmware_in(simulation / "wokwi.toml")
         firmware = kept.name
-        if kept.state == NOT_CHECKED:  # P429: the rewritten file would drop the line without a word
-            print(guard_lines("  sim/wokwi.toml: its firmware line is not kept: %s; the rebuild names no image, "
-                              "and a scenario run then names the default one" % kept.why), file=sys.stderr)
     try:
         stages = run(requirements, workdir, toolchain, project, from_library, firmware=firmware)
     except subprocess.TimeoutExpired:
@@ -722,6 +719,11 @@ def main(argv=None):
         # sends somebody to debug a design that was never examined.
         stages = [Stage("check_spine", COULD_NOT_RUN,
                         "%s: %s" % (type(exc).__name__, exc))]
+
+    # P429: a line this could not read goes with the file the build writes again, so that is said, but only when it did.
+    if kept is not None and kept.state == NOT_CHECKED and (workdir / "sim" / "wokwi.toml").is_file():
+        print(guard_lines("  sim/wokwi.toml %s The rebuild wrote it again with no image named, and a scenario run then names "
+                          "the default one." % kept.why), file=sys.stderr)
 
     # The history says a build ran end to end (§5.7) — written here, by the chain itself, never on anyone's say-so.
     # A history that cannot be kept is said, and the verdict stands: the chain ran, whatever the store thinks of it.

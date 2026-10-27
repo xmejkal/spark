@@ -144,9 +144,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         (self.project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 3\n")
         code, said, problems = self.go()
         self.assertEqual((code, problems), (2, ""))
-        self.assertEqual(said[-1], "  no token: sim/wokwi.toml names its firmware in a form spark cannot use: line 3 is not "
-                         "firmware = and a JSON string; spark reads the value as a JSON string, while wokwi-cli reads full "
-                         'TOML; write it as firmware = "name.bin"')
+        self.assertEqual(said[-1], "  no token: sim/wokwi.toml line 3 names the firmware in a form spark cannot read. "
+                         'To fix it, write it as firmware = "name.bin".')
 
     def test_ignore_older_runs_gives_a_token_where_an_older_log_tested_another_image(self):
         self.run_the_scenario()

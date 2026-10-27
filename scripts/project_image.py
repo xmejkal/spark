@@ -30,9 +30,11 @@ class ProjectImage:
             raise DeployError("no sim/wokwi.toml in %s: build with /spark:build --keep . first" % project)
         named = sim_project.firmware_in(toml)
         if named.state == outcomes.NOT_CHECKED:
-            raise DeployError('sim/wokwi.toml names its firmware in a form spark cannot use: %s; write it as '
-                              'firmware = "name.bin"' % named.why)
+            raise DeployError("sim/wokwi.toml %s%s" % (named.why, named.fix()))
         self.path = toml.parent / (named.name or run_scenario.DEFAULT_IMAGE)
+        outside = sim_project.why_outside_sim(toml.parent, self.path)
+        if outside:
+            raise DeployError(outside)
         if not self.path.is_file():
             raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it"
                               % self.path)
