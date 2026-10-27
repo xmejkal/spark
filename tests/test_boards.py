@@ -20,6 +20,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
@@ -894,10 +895,37 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
         board["documents"][boards.WOKWI_DEFINITION]["file"] = "a\0b.board.json"
         self.assertEqual(self.state_of(board), self.NOT_KEPT)
 
-    @unittest.skipUnless(hasattr(sys, "set_int_max_str_digits"), "this Python has no limit on the digits of an int")
-    def test_a_pin_target_with_a_digit_run_too_long_for_int_is_not_checked_never_raised(self):
-        text = '{"pins": {"D1": {"target": "GPIO' + "9" * 5000 + '"}}}'
-        self.assertEqual(self.state_of(kept_definition_board(text)), self.NOT_KEPT)
+    def test_a_pin_target_whose_digits_int_refuses_is_not_checked_never_raised(self):
+        # int() refuses a very long digit run on Python 3.9.14+, 3.10.7+ and 3.11+, and not on older ones, so it is made to here.
+        board = kept_definition_board('{"pins": {"D1": {"target": "GPIO9"}}}')
+        with mock.patch.object(boards, "int", side_effect=ValueError("too many digits"), create=True):
+            self.assertEqual(self.state_of(board), self.NOT_KEPT)
+
+    def test_a_record_that_is_no_table_names_no_definition(self):
+        for record in ([], "x", None, 5, ["id"]):
+            with self.subTest(record=record):
+                self.assertEqual(self.state_of(record), ("none-recorded", None))
+
+    def test_an_entry_that_would_leave_the_store_is_not_checked_and_never_opened(self):
+        # A sha256 that is no 64 lowercase hex, or a file that is no plain name, is joined into a path: it could be an
+        # absolute one, a "../" one, or a FIFO that hangs the read. The outside file below holds a good definition.
+        outside = Path(tempfile.mkdtemp()) / "outside.board.json"
+        outside.write_text(DEFINITION)
+        good = kept_definition_board()["documents"][boards.WOKWI_DEFINITION]
+        hostile = {"an absolute sha256": dict(good, sha256=str(outside.parent), file=outside.name),
+                   "a ../ sha256": dict(good, sha256="../" * 3 + str(outside.parent).lstrip("/"), file=outside.name),
+                   "an uppercase sha256": dict(good, sha256=good["sha256"].upper()),
+                   "a short sha256": dict(good, sha256=good["sha256"][:63]),
+                   "a file with a slash": dict(good, file="sub/" + good["file"]),
+                   "an absolute file": dict(good, file=str(outside)),
+                   "a file with a backslash": dict(good, file="sub\\" + good["file"]),
+                   "a file with two dots": dict(good, file=".." + good["file"]),
+                   "a file of ..": dict(good, file=".."),
+                   "a file that is no string": dict(good, file=5)}
+        for case, entry in hostile.items():
+            with self.subTest(case=case), mock.patch.object(Path, "read_bytes", side_effect=AssertionError("opened " + case)):
+                board = {"id": "x", "documents": {boards.WOKWI_DEFINITION: entry}}
+                self.assertEqual(self.state_of(board), self.NOT_KEPT)
 
     def test_why_not_simulated_says_what_stopped_the_reader_never_that_a_pin_is_missing(self):
         # A definition that spark could not look at has no GPIOs, which is not the same as having no pin on GPIO9.

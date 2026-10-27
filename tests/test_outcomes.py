@@ -105,9 +105,12 @@ def read_text(text):
 def read_definition(case):
     """
     boards.read_simulated_part with `case` as what the board's record holds for its Wokwi definition: None (the record names
-    none), text (the kept file's bytes), or ("entry", value) (the `documents` entry itself, whatever it is).
+    none), text (the kept file's bytes), ("entry", value) (the `documents` entry itself, whatever it is) or ("record",
+    value) (the board record itself, whatever it is).
     """
-    if case is None:
+    if isinstance(case, tuple) and case[0] == "record":
+        board = case[1]
+    elif case is None:
         board = kept_definition_board()
         del board["documents"][boards.WOKWI_DEFINITION]
     elif isinstance(case, tuple):
@@ -137,6 +140,8 @@ READERS = {
         "wrong shape": ('{"pins": [1]}', "not-checked"),
         "entry that is null": (("entry", None), "not-checked"),
         "file name with a null byte": (("entry", {"sha256": "a" * 64, "file": "a\0b"}), "not-checked"),
+        "entry with an absolute sha256": (("entry", {"sha256": "/etc", "file": "passwd"}), "not-checked"),
+        "record that is a list": (("record", []), "none-recorded"),
         "good": (DEFINITION, "recorded")}),
     "ScenarioSteps.from_text": (read_text, {
         "missing": (None, "none-recorded"),
