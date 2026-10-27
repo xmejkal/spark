@@ -175,7 +175,7 @@ def why_header_disagrees(board, rules=None):
         return DISAGREES_MESSAGE % wrong
     try:
         render(board, rules)
-    except (ValueError, KeyError) as exc:
+    except (ValueError, KeyError, TypeError) as exc:  # TypeError: a project's rules value of the wrong kind reaches it until P434 (#576) checks rules values
         return DISAGREES_MESSAGE % exc
     return None
 

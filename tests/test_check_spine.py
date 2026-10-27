@@ -1413,6 +1413,15 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
                          ("footprint", check_spine.COULD_NOT_RUN,
                           "the board definition disagrees with itself: physical.header.pitch_mm is not a number"))
 
+    def test_a_project_rule_of_the_wrong_kind_stops_the_footprint_stage_not_the_build(self):
+        # fab.process returns a project's own value unchecked: a drill step written as text was a TypeError out of `render`
+        project, wanted = self.project_without("physical.header.drill_mm")
+        (project / ".spark" / "rules.json").write_text(json.dumps({"fabrication": {"drill_step_mm": "0.1"}}))
+        stages = self.run_spine(project, wanted)
+        self.assertEqual((stages[-1].name, stages[-1].status), ("footprint", check_spine.COULD_NOT_RUN))
+        # the spine asks `why_header_disagrees` without the project's rules (row 15), so the fallback says what exited
+        self.assertEqual(stages[-1].detail, "emit_footprint.py exited 1 for xiao-esp32-c6")
+
     def test_a_footprint_that_fails_for_no_reason_the_board_shows_says_what_exited(self):
         project, wanted = self.project_without("physical.header.drill_mm")
         with mock.patch.object(check_spine.emit_footprint, "main", return_value=check_spine.emit_footprint.EXIT_COULD_NOT_RUN):

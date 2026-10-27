@@ -19,5 +19,6 @@
  {"file": "scripts/needs.py", "name": "P411: --match carries no stops_why", "find": "            said[\"stops_why\"] = emit_footprint.why_no_footprint(record)", "replace": "            said[\"stops_why\"] = None"},
  {"file": "scripts/parts.py", "name": "P411: --match's JSON keeps the line the text shows", "find": "            c.pop(\"stop_line\", None)", "replace": "            pass"},
  {"file": "scripts/needs.py", "name": "P411: the refusal says each stopping board's gaps without its id", "find": "[\"%s %s\" % (board_id, line) for board_id, line in stopping.items() if line]", "replace": "[line for board_id, line in stopping.items() if line]"},
- {"file": "scripts/needs.py", "name": "P411: a board that builds gains a stops_why key", "find": "            if said[\"stops_at\"]:  # P411", "replace": "            if True:  # P411"}
+ {"file": "scripts/needs.py", "name": "P411: a board that builds gains a stops_why key", "find": "            if said[\"stops_at\"]:  # P411", "replace": "            if True:  # P411"},
+ {"file": "scripts/emit_footprint.py", "name": "P411: a rule of the wrong kind is no disagreement (TypeError)", "find": "except (ValueError, KeyError, TypeError) as exc:", "replace": "except (ValueError, KeyError) as exc:"}
 ]
