@@ -1476,6 +1476,28 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
                 self.assertTrue(stages[-1].detail.startswith("cannot emit a board: "), stages[-1].detail)
                 self.assertIn(said, stages[-1].detail)
 
+    def test_the_stop_says_what_read_inputs_says_on_the_same_project(self):
+        # P432: the spine and emit_board refuse in one order, with one function's words
+        typo = {"signals": [{"name": "X", "needs": ["teleport"]}]}
+        for fields, extra in ((("physical.header",), typo), (("physical.header",), {}),
+                              (("physical.width_mm", "physical.header_order"), {})):
+            with self.subTest(fields=fields, extra=extra):
+                project, wanted = self.project_without(*fields, requirements=dict(
+                    {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}, **extra))
+                with self.assertRaises(emit_board.RefusedInput) as refused:
+                    emit_board.read_inputs(project / "requirements.json", project)
+                stages = self.run_spine(project, wanted)
+                self.assertEqual(stages[-1].name, refused.exception.stage)
+                self.assertTrue(stages[-1].detail.startswith(str(refused.exception)), stages[-1].detail)
+
+    def test_a_fault_in_the_requirements_is_said_without_asking_emit_board(self):
+        project, wanted = self.project_without("physical.header_order", requirements={
+            "board": "xiao-esp32-c6", "parts": ["led-red-5mm"], "signals": [{"name": "X", "needs": ["teleport"]}]})
+        with mock.patch("subprocess.run", side_effect=AssertionError("emit_board was asked")):
+            stages = self.run_spine(project, wanted)
+        self.assertEqual((stages[-1].name, stages[-1].status), ("schematic", check_spine.COULD_NOT_RUN))
+        self.assertIn("X asks for teleport", stages[-1].detail)
+
     def test_pins_that_cannot_be_placed_write_no_pin_map(self):
         project, _ = self.project_without("physical.header", requirements={
             "board": "xiao-esp32-c6", "parts": ["led-red-5mm"], "signals": [{"name": "X", "needs": ["teleport"]}]})

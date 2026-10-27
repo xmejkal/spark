@@ -394,17 +394,14 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     except design.DesignError as broken:
         return stages + [Stage("parts", COULD_NOT_RUN, str(broken))]
 
-    # --- MVP --- the schematic imports the board's footprint, so a record that cannot give one stops here, at the
-    # footprint stage `emit_footprint.why_no_footprint` explains, before emit_board is asked (P407). The input is read and the pins placed
-    # first, as emit_board does, so a fault in the requirements is said before a gap in the board record.
-    no_footprint = emit_footprint.why_no_footprint(board)
-    if no_footprint:
-        try:
-            loaded = design.load(workdir / "requirements.json", project)
-            assign_pins.assign(loaded.board, loaded.signals)
-        except (design.DesignError, assign_pins.Impossible) as broken:
-            return stages + [Stage("schematic", COULD_NOT_RUN, emit_board.REFUSED_INPUT_MESSAGE % broken)]
-        return stages + [Stage("footprint", COULD_NOT_RUN, no_footprint + "\n" + NO_FOOTPRINT_HINT)]
+    # --- MVP --- the input is read, the pins are placed and the footprint is asked for, in the one order `emit_board.read_inputs`
+    # gives (P407, P432): a fault in the requirements is said before a gap in the board record, and the schematic imports
+    # the board's footprint, so a record that cannot give one stops here, before emit_board is asked.
+    try:
+        emit_board.read_inputs(workdir / "requirements.json", project)
+    except emit_board.RefusedInput as refused:
+        hint = "\n" + NO_FOOTPRINT_HINT if refused.stage == emit_board.FOOTPRINT_STAGE else ""
+        return stages + [Stage(refused.stage, COULD_NOT_RUN, str(refused) + hint)]
 
     board_file = workdir / "board.tsx"
     emitted = subprocess.run(
