@@ -217,6 +217,17 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertTrue(why.startswith("firmware/lib/bad.py, line "), why)
         self.assertIn("does not compile", why)
 
+    def test_the_four_old_compile_sentences_are_pinned_word_for_word(self):
+        (self.firmware / "lib").mkdir()
+        bad = self.firmware / "lib" / "bad.py"
+        bad.write_text("x = 1\ny = = 2\n")
+        self.assertEqual(self.why(), "firmware/lib/bad.py, line 2 does not compile: invalid syntax")
+        bad.write_bytes(b"x = 1\x00\n")
+        self.assertEqual(self.why(), "firmware/lib/bad.py does not compile: source code string cannot contain null bytes")
+        bad.unlink()
+        bad.mkdir()  # a folder named like a source file: it cannot be read
+        self.assertEqual(self.why(), "cannot read firmware/lib/bad.py: [Errno 21] Is a directory: '%s'" % bad)
+
     def test_no_main_py_refuses_with_the_run_scenario_sentence(self):
         (self.firmware / "main.py").unlink()
         self.assertIn("no firmware/main.py in %s: the board would boot to a bare prompt" % self.project, self.why())
