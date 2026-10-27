@@ -175,7 +175,7 @@ def audit(project=None):
             owed.append({"id": found, "layer": layer, "owes": owing})
         elif kind == "board" and emit_footprint.footprint_gaps(record):  # C-7: a board owes nothing, and may still stop the chain
             stops.append({"id": found, "layer": layer, "stops_why": emit_footprint.why_no_footprint(record),
-                          "line": emit_footprint.footprint_stop_line(record)})  # P411: the text shows the line; `--audit` drops it from the JSON
+                          "stop_line": emit_footprint.footprint_stop_line(record)})  # P411: the text shows the line; `--audit` drops it from the JSON
         if isinstance(record, dict) and not function_of(record, board=kind == "board") and (kind, found, layer, path) not in linked:
             silent.append(found)
     return counts, owed, broken, silent, dangling, stops
@@ -2068,7 +2068,7 @@ def _op_audit(args, project):
     lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
               % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
     lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
-    lines += ["  %s (%s) %s" % (s["id"], s["layer"], s["line"]) for s in stops]
+    lines += ["  %s (%s) %s" % (s["id"], s["layer"], s["stop_line"]) for s in stops]
     return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling,
                    "stops_at_footprint": [{key: s[key] for key in ("id", "layer", "stops_why")} for s in stops]}, lines,
                   truncated=truncated, problems=[_problem(b["id"], "broken: " + "; ".join(b["problems"])) for b in broken]

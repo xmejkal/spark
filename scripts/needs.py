@@ -226,8 +226,9 @@ def _candidate(need, fit, context, mine=None):
                 if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
         if offer.kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
             said["stops_at"] = "footprint" if emit_footprint.footprint_gaps(record) else None
-            said["stops_why"] = emit_footprint.why_no_footprint(record)  # P411: the list, for Claude
-            said["stop_line"] = emit_footprint.footprint_stop_line(record)  # the text shows it; `--match` drops it from the JSON
+            if said["stops_at"]:  # P411: a board that builds gains no key
+                said["stops_why"] = emit_footprint.why_no_footprint(record)  # the list, for Claude
+                said["stop_line"] = emit_footprint.footprint_stop_line(record)  # the text shows it; `--match` drops it from the JSON
     return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": [], "limits": []}, **said,
                 what=sorted({f["what"] for f in offer.functions if f.get("does") == need["does"]}),
                 what_matches=fit.exact, score=fit.score, why=fit.why, about=offer.about,

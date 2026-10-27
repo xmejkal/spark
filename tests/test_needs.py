@@ -470,7 +470,8 @@ class TheMatcherTest(unittest.TestCase):
         self.assertIn("  stops at the footprint stage (P121): its board file lacks physical.header", next(line for line in lines if "xiao-esp32-c6 (library)" in line))
         self.assertEqual(boards_offered["xiao-esp32-c6"]["stops_why"], "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of "
                          "them can be derived from the rest:\n  physical.header (no header geometry at all)")
-        self.assertIsNone(boards_offered["firebeetle2-esp32s3"]["stops_why"])
+        self.assertNotIn("stops_why", boards_offered["firebeetle2-esp32s3"])  # a board that builds gains no key
+        self.assertNotIn("stop_line", boards_offered["firebeetle2-esp32s3"])
         self.assertNotIn("stop_line", boards_offered["xiao-esp32-c6"])  # only the text shows the line
         self.assertNotIn("stops at", next(line for line in lines if "firebeetle2-esp32s3 (library)" in line))
 

@@ -168,19 +168,20 @@ class WhatItWillNotInventTest(unittest.TestCase):
     def test_a_board_with_no_header_order_is_refused(self):
         board = self._render_without("header_order")
         gaps = emit_footprint._missing(board["physical"], board["physical"]["header"])
-        self.assertTrue(any("header_order" in g for g in gaps), gaps)
+        self.assertEqual([field for field, _ in gaps], ["physical.header_order"])
+        self.assertTrue(gaps[0][1], gaps)  # a gap that is not derivable carries its note
 
     def test_a_board_with_no_header_geometry_is_refused(self):
         board = self._render_without("header")
         gaps = emit_footprint._missing(board["physical"], board["physical"].get("header"))
-        self.assertTrue(gaps)
+        self.assertEqual([field for field, _ in gaps], ["physical.header"])
 
     def test_the_distance_to_the_first_pad_is_required(self):
         # It was prose in a comment until 2026-09-25, so nothing could read it and the pads could
         # not be tied to the outline at all.
         board = self._render_without("header", "first_pad_from_edge_mm")
         gaps = emit_footprint._missing(board["physical"], board["physical"]["header"])
-        self.assertIn("physical.header.first_pad_from_edge_mm", gaps)
+        self.assertEqual(gaps, [("physical.header.first_pad_from_edge_mm", "")])
 
     def test_a_pad_order_that_disagrees_with_the_pin_count_is_refused(self):
         # The dangerous shape: 17 labels for 18 pads places every pad after the gap one pitch
@@ -249,25 +250,27 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
                          % ", ".join(key for key in board["physical"]["header_order"] if not key.startswith("//")))
         self.assertIsNone(emit_footprint.why_header_disagrees(firebeetle()))
 
-    def test_a_value_of_the_wrong_kind_is_a_disagreement_not_a_traceback(self):
+    def test_a_value_of_the_wrong_kind_is_a_disagreement_that_names_the_field(self):
         # boards.validate checks no header geometry: a pitch written as text reached `pads` and raised a TypeError
-        for field, value, said in (("pitch_mm", "2.54", "unsupported operand type(s) for -: 'float' and 'str'"),
-                                   ("pins", 18, "object of type 'int' has no len()")):
-            with self.subTest(field=field):
+        for where, field, value, said in (("header", "pitch_mm", "2.54", "physical.header.pitch_mm is not a number"),
+                                          ("header", "first_pad_from_edge_mm", True, "physical.header.first_pad_from_edge_mm is not a number"),
+                                          ("header", "pins", 18, "physical.header.pins is not a list of whole numbers"),
+                                          ("header", "pins", ["6", "6"], "physical.header.pins is not a list of whole numbers"),
+                                          (None, "width_mm", "21", "physical.width_mm is not a number"),
+                                          (None, "header_order", [1, 2], "physical.header_order is not an object with a list of labels for each row"),
+                                          (None, "header_order", {"left": 5, "right": 5},
+                                           "physical.header_order is not an object with a list of labels for each row")):
+            with self.subTest(field=field, value=value):
                 board = firebeetle()
-                board["physical"]["header"][field] = value
+                (board["physical"][where] if where else board["physical"])[field] = value
                 self.assertEqual(emit_footprint.why_header_disagrees(board), "the board definition disagrees with itself: " + said)
-        board = firebeetle()
-        board["physical"]["header_order"] = {"left": 5, "right": 5}
-        self.assertEqual(emit_footprint.why_header_disagrees(board),
-                         "the board definition disagrees with itself: object of type 'int' has no len()")
 
-    def test_a_pad_order_that_is_a_list_of_numbers_is_a_disagreement_too(self):
-        # an AttributeError this time: `1.startswith`
+    def test_nothing_is_said_of_a_disagreement_when_something_is_missing_or_the_board_is_no_object(self):
         board = firebeetle()
-        board["physical"]["header_order"] = [1, 2]
-        self.assertEqual(emit_footprint.why_header_disagrees(board),
-                         "the board definition disagrees with itself: 'int' object has no attribute 'startswith'")
+        del board["physical"]["header_order"]
+        for given in (board, "not a board", None, []):
+            with self.subTest(given=given):
+                self.assertIsNone(emit_footprint.why_header_disagrees(given))
 
     def test_the_list_of_a_board_that_is_no_object_names_no_board(self):
         self.assertEqual(emit_footprint.why_no_footprint("not a board"),
@@ -296,7 +299,7 @@ class TheCommandLineTest(unittest.TestCase):
         with contextlib.redirect_stderr(err):
             code = emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(library.parent)])
         self.assertEqual((code, err.getvalue()), (emit_footprint.EXIT_PROBLEMS,
-                                                  "problems: the board definition disagrees with itself: object of type 'int' has no len()\n"))
+                                                  "problems: the board definition disagrees with itself: physical.header.pins is not a list of whole numbers\n"))
 
     def test_a_missing_board_exits_could_not_run(self):
         self.assertEqual(emit_footprint.main(["--board", "no-such-board", "--json"]),

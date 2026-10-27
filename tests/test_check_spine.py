@@ -1411,7 +1411,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         stages = self.run_spine(project, wanted)
         self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail),
                          ("footprint", check_spine.COULD_NOT_RUN,
-                          "the board definition disagrees with itself: unsupported operand type(s) for -: 'float' and 'str'"))
+                          "the board definition disagrees with itself: physical.header.pitch_mm is not a number"))
 
     def test_a_footprint_that_fails_for_no_reason_the_board_shows_says_what_exited(self):
         project, wanted = self.project_without("physical.header.drill_mm")
