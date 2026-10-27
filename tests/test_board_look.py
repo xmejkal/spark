@@ -337,7 +337,7 @@ class LookTest(LookCase):
         self.board("firebeetle2-esp32s3")
         report = self.look()
         self.assertEqual((report.verdict, report.status), ("stop", outcomes.PROBLEMS))
-        self.assertIn("this board is an esp32c6, the project is for an esp32s3", report.stops[0])
+        self.assertEqual(report.stops, [board_look.Stop("chip_differs", "this board is an esp32c6, the project is for an esp32s3")])
         self.assertIsNone(report.token())
 
     def test_a_flash_that_differs_but_holds_the_image_is_a_warning_and_keeps_its_token(self):
@@ -353,7 +353,7 @@ class LookTest(LookCase):
         self.board("firebeetle2-esp32s3")
         report = self.look(esptool="s3-flash-id-2mb.txt")
         self.assertEqual(report.verdict, "stop")
-        self.assertEqual(report.stops, ["the flash is 2 MB, the image needs 4 MB"])
+        self.assertEqual(report.stops, [board_look.Stop("flash_too_small", "the flash is 2 MB, the image needs 4 MB")])
         self.assertIsNone(report.token())
 
     def fit(self, record, megabytes, extra):
@@ -366,7 +366,7 @@ class LookTest(LookCase):
 
     def test_the_fit_check_runs_when_the_flash_is_in_the_records_list(self):
         report = self.fit("firebeetle2-esp32s3", 4, 1)  # the record says [16, 4], the board 4: same, yet too small
-        self.assertEqual((report.fields["flash"], report.stops), ("same", ["the flash is 4 MB, the image needs 5 MB"]))
+        self.assertEqual((report.fields["flash"], report.stops), ("same", [board_look.Stop("flash_too_small", "the flash is 4 MB, the image needs 5 MB")]))
         self.assertIsNone(report.token())
         self.assertEqual((report.status, report.exit_code()), (outcomes.PROBLEMS, outcomes.EXIT_PROBLEMS))
 
@@ -383,7 +383,7 @@ class LookTest(LookCase):
         self.run_the_scenario()
         self.image.write_bytes(b"x" * (1024 * 1024 + 1))
         report = self.look(text=data("c6-flash-id.txt").replace("4MB", "1MB"))
-        self.assertEqual(report.stops, ["the flash is 1 MB, the image needs 2 MB"])
+        self.assertEqual(report.stops, [board_look.Stop("flash_too_small", "the flash is 1 MB, the image needs 2 MB")])
 
     def test_a_field_it_cannot_read_is_a_warning_and_unchecked(self):
         self.run_the_scenario()
@@ -424,7 +424,7 @@ class LookTest(LookCase):
         self.image.write_bytes(self.image.read_bytes() + b"x")  # 4 MB + 1 byte on a 4 MB flash
         with mock.patch.object(project_image.run_scenario, "run_record", side_effect=OSError("denied")):
             report = self.look()
-        self.assertEqual(report.stops, ["the flash is 4 MB, the image needs 5 MB"])
+        self.assertEqual(report.stops, [board_look.Stop("flash_too_small", "the flash is 4 MB, the image needs 5 MB")])
         self.assertIn("cannot read", report.image_why)
 
     def test_a_record_without_flash_says_the_record_does_not_hold_it_and_a_silent_board_says_so(self):
@@ -477,7 +477,7 @@ class LookReportToDictTest(LookCase):
         as_dict = self.look().to_dict()
         self.assertEqual((as_dict["verdict"], as_dict["status"], as_dict["token"], as_dict["no_token_reason"]),
                          ("stop", outcomes.PROBLEMS, None, "the look found a stop"))
-        self.assertEqual(as_dict["stops"], ["this board is an esp32c6, the project is for an esp32s3"])
+        self.assertEqual(as_dict["stops"], ["this board is an esp32c6, the project is for an esp32s3"])  # sentences only
         json.dumps(as_dict)
 
     def test_changing_the_dict_leaves_the_report_alone(self):

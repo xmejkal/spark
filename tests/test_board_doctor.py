@@ -101,7 +101,7 @@ class StepTest(unittest.TestCase):
         self.assertIn("not read", result.checks[-1].fact)
 
     def test_a_list_that_fails_keeps_its_error_and_the_console_still_looks(self):
-        result, _ = examine(ConsoleReadResult("read", "", None), finder=FakeFinder(raises=LookStop("mpremote took too long")))
+        result, _ = examine(ConsoleReadResult("read", "", None), finder=FakeFinder(raises=LookStop("mpremote took too long", reason="list_timeout")))
         self.assertIn("mpremote took too long", result.checks[0].fact)
         self.assertEqual(result.next_step, "hold_boot")
 
@@ -127,12 +127,12 @@ class ConfigurationTest(unittest.TestCase):
 
 class EsptoolStopTest(unittest.TestCase):
     def test_a_stop_with_no_port_prints_only_the_stop(self):
-        self.assertEqual(board_doctor.stop_lines("look.py", LookStop("requirements.json names no board"), ".", None),
+        self.assertEqual(board_doctor.stop_lines("look.py", LookStop("requirements.json names no board", reason="no_board_named"), ".", None),
                          ["look.py: requirements.json names no board"])
 
     def test_a_tools_list_it_cannot_use_keeps_the_stop_and_says_no_doctor(self):
         from unittest import mock
-        stop = LookStop("could not read the board on %s" % PORT, PORT, SAID)
+        stop = LookStop("could not read the board on %s" % PORT, PORT, SAID, reason="board_not_read")
         with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("mpremote is not installed")):
             lines = board_doctor.stop_lines("grant.py", stop, ".", None)
         self.assertEqual(lines, ["grant.py: could not read the board on %s (no doctor: mpremote is not installed)" % PORT])

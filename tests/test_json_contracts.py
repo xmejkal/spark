@@ -37,14 +37,20 @@ import check_all  # noqa: E402
 import check_footprints  # noqa: E402
 import check_physics  # noqa: E402
 import check_spine  # noqa: E402
+import board_codes  # noqa: E402
+import board_grant  # noqa: E402
+import board_look  # noqa: E402
 import check_vendor_pins  # noqa: E402
 import compare_design  # noqa: E402
+import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
 import grant  # noqa: E402
 import import_firmware  # noqa: E402
 import outcomes  # noqa: E402
 import parts  # noqa: E402
+import test_deploy_gate  # noqa: E402
 import tools  # noqa: E402
+from suite_runs import slow  # noqa: E402
 
 BOARD = "firebeetle2-esp32s3"
 
@@ -215,6 +221,42 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         """`parts.py --catalog --json` printed prose and ignored the flag (P43); since P95 it is the envelope."""
         _, payload = payload_of(lambda: parts.main(["--catalog", "--json"]))
         self.assertEqual(sorted(payload), ENVELOPE)
+
+
+class TheBenchCodesTableTest(unittest.TestCase):
+    """P433: every code that look.py and deploy.py write is in board_codes.CODES, which says it in one sentence."""
+
+    def test_the_table_holds_each_constant_of_the_module_once_with_a_sentence(self):
+        constants = {name: value for name, value in vars(board_codes).items() if name.isupper() and isinstance(value, str)}
+        self.assertEqual(sorted(constants.values()), sorted(board_codes.CODES))
+        sentences = list(board_codes.CODES.values())
+        self.assertTrue(all(sentence.strip() for sentence in sentences))
+        self.assertEqual(len(set(sentences)), len(sentences))
+
+    @slow("runs the look, gate, grant and doctor test modules once more under a spy, 1 test, 7 s on 2026-10-27")
+    def test_every_reason_raised_is_in_the_table(self):
+        raised = set()
+
+        def spying(original):
+            def init(error, *args, **kwargs):
+                original(error, *args, **kwargs)
+                raised.add(error.reason)
+            return init
+
+        suite = unittest.TestSuite()
+        for name in ("test_board_look", "test_board_doctor", "test_board_grant"):
+            suite.addTests(unittest.defaultTestLoader.loadTestsFromName(name))
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromName("TheGateTest", test_deploy_gate))
+        with mock.patch.object(board_look.LookStop, "__init__", spying(board_look.LookStop.__init__)), \
+                mock.patch.object(deploy_gate.GateClosedError, "__init__", spying(deploy_gate.GateClosedError.__init__)):
+            result = unittest.TextTestRunner(stream=io.StringIO()).run(suite)
+        self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
+        self.assertTrue(raised, "the spy saw no raise")
+        self.assertEqual(sorted(raised - set(board_codes.CODES)), [])
+
+    def test_a_grant_refusal_has_the_reason_of_its_why(self):
+        for why in board_grant.CODE_FOR_WHY:
+            self.assertIn(board_grant.GrantRefusedError(why).reason, board_codes.CODES)
 
 
 if __name__ == "__main__":

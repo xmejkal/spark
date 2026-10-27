@@ -28,6 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_codes
 import board_doctor
 import board_envelope
 import board_grant
@@ -182,6 +183,16 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     return code
 
 
+def reason_of(refusal):
+    """The board_codes code for a refusal that deploy.py catches: the LookStop's own reason, a flash command that failed,
+    a tool that cannot be used, else an image that the evidence refuses (P433)."""
+    if isinstance(refusal, board_look.LookStop):
+        return refusal.reason
+    if isinstance(refusal, FlashError):
+        return board_codes.FLASH_FAILED
+    return board_codes.TOOL_MISSING if isinstance(refusal, tools.ToolProblem) else board_codes.IMAGE_REFUSED
+
+
 def who_said_yes(consent):
     """Whose yes it was, as a phrase, read once. getpass can find no user (OSError since Python 3.13, KeyError before
     it), and then the phrase says so; the store record names the error itself."""
@@ -202,7 +213,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
     try:
         planned = service.plan(args.port)
     except (DeployError, tools.ToolProblem) as cannot:
-        reached["refusal"] = str(cannot)
+        reached.update(refusal=str(cannot), reason=reason_of(cannot))
         shown("deploy.py: %s" % cannot, sys.stderr)
         return EXIT_COULD_NOT_RUN
     reached["plan"] = planned
@@ -228,14 +239,14 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
         if isinstance(cannot, FlashError):
             reached.update(stage=board_envelope.STAGE_FLASH, consent=consent, yes_kind=yes_kind,
                            who=who_said_yes(consent))
-        reached["refusal"] = str(cannot)
+        reached.update(refusal=str(cannot), reason=reason_of(cannot))
         lines = ["deploy.py: %s" % cannot]
         if isinstance(cannot, board_look.LookStop):  # P354: a failed read gets the doctor, a busy port its step
             lines, reached["doctor"] = board_doctor.stop_answer("deploy.py", cannot, args.project, run)
         shown("\n".join(lines), sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.GateClosedError as shut:
-        reached.update(refusal=str(shut), next_op=shut.next_op)
+        reached.update(refusal=str(shut), reason=shut.reason, next_op=shut.next_op)
         if shut.next_op == deploy_gate.NEXT_DEPLOY:
             reached["run_in_terminal"] = rerun_line(args, report.port, evidence)
             if board_grant.grant_may_cover(report, evidence):
@@ -247,7 +258,8 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
     ready = result.ready
     reached["person_action"] = download_mode.press_reset(boards.ButtonPlaces.of_project(args.project))
     if ready.verdict != ready_check.SEEN:
-        reached["refusal"] = ready.sentence
+        reached.update(refusal=ready.sentence, reason=board_codes.READY_UNKNOWN if ready.verdict == ready_check.UNKNOWN
+                       else board_codes.READY_NOT_SEEN)
     who = reached["who"]
     say("  %s\n  %s\n  %s: %s\n  board log: %s" % (result.facts_line, DEPLOYED_LINE % (result.image_sha256, who),
                                                 ready.verdict, ready.sentence, result.log_path))

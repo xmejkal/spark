@@ -128,7 +128,8 @@ class GateCase(LookCase):
         class EndsDuringTheWait(FakeConsent):
             def require_ready(self):
                 if case.slept:
-                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.")
+                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.",
+                                                    reason="grant_ended")
 
         return EndsDuringTheWait(True)
 

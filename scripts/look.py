@@ -65,7 +65,7 @@ def main(argv=None, run=subprocess.run):
         lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
         print(guard_lines("\n".join(lines)), file=sys.stderr)
         if args.json:
-            _print_json(board_envelope.look_stop_envelope(str(stop), doctor, boards.ButtonPlaces.of_project(args.project)))
+            _print_json(board_envelope.look_stop_envelope(stop, doctor, boards.ButtonPlaces.of_project(args.project)))
         return EXIT_COULD_NOT_RUN
     if args.json:
         _print_json(board_envelope.look_envelope(report, args.project.resolve(), evidence))

@@ -101,9 +101,14 @@ def envelope(tool, op, data=None, problems=(), unchecked=(), next_steps=(), trun
     return said
 
 
-def step(op, argv, why, effects=(), needs_yes=False):
-    """A step an agent may take next (§6.4.2): ids only in `argv` — a label or a reason travels in a file."""
-    return {"op": op, "argv": list(argv), "why": why, "effects": list(effects), "needs_yes": needs_yes}
+def step(op, argv, why, effects=(), needs_yes=False, needs_person=None):
+    """A step an agent may take next (§6.4.2): ids only in `argv` — a label or a reason travels in a file. `needs_person`
+    is a key only for a step that passes it: True when the person must use their hands first (press a button) and the
+    step is no use before that (P433)."""
+    said = {"op": op, "argv": list(argv), "why": why, "effects": list(effects), "needs_yes": needs_yes}
+    if needs_person is not None:
+        said["needs_person"] = needs_person
+    return said
 
 
 def page(items, start, op, argv, limit=20, budget=3400):

@@ -69,7 +69,7 @@ class LookJsonTest(JsonCase, LookScriptCase):
         code, said, _ = self.go("--json")
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["status"], said["data"]["token"], said["next"]), (1, "problems", None, []))
-        self.assertEqual(said["problems"][0]["subject"], "stop")
+        self.assertEqual((said["problems"][0]["subject"], said["problems"][0]["code"]), ("stop", "chip_differs"))
         self.assertIn("this board is an esp32c6", said["problems"][0]["sentence"])
 
     def test_a_flash_that_differs_but_fits_is_a_problem_and_keeps_its_token_and_step(self):
@@ -77,7 +77,8 @@ class LookJsonTest(JsonCase, LookScriptCase):
         self.board("firebeetle2-esp32s3")
         code, said, _ = self.go("--json", esptool="s3-flash-id-8mb.txt")
         said = self.one(code, said, "look", "look")
-        self.assertEqual((code, said["status"], said["problems"][0]["subject"]), (1, "problems", "flash"))
+        self.assertEqual((code, said["status"], said["problems"][0]["subject"], said["problems"][0]["code"]),
+                         (1, "problems", "flash", "flash_differs"))
         self.assertIsNotNone(said["data"]["token"])
         self.assertEqual(said["next"][0]["op"], "deploy")
 
@@ -87,6 +88,7 @@ class LookJsonTest(JsonCase, LookScriptCase):
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["status"], said["problems"]), (2, "could-not-run", []))
         self.assertIn("flash", said["unchecked"][0]["sentence"])
+        self.assertEqual(said["unchecked"][0]["code"], "field_unknown")
         self.assertEqual(said["next"][0]["op"], "deploy")
 
     def test_a_last_deploy_that_cannot_be_read_is_unchecked_not_ok_and_keeps_its_token_and_step(self):
@@ -97,7 +99,8 @@ class LookJsonTest(JsonCase, LookScriptCase):
         code, said, _ = self.go("--json")
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["status"], said["problems"]), (2, "could-not-run", []))
-        self.assertEqual(said["unchecked"], [{"sentence": "last deploy not checked: spark's record of it cannot be read",
+        self.assertEqual(said["unchecked"], [{"code": "last_deploy_not_checked",
+                                              "sentence": "last deploy not checked: spark's record of it cannot be read",
                                               "fix": "repair or remove %s, then run look.py again" % record}])
         self.assertTrue(said["data"]["token"])
         self.assertEqual(said["next"][0]["op"], "deploy")
@@ -107,15 +110,18 @@ class LookJsonTest(JsonCase, LookScriptCase):
         code, said, _ = self.go("--json", esptool="c6-flash-id-no-mac.txt")
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["status"]), (2, "could-not-run"))
-        self.assertEqual(said["unchecked"][-1], {"sentence": "last deploy not checked: the board's MAC was not read",
+        self.assertEqual(said["unchecked"][-1], {"code": "last_deploy_not_checked",
+                                                 "sentence": "last deploy not checked: the board's MAC was not read",
                                                  "fix": "reconnect the board so that its MAC can be read, then run look.py again"})
         self.assertTrue(said["unchecked"][-2]["sentence"].startswith("no token: "))
+        self.assertEqual(said["unchecked"][-2]["code"], "no_token")
 
     def test_no_token_is_unchecked_and_has_no_deploy_step(self):
         code, said, _ = self.go("--json")
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["status"], said["data"]["token"]), (2, "could-not-run", None))
         self.assertRegex(said["unchecked"][-1]["sentence"], "run a scenario first")
+        self.assertEqual(said["unchecked"][-1]["code"], "no_token")
         self.assertEqual(said["next"], [])
 
     def test_a_look_that_stopped_has_no_data_and_says_why(self):
@@ -123,6 +129,7 @@ class LookJsonTest(JsonCase, LookScriptCase):
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["status"], said["data"]), (2, "could-not-run", None))
         self.assertIn("no board found", said["unchecked"][0]["sentence"])
+        self.assertEqual(said["unchecked"][0]["code"], "no_port")
         self.assertIn("no board found", err)  # the text still goes to stderr
 
     def test_a_failed_read_gives_the_doctor_s_result_and_its_step_as_the_fix(self):
@@ -131,6 +138,7 @@ class LookJsonTest(JsonCase, LookScriptCase):
             code, said, err = self.go("--json", text="x", esptool="c6-flash-id.txt", fail=True)
         said = self.one(code, said, "look", "look")
         self.assertEqual((code, said["data"]["doctor"]["next_step"]), (2, "hold_boot"))
+        self.assertEqual(said["unchecked"][0]["code"], "board_not_read")
         self.assertEqual(said["unchecked"][0]["fix"], "hold the board's BOOT button (B, top right, beside the USB-C), press and release RESET (R, top left, beside the USB-C), release BOOT, and run it again. After it, press RESET once so the firmware starts. Left and right as seen with the metal shield facing you, USB-C at the top")
 
     def test_status_is_the_exit_code_for_every_fixture(self):
@@ -197,6 +205,7 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], said["data"]["stage"], self.flashed()), (2, "could-not-run", "gate", []))
         self.assertIn("no terminal", said["unchecked"][0]["sentence"])
+        self.assertEqual(said["unchecked"][0]["code"], "no_terminal")
         self.assertIsNone(said["data"]["yes"])  # no yes was given
         self.assertIsNone(said["data"]["image_sha256"])  # nothing was flashed (P213)
         self.assertIn("--token %s" % token, said["data"]["run_in_terminal"])
@@ -212,6 +221,13 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], [s["op"] for s in said["next"]]), (2, "could-not-run", ["look"]))
         self.assertEqual(said["unchecked"][0]["fix"], "run look.py again")  # no doctor: the fix of the next op
+        self.assertEqual(said["unchecked"][0]["code"], "no_look")
+
+    def test_a_token_that_is_not_this_board_s_and_this_image_s_is_stale(self):
+        self.run_the_scenario()
+        code, said, _ = self.go("--token", "aaaa-bbbb", consent=FakeConsent(True))
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["unchecked"][0]["code"], [s["op"] for s in said["next"]]), (2, "token_stale", ["look"]))
 
     def test_the_doctor_s_fix_names_the_project_s_own_buttons(self):
         self.run_the_scenario()
@@ -228,6 +244,7 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, _ = self.go("--token", "aaaa-bbbb", consent=FakeConsent(True))
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], said["problems"][0]["subject"], said["next"]), (1, "problems", "gate", []))
+        self.assertEqual(said["problems"][0]["code"], "chip_differs")
 
     def test_a_busy_port_gives_the_doctor_s_result_and_its_step_as_the_fix(self):
         self.run_the_scenario()
@@ -242,6 +259,7 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, _ = self.go("--token", "aaaa-bbbb", consent=FakeConsent(True), devs="mpremote-devs-none.txt")
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, "doctor" in said["data"], said["unchecked"][0]["fix"]), (2, False, ""))
+        self.assertEqual(said["unchecked"][0]["code"], "no_port")
 
     def test_doctor_fix_is_the_step_s_sentence_or_nothing(self):
         busy = test_deploy_gate.TheBusyPortTest.BUSY
@@ -254,12 +272,14 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, _ = self.go("--token", self.token(), consent=FakeConsent(False))
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["next"], self.flashed()), (2, [], []))
+        self.assertEqual(said["unchecked"][0]["code"], "answered_no")
 
     def test_a_failed_flash_says_the_board_may_be_erased(self):
         self.run_the_scenario()
         code, said, _ = self.go("--token", self.token(), consent=FakeConsent(True), fails=2)
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((said["data"]["stage"], said["data"]["board_state"]), ("flash", "may_be_erased"))
+        self.assertEqual(said["unchecked"][0]["code"], "flash_failed")
 
     def test_an_erase_retried_once_gives_the_usual_envelope_and_the_retry_line_on_stderr(self):
         code, said, err = self.ready(fails=1)
@@ -278,6 +298,7 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["data"]["stage"], said["data"]["look"]), (2, "plan", None))
         self.assertIn("run a scenario", said["unchecked"][0]["sentence"])
+        self.assertEqual(said["unchecked"][0]["code"], "image_refused")
 
     def test_the_dry_run_lists_the_commands_and_points_to_the_look(self):
         self.run_the_scenario()
@@ -294,6 +315,7 @@ class DeployJsonTest(JsonCase, GateCase):
         code, said, _ = self.ready()
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["problems"][0]["subject"], said["data"]["ready"]["verdict"]), (1, "ready", "ready not seen"))
+        self.assertEqual(said["problems"][0]["code"], "ready_not_seen")
 
     def test_ready_unknown_gives_a_watch_step_and_never_a_second_erase(self):
         self.unread = subprocess.CalledProcessError(1, "mpremote")
@@ -301,6 +323,8 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["status"], said["data"]["person_action"]), (2, "could-not-run", None))
         self.assertEqual([s["op"] for s in said["next"]], ["watch"])
+        self.assertEqual(said["unchecked"][0]["code"], "ready_unknown")
+        self.assertNotIn("needs_person", said["next"][0])  # nobody must press anything first
         self.assertTrue(said["data"]["repl_command"])
         self.assertEqual(said["next"][0]["argv"], said["data"]["repl_command"])
 
@@ -311,6 +335,7 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual(code, 2)
         self.assertIn("press the board's RESET (R, top left, beside the USB-C) once", said["data"]["person_action"])
         self.assertEqual(said["next"][0]["op"], "watch")
+        self.assertIs(said["next"][0]["needs_person"], True)
         self.assertIn("First the person presses the board's RESET (R, top left, beside the USB-C)", said["next"][0]["why"])
 
     def test_a_store_record_that_was_not_written_is_said_beside_the_null(self):
