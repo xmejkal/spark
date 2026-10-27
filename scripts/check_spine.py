@@ -73,7 +73,7 @@ import tabbed_page  # noqa: E402
 import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, NOT_CHECKED  # noqa: E402
 from text_guards import guard_lines  # noqa: E402
 
 from outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
@@ -704,7 +704,13 @@ def main(argv=None):
 
     # A rebuild runs the flash image the kept wokwi.toml already names, unless --firmware names another.
     simulation = simulation_dir(args)
-    firmware = args.firmware or (sim_project.firmware_in(simulation / "wokwi.toml") if simulation else None)
+    firmware = args.firmware
+    if not firmware and simulation:
+        kept = sim_project.firmware_in(simulation / "wokwi.toml")
+        firmware = kept.name
+        if kept.state == NOT_CHECKED:  # P429: the rewritten file would drop the line without a word
+            print(guard_lines("  sim/wokwi.toml: its firmware line is not kept: %s; the rebuild names no image, "
+                              "and a scenario run then names the default one" % kept.why), file=sys.stderr)
     try:
         stages = run(requirements, workdir, toolchain, project, from_library, firmware=firmware)
     except subprocess.TimeoutExpired:

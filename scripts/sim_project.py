@@ -11,10 +11,13 @@ simulation stage calls it; nothing here knows about tscircuit.
 import json
 import shutil
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import boards
 import emit_board
+import outcomes
 import parts as parts_library
 import tools
 
@@ -175,17 +178,48 @@ def stage_chips(chips, sim_dir, compiler=None):
 FIRMWARE_LINE = "firmware = "
 
 
+# --- MVP ---
+@dataclass(frozen=True)
+class FirmwareLine:
+    """
+    Value: what a wokwi.toml says of its flash image (P429). `state` is one of the three words of `outcomes` (the reader
+    rule, OC4): `name` holds the file name only when it is RECORDED, and `why` says what stopped the reader only when it
+    is NOT_CHECKED. The name is whatever string the file holds: where it may point is the run's rule, not the reader's.
+    """
+
+    state: str
+    name: Optional[str] = None
+    why: Optional[str] = None
+
+
 def firmware_in(toml):
     """
-    The flash image a kept wokwi.toml names, or None (P196's refuter): a rebuild with no --firmware keeps running it,
-    where it used to rewrite the line commented out. `wokwi_toml` writes the value as a JSON string, so it reads back so.
+    The flash image a kept wokwi.toml names, as a FirmwareLine; never raises (P196's refuter, P429). A rebuild with no
+    --firmware keeps running it, where it used to rewrite the line commented out. `wokwi_toml` writes the value as a JSON
+    string after `firmware = ` at the start of the line, and only that form is read. No file, or no line that starts with
+    `firmware`: NONE_RECORDED. A file that cannot be read, or a first such line in any other form (indented, no spaces
+    around the `=`, a value that is no JSON string, or an empty one): NOT_CHECKED, because wokwi-cli reads full TOML and
+    would take an image that this does not.
     """
     try:
         lines = Path(toml).read_text().splitlines()
-        named = [line[len(FIRMWARE_LINE):] for line in lines if line.startswith(FIRMWARE_LINE)]
-        return json.loads(named[0]) if named else None
-    except (OSError, ValueError):
-        return None
+    except FileNotFoundError:
+        return FirmwareLine(outcomes.NONE_RECORDED)
+    except (OSError, ValueError) as cannot:  # ValueError: bytes that are no text
+        return FirmwareLine(outcomes.NOT_CHECKED, why="the file cannot be read (%s)" % type(cannot).__name__)
+    for number, line in enumerate(lines, 1):
+        if not line.strip().startswith("firmware"):
+            continue
+        try:
+            name = json.loads(line[len(FIRMWARE_LINE):]) if line.startswith(FIRMWARE_LINE) else None
+        except (ValueError, RecursionError):
+            name = None
+        if isinstance(name, str) and name:
+            return FirmwareLine(outcomes.RECORDED, name)
+        return FirmwareLine(outcomes.NOT_CHECKED, why="line %d is not firmware = and a JSON string; spark reads the value as a JSON "
+                            "string, while wokwi-cli reads full TOML" % number)
+    return FirmwareLine(outcomes.NONE_RECORDED)
+# --- end MVP ---
 
 
 #: The line wokwi_toml writes when no image is named yet. wokwi-cli refuses such a file, so run_scenario.py names one here.

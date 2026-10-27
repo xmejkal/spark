@@ -8,6 +8,7 @@ sim/runs/ that name an image's sha256, and says why an image is not yet one to p
 import functools
 import hashlib
 
+import outcomes
 import run_scenario
 import sim_project
 
@@ -27,7 +28,11 @@ class ProjectImage:
         toml = project / "sim" / "wokwi.toml"
         if not toml.is_file():
             raise DeployError("no sim/wokwi.toml in %s: build with /spark:build --keep . first" % project)
-        self.path = toml.parent / (sim_project.firmware_in(toml) or run_scenario.DEFAULT_IMAGE)
+        named = sim_project.firmware_in(toml)
+        if named.state == outcomes.NOT_CHECKED:
+            raise DeployError('sim/wokwi.toml names its firmware in a form spark cannot use: %s; write it as '
+                              'firmware = "name.bin"' % named.why)
+        self.path = toml.parent / (named.name or run_scenario.DEFAULT_IMAGE)
         if not self.path.is_file():
             raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it"
                               % self.path)

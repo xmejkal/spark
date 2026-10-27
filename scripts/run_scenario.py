@@ -193,12 +193,13 @@ class ScenarioSteps:
 def image_in(toml):
     """The flash image wokwi.toml names. When the build named none, this names DEFAULT_IMAGE there first."""
     text = toml.read_text()
-    if sim_project.firmware_in(toml) is None and sim_project.UNNAMED_FIRMWARE in text:
+    if sim_project.firmware_in(toml).state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE in text:
         toml.write_text(text.replace(sim_project.UNNAMED_FIRMWARE, "\n".join(sim_project.firmware_lines(DEFAULT_IMAGE))))
     named = sim_project.firmware_in(toml)
-    if named is None and any(line.lstrip().startswith("firmware") for line in toml.read_text().splitlines()):
-        raise ValueError('wokwi.toml names its firmware in a form this cannot read: write it as firmware = "name.bin"')
-    return toml.parent / (named or DEFAULT_IMAGE)
+    if named.state == outcomes.NOT_CHECKED:
+        raise ValueError('wokwi.toml names its firmware in a form this cannot read: %s; write it as firmware = "name.bin"'
+                         % named.why)
+    return toml.parent / (named.name or DEFAULT_IMAGE)
 
 
 def verdict(code, serial, out, err, timeout_ms):
