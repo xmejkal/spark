@@ -27,7 +27,7 @@ STEPS = [
      "Listing and writing entries ran. Your words to entries, and the DFRobot import, did not.", "partly"),
     ("Idea", "/spark:idea", "Describe the gadget in your own words.",
      "Needs matched to your drawer, a part per need, and a requirements file.",
-     "The scripts ran from needs to a requirements file. A board offers its own parts for a need. The conversation was not run.", "partly"),
+     "The scripts ran from needs to a requirements file. A board offers its own parts for a need, and says what a run cannot test of them. The conversation was not run.", "partly"),
     ("Research", "/spark:research", "Pick a part for a real gap.", "A part record with a source for every fact.",
      "The library search runs. Research by agents was not run.", "partly"),
     ("Build", "/spark:build", "Run it on the requirements file.",

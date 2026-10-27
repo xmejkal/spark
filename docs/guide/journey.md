@@ -1191,6 +1191,9 @@ for a need that its own LED, buttons or display serve, and `pins.py` names a dis
 The board's `power` block can also name its charger, its voltage regulator and its battery input, and `--match` offers the
 board for a need of `power` / `charger`, `power` / `voltage regulator` or `connect` / `battery input`. A pin that reads the
 battery is `ONBOARD_BATTERY_SENSE` in `pins.py`, with its divider, and `--match` offers it for `sense` / `battery level`.
+Since [P397](https://github.com/xmejkal/spark/issues/513), `--match` prints under such a board what a passed run does not test of
+that part, and `--pick` puts the same sentences in a note: the XIAO's BOOT button has no pin in its Wokwi definition, so a scenario
+cannot press it. The note names the bench as the test, and a part you own that has a Wokwi model as the other choice.
 A number typed in the board's console sets the period in milliseconds, and `steady`, `heartbeat` or `random` picks the
 pattern. Its scenario passed in Wokwi. The PO ran deploy.py in his own terminal and typed yes. The esptool lines are cut
 here.

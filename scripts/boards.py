@@ -515,14 +515,12 @@ def read_simulated_part(board):
     return SimulatedPart(outcomes.RECORDED, board_id, gpios)
 
 
-def gpio_limits(board, checked):
-    """
-    The GPIOs of the `checked` entries, (spec, entry) pairs, that the board's Wokwi definition gives no pin, as
-    (component, sentence) limits. No pair gives []. A record that cannot be compared gives its one "not checked" line.
-    """
-    if not checked:
-        return []
-    part = read_simulated_part(board)
+#: The sentence that ends a limit about a part the build did not look at, or a part no scenario reaches (P396, P397).
+BENCH = "Test it on the board."
+
+
+def _gpio_limits(part, checked):
+    """gpio_limits for a definition already read: the GPIOs of the `checked` (spec, entry) pairs that `part` gives no pin."""
     if part.state != outcomes.RECORDED:
         return [(ONBOARD_GPIOS, part.why_not_read())]
     said = []
@@ -532,14 +530,21 @@ def gpio_limits(board, checked):
             why = part.why_not_simulated(gpio)
             if why:
                 said.append(("%s (GPIO%d)" % (spec.constant, gpio),
-                             "%s, so spark knows no way for a scenario to %s it. Test it on the board."
-                             % (why, spec.scenario_verb)))
+                             "%s, so spark knows no way for a scenario to %s it. %s" % (why, spec.scenario_verb, BENCH)))
     return said
+
+
+def gpio_limits(board, checked):
+    """
+    The GPIOs of the `checked` entries, (spec, entry) pairs, that the board's Wokwi definition gives no pin, as
+    (component, sentence) limits. No pair gives []. A record that cannot be compared gives its one "not checked" line.
+    """
+    return _gpio_limits(read_simulated_part(board), checked) if checked else []
 
 
 def onboard_limits(board):
     """
-    What a passed run does not test of the board's own parts, as (component, sentence) limits (P396, P389). An LED or
+    What a passed run does not test of the board's own parts, as (component, sentence) pairs (P396, P389). An LED or
     button that its Wokwi definition gives no pin: spark knows no way for a scenario to reach it. A record that cannot be
     compared says "not checked", in the list and never as a failure: it is what the build did not look at, as a
     stand-in's sentence is what the simulation cannot show (P37). A part no scenario reaches (the display, the
@@ -549,6 +554,29 @@ def onboard_limits(board):
     entries = onboard_entries(board)
     said = gpio_limits(board, [(spec, entry) for _, spec, entry in entries if spec.scenario_verb])
     return said + [(spec.constant, spec.not_in_diagram) for _, spec, _ in entries if spec.not_in_diagram]
+
+
+def role_limits(board, roles, definitions=None, key=None):
+    """
+    {role: [(component, sentence)]} for each of `roles` that the board's `pin_roles` names, in table order (P397): the
+    pairs `onboard_limits` gives for that role alone. The Wokwi definition is read only for a role with a scenario verb,
+    and once per board when the caller passes the same `definitions`, a dict from `key` to the SimulatedPart already read.
+    `key` names the board for that dict: the caller's own (an offer's key), else the record's `id`, which a record may lack.
+    A verb role whose definition spark could not compare has the one ONBOARD_GPIOS pair, as in `onboard_limits`.
+    """
+    definitions = {} if definitions is None else definitions
+    key = board.get("id") if key is None else key
+    said = {}
+    for role, spec, entry in onboard_entries(board):
+        if role not in roles:
+            continue
+        if spec.scenario_verb:
+            if key not in definitions:
+                definitions[key] = read_simulated_part(board)
+            said[role] = _gpio_limits(definitions[key], [(spec, entry)])
+        else:
+            said[role] = [(spec.constant, spec.not_in_diagram)]
+    return said
 # --- end MVP ---
 
 

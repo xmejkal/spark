@@ -41,8 +41,10 @@
 <text x="450" y="766" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The scripts ran from needs</text>
 <text x="450" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">to a requirements file. A</text>
 <text x="450" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">board offers its own parts</text>
-<text x="450" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">for a need. The</text>
-<text x="450" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">conversation was not run.</text>
+<text x="450" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">for a need, and says what a</text>
+<text x="450" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">run cannot test of them.</text>
+<text x="450" y="936" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The conversation was not</text>
+<text x="450" y="970" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">run.</text>
 <circle cx="991" cy="276" r="36" fill="#ffdc4a"/>
 <text x="991" y="287" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">3</text>
 <text x="991" y="358" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Research</text>

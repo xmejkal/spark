@@ -10,7 +10,7 @@
   "find": "drawer.linkable(project), drawer.entries(), [], [], store.project_name(project)",
   "replace": "drawer.linkable(project), drawer.entries(), [], [], None"},
  {"file": "scripts/needs.py", "name": "a candidate loses its empty proof",
-  "find": "\"broken\": False, \"proof\": []}", "replace": "\"broken\": False}"},
+  "find": "\"broken\": False, \"proof\": [], \"limits\": []}", "replace": "\"broken\": False, \"limits\": []}"},
  {"file": "scripts/needs.py", "name": "a candidate says what every verb of it does",
   "find": "what=sorted({f[\"what\"] for f in functions if f.get(\"does\") == need[\"does\"]})",
   "replace": "what=sorted({f[\"what\"] for f in functions})"},
