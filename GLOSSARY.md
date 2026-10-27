@@ -24,6 +24,15 @@ print `status: ok`, exit 0, and hand you a board where every finding it emitted 
 `could-not-run` — it had examined nothing and said "fine". That is worse than no check at all,
 because you now believe something.
 
+### not checked — what a reader says when it could not look
+
+A **reader** of one thing that may be absent (the board's Wokwi definition, a deploy record, a log's step counts) never
+raises. It returns a Value with a `state`: `recorded` (it read the thing), `none-recorded` (it looked and the thing is
+not there) or `not-checked` (it could not look, and `why` says what stopped it). A `not-checked` is said aloud as
+`not checked: <why>`, goes to an envelope's `unchecked` list, and never reads as a pass or as a fault of the board. The
+rule is in `scripts/outcomes.py`. P397 moved the board's Wokwi definition under it: `none-recorded` when the board
+record names no definition, `not-checked` when the store does not hold it as named.
+
 ### look and token — `look.py`
 
 A **look** is a read of the board on USB that changes nothing, compared with the project's board record. The board
