@@ -208,7 +208,7 @@ def board_limits(need, record, functions, read=None):
     """
     said = boards.role_limits(record, serving_roles(need, functions), read)
     pairs = [(component, sentence) for pairs in said.values() for component, sentence in pairs]
-    sentences = [sentence + (" " + boards.BENCH if component == boards.ONBOARD_GPIOS else "") for component, sentence in pairs]
+    sentences = [("%s. %s" % (sentence, boards.BENCH)) if component == boards.ONBOARD_GPIOS else sentence for component, sentence in pairs]
     no_pin = any(boards.ONBOARD_ROLES[role].scenario_verb and pairs and pairs[0][0] != boards.ONBOARD_GPIOS
                  for role, pairs in said.items())
     return Limits(list(dict.fromkeys(sentences)), no_pin)

@@ -1049,6 +1049,45 @@ class TheBoardsOwnLimitsTest(unittest.TestCase):
         self.assertEqual(boards.onboard_limits(board),
                          [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
 
+    # --- P397: the limits of one role, for the note of a pick
+    NOT_KEPT = ("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 "
+                                 "differs, or it does not parse")
+
+    def test_a_role_has_the_pairs_that_onboard_limits_gives_for_it_alone(self):
+        board = kept_definition_board()
+        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_BUTTON}), {boards.ONBOARD_BUTTON: [self.BUTTON]})
+        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_LED}), {boards.ONBOARD_LED: []})
+        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_LED, boards.ONBOARD_BUTTON}),
+                         {boards.ONBOARD_LED: [], boards.ONBOARD_BUTTON: [self.BUTTON]})
+
+    def test_a_role_the_board_does_not_name_or_the_caller_did_not_ask_for_is_not_in_the_answer(self):
+        board = kept_definition_board()
+        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_DISPLAY, boards.ONBOARD_BATTERY_SENSE}), {})
+        self.assertEqual(boards.role_limits(board, set()), {})
+
+    def test_a_part_no_scenario_reaches_has_its_sentence_and_the_definition_is_not_read_for_it(self):
+        board = json.loads(self.TDISPLAY.read_text())
+        with mock.patch.object(boards, "read_simulated_part", side_effect=AssertionError("read")):
+            self.assertEqual(boards.role_limits(board, {boards.ONBOARD_DISPLAY, boards.ONBOARD_BATTERY_SENSE}),
+                             {boards.ONBOARD_DISPLAY: [self.DISPLAY], boards.ONBOARD_BATTERY_SENSE: [self.BATTERY]})
+
+    def test_a_definition_spark_cannot_compare_gives_each_verb_role_its_not_checked_pair(self):
+        board = kept_definition_board()
+        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_LED, boards.ONBOARD_BUTTON}),
+                         {boards.ONBOARD_LED: [self.NOT_KEPT], boards.ONBOARD_BUTTON: [self.NOT_KEPT]})
+
+    def test_the_definition_is_read_once_for_every_role_and_once_over_calls_that_share_a_dict(self):
+        board = kept_definition_board()
+        with mock.patch.object(boards, "read_simulated_part", wraps=boards.read_simulated_part) as read:
+            boards.role_limits(board, {boards.ONBOARD_LED, boards.ONBOARD_BUTTON})
+        self.assertEqual(read.call_count, 1)
+        with mock.patch.object(boards, "read_simulated_part", wraps=boards.read_simulated_part) as read:
+            shared = {}
+            boards.role_limits(board, {boards.ONBOARD_LED}, shared)
+            boards.role_limits(board, {boards.ONBOARD_BUTTON}, shared)
+        self.assertEqual((read.call_count, list(shared)), (1, ["xiao-esp32-c6"]))
+
 
 # --- end MVP ---
 

@@ -514,7 +514,8 @@ class TheMatcherTest(unittest.TestCase):
         found = {c["id"] or c["entry"]: c for c in self.alone({"id": "heat", "does": "sense", "what": "temperature"})["candidates"]}
         self.assertEqual(found["ntc"], {"id": None, "kind": None, "entry": "ntc", "owes": [], "broken": False, "proof": [], "in": "drawer",
                                         "label": "an NTC thermistor", "what": ["temperature"], "what_matches": True,
-                                        "score": 1.0, "why": ["same words"], "held_by": [], "owned": 3, "free": 3, "unsure": False})
+                                        "score": 1.0, "why": ["same words"], "held_by": [], "owned": 3, "free": 3, "unsure": False,
+                                        "limits": []})
         combo = found["y-combo"]
         self.assertEqual((combo["kind"], combo["entry"], combo["in"], combo["label"], combo["what"], combo["proof"], combo["what_matches"]),
                          ("part", None, "catalog", "A combo board", ["temperature"], [], True))
@@ -1403,6 +1404,201 @@ def a_project_with_picks(picks):
     (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
         {"id": need_id, "does": "sense", "what": "x", "pick": pick} for need_id, pick in picks]}))
     return home, project
+
+
+# --- MVP --- P397: a pick, or --match, that gives a need to a board's own part says what a passed run does not test of it
+class TheBoardsLimitsNoteTest(unittest.TestCase):
+    """P397: the note of a pick that gives a button, a light or a display to the board, and the same sentences in --match."""
+
+    NEEDS = {"press": {"id": "press", "does": "input", "what": "button"}, "blink": {"id": "blink", "does": "indicate", "what": "light"},
+             "show": {"id": "show", "does": "indicate", "what": "display"}, "charge": {"id": "charge", "does": "power", "what": "charger"},
+             "joy": {"id": "joy", "does": "input", "what": "joystick"}}
+    PINS = '{"pins": {"D0": {"target": "GPIO0"}, "$gpio15": {"target": "GPIO15"}}}'
+    NO_PIN = ("the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9, so spark knows no way for a scenario to press it. "
+              "Test it on the board.")
+    NOT_KEPT = ("not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 differs, or it "
+                "does not parse. Test it on the board.")
+    NOT_NAMED = "not checked: the board record names no Wokwi definition. Test it on the board."
+    DISPLAY = ("spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. "
+               "Test it on the board.")
+    OTHER = "The other choice: tactile-button on a header pad, which the simulation can reach."
+    ALL_HELD = "Every other candidate for press is held by another project."
+    TDISPLAY = ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json"
+
+    def setUp(self):
+        self.home, self.project = a_store_with_a_drawer(), Path(tempfile.mkdtemp()) / "plant-alarm"
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        run(["--needs-set", str(self.project), a_file(list(self.NEEDS.values()))])
+        self.keep_the_xiao(self.PINS)
+
+    def keep_the_xiao(self, text, edit=lambda board: None):
+        """The XIAO's record in the project, with the Wokwi definition `text` kept in the scratch store under its sha256."""
+        board = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
+        board["documents"][boards.WOKWI_DEFINITION].update(sha256=store.keep(text.encode(), "wokwi-test.board.json"),
+                                                           file="wokwi-test.board.json")
+        edit(board)
+        (self.project / "boards").mkdir(parents=True, exist_ok=True)
+        (self.project / "boards" / "xiao-esp32-c6.json").write_text(json.dumps(board))
+
+    def keep_the_t_display(self):
+        (self.project / "boards").mkdir(parents=True, exist_ok=True)
+        shutil.copy(self.TDISPLAY, self.project / "boards" / "lilygo-t-display.json")
+
+    def own(self, entry, part_id, simulated=True, **fields):
+        """A button part in the project, owned in the drawer under `entry`, with a Wokwi stand-in unless `simulated` is False."""
+        record = {"schema": 1, "id": part_id, "name": "A button " + part_id, "kind": "button"}
+        record.update({"simulation": {"wokwi": {"part": "wokwi-pushbutton", "pins": {"A": "1.l", "B": "2.l"}, "stand_in": "x"}}} if simulated else {})
+        (self.project / "parts").mkdir(parents=True, exist_ok=True)
+        (self.project / "parts" / (part_id + ".json")).write_text(json.dumps(record))
+        (self.home / "drawer" / (entry + ".json")).write_text(json.dumps(dict({"schema": 1, "label": entry, "count": 2, "is": {"part": part_id}},
+                                                                              **fields)))
+
+    def hold_the_bag_of_buttons(self):
+        """All of the person's tactile buttons are held by another project."""
+        (self.home / "drawer" / "buttons.json").write_text(json.dumps({"schema": 1, "label": "a bag of buttons", "count": 3,
+                                                                       "is": {"part": "tactile-button"}, "used_in": {"smartbin-local": 3}}))
+
+    def pick(self, *picks):
+        """A dry-run pick's notes about a board, as {subject: sentence}."""
+        said, code = run(["--pick", str(self.project)] + list(picks) + ["--dry-run"])
+        self.assertEqual((code, said["status"]), (0, "ok"), said)
+        return {note["subject"]: note["sentence"] for note in said["notes"] if note["subject"] and note["subject"].startswith("board ")}
+
+    def matched(self, need_id, board="xiao-esp32-c6"):
+        """The board's candidate for one need, matched alone, as --match --json says it."""
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [self.NEEDS[need_id]]}))
+        said, _ = run(["--match", str(self.project)])
+        return next(c for c in said["data"]["needs"][0]["candidates"] if c["id"] == board)
+
+    def test_the_pick_prints_the_bench_and_the_first_candidate_with_free_stock(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--pick", str(self.project), "press=xiao-esp32-c6", "--dry-run"])
+        self.assertIn("  board xiao-esp32-c6 for press: " + self.NO_PIN + " " + self.OTHER, out.getvalue().splitlines())
+
+    def test_a_pin_on_the_buttons_gpio_gives_no_note_and_no_pin_gives_one(self):
+        self.assertEqual(list(self.pick("press=xiao-esp32-c6")), ["board xiao-esp32-c6 for press"])
+        self.keep_the_xiao('{"pins": {"D9": {"target": "GPIO9"}, "$gpio15": {"target": "GPIO15"}}}')
+        self.assertEqual((self.pick("press=xiao-esp32-c6"), self.matched("press")["limits"]), ({}, []))
+
+    def test_an_led_need_on_the_xiao_has_no_note_while_its_gpio_has_a_pin_and_one_when_it_has_none(self):
+        self.assertEqual((self.pick("blink=xiao-esp32-c6"), self.matched("blink")["limits"]), ({}, []))
+        self.keep_the_xiao(self.PINS, lambda board: board["pin_roles"]["onboard_led"].update(gpio=[3]))
+        sentence = ("the Wokwi definition of xiao-esp32-c6 has no pin on GPIO3, so spark knows no way for a scenario to read it. "
+                    "Test it on the board.")
+        self.assertEqual(self.pick("blink=xiao-esp32-c6"), {"board xiao-esp32-c6 for blink": sentence})
+        self.assertEqual(self.matched("blink")["limits"], [sentence])
+
+    def test_the_picked_board_s_sentence_is_the_builds_sentence(self):
+        board = json.loads((self.project / "boards" / "xiao-esp32-c6.json").read_text())
+        built = [sentence for _, sentence in boards.onboard_limits(board)]
+        self.assertEqual(built, [self.NO_PIN])
+        self.assertTrue(self.pick("press=xiao-esp32-c6")["board xiao-esp32-c6 for press"].startswith(built[0]))
+
+    def test_the_other_choice_is_the_first_owned_part_with_free_stock_that_the_simulation_can_reach(self):
+        self.hold_the_bag_of_buttons()
+        self.own("seen", "x-seen")
+        self.assertEqual(self.pick("press=xiao-esp32-c6"),
+                         {"board xiao-esp32-c6 for press": self.NO_PIN + " " + self.OTHER.replace("tactile-button", "x-seen")})
+
+    def test_a_part_out_of_the_simulation_is_not_the_other_choice_and_leaves_the_others_not_all_held(self):
+        self.hold_the_bag_of_buttons()
+        self.own("unseen", "x-unseen", simulated=False)
+        self.assertEqual(self.pick("press=xiao-esp32-c6"), {"board xiao-esp32-c6 for press": self.NO_PIN})
+
+    def test_every_owned_candidate_held_by_another_project_is_said_so_and_none_is_named(self):
+        self.hold_the_bag_of_buttons()
+        self.assertEqual(self.pick("press=xiao-esp32-c6"), {"board xiao-esp32-c6 for press": self.NO_PIN + " " + self.ALL_HELD})
+
+    def test_a_part_to_get_is_never_the_other_choice_and_nothing_owned_says_nothing_of_a_choice(self):
+        for entry in ("buttons", "board"):
+            (self.home / "drawer" / (entry + ".json")).unlink()
+        self.assertEqual(self.pick("press=xiao-esp32-c6"), {"board xiao-esp32-c6 for press": self.NO_PIN})
+
+    def test_a_footprint_stop_is_said_before_the_note_of_the_button(self):
+        self.keep_the_xiao(self.PINS, lambda board: board["physical"].pop("header"))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--pick", str(self.project), "press=xiao-esp32-c6", "--dry-run"])
+        self.assertEqual([line for line in out.getvalue().splitlines() if line.startswith("  board ")],
+                         ["  board xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry in its board file",
+                          "  board xiao-esp32-c6 for press: " + self.NO_PIN + " " + self.OTHER])
+
+    def test_a_board_whose_definition_is_not_kept_says_not_checked_then_the_bench_and_no_other_choice(self):
+        (self.project / "boards" / "xiao-esp32-c6.json").unlink()  # the library's XIAO: its definition is not in this store
+        said, _ = run(["--pick", str(self.project), "press=xiao-esp32-c6", "--dry-run"])
+        note = next(note for note in said["notes"] if note["subject"] == "board xiao-esp32-c6 for press")
+        self.assertEqual(note, {"subject": "board xiao-esp32-c6 for press", "sentence": self.NOT_KEPT})
+        self.assertTrue(note["sentence"].startswith("not checked: spark's store"), "the subject ends at the first colon, so the sentence stays whole")
+
+    def test_a_board_that_names_no_definition_says_that_and_the_bench(self):
+        self.keep_the_t_display()
+        self.assertEqual(self.pick("press=lilygo-t-display"), {"board lilygo-t-display for press": self.NOT_NAMED})
+
+    def test_a_display_need_gets_the_display_sentence_alone_and_a_power_need_gets_none(self):
+        self.keep_the_t_display()
+        self.assertEqual(self.pick("show=lilygo-t-display", "charge=lilygo-t-display"),
+                         {"board lilygo-t-display for show": self.DISPLAY})
+        self.assertEqual(self.matched("show", "lilygo-t-display")["limits"], [self.DISPLAY])
+        self.assertEqual(self.matched("charge", "lilygo-t-display")["limits"], [])
+
+    def test_a_board_admitted_by_the_verb_alone_and_a_part_have_no_limits(self):
+        self.assertEqual(self.matched("joy")["limits"], [])
+        self.assertEqual(self.matched("press", "tactile-button")["limits"], [])
+        self.assertEqual(self.matched("press")["limits"], [self.NO_PIN])
+
+    def test_the_text_of_match_shows_each_sentence_on_a_line_under_the_board(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [self.NEEDS["press"]]}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--match", str(self.project)])
+        lines = out.getvalue().splitlines()
+        after = lines.index(next(line for line in lines if "xiao-esp32-c6 (project)" in line))
+        self.assertEqual(lines[after + 1], "          " + self.NO_PIN)
+
+    def test_a_not_checked_sentence_in_match_is_followed_by_the_bench(self):
+        (self.project / "boards" / "xiao-esp32-c6.json").unlink()
+        self.assertEqual(self.matched("press")["limits"], [self.NOT_KEPT])
+
+    def test_the_definition_of_a_board_is_read_once_for_every_need_of_a_match_and_of_a_pick(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [self.NEEDS["press"], self.NEEDS["blink"]]}))
+        with mock.patch.object(boards, "read_simulated_part", wraps=boards.read_simulated_part) as read:
+            run(["--match", str(self.project)])
+        self.assertEqual(sorted(call.args[0]["id"] for call in read.call_args_list), ["firebeetle2-esp32s3", "xiao-esp32-c6"])
+        with mock.patch.object(boards, "read_simulated_part", wraps=boards.read_simulated_part) as read:
+            run(["--pick", str(self.project), "press=xiao-esp32-c6", "blink=xiao-esp32-c6", "--dry-run"])
+        self.assertEqual([call.args[0]["id"] for call in read.call_args_list], ["xiao-esp32-c6"])
+
+    def test_a_need_is_served_by_the_boards_part_of_its_verb_that_shares_any_word_of_the_need(self):
+        functions = [{"does": "input", "what": "onboard button", "role": "onboard_button"},
+                     {"does": "indicate", "what": "onboard LED light", "role": "onboard_led"},
+                     {"does": "indicate", "what": "onboard display screen", "role": "onboard_display"},
+                     {"does": "power", "what": "onboard charger"}]
+        for does, what, roles in (("input", "press button", ["onboard_button"]), ("input", "input button", ["onboard_button"]),
+                                  ("input", "boot button", ["onboard_button"]), ("indicate", "status led", ["onboard_led"]),
+                                  ("indicate", "light", ["onboard_led"]), ("indicate", "screen", ["onboard_display"]),
+                                  ("input", "joystick", []), ("sense", "button", []), ("power", "charger", [])):
+            with self.subTest(need=(does, what)):
+                self.assertEqual(needs.serving_roles({"does": does, "what": what}, functions), roles)
+
+    def test_the_sentences_cost_the_page_of_match_what_they_weigh_and_no_need_is_lost(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            dict(self.NEEDS["press"], id="press%d" % number) for number in range(6)]}))
+        (self.project / "boards" / "xiao-esp32-c6.json").unlink()
+        pages, seen, start = [], [], 0
+        while True:
+            said, _ = run(["--match", str(self.project)] + (["--from", str(start)] if start else []))
+            pages.append(len(json.dumps(said["data"]["needs"])))
+            seen += [need["need"] for need in said["data"]["needs"]]
+            if not (said["truncated"] and said["truncated"]["next"]):
+                break
+            start = len(seen)
+        self.assertEqual(seen, ["press%d" % number for number in range(6)])
+        self.assertEqual(len(pages), 3, "each need weighs a sentence for each board, so a page holds two needs and not three")
+        self.assertTrue(all(size <= 3400 for size in pages), pages)
+# --- end MVP ---
 
 
 class TheRequirementsFileTest(unittest.TestCase):
