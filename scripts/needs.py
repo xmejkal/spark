@@ -140,12 +140,6 @@ def _counts(holding, mine=None):
     return owned, max(owned - held, 0), unsure
 
 
-def stops_at_footprint(board):
-    """Whether a board stops the chain at the footprint stage (C-7, P121): its file has no header geometry to draw the footprint
-    from (`emit_footprint.footprint_gaps`) — or it is no board file at all. A board owes nothing; this is what it lacks."""
-    return not isinstance(board, dict) or bool(emit_footprint.footprint_gaps(board))
-
-
 def offers(known, entries):
     """
     Every offer in the store (P211) as [(Offer, context)]: each readable record with the live drawer entries that say they
@@ -231,7 +225,10 @@ def _candidate(need, fit, context, mine=None):
                 "broken": bool(parts._shape_problems(boards.validate, record, context["path"], "board definition"))
                 if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
         if offer.kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
-            said["stops_at"] = "footprint" if stops_at_footprint(record) else None
+            said["stops_at"] = "footprint" if emit_footprint.footprint_gaps(record) else None
+            if said["stops_at"]:  # P411: a board that builds gains no key
+                said["stops_why"] = emit_footprint.why_no_footprint(record)  # the list, for Claude
+                said["stop_line"] = emit_footprint.footprint_stop_line(record)  # the text shows it; `--match` drops it from the JSON
     return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": [], "limits": []}, **said,
                 what=sorted({f["what"] for f in offer.functions if f.get("does") == need["does"]}),
                 what_matches=fit.exact, score=fit.score, why=fit.why, about=offer.about,
@@ -446,7 +443,7 @@ def plan_pick(project, given, passed_over=()):
     # F12 (C-7): a board this pick picks that stops the chain at the footprint stage is said, never refused
     for key in sorted({key for need_id in picked for pick in picked[need_id] for kind, key in pick.items() if kind == "board"}):
         stop = boards.footprint_stop(key, project)
-        notes += ["board %s %s" % (key, stop)] if stop else []
+        notes += ["board %s: %s" % (key, stop)] if stop else []
     notes += _limits_notes(after, picked, rows, entries, name)
     changes = []
     for entry_id, entry in sorted(entries.items()):
@@ -640,11 +637,10 @@ def _board_problems(board_picks, unfiled, project):
         return []
     if unfiled and not board_picks:
         filed = boards.records(project)
-        stopping = [board_id for board_id, (_, path) in filed.items() if stops_at_footprint(parts._parse(path))]
-        builds = [board_id for board_id in filed if board_id not in stopping]  # C-7: a board that stops is never suggested
-        said = ("spark has one that builds for %s" % ", ".join(builds) if builds else "spark has no board file that builds") + (
-            "; %s stop%s at the footprint stage (P121) — no header geometry in %s board file" % (
-                ", ".join(stopping), "s" if len(stopping) == 1 else "", "its" if len(stopping) == 1 else "their") if stopping else "")
+        stopping = {board_id: emit_footprint.footprint_stop_line(parts._parse(path)) for board_id, (_, path) in filed.items()}
+        builds = [board_id for board_id in filed if not stopping[board_id]]  # C-7: a board that stops is never suggested
+        said = "; ".join(["spark has one that builds for %s" % ", ".join(builds) if builds else "spark has no board file that builds"]
+                         + ["%s %s" % (board_id, line) for board_id, line in stopping.items() if line])
         return [parts._problem(key, "picked as the board, but a board needs a board file — a record in boards/ — before spark can "
                                     "build with it, and it has none; %s" % said,
                                '%swrite a board file for %s first (docs/guide/how-it-works.md, "Your own dev board")'

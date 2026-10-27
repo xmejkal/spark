@@ -81,43 +81,103 @@ def pad_diameter_mm(hole_mm, rules=None):
 
 
 def _missing(physical, header):
-    """Every field this script needs and cannot derive, named individually."""
+    """Every field this script needs and cannot derive, named individually, as (field, note) with "" for a field that needs no note."""
     gaps = []
     if not header:
-        return ["physical.header (no header geometry at all)"]
+        return [("physical.header", "no header geometry at all")]
     for field in ("rows", "pins", "pitch_mm", "row_spacing_mm", "first_pad_from_edge_mm"):
         if header.get(field) in (None, ""):
-            gaps.append("physical.header.%s" % field)
+            gaps.append(("physical.header.%s" % field, ""))
     for field in ("width_mm", "height_mm"):
         if physical.get(field) in (None, ""):
-            gaps.append("physical.%s" % field)
+            gaps.append(("physical.%s" % field, ""))
     if not physical.get("header_order"):
-        gaps.append("physical.header_order (which label is on which pad — not derivable)")
+        gaps.append(("physical.header_order", "which label is on which pad — not derivable"))
     if not physical.get("footprint_export"):
-        gaps.append("physical.footprint_export (what the module should be called)")
+        gaps.append(("physical.footprint_export", "what the module should be called"))
     return gaps
 
 
-def footprint_gaps(board):
-    """
-    What a board's file lacks for its footprint to be generated (`_missing`), or [] when nothing — the one rule by which this
-    script refuses, and by which `--match`, `--audit` and `--requirements` say a board stops the chain at the footprint stage
-    (C-7, P121) before anyone builds. A `physical` or a `header` that is no object is no geometry.
-    """
+def _gaps(board):
+    """`_missing` of a board; a board that is no object lacks all of it. A `physical` or a `header` that is no object is no geometry."""
+    board = board if isinstance(board, dict) else {}
     physical = board.get("physical") if isinstance(board.get("physical"), dict) else {}
     header = physical.get("header")
     return _missing(physical, header if isinstance(header, dict) else None)
 
 
-# --- MVP ---
+def footprint_gaps(board):
+    """
+    What a board's file lacks for its footprint to be generated (`_missing`), each as its field and its note in parentheses, or
+    [] when nothing — the one rule by which this script refuses, and by which `--match`, `--audit` and `--requirements` say a
+    board stops the chain at the footprint stage (C-7, P121) before anyone builds.
+    """
+    return ["%s (%s)" % (field, note) if note else field for field, note in _gaps(board)]
+
+
+# --- MVP --- (P411) the gaps `footprint_gaps` finds are said two ways, each from the same facts: the list, for the build and
+# for Claude, and the line, for a row that says where a board stops among many.
+#: The line's sentence (P411): after a board's id or its row, the stage and what the board file lacks.
+STOP_LINE_MESSAGE = "stops at the footprint stage (P121): its board file lacks %s"
+
+
 def why_no_footprint(board):
-    """Why no footprint can be generated for `board`, naming each gap of `footprint_gaps`, or None when one can. The one
-    sentence of this refusal, for this script, `emit_board` and the spine's footprint stage."""
+    """The list: why no footprint can be generated for `board`, naming each gap of `footprint_gaps` with its note, or None when
+    one can. The sentence of this refusal for this script, `emit_board` and the spine's footprint stage, and the `stops_why` of
+    a `--match` candidate and an `--audit` row."""
     gaps = footprint_gaps(board)
     if not gaps:
         return None
     return ("%s cannot have a footprint generated — these are not recorded, and none of them can be derived from the "
-            "rest:\n  %s" % (board.get("id"), "\n  ".join(gaps)))
+            "rest:\n  %s" % (board.get("id") if isinstance(board, dict) else None, "\n  ".join(gaps)))
+
+
+def footprint_stop_line(board):
+    """The line: one sentence for a row in a list, with no id (the row puts its own first) and no notes — the field when one
+    is missing, else how many and the first — or None when a footprint can be generated. `why_no_footprint` has the list."""
+    fields = [field for field, _ in _gaps(board)]
+    if not fields:
+        return None
+    return STOP_LINE_MESSAGE % (fields[0] if len(fields) == 1 else "%d fields (first: %s)" % (len(fields), fields[0]))
+
+
+#: What a board whose header geometry and pad order do not fit each other is told (P411): `main` and the spine's footprint stage.
+DISAGREES_MESSAGE = "the board definition disagrees with itself: %s"
+
+
+def _wrong_kind(physical):
+    """The first field of a complete board file that holds a value of the wrong kind, said with its name, or None. The board
+    file's validation checks no header geometry, so `pads` and `render` would raise a TypeError on a pitch written as text."""
+    header = physical["header"]
+    numbers = [("physical.%s" % field, physical[field]) for field in ("width_mm", "height_mm")] + [
+        ("physical.header.%s" % field, header[field]) for field in ("pitch_mm", "row_spacing_mm", "first_pad_from_edge_mm")]
+    for name, value in numbers:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return "%s is not a number" % name
+    pins, order = header["pins"], physical["header_order"]
+    if not isinstance(pins, list) or not all(isinstance(count, int) and not isinstance(count, bool) for count in pins):
+        return "physical.header.pins is not a list of whole numbers"
+    if not isinstance(order, dict) or not all(isinstance(labels, list) for key, labels in order.items() if not key.startswith("//")):
+        return "physical.header_order is not an object with a list of labels for each row"
+    return None
+
+
+def why_header_disagrees(board, rules=None):
+    """
+    Why the footprint of `board` cannot be drawn although nothing is missing, or None when it can (or when something is
+    missing: `why_no_footprint` says that): a value of the wrong kind, which is named, or a pad order that does not fit the
+    pin counts.
+    """
+    if footprint_gaps(board):
+        return None
+    wrong = _wrong_kind(board["physical"])
+    if wrong:
+        return DISAGREES_MESSAGE % wrong
+    try:
+        render(board, rules)
+    except (ValueError, KeyError, TypeError) as exc:  # TypeError: a project's rules value of the wrong kind reaches it until P434 (#576) checks rules values
+        return DISAGREES_MESSAGE % exc
+    return None
 
 
 def pads(board):
@@ -225,10 +285,10 @@ def main(argv=None):
         return _report(args, EXIT_COULD_NOT_RUN, refusal)
 
     rules = design.rules_in(project)
-    try:
-        text = render(board, rules)
-    except (ValueError, KeyError) as exc:
-        return _report(args, EXIT_PROBLEMS, "the board definition disagrees with itself: %s" % exc)
+    disagreement = why_header_disagrees(board, rules)
+    if disagreement:
+        return _report(args, EXIT_PROBLEMS, disagreement)
+    text = render(board, rules)
 
     if args.out:
         Path(args.out).write_text(text)

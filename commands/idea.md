@@ -128,8 +128,9 @@ dry run — or picks another. A refused write marks each change line `not writte
 A `board <key> for <need>: ...` note is the same sentence, and it names the other choice: the first part the person owns
 with free stock that matches the need and has a Wokwi model, on a header pad. Say it to the person as it is.
 Say "to get" (known, not owned), "maybe owned — check the drawer first", "count unknown", "a board needs a board
-file" and "board … stops at the footprint stage (P121) — no header geometry in its board file" (the pick stands, and
-such a board is a choice for its pin map, but the chain cannot generate its footprint) to the person as they are — and,
+file" and "board <key>: stops at the footprint stage (P121): its board file lacks physical.header" (the pick stands,
+and such a board is a choice for its pin map, but the chain cannot generate its footprint; the line names the field, or says "lacks 3 fields (first: …)" and
+`--match --json` gives the whole list as `stops_why`) to the person as they are — and,
 before the real run, each "would release: …": a hold of this project that no pick of it explains any more, which the
 pick lets go. For each candidate the person passed over, write their reason **in their words** to a JSON file
 with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by": "person"}]` — and add
@@ -154,8 +155,8 @@ there is the yes.
 
 ## L — the building list
 
-Run `/spark:init --board <the board pick>` in the project first; for a board with no header geometry it adds
-`board … stops at the footprint stage (P121) — no header geometry in its board file` after `wrote active.json`, and
+Run `/spark:init --board <the board pick>` in the project first; for a board whose file lacks what its footprint is drawn from it adds
+`board <key>: stops at the footprint stage (P121): its board file lacks …` after `wrote active.json`, and
 writes the file all the same: say so. Then fill what the part picks owe (above), and:
 
 ```
@@ -174,8 +175,8 @@ pick from the catalog goes onto the shelf, so every project builds with it. `/sp
 The answer can carry notes after its first line. Say each to the person as it is printed; none of them refuses, and the
 file is written:
 
-- `board … stops at the footprint stage (P121) — no header geometry in its board file`: the board picked has no header
-  geometry, so the chain cannot generate its footprint; it is still a choice for the pin map;
+- `board <key>: stops at the footprint stage (P121): its board file lacks …`: the board picked lacks a fact its footprint
+  is drawn from (`physical.header`, say), so the chain cannot generate its footprint; it is still a choice for the pin map;
 - `placeholder outline — …`: a pick whose record owes only its outline;
 - `reserved, not placed — no record: …`: a pick with no record;
 - `kept, not from a pick: …`: an entry no pick explains;

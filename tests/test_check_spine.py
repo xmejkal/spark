@@ -1388,6 +1388,47 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         self.assertIn(":\n  physical.width_mm\n  physical.header_order (which label is on which pad — not derivable)\n",
                       stages[-1].detail)
 
+    def edit_record(self, project, edit):
+        record_file = project / "boards" / "xiao-esp32-c6.json"
+        record = json.loads(record_file.read_text())
+        edit(record)
+        record_file.write_text(json.dumps(record, indent=2) + "\n")
+
+    def test_a_board_that_disagrees_with_itself_says_how_at_the_footprint_stage(self):
+        # P411: the stage said "no footprint could be generated for xiao-esp32-c6", and nothing of what to change
+        project, wanted = self.project_without("physical.header.drill_mm")
+        self.edit_record(project, lambda record: record["physical"]["header"].update(pins=[6, 6]))
+        stages = self.run_spine(project, wanted)
+        self.assertEqual([(s.name, s.status) for s in stages][-2:], [("schematic", check_spine.OK), ("footprint", check_spine.COULD_NOT_RUN)])
+        self.assertEqual(stages[-1].detail,
+                         "the board definition disagrees with itself: header_order.row_left has 7 labels but physical.header.pins says 6 "
+                         "— one of the two is wrong, and guessing which would shift every pad after the disagreement")
+
+    def test_a_value_of_the_wrong_kind_in_the_header_stops_the_footprint_stage_too(self):
+        # the board file's validation checks no header geometry: a pitch written as text was a TypeError out of the build
+        project, wanted = self.project_without("physical.header.drill_mm")
+        self.edit_record(project, lambda record: record["physical"]["header"].update(pitch_mm="2.54"))
+        stages = self.run_spine(project, wanted)
+        self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail),
+                         ("footprint", check_spine.COULD_NOT_RUN,
+                          "the board definition disagrees with itself: physical.header.pitch_mm is not a number"))
+
+    def test_a_project_rule_of_the_wrong_kind_stops_the_footprint_stage_not_the_build(self):
+        # fab.process returns a project's own value unchecked: a drill step written as text was a TypeError out of `render`
+        project, wanted = self.project_without("physical.header.drill_mm")
+        (project / ".spark" / "rules.json").write_text(json.dumps({"fabrication": {"drill_step_mm": "0.1"}}))
+        stages = self.run_spine(project, wanted)
+        self.assertEqual((stages[-1].name, stages[-1].status), ("footprint", check_spine.COULD_NOT_RUN))
+        # the spine asks `why_header_disagrees` without the project's rules (row 15), so the fallback says what exited
+        self.assertEqual(stages[-1].detail, "emit_footprint.py exited 1 for xiao-esp32-c6")
+
+    def test_a_footprint_that_fails_for_no_reason_the_board_shows_says_what_exited(self):
+        project, wanted = self.project_without("physical.header.drill_mm")
+        with mock.patch.object(check_spine.emit_footprint, "main", return_value=check_spine.emit_footprint.EXIT_COULD_NOT_RUN):
+            stages = self.run_spine(project, wanted)
+        self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail),
+                         ("footprint", check_spine.COULD_NOT_RUN, "emit_footprint.py exited 2 for xiao-esp32-c6"))
+
     def test_the_board_alone_needs_no_footprint(self):
         # the stop comes after the board-only branch: a board with no header still simulates on its own
         project, wanted = self.project_without("physical.header", requirements={"board": "xiao-esp32-c6", "parts": [],
