@@ -36,10 +36,10 @@
   "replace": "if False:"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/sim_project.py",
   "name": "an image named outside sim/ is overwritten with MicroPython",
-  "find": "if self.sim.resolve() not in self.image.resolve().parents:",
-  "replace": "if False:"
+  "find": "outside = Path(sim).resolve() not in Path(image).resolve().parents",
+  "replace": "outside = False"
  },
  {
   "file": "scripts/run_scenario.py",
