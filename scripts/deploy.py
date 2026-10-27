@@ -44,7 +44,7 @@ from deploy_service import DeployService, FlashError
 from firmware_platform import FirmwarePlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
-from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
+from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, AnsweringParser, BadArgument
 from text_guards import guard_lines
 
 #: The line after a deploy that names the image on the board and whose yes erased it (P213, card A).
@@ -156,8 +156,8 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     `grant_service` the board_grant.GrantService that finds a deploy grant (default: the store's). A `consent` given always
     wins: the grant is read only when none is given. Returns the exit code.
     """
-    parser = argparse.ArgumentParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = AnsweringParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
+                             formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder with sim/ and requirements.json (default: here)")
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on "
@@ -173,7 +173,14 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     parser.add_argument("--dry-run", action="store_true", help="print each command and run nothing")
     parser.add_argument("--json", action="store_true", help="print one envelope on stdout, the lines a person reads on "
                         "stderr (docs/guide/agents.md)")
-    args = parser.parse_args(argv)
+    argv = sys.argv[1:] if argv is None else list(argv)
+    try:
+        args = parser.parse_args(argv)
+    except BadArgument as bad:  # P433: with --json an envelope, else the usage on stderr as argparse prints it
+        if "--json" not in argv:
+            parser.exit_with_usage(bad)
+        print(board_envelope.dumps(board_envelope.bad_argument_envelope("deploy", bad)))
+        return EXIT_COULD_NOT_RUN
     evidence = evidence_for(args.project, args.no_simulation, args.ignore_older_runs)
     reached = {"project": args.project.resolve(), "token": args.token, "port": args.port, "stage": board_envelope.STAGE_PLAN,
             "evidence": evidence, "dry_run": args.dry_run}

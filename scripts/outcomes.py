@@ -13,7 +13,9 @@ fourteen places the numbers could drift apart (sprint-4 audit B17). Scripts impo
 here and alias the middle one to their own word.
 """
 
+import argparse
 import json
+import sys
 
 #: What the shell sees.
 EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
@@ -109,6 +111,25 @@ def step(op, argv, why, effects=(), needs_yes=False, needs_person=None):
     if needs_person is not None:
         said["needs_person"] = needs_person
     return said
+
+
+# --- MVP ---
+class BadArgument(Exception):
+    """An argument a script cannot run with: could-not-run, and with --json an envelope like any other answer."""
+
+
+class AnsweringParser(argparse.ArgumentParser):
+    """argparse, except that a bad argument is an answer, not an exit: `error` raises BadArgument before argparse prints
+    anything. A script catches it, and prints an envelope with --json or calls `exit_with_usage` without it."""
+
+    def error(self, message):
+        raise BadArgument(message)
+
+    def exit_with_usage(self, bad):
+        """Print the usage and `bad`'s message on stderr as argparse does, and exit with EXIT_COULD_NOT_RUN."""
+        self.print_usage(sys.stderr)
+        self.exit(EXIT_COULD_NOT_RUN, "%s: error: %s\n" % (self.prog, bad))
+# --- end MVP ---
 
 
 def page(items, start, op, argv, limit=20, budget=3400):

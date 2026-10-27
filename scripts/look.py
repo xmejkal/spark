@@ -11,7 +11,7 @@ import board_envelope
 import board_look
 import boards
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
-from outcomes import EXIT_COULD_NOT_RUN
+from outcomes import EXIT_COULD_NOT_RUN, AnsweringParser, BadArgument
 from text_guards import guard_lines
 
 EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash_id`. It writes nothing,
@@ -44,8 +44,8 @@ or could not check something (a field unknown, no token, a last deploy it could 
 
 def main(argv=None, run=subprocess.run):
     """Print the look. `run` is how a command runs. Returns the exit code."""
-    parser = argparse.ArgumentParser(prog="look.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = AnsweringParser(prog="look.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
+                             formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder with requirements.json and sim/ (default: here)")
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
@@ -57,7 +57,14 @@ def main(argv=None, run=subprocess.run):
                        help="give a token for an image that no simulation tested, when firmware/ has a main.py, "
                        "compiles and is what the image holds (default: a passed run must name the image)")
     parser.add_argument("--json", action="store_true", help="print one envelope on stdout (docs/guide/agents.md)")
-    args = parser.parse_args(argv)
+    argv = sys.argv[1:] if argv is None else list(argv)
+    try:
+        args = parser.parse_args(argv)
+    except BadArgument as bad:  # P433: with --json an envelope, else the usage on stderr as argparse prints it
+        if "--json" not in argv:
+            parser.exit_with_usage(bad)
+        _print_json(board_envelope.bad_argument_envelope("look", bad))
+        return EXIT_COULD_NOT_RUN
     evidence = evidence_for(args.project, args.no_simulation, args.ignore_older_runs)
     try:
         report = board_look.looker(args.project, run).run(args.project, args.port, evidence)

@@ -154,8 +154,21 @@ class TheNoSimulationDryRunTest(ProjectCase):
         self.assertIn("--no-simulation", envelope["next"][0]["argv"])
 
     def test_both_flags_are_an_argument_error(self):
-        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
-            self.deploy("--dry-run", "--no-simulation", "--ignore-older-runs")
+        err = io.StringIO()
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(err):
+            deploy.main(["--project", str(self.project), "--dry-run", "--no-simulation", "--ignore-older-runs"])
+        self.assertEqual(raised.exception.code, 2)
+        self.assertTrue(err.getvalue().startswith("usage: deploy.py "), err.getvalue())
+        self.assertIn("deploy.py: error: argument --ignore-older-runs: not allowed with argument --no-simulation", err.getvalue())
+
+    def test_a_bad_flag_with_json_is_an_envelope_and_no_usage(self):
+        code, said, err, ran = self.deploy("--dry-run", "--no-simulation", "--ignore-older-runs", "--json")
+        self.assertEqual((code, err, ran), (deploy.EXIT_COULD_NOT_RUN, "", []))
+        envelope = json.loads(said)
+        self.assertEqual((envelope["tool"], envelope["op"], envelope["status"], envelope["data"], envelope["problems"], envelope["next"]),
+                         ("deploy", "deploy", "could-not-run", None, [], []))
+        self.assertEqual([item["code"] for item in envelope["unchecked"]], ["bad_argument"])
+        self.assertIn("not allowed with argument --no-simulation", envelope["unchecked"][0]["sentence"])
 
 
 class OnlyAnImageThatPassedTest(ProjectCase):

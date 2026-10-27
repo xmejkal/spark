@@ -91,6 +91,11 @@ def look_stop_envelope(stop, doctor=None, places=boards.ButtonPlaces.EMPTY):
                              unchecked=[{"code": stop.reason, "sentence": str(stop), "fix": doctor_fix(doctor, places)}])
 
 
+def bad_argument_envelope(tool, bad):
+    """The envelope of a run that a bad argument stopped (outcomes.BadArgument `bad`): one unchecked item, and no data."""
+    return outcomes.envelope(tool, tool, None, unchecked=[{"code": board_codes.BAD_ARGUMENT, "sentence": str(bad),
+                                                           "fix": "%s.py --help lists the arguments" % tool}])
+
 
 def doctor_fix(doctor, places):
     """The `fix` of a BoardDoctorResult: its next step's sentence, naming the buttons as `places` does, or '' when there

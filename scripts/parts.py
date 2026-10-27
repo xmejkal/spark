@@ -214,7 +214,7 @@ NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, di
 #: that validates parts owns the vocabulary and the file that consumes it follows.
 CAPABILITIES = ("wake", "adc", "pwm")
 
-from outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page  # noqa: E402, F401
+from outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page  # noqa: E402, F401
 import provenance  # noqa: E402
 import store  # noqa: E402
 from text_guards import guard_lines, printable  # noqa: E402
@@ -229,10 +229,6 @@ class PartError(Exception):
 #: fail ({subject, sentence}); `assumptions` are what the answer rests on that nobody has checked ({fact, basis, …}).
 Answer = namedtuple("Answer", "data lines problems unchecked next truncated notes assumptions",
                     defaults=(None, (), (), (), (), None, (), ()))
-
-
-class BadArgument(Exception):
-    """An argument parts.py cannot run with: could-not-run, and with --json an envelope like any other answer."""
 
 
 def _problem(subject, sentence, fix=None):
@@ -1663,16 +1659,9 @@ OPTIONS = (
 )
 
 
-class _Parser(argparse.ArgumentParser):
-    """argparse, except that a bad argument is an answer, not an exit — with --json it is an envelope too."""
-
-    def error(self, message):
-        raise BadArgument(message)
-
-
 def _parser():
     """The argument parser, built from OPERATIONS and OPTIONS so that `--describe` cannot drift from it."""
-    parser = _Parser(prog="parts.py", description="What a part needs, and what is known about it.")
+    parser = AnsweringParser(prog="parts.py", description="What a part needs, and what is known about it.")
     what = parser.add_mutually_exclusive_group(required=True)
     for name, keywords, summary, _, _ in OPERATIONS:
         what.add_argument("--" + name, help=summary, **keywords)

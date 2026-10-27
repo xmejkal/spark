@@ -215,8 +215,22 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertIn("or a deploy grant stands", passed)
 
     def test_both_flags_are_an_argument_error(self):
-        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
-            self.go("--no-simulation", "--ignore-older-runs")
+        err = io.StringIO()
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(err):
+            look.main(["--project", str(self.project), "--no-simulation", "--ignore-older-runs"])
+        self.assertEqual(raised.exception.code, 2)
+        self.assertTrue(err.getvalue().startswith("usage: look.py "), err.getvalue())
+        self.assertIn("look.py: error: argument --ignore-older-runs: not allowed with argument --no-simulation", err.getvalue())
+
+    def test_a_bad_flag_with_json_is_an_envelope_and_no_usage(self):
+        code, said, err = self.go("--no-simulation", "--ignore-older-runs", "--json")
+        self.assertEqual((code, err, self.ran), (2, "", []))
+        self.assertEqual(len(said), 1)
+        envelope = json.loads(said[0])
+        self.assertEqual((envelope["tool"], envelope["op"], envelope["status"], envelope["data"], envelope["problems"], envelope["next"]),
+                         ("look", "look", "could-not-run", None, [], []))
+        self.assertEqual([item["code"] for item in envelope["unchecked"]], ["bad_argument"])
+        self.assertIn("not allowed with argument --no-simulation", envelope["unchecked"][0]["sentence"])
 
     def test_no_mac_is_no_token(self):
         self.run_the_scenario()
