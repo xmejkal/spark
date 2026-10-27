@@ -161,6 +161,13 @@ class TheNoSimulationDryRunTest(ProjectCase):
         self.assertTrue(err.getvalue().startswith("usage: deploy.py "), err.getvalue())
         self.assertIn("deploy.py: error: argument --ignore-older-runs: not allowed with argument --no-simulation", err.getvalue())
 
+    def test_the_error_text_shows_a_control_character_as_a_question_mark(self):
+        err = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(err):
+            deploy.main(["--project", str(self.project), "--bad\x1b[2J"])
+        self.assertIn("deploy.py: error: unrecognized arguments: --bad?[2J\n", err.getvalue())
+        self.assertNotIn("\x1b", err.getvalue())
+
     def test_a_bad_flag_with_json_is_an_envelope_and_no_usage(self):
         code, said, err, ran = self.deploy("--dry-run", "--no-simulation", "--ignore-older-runs", "--json")
         self.assertEqual((code, err, ran), (deploy.EXIT_COULD_NOT_RUN, "", []))

@@ -13,8 +13,8 @@
  },
  {
   "file": "scripts/board_look.py",
-  "name": "to_dict hands out the report's own list of stops",
-  "find": "\"stops\": list(self.stops),",
+  "name": "to_dict hands out the Stops, not their sentences",
+  "find": "\"stops\": [stop.sentence for stop in self.stops],",
   "replace": "\"stops\": self.stops,"
  },
  {
@@ -26,7 +26,7 @@
  {
   "file": "scripts/board_look.py",
   "name": "report_lines loses the stop lines",
-  "find": "    out += [\"%s: deploy.py will refuse.\" % stop for stop in report.stops]\n",
+  "find": "    out += [\"%s: deploy.py will refuse.\" % stop.sentence for stop in report.stops]\n",
   "replace": ""
  },
  {

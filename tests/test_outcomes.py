@@ -229,7 +229,7 @@ class AnsweringParserTest(unittest.TestCase):
         out, err = io.StringIO(), io.StringIO()
         parser = self.parser()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as raised:
-            parser.exit_with_usage(outcomes.BadArgument("argument --n: boom"))
+            parser.exit_with_usage("argument --n: boom")
         self.assertEqual((raised.exception.code, out.getvalue()), (2, ""))
         self.assertEqual(err.getvalue(), "usage: demo.py [-h] [--n N]\ndemo.py: error: argument --n: boom\n")
 

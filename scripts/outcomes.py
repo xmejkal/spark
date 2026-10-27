@@ -125,10 +125,11 @@ class AnsweringParser(argparse.ArgumentParser):
     def error(self, message):
         raise BadArgument(message)
 
-    def exit_with_usage(self, bad):
-        """Print the usage and `bad`'s message on stderr as argparse does, and exit with EXIT_COULD_NOT_RUN."""
+    def exit_with_usage(self, message):
+        """Print the usage and `message` on stderr as argparse does, and exit with EXIT_COULD_NOT_RUN. The message holds the
+        person's own arguments, so the caller passes it through text_guards first (outcomes imports nothing of spark)."""
         self.print_usage(sys.stderr)
-        self.exit(EXIT_COULD_NOT_RUN, "%s: error: %s\n" % (self.prog, bad))
+        self.exit(EXIT_COULD_NOT_RUN, "%s: error: %s\n" % (self.prog, message))
 # --- end MVP ---
 
 

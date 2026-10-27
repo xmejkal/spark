@@ -62,8 +62,8 @@
  {
   "file": "scripts/board_look.py",
   "name": "usb-c-dropped",
-  "find": "power only. \"\n                           \"If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.\")",
-  "replace": "power only.\")"
+  "find": "power only. \"\n                           \"If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.\", reason=board_codes.NO_PORT)",
+  "replace": "power only.\", reason=board_codes.NO_PORT)"
  },
  {
   "file": "scripts/board_look.py",

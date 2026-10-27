@@ -233,7 +233,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
         self.assertTrue(all(sentence.strip() for sentence in sentences))
         self.assertEqual(len(set(sentences)), len(sentences))
 
-    @slow("runs the look, gate, grant and doctor test modules once more under a spy, 1 test, 7 s on 2026-10-27")
+    @slow("runs the look, gate, grant and doctor test modules once more under a spy, 1 test, 6 s on 2026-10-27")
     def test_every_reason_raised_is_in_the_table(self):
         raised = set()
 
@@ -254,9 +254,15 @@ class TheBenchCodesTableTest(unittest.TestCase):
         self.assertTrue(raised, "the spy saw no raise")
         self.assertEqual(sorted(raised - set(board_codes.CODES)), [])
 
-    def test_a_grant_refusal_has_the_reason_of_its_why(self):
-        for why in board_grant.CODE_FOR_WHY:
-            self.assertIn(board_grant.GrantRefusedError(why).reason, board_codes.CODES)
+    def test_agents_md_names_every_code(self):
+        text = (ROOT / "docs" / "guide" / "agents.md").read_text()
+        self.assertEqual([code for code in board_codes.CODES if "`%s`" % code not in text], [])
+
+    def test_a_grant_refusal_has_the_reason_and_the_exit_code_of_its_why(self):
+        for why, reason, code in (("not a grant", "not_a_grant", 1), ("answered no", "answered_no", 1), ("bad minutes", "bad_minutes", 2),
+                                  ("bad scope", "bad_scope", 2), ("no mac", "no_mac", 2), ("serial not mac", "serial_not_mac", 1)):
+            refusal = board_grant.GrantRefusedError(why)
+            self.assertEqual((refusal.reason, refusal.code, reason in board_codes.CODES), (reason, code, True), why)
 
 
 if __name__ == "__main__":

@@ -79,7 +79,6 @@ MAY_READ = {
     "breadboard.DRAWING_RENDERERS": STRUCTURE,
     "breadboard_keep.CODES": AGREEMENT, "breadboard_keep.MESSAGES": AGREEMENT,
     "board_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and against the codes the bench scripts raise and write",
-    "board_grant.CODE_FOR_WHY": STRUCTURE,
     "part_pictures.PICTOGRAMS": STRUCTURE,
     "breadboard_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
     "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",

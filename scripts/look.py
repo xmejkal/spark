@@ -36,7 +36,9 @@ and one next step for your hands, as the last line. Its look at the console can 
 
 --json prints one envelope on stdout (docs/guide/agents.md): the look in `data`, the stops and warnings as `problems`, the
 unknown fields, a missing token and a last deploy it could not check as `unchecked`, and, when there is a token, the deploy step with `needs_yes`. The
-board doctor's lines still go to stderr. Exit codes do not change; the envelope's status is the exit code's.
+board doctor's lines still go to stderr. Every `problems` and `unchecked` item has a `code` (scripts/board_codes.py). A bad flag with
+--json prints an envelope (status could-not-run, code bad_argument, exit 2); without --json it prints the usage and the error on stderr and
+exits 2. Exit codes do not change; the envelope's status is the exit code's.
 
 Exit codes: 0 every field matches, there is a token and the last deploy was checked, 1 a field differs or the look found a stop, 2 it could not run
 or could not check something (a field unknown, no token, a last deploy it could not check), and the sentence says why."""
@@ -62,7 +64,7 @@ def main(argv=None, run=subprocess.run):
         args = parser.parse_args(argv)
     except BadArgument as bad:  # P433: with --json an envelope, else the usage on stderr as argparse prints it
         if "--json" not in argv:
-            parser.exit_with_usage(bad)
+            parser.exit_with_usage(guard_lines(str(bad)))
         _print_json(board_envelope.bad_argument_envelope("look", bad))
         return EXIT_COULD_NOT_RUN
     evidence = evidence_for(args.project, args.no_simulation, args.ignore_older_runs)
