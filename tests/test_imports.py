@@ -15,7 +15,7 @@ SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 SPARK = {path.stem for path in SCRIPTS.glob("*.py")}
 
 #: The modules that import nothing of spark, so that every reader can use them without importing another reader.
-LEAVES = ("outcomes", "provenance", "text_guards", "zone_time")
+LEAVES = ("board_codes", "outcomes", "provenance", "text_guards", "zone_time")
 
 #: The names OC8 moved into `text_guards`, by the module that held them. No script reads them from there again.
 MOVED = {"drawer": {"clean", "CONTROL", "LABEL_MAX", "TEXT_MAX", "TAGS_MAX"}, "parts": {"one_line", "COMMENT_UNSAFE"}}
