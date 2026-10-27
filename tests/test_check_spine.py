@@ -1413,6 +1413,13 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
                          ("footprint", check_spine.COULD_NOT_RUN,
                           "the board definition disagrees with itself: unsupported operand type(s) for -: 'float' and 'str'"))
 
+    def test_a_footprint_that_fails_for_no_reason_the_board_shows_says_what_exited(self):
+        project, wanted = self.project_without("physical.header.drill_mm")
+        with mock.patch.object(check_spine.emit_footprint, "main", return_value=check_spine.emit_footprint.EXIT_COULD_NOT_RUN):
+            stages = self.run_spine(project, wanted)
+        self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail),
+                         ("footprint", check_spine.COULD_NOT_RUN, "emit_footprint.py exited 2 for xiao-esp32-c6"))
+
     def test_the_board_alone_needs_no_footprint(self):
         # the stop comes after the board-only branch: a board with no header still simulates on its own
         project, wanted = self.project_without("physical.header", requirements={"board": "xiao-esp32-c6", "parts": [],

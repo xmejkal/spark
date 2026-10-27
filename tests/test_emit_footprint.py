@@ -262,6 +262,18 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
         self.assertEqual(emit_footprint.why_header_disagrees(board),
                          "the board definition disagrees with itself: object of type 'int' has no len()")
 
+    def test_a_pad_order_that_is_a_list_of_numbers_is_a_disagreement_too(self):
+        # an AttributeError this time: `1.startswith`
+        board = firebeetle()
+        board["physical"]["header_order"] = [1, 2]
+        self.assertEqual(emit_footprint.why_header_disagrees(board),
+                         "the board definition disagrees with itself: 'int' object has no attribute 'startswith'")
+
+    def test_the_list_of_a_board_that_is_no_object_names_no_board(self):
+        self.assertEqual(emit_footprint.why_no_footprint("not a board"),
+                         "None cannot have a footprint generated — these are not recorded, and none of them can be derived from the "
+                         "rest:\n  physical.header (no header geometry at all)")
+
 
 class TheCommandLineTest(unittest.TestCase):
     def test_a_board_that_cannot_be_generated_exits_could_not_run(self):
