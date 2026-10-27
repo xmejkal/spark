@@ -209,6 +209,13 @@ The generator refuses rather than guess, and each refusal says what to record:
 A rail nothing sources (a motor rail with no connector) is not a refusal: the file says so and the
 build stops on a net with one member. Add the connector to the parts list.
 
+The refusals come in one order: the requirements, the pins, the footprint. The footprint step prints no `wrote <path>` line
+on stderr; the stage list's `footprint` line is the only word of it. A project rule of the wrong kind (a drill step written
+as text) stops the footprint stage with `the board definition disagrees with itself: …` until P434
+([#576](https://github.com/xmejkal/spark/issues/576)) checks rules values. `emit_board.py` run alone prints the library
+note (`no project up from the requirements file …`) only after its input is accepted, so a refused input prints only its
+refusal.
+
 ## See it
 
 **The board, live** — tscircuit's own viewer, which every spark project already has (`init` writes

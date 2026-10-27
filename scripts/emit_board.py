@@ -30,6 +30,7 @@ which is the difference between a draft you can iterate and a blank file.
 import argparse
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -50,6 +51,10 @@ from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 TRACE_TAG = "<trace "
 #: What this script prints for input it refuses, before any board is emitted; `check_spine` says the same (P407).
 REFUSED_INPUT_MESSAGE = "cannot emit a board: %s"
+#: The two stages that can refuse the input, named as the spine's stages are (P432): the design is read and its pins are
+#: placed under the first, and the board's footprint is asked for under the second, in that order.
+SCHEMATIC_STAGE = "schematic"
+FOOTPRINT_STAGE = "footprint"
 
 #: Layout constants. Ordinal, not designed — they exist to produce something that does not
 #: overlap, so the checks have a board to run on.
@@ -1048,6 +1053,50 @@ def emit(board, part_list, assignments, placements, width, height, rules=None):
     return "\n".join(lines) + "\n"
 
 
+# --- MVP --- (P432, OC1) one order in which the input is refused, for `main` and the spine's build.
+@dataclass(frozen=True)
+class BoardInputs:
+    """Value: what a build reads before it emits anything: the design, and the pin each of its signals was given."""
+
+    design: object
+    assignments: list
+
+
+class RefusedInput(Exception):
+    """
+    The input was refused at `stage` (`SCHEMATIC_STAGE` or `FOOTPRINT_STAGE`) for `why`. `str()` is the line each caller
+    prints: the schematic words around `why`, or `why` alone for a footprint gap, which has its own sentence (P407).
+    """
+
+    def __init__(self, stage, why):
+        super().__init__(REFUSED_INPUT_MESSAGE % why if stage == SCHEMATIC_STAGE else why)
+        self.stage = stage
+        self.why = why
+
+
+def read_inputs(path, project, board_id=None):
+    """
+    The design at `path` and its pin assignments, or `RefusedInput`: a fault in the requirements first, then pins that
+    cannot be placed, then a board record that cannot give a footprint. A fault in the requirements is said before a gap in
+    the board record, because a person who fixed the board would meet the typo next (P407). Prints nothing.
+    """
+    try:
+        design = design_library.load(path, project, board_id)
+        board = design.board
+        # The signals are the loader's — derived once, named per instance — so `assign_pins.py`
+        # and this file cannot disagree about which signals a design has.
+        assignments, _ = assign_pins.assign(board, design.signals)
+    except (design_library.DesignError, assign_pins.Impossible) as broken:
+        # Everything wrong with the INPUT is could-not-run: the file was never a design. Reading
+        # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
+        # which reads as "problems found" to anything that knows three outcomes.
+        raise RefusedInput(SCHEMATIC_STAGE, str(broken)) from broken
+    no_footprint = emit_footprint.why_no_footprint(board)
+    if no_footprint:
+        raise RefusedInput(FOOTPRINT_STAGE, no_footprint)
+    return BoardInputs(design, assignments)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="emit_board.py", description="Turn a module list and a pin map into a board file.")
@@ -1060,29 +1109,17 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     try:
-        design = design_library.load(args.requirements, args.project, args.board)
-        board, part_list = design.board, design.parts
-        # Said only when the library was fallen into, not asked for: `check_spine` passes
-        # `--project` to build the reference design from it on purpose, and it reads every
-        # line here as a note about the design.
-        if not args.project and design_library.is_library(design.project):
-            print(design_library.LIBRARY_NOTE, file=sys.stderr)
-        # The signals are the loader's — derived once, named per instance — so `assign_pins.py`
-        # and this file cannot disagree about which signals a design has.
-        assignments, _ = assign_pins.assign(board, design.signals)
-    except (design_library.DesignError, assign_pins.Impossible) as broken:
-        # Everything wrong with the INPUT is could-not-run: the file was never a design. Reading
-        # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
-        # which reads as "problems found" to anything that knows three outcomes.
-        print(REFUSED_INPUT_MESSAGE % broken, file=sys.stderr)
+        inputs = read_inputs(args.requirements, args.project, args.board)
+    except RefusedInput as refused:
+        print(refused, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-
-    # --- MVP --- the same refusal as the spine's footprint stage, which stops before this runs. This guard serves a
-    # direct run: a partial header would emit a file that imports a footprint nobody can generate (P407).
-    no_footprint = emit_footprint.why_no_footprint(board)
-    if no_footprint:
-        print(no_footprint, file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
+    design, assignments = inputs.design, inputs.assignments
+    board, part_list = design.board, design.parts
+    # Said only when the library was fallen into, not asked for: `check_spine` passes
+    # `--project` to build the reference design from it on purpose, and it reads every
+    # line here as a note about the design.
+    if not args.project and design_library.is_library(design.project):
+        print(design_library.LIBRARY_NOTE, file=sys.stderr)
 
     repeated = duplicate_component_names(part_list)
     if repeated:
