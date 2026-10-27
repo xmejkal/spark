@@ -37,7 +37,7 @@ SKIPPED = "skipped"
 #: NONE_RECORDED and NOT_CHECKED, and from_log reads NOT_CHECKED back. A loader of a required thing (design.load,
 #: boards.load) raises its Error: that is a refusal, not a reading, and is no reader in this rule. Three phrasings stay
 #: outside the template because each names its thing first: "last deploy not checked: %s" (board_look.py,
-#: board_envelope.py) and "spark did not read its record of this board: %s" (LastDeploy.in_question). Readers that
+#: board_envelope.py) and "spark did not read its record of this board: %s" (deploy_gate.say_last_deploy_in_question). Readers that
 #: still wait: breadboard_keep.EarlierDiagram.read and breadboard_changes.WiringRecord.read (wave 6);
 #: project_image.read_run_logs and firmware_platform.record_of refuse by design. The rule is tested by READERS in
 #: tests/test_outcomes.py, one row per reader that follows it (boards.read_simulated_part, P397, is one of them).

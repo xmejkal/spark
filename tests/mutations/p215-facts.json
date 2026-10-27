@@ -18,7 +18,7 @@
   "replace": "key = store.slug(said[\"project\"])"
  },
  {
-  "file": "scripts/board_facts.py",
+  "file": "scripts/deploy_record_store.py",
   "name": "verdict fixed",
   "find": "\"verdict\": verdict,",
   "replace": "\"verdict\": \"ready seen\","

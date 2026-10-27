@@ -25,6 +25,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import board_console  # noqa: E402
 import board_doctor  # noqa: E402
 import board_facts  # noqa: E402
+import board_look  # noqa: E402
+import deploy_record_store  # noqa: E402
 import deploy  # noqa: E402
 import deploy_service  # noqa: E402
 import board_grant  # noqa: E402
@@ -668,7 +670,7 @@ class TheFactsAfterTheFlashTest(GateCase):
 
     def test_the_record_writes_the_who_it_is_given(self):
         said = {"mac": "aa:bb:test-who", "project": "p", "board": "b", "image_sha256": "0", "simulation": "passed", "deployed": "d"}
-        path = board_facts.record_deploy(said, "ready seen", "a test")
+        path = deploy_record_store.DeployRecordStore().write_deploy(said, "ready seen", "a test")
         self.assertEqual(json.loads(path.read_text())["deploys"][-1]["yes"], "a test")
 
     def test_the_facts_go_to_the_look_s_port_and_name_the_look_s_mac(self):
@@ -726,6 +728,61 @@ class TheFactsAfterTheFlashTest(GateCase):
             code, said, _ = self.flash()
         self.assertEqual(code, 0)
         self.assertIn("store record: not written: no room", said)
+
+
+class SayLastDeployInQuestionTest(unittest.TestCase):
+    """P431 (OC5): deploy_gate.say_last_deploy_in_question, the deploy question's words for a deploy_record_store.LastDeploy."""
+
+    def setUp(self):
+        pin_time_zone(self)
+
+    @staticmethod
+    def recorded(deployed, project="blink-c6", verdict="ready seen"):
+        return deploy_record_store.LastDeploy("recorded", project, verdict, deployed)
+
+    def test_recorded_with_a_zone(self):
+        self.assertEqual(deploy_gate.say_last_deploy_in_question(self.recorded("2026-10-19T09:24:50+02:00")),
+                         "spark's store record names blink-c6 as its last deploy here, 2026-10-19T09:24:50+02:00, ready seen")
+
+    def test_a_time_with_no_zone_or_no_parse_is_as_stored(self):
+        self.assertIn("last deploy here, 2026-10-19T09:24:50 (zone not stored), ready seen",
+                      deploy_gate.say_last_deploy_in_question(self.recorded("2026-10-19T09:24:50")))
+        self.assertIn("last deploy here, last tuesday, ready seen",
+                      deploy_gate.say_last_deploy_in_question(self.recorded("last tuesday")))
+
+    def test_none_recorded(self):
+        last = deploy_record_store.LastDeploy("none-recorded")
+        self.assertEqual(deploy_gate.say_last_deploy_in_question(last), "spark's store record names no deploy here")
+
+    def test_not_checked(self):
+        last = deploy_record_store.LastDeploy("not-checked", why="the board's MAC was not read")
+        self.assertEqual(deploy_gate.say_last_deploy_in_question(last),
+                         "spark did not read its record of this board: the board's MAC was not read")
+
+    def test_a_project_name_cannot_add_a_line(self):
+        said = deploy_gate.say_last_deploy_in_question(self.recorded("2026-10-19T09:24:50+02:00", project="a\nmac    ff"))
+        self.assertNotIn("\n", said)
+
+    def test_a_verdict_and_a_time_with_a_newline_show_a_question_mark(self):
+        said = deploy_gate.say_last_deploy_in_question(self.recorded("not a time\nat all", project="blink\nc6", verdict="ready\nseen"))
+        self.assertIn("blink?c6", said)
+        self.assertIn("ready?seen", said)
+        self.assertIn("not a time?at all", said)
+        self.assertNotIn("\n", said)
+
+    def test_the_line_and_the_question_name_the_same_deploy(self):
+        # The look's line and the deploy question hold the words of one Value in two modules (P431): one drift test.
+        states = {
+            "recorded": (self.recorded("2026-10-19T09:24:50+02:00"), ["blink-c6", "ready seen", "2026-10-19T09:24:50+02:00"]),
+            "none-recorded": (deploy_record_store.LastDeploy("none-recorded"), ["store record"]),
+            "not-checked": (deploy_record_store.LastDeploy("not-checked", why="the board's MAC was not read"),
+                            ["the board's MAC was not read"]),
+        }
+        for name, (last, words) in states.items():
+            with self.subTest(name):
+                for said in (board_look.say_last_deploy(last), deploy_gate.say_last_deploy_in_question(last)):
+                    for word in words:
+                        self.assertIn(word, said)
 
 
 class TheBoardLogTextTest(unittest.TestCase):

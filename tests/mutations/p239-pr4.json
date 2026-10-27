@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/board_facts.py",
+  "file": "scripts/deploy_record_store.py",
   "name": "the record ignores who",
   "find": "\"yes\": who}",
   "replace": "\"yes\": \"typed in a terminal\"}"

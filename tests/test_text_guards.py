@@ -32,6 +32,12 @@ class GuardLinesTest(unittest.TestCase):
                 self.assertEqual(text_guards.guard_lines("a%sb\nc%sd" % (hidden, hidden)), "a?b\nc?d")
 
 
+class PrintableTest(unittest.TestCase):
+    def test_printable_shows_what_a_terminal_does_not_print_as_a_question_mark(self):
+        self.assertEqual(text_guards.printable("a\nb\u202ec ok"), "a?b?c ok")
+
+
+
 class CleanTest(unittest.TestCase):
     def test_a_line_or_paragraph_separator_becomes_a_space(self):
         self.assertEqual(text_guards.clean("a\u2028b\u2029c"), "a b c")

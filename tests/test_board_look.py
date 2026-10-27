@@ -16,7 +16,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_facts  # noqa: E402
+import deploy_record_store  # noqa: E402
 from fakes import pin_time_zone  # noqa: E402
 import board_look  # noqa: E402
 import project_image  # noqa: E402
@@ -63,8 +63,8 @@ class LookCase(ProjectCase):
         self.ran = []
 
     def record_a_deploy(self, project="blink-c6", verdict="ready seen"):
-        """A deploy of this look's board in the store, as record_deploy writes it."""
-        board_facts.record_deploy({"mac": C6_MAC, "project": project, "board": "xiao-esp32-c6", "image_sha256": "0",
+        """A deploy of this look's board in the store, as write_deploy writes it."""
+        deploy_record_store.DeployRecordStore().write_deploy({"mac": C6_MAC, "project": project, "board": "xiao-esp32-c6", "image_sha256": "0",
                                    "simulation": "passed", "deployed": "2026-10-19T09:24:50+02:00"}, verdict, "a test")
 
     def board(self, name):
@@ -593,7 +593,7 @@ class ReportLinesTest(LookCase):
 
     def test_a_last_deploy_that_cannot_be_read_says_so_and_what_to_do(self):
         self.run_the_scenario()
-        record = board_facts.record_path(C6_MAC)
+        record = deploy_record_store.DeployRecordStore().find_path(C6_MAC)
         record.parent.mkdir(parents=True, exist_ok=True)
         record.write_text("{not json")
         lines = board_look.report_lines(self.look(), token=False)
@@ -604,7 +604,7 @@ class ReportLinesTest(LookCase):
         self.run_the_scenario()
         report = self.look()
         self.assertEqual(report.status, outcomes.OK)
-        report.last_deploy = board_facts.LastDeploy("not-checked", why="spark's record of it cannot be read")
+        report.last_deploy = deploy_record_store.LastDeploy("not-checked", why="spark's record of it cannot be read")
         self.assertEqual(report.status, outcomes.COULD_NOT_RUN)
 
     def test_a_board_whose_mac_was_not_read_is_not_checked_and_never_no_deploy(self):
@@ -617,7 +617,7 @@ class ReportLinesTest(LookCase):
         self.run_the_scenario()
         self.record_a_deploy()
         other = "aa:bb:cc:dd:ee:ff"
-        board_facts.record_deploy({"mac": other, "project": "other", "board": "b", "image_sha256": "0", "simulation": "passed",
+        deploy_record_store.DeployRecordStore().write_deploy({"mac": other, "project": "other", "board": "b", "image_sha256": "0", "simulation": "passed",
                                    "deployed": "2026-10-20T09:24:50+02:00"}, "ready seen", "a test")
         self.assertEqual(self.look().last_deploy.project, "blink-c6")
 
@@ -659,6 +659,51 @@ class ReportLinesTest(LookCase):
         self.board("firebeetle2-esp32s3")
         lines = board_look.report_lines(self.look(esptool="s3-flash-id-8mb.txt"), token=False)
         self.assertIn("  the flash differs: 8 MB, the record says 16 or 4. deploy.py will ask you to accept it.", lines)
+
+
+class SayLastDeployTest(unittest.TestCase):
+    """P431 (OC5): board_look.say_last_deploy, the look's line for a deploy_record_store.LastDeploy."""
+
+    def setUp(self):
+        pin_time_zone(self)  # a stored time is said in the machine's zone: one zone on every machine
+
+    @staticmethod
+    def recorded(deployed, project="blink-c6", verdict="ready seen"):
+        return deploy_record_store.LastDeploy("recorded", project, verdict, deployed)
+
+    def test_recorded_with_a_zone(self):
+        self.assertEqual(board_look.say_last_deploy(self.recorded("2026-10-19T09:24:50+02:00")),
+                         "spark's last deploy here: blink-c6, ready seen, 2026-10-19T09:24:50+02:00 "
+                         "(its store record, not read from the board)")
+
+    def test_a_time_in_another_zone_is_said_in_the_machine_s_zone(self):
+        self.assertIn(", 2026-10-19T09:24:50+02:00 (", board_look.say_last_deploy(self.recorded("2026-10-19T07:24:50+00:00")))
+
+    def test_a_time_with_no_zone_is_not_given_one(self):
+        self.assertIn("blink-c6, ready seen, 2026-10-19T09:24:50 (zone not stored) (its store record",
+                      board_look.say_last_deploy(self.recorded("2026-10-19T09:24:50")))
+
+    def test_a_time_that_does_not_parse_is_as_stored(self):
+        self.assertIn("blink-c6, ready seen, last tuesday (its store record", board_look.say_last_deploy(self.recorded("last tuesday")))
+
+    def test_none_recorded(self):
+        self.assertEqual(board_look.say_last_deploy(deploy_record_store.LastDeploy("none-recorded")),
+                         "spark's last deploy here: none in its store record (it keeps only its own deploys)")
+
+    def test_not_checked(self):
+        last = deploy_record_store.LastDeploy("not-checked", why="the board's MAC was not read")
+        self.assertEqual(board_look.say_last_deploy(last), "spark's last deploy here: not checked: the board's MAC was not read")
+
+    def test_a_project_name_cannot_add_a_line(self):
+        self.assertNotIn("\n", board_look.say_last_deploy(self.recorded("2026-10-19T09:24:50+02:00", project="a\nmac    ff")))
+
+    def test_a_verdict_and_a_time_with_a_newline_show_a_question_mark(self):
+        said = board_look.say_last_deploy(self.recorded("not a time\nat all", project="blink\nc6", verdict="ready\nseen"))
+        self.assertIn("blink?c6, ready?seen, not a time?at all", said)
+        self.assertNotIn("\n", said)
+
+    def test_a_time_with_a_zone_is_said_without_the_question_mark(self):
+        self.assertNotIn("?", board_look.say_last_deploy(self.recorded("2026-10-23T04:55:29Z")))
 
 
 class RenamesTest(unittest.TestCase):

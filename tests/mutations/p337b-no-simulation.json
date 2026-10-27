@@ -48,7 +48,7 @@
   "replace": "question = \"%s. %s\" % (question, caveat)"
  },
  {
-  "file": "scripts/board_facts.py",
+  "file": "scripts/deploy_record_store.py",
   "name": "record-drops-simulation",
   "find": "\"simulation\": facts[\"simulation\"], \"yes\": who}",
   "replace": "\"yes\": who}"

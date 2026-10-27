@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tools"))  # `mutate`, which test_every_script_answers_in_the_one_vocabulary imports
 
-import board_facts  # noqa: E402
+import deploy_record_store  # noqa: E402
 import boards  # noqa: E402
 import outcomes  # noqa: E402
 import run_scenario  # noqa: E402
@@ -81,13 +81,13 @@ class ThreeOutcomesTest(unittest.TestCase):
 
 
 def read_last_deploy(text):
-    """board_facts.read_last_deploy with `text` as the store's record of the board (None: no record), in a store of its own."""
+    """DeployRecordStore.read_last_deploy with `text` as the store's record of the board (None: no record), in a store of its own."""
     with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
         if text is not None:
-            record = board_facts.record_path(MAC)
+            record = deploy_record_store.DeployRecordStore().find_path(MAC)
             record.parent.mkdir(parents=True, exist_ok=True)
             record.write_text(text)
-        return board_facts.read_last_deploy(MAC)
+        return deploy_record_store.DeployRecordStore().read_last_deploy(MAC)
 
 
 def read_log(text):
@@ -138,7 +138,7 @@ def read_definition(case):
 #: Every reader that follows the rule in outcomes.py: its function from an input to a Value, and for each input the state
 #: it must give, as the literal the records and goldens hold. Each has a missing, a malformed and a good input.
 READERS = {
-    "board_facts.read_last_deploy": (read_last_deploy, {
+    "DeployRecordStore.read_last_deploy": (read_last_deploy, {
         "missing": (None, "none-recorded"),
         "malformed": ("{not json", "not-checked"),
         "wrong shape": ('{"deploys": 3}', "not-checked"),
