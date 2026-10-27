@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/provenance.py",
+  "name": "read_value gives None for a bare value where a fact belongs",
+  "find": "    return record.get(\"value\") if isinstance(record, dict) else record\n",
+  "replace": "    return record.get(\"value\") if isinstance(record, dict) else None\n"
+ }
+]

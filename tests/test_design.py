@@ -437,6 +437,11 @@ class TheBoardsOwnPullUpTest(unittest.TestCase):
         self.assertEqual(len(part["host_parts"]), 2)
         self.assertNotIn("_firmware_pulls", part)
 
+    def test_a_bare_pull_up_number_leaves_the_pull_to_the_firmware(self):
+        # P431: a number where a fact belongs reads as the pull, as a bare `io_volts` does. On main it raised AttributeError.
+        part = design.firmware_pulls(self.button(), {"power": {"internal_pull_up_ohms": 10000}})
+        self.assertEqual(part["_firmware_pulls"], ["A"])
+
     def test_a_board_that_states_no_internal_pull_up_keeps_every_resistor(self):
         self.assertEqual(design.firmware_pulls(self.button(), {"power": {}}), self.button())
         self.assertEqual(design.firmware_pulls(self.button(), None), self.button())

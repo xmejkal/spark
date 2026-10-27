@@ -39,6 +39,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
 import parts as parts_library  # noqa: E402
+import provenance  # noqa: E402
 
 #: What `load` returns. `parts` are the requested instances: each a copy of its record, with
 #: `_instance` set when the requirements named it.
@@ -287,7 +288,7 @@ def firmware_pulls(part, board):
     `internal_will_do`. A pin that wakes the chip keeps its resistor, because the internal pull lets go in sleep.
     The pins left to the firmware are listed in `_firmware_pulls`.
     """
-    if not (((board or {}).get("power") or {}).get("internal_pull_up_ohms") or {}).get("value"):
+    if not provenance.read_value(board, "power", "internal_pull_up_ohms"):
         return part
     wakes = {need.get("pin") for need in part.get("needs") or [] if "wake" in (need.get("needs") or [])}
     left = [host for host in part.get("host_parts") or []

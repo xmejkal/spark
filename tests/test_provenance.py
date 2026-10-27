@@ -14,6 +14,23 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import provenance  # noqa: E402
 
 
+class ReadValueTest(unittest.TestCase):
+    def test_read_value_gives_a_fact_s_value_along_its_path(self):
+        record = {"power": {"io_volts": {"value": 3.3, "verified": True, "source": "page 4"}}}
+        self.assertEqual(provenance.read_value(record, "power", "io_volts"), 3.3)
+        self.assertEqual(provenance.read_value({"a": {"value": 0}}, "a"), 0)
+
+    def test_a_bare_value_on_the_path_is_the_value(self):
+        self.assertEqual(provenance.read_value({"power": {"io_volts": 3.3}}, "power", "io_volts"), 3.3)
+        self.assertEqual(provenance.read_value({"power": {"io_volts": "high"}}, "power", "io_volts"), "high")
+
+    def test_a_missing_key_or_no_record_is_none(self):
+        self.assertIsNone(provenance.read_value({"power": {}}, "power", "io_volts"))
+        self.assertIsNone(provenance.read_value({"power": 3}, "power", "io_volts", "deeper"))
+        self.assertIsNone(provenance.read_value(None, "power", "io_volts"))
+        self.assertIsNone(provenance.read_value([], "power"))
+
+
 class FactProblemsTest(unittest.TestCase):
     def test_a_fact_with_its_value_verified_flag_and_source_holds(self):
         self.assertEqual(provenance.fact_problems("facts.a", {"value": 3, "verified": True, "source": "page 4"}), [])
