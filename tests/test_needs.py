@@ -1422,7 +1422,7 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
     DISPLAY = ("spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. "
                "Test it on the board.")
     OTHER = "The other choice: tactile-button on a header pad, which has a Wokwi model."
-    ALL_HELD = "Every other candidate for press is held by another project."
+    ALL_HELD = "Every other part with a Wokwi model for press is held by another project."
     TDISPLAY = ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json"
 
     def setUp(self):
@@ -1507,7 +1507,7 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
 
     def test_a_part_with_no_wokwi_model_is_not_the_other_choice_and_is_not_counted_as_held_or_free(self):
         self.hold_the_bag_of_buttons()
-        self.own("unseen", "x-unseen", simulated=False)
+        self.own("unseen", "x-unseen", simulated=False)  # free, matches, no Wokwi model: the sentence says "with a Wokwi model", so it stays true
         self.assertEqual(self.pick("press=xiao-esp32-c6"), {"board xiao-esp32-c6 for press": self.NO_PIN + " " + self.ALL_HELD})
 
     def test_a_free_part_that_matches_no_word_of_the_need_is_never_the_other_choice(self):

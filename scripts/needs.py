@@ -182,7 +182,7 @@ def offer(key, project=None):
 # --- MVP ---
 #: What the pick's note says after the limits of a board (P397): the part to wire to a header pad, or why none is named.
 OTHER_CHOICE = "The other choice: %s on a header pad, which has a Wokwi model."
-ALL_HELD = "Every other candidate for %s is held by another project."
+ALL_HELD = "Every other part with a Wokwi model for %s is held by another project."
 
 Limits = collections.namedtuple("Limits", "sentences no_pin")
 Limits.__doc__ = "What a passed run does not test of a board's parts that serve one need: plain sentences, and whether one says a pin is missing."
