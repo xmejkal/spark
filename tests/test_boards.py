@@ -731,7 +731,7 @@ class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
         with board_missing("physical.header"):
             code, lines = self.listed(project())
         self.assertEqual(code, 0)
-        self.assertIn("    xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file", lines)
+        self.assertIn("    xiao-esp32-c6 (library) stops at the footprint stage (P121): its board file lacks physical.header", lines)
         self.assertIn("  * firebeetle2-esp32s3 (library)", lines)
 
     def test_a_board_file_that_cannot_be_read_is_still_listed(self):
@@ -739,6 +739,16 @@ class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
         (root / "boards" / "half-board.json").write_text("{not json")
         code, lines = self.listed(root)
         self.assertEqual((code, "    half-board (project)" in lines), (0, True), lines)
+
+    def test_the_line_comes_from_the_footprint_module_and_asks_nothing_of_parts(self):
+        # P411: footprint_stop imported `parts` for a sentence that now lives in emit_footprint; the edge to parts that remains is validate's.
+        # emit_footprint loads parts itself, through design (design.py:41), so it is loaded first: the test asks only whether footprint_stop imports parts
+        import emit_footprint  # noqa: F401
+        from board_library import board_missing
+        with board_missing("physical.header_order"), mock.patch.dict(sys.modules, {"parts": None}):
+            self.assertEqual(boards.footprint_stop("xiao-esp32-c6", project()),
+                             "stops at the footprint stage (P121): its board file lacks physical.header_order")
+            self.assertEqual(boards.footprint_stop("firebeetle2-esp32s3", project()), "")
 
 
 class APadTheBoardCanWireMustHaveASimulatorNameTest(unittest.TestCase):

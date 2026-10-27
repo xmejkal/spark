@@ -467,7 +467,12 @@ class TheMatcherTest(unittest.TestCase):
         boards_offered = {c["id"]: c for c in needs["board"]["candidates"] if c["kind"] == "board"}
         self.assertEqual((boards_offered["xiao-esp32-c6"]["stops_at"], boards_offered["firebeetle2-esp32s3"]["stops_at"]), ("footprint", None))
         lines = out.getvalue().splitlines()
-        self.assertIn("stops at the footprint stage (P121)", next(line for line in lines if "xiao-esp32-c6 (library)" in line))
+        self.assertIn("  stops at the footprint stage (P121): its board file lacks physical.header", next(line for line in lines if "xiao-esp32-c6 (library)" in line))
+        self.assertEqual(boards_offered["xiao-esp32-c6"]["stops_why"], "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of "
+                         "them can be derived from the rest:\n  physical.header (no header geometry at all)")
+        self.assertNotIn("stops_why", boards_offered["firebeetle2-esp32s3"])  # a board that builds gains no key
+        self.assertNotIn("stop_line", boards_offered["firebeetle2-esp32s3"])
+        self.assertNotIn("stop_line", boards_offered["xiao-esp32-c6"])  # only the text shows the line
         self.assertNotIn("stops at", next(line for line in lines if "firebeetle2-esp32s3 (library)" in line))
 
     def test_a_broken_board_is_marked_broken(self):
@@ -866,8 +871,11 @@ class ThePicksTest(unittest.TestCase):
     def test_a_board_that_stops_at_the_footprint_is_picked_saying_so_and_one_that_builds_is_not(self):
         # F12 (C-7): the XIAO was picked without a word, and the person learnt it when the build stopped; warned, never refused
         said = self.text(["--pick", str(self.project), "board=xiao-esp32-c6"])
-        self.assertIn("  board xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry in its board file",
+        self.assertIn("  board xiao-esp32-c6: stops at the footprint stage (P121): its board file lacks physical.header",
                       said.splitlines())
+        said, _ = run(["--pick", str(self.project), "board=xiao-esp32-c6", "--dry-run"])
+        self.assertIn({"subject": "board xiao-esp32-c6", "sentence": "stops at the footprint stage (P121): its board file lacks physical.header"},
+                      said["notes"])  # P411: the colon of the line must not cut the note at the wrong place
         self.assertEqual(self.picks()["board"], [{"board": "xiao-esp32-c6"}])
         run(["--drawer-set", a_file([{"entry": "board", "used_in": {}}])])
         self.assertNotIn("stops at", self.text(["--pick", str(self.project), "board=firebeetle2-esp32s3"]))
@@ -1466,7 +1474,7 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         """A dry-run pick's notes about a board, as {subject: sentence}."""
         said, code = run(["--pick", str(self.project)] + list(picks) + ["--dry-run"])
         self.assertEqual((code, said["status"]), (0, "ok"), said)
-        return {note["subject"]: note["sentence"] for note in said["notes"] if note["subject"] and note["subject"].startswith("board ")}
+        return {note["subject"]: note["sentence"] for note in said["notes"] if note["subject"] and note["subject"].startswith("board ") and " for " in note["subject"]}
 
     def matched(self, need_id, board="xiao-esp32-c6"):
         """The board's candidate for one need, matched alone, as --match --json says it."""
@@ -1537,7 +1545,7 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             parts.main(["--pick", str(self.project), "press=xiao-esp32-c6", "--dry-run"])
         self.assertEqual([line for line in out.getvalue().splitlines() if line.startswith("  board ")],
-                         ["  board xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry in its board file",
+                         ["  board xiao-esp32-c6: stops at the footprint stage (P121): its board file lacks physical.header",
                           "  board xiao-esp32-c6 for press: " + self.NO_PIN + " " + self.OTHER])
 
     def test_a_board_whose_definition_is_not_kept_says_not_checked_then_the_bench_and_no_other_choice(self):
@@ -1817,7 +1825,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         _, project = self.project([("board", [{"board": "xiao-esp32-c6"}]), ("light", [{"part": "led-red-5mm"}])])
         for extra in (["--dry-run"], []):
             with self.subTest(extra=extra):
-                self.assertIn("  board xiao-esp32-c6 stops at the footprint stage (P121) — no header geometry in its board file",
+                self.assertIn("  board xiao-esp32-c6: stops at the footprint stage (P121): its board file lacks physical.header",
                               self.text(["--requirements", str(project)] + extra).splitlines())
         self.assertEqual(self.written(project)["board"], "xiao-esp32-c6")
         _, builds = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
@@ -2072,14 +2080,37 @@ class TheRequirementsFileTest(unittest.TestCase):
             said, code = run(["--requirements", str(project)])
             text = self.text(["--requirements", str(project)])
         sentence = ("picked as the board, but a board needs a board file — a record in boards/ — before spark can build with it, "
-                    "and it has none; spark has one that builds for x-lib-board; x-own-board stops at the footprint stage (P121) "
-                    "— no header geometry in its board file")
+                    "and it has none; spark has one that builds for x-lib-board; x-own-board stops at the footprint stage (P121): "
+                    "its board file lacks physical.header")
         self.assertEqual((said["status"], code, said["problems"]), ("problems", 1, [
             {"subject": "beetle-c6", "sentence": sentence,
              "fix": 'pick x-lib-board, or write a board file for beetle-c6 first (docs/guide/how-it-works.md, "Your own dev board")'}]))
         self.assertEqual(text, "  refused, so nothing was written: beetle-c6 — %s\n  fix for beetle-c6: %s\n"  # P124: with its fix
                          % (sentence, said["problems"][0]["fix"]))
         self.assertFalse((project / "requirements.json").exists())
+
+    def test_each_board_that_stops_is_named_with_its_own_gaps(self):
+        # P411: one sentence for "these stop" said no more than "no header geometry"; each says what its own file lacks
+        home, project = self.project([])
+        library = Path(tempfile.mkdtemp())
+        (library / "x-lib-board.json").write_text(json.dumps(dict(json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text()),
+                                                                  id="x-lib-board")))
+        cut = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        del cut["physical"]["header_order"], cut["physical"]["width_mm"]
+        (project / "boards").mkdir()
+        (project / "boards" / "x-cut-board.json").write_text(json.dumps(dict(cut, id="x-cut-board")))
+        (project / "boards" / "x-bare-board.json").write_text(json.dumps({"id": "x-bare-board"}))
+        (project / "boards" / "active.json").write_text(json.dumps({"board": "x-bare-board"}))
+        self.owned(home, "beetle-c6", {"label": "Beetle ESP32 C6 Mini", "count": 3})
+        (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
+            {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"entry": "beetle-c6"}]}]}))
+        with mock.patch.object(boards, "LIBRARY", library):
+            said, _ = run(["--requirements", str(project)])
+        self.assertEqual(said["problems"][0]["sentence"],
+                         "picked as the board, but a board needs a board file — a record in boards/ — before spark can build with it, "
+                         "and it has none; spark has one that builds for x-lib-board; "
+                         "x-bare-board stops at the footprint stage (P121): its board file lacks physical.header; "
+                         "x-cut-board stops at the footprint stage (P121): its board file lacks 2 fields (first: physical.width_mm)")
 
     @board_missing("physical.header")
     def test_a_board_that_stops_at_the_footprint_is_never_suggested(self):
@@ -2089,7 +2120,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
             {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"entry": "beetle-c6"}]}]}))
         said, _ = run(["--requirements", str(project)])
-        self.assertIn("spark has one that builds for firebeetle2-esp32s3; xiao-esp32-c6 stops at the footprint stage (P121)",
+        self.assertIn("spark has one that builds for firebeetle2-esp32s3; xiao-esp32-c6 stops at the footprint stage (P121): its board file lacks physical.header",
                       said["problems"][0]["sentence"])
         self.assertNotIn("xiao", said["problems"][0]["fix"])
 
