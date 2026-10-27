@@ -80,8 +80,9 @@ def _from_source(prefix):
     run = Path(tempfile.mkdtemp(prefix=prefix))
     try:
         (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
-        environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=str(run / "pycache"),
-                           TMPDIR=str(run / "tmp"))
+        # A mutation run never runs the quick run (P425): a defect only a slow test catches would escape it.
+        environment = dict({name: value for name, value in os.environ.items() if name != "SPARK_SUITE"},
+                           PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=str(run / "pycache"), TMPDIR=str(run / "tmp"))
         yield environment
     finally:
         shutil.rmtree(run, ignore_errors=True)

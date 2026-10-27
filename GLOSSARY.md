@@ -221,6 +221,11 @@ push (P172): one run had left 2,291 entries, 26 MB, and the hook ran it at every
 `ln -sf ../../tools/pre-push .git/hooks/pre-push`. It exists because "runs at every commit" was,
 for two sprints, enforced by nothing.
 
+Since P425 the hook runs the **quick run**, which skips the tests marked `@slow` (`tests/suite_runs.py`) and prints
+`quick run: Ran N of M tests in S s (K slow tests skipped; the full run is check_commit.py --full)`. That line is not the
+suite's count. The **full run**, `tools/check_commit.py [commit] --full`, runs every test and prints
+`as committed, full run: Ran M tests in S s / OK`; it runs before a PR is marked ready and before an auto-mode merge.
+
 ---
 
 ## Keeping the thing small

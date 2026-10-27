@@ -21,6 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import slow  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
@@ -72,6 +73,7 @@ class ACaughtMutationTest(unittest.TestCase):
         self.assertEqual((root / "m.py").read_text(), before)
 
 
+@slow("back-to-back mutation runs of a tiny tree, 4 tests, 3.3 s on 2026-10-26")
 class StaleBytecodeTest(unittest.TestCase):
     """
     A same-size edit, mutated and restored within one second, is invisible to `.pyc` validation.
@@ -126,6 +128,7 @@ class StaleBytecodeTest(unittest.TestCase):
         self.assertTrue(restored)
 
 
+@slow("a mutation run no test notices, on a tiny tree, 3 tests, 2.1 s on 2026-10-26")
 class AnEscapedMutationTest(unittest.TestCase):
     def test_a_defect_no_test_notices_is_reported_escaped_not_caught(self):
         # The whole product. `sub` has no test, so breaking it leaves the suite green.
@@ -172,6 +175,7 @@ class ARefusedMutationTest(unittest.TestCase):
         self.assertNotEqual(mutate.verdict(results, restored), mutate.EXIT_OK)
 
 
+@slow("mutants that do not compile or import, run on a tiny tree, 7 tests, 2.6 s on 2026-10-26")
 class AMutantThatCannotLoadIsRefusedTest(unittest.TestCase):
     """
     P186 (#135), part 1's CH-2: a replacement that breaks the file's syntax, import or format turns the suite red for a
@@ -351,6 +355,7 @@ def write_test(root, name, *lines):
     (root / "tests" / name).write_text("\n".join(["import sys, unittest", "sys.path.insert(0, %r)" % str(root)] + list(lines)) + "\n")
 
 
+@slow("mutation runs of a tiny tree, near tests then the whole suite, 7 tests, 3.7 s on 2026-10-26")
 class NearTestsFirstTest(unittest.TestCase):
     """P98: a mutation meets the tests near its file first; the whole suite decides only what they miss."""
 

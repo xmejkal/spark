@@ -123,7 +123,7 @@ sequenceDiagram
 - Each real stage gets a `BuildInputs` from `tests/data/` and a recording `run` with a canned `circuit.json`.
 - The 6 patches of `check_spine.run` and the 7 of `find_toolchain` go when the engine Adapter takes `run`.
 - The golden of `check_spine.py --json` on the fixture project stays unchanged through the move. It is the net.
-- One real `tsci build` test moves to the slow lane (`slow_test_*.py`), with `test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert` in `test_needs.py`.
+- One real `tsci build` test is marked `@slow` (`tests/suite_runs.py`, P425), so the full run alone runs it, with `test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert` in `test_needs.py`.
 
 ### How a new implementation is added
 
