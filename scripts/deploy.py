@@ -28,6 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_codes
 import board_doctor
 import board_envelope
 import board_grant
@@ -43,7 +44,7 @@ from deploy_service import DeployService, FlashError
 from firmware_platform import FirmwarePlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
-from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
+from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, AnsweringParser, BadArgument
 from text_guards import guard_lines
 
 #: The line after a deploy that names the image on the board and whose yes erased it (P213, card A).
@@ -96,7 +97,8 @@ deploy.py reads it again at once. What the port printed, `nothing`, or why it co
 --json prints one envelope on stdout (docs/guide/agents.md): the token, the look, the stage the run reached, the yes, the
 board log and the store record in `data`, and in `next` the step that waits for the person (`needs_yes`). Every line above
 then goes to stderr, and so does the flash tool's own output. Exit codes do not change; the envelope's status is the exit
-code's. An argument error prints usage on stderr and no envelope.
+code's. Every `problems` and `unchecked` item has a `code` (scripts/board_codes.py). A bad flag with --json prints an envelope
+(status could-not-run, code bad_argument, exit 2); without --json it prints the usage and the error on stderr and exits 2.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
@@ -155,8 +157,8 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     `grant_service` the board_grant.GrantService that finds a deploy grant (default: the store's). A `consent` given always
     wins: the grant is read only when none is given. Returns the exit code.
     """
-    parser = argparse.ArgumentParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = AnsweringParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
+                             formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", type=Path, default=Path("."),
                         help="the project folder with sim/ and requirements.json (default: here)")
     parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on "
@@ -172,7 +174,14 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     parser.add_argument("--dry-run", action="store_true", help="print each command and run nothing")
     parser.add_argument("--json", action="store_true", help="print one envelope on stdout, the lines a person reads on "
                         "stderr (docs/guide/agents.md)")
-    args = parser.parse_args(argv)
+    argv = sys.argv[1:] if argv is None else list(argv)
+    try:
+        args = parser.parse_args(argv)
+    except BadArgument as bad:  # P433: with --json an envelope, else the usage on stderr as argparse prints it
+        if "--json" not in argv:
+            parser.exit_with_usage(guard_lines(str(bad)))
+        print(board_envelope.dumps(board_envelope.bad_argument_envelope("deploy", bad)))
+        return EXIT_COULD_NOT_RUN
     evidence = evidence_for(args.project, args.no_simulation, args.ignore_older_runs)
     reached = {"project": args.project.resolve(), "token": args.token, "port": args.port, "stage": board_envelope.STAGE_PLAN,
             "evidence": evidence, "dry_run": args.dry_run}
@@ -180,6 +189,12 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     if args.json:
         print(board_envelope.dumps(board_envelope.deploy_envelope(reached, code)))
     return code
+
+
+def reason_of(refusal):
+    """The board_codes code for a refusal that deploy.py catches: the `reason` of a LookStop or a DeployError (a FlashError
+    too), and tool_missing for a tools.ToolProblem (P433)."""
+    return board_codes.TOOL_MISSING if isinstance(refusal, tools.ToolProblem) else refusal.reason
 
 
 def who_said_yes(consent):
@@ -202,7 +217,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
     try:
         planned = service.plan(args.port)
     except (DeployError, tools.ToolProblem) as cannot:
-        reached["refusal"] = str(cannot)
+        reached.update(refusal=str(cannot), reason=reason_of(cannot))
         shown("deploy.py: %s" % cannot, sys.stderr)
         return EXIT_COULD_NOT_RUN
     reached["plan"] = planned
@@ -228,14 +243,14 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
         if isinstance(cannot, FlashError):
             reached.update(stage=board_envelope.STAGE_FLASH, consent=consent, yes_kind=yes_kind,
                            who=who_said_yes(consent))
-        reached["refusal"] = str(cannot)
+        reached.update(refusal=str(cannot), reason=reason_of(cannot))
         lines = ["deploy.py: %s" % cannot]
         if isinstance(cannot, board_look.LookStop):  # P354: a failed read gets the doctor, a busy port its step
             lines, reached["doctor"] = board_doctor.stop_answer("deploy.py", cannot, args.project, run)
         shown("\n".join(lines), sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.GateClosedError as shut:
-        reached.update(refusal=str(shut), next_op=shut.next_op)
+        reached.update(refusal=str(shut), reason=shut.reason, next_op=shut.next_op)
         if shut.next_op == deploy_gate.NEXT_DEPLOY:
             reached["run_in_terminal"] = rerun_line(args, report.port, evidence)
             if board_grant.grant_may_cover(report, evidence):
@@ -247,7 +262,8 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
     ready = result.ready
     reached["person_action"] = download_mode.press_reset(boards.ButtonPlaces.of_project(args.project))
     if ready.verdict != ready_check.SEEN:
-        reached["refusal"] = ready.sentence
+        reached.update(refusal=ready.sentence, reason=board_codes.READY_UNKNOWN if ready.verdict == ready_check.UNKNOWN
+                       else board_codes.READY_NOT_SEEN)
     who = reached["who"]
     say("  %s\n  %s\n  %s: %s\n  board log: %s" % (result.facts_line, DEPLOYED_LINE % (result.image_sha256, who),
                                                 ready.verdict, ready.sentence, result.log_path))

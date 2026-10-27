@@ -4,7 +4,9 @@ Proof that the three outcomes are one definition, and that every script answers 
     python3 -m unittest discover -s tests
 """
 
+import contextlib
 import importlib
+import io
 import os
 import sys
 import tempfile
@@ -203,6 +205,33 @@ class OneUpwardWalkTest(unittest.TestCase):
         self.assertEqual(walked[0], (ROOT / "scripts").resolve())
         self.assertEqual(walked[1], ROOT.resolve())
         self.assertEqual(walked[-1], Path(walked[-1].anchor))
+
+
+class AnsweringParserTest(unittest.TestCase):
+    """P433: a bad argument is an answer a script can give, and the usage is printed only when the script chooses."""
+
+    def parser(self):
+        parser = outcomes.AnsweringParser(prog="demo.py")
+        parser.add_argument("--n", type=int)
+        return parser
+
+    def test_a_bad_argument_raises_before_argparse_prints_anything(self):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), self.assertRaises(outcomes.BadArgument) as raised:
+            self.parser().parse_args(["--n", "x"])
+        self.assertEqual((out.getvalue(), err.getvalue()), ("", ""))
+        self.assertIn("invalid int value", str(raised.exception))
+
+    def test_a_good_argument_parses(self):
+        self.assertEqual(self.parser().parse_args(["--n", "3"]).n, 3)
+
+    def test_exit_with_usage_prints_what_argparse_prints_and_exits_with_the_could_not_run_code(self):
+        out, err = io.StringIO(), io.StringIO()
+        parser = self.parser()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as raised:
+            parser.exit_with_usage("argument --n: boom")
+        self.assertEqual((raised.exception.code, out.getvalue()), (2, ""))
+        self.assertEqual(err.getvalue(), "usage: demo.py [-h] [--n N]\ndemo.py: error: argument --n: boom\n")
 
 
 if __name__ == "__main__":

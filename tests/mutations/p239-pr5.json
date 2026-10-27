@@ -20,7 +20,7 @@
  {
   "file": "scripts/project_image.py",
   "name": "an unreadable log is skipped",
-  "find": "raise DeployError(\"cannot read %s: %s\" % (log, cannot))",
+  "find": "raise DeployError(\"cannot read %s: %s\" % (log, cannot), reason=board_codes.LOG_UNREADABLE)",
   "replace": "continue"
  },
  {
@@ -38,8 +38,8 @@
  {
   "file": "scripts/board_look.py",
   "name": "LookService.run loses the image on an unreadable log",
-  "find": "            why = str(cannot)  # image stays set",
-  "replace": "            image = None\n            why = str(cannot)  # image stays set"
+  "find": "            why, code = str(cannot), cannot.reason  # image stays set",
+  "replace": "            image = None\n            why, code = str(cannot), cannot.reason  # image stays set"
  },
  {
   "file": "scripts/project_image.py",

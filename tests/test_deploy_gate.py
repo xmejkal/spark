@@ -28,6 +28,7 @@ import board_facts  # noqa: E402
 import deploy  # noqa: E402
 import deploy_service  # noqa: E402
 import board_grant  # noqa: E402
+import board_look  # noqa: E402
 import boards  # noqa: E402
 import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
@@ -128,7 +129,8 @@ class GateCase(LookCase):
         class EndsDuringTheWait(FakeConsent):
             def require_ready(self):
                 if case.slept:
-                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.")
+                    raise deploy_gate.GateClosedError("the deploy grant ended before the erase. not flashed.",
+                                                    reason="grant_ended")
 
         return EndsDuringTheWait(True)
 
@@ -1183,7 +1185,44 @@ class TerminalConsentTest(unittest.TestCase):
                 self.ask("yes\n", stdin_tty, stdout_tty)
             self.assertIn("no terminal to ask you in", str(shut.exception))
             self.assertIn(self.LINE, str(shut.exception))
-            self.assertEqual(shut.exception.code, 2)
+            self.assertEqual((shut.exception.code, shut.exception.reason), (2, "no_terminal"))
+
+
+class TheGateReasonTest(GateCase):
+    """P433: each refusal of the gate names its reason, and the exit code stays what it was."""
+
+    def refusal(self, report, token, answer=True):
+        with self.assertRaises(deploy_gate.GateClosedError) as shut:
+            deploy_gate.require_open_gate(report, token, FakeConsent(answer), "x.bin", report.caveats)
+        return shut.exception.reason, shut.exception.code
+
+    def test_a_stop_names_its_own_code_and_exits_1(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        self.assertEqual(self.refusal(self.look(), "aaaa-bbbb"), ("chip_differs", 1))
+
+    def test_with_two_stops_the_first_one_s_code_is_the_reason(self):
+        self.run_the_scenario()
+        self.board("firebeetle2-esp32s3")
+        report = self.look(esptool="s3-flash-id-2mb.txt")
+        self.assertEqual([stop.code for stop in report.stops], ["flash_too_small"])
+        report.stops.insert(0, board_look.Stop("chip_differs", "another chip"))
+        self.assertEqual(self.refusal(report, "aaaa-bbbb"), ("chip_differs", 1))
+
+    def test_no_token_given_a_look_with_no_token_a_stale_token_and_a_no(self):
+        self.assertEqual(self.refusal(self.look(), "aaaa-bbbb"), ("no_image", 2))  # no scenario run: the look has no image, so no token
+        self.run_the_scenario()
+        report = self.look()
+        self.assertEqual(self.refusal(report, ""), ("token_missing", 2))
+        self.assertEqual(self.refusal(report, "aaaa-bbbb"), ("token_stale", 2))
+        self.assertEqual(self.refusal(report, report.token(), answer=False), ("answered_no", 2))
+
+    def test_a_deploy_grant_that_ended_names_its_reason(self):
+        grant = board_grant.Grant("m", "t", "u", "2026-01-01T00:00:00+00:00", "2026-01-01T01:00:00+00:00", "deploy")
+        later = datetime.datetime(2026, 1, 2, tzinfo=datetime.timezone.utc)
+        with self.assertRaises(deploy_gate.GateClosedError) as shut:
+            board_grant.StandingConsentStrategy(grant, now=lambda: later).require_ready()
+        self.assertEqual((shut.exception.reason, shut.exception.code), ("grant_ended", 2))
 
 
 if __name__ == "__main__":

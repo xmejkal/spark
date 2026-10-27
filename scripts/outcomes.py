@@ -11,9 +11,13 @@ and the middle word varied with the script — IMPOSSIBLE, INVALID, MISMATCH, ES
 NOTHING_TO_DO — which is fine as a local name for "ran, and the answer is no", and not fine as
 fourteen places the numbers could drift apart (sprint-4 audit B17). Scripts import the codes from
 here and alias the middle one to their own word.
+
+`AnsweringParser` is the argparse that a script with a `--json` envelope uses: a bad flag raises `BadArgument` (P433).
 """
 
+import argparse
 import json
+import sys
 
 #: What the shell sees.
 EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN = 0, 1, 2
@@ -101,9 +105,34 @@ def envelope(tool, op, data=None, problems=(), unchecked=(), next_steps=(), trun
     return said
 
 
-def step(op, argv, why, effects=(), needs_yes=False):
-    """A step an agent may take next (§6.4.2): ids only in `argv` — a label or a reason travels in a file."""
-    return {"op": op, "argv": list(argv), "why": why, "effects": list(effects), "needs_yes": needs_yes}
+def step(op, argv, why, effects=(), needs_yes=False, needs_person=None):
+    """A step an agent may take next (§6.4.2): ids only in `argv` — a label or a reason travels in a file. `needs_person`
+    is a key only for a step that passes it: True when the person must use their hands first (press a button) and the
+    step is no use before that (P433)."""
+    said = {"op": op, "argv": list(argv), "why": why, "effects": list(effects), "needs_yes": needs_yes}
+    if needs_person is not None:
+        said["needs_person"] = needs_person
+    return said
+
+
+# --- MVP ---
+class BadArgument(Exception):
+    """An argument a script cannot run with: could-not-run, and with --json an envelope like any other answer."""
+
+
+class AnsweringParser(argparse.ArgumentParser):
+    """argparse, except that a bad argument is an answer, not an exit: `error` raises BadArgument before argparse prints
+    anything. A script catches it, and prints an envelope with --json or calls `exit_with_usage` without it."""
+
+    def error(self, message):
+        raise BadArgument(message)
+
+    def exit_with_usage(self, message):
+        """Print the usage and `message` on stderr as argparse does, and exit with EXIT_COULD_NOT_RUN. The message holds the
+        person's own arguments, so the caller passes it through text_guards first (outcomes imports nothing of spark)."""
+        self.print_usage(sys.stderr)
+        self.exit(EXIT_COULD_NOT_RUN, "%s: error: %s\n" % (self.prog, message))
+# --- end MVP ---
 
 
 def page(items, start, op, argv, limit=20, budget=3400):

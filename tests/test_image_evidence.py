@@ -117,7 +117,7 @@ class PassedRunEvidenceTest(unittest.TestCase):
 
     def test_a_log_that_cannot_be_read_is_a_deploy_error(self):
         write_log(self.project, "a.log", "passed")
-        with mock.patch.object(ProjectImage, "read_run_logs", side_effect=DeployError("cannot read a.log")), \
+        with mock.patch.object(ProjectImage, "read_run_logs", side_effect=DeployError("cannot read a.log", reason="log_unreadable")), \
                 self.assertRaises(DeployError):
             PassedRunEvidence().why_not_ready(self.image)
 

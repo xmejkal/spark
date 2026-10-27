@@ -95,7 +95,7 @@ class TheFlashTest(ServiceCase):
     def test_a_yes_that_ends_before_the_flash_stops_it(self):
         class Ended(FakeConsent):
             def require_ready(self):
-                raise project_image.DeployError("the yes ended")
+                raise project_image.DeployError("the yes ended", reason="grant_ended")
         report = self.look()
         with self.assertRaises(project_image.DeployError):
             self.service().deploy(report, report.token(), Ended(True), self.lines.append)
@@ -147,7 +147,7 @@ class TheVerifyTest(ServiceCase):
         report = self.look()
         service = self.service()
         planned = service.deploy(report, report.token(), FakeConsent(True), self.lines.append)
-        with mock.patch.object(project_image.ProjectImage, "find_passed_log", side_effect=project_image.DeployError("x")):
+        with mock.patch.object(project_image.ProjectImage, "find_passed_log", side_effect=project_image.DeployError("x", reason="log_unreadable")):
             with self.assertRaises(project_image.DeployError):
                 service.verify(report, planned, self.lines.append)
 
@@ -157,7 +157,7 @@ class TheVerifyTest(ServiceCase):
 
         def find_passed_log(image):
             if self.flashed():  # only after the flash
-                raise project_image.DeployError("the log is gone")
+                raise project_image.DeployError("the log is gone", reason="log_unreadable")
             return real(image)
         with mock.patch.object(project_image.ProjectImage, "find_passed_log", find_passed_log):
             with self.assertRaises(project_image.DeployError):

@@ -206,8 +206,8 @@
  {
   "file": "scripts/board_look.py",
   "name": "stop-verdict-not-refused-token",
-  "find": "        if self.verdict == VERDICT_STOP:\n            return \"the look found a stop\"",
-  "replace": "        if False:\n            return \"the look found a stop\""
+  "find": "        if self.verdict == VERDICT_STOP:\n            return NoToken(board_codes.STOP_FOUND, \"the look found a stop\")",
+  "replace": "        if False:\n            return NoToken(board_codes.STOP_FOUND, \"the look found a stop\")"
  },
  {
   "file": "scripts/deploy_service.py",

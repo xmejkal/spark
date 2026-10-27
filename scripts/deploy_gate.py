@@ -14,6 +14,7 @@ import shlex
 import sys
 from pathlib import Path
 
+import board_codes
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 from text_guards import guard_lines
 
@@ -32,15 +33,19 @@ def format_rerun_line(script, arguments):
 NEXT_DEPLOY, NEXT_LOOK = "deploy", "look"
 
 
+# --- MVP ---
 class GateClosedError(Exception):
     """Error: why the gate stays shut, and `code`, the exit code: 1 for a stop the look found, 2 for everything else.
+    `reason` is the board_codes code that names why, a required keyword, so no raise site goes without one (P433).
     `next_op` is NEXT_DEPLOY (the person runs the deploy in their own terminal), NEXT_LOOK (the look is stale or missing)
     or None (nothing to do but read the sentence)."""
 
-    def __init__(self, why, code=EXIT_COULD_NOT_RUN, next_op=None):
+    def __init__(self, why, code=EXIT_COULD_NOT_RUN, next_op=None, *, reason):
         super().__init__(why)
         self.code = code
         self.next_op = next_op
+        self.reason = reason
+# --- end MVP ---
 
 
 class ConsentStrategy(abc.ABC):
@@ -74,7 +79,7 @@ class TerminalConsentStrategy(ConsentStrategy):
 
     def require_ready(self):
         if not (self.stdin.isatty() and self.stdout.isatty()):
-            raise GateClosedError(NO_TERMINAL % self.line, next_op=NEXT_DEPLOY)
+            raise GateClosedError(NO_TERMINAL % self.line, next_op=NEXT_DEPLOY, reason=board_codes.NO_TERMINAL)
 
     def ask(self, question):
         self.require_ready()
@@ -87,16 +92,20 @@ def require_open_gate(report, token, consent, image, caveats):
     """Returns None when the person said yes to erasing this board for `image`. Raises GateClosedError, which says why
     not. It never erases or writes. The `caveats` (LookReport.caveats) come first in the question."""
     if report.stops:
-        raise GateClosedError("%s. not flashed." % "; ".join(report.stops), EXIT_PROBLEMS)
+        raise GateClosedError("%s. not flashed." % "; ".join(stop.sentence for stop in report.stops), EXIT_PROBLEMS,
+                              reason=report.stops[0].code)  # with two stops, the first one's code
     if not token:
-        raise GateClosedError("run look.py first, then deploy.py --token <token>.", next_op=NEXT_LOOK)
+        raise GateClosedError("run look.py first, then deploy.py --token <token>.", next_op=NEXT_LOOK,
+                              reason=board_codes.TOKEN_MISSING)
     mine = report.token()
     if not mine:
-        raise GateClosedError("no token: %s. not flashed." % report.no_token_reason())
+        why = report.no_token_reason()
+        raise GateClosedError("no token: %s. not flashed." % why.sentence, reason=why.code)
     theirs = (token.split("-", 1) + [""])[:2]
     changed = [what for what, given, read in zip(("the board", "the image"), theirs, mine.split("-")) if given != read]
     if changed:
-        raise GateClosedError("%s changed since the look: run look.py again." % " and ".join(changed), next_op=NEXT_LOOK)
+        raise GateClosedError("%s changed since the look: run look.py again." % " and ".join(changed), next_op=NEXT_LOOK,
+                              reason=board_codes.TOKEN_STALE)
     accepted = report.warnings + ["%s unknown (%s)" % each for each in report.unknown.items()]
     question = "erase ALL of this board's flash (%s) and write %s?" % (report.last_deploy.in_question(), image)
     if accepted:
@@ -104,4 +113,4 @@ def require_open_gate(report, token, consent, image, caveats):
     for caveat in reversed(caveats):
         question = "%s. %s" % (caveat, question)
     if not consent.ask(question):
-        raise GateClosedError("not flashed: you answered no.")
+        raise GateClosedError("not flashed: you answered no.", reason=board_codes.ANSWERED_NO)

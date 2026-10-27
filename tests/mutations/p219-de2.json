@@ -56,7 +56,7 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "check-after-tools",
-  "find": "        why = self.evidence.why_not_ready(image)\n        if why:\n            raise DeployError(why + self.evidence.way_out(image))\n        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n",
-  "replace": "        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n        why = self.evidence.why_not_ready(image)\n        if why:\n            raise DeployError(why + self.evidence.way_out(image))\n"
+  "find": "        why = self.evidence.why_not_ready(image)\n        if why:\n            raise DeployError(why + self.evidence.way_out(image), reason=board_codes.EVIDENCE_REFUSES)\n        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n",
+  "replace": "        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n        why = self.evidence.why_not_ready(image)\n        if why:\n            raise DeployError(why + self.evidence.way_out(image), reason=board_codes.EVIDENCE_REFUSES)\n"
  }
 ]

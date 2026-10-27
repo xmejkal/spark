@@ -12,6 +12,7 @@ import shlex
 import subprocess
 import time
 
+import board_codes
 import board_facts
 import boards
 import board_grant
@@ -32,7 +33,8 @@ DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready lo
 
 
 class FlashError(DeployError):
-    """Error: a flash command failed, so the board may be erased and not written."""
+    """Error: a flash command failed, so the board may be erased and not written. Its `reason` is flash_failed, or the
+    gate's grant_ended when the yes ended before the retry."""
 
 
 class BoardLog(collections.namedtuple("BoardLog", "moment port image_sha256 facts_line verdict sentence heard simulation")):
@@ -77,7 +79,7 @@ class DeployService:
         image = ProjectImage(self.project)
         why = self.evidence.why_not_ready(image)
         if why:
-            raise DeployError(why + self.evidence.way_out(image))
+            raise DeployError(why + self.evidence.way_out(image), reason=board_codes.EVIDENCE_REFUSES)
         project_flasher = self.platform.make_flasher()
         shell_command = self.platform.make_shell_command()
         notes = self.evidence.notes(image)
@@ -99,7 +101,7 @@ class DeployService:
             show_line("  yes: %s" % consent.who)
         planned = self.plan(report.port)
         if report.token() != token:  # AT116: the image changed while the person answered
-            raise DeployError("the image changed after your yes: run look.py again. not flashed.")
+            raise DeployError("the image changed after your yes: run look.py again. not flashed.", reason=board_codes.IMAGE_CHANGED)
         consent.require_ready()  # a deploy grant can end while the plan reads the image
         for index, command in enumerate(planned.commands):
             show_line("  running: %s" % shlex.join(command))
@@ -107,7 +109,8 @@ class DeployService:
                 self._run_flash(command, planned.flasher, consent, show_line, retry=index == 0)
             except (OSError, subprocess.CalledProcessError) as failed:
                 hint = planned.flasher.boot_hint
-                raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""))
+                raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
+                                 reason=board_codes.FLASH_FAILED)
         return planned
 
     def _run_flash(self, command, flasher, consent, show_line, retry):
@@ -125,7 +128,8 @@ class DeployService:
             try:
                 consent.require_ready()
             except deploy_gate.GateClosedError as shut:  # the first try ran: the board may be erased
-                raise FlashError("`%s` failed (%s), and its retry did not run: %s" % (shlex.join(command), failed, shut))
+                raise FlashError("`%s` failed (%s), and its retry did not run: %s" % (shlex.join(command), failed, shut),
+                                 reason=shut.reason)  # the yes ended: grant_ended
             self.run(command, check=True, **echo)
 
     def verify(self, report, planned, show_line):

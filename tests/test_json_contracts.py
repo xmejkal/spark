@@ -15,6 +15,7 @@ their first key `check` where the others say `tool`. That disagreement is P43's 
 is what makes fixing it safe, and its expectations are what P43 will update.
 """
 
+import ast
 import contextlib
 import io
 import json
@@ -37,14 +38,20 @@ import check_all  # noqa: E402
 import check_footprints  # noqa: E402
 import check_physics  # noqa: E402
 import check_spine  # noqa: E402
+import board_codes  # noqa: E402
+import board_grant  # noqa: E402
+import board_look  # noqa: E402
 import check_vendor_pins  # noqa: E402
 import compare_design  # noqa: E402
+import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
 import grant  # noqa: E402
 import import_firmware  # noqa: E402
 import outcomes  # noqa: E402
 import parts  # noqa: E402
+import test_deploy_gate  # noqa: E402
 import tools  # noqa: E402
+from suite_runs import slow  # noqa: E402
 
 BOARD = "firebeetle2-esp32s3"
 
@@ -215,6 +222,55 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         """`parts.py --catalog --json` printed prose and ignored the flag (P43); since P95 it is the envelope."""
         _, payload = payload_of(lambda: parts.main(["--catalog", "--json"]))
         self.assertEqual(sorted(payload), ENVELOPE)
+
+
+class TheBenchCodesTableTest(unittest.TestCase):
+    """P433: every code that look.py and deploy.py write is in board_codes.CODES, which says it in one sentence."""
+
+    def test_the_table_holds_each_constant_of_the_module_once_with_a_sentence(self):
+        constants = {name: value for name, value in vars(board_codes).items() if name.isupper() and isinstance(value, str)}
+        self.assertEqual(sorted(constants.values()), sorted(board_codes.CODES))
+        sentences = list(board_codes.CODES.values())
+        self.assertTrue(all(sentence.strip() for sentence in sentences))
+        self.assertEqual(len(set(sentences)), len(sentences))
+
+    @slow("runs the look, gate, grant and doctor test modules once more under a spy, 1 test, 15.7 s on 2026-10-27")
+    def test_every_reason_raised_is_in_the_table(self):
+        raised = set()
+
+        def spying(original):
+            def init(error, *args, **kwargs):
+                original(error, *args, **kwargs)
+                raised.add(error.reason)
+            return init
+
+        suite = unittest.TestSuite()
+        for name in ("test_board_look", "test_board_doctor", "test_board_grant"):
+            suite.addTests(unittest.defaultTestLoader.loadTestsFromName(name))
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromName("TheGateTest", test_deploy_gate))
+        with mock.patch.object(board_look.LookStop, "__init__", spying(board_look.LookStop.__init__)), \
+                mock.patch.object(deploy_gate.GateClosedError, "__init__", spying(deploy_gate.GateClosedError.__init__)):
+            result = unittest.TextTestRunner(stream=io.StringIO()).run(suite)
+        self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
+        self.assertTrue(raised, "the spy saw no raise")
+        self.assertEqual(sorted(raised - set(board_codes.CODES)), [])
+
+    def test_agents_md_names_every_code(self):
+        text = (ROOT / "docs" / "guide" / "agents.md").read_text()
+        self.assertEqual([code for code in board_codes.CODES if "`%s`" % code not in text], [])
+
+    def test_every_why_a_site_raises_a_grant_refusal_with_has_a_code(self):
+        tree = ast.parse(Path(board_grant.__file__).read_text())
+        raised = {node.args[0].id for node in ast.walk(tree) if isinstance(node, ast.Call) and node.args
+                  and getattr(node.func, "id", "") == "GrantRefusedError" and isinstance(node.args[0], ast.Name)}
+        self.assertTrue(raised, "the scan found no raise site")
+        self.assertEqual(sorted(name for name in raised if getattr(board_grant, name) not in board_grant.CODE_FOR_WHY), [])
+
+    def test_a_grant_refusal_has_the_reason_and_the_exit_code_of_its_why(self):
+        for why, reason, code in (("not a grant", "not_a_grant", 1), ("answered no", "answered_no", 1), ("bad minutes", "bad_minutes", 2),
+                                  ("bad scope", "bad_scope", 2), ("no mac", "no_mac", 2), ("serial not mac", "serial_not_mac", 1)):
+            refusal = board_grant.GrantRefusedError(why)
+            self.assertEqual((refusal.reason, refusal.code, reason in board_codes.CODES), (reason, code, True), why)
 
 
 if __name__ == "__main__":
