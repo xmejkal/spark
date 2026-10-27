@@ -473,6 +473,17 @@ class TheRunChecksWhatCostsNothingFirstTest(ProjectCase):
         (self.project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 'mine.bin'\n")
         self.assertIn('write it as firmware = "name.bin"', self.refused())
 
+    def test_a_firmware_line_that_is_no_string_is_refused_with_the_reason(self):
+        # P429: `firmware = 3` raised a TypeError out of the run
+        (self.project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 3\n")
+        self.assertEqual(self.refused(), "lights.v2.scenario.yaml: wokwi.toml line 3 names the firmware in a form spark "
+                         'cannot read. To fix it, write it as firmware = "name.bin".')
+
+    def test_an_empty_firmware_name_is_refused_with_its_own_reason(self):
+        (self.project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = ""\n')
+        self.assertEqual(self.refused(), 'lights.v2.scenario.yaml: wokwi.toml line 3 names no file. '
+                         'To fix it, write it as firmware = "name.bin".')
+
 
 class TheMutationTesterFoundTheseMissingTest(ProjectCase):
     """The mutation tester's first run on the follow-up (2026-10-12): 12 planted, 6 caught. Each escape is a test here."""

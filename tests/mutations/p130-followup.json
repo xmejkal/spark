@@ -20,14 +20,14 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a wokwi.toml firmware line this cannot read is accepted, and the run writes one image while wokwi-cli simulates another",
-  "find": "if named is None and any(line.lstrip().startswith(\"firmware\") for line in toml.read_text().splitlines()):",
-  "replace": "if False:"
+  "find": "    if named.state == outcomes.NOT_CHECKED:\n        raise ValueError(",
+  "replace": "    if False:\n        raise ValueError("
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/sim_project.py",
   "name": "an indented, unreadable firmware line is not seen",
-  "find": "any(line.lstrip().startswith(\"firmware\")",
-  "replace": "any(line.startswith(\"firmware\")"
+  "find": "if not line.strip().startswith(\"firmware\"):",
+  "replace": "if not line.startswith(\"firmware\"):"
  },
  {
   "file": "scripts/run_scenario.py",

@@ -131,7 +131,7 @@ does not need a finished build ([P196](https://github.com/xmejkal/spark/issues/1
 build removes the `pins.py` that it wrote earlier, because that file describes another design. If spark refuses the
 requirements file, the build removes the earlier sheet, drawings, `page.html` and the `pins.py` that it wrote, and
 says why. If the requirements file is missing, it removes nothing. The one command also keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR.
-A rebuild keeps the flash image that `sim/wokwi.toml` already names, unless `--firmware` names another.
+A rebuild keeps the flash image that `sim/wokwi.toml` already names, unless `--firmware` names another. Spark reads that line only as `firmware = "name.bin"` (a JSON string); a line in another form (indented, `firmware="x.bin"`, a number, an empty name) is not kept, and the build says so on stderr: the rebuild then names no image.
 
 When the chain runs end to end for a project on your list, your store's history records `built`: the board and the parts
 that were built, each with a digest of some of the facts the build read from it (the pins, power and footprint; not a

@@ -53,6 +53,36 @@ class TheImageTest(unittest.TestCase):
             ProjectImage(project)
         self.assertIn("run a scenario first", str(said.exception))
 
+    def test_a_firmware_line_that_is_no_string_is_a_deploy_error_with_one_sentence(self):
+        # P429: `firmware = 3` raised a TypeError
+        project = project_with_image()
+        (project / "sim" / "wokwi.toml").write_text("[wokwi]\nfirmware = 3\n")
+        with self.assertRaises(DeployError) as said:
+            ProjectImage(project)
+        self.assertEqual(str(said.exception), "sim/wokwi.toml line 2 names the firmware in a form spark cannot read. "
+                         'To fix it, write it as firmware = "name.bin".')
+
+    def test_an_empty_firmware_name_and_a_file_that_is_no_text_each_have_their_own_sentence(self):
+        project = project_with_image()
+        (project / "sim" / "wokwi.toml").write_text('[wokwi]\nfirmware = ""\n')
+        with self.assertRaises(DeployError) as empty:
+            ProjectImage(project)
+        self.assertEqual(str(empty.exception), 'sim/wokwi.toml line 2 names no file. To fix it, write it as firmware = "name.bin".')
+        (project / "sim" / "wokwi.toml").write_bytes(b"\xff\xfe\x00")
+        with self.assertRaises(DeployError) as unreadable:
+            ProjectImage(project)
+        self.assertEqual(str(unreadable.exception), "sim/wokwi.toml cannot be read: it is not text in UTF-8.")
+
+    def test_an_image_outside_sim_is_a_deploy_error_as_it_is_a_refused_run(self):
+        # P429: the look and the deploy took "../x.bin" and "/abs/x.bin", which no run writes
+        project = project_with_image()
+        for named in ("../x.bin", "/abs/x.bin"):
+            (project / "sim" / "wokwi.toml").write_text('firmware = "%s"\n' % named)
+            with self.assertRaises(DeployError) as said:
+                ProjectImage(project)
+            self.assertEqual(str(said.exception), "wokwi.toml names %s, outside sim/, and a run writes its image only "
+                             "inside sim/" % (project / "sim" / named))
+
     def test_a_new_project_image_after_the_file_changed_has_the_new_sha256(self):
         project = project_with_image()
         ProjectImage(project).sha256

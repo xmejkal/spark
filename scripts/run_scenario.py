@@ -193,12 +193,12 @@ class ScenarioSteps:
 def image_in(toml):
     """The flash image wokwi.toml names. When the build named none, this names DEFAULT_IMAGE there first."""
     text = toml.read_text()
-    if sim_project.firmware_in(toml) is None and sim_project.UNNAMED_FIRMWARE in text:
+    if sim_project.firmware_in(toml).state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE in text:
         toml.write_text(text.replace(sim_project.UNNAMED_FIRMWARE, "\n".join(sim_project.firmware_lines(DEFAULT_IMAGE))))
     named = sim_project.firmware_in(toml)
-    if named is None and any(line.lstrip().startswith("firmware") for line in toml.read_text().splitlines()):
-        raise ValueError('wokwi.toml names its firmware in a form this cannot read: write it as firmware = "name.bin"')
-    return toml.parent / (named or DEFAULT_IMAGE)
+    if named.state == outcomes.NOT_CHECKED:
+        raise ValueError("wokwi.toml %s%s" % (named.why, named.fix()))
+    return toml.parent / (named.name or DEFAULT_IMAGE)
 
 
 def verdict(code, serial, out, err, timeout_ms):
@@ -255,9 +255,7 @@ class ScenarioRun:
             self.flash = flash_image.interpreter_for(self.micropython, self.project).image(self.files)
         except (OSError, ValueError, tools.ToolProblem) as cannot:
             return "%s: %s" % (self.scenario.name, cannot)
-        if self.sim.resolve() not in self.image.resolve().parents:
-            return "wokwi.toml names %s, outside sim/, and a run writes its image only inside sim/" % self.image
-        return None
+        return sim_project.why_outside_sim(self.sim, self.image)
 
     def run(self, cli):
         """Run it with the firmware as it is now: (status, sentence, the log or None). Every paid run leaves a log."""

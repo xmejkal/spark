@@ -11,10 +11,13 @@ simulation stage calls it; nothing here knows about tscircuit.
 import json
 import shutil
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import boards
 import emit_board
+import outcomes
 import parts as parts_library
 import tools
 
@@ -171,21 +174,72 @@ def stage_chips(chips, sim_dir, compiler=None):
     return staged, problems
 
 
+#: How `why` begins when the file itself cannot be read, and not one of its lines.
+CANNOT_READ = "cannot be read: "
+
 #: How a wokwi.toml line names the flash image: `wokwi_toml` writes it, and `firmware_in` reads it.
 FIRMWARE_LINE = "firmware = "
 
 
+# --- MVP ---
+@dataclass(frozen=True)
+class FirmwareLine:
+    """
+    Value: what a wokwi.toml says of its flash image (P429). `state` is one of the three words of `outcomes` (the reader
+    rule, OC4): `name` holds the file name only when it is RECORDED, and `why` says what stopped the reader only when it
+    is NOT_CHECKED, as a sentence without the file's name (a caller puts that first). `name` is whatever non-empty string the
+    file holds: where it may point is `why_outside_sim`'s rule, which the run and the project's image apply, not the reader.
+    """
+
+    state: str
+    name: Optional[str] = None
+    why: Optional[str] = None
+
+    def fix(self):
+        """What to add after `why` when a person can rewrite the line: the form to write, or "" when the file cannot be read."""
+        return "" if self.why is None or self.why.startswith(CANNOT_READ) else ' To fix it, write it as firmware = "name.bin".'
+
+
 def firmware_in(toml):
     """
-    The flash image a kept wokwi.toml names, or None (P196's refuter): a rebuild with no --firmware keeps running it,
-    where it used to rewrite the line commented out. `wokwi_toml` writes the value as a JSON string, so it reads back so.
+    The flash image a kept wokwi.toml names, as a FirmwareLine; never raises (P196's refuter, P429). A rebuild with no
+    --firmware keeps running it, where it used to rewrite the line commented out. `wokwi_toml` writes the value as a JSON
+    string after `firmware = ` at the start of the line, and only that form is read. No file, or no line that starts with
+    `firmware`: NONE_RECORDED. A file that cannot be read, or a first such line in any other form (indented, no spaces
+    around the `=`, a value that is no JSON string, or an empty one): NOT_CHECKED, because wokwi-cli reads full TOML and
+    would take an image that this does not.
     """
     try:
         lines = Path(toml).read_text().splitlines()
-        named = [line[len(FIRMWARE_LINE):] for line in lines if line.startswith(FIRMWARE_LINE)]
-        return json.loads(named[0]) if named else None
-    except (OSError, ValueError):
-        return None
+    except FileNotFoundError:
+        return FirmwareLine(outcomes.NONE_RECORDED)
+    except (OSError, ValueError) as cannot:  # ValueError: bytes that are no text
+        reason = getattr(cannot, "strerror", None) or "it is not text in UTF-8"
+        return FirmwareLine(outcomes.NOT_CHECKED, why=CANNOT_READ + reason + ".")
+    for number, line in enumerate(lines, 1):
+        if not line.strip().startswith("firmware"):
+            continue
+        try:
+            name = json.loads(line[len(FIRMWARE_LINE):]) if line.startswith(FIRMWARE_LINE) else None
+        except (ValueError, RecursionError):
+            name = None
+        if isinstance(name, str) and name:
+            return FirmwareLine(outcomes.RECORDED, name)
+        if name == "":
+            return FirmwareLine(outcomes.NOT_CHECKED, why="line %d names no file." % number)
+        return FirmwareLine(outcomes.NOT_CHECKED, why="line %d names the firmware in a form spark cannot read." % number)
+    return FirmwareLine(outcomes.NONE_RECORDED)
+# --- end MVP ---
+
+
+def why_outside_sim(sim, image):
+    """The sentence that refuses an image outside the sim folder, or None when it is inside. A run writes its image, so it
+    only writes inside sim/, and the look and the deploy refuse the same image: they would flash a file no run made."""
+    try:
+        outside = Path(sim).resolve() not in Path(image).resolve().parents
+    except (OSError, ValueError, RuntimeError):  # a null byte in the name, a link loop
+        outside = True
+    return "wokwi.toml names %s, outside sim/, and a run writes its image only inside sim/" % image if outside else None
 
 
 #: The line wokwi_toml writes when no image is named yet. wokwi-cli refuses such a file, so run_scenario.py names one here.

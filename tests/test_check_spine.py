@@ -620,6 +620,58 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertEqual(self.keep_through_main("--keep", into)[1], "flash-with-firmware.bin")
         self.assertEqual(self.keep_through_main("--keep", into, "--firmware", "other.bin")[1], "other.bin")
 
+    def rebuild_over(self, toml_text, *argv, writes=True):
+        """
+        (the firmware the run was handed, stderr) of a `--keep` rebuild over a sim/wokwi.toml of this text (None: no file).
+        The run writes a new wokwi.toml unless `writes` is False: a build that stopped before its simulation stage.
+        """
+        import contextlib
+        import io
+        into = Path(tempfile.mkdtemp()) / "project"
+        (into / "sim").mkdir(parents=True)
+        if toml_text is not None:
+            (into / "sim" / "wokwi.toml").write_text(toml_text)
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        handed = {}
+
+        def a_run_that_simulated(requirements, workdir, *rest, firmware=None, **named):
+            handed["firmware"] = firmware
+            if writes:
+                (workdir / "sim").mkdir()
+                (workdir / "sim" / "wokwi.toml").write_text("[wokwi]\n")
+            return [check_spine.Stage("build", check_spine.OK, "fine")]
+
+        with mock.patch.object(check_spine, "run", a_run_that_simulated), \
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            check_spine.main([str(fixture / "requirements.json"), "--keep", str(into)] + list(argv))
+        return handed["firmware"], err.getvalue()
+
+    def test_a_rebuild_over_a_firmware_line_it_cannot_read_says_the_line_goes(self):
+        # P429: the rewritten wokwi.toml dropped the line without a word
+        handed, said = self.rebuild_over("[wokwi]\nversion = 1\nfirmware = 3\n")
+        self.assertIsNone(handed)
+        self.assertIn("  sim/wokwi.toml line 3 names the firmware in a form spark cannot read. "
+                      "The rebuild wrote it again with no image named, and a scenario run then names the default one.\n", said)
+        # and nothing for a line it kept, no line, no file, a --firmware of the person's own, or a build that stopped early
+        for text in ('firmware = "x.bin"\n', "[wokwi]\nversion = 1\n", None):
+            self.assertNotIn("The rebuild wrote it again", self.rebuild_over(text)[1], text)
+        handed, said = self.rebuild_over("firmware = 3\n", "--firmware", "other.bin")
+        self.assertEqual((handed, said.count("The rebuild wrote it again")), ("other.bin", 0))
+        self.assertNotIn("The rebuild wrote it again", self.rebuild_over("firmware = 3\n", writes=False)[1])
+
+    def test_a_file_spark_cannot_read_has_its_own_sentence_in_the_rebuild_line(self):
+        with mock.patch.object(check_spine.sim_project, "firmware_in", return_value=check_spine.sim_project.FirmwareLine(
+                "not-checked", None, "cannot be read: Permission denied.")):
+            handed, said = self.rebuild_over("anything")
+        self.assertIn("  sim/wokwi.toml cannot be read: Permission denied. The rebuild wrote it again", said)
+
+    def test_that_line_is_one_the_terminal_prints_as_itself(self):
+        # a reason that holds a character a terminal does not print: the line goes through guard_lines like the others
+        with mock.patch.object(check_spine.sim_project, "firmware_in", return_value=check_spine.sim_project.FirmwareLine(
+                "not-checked", None, "a\u202eb")):
+            handed, said = self.rebuild_over("anything")
+        self.assertIn("  sim/wokwi.toml a?b The rebuild wrote it again", said)
+
     def test_kept_files_reach_the_envelope_as_they_reach_the_text(self):
         # P124 (#58), CH-16: with --json the lines of --keep went to stderr only, so an agent never read which files it
         # wrote and which it left alone.

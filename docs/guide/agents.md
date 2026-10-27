@@ -122,6 +122,7 @@ These only read:
   **A field `unknown` is not a pass**, and neither is a look with no token or a last deploy it could not check ([P416](https://github.com/xmejkal/spark/issues/543)): the exit is 2 and the line says what went unchecked. A deploy grant does not cover a look whose last deploy was not checked: the person types yes.
   Exit 1 is a stop (deploy.py will refuse, no token) or a field that differs but that the person can accept (with a token):
   the stop line or the token line tells them apart. The token is not the person's yes;
+  a `sim/wokwi.toml` whose firmware line is not `firmware = "name.bin"` ([P429](https://github.com/xmejkal/spark/issues/566)) gives the line `no token: sim/wokwi.toml names its firmware in a form spark cannot use: ...`, exit 2: rewrite the line, then look again;
 - `grant.py --check`. It runs only `mpremote devs`, so the board does not restart. It says whether the board on USB has
   a live grant now: exit 0 granted, 1 not (no grant, it ended, a grant file that is not this board's), 2 it could not
   run. `--json` gives `granted`, `why` (a code, or null; `could not run` when it could not look) and `grant` ([P253](https://github.com/xmejkal/spark/issues/265)). Never run `grant.py --minutes` (with `--scope live`

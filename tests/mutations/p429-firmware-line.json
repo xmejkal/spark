@@ -1,0 +1,110 @@
+[
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: a firmware value that is no string is taken as the image name",
+  "find": "if isinstance(name, str) and name:",
+  "replace": "if name is not None and name:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: an empty firmware name is taken as the image name",
+  "find": "if isinstance(name, str) and name:",
+  "replace": "if isinstance(name, str):"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: a line that is not in the written form is cut at the same column and read anyway",
+  "find": "json.loads(line[len(FIRMWARE_LINE):]) if line.startswith(FIRMWARE_LINE) else None",
+  "replace": "json.loads(line[len(FIRMWARE_LINE):])"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: an indented firmware line is not seen by the reader",
+  "find": "if not line.strip().startswith(\"firmware\"):",
+  "replace": "if not line.startswith(\"firmware\"):"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: the reason names no line, or the wrong one",
+  "find": "enumerate(lines, 1)",
+  "replace": "enumerate(lines)"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: a deeply nested value raises out of the reader",
+  "find": "except (ValueError, RecursionError):",
+  "replace": "except ValueError:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: bytes that are no text raise out of the reader",
+  "find": "except (OSError, ValueError) as cannot:",
+  "replace": "except OSError as cannot:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: a file that is not there is a file that could not be read",
+  "find": "except FileNotFoundError:",
+  "replace": "except ZeroDivisionError:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: the name of a read line is dropped",
+  "find": "return FirmwareLine(outcomes.RECORDED, name)",
+  "replace": "return FirmwareLine(outcomes.RECORDED)"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "P429: the image of a firmware line spark cannot use is the default one, not a DeployError",
+  "find": "        if named.state == outcomes.NOT_CHECKED:\n",
+  "replace": "        if False:\n"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P429: the rebuild drops a firmware line it cannot read without a word",
+  "find": "    if kept is not None and kept.state == NOT_CHECKED and",
+  "replace": "    if False and"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P429: the rebuild's line about the dropped firmware line is printed unguarded",
+  "find": "print(guard_lines(\"  sim/wokwi.toml %s The rebuild",
+  "replace": "print((\"  sim/wokwi.toml %s The rebuild"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: an empty firmware name has the reason of a form spark cannot read",
+  "find": "if name == \"\":",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: a file that is no text has no reason",
+  "find": "or \"it is not text in UTF-8\"",
+  "replace": "or \"\""
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: a file spark cannot read is told to write the line as firmware = name.bin",
+  "find": "\"\" if self.why is None or self.why.startswith(CANNOT_READ) else",
+  "replace": "\"\" if self.why is None else"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "P429: a name that cannot be resolved counts as inside sim/",
+  "find": "except (OSError, ValueError, RuntimeError):",
+  "replace": "except RuntimeError:"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "P429: the rebuild says the line goes when the build stopped before it wrote wokwi.toml",
+  "find": " and (workdir / \"sim\" / \"wokwi.toml\").is_file():",
+  "replace": ":"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "P429: the look and the deploy take an image outside sim/",
+  "find": "        if outside:\n            raise DeployError(outside)\n",
+  "replace": "        if False:\n            raise DeployError(outside)\n"
+ }
+]
