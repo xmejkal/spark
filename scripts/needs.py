@@ -179,6 +179,7 @@ def offer(key, project=None):
     return next((found for found, _ in offers(rows, entries) if (found.kind, found.key) == wanted), None)
 
 
+# --- MVP ---
 #: What the pick's note says after the limits of a board (P397): the part to wire to a header pad, or why none is named.
 OTHER_CHOICE = "The other choice: %s on a header pad, which the simulation can reach."
 ALL_HELD = "Every other candidate for %s is held by another project."
@@ -212,6 +213,9 @@ def board_limits(need, record, functions, read=None):
     no_pin = any(boards.ONBOARD_ROLES[role].scenario_verb and pairs and pairs[0][0] != boards.ONBOARD_GPIOS
                  for role, pairs in said.items())
     return Limits(list(dict.fromkeys(sentences)), no_pin)
+
+
+# --- end MVP ---
 
 
 def _candidate(need, fit, context, mine=None):
@@ -331,6 +335,7 @@ def _unfiled_boards(needs, known, entries):
                    for kind, key in [next(iter(_as_record(pick, known, entries).items()))] if kind == "entry"})
 
 
+# --- MVP ---
 def _holds_wokwi(record):
     """Whether a record gives the simulation a stand-in or a chip for the part (`simulation.wokwi`), as a table."""
     return isinstance(record, dict) and isinstance(record.get("simulation"), dict) and isinstance(record["simulation"].get("wokwi"), dict)
@@ -340,8 +345,8 @@ def _other_choice(need, built, mine, board_key):
     """
     The sentence that closes a board's limits when a part on a header pad would lift them (P397): the first candidate for the
     need, other than the board, that is a part the person owns with free stock and whose record the simulation can reach.
-    Spark looks in what the person owns first, so a part to get is never named. When every other candidate is owned and held
-    by another project, it says so. With none owned, and with any other candidate left, it says nothing.
+    Spark looks in what the person owns first, so a part to get is never named, and never counted. When the person owns
+    candidates and each is held by another project, it says so. With none owned, it says nothing of a choice.
     """
     records = {(offer.kind, offer.key): said["record"] for offer, said in built}
     others = [c for c in _rank(need, built, mine) if (c["kind"], c["id"]) != ("board", board_key)]
@@ -349,7 +354,8 @@ def _other_choice(need, built, mine, board_key):
                   and _holds_wokwi(records[("part", c["id"])])), None)
     if named:
         return OTHER_CHOICE % named["id"]
-    return ALL_HELD % need["id"] if others and all(c["owned"] != 0 and c["free"] == 0 for c in others) else ""
+    owned = [c for c in others if c["owned"] != 0]
+    return ALL_HELD % need["id"] if owned and all(c["free"] == 0 for c in owned) else ""
 
 
 def _limits_notes(after, picked, rows, entries, mine):
@@ -373,6 +379,9 @@ def _limits_notes(after, picked, rows, entries, mine):
             other = _other_choice(need, built, mine, key) if limits.no_pin else ""
             notes.append("board %s for %s: %s" % (key, need["id"], " ".join(limits.sentences + ([other] if other else []))))
     return notes
+
+
+# --- end MVP ---
 
 
 def plan_pick(project, given, passed_over=()):

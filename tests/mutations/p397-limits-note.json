@@ -8,7 +8,7 @@
 {"file": "scripts/needs.py", "name": "other-choice-names-a-held-part", "find": "c[\"owned\"] != 0 and c[\"free\"] != 0", "replace": "c[\"owned\"] != 0"},
 {"file": "scripts/needs.py", "name": "other-choice-names-a-part-to-get", "find": "c[\"kind\"] == \"part\" and c[\"owned\"] != 0 and c[\"free\"] != 0", "replace": "c[\"kind\"] == \"part\""},
 {"file": "scripts/needs.py", "name": "other-choice-names-a-part-out-of-the-simulation", "find": "\n                  and _holds_wokwi(records[(\"part\", c[\"id\"])])), None)", "replace": "), None)"},
-{"file": "scripts/needs.py", "name": "all-held-says-so-for-a-part-to-get", "find": "all(c[\"owned\"] != 0 and c[\"free\"] == 0 for c in others)", "replace": "all(c[\"free\"] == 0 for c in others)"},
+{"file": "scripts/needs.py", "name": "all-held-says-so-for-a-part-to-get", "find": "all(c[\"free\"] == 0 for c in owned)", "replace": "all(c[\"free\"] == 0 for c in others)"},
 {"file": "scripts/needs.py", "name": "limits-note-before-the-footprint-note", "find": "    notes += _limits_notes(after, picked, rows, entries, name)\n", "replace": "    notes[:0] = _limits_notes(after, picked, rows, entries, name)\n"},
 {"file": "scripts/boards.py", "name": "definition-read-again-for-each-role", "find": "            if board.get(\"id\") not in read:\n", "replace": "            if True:\n"},
 {"file": "scripts/parts.py", "name": "match-text-drops-the-limits", "find": "            lines += [\"          \" + sentence for sentence in c[\"limits\"]]  # P397: the JSON keeps them as data\n", "replace": ""}

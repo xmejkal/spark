@@ -1489,7 +1489,8 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         self.keep_the_xiao(self.PINS, lambda board: board["pin_roles"]["onboard_led"].update(gpio=[3]))
         sentence = ("the Wokwi definition of xiao-esp32-c6 has no pin on GPIO3, so spark knows no way for a scenario to read it. "
                     "Test it on the board.")
-        self.assertEqual(self.pick("blink=xiao-esp32-c6"), {"board xiao-esp32-c6 for blink": sentence})
+        # the FireBeetle's LED is the only one the person owns, and another project holds the FireBeetle
+        self.assertEqual(self.pick("blink=xiao-esp32-c6"), {"board xiao-esp32-c6 for blink": sentence + " Every other candidate for blink is held by another project."})
         self.assertEqual(self.matched("blink")["limits"], [sentence])
 
     def test_the_picked_board_s_sentence_is_the_builds_sentence(self):
@@ -1511,6 +1512,9 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
 
     def test_every_owned_candidate_held_by_another_project_is_said_so_and_none_is_named(self):
         self.hold_the_bag_of_buttons()
+        self.assertEqual(self.pick("press=xiao-esp32-c6"), {"board xiao-esp32-c6 for press": self.NO_PIN + " " + self.ALL_HELD})
+        self.own("spare", "x-spare")
+        (self.home / "drawer" / "spare.json").unlink()  # a part to get: a candidate the person does not own
         self.assertEqual(self.pick("press=xiao-esp32-c6"), {"board xiao-esp32-c6 for press": self.NO_PIN + " " + self.ALL_HELD})
 
     def test_a_part_to_get_is_never_the_other_choice_and_nothing_owned_says_nothing_of_a_choice(self):
