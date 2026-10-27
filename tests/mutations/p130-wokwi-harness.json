@@ -32,7 +32,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a wokwi.toml with no image named is left so, and wokwi-cli refuses it",
-  "find": "if sim_project.firmware_in(toml) is None and sim_project.UNNAMED_FIRMWARE in text:",
+  "find": "if sim_project.firmware_in(toml).state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE in text:",
   "replace": "if False:"
  },
  {

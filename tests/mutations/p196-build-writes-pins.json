@@ -50,8 +50,8 @@
  {
   "file": "scripts/check_spine.py",
   "name": "P196 refuter: a rebuild drops the flash image the kept wokwi.toml names again",
-  "find": "    firmware = args.firmware or (sim_project.firmware_in(simulation / \"wokwi.toml\") if simulation else None)",
-  "replace": "    firmware = args.firmware"
+  "find": "        firmware = kept.name\n",
+  "replace": "        firmware = None\n"
  },
  {
   "file": "scripts/design.py",

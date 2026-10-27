@@ -193,7 +193,7 @@ class TheFirmwareLineTest(unittest.TestCase):
                 self.assertEqual(self.read(line + "\n").state, "not-checked")
 
     def test_an_indented_line_and_one_with_no_spaces_are_seen_and_not_checked(self):
-        for line in ('  firmware = "x.bin"', 'firmware="x.bin"', '\tfirmware = "x.bin"'):
+        for line in ('  firmware = "x.bin"', 'firmware="x.bin"', '\tfirmware = "x.bin"', 'firmware   "x.bin"'):
             with self.subTest(line=line):
                 self.assertEqual(self.read("[wokwi]\n" + line + "\n").state, "not-checked")
 

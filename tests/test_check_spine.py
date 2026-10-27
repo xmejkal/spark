@@ -647,6 +647,11 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("  sim/wokwi.toml: its firmware line is not kept: line 3 is not firmware = and a JSON string; spark "
                       "reads the value as a JSON string, while wokwi-cli reads full TOML; the rebuild names no image, and a "
                       "scenario run then names the default one\n", said)
+        # and nothing for a line it kept, no line, no file, or a --firmware of the person's own
+        for text in ('firmware = "x.bin"\n', "[wokwi]\nversion = 1\n", None):
+            self.assertNotIn("firmware line is not kept", self.rebuild_over(text)[1], text)
+        handed, said = self.rebuild_over("firmware = 3\n", "--firmware", "other.bin")
+        self.assertEqual((handed, said.count("firmware line is not kept")), ("other.bin", 0))
 
     def test_that_line_is_one_the_terminal_prints_as_itself(self):
         # a reason that holds a character a terminal does not print: the line goes through guard_lines like the others
@@ -654,15 +659,6 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
                 "not-checked", None, "a\u202eb")):
             handed, said = self.rebuild_over("anything")
         self.assertIn("is not kept: a?b;", said)
-
-    def test_a_rebuild_with_a_good_line_a_missing_line_or_no_file_says_nothing(self):
-        for text in ('firmware = "x.bin"\n', "[wokwi]\nversion = 1\n", None):
-            with self.subTest(text=text):
-                self.assertNotIn("firmware line is not kept", self.rebuild_over(text)[1])
-
-    def test_a_rebuild_with_a_firmware_of_its_own_says_nothing_of_the_old_line(self):
-        handed, said = self.rebuild_over("firmware = 3\n", "--firmware", "other.bin")
-        self.assertEqual((handed, said.count("firmware line is not kept")), ("other.bin", 0))
 
     def test_kept_files_reach_the_envelope_as_they_reach_the_text(self):
         # P124 (#58), CH-16: with --json the lines of --keep went to stderr only, so an agent never read which files it

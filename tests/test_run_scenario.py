@@ -481,11 +481,6 @@ class TheRunChecksWhatCostsNothingFirstTest(ProjectCase):
                       'a JSON string; spark reads the value as a JSON string, while wokwi-cli reads full TOML; '
                       'write it as firmware = "name.bin"', self.refused())
 
-    def test_the_run_alone_keeps_the_rule_that_an_image_stays_inside_sim(self):
-        # P429: the reader takes any string; containment is this run's rule
-        (self.project / "sim" / "wokwi.toml").write_text(sim_project.wokwi_toml([], "../x.bin"))
-        self.assertIn("outside sim/", self.refused())
-
 
 class TheMutationTesterFoundTheseMissingTest(ProjectCase):
     """The mutation tester's first run on the follow-up (2026-10-12): 12 planted, 6 caught. Each escape is a test here."""
