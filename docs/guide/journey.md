@@ -183,8 +183,9 @@ How to read the matches:
   (*distance*, *light*). Whether that fits is Claude's call, and Claude says so to you.
 - A candidate with an `about` line shows it under its row. With `--json`, each candidate has a `score` from 0 to 1 and a
   `why`. `--matcher word-overlap` ranks by shared words, tags and descriptions, and `same-words` stays the default.
-- `stops at the footprint stage (P121)` marks a board whose board file has no header geometry: the chain stops at its
-  footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)). Both library boards build today (the XIAO since
+- `stops at the footprint stage (P121)` marks a board whose board file lacks a fact its footprint is drawn from, and the
+  rest of the line names it (`its board file lacks physical.header`; with more, `lacks 3 fields (first: …)`; `--json`
+  has the whole list as `stops_why`): the chain stops at its footprint stage ([P121](https://github.com/xmejkal/spark/issues/55)). Both library boards build today (the XIAO since
   [P278](https://github.com/xmejkal/spark/issues/314)); the lines above are a dated record from when it did not.
 
 Here a distance sensor is offered for soil moisture. It senses distance, not moisture, so soil moisture is a real gap.

@@ -98,7 +98,7 @@ CHANGED = "changed"
 #: The `did` of a kept entry for one end the drawn breadboard joins differently from circuit.json's points (P279).
 DRAWING_DIFFERS = "drawing differs"
 # --- MVP ---
-#: What a build stopped at the footprint stage still gives, after the gaps `emit_footprint.why_no_footprint` names (P407).
+#: What a build stopped at the footprint stage still gives, after the gaps `emit_footprint.why_no_footprint` lists (P407).
 NO_FOOTPRINT_HINT = ("The schematic was not tried. The pin map needs no footprint: with --keep, the kept lines say "
                      "whether firmware/pins.py was written. The breadboard sheet and the simulation read the built "
                      "board, so they wait for the footprint.")
@@ -394,8 +394,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     except design.DesignError as broken:
         return stages + [Stage("parts", COULD_NOT_RUN, str(broken))]
 
-    # --- MVP --- the schematic imports the board's footprint, so a record that cannot give one stops here, under the
-    # stage `parts.STOPS_AT_FOOTPRINT` names, before emit_board is asked (P407). The input is read and the pins placed
+    # --- MVP --- the schematic imports the board's footprint, so a record that cannot give one stops here, at the
+    # footprint stage `emit_footprint.why_no_footprint` explains, before emit_board is asked (P407). The input is read and the pins placed
     # first, as emit_board does, so a fault in the requirements is said before a gap in the board record.
     no_footprint = emit_footprint.why_no_footprint(board)
     if no_footprint:
@@ -432,8 +432,9 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         ["--board", board["id"], "--project", str(project),
          "-o", str(workdir / ("%s.tsx" % export))])
     if footprint != emit_footprint.EXIT_OK:
-        return stages + [Stage("footprint", COULD_NOT_RUN,
-                               "no footprint could be generated for %s" % board["id"])]
+        # nothing is missing here (the stop above), so the board disagrees with itself; the fallback is for what else exits
+        return stages + [Stage("footprint", COULD_NOT_RUN, emit_footprint.why_header_disagrees(board) or
+                               "emit_footprint.py exited %d for %s" % (footprint, board["id"]))]
     stages.append(Stage("footprint", OK, "%s.tsx" % export))
 
     # --- the build, which is the only stage that can prove any of the above ---

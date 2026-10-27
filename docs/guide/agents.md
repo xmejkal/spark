@@ -172,6 +172,11 @@ These only read:
   battery input` come from the `power` block. A need of "indicate light" finds the XIAO ESP32-C6 through its LED, and a
   need of "power charger" finds it through its charger. Tell the person that the board is the part, and pick the board
   for that need too. Read every page of `--match` first: follow `truncated.next` until it is null.
+  A board that stops the chain at the footprint stage (P121) is one line in the text rows of `--list`, `--audit`, `--match`,
+  `--pick`, `--requirements` and init: `stops at the footprint stage (P121): its board file lacks physical.header`, or
+  `lacks 3 fields (first: physical.width_mm)` when more are missing (P411). The JSON gives the list: `stops_why` on a
+  `--match` board candidate that stops (`stops_at` is `footprint`; a board that builds has `stops_at` null and no `stops_why`)
+  and on each `--audit` `stops_at_footprint` row, the sentence the build prints, a field to a line with its note. Relay the line; read `stops_why` to see what to record.
   Each `--match --json` candidate has `limits` (P397): a list of plain sentences, filled only for a board that serves the
   need through its own LED, button, display or battery-level pin, and `[]` for any other candidate, and for a board that
   the need's verb admitted by other words. A sentence says what a passed run does not test of that part: the simulation
@@ -638,7 +643,9 @@ count.
    detail that starts `Traceback (most recent call last):` is a crash, not a defect in the design. A board whose file
    cannot give a footprint stops at `[????] footprint`, before the schematic. The detail names each missing fact (the
    gaps `emit_footprint.py` names), then says what the build still gives: with `--keep`, the kept lines say whether
-   `firmware/pins.py` was written. A fault in the requirements file (an unknown need, two parts of one name, pins that
+   `firmware/pins.py` was written. A board whose header and pad order disagree, or hold a value of the wrong kind (a pitch
+   written as text), stops at `[????] footprint` too, in the sentence `the board definition disagrees with itself: …` (P411); a value of the wrong kind is named by its field, as `physical.header.pitch_mm is not a number`.
+   A fault in the requirements file (an unknown need, two parts of one name, pins that
    cannot be placed) is said first, under `schematic`. `emit_board.py` alone refuses that board with the same sentence,
    in the same order, exit 2 ([P407](https://github.com/xmejkal/spark/issues/532)).
 3. A bad command line (an unknown flag, or `CLAUDE_PLUGIN_ROOT` unset) exits 2 with nothing on stdout, except that
