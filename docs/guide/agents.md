@@ -525,14 +525,14 @@ The column "needs the person" says whether the next step waits on the person's h
 | `flash_differs` | `problems`, subject `flash` | the flash size is not one the record lists | relay it; deploy.py asks the person to accept it | yes |
 | `field_unknown` | `unchecked` | the board or the record did not say a field | relay it; deploy.py asks the person to accept it | yes |
 | `stop_found` | `unchecked` | the look found a stop, so it gave no token. The stop is its own item | as for the stop | yes |
-| `no_mac` | `unchecked` | the board's MAC could not be read, so the look gave no token | reconnect the board, run look.py again | yes |
-| `evidence_refuses` | `unchecked` of a look, deploy stage `plan` | the evidence refuses the image: no passed run names it, a run tested another image, or another check failed. The sentence names the way out | run a scenario, or what the sentence names, then look.py again | no |
+| `no_mac` | `unchecked`, deploy stage `gate` | the board's MAC could not be read, so the look gave no token. `grant.py` refuses with it too | reconnect the board, run look.py again | yes |
+| `evidence_refuses` | `unchecked` of a look, deploy stage `plan` | the evidence refuses the image: no passed run names it, a run tested another image, or another check failed. The sentence names the way out. Until [P436](https://github.com/xmejkal/spark/issues/580), a missing image tool comes under this code too, and its sentence says `install: /spark:setup add ...` | run a scenario, or what the sentence names, then look.py again. If the sentence says `install:`, ask the person to run `/spark:setup` | no, yes for `install:` |
 | `last_deploy_not_checked` | `unchecked` | spark's record of the board's last deploy could not be read | relay the `fix` (repair the record), run look.py again | yes |
 | `no_terminal` | deploy, stage `gate` | there is no terminal for the person's yes. `data.run_in_terminal` is the line | give the person the line, word for word | yes |
 | `token_missing` | deploy, stage `gate` | deploy.py got no token, so no look came before it | run look.py, then deploy.py with its token | no |
 | `token_stale` | deploy, stage `gate` | the board or the image is not the one the token names | run look.py again | no |
 | `answered_no` | deploy, stage `gate` | the person answered no | stop | yes |
-| `grant_ended` | deploy, stage `gate` or `flash` | the deploy grant ended before the erase | ask the person for a new grant or a typed yes | yes |
+| `grant_ended` | deploy, stage `gate` or `flash` | the deploy grant ended before the erase. At stage `flash`, `board_state` is `may_be_erased` | ask the person for a new grant or a typed yes. At stage `flash`, tell the person the board may be erased | yes |
 | `no_sim_toml` | deploy, stage `plan` or a look | the project has no `sim/wokwi.toml` | build first (`/spark:build --keep`) | no |
 | `firmware_line_bad` | deploy, stage `plan` or a look | the firmware line of `sim/wokwi.toml` cannot be read, or names an image outside `sim/` | fix the line as the sentence says, build again | no |
 | `no_image` | deploy, stage `plan` or a look | the image that `sim/wokwi.toml` names is not there yet | run a scenario | no |
@@ -544,7 +544,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `ready_unknown` | deploy, stage `verify` | the board could not be read after the flash, or the passed run's log names no files. The sentence tells which | run the `watch` step; if it has `needs_person`, tell the person first | if `needs_person` |
 | `bad_argument` | both scripts | an argument that the script cannot run with (below) | fix the flag, run again | no |
 
-The codes `not_a_grant`, `bad_minutes`, `bad_scope` and `serial_not_mac` are in the table of `scripts/board_codes.py` too. They name the reasons of
+The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `serial_not_mac` and `no_mac` are in the table of `scripts/board_codes.py` too. They name the reasons of
 `grant.py`'s refusals, which do not reach this envelope. With two stops, the deploy gate's `code` is the first stop's.
 
 **A bad flag.** With `--json`, `look.py` and `deploy.py` print an envelope for an argument they cannot run with, such as

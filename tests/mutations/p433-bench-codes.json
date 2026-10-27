@@ -13,7 +13,7 @@
  {"file": "scripts/board_grant.py", "name": "an ended grant is told as a no", "find": "reason=board_codes.GRANT_ENDED)", "replace": "reason=board_codes.ANSWERED_NO)"},
  {"file": "scripts/board_grant.py", "name": "a bad scope is told as bad minutes", "find": "WHY_BAD_SCOPE: board_codes.BAD_SCOPE", "replace": "WHY_BAD_SCOPE: board_codes.BAD_MINUTES"},
  {"file": "scripts/board_envelope.py", "name": "the envelope drops a stop's own code", "find": "{\"subject\": \"stop\", \"code\": stop.code,", "replace": "{\"subject\": \"stop\", \"code\": board_codes.FLASH_DIFFERS,"},
- {"file": "scripts/board_envelope.py", "name": "an unknown field is told as no token", "find": "\"code\": board_codes.FIELD_UNKNOWN,", "replace": "\"code\": board_codes.NO_TOKEN,"},
+ {"file": "scripts/board_envelope.py", "name": "an unknown field is told as a stop", "find": "\"code\": board_codes.FIELD_UNKNOWN,", "replace": "\"code\": board_codes.STOP_FOUND,"},
  {"file": "scripts/board_envelope.py", "name": "a differing flash is told as an unknown field", "find": "\"code\": board_codes.FLASH_DIFFERS, \"sentence\": warning", "replace": "\"code\": board_codes.FIELD_UNKNOWN, \"sentence\": warning"},
  {"file": "scripts/board_envelope.py", "name": "a look that could not run drops its stop's reason", "find": "\"code\": stop.reason,", "replace": "\"code\": board_codes.TOOL_MISSING,"},
  {"file": "scripts/board_envelope.py", "name": "the deploy item has no code", "find": "\"code\": reached.get(\"reason\"),", "replace": "\"code\": None,"},
