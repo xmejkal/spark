@@ -16,6 +16,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import suite_temp  # noqa: E402,F401
+from suite_runs import slow  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -106,6 +107,7 @@ class TscircuitExportTest(unittest.TestCase):
         result = self.run_with(side_effect=subprocess.TimeoutExpired("tsci", 60))
         self.assertEqual("tsci export -f pcb-svg took over 60 s", result.why_missing)
 
+    @slow("the real tsci exports a circuit to SVG, 1 test, 2.4 s on 2026-10-26")
     @unittest.skipUnless(shutil.which("tsci"), "tsci is not installed")
     def test_the_real_tsci_exports_a_circuit(self):
         with tempfile.TemporaryDirectory() as scratch:

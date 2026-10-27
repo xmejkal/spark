@@ -240,7 +240,7 @@ class TheGateRemovesItsOwnArchiveTest(unittest.TestCase):
         def archived(root, commit, into):
             (into / "tools" / "circuit-to-wokwi").mkdir(parents=True)
 
-        def measured(tree):
+        def measured(tree, full=False):
             check_commit.lend_node_modules(tree)
             self.assertTrue((tree / "tools" / "circuit-to-wokwi" / "node_modules").is_symlink())
             return "OK", True, []

@@ -68,8 +68,8 @@
  {
   "file": "tools/check_commit.py",
   "name": "the measured verdict is ok whatever the suite returned",
-  "find": "return \" / \".join(suite_said), suite.returncode == 0, left",
-  "replace": "return \" / \".join(suite_said), True, left"
+  "find": "suite_line(suite_said, not full, slow_skipped), suite.returncode == 0, left",
+  "replace": "suite_line(suite_said, not full, slow_skipped), True, left"
  },
  {
   "file": "tools/check_commit.py",

@@ -393,7 +393,7 @@ One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of th
 | 1 | Pruning: what goes under the tag, what moves behind a module | the prune PR with `PRUNED.md`, the MVP marks per card | question 1: which of the verdict groups to take, in which order (answered: *"quck now, split later"*, so the prune PR does the quick work, and the splits of `boards.py` and `parts.py` wait for wave 6) |
 | 2 | Package layout: `scripts/spark/`, areas, leaves, the move recipe | S4, S11, waves 5 and 6 | question 2 (decision 2, the shape) and question 3 (decision 4, when the moves start) |
 | 3 | The core contract: Operation, result, Finding, the four rules of section 4, consent, the five role tables as its worked input | S3, S5, S6, OC4 | question 4 (decision 6, a relayed yes), question 5 (decision 1, readability first) and question 6 (decision 5, the printed names) |
-| 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, `tests/test_imports.py` | question 7: the fast lane's budget on a push (S13) |
+| 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, `tests/test_imports.py` | question 7: the quick run on a push, with no cap (S13, done in P425) |
 | 5 | Claude Code forms: command, skill, agent, MCP, and what each gets from one Operation | the frontends, the learning spike | question 8: when the spike runs (answered: after wave 3) |
 
 ## 10. The waves and their slices
@@ -410,8 +410,10 @@ One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of th
 The order of work. The between-cards council set the order after P335. The PO accepted it in chat on 2026-10-26:
 OC8, P333, OC3, S13, OC4, P397, OC7, P399, P374, OC5, P345 PR 2, S2, OC6, OC1 (after P411), OC2. The waves keep
 their slices. S13 runs early because of the PO's answer on question 7 (epic #94, 2026-10-26: *"let's try option a,
-lets see, how t works"*). It is an experiment: a fast lane under 90 s on his Mac, judged at a retro. Today the push
-hook takes 111 to 206 s. Wave 5's closing 90 s check becomes S13's own check.
+lets see, how t works"*). It is an experiment, judged at a retro. The PO's "under 90 s" meant the quick run's test seconds: with the board check the whole push took 94 to 100 s. Today the push
+hook takes 111 to 206 s. **S13 is done in P425 ([#559](https://github.com/xmejkal/spark/issues/559))**: a quick run on the hook
+and a full run (`check_commit.py --full`) before a PR is ready, with no cap on the time. The hook prints the quick run's
+seconds and count, and the retro decides any cap (W15b). Wave 5's closing 90 s check is dropped with the cap.
 
 ```mermaid
 flowchart LR
@@ -523,8 +525,7 @@ today 2,266 lines that 35 files import. It retargets the 217 mutation rows. It a
 `LookStopError`, `ReadyProbe`, `DoctorProbe`, `DeployPhase`, `ReadingFile`. It moves the Fakes into `tests/fakes.py`.
 `board_facts.py` moves as the bench's `ReadingFile` and the look's line. `deployed_store.py` (OC5) stays in `scripts/`
 until the records move. S12, the map: `tools/map.py` writes `docs/guide/map.md`. When the page is stale, a test fails. S13,
-fast and slow lanes. S13 runs early (the order of work in section 10). Its own check is that the fast lane runs
-under 90 s on the PO's Mac. One check closes the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints nothing.
+the quick run and the full run. S13 is done in P425 (the order of work in section 10). One check closes the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints nothing.
 
 ### Wave 6: the other areas
 

@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import suite_temp  # noqa: E402,F401
+from suite_runs import slow  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -29,6 +30,7 @@ FRESH = json.loads((ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
                     / "xiao-esp32-c6-fresh.json").read_text())
 
 
+@slow("a real build of the library XIAO with a button and an LED, 3 tests, 5.8 s on 2026-10-26")
 class TheLibraryXiaoBuildsAButtonAndAnLedTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
