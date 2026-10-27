@@ -74,7 +74,7 @@ import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, NOT_CHECKED  # noqa: E402
-from text_guards import guard_lines  # noqa: E402
+from text_guards import guard_lines, printable  # noqa: E402
 
 from outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
 
@@ -102,6 +102,11 @@ DRAWING_DIFFERS = "drawing differs"
 NO_FOOTPRINT_HINT = ("The schematic was not tried. The pin map needs no footprint: with --keep, the kept lines say "
                      "whether firmware/pins.py was written. The breadboard sheet and the simulation read the built "
                      "board, so they wait for the footprint.")
+
+
+def said_of_a_crash(program, crash):
+    """How a crash in `program` reads as a stage's detail: its last traceback line, as the child's stderr gave it (F5)."""
+    return "%s crashed: %s: %s" % (program, type(crash).__name__, printable(str(crash)))
 
 
 class Stage:
@@ -402,6 +407,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     except emit_board.RefusedInput as refused:
         hint = "\n" + NO_FOOTPRINT_HINT if refused.stage == emit_board.FOOTPRINT_STAGE else ""
         return stages + [Stage(refused.stage, COULD_NOT_RUN, str(refused) + hint)]
+    except Exception as crash:  # noqa: BLE001 -- emit_board ran in a child until P432, so a crash was a stage (F5), not a lost run
+        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_board.py", crash))]
 
     board_file = workdir / "board.tsx"
     emitted = subprocess.run(
@@ -410,30 +417,33 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         capture_output=True, text=True)
     if emitted.returncode == emit_board.EXIT_COULD_NOT_RUN:
         # It refused the input — a part with no measured outline, a resistor nothing sizes — in its own words.
-        return stages + [Stage("schematic", COULD_NOT_RUN, emitted.stderr.strip())]
+        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, emitted.stderr.strip())]
     if emitted.returncode != 0:
         # emit_board exits 0 or 2 on purpose, so anything else is a crash: could-not-run, as `main` says of anything
         # unforeseen, with the traceback's last line. Read as problems, it sent people to debug a design nobody examined (F5).
         said = emitted.stderr.strip().splitlines()
-        return stages + [Stage("schematic", COULD_NOT_RUN, "emit_board.py crashed: %s" % (
+        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, "emit_board.py crashed: %s" % (
             said[-1] if said else "exit %d, and nothing said" % emitted.returncode))]
     board_file.write_text(emitted.stdout)
     traces_asked = emitted.stdout.count(emit_board.TRACE_TAG)
-    stages.append(Stage("schematic", OK, "%d trace(s) written" % traces_asked))
+    stages.append(Stage(emit_board.SCHEMATIC_STAGE, OK, "%d trace(s) written" % traces_asked))
     if emitted.stderr.strip():
         stages.append(Stage("schematic-notes", PROBLEMS, emitted.stderr.strip()))
 
     # --- the footprint the schematic imports ---
-    # --- MVP --- rendered here, in this process, with the rules the design came with (P432, OC2): the child that wrote the
-    # footprint printed a line of its own to this build's stderr and said only what exited. `read_inputs` has read the rules,
-    # and a rules file that cannot be read was refused with the schematic.
-    export = (board.get("physical") or {}).get("footprint_export")
+    # --- MVP --- drawn here with the design's rules; `read_inputs` already refused a rules file that cannot be read (P432, OC2).
+    footprint_board = inputs.design.board
+    export = (footprint_board.get("physical") or {}).get("footprint_export")
     rules = inputs.design.rules
-    disagreement = emit_footprint.why_header_disagrees(board, rules)
-    if disagreement:
-        return stages + [Stage("footprint", COULD_NOT_RUN, disagreement)]
-    (workdir / ("%s.tsx" % export)).write_text(emit_footprint.render(board, rules))
-    stages.append(Stage("footprint", OK, "%s.tsx" % export))
+    try:
+        disagreement = emit_footprint.why_header_disagrees(footprint_board, rules)
+        if disagreement:
+            return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, disagreement)]
+        text = emit_footprint.render(footprint_board, rules)
+    except Exception as crash:  # noqa: BLE001 -- the footprint script ran apart from this run until P432, so a crash was a stage
+        return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_footprint.py", crash))]
+    (workdir / ("%s.tsx" % export)).write_text(text)
+    stages.append(Stage(emit_board.FOOTPRINT_STAGE, OK, "%s.tsx" % export))
 
     # --- the build, which is the only stage that can prove any of the above ---
     # The project's tools file, not the scratch directory's: a broken or pinned project file must be read.
@@ -561,7 +571,7 @@ def board_alone(board, workdir, firmware=None):
     The stages after `board` for a project that runs on the board alone (P236): nothing to wire, so the parts,
     schematic, footprint and build stages are SKIPPED, never ok, and the simulation holds the board's Wokwi part only.
     """
-    skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", "schematic", "footprint", "build")]
+    skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", emit_board.SCHEMATIC_STAGE, emit_board.FOOTPRINT_STAGE, "build")]
     if not board.get("wokwi_part_type"):
         return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type")]
     sim_dir = workdir / "sim"

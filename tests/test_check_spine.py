@@ -35,6 +35,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import boards  # noqa: E402
 import check_spine  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
@@ -1440,9 +1441,11 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
 
     def test_the_spine_s_footprint_is_byte_equal_to_the_cli_s(self):
         project, wanted = self.project_without("physical.header.drill_mm")
-        (project / ".spark" / "rules.json").write_text(json.dumps({"fabrication": {"drill_step_mm": 0.05}}))
+        # a drill step of 0.3 mm draws a 1.2 mm hole where the default draws 1.0 mm, so the rules show in the bytes
+        (project / ".spark" / "rules.json").write_text(json.dumps({"fabrication": {"drill_step_mm": 0.3}}))
         workdir, stages = self.run_to_the_footprint(project, wanted)
         written = (workdir / [stage for stage in stages if stage.name == "footprint"][0].detail).read_text()
+        self.assertNotEqual(written, check_spine.emit_footprint.render(boards.load(project, "xiao-esp32-c6"), None))
         with contextlib.redirect_stdout(io.StringIO()) as printed:
             code = check_spine.emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(project)])
         self.assertEqual(code, 0)
@@ -1511,20 +1514,42 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
                 self.assertIn(said, stages[-1].detail)
 
     def test_the_stop_says_what_read_inputs_says_on_the_same_project(self):
-        # P432: the spine and emit_board refuse in one order, with one function's words
+        # P432: the spine and emit_board refuse in one order, with one function's words; `first` is each case's literal start
         typo = {"signals": [{"name": "X", "needs": ["teleport"]}]}
-        for fields, extra in ((("physical.header",), typo), (("physical.header",), {}),
-                              (("physical.width_mm", "physical.header_order"), {})):
+        gap = "xiao-esp32-c6 cannot have a footprint generated — these are not recorded"
+        for fields, extra, first in ((("physical.header",), typo, "cannot emit a board: X asks for teleport, which is not"),
+                                     (("physical.header",), {}, gap),
+                                     (("physical.width_mm", "physical.header_order"), {}, gap)):
             with self.subTest(fields=fields, extra=extra):
                 project, wanted = self.project_without(*fields, requirements=dict(
                     {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}, **extra))
                 with self.assertRaises(emit_board.RefusedInput) as refused:
                     emit_board.read_inputs(project / "requirements.json", project)
+                self.assertTrue(str(refused.exception).startswith(first), str(refused.exception))
                 stages = self.run_spine(project, wanted)
                 self.assertEqual(stages[-1].name, refused.exception.stage)
+                self.assertTrue(stages[-1].detail.startswith(first), stages[-1].detail)
                 # only the footprint stop is followed by what the build still gives
                 after = "\n" + self.HINT if refused.exception.stage == "footprint" else ""
                 self.assertEqual(stages[-1].detail, str(refused.exception) + after)
+
+    def test_a_crash_in_reading_the_input_is_a_stage_and_keeps_the_stages_before_it(self):
+        # P432: emit_board ran in a child, so an exception it did not foresee was a stage and not a lost run. A pin written
+        # as a list is one (the input type checks are P438, #583).
+        project, wanted = self.project_without("physical.header.drill_mm", requirements={
+            "board": "xiao-esp32-c6", "parts": ["tactile-button", "led-red-5mm"],
+            "signals": [{"name": "X", "needs": ["adc"], "pin": ["D0"]}]})
+        stages = self.run_spine(project, wanted)
+        self.assertEqual([(s.name, s.status) for s in stages], [("board", "ok"), ("schematic", check_spine.COULD_NOT_RUN)])
+        self.assertEqual(stages[-1].detail, "emit_board.py crashed: TypeError: unhashable type: 'list'")
+
+    def test_a_crash_in_drawing_the_footprint_is_a_stage_and_keeps_the_stages_before_it(self):
+        project, wanted = self.project_without("physical.header.drill_mm")
+        with mock.patch.object(check_spine.emit_footprint, "render", side_effect=ZeroDivisionError("a fault of its own")):
+            workdir, stages = self.run_to_the_footprint(project, wanted)
+        self.assertEqual([(s.name, s.status) for s in stages],
+                         [("board", "ok"), ("schematic", "ok"), ("footprint", check_spine.COULD_NOT_RUN)])
+        self.assertEqual(stages[-1].detail, "emit_footprint.py crashed: ZeroDivisionError: a fault of its own")
 
     def test_a_fault_in_the_requirements_is_said_without_asking_emit_board(self):
         project, wanted = self.project_without("physical.header_order", requirements={

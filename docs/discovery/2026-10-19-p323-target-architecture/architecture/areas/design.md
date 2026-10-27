@@ -35,7 +35,7 @@ into records and sourcing would be a parameter with one value.
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is |
 | `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` |
 | `design/netlist.py` | `Netlist`, moved as is |
-| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `RefusedInput` and `REFUSED_INPUT_MESSAGE` |
+| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `BoardInputs`, `RefusedInput`, `REFUSED_INPUT_MESSAGE` and the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE` |
 | `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, and `footprint_stop`, moved from `emit_footprint.py` and `boards.py` |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is |
 | `design/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
