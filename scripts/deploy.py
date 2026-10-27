@@ -57,8 +57,9 @@ EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), a
 
 --no-simulation flashes an image that no simulation tested, as the board is the test. Build the image first with
 `flash_image.py --project . --files firmware -o <the image sim/wokwi.toml names>`. Then look.py and deploy.py both need
---no-simulation. deploy.py refuses when firmware/main.py is missing, a .py file under firmware/ does not compile, a run
-in sim/runs/ failed on this image, or the image is not firmware/ as it is now. It does not run the firmware, so a
+--no-simulation. deploy.py refuses when firmware/main.py is missing, a .py file under firmware/ does not compile (or kills
+the compiler, or takes over 30 s), a run in
+sim/runs/ failed on this image, or the image is not firmware/ as it is now. It does not run the firmware, so a
 firmware that fails on the board shows only after the flash. The question starts with "%s", only a typed yes
 answers it (a deploy grant never does), and the spark.json, the board log, the store record and the --json data say
 `simulation: none`. It cannot be given with --ignore-older-runs.
