@@ -43,10 +43,10 @@ areas' `OPERATIONS`, as `parts.py` does.
 
 | Seam | Real adapter | Fake | Configured in |
 |---|---|---|---|
-| record folders | `RecordFolders.from_environ()` | `RecordFolders(tmp)` | `SPARK_HOME`, then `XDG_DATA_HOME`, then `~/.local/share/spark` (`store.py:46-52`) |
+| record folders | `RecordFolders.from_environ()` | `RecordFolders(tmp)` | `SPARK_HOME`, then `XDG_DATA_HOME`, then `~/.local/share/spark` (`store.home`) |
 | tool finder: `find(role) -> Tool` | `ToolFinder` over `data/tools.json`, the store's and the project's `tools.json` | `FakeToolFinder({role: argv})` | the three layers, the project wins (`tools.py:79-85`) |
-| network: `fetch(url) -> bytes` | `store.fetch`, the only `urlopen` (`store.py:368`) | a dict from URL to bytes | none |
-| file writes | `store.write_file` (`store.py:140`) | a recording writer | none |
+| network: `fetch(url) -> bytes` | `store.fetch`, the only `urlopen` | a dict from URL to bytes | none |
+| file writes | `store.write_file` | a recording writer | none |
 
 Records imports only core. It is the only area that reads `os.environ`. Another area gets the variables it needs
 from `OutsideWorld.environ`, such as `CLAUDE_CODE_SESSION_ID` (`cost.py:69`, `:77`) and the Wokwi token
@@ -139,7 +139,7 @@ sequenceDiagram
 - `FakeToolFinder` replaces about 39 `mock.patch.object(tools, "find")` lines and 29 patches of `shutil.which`
   (grep, 2026-10-21). The suite's patch count then falls.
 - A `RecordKind` contract test runs every record in `boards/` and `parts/` through `validate` and expects none.
-- When every test passes a `RecordFolders`, the test branches at `store.py:40` and `store.py:350` go (rule T4).
+- When every test passes a `RecordFolders`, the test branches in `store` (the `unittest` guard at import, and `store._must_be_web`) go (rule T4).
 
 ### How a new implementation is added
 

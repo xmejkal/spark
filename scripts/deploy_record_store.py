@@ -3,9 +3,10 @@ What spark's store keeps of each physical board, by its MAC (P215 step 3, D22, D
 
 A library, for `deploy_service.DeployService` (it writes the record after a deploy) and `board_look` (it reads the last
 deploy). `DeployRecordStore` keeps one record per board, with each deploy, its verdict, its simulation and whose yes it
-was. `LastDeploy` is what the store says of the board on USB, and holds no words for it: `board_look.say_last_deploy` is
-the look's line and `deploy_gate.say_last_deploy_in_question` is the deploy question's. What is on the board itself,
-the facts file, is `board_facts`.
+was. `LastDeploy` is what the store says of the board on USB. It holds the reasons (`WHY_NO_MAC`, `WHY_UNREADABLE`) and the
+zone note of a time, and no line or question words: `board_look.say_last_deploy` is the look's line and
+`deploy_gate.say_last_deploy_in_question` is the deploy question's. What is on the board itself, the facts file, is
+`board_facts`.
 """
 
 import datetime
@@ -17,7 +18,6 @@ import zone_time
 
 
 # --- MVP ---
-#: What the store says of the board on USB is LastDeploy.state, one of the three words of `outcomes` (the reader rule is there).
 WHY_NO_MAC = "the board's MAC was not read"
 WHY_UNREADABLE = "spark's record of it cannot be read"
 ZONE_NOT_STORED = "(zone not stored)"
@@ -28,6 +28,7 @@ class LastDeploy:
     them, with outcomes.RECORDED. `why` is the reason, with outcomes.NOT_CHECKED. The rest are None."""
 
     def __init__(self, state, project=None, verdict=None, deployed=None, why=None):
+        # `state` is what the store says of the board on USB: one of the three words of `outcomes` (the reader rule is there).
         self.state, self.project, self.verdict, self.deployed, self.why = state, project, verdict, deployed, why
 
     def time_said(self):
@@ -52,9 +53,14 @@ class DeployRecordStore:
     and read by the look (`read_last_deploy`). It keeps nothing in memory, so a caller makes one where it needs one.
     """
 
+    @staticmethod
+    def _key(mac):
+        """The name of the board's record inside the store's `boards` place: the one rule that `find_path` and `write_deploy` share."""
+        return store.slug(mac)
+
     def find_path(self, mac):
         """The path of the store's record of the board with this MAC: what write_deploy writes and read_last_deploy reads."""
-        return store.place("boards") / (store.slug(mac) + ".json")
+        return store.place("boards") / (self._key(mac) + ".json")
 
     def read_last_deploy(self, mac):
         """The LastDeploy of the board with this `mac`, from the record `write_deploy` writes. It never raises: what it cannot
@@ -80,7 +86,6 @@ class DeployRecordStore:
         The store's record of this board, by its MAC, with this deploy added: the project, the image's sha256, the date,
         the verdict and `who`, the phrase for whose yes it was (ConsentStrategy.who). Returns the record's path.
         """
-        key = store.slug(facts["mac"])
         deploy = {"project": facts["project"], "image_sha256": facts["image_sha256"], "deployed": facts["deployed"],
                   "verdict": verdict, "simulation": facts["simulation"], "yes": who}
         with store.locked():
@@ -93,6 +98,6 @@ class DeployRecordStore:
                 raise store.StoreProblem("%s is not a board record, so it was left as it is" % path)
             record["board"] = facts["board"]
             record["deploys"].append(deploy)
-            store.write_json("boards", key, record)
+            store.write_json("boards", self._key(facts["mac"]), record)
         return path
 # --- end MVP ---

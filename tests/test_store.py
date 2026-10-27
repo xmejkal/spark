@@ -756,6 +756,15 @@ class TheProjectsListTest(unittest.TestCase):
             self.assertEqual(store.find_listed_name(folder), planned)
         self.assertEqual(store.projects(), {"bin": first.resolve(), "bin-2": second.resolve(), "bin-3": third.resolve()})
 
+    def test_plan_listed_name_names_an_unlisted_symlink_by_its_target(self):
+        folder, link = Path(tempfile.mkdtemp()) / "plant-alarm", Path(tempfile.mkdtemp()) / "alarm-link"
+        folder.mkdir()
+        link.symlink_to(folder)
+        planned = store.plan_listed_name(link)
+        self.assertEqual(planned, "plant-alarm")
+        self.assertEqual(store.add_project(link), planned)
+        self.assertEqual(store.projects(), {"plant-alarm": folder.resolve()})
+
     def test_a_listed_folder_whose_old_path_is_gone_is_listed_again_under_its_name(self):
         gone, folder = (Path(tempfile.mkdtemp()) / "bin" for _ in range(2))
         folder.mkdir()

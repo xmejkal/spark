@@ -29,6 +29,7 @@ name where the signals are derived (`signals_of`, which is the first to hold the
 """
 
 import json
+import math
 import re
 import sys
 from collections import namedtuple
@@ -286,9 +287,11 @@ def firmware_pulls(part, board):
     The part with each pull-up the board's internal one does left to the firmware (P204, the PO's rule of 2026-10-12:
     prefer what the board offers). It needs the board's `internal_pull_up_ohms` and a host pull-up marked
     `internal_will_do`. A pin that wakes the chip keeps its resistor, because the internal pull lets go in sleep.
-    The pins left to the firmware are listed in `_firmware_pulls`.
+    The pins left to the firmware are listed in `_firmware_pulls`. The board's pull counts only as a finite positive number
+    (a fact's `value`, or a bare number where a fact belongs). Any other value reads as a missing fact (P431).
     """
-    if not provenance.read_value(board, "power", "internal_pull_up_ohms"):
+    pull = provenance.read_value(board, "power", "internal_pull_up_ohms")
+    if isinstance(pull, bool) or not isinstance(pull, (int, float)) or not math.isfinite(pull) or pull <= 0:
         return part
     wakes = {need.get("pin") for need in part.get("needs") or [] if "wake" in (need.get("needs") or [])}
     left = [host for host in part.get("host_parts") or []

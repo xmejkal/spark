@@ -37,7 +37,6 @@ class PrintableTest(unittest.TestCase):
         self.assertEqual(text_guards.printable("a\nb\u202ec ok"), "a?b?c ok")
 
 
-
 class CleanTest(unittest.TestCase):
     def test_a_line_or_paragraph_separator_becomes_a_space(self):
         self.assertEqual(text_guards.clean("a\u2028b\u2029c"), "a b c")

@@ -4,5 +4,29 @@
   "name": "read_value gives None for a bare value where a fact belongs",
   "find": "    return record.get(\"value\") if isinstance(record, dict) else record\n",
   "replace": "    return record.get(\"value\") if isinstance(record, dict) else None\n"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "a bare true counts as the board's pull",
+  "find": "if isinstance(pull, bool) or not isinstance(pull, (int, float))",
+  "replace": "if not isinstance(pull, (int, float))"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "a bare string counts as the board's pull",
+  "find": "or not isinstance(pull, (int, float)) or not math.isfinite(pull)",
+  "replace": "or not math.isfinite(pull)"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "an infinite pull counts as the board's pull",
+  "find": " or not math.isfinite(pull) or pull <= 0:",
+  "replace": " or pull <= 0:"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "a zero or negative pull counts as the board's pull",
+  "find": " or not math.isfinite(pull) or pull <= 0:",
+  "replace": " or not math.isfinite(pull):"
  }
 ]

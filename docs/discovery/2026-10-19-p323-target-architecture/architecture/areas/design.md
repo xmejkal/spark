@@ -103,7 +103,7 @@ classDiagram
   NeedsService ..> Design
 ```
 
-`Design` exists as a namedtuple (`design.py:46`). `ImpossibleError` is today's `Impossible` (in `assign_pins.py`), and its class
+`Design` exists as a namedtuple (`design.Design`). `ImpossibleError` is today's `Impossible` (in `assign_pins.py`), and its class
 attribute `status` is `problems`, because the design asks for something the board cannot do.
 
 The pin map is written as MicroPython's `pins.py` today (`assign_pins.pin_module`). It stays in design until a second
@@ -134,7 +134,7 @@ sequenceDiagram
 - `PinAssigner` and `BoardEmitter` are pure: a `Design` in, a value or a text out. They need no Fake.
 - The goldens of `assign_pins.py --json` and `emit_board.py` on fixture projects stay unchanged through the move.
 - `no_board` (D16): only when neither the requirements nor `boards/active.json` names a board. Its callers are
-  `live.py:91`, `emit_footprint.main` and `design.py:378`.
+  `live.py:91`, `emit_footprint.main` and `design.load`.
 
 ### How a new implementation is added
 

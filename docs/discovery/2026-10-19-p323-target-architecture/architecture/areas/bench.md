@@ -75,8 +75,8 @@ flowchart TB
 |---|---|---|
 | `FirmwarePlatform`: makes every board tool below | `MicroPythonPlatform` | `FakeFirmwarePlatform` built from the Fakes below |
 | `Flasher`: `build_commands` | `EsptoolFlasher` (`flasher.py:35`) | the contract test with a recording `run` |
-| `BoardReader`: `read(port)` | `EsptoolReader` (`board_look.py:117`) | `FakeBoardReader` |
-| port finder: `ports()`, `require_one_port` | `PortFinder` over `mpremote devs` (`board_look.py:67`) | `FakePortFinder`, from `test_board_doctor.py:28` |
+| `BoardReader`: `read(port)` | `EsptoolReader` (`board_look.py`) | `FakeBoardReader` |
+| port finder: `ports()`, `require_one_port` | `PortFinder` over `mpremote devs` (`board_look.py`) | `FakePortFinder`, from `test_board_doctor.py:28` |
 | board connection | `BoardConnection`, `RetryingBoardConnection` (`board_connection.py:50`, `:106`) | `FakeBoardConnection` (`tests/fakes.py:8`) |
 | console probe | `ConsoleProbe` (`board_console.py`) | `FakeConsoleProbe` (`tests/fakes.py:102`) |
 | `ConsentStrategy`: `ask`, `who` | `TerminalConsentStrategy`, `StandingConsentStrategy`, `DeferringConsentStrategy` (proposed, for a graph: its `require_ready` raises `GateClosedError` with the next step, so `ask` is never reached) | `FakeConsent` (`tests/fakes.py:41`) |

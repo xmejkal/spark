@@ -21,7 +21,7 @@ The PO answered all five decisions on epic #94 on 2026-10-26. Decision 3 was ans
    go with a then"*. One rule for every slice: reuse every fact, and keep each module's judgement in that module.
 2. The shape. Answer: (a), thin CLIs over one package, one Operation per job, one rules test. His words: *"yes, option
    a please"*.
-4. When the area moves start. Answer: (b), back to back, one PR at a time. His words: *"I think for question 3
+4. When the area moves start. Answer: (b), back to back, a PR for each kind of slice (decision 3, changed on 2026-10-27). His words: *"I think for question 3
    ideally we'd go all in one, so option c, but if it would take too much time, we can do continuous version"*. The
    plan records (b) because only the bench has a net today. The PO can change this.
 5. The printed names of the Operations. Answer: (a), keep the names that a golden or a command page pins. His words:

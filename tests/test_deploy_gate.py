@@ -772,17 +772,26 @@ class SayLastDeployInQuestionTest(unittest.TestCase):
 
     def test_the_line_and_the_question_name_the_same_deploy(self):
         # The look's line and the deploy question hold the words of one Value in two modules (P431): one drift test.
+        # Each state has the words that tell it from the others, one for the line and one for the question.
         states = {
-            "recorded": (self.recorded("2026-10-19T09:24:50+02:00"), ["blink-c6", "ready seen", "2026-10-19T09:24:50+02:00"]),
-            "none-recorded": (deploy_record_store.LastDeploy("none-recorded"), ["store record"]),
+            "recorded": (self.recorded("2026-10-19T09:24:50+02:00"),
+                         ["blink-c6", "ready seen", "2026-10-19T09:24:50+02:00"], "its store record, not read", "as its last deploy here"),
+            "none-recorded": (deploy_record_store.LastDeploy("none-recorded"), [], "none in its store record", "names no deploy here"),
             "not-checked": (deploy_record_store.LastDeploy("not-checked", why="the board's MAC was not read"),
-                            ["the board's MAC was not read"]),
+                            ["the board's MAC was not read"], "not checked:", "did not read its record"),
         }
-        for name, (last, words) in states.items():
+        for name, (last, words, line_marker, question_marker) in states.items():
+            line, question = board_look.say_last_deploy(last), deploy_gate.say_last_deploy_in_question(last)
             with self.subTest(name):
-                for said in (board_look.say_last_deploy(last), deploy_gate.say_last_deploy_in_question(last)):
-                    for word in words:
-                        self.assertIn(word, said)
+                self.assertIn(line_marker, line)
+                self.assertIn(question_marker, question)
+                for word in words:
+                    self.assertIn(word, line)
+                    self.assertIn(word, question)
+                for other, (_, _, other_line, other_question) in states.items():
+                    if other != name:
+                        self.assertNotIn(other_line, line)
+                        self.assertNotIn(other_question, question)
 
 
 class TheBoardLogTextTest(unittest.TestCase):
