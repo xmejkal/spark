@@ -117,9 +117,9 @@ class CompileCheck:
 
     @staticmethod
     def _read(said):
-        """(the last name the child began, its answer) from the complete JSON lines in `said`; a cut last line is dropped."""
+        """(the last name the child began, its answer) from the JSON lines in `said`; a line cut short is no JSON and is skipped."""
         checking, result = None, None
-        for line in (said or "").split("\n")[:-1]:
+        for line in (said or "").split("\n"):
             try:
                 entry = json.loads(line)
             except ValueError:

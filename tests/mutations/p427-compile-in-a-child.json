@@ -1,0 +1,12 @@
+[
+ {"file": "scripts/image_evidence.py", "name": "a signal is told as an exit code", "find": "if done.returncode < 0 else", "replace": "if done.returncode > 0 else"},
+ {"file": "scripts/image_evidence.py", "name": "the sentence names the first file the child began, not the last", "find": "checking = str(entry[\"checking\"])", "replace": "checking = checking or str(entry[\"checking\"])"},
+ {"file": "scripts/image_evidence.py", "name": "a timeout is not caught", "find": "except subprocess.TimeoutExpired as late:", "replace": "except KeyError as late:"},
+ {"file": "scripts/image_evidence.py", "name": "the child has no time limit", "find": "cwd=tempfile.gettempdir(), timeout=COMPILE_TIMEOUT_S)", "replace": "cwd=tempfile.gettempdir())"},
+ {"file": "scripts/image_evidence.py", "name": "one child per file, not one per question", "find": "return CompileCheck(files).why_not() if files else None", "replace": "return next((why for why in (CompileCheck([each]).why_not() for each in files) if why), None)"},
+ {"file": "scripts/image_evidence.py", "name": "the child does not run isolated (-I)", "find": "command = [sys.executable, \"-I\", \"-B\", \"-c\", COMPILE_CHILD]", "replace": "command = [sys.executable, \"-B\", \"-c\", COMPILE_CHILD]"},
+ {"file": "scripts/image_evidence.py", "name": "the file list is not JSON", "find": "input=json.dumps(self.files)", "replace": "input=\"\\n\".join(path for _, path in self.files)"},
+ {"file": "scripts/image_evidence.py", "name": "the child's lines are not escaped, so a newline in a name splits a line", "find": "print(json.dumps(fields), flush=True)", "replace": "print(json.dumps(fields).encode().decode(\"unicode_escape\"), flush=True)"},
+ {"file": "scripts/image_evidence.py", "name": "a name is shown unguarded", "find": "name = text_guards.printable(str(result.get(\"name\")))", "replace": "name = str(result.get(\"name\"))"},
+ {"file": "scripts/image_evidence.py", "name": "a child that stopped before any file names the wrong folder", "find": "text_guards.printable(checking or NO_FILE_YET), detail)", "replace": "text_guards.printable(checking or \"\"), detail)"}
+]
