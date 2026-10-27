@@ -14,19 +14,25 @@
  {
   "file": "scripts/design.py",
   "name": "a bare string counts as the board's pull",
-  "find": "or not isinstance(pull, (int, float)) or not math.isfinite(pull)",
-  "replace": "or not math.isfinite(pull)"
+  "find": "or not isinstance(pull, (int, float)) or not 0 < pull < math.inf",
+  "replace": "or not 0 < pull < math.inf"
  },
  {
   "file": "scripts/design.py",
   "name": "an infinite pull counts as the board's pull",
-  "find": " or not math.isfinite(pull) or pull <= 0:",
-  "replace": " or pull <= 0:"
+  "find": " or not 0 < pull < math.inf:",
+  "replace": " or not 0 < pull:"
  },
  {
   "file": "scripts/design.py",
   "name": "a zero or negative pull counts as the board's pull",
-  "find": " or not math.isfinite(pull) or pull <= 0:",
-  "replace": " or not math.isfinite(pull):"
+  "find": " or not 0 < pull < math.inf:",
+  "replace": " or not pull < math.inf:"
+ },
+ {
+  "file": "scripts/design.py",
+  "name": "a 400-digit pull is turned into a float and crashes the build",
+  "find": " or not 0 < pull < math.inf:",
+  "replace": " or not 0 < float(pull) < math.inf:"
  }
 ]

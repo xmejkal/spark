@@ -456,6 +456,14 @@ class TheBoardsOwnPullUpTest(unittest.TestCase):
                 board = {"power": {"internal_pull_up_ohms": {"value": value, "verified": False, "source": "test"}}}
                 self.assertEqual(len(design.firmware_pulls(self.button(), board)["host_parts"]), 2)
 
+    def test_a_400_digit_pull_up_number_does_not_crash_the_design(self):
+        # P431 refuter: json.loads gives a Python int of any size, and math.isfinite raised OverflowError on it.
+        huge = 10 ** 400
+        for stated in (huge, {"value": huge, "verified": False, "source": "test"}):
+            with self.subTest(stated=type(stated).__name__):
+                part = design.firmware_pulls(self.button(), {"power": {"internal_pull_up_ohms": stated}})
+                self.assertEqual(part["_firmware_pulls"], ["A"])
+
     def test_a_board_that_states_no_internal_pull_up_keeps_every_resistor(self):
         self.assertEqual(design.firmware_pulls(self.button(), {"power": {}}), self.button())
         self.assertEqual(design.firmware_pulls(self.button(), None), self.button())

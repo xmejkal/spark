@@ -291,7 +291,8 @@ def firmware_pulls(part, board):
     (a fact's `value`, or a bare number where a fact belongs). Any other value reads as a missing fact (P431).
     """
     pull = provenance.read_value(board, "power", "internal_pull_up_ohms")
-    if isinstance(pull, bool) or not isinstance(pull, (int, float)) or not math.isfinite(pull) or pull <= 0:
+    # a comparison, not math.isfinite: a 400-digit int is valid JSON and cannot become a float
+    if isinstance(pull, bool) or not isinstance(pull, (int, float)) or not 0 < pull < math.inf:
         return part
     wakes = {need.get("pin") for need in part.get("needs") or [] if "wake" in (need.get("needs") or [])}
     left = [host for host in part.get("host_parts") or []
