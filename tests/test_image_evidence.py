@@ -290,13 +290,23 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertEqual(run.call_count, 1)
 
     def test_the_child_does_not_import_a_json_py_from_the_folder_it_runs_in(self):
-        decoy = self.project / "decoy"
-        decoy.mkdir()
         marker = self.project / "decoy-ran"
-        (decoy / "json.py").write_text("open(%r, 'w').close()\nraise SystemExit(3)\n" % str(marker))
-        with mock.patch.object(image_evidence.tempfile, "gettempdir", return_value=str(decoy)):
-            self.assertIsNone(self.why())
+        (self.project / "json.py").write_text("open(%r, 'w').close()\nraise SystemExit(3)\n" % str(marker))
+        (self.project / "sitecustomize.py").write_text("open(%r, 'w').close()\n" % str(marker))
+        self.in_folder(self.project)  # the child runs where spark runs
+        self.assertIsNone(self.why())
         self.assertFalse(marker.exists())
+
+    def in_folder(self, folder):
+        before = os.getcwd()
+        os.chdir(str(folder))
+        self.addCleanup(os.chdir, before)
+
+    def test_from_a_relative_project_an_unreadable_file_keeps_the_path_as_given(self):
+        (self.firmware / "zz.py").mkdir()  # a folder named like a source file
+        self.in_folder(self.project)
+        self.assertEqual(NoSimulationEvidence(Path(".")).why_not_ready(ProjectImage(self.project)),
+                         "cannot read firmware/zz.py: [Errno 21] Is a directory: 'firmware/zz.py'")
 
     def test_a_compiler_that_does_not_finish_in_time_is_a_sentence_naming_the_file(self):
         slow = ("import json, time\nprint(json.dumps({'checking': 'firmware/slow.py'}), flush=True)\ntime.sleep(60)\n")
@@ -386,6 +396,16 @@ class CompileCheckTest(unittest.TestCase):
                 ({"name": "firmware/a.py", "kind": "bytes", "msg": "a null byte"}, "firmware/a.py does not compile: a null byte"),
                 ({"name": "firmware/a.py", "kind": "unreadable", "msg": "gone"}, "cannot read firmware/a.py: gone")):
             self.assertEqual(self.why(self.lines({"checking": "firmware/a.py"}, entry)), sentence)
+
+    def test_a_child_that_exited_0_with_no_answer_says_it_gave_none(self):
+        said = self.lines({"checking": "firmware/a.py"})
+        self.assertEqual(self.why(said, 0), "firmware/a.py could not be compiled: the compiler gave no answer")
+        self.assertEqual(self.why("", 0), "firmware/ could not be compiled: the compiler gave no answer")
+
+    def test_an_answer_with_no_name_names_the_last_file_the_child_began_or_a_firmware_file(self):
+        said = self.lines({"checking": "firmware/a.py"}, {"kind": "too_deep"})
+        self.assertEqual(self.why(said), "firmware/a.py is too deeply nested or too big to compile")
+        self.assertEqual(self.why(self.lines({"kind": "too_deep"})), "a firmware file is too deeply nested or too big to compile")
 
     def test_a_name_with_a_control_character_is_printed_with_a_question_mark(self):
         said = self.lines({"checking": "firmware/a\x07b.py"})

@@ -8,10 +8,8 @@ today's evidence, a run in sim/runs/ that passed on the image's sha256. It write
 import abc
 import hashlib
 import json
-import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import board_grant
@@ -54,8 +52,11 @@ UNREADABLE_REASON = "cannot read %s: %s"
 STOPPED_REASON = "%s could not be compiled: the compiler stopped (%s)"
 SIGNAL_DETAIL, EXIT_DETAIL = "signal %d", "exit code %d"
 TIMEOUT_REASON = "%s did not compile in %g s"
+NO_ANSWER_REASON = "%s could not be compiled: the compiler gave no answer"
 #: Named when the compiler stopped before it began a file.
 NO_FILE_YET = "firmware/"
+#: Named when an answer holds no file name and the child began no file.
+NO_NAME = "a firmware file"
 #: What each compile child runs (P427): read [name, path] pairs from stdin; say {"checking": name} before each file, then one
 #: line for the first file that fails, or {"ok": true}. A JSON line holds no raw newline, so no file name can fake a line.
 COMPILE_CHILD = """\
@@ -94,26 +95,30 @@ class CompileCheck:
     """
     The .py files compiled in one child process, so that a source which kills the compiler (a stack overflow, signal 11)
     kills the child and not spark (P427). `why_not` is None, or one sentence. It started like import_firmware.import_one:
-    this interpreter with -I -B, in a folder that is not firmware/.
+    this interpreter with -I -B, in spark's own working directory: -I keeps a json.py planted there out, and a relative path
+    means what it meant to the parent.
     """
 
     def __init__(self, files):
         """`files`: [(name shown, path)] in the order to compile."""
-        self.files = [[str(name), os.path.abspath(path)] for name, path in files]
+        self.files = [[str(name), str(path)] for name, path in files]
 
     def why_not(self):
         command = [sys.executable, "-I", "-B", "-c", COMPILE_CHILD]
         try:
             done = subprocess.run(command, input=json.dumps(self.files), capture_output=True, text=True, errors="replace",
-                                  cwd=tempfile.gettempdir(), timeout=COMPILE_TIMEOUT_S)
+                                  timeout=COMPILE_TIMEOUT_S)
         except subprocess.TimeoutExpired as late:
             said = late.stdout.decode(errors="replace") if isinstance(late.stdout, bytes) else late.stdout
             return TIMEOUT_REASON % (text_guards.printable(self._read(said)[0] or NO_FILE_YET), COMPILE_TIMEOUT_S)
         checking, result = self._read(done.stdout)
         if result is None:
+            last = text_guards.printable(checking or NO_FILE_YET)
+            if done.returncode == 0:
+                return NO_ANSWER_REASON % last
             detail = SIGNAL_DETAIL % -done.returncode if done.returncode < 0 else EXIT_DETAIL % done.returncode
-            return STOPPED_REASON % (text_guards.printable(checking or NO_FILE_YET), detail)
-        return self._sentence(result)
+            return STOPPED_REASON % (last, detail)
+        return self._sentence(result, checking)
 
     @staticmethod
     def _read(said):
@@ -134,10 +139,10 @@ class CompileCheck:
         return checking, result
 
     @staticmethod
-    def _sentence(result):
+    def _sentence(result, checking):
         if result.get("ok"):
             return None
-        name = text_guards.printable(str(result.get("name")))
+        name = text_guards.printable(str(result.get("name") or checking or NO_NAME))
         kind = result.get("kind")
         if kind == SYNTAX:
             return SYNTAX_REASON % (name, result.get("line"), result.get("msg"))
