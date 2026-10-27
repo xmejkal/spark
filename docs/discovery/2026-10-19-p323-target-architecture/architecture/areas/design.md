@@ -35,7 +35,7 @@ into records and sourcing would be a parameter with one value.
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is |
 | `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` |
 | `design/netlist.py` | `Netlist`, moved as is |
-| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `RefusedInputError` and `REFUSED_INPUT_MESSAGE` |
+| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `RefusedInput` and `REFUSED_INPUT_MESSAGE` |
 | `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, and `footprint_stop`, moved from `emit_footprint.py` and `boards.py` |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is |
 | `design/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
@@ -103,7 +103,7 @@ classDiagram
   NeedsService ..> Design
 ```
 
-`Design` exists as a namedtuple (`design.py:45`). `ImpossibleError` is today's `Impossible` (in `assign_pins.py`), and its class
+`Design` exists as a namedtuple (`design.py:46`). `ImpossibleError` is today's `Impossible` (in `assign_pins.py`), and its class
 attribute `status` is `problems`, because the design asks for something the board cannot do.
 
 The pin map is written as MicroPython's `pins.py` today (`assign_pins.pin_module`). It stays in design until a second
@@ -134,7 +134,7 @@ sequenceDiagram
 - `PinAssigner` and `BoardEmitter` are pure: a `Design` in, a value or a text out. They need no Fake.
 - The goldens of `assign_pins.py --json` and `emit_board.py` on fixture projects stay unchanged through the move.
 - `no_board` (D16): only when neither the requirements nor `boards/active.json` names a board. Its callers are
-  `live.py:91`, `emit_footprint.main` and `design.py:377`.
+  `live.py:91`, `emit_footprint.main` and `design.py:378`.
 
 ### How a new implementation is added
 

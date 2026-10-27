@@ -105,7 +105,7 @@ Every Operation returns an `OperationResult` (proposed). Every frontend renders 
 |---|---|
 | result | `data`, `findings`, `next`, `lines`. `status` comes from `outcomes.status_of`, never declared. |
 | envelope | v1 keys stay: `envelope`, `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated` (`outcomes.envelope`). It only gains keys. |
-| Finding | `severity`, `subject`, `code`, `sentence`, `fix` (a string, as today), `fix_step` (a NextStep or null, proposed). Severity picks the list: `problems`, `unchecked` or `unmeasured`. |
+| Finding | `severity`, `subject`, `code`, `sentence`, `fix` (a string, as today). Severity picks the list: `problems`, `unchecked` or `unmeasured`. |
 | effects | `reads`, `writes`, `runs` (a tool, proposed), `network`, `board`, `deletes`. An Operation gets only the outside callables its effects declare. |
 | status words | `ok`, `problems`, `could-not-run`. A check or stage also has `skipped` (`outcomes.SKIPPED`). Nothing else under `status`. |
 | exit codes | 0 ok, 1 problems, 2 could-not-run, only from `EXIT_FOR`. A crash is `could-not-run`, code `crash`, exit 2. |

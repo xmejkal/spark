@@ -61,7 +61,6 @@ classDiagram
     code
     sentence
     fix
-    fix_step
   }
   class NextStep {
     <<Value>>
@@ -90,7 +89,6 @@ classDiagram
   Operation ..> OperationResult
   OperationResult o-- Finding
   OperationResult o-- NextStep
-  Finding --> NextStep : fix_step
   Operation ..> OutsideWorld
   Operation ..> SparkError
 ```
@@ -102,8 +100,8 @@ class. One test checks that every `Argument.dest` names a parameter. `SparkError
 the class default `could-not-run`: `ImpossibleError` (today `assign_pins.Impossible`) defaults to `problems`, and
 `GateClosedError` sets it per instance, as its `code` is today.
 
-`fix` stays a string, as today (`board_envelope.look_envelope`), so the envelope only gains keys. `fix_step` is a new key
-that holds the same advice as a NextStep, or null. `TextReport` and `JsonEnvelope` are the two Renderers of a result.
+`fix` stays a string, as today (`board_envelope.look_envelope`), so the envelope only gains keys. `fix_step` was dropped on 2026-10-27, because it would be
+null at every look site. `TextReport` and `JsonEnvelope` are the two Renderers of a result.
 
 The effects are `reads`, `writes`, `runs`, `network`, `board` and `deletes`. `build_outside` fills only the fields
 the declared effects need and puts a refusing stub in the others. A call to a stub raises `SparkError` with code

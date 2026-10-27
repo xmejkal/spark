@@ -3,7 +3,7 @@
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
-New names (proposed): `RecordFolders`, `RecordFinder`, `RecordKind`, `Record`, `ShelveRecord`, `Brief`, `DeployedStore`,
+New names (proposed): `RecordFolders`, `RecordFinder`, `RecordKind`, `Record`, `ShelveRecord`, `Brief`, `DeployRecordStore`,
 `ToolFinder`, `ToolMissingError`, `Backends`, `Choice`, `build_outside`, `FakeToolFinder` and the Operation names below.
 `Records` and `RecordSchema` are the names of plan version 1. They are now `RecordFinder` and `RecordKind`, and the
 role word Records is gone.
@@ -34,7 +34,7 @@ areas' `OPERATIONS`, as `parts.py` does.
 | `records/record_kind.py` | `RecordKind`: a record kind's `version`, `required` keys and rules, `validate`, `stops_at`, `shelf_copy`, `digest` |
 | `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, `OnboardRole`, `ONBOARD_ROLES`, `POWER_FACT_FUNCTIONS`, `SimulatedPart`, `read_simulated_part`, `WOKWI_DEFINITION`, `onboard_limits`, `gpio_limits` and the readers of the role table, moved from `boards.py` |
 | `records/brief.py` | `Brief`: the project's `prefer` and `sellers`, from `.spark/project.json` |
-| `records/deployed_store.py` | `DeployedStore` and `LastDeploy`: what the store says of the board on USB |
+| `records/deploy_record_store.py` | `DeployRecordStore` and `LastDeploy`: what the store says of the board on USB (built in `scripts/` in P431) |
 | `records/provenance.py` | the leaf `provenance`: what a fact must carry |
 | `records/tool_finder.py` | `ToolFinder` over the three `tools.json` layers, install lines |
 | `records/backends.py` | `Backends` and `build_outside` |
@@ -45,7 +45,7 @@ areas' `OPERATIONS`, as `parts.py` does.
 |---|---|---|---|
 | record folders | `RecordFolders.from_environ()` | `RecordFolders(tmp)` | `SPARK_HOME`, then `XDG_DATA_HOME`, then `~/.local/share/spark` (`store.py:46-52`) |
 | tool finder: `find(role) -> Tool` | `ToolFinder` over `data/tools.json`, the store's and the project's `tools.json` | `FakeToolFinder({role: argv})` | the three layers, the project wins (`tools.py:79-85`) |
-| network: `fetch(url) -> bytes` | `store.fetch`, the only `urlopen` (`store.py:357`) | a dict from URL to bytes | none |
+| network: `fetch(url) -> bytes` | `store.fetch`, the only `urlopen` (`store.py:368`) | a dict from URL to bytes | none |
 | file writes | `store.write_file` (`store.py:140`) | a recording writer | none |
 
 Records imports only core. It is the only area that reads `os.environ`. Another area gets the variables it needs
@@ -109,7 +109,7 @@ classDiagram
 `Backends` holds choices, not built objects, and it names no backend of its own. `platform` is a `Choice` with the
 name that `requirements.json` gives, or none and `chosen_by: default`. Each area's Operation modules turn a choice into
 a Strategy with its own registry and its own default, such as bench's `DEFAULT_PLATFORM`. So records never imports
-bench or firmware. The envelope gains a `backends` key with each choice and its `chosen_by`, so a person and Claude
+bench or firmware. S8 adds a `backends` key to the envelope with each choice and its `chosen_by`, so a person and Claude
 see which backend ran and why.
 
 A record reader refuses a newer schema with code `schema_too_new`. A schema bump ships one tested `migrate(record)`.
@@ -139,7 +139,7 @@ sequenceDiagram
 - `FakeToolFinder` replaces about 39 `mock.patch.object(tools, "find")` lines and 29 patches of `shutil.which`
   (grep, 2026-10-21). The suite's patch count then falls.
 - A `RecordKind` contract test runs every record in `boards/` and `parts/` through `validate` and expects none.
-- When every test passes a `RecordFolders`, the test branches at `store.py:40` and `store.py:339` go (rule T4).
+- When every test passes a `RecordFolders`, the test branches at `store.py:40` and `store.py:350` go (rule T4).
 
 ### How a new implementation is added
 

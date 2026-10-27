@@ -44,7 +44,7 @@ flowchart TB
   DEP --> LOOK
   DEP --> GRANT
   DEP --> GATE["deploy_gate.py<br/>require_open_gate, ConsentStrategy (Strategy)"]
-  DEP --> FACTS["board_facts.py<br/>ReadingFile (Adapter), the look's line of a LastDeploy"]
+  DEP --> FACTS["board_facts.py<br/>ReadingFile (Adapter)"]
   DEP --> READY["ready_probe.py<br/>ReadyProbe (probe)"]
   DEP --> DM["download_mode.py<br/>the board after a flash (functions)"]
   GRANT --> LOOK
@@ -86,8 +86,9 @@ The Operation modules pick the platform from `PLATFORMS` by `backends.platform.n
 (`micropython`) when the requirements name none. They are the only place that names an Adapter (rule X1). Bench
 imports firmware (`ProjectImage`, and `scenario_steps` for `image_evidence`: the edge `image_evidence ->
 scenario_steps`), design (`restricted_pins`, at `board_live.py:24` and `live.py:19`), records and core. Each is
-reachable along the area map's arrows (rule U1). The look's line of a `LastDeploy` sits on the bench side
-(`board_look`), and the `DeployedStore` that reads and records it sits in records.
+reachable along the area map's arrows (rule U1). The look's line of a `LastDeploy` (`board_look.say_last_deploy`) and the deploy question's words
+(`deploy_gate.say_last_deploy_in_question`) sit on the bench side, and the `DeployRecordStore` that reads and records it
+sits in records.
 
 ## Level 3: how bench is built
 
@@ -157,14 +158,14 @@ sequenceDiagram
   participant DS as DeployService
   participant PL as MicroPythonPlatform
   participant G as require_open_gate
-  participant ST as DeployedStore
+  participant ST as DeployRecordStore
   participant C as ConsentStrategy
   participant OW as OutsideWorld.run
   OP->>DS: plan(port)
   DS->>PL: make_flasher(), make_board_reader()
   DS-->>OP: DeployPlan, or DeployError code image_stale
   OP->>DS: look(port)
-  DS->>ST: last_deploy(mac)
+  DS->>ST: read_last_deploy(mac)
   DS-->>OP: LookReport with LastDeploy
   OP->>DS: deploy(report, token, consent, show_line)
   DS->>G: require_open_gate(report, token, consent, image, caveats)

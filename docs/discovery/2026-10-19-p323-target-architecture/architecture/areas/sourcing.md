@@ -125,7 +125,7 @@ sequenceDiagram
 - A `MatcherContract` test that every Matcher passes, as `FlasherContract` does for flashers (both proposed).
 - `fetch` is a dict, so no test opens the network.
 - The goldens of stage 6 run every `parts.py` Operation once on a fixture project. The `fetch` goldens run
-  through `main(argv)`, so `store.fetch` takes `file:` URLs (`store.py:339`) and no golden needs the network.
+  through `main(argv)`, so `store.fetch` takes `file:` URLs (`store.py:350`) and no golden needs the network.
 
 ### How a new implementation is added
 

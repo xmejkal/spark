@@ -21,13 +21,12 @@ Back to [the architecture](README.md).
 | status | One of `ok`, `problems`, `could-not-run`. A check or a build stage also has `skipped`. Replaces "outcome". |
 | exit code | The number the process exits with: 0, 1 or 2, from `EXIT_FOR` (`outcomes.py:31`). Always two words. |
 | code | A constant in snake_case that names one problem or unchecked item, such as `no_port`. Never an exit code. |
-| Finding | One item in `problems`, `unchecked` or `unmeasured`: severity, subject, code, sentence, fix, fix_step. Proposed class. |
+| Finding | One item in `problems`, `unchecked` or `unmeasured`: severity, subject, code, sentence, fix. Proposed class. |
 | severity | Which list a Finding goes in: `problem`, `unchecked` or `unmeasured` (`outcomes.py:49`). |
 | OperationResult | What an Operation returns: data, findings, next steps and lines. Proposed class. |
 | envelope | The JSON form of an OperationResult, version 1 (`outcomes.py:68`). It only gains keys. |
 | NextStep | One action that comes next, JSON `next`. Proposed class over `outcomes.step` (`outcomes.py:84`). |
 | fix | The text that says what to do about a Finding. A string, as today (`board_envelope.look_envelope`). |
-| fix_step | The same advice as a NextStep, or null. A new key beside `fix`, so the envelope only gains keys. Proposed. |
 | sentence | The text a person reads in a Finding. |
 | why | The text a person reads in a NextStep. |
 | lines | Text for a person. stdout without `--json`, stderr with it. Replaces the proposed `diagnostics`. |
@@ -48,7 +47,7 @@ Back to [the architecture](README.md).
 | RecordFinder | Reads one record kind across the three folders, the nearest wins. Proposed. Replaces `Records`. |
 | Record | The Value of one loaded record, with its kind and place. Proposed (P391). |
 | Brief | The Value of the project's brief in `.spark/project.json`: `prefer`, `sellers`. Proposed, in records. |
-| DeployedStore | The Store that reads and records what spark knows of the last deploy to a board. Proposed, in records. |
+| DeployRecordStore | The Store that reads and records what spark knows of the last deploy to a board (`scripts/deploy_record_store.py`, P431). Moves to records. |
 | leaf | A module that imports nothing of spark. Three today: `zone_time`, `text_guards` and `provenance`. |
 | text guard | A function where text leaves spark: `printable` to the screen, `clean` to the store, `one_line` to a generated file. All three live in `text_guards` (OC8). |
 | kanban | The team's GitHub Projects board. Its tool is `tools/kanban.py` after the rename, today `tools/board.py`. |
@@ -98,7 +97,7 @@ Back to [the architecture](README.md).
 | parts | the record folder, `parts.py`, the area | the area is `sourcing`. The folder and the CLI keep `parts`. |
 | needs | a goal's needs (`needs.py`), a check's inputs (`check_all.py:63`) | `Check.inputs` (proposed, checks move). |
 | describe / render | person text in `render` (`check_all.py:434`) and `describe` (`board_doctor.py`) | `render` returns person text. `describe` is only the machine description. |
-| fact value | `emit_board.fact_value`, `boards.is_fact_value`, `boards.fact_value_problems` | `provenance.read_value`, `boards.is_pin_map_constant`, `boards.board_fact_problems`. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
+| fact value | `emit_board.fact_value` (deleted in P431), `boards.is_fact_value`, `boards.fact_value_problems` | `provenance.read_value`, `boards.is_pin_map_constant`, `boards.board_fact_problems`. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
 | power | a part's `power` list, a board's `power` block, `power_pads`, the verb `power` | `supply_pins` and `power_facts` in code. The record keys stay. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
 | board (Kanban) | `scripts/boards.py` reads dev board records, `tools/board.py` reads the team's GitHub board | `tools/kanban.py`. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
 | brief | `parts._brief` (a part's three-key summary), the project's brief | `_part_summary` and `Brief`. Settled in [section 3 of the plan](refactor-plan.md#3-names-the-clashes-and-their-role-names). |
