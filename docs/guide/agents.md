@@ -171,6 +171,15 @@ These only read:
   battery input` come from the `power` block. A need of "indicate light" finds the XIAO ESP32-C6 through its LED, and a
   need of "power charger" finds it through its charger. Tell the person that the board is the part, and pick the board
   for that need too. Read every page of `--match` first: follow `truncated.next` until it is null.
+  Each `--match --json` candidate has `limits` (P397): a list of plain sentences, filled only for a board that serves the
+  need through its own LED, button, display or battery-level pin, and `[]` for any other candidate, and for a board that
+  the need's verb admitted by other words. A sentence says what a passed run does not test of that part: the simulation
+  has no pin on the part's GPIO, spark did not look at the board's Wokwi definition ("not checked: ...", then the bench),
+  or spark adds no part to the diagram for it. Relay each sentence as printed; none of them is a failure. `--pick`
+  puts the same sentences in a `notes` entry, `board <key> for <need>: ...`, after the footprint note. When a pin is
+  missing, the note ends with the other choice: the first part the person owns with free stock whose record the
+  simulation can reach, or "Every other candidate for <need> is held by another project." when each part the person
+  owns is held. A part that the person does not own is never named there. The sentence of the note is the build's own.
 
 These write:
 

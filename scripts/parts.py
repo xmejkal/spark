@@ -1614,13 +1614,15 @@ OPERATIONS = (
      "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds", ("writes",),
      ("changes", "written")),
     ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes, "
-     "each with its score and why; --matcher picks the matcher that ranks them", (), ("needs",)),
+     "each with its score and why; --matcher picks the matcher that ranks them; a board that serves a need through its own "
+     "LED, button or display has `limits`, the sentences for what a passed run does not test of it", (), ("needs",)),
     ("offer", {"metavar": "KEY"}, "what one offer says of itself, for the chooser to read: a record's id or a drawer entry's "
      "key — about, description, tags, what it does, its names, power and size. --project reads the project's own records", (),
      ("offer",)),
     ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
      "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
-     "what it notes is under `notes`",
+     "what it notes is under `notes`: a board given a need that its own part serves says what a run does not test of the part, "
+     "and the other choice",
      ("writes",), ("project", "picks", "reserved", "released", "written")),
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; board_only when the board itself serves every need",
