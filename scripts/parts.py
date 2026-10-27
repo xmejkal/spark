@@ -143,7 +143,7 @@ def audit(project=None):
     Every record in every layer — the catalog included — every drawer link, and each record a link reaches in the person's
     other projects, walked once (§5.4, P89): per layer how many are current, owe facts, or are broken; which say nothing
     of what they do (spark's layers and this project only); which entries point at nothing; which boards stop the chain at
-    the footprint stage, their files holding no header geometry (C-7, P121).
+    the footprint stage, their files lacking what the footprint is drawn from (C-7, P121).
     """
     import boards
     import drawer
@@ -174,7 +174,8 @@ def audit(project=None):
         elif owing:
             owed.append({"id": found, "layer": layer, "owes": owing})
         elif kind == "board" and emit_footprint.footprint_gaps(record):  # C-7: a board owes nothing, and may still stop the chain
-            stops.append({"id": found, "layer": layer})
+            stops.append({"id": found, "layer": layer, "stops_why": emit_footprint.why_no_footprint(record),
+                          "line": emit_footprint.footprint_stop_line(record)})  # P411: the text shows the line; `--audit` drops it from the JSON
         if isinstance(record, dict) and not function_of(record, board=kind == "board") and (kind, found, layer, path) not in linked:
             silent.append(found)
     return counts, owed, broken, silent, dangling, stops
@@ -2057,10 +2058,6 @@ def _op_catalog(args, project):
                   problems=[_problem(name.split(" — ")[0], "a broken catalog record: %s" % name) for name in broken])
 
 
-#: What `--audit` says of a board whose file has no header geometry (C-7): the chain stops there, whatever else it passes.
-STOPS_AT_FOOTPRINT = "stops at the footprint stage (P121) — no header geometry in its board file"
-
-
 def _op_audit(args, project):
     counts, owed, broken, silent, dangling, stops = audit(project)
     shown, truncated = page(owed, args.start, "audit", ["--audit"] + _with_project(project))
@@ -2071,9 +2068,9 @@ def _op_audit(args, project):
     lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
               % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
     lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
-    lines += ["  %s (%s) %s" % (s["id"], s["layer"], STOPS_AT_FOOTPRINT) for s in stops]
+    lines += ["  %s (%s) %s" % (s["id"], s["layer"], s["line"]) for s in stops]
     return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling,
-                   "stops_at_footprint": stops}, lines,
+                   "stops_at_footprint": [{key: s[key] for key in ("id", "layer", "stops_why")} for s in stops]}, lines,
                   truncated=truncated, problems=[_problem(b["id"], "broken: " + "; ".join(b["problems"])) for b in broken]
                   + [_problem(entry, "points at a record nobody has") for entry in dangling])
 
@@ -2109,11 +2106,12 @@ def _op_match(args, project):
                                                   "  ".join(filter(None, [", ".join(c["what"]) + ("" if c["what_matches"] else " [other words]"),
                                                                           ("free %s%s" % (c["free"], ", held by " + ", ".join(map(printable, c["held_by"])) if c["held_by"] else "")) if c["owned"] else "",
                                                                           "owes " + ", ".join(c["owes"]) if c["owes"] else "",
-                                                                          "stops at the footprint stage (P121)" if c.get("stops_at") else ""])))
+                                                                          c.get("stop_line") or ""])))
                          + ("  maybe owned — check the drawer" if c["unsure"] else "") + ("  BROKEN" if c["broken"] else ""))
             lines += ["          " + c["about"]] if c["about"] else []
             lines += ["          " + sentence for sentence in c["limits"]]  # P397: the JSON keeps them as data
             del c["about"]  # the text shows it; the JSON gains only `score` and `why`
+            c.pop("stop_line", None)  # likewise: the JSON has `stops_why`, the list
         hidden = "none with the need's words" if chosen.name == needs.MATCHER else "each scoring under %s" % matching.MIN_SHOWN
         lines += ["      … %d more, %s" % (need["more"], hidden)] if need["more"] else []
         lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
@@ -2243,7 +2241,7 @@ def _op_requirements(args, project):
              ] if content.get(needs.BOARD_ONLY) is True and not problems else []
     said += ["  board_only removed: the file lists parts"] if isinstance(held, dict) and needs.BOARD_ONLY in held and content["parts"] and not problems else []
     stop = "" if problems else boards.footprint_stop(content["board"], Path(args.requirements))  # F12 (C-7): said, never refused
-    said += ["  board %s %s" % (content["board"], stop)] if stop else []
+    said += ["  board %s: %s" % (content["board"], stop)] if stop else []
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
     said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
              "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.emit_board.DEFAULT_BODY_MM + (how,))

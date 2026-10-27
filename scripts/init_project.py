@@ -488,7 +488,7 @@ def main(argv=None):
                           {"schema": 1, "board": args.board}, args.force)
         notes.append(note)
         stop = boards.footprint_stop(args.board, project)  # F12: said where the board is chosen, never refused
-        notes += ["board %s %s" % (args.board, stop)] if stop else []
+        notes += ["board %s: %s" % (args.board, stop)] if stop else []
 
     print("spark init in %s" % project)
     for note in notes:

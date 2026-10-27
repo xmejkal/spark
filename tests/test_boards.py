@@ -731,7 +731,7 @@ class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
         with board_missing("physical.header"):
             code, lines = self.listed(project())
         self.assertEqual(code, 0)
-        self.assertIn("    xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file", lines)
+        self.assertIn("    xiao-esp32-c6 (library) stops at the footprint stage (P121): its board file lacks physical.header", lines)
         self.assertIn("  * firebeetle2-esp32s3 (library)", lines)
 
     def test_a_board_file_that_cannot_be_read_is_still_listed(self):

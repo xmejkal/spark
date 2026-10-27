@@ -2580,8 +2580,11 @@ class OwedIsNotBrokenTest(unittest.TestCase):
             said, code = run_json(["--audit"])
             with contextlib.redirect_stdout(out):
                 parts.main(["--audit"])
-        self.assertEqual((code, said["data"]["stops_at_footprint"]), (0, [{"id": "xiao-esp32-c6", "layer": "library"}]))
-        self.assertIn("  xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file\n",
+        self.assertEqual((code, said["data"]["stops_at_footprint"]), (0, [{
+            "id": "xiao-esp32-c6", "layer": "library",
+            "stops_why": "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of them can be derived "
+                         "from the rest:\n  physical.header (no header geometry at all)"}]))
+        self.assertIn("  xiao-esp32-c6 (library) stops at the footprint stage (P121): its board file lacks physical.header\n",
                       out.getvalue())
 
     def test_audit_names_a_drawer_link_to_a_record_nobody_has(self):

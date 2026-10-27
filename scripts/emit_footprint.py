@@ -102,22 +102,56 @@ def footprint_gaps(board):
     """
     What a board's file lacks for its footprint to be generated (`_missing`), or [] when nothing — the one rule by which this
     script refuses, and by which `--match`, `--audit` and `--requirements` say a board stops the chain at the footprint stage
-    (C-7, P121) before anyone builds. A `physical` or a `header` that is no object is no geometry.
+    (C-7, P121) before anyone builds. A `physical` or a `header` that is no object is no geometry, and a board that is no
+    object lacks all of it.
     """
+    board = board if isinstance(board, dict) else {}
     physical = board.get("physical") if isinstance(board.get("physical"), dict) else {}
     header = physical.get("header")
     return _missing(physical, header if isinstance(header, dict) else None)
 
 
-# --- MVP ---
+# --- MVP --- (P411) the gaps `footprint_gaps` finds are said two ways, each from the same facts: the list, for the build and
+# for Claude, and the line, for a row that says where a board stops among many.
+#: The line's sentence (P411): after a board's id or its row, the stage and what the board file lacks.
+STOP_LINE_MESSAGE = "stops at the footprint stage (P121): its board file lacks %s"
+
+
 def why_no_footprint(board):
-    """Why no footprint can be generated for `board`, naming each gap of `footprint_gaps`, or None when one can. The one
-    sentence of this refusal, for this script, `emit_board` and the spine's footprint stage."""
+    """The list: why no footprint can be generated for `board`, naming each gap of `footprint_gaps` with its note, or None when
+    one can. The sentence of this refusal for this script, `emit_board` and the spine's footprint stage, and the `stops_why` of
+    a `--match` candidate and an `--audit` row."""
     gaps = footprint_gaps(board)
     if not gaps:
         return None
     return ("%s cannot have a footprint generated — these are not recorded, and none of them can be derived from the "
-            "rest:\n  %s" % (board.get("id"), "\n  ".join(gaps)))
+            "rest:\n  %s" % (board.get("id") if isinstance(board, dict) else None, "\n  ".join(gaps)))
+
+
+def footprint_stop_line(board):
+    """The line: one sentence for a row in a list, with no id (the row puts its own first) and no notes — the field when one
+    is missing, else how many and the first — or None when a footprint can be generated. `why_no_footprint` has the list."""
+    fields = [gap.split(" (")[0] for gap in footprint_gaps(board)]
+    if not fields:
+        return None
+    return STOP_LINE_MESSAGE % (fields[0] if len(fields) == 1 else "%d fields (first: %s)" % (len(fields), fields[0]))
+
+
+#: What a board whose header geometry and pad order do not fit each other is told (P411): `main` and the spine's footprint stage.
+DISAGREES_MESSAGE = "the board definition disagrees with itself: %s"
+
+
+def why_header_disagrees(board, rules=None):
+    """
+    Why the footprint of `board` cannot be drawn although nothing is missing, or None when it can: a pad order that does not
+    fit the pin counts, or a value of the wrong kind (a pitch written as text). The board file's validation checks no header
+    geometry, so a TypeError and an AttributeError are as much a disagreement as a ValueError and a KeyError.
+    """
+    try:
+        render(board, rules)
+    except (ValueError, KeyError, TypeError, AttributeError) as exc:
+        return DISAGREES_MESSAGE % exc
+    return None
 
 
 def pads(board):
@@ -225,10 +259,10 @@ def main(argv=None):
         return _report(args, EXIT_COULD_NOT_RUN, refusal)
 
     rules = design.rules_in(project)
-    try:
-        text = render(board, rules)
-    except (ValueError, KeyError) as exc:
-        return _report(args, EXIT_PROBLEMS, "the board definition disagrees with itself: %s" % exc)
+    disagreement = why_header_disagrees(board, rules)
+    if disagreement:
+        return _report(args, EXIT_PROBLEMS, disagreement)
+    text = render(board, rules)
 
     if args.out:
         Path(args.out).write_text(text)

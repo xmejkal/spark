@@ -248,19 +248,18 @@ def available(project: Path) -> list:
 
 def footprint_stop(board_id: str, project: Path = None) -> str:
     """
-    `parts.STOPS_AT_FOOTPRINT` for a board that stops the chain at the footprint stage — its file has no header geometry to
-    draw the footprint from (`emit_footprint.footprint_gaps`; C-7, P121) — and "" for one that builds on. Said wherever a
+    `emit_footprint.footprint_stop_line` of a board that stops the chain at the footprint stage — its file lacks what the
+    footprint is drawn from (`emit_footprint.footprint_gaps`; C-7, P121) — and "" for one that builds on. Said wherever a
     board is offered or picked (F12: the XIAO was listed and picked without a word), never refused: such a board is still a
     choice for pin-map work. A file that cannot be read is not said to stop here; `--validate` names it.
     """
     import emit_footprint  # here, not at the top: it imports this module
-    import parts
     found = records(project).get(board_id)
     try:
         board = _read_json(found[1], "board definition") if found else None
     except BoardError:
         return ""
-    return parts.STOPS_AT_FOOTPRINT if isinstance(board, dict) and emit_footprint.footprint_gaps(board) else ""
+    return (emit_footprint.footprint_stop_line(board) or "") if isinstance(board, dict) else ""
 
 
 def load(project: Path, board_id: str = None) -> dict:
