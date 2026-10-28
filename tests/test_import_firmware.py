@@ -31,6 +31,8 @@ import outcomes  # noqa: E402
 
 
 STAND_IN = ROOT / "scripts" / "stand_in" / "machine.py"
+#: framebuf.py and micropython.py live here: the check puts this folder after the firmware's own.
+FALLBACK = STAND_IN.parent / "fallback"
 SCRIPT = ROOT / "scripts" / "import_firmware.py"
 #: Long enough to see a loop is a loop, short enough for the suite.
 LOOP_TIMEOUT_S = "0.5"
@@ -38,7 +40,8 @@ LOOP_TIMEOUT_S = "0.5"
 
 def a_stand_in(name="machine"):
     """A fresh copy of one stand-in (machine, micropython or framebuf), with a level table of its own."""
-    spec = importlib.util.spec_from_file_location("stand_in_%s_under_test" % name, STAND_IN.parent / (name + ".py"))
+    folder = STAND_IN.parent if name == "machine" else FALLBACK
+    spec = importlib.util.spec_from_file_location("stand_in_%s_under_test" % name, folder / (name + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -270,6 +273,36 @@ class TheNewStandInsKeepTheirArgumentsAndReturnFixedValuesTest(unittest.TestCase
         self.assertTrue(issubclass(self.machine.SoftSPI, self.machine.SPI))
         self.assertTrue(issubclass(self.machine.SoftI2C, self.machine.I2C))
 
+    def test_an_i2c_vector_write_counts_every_byte_and_the_rest_of_the_bus_calls_run(self):
+        for bus in (self.machine.I2C(0), self.machine.SoftI2C(scl=1, sda=2)):
+            with self.subTest(bus=type(bus).__name__):
+                self.assertEqual(bus.writevto(60, [b"ab", bytearray(3)]), 5)
+                self.assertEqual(bus.write(b"abc"), 3)
+                buf = bytearray(b"\x05\x05")
+                self.assertIsNone(bus.readinto(buf))
+                self.assertEqual(buf, bytearray(b"\x05\x05"))
+                self.assertIsNone(bus.start())
+                self.assertIsNone(bus.stop())
+
+    def test_a_pin_is_called_to_write_and_to_read(self):
+        chip_select = self.machine.Pin(5, self.machine.Pin.OUT)
+        chip_select(1)
+        self.assertEqual(chip_select(), 1)
+        chip_select(0)
+        self.assertEqual(chip_select.value(), 0)
+
+    def test_a_subclass_may_give_init_other_arguments(self):
+        machine = self.machine
+
+        class Sensor(machine.I2C):
+            def init(self):
+                self.ready = True
+
+        sensor = Sensor(0, scl=1)
+        self.assertEqual((sensor.args, sensor.settings), ((0,), {"scl": 1}))
+        sensor.init()
+        self.assertTrue(sensor.ready)
+
     def test_each_new_name_imports_on_its_own(self):
         for name in ("ADC", "SPI", "SoftSPI", "I2C", "SoftI2C", "I2S"):
             with self.subTest(name=name):
@@ -309,15 +342,32 @@ class TheDisplayDriverStandInsTest(unittest.TestCase):
             self.assertIsNone(call())
         self.assertEqual(buf, bytearray(8))
 
-    def test_a_name_the_stand_in_lacks_is_an_import_error_with_its_own_file(self):
-        for module, statement in (("micropython", "from micropython import opt_level"),
-                                  ("framebuf", "import framebuf; framebuf.Nothing")):
+    def test_a_name_the_stand_in_lacks_is_an_import_error_with_its_own_file_names_and_action(self):
+        for module, statement, have in (
+                ("micropython", "from micropython import opt_level", "has bytecode, const, native and viper only"),
+                ("framebuf", "import framebuf; framebuf.Nothing",
+                 "has FrameBuffer, GS2_HMSB, GS4_HMSB, GS8, MONO_HLSB, MONO_HMSB, MONO_VLSB and RGB565 only")):
             with self.subTest(module=module):
                 done = subprocess.run([sys.executable, "-c", statement], capture_output=True, text=True,
-                                      env={"PYTHONPATH": str(STAND_IN.parent)})
+                                      env={"PYTHONPATH": str(FALLBACK)})
                 self.assertNotEqual(done.returncode, 0)
                 self.assertIn("ImportError", done.stderr)
-                self.assertIn("scripts/stand_in/%s.py" % module, done.stderr)
+                self.assertIn("scripts/stand_in/fallback/%s.py" % module, done.stderr)
+                self.assertIn(have, done.stderr)
+                self.assertIn("move the rest into a function that main.py calls", done.stderr)
+
+    def test_a_subclass_may_define_width_as_a_property(self):
+        framebuf = self.framebuf
+
+        class Screen(framebuf.FrameBuffer):
+            def __init__(self):
+                super().__init__(bytearray(8), 8, 8, framebuf.MONO_VLSB)
+
+            @property
+            def width(self):
+                return 8
+
+        self.assertEqual(Screen().width, 8)
 
     def test_a_driver_shaped_module_imports(self):
         project = a_project(screen=(
@@ -332,6 +382,46 @@ class TheDisplayDriverStandInsTest(unittest.TestCase):
             "Screen(I2C(0, scl=Pin(22), sda=Pin(21))).show()\n"))
         code, answer = answer_for(project)
         self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
+
+    def test_the_ssd1306_shapes_import_when_the_module_builds_the_screen(self):
+        """micropython-lib's ssd1306.py: `writevto` on an I2C, `self.cs(1)` and `spi.write` on an SPI, built at once."""
+        project = a_project(screen=(
+            "from machine import Pin, SoftI2C, SoftSPI\nimport framebuf\n"
+            "class Screen(framebuf.FrameBuffer):\n"
+            "    def __init__(self, bus, cs):\n"
+            "        self.bus, self.cs, self.buffer = bus, cs, bytearray(128 * 8)\n"
+            "        self.write_list = [b'\\x40', self.buffer]\n"
+            "        super().__init__(self.buffer, 128, 64, framebuf.MONO_VLSB)\n"
+            "        self.show()\n"
+            "class OnI2C(Screen):\n"
+            "    def show(self):\n"
+            "        assert self.bus.writevto(0x3C, self.write_list) == 1025\n"
+            "class OnSPI(Screen):\n"
+            "    def show(self):\n"
+            "        self.cs(1)\n        self.cs(0)\n        self.bus.write(self.buffer)\n        self.cs(1)\n"
+            "        assert self.cs() == 1\n"
+            "OnI2C(SoftI2C(scl=Pin(22), sda=Pin(21)), Pin(5, Pin.OUT))\n"
+            "OnSPI(SoftSPI(baudrate=1000000), Pin(6, Pin.OUT))\n"))
+        code, answer = answer_for(project)
+        self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
+
+    def test_a_driver_of_the_firmware_s_own_framebuf_wins_in_the_firmware_folder_and_in_lib(self):
+        for where in ("", "lib"):
+            with self.subTest(where=where or "firmware"):
+                project = a_project(screen="import framebuf\nassert framebuf.MINE == 1\n")
+                folder = project / "firmware" / where
+                folder.mkdir(exist_ok=True)
+                (folder / "framebuf.py").write_text("MINE = 1\n")
+                (folder / "micropython.py").write_text("MINE = 1\n")
+                (project / "firmware" / "uses.py").write_text("import micropython\nassert micropython.MINE == 1\n")
+                _, answer = answer_for(project)
+                self.assertEqual(module_named(answer, "screen")["status"], "imported", answer)
+                self.assertEqual(module_named(answer, "uses")["status"], "imported", answer)
+
+    def test_without_a_framebuf_of_its_own_the_firmware_gets_the_stand_in(self):
+        project = a_project(screen="import framebuf\nassert 'MINE' not in dir(framebuf)\nframebuf.FrameBuffer\n")
+        _, answer = answer_for(project)
+        self.assertEqual(module_named(answer, "screen")["status"], "imported", answer)
 
 
 def a_project(**modules):
@@ -377,6 +467,12 @@ class AModuleThatImportsIsOkTest(unittest.TestCase):
             "speaker.write(b'x')\nspeaker.readinto(bytearray(4))\n"
             "for part in (pot, spi, soft, i2c, soft_i2c, speaker):\n"
             "    part.deinit()\n"))
+        code, answer = answer_for(project)
+        self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
+
+    def test_a_firmware_file_named_like_a_standard_module_does_not_break_the_machine_import(self):
+        project = a_project(token="x = 1\n", ast="x = 1\n", tokenize="x = 1\n", linecache="x = 1\n", dis="x = 1\n",
+                            light="from machine import ADC, Pin\nADC(Pin(34))\n")
         code, answer = answer_for(project)
         self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
 
@@ -475,7 +571,7 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         self.assertEqual(module_named(answer, "slow")["status"], "timed out")
         self.assertIn("within 0.5 s", module_named(answer, "slow")["detail"])
 
-    def test_a_module_that_needs_more_than_pin_and_pwm_is_named_as_the_stand_in_s_limit(self):
+    def test_a_name_the_stand_in_lacks_names_the_stand_in(self):
         project = a_project(light="from machine import UART\n")
         _, answer = answer_for(project)
         self.assertIn("stand-in", module_named(answer, "light")["detail"])

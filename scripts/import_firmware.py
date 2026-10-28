@@ -12,8 +12,9 @@ It imports each PROJECT/firmware/*.py and each package there (a folder holding _
 main.py and boot.py. PROJECT defaults to `.`. Each import is a process of its own, with spark's stand-ins first on
 sys.path, then firmware/ and firmware/lib, where MicroPython looks for drivers. The stand-ins are in scripts/stand_in/:
 `machine` (a Pin that remembers its level, a PWM that keeps its last frequency and duty, and an ADC, SPI, SoftSPI, I2C,
-SoftI2C and I2S that keep their arguments and return fixed values), `micropython` and `framebuf`. Per module the
-answer is one of:
+SoftI2C and I2S that keep their arguments and return fixed values), `micropython` and `framebuf`. A driver that ships
+its own `framebuf.py` or `micropython.py` in firmware/ or firmware/lib gets its own, because those two stand-ins come
+last on sys.path. Per module the answer is one of:
   - imported;
   - raised: the exception's last line, which names the stand-in and the first name it lacks, for example UART;
   - timed out: it did not return within the timeout (5 s by default). Something at module level loops or waits.
@@ -22,6 +23,8 @@ answer is one of:
 An `imported` proves that the names exist and the module-level calls ran. It does not prove that their arguments are
 right (the stand-ins take any), that a pin, a wire, a rate or a driver works, or that a device answers: a bus finds no
 device, so a module-level `assert 0x3C in i2c.scan()` fails here. Keep such a check in a function that main.py calls.
+Build a driver in a function that main.py calls too: a driver that calls `time.sleep_ms` in its constructor fails when
+the module builds it at import (CPython's `time` has no `sleep_ms`, and spark cannot stand in for `time`).
 
 The boot files are left unrun on purpose: main.py starts the loop, so a two-line main.py over an importable module is
 the shape that can be tested. When firmware/ holds nothing to import but the boot files and pins.py, that is a
@@ -42,14 +45,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from outcomes import EXIT_FOR, answer  # noqa: E402
 
 STAND_IN = Path(__file__).resolve().parent / "stand_in"
+#: framebuf and micropython, which a driver may ship itself: they come after the firmware's own folders on sys.path.
+FALLBACK = STAND_IN / "fallback"
 #: The files MicroPython runs at boot, never imported (main.py starts the loop), and the pin map the build writes, which
 #: is not firmware someone wrote.
 BOOT_FILE, PIN_MAP, PIN_MODULE = "main.py", "pins.py", "pins"
 BOOT_FILES = ("boot.py", BOOT_FILE)
 DEFAULT_TIMEOUT_S = 5.0
 IMPORTED, RAISED, TIMED_OUT = "imported", "raised", "timed out"
-#: What each child runs: import the module argv[1], with the folders argv[2:] first on sys.path. They are the stand-in,
-#: firmware/ and firmware/lib, where MicroPython looks for drivers.
+#: What each child runs: import the module argv[1], with the folders argv[2:] first on sys.path, in that order. They are
+#: the machine stand-in, firmware/, firmware/lib (where MicroPython looks for drivers) and the fallback stand-ins.
 IMPORT_ONE = "import importlib, sys; sys.path[:0] = sys.argv[2:]; importlib.import_module(sys.argv[1])"
 NOTHING_TO_IMPORT = ("firmware/ holds nothing to import but %s, %s and %s. The firmware cannot be imported without "
                      "running %s: move the code out of %s into a module that %s calls"
@@ -59,7 +64,8 @@ NOTHING_TO_IMPORT = ("firmware/ holds nothing to import but %s, %s and %s. The f
 def import_one(name, firmware, timeout_s):
     """One module imported in a process of its own, as (status word, detail); the detail is empty when it imported."""
     # -B: no __pycache__ in the person's folder
-    command = [sys.executable, "-B", "-c", IMPORT_ONE, name, str(STAND_IN), str(firmware), str(firmware / "lib")]
+    command = [sys.executable, "-B", "-c", IMPORT_ONE, name,
+               str(STAND_IN), str(firmware), str(firmware / "lib"), str(FALLBACK)]
     try:
         done = subprocess.run(command, cwd=str(firmware), capture_output=True, text=True, errors="replace",
                               stdin=subprocess.DEVNULL, timeout=timeout_s)

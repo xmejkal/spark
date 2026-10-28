@@ -16,7 +16,8 @@ class FrameBuffer:
     is left as it is."""
 
     def __init__(self, buffer, width, height, format, stride=None):
-        self.buffer, self.width, self.height, self.format = buffer, width, height, format
+        """Keeps nothing, as the C class keeps nothing on the Python object: a driver's subclass may define `width`
+        as a property."""
 
     fill = hline = vline = line = rect = fill_rect = text = scroll = blit = ellipse = poly = _nothing
 
@@ -28,5 +29,7 @@ class FrameBuffer:
 def __getattr__(name):
     if name.startswith("__"):  # the import machinery asks for __path__ and the like
         raise AttributeError(name)
-    raise ImportError("spark's stand-in framebuf (scripts/stand_in/framebuf.py) has FrameBuffer and the format "
-                      "constants only, not %s" % name)
+    have = sorted(n for n in globals() if not n.startswith("_"))
+    raise ImportError("spark's stand-in framebuf (scripts/stand_in/fallback/framebuf.py) has %s and %s only, not %s: "
+                      "use only these at module level, or move the rest into a function that main.py calls"
+                      % (", ".join(have[:-1]), have[-1], name))

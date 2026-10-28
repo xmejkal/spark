@@ -8,8 +8,6 @@ keep their arguments and return a fixed value (P421, below). It knows nothing of
 firing. A firmware that imports any other name gets an ImportError that names this file.
 """
 
-import inspect as _inspect
-
 #: GPIO number -> the level the firmware last wrote, or a test last set. Pins share it, as pins of one chip would.
 _levels = {}
 
@@ -33,7 +31,7 @@ class _StandIn:
     deinited = False
 
     def __init__(self, *args, **settings):
-        self.init(*args, **settings)
+        _StandIn.init(self, *args, **settings)  # not self.init: a driver's subclass may give init other arguments
 
     def init(self, *args, **settings):
         self.args, self.settings = args, settings
@@ -60,6 +58,10 @@ class Pin:
         if x is None:
             return _levels.get(self.id, 1 if self.pull == self.PULL_UP else 0)
         _levels[self.id] = 1 if x else 0
+
+    def __call__(self, value=None):
+        """`pin(1)` writes and `pin()` reads, as `pin.value` does; a driver such as the SSD1306 SPI one uses it."""
+        return self.value(value)
 
     def on(self):
         self.value(1)
@@ -174,13 +176,29 @@ class I2C(_StandIn):
     def readfrom_mem_into(self, addr, mem, buf, **settings):
         pass
 
+    def writevto(self, addr, vector, *args, **settings):
+        return sum(len(buf) for buf in vector)
+
+    def write(self, buf):
+        return len(buf)
+
+    def readinto(self, buf, *args, **settings):
+        pass
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
 
 class SoftI2C(I2C):
     """On a board the two are separate classes. Here a software bus is the same stand-in."""
 
 
 class I2S(_StandIn):
-    """A sound data bus. A write is taken whole and a read leaves the buffer as it is. The handler is never called."""
+    """A sound data bus. A write is taken whole. A read returns len(buf) at once and leaves the buffer as it was, by
+    choice: a read that waited for sound would wait for ever. The handler is never called."""
 
     TX, RX, MONO, STEREO = 1, 0, 0, 1
     handler = None
@@ -198,7 +216,7 @@ class I2S(_StandIn):
 def __getattr__(name):
     if name.startswith("__"):  # the import machinery asks for __path__ and the like
         raise AttributeError(name)
-    have = sorted(n for n, value in globals().items() if _inspect.isclass(value) and not n.startswith("_"))
+    have = sorted(n for n, value in globals().items() if isinstance(value, type) and not n.startswith("_"))
     raise ImportError("spark's stand-in machine (scripts/stand_in/machine.py) has %s and %s only, not %s: use only "
                       "these at module level, or move the rest into a function that main.py calls"
                       % (", ".join(have[:-1]), have[-1], name))

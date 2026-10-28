@@ -26,8 +26,8 @@
  {
   "file": "scripts/stand_in/machine.py",
   "name": "P421: an I2S write takes no bytes",
-  "find": "    def write(self, buf):\n        return len(buf)",
-  "replace": "    def write(self, buf):\n        return 0"
+  "find": "    handler = None\n\n    def write(self, buf):\n        return len(buf)",
+  "replace": "    handler = None\n\n    def write(self, buf):\n        return 0"
  },
  {
   "file": "scripts/stand_in/machine.py",
@@ -38,8 +38,8 @@
  {
   "file": "scripts/stand_in/machine.py",
   "name": "P421: a constructor refuses a keyword it does not know",
-  "find": "    def __init__(self, *args, **settings):\n        self.init(*args, **settings)",
-  "replace": "    def __init__(self, *args):\n        self.init(*args)"
+  "find": "    def __init__(self, *args, **settings):\n        _StandIn.init(self, *args, **settings)",
+  "replace": "    def __init__(self, *args):\n        _StandIn.init(self, *args)"
  },
  {
   "file": "scripts/stand_in/machine.py",
@@ -62,13 +62,49 @@
  {
   "file": "scripts/import_firmware.py",
   "name": "P421: the help keeps saying the stand-ins have nothing else",
-  "find": "`micropython` and `framebuf`. Per module",
-  "replace": "`micropython` and `framebuf`, nothing else. Per module"
+  "find": "`micropython` and `framebuf`. A driver",
+  "replace": "`micropython` and `framebuf`, nothing else. A driver"
  },
  {
-  "file": "scripts/stand_in/micropython.py",
+  "file": "scripts/stand_in/fallback/micropython.py",
   "name": "P421: const gives back nothing",
   "find": "def const(x):\n    return x",
   "replace": "def const(x):\n    return None"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P421: an I2C vector write takes no bytes",
+  "find": "        return sum(len(buf) for buf in vector)",
+  "replace": "        return 0"
+ },
+ {
+  "file": "scripts/stand_in/fallback/framebuf.py",
+  "name": "P421: a FrameBuffer keeps its width on the driver's object",
+  "find": "        as a property.\"\"\"",
+  "replace": "        as a property.\"\"\"\n        self.width = width"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P421: the base constructor calls the driver's own init",
+  "find": "_StandIn.init(self, *args, **settings)  # not self.init",
+  "replace": "self.init(*args, **settings)  # not self.init"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P421: machine.py imports a standard module a firmware file can shadow",
+  "find": "#: GPIO number -> the level",
+  "replace": "import inspect\n\n#: GPIO number -> the level"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P421: the stand-in framebuf comes before the firmware's own",
+  "find": "str(STAND_IN), str(firmware), str(firmware / \"lib\"), str(FALLBACK)]",
+  "replace": "str(STAND_IN), str(FALLBACK), str(firmware), str(firmware / \"lib\")]"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P421: a Pin called with a value reads nothing",
+  "find": "        return self.value(value)",
+  "replace": "        self.value(value)"
  }
 ]

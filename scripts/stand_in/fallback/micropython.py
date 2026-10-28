@@ -25,5 +25,7 @@ def bytecode(function):
 def __getattr__(name):
     if name.startswith("__"):  # the import machinery asks for __path__ and the like
         raise AttributeError(name)
-    raise ImportError("spark's stand-in micropython (scripts/stand_in/micropython.py) has const, native, viper and "
-                      "bytecode only, not %s" % name)
+    have = sorted(n for n in globals() if not n.startswith("_"))
+    raise ImportError("spark's stand-in micropython (scripts/stand_in/fallback/micropython.py) has %s and %s only, "
+                      "not %s: use only these at module level, or move the rest into a function that main.py calls"
+                      % (", ".join(have[:-1]), have[-1], name))
