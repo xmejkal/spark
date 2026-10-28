@@ -657,8 +657,9 @@ count.
    through a series resistor, but the board states no power.io_volts — nothing to compute it from`. `check_spine.py`
    shows it as `[????] schematic` with that sentence, then `the chain was NOT exercised — this is not a pass`, exit 2
    ([P121](https://github.com/xmejkal/spark/issues/55)). An `emit_board.py` that crashes inside `check_spine.py` is
-   could-not-run too: the `schematic` stage's detail is `emit_board.py crashed: ` and the traceback's last line. A stage
-   detail that starts `Traceback (most recent call last):` is a crash, not a defect in the design. A board whose file
+   could-not-run too: the `schematic` stage's detail is `emit_board.py crashed: ` and the traceback's last line. A crash in the
+   spine's own read of the input or in the footprint drawing reads `<script> crashed: <Type>: <message>`, such as
+   `emit_footprint.py crashed: RuntimeError: boom`. Such a detail is a crash, not a defect in the design. A board whose file
    cannot give a footprint stops at `[????] footprint`, before the schematic. The detail names each missing fact (the
    gaps `emit_footprint.py` names), then says what the build still gives: with `--keep`, the kept lines say whether
    `firmware/pins.py` was written. A board whose header and pad order disagree, or hold a value of the wrong kind (a pitch

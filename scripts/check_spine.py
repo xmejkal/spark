@@ -74,7 +74,7 @@ import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 
 from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, NOT_CHECKED  # noqa: E402
-from text_guards import guard_lines, printable  # noqa: E402
+from text_guards import guard_lines  # noqa: E402
 
 from outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
 
@@ -105,8 +105,11 @@ NO_FOOTPRINT_HINT = ("The schematic was not tried. The pin map needs no footprin
 
 
 def said_of_a_crash(program, crash):
-    """How a crash in `program` reads as a stage's detail: its last traceback line, as the child's stderr gave it (F5)."""
-    return "%s crashed: %s: %s" % (program, type(crash).__name__, printable(str(crash)))
+    """
+    How a crash in `program` reads as a stage's detail, raw (P430): its last traceback line, as the child's stderr gave it (F5).
+    The text is guarded when it is printed (`render`), and `--json` keeps it as it stands.
+    """
+    return "%s crashed: %s: %s" % (program, type(crash).__name__, str(crash))
 
 
 class Stage:

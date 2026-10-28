@@ -1,3 +1,4 @@
 [
- {"file": "scripts/text_guards.py", "name": "P430: guard_sentence leaves a newline of the port in the sentence, so it fakes a line", "find": "text = text.replace(each, printable(each)) if each else text", "replace": "text = text"}
+ {"file": "scripts/text_guards.py", "name": "P430: guard_sentence leaves a newline of the port in the sentence, so it fakes a line", "find": "text = text.replace(each, printable(each)) if each else text", "replace": "text = text"},
+ {"file": "scripts/check_spine.py", "name": "P430: a crash's text is stored through the screen guard, so --json holds a question mark", "find": "return \"%s crashed: %s: %s\" % (program, type(crash).__name__, str(crash))", "replace": "return \"%s crashed: %s: %s\" % (program, type(crash).__name__, printable(str(crash)))"}
 ]
