@@ -130,5 +130,11 @@
   "name": "limits_note writes a blank line inside a sentence",
   "find": "LIMIT_DASH + _one_paragraph(sentence))",
   "replace": "LIMIT_DASH + sentence)"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "keep_simulation removes the project's note whatever the simulation stage did",
+  "find": "simulated = any(stage.name == \"simulation\" and stage.status == OK for stage in stages)",
+  "replace": "simulated = True"
  }
 ]

@@ -549,22 +549,43 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertTrue((elsewhere / "diagram.json").is_file())
         self.assertFalse((other / "sim").exists())
 
-    def test_an_older_limits_note_goes_when_the_build_wrote_none_and_a_new_one_replaces_it(self):
-        # The build runs in a fresh folder and keep_simulation merges into the project's sim/, so only keep_simulation can remove it.
+    def a_kept_project(self):
+        """(a build's workdir with a sim/ and no note, a project's sim/ with an older note, a diagram and a scenario of the person's)."""
         work, into = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "sim"
         (work / "sim").mkdir()
-        (work / "sim" / "diagram.json").write_text("{}")
+        (work / "sim" / "board.json").write_text("{}")
         into.mkdir()
+        (into / "diagram.json").write_text('{"parts": ["older"]}')
         (into / "WHAT-THIS-CANNOT-SHOW.md").write_text("- **Old** — from an earlier build\n")
         (into / "scenarios").mkdir()
         (into / "scenarios" / "mine.scenario.yaml").write_text("steps:\n")
-        self.assertEqual(check_spine.keep_simulation(work, into)["did"], "wrote")
+        return work, into
+
+    def test_an_older_limits_note_goes_when_the_simulation_stage_finished_and_wrote_none(self):
+        # The build runs in a fresh folder and keep_simulation merges into the project's sim/, so only keep_simulation can remove it.
+        work, into = self.a_kept_project()
+        (work / "sim" / "diagram.json").write_text("{}")
+        done = [check_spine.Stage("build", check_spine.OK, "fine"), check_spine.Stage("simulation", check_spine.OK, "ran")]
+        self.assertEqual(check_spine.keep_simulation(work, into, done)["did"], "wrote")
         self.assertFalse((into / "WHAT-THIS-CANNOT-SHOW.md").exists())
         self.assertTrue((into / "scenarios" / "mine.scenario.yaml").is_file())  # a person's scenarios stay
-        self.assertTrue((into / "diagram.json").is_file())
+        self.assertEqual((into / "diagram.json").read_text(), "{}")
         (work / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text("- **New** — from this build\n")
-        check_spine.keep_simulation(work, into)
+        check_spine.keep_simulation(work, into, done)
         self.assertEqual((into / "WHAT-THIS-CANNOT-SHOW.md").read_text(), "- **New** — from this build\n")
+
+    def test_the_older_note_and_diagram_stay_when_the_simulation_stage_did_not_finish(self):
+        # The stage writes board.json and wokwi-mapping.json before it can stop; the older diagram stays, so its note must too.
+        for status in (check_spine.COULD_NOT_RUN, check_spine.PROBLEMS):
+            work, into = self.a_kept_project()
+            stopped = [check_spine.Stage("build", check_spine.OK, "fine"), check_spine.Stage("simulation", status, "stopped")]
+            with self.subTest(status=status):
+                check_spine.keep_simulation(work, into, stopped)
+                self.assertEqual((into / "WHAT-THIS-CANNOT-SHOW.md").read_text(), "- **Old** — from an earlier build\n")
+                self.assertEqual((into / "diagram.json").read_text(), '{"parts": ["older"]}')
+        work, into = self.a_kept_project()  # a build that stopped before the simulation stage has no simulation stage at all
+        check_spine.keep_simulation(work, into, [check_spine.Stage("board", check_spine.COULD_NOT_RUN, "no board")])
+        self.assertTrue((into / "WHAT-THIS-CANNOT-SHOW.md").is_file())
 
     def keep_through_main(self, *argv, requirements=None):
         """`main` with a run that simulated, --json: the verdict it printed, and the firmware the run was handed."""
