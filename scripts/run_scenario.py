@@ -74,6 +74,8 @@ WHY_BAD_COUNTS = "the log's step counts line is malformed"
 WHY_LOG_UNREADABLE = "the log cannot be read"
 #: Why SimulationLimits is outcomes.NOT_CHECKED when the log has the section: it holds no limit line.
 WHY_NO_LIMIT_LINE = "the log's limits section has no limit line"
+#: Why SimulationLimits is outcomes.NOT_CHECKED when the section never reaches the scenario's section: the log is cut off.
+WHY_LIMITS_CUT_OFF = "the log's limits section is cut off"
 #: The log's section that holds the simulation's limits note, when the project has one (P396).
 LIMITS_SECTION = "--- what this simulation cannot show ---"
 #: The log's section that holds the scenario as run: it ends the limits section above it.
@@ -186,6 +188,7 @@ class ScenarioSteps:
         """How many steps have this kind."""
         return self.counts.get(kind, 0)
 
+    # --- MVP ---
     @classmethod
     def merge(cls, steps):
         """The ScenarioSteps of several runs together: the sum of the counts of the RECORDED ones. With none RECORDED, NONE_RECORDED."""
@@ -197,6 +200,7 @@ class ScenarioSteps:
             for kind, number in each.counts.items():
                 total[kind] = total.get(kind, 0) + number
         return cls(total)
+    # --- end MVP ---
 
     def line(self):
         """The log's counts line: every kind, sorted, with the two kinds that matter always shown, or `not read`."""
@@ -230,7 +234,10 @@ class SimulationLimits:
             return cls([], outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
         if not body.startswith(LIMITS_SECTION + "\n"):
             return cls([], outcomes.NONE_RECORDED)
-        limits = sim_project.limits_in(body[len(LIMITS_SECTION):].split(SCENARIO_SECTION, 1)[0])
+        section, ended, _ = body[len(LIMITS_SECTION):].partition(SCENARIO_SECTION)
+        if not ended:
+            return cls([], outcomes.NOT_CHECKED, WHY_LIMITS_CUT_OFF)
+        limits = sim_project.limits_in(section)
         return cls(limits) if limits else cls([], outcomes.NOT_CHECKED, WHY_NO_LIMIT_LINE)
 # --- end MVP ---
 

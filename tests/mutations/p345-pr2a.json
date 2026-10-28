@@ -8,8 +8,8 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "caveats reads only the first passed log",
-  "find": "logs = image.find_passed_logs()\n        return self._control_caveats",
-  "replace": "logs = image.find_passed_logs()[:1]\n        return self._control_caveats"
+  "find": "logs = image.find_passed_logs()\n        read = ",
+  "replace": "logs = image.find_passed_logs()[:1]\n        read = "
  },
  {
   "file": "scripts/run_scenario.py",
@@ -32,14 +32,14 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "the no-control subject is always the singular",
-  "find": "if len(logs) > 1 else ONE_RUN_SUBJECT",
-  "replace": "if False else ONE_RUN_SUBJECT"
+  "find": "if len(logs) > 1 else ONE_RUN_MESSAGE",
+  "replace": "if False else ONE_RUN_MESSAGE"
  },
  {
   "file": "scripts/run_scenario.py",
   "name": "SimulationLimits reads the whole log, not up to the scenario section",
-  "find": ".split(SCENARIO_SECTION, 1)[0])",
-  "replace": ")"
+  "find": "section, ended, _ = body[len(LIMITS_SECTION):].partition(SCENARIO_SECTION)",
+  "replace": "section, ended, _ = body[len(LIMITS_SECTION):], SCENARIO_SECTION, \"\""
  },
  {
   "file": "scripts/run_scenario.py",
@@ -56,14 +56,14 @@
  {
   "file": "scripts/sim_project.py",
   "name": "limits_in drops a continuation line",
-  "find": "        elif found and line.strip():",
+  "find": "        elif open_limit:",
   "replace": "        elif False:"
  },
  {
   "file": "scripts/board_look.py",
   "name": "report_lines prints the limits after the token",
-  "find": "    # --- MVP ---\n    if report.limits:\n        out += [LIMITS_HEADING] + [say_limit(limit) for limit in report.limits]\n    # --- end MVP ---\n    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n",
-  "replace": "    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n    if report.limits:\n        out += [LIMITS_HEADING] + [say_limit(limit) for limit in report.limits]\n"
+  "find": "    # --- MVP ---\n    if report.limits:\n        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]\n    # --- end MVP ---\n    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n",
+  "replace": "    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n    if report.limits:\n        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]\n"
  },
  {
   "file": "scripts/board_look.py",
@@ -80,7 +80,43 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "an unreadable log also gets the limits hint",
-  "find": "if each.state == outcomes.NOT_CHECKED and each.why != WHY_LOG_UNREADABLE]",
+  "find": "if each.state == outcomes.NOT_CHECKED and not (said_unreadable and each.why == WHY_LOG_UNREADABLE)]",
   "replace": "if each.state == outcomes.NOT_CHECKED]"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a log cut off inside its limits section is RECORDED",
+  "find": "        if not ended:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "an empty limit is kept",
+  "find": "    return [limit for limit in found if limit.sentence]",
+  "replace": "    return found"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "a blank line does not end the limit",
+  "find": "        elif not line.strip():\n            open_limit = False\n",
+  "replace": "        elif not line.strip():\n            pass\n"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "write_limits keeps an older note when there are no limits",
+  "find": "note.unlink(missing_ok=True)  # a note from an earlier build must not outlive the limits it listed",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "an unreadable log's limits sentence is skipped although a control hides its steps sentence",
+  "find": "said_unreadable=not merged.count(SET_CONTROL))",
+  "replace": "said_unreadable=True)"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "a joined sentence keeps a leading space",
+  "find": "found[-1] = Limit(found[-1].component, (\"%s %s\" % (found[-1].sentence, line.strip())).strip())",
+  "replace": "found[-1] = Limit(found[-1].component, \"%s %s\" % (found[-1].sentence, line.strip()))"
  }
 ]

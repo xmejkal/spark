@@ -27,7 +27,8 @@ no MAC, no image or no evidence for the image, there is no token, and the line s
 
 For an image that a passed run tested, the look also prints what that run did not test (the caveats), and under "what this
 simulation cannot show, so test it on the board:" the limits of the project that sim/WHAT-THIS-CANNOT-SHOW.md holds, read
-from the limits section of every passed log. --json has them as data.limits, a list of {component, sentence}.
+from the limits section of every passed log. --json has them as data.limits, a list of {component, sentence}. With
+--no-simulation no log is read, so no limits are printed, and an empty list is not a pass: it never means the project has none.
 
 With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a token
 even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it. --no-simulation gives a

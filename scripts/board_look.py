@@ -46,8 +46,10 @@ LIST_TIMEOUT_S, READ_TIMEOUT_S = 15, 60
 
 RESTART_NOTICE = "the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
 TOKEN_LINE = "token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that."
+# --- MVP ---
 #: The look's line above the limits of the project: what the passed runs cannot show, so only the board can.
-LIMITS_HEADING = "what this simulation cannot show, so test it on the board:"
+LIMITS_HEADING_MESSAGE = "what this simulation cannot show, so test it on the board:"
+# --- end MVP ---
 
 
 def board_token(mac):
@@ -232,7 +234,7 @@ VERDICT_STOP, VERDICT_WARNING, VERDICT_MATCH = "stop", "warning", "match"
 
 class LookReport:
     """Value. What the look found. `stops` are Stops (a code and a sentence), `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
-    warning or stop. `simulation`, `caveats` and `limits` (sim_project.Limits) are what the evidence says of the image, or None, [] and [] when it refused the image.
+    warning or stop. `simulation`, `caveats` and `limits` (sim_project.Limit) are what the evidence says of the image, or None, [] and [] when it refused the image.
     `last_deploy` is the deploy_record_store.LastDeploy of the board's MAC, whatever the evidence said."""
 
     def __init__(self, port, reading, record, image, image_why, simulation, caveats, limits, last_deploy, also_on=None,
@@ -320,11 +322,13 @@ def say_last_deploy(last):
 # --- end MVP ---
 
 
+# --- MVP ---
 def say_limit(limit):
     """The look's line for a sim_project.Limit: `- component — sentence`, or `- sentence` when the line had no component."""
     if not limit.component:
         return sim_project.LIMIT_PREFIX + limit.sentence
     return sim_project.LIMIT_PREFIX + limit.component + sim_project.LIMIT_DASH + limit.sentence
+# --- end MVP ---
 
 
 def report_lines(report, token=True):
@@ -347,7 +351,7 @@ def report_lines(report, token=True):
     out += report.caveats
     # --- MVP ---
     if report.limits:
-        out += [LIMITS_HEADING] + [say_limit(limit) for limit in report.limits]
+        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]
     # --- end MVP ---
     if report.verdict == VERDICT_MATCH:
         out.append("all fields match the board record %s." % name)

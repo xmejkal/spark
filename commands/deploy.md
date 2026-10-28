@@ -44,7 +44,7 @@ order: the look, its token, then the person's yes.
    `standing yes: not used: <why>`), it erased nothing. Give the person the line
    it printed to run in their own terminal window, word for word, and wait. deploy.py looks at the board again (the
    board restarts), names every warning in its question and erases only after they type `yes`.
-   The question starts with the look's caveats (P345), such as a passed run whose scenario has no `set-control` step, and the look above it lists the limits: what no simulation can show of the project. Relay both. They are facts about the run and the project, not a stop.
+   The question starts with the look's caveats (P345), such as a passed run whose scenario has no `set-control` step, and the look above it lists the limits: what no simulation can show of the project. Relay the limits once; they are not in the question. Relay the caveats too. Both are facts about the run and the project, not a stop.
    The erase sentence then names the last deploy in spark's store record, for example `spark's store record names blink-c6 as its last deploy here,
    2026-10-19T09:24:50+02:00, ready seen`. Relay it. It says what spark's store record names as its last deploy here. It does not say what is on the board now.
    A flash made outside spark leaves no trace, and a flash that failed after the erase writes no record. `none in its store record` is not an empty board.

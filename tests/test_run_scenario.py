@@ -473,6 +473,14 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
         self.assertEqual((limits.state, limits.why, limits.limits), (
             "not-checked", "the log's limits section has no limit line", []))
 
+    def test_a_log_cut_off_inside_its_limits_section_is_not_checked_and_gives_no_half_limit(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(sim_project.limits_note([("ONBOARD_DISPLAY", "no part")]))
+        _, _, log = self.run_with("ready\n")
+        text = log.read_text()
+        log.write_text(text[:text.index("- **ONBOARD_DISPLAY**") + len("- **ONBOA")])
+        limits = run_scenario.SimulationLimits.from_log(log)
+        self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log's limits section is cut off", []))
+
     def test_an_unreadable_log_is_not_checked(self):
         limits = run_scenario.SimulationLimits.from_log(self.project / "sim" / "runs" / "none.log")
         self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log cannot be read", []))

@@ -247,6 +247,14 @@ class PassedRunEvidenceTest(unittest.TestCase):
             "and no expect-pin step (the step that reads a pin)",
             "b.log: " + self.NO_LIMIT_LINE_CAVEAT])
 
+    def test_an_unreadable_log_beside_a_run_with_a_control_still_gets_the_limits_sentence(self):
+        self.counted(self.CONTROL, "a.log")
+        gone = self.project / "sim" / "runs" / "gone.log"
+        logs = [self.project / "sim" / "runs" / "a.log", gone]
+        with mock.patch.object(ProjectImage, "find_passed_logs", return_value=logs):
+            self.assertEqual(PassedRunEvidence().caveats(self.image), [
+                "gone.log: not checked: the log cannot be read; fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"])
+
     def test_a_good_section_adds_no_caveat(self):
         self.counted(self.NO_CONTROL)
         self.with_section("a.log", sim_project.limits_note([self.DISPLAY]))

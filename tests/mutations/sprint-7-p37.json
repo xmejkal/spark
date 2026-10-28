@@ -32,7 +32,7 @@
  {
   "file": "scripts/sim_project.py",
   "name": "nothing is left beside the diagram for the person who reads it later",
-  "find": "        (Path(sim_dir) / \"WHAT-THIS-CANNOT-SHOW.md\").write_text(limits_note(limits))",
+  "find": "        note.write_text(limits_note(limits))",
   "replace": "        pass"
  }
 ]

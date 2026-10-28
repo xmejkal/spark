@@ -126,15 +126,19 @@ def limits_in(note_text):
     The Limits a note's text holds, in order, as `limits_note` wrote them; it never raises. The lines before the first limit line
     are skipped. A limit line that does not continue the shape `- **component** — sentence` gives the component "" and the text
     after the prefix. A line without the prefix after the first limit joins the limit above it with a space, since
-    `limits_note` writes a sentence with a line break as it is. Blank lines are skipped.
+    `limits_note` writes a sentence with a line break as it is. A blank line ends the limit above it, so a closing paragraph that
+    a person adds is no part of it. A limit whose sentence is empty is dropped.
     """
-    found = []
+    found, open_limit = [], False
     for line in note_text.splitlines():
         if line.startswith(LIMIT_PREFIX):
             found.append(_limit_of(line[len(LIMIT_PREFIX):]))
-        elif found and line.strip():
-            found[-1] = Limit(found[-1].component, "%s %s" % (found[-1].sentence, line.strip()))
-    return found
+            open_limit = True
+        elif not line.strip():
+            open_limit = False
+        elif open_limit:
+            found[-1] = Limit(found[-1].component, ("%s %s" % (found[-1].sentence, line.strip())).strip())
+    return [limit for limit in found if limit.sentence]
 
 
 def _limit_of(text):
@@ -161,13 +165,16 @@ def limits_note(limits):
 
 def write_limits(sim_dir, design, board):
     """
-    Put the note beside the diagram and hand back what it said, or [] when there is nothing. The design's records and the
+    Put the note beside the diagram and hand back what it said, or [] when there is nothing (then an older note is removed). The design's records and the
     board's own GPIOs both count (P396), and a board-only build passes no design. `board` has no default: no test reaches
     the full build's simulation stage (`check_spine.simulation_detail`), so a call that drops it fails at once.
     """
     limits = (limits_of(design) if design is not None else []) + boards.onboard_limits(board)
+    note = Path(sim_dir) / "WHAT-THIS-CANNOT-SHOW.md"
     if limits:
-        (Path(sim_dir) / "WHAT-THIS-CANNOT-SHOW.md").write_text(limits_note(limits))
+        note.write_text(limits_note(limits))
+    else:
+        note.unlink(missing_ok=True)  # a note from an earlier build must not outlive the limits it listed
     return limits
 
 

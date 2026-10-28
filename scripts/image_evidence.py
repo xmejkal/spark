@@ -36,8 +36,8 @@ NO_CONTROL_NO_PIN_CAVEAT = ("%s no set-control step (the step that presses a but
                             "step (the step that reads a pin)")
 #: What a passed run's limits section that cannot be read tells the person to do (the sentence starts with why it was not checked).
 LIMITS_HINT = "fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"
-ONE_RUN_SUBJECT = "the passed run's scenario has"
-MANY_RUNS_SUBJECT = "the passed runs (%s) have"
+ONE_RUN_MESSAGE = "the passed run's scenario has"
+MANY_RUNS_MESSAGE = "the passed runs (%s) have"
 #: The flag that deploys an image from firmware/ with no simulation.
 NO_SIMULATION_FLAG = "--no-simulation"
 #: The flag that turns a run of another image from a refusal into a note.
@@ -177,9 +177,11 @@ class ImageEvidence(abc.ABC):
         """Sentences the person reads before the gate question about what tested `image`, or [] when there are none."""
         return []
 
+    # --- MVP ---
     def find_limits(self, image):
-        """The sim_project.Limits of the project that no simulation can show, from this evidence's records, or [] when it holds none."""
+        """The sim_project.Limit list of the project that no simulation can show, from this evidence's records, or [] when it holds none."""
         return []
+    # --- end MVP ---
 
     def way_out(self, image):
         """What to do instead of a refusal, as words that end its sentence, or "" when there is nothing to add."""
@@ -223,12 +225,17 @@ class PassedRunEvidence(ImageEvidence):
         the button. Then it adds a sentence for each log whose limits section could not be read.
         """
         logs = image.find_passed_logs()
-        return self._control_caveats(logs) + self._limits_caveats(logs)
+        read = [(log, ScenarioSteps.from_log(log)) for log in logs]
+        merged = ScenarioSteps.merge([steps for _, steps in read])
+        # With no control in any counted log, an unreadable log has said so in its steps sentence already.
+        return self._control_caveats(logs, read, merged) + self._limits_caveats(logs, said_unreadable=not merged.count(SET_CONTROL))
 
+    # --- MVP ---
     def find_limits(self, image):
         """The Limits in the limits section of every passed log of `image`, in name order, each once."""
         found = [limit for _, each in self._limits_of(image.find_passed_logs()) for limit in each.limits]
         return list(dict.fromkeys(found))
+    # --- end MVP ---
 
     @staticmethod
     def _limits_of(logs):
@@ -236,24 +243,22 @@ class PassedRunEvidence(ImageEvidence):
         return [(log, SimulationLimits.from_log(log)) for log in logs]
 
     @staticmethod
-    def _control_caveats(logs):
-        read = [(log, ScenarioSteps.from_log(log)) for log in logs]
-        merged = ScenarioSteps.merge([steps for _, steps in read])
+    def _control_caveats(logs, read, merged):
         if not logs or merged.count(SET_CONTROL):
             return []
         uncounted = [PassedRunEvidence._named(log, PassedRunEvidence._uncounted_sentence(steps), len(logs) > 1)
                      for log, steps in read if steps.state != outcomes.RECORDED]
         if uncounted:
             return uncounted
-        subject = MANY_RUNS_SUBJECT % ", ".join(log.name for log in logs) if len(logs) > 1 else ONE_RUN_SUBJECT
+        subject = MANY_RUNS_MESSAGE % ", ".join(log.name for log in logs) if len(logs) > 1 else ONE_RUN_MESSAGE
         return [(NO_CONTROL_CAVEAT if merged.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT) % subject]
 
     @staticmethod
-    def _limits_caveats(logs):
-        """A sentence for each log whose limits section is NOT_CHECKED, except an unreadable log: its steps sentence says so."""
+    def _limits_caveats(logs, said_unreadable):
+        """A sentence for each log whose limits section is NOT_CHECKED. An unreadable log is skipped when `said_unreadable`: its steps sentence says so."""
         return [PassedRunEvidence._named(log, "%s; %s" % (outcomes.NOT_CHECKED_MESSAGE % each.why, LIMITS_HINT), len(logs) > 1)
                 for log, each in PassedRunEvidence._limits_of(logs)
-                if each.state == outcomes.NOT_CHECKED and each.why != WHY_LOG_UNREADABLE]
+                if each.state == outcomes.NOT_CHECKED and not (said_unreadable and each.why == WHY_LOG_UNREADABLE)]
 
     @staticmethod
     def _uncounted_sentence(steps):
