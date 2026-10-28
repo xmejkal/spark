@@ -266,6 +266,10 @@ exits 1 today, and the baseline holds that. A card that changes an output says w
 script is for, which pages name it, and which of its flags no page names. Scripts that no page names and no script
 imports come first. It runs only `--help` and writes nothing. `--spark DIR` reads another tree (P200, #153).
 
+`python3 tools/measure.py` prints the shape of the code under `scripts/` (every folder in it but the MicroPython
+`stand_in/`), ending in a SCORE line (P322). `--rules` prints each breach of an architecture rule as
+`rule:file:name:value`. `--rules --accept` writes the breaches as `tests/architecture_baseline.json` (P440, #585).
+
 ## Patterns and names in spark's core
 
 New code in `scripts/` is small classes with one job each, in library modules, and `main()` only parses and prints
@@ -302,6 +306,23 @@ buttons from the record's `physical.buttons`. `board_doctor.step_sentence` does 
 PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `deploy_service.DeployResult` and
 `firmware_platform.FirmwarePlatform`. `deploy.py` only parses, prints and maps the exit code.
 
+### The rules test
+
+`tests/test_architecture.py` reads `scripts/` and `tests/` with `ast` and holds each breach against
+`tests/architecture_baseline.json`. One test method checks one rule: R1 (a function, a module and a `main` are short),
+R2 (nesting), R3 (parameters), R6 (a class docstring starts with a role word), T1 (only an Adapter touches the outside),
+T2 (no test file adds a `mock.patch`), T4 (no branch on `sys.modules`), X2 (nothing in `scripts/spark/` prints, reads or
+exits outside a Renderer), U1 (the leaves import nothing of spark), C1 (a unique file name, an exception ends in `Error`)
+and C3 (no second name for an exit code). The rules and their limits are in
+[`architecture/notes.md`](../discovery/2026-10-19-p323-target-architecture/architecture/notes.md).
+
+The baseline lists the breaches that exist today, one `"rule:file:name": value` per line and sorted, so two branches
+merge line by line. The value is the measured size, not only the name. The baseline only shrinks: a new breach fails,
+a value above its entry fails, and so does a value below it and an entry the code no longer has. Fix the code, then run
+`python3 tools/measure.py --rules --accept` and commit the shorter file. A branch that rebases on another one
+regenerates the file from the merged tree. A baseline of 200 entries hides what it lists: each slice pays down the
+lines it touches.
+
 ### One responsibility, one name
 
 The PO agreed these rules on 2026-10-21 ([P381](https://github.com/xmejkal/spark/issues/488)): "let's try to stick
@@ -321,7 +342,8 @@ to the rules we set". New code follows them now. Today's names change in the nam
 
 4. An Operation's module, class and op name (printed as `op` in the JSON) use the same words: the module `show_part`,
    the class `ShowPart`, the op `"show-part"`. Its subcommand is the verb alone, because the CLI's topic noun gives
-   the object: `parts.py show`.
+   the object: `parts.py show`. An `op` that a golden or a command page already pins keeps its spelling (decision 5 of
+   the refactor plan, the PO on 2026-10-26); only a new Operation follows this rule.
 5. A class that only reads says so in its name: `Reader`, `Finder` or `Probe`. A class or a method that changes a
    board, a file or a port has a verb that names the change: `write`, `erase`, `cure`, `save`.
 

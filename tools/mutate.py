@@ -6,6 +6,7 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py --anchors tests/mutations/*.json      # anchors and syntax only, a second
     tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy    # one file's rows, in a copy
     tools/mutate.py tests/mutations/*.json --for $changed --copy   # a branch's: changed=$(git diff --name-only origin/main...HEAD)
+    tools/mutate.py tests/mutations/*.json --retarget scripts/a.py scripts/spark/a.py   # a file moved: its rows follow
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -39,6 +40,12 @@ THE FOUR RULES BUILT IN (the first three learned from the hand-rolled harnesses)
     within one second is invisible to that check: the "restored" suite ran the MUTATED bytecode
     and reported red, which this tool's own tests caught on their first full run. So every suite
     run is `-B` with a fresh, empty cache prefix — pure source, every time.
+
+A COPY (--copy) is deleted after the run, so the run does not run the whole suite again to prove the files restored: that
+check cost 207 s on 2026-10-28 (P424), and a copy has nothing to restore. `--retarget OLD NEW` edits the text of the
+tables and moves no other row; run `--anchors` after it. Both `near_tests` and the import check name a module under
+`scripts/` by its dotted name, so a package module (`spark.core.outcomes`) meets the tests that import it. Rows do not run
+in parallel: `--jobs 4` saved 24 s on 8 rows (rows file of P440), under the minute that would pay for the flag.
 
 WHAT PASSING MEANS
 

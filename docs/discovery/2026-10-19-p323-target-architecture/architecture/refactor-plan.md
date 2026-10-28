@@ -286,8 +286,8 @@ module imports upward. `board_facts` needed the time rule that `board_grant` hol
 `text_guards` sit in core and `provenance` in records.
 
 One test over every leaf, in `tests/test_imports.py`, replaced the old `screen_text` import test in
-`tests/test_board_facts.py` (P418; P431 renamed that file `tests/test_deploy_record_store.py`): it reads each leaf with `ast` and fails on any spark import (rows 6 and 22: `zone_time`
-has no test, and `provenance` has no import test). S3 folds it into `ArchitectureRules`.
+`tests/test_board_facts.py` (P418; P431 renamed that file `tests/test_deploy_record_store.py`): it read each leaf with `ast` and failed on any spark import (rows 6 and 22: `zone_time`
+had no test, and `provenance` had no import test). S3 (P440) folded it into rule U1 of `ArchitectureRules`, and deleted it.
 
 An `ast` walk over `scripts/` at `d064a65` finds 242 import edges, 17 of them lazy (inside a function). 32 edges sit
 on a cycle. Every cycle closes through one of eight lazy edges. The other 24 are top-level imports that point down
@@ -489,9 +489,10 @@ The PO on 2026-10-27: "oh and yes, wave 3 should also become fewer bigger PRs as
 units to group, not one PR each. Wave 3's own plan proposes the cut by kind of change, with one council, as wave 2's
 did.
 
-S3, the rules test: `tests/test_architecture.py` (`ArchitectureRules`) and a generated baseline that only shrinks.
-`measure.py` of P322 moves to `tools/measure.py`. `tools/mutate.py` gains `--retarget OLD NEW`. The leaf test
-becomes a rule. When each planted breach is caught with its rule, the slice is done.
+S3, the rules test (done in P440): `tests/test_architecture.py` (`ArchitectureRules`) and a generated baseline that
+only shrinks. `measure.py` of P322 moved to `tools/measure.py`. `tools/mutate.py` gained `--retarget OLD NEW`. The leaf
+test became rule U1. Each planted breach is caught with its rule. R4, R5, U2, X1, X3, C4, T3 and T5 enter with the
+slice that first needs them.
 
 S4, `outcomes` and the two core leaves into the package: `scripts/spark/core/outcomes.py`, `core/zone_time.py` and
 `core/text_guards.py`, with the 36 import lines in 32 files of `scripts/` and `tools/` (at `d064a65`) and the test imports changed.
@@ -593,8 +594,8 @@ The other cards repeat a section and are cut: `tools/kanban.py` (section 3), `Br
 
 ## Still to do for the area pages
 
-The P385 PR applied every other edit to the pages. One is left: `docs/guide/developing.md` (not edited here) gains in
-the standard's rule 4 "an `op` in a golden or a command page keeps its spelling until decision 5".
+Nothing is left. The P385 PR applied every edit to the pages but one, and P440 added that one to rule 4 of
+`docs/guide/developing.md`: an `op` that a golden or a command page pins keeps its spelling (decision 5).
 
 ## What we will not do
 
