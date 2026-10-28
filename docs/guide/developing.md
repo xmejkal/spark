@@ -318,10 +318,15 @@ and C3 (no second name for an exit code). The rules and their limits are in
 
 The baseline lists the breaches that exist today, one `"rule:file:name": value` per line and sorted, so two branches
 merge line by line. The value is the measured size, not only the name. The baseline only shrinks: a new breach fails,
-a value above its entry fails, and so does a value below it and an entry the code no longer has. Fix the code, then run
-`python3 tools/measure.py --rules --accept` and commit the shorter file. A branch that rebases on another one
-regenerates the file from the merged tree. A baseline of 200 entries hides what it lists: each slice pays down the
-lines it touches.
+a value above its entry fails, and so does an entry the code no longer has. A value below its entry passes; write it
+back with `python3 tools/measure.py --rules --accept`, which takes only values that fell and entries that are gone and
+refuses a new or risen breach. `--accept-new` writes those too: use it only for a rule that enters or for a branch that
+rebases on another one, and give the reason in the PR. A failure names the rule and its limit, the file, the name and
+the value, and `python3 tools/measure.py --rules` shows every breach.
+
+R6 and C1 list a class by its qualified name (`Outer.Inner`). T1, T2, T4, X2 and C3 count the breaches of a file under
+one key: they say how many, not where, so a new breach next to an old one shows only as a higher count. A baseline of
+200 entries hides what it lists: each slice pays down the lines it touches.
 
 ### One responsibility, one name
 

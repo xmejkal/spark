@@ -2,10 +2,11 @@
 
     python3 tools/measure.py                  # the P322 figures (the code architecture discovery), ending in a SCORE line
     python3 tools/measure.py --rules          # each breach of a rule, one per line: rule:file:name:value
-    python3 tools/measure.py --rules --accept # write tests/architecture_baseline.json from the tree
+    python3 tools/measure.py --rules --accept # lower tests/architecture_baseline.json: values that fell, entries that are gone
+    python3 tools/measure.py --rules --accept-new   # write it whatever it holds, new and risen breaches too (say why in the PR)
 
 Stdlib only. It reads `scripts/` (every folder under it, but `scripts/stand_in/`, the MicroPython stand-in that is not
-spark's code) and `tests/`. Only `--accept` writes, and only the baseline. `tests/test_architecture.py` holds each
+spark's code) and `tests/`. Only `--accept` and `--accept-new` write, and only the baseline. `tests/test_architecture.py` holds each
 breach against that baseline, which may only shrink (P440). The rules are the table in
 `docs/discovery/2026-10-19-p323-target-architecture/architecture/notes.md`.
 
@@ -41,15 +42,12 @@ OUTCOME_NAMES = {"status", "verdict", "outcome"}
 NAMEDTUPLE_API = {"_asdict", "_replace", "_fields", "_make"}  # public API of a namedtuple, not a private name
 
 
+# --- Later, not MVP: the P322 discovery's figures, kept for its score line ---
+
+
 def code_lines(source):
     """Lines that are neither blank nor a comment (docstrings count as code)."""
     return sum(1 for line in source.splitlines() if line.strip() and not line.strip().startswith("#"))
-
-
-def span(node):
-    """Lines of a def or class, from its first decorator to its last line."""
-    first = min([node.lineno] + [d.lineno for d in node.decorator_list])
-    return node.end_lineno - first + 1
 
 
 def node_lines(source_lines, node):
@@ -73,12 +71,6 @@ def top_level(body):
         elif isinstance(node, ast.Try):
             yield from top_level(node.body + node.orelse + node.finalbody
                                  + [s for h in node.handlers for s in h.body])
-
-
-def role_word_of(cls):
-    """The first word of a class's docstring without its ':' or '.', or '' when it has none."""
-    first = (ast.get_docstring(cls) or "").split(maxsplit=1)
-    return first[0].rstrip(":.") if first else ""
 
 
 def role_of(cls):
@@ -134,12 +126,6 @@ def outcome_literals(tree):
                 if isinstance(k, ast.Constant) and k.value in OUTCOME_NAMES:
                     found.update(id(c) for c in _constants(v))
     return len(found)
-
-
-def script_paths(root):
-    """Every `.py` under `root/scripts`, in folders too, but not the MicroPython stand-in."""
-    scripts = pathlib.Path(root) / "scripts"
-    return sorted(path for path in scripts.rglob("*.py") if "stand_in" not in path.relative_to(scripts).parts)
 
 
 def measure(path, names):
@@ -229,7 +215,28 @@ def print_figures(root):
           f"thin CLIs {kinds['thin CLI']} | private imports {len(private)} | outcome literals {sum(r['literals'] for r in literals)} | roles stated "
           f"{sum(1 for x in roles if not x.endswith('?'))}/{classes}")
 
-# --- The rules (P440): each breach is `rule:file:name:value`, held against tests/architecture_baseline.json ---
+
+# --- MVP ---
+# The rules (P440): each breach is `rule:file:name:value`, held against tests/architecture_baseline.json
+
+
+def span(node):
+    """Lines of a def or class, from its first decorator to its last line."""
+    first = min([node.lineno] + [d.lineno for d in node.decorator_list])
+    return node.end_lineno - first + 1
+
+
+def role_word_of(cls):
+    """The first word of a class's docstring without its ':' or '.', or '' when it has none."""
+    first = (ast.get_docstring(cls) or "").split(maxsplit=1)
+    return first[0].rstrip(":.") if first else ""
+
+
+def script_paths(root):
+    """Every `.py` under `root/scripts`, in folders too, but not the MicroPython stand-in."""
+    scripts = pathlib.Path(root) / "scripts"
+    return sorted(path for path in scripts.rglob("*.py") if "stand_in" not in path.relative_to(scripts).parts)
+
 
 FUNCTION_LINES = {"spark": 40, "old": 60}  # R1: a function in scripts/spark/, and in a script not yet moved there
 MODULE_LINES = 600                          # R1: a module
@@ -243,15 +250,38 @@ MOVED_GUARDS = {"drawer": {"clean", "CONTROL", "LABEL_MAX", "TEXT_MAX", "TAGS_MA
 #: X2: a class that may print, read and exit in `scripts/spark/`: the Renderers (by role word) and the terminal consent.
 TERMINAL_CLASSES = ("TerminalConsentStrategy",)
 EXCEPTION_NAMES = {name for name, value in vars(builtins).items() if isinstance(value, type) and issubclass(value, BaseException)}
+#: T1: the calls of `time` that read the clock or sleep. `strftime` and the like are no I/O.
+CLOCK_CALLS = {"time", "time_ns", "monotonic", "monotonic_ns", "perf_counter", "perf_counter_ns", "process_time", "sleep",
+               "localtime", "gmtime"}
+#: T1 and X2: the modules an `import X as Y` may hide.
+TRACKED = ("subprocess", "time", "urllib", "os", "datetime", "sys")
+
+#: Each rule in a sentence. The failure messages, the docstrings of the test methods and `--rules` read this one table.
+RULES = {
+    "R1": "a function, a module and a main are short (a function %d lines in scripts/spark/ and %d elsewhere, a module %d, a main %d)"
+          % (FUNCTION_LINES["spark"], FUNCTION_LINES["old"], MODULE_LINES, MAIN_LINES),
+    "R2": "nesting is at most %d deep, and an elif is no level" % NESTING,
+    "R3": "a function takes at most %d parameters, without self" % PARAMETERS,
+    "R6": "a class docstring starts with a role word of docs/guide/developing.md",
+    "T1": "only an Adapter runs a program, reads the clock or the environment, calls the network or writes a file",
+    "T2": "a test file never adds a mock.patch (mock.patch.dict on os.environ is the exception)",
+    "T4": "code never branches on what is imported, as in `\"unittest\" in sys.modules`",
+    "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr or exit outside a Renderer and the terminal consent",
+    "U1": "a leaf imports nothing of spark, matching imports no drawer, and no script reads a moved guard from its old module",
+    "C1": "a file name under scripts/ is unique, and an exception name ends in Error",
+    "C3": "an exit code has no second name (no EXIT_ alias)",
+}
 
 Breach = collections.namedtuple("Breach", "rule file name value")
 #: One source file: its path under the root (with `/`), its tree and its text.
-Source = collections.namedtuple("Source", "file tree text")
-#: What a file's rules need to know of the others: the stems of all scripts and the names of the exceptions they define.
-World = collections.namedtuple("World", "stems exceptions")
+SourceFile = collections.namedtuple("SourceFile", "file tree text")
+#: What a rule needs to know of the other scripts: their stems and the names of the exceptions they define.
+ScriptNames = collections.namedtuple("ScriptNames", "stems exceptions")
 #: One difference between the breaches and the baseline. `kind` is one of NEW, ROSE, FELL and GONE.
 Drift = collections.namedtuple("Drift", "key kind found allowed")
 NEW, ROSE, FELL, GONE = "new-breach", "value-rose", "value-fell", "entry-gone"
+#: The kinds that fail the test. A value that fell passes: `--rules --accept` writes it back.
+FAILING = (NEW, ROSE, GONE)
 
 
 def functions_of(tree, prefix=""):
@@ -264,6 +294,18 @@ def functions_of(tree, prefix=""):
             yield from functions_of(node, prefix + node.name + ".")
         else:
             yield from functions_of(node, prefix)
+
+
+def classes_of(tree, prefix=""):
+    """Every class under `tree` as (qualified name, node): a nested class is `Outer.Inner`."""
+    for node in ast.iter_child_nodes(tree):
+        if isinstance(node, ast.ClassDef):
+            yield prefix + node.name, node
+            yield from classes_of(node, prefix + node.name + ".")
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            yield from classes_of(node, prefix + node.name + ".")
+        else:
+            yield from classes_of(node, prefix)
 
 
 def imports_of(tree):
@@ -321,6 +363,23 @@ def _dotted(node):
     return ""
 
 
+def aliases_of(tree):
+    """{name: what it stands for} for `import subprocess as sp` and `from datetime import datetime as dt`, of the modules in TRACKED."""
+    found = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            found.update({a.asname: a.name for a in node.names if a.asname and a.name.split(".")[0] in TRACKED})
+        elif isinstance(node, ast.ImportFrom) and node.module in ("datetime", "urllib"):
+            found.update({a.asname: node.module + "." + a.name for a in node.names if a.asname})
+    return found
+
+
+def _resolved(node, aliases):
+    """`_dotted(node)` with its first name replaced by what an alias stands for."""
+    first, _, rest = _dotted(node).partition(".")
+    return (aliases.get(first, first) + ("." + rest if rest else "")) if first else ""
+
+
 def _writes_a_file(call):
     """True for write_text, write_bytes and an open() whose mode writes, appends or creates."""
     if isinstance(call.func, ast.Attribute) and call.func.attr in ("write_text", "write_bytes"):
@@ -335,30 +394,53 @@ def _writes_a_file(call):
     return isinstance(mode, ast.Constant) and isinstance(mode.value, str) and any(c in mode.value for c in "wax+")
 
 
+def _effect(node, aliases):
+    """The outside that T1 sees `node` reach: subprocess, time, urllib, datetime, os.environ, os.getenv or file-write, else ''."""
+    if isinstance(node, ast.ImportFrom):
+        module, imported = node.module or "", {a.name for a in node.names}
+        if module == "subprocess" or module == "time" and imported & CLOCK_CALLS:
+            return module
+        if module.startswith("urllib.request") or module == "urllib" and "request" in imported:
+            return "urllib"
+        if module == "os":
+            return "os.environ" if "environ" in imported else "os.getenv" if "getenv" in imported else ""
+    elif isinstance(node, ast.Attribute):
+        whole, base = _resolved(node, aliases), _resolved(node.value, aliases)
+        if base == "subprocess" or base == "time" and node.attr in CLOCK_CALLS:
+            return base
+        if whole in ("urllib.request", "os.environ", "os.getenv"):
+            return "urllib" if whole == "urllib.request" else whole
+        if node.attr in ("now", "utcnow", "today") and base.split(".")[-1] in ("datetime", "date"):
+            return "datetime"
+    elif isinstance(node, ast.Call) and _writes_a_file(node):
+        return "file-write"
+    return ""
+
+
 def _count(rule, source, seen):
     """One Breach per name in the Counter `seen` that was counted at least once."""
     return [Breach(rule, source.file, name, count) for name, count in sorted(seen.items()) if count]
 
 
-def long_code(source, world):
-    """R1: a function over its limit, a module over 600 lines, a `main` over 15."""
+def long_code(source, known):
+    """R1: a function over its limit, a module over 600 lines, a `main` over 15 (one entry for a `main`)."""
     limit = FUNCTION_LINES["spark" if source.file.startswith("scripts/spark/") else "old"]
-    found = [Breach("R1", source.file, name, span(node)) for name, node in functions_of(source.tree) if span(node) > limit]
+    found = []
+    for name, node in functions_of(source.tree):
+        if span(node) > (MAIN_LINES if name == "main" else limit):
+            found.append(Breach("R1", source.file, name, span(node)))
     lines = len(source.text.splitlines())
     if lines > MODULE_LINES:
         found.append(Breach("R1", source.file, "<module>", lines))
-    main = next((n for n in source.tree.body if isinstance(n, ast.FunctionDef) and n.name == "main"), None)
-    if main and span(main) > MAIN_LINES:
-        found.append(Breach("R1", source.file, "main/cli", span(main)))
     return found
 
 
-def deep_nesting(source, world):
+def deep_nesting(source, known):
     """R2: a function that nests deeper than 3."""
     return [Breach("R2", source.file, name, depth_of(node)) for name, node in functions_of(source.tree) if depth_of(node) > NESTING]
 
 
-def many_parameters(source, world):
+def many_parameters(source, known):
     """R3: a function with more than 5 parameters, without self or cls."""
     found = []
     for name, node in functions_of(source.tree):
@@ -370,48 +452,44 @@ def many_parameters(source, world):
     return found
 
 
-def class_without_role(source, world):
-    """R6: a class whose docstring does not start with a role word."""
-    return [Breach("R6", source.file, node.name, 1) for node in ast.walk(source.tree)
-            if isinstance(node, ast.ClassDef) and role_word_of(node) not in ROLES]
+def class_without_role(source, known):
+    """R6: a class whose docstring does not start with a role word. The count is per qualified name."""
+    return _count("R6", source, collections.Counter(name for name, node in classes_of(source.tree) if role_word_of(node) not in ROLES))
 
 
-def effect_outside_adapter(source, world):
-    """T1: subprocess, time, urllib, os.environ or a file write, outside a class whose docstring says Adapter."""
-    seen = collections.Counter()
-    for node in walk_outside(source.tree, _is_adapter):
-        if isinstance(node, ast.ImportFrom) and node.module and node.module.split(".")[0] in ("subprocess", "time", "urllib"):
-            seen[node.module.split(".")[0]] += 1
-        elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in ("subprocess", "time", "urllib"):
-            seen[node.value.id] += 1
-        elif isinstance(node, ast.Attribute) and _dotted(node) == "os.environ":
-            seen["os.environ"] += 1
-        elif isinstance(node, ast.Call) and _writes_a_file(node):
-            seen["file-write"] += 1
+def effect_outside_adapter(source, known):
+    """T1: subprocess, time, urllib, datetime, os.environ, os.getenv or a file write, outside a class whose docstring says Adapter."""
+    aliases = aliases_of(source.tree)
+    seen = collections.Counter(_effect(node, aliases) for node in walk_outside(source.tree, _is_adapter))
+    del seen[""]  # a node that reaches nothing outside
     return _count("T1", source, seen)
 
 
-def branch_on_imports(source, world):
-    """T4: a branch whose test reads `sys.modules`, like `"unittest" in sys.modules`."""
-    reads = sum(1 for node in ast.walk(source.tree) if isinstance(node, (ast.If, ast.IfExp, ast.While))
-                and any(_dotted(n) == "sys.modules" for n in ast.walk(node.test)))
-    return _count("T4", source, collections.Counter({"sys.modules": reads}))
+def branch_on_imports(source, known):
+    """T4: a branch whose test reads `sys.modules`, like `"unittest" in sys.modules`. Each read counts once."""
+    reads = set()
+    for node in ast.walk(source.tree):
+        if isinstance(node, (ast.If, ast.IfExp, ast.While)):
+            reads |= {id(n) for n in ast.walk(node.test) if _dotted(n) == "sys.modules"}
+    return _count("T4", source, collections.Counter({"sys.modules": len(reads)}))
 
 
-def output_in_spark(source, world):
-    """X2: main, print, input, sys.stdin, sys.stdout, sys.exit or readline in scripts/spark/, outside the Renderers and the terminal consent."""
+def output_in_spark(source, known):
+    """X2: main, print, input, sys.stdin, sys.stdout, sys.stderr, sys.exit, readline or SystemExit in scripts/spark/, outside the Renderers and the terminal consent."""
     if not source.file.startswith("scripts/spark/"):
         return []
-    seen = collections.Counter()
+    aliases, seen = aliases_of(source.tree), collections.Counter()
     for node in walk_outside(source.tree, _may_print):
         if isinstance(node, ast.FunctionDef) and node.name == "main":
             seen["main"] += 1
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in ("print", "input"):
             seen[node.func.id] += 1
-        elif isinstance(node, ast.Attribute) and _dotted(node) in ("sys.stdin", "sys.stdout", "sys.exit"):
-            seen[_dotted(node)] += 1
+        elif isinstance(node, ast.Attribute) and _resolved(node, aliases) in ("sys.stdin", "sys.stdout", "sys.stderr", "sys.exit"):
+            seen[_resolved(node, aliases)] += 1
         elif isinstance(node, ast.Attribute) and node.attr == "readline":
             seen["readline"] += 1
+        elif isinstance(node, ast.Raise) and _dotted(node.exc.func if isinstance(node.exc, ast.Call) else node.exc) == "SystemExit":
+            seen["SystemExit"] += 1
     return _count("X2", source, seen)
 
 
@@ -427,25 +505,25 @@ def old_reads(tree):
                     for alias in node.names if alias.name in MOVED_GUARDS[node.module]}
 
 
-def leaf_imports(source, world):
+def leaf_imports(source, known):
     """U1: a leaf that imports a script or `spark`, `matching` that imports `drawer`, a script that reads a moved guard from its old module."""
     stem = pathlib.PurePosixPath(source.file).stem
     imported = imports_of(source.tree)
     found = []
     if stem in LEAVES:
-        found += [Breach("U1", source.file, "imports-" + name, 1) for name in sorted(imported & (world.stems | {"spark"}) - {stem})]
+        found += [Breach("U1", source.file, "imports-" + name, 1) for name in sorted(imported & (known.stems | {"spark"}) - {stem})]
     if stem == "matching" and "drawer" in imported:
         found.append(Breach("U1", source.file, "imports-drawer", 1))
     return found + [Breach("U1", source.file, "reads-" + name, 1) for name in sorted(old_reads(source.tree))]
 
 
-def unnamed_error(source, world):
-    """C1: an exception class whose name does not end in Error."""
-    return [Breach("C1", source.file, node.name, 1) for node in ast.walk(source.tree)
-            if isinstance(node, ast.ClassDef) and node.name in world.exceptions and not node.name.endswith("Error")]
+def unnamed_error(source, known):
+    """C1: an exception class whose name does not end in Error. The count is per qualified name."""
+    return _count("C1", source, collections.Counter(name for name, node in classes_of(source.tree)
+                                                   if node.name in known.exceptions and not node.name.endswith("Error")))
 
 
-def exit_alias(source, world):
+def exit_alias(source, known):
     """C3: `from outcomes import X as EXIT_Y` with another name, or `EXIT_Y = ...EXIT_X`: a second name for an exit code."""
     seen = collections.Counter()
     for node in ast.walk(source.tree):
@@ -460,7 +538,8 @@ def exit_alias(source, world):
     return _count("C3", source, seen)
 
 
-#: The rules that read one script. T2 reads the tests and the two C1 and U1 clauses on the whole tree are in `breaches`.
+#: The rules that read one script. T2 reads the tests and the two clauses on the whole tree (C1 file names, U1 leaves) are in `breaches`.
+#: T1, T2, T4, X2 and C3 count the breaches of a file under one key: they say how many, not where.
 SCRIPT_RULES = (long_code, deep_nesting, many_parameters, class_without_role, effect_outside_adapter, branch_on_imports,
                 output_in_spark, leaf_imports, unnamed_error, exit_alias)
 
@@ -477,11 +556,11 @@ def mock_patches(source):
 
 
 def sources_of(root, paths):
-    """The Source of each path under `root`."""
+    """The SourceFile of each path under `root`."""
     found = []
     for path in paths:
         text = path.read_text()
-        found.append(Source(path.relative_to(root).as_posix(), ast.parse(text), text))
+        found.append(SourceFile(path.relative_to(root).as_posix(), ast.parse(text), text))
     return found
 
 
@@ -502,8 +581,8 @@ def breaches(root=ROOT):
     root = pathlib.Path(root)
     scripts = sources_of(root, script_paths(root))
     stems = {pathlib.PurePosixPath(s.file).stem for s in scripts}
-    world = World(stems, exceptions_of(scripts))
-    found = [b for source in scripts for rule in SCRIPT_RULES for b in rule(source, world)]
+    known = ScriptNames(stems, exceptions_of(scripts))
+    found = [b for source in scripts for rule in SCRIPT_RULES for b in rule(source, known)]
     found += [b for source in sources_of(root, sorted((root / "tests").glob("test_*.py"))) for b in mock_patches(source)]
     names = collections.Counter(pathlib.PurePosixPath(s.file).name for s in scripts if not s.file.endswith("__init__.py"))
     found += [Breach("C1", s.file, "basename", 1) for s in scripts if names[pathlib.PurePosixPath(s.file).name] > 1]
@@ -515,7 +594,7 @@ def breaches(root=ROOT):
     return dict(sorted(kept.items()))
 
 
-def drift(found, baseline, rule=None):
+def compare(found, baseline, rule=None):
     """Where the breaches `found` differ from the `baseline` (both {key: value}), for one rule or all: a list of Drift."""
     said = []
     for key in sorted(set(found) | set(baseline)):
@@ -528,6 +607,21 @@ def drift(found, baseline, rule=None):
         elif found[key] != baseline[key]:
             said.append(Drift(key, ROSE if found[key] > baseline[key] else FELL, found[key], baseline[key]))
     return said
+
+
+def explain(drift):
+    """One sentence for a Drift: the rule and its limit, the file, the name and the values, and what to do."""
+    rule, file, name = drift.key.split(":", 2)
+    where = "%s: %s" % (rule, RULES[rule])
+    lists = "`python3 tools/measure.py --rules` lists every breach"
+    return {
+        NEW: "%s -- %s in %s is %s and the baseline does not list it. Fix it; %s" % (where, name, file, drift.found, lists),
+        ROSE: "%s -- %s in %s rose from %s to %s. Fix it; %s" % (where, name, file, drift.allowed, drift.found, lists),
+        GONE: "%s -- the baseline lists %s in %s at %s and the code no longer has it. Remove the entry with `python3 tools/measure.py --rules --accept`"
+              % (where, name, file, drift.allowed),
+        FELL: "%s -- %s in %s fell from %s to %s. Write it back with `python3 tools/measure.py --rules --accept`"
+              % (where, name, file, drift.allowed, drift.found),
+    }[drift.kind]
 
 
 def read_baseline(root=ROOT):
@@ -547,17 +641,30 @@ def write_baseline(found, root=ROOT):
 def main(argv=None, root=ROOT):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("--rules", action="store_true", help="print each breach of the architecture rules, one per line: rule:file:name:value")
-    parser.add_argument("--accept", action="store_true", help="with --rules: write the breaches as the new tests/architecture_baseline.json")
+    parser.add_argument("--accept", action="store_true",
+                        help="with --rules: write the breaches as the new tests/architecture_baseline.json, for values that fell "
+                             "and entries that are gone. It refuses a new or risen breach")
+    parser.add_argument("--accept-new", action="store_true",
+                        help="with --rules: write the baseline whatever it holds, new and risen breaches too. Give the reason in the PR")
     args = parser.parse_args(argv)
-    if args.accept and not args.rules:
-        parser.error("--accept goes with --rules")
+    if (args.accept or args.accept_new) and not args.rules:
+        parser.error("--accept and --accept-new go with --rules")
     if not args.rules:
         print_figures(root)
         return 0
     found = breaches(root)
     for key, value in found.items():
         print("%s:%d" % (key, value))
-    if args.accept:
+    for rule in sorted({key.split(":")[0] for key in found}):
+        print("%s: %s" % (rule, RULES[rule]), file=sys.stderr)
+    if args.accept or args.accept_new:
+        worse = [d for d in compare(found, read_baseline(root)) if d.kind in (NEW, ROSE)]
+        if worse and not args.accept_new:
+            for drift in worse:
+                print(explain(drift), file=sys.stderr)
+            print("not written: --accept takes only values that fell and entries that are gone. Fix the breaches above, or use "
+                  "--accept-new and give the reason in the PR", file=sys.stderr)
+            return 1
         write_baseline(found, root)
         print("wrote %s: %d entries" % (BASELINE, len(found)), file=sys.stderr)
     return 0

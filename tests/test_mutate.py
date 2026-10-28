@@ -446,6 +446,22 @@ class RetargetTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             mutate.retarget('[{"file": "a.py", "find": "x"}, {"note": {"file": "a.py"}}]', "a.py", "b.py")
 
+    def test_the_command_that_moves_no_row_is_could_not_run_and_runs_alone(self):
+        import contextlib
+        import io
+        root = Path(tempfile.mkdtemp())
+        table_file = root / "t.json"
+        table_file.write_text('[{"file": "c.py", "find": "x"}]')
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(mutate.main([str(table_file), "--retarget", "a.py", "b.py"]), mutate.EXIT_COULD_NOT_RUN)
+        self.assertIn("nothing moved", err.getvalue())
+        for flag in ("--anchors", "--copy"):
+            with self.subTest(flag=flag), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                mutate.main([str(table_file), "--retarget", "c.py", "d.py", flag])
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            mutate.main([str(table_file), "--retarget", "c.py", "d.py", "--for", "c.py"])
+        self.assertEqual(table_file.read_text(), '[{"file": "c.py", "find": "x"}]')
+
     def test_the_command_moves_the_rows_of_every_table_or_none(self):
         import contextlib
         import io
@@ -480,6 +496,9 @@ class APackageModuleTest(unittest.TestCase):
 
     def test_a_package_module_s_near_tests_are_the_ones_that_import_its_dotted_name(self):
         root = tiny_project()
+        (root / "scripts" / "spark" / "core").mkdir(parents=True)
+        for folder in (root / "scripts" / "spark", root / "scripts" / "spark" / "core"):
+            (folder / "__init__.py").write_text("")
         for name, line in (("test_from_package.py", "from spark.core import outcomes"),
                            ("test_dotted.py", "import spark.core.outcomes"),
                            ("test_from_module.py", "from spark.core.outcomes import ONE"),
@@ -493,6 +512,27 @@ class APackageModuleTest(unittest.TestCase):
         self.assertEqual(mutate.near_tests(root, "tests", "scripts/outcomes.py"), ["test_flat"])
         self.assertEqual(mutate.near_tests(root, "tests", "scripts/spark/core/__init__.py"),
                          ["test_among_names", "test_dotted", "test_from_module", "test_from_package", "test_look_alike"])
+
+    def test_a_script_in_a_folder_without_an_init_is_near_the_tests_that_import_its_stem(self):
+        # scripts/stand_in/ is no package: tests/test_journey_basic.py does `import machine`.
+        root = tiny_project()
+        (root / "scripts" / "stand_in").mkdir(parents=True)
+        (root / "scripts" / "stand_in" / "machine.py").write_text("ONE = 1\n")
+        write_test(root, "test_flat.py", "import machine")
+        write_test(root, "test_dotted.py", "import stand_in.machine")
+        self.assertEqual(mutate.near_tests(root, "tests", "scripts/stand_in/machine.py"), ["test_flat"])
+        self.assertIsNone(mutate._import_error(root, "scripts/stand_in/machine.py"))
+
+    def test_a_folder_below_a_folder_without_an_init_falls_back_to_the_stem(self):
+        root = tiny_project()
+        inner = root / "scripts" / "fallback" / "inner"
+        inner.mkdir(parents=True)
+        (inner / "__init__.py").write_text("")
+        (inner / "x.py").write_text("ONE = 1\n")
+        write_test(root, "test_stem.py", "import x")
+        write_test(root, "test_path.py", "from fallback.inner import x")
+        self.assertEqual(mutate.import_spec(root, "scripts/fallback/inner/x.py"), (inner, "x"))
+        self.assertEqual(mutate.near_tests(root, "tests", "scripts/fallback/inner/x.py"), ["test_stem"])
 
     def test_a_package_module_s_import_is_checked_by_its_dotted_name(self):
         root = tiny_project()

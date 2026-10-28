@@ -43,8 +43,9 @@ THE FOUR RULES BUILT IN (the first three learned from the hand-rolled harnesses)
 
 A COPY (--copy) is deleted after the run, so the run does not run the whole suite again to prove the files restored: that
 check cost 207 s on 2026-10-28 (P424), and a copy has nothing to restore. `--retarget OLD NEW` edits the text of the
-tables and moves no other row; run `--anchors` after it. Both `near_tests` and the import check name a module under
-`scripts/` by its dotted name, so a package module (`spark.core.outcomes`) meets the tests that import it. Rows do not run
+tables and moves no other row; run `--anchors` after it. It exits 2 when no row names OLD, and runs alone. Both `near_tests` and the import check name a module under
+`scripts/` by its dotted name when every folder on the way has an `__init__.py`, so a package module (`spark.core.outcomes`)
+meets the tests that import it; `scripts/stand_in/machine.py` stays `machine`. Rows do not run
 in parallel: `--jobs 4` saved 24 s on 8 rows (rows file of P440), under the minute that would pay for the flag.
 
 WHAT PASSING MEANS
@@ -112,15 +113,22 @@ def suite_is_green(root, tests, only=(), failfast=False):
     return result.returncode == 0 and "\nOK" in verdict
 
 
-def dotted_name(file):
+# --- MVP ---
+def import_spec(root, file):
     """
-    The name a module is imported by (P440): a path under `scripts/` by its path below it (`scripts/spark/core/outcomes.py`
-    is `spark.core.outcomes`, an `__init__.py` is its package), any other path by its stem alone.
+    Where to import the module at `file` from and by what name, as (folder for sys.path, dotted name) (P440). A path under
+    `scripts/` is imported by its path below it (`scripts/spark/core/outcomes.py` is `spark.core.outcomes`, an `__init__.py`
+    is its package) only when every folder between `scripts/` and the file has an `__init__.py`. Any other path, such as
+    `scripts/stand_in/machine.py`, is imported by its stem from its own folder.
     """
-    parts = list(Path(file).with_suffix("").parts)
-    if parts and parts[-1] == "__init__":
-        parts.pop()
-    return ".".join(parts[1:]) if len(parts) > 1 and parts[0] == "scripts" else parts[-1]
+    parts = Path(file).parts
+    if parts[:1] == ("scripts",) and all((Path(root).joinpath(*parts[:i + 1]) / "__init__.py").is_file() for i in range(1, len(parts) - 1)):
+        dotted = list(Path(file).with_suffix("").parts[1:])
+        if dotted and dotted[-1] == "__init__":
+            dotted.pop()
+        if dotted:
+            return Path(root) / "scripts", ".".join(dotted)
+    return (Path(root) / file).parent, Path(file).stem
 
 
 def near_tests(root, tests, mutated_file):
@@ -137,7 +145,7 @@ def near_tests(root, tests, mutated_file):
     if target.suffix != ".py":
         said = re.compile(re.escape(target.name))
     else:
-        dotted = dotted_name(mutated_file)
+        dotted = import_spec(root, mutated_file)[1]
         package, _, module = dotted.rpartition(".")
         said = re.compile(r"^\s*(?:import|from)\s+%s\b" % re.escape(dotted)
                           + (r"|^\s*from\s+%s\s+import\s+[^\n]*\b%s\b" % (re.escape(package), re.escape(module)) if package else ""), re.M)
@@ -207,14 +215,13 @@ def unloadable(root, mutations):
 
 def _import_error(root, file):
     """
-    The last line of what importing `file` says, from source alone, or None when it imports. A path under `scripts/` is
-    imported by its dotted name with `scripts/` on the path, so a module of a package finds its package (P440); any other
-    path is imported by its stem with its own folder on the path.
+    The last line of what importing `file` says, from source alone, or None when it imports. A module of a package is
+    imported by its dotted name with `scripts/` on the path, so it finds its package (P440); see `import_spec`.
     """
-    folder = root / "scripts" if Path(file).parts[:1] == ("scripts",) else (root / file).parent
+    folder, dotted = import_spec(root, file)
     with _from_source("mutate-import-") as environment:
         done = subprocess.run([sys.executable, "-B", "-c", "import sys; sys.path.insert(0, sys.argv[1]); __import__(sys.argv[2])",
-                               str(folder), dotted_name(file)], cwd=str(root), capture_output=True, text=True, env=environment)
+                               str(folder), dotted], cwd=str(root), capture_output=True, text=True, env=environment)
     return None if done.returncode == 0 else (done.stderr.strip().splitlines() or ["exit %d" % done.returncode])[-1]
 
 
@@ -255,6 +262,7 @@ def related(mutations, paths):
             if any(mutation["file"] == path or mutation["file"].startswith(path + "/") for path in wanted)]
 
 
+# --- MVP ---
 def retarget(text, old, new):
     """
     A table's text with the `file` of every row that names `old` changed to `new`, and how many rows that was (P440).
@@ -281,6 +289,9 @@ def retarget_tables(tables, old, new):
             return EXIT_COULD_NOT_RUN
         if count:
             moved[table] = (changed, count)
+    if not moved:
+        print("no row of %s has %s as its file; nothing moved" % (", ".join(map(str, tables)), old), file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
     for table, (changed, _) in moved.items():
         Path(table).write_text(changed)
     print("  moved %d row(s) from %s to %s in %d of %d table(s); run --anchors to prove them" % (
@@ -336,7 +347,7 @@ def run(root, tests, mutations, copied=False):
         lock.unlink(missing_ok=True)
 
 
-def _run(root, tests, mutations, near_by_file, copied=False):
+def _run(root, tests, mutations, near_by_file, copied):
     results, imports_before = [], {}
     for mutation in mutations:
         path = root / mutation["file"]
@@ -417,6 +428,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.retarget:
+        if args.anchors or args.paths or args.copy:
+            parser.error("--retarget runs alone: it takes no --anchors, --for or --copy")
         return retarget_tables(args.table, *args.retarget)
     root = Path(args.root).resolve()
     mutations = []

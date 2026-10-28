@@ -11,7 +11,6 @@ import contextlib
 import io
 import json
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -20,25 +19,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import measure  # noqa: E402
-
-#: The modules that import nothing of spark. A planted tree holds them, or rule U1 reports each one as missing.
-LEAF_NAMES = ("board_codes", "outcomes", "provenance", "text_guards", "zone_time")
-
-
-def planted(files, leaves=True):
-    """A temp root holding `files` ({path under the root: source}) and, unless `leaves` is False, the five leaf modules."""
-    root = Path(tempfile.mkdtemp())
-    if leaves:
-        files = dict({"scripts/%s.py" % name: '"""A leaf."""\n' for name in LEAF_NAMES}, **files)
-    for name, source in files.items():
-        (root / name).parent.mkdir(parents=True, exist_ok=True)
-        (root / name).write_text(source)
-    return root
-
-
-def function_of(name, lines):
-    """A function `name` that is exactly `lines` lines long."""
-    return "def %s():\n%s" % (name, "    pass\n" * (lines - 1))
+from planted_tree import function_of, planted  # noqa: E402
 
 
 def run_main(argv, root):
@@ -70,17 +51,39 @@ class RulesPrintTest(unittest.TestCase):
     def test_the_rules_print_each_breach_once(self):
         root = planted({"scripts/spark/big.py": function_of("big", 45), "scripts/ok.py": function_of("small", 3)})
         code, out, err = run_main(["--rules"], root)
-        self.assertEqual((code, out, err), (0, "R1:scripts/spark/big.py:big:45\n", ""))
+        self.assertEqual((code, out), (0, "R1:scripts/spark/big.py:big:45\n"))
+        self.assertEqual(err, "R1: %s\n" % measure.RULES["R1"])
         self.assertFalse((root / "tests" / "architecture_baseline.json").exists())
 
-    def test_accept_writes_the_baseline_sorted_one_line_per_entry(self):
+    def test_accept_new_writes_the_baseline_sorted_one_line_per_entry(self):
         root = planted({"scripts/spark/b.py": function_of("big", 45), "scripts/spark/a.py": function_of("big", 46)})
-        code, out, err = run_main(["--rules", "--accept"], root)
+        code, out, err = run_main(["--rules", "--accept-new"], root)
         self.assertEqual(code, 0)
         self.assertEqual((root / "tests" / "architecture_baseline.json").read_text(),
                          '{\n"R1:scripts/spark/a.py:big": 46,\n"R1:scripts/spark/b.py:big": 45\n}\n')
         self.assertEqual(out, "R1:scripts/spark/a.py:big:46\nR1:scripts/spark/b.py:big:45\n")
-        self.assertEqual(err, "wrote tests/architecture_baseline.json: 2 entries\n")
+        self.assertTrue(err.endswith("wrote tests/architecture_baseline.json: 2 entries\n"), err)
+
+    def test_accept_refuses_a_new_breach_and_a_value_that_rose_and_writes_nothing(self):
+        root = planted({"scripts/spark/big.py": function_of("big", 45), "scripts/spark/new.py": function_of("new", 41)})
+        (root / "tests").mkdir()
+        (root / "tests" / "architecture_baseline.json").write_text('{\n"R1:scripts/spark/big.py:big": 44\n}\n')
+        before = (root / "tests" / "architecture_baseline.json").read_text()
+        code, _, err = run_main(["--rules", "--accept"], root)
+        self.assertEqual(code, 1)
+        self.assertEqual((root / "tests" / "architecture_baseline.json").read_text(), before)
+        self.assertIn("rose from 44 to 45", err)
+        self.assertIn("new in scripts/spark/new.py is 41", err)
+        self.assertIn("not written", err)
+
+    def test_accept_lowers_a_value_that_fell_and_drops_an_entry_that_is_gone(self):
+        root = planted({"scripts/spark/big.py": function_of("big", 45)})
+        (root / "tests").mkdir()
+        (root / "tests" / "architecture_baseline.json").write_text(
+            '{\n"R1:scripts/spark/big.py:big": 50,\n"R1:scripts/spark/gone.py:old": 61\n}\n')
+        code, _, _ = run_main(["--rules", "--accept"], root)
+        self.assertEqual(code, 0)
+        self.assertEqual(measure.read_baseline(root), {"R1:scripts/spark/big.py:big": 45})
 
     def test_accept_without_a_breach_writes_an_empty_baseline_that_reads_back(self):
         root = planted({"scripts/ok.py": function_of("small", 3)})
@@ -89,9 +92,10 @@ class RulesPrintTest(unittest.TestCase):
         self.assertEqual(measure.read_baseline(root), {})
 
     def test_accept_goes_with_rules(self):
-        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as stopped:
-            measure.main(["--accept"], planted({}))
-        self.assertEqual(stopped.exception.code, 2)
+        for flag in ("--accept", "--accept-new"):
+            with self.subTest(flag=flag), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as stopped:
+                measure.main([flag], planted({}))
+            self.assertEqual(stopped.exception.code, 2)
 
     def test_a_missing_baseline_reads_as_empty(self):
         self.assertEqual(measure.read_baseline(planted({})), {})
@@ -100,7 +104,7 @@ class RulesPrintTest(unittest.TestCase):
 class ReadersTest(unittest.TestCase):
     def test_the_old_reads_find_each_way_to_the_old_module(self):
         tree = ast.parse("import parts as parts_library\nimport drawer\nfrom drawer import TAGS_MAX\n"
-                                 "parts_library.one_line(x)\ndrawer.clean(y)\ndrawer.listing()\n")
+                         "parts_library.one_line(x)\ndrawer.clean(y)\ndrawer.listing()\n")
         self.assertEqual(measure.old_reads(tree), {"parts.one_line", "drawer.clean", "drawer.TAGS_MAX"})
 
     def test_functions_come_with_their_class_and_their_outer_function(self):
