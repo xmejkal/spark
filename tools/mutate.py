@@ -105,16 +105,35 @@ def suite_is_green(root, tests, only=(), failfast=False):
     return result.returncode == 0 and "\nOK" in verdict
 
 
+def dotted_name(file):
+    """
+    The name a module is imported by (P440): a path under `scripts/` by its path below it (`scripts/spark/core/outcomes.py`
+    is `spark.core.outcomes`, an `__init__.py` is its package), any other path by its stem alone.
+    """
+    parts = list(Path(file).with_suffix("").parts)
+    if parts and parts[-1] == "__init__":
+        parts.pop()
+    return ".".join(parts[1:]) if len(parts) > 1 and parts[0] == "scripts" else parts[-1]
+
+
 def near_tests(root, tests, mutated_file):
     """
     The test modules near a mutated file (P98): for a `.py` file the ones that import its module, for any
     other file the ones that name it. Each mutation meets these first — a defect a nearby test catches
     costs a second, not the whole suite — and only what they miss goes to the whole suite, so an escape is
     never reported on their word. Empty: the whole suite decides alone.
+
+    A module in a package is imported by its dotted name (P440): `import spark.core.outcomes`, `from spark.core.outcomes
+    import X` and `from spark.core import outcomes` all name it.
     """
     target = Path(mutated_file)
-    said = (re.compile(r"^\s*(?:import|from)\s+%s\b" % re.escape(target.stem), re.M) if target.suffix == ".py"
-            else re.compile(re.escape(target.name)))
+    if target.suffix != ".py":
+        said = re.compile(re.escape(target.name))
+    else:
+        dotted = dotted_name(mutated_file)
+        package, _, module = dotted.rpartition(".")
+        said = re.compile(r"^\s*(?:import|from)\s+%s\b" % re.escape(dotted)
+                          + (r"|^\s*from\s+%s\s+import\s+[^\n]*\b%s\b" % (re.escape(package), re.escape(module)) if package else ""), re.M)
     return sorted(path.stem for path in sorted((Path(root) / tests).glob("test_*.py"))
                   if said.search(path.read_text(errors="replace")))
 
@@ -180,11 +199,15 @@ def unloadable(root, mutations):
 
 
 def _import_error(root, file):
-    """The last line of what importing `file` says, from source alone, or None when it imports."""
-    path = root / file
+    """
+    The last line of what importing `file` says, from source alone, or None when it imports. A path under `scripts/` is
+    imported by its dotted name with `scripts/` on the path, so a module of a package finds its package (P440); any other
+    path is imported by its stem with its own folder on the path.
+    """
+    folder = root / "scripts" if Path(file).parts[:1] == ("scripts",) else (root / file).parent
     with _from_source("mutate-import-") as environment:
         done = subprocess.run([sys.executable, "-B", "-c", "import sys; sys.path.insert(0, sys.argv[1]); __import__(sys.argv[2])",
-                               str(path.parent), path.stem], cwd=str(root), capture_output=True, text=True, env=environment)
+                               str(folder), dotted_name(file)], cwd=str(root), capture_output=True, text=True, env=environment)
     return None if done.returncode == 0 else (done.stderr.strip().splitlines() or ["exit %d" % done.returncode])[-1]
 
 
@@ -223,6 +246,40 @@ def related(mutations, paths):
     wanted = [str(Path(part)) for path in paths for part in path.split()]
     return [mutation for mutation in mutations
             if any(mutation["file"] == path or mutation["file"].startswith(path + "/") for path in wanted)]
+
+
+def retarget(text, old, new):
+    """
+    A table's text with the `file` of every row that names `old` changed to `new`, and how many rows that was (P440).
+
+    It edits the text, never `json.dumps` of the rows: no table prints back as it is written, because they are hand-aligned,
+    and 48 rows write `"file":"` with no space. It raises ValueError when the table is not JSON before or after, or when the
+    text it replaced does not match the rows that name `old`.
+    """
+    changed, count = re.subn(r'("file"\s*:\s*)"%s"' % re.escape(old), lambda match: match.group(1) + json.dumps(new), text)
+    rows = sum(1 for row in json.loads(text) if isinstance(row, dict) and row.get("file") == old)
+    json.loads(changed)
+    if count != rows:
+        raise ValueError("%d row(s) name %s, but the text matched %d place(s)" % (rows, old, count))
+    return changed, count
+
+
+def retarget_tables(tables, old, new):
+    """Move every row of `old` to `new` in the table files `tables`, all or none; the exit code, with the line it printed."""
+    moved = {}
+    for table in tables:
+        try:
+            changed, count = retarget(Path(table).read_text(), old, new)
+        except (OSError, ValueError) as broken:
+            print("could not retarget %s: %s" % (table, broken), file=sys.stderr)
+            return EXIT_COULD_NOT_RUN
+        if count:
+            moved[table] = (changed, count)
+    for table, (changed, _) in moved.items():
+        Path(table).write_text(changed)
+    print("  moved %d row(s) from %s to %s in %d of %d table(s); run --anchors to prove them" % (
+        sum(count for _, count in moved.values()), old, new, len(moved), len(tables)))
+    return EXIT_OK
 
 
 def copy_of(root):
@@ -343,9 +400,14 @@ def main(argv=None):
                         help="only the rows for these files, or for everything under these folders")
     parser.add_argument("--copy", action="store_true",
                         help="mutate a temporary copy of the tree, never the files you or an agent have open")
+    parser.add_argument("--retarget", nargs=2, metavar=("OLD", "NEW"),
+                        help="instead of a run: in these tables, move every row whose `file` is OLD to NEW (the text is "
+                             "edited, so the tables keep their alignment); then prove them with --anchors")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
+    if args.retarget:
+        return retarget_tables(args.table, *args.retarget)
     root = Path(args.root).resolve()
     mutations = []
     for table in args.table:
