@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_grant  # noqa: E402
 import board_look  # noqa: E402
+import boards  # noqa: E402
 import deploy_gate  # noqa: E402
 import grant  # noqa: E402
 import image_evidence  # noqa: E402
@@ -583,6 +584,67 @@ class LocalTimeTest(unittest.TestCase):
         grant = board_grant.GrantService(finder, reader, grants, now=clock).issue(
             None, 60, FakeConsent(True), scope="deploy")
         self.assertEqual((grant.granted_at, grant.expires_at), ("2026-10-25T02:30:00+02:00", "2026-10-25T02:30:00+01:00"))
+
+
+class GuardedPrintsTest(GrantCase):
+    """P430 (#569): grant.py prints through the text guard, and its --json keeps the raw text."""
+
+    BIDI_MAC = "8c:bf:ea:\u202exx:xx:xx"
+
+    def with_bidi_mac(self):
+        self.esptool = data("c6-flash-id.txt").replace("8c:bf:ea:xx:xx:xx", self.BIDI_MAC)
+        self.devs = data("mpremote-devs-one.txt").replace("8c:bf:ea:xx:xx:xx", self.BIDI_MAC)
+
+    def test_the_granted_line_shows_a_mac_with_a_bidi_character_guarded_and_the_file_keeps_it_raw(self):
+        self.with_bidi_mac()
+        code, out, _ = self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True))
+        self.assertEqual(code, 0)
+        self.assertIn("  granted (deploy): board 8c:bf:ea:?xx:xx:xx (token ", out)
+        self.assertNotIn("\u202e", out)
+        self.assertEqual(json.loads(next((self.home / "grants").glob("*-deploy.json")).read_text())["mac"], self.BIDI_MAC)
+
+    def test_the_rm_line_shows_a_store_path_with_a_bidi_character_guarded(self):
+        self.home = self.home / "a\u202eb"
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)}):
+            _, out, _ = self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True))
+        self.assertIn("rm ", out)
+        self.assertIn("a?b", out)
+        self.assertNotIn("\u202e", out)
+
+    def test_the_restart_notice_shows_a_button_word_with_a_bidi_character_guarded(self):
+        record = {"physical": {"buttons": {"seen_from": "the shield \u202efacing you",
+                                           "boot": {"silkscreen": "B\u202e", "place": "top"},
+                                           "reset": {"silkscreen": "R", "place": "left"}}}}
+        with mock.patch.object(boards.ButtonPlaces, "of_project", return_value=boards.ButtonPlaces.from_record(record)):
+            _, out, _ = self.grant("--minutes", "30", consent=FakeConsent(True))
+        self.assertIn("press its RESET (R, left) once. Left and right as seen with the shield ?facing you.", out)
+        self.assertNotIn("\u202e", out)
+
+    def test_the_check_shows_a_serial_with_a_bidi_character_guarded_and_json_keeps_it_raw(self):
+        self.with_bidi_mac()
+        self.grant("--minutes", "30", consent=FakeConsent(True))
+        code, out, _ = self.grant("--check")
+        self.assertEqual((code, out.startswith("  granted: board 8c:bf:ea:?xx:xx:xx until ")), (0, True))
+        self.assertEqual(self.check()[1]["grant"]["mac"], self.BIDI_MAC)
+
+    def test_a_port_with_a_bidi_character_is_told_guarded_and_the_json_is_could_not_run(self):
+        code, out, err = self.grant("--check", "--json", "--port", "/dev/x\u202ey")
+        self.assertEqual((code, json.loads(out)["why"]), (2, "could not run"))
+        self.assertIn("no board on /dev/x?y", err)
+        self.assertNotIn("\u202e", err)
+
+    def test_a_newline_in_the_port_cannot_fake_a_line_of_the_stop(self):
+        code, _, err = self.grant("--check", "--port", "/dev/x\nGRANTED")
+        self.assertEqual(code, 2)
+        self.assertIn("no board on /dev/x?GRANTED", err)
+        self.assertEqual([line for line in err.splitlines() if line.startswith("GRANTED")], [])
+
+    def test_a_tool_problem_with_a_bidi_character_is_told_guarded(self):
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("no \u202e mpremote")), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = grant.main(["--check"], run=self.run_tool, now=lambda: self.now)
+        self.assertEqual((code, err.getvalue()), (2, "grant.py: no ? mpremote\n"))
 
 
 if __name__ == "__main__":

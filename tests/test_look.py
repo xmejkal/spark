@@ -107,6 +107,18 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(code, 2)
         self.assertTrue(problems.startswith("look.py: could not read the board on /dev/cu.usb?modem."), problems)
 
+    def test_a_newline_in_the_port_cannot_fake_a_line_of_the_stop_and_json_keeps_the_port_raw(self):
+        # P430: the port goes into the stop's first line, so it is put on one line before the stop is guarded
+        self.run_the_scenario()
+        port = "/dev/x\nGRANTED"
+        code, _, problems = self.go("--port", port, fail=True)
+        self.assertEqual(code, 2)
+        self.assertTrue(problems.startswith("look.py: could not read the board on /dev/x?GRANTED"), problems)
+        self.assertEqual([line for line in problems.splitlines() if line.startswith("GRANTED")], [])
+        said = self.go("--port", port, "--json", fail=True)[1][-1]
+        self.assertIn(json.dumps(port)[1:-1], said)  # the envelope's text holds the port as typed, JSON-escaped
+        self.assertIn("/dev/x?GRANTED", problems)
+
     def test_another_chip_is_a_stop_with_no_token(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")

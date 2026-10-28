@@ -17,6 +17,7 @@ import store
 import tools
 from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
+from text_guards import guard_lines, guard_sentence
 
 RESTART = ("the board restarts while it is read: a running program stops and starts again. Nothing is erased or "
            "written. If it then waits in download mode, press its %(reset)s once%(orientation)s.")
@@ -89,7 +90,7 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
         finder = board_look.PortFinder(tools.find("board-shell", args.project), run)
         if args.check:
             result = board_grant.GrantService(finder, now=now).check(args.port)
-            print(to_json(result) if args.json else describe(result))
+            print(to_json(result) if args.json else guard_lines(describe(result)))  # --- MVP --- the MAC is data (P430)
             return EXIT_OK if result.granted else EXIT_PROBLEMS
         places = boards.ButtonPlaces.of_project(args.project)
         hint = flasher.EsptoolFlasher.boot_hint_for(places)
@@ -98,7 +99,7 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
                                  + ["--minutes", args.minutes, "--project", args.project.resolve()]
                                  + (["--port", args.port] if args.port else []))
         grant = board_grant.GrantService(finder, reader, now=now).issue(
-            args.port, args.minutes, consent or TerminalConsentStrategy(line), before_look=lambda: print("  " + RESTART % {"reset": places.reset, "orientation": places.orientation}),
+            args.port, args.minutes, consent or TerminalConsentStrategy(line), before_look=lambda: print(guard_lines("  " + RESTART % {"reset": places.reset, "orientation": places.orientation})),
             scope=args.scope)
     except GateClosedError as closed:
         print("grant.py: %s" % closed, file=sys.stderr)
@@ -107,15 +108,16 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
         if args.json:
             print(to_json(board_grant.GrantCheckResult(False, None, board_grant.WHY_COULD_NOT_RUN)))
         if isinstance(cannot, board_look.LookStop):
-            print("\n".join(board_doctor.stop_lines("grant.py", cannot, args.project, run)), file=sys.stderr)
+            # --- MVP --- the stop holds the port as typed and esptool's words: one line each, then guarded (P430)
+            print(guard_sentence("\n".join(board_doctor.stop_lines("grant.py", cannot, args.project, run)), args.port), file=sys.stderr)
         else:
-            print("grant.py: %s" % cannot, file=sys.stderr)
+            print(guard_lines("grant.py: %s" % cannot), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    print("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))
+    print(guard_lines("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at)))
     if grant.scope == board_grant.SCOPE_DEPLOY:
         grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
-        print("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
-              "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(str(grant_file)))
+        print(guard_lines("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
+                          "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(str(grant_file))))
     return EXIT_OK
 
 
