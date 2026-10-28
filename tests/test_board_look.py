@@ -572,7 +572,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.run_the_scenario()
         evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value=None))
         evidence.caveats.return_value = list(caveats)
-        evidence.find_limits.return_value = [sim_project.Limit(*each) for each in limits]
+        self.found = evidence.find_limits.return_value = [sim_project.Limit(*each) for each in limits]
         return self.look(evidence=evidence)
 
     def test_the_limits_follow_the_caveats_under_a_heading_and_come_before_the_match_and_the_token(self):
@@ -598,6 +598,11 @@ class TheLookStatesTheSimulationTest(LookCase):
         as_dict["limits"].clear()
         self.assertEqual(len(report.to_dict()["limits"]), 2)
 
+    def test_the_report_keeps_its_own_copy_of_the_limits(self):
+        report = self.limited(("A", "first"))
+        self.found.clear()  # the evidence's list, which the report must not share
+        self.assertEqual(report.limits, [("A", "first")])
+
     def test_no_limits_print_no_heading(self):
         lines = board_look.report_lines(self.limited(), token=False)
         self.assertFalse([line for line in lines if "cannot show" in line])
@@ -608,6 +613,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertFalse([line for line in board_look.report_lines(report) if "simulation" in line])
 
     def test_a_refused_image_is_not_asked_for_its_caveats(self):
+        self.run_the_scenario()  # an image to ask about: without one the evidence is never reached
         evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value="no"))
         report = self.look(evidence=evidence)
         evidence.caveats.assert_not_called()
