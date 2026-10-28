@@ -115,7 +115,13 @@ These only read:
 - `check_all.py`, `check_physics.py`, `check_footprints.py`, `compare_design.py`, `check_bom.py`;
 - `assign_pins.py` without `--emit-pins`;
 - `import_firmware.py`. It writes nothing. It does import the project's firmware modules. Their module-level code runs
-  on this machine, each module in its own process under a time limit ([P59](https://github.com/xmejkal/spark/issues/7));
+  on this machine, each module in its own process under a time limit ([P59](https://github.com/xmejkal/spark/issues/7)).
+  The stand-ins (`scripts/stand_in/`) are `machine` (`Pin`, `PWM`, `ADC`, `SPI`, `SoftSPI`, `I2C`, `SoftI2C`, `I2S`),
+  `micropython` and `framebuf` ([P421](https://github.com/xmejkal/spark/issues/551)). They keep their arguments and
+  return fixed values. An `imported` proves that the names exist and the module-level calls ran, not that the arguments
+  are right (the constructors take any), nor pins, wiring, rates, drivers, or that a device answers. A stand-in never
+  reports a device as present, so a module-level `assert 0x3C in i2c.scan()` fails the import: keep such a check in a
+  function that `main.py` calls. A driver that calls `time.sleep_ms` in its constructor fails when the module builds it at import, so build drivers inside a function that `main.py` calls (CPython's `time` has no `sleep_ms`, and spark does not stand in for `time`). `framebuf` and `micropython` come after the firmware's own folders on `sys.path`, so a driver that ships its own wins;
 - `tools.py --status`, `boards.py --list`, `check_vendor_pins.py --offline`;
 - `look.py`. It writes nothing and changes no flash, but **the board on USB restarts**, because esptool resets it to read it: a running
   program stops and starts again, so say so before you run it. Run it with `--json` ([P213](https://github.com/xmejkal/spark/issues/175)): one envelope on stdout, described under "look.py and deploy.py's envelope". The exit code is the same as the text run's.

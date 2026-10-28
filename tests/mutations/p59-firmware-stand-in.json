@@ -44,8 +44,8 @@
  {
   "file": "scripts/import_firmware.py",
   "name": "P59: the stand-in is not on the path",
-  "find": "name, str(STAND_IN), str(firmware), str(firmware / \"lib\")]",
-  "replace": "name, str(firmware), str(firmware / \"lib\")]"
+  "find": "str(STAND_IN), str(firmware), str(firmware / \"lib\"), str(FALLBACK)]",
+  "replace": "str(firmware), str(firmware / \"lib\"), str(FALLBACK)]"
  },
  {
   "file": "scripts/import_firmware.py",
@@ -158,8 +158,8 @@
  {
   "file": "scripts/import_firmware.py",
   "name": "P59 F5: a driver kept in firmware/lib is not found",
-  "find": ", str(firmware / \"lib\")]",
-  "replace": "]"
+  "find": "str(firmware / \"lib\"), str(FALLBACK)]",
+  "replace": "str(FALLBACK)]"
  },
  {
   "file": "tests/test_journey_basic.py",
