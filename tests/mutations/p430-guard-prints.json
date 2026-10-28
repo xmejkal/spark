@@ -1,4 +1,6 @@
 [
  {"file": "scripts/text_guards.py", "name": "P430: guard_sentence leaves a newline of the port in the sentence, so it fakes a line", "find": "text = text.replace(each, printable(each)) if each else text", "replace": "text = text"},
- {"file": "scripts/check_spine.py", "name": "P430: a crash's text is stored through the screen guard, so --json holds a question mark", "find": "return \"%s crashed: %s: %s\" % (program, type(crash).__name__, str(crash))", "replace": "return \"%s crashed: %s: %s\" % (program, type(crash).__name__, printable(str(crash)))"}
+ {"file": "scripts/check_spine.py", "name": "P430: a crash's text is stored through the screen guard, so --json holds a question mark", "find": "return \"%s crashed: %s: %s\" % (program, type(crash).__name__, str(crash))", "replace": "return \"%s crashed: %s: %s\" % (program, type(crash).__name__, printable(str(crash)))"},
+ {"file": "scripts/live.py", "name": "P430: live prints the board's reply and the doctor's lines without the guard", "find": "return \"\\n\".join(\"  \" + printable(line) for line in out)", "replace": "return \"\\n\".join(\"  \" + line for line in out)"},
+ {"file": "scripts/live.py", "name": "P430: live tells a stop with the port as typed, so a newline in it fakes a line", "find": "print(guard_sentence(\"live.py: %s\" % cannot, port), file=sys.stderr)", "replace": "print(guard_sentence(\"live.py: %s\" % cannot), file=sys.stderr)"}
 ]
