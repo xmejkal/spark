@@ -46,7 +46,7 @@ class LiveScriptTest(unittest.TestCase):
         board_grant.GrantStore().save(board_grant.Grant(MAC, board_look.board_token(MAC), "petr", NOW.isoformat(),
                                                         (NOW + datetime.timedelta(minutes=30)).isoformat()))
 
-    def go(self, *argv, answers=("1\n", ""), devs="mpremote-devs-one.txt", minutes_later=0):
+    def go(self, *argv, answers=("1\n", ""), devs="mpremote-devs-one.txt", minutes_later=0, probe=None):
         """(exit code, stdout, stderr, the commands run) of live.py with fake tools."""
         answers, ran = list(answers), []
 
@@ -63,7 +63,7 @@ class LiveScriptTest(unittest.TestCase):
         argv = ["--project", str(self.project)] + list(argv)
         with mock.patch.object(tools, "find", side_effect=found), contextlib.redirect_stdout(out), \
                 contextlib.redirect_stderr(err):
-            code = live.main(argv, run=run, probe=FakeConsoleProbe(cured=RESTART),
+            code = live.main(argv, run=run, probe=probe or FakeConsoleProbe(cured=RESTART),
                              now=lambda: NOW + datetime.timedelta(minutes=minutes_later))
         return code, out.getvalue(), err.getvalue(), ran
 
@@ -158,6 +158,49 @@ class LiveScriptTest(unittest.TestCase):
         code, said, _, _ = self.go("--code", "from machine import Pin\nPin(15, Pin.OUT).value(1)", answers=("", ""))
         self.assertEqual(code, 0)
         self.assertIn("  gpio    the code writes 1, 15, each a GPIO of this board\n", said + "\n")
+
+    # --- MVP --- (P430, #569) the printed lines are guarded, the --json values stay raw
+    def test_a_board_reply_with_control_characters_shows_guarded_and_json_keeps_it_raw(self):
+        reply = "a\x1b[31m\u202eb\n"
+        _, said, _, _ = self.go("--code", "print(1)", answers=(reply, ""))
+        self.assertIn("  output  a?[31m?b\n", said + "\n")
+        _, said, _, _ = self.go("--code", "print(1)", "--json", answers=(reply, ""))
+        self.assertEqual(json.loads(said)["output"], reply)
+
+    def test_a_port_that_is_not_listed_is_told_guarded_and_json_keeps_it_raw(self):
+        port = "/dev/x\u202ey"
+        code, said, problems, _ = self.go("--code", "print(1)", "--port", port)
+        self.assertEqual((code, problems), (2, "live.py: no board on /dev/x?y: mpremote devs does not list it.\n"))
+        code, said, _, _ = self.go("--code", "print(1)", "--port", port, "--json")
+        line = json.loads(said)
+        self.assertEqual((line["port"], line["why"]), (port, "no board on %s: mpremote devs does not list it." % port))
+
+    def test_a_newline_in_the_port_cannot_fake_a_line_of_the_stop(self):
+        code, _, problems, _ = self.go("--code", "print(1)", "--port", "/dev/x\nGRANTED")
+        self.assertEqual((code, problems), (2, "live.py: no board on /dev/x?GRANTED: mpremote devs does not list it.\n"))
+
+    def test_the_doctor_s_console_line_shows_guarded_and_json_keeps_it_raw(self):
+        refused = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        printed = "boot\u202e x"
+        _, said, _, _ = self.go("--code", "print(1)", answers=(refused, refused), probe=FakeConsoleProbe(printed=printed))
+        self.assertIn("  check   console: ", said)
+        self.assertNotIn("\u202e", said)
+        self.assertIn("boot? x", said)
+        _, said, _, _ = self.go("--code", "print(1)", "--json", answers=(refused, refused),
+                                probe=FakeConsoleProbe(printed=printed))
+        self.assertIn("boot\u202e x", json.dumps(json.loads(said)["doctor"], ensure_ascii=False))
+
+    def test_a_newline_in_the_project_path_cannot_fake_a_line_of_a_tool_problem(self):
+        project = Path(tempfile.mkdtemp()) / "a\nGRANTED: board ok"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "tools.json").write_text("not json")
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = live.main(["--code", "print(1)", "--project", str(project), "--json"])
+        self.assertEqual(code, 2)
+        self.assertEqual(len(err.getvalue().splitlines()), 1, err.getvalue())
+        self.assertIn("a?GRANTED: board ok", err.getvalue())
+        self.assertIn("a\nGRANTED: board ok", json.loads(out.getvalue())["why"])  # --json keeps it raw
 
 
 if __name__ == "__main__":

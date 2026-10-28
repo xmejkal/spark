@@ -38,7 +38,7 @@
  {
   "file": "scripts/look.py",
   "name": "the look's failed read prints its lines without the guard",
-  "find": "print(guard_lines(\"\\n\".join(lines)), file=sys.stderr)",
+  "find": "print(guard_sentence(\"\\n\".join(lines), args.port, args.project, places.boot, places.reset, places.orientation),\n              file=sys.stderr)",
   "replace": "print(\"\\n\".join(lines), file=sys.stderr)"
  },
  {

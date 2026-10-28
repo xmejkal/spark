@@ -1589,6 +1589,39 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
                          [("board", "ok"), ("schematic", "ok"), ("footprint", check_spine.COULD_NOT_RUN)])
         self.assertEqual(stages[-1].detail, "emit_footprint.py crashed: ZeroDivisionError: a fault of its own")
 
+    def said_by_report(self, stages, as_json):
+        """`report` for a verdict: what it printed on stdout. A --json run is read back."""
+        args = argparse.Namespace(json=as_json, keep=None)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            check_spine.report(stages, args)
+        return json.loads(out.getvalue()) if as_json else out.getvalue()
+
+    # --- MVP --- (P430, #569) a crash's text is stored raw and guarded where it is printed
+    def test_a_crash_in_drawing_the_footprint_keeps_its_text_raw_and_the_screen_shows_it_guarded(self):
+        project, wanted = self.project_without("physical.header.drill_mm")
+        with mock.patch.object(check_spine.emit_footprint, "render", side_effect=RuntimeError("a\u202e\x1bb")):
+            _, stages = self.run_to_the_footprint(project, wanted)
+        self.assertEqual(stages[-1].detail, "emit_footprint.py crashed: RuntimeError: a\u202e\x1bb")
+        self.assertEqual(self.said_by_report(stages, True)["stages"][-1]["detail"], stages[-1].detail)
+        self.assertIn("emit_footprint.py crashed: RuntimeError: a??b", self.said_by_report(stages, False))
+
+    def test_a_crash_in_reading_the_input_keeps_its_text_raw_and_the_screen_shows_it_guarded(self):
+        project, wanted = self.project_without("physical.header.drill_mm")
+        with mock.patch.object(check_spine.emit_board, "read_inputs", side_effect=ValueError("a\u202e\x1bb")):
+            stages = self.run_spine(project, wanted)
+        self.assertEqual(stages[-1].detail, "emit_board.py crashed: ValueError: a\u202e\x1bb")
+        self.assertEqual(self.said_by_report(stages, True)["stages"][-1]["detail"], stages[-1].detail)
+        self.assertIn("emit_board.py crashed: ValueError: a??b", self.said_by_report(stages, False))
+
+    def test_a_newline_in_a_crash_message_shows_as_a_line_break_in_the_text(self):
+        # The decided residual (P430): the text keeps a message's own newlines, so a second line can look like a stage.
+        # Only a --json reader gets one detail, whole.
+        project, wanted = self.project_without("physical.header.drill_mm")
+        with mock.patch.object(check_spine.emit_footprint, "render", side_effect=RuntimeError("a\nb")):
+            _, stages = self.run_to_the_footprint(project, wanted)
+        self.assertIn("crashed: RuntimeError: a\nb\n", self.said_by_report(stages, False))
+        self.assertEqual(self.said_by_report(stages, True)["stages"][-1]["detail"], "emit_footprint.py crashed: RuntimeError: a\nb")
+
     def test_a_fault_in_the_requirements_is_said_without_asking_emit_board(self):
         project, wanted = self.project_without("physical.header_order", requirements={
             "board": "xiao-esp32-c6", "parts": ["led-red-5mm"], "signals": [{"name": "X", "needs": ["teleport"]}]})

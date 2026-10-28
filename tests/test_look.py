@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -16,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_doctor  # noqa: E402
+import boards  # noqa: E402
 import flash_image  # noqa: E402
 import look  # noqa: E402
 import sim_project  # noqa: E402
@@ -131,6 +133,41 @@ class WhatThePersonSeesTest(LookScriptCase):
             code, _, problems = self.go("--port", "/dev/cu.usb\u202emodem", fail=True)
         self.assertEqual(code, 2)
         self.assertTrue(problems.startswith("look.py: could not read the board on /dev/cu.usb?modem."), problems)
+
+    def test_a_newline_in_the_port_cannot_fake_a_line_of_the_stop_and_json_keeps_the_port_raw(self):
+        # P430: the port goes into the stop's first line, so it is put on one line before the stop is guarded
+        self.run_the_scenario()
+        port = "/dev/x\nGRANTED"
+        code, _, problems = self.go("--port", port, fail=True)
+        self.assertEqual(code, 2)
+        self.assertTrue(problems.startswith("look.py: could not read the board on /dev/x?GRANTED"), problems)
+        self.assertEqual([line for line in problems.splitlines() if line.startswith("GRANTED")], [])
+        said = self.go("--port", port, "--json", fail=True)[1][-1]
+        self.assertIn(json.dumps(port)[1:-1], said)  # the envelope's text holds the port as typed, JSON-escaped
+        self.assertIn("/dev/x?GRANTED", problems)
+
+    def test_a_newline_in_a_button_word_of_the_board_record_cannot_fake_a_line_of_the_stop(self):
+        # P430: the doctor's step holds the record's button words, which `guard_lines` would let break the line
+        self.run_the_scenario()
+        record = {"physical": {"buttons": {"seen_from": "the shield", "boot": {"silkscreen": "B\nGRANTED: fake", "place": "top"},
+                                           "reset": {"silkscreen": "R", "place": "left"}}}}
+        with mock.patch.object(boards.ButtonPlaces, "of_project", return_value=boards.ButtonPlaces.from_record(record)):
+            code, _, problems = self.go(fail=True, text="Connecting......\nA fatal error occurred: No serial data received.\n")
+        self.assertEqual(code, 2)
+        self.assertIn("BOOT button (B?GRANTED: fake, top)", problems)
+        self.assertEqual([line for line in problems.splitlines() if line.startswith("GRANTED")], [])
+
+    def test_a_newline_in_the_project_path_cannot_fake_a_line_of_a_tool_problem_stop(self):
+        # P430: looker turns a ToolProblem into a stop whose text holds the project's tools file path
+        project = Path(tempfile.mkdtemp()) / "a\nGRANTED (deploy): board ok"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "tools.json").write_text("not json")
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = look.main(["--project", str(project)])
+        self.assertEqual(code, 2)
+        self.assertIn("a?GRANTED (deploy): board ok", err.getvalue())
+        self.assertEqual([line for line in err.getvalue().splitlines() if line.startswith("GRANTED")], [])
 
     def test_another_chip_is_a_stop_with_no_token(self):
         self.run_the_scenario()

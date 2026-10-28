@@ -16,6 +16,7 @@ import tools
 from board_connection import BoardConnection
 from board_console import ConsoleProbe
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK
+from text_guards import guard_lines, guard_sentence, printable
 
 #: What reach.py says after the board answered: mpremote's exec stops the firmware that ran (reach-test.md).
 FIRMWARE_STOPPED_MESSAGE = "the firmware is stopped: press R or replug to run it"
@@ -81,7 +82,8 @@ def main(argv=None, run=subprocess.run, probe=None):
         finder = board_look.PortFinder(shell, run)
         port = args.port or finder.require_one_port("reach.py")
     except (tools.ToolProblem, board_look.LookStop) as cannot:
-        print("reach.py: %s" % cannot, file=sys.stderr)
+        # --- MVP --- data: device names, a tool's words and the project path as typed (P430)
+        print(guard_sentence("reach.py: %s" % cannot, args.project), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     probe = probe or ConsoleProbe.for_tool(shell, port, run)
     if args.cure_first and probe is None:
@@ -92,13 +94,14 @@ def main(argv=None, run=subprocess.run, probe=None):
         doctor = (None if result.entered else
                   board_doctor.BoardDoctorService.for_board(finder, probe).examine(port, shell, result.why))
     except board_doctor.UnknownStepError as cannot:
-        print("reach.py: no doctor: %s" % cannot, file=sys.stderr)
+        print(guard_lines("reach.py: no doctor: %s" % cannot), file=sys.stderr)  # --- MVP --- the tools list's words (P430)
         doctor = None
     if args.json:
         print(to_json(port, result, args.cure_first, doctor))
     else:
         lines = describe(port, result) + (["  " + line for line in board_doctor.describe(doctor, boards.ButtonPlaces.of_project(args.project))] if doctor else [])
-        print("\n".join(lines))
+        # --- MVP --- the port, the cure's read and the board's reply are data, each line shown guarded (P430)
+        print("\n".join(printable(line) for line in lines))
     return EXIT_OK if result.reached else EXIT_COULD_NOT_RUN
 
 
