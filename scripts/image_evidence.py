@@ -29,9 +29,12 @@ NO_SIMULATION_CAVEAT = "no simulation tested this image"
 #: (outcomes.NONE_RECORDED) is not "not checked": nothing was recorded in it, and it says so.
 UNCOUNTED_ADVICE = "run its scenario again to count them"
 OLDER_LOG_CAVEAT = "the passed run's log is older than step counting: run its scenario again to count its steps"
-NO_CONTROL_CAVEAT = "the passed run's scenario has no set-control step (the step that presses a button or sets a sensor)"
-NO_CONTROL_NO_PIN_CAVEAT = ("the passed run's scenario has no set-control step (the step that presses a button or sets a "
-                            "sensor) and no expect-pin step (the step that reads a pin)")
+#: The two no-control sentences take a subject: one run says "the passed run's scenario has", several name their logs.
+NO_CONTROL_CAVEAT = "%s no set-control step (the step that presses a button or sets a sensor)"
+NO_CONTROL_NO_PIN_CAVEAT = ("%s no set-control step (the step that presses a button or sets a sensor) and no expect-pin "
+                            "step (the step that reads a pin)")
+ONE_RUN_SUBJECT = "the passed run's scenario has"
+MANY_RUNS_SUBJECT = "the passed runs (%s) have"
 #: The flag that deploys an image from firmware/ with no simulation.
 NO_SIMULATION_FLAG = "--no-simulation"
 #: The flag that turns a run of another image from a refusal into a note.
@@ -206,18 +209,33 @@ class PassedRunEvidence(ImageEvidence):
 
     # --- MVP ---
     def caveats(self, image):
-        """What the passed run's scenario did not do, from the step counts in its log's header. Call it only for an image `why_not_ready` passed."""
-        passed = image.find_passed_log()
-        if passed is None:
+        """
+        What the passed runs of `image` did not test, from the step counts in their logs' headers. Call it only for an image
+        `why_not_ready` passed. A control in any counted log clears the no-control sentence. A log that cannot be counted
+        says its own sentence and makes no claim about a control, because it may press the button.
+        """
+        logs = image.find_passed_logs()
+        if not logs:
             return []
-        steps = ScenarioSteps.from_log(passed)
+        read = [(log, ScenarioSteps.from_log(log)) for log in logs]
+        merged = ScenarioSteps.merge([steps for _, steps in read])
+        if merged.count(SET_CONTROL):
+            return []
+        uncounted = [self._uncounted_sentence(log, steps, len(logs) > 1) for log, steps in read
+                     if steps.state != outcomes.RECORDED]
+        if uncounted:
+            return uncounted
+        subject = MANY_RUNS_SUBJECT % ", ".join(log.name for log in logs) if len(logs) > 1 else ONE_RUN_SUBJECT
+        return [(NO_CONTROL_CAVEAT if merged.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT) % subject]
+
+    @staticmethod
+    def _uncounted_sentence(log, steps, named):
+        """The sentence for a passed log whose steps are not RECORDED; with several logs it starts with the log's name."""
         if steps.state == outcomes.NOT_CHECKED:
-            return ["%s; %s" % (outcomes.NOT_CHECKED_MESSAGE % steps.why, UNCOUNTED_ADVICE)]
-        if steps.state == outcomes.NONE_RECORDED:
-            return [OLDER_LOG_CAVEAT]
-        if steps.count(SET_CONTROL):
-            return []
-        return [NO_CONTROL_CAVEAT if steps.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT]
+            said = "%s; %s" % (outcomes.NOT_CHECKED_MESSAGE % steps.why, UNCOUNTED_ADVICE)
+        else:
+            said = OLDER_LOG_CAVEAT
+        return "%s: %s" % (log.name, said) if named else said
 
     def way_out(self, image):
         refused_for_other_runs = not self.ignore_older_runs and not image.why_untested() and image.why_other_runs()

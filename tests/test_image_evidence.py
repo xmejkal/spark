@@ -172,9 +172,50 @@ class PassedRunEvidenceTest(unittest.TestCase):
 
     def test_a_log_that_cannot_be_read_is_not_checked_with_its_reason(self):
         self.counted("step counts: expect-pin 1, set-control 1, wait-serial 1")
-        with mock.patch.object(ProjectImage, "find_passed_log", return_value=self.project / "gone.log"):
+        with mock.patch.object(ProjectImage, "find_passed_logs", return_value=[self.project / "gone.log"]):
             self.assertEqual(PassedRunEvidence().caveats(self.image), [
                 "not checked: the log cannot be read; run its scenario again to count them"])
+
+    CONTROL = "step counts: expect-pin 0, set-control 1, wait-serial 2"
+    NO_CONTROL = "step counts: expect-pin 0, set-control 0, wait-serial 1"
+    PIN_NO_CONTROL = "step counts: expect-pin 1, set-control 0, wait-serial 1"
+
+    def test_a_second_passed_run_that_sets_a_control_clears_the_no_control_caveat(self):
+        self.counted(self.NO_CONTROL, "a.log")
+        self.counted(self.CONTROL, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
+
+    def test_two_passed_runs_with_no_control_say_it_once_and_name_both_logs(self):
+        self.counted(self.NO_CONTROL, "a.log")
+        self.counted(self.NO_CONTROL, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "the passed runs (a.log, b.log) have no set-control step (the step that presses a button or sets a sensor) "
+            "and no expect-pin step (the step that reads a pin)"])
+
+    def test_a_pin_read_by_the_other_run_gives_the_short_sentence(self):
+        self.counted(self.NO_CONTROL, "a.log")
+        self.counted(self.PIN_NO_CONTROL, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "the passed runs (a.log, b.log) have no set-control step (the step that presses a button or sets a sensor)"])
+
+    def test_an_uncounted_run_beside_a_run_with_no_control_makes_no_no_control_claim_and_names_its_log(self):
+        self.counted(self.NO_CONTROL, "a.log")
+        self.counted(None, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "b.log: the passed run's log is older than step counting: run its scenario again to count its steps"])
+        self.counted("step counts: nonsense", "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "b.log: not checked: the log's step counts line is malformed; run its scenario again to count them"])
+
+    def test_a_counted_run_with_a_control_beside_an_uncounted_run_has_no_caveat(self):
+        self.counted(None, "a.log")
+        self.counted(self.CONTROL, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
+
+    def test_the_same_pair_the_other_way_round_has_no_caveat_either(self):
+        self.counted(self.CONTROL, "a.log")
+        self.counted(None, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
 
     def test_no_passed_run_gives_no_caveat(self):
         self.assertEqual(PassedRunEvidence().caveats(self.image), [])
