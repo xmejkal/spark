@@ -112,18 +112,18 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
         if args.json:
             print(to_json(board_grant.GrantCheckResult(False, None, board_grant.WHY_COULD_NOT_RUN)))
         if isinstance(cannot, board_look.LookStop):
-            # --- MVP --- the stop holds the port, the project path and the board record's button words, each on one line (P430)
+            # --- MVP --- the stop holds the port and the board record's button words, each on one line (P430)
             shown = boards.ButtonPlaces.of_project(args.project)
             print(guard_sentence("\n".join(board_doctor.stop_lines("grant.py", cannot, args.project, run)), args.port,
-                                 args.project, shown.boot, shown.reset, shown.orientation), file=sys.stderr)
+                                 shown.boot, shown.reset, shown.orientation), file=sys.stderr)
         else:
             print(guard_sentence("grant.py: %s" % cannot, args.project), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print(guard_lines("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at)))
     if grant.scope == board_grant.SCOPE_DEPLOY:
         grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
-        print(guard_lines("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
-                          "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(printable(str(grant_file)))))
+        print("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
+              "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(printable(str(grant_file))))  # P430: one line
     return EXIT_OK
 
 
