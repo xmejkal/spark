@@ -1,0 +1,6 @@
+[
+ {"file": "scripts/image_evidence.py", "name": "a missing tool is told as a sentence", "find": "raise tools.ToolProblem(CANNOT_CHECK_REASON % (image.path.name, cannot))", "replace": "return CANNOT_CHECK_REASON % (image.path.name, cannot)"},
+ {"file": "scripts/image_evidence.py", "name": "a missing tool is raised without the check words", "find": "raise tools.ToolProblem(CANNOT_CHECK_REASON % (image.path.name, cannot))", "replace": "raise"},
+ {"file": "scripts/board_look.py", "name": "a missing image tool is told as a refused image", "find": "why, code = str(cannot), board_codes.TOOL_MISSING", "replace": "why, code = str(cannot), board_codes.EVIDENCE_REFUSES"},
+ {"file": "scripts/image_evidence.py", "name": "an unreadable file is told as a missing tool", "find": "except (tools.ToolProblem, ImportError) as cannot:", "replace": "except (tools.ToolProblem, ImportError, OSError) as cannot:"}
+]
