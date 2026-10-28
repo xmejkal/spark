@@ -253,14 +253,13 @@ def retarget(text, old, new):
     A table's text with the `file` of every row that names `old` changed to `new`, and how many rows that was (P440).
 
     It edits the text, never `json.dumps` of the rows: no table prints back as it is written, because they are hand-aligned,
-    and 48 rows write `"file":"` with no space. It raises ValueError when the table is not JSON before or after, or when the
-    text it replaced does not match the rows that name `old`.
+    and 48 rows write `"file":"` with no space. It proves the edit by parsing both texts: the rows after must be the rows
+    before with `old` replaced and nothing else. It raises ValueError when either text is not JSON or the proof fails.
     """
     changed, count = re.subn(r'("file"\s*:\s*)"%s"' % re.escape(old), lambda match: match.group(1) + json.dumps(new), text)
-    rows = sum(1 for row in json.loads(text) if isinstance(row, dict) and row.get("file") == old)
-    json.loads(changed)
-    if count != rows:
-        raise ValueError("%d row(s) name %s, but the text matched %d place(s)" % (rows, old, count))
+    before = json.loads(text)
+    if json.loads(changed) != [dict(row, file=new) if isinstance(row, dict) and row.get("file") == old else row for row in before]:
+        raise ValueError("the text edit of %s changed more or less than the rows that name it" % old)
     return changed, count
 
 
@@ -307,8 +306,13 @@ class RedBeforeMutation(Exception):
     """The suite is not green before any mutation: a red suite catches nothing."""
 
 
-def run(root, tests, mutations):
-    """Every mutation, each restored before the next, and the suite confirmed green at the end."""
+def run(root, tests, mutations, copied=False):
+    """
+    Every mutation, each restored before the next, and the suite confirmed green at the end.
+
+    `copied` says `root` is a copy that is deleted after the run, so there is nothing to restore and the end check is
+    skipped (P424: it cost a whole suite, 207 s on 2026-10-28).
+    """
     lock = root / LOCK_NAME
     if lock.exists():
         raise AnotherRunIsActive("%s exists: another run is rewriting these files, or a killed "
@@ -320,12 +324,12 @@ def run(root, tests, mutations):
         # seconds both passed the lock test and both took the lock (audit C8). Under it now.
         if not suite_is_green(root, tests):
             raise RedBeforeMutation("the suite is not green BEFORE any mutation; a red suite catches nothing")
-        return _run(root, tests, mutations, near_sets(root, tests, mutations))
+        return _run(root, tests, mutations, near_sets(root, tests, mutations), copied)
     finally:
         lock.unlink(missing_ok=True)
 
 
-def _run(root, tests, mutations, near_by_file):
+def _run(root, tests, mutations, near_by_file, copied=False):
     results, imports_before = [], {}
     for mutation in mutations:
         path = root / mutation["file"]
@@ -357,8 +361,7 @@ def _run(root, tests, mutations, near_by_file):
                         "detail": "" if not green else
                         "the suite stayed green — no test notices this defect"})
 
-    restored = suite_is_green(root, tests)
-    return results, restored
+    return results, copied or suite_is_green(root, tests)
 
 
 def verdict(results, restored):
@@ -438,12 +441,12 @@ def main(argv=None):
     started = time.monotonic()
     where = copy_of(root) if args.copy else root
     try:
-        results, restored = run(where, args.tests, mutations)
+        results, restored = run(where, args.tests, mutations, copied=where is not root)
     except (AnotherRunIsActive, RedBeforeMutation) as stopped:
         print(str(stopped), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     finally:
-        if args.copy:
+        if where is not root:
             __import__("shutil").rmtree(where.parent, ignore_errors=True)
     code = verdict(results, restored)
     if args.json:

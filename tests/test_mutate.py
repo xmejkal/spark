@@ -558,6 +558,16 @@ class AMutationRunInACopyTest(unittest.TestCase):
         self.assertEqual(code, mutate.EXIT_OK)
         self.assertNotEqual(seen[0], root.resolve())
         self.assertFalse(seen[0].parent.exists(), "the copy, or the folder it was made in, stays behind")
+    def test_a_copy_skips_the_after_suite_and_reports_restored(self):
+        # P424: a copy is deleted after the run, so running the whole suite again to prove it restored proves nothing.
+        root = tiny_project()
+        calls = counting(self)
+        results, restored = mutate.run(root, "tests", [BREAK_ADD], copied=True)
+        self.assertEqual((results[0]["status"], restored, calls.count(None)), (mutate.CAUGHT, True, 1))
+        calls.clear()
+        mutate.run(root, "tests", [BREAK_ADD])
+        self.assertEqual(calls.count(None), 2, "outside a copy the suite runs before and after: %s" % calls)
+
     def test_the_copy_leaves_out_git_worktrees_caches_and_the_lock_and_borrows_node_modules(self):
         root = Path(tempfile.mkdtemp()) / "tree"
         for name in (".git/HEAD", ".worktrees/x/f.py", "__pycache__/c.pyc", mutate.LOCK_NAME, "kept.py",
