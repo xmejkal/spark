@@ -571,8 +571,10 @@ class WhenItCannotLookTest(unittest.TestCase):
     def test_help_says_what_it_does_and_leaves_alone(self):
         done = subprocess.run([sys.executable, str(SCRIPT), "--help"], capture_output=True, text=True)
         self.assertEqual(done.returncode, 0)
-        for said in ("usage:", "main.py", "stand-in", "--timeout", "--json"):
+        for said in ("usage:", "main.py", "stand-in", "--timeout", "--json", "ADC", "I2S", "framebuf",
+                     "proves that the names exist and the module-level calls ran"):
             self.assertIn(said, done.stdout)
+        self.assertNotIn("nothing else", done.stdout)
 
 
 if __name__ == "__main__":

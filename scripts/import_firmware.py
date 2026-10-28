@@ -9,13 +9,19 @@ Example, in a project after `/spark:build` and the firmware are written:
     python3 "$CLAUDE_PLUGIN_ROOT/scripts/import_firmware.py"
 
 It imports each PROJECT/firmware/*.py and each package there (a folder holding __init__.py) except the boot files,
-main.py and boot.py. PROJECT defaults to `.`. Each import is a process of its own, with spark's `machine` stand-in
-(scripts/stand_in/machine.py: a Pin that remembers its level and a PWM that keeps its last frequency and duty,
-nothing else), firmware/ and firmware/lib, where MicroPython looks for drivers, first on sys.path. Per module the answer is one of:
+main.py and boot.py. PROJECT defaults to `.`. Each import is a process of its own, with spark's stand-ins first on
+sys.path, then firmware/ and firmware/lib, where MicroPython looks for drivers. The stand-ins are in scripts/stand_in/:
+`machine` (a Pin that remembers its level, a PWM that keeps its last frequency and duty, and an ADC, SPI, SoftSPI, I2C,
+SoftI2C and I2S that keep their arguments and return fixed values), `micropython` and `framebuf`. Per module the
+answer is one of:
   - imported;
-  - raised: the exception's last line, which names the stand-in when the firmware wants more than a Pin or a PWM;
+  - raised: the exception's last line, which names the stand-in and the first name it lacks, for example UART;
   - timed out: it did not return within the timeout (5 s by default). Something at module level loops or waits.
     Put it in a function that main.py calls.
+
+An `imported` proves that the names exist and the module-level calls ran. It does not prove that their arguments are
+right (the stand-ins take any), that a pin, a wire, a rate or a driver works, or that a device answers: a bus finds no
+device, so a module-level `assert 0x3C in i2c.scan()` fails here. Keep such a check in a function that main.py calls.
 
 The boot files are left unrun on purpose: main.py starts the loop, so a two-line main.py over an importable module is
 the shape that can be tested. When firmware/ holds nothing to import but the boot files and pins.py, that is a
