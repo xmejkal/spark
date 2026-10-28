@@ -400,6 +400,16 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: littlefs (littlefs-python) "
                          "is not installed — install: python3 -m pip install --user littlefs-python")
 
+    def test_a_littlefs_that_fails_to_import_raises_its_tool_problem(self):
+        with mock.patch.object(flash_image, "image", side_effect=ImportError("No module named 'littlefs'")):
+            with self.assertRaises(tools.ToolProblem) as raised:
+                self.why()
+        self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: No module named 'littlefs'")
+
+    def test_a_board_record_that_cannot_be_read_stays_a_sentence_not_a_missing_tool(self):
+        (self.project / "requirements.json").write_text("{not json")
+        self.assertIn("requirements.json cannot be read, so its board's MicroPython build is not known", self.why())
+
     def test_an_unreadable_interpreter_is_a_sentence(self):
         self.interpreter.unlink()  # OSError, not a missing tool: it stays a sentence, evidence_refuses
         self.assertIn("cannot check", self.why())

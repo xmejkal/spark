@@ -39,7 +39,7 @@ LIMITS_HINT = "fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"
 ONE_RUN_MESSAGE = "the passed run's scenario has"
 MANY_RUNS_MESSAGE = "the passed runs (%s) have"
 #: P436: the words of the image check that could not run, as a sentence and as a tools.ToolProblem.
-CANNOT_CHECK_REASON = "cannot check %s against firmware/: %s"
+CANNOT_CHECK_MESSAGE = "cannot check %s against firmware/: %s"
 #: The flag that deploys an image from firmware/ with no simulation.
 NO_SIMULATION_FLAG = "--no-simulation"
 #: The flag that turns a run of another image from a refusal into a note.
@@ -310,7 +310,7 @@ class NoSimulationEvidence(ImageEvidence):
     def why_not_ready(self, image):
         """None, or one sentence. A broken file is a sentence; a missing tool raises a tools.ToolProblem (P436)."""
         return (self._why_no_main() or self._why_not_compiling() or self._why_run_failed(image)
-                or self._why_image_differs(image))
+                or self._why_board_build_unknown(image) or self._why_image_differs(image))
 
     def caveats(self, image):
         return [NO_SIMULATION_CAVEAT]
@@ -334,6 +334,14 @@ class NoSimulationEvidence(ImageEvidence):
                         % (log.name, verdict))
         return None
 
+    # --- MVP --- P436: a board record that cannot be read is a sentence (evidence_refuses), not a missing tool
+    def _why_board_build_unknown(self, image):
+        try:
+            flash_image.board_build(self.project)
+        except tools.ToolProblem as cannot:
+            return CANNOT_CHECK_MESSAGE % (image.path.name, cannot)
+        return None
+
     # --- MVP --- P436: a missing tool raises its ToolProblem (tool_missing: /spark:setup); an unreadable file is a sentence
     def _why_image_differs(self, image):
         try:
@@ -341,9 +349,9 @@ class NoSimulationEvidence(ImageEvidence):
             built = flash_image.interpreter_for(None, self.project).image(flash_image.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tools.ToolProblem, ImportError) as cannot:
-            raise tools.ToolProblem(CANNOT_CHECK_REASON % (image.path.name, cannot))
+            raise tools.ToolProblem(CANNOT_CHECK_MESSAGE % (image.path.name, cannot))
         except (OSError, ValueError) as cannot:
-            return CANNOT_CHECK_REASON % (image.path.name, cannot)
+            return CANNOT_CHECK_MESSAGE % (image.path.name, cannot)
         except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as flash_image does
             if type(cannot).__name__ != "LittleFSError":
                 raise
@@ -352,6 +360,7 @@ class NoSimulationEvidence(ImageEvidence):
             return ("%s does not hold firmware/ as it is now: build it with flash_image.py --project %s --files "
                     "firmware -o %s" % (image.path.name, self.project.resolve(), image.path))
         return None
+    # --- end MVP ---
 
     def expected_files(self, image):
         return {path: hashlib.sha256(data).hexdigest()
