@@ -185,6 +185,7 @@
 "T1:scripts/parts.py:file-write": 1,
 "T1:scripts/parts.py:subprocess": 1,
 "T1:scripts/reach.py:subprocess": 1,
+"T1:scripts/reach.py:time": 1,
 "T1:scripts/run_scenario.py:datetime": 1,
 "T1:scripts/run_scenario.py:file-write": 4,
 "T1:scripts/run_scenario.py:os.environ": 1,
