@@ -32,6 +32,20 @@ class GuardLinesTest(unittest.TestCase):
                 self.assertEqual(text_guards.guard_lines("a%sb\nc%sd" % (hidden, hidden)), "a?b\nc?d")
 
 
+class GuardSentenceTest(unittest.TestCase):
+    """P430 (#569): a sentence with a name in it, the name put on one line first."""
+
+    def test_a_newline_in_the_name_shows_as_a_question_mark_and_the_sentences_own_newline_stays(self):
+        self.assertEqual(text_guards.guard_sentence("no board on /dev/x\nGRANTED\nnext", "/dev/x\nGRANTED"),
+                         "no board on /dev/x?GRANTED\nnext")
+
+    def test_a_name_that_is_none_or_empty_changes_nothing(self):
+        self.assertEqual(text_guards.guard_sentence("a\u202eb\nc", None, ""), "a?b\nc")
+
+    def test_each_name_is_put_on_one_line(self):
+        self.assertEqual(text_guards.guard_sentence("p\ne q\nr", "p\ne", "q\nr"), "p?e q?r")
+
+
 class PrintableTest(unittest.TestCase):
     def test_printable_shows_what_a_terminal_does_not_print_as_a_question_mark(self):
         self.assertEqual(text_guards.printable("a\nb\u202ec ok"), "a?b?c ok")

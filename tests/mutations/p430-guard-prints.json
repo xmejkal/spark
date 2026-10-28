@@ -1,0 +1,3 @@
+[
+ {"file": "scripts/text_guards.py", "name": "P430: guard_sentence leaves a newline of the port in the sentence, so it fakes a line", "find": "text = text.replace(each, printable(each)) if each else text", "replace": "text = text"}
+]

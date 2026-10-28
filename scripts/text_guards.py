@@ -39,6 +39,18 @@ def guard_lines(text):
     return "\n".join(printable(line) for line in text.split("\n"))
 
 
+# --- MVP ---
+def guard_sentence(text, *flat):
+    """
+    A sentence for a terminal that holds names the person typed, such as a `--port` (P430): each value in `flat` is put on one
+    line first, as `printable` does, then the text goes through `guard_lines`. A name with its own newline cannot fake a line
+    of the sentence. Only the value as it stands in the text is found, so give the value as the script holds it.
+    """
+    for each in flat:
+        text = text.replace(each, printable(each)) if each else text
+    return guard_lines(text)
+
+
 def clean(text, cap=LABEL_MAX):
     """Words from a shop or a person, made safe to show: control and bidi characters become a space; at most `cap` characters."""
     return CONTROL.sub(" ", str(text)).strip()[:cap]
