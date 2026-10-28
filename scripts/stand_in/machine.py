@@ -1,11 +1,14 @@
 """
 spark's stand-in for MicroPython's `machine` module (P59), so a firmware imports and runs on the Mac.
 
-It is NOT the chip. It has a `Pin` and a `PWM` and nothing else: pins remember the level written to them, and a test
-sets an input with `set_level(gpio, level)` and reads an output with `level(gpio)`. A PWM keeps the last frequency and
-duty set on it and makes no signal (P352). It knows nothing of which GPIO exists, of interrupts firing, of I2C or SPI.
-A firmware that imports those gets an ImportError that names this file.
+It is NOT the chip. It has a `Pin`, a `PWM`, an `ADC`, an `SPI` and `SoftSPI`, an `I2C` and `SoftI2C`, and an `I2S`.
+Pins remember the level written to them, and a test sets an input with `set_level(gpio, level)` and reads an output
+with `level(gpio)`. A PWM keeps the last frequency and duty set on it and makes no signal (P352). The other classes
+keep their arguments and return a fixed value (P421, below). It knows nothing of which GPIO exists or of interrupts
+firing. A firmware that imports any other name gets an ImportError that names this file.
 """
+
+import inspect as _inspect
 
 #: GPIO number -> the level the firmware last wrote, or a test last set. Pins share it, as pins of one chip would.
 _levels = {}
@@ -19,6 +22,25 @@ def set_level(gpio, level):
 def level(gpio):
     """What the firmware last wrote to a GPIO (or a test set); None while nothing has."""
     return _levels.get(gpio)
+
+
+# --- MVP --- (P421) The rule for ADC, SPI, I2C and I2S: each keeps its arguments and returns a fixed value. None models a
+# device. No sample, frame, sound or bus traffic is made, stored or answered. The only value that depends on an input is
+# a length the caller gave. A stand-in never reports a device as present.
+class _StandIn:
+    """What the classes below share: any arguments, kept; a deinit that is remembered; an init that turns it on again."""
+
+    deinited = False
+
+    def __init__(self, *args, **settings):
+        self.init(*args, **settings)
+
+    def init(self, *args, **settings):
+        self.args, self.settings = args, settings
+        self.deinited = False
+
+    def deinit(self):
+        self.deinited = True
 
 
 class Pin:
@@ -50,7 +72,7 @@ class Pin:
         self.handler = handler
 
 
-class PWM:
+class PWM(_StandIn):
     """MicroPython's PWM as calls only: each setter keeps its value, each getter returns it, None while unset."""
 
     def __init__(self, dest, freq=None, **settings):
@@ -63,9 +85,6 @@ class PWM:
             settings["freq"] = freq
         self.settings.update(settings)
         self.deinited = False
-
-    def deinit(self):
-        self.deinited = True
 
     def _kept(self, name, value):
         if value is None:
@@ -85,7 +104,101 @@ class PWM:
         return self._kept("duty_ns", value)
 
 
+# --- MVP --- (P421) fixed value, no device
+class ADC(_StandIn):
+    """A pin read as a number. Every read is 0, the same "nothing sensed" as a Pin that nothing set."""
+
+    ATTN_0DB, ATTN_2_5DB, ATTN_6DB, ATTN_11DB = 0, 1, 2, 3
+    WIDTH_9BIT, WIDTH_10BIT, WIDTH_11BIT, WIDTH_12BIT, WIDTH_13BIT = 0, 1, 2, 3, 4
+
+    def read_u16(self):
+        return 0
+
+    def read(self):
+        return 0
+
+    def read_uv(self):
+        return 0
+
+    def atten(self, x):
+        pass
+
+    def width(self, bits):
+        pass
+
+
+class SPI(_StandIn):
+    """A clocked data bus. Nothing is sent, and a read gives zero bytes."""
+
+    MSB, LSB = 0, 1  # as in MicroPython's extmod/machine_spi.c
+
+    def read(self, n, *args, **settings):
+        return bytes(n)
+
+    def write(self, buf):
+        pass
+
+    def readinto(self, buf, *args, **settings):
+        pass
+
+    def write_readinto(self, write_buf, read_buf):
+        pass
+
+
+class SoftSPI(SPI):
+    """On a board the two are separate classes. Here a software bus is the same stand-in."""
+
+
+class I2C(_StandIn):
+    """A two-wire bus. No device answers, so `scan()` is empty: a module-level `assert 0x3C in i2c.scan()` fails the
+    import check on a Mac. Keep such a check inside a function that main.py calls."""
+
+    def scan(self):
+        return []
+
+    def writeto(self, addr, buf, *args, **settings):
+        return len(buf)
+
+    def readfrom(self, addr, n, *args, **settings):
+        return bytes(n)
+
+    def readfrom_mem(self, addr, mem, n, **settings):
+        return bytes(n)
+
+    def writeto_mem(self, addr, mem, buf, **settings):
+        pass
+
+    def readfrom_into(self, addr, buf, *args, **settings):
+        pass
+
+    def readfrom_mem_into(self, addr, mem, buf, **settings):
+        pass
+
+
+class SoftI2C(I2C):
+    """On a board the two are separate classes. Here a software bus is the same stand-in."""
+
+
+class I2S(_StandIn):
+    """A sound data bus. A write is taken whole and a read leaves the buffer as it is. The handler is never called."""
+
+    TX, RX, MONO, STEREO = 1, 0, 0, 1
+    handler = None
+
+    def write(self, buf):
+        return len(buf)
+
+    def readinto(self, buf):
+        return len(buf)
+
+    def irq(self, handler=None, *args, **settings):
+        self.handler = handler
+
+
 def __getattr__(name):
     if name.startswith("__"):  # the import machinery asks for __path__ and the like
         raise AttributeError(name)
-    raise ImportError("spark's stand-in machine (scripts/stand_in/machine.py) has Pin and PWM only, not %s" % name)
+    have = sorted(n for n, value in globals().items() if _inspect.isclass(value) and not n.startswith("_"))
+    raise ImportError("spark's stand-in machine (scripts/stand_in/machine.py) has %s and %s only, not %s: use only "
+                      "these at module level, or move the rest into a function that main.py calls"
+                      % (", ".join(have[:-1]), have[-1], name))

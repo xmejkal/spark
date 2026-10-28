@@ -36,9 +36,9 @@ SCRIPT = ROOT / "scripts" / "import_firmware.py"
 LOOP_TIMEOUT_S = "0.5"
 
 
-def a_stand_in():
-    """A fresh copy of the stand-in, with a level table of its own."""
-    spec = importlib.util.spec_from_file_location("stand_in_machine_under_test", STAND_IN)
+def a_stand_in(name="machine"):
+    """A fresh copy of one stand-in (machine, micropython or framebuf), with a level table of its own."""
+    spec = importlib.util.spec_from_file_location("stand_in_%s_under_test" % name, STAND_IN.parent / (name + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -116,14 +116,21 @@ class ThePinsRememberTheirLevelsTest(unittest.TestCase):
         self.assertEqual(button.value(), 1)
 
     def test_what_the_stand_in_lacks_is_an_import_error_that_names_it(self):
-        for statement in ("from machine import I2C", "import machine; machine.SPI"):
+        for statement in ("from machine import UART", "import machine; machine.Timer"):
             with self.subTest(statement=statement):
                 done = subprocess.run([sys.executable, "-c", statement], capture_output=True, text=True,
                                       env={"PYTHONPATH": str(STAND_IN.parent)})
                 self.assertNotEqual(done.returncode, 0)
                 self.assertIn("ImportError", done.stderr)
                 self.assertIn("stand-in", done.stderr)
-                self.assertIn("Pin and PWM only", done.stderr)
+                self.assertIn("move the rest into a function that main.py calls", done.stderr)
+                self.assertNotIn("Pin and PWM only", done.stderr)
+
+    def test_the_error_lists_the_classes_sorted_and_not_the_helpers(self):
+        with self.assertRaises(ImportError) as caught:
+            self.machine.UART
+        self.assertIn("has ADC, I2C, I2S, PWM, Pin, SPI, SoftI2C and SoftSPI only, not UART", str(caught.exception))
+        self.assertNotIn("set_level", str(caught.exception))
 
 
 class APwmKeepsWhatWasLastSetTest(unittest.TestCase):
@@ -182,6 +189,95 @@ class APwmKeepsWhatWasLastSetTest(unittest.TestCase):
         self.assertEqual(self.PWM(15, freq=50).freq(), 50)
 
 
+class TheNewStandInsKeepTheirArgumentsAndReturnFixedValuesTest(unittest.TestCase):
+    """P421: no device is modelled; a stand-in never reports one as present."""
+
+    def setUp(self):
+        self.machine = a_stand_in()
+
+    def test_an_adc_reads_zero_in_each_form(self):
+        pot = self.machine.ADC(self.machine.Pin(34), atten=self.machine.ADC.ATTN_11DB)
+        self.assertEqual((pot.read_u16(), pot.read(), pot.read_uv()), (0, 0, 0))
+        self.assertIsNone(pot.atten(self.machine.ADC.ATTN_6DB))
+        self.assertIsNone(pot.width(self.machine.ADC.WIDTH_12BIT))
+
+    def test_an_spi_read_is_zero_bytes_of_the_length_asked(self):
+        for bus in (self.machine.SPI(1, 1000000, sck=1, mosi=2, miso=3), self.machine.SoftSPI(baudrate=1000000)):
+            with self.subTest(bus=type(bus).__name__):
+                self.assertEqual(bus.read(3), b"\x00\x00\x00")
+                self.assertIsNone(bus.write(b"x"))
+                self.assertIsNone(bus.write_readinto(b"x", bytearray(1)))
+
+    def test_an_spi_readinto_leaves_the_buffer_as_it_is(self):
+        buf = bytearray(b"\x07\x07")
+        self.assertIsNone(self.machine.SPI(1).readinto(buf))
+        self.assertEqual(buf, bytearray(b"\x07\x07"))
+
+    def test_the_spi_bit_orders_differ(self):
+        self.assertNotEqual(self.machine.SPI.MSB, self.machine.SPI.LSB)
+
+    def test_an_i2c_bus_finds_no_device_and_writing_does_not_make_one(self):
+        for bus in (self.machine.I2C(0, scl=self.machine.Pin(22), sda=self.machine.Pin(21), freq=400000),
+                    self.machine.SoftI2C(scl=self.machine.Pin(22), sda=self.machine.Pin(21))):
+            with self.subTest(bus=type(bus).__name__):
+                self.assertEqual(bus.scan(), [])
+                self.assertEqual(bus.writeto(60, b"ab"), 2)
+                self.assertEqual(bus.writeto(60, b"ab", False), 2)
+                self.assertEqual(bus.scan(), [])
+
+    def test_an_i2c_read_is_zero_bytes_of_the_length_asked(self):
+        bus = self.machine.I2C(0)
+        self.assertEqual(bus.readfrom(60, 3), b"\x00\x00\x00")
+        self.assertEqual(bus.readfrom_mem(60, 1, 2), b"\x00\x00")
+        buf = bytearray(b"\x09")
+        self.assertIsNone(bus.readfrom_into(60, buf))
+        self.assertIsNone(bus.readfrom_mem_into(60, 1, buf))
+        self.assertIsNone(bus.writeto_mem(60, 1, b"x"))
+        self.assertEqual(buf, bytearray(b"\x09"))
+
+    def test_an_i2s_write_is_taken_whole_and_a_read_leaves_the_buffer(self):
+        speaker = self.machine.I2S(0, sck=1, ws=2, sd=3, mode=self.machine.I2S.TX, bits=16,
+                                   format=self.machine.I2S.MONO, rate=22050, ibuf=2000)
+        self.assertEqual(speaker.write(bytes(8)), 8)
+        buf = bytearray(4)
+        self.assertEqual(speaker.readinto(buf), 4)
+        self.assertEqual(buf, bytearray(4))
+
+    def test_an_i2s_handler_is_kept_and_never_called(self):
+        calls = []
+        speaker = self.machine.I2S(0)
+        speaker.irq(lambda bus: calls.append(bus))
+        speaker.write(b"x")
+        self.assertEqual(calls, [])
+        self.assertIsNotNone(speaker.handler)
+
+    def test_a_constructor_given_a_keyword_it_does_not_know_does_not_raise(self):
+        for cls in (self.machine.ADC, self.machine.SPI, self.machine.I2C, self.machine.I2S):
+            with self.subTest(cls=cls.__name__):
+                cls(1, nothing_like_this=2)
+
+    def test_deinit_is_remembered_and_init_turns_it_on_again(self):
+        for cls in (self.machine.ADC, self.machine.SPI, self.machine.I2C, self.machine.I2S):
+            with self.subTest(cls=cls.__name__):
+                bus = cls(1)
+                self.assertFalse(bus.deinited)
+                bus.deinit()
+                self.assertTrue(bus.deinited)
+                bus.init(1)
+                self.assertFalse(bus.deinited)
+
+    def test_a_software_bus_is_the_same_kind_of_stand_in(self):
+        self.assertTrue(issubclass(self.machine.SoftSPI, self.machine.SPI))
+        self.assertTrue(issubclass(self.machine.SoftI2C, self.machine.I2C))
+
+    def test_each_new_name_imports_on_its_own(self):
+        for name in ("ADC", "SPI", "SoftSPI", "I2C", "SoftI2C", "I2S"):
+            with self.subTest(name=name):
+                done = subprocess.run([sys.executable, "-c", "from machine import " + name], capture_output=True,
+                                      text=True, env={"PYTHONPATH": str(STAND_IN.parent)})
+                self.assertEqual(done.returncode, 0, done.stderr)
+
+
 def a_project(**modules):
     """A project whose firmware/ holds one file per keyword (`light="..."` is firmware/light.py); returns the project."""
     project = Path(tempfile.mkdtemp()) / "project"
@@ -209,6 +305,31 @@ def module_named(answer, name):
 
 
 class AModuleThatImportsIsOkTest(unittest.TestCase):
+    def test_a_firmware_that_builds_one_of_each_new_class_imports(self):
+        project = a_project(parts=(
+            "from machine import ADC, I2C, I2S, Pin, SPI, SoftI2C, SoftSPI\n"
+            "pot = ADC(Pin(34), atten=ADC.ATTN_11DB)\n"
+            "pot.read_u16()\n"
+            "spi = SPI(1, baudrate=1000000, sck=Pin(1), mosi=Pin(2), miso=Pin(3))\n"
+            "soft = SoftSPI(baudrate=1000000, sck=Pin(1), mosi=Pin(2), miso=Pin(3))\n"
+            "spi.write(b'x')\nsoft.read(3)\n"
+            "i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)\n"
+            "soft_i2c = SoftI2C(scl=Pin(22), sda=Pin(21))\n"
+            "i2c.scan()\ni2c.writeto(0x3C, b'x')\nsoft_i2c.scan()\n"
+            "speaker = I2S(0, sck=Pin(1), ws=Pin(2), sd=Pin(3), mode=I2S.TX, bits=16, format=I2S.MONO,\n"
+            "              rate=22050, ibuf=2000)\n"
+            "speaker.write(b'x')\nspeaker.readinto(bytearray(4))\n"
+            "for part in (pot, spi, soft, i2c, soft_i2c, speaker):\n"
+            "    part.deinit()\n"))
+        code, answer = answer_for(project)
+        self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
+
+    def test_a_module_that_asks_the_bus_for_a_device_at_module_level_does_not_import(self):
+        project = a_project(screen="from machine import I2C\ni2c = I2C(0)\nassert 0x3C in i2c.scan()\n")
+        _, answer = answer_for(project)
+        self.assertEqual(module_named(answer, "screen")["status"], "raised")
+        self.assertIn("AssertionError", module_named(answer, "screen")["detail"])
+
     def test_a_module_that_uses_the_stand_in_imports(self):
         project = a_project(light="import machine\nled = machine.Pin(3, machine.Pin.OUT)\n")
         code, answer = answer_for(project)
@@ -299,7 +420,7 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         self.assertIn("within 0.5 s", module_named(answer, "slow")["detail"])
 
     def test_a_module_that_needs_more_than_pin_and_pwm_is_named_as_the_stand_in_s_limit(self):
-        project = a_project(light="from machine import I2C\n")
+        project = a_project(light="from machine import UART\n")
         _, answer = answer_for(project)
         self.assertIn("stand-in", module_named(answer, "light")["detail"])
 
