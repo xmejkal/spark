@@ -22,7 +22,6 @@ import board_look  # noqa: E402
 import project_image  # noqa: E402
 import sim_project  # noqa: E402
 import outcomes  # noqa: E402
-import flash_image  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from test_deploy import FOUND, ProjectCase, found  # noqa: E402
@@ -659,25 +658,34 @@ class TheLookStatesTheSimulationTest(LookCase):
 
 
 class TheLookCodesTheImageRefusalTest(LookCase):
-    """P436: a missing tool the image check needs is tool_missing; an image that differs from firmware/ stays evidence_refuses."""
+    """P436: a tool the image check needs that is missing is tool_missing; any other refusal stays evidence_refuses.
+    The evidence is a small fake: the words of NoSimulationEvidence are tested in test_image_evidence."""
 
-    def test_a_missing_interpreter_is_tool_missing_with_no_token_and_the_image_kept(self):
+    class RefusingEvidence:
+        """Evidence whose check raises `problem`, or says `sentence` when there is none."""
+        simulation = "none"
+
+        def __init__(self, problem=None, sentence=None):
+            self.problem, self.sentence = problem, sentence
+
+        def why_not_ready(self, image):
+            if self.problem:
+                raise self.problem
+            return self.sentence
+
+    def test_a_missing_image_tool_is_tool_missing_with_no_token_and_the_image_kept(self):
         self.run_the_scenario()
-        evidence = image_evidence.NoSimulationEvidence(self.project)
-        with mock.patch.object(flash_image, "interpreter_for", side_effect=tools.ToolProblem("no tool holds it")):
-            report = self.look(evidence=evidence)
+        problem = tools.ToolProblem("cannot check flash-with-firmware.bin against firmware/: no tool holds it")
+        report = self.look(evidence=self.RefusingEvidence(problem=problem))
         self.assertEqual((report.no_token_reason().code, report.token(), report.image_code), ("tool_missing", None, "tool_missing"))
         self.assertEqual(report.image_why, "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
         self.assertEqual((report.image, report.caveats), (self.image, []))
 
-    def test_an_image_that_differs_from_firmware_stays_evidence_refuses(self):
+    def test_an_image_the_evidence_refuses_with_a_sentence_stays_evidence_refuses(self):
         self.run_the_scenario()
-        (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(2)\n")
-        evidence = image_evidence.NoSimulationEvidence(self.project)
-        with mock.patch.object(flash_image, "interpreter_for", side_effect=lambda given, project=None: flash_image.Interpreter(self.micropython, 0)):
-            report = self.look(evidence=evidence)
+        report = self.look(evidence=self.RefusingEvidence(sentence="flash-with-firmware.bin does not hold firmware/ as it is now"))
         self.assertEqual((report.no_token_reason().code, report.token(), report.image_code), ("evidence_refuses", None, "evidence_refuses"))
-        self.assertIn("flash-with-firmware.bin does not hold firmware/ as it is now", report.image_why)
+        self.assertEqual(report.image_why, "flash-with-firmware.bin does not hold firmware/ as it is now")
 
 
 class ReportLinesTest(LookCase):

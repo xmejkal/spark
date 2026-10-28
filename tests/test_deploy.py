@@ -43,6 +43,8 @@ PORT = "/dev/cu.usbmodem1101"
 
 def found(name, *args, **kwargs):
     """tools.find for the roles and tools deploy.py and the image check ask for."""
+    if name not in FOUND:  # P436: as tools.find does for a tool nothing installed, so a test can meet a missing tool with no patch
+        raise tools.ToolProblem("%s is not installed — install: /spark:setup add %s" % (name, name))
     return FOUND[name]
 
 

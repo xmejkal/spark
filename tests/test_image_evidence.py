@@ -327,7 +327,11 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.interpreter.write_bytes(self.INTERPRETER)
         self.build()
 
+    raising = None  # P436: a test sets what the interpreter's lookup raises, so it needs no patch of its own
+
     def find_interpreter(self, given, project=None):
+        if self.raising:
+            raise self.raising
         return flash_image.Interpreter(self.interpreter, self.offset)
 
     def build(self, offset=None):
@@ -385,9 +389,9 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertIn("no firmware/main.py", self.why())
 
     def test_a_missing_interpreter_raises_its_tool_problem_with_the_check_words(self):
-        with mock.patch.object(flash_image, "interpreter_for", side_effect=tools.ToolProblem("no tool holds it")):
-            with self.assertRaises(tools.ToolProblem) as raised:
-                self.why()
+        self.raising = tools.ToolProblem("no tool holds it")
+        with self.assertRaises(tools.ToolProblem) as raised:
+            self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
 
     def test_a_missing_littlefs_raises_its_tool_problem_with_the_install_line(self):
@@ -401,9 +405,9 @@ class NoSimulationEvidenceTest(unittest.TestCase):
                          "is not installed — install: python3 -m pip install --user littlefs-python")
 
     def test_a_littlefs_that_fails_to_import_raises_its_tool_problem(self):
-        with mock.patch.object(flash_image, "image", side_effect=ImportError("No module named 'littlefs'")):
-            with self.assertRaises(tools.ToolProblem) as raised:
-                self.why()
+        self.raising = ImportError("No module named 'littlefs'")
+        with self.assertRaises(tools.ToolProblem) as raised:
+            self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: No module named 'littlefs'")
 
     def test_a_board_record_that_cannot_be_read_stays_a_sentence_not_a_missing_tool(self):
