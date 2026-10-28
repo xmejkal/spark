@@ -71,7 +71,8 @@ Back to [the architecture](README.md).
 | golden | A file with the expected `--json` and exit code of one Operation on one fixture project. Proposed. |
 | Fake | A stand-in for a real part in tests, in `tests/fakes.py`. `Fake`, then the whole name: `FakeOutsideWorld`, `FakeFirmwarePlatform`. |
 | Wokwi definition | The kept JSON file of one Wokwi part type, a board included, a `documents` entry of its record (`wokwi-board`). Never "part", which is a part record (P396). |
-| limit | One thing that a simulation cannot show, as a component and a sentence, in the simulation stage and `sim/WHAT-THIS-CANNOT-SHOW.md` (P37, P396). |
+| limit | One thing that no simulation can show of the project, as a component and a sentence: a line of `sim/WHAT-THIS-CANNOT-SHOW.md`, of the log's limits section and of `data.limits` of the look (P37, P396, P345). |
+| caveat | One thing that this passed run did not test, as a sentence: a scenario with no `set-control` step, or a log that cannot be counted. A list of them is `data.caveats` (P345). |
 
 ## 2. Clashes and how they are settled
 
