@@ -278,6 +278,62 @@ class TheNewStandInsKeepTheirArgumentsAndReturnFixedValuesTest(unittest.TestCase
                 self.assertEqual(done.returncode, 0, done.stderr)
 
 
+class TheDisplayDriverStandInsTest(unittest.TestCase):
+    """P421: `micropython` and `framebuf`, the two a display driver imports besides `machine`."""
+
+    def setUp(self):
+        self.framebuf = a_stand_in("framebuf")
+        self.micropython = a_stand_in("micropython")
+
+    def test_const_gives_back_its_argument(self):
+        self.assertEqual(self.micropython.const(5), 5)
+
+    def test_a_decorator_gives_back_the_function_it_was_given(self):
+        def blink():
+            pass
+        for decorator in (self.micropython.native, self.micropython.viper, self.micropython.bytecode):
+            with self.subTest(decorator=decorator.__name__):
+                self.assertIs(decorator(blink), blink)
+
+    def test_a_picture_reads_zero_and_draws_nothing(self):
+        buf = bytearray(8)
+        screen = self.framebuf.FrameBuffer(buf, 8, 8, self.framebuf.MONO_VLSB)
+        self.assertEqual(screen.pixel(1, 1), 0)
+        self.assertIsNone(screen.pixel(1, 1, 1))
+        self.assertEqual(screen.pixel(1, 1), 0)
+        for call in (lambda: screen.fill(1), lambda: screen.fill_rect(0, 0, 4, 4, 1), lambda: screen.hline(0, 0, 4, 1),
+                     lambda: screen.vline(0, 0, 4, 1), lambda: screen.line(0, 0, 4, 4, 1),
+                     lambda: screen.rect(0, 0, 4, 4, 1), lambda: screen.text("hi", 0, 0, c=1),
+                     lambda: screen.scroll(1, 0), lambda: screen.blit(screen, 0, 0, 0),
+                     lambda: screen.ellipse(4, 4, 2, 2, 1), lambda: screen.poly(0, 0, bytearray(4), 1)):
+            self.assertIsNone(call())
+        self.assertEqual(buf, bytearray(8))
+
+    def test_a_name_the_stand_in_lacks_is_an_import_error_with_its_own_file(self):
+        for module, statement in (("micropython", "from micropython import opt_level"),
+                                  ("framebuf", "import framebuf; framebuf.Nothing")):
+            with self.subTest(module=module):
+                done = subprocess.run([sys.executable, "-c", statement], capture_output=True, text=True,
+                                      env={"PYTHONPATH": str(STAND_IN.parent)})
+                self.assertNotEqual(done.returncode, 0)
+                self.assertIn("ImportError", done.stderr)
+                self.assertIn("scripts/stand_in/%s.py" % module, done.stderr)
+
+    def test_a_driver_shaped_module_imports(self):
+        project = a_project(screen=(
+            "from machine import I2C, Pin\nfrom micropython import const\nimport framebuf\n"
+            "WIDTH = const(128)\n"
+            "class Screen(framebuf.FrameBuffer):\n"
+            "    def __init__(self, i2c):\n"
+            "        self.i2c, self.buffer = i2c, bytearray(128 * 8)\n"
+            "        super().__init__(self.buffer, WIDTH, 64, framebuf.MONO_VLSB)\n"
+            "    def show(self):\n"
+            "        self.fill(0)\n        self.i2c.writeto(0x3C, self.buffer)\n"
+            "Screen(I2C(0, scl=Pin(22), sda=Pin(21))).show()\n"))
+        code, answer = answer_for(project)
+        self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
+
+
 def a_project(**modules):
     """A project whose firmware/ holds one file per keyword (`light="..."` is firmware/light.py); returns the project."""
     project = Path(tempfile.mkdtemp()) / "project"
