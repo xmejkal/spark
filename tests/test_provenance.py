@@ -1,6 +1,5 @@
 """P389: provenance.fact_problems, the one rule a part record and a board record check a fact by."""
 
-import ast
 import sys
 import unittest
 from pathlib import Path
@@ -63,13 +62,6 @@ class FactProblemsTest(unittest.TestCase):
             with self.subTest(fact=fact):
                 self.assertEqual(provenance.fact_problems("facts.a", fact),
                                  ["facts.a is %r, but it is an object" % (fact,)])
-
-    def test_provenance_imports_no_spark_module(self):
-        tree = ast.parse((ROOT / "scripts" / "provenance.py").read_text())
-        imported = {name.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for name in node.names}
-        imported |= {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module}
-        spark = {path.stem for path in (ROOT / "scripts").glob("*.py")}
-        self.assertEqual(imported & spark, set())
 
 
 if __name__ == "__main__":

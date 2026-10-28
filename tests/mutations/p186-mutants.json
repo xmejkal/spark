@@ -68,7 +68,7 @@
  {
   "file": "tools/mutate.py",
   "name": "import wrong path",
-  "find": "str(path.parent), path.stem]",
-  "replace": "str(root / \"nowhere\"), path.stem]"
+  "find": "str(folder), dotted], cwd=",
+  "replace": "str(root / \"nowhere\"), dotted], cwd="
  }
 ]

@@ -6,6 +6,7 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py --anchors tests/mutations/*.json      # anchors and syntax only, a second
     tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy    # one file's rows, in a copy
     tools/mutate.py tests/mutations/*.json --for $changed --copy   # a branch's: changed=$(git diff --name-only origin/main...HEAD)
+    tools/mutate.py tests/mutations/*.json --retarget scripts/a.py scripts/spark/a.py   # a file moved: its rows follow
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -39,6 +40,13 @@ THE FOUR RULES BUILT IN (the first three learned from the hand-rolled harnesses)
     within one second is invisible to that check: the "restored" suite ran the MUTATED bytecode
     and reported red, which this tool's own tests caught on their first full run. So every suite
     run is `-B` with a fresh, empty cache prefix — pure source, every time.
+
+A COPY (--copy) is deleted after the run, so the run does not run the whole suite again to prove the files restored: that
+check cost 207 s on 2026-10-28 (P424), and a copy has nothing to restore. `--retarget OLD NEW` edits the text of the
+tables and moves no other row; run `--anchors` after it. It exits 2 when no row names OLD, and runs alone. Both `near_tests` and the import check name a module under
+`scripts/` by its dotted name when every folder on the way has an `__init__.py`, so a package module (`spark.core.outcomes`)
+meets the tests that import it; `scripts/stand_in/machine.py` stays `machine`. Rows do not run
+in parallel: `--jobs 4` saved 24 s on 8 rows (rows file of P440), under the minute that would pay for the flag.
 
 WHAT PASSING MEANS
 
@@ -105,16 +113,42 @@ def suite_is_green(root, tests, only=(), failfast=False):
     return result.returncode == 0 and "\nOK" in verdict
 
 
+# --- MVP ---
+def import_spec(root, file):
+    """
+    Where to import the module at `file` from and by what name, as (folder for sys.path, dotted name) (P440). A path under
+    `scripts/` is imported by its path below it (`scripts/spark/core/outcomes.py` is `spark.core.outcomes`, an `__init__.py`
+    is its package) only when every folder between `scripts/` and the file has an `__init__.py`. Any other path, such as
+    `scripts/stand_in/machine.py`, is imported by its stem from its own folder.
+    """
+    parts = Path(file).parts
+    if parts[:1] == ("scripts",) and all((Path(root).joinpath(*parts[:i + 1]) / "__init__.py").is_file() for i in range(1, len(parts) - 1)):
+        dotted = list(Path(file).with_suffix("").parts[1:])
+        if dotted and dotted[-1] == "__init__":
+            dotted.pop()
+        if dotted:
+            return Path(root) / "scripts", ".".join(dotted)
+    return (Path(root) / file).parent, Path(file).stem
+
+
 def near_tests(root, tests, mutated_file):
     """
     The test modules near a mutated file (P98): for a `.py` file the ones that import its module, for any
     other file the ones that name it. Each mutation meets these first — a defect a nearby test catches
     costs a second, not the whole suite — and only what they miss goes to the whole suite, so an escape is
     never reported on their word. Empty: the whole suite decides alone.
+
+    A module in a package is imported by its dotted name (P440): `import spark.core.outcomes`, `from spark.core.outcomes
+    import X` and `from spark.core import outcomes` all name it.
     """
     target = Path(mutated_file)
-    said = (re.compile(r"^\s*(?:import|from)\s+%s\b" % re.escape(target.stem), re.M) if target.suffix == ".py"
-            else re.compile(re.escape(target.name)))
+    if target.suffix != ".py":
+        said = re.compile(re.escape(target.name))
+    else:
+        dotted = import_spec(root, mutated_file)[1]
+        package, _, module = dotted.rpartition(".")
+        said = re.compile(r"^\s*(?:import|from)\s+%s\b" % re.escape(dotted)
+                          + (r"|^\s*from\s+%s\s+import\s+[^\n]*\b%s\b" % (re.escape(package), re.escape(module)) if package else ""), re.M)
     return sorted(path.stem for path in sorted((Path(root) / tests).glob("test_*.py"))
                   if said.search(path.read_text(errors="replace")))
 
@@ -180,11 +214,14 @@ def unloadable(root, mutations):
 
 
 def _import_error(root, file):
-    """The last line of what importing `file` says, from source alone, or None when it imports."""
-    path = root / file
+    """
+    The last line of what importing `file` says, from source alone, or None when it imports. A module of a package is
+    imported by its dotted name with `scripts/` on the path, so it finds its package (P440); see `import_spec`.
+    """
+    folder, dotted = import_spec(root, file)
     with _from_source("mutate-import-") as environment:
         done = subprocess.run([sys.executable, "-B", "-c", "import sys; sys.path.insert(0, sys.argv[1]); __import__(sys.argv[2])",
-                               str(path.parent), path.stem], cwd=str(root), capture_output=True, text=True, env=environment)
+                               str(folder), dotted], cwd=str(root), capture_output=True, text=True, env=environment)
     return None if done.returncode == 0 else (done.stderr.strip().splitlines() or ["exit %d" % done.returncode])[-1]
 
 
@@ -225,6 +262,43 @@ def related(mutations, paths):
             if any(mutation["file"] == path or mutation["file"].startswith(path + "/") for path in wanted)]
 
 
+# --- MVP ---
+def retarget(text, old, new):
+    """
+    A table's text with the `file` of every row that names `old` changed to `new`, and how many rows that was (P440).
+
+    It edits the text, never `json.dumps` of the rows: no table prints back as it is written, because they are hand-aligned,
+    and 48 rows write `"file":"` with no space. It proves the edit by parsing both texts: the rows after must be the rows
+    before with `old` replaced and nothing else. It raises ValueError when either text is not JSON or the proof fails.
+    """
+    changed, count = re.subn(r'("file"\s*:\s*)"%s"' % re.escape(old), lambda match: match.group(1) + json.dumps(new), text)
+    before = json.loads(text)
+    if json.loads(changed) != [dict(row, file=new) if isinstance(row, dict) and row.get("file") == old else row for row in before]:
+        raise ValueError("the text edit of %s changed more or less than the rows that name it" % old)
+    return changed, count
+
+
+def retarget_tables(tables, old, new):
+    """Move every row of `old` to `new` in the table files `tables`, all or none; the exit code, with the line it printed."""
+    moved = {}
+    for table in tables:
+        try:
+            changed, count = retarget(Path(table).read_text(), old, new)
+        except (OSError, ValueError) as broken:
+            print("could not retarget %s: %s" % (table, broken), file=sys.stderr)
+            return EXIT_COULD_NOT_RUN
+        if count:
+            moved[table] = (changed, count)
+    if not moved:
+        print("no row of %s has %s as its file; nothing moved" % (", ".join(map(str, tables)), old), file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
+    for table, (changed, _) in moved.items():
+        Path(table).write_text(changed)
+    print("  moved %d row(s) from %s to %s in %d of %d table(s); run --anchors to prove them" % (
+        sum(count for _, count in moved.values()), old, new, len(moved), len(tables)))
+    return EXIT_OK
+
+
 def copy_of(root):
     """
     The tree at `root` in a temporary folder, without .git, worktrees or caches (P208). A run that mutates the copy never
@@ -250,8 +324,13 @@ class RedBeforeMutation(Exception):
     """The suite is not green before any mutation: a red suite catches nothing."""
 
 
-def run(root, tests, mutations):
-    """Every mutation, each restored before the next, and the suite confirmed green at the end."""
+def run(root, tests, mutations, copied=False):
+    """
+    Every mutation, each restored before the next, and the suite confirmed green at the end.
+
+    `copied` says `root` is a copy that is deleted after the run, so there is nothing to restore and the end check is
+    skipped (P424: it cost a whole suite, 207 s on 2026-10-28).
+    """
     lock = root / LOCK_NAME
     if lock.exists():
         raise AnotherRunIsActive("%s exists: another run is rewriting these files, or a killed "
@@ -263,12 +342,12 @@ def run(root, tests, mutations):
         # seconds both passed the lock test and both took the lock (audit C8). Under it now.
         if not suite_is_green(root, tests):
             raise RedBeforeMutation("the suite is not green BEFORE any mutation; a red suite catches nothing")
-        return _run(root, tests, mutations, near_sets(root, tests, mutations))
+        return _run(root, tests, mutations, near_sets(root, tests, mutations), copied)
     finally:
         lock.unlink(missing_ok=True)
 
 
-def _run(root, tests, mutations, near_by_file):
+def _run(root, tests, mutations, near_by_file, copied):
     results, imports_before = [], {}
     for mutation in mutations:
         path = root / mutation["file"]
@@ -300,8 +379,7 @@ def _run(root, tests, mutations, near_by_file):
                         "detail": "" if not green else
                         "the suite stayed green — no test notices this defect"})
 
-    restored = suite_is_green(root, tests)
-    return results, restored
+    return results, copied or suite_is_green(root, tests)
 
 
 def verdict(results, restored):
@@ -343,9 +421,16 @@ def main(argv=None):
                         help="only the rows for these files, or for everything under these folders")
     parser.add_argument("--copy", action="store_true",
                         help="mutate a temporary copy of the tree, never the files you or an agent have open")
+    parser.add_argument("--retarget", nargs=2, metavar=("OLD", "NEW"),
+                        help="instead of a run: in these tables, move every row whose `file` is OLD to NEW (the text is "
+                             "edited, so the tables keep their alignment); then prove them with --anchors")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
+    if args.retarget:
+        if args.anchors or args.paths or args.copy:
+            parser.error("--retarget runs alone: it takes no --anchors, --for or --copy")
+        return retarget_tables(args.table, *args.retarget)
     root = Path(args.root).resolve()
     mutations = []
     for table in args.table:
@@ -376,12 +461,12 @@ def main(argv=None):
     started = time.monotonic()
     where = copy_of(root) if args.copy else root
     try:
-        results, restored = run(where, args.tests, mutations)
+        results, restored = run(where, args.tests, mutations, copied=where is not root)
     except (AnotherRunIsActive, RedBeforeMutation) as stopped:
         print(str(stopped), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     finally:
-        if args.copy:
+        if where is not root:
             __import__("shutil").rmtree(where.parent, ignore_errors=True)
     code = verdict(results, restored)
     if args.json:
