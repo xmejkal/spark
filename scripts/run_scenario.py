@@ -72,6 +72,8 @@ WHY_NO_KEY = "a step of the scenario has no kind"
 WHY_NOT_COUNTED = "the log says its steps were not counted"
 WHY_BAD_COUNTS = "the log's step counts line is malformed"
 WHY_LOG_UNREADABLE = "the log cannot be read"
+#: Why SimulationLimits is outcomes.NOT_CHECKED when the log has the section: it holds no limit line.
+WHY_NO_LIMIT_LINE = "the log's limits section has no limit line"
 #: The log's section that holds the simulation's limits note, when the project has one (P396).
 LIMITS_SECTION = "--- what this simulation cannot show ---"
 #: The log's section that holds the scenario as run: it ends the limits section above it.
@@ -202,6 +204,35 @@ class ScenarioSteps:
             return STEP_COUNTS_LINE + STEPS_NOT_READ
         kinds = sorted(set(self.counts) | {SET_CONTROL, EXPECT_PIN})
         return STEP_COUNTS_LINE + ", ".join("%s %d" % (kind, self.count(kind)) for kind in kinds)
+
+
+# --- MVP ---
+class SimulationLimits:
+    """
+    Value: what no simulation can show of the project, from the log of a run (P345). `limits` is a list of sim_project.Limit.
+    `state` is an outcomes word: RECORDED (the log's limits section holds at least one limit), NONE_RECORDED (the log has no
+    section: a project with no note, or a log older than P396) or NOT_CHECKED (the log cannot be read, or its section has no
+    limit line, and `why` says which). `from_log` only cuts the section out of the log, and sim_project.limits_in reads its text.
+    """
+
+    def __init__(self, limits, state=outcomes.RECORDED, why=None):
+        self.limits, self.state, self.why = list(limits), state, why
+
+    @classmethod
+    def from_log(cls, log):
+        """
+        The SimulationLimits of a log; it never raises. The section counts only where `write_log` puts it: right after the
+        header, so the scenario or the board's output, which come later, cannot forge a limit. It ends at the scenario's section.
+        """
+        try:
+            _, _, body = Path(log).read_text(errors="replace").partition("\n\n")
+        except OSError:
+            return cls([], outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
+        if not body.startswith(LIMITS_SECTION + "\n"):
+            return cls([], outcomes.NONE_RECORDED)
+        limits = sim_project.limits_in(body[len(LIMITS_SECTION):].split(SCENARIO_SECTION, 1)[0])
+        return cls(limits) if limits else cls([], outcomes.NOT_CHECKED, WHY_NO_LIMIT_LINE)
+# --- end MVP ---
 
 
 def image_in(toml):

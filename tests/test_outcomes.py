@@ -100,6 +100,14 @@ def read_log(text):
     return run_scenario.ScenarioSteps.from_log(log)
 
 
+def read_limits(text):
+    """SimulationLimits.from_log with `text` as the log (None: no file)."""
+    log = Path(tempfile.mkdtemp()) / "a.log"
+    if text is not None:
+        log.write_text(text)
+    return run_scenario.SimulationLimits.from_log(log)
+
+
 def read_firmware(case):
     """sim_project.firmware_in with `case` as the wokwi.toml: None (no file), text, ("folder", None) or ("bytes", the bytes)."""
     folder = Path(tempfile.mkdtemp())
@@ -150,6 +158,12 @@ READERS = {
         "malformed": (LOG_HEADER + "step counts: set-control x\n\n", "not-checked"),
         "older, with no counts line": (LOG_HEADER + "\nbody\n", "none-recorded"),
         "good": (LOG_HEADER + "step counts: set-control 1, wait-serial 2\n\n", "recorded")}),
+    "SimulationLimits.from_log": (read_limits, {
+        "missing": (None, "not-checked"),
+        "malformed": (LOG_HEADER + "\n--- what this simulation cannot show ---\n# Limits\n\n--- the scenario as run ---\n", "not-checked"),
+        "older, with no section": (LOG_HEADER + "\nbody\n", "none-recorded"),
+        "good": (LOG_HEADER + "\n--- what this simulation cannot show ---\n- **A** — no part\n\n--- the scenario as run ---\n",
+                 "recorded")}),
     "boards.read_simulated_part": (read_definition, {
         "missing": (None, "none-recorded"),
         "malformed": ('{"pins": ', "not-checked"),

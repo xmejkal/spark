@@ -343,6 +343,23 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
         self.assertIn("The rest say what spark did not check or leaves out of the diagram.", note)
         self.assertIn("- **ONBOARD_DISPLAY** — spark adds no part to the diagram", note)
 
+    def test_limits_in_reads_what_limits_note_writes(self):
+        note = sim_project.limits_note([("Valve1, Valve2", "no MOSFET"), self.DISPLAY, ("Jack", "not simulated at all: no model")])
+        self.assertEqual(sim_project.limits_in(note), [
+            ("Valve1, Valve2", "no MOSFET"), self.DISPLAY, ("Jack", "not simulated at all: no model")])
+        self.assertEqual(sim_project.limits_in(note)[0].component, "Valve1, Valve2")
+        self.assertEqual(sim_project.limits_in(sim_project.limits_note([])), [])
+
+    def test_a_line_that_is_not_the_shape_gives_no_component(self):
+        text = "intro\n\n- just words\n- **A**: no dash\n- **B** — fine\n- **C* — one star\n"
+        self.assertEqual(sim_project.limits_in(text), [
+            ("", "just words"), ("", "**A**: no dash"), ("B", "fine"), ("", "**C* — one star")])
+        self.assertEqual(sim_project.limits_in("nothing here\n\nor here\n"), [])
+
+    def test_a_continuation_line_joins_the_limit_above(self):
+        note = sim_project.limits_note([("A", "first line\nsecond line"), ("B", "alone")])
+        self.assertEqual(sim_project.limits_in(note), [("A", "first line second line"), ("B", "alone")])
+
     def test_the_note_holds_the_records_lines_and_the_boards(self):
         work = Path(tempfile.mkdtemp())
         design = FakeDesign([{"id": "valve", "name": "Valve",

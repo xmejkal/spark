@@ -13,7 +13,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import NamedTuple, Optional
 
 import boards
 import emit_board
@@ -108,6 +108,44 @@ def limits_of(design):
     return sorted((", ".join(sorted(names)), sentence) for sentence, names in together.items())
 
 
+# --- MVP ---
+#: How a limit line of the note begins, how its component is marked and what comes between the component and the sentence:
+#: `limits_note` writes `- **component** — sentence`, and `limits_in` reads it back.
+LIMIT_PREFIX, LIMIT_MARK, LIMIT_DASH = "- ", "**", " — "
+
+
+class Limit(NamedTuple):
+    """Value: one limit of the note, what the simulation cannot show of a `component`. The component is "" when a line has no shape of `limits_note`'s."""
+
+    component: str
+    sentence: str
+
+
+def limits_in(note_text):
+    """
+    The Limits a note's text holds, in order, as `limits_note` wrote them; it never raises. The lines before the first limit line
+    are skipped. A limit line that does not continue the shape `- **component** — sentence` gives the component "" and the text
+    after the prefix. A line without the prefix after the first limit joins the limit above it with a space, since
+    `limits_note` writes a sentence with a line break as it is. Blank lines are skipped.
+    """
+    found = []
+    for line in note_text.splitlines():
+        if line.startswith(LIMIT_PREFIX):
+            found.append(_limit_of(line[len(LIMIT_PREFIX):]))
+        elif found and line.strip():
+            found[-1] = Limit(found[-1].component, "%s %s" % (found[-1].sentence, line.strip()))
+    return found
+
+
+def _limit_of(text):
+    """The Limit of one limit line, after its prefix."""
+    end = text.find(LIMIT_MARK, len(LIMIT_MARK))
+    if text.startswith(LIMIT_MARK) and end > 0 and text[end + len(LIMIT_MARK):].startswith(LIMIT_DASH):
+        return Limit(text[len(LIMIT_MARK):end], text[end + len(LIMIT_MARK) + len(LIMIT_DASH):].strip())
+    return Limit("", text.strip())
+# --- end MVP ---
+
+
 def limits_note(limits):
     """The same, as the file a person finds beside the diagram rather than in a terminal they closed."""
     lines = ["# What this simulation cannot show", "",
@@ -117,7 +155,7 @@ def limits_note(limits):
              "A scenario passing over any of these proves what the FIRMWARE did, and nothing about",
              "the hardware the stand-in replaced or the board's part that Wokwi lacks.", ""]
     for component, sentence in limits:
-        lines.append("- **%s** — %s" % (component, sentence))
+        lines.append(LIMIT_PREFIX + LIMIT_MARK + component + LIMIT_MARK + LIMIT_DASH + sentence)
     return "\n".join(lines) + "\n"
 
 

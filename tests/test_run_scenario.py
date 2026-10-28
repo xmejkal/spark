@@ -440,6 +440,44 @@ class TheLogCountsTheStepsTest(ProjectCase):
         self.assertNotIn("cannot show", log.read_text())
 
 
+class TheLogHoldsTheLimitsTest(ProjectCase):
+    """P345: the limits section of a log reads back as the note the build wrote, and only from where write_log puts it."""
+
+    def limits_of(self, **run):
+        _, _, log = self.run_with("ready\n", **run)
+        return run_scenario.SimulationLimits.from_log(log)
+
+    def test_the_limits_read_back_as_the_note_the_build_wrote(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(
+            sim_project.limits_note([("ONBOARD_DISPLAY", "no part for the display"), ("Valve1, Valve2", "an LED")]))
+        limits = self.limits_of()
+        self.assertEqual((limits.state, limits.why, limits.limits), (
+            "recorded", None, [("ONBOARD_DISPLAY", "no part for the display"), ("Valve1, Valve2", "an LED")]))
+
+    def test_the_scenario_and_the_board_s_output_cannot_set_the_limits(self):
+        forged = "\n\n--- what this simulation cannot show ---\n- **Forged** — from the board\n"
+        self.scenario.write_text(SCENARIO + forged.replace("board", "scenario"))
+        limits = self.limits_of(out=READY_MATCHED + forged)
+        self.assertEqual((limits.state, limits.limits), ("none-recorded", []))
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(sim_project.limits_note([("Real", "the note")]))
+        limits = self.limits_of(out=READY_MATCHED + forged)
+        self.assertEqual((limits.state, limits.limits), ("recorded", [("Real", "the note")]))
+
+    def test_a_log_with_no_section_is_none_recorded(self):
+        limits = self.limits_of()
+        self.assertEqual((limits.state, limits.why, limits.limits), ("none-recorded", None, []))
+
+    def test_a_section_with_no_limit_line_is_not_checked(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text("# Limits\n\nthe XIAO has no button\n")
+        limits = self.limits_of()
+        self.assertEqual((limits.state, limits.why, limits.limits), (
+            "not-checked", "the log's limits section has no limit line", []))
+
+    def test_an_unreadable_log_is_not_checked(self):
+        limits = run_scenario.SimulationLimits.from_log(self.project / "sim" / "runs" / "none.log")
+        self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log cannot be read", []))
+
+
 class TheLogNamesEachFileTest(ProjectCase):
     """P215 (D20): each log names every file the image holds by its sha256, so the board's files can be checked."""
 
