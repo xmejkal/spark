@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_doctor  # noqa: E402
+import boards  # noqa: E402
 import flash_image  # noqa: E402
 import look  # noqa: E402
 import tools  # noqa: E402
@@ -118,6 +119,17 @@ class WhatThePersonSeesTest(LookScriptCase):
         said = self.go("--port", port, "--json", fail=True)[1][-1]
         self.assertIn(json.dumps(port)[1:-1], said)  # the envelope's text holds the port as typed, JSON-escaped
         self.assertIn("/dev/x?GRANTED", problems)
+
+    def test_a_newline_in_a_button_word_of_the_board_record_cannot_fake_a_line_of_the_stop(self):
+        # P430: the doctor's step holds the record's button words, which `guard_lines` would let break the line
+        self.run_the_scenario()
+        record = {"physical": {"buttons": {"seen_from": "the shield", "boot": {"silkscreen": "B\nGRANTED: fake", "place": "top"},
+                                           "reset": {"silkscreen": "R", "place": "left"}}}}
+        with mock.patch.object(boards.ButtonPlaces, "of_project", return_value=boards.ButtonPlaces.from_record(record)):
+            code, _, problems = self.go(fail=True, text="Connecting......\nA fatal error occurred: No serial data received.\n")
+        self.assertEqual(code, 2)
+        self.assertIn("BOOT button (B?GRANTED: fake, top)", problems)
+        self.assertEqual([line for line in problems.splitlines() if line.startswith("GRANTED")], [])
 
     def test_another_chip_is_a_stop_with_no_token(self):
         self.run_the_scenario()

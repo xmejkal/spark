@@ -72,9 +72,12 @@ def main(argv=None, run=subprocess.run):
         report = board_look.looker(args.project, run).run(args.project, args.port, evidence)
     except board_look.LookStop as stop:
         lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
-        print(guard_sentence("\n".join(lines), args.port), file=sys.stderr)  # --- MVP --- the port as typed, one line (P430)
+        places = boards.ButtonPlaces.of_project(args.project)
+        # --- MVP --- the port, the project path and the board record's button words as typed or written, each on one line (P430)
+        print(guard_sentence("\n".join(lines), args.port, args.project, places.boot, places.reset, places.orientation),
+              file=sys.stderr)
         if args.json:
-            _print_json(board_envelope.look_stop_envelope(stop, doctor, boards.ButtonPlaces.of_project(args.project)))
+            _print_json(board_envelope.look_stop_envelope(stop, doctor, places))
         return EXIT_COULD_NOT_RUN
     if args.json:
         _print_json(board_envelope.look_envelope(report, args.project.resolve(), evidence))

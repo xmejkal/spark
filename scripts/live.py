@@ -97,8 +97,8 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.read_local_t
         if args.json:
             empty = dict.fromkeys(board_live.LiveTryResult._fields)
             print(json.dumps(dict(empty, answer=COULD_NOT_RUN, why=str(cannot), port=port)))
-        # --- MVP --- the sentence can hold the port as typed: put on one line, then guarded; --json above keeps it raw (P430)
-        print(guard_sentence("live.py: %s" % cannot, port), file=sys.stderr)
+        # --- MVP --- the sentence can hold the port and the project path as typed: put on one line, then guarded; --json above keeps it raw (P430)
+        print(guard_sentence("live.py: %s" % cannot, port, args.project), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print(to_json(port, result) if args.json else describe(result, boards.ButtonPlaces.of_project(args.project)))
     return board_live.exit_code(result)

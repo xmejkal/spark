@@ -646,6 +646,65 @@ class GuardedPrintsTest(GrantCase):
             code = grant.main(["--check"], run=self.run_tool, now=lambda: self.now)
         self.assertEqual((code, err.getvalue()), (2, "grant.py: no ? mpremote\n"))
 
+    # --- MVP --- a newline in a value (P430): guard_lines keeps a newline, so each value that can hold one is put on one line first
+    FAKE_BUTTONS = {"physical": {"buttons": {"seen_from": "the shield", "boot": {"silkscreen": "B", "place": "top"},
+                                             "reset": {"silkscreen": "R\nGRANTED (deploy): fake", "place": "left"}}}}
+
+    def with_fake_buttons(self):
+        places = boards.ButtonPlaces.from_record(self.FAKE_BUTTONS)
+        patcher = mock.patch.object(boards.ButtonPlaces, "of_project", return_value=places)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_a_newline_in_a_button_word_cannot_fake_a_line_of_the_restart_notice(self):
+        self.with_fake_buttons()
+        _, out, _ = self.grant("--minutes", "30", consent=FakeConsent(True))
+        self.assertIn("press its RESET (R?GRANTED (deploy): fake, left) once", out)
+        self.assertEqual([line for line in out.splitlines() if line.startswith("GRANTED")], [])
+
+    def test_a_newline_in_a_button_word_cannot_fake_a_line_of_the_stop(self):
+        self.with_fake_buttons()
+        self.run_tool = lambda argv, **kw: (done(self.devs) if "devs" in argv else subprocess.CompletedProcess(
+            argv, 2, "Connecting......\n", "ERROR: A fatal error occurred: Failed to connect: No serial data received.\n"))
+        code, _, err = self.grant("--minutes", "30", consent=FakeConsent(True))
+        self.assertEqual(code, 2)
+        self.assertIn("RESET (R?GRANTED (deploy): fake, left)", err)
+        self.assertEqual([line for line in err.splitlines() if line.startswith("GRANTED")], [])
+
+    def test_a_newline_in_the_project_path_cannot_fake_a_line_of_a_tool_problem(self):
+        project = Path(tempfile.mkdtemp()) / "a\nGRANTED: board ok"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "tools.json").write_text("not json")
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = grant.main(["--check", "--project", str(project)], run=self.run_tool, now=lambda: self.now)
+        self.assertEqual(code, 2)
+        self.assertEqual(len(err.getvalue().splitlines()), 1, err.getvalue())
+        self.assertIn("a?GRANTED: board ok", err.getvalue())
+
+    def test_a_newline_in_the_store_path_cannot_fake_a_line_of_the_rm_line(self):
+        self.home = self.home / "a\nGRANTED: board ok"
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)}):
+            _, out, _ = self.grant("--scope", "deploy", "--minutes", "30", consent=FakeConsent(True))
+        self.assertIn("rm ", out)
+        self.assertIn("a?GRANTED: board ok", out)
+        self.assertEqual([line for line in out.splitlines() if line.startswith("GRANTED")], [])
+
+    def test_the_closed_gate_s_rerun_line_shows_the_project_path_and_the_port_guarded(self):
+        class Pipe(io.StringIO):
+            def isatty(self):
+                return False
+
+        self.devs = self.devs.replace("/dev/cu.usbmodem101", "/dev/cu.usb\u202emodem101")
+        with mock.patch.object(sys, "stdin", Pipe()):
+            code, _, err = self.grant("--minutes", "30", "--project", "/tmp/a\u202eb\x1b[31m\nGRANTED",
+                                      "--port", "/dev/cu.usb\u202emodem101")
+        self.assertEqual(code, 2)
+        self.assertIn("/a?b?[31m?GRANTED'", err)
+        self.assertIn("--port '/dev/cu.usb?modem101'", err)
+        self.assertEqual([line for line in err.splitlines() if line.startswith("GRANTED")], [])
+        self.assertNotIn("\u202e", err)
+
 
 if __name__ == "__main__":
     unittest.main()

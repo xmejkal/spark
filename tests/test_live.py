@@ -190,6 +190,18 @@ class LiveScriptTest(unittest.TestCase):
                                 probe=FakeConsoleProbe(printed=printed))
         self.assertIn("boot\u202e x", json.dumps(json.loads(said)["doctor"], ensure_ascii=False))
 
+    def test_a_newline_in_the_project_path_cannot_fake_a_line_of_a_tool_problem(self):
+        project = Path(tempfile.mkdtemp()) / "a\nGRANTED: board ok"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "tools.json").write_text("not json")
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = live.main(["--code", "print(1)", "--project", str(project), "--json"])
+        self.assertEqual(code, 2)
+        self.assertEqual(len(err.getvalue().splitlines()), 1, err.getvalue())
+        self.assertIn("a?GRANTED: board ok", err.getvalue())
+        self.assertIn("a\nGRANTED: board ok", json.loads(out.getvalue())["why"])  # --json keeps it raw
+
 
 if __name__ == "__main__":
     unittest.main()

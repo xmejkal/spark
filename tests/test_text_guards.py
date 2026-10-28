@@ -45,6 +45,9 @@ class GuardSentenceTest(unittest.TestCase):
     def test_each_name_is_put_on_one_line(self):
         self.assertEqual(text_guards.guard_sentence("p\ne q\nr", "p\ne", "q\nr"), "p?e q?r")
 
+    def test_a_path_is_put_on_one_line_too(self):
+        self.assertEqual(text_guards.guard_sentence("bad json in /tmp/a\nb/x.json", Path("/tmp/a\nb")), "bad json in /tmp/a?b/x.json")
+
 
 class PrintableTest(unittest.TestCase):
     def test_printable_shows_what_a_terminal_does_not_print_as_a_question_mark(self):

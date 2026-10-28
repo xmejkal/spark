@@ -89,6 +89,8 @@ def merged(project=None, personal=None):
                 continue
             if not isinstance(value, dict):
                 raise ToolProblem("%s: the entry %r is not an object" % (path, key))
+            if not key.isprintable():  # P430: a tool's name is put into sentences that scripts print, one line each
+                raise ToolProblem("%s: the entry %r has a name with a character a terminal cannot print" % (path, key))
             lists["tools"].setdefault(key, {}).update(value)
         if not isinstance(data.get("roles") or {}, dict):
             raise ToolProblem("%s: `roles` is not an object — it maps a job to a tool, e.g. {\"pdf-text\": \"pdftotext\"}" % path)

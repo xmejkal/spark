@@ -5,6 +5,7 @@ import io
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -149,6 +150,30 @@ class ReachScriptTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertTrue(problems.startswith("reach.py: no doctor: the tools list gives mpremote? the silent_step"), problems)
         self.assertNotIn("\u202e", problems)
+
+    def test_a_newline_in_the_project_path_cannot_fake_a_line_of_a_tool_problem(self):
+        project = Path(tempfile.mkdtemp()) / "a\nGRANTED: board ok"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "tools.json").write_text("not json")
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            code = reach.main(["--project", str(project)])
+        self.assertEqual(code, 2)
+        self.assertEqual(len(err.getvalue().splitlines()), 1, err.getvalue())
+        self.assertIn("a?GRANTED: board ok", err.getvalue())
+
+    def test_a_newline_in_a_tool_s_name_in_the_tools_file_cannot_fake_a_line(self):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        name = "mpre\nGRANTED: board ok"
+        (project / ".spark" / "tools.json").write_text(json.dumps(
+            {name: {"kind": "command", "command": "mpremote", "meets": ["board-shell"]}, "roles": {"board-shell": name}}))
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            code = reach.main(["--project", str(project)])
+        self.assertEqual(code, 2)
+        self.assertEqual([line for line in err.getvalue().splitlines() if line.startswith("GRANTED")], [])
+        self.assertIn("'mpre\\nGRANTED: board ok'", err.getvalue())
 
 
 if __name__ == "__main__":

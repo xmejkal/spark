@@ -42,12 +42,13 @@ def guard_lines(text):
 # --- MVP ---
 def guard_sentence(text, *flat):
     """
-    A sentence for a terminal that holds names the person typed, such as a `--port` (P430): each value in `flat` is put on one
-    line first, as `printable` does, then the text goes through `guard_lines`. A name with its own newline cannot fake a line
-    of the sentence. Only the value as it stands in the text is found, so give the value as the script holds it.
+    A sentence for a terminal that holds names the person typed, such as a `--port` or a `--project` (P430): each value in
+    `flat` (a string, a path, or an empty value that is skipped) is put on one line first, as `printable` does, then the text
+    goes through `guard_lines`. A name with its own newline cannot fake a line of the sentence. Only the value as it stands in
+    the text is found, so give the value as the script holds it.
     """
     for each in flat:
-        text = text.replace(each, printable(each)) if each else text
+        text = text.replace(str(each), printable(str(each))) if each else text
     return guard_lines(text)
 
 
