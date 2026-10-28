@@ -62,6 +62,25 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
             tools.merged(None, layer("{not json"))
         self.assertIn("is not JSON", str(refused.exception))
 
+    def test_a_tool_name_with_a_newline_is_refused_and_named_with_its_escape(self):
+        # P430: a tool's name goes into sentences that scripts print, so a name that breaks the line is refused where it is read
+        with self.assertRaises(tools.ToolProblem) as refused:
+            tools.merged(None, layer({"mpre\nGRANTED: board ok": {"kind": "command"}}))
+        self.assertIn("'mpre\\nGRANTED: board ok'", str(refused.exception))
+        self.assertNotIn("\n", str(refused.exception))
+
+    def test_a_name_in_needs_with_a_newline_is_refused_too(self):
+        with self.assertRaises(tools.ToolProblem) as refused:
+            tools.merged(None, layer({"mpremote": {"kind": "command", "needs": ["py\nGRANTED: board ok"]}}))
+        self.assertIn("'py\\nGRANTED: board ok'", str(refused.exception))
+        self.assertNotIn("\n", str(refused.exception))
+
+    def test_a_tab_a_zero_width_joiner_and_a_no_break_space_in_a_name_are_refused_like_the_rest(self):
+        # by choice (P430): the same test as `printable`, so a name never shows as `?` in a sentence
+        for hidden in ("\t", "\u200d", "\u00a0"):
+            with self.subTest(hidden=repr(hidden)), self.assertRaises(tools.ToolProblem):
+                tools.merged(None, layer({"mpre%smote" % hidden: {"kind": "command"}}))
+
     def test_a_tools_file_that_is_not_an_object_is_named(self):
         with self.assertRaises(tools.ToolProblem) as refused:
             tools.merged(None, layer("[1, 2]"))

@@ -12,7 +12,7 @@ import board_look
 import boards
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from outcomes import EXIT_COULD_NOT_RUN, AnsweringParser, BadArgument
-from text_guards import guard_lines
+from text_guards import guard_lines, guard_sentence
 
 EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash_id`. It writes nothing,
 erases nothing and changes no flash. The board restarts while esptool reads it: a running program stops and starts again.
@@ -77,9 +77,12 @@ def main(argv=None, run=subprocess.run):
         report = board_look.looker(args.project, run).run(args.project, args.port, evidence)
     except board_look.LookStop as stop:
         lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
-        print(guard_lines("\n".join(lines)), file=sys.stderr)
+        places = boards.ButtonPlaces.of_project(args.project)
+        # --- MVP --- the port, the project path (a tool problem names its tools file) and the button words, each on one line (P430)
+        print(guard_sentence("\n".join(lines), args.port, args.project, places.boot, places.reset, places.orientation),
+              file=sys.stderr)
         if args.json:
-            _print_json(board_envelope.look_stop_envelope(stop, doctor, boards.ButtonPlaces.of_project(args.project)))
+            _print_json(board_envelope.look_stop_envelope(stop, doctor, places))
         return EXIT_COULD_NOT_RUN
     if args.json:
         _print_json(board_envelope.look_envelope(report, args.project.resolve(), evidence))

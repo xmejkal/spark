@@ -17,6 +17,7 @@ from board_connection import BoardConnection
 from board_console import ConsoleProbe
 from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN
 from restricted_pins import BrokenRecordError
+from text_guards import guard_sentence, printable
 
 EPILOG = """live.py --code 'print(1)' runs the code on the board on USB with mpremote's exec, after two checks that do not
 touch the board. First, the board must have a grant now: the person runs %s in their own terminal,
@@ -57,7 +58,8 @@ def describe(result, places=boards.ButtonPlaces.EMPTY):
                    % ", ".join(str(gpio) for gpio in result.gpio_numbers_in_code))
     if result.doctor:
         out += board_doctor.describe(result.doctor, places)
-    return "\n".join("  " + line for line in out)
+    # --- MVP --- the board's reply and the doctor's lines are data, one line each, shown guarded (P430)
+    return "\n".join("  " + printable(line) for line in out)
 
 
 def to_json(port, result):
@@ -95,7 +97,8 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.read_local_t
         if args.json:
             empty = dict.fromkeys(board_live.LiveTryResult._fields)
             print(json.dumps(dict(empty, answer=COULD_NOT_RUN, why=str(cannot), port=port)))
-        print("live.py: %s" % cannot, file=sys.stderr)
+        # --- MVP --- the sentence can hold the port and the project path as typed: put on one line, then guarded; --json above keeps it raw (P430)
+        print(guard_sentence("live.py: %s" % cannot, port, args.project), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print(to_json(port, result) if args.json else describe(result, boards.ButtonPlaces.of_project(args.project)))
     return board_live.exit_code(result)

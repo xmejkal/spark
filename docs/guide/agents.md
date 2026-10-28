@@ -500,7 +500,11 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
-**What the text output shows (P423).** In the text output of `parts.py`, `look.py`, `deploy.py`, `check_spine.py` and `run_scenario.py`, a character that a terminal does not print, such as a control character or a right-to-left override, shows as `?`. A text's own line breaks stay. `--json` carries the raw text, so decide on the JSON and not on the screen. `run_scenario.py` has no `--json`, and its log file in `sim/runs/` keeps the raw text. The question that `deploy.py` asks you to type yes to is guarded too. Two paths still print raw text: the flash tool that `deploy.py` runs writes its own output to the terminal; and `grant.py`, `live.py` and `reach.py` do not guard yet.
+**What the text output shows (P423, P430).** The text output of `parts.py`, `look.py`, `deploy.py`, `check_spine.py`, `run_scenario.py`, `grant.py`, `live.py` and `reach.py`:
+
+- Guarded: a character that a terminal does not print, such as a control character or a right-to-left override, shows as `?`. A text's own line breaks stay. A value that can hold a line break of its own (a port, a project path, a button word of a board record) is put on one line first, so it cannot fake a line. This holds for the question that `deploy.py` asks you to type yes to, and for the sentence `grant.py` gives when it has no terminal to ask in (it holds the line to run, with your project path and port). A tools file is refused when a tool's name, or a name in its `needs`, holds a character that `str.isprintable` rejects: a control character or a bidi mark, and also a tab, a zero-width joiner (U+200D) or a no-break space (U+00A0), which an older spark let through. The `rm` path that `grant.py` prints after a deploy grant may show `?`: copy it from the store, not from the screen.
+- Raw: `--json` carries the raw text, so decide on the JSON and not on the screen (`check_spine.py --json` holds the raw text of a crash). `run_scenario.py` has no `--json`, and its log file in `sim/runs/` keeps the raw text. Two paths print raw text: the flash tool that `deploy.py` runs writes its own output to the terminal, and `emit_footprint.py` prints its own messages.
+- Exact reply: in the text of `live.py` a tab in the board's reply shows as `?`, so read `output` from `--json` for the exact reply.
 
 ### look.py and deploy.py's envelope
 
@@ -657,8 +661,9 @@ count.
    through a series resistor, but the board states no power.io_volts — nothing to compute it from`. `check_spine.py`
    shows it as `[????] schematic` with that sentence, then `the chain was NOT exercised — this is not a pass`, exit 2
    ([P121](https://github.com/xmejkal/spark/issues/55)). An `emit_board.py` that crashes inside `check_spine.py` is
-   could-not-run too: the `schematic` stage's detail is `emit_board.py crashed: ` and the traceback's last line. A stage
-   detail that starts `Traceback (most recent call last):` is a crash, not a defect in the design. A board whose file
+   could-not-run too: the `schematic` stage's detail is `emit_board.py crashed: ` and the traceback's last line. A crash in the
+   spine's own read of the input or in the footprint drawing reads `<script> crashed: <Type>: <message>`, such as
+   `emit_footprint.py crashed: RuntimeError: boom`. Such a detail is a crash, not a defect in the design. A board whose file
    cannot give a footprint stops at `[????] footprint`, before the schematic. The detail names each missing fact (the
    gaps `emit_footprint.py` names), then says what the build still gives: with `--keep`, the kept lines say whether
    `firmware/pins.py` was written. A board whose header and pad order disagree, or hold a value of the wrong kind (a pitch

@@ -17,6 +17,7 @@ import store
 import tools
 from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
 from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
+from text_guards import guard_lines, guard_sentence, printable
 
 RESTART = ("the board restarts while it is read: a running program stops and starts again. Nothing is erased or "
            "written. If it then waits in download mode, press its %(reset)s once%(orientation)s.")
@@ -89,7 +90,7 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
         finder = board_look.PortFinder(tools.find("board-shell", args.project), run)
         if args.check:
             result = board_grant.GrantService(finder, now=now).check(args.port)
-            print(to_json(result) if args.json else describe(result))
+            print(to_json(result) if args.json else guard_lines(describe(result)))  # --- MVP --- the MAC is data (P430)
             return EXIT_OK if result.granted else EXIT_PROBLEMS
         places = boards.ButtonPlaces.of_project(args.project)
         hint = flasher.EsptoolFlasher.boot_hint_for(places)
@@ -97,25 +98,32 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
         line = format_rerun_line(__file__, (["--scope", args.scope] if args.scope != board_grant.SCOPE_LIVE else [])
                                  + ["--minutes", args.minutes, "--project", args.project.resolve()]
                                  + (["--port", args.port] if args.port else []))
+        notice = "  " + RESTART % {"reset": places.reset, "orientation": places.orientation}
         grant = board_grant.GrantService(finder, reader, now=now).issue(
-            args.port, args.minutes, consent or TerminalConsentStrategy(line), before_look=lambda: print("  " + RESTART % {"reset": places.reset, "orientation": places.orientation}),
+            args.port, args.minutes, consent or TerminalConsentStrategy(line),
+            before_look=lambda: print(guard_sentence(notice, places.reset, places.orientation)),  # --- MVP --- button words are data (P430)
             scope=args.scope)
     except GateClosedError as closed:
-        print("grant.py: %s" % closed, file=sys.stderr)
+        # --- MVP --- the closed gate's sentence holds the rerun line: the project path and the port, quoted as that line quotes them (P430)
+        print(guard_sentence("grant.py: %s" % closed, shlex.quote(str(args.project.resolve())), shlex.quote(args.port) if args.port else None),
+              file=sys.stderr)
         return closed.code
     except (tools.ToolProblem, board_look.LookStop) as cannot:
         if args.json:
             print(to_json(board_grant.GrantCheckResult(False, None, board_grant.WHY_COULD_NOT_RUN)))
         if isinstance(cannot, board_look.LookStop):
-            print("\n".join(board_doctor.stop_lines("grant.py", cannot, args.project, run)), file=sys.stderr)
+            # --- MVP --- the stop holds the port and the board record's button words, each on one line (P430)
+            shown = boards.ButtonPlaces.of_project(args.project)
+            print(guard_sentence("\n".join(board_doctor.stop_lines("grant.py", cannot, args.project, run)), args.port,
+                                 shown.boot, shown.reset, shown.orientation), file=sys.stderr)
         else:
-            print("grant.py: %s" % cannot, file=sys.stderr)
+            print(guard_sentence("grant.py: %s" % cannot, args.project), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    print("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))
+    print(guard_lines("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at)))
     if grant.scope == board_grant.SCOPE_DEPLOY:
         grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
         print("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
-              "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(str(grant_file)))
+              "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(printable(str(grant_file))))  # P430: one line
     return EXIT_OK
 
 
