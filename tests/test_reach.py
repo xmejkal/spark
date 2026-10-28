@@ -26,14 +26,14 @@ RESTART = Cure("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n", None, True, True)
 
 
 class ReachScriptTest(unittest.TestCase):
-    def go(self, *argv, answers=("reached\n",), devs="mpremote-devs-one.txt", probe=None):
+    def go(self, *argv, answers=("reached\n",), devs="mpremote-devs-one.txt", probe=None, devs_text=None):
         """(exit code, stdout, stderr, the commands run) of reach.py with fake tools."""
         answers, ran = list(answers), []
 
         def run(command, **kw):
             ran.append(command)
             if "devs" in command:
-                return done(data(devs))
+                return done(data(devs) if devs_text is None else devs_text)
             answer = answers.pop(0)
             if isinstance(answer, Exception):
                 raise answer
@@ -117,6 +117,38 @@ class ReachScriptTest(unittest.TestCase):
         tail = Cure("entry 0x4086b910\nready\n", None, False, True, True)
         _, said, _, _ = self.go(answers=(REFUSED, "reached\n"), probe=FakeConsoleProbe(cured=tail))
         self.assertIn("  cure    boot tail heard, no rst: line, the port was back\n", said)
+
+    # --- MVP --- (P430, #569) the printed lines are guarded, the --json values stay raw
+    def test_a_port_with_a_bidi_character_shows_guarded_and_json_keeps_it_raw(self):
+        port = "/dev/x\u202ey"
+        _, said, _, _ = self.go("--port", port)
+        self.assertIn("  port    /dev/x?y\n", said)
+        _, said, _, _ = self.go("--port", port, "--json")
+        self.assertEqual(json.loads(said)["port"], port)
+
+    def test_what_the_cure_heard_and_why_it_failed_show_guarded_and_json_keeps_them_raw(self):
+        heard = Cure("boot\x1b[31m\u202e x\n", "no\u202eread", False, True)
+        _, said, _, _ = self.go(answers=(REFUSED, "reached\n"), probe=FakeConsoleProbe(cured=heard))
+        self.assertIn("        its read failed: no?read\n", said)
+        self.assertIn("        boot?[31m? x\n", said)
+        _, said, _, _ = self.go("--json", answers=(REFUSED, "reached\n"), probe=FakeConsoleProbe(cured=heard))
+        self.assertEqual(json.loads(said)["cure"]["heard"], heard.heard)
+
+    def test_a_device_name_in_the_two_boards_stop_shows_guarded(self):
+        devs = data("mpremote-devs-two.txt").replace("usbserial-1410", "usbser\u202eial")
+        code, _, problems, _ = self.go(devs_text=devs)
+        self.assertEqual(code, 2)
+        self.assertIn("/dev/cu.usbser?ial", problems)
+        self.assertNotIn("\u202e", problems)
+
+    def test_a_tools_list_word_in_the_no_doctor_line_shows_guarded(self):
+        shell = tools.Tool("mpremote\u202e", "board-shell", {"kind": "python", "module": "mpremote", "silent_step": "erase"},
+                           ["/opt/python3"])
+        with mock.patch.dict(found.__globals__["FOUND"], {"board-shell": shell}):
+            code, _, problems, _ = self.go(answers=(REFUSED, REFUSED))
+        self.assertEqual(code, 2)
+        self.assertTrue(problems.startswith("reach.py: no doctor: the tools list gives mpremote? the silent_step"), problems)
+        self.assertNotIn("\u202e", problems)
 
 
 if __name__ == "__main__":
