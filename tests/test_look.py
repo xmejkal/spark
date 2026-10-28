@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -130,6 +131,18 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(code, 2)
         self.assertIn("BOOT button (B?GRANTED: fake, top)", problems)
         self.assertEqual([line for line in problems.splitlines() if line.startswith("GRANTED")], [])
+
+    def test_a_newline_in_the_project_path_cannot_fake_a_line_of_a_tool_problem_stop(self):
+        # P430: looker turns a ToolProblem into a stop whose text holds the project's tools file path
+        project = Path(tempfile.mkdtemp()) / "a\nGRANTED (deploy): board ok"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "tools.json").write_text("not json")
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = look.main(["--project", str(project)])
+        self.assertEqual(code, 2)
+        self.assertIn("a?GRANTED (deploy): board ok", err.getvalue())
+        self.assertEqual([line for line in err.getvalue().splitlines() if line.startswith("GRANTED")], [])
 
     def test_another_chip_is_a_stop_with_no_token(self):
         self.run_the_scenario()

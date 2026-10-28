@@ -73,8 +73,8 @@ def main(argv=None, run=subprocess.run):
     except board_look.LookStop as stop:
         lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
         places = boards.ButtonPlaces.of_project(args.project)
-        # --- MVP --- the port and the board record's button words as typed or written, each on one line (P430)
-        print(guard_sentence("\n".join(lines), args.port, places.boot, places.reset, places.orientation),
+        # --- MVP --- the port, the project path (a tool problem names its tools file) and the button words, each on one line (P430)
+        print(guard_sentence("\n".join(lines), args.port, args.project, places.boot, places.reset, places.orientation),
               file=sys.stderr)
         if args.json:
             _print_json(board_envelope.look_stop_envelope(stop, doctor, places))

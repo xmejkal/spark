@@ -175,6 +175,16 @@ class ReachScriptTest(unittest.TestCase):
         self.assertEqual([line for line in err.getvalue().splitlines() if line.startswith("GRANTED")], [])
         self.assertIn("'mpre\\nGRANTED: board ok'", err.getvalue())
 
+    def test_a_newline_in_a_needs_name_in_the_tools_file_cannot_fake_a_line(self):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / ".spark" / "tools.json").write_text(json.dumps({"mpremote": {"needs": ["py\nGRANTED: board ok"]}}))
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            code = reach.main(["--project", str(project)])
+        self.assertEqual(code, 2)
+        self.assertEqual([line for line in err.getvalue().splitlines() if line.startswith("GRANTED")], [])
+
 
 if __name__ == "__main__":
     unittest.main()
