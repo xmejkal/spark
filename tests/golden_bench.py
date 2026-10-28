@@ -21,6 +21,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import boards  # noqa: E402
 import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
 
@@ -91,6 +92,9 @@ def build_project(folder):
     (project / "requirements.json").write_text(json.dumps({"board": BOARD_ID, "parts": []}))
     (project / "boards").mkdir()
     (project / "boards" / "active.json").write_text(json.dumps({"board": BOARD_ID}))
+    # The fixture invents this note: the firebeetle S3 board has no display. It makes the run copy a limits section into the log (P345).
+    (sim / "WHAT-THIS-CANNOT-SHOW.md").write_text(sim_project.limits_note(
+        [("ONBOARD_DISPLAY", boards.ONBOARD_ROLES[boards.ONBOARD_DISPLAY].not_in_diagram)]))
     scenario = sim / "scenarios" / "s.scenario.yaml"
     scenario.write_text('name: s\nversion: 1\nsteps:\n  - wait-serial: "LED on"\n')
     micropython = project / "micropython.bin"

@@ -25,6 +25,11 @@ hex digits: one from the board's MAC and one from the image (the one a passed ru
 image file). It shows that a look was made on this board for this image. It is not the yes and it is not a secret. With
 no MAC, no image or no evidence for the image, there is no token, and the line says why.
 
+For an image that a passed run tested, the look also prints what that run did not test (the caveats), and under "what this
+simulation cannot show, so test it on the board:" the limits of the project that sim/WHAT-THIS-CANNOT-SHOW.md holds, read
+from the limits section of every passed log. --json has them as data.limits, a list of {component, sentence}. With
+--no-simulation no log is read, so no limits are printed, and an empty list is not a pass: it never means the project has none.
+
 With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a token
 even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it. --no-simulation gives a
 token for an image that no simulation tested: firmware/ has a main.py, every .py file compiles, no run in sim/runs/ failed on the image and the image holds

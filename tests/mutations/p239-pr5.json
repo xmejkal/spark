@@ -1,9 +1,9 @@
 [
  {
   "file": "scripts/project_image.py",
-  "name": "find_passed_log ignores the verdict",
-  "find": "if sha256 == self.sha256 and verdict == \"passed\"), None)",
-  "replace": "if sha256 == self.sha256), None)"
+  "name": "find_passed_logs ignores the verdict",
+  "find": "if sha256 == self.sha256 and verdict == \"passed\"]",
+  "replace": "if sha256 == self.sha256]"
  },
  {
   "file": "scripts/project_image.py",

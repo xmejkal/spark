@@ -38,7 +38,7 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "a none-recorded log is said to be not checked",
-  "find": "        if steps.state == outcomes.NONE_RECORDED:\n            return [OLDER_LOG_CAVEAT]",
-  "replace": "        if steps.state == outcomes.NONE_RECORDED:\n            return [\"%s; %s\" % (outcomes.NOT_CHECKED_MESSAGE % steps.why, UNCOUNTED_ADVICE)]"
+  "find": "        return OLDER_LOG_CAVEAT",
+  "replace": "        return \"%s; %s\" % (outcomes.NOT_CHECKED_MESSAGE % steps.why, UNCOUNTED_ADVICE)"
  }
 ]

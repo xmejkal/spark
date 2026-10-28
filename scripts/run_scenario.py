@@ -72,8 +72,14 @@ WHY_NO_KEY = "a step of the scenario has no kind"
 WHY_NOT_COUNTED = "the log says its steps were not counted"
 WHY_BAD_COUNTS = "the log's step counts line is malformed"
 WHY_LOG_UNREADABLE = "the log cannot be read"
+#: Why SimulationLimits is outcomes.NOT_CHECKED when the log has the section: it holds no limit line.
+WHY_NO_LIMIT_LINE = "the log's limits section has no limit line"
+#: Why SimulationLimits is outcomes.NOT_CHECKED when the section never reaches the scenario's section: the log is cut off.
+WHY_LIMITS_CUT_OFF = "the log's limits section is cut off"
 #: The log's section that holds the simulation's limits note, when the project has one (P396).
 LIMITS_SECTION = "--- what this simulation cannot show ---"
+#: The log's section that holds the scenario as run: it ends the limits section above it.
+SCENARIO_SECTION = "--- the scenario as run ---"
 #: What --help says beyond the arguments: the cost, the token, the contract and the exit codes.
 EPILOG = """A run spends Wokwi CI minutes: ask the person before each run, whatever your permissions allow.
 It needs a Wokwi CI token (wokwi.com/dashboard/ci) in WOKWI_CLI_TOKEN: export WOKWI_CLI_TOKEN=...
@@ -182,12 +188,60 @@ class ScenarioSteps:
         """How many steps have this kind."""
         return self.counts.get(kind, 0)
 
+    # --- MVP ---
+    @classmethod
+    def merge(cls, steps):
+        """The ScenarioSteps of several runs together: the sum of the counts of the RECORDED ones. With none RECORDED, NONE_RECORDED."""
+        counted = [each for each in steps if each.state == outcomes.RECORDED]
+        if not counted:
+            return cls({}, outcomes.NONE_RECORDED)
+        total = {}
+        for each in counted:
+            for kind, number in each.counts.items():
+                total[kind] = total.get(kind, 0) + number
+        return cls(total)
+    # --- end MVP ---
+
     def line(self):
         """The log's counts line: every kind, sorted, with the two kinds that matter always shown, or `not read`."""
         if self.state != outcomes.RECORDED:
             return STEP_COUNTS_LINE + STEPS_NOT_READ
         kinds = sorted(set(self.counts) | {SET_CONTROL, EXPECT_PIN})
         return STEP_COUNTS_LINE + ", ".join("%s %d" % (kind, self.count(kind)) for kind in kinds)
+
+
+# --- MVP ---
+class SimulationLimits:
+    """
+    Value: what no simulation can show of the project, from the log of a run (P345). `limits` is a list of sim_project.Limit.
+    `state` is an outcomes word: RECORDED (the log's limits section holds at least one limit), NONE_RECORDED (the log has no
+    section: a project with no note, or a log older than P396) or NOT_CHECKED (the log cannot be read, or its section has no
+    limit line, and `why` says which). `from_log` only cuts the section out of the log, and sim_project.limits_in reads its text.
+    """
+
+    def __init__(self, limits, state=outcomes.RECORDED, why=None):
+        self.limits, self.state, self.why = list(limits), state, why
+
+    @classmethod
+    def from_log(cls, log):
+        """
+        The SimulationLimits of a log; it never raises. The section counts only where `write_log` puts it: right after the
+        header, so the scenario or the board's output, which come later, cannot forge a limit. It ends at the scenario's section.
+        """
+        try:
+            _, _, body = Path(log).read_text(errors="replace").partition("\n\n")
+        except OSError:
+            return cls([], outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
+        if not body.startswith(LIMITS_SECTION + "\n"):
+            if body and (LIMITS_SECTION + "\n").startswith(body):  # a log cut off inside the heading line
+                return cls([], outcomes.NOT_CHECKED, WHY_LIMITS_CUT_OFF)
+            return cls([], outcomes.NONE_RECORDED)
+        section, ended, _ = body[len(LIMITS_SECTION):].partition(SCENARIO_SECTION)
+        if not ended:
+            return cls([], outcomes.NOT_CHECKED, WHY_LIMITS_CUT_OFF)
+        limits = sim_project.limits_in(section)
+        return cls(limits) if limits else cls([], outcomes.NOT_CHECKED, WHY_NO_LIMIT_LINE)
+# --- end MVP ---
 
 
 def image_in(toml):
@@ -294,16 +348,16 @@ class ScenarioRun:
         """
         self.log.parent.mkdir(exist_ok=True)
         files = "".join("%s%s %s\n" % (FILE_LINE, hashlib.sha256(data).hexdigest(), name) for name, data in self.files)
-        limits = self.sim / "WHAT-THIS-CANNOT-SHOW.md"
+        limits = self.sim / sim_project.LIMITS_NOTE
         try:
             shown = "%s\n%s\n\n" % (LIMITS_SECTION, limits.read_text(errors="replace").rstrip("\n")) if limits.is_file() else ""
         except OSError:
             shown = ""
-        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s\n%s%s\n%s\n%s--- the scenario as run ---\n%s\n"
+        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s\n%s%s\n%s\n%s%s\n%s\n"
                             "--- wokwi-cli printed ---\n%s\n"
                             % (self.scenario.name, datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
                                self.timeout_ms, sentence, ScenarioSteps.from_text(self.steps).line(), IMAGE_LINE,
-                               hashlib.sha256(self.flash).hexdigest(), files, shown, self.steps, said.strip()))
+                               hashlib.sha256(self.flash).hexdigest(), files, shown, SCENARIO_SECTION, self.steps, said.strip()))
         return self.log
 
 

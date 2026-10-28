@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import board_doctor  # noqa: E402
 import flash_image  # noqa: E402
 import look  # noqa: E402
+import sim_project  # noqa: E402
 import tools  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
@@ -71,6 +72,30 @@ class WhatThePersonSeesTest(LookScriptCase):
             SIMULATION, CAVEAT,
             "  all fields match the board record xiao-esp32-c6.",
             "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token()])
+
+    def run_the_scenario_with_a_note(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(
+            sim_project.limits_note([("ONBOARD_DISPLAY", "no part for the display. Test it on the board.")]))
+        self.run_the_scenario()
+
+    def test_the_text_look_lists_the_limits_of_the_passed_run_after_the_caveat(self):
+        self.run_the_scenario_with_a_note()
+        code, said, _ = self.go()
+        self.assertEqual(code, 0)
+        self.assertEqual(said[6:10], [
+            SIMULATION, CAVEAT, "  what this simulation cannot show, so test it on the board:",
+            "  - ONBOARD_DISPLAY — no part for the display. Test it on the board."])
+
+    def test_the_json_look_carries_the_limits_of_the_passed_run(self):
+        self.run_the_scenario_with_a_note()
+        data = json.loads(self.go("--json")[1][-1])["data"]
+        self.assertEqual(data["limits"], [{"component": "ONBOARD_DISPLAY", "sentence": "no part for the display. Test it on the board."}])
+
+    def test_a_passed_run_of_a_project_with_no_note_has_no_limits_and_no_heading(self):
+        self.run_the_scenario()
+        code, said, _ = self.go()
+        self.assertFalse([line for line in said if "cannot show" in line])
+        self.assertEqual(json.loads(self.go("--json")[1][-1])["data"]["limits"], [])
 
     def test_a_flash_that_differs_but_holds_the_image_is_a_warning_with_its_token(self):
         self.run_the_scenario()

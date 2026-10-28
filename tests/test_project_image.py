@@ -171,6 +171,18 @@ class TheRunLogsTest(unittest.TestCase):
         write_log(self.project, "a.log", "passed", "0")
         self.assertIsNone(self.image.find_passed_log())
 
+    def test_find_passed_logs_lists_every_passed_log_of_this_image_in_name_order(self):
+        write_log(self.project, "c.log", "passed")
+        write_log(self.project, "a.log", "passed")
+        write_log(self.project, "b.log", "failed (wokwi-cli exit 1)")
+        write_log(self.project, "d.log", "passed", "0")  # another image
+        runs = self.project / "sim" / "runs"
+        self.assertEqual(self.image.find_passed_logs(), [runs / "a.log", runs / "c.log"])
+        self.assertEqual(self.image.find_passed_log(), runs / "a.log")
+
+    def test_find_passed_logs_is_empty_when_no_run_passed(self):
+        self.assertEqual(self.image.find_passed_logs(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

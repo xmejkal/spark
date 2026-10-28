@@ -27,6 +27,7 @@ import deploy_record_store
 import flasher
 import outcomes
 import project_image
+import sim_project
 import tools
 from text_guards import printable
 
@@ -45,6 +46,10 @@ LIST_TIMEOUT_S, READ_TIMEOUT_S = 15, 60
 
 RESTART_NOTICE = "the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
 TOKEN_LINE = "token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that."
+# --- MVP ---
+#: The look's line above the limits of the project: what the passed runs cannot show, so only the board can.
+LIMITS_HEADING_MESSAGE = "what this simulation cannot show, so test it on the board:"
+# --- end MVP ---
 
 
 def board_token(mac):
@@ -229,16 +234,16 @@ VERDICT_STOP, VERDICT_WARNING, VERDICT_MATCH = "stop", "warning", "match"
 
 class LookReport:
     """Value. What the look found. `stops` are Stops (a code and a sentence), `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
-    warning or stop. `simulation` and `caveats` are what the evidence says of the image, or None and [] when it refused the image.
+    warning or stop. `simulation`, `caveats` and `limits` (sim_project.Limit) are what the evidence says of the image, or None, [] and [] when it refused the image.
     `last_deploy` is the deploy_record_store.LastDeploy of the board's MAC, whatever the evidence said."""
 
-    def __init__(self, port, reading, record, image, image_why, simulation, caveats, last_deploy, also_on=None,
+    def __init__(self, port, reading, record, image, image_why, simulation, caveats, limits, last_deploy, also_on=None,
                  image_code=board_codes.EVIDENCE_REFUSES):
         self.port, self.reading, self.record = port, reading, record
         self.also_on = None if also_on is None else tuple(also_on)  # None: a --port was named, so no node list was read
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
         self.image_code = image_code  # the board_codes code of image_why
-        self.simulation, self.caveats = simulation, list(caveats)
+        self.simulation, self.caveats, self.limits = simulation, list(caveats), list(limits)
         self.last_deploy = last_deploy
         self.fields = compare(reading, record)
         self.stops, self.warnings = [], []
@@ -298,7 +303,9 @@ class LookReport:
                 "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
                 "status": self.status, "token": self.token(),
                 "no_token_reason": self.no_token_reason() and self.no_token_reason().sentence,
-                "simulation": self.simulation, "caveats": list(self.caveats), "last_deploy": self.last_deploy.to_dict()}
+                "simulation": self.simulation, "caveats": list(self.caveats),
+                "limits": [{"component": limit.component, "sentence": limit.sentence} for limit in self.limits],
+                "last_deploy": self.last_deploy.to_dict()}
 
 
 # --- MVP ---
@@ -312,6 +319,15 @@ def say_last_deploy(last):
     else:
         said = outcomes.NOT_CHECKED_MESSAGE % last.why
     return "spark's last deploy here: " + said
+# --- end MVP ---
+
+
+# --- MVP ---
+def say_limit(limit):
+    """The look's line for a sim_project.Limit: `- component — sentence`, or `- sentence` when the line had no component."""
+    if not limit.component:
+        return sim_project.LIMIT_PREFIX + limit.sentence
+    return sim_project.LIMIT_PREFIX + limit.component + sim_project.LIMIT_DASH + limit.sentence
 # --- end MVP ---
 
 
@@ -333,6 +349,10 @@ def report_lines(report, token=True):
     if report.simulation:
         out.append("simulation: %s" % report.simulation)
     out += report.caveats
+    # --- MVP ---
+    if report.limits:
+        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]
+    # --- end MVP ---
     if report.verdict == VERDICT_MATCH:
         out.append("all fields match the board record %s." % name)
     if token:
@@ -353,18 +373,18 @@ class LookService:
         listed = None if port else self.finder.require_one_board("look.py")
         port = port or listed.device
         reading = self.reader.read(port)
-        image, why, code, simulation, caveats = None, None, board_codes.EVIDENCE_REFUSES, None, []
+        image, why, code, simulation, caveats, limits = None, None, board_codes.EVIDENCE_REFUSES, None, [], []
         try:
             found = project_image.ProjectImage(project)
             image = found.path
             why = evidence.why_not_ready(found)
             # --- MVP ---
             if why is None:  # what tested an image is stated only for one the evidence passes
-                simulation, caveats = evidence.simulation, evidence.caveats(found)
+                simulation, caveats, limits = evidence.simulation, evidence.caveats(found), evidence.find_limits(found)
         except project_image.DeployError as cannot:
             why, code = str(cannot), cannot.reason  # image stays set when only the logs could not be read: the fit check needs it
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
-        return LookReport(port, reading, record, image, why, simulation, caveats, deploy_record_store.DeployRecordStore().read_last_deploy(reading.mac),
+        return LookReport(port, reading, record, image, why, simulation, caveats, limits, deploy_record_store.DeployRecordStore().read_last_deploy(reading.mac),
                           listed.also_on if listed else None, code)
 
     @staticmethod

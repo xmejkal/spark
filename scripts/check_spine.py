@@ -966,14 +966,19 @@ def simulation_dir(args):
     return Path(args.keep) / "sim" if getattr(args, "keep", None) else None
 
 
-def keep_simulation(workdir, destination):
+def keep_simulation(workdir, destination, stages):
     """
     The simulation project the last stage wrote, copied to `destination` as one kept entry {file, did, why, line}, or None
-    when the stage wrote none. It is merged into what is there, so a person's scenarios stay.
+    when the stage wrote none. It is merged into what is there, so a person's scenarios stay. When the simulation stage is OK
+    (it ran to the end, so `write_limits` has had its say), a limits note from an earlier build goes if this build wrote none.
+    Any other outcome leaves the project's note, since the older diagram stays too.
     """
     if not (workdir / "sim").is_dir():
         return None
     try:
+        simulated = any(stage.name == "simulation" and stage.status == OK for stage in stages)
+        if simulated and not (workdir / "sim" / sim_project.LIMITS_NOTE).is_file():  # the copy merges, so an older note would stay for the next run
+            (Path(destination) / sim_project.LIMITS_NOTE).unlink(missing_ok=True)
         shutil.copytree(workdir / "sim", destination, dirs_exist_ok=True)
     except OSError as refused:  # shutil.Error is one
         return {"file": str(destination), "did": "not kept", "why": str(refused),
@@ -999,7 +1004,7 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
         kept += drop_an_older_build(Path(args.keep), stages)
         kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
         kept.append(keep_tabbed_page(Path(args.keep), stages, kept, exporter or tabbed_page.TscircuitExport(None)))
-    simulation = keep_simulation(workdir, simulation_dir(args)) if workdir is not None and simulation_dir(args) else None
+    simulation = keep_simulation(workdir, simulation_dir(args), stages) if workdir is not None and simulation_dir(args) else None
     if simulation is not None:
         kept = (kept or []) + [simulation]
     if args.json:

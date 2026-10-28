@@ -20,6 +20,7 @@ import deploy_record_store  # noqa: E402
 from fakes import pin_time_zone  # noqa: E402
 import board_look  # noqa: E402
 import project_image  # noqa: E402
+import sim_project  # noqa: E402
 import outcomes  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
@@ -501,7 +502,7 @@ class LookReportToDictTest(LookCase):
             "fields": {"chip": "same", "flash": "same"}, "stops": [], "warnings": [], "unknown": {},
             "verdict": "match", "status": outcomes.OK, "token": report.token(), "no_token_reason": None,
             # LookCase's scenario only waits for text (the P345 caveat), so the passed run did not press anything
-            "simulation": "passed", "caveats": [NO_CONTROL_NO_PIN],
+            "simulation": "passed", "caveats": [NO_CONTROL_NO_PIN], "limits": [],
             "last_deploy": {"state": "none-recorded", "why": None, "project": None, "verdict": None, "deployed": None}})
         self.assertIsNotNone(as_dict["token"])
         json.dumps(as_dict)
@@ -562,8 +563,49 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.run_the_scenario()
         evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value=None))
         evidence.caveats.return_value = ["first", "second"]
+        evidence.find_limits.return_value = []
         lines = board_look.report_lines(self.look(evidence=evidence), token=False)
         self.assertEqual(lines[-4:-1], ["  simulation: passed", "  first", "  second"])
+
+    def limited(self, *limits, caveats=("first",)):
+        """A LookReport whose evidence passes the image and gives these caveats and (component, sentence) limits."""
+        self.run_the_scenario()
+        evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value=None))
+        evidence.caveats.return_value = list(caveats)
+        self.found = evidence.find_limits.return_value = [sim_project.Limit(*each) for each in limits]
+        return self.look(evidence=evidence)
+
+    def test_the_limits_follow_the_caveats_under_a_heading_and_come_before_the_match_and_the_token(self):
+        report = self.limited(("ONBOARD_DISPLAY", "no part for the display. Test it on the board."),
+                              ("", "a line with no component"))
+        lines = board_look.report_lines(report)
+        self.assertEqual(lines[lines.index("  first"):-1], [
+            "  first", "  what this simulation cannot show, so test it on the board:",
+            "  - ONBOARD_DISPLAY — no part for the display. Test it on the board.", "  - a line with no component",
+            "  all fields match the board record xiao-esp32-c6."])
+        self.assertTrue(lines[-1].startswith("  token  "))
+
+    def test_a_control_character_in_a_limit_shows_as_a_question_mark(self):
+        lines = board_look.report_lines(self.limited(("A\nB", "two\x1b[31mlines")), token=False)
+        self.assertIn("  - A?B — two?[31mlines", lines)
+
+    def test_to_dict_gives_each_limit_as_a_component_and_a_sentence_and_copies_the_list(self):
+        report = self.limited(("ONBOARD_DISPLAY", "no part"), ("", "bare"))
+        as_dict = report.to_dict()
+        self.assertEqual(as_dict["limits"], [{"component": "ONBOARD_DISPLAY", "sentence": "no part"},
+                                             {"component": "", "sentence": "bare"}])
+        json.dumps(as_dict)
+        as_dict["limits"].clear()
+        self.assertEqual(len(report.to_dict()["limits"]), 2)
+
+    def test_the_report_keeps_its_own_copy_of_the_limits(self):
+        report = self.limited(("A", "first"))
+        self.found.clear()  # the evidence's list, which the report must not share
+        self.assertEqual(report.limits, [("A", "first")])
+
+    def test_no_limits_print_no_heading(self):
+        lines = board_look.report_lines(self.limited(), token=False)
+        self.assertFalse([line for line in lines if "cannot show" in line])
 
     def test_an_image_the_evidence_refuses_has_no_simulation_and_no_caveat(self):
         report = self.look()  # no scenario has run: no image
@@ -571,9 +613,11 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertFalse([line for line in board_look.report_lines(report) if "simulation" in line])
 
     def test_a_refused_image_is_not_asked_for_its_caveats(self):
+        self.run_the_scenario()  # an image to ask about: without one the evidence is never reached
         evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value="no"))
         report = self.look(evidence=evidence)
         evidence.caveats.assert_not_called()
+        evidence.find_limits.assert_not_called()
         self.assertEqual((report.simulation, report.caveats), (None, []))
 
     def test_a_log_that_cannot_be_read_gives_no_simulation_and_no_caveat(self):

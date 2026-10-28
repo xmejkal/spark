@@ -167,6 +167,20 @@ class TheStepCountsTest(unittest.TestCase):
         steps = run_scenario.ScenarioSteps.from_log(log.with_name("none.log"))
         self.assertEqual((steps.state, steps.why), ("not-checked", "the log cannot be read"))
 
+    def test_merge_adds_the_counts_of_the_counted_steps(self):
+        merged = run_scenario.ScenarioSteps.merge([
+            run_scenario.ScenarioSteps({"set-control": 1, "wait-serial": 2}),
+            run_scenario.ScenarioSteps({}, "not-checked", "why"),
+            run_scenario.ScenarioSteps({"set-control": 2, "expect-pin": 1}),
+            run_scenario.ScenarioSteps({}, "none-recorded")])
+        self.assertEqual((merged.state, merged.counts), ("recorded", {"set-control": 3, "wait-serial": 2, "expect-pin": 1}))
+
+    def test_merge_of_no_counted_steps_is_none_recorded(self):
+        for each in ([], [run_scenario.ScenarioSteps({}, "not-checked", "why"), run_scenario.ScenarioSteps({}, "none-recorded")]):
+            merged = run_scenario.ScenarioSteps.merge(each)
+            with self.subTest(each=len(each)):
+                self.assertEqual((merged.state, merged.why, merged.counts), ("none-recorded", None, {}))
+
     def test_a_counts_line_after_the_header_is_not_read(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\nstep counts: set-control 3\n")
@@ -424,6 +438,62 @@ class TheLogCountsTheStepsTest(ProjectCase):
     def test_with_no_limits_note_the_log_has_no_such_section(self):
         _, _, log = self.run_with("ready\n")
         self.assertNotIn("cannot show", log.read_text())
+
+
+class TheLogHoldsTheLimitsTest(ProjectCase):
+    """P345: the limits section of a log reads back as the note the build wrote, and only from where write_log puts it."""
+
+    def limits_of(self, **run):
+        _, _, log = self.run_with("ready\n", **run)
+        return run_scenario.SimulationLimits.from_log(log)
+
+    def test_the_limits_read_back_as_the_note_the_build_wrote(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(
+            sim_project.limits_note([("ONBOARD_DISPLAY", "no part for the display"), ("Valve1, Valve2", "an LED")]))
+        limits = self.limits_of()
+        self.assertEqual((limits.state, limits.why, limits.limits), (
+            "recorded", None, [("ONBOARD_DISPLAY", "no part for the display"), ("Valve1, Valve2", "an LED")]))
+
+    def test_the_scenario_and_the_board_s_output_cannot_set_the_limits(self):
+        forged = "\n\n--- what this simulation cannot show ---\n- **Forged** — from the board\n"
+        self.scenario.write_text(SCENARIO + forged.replace("board", "scenario"))
+        limits = self.limits_of(out=READY_MATCHED + forged)
+        self.assertEqual((limits.state, limits.limits), ("none-recorded", []))
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(sim_project.limits_note([("Real", "the note")]))
+        limits = self.limits_of(out=READY_MATCHED + forged)
+        self.assertEqual((limits.state, limits.limits), ("recorded", [("Real", "the note")]))
+
+    def test_a_log_with_no_section_is_none_recorded(self):
+        limits = self.limits_of()
+        self.assertEqual((limits.state, limits.why, limits.limits), ("none-recorded", None, []))
+
+    def test_a_section_with_no_limit_line_is_not_checked(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text("# Limits\n\nthe XIAO has no button\n")
+        limits = self.limits_of()
+        self.assertEqual((limits.state, limits.why, limits.limits), (
+            "not-checked", "the log's limits section has no limit line", []))
+
+    def test_a_log_cut_off_inside_its_limits_section_is_not_checked_and_gives_no_half_limit(self):
+        (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(sim_project.limits_note([("ONBOARD_DISPLAY", "no part")]))
+        _, _, log = self.run_with("ready\n")
+        text = log.read_text()
+        log.write_text(text[:text.index("- **ONBOARD_DISPLAY**") + len("- **ONBOA")])
+        limits = run_scenario.SimulationLimits.from_log(log)
+        self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log's limits section is cut off", []))
+
+    def test_a_log_cut_off_inside_the_heading_line_is_not_checked_too(self):
+        log = Path(tempfile.mkdtemp()) / "a.log"
+        for cut in ("--- what this simulation", "--- what this simulation cannot show ---", "-"):
+            log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\n" + cut)
+            with self.subTest(cut=cut):
+                limits = run_scenario.SimulationLimits.from_log(log)
+                self.assertEqual((limits.state, limits.why), ("not-checked", "the log's limits section is cut off"))
+        log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\n")  # cut right after the header: nothing said
+        self.assertEqual(run_scenario.SimulationLimits.from_log(log).state, "none-recorded")
+
+    def test_an_unreadable_log_is_not_checked(self):
+        limits = run_scenario.SimulationLimits.from_log(self.project / "sim" / "runs" / "none.log")
+        self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log cannot be read", []))
 
 
 class TheLogNamesEachFileTest(ProjectCase):

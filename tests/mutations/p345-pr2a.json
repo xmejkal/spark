@@ -1,0 +1,140 @@
+[
+ {
+  "file": "scripts/project_image.py",
+  "name": "find_passed_logs lists a log that tested another image",
+  "find": "if sha256 == self.sha256 and verdict == \"passed\"]",
+  "replace": "if verdict == \"passed\"]"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "caveats reads only the first passed log",
+  "find": "logs = image.find_passed_logs()\n        read = ",
+  "replace": "logs = image.find_passed_logs()[:1]\n        read = "
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "merge takes the first counted log only",
+  "find": "        for each in counted:\n",
+  "replace": "        for each in counted[:1]:\n"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "a control in a later log does not clear the no-control caveat",
+  "find": "if not logs or merged.count(SET_CONTROL):",
+  "replace": "if not logs or read[0][1].count(SET_CONTROL):"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "an uncounted log still allows the no-control claim",
+  "find": "        if uncounted:\n            return uncounted\n",
+  "replace": "        if uncounted and False:\n            return uncounted\n"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "the no-control subject is always the singular",
+  "find": "if len(logs) > 1 else ONE_RUN_MESSAGE",
+  "replace": "if False else ONE_RUN_MESSAGE"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "SimulationLimits reads the whole log, not up to the scenario section",
+  "find": "section, ended, _ = body[len(LIMITS_SECTION):].partition(SCENARIO_SECTION)",
+  "replace": "section, ended, _ = body[len(LIMITS_SECTION):], SCENARIO_SECTION, \"\""
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a limits section with no limit line is RECORDED with no limits",
+  "find": "return cls(limits) if limits else cls([], outcomes.NOT_CHECKED, WHY_NO_LIMIT_LINE)",
+  "replace": "return cls(limits)"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "find_limits keeps repeats",
+  "find": "return list(dict.fromkeys(found))",
+  "replace": "return found"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "limits_in drops a continuation line",
+  "find": "        elif open_limit:",
+  "replace": "        elif False:"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "report_lines prints the limits after the token",
+  "find": "    # --- MVP ---\n    if report.limits:\n        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]\n    # --- end MVP ---\n    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n",
+  "replace": "    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n    if report.limits:\n        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]\n"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "LookService.run asks a refused image for its limits",
+  "find": "            why = evidence.why_not_ready(found)\n",
+  "replace": "            why = evidence.why_not_ready(found)\n            limits = evidence.find_limits(found)\n"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "the report shares the evidence's list of limits",
+  "find": "list(caveats), list(limits)",
+  "replace": "list(caveats), limits"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "an unreadable log also gets the limits hint",
+  "find": "if each.state == outcomes.NOT_CHECKED and not (said_unreadable and each.why == WHY_LOG_UNREADABLE)]",
+  "replace": "if each.state == outcomes.NOT_CHECKED]"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a log cut off inside its limits section is RECORDED",
+  "find": "        if not ended:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "an empty limit is kept",
+  "find": "    return [limit for limit in found if limit.sentence]",
+  "replace": "    return found"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "a blank line does not end the limit",
+  "find": "        elif not line.strip():\n            open_limit = False\n",
+  "replace": "        elif not line.strip():\n            pass\n"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "an unreadable log's limits sentence is skipped although a control hides its steps sentence",
+  "find": "said_unreadable=not merged.count(SET_CONTROL))",
+  "replace": "said_unreadable=True)"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "a joined sentence keeps a leading space",
+  "find": "found[-1] = Limit(found[-1].component, (\"%s %s\" % (found[-1].sentence, line.strip())).strip())",
+  "replace": "found[-1] = Limit(found[-1].component, \"%s %s\" % (found[-1].sentence, line.strip()))"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "keep_simulation keeps an older limits note when the build wrote none",
+  "find": "            (Path(destination) / sim_project.LIMITS_NOTE).unlink(missing_ok=True)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a log cut off inside the limits heading reads as NONE_RECORDED",
+  "find": "            if body and (LIMITS_SECTION + \"\\n\").startswith(body):",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "limits_note writes a blank line inside a sentence",
+  "find": "LIMIT_DASH + _one_paragraph(sentence))",
+  "replace": "LIMIT_DASH + sentence)"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "keep_simulation removes the project's note whatever the simulation stage did",
+  "find": "simulated = any(stage.name == \"simulation\" and stage.status == OK for stage in stages)",
+  "replace": "simulated = True"
+ }
+]

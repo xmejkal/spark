@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import image_evidence  # noqa: E402
+import sim_project  # noqa: E402
 import flash_image  # noqa: E402
 import tools  # noqa: E402
 from image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
@@ -172,9 +173,139 @@ class PassedRunEvidenceTest(unittest.TestCase):
 
     def test_a_log_that_cannot_be_read_is_not_checked_with_its_reason(self):
         self.counted("step counts: expect-pin 1, set-control 1, wait-serial 1")
-        with mock.patch.object(ProjectImage, "find_passed_log", return_value=self.project / "gone.log"):
+        with mock.patch.object(ProjectImage, "find_passed_logs", return_value=[self.project / "gone.log"]):
             self.assertEqual(PassedRunEvidence().caveats(self.image), [
                 "not checked: the log cannot be read; run its scenario again to count them"])
+
+    def with_section(self, name, note_text):
+        """The log `name` with this text as its limits section, where write_log puts it (right after the header)."""
+        log = self.project / "sim" / "runs" / name
+        header, _, body = log.read_text().partition("\n\n")
+        log.write_text("%s\n\n--- what this simulation cannot show ---\n%s\n--- the scenario as run ---\n%s" % (header, note_text, body))
+
+    DISPLAY = ("ONBOARD_DISPLAY", "no part for the display. Test it on the board.")
+    BUTTON = ("ONBOARD_BUTTON (GPIO9)", "no way to press it. Test it on the board.")
+    NO_LIMIT_LINE_CAVEAT = ("not checked: the log's limits section has no limit line; "
+                            "fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again")
+
+    def test_the_limits_are_those_of_the_passed_log_s_section(self):
+        self.counted(self.CONTROL)
+        self.with_section("a.log", sim_project.limits_note([self.DISPLAY, self.BUTTON]))
+        found = PassedRunEvidence().find_limits(self.image)
+        self.assertEqual(found, [self.DISPLAY, self.BUTTON])
+        self.assertEqual((found[0].component, found[0].sentence), self.DISPLAY)
+
+    def test_two_logs_with_the_same_limit_give_it_once_and_the_union_keeps_name_order(self):
+        self.counted(self.CONTROL, "b.log")
+        self.counted(self.CONTROL, "a.log")
+        self.with_section("a.log", sim_project.limits_note([self.DISPLAY]))
+        self.with_section("b.log", sim_project.limits_note([self.BUTTON, self.DISPLAY]))
+        self.assertEqual(PassedRunEvidence().find_limits(self.image), [self.DISPLAY, self.BUTTON])
+
+    def test_a_log_with_no_section_adds_nothing(self):
+        self.counted(self.CONTROL, "a.log")
+        self.counted(self.CONTROL, "b.log")
+        self.with_section("b.log", sim_project.limits_note([self.BUTTON]))
+        self.assertEqual(PassedRunEvidence().find_limits(self.image), [self.BUTTON])
+        (self.project / "sim" / "runs" / "b.log").unlink()
+        self.assertEqual(PassedRunEvidence().find_limits(self.image), [])
+
+    def test_a_scenario_that_holds_the_section_line_gives_no_limits_when_the_log_has_no_note(self):
+        self.counted(self.CONTROL)
+        log = self.project / "sim" / "runs" / "a.log"
+        log.write_text(log.read_text().replace(
+            "body", "--- the scenario as run ---\n--- what this simulation cannot show ---\n- **Forged** — from the scenario"))
+        self.assertEqual(PassedRunEvidence().find_limits(self.image), [])
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
+
+    def test_a_log_that_failed_or_tested_another_image_gives_no_limits(self):
+        self.counted(self.CONTROL, "a.log")
+        write_log(self.project, "b.log", "failed (wokwi-cli exit 1)")
+        write_log(self.project, "c.log", "passed", "0")
+        for name in ("a.log", "b.log", "c.log"):
+            self.with_section(name, sim_project.limits_note([self.DISPLAY]))
+        (self.project / "sim" / "runs" / "a.log").unlink()
+        self.assertEqual(PassedRunEvidence(ignore_older_runs=True).find_limits(self.image), [])
+
+    def test_no_simulation_evidence_gives_the_base_default_empty_list(self):
+        self.counted(self.CONTROL)
+        self.with_section("a.log", sim_project.limits_note([self.DISPLAY]))
+        self.assertEqual(NoSimulationEvidence(self.project).find_limits(self.image), [])
+
+    def test_a_section_with_no_limit_line_is_a_caveat_with_the_hint(self):
+        self.counted(self.CONTROL)
+        self.with_section("a.log", "# Limits\n\nthe XIAO has no button\n")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [self.NO_LIMIT_LINE_CAVEAT])
+        self.assertEqual(PassedRunEvidence().find_limits(self.image), [])
+
+    def test_the_limits_caveat_comes_after_the_control_caveat_and_names_its_log_among_several(self):
+        self.counted(self.NO_CONTROL, "a.log")
+        self.counted(self.NO_CONTROL, "b.log")
+        self.with_section("b.log", "# Limits\n")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "the passed runs (a.log, b.log) have no set-control step (the step that presses a button or sets a sensor) "
+            "and no expect-pin step (the step that reads a pin)",
+            "b.log: " + self.NO_LIMIT_LINE_CAVEAT])
+
+    def test_an_unreadable_log_beside_a_run_with_a_control_still_gets_the_limits_sentence(self):
+        self.counted(self.CONTROL, "a.log")
+        gone = self.project / "sim" / "runs" / "gone.log"
+        logs = [self.project / "sim" / "runs" / "a.log", gone]
+        with mock.patch.object(ProjectImage, "find_passed_logs", return_value=logs):
+            self.assertEqual(PassedRunEvidence().caveats(self.image), [
+                "gone.log: not checked: the log cannot be read; fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"])
+
+    def test_a_good_section_adds_no_caveat(self):
+        self.counted(self.NO_CONTROL)
+        self.with_section("a.log", sim_project.limits_note([self.DISPLAY]))
+        self.assertEqual(len(PassedRunEvidence().caveats(self.image)), 1)
+
+    def test_an_unreadable_log_gets_one_sentence_not_two(self):
+        with mock.patch.object(ProjectImage, "find_passed_logs", return_value=[self.project / "gone.log"]):
+            self.assertEqual(PassedRunEvidence().caveats(self.image), [
+                "not checked: the log cannot be read; run its scenario again to count them"])
+            self.assertEqual(PassedRunEvidence().find_limits(self.image), [])
+
+    CONTROL = "step counts: expect-pin 0, set-control 1, wait-serial 2"
+    NO_CONTROL = "step counts: expect-pin 0, set-control 0, wait-serial 1"
+    PIN_NO_CONTROL = "step counts: expect-pin 1, set-control 0, wait-serial 1"
+
+    def test_a_second_passed_run_that_sets_a_control_clears_the_no_control_caveat(self):
+        self.counted(self.NO_CONTROL, "a.log")
+        self.counted(self.CONTROL, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
+
+    def test_two_passed_runs_with_no_control_say_it_once_and_name_both_logs(self):
+        self.counted(self.NO_CONTROL, "a.log")
+        self.counted(self.NO_CONTROL, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "the passed runs (a.log, b.log) have no set-control step (the step that presses a button or sets a sensor) "
+            "and no expect-pin step (the step that reads a pin)"])
+
+    def test_a_pin_read_by_the_other_run_gives_the_short_sentence(self):
+        self.counted(self.NO_CONTROL, "a.log")
+        self.counted(self.PIN_NO_CONTROL, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "the passed runs (a.log, b.log) have no set-control step (the step that presses a button or sets a sensor)"])
+
+    def test_an_uncounted_run_beside_a_run_with_no_control_makes_no_no_control_claim_and_names_its_log(self):
+        self.counted(self.NO_CONTROL, "a.log")
+        self.counted(None, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "b.log: the passed run's log is older than step counting: run its scenario again to count its steps"])
+        self.counted("step counts: nonsense", "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [
+            "b.log: not checked: the log's step counts line is malformed; run its scenario again to count them"])
+
+    def test_a_counted_run_with_a_control_beside_an_uncounted_run_has_no_caveat(self):
+        self.counted(None, "a.log")
+        self.counted(self.CONTROL, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
+
+    def test_the_same_pair_the_other_way_round_has_no_caveat_either(self):
+        self.counted(self.CONTROL, "a.log")
+        self.counted(None, "b.log")
+        self.assertEqual(PassedRunEvidence().caveats(self.image), [])
 
     def test_no_passed_run_gives_no_caveat(self):
         self.assertEqual(PassedRunEvidence().caveats(self.image), [])

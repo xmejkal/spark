@@ -86,10 +86,15 @@ class ProjectImage:
                     "run its scenario again with run_scenario.py" % self.path.name)
         return None
 
+    # --- MVP ---
+    def find_passed_logs(self):
+        """Every log in the runs folder that passed on this image's sha256, in name order. DeployError when a log cannot be read."""
+        return [log for log, verdict, sha256 in self.read_run_logs() if sha256 == self.sha256 and verdict == "passed"]
+    # --- end MVP ---
+
     def find_passed_log(self):
         """The first log in the runs folder that passed on this image's sha256, or None. Its file lines are what a board must hold."""
-        return next((log for log, verdict, sha256 in self.read_run_logs()
-                     if sha256 == self.sha256 and verdict == "passed"), None)
+        return next(iter(self.find_passed_logs()), None)
 
     def find_newer_files(self):
         """The files under firmware/ changed after the image was made, as project paths. The board gets the image, not them."""
