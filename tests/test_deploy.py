@@ -32,16 +32,17 @@ FAKE_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
 READY_MATCHED = '[s] Expected text matched: "ready"\n'
 SCENARIO = 'name: s\nversion: 1\nsteps:\n  - wait-serial: "LED on"\n'
 PYTHON = "/opt/python3"
-#: esptool and mpremote as tools.find returns them once /spark:setup installed them for the Python at PYTHON.
+#: esptool, mpremote and littlefs as tools.find returns them once /spark:setup installed them for the Python at PYTHON.
 FOUND = {"flasher": tools.Tool("esptool", "flasher", {"kind": "python", "module": "esptool", "silent_step": "hold_boot"},
                                 [PYTHON]),
          "board-shell": tools.Tool("mpremote", "board-shell",
-                                   {"kind": "python", "module": "mpremote", "silent_step": "press_reset"}, [PYTHON])}
+                                   {"kind": "python", "module": "mpremote", "silent_step": "press_reset"}, [PYTHON]),
+         "littlefs": tools.Tool("littlefs", "littlefs", {"kind": "python", "module": "littlefs"}, [PYTHON])}  # P436: the image check asks for it
 PORT = "/dev/cu.usbmodem1101"
 
 
 def found(name, *args, **kwargs):
-    """tools.find for the two roles deploy.py asks for."""
+    """tools.find for the roles and tools deploy.py and the image check ask for."""
     return FOUND[name]
 
 

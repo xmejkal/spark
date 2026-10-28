@@ -38,6 +38,8 @@ NO_CONTROL_NO_PIN_CAVEAT = ("%s no set-control step (the step that presses a but
 LIMITS_HINT = "fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"
 ONE_RUN_MESSAGE = "the passed run's scenario has"
 MANY_RUNS_MESSAGE = "the passed runs (%s) have"
+#: P436: the words of the image check that could not run, as a sentence and as a tools.ToolProblem.
+CANNOT_CHECK_REASON = "cannot check %s against firmware/: %s"
 #: The flag that deploys an image from firmware/ with no simulation.
 NO_SIMULATION_FLAG = "--no-simulation"
 #: The flag that turns a run of another image from a refusal into a note.
@@ -171,7 +173,8 @@ class ImageEvidence(abc.ABC):
 
     @abc.abstractmethod
     def why_not_ready(self, image):
-        """None when the evidence says `image` may go on a board, else why not. DeployError when a log cannot be read."""
+        """None when the evidence says `image` may go on a board, else why not. DeployError when a log cannot be read;
+        tools.ToolProblem when a tool the check needs is missing (P436)."""
 
     def caveats(self, image):
         """Sentences the person reads before the gate question about what tested `image`, or [] when there are none."""
@@ -305,7 +308,7 @@ class NoSimulationEvidence(ImageEvidence):
         self.project = Path(project)
 
     def why_not_ready(self, image):
-        """None, or one sentence. It never raises for firmware/ or the image: a broken file is a sentence."""
+        """None, or one sentence. A broken file is a sentence; a missing tool raises a tools.ToolProblem (P436)."""
         return (self._why_no_main() or self._why_not_compiling() or self._why_run_failed(image)
                 or self._why_image_differs(image))
 
@@ -331,12 +334,16 @@ class NoSimulationEvidence(ImageEvidence):
                         % (log.name, verdict))
         return None
 
+    # --- MVP --- P436: a missing tool raises its ToolProblem (tool_missing: /spark:setup); an unreadable file is a sentence
     def _why_image_differs(self, image):
         try:
+            tools.find("littlefs")  # as flash_image.main does, so a missing littlefs names its install line
             built = flash_image.interpreter_for(None, self.project).image(flash_image.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
-        except (tools.ToolProblem, OSError, ValueError, ImportError) as cannot:
-            return "cannot check %s against firmware/: %s" % (image.path.name, cannot)
+        except (tools.ToolProblem, ImportError) as cannot:
+            raise tools.ToolProblem(CANNOT_CHECK_REASON % (image.path.name, cannot))
+        except (OSError, ValueError) as cannot:
+            return CANNOT_CHECK_REASON % (image.path.name, cannot)
         except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as flash_image does
             if type(cannot).__name__ != "LittleFSError":
                 raise

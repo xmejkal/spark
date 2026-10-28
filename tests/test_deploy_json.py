@@ -19,6 +19,7 @@ import board_envelope  # noqa: E402
 import boards  # noqa: E402
 import deploy_service  # noqa: E402
 import firmware_platform  # noqa: E402
+import flash_image  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
 import outcomes  # noqa: E402
@@ -301,6 +302,14 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["data"]["stage"], said["unchecked"][0]["code"]), (2, "plan", "tool_missing"))
         self.assertEqual(said["unchecked"][0]["sentence"], "esptool is not installed")
+
+    def test_a_missing_image_tool_with_no_simulation_is_tool_missing_at_the_plan(self):
+        self.run_the_scenario()  # P436: the image check needs the interpreter; --no-simulation reaches it
+        with mock.patch.object(flash_image, "interpreter_for", side_effect=tools.ToolProblem("no tool holds it")):
+            code, said, _ = self.go("--no-simulation", "--token", "aaaa-bbbb")
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["data"]["stage"], said["unchecked"][0]["code"]), (2, "plan", "tool_missing"))
+        self.assertEqual(said["unchecked"][0]["sentence"], "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
 
     def test_a_board_record_that_cannot_be_read_is_chip_unknown(self):
         self.run_the_scenario()
