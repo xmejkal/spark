@@ -657,6 +657,37 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertEqual(len(self.look().caveats), 1)
 
 
+class TheLookCodesTheImageRefusalTest(LookCase):
+    """P436: a tool the image check needs that is missing is tool_missing; any other refusal stays evidence_refuses.
+    The evidence is a small fake: the words of NoSimulationEvidence are tested in test_image_evidence."""
+
+    class RefusingEvidence:
+        """Evidence whose check raises `problem`, or says `sentence` when there is none."""
+        simulation = "none"
+
+        def __init__(self, problem=None, sentence=None):
+            self.problem, self.sentence = problem, sentence
+
+        def why_not_ready(self, image):
+            if self.problem:
+                raise self.problem
+            return self.sentence
+
+    def test_a_missing_image_tool_is_tool_missing_with_no_token_and_the_image_kept(self):
+        self.run_the_scenario()
+        problem = tools.ToolProblem("cannot check flash-with-firmware.bin against firmware/: no tool holds it")
+        report = self.look(evidence=self.RefusingEvidence(problem=problem))
+        self.assertEqual((report.no_token_reason().code, report.token(), report.image_code), ("tool_missing", None, "tool_missing"))
+        self.assertEqual(report.image_why, "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
+        self.assertEqual((report.image, report.caveats), (self.image, []))
+
+    def test_an_image_the_evidence_refuses_with_a_sentence_stays_evidence_refuses(self):
+        self.run_the_scenario()
+        report = self.look(evidence=self.RefusingEvidence(sentence="flash-with-firmware.bin does not hold firmware/ as it is now"))
+        self.assertEqual((report.no_token_reason().code, report.token(), report.image_code), ("evidence_refuses", None, "evidence_refuses"))
+        self.assertEqual(report.image_why, "flash-with-firmware.bin does not hold firmware/ as it is now")
+
+
 class ReportLinesTest(LookCase):
     """P239 PR 6: the lines a person reads live in board_look, so deploy.py need not import look.py."""
 

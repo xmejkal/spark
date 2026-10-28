@@ -19,12 +19,6 @@
  },
  {
   "file": "scripts/image_evidence.py",
-  "name": "tool-problem-traceback",
-  "find": "except (tools.ToolProblem, OSError, ValueError, ImportError) as cannot:",
-  "replace": "except (OSError, ValueError, ImportError) as cannot:"
- },
- {
-  "file": "scripts/image_evidence.py",
   "name": "flag-dropped",
   "find": "return [NO_SIMULATION_FLAG]",
   "replace": "return []"

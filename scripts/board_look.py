@@ -383,6 +383,10 @@ class LookService:
                 simulation, caveats, limits = evidence.simulation, evidence.caveats(found), evidence.find_limits(found)
         except project_image.DeployError as cannot:
             why, code = str(cannot), cannot.reason  # image stays set when only the logs could not be read: the fit check needs it
+        # --- MVP --- P436: the image check needs a tool that is missing; image stays set, there is no token
+        except tools.ToolProblem as cannot:
+            why, code = str(cannot), board_codes.TOOL_MISSING
+        # --- end MVP ---
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
         return LookReport(port, reading, record, image, why, simulation, caveats, limits, deploy_record_store.DeployRecordStore().read_last_deploy(reading.mac),
                           listed.also_on if listed else None, code)

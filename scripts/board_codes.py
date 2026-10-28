@@ -24,7 +24,7 @@ CHIP_DIFFERS, FLASH_TOO_SMALL = "chip_differs", "flash_too_small"
 FLASH_DIFFERS, FIELD_UNKNOWN = "flash_differs", "field_unknown"
 LAST_DEPLOY_NOT_CHECKED = "last_deploy_not_checked"
 #: Why a look gave no token (the `no_token_reason`), when the stop is already a problem of its own, the MAC was not read, or
-#: the evidence refuses the image. The same codes are a gate's reason (EVIDENCE_REFUSES is also a DeployError's).
+#: the evidence refuses the image (TOOL_MISSING when a tool its check needs is missing, P436). The same codes are a gate's reason (EVIDENCE_REFUSES is also a DeployError's).
 STOP_FOUND, NO_MAC = "stop_found", "no_mac"
 #: A GateClosedError's reason: the deploy gate stays shut.
 NO_TERMINAL, TOKEN_MISSING, TOKEN_STALE = "no_terminal", "token_missing", "token_stale"
