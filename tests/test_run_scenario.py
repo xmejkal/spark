@@ -167,6 +167,20 @@ class TheStepCountsTest(unittest.TestCase):
         steps = run_scenario.ScenarioSteps.from_log(log.with_name("none.log"))
         self.assertEqual((steps.state, steps.why), ("not-checked", "the log cannot be read"))
 
+    def test_merge_adds_the_counts_of_the_counted_steps(self):
+        merged = run_scenario.ScenarioSteps.merge([
+            run_scenario.ScenarioSteps({"set-control": 1, "wait-serial": 2}),
+            run_scenario.ScenarioSteps({}, "not-checked", "why"),
+            run_scenario.ScenarioSteps({"set-control": 2, "expect-pin": 1}),
+            run_scenario.ScenarioSteps({}, "none-recorded")])
+        self.assertEqual((merged.state, merged.counts), ("recorded", {"set-control": 3, "wait-serial": 2, "expect-pin": 1}))
+
+    def test_merge_of_no_counted_steps_is_none_recorded(self):
+        for each in ([], [run_scenario.ScenarioSteps({}, "not-checked", "why"), run_scenario.ScenarioSteps({}, "none-recorded")]):
+            merged = run_scenario.ScenarioSteps.merge(each)
+            with self.subTest(each=len(each)):
+                self.assertEqual((merged.state, merged.why, merged.counts), ("none-recorded", None, {}))
+
     def test_a_counts_line_after_the_header_is_not_read(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\nstep counts: set-control 3\n")

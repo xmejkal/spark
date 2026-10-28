@@ -74,6 +74,8 @@ WHY_BAD_COUNTS = "the log's step counts line is malformed"
 WHY_LOG_UNREADABLE = "the log cannot be read"
 #: The log's section that holds the simulation's limits note, when the project has one (P396).
 LIMITS_SECTION = "--- what this simulation cannot show ---"
+#: The log's section that holds the scenario as run: it ends the limits section above it.
+SCENARIO_SECTION = "--- the scenario as run ---"
 #: What --help says beyond the arguments: the cost, the token, the contract and the exit codes.
 EPILOG = """A run spends Wokwi CI minutes: ask the person before each run, whatever your permissions allow.
 It needs a Wokwi CI token (wokwi.com/dashboard/ci) in WOKWI_CLI_TOKEN: export WOKWI_CLI_TOKEN=...
@@ -181,6 +183,18 @@ class ScenarioSteps:
     def count(self, kind):
         """How many steps have this kind."""
         return self.counts.get(kind, 0)
+
+    @classmethod
+    def merge(cls, steps):
+        """The ScenarioSteps of several runs together: the sum of the counts of the RECORDED ones. With none RECORDED, NONE_RECORDED."""
+        counted = [each for each in steps if each.state == outcomes.RECORDED]
+        if not counted:
+            return cls({}, outcomes.NONE_RECORDED)
+        total = {}
+        for each in counted:
+            for kind, number in each.counts.items():
+                total[kind] = total.get(kind, 0) + number
+        return cls(total)
 
     def line(self):
         """The log's counts line: every kind, sorted, with the two kinds that matter always shown, or `not read`."""
@@ -299,11 +313,11 @@ class ScenarioRun:
             shown = "%s\n%s\n\n" % (LIMITS_SECTION, limits.read_text(errors="replace").rstrip("\n")) if limits.is_file() else ""
         except OSError:
             shown = ""
-        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s\n%s%s\n%s\n%s--- the scenario as run ---\n%s\n"
+        self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s\n%s%s\n%s\n%s%s\n%s\n"
                             "--- wokwi-cli printed ---\n%s\n"
                             % (self.scenario.name, datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
                                self.timeout_ms, sentence, ScenarioSteps.from_text(self.steps).line(), IMAGE_LINE,
-                               hashlib.sha256(self.flash).hexdigest(), files, shown, self.steps, said.strip()))
+                               hashlib.sha256(self.flash).hexdigest(), files, shown, SCENARIO_SECTION, self.steps, said.strip()))
         return self.log
 
 
