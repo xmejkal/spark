@@ -161,12 +161,12 @@ class PlantedBreachesTest(unittest.TestCase):
             "import os\nimport subprocess\nimport subprocess as sp\nimport time\nimport urllib.parse\nimport urllib.request\n"
             "from datetime import date, datetime as clock\nfrom pathlib import Path\n\n\n"
             'class Runner:\n    """Adapter: wraps a tool."""\n\n    def go(self):\n        return subprocess.run(["x"]), time.sleep(1), clock.now()\n\n\n'
-            'def outside():\n    subprocess.run(["y"])\n    sp.run(["z"])\n    time.monotonic()\n    time.strftime("%Y")\n'
+            'def outside():\n    subprocess.run(["y"])\n    sp.run(["z"])\n    time.monotonic()\n    time.strftime("%Y")\n    time.strftime("%Y", when)\n    time.ctime(when)\n    time.asctime()\n'
             '    urllib.parse.quote("a")\n    urllib.request.urlopen("u")\n    clock.now()\n    date.today()\n'
             '    open("f", "w")\n    open("g")\n    Path("p").write_text("x")\n    os.getenv("B")\n    return os.environ["A"]\n')})
         self.assertEqual(measure.breaches(root), {
             "T1:scripts/touch.py:datetime": 2, "T1:scripts/touch.py:file-write": 2, "T1:scripts/touch.py:os.environ": 1,
-            "T1:scripts/touch.py:os.getenv": 1, "T1:scripts/touch.py:subprocess": 2, "T1:scripts/touch.py:time": 1,
+            "T1:scripts/touch.py:os.getenv": 1, "T1:scripts/touch.py:subprocess": 2, "T1:scripts/touch.py:time": 3,
             "T1:scripts/touch.py:urllib": 1})
 
     def test_t2_the_mock_patches_of_a_test_file_but_not_those_on_the_environment(self):

@@ -34,5 +34,7 @@
  {"file": "tools/measure.py", "name": "P440: an import alias hides the outside", "find": "whole, base = _resolved(node, aliases), _resolved(node.value, aliases)", "replace": "whole, base = _dotted(node), _dotted(node.value)"},
  {"file": "tools/measure.py", "name": "P440: time.strftime reads the clock", "find": "base == \"time\" and node.attr in CLOCK_CALLS", "replace": "base == \"time\""},
  {"file": "tools/measure.py", "name": "P440: raise SystemExit is no exit", "find": "elif isinstance(node, ast.Raise)", "replace": "elif False and isinstance(node, ast.Raise)"},
- {"file": "tools/measure.py", "name": "P440: a main is listed twice", "find": "if span(node) > (MAIN_LINES if name == \"main\" else limit):", "replace": "if span(node) > limit:"}
+ {"file": "tools/measure.py", "name": "P440: a main is listed twice", "find": "if span(node) > (MAIN_LINES if name == \"main\" else limit):", "replace": "if span(node) > limit:"},
+ {"file": "tools/measure.py", "name": "P440: time.strftime with no time tuple is pure", "find": "and len(node.args) + len(node.keywords) < CLOCK_WHEN_BARE.get(node.func.attr, 0):", "replace": "and False:"},
+ {"file": "tools/measure.py", "name": "P440: time.strftime with a time tuple reads the clock", "find": "CLOCK_WHEN_BARE = {\"strftime\": 2, \"asctime\": 1, \"ctime\": 1}", "replace": "CLOCK_WHEN_BARE = {\"strftime\": 99, \"asctime\": 99, \"ctime\": 99}"}
 ]

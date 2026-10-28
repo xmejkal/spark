@@ -309,12 +309,9 @@ PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `
 ### The rules test
 
 `tests/test_architecture.py` reads `scripts/` and `tests/` with `ast` and holds each breach against
-`tests/architecture_baseline.json`. One test method checks one rule: R1 (a function, a module and a `main` are short),
-R2 (nesting), R3 (parameters), R6 (a class docstring starts with a role word), T1 (only an Adapter touches the outside),
-T2 (no test file adds a `mock.patch`), T4 (no branch on `sys.modules`), X2 (nothing in `scripts/spark/` prints, reads or
-exits outside a Renderer), U1 (the leaves import nothing of spark), C1 (a unique file name, an exception ends in `Error`)
-and C3 (no second name for an exit code). The rules and their limits are in
-[`architecture/notes.md`](../discovery/2026-10-19-p323-target-architecture/architecture/notes.md).
+`tests/architecture_baseline.json`. One test method checks one rule (R1, R2, R3, R6, T1, T2, T4, X2, U1, C1, C3). Each
+rule is one sentence in `measure.RULES` in `tools/measure.py`, which the test's docstrings and its failure messages read;
+`python3 tools/measure.py --rules` lists every breach with its rule.
 
 The baseline lists the breaches that exist today, one `"rule:file:name": value` per line and sorted, so two branches
 merge line by line. The value is the measured size, not only the name. The baseline only shrinks: a new breach fails,

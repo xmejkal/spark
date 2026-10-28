@@ -250,9 +250,11 @@ MOVED_GUARDS = {"drawer": {"clean", "CONTROL", "LABEL_MAX", "TEXT_MAX", "TAGS_MA
 #: X2: a class that may print, read and exit in `scripts/spark/`: the Renderers (by role word) and the terminal consent.
 TERMINAL_CLASSES = ("TerminalConsentStrategy",)
 EXCEPTION_NAMES = {name for name, value in vars(builtins).items() if isinstance(value, type) and issubclass(value, BaseException)}
-#: T1: the calls of `time` that read the clock or sleep. `strftime` and the like are no I/O.
+#: T1: the calls of `time` that read the clock or sleep.
 CLOCK_CALLS = {"time", "time_ns", "monotonic", "monotonic_ns", "perf_counter", "perf_counter_ns", "process_time", "sleep",
                "localtime", "gmtime"}
+#: T1: the calls of `time` that read the clock only when they get fewer arguments than this (no time tuple); with a tuple they are pure.
+CLOCK_WHEN_BARE = {"strftime": 2, "asctime": 1, "ctime": 1}
 #: T1 and X2: the modules an `import X as Y` may hide.
 TRACKED = ("subprocess", "time", "urllib", "os", "datetime", "sys")
 
@@ -412,8 +414,12 @@ def _effect(node, aliases):
             return "urllib" if whole == "urllib.request" else whole
         if node.attr in ("now", "utcnow", "today") and base.split(".")[-1] in ("datetime", "date"):
             return "datetime"
-    elif isinstance(node, ast.Call) and _writes_a_file(node):
-        return "file-write"
+    elif isinstance(node, ast.Call):
+        if _writes_a_file(node):
+            return "file-write"
+        if isinstance(node.func, ast.Attribute) and _resolved(node.func.value, aliases) == "time" \
+                and len(node.args) + len(node.keywords) < CLOCK_WHEN_BARE.get(node.func.attr, 0):
+            return "time"
     return ""
 
 
@@ -423,7 +429,7 @@ def _count(rule, source, seen):
 
 
 def long_code(source, known):
-    """R1: a function over its limit, a module over 600 lines, a `main` over 15 (one entry for a `main`)."""
+    """R1 (see RULES): a function, a module or a main over its limit; a `main` is one entry."""
     limit = FUNCTION_LINES["spark" if source.file.startswith("scripts/spark/") else "old"]
     found = []
     for name, node in functions_of(source.tree):
@@ -436,12 +442,12 @@ def long_code(source, known):
 
 
 def deep_nesting(source, known):
-    """R2: a function that nests deeper than 3."""
+    """R2 (see RULES): a function that nests too deep."""
     return [Breach("R2", source.file, name, depth_of(node)) for name, node in functions_of(source.tree) if depth_of(node) > NESTING]
 
 
 def many_parameters(source, known):
-    """R3: a function with more than 5 parameters, without self or cls."""
+    """R3 (see RULES): a function with too many parameters, not counting self or cls."""
     found = []
     for name, node in functions_of(source.tree):
         args = node.args
