@@ -9,7 +9,7 @@ Example, in a project after `/spark:build` and the firmware are written:
     python3 "$CLAUDE_PLUGIN_ROOT/scripts/import_firmware.py"
 
 It imports each PROJECT/firmware/*.py and each package there (a folder holding __init__.py) except the boot files,
-main.py and boot.py. PROJECT defaults to `.`. Each import is a process of its own, with spark's stand-ins first on
+main.py and boot.py. PROJECT defaults to `.`. Each import is a process of its own, with spark's machine stand-in first on
 sys.path, then firmware/ and firmware/lib, where MicroPython looks for drivers. The stand-ins are in scripts/stand_in/:
 `machine` (a Pin that remembers its level, a PWM that keeps its last frequency and duty, and an ADC, SPI, SoftSPI, I2C,
 SoftI2C and I2S that keep their arguments and return fixed values), `micropython` and `framebuf`. A driver that ships
@@ -24,7 +24,7 @@ An `imported` proves that the names exist and the module-level calls ran. It doe
 right (the stand-ins take any), that a pin, a wire, a rate or a driver works, or that a device answers: a bus finds no
 device, so a module-level `assert 0x3C in i2c.scan()` fails here. Keep such a check in a function that main.py calls.
 Build a driver in a function that main.py calls too: a driver that calls `time.sleep_ms` in its constructor fails when
-the module builds it at import (CPython's `time` has no `sleep_ms`, and spark cannot stand in for `time`).
+the module builds it at import (CPython's `time` has no `sleep_ms`, and spark does not stand in for `time`).
 
 The boot files are left unrun on purpose: main.py starts the loop, so a two-line main.py over an importable module is
 the shape that can be tested. When firmware/ holds nothing to import but the boot files and pins.py, that is a
