@@ -549,6 +549,23 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertTrue((elsewhere / "diagram.json").is_file())
         self.assertFalse((other / "sim").exists())
 
+    def test_an_older_limits_note_goes_when_the_build_wrote_none_and_a_new_one_replaces_it(self):
+        # The build runs in a fresh folder and keep_simulation merges into the project's sim/, so only keep_simulation can remove it.
+        work, into = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "sim"
+        (work / "sim").mkdir()
+        (work / "sim" / "diagram.json").write_text("{}")
+        into.mkdir()
+        (into / "WHAT-THIS-CANNOT-SHOW.md").write_text("- **Old** — from an earlier build\n")
+        (into / "scenarios").mkdir()
+        (into / "scenarios" / "mine.scenario.yaml").write_text("steps:\n")
+        self.assertEqual(check_spine.keep_simulation(work, into)["did"], "wrote")
+        self.assertFalse((into / "WHAT-THIS-CANNOT-SHOW.md").exists())
+        self.assertTrue((into / "scenarios" / "mine.scenario.yaml").is_file())  # a person's scenarios stay
+        self.assertTrue((into / "diagram.json").is_file())
+        (work / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text("- **New** — from this build\n")
+        check_spine.keep_simulation(work, into)
+        self.assertEqual((into / "WHAT-THIS-CANNOT-SHOW.md").read_text(), "- **New** — from this build\n")
+
     def keep_through_main(self, *argv, requirements=None):
         """`main` with a run that simulated, --json: the verdict it printed, and the firmware the run was handed."""
         import contextlib

@@ -481,6 +481,16 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
         limits = run_scenario.SimulationLimits.from_log(log)
         self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log's limits section is cut off", []))
 
+    def test_a_log_cut_off_inside_the_heading_line_is_not_checked_too(self):
+        log = Path(tempfile.mkdtemp()) / "a.log"
+        for cut in ("--- what this simulation", "--- what this simulation cannot show ---", "-"):
+            log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\n" + cut)
+            with self.subTest(cut=cut):
+                limits = run_scenario.SimulationLimits.from_log(log)
+                self.assertEqual((limits.state, limits.why), ("not-checked", "the log's limits section is cut off"))
+        log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\n")  # cut right after the header: nothing said
+        self.assertEqual(run_scenario.SimulationLimits.from_log(log).state, "none-recorded")
+
     def test_an_unreadable_log_is_not_checked(self):
         limits = run_scenario.SimulationLimits.from_log(self.project / "sim" / "runs" / "none.log")
         self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log cannot be read", []))

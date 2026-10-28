@@ -102,12 +102,6 @@
   "replace": "        elif not line.strip():\n            pass\n"
  },
  {
-  "file": "scripts/sim_project.py",
-  "name": "write_limits keeps an older note when there are no limits",
-  "find": "note.unlink(missing_ok=True)  # a note from an earlier build must not outlive the limits it listed",
-  "replace": "pass"
- },
- {
   "file": "scripts/image_evidence.py",
   "name": "an unreadable log's limits sentence is skipped although a control hides its steps sentence",
   "find": "said_unreadable=not merged.count(SET_CONTROL))",
@@ -118,5 +112,23 @@
   "name": "a joined sentence keeps a leading space",
   "find": "found[-1] = Limit(found[-1].component, (\"%s %s\" % (found[-1].sentence, line.strip())).strip())",
   "replace": "found[-1] = Limit(found[-1].component, \"%s %s\" % (found[-1].sentence, line.strip()))"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "keep_simulation keeps an older limits note when the build wrote none",
+  "find": "            (Path(destination) / sim_project.LIMITS_NOTE).unlink(missing_ok=True)",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a log cut off inside the limits heading reads as NONE_RECORDED",
+  "find": "            if body and (LIMITS_SECTION + \"\\n\").startswith(body):",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "limits_note writes a blank line inside a sentence",
+  "find": "LIMIT_DASH + _one_paragraph(sentence))",
+  "replace": "LIMIT_DASH + sentence)"
  }
 ]

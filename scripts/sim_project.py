@@ -109,6 +109,9 @@ def limits_of(design):
 
 
 # --- MVP ---
+#: The note's file name, in the simulation project's folder: `write_limits` writes it, run_scenario.py copies it into a log and
+#: `check_spine.keep_simulation` removes an older one.
+LIMITS_NOTE = "WHAT-THIS-CANNOT-SHOW.md"
 #: How a limit line of the note begins, how its component is marked and what comes between the component and the sentence:
 #: `limits_note` writes `- **component** — sentence`, and `limits_in` reads it back.
 LIMIT_PREFIX, LIMIT_MARK, LIMIT_DASH = "- ", "**", " — "
@@ -150,6 +153,11 @@ def _limit_of(text):
 # --- end MVP ---
 
 
+def _one_paragraph(sentence):
+    """The sentence with its blank and whitespace-only lines removed and the rest joined by one space, so the reader never meets a blank line inside a limit."""
+    return " ".join(line for line in sentence.splitlines() if line.strip())
+
+
 def limits_note(limits):
     """The same, as the file a person finds beside the diagram rather than in a terminal they closed."""
     lines = ["# What this simulation cannot show", "",
@@ -159,22 +167,19 @@ def limits_note(limits):
              "A scenario passing over any of these proves what the FIRMWARE did, and nothing about",
              "the hardware the stand-in replaced or the board's part that Wokwi lacks.", ""]
     for component, sentence in limits:
-        lines.append(LIMIT_PREFIX + LIMIT_MARK + component + LIMIT_MARK + LIMIT_DASH + sentence)
+        lines.append(LIMIT_PREFIX + LIMIT_MARK + component + LIMIT_MARK + LIMIT_DASH + _one_paragraph(sentence))
     return "\n".join(lines) + "\n"
 
 
 def write_limits(sim_dir, design, board):
     """
-    Put the note beside the diagram and hand back what it said, or [] when there is nothing (then an older note is removed). The design's records and the
+    Put the note beside the diagram and hand back what it said, or [] when there is nothing. The design's records and the
     board's own GPIOs both count (P396), and a board-only build passes no design. `board` has no default: no test reaches
     the full build's simulation stage (`check_spine.simulation_detail`), so a call that drops it fails at once.
     """
     limits = (limits_of(design) if design is not None else []) + boards.onboard_limits(board)
-    note = Path(sim_dir) / "WHAT-THIS-CANNOT-SHOW.md"
     if limits:
-        note.write_text(limits_note(limits))
-    else:
-        note.unlink(missing_ok=True)  # a note from an earlier build must not outlive the limits it listed
+        (Path(sim_dir) / LIMITS_NOTE).write_text(limits_note(limits))
     return limits
 
 

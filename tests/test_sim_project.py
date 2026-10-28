@@ -288,13 +288,6 @@ class WhatTheSimulationCannotShowTest(unittest.TestCase):
         self.assertEqual(sim_project.write_limits(work, design, {}), [])
         self.assertFalse((work / "WHAT-THIS-CANNOT-SHOW.md").exists())
 
-    def test_an_older_note_is_removed_when_the_build_has_no_limits(self):
-        work = Path(tempfile.mkdtemp())
-        (work / "WHAT-THIS-CANNOT-SHOW.md").write_text(sim_project.limits_note([("Valve", "an LED")]))
-        design = self.FakeDesign([self.part("Btn", wokwi={"part": "wokwi-pushbutton"})])
-        self.assertEqual(sim_project.write_limits(work, design, {}), [])
-        self.assertFalse((work / "WHAT-THIS-CANNOT-SHOW.md").exists())
-
     def test_the_stage_says_it_too_for_the_person_watching_the_run(self):
         import check_spine
         detail = check_spine.simulation_detail(34, {"l9110s": "reused"}, 0,
@@ -366,6 +359,11 @@ class TheBoardsOwnGpiosAreLimitsTooTest(unittest.TestCase):
     def test_a_continuation_line_joins_the_limit_above(self):
         note = sim_project.limits_note([("A", "first line\nsecond line"), ("B", "alone")])
         self.assertEqual(sim_project.limits_in(note), [("A", "first line second line"), ("B", "alone")])
+
+    def test_a_sentence_with_a_blank_line_is_written_as_one_paragraph_and_reads_back_whole(self):
+        note = sim_project.limits_note([("A", "para one\n\npara two\n  \npara three"), ("B", "alone")])
+        self.assertEqual(sim_project.limits_in(note), [("A", "para one para two para three"), ("B", "alone")])
+        self.assertIn("- **A** — para one para two para three\n", note)
 
     def test_a_blank_line_ends_the_limit_so_a_closing_paragraph_is_no_part_of_it(self):
         note = sim_project.limits_note([("A", "first line\nsecond line"), ("B", "alone")]) + "\nA paragraph a person added.\n"

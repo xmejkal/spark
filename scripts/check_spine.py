@@ -969,11 +969,13 @@ def simulation_dir(args):
 def keep_simulation(workdir, destination):
     """
     The simulation project the last stage wrote, copied to `destination` as one kept entry {file, did, why, line}, or None
-    when the stage wrote none. It is merged into what is there, so a person's scenarios stay.
+    when the stage wrote none. It is merged into what is there, so a person's scenarios stay; a limits note from an earlier build goes when this build wrote none.
     """
     if not (workdir / "sim").is_dir():
         return None
     try:
+        if not (workdir / "sim" / sim_project.LIMITS_NOTE).is_file():  # the copy merges, so an older note would stay for the next run
+            (Path(destination) / sim_project.LIMITS_NOTE).unlink(missing_ok=True)
         shutil.copytree(workdir / "sim", destination, dirs_exist_ok=True)
     except OSError as refused:  # shutil.Error is one
         return {"file": str(destination), "did": "not kept", "why": str(refused),

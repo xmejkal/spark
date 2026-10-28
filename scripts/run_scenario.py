@@ -233,6 +233,8 @@ class SimulationLimits:
         except OSError:
             return cls([], outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
         if not body.startswith(LIMITS_SECTION + "\n"):
+            if body and (LIMITS_SECTION + "\n").startswith(body):  # a log cut off inside the heading line
+                return cls([], outcomes.NOT_CHECKED, WHY_LIMITS_CUT_OFF)
             return cls([], outcomes.NONE_RECORDED)
         section, ended, _ = body[len(LIMITS_SECTION):].partition(SCENARIO_SECTION)
         if not ended:
@@ -346,7 +348,7 @@ class ScenarioRun:
         """
         self.log.parent.mkdir(exist_ok=True)
         files = "".join("%s%s %s\n" % (FILE_LINE, hashlib.sha256(data).hexdigest(), name) for name, data in self.files)
-        limits = self.sim / "WHAT-THIS-CANNOT-SHOW.md"
+        limits = self.sim / sim_project.LIMITS_NOTE
         try:
             shown = "%s\n%s\n\n" % (LIMITS_SECTION, limits.read_text(errors="replace").rstrip("\n")) if limits.is_file() else ""
         except OSError:
