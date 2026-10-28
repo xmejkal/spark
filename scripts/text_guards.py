@@ -1,7 +1,7 @@
 """
 The guards for text that spark shows, stores or writes into a file (P403, OC8): `printable` for the screen, `clean`
 for the store, `one_line` for a generated file's comment. It imports nothing of spark, so every reader can use it
-(`tests/test_imports.py`).
+(rule U1 of `tests/test_architecture.py`).
 """
 
 import re

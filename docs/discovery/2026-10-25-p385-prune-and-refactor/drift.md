@@ -28,7 +28,7 @@ was also compared by the text of its line at the base commit of its page (`17708
 | refactor-plan.md Stage 1 "Done when" | `ls tests/golden/*.json` counts at least 12. `grep -L '"code"'` prints nothing | gone | 11 json files. No golden has a `code` key, so the grep lists them, because S2 is not built. |
 | refactor-plan.md S1 "Goldens" | Look bad flag, look ok with `--no-simulation`, deploy gate closed, deploy ready seen, deploy bad flag | not built yet | `CASES` in `golden_bench.py` has 13 Cases. Deploy has only dry run (json, txt) and `could-not-run-no-terminal`. Look with `--no-simulation` is `could-not-run`. |
 | refactor-plan.md S2 | `board_codes.py`, a `code` at six item sites, `fix_step`, `needs_person`, top-level `backends`, a `bad_argument` parser | not built yet | `git grep` finds none of these in `scripts/`. |
-| refactor-plan.md S3 to S13, core.md, all proposed names | `scripts/spark/`, `test_architecture.py`, `architecture_baseline.json`, `tools/measure.py`, `--retarget`, `tools/map.py`, `docs/guide/map.md`, `slow_test_*`, `OutsideWorld`, `Backends`, `Operation`, `OperationResult` | not built yet | None of these files or names exists. The only leaf test is `test_screen_text_imports_no_spark_module` (`tests/test_board_facts.py`). |
+| refactor-plan.md S3 to S13, core.md, all proposed names | `scripts/spark/`, `test_architecture.py`, `architecture_baseline.json`, `tools/measure.py`, `--retarget`, `tools/map.py`, `docs/guide/map.md`, `slow_test_*`, `OutsideWorld`, `Backends`, `Operation`, `OperationResult` | partly built | `tests/test_architecture.py`, `tests/architecture_baseline.json`, `tools/measure.py` and `mutate.py --retarget` exist since P440 (2026-10-28). The rest of the names does not exist yet. |
 
 ### Names the comments mention
 

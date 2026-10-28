@@ -68,7 +68,7 @@ five stages (rows 232 to 255). Version 2 of the plan (P385, 2026-10-25) has six 
 
 ## Rule reference
 
-`ArchitectureRules` (proposed, `tests/test_architecture.py`) checks each AST rule. A breach that exists today goes
+`ArchitectureRules` (built in P440, `tests/test_architecture.py`) checks each AST rule. A breach that exists today goes
 in `tests/architecture_baseline.json`, which only shrinks. The old ids are in brackets.
 
 | Id | Rule | Check |

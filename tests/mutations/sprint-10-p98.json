@@ -6,5 +6,5 @@
  {"file": "tools/mutate.py", "name": "a near set that fails on clean code alone is trusted",
   "find": "found[file] = near if near and suite_is_green(root, tests, only=near) else ()", "replace": "found[file] = near"},
  {"file": "tools/mutate.py", "name": "a Python file is near only the tests that name it",
-  "find": "if target.suffix == \".py\"", "replace": "if False"}
+  "find": "if target.suffix != \".py\":", "replace": "if True:"}
 ]

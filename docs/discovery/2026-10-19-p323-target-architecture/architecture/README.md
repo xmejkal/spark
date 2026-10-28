@@ -116,7 +116,7 @@ Every Operation returns an `OperationResult` (proposed). Every frontend renders 
 
 ## The five goals, in the PO's order
 
-Each rule has an id. The full table is in [notes](notes.md#rule-reference). `ArchitectureRules` (proposed) is one
+Each rule has an id. The full table is in [notes](notes.md#rule-reference). `ArchitectureRules` (built in P440) is one
 test that reads the code with Python's `ast` module. A breach that exists today goes in a baseline that only shrinks.
 
 | Goal | Its rules | How a test enforces it |

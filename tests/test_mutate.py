@@ -422,6 +422,131 @@ class NearTestsFirstTest(unittest.TestCase):
 
 
 
+class RetargetTest(unittest.TestCase):
+    """P440: --retarget moves the rows of a file that moved, by editing the table's text."""
+
+    def test_retarget_moves_every_row_of_the_old_file_and_no_other(self):
+        text = ('[{"file": "scripts/a.py", "name": "one", "find": "x", "replace": "y"},\n'
+                ' {"file": "scripts/ab.py", "name": "two", "find": "x", "replace": "y"},\n'
+                ' {"file": "scripts/a.py", "name": "three", "find": "scripts/a.py", "replace": "\\"file\\": \\"scripts/a.py\\""}]\n')
+        changed, count = mutate.retarget(text, "scripts/a.py", "scripts/spark/a.py")
+        self.assertEqual(count, 2)
+        self.assertEqual([(row["file"], row["find"]) for row in json.loads(changed)],
+                         [("scripts/spark/a.py", "x"), ("scripts/ab.py", "x"), ("scripts/spark/a.py", "scripts/a.py")])
+
+    def test_retarget_keeps_the_table_s_own_alignment(self):
+        text = '[{"file":"scripts/a.py", "find": "x"},\n {"file" :  "scripts/a.py", "find": "y"},\n {"file": "scripts/a.py", "find": "z"}]'
+        changed, count = mutate.retarget(text, "scripts/a.py", "scripts/b.py")
+        self.assertEqual((changed, count), ('[{"file":"scripts/b.py", "find": "x"},\n {"file" :  "scripts/b.py", "find": "y"},\n'
+                                            ' {"file": "scripts/b.py", "find": "z"}]', 3))
+
+    def test_retarget_refuses_a_table_that_is_not_json_and_a_text_that_does_not_match_the_rows(self):
+        with self.assertRaises(ValueError):
+            mutate.retarget('[{"file": "a.py",}]', "a.py", "b.py")
+        with self.assertRaises(ValueError):
+            mutate.retarget('[{"file": "a.py", "find": "x"}, {"note": {"file": "a.py"}}]', "a.py", "b.py")
+
+    def test_the_command_that_moves_no_row_is_could_not_run_and_runs_alone(self):
+        import contextlib
+        import io
+        root = Path(tempfile.mkdtemp())
+        table_file = root / "t.json"
+        table_file.write_text('[{"file": "c.py", "find": "x"}]')
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(mutate.main([str(table_file), "--retarget", "a.py", "b.py"]), mutate.EXIT_COULD_NOT_RUN)
+        self.assertIn("nothing moved", err.getvalue())
+        for flag in ("--anchors", "--copy"):
+            with self.subTest(flag=flag), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                mutate.main([str(table_file), "--retarget", "c.py", "d.py", flag])
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            mutate.main([str(table_file), "--retarget", "c.py", "d.py", "--for", "c.py"])
+        self.assertEqual(table_file.read_text(), '[{"file": "c.py", "find": "x"}]')
+
+    def test_the_command_moves_the_rows_of_every_table_or_none(self):
+        import contextlib
+        import io
+        root = Path(tempfile.mkdtemp())
+        good, other, bad = root / "good.json", root / "other.json", root / "bad.json"
+        good.write_text('[{"file": "a.py", "find": "x"}]')
+        other.write_text('[{"file": "c.py", "find": "x"}]')
+        bad.write_text("[{")
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(mutate.main([str(good), str(other), "--retarget", "a.py", "b.py"]), mutate.EXIT_OK)
+        self.assertEqual(out.getvalue(), "  moved 1 row(s) from a.py to b.py in 1 of 2 table(s); run --anchors to prove them\n")
+        self.assertEqual((good.read_text(), other.read_text()), ('[{"file": "b.py", "find": "x"}]', '[{"file": "c.py", "find": "x"}]'))
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(mutate.main([str(good), str(bad), "--retarget", "b.py", "c.py"]), mutate.EXIT_COULD_NOT_RUN)
+        self.assertEqual(good.read_text(), '[{"file": "b.py", "find": "x"}]')
+
+
+def tiny_package(root):
+    """Under `scripts/spark/core/`: `sibling.py` and `leaf.py`, which reads `sibling` from its package, as every module of the core does."""
+    core = root / "scripts" / "spark" / "core"
+    core.mkdir(parents=True)
+    for folder in (root / "scripts" / "spark", core):
+        (folder / "__init__.py").write_text('"""A package."""\n')
+    (core / "sibling.py").write_text("ONE = 1\n")
+    (core / "leaf.py").write_text("from spark.core import sibling\n\n\ndef one():\n    return sibling.ONE\n")
+    write_test(root, "test_leaf.py", "sys.path.insert(0, %r)" % str(root / "scripts"), "from spark.core import leaf",
+               "class T(unittest.TestCase):", "    def test_one(self): self.assertEqual(leaf.one(), 1)")
+
+
+class APackageModuleTest(unittest.TestCase):
+    """P440: a module of a package is found, near and imported, by its dotted name."""
+
+    def test_a_package_module_s_near_tests_are_the_ones_that_import_its_dotted_name(self):
+        root = tiny_project()
+        (root / "scripts" / "spark" / "core").mkdir(parents=True)
+        for folder in (root / "scripts" / "spark", root / "scripts" / "spark" / "core"):
+            (folder / "__init__.py").write_text("")
+        for name, line in (("test_from_package.py", "from spark.core import outcomes"),
+                           ("test_dotted.py", "import spark.core.outcomes"),
+                           ("test_from_module.py", "from spark.core.outcomes import ONE"),
+                           ("test_among_names.py", "from spark.core import other, outcomes as o"),
+                           ("test_flat.py", "import outcomes"),
+                           ("test_look_alike.py", "from spark.core import outcomes_extra\nimport spark.core.outcomes_extra"),
+                           ("test_other_package.py", "from spark.edge import outcomes")):
+            write_test(root, name, line)
+        self.assertEqual(mutate.near_tests(root, "tests", "scripts/spark/core/outcomes.py"),
+                         ["test_among_names", "test_dotted", "test_from_module", "test_from_package"])
+        self.assertEqual(mutate.near_tests(root, "tests", "scripts/outcomes.py"), ["test_flat"])
+        self.assertEqual(mutate.near_tests(root, "tests", "scripts/spark/core/__init__.py"),
+                         ["test_among_names", "test_dotted", "test_from_module", "test_from_package", "test_look_alike"])
+
+    def test_a_script_in_a_folder_without_an_init_is_near_the_tests_that_import_its_stem(self):
+        # scripts/stand_in/ is no package: tests/test_journey_basic.py does `import machine`.
+        root = tiny_project()
+        (root / "scripts" / "stand_in").mkdir(parents=True)
+        (root / "scripts" / "stand_in" / "machine.py").write_text("ONE = 1\n")
+        write_test(root, "test_flat.py", "import machine")
+        write_test(root, "test_dotted.py", "import stand_in.machine")
+        self.assertEqual(mutate.near_tests(root, "tests", "scripts/stand_in/machine.py"), ["test_flat"])
+        self.assertIsNone(mutate._import_error(root, "scripts/stand_in/machine.py"))
+
+    def test_a_folder_below_a_folder_without_an_init_falls_back_to_the_stem(self):
+        root = tiny_project()
+        inner = root / "scripts" / "fallback" / "inner"
+        inner.mkdir(parents=True)
+        (inner / "__init__.py").write_text("")
+        (inner / "x.py").write_text("ONE = 1\n")
+        write_test(root, "test_stem.py", "import x")
+        write_test(root, "test_path.py", "from fallback.inner import x")
+        self.assertEqual(mutate.import_spec(root, "scripts/fallback/inner/x.py"), (inner, "x"))
+        self.assertEqual(mutate.near_tests(root, "tests", "scripts/fallback/inner/x.py"), ["test_stem"])
+
+    def test_a_package_module_s_import_is_checked_by_its_dotted_name(self):
+        root = tiny_project()
+        tiny_package(root)
+        self.assertEqual([mutate._import_error(root, file) for file in ("scripts/spark/core/leaf.py", "scripts/spark/__init__.py")],
+                         [None, None])
+        broken = {"file": "scripts/spark/core/leaf.py", "name": "the package has no such module",
+                  "find": "from spark.core import sibling", "replace": "from spark.core import sibling_xyz"}
+        results, restored = mutate.run(root, "tests", [broken])
+        self.assertEqual((results[0]["status"], restored), (mutate.REFUSED, True))
+        self.assertIn("does not import", results[0]["detail"])
+        self.assertIn("sibling_xyz", results[0]["detail"])
+
+
 class OnlyTheMutationsOfAPathTest(unittest.TestCase):
     """P208: --for keeps the rows of a file, or of a folder and everything in it, from any number of tables."""
 
@@ -463,16 +588,25 @@ class AMutationRunInACopyTest(unittest.TestCase):
         seen = []
         real_run = mutate.run
 
-        def watched(where, tests, mutations):
+        def watched(where, tests, mutations, **kept):
             seen.append(where)
             self.assertEqual((root / "m.py").read_text().count("return a + b"), 1)
-            return real_run(where, tests, mutations)
+            return real_run(where, tests, mutations, **kept)
 
         with unittest.mock.patch.object(mutate, "run", side_effect=watched):
             code = mutate.main([str(table(root, BREAK_ADD)), "--root", str(root), "--copy"])
         self.assertEqual(code, mutate.EXIT_OK)
         self.assertNotEqual(seen[0], root.resolve())
         self.assertFalse(seen[0].parent.exists(), "the copy, or the folder it was made in, stays behind")
+    def test_a_copy_skips_the_after_suite_and_reports_restored(self):
+        # P424: a copy is deleted after the run, so running the whole suite again to prove it restored proves nothing.
+        root = tiny_project()
+        calls = counting(self)
+        results, restored = mutate.run(root, "tests", [BREAK_ADD], copied=True)
+        self.assertEqual((results[0]["status"], restored, calls.count(None)), (mutate.CAUGHT, True, 1))
+        calls.clear()
+        mutate.run(root, "tests", [BREAK_ADD])
+        self.assertEqual(calls.count(None), 2, "outside a copy the suite runs before and after: %s" % calls)
 
     def test_the_copy_leaves_out_git_worktrees_caches_and_the_lock_and_borrows_node_modules(self):
         root = Path(tempfile.mkdtemp()) / "tree"

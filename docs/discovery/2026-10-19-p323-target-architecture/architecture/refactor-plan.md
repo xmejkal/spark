@@ -286,8 +286,8 @@ module imports upward. `board_facts` needed the time rule that `board_grant` hol
 `text_guards` sit in core and `provenance` in records.
 
 One test over every leaf, in `tests/test_imports.py`, replaced the old `screen_text` import test in
-`tests/test_board_facts.py` (P418; P431 renamed that file `tests/test_deploy_record_store.py`): it reads each leaf with `ast` and fails on any spark import (rows 6 and 22: `zone_time`
-has no test, and `provenance` has no import test). S3 folds it into `ArchitectureRules`.
+`tests/test_board_facts.py` (P418; P431 renamed that file `tests/test_deploy_record_store.py`): it read each leaf with `ast` and failed on any spark import (rows 6 and 22: `zone_time`
+had no test, and `provenance` had no import test). S3 (P440) folded it into rule U1 of `ArchitectureRules`, and deleted it.
 
 An `ast` walk over `scripts/` at `d064a65` finds 242 import edges, 17 of them lazy (inside a function). 32 edges sit
 on a cycle. Every cycle closes through one of eight lazy edges. The other 24 are top-level imports that point down
@@ -332,7 +332,7 @@ constant in `assign_pins.py`.
 | OC5, the store side and the look side (done in P431) | `DeployRecordStore` (Store) in `scripts/deploy_record_store.py` holds `find_path(mac)`, `read_last_deploy(mac)` and `write_deploy(facts, verdict, who)`, today `board_facts.record_path`, `read_last_deploy` and `record_deploy`. `LastDeploy` moves with it and keeps `state`, `why`, `to_dict`, `time_said` and the stored fields. `line()` and `in_question()` become `board_look.say_last_deploy(last)` and `deploy_gate.say_last_deploy_in_question(last)`. | the look and deploy goldens do not change. `tests/test_board_facts.py` moved its reader tests to `tests/test_deploy_record_store.py`, its line tests to `tests/test_board_look.py` and its question tests to `tests/test_deploy_gate.py`. One test holds the line and the question to the same words | 100 |
 | OC6, two meanings of the project name (done in P431) | `store.find_listed_name(folder)` is the name on the person's list or None (today `project_name`). `store.plan_listed_name(folder)` is the name the folder holds or will hold (today `add_project(dry_run=True)`). `plan_` already means "say it, write nothing" in `plan_set` and `plan_pick`. `add_project` loses `dry_run`. Call sites that need the listed name: `drawer.plan_set`, `breadboard._have`, `parts.note_built`, `parts._record_path`, `parts._op_pick` (its "listed" check), `parts._op_step` (its "listed" check), `parts._op_tally`. Call sites that need the name it will hold: `needs.match` (it hands the name to `_candidate`), `needs.plan_pick`, `parts._op_pick` (the name it writes), `parts._op_step` with `--dry-run`. The calls that write the name stay `add_project(folder)`: `init_project`, and `_op_pick` and `_op_step` when they write. | `--match` and `--pick` already named the same project (P403's bug) through `add_project(dry_run=True)`, so this slice is a rename with one split. Every old call site is gone by grep | 60 |
 | OC7, one reader of a fact's value (done in P431) | `provenance.read_value(record, *path)` reads a value along a key path through the fact's `value`. `emit_board.fact_value` is deleted, and the hand-read chain in `design.firmware_pulls` calls `read_value`. A bare number where a fact belongs reads as the value, as `fact_value` read a bare `io_volts`. | `firmware_pulls` on a board whose `internal_pull_up_ohms` is a bare number leaves the pull to the firmware (on main it raised AttributeError). A fact whose `value` is truthy but no positive number (`"45000"` as text) keeps the resistor, where main dropped it. A row asks whether `boards.board_fact_problems` must refuse a bare value at a fact position | 30 |
-| OC8, one home for the text guards (done in P418) | The leaf `text_guards.py` (once `screen_text.py`) holds `printable`, `clean` and its caps, `one_line` and `COMMENT_UNSAFE`. `drawer`, `parts`, `matching`, `assign_pins`, `needs`, `board_facts` and `emit_footprint` import it. `tests/test_imports.py` reads imports with `ast`: each leaf imports nothing of spark, `matching` imports no `drawer`, and `assign_pins` calls no `parts.one_line`. S3 folds it into the rules test later, and until then it keeps OC8 from regressing. | `tests/test_imports.py` fails on the old code and passes on the new | 80 |
+| OC8, one home for the text guards (done in P418) | The leaf `text_guards.py` (once `screen_text.py`) holds `printable`, `clean` and its caps, `one_line` and `COMMENT_UNSAFE`. `drawer`, `parts`, `matching`, `assign_pins`, `needs`, `board_facts` and `emit_footprint` import it. `tests/test_imports.py` read imports with `ast`: each leaf imports nothing of spark, `matching` imports no `drawer`, and `assign_pins` calls no `parts.one_line`. S3 (P440) folded it into rule U1 of the rules test. | `tests/test_imports.py` failed on the old code and passed on the new | 80 |
 
 Three more findings are rules, not slices. `drawer.holders_of` is the one reader of "who holds this stock", and
 `drawer.listing`, `needs.plan_pick` and `needs._candidate` stay its only callers (a U3 entry of S3). `provenance.fact_problems` is the
@@ -394,7 +394,7 @@ One lesson at a time, in chat, after the PR. The texts are in `lessons.md` of th
 | 1 | Pruning: what goes under the tag, what moves behind a module | the prune PR with `PRUNED.md`, the MVP marks per card | question 1: which of the verdict groups to take, in which order (answered: *"quck now, split later"*, so the prune PR does the quick work, and the splits of `boards.py` and `parts.py` wait for wave 6) |
 | 2 | Package layout: `scripts/spark/`, areas, leaves, the move recipe | S4, S11, waves 5 and 6 | question 2 (decision 2, the shape) and question 3 (decision 4, when the moves start) |
 | 3 | The core contract: Operation, result, Finding, the four rules of section 4, consent, the five role tables as its worked input | S3, S5, S6, OC4 | question 4 (decision 6, a relayed yes), question 5 (decision 1, readability first) and question 6 (decision 5, the printed names) |
-| 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, `tests/test_imports.py` | question 7: the quick run on a push, with no cap (S13, done in P425) |
+| 4 | Tests: goldens, Fakes, the leaf test, the ratchet on `mock.patch` | S7a, S13, rule U1 of `tests/test_architecture.py` | question 7: the quick run on a push, with no cap (S13, done in P425) |
 | 5 | Claude Code forms: command, skill, agent, MCP, and what each gets from one Operation | the frontends, the learning spike | question 8: when the spike runs (answered: after wave 3) |
 
 ## 10. The waves and their slices
@@ -478,8 +478,8 @@ one home for each fact (OC7, OC5, OC6) and the decision 3 edit. W2-2, P432 [#574
 one refusal order (OC1, OC2), after P411 [#572](https://github.com/xmejkal/spark/pull/572) merged. W2-3, P433
 [#575](https://github.com/xmejkal/spark/issues/575): the bench envelope codes (S2). W2-1 and W2-3 touch different
 files, so they are the two lanes. W2-2 follows both. The wave plan sits outside the repository. The order of work in
-section 10 puts other cards between them. Wave 2 removes no cycle (section 5). It is done when `tests/test_imports.py`
-passes and each OC proof holds. No golden changes except S2's, and no build golden is taken in wave 2: the first one
+section 10 puts other cards between them. Wave 2 removes no cycle (section 5). It is done when rule U1 of `tests/test_architecture.py`
+(once `tests/test_imports.py`) passes and each OC proof holds. No golden changes except S2's, and no build golden is taken in wave 2: the first one
 moves to S3. The Ready cards behind P385 (P397, P399, P345 PR 2 and P374, section 7) land in today's scripts during
 waves 1 and 2, and each marks its span (section 8).
 
@@ -489,9 +489,10 @@ The PO on 2026-10-27: "oh and yes, wave 3 should also become fewer bigger PRs as
 units to group, not one PR each. Wave 3's own plan proposes the cut by kind of change, with one council, as wave 2's
 did.
 
-S3, the rules test: `tests/test_architecture.py` (`ArchitectureRules`) and a generated baseline that only shrinks.
-`measure.py` of P322 moves to `tools/measure.py`. `tools/mutate.py` gains `--retarget OLD NEW`. The leaf test
-becomes a rule. When each planted breach is caught with its rule, the slice is done.
+S3, the rules test (done in P440): `tests/test_architecture.py` (`ArchitectureRules`) and a generated baseline that
+only shrinks. `measure.py` of P322 moved to `tools/measure.py`. `tools/mutate.py` gained `--retarget OLD NEW`. The leaf
+test became rule U1. Each planted breach is caught with its rule. R4, R5, U2, X1, X3, C4, T3 and T5 enter with the
+slice that first needs them.
 
 S4, `outcomes` and the two core leaves into the package: `scripts/spark/core/outcomes.py`, `core/zone_time.py` and
 `core/text_guards.py`, with the 36 import lines in 32 files of `scripts/` and `tools/` (at `d064a65`) and the test imports changed.
@@ -593,8 +594,8 @@ The other cards repeat a section and are cut: `tools/kanban.py` (section 3), `Br
 
 ## Still to do for the area pages
 
-The P385 PR applied every other edit to the pages. One is left: `docs/guide/developing.md` (not edited here) gains in
-the standard's rule 4 "an `op` in a golden or a command page keeps its spelling until decision 5".
+Nothing is left. The P385 PR applied every edit to the pages but one, and P440 added that one to rule 4 of
+`docs/guide/developing.md`: an `op` that a golden or a command page pins keeps its spelling (decision 5).
 
 ## What we will not do
 

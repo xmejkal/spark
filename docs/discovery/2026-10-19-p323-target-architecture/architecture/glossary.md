@@ -66,7 +66,7 @@ Back to [the architecture](README.md).
 | tool | An outside program, one row in `data/tools.json`. In the envelope, `tool` names the CLI that printed it. |
 | gate | The rule that opens or refuses an erase or a board write, with consent. |
 | consent | The person's yes, asked by a `ConsentStrategy`, or given by a stored grant. In a graph, `DeferringConsentStrategy` (proposed) never asks: its `require_ready` raises with the next step, and the Operation returns a `needs_yes` step with the command for the person's own terminal. Never a CLI flag: a Strategy in `OutsideWorld`, or the token. |
-| rule | One line of the code standard, checked by `ArchitectureRules`. Proposed. |
+| rule | One line of the code standard, checked by `ArchitectureRules`, built in P440. |
 | baseline | The list of today's rule breaches. It only shrinks. |
 | golden | A file with the expected `--json` and exit code of one Operation on one fixture project. Proposed. |
 | Fake | A stand-in for a real part in tests, in `tests/fakes.py`. `Fake`, then the whole name: `FakeOutsideWorld`, `FakeFirmwarePlatform`. |
