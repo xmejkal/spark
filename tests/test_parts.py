@@ -328,6 +328,42 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
         questions = parts.unverified(["dfr0534-module"])
         self.assertIn("idle_current_ma", {q["fact"] for q in questions})
 
+    def test_a_joystick_lists_ten_rows_and_the_guessed_outline_row_says_where_it_goes_back(self):
+        # P373: the outline is a fact nobody checked, so it is listed beside the eight facts and the pin order.
+        home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
+        facts = {"fact_%d" % n: {"value": n, "verified": False, "source": "the maker's page", "why_it_matters": "it matters"}
+                 for n in range(8)}
+        record = part("x-joy", pin_order=["GND", "VCC", "X"], facts=facts, body_mm={
+            "width": 34, "height": 26, "verified": False, "source": "a guess from the photo", "why_it_matters": "the fit"})
+        (home / "catalog" / "x-joy.json").write_text(json.dumps(record))
+        with in_store(home):
+            said, code = run_json(["--unverified", "x-joy"])
+        self.assertEqual((code, len(said["assumptions"])), (0, 10))
+        self.assertEqual(said["assumptions"][-1], {"fact": "x-joy.body_mm", "basis": "unverified", "assumed": {"width": 34, "height": 26},
+                                                   "sentence": "the fit", "source": "a guess from the photo", "write": "body_mm"})
+        self.assertEqual([row["write"] for row in said["assumptions"][7:]], ["facts.fact_7", "pin_order_proof", "body_mm"])
+        self.assertEqual([(step["op"], step["argv"], step["effects"]) for step in said["next"]],
+                         [("fact-set", ["--fact-set", "x-joy", "<file>"], ["writes"])])
+        with in_store(home), contextlib.redirect_stdout(io.StringIO()) as out:
+            parts.main(["--unverified", "x-joy"])
+        self.assertTrue(out.getvalue().rstrip().splitlines()[-1].startswith("  next: parts.py --fact-set x-joy <file> — "), out.getvalue())
+
+    def test_the_next_step_names_the_first_part_with_a_row_that_can_go_back_and_none_when_no_row_can(self):
+        # P373: a record whose facts is no object has one row with `write` null, and `--fact-set` would refuse it.
+        home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
+        (home / "catalog" / "x-bad.json").write_text(json.dumps(part("x-bad", facts=[])))
+        (home / "catalog" / "x-good.json").write_text(json.dumps(part("x-good", facts={
+            "f": {"value": 1, "verified": False, "source": "the maker's page", "why_it_matters": "it matters"}})))
+        with in_store(home):
+            both, _ = run_json(["--unverified", "x-bad", "x-good"])
+            alone, _ = run_json(["--unverified", "x-bad"])
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                parts.main(["--unverified", "x-bad"])
+        self.assertEqual([step["argv"] for step in both["next"]], [["--fact-set", "x-good", "<file>"]])
+        self.assertEqual(([row["write"] for row in alone["assumptions"]], alone["next"]), ([None], []))
+        self.assertNotIn("next:", out.getvalue())
+        self.assertIn("repair the file by hand", out.getvalue())
+
 
 class FromPartsToAPinMapTest(unittest.TestCase):
     """The whole point: a list of modules in, a defensible pin map out."""
@@ -954,7 +990,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         from unittest import mock
         home = self._home(); catalog = home / "catalog"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"],
-                             facts={"pitch_mm": {"value": 2.0, "verified": False, "why_it_matters": "the socket", "source": None}})
+                             facts={"pitch_mm": {"value": 2.0, "verified": False, "why_it_matters": "the socket", "source": "the maker's page"}})
         answered = lambda record: [(url, True) for url in parts.cited_urls(record)]  # noqa: E731 — no network
         with in_store(home), mock.patch.object(parts, "sources_resolve", answered):
             self.assertEqual(parts.any_record("x-part")["id"], "x-part")
@@ -2381,6 +2417,139 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
             said, _ = run_json(["--fact-set", "x-soil", self.facts({"footprint": "jst_ph_3"}), "--dry-run"])
         self.assertEqual((said["data"]["part"], said["data"]["was"], said["data"]["now"]),
                          ("x-soil", {"footprint": None}, {"footprint": "jst_ph_3"}))
+
+
+class ABenchResultGoesBackWithItsSourceTest(unittest.TestCase):
+    """P374 (#479): `--fact-set` takes `facts` entries {value, verified, source}, `body_mm` and `pin_order_proof`; P373 lists what is left."""
+
+    BENCH = "bench, 2026-10-29, meter on the owned board, Petr Smejkal"
+
+    def entry(self, **change):
+        return dict({"value": True, "verified": True, "source": self.BENCH}, **change)
+
+    def a_joystick(self, **change):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        record = {"schema": 1, "id": "x-joy", "name": "A joystick", "kind": "input", "footprint": "pinrow3",
+                  "pin_order": ["GND", "VCC", "X"], "pin_order_proof": {"verified": False, "source": "a photo"},
+                  "needs": [{"signal": "X", "pin": "X", "direction": "out"}],
+                  "power": [{"pin": "VCC", "rail": "logic", "direction": "in"}, {"pin": "GND", "rail": "ground", "direction": "in"}],
+                  "body_mm": {"width": 34, "height": 26, "verified": False, "source": "a guess", "why_it_matters": "the fit"},
+                  "facts": {"runs_at_3v3": {"value": True, "verified": False, "source": "the maker", "why_it_matters": "the rail"},
+                            "supply_range_v": {"value": [3, 5], "verified": False, "source": "none", "why_it_matters": "the rail"},
+                            "kept": {"value": 1, "verified": True, "source": "page 2"}}}
+        (home / "catalog" / "x-joy.json").write_text(json.dumps(dict(record, **change)))
+        return home
+
+    def given(self, content):
+        path = Path(tempfile.mkdtemp()) / "facts.json"
+        path.write_text(json.dumps(content))
+        return str(path)
+
+    def record(self, home):
+        return json.loads((home / "catalog" / "x-joy.json").read_text())
+
+    def test_a_bench_result_is_written_beside_the_other_entries_and_its_row_goes(self):
+        home = self.a_joystick()
+        held = self.record(home)["facts"]["runs_at_3v3"]
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-joy", self.given({"facts": {"runs_at_3v3": self.entry()}})])
+            left = [row["write"] for row in run_json(["--unverified", "x-joy"])[0]["assumptions"]]
+        record = self.record(home)
+        self.assertEqual((code, record["facts"]["runs_at_3v3"], sorted(record["facts"])), (0, self.entry(), ["kept", "runs_at_3v3", "supply_range_v"]))
+        self.assertEqual(record["facts"]["supply_range_v"]["verified"], False)
+        self.assertEqual(parts.broken_problems(record, home / "catalog" / "x-joy.json"), [])
+        self.assertEqual((said["data"]["was"], said["data"]["now"]), ({"facts": {"runs_at_3v3": held}}, {"facts": {"runs_at_3v3": self.entry()}}))
+        self.assertEqual(left, ["facts.supply_range_v", "pin_order_proof", "body_mm"])
+
+    def test_a_bench_outline_and_pin_order_proof_end_with_nothing_left_unverified(self):
+        home = self.a_joystick()
+        write = {"facts": {"runs_at_3v3": self.entry(), "supply_range_v": self.entry(value=[3, 5])},
+                 "body_mm": {"width": 33.5, "height": 25.8, "verified": True, "source": self.BENCH},
+                 "pin_order_proof": {"verified": True, "source": self.BENCH}}
+        with in_store(home):
+            _, code = run_json(["--fact-set", "x-joy", self.given(write)])
+            left = run_json(["--unverified", "x-joy"])[0]["assumptions"]
+        self.assertEqual((code, left), (0, []))
+        self.assertEqual(self.record(home)["body_mm"]["width"], 33.5)
+
+    def test_a_dry_run_leaves_the_bytes_and_the_same_entry_again_changes_nothing(self):
+        home = self.a_joystick()
+        path, written = home / "catalog" / "x-joy.json", self.given({"facts": {"runs_at_3v3": self.entry()}})
+        before = path.read_bytes()
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-joy", written, "--dry-run"])
+            self.assertEqual((code, said["data"]["written"], path.read_bytes()), (0, False, before))
+            self.assertEqual(said["data"]["now"], {"facts": {"runs_at_3v3": self.entry()}})
+            run_json(["--fact-set", "x-joy", written])
+            once = path.read_bytes()
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                parts.main(["--fact-set", "x-joy", written])
+        self.assertNotEqual(once, before)
+        self.assertEqual(path.read_bytes(), once)
+        self.assertIn("nothing to change", out.getvalue())
+
+    def test_a_mixed_write_sets_the_footprint_and_the_facts_together(self):
+        home = self.a_joystick(footprint=None)
+        with in_store(home):
+            _, code = run_json(["--fact-set", "x-joy", self.given({"footprint": "pinrow3", "facts": {"runs_at_3v3": self.entry()}})])
+        record = self.record(home)
+        self.assertEqual((code, record["footprint"], record["facts"]["runs_at_3v3"]), (0, "pinrow3", self.entry()))
+
+    def test_the_text_a_bench_result_writes_is_cleaned_and_kept_up_to_a_thousand_characters(self):
+        dirty = "bench\u202e, 2026-10-29\x00, meter"
+        clean = "bench , 2026-10-29 , meter"
+        cases = {"a facts entry": ({"facts": {"runs_at_3v3": self.entry(source=dirty)}}, lambda r: r["facts"]["runs_at_3v3"]["source"]),
+                 "an entry named does": ({"facts": {"does": self.entry(source=dirty)}}, lambda r: r["facts"]["does"]["source"]),
+                 "a bench body_mm": ({"body_mm": {"width": 34, "height": 26, "verified": True, "source": dirty}},
+                                     lambda r: r["body_mm"]["source"]),
+                 "a bench pin_order_proof": ({"pin_order_proof": {"verified": True, "source": dirty}},
+                                             lambda r: r["pin_order_proof"]["source"])}
+        for what, (content, source_of) in cases.items():
+            with self.subTest(what), in_store(home := self.a_joystick()):
+                said, code = run_json(["--fact-set", "x-joy", self.given(content)])
+                self.assertEqual((code, source_of(self.record(home)), source_of(said["data"]["now"])), (0, clean, clean), said)
+        with in_store(home := self.a_joystick()):
+            run_json(["--fact-set", "x-joy", self.given({"facts": {"runs_at_3v3": self.entry(source="s" * 700)}})])
+        self.assertEqual(len(self.record(home)["facts"]["runs_at_3v3"]["source"]), 700)
+        import drawer
+        self.assertEqual(len(drawer.scrub("place", "p" * 700)), 160)
+
+    def test_each_refusal_says_its_own_sentence_and_writes_nothing(self):
+        bad_outline = {"width": 34, "height": 26, "verified": True, "source": ""}
+        lacks = {"value": 1, "verified": False, "why_it_matters": "the rail"}
+        cases = [
+            ("an entry whose verified is no bool", {}, {"facts": {"good": self.entry(), "bad": self.entry(verified="yes")}},
+             "facts.bad has verified 'yes', but it must be true or false"),
+            ("entries that are a list", {}, {"facts": [self.entry()]}, "facts is [{'value': True"),
+            ("a name outside the pattern", {}, {"facts": {"good": self.entry(), "Bad Name": self.entry()}},
+             "'Bad Name' is no fact name: use lowercase letters, digits and underscores"),
+            ("a record whose own facts is a list", {"facts": ["x"]}, {"facts": {"good": self.entry()}},
+             "the record's own facts is ['x'], but it is an object — repair the file by hand first"),
+            ("a rewrite that lacks a source like the held one", {"facts": {"old": lacks}}, {"facts": {"good": self.entry(), "old": lacks}},
+             "facts.old has no 'source' — a number with no provenance is an opinion"),
+            ("a bench outline with no words for a source", {}, {"body_mm": bad_outline},
+             "body_mm has source '', but it must be words that say where the value came from"),
+            ("a key with a bidi character in an entry", {}, {"facts": {"x": dict(self.entry(), **{"no\u202ete": 1})}},
+             "facts['x']['no\\u202ete'] is a key that is no string or holds a control or bidi character"),
+            ("a key with a control character in a value", {}, {"facts": {"x": self.entry(value={"k": [{"a\x1b": 1}]})}},
+             "facts['x']['value']['k'][0]['a\\x1b'] is a key"),
+            ("a key with a bidi character in a bench outline", {}, {"body_mm": {
+                "width": 34, "height": 26, "verified": True, "source": self.BENCH, "no\u202ete": 1}},
+             "body_mm['no\\u202ete'] is a key"),
+            ("a key with a control character in a bench pin order proof", {}, {"pin_order_proof": {
+                "verified": True, "source": self.BENCH, "no\x00te": 1}}, "pin_order_proof['no\\x00te'] is a key"),
+        ]
+        for what, held, content, sentence in cases:
+            home = self.a_joystick(**held)
+            path = home / "catalog" / "x-joy.json"
+            before = path.read_bytes()
+            with self.subTest(what), in_store(home):
+                for flags in ([], ["--dry-run"]):
+                    said, code = run_json(["--fact-set", "x-joy", self.given(content)] + flags)
+                    self.assertEqual((said["status"], code), ("problems", 1), said)
+                    self.assertEqual([sentence in p["sentence"] for p in said["problems"]], [True], said["problems"])  # one fault, one sentence
+                self.assertEqual(path.read_bytes(), before)
 
 
 class OwedIsNotBrokenTest(unittest.TestCase):

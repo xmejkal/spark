@@ -317,7 +317,8 @@ and height). It is **broken** when a value is present and wrong. A record grows 
 fact, not before (W21), so owing is normal for a part nobody has built with yet. What it stops: a pick
 that owes anything but `body_mm` stops `parts.py --requirements`, which names where to fill it
 (`--fact-set` in the record's own home; spark's library is changed in spark's repository); a pick that
-owes only `body_mm` is written with a placeholder-outline warning.
+owes only `body_mm` is written with a placeholder-outline warning. A fact nobody confirmed is **unverified**
+(`verified` is not true): `--unverified` lists it, and a bench result with its source turns it verified (`--fact-set`).
 
 ---
 

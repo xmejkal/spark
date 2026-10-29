@@ -313,6 +313,18 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertEqual(code, assign_pins.EXIT_OK, out)
         self.assertIn("MOTOR_IA", out)
 
+    def test_a_shipped_part_with_a_guessed_outline_is_unverified_by_its_body_mm(self):
+        # P373: the outline is a fact nobody checked, so the pin map's `unverified` lists it, in --json and in the text.
+        root = self._project({"board": "firebeetle2-esp32s3", "parts": ["speaker-terminal"]})
+        code, out = self._main(["requirements.json", "--json"], root)
+        self.assertEqual(code, assign_pins.EXIT_OK, out)
+        import json
+        rows = json.loads(out)["unverified"]
+        (outline,) = [row for row in rows if row["fact"] == "body_mm"]
+        self.assertEqual((outline["part"], outline["write"], outline["assumed"]),
+                         ("speaker-terminal", "body_mm", {"width": 7.9, "height": 5.8}))
+        self.assertIn("    speaker-terminal.body_mm", self._main(["requirements.json"], root)[1])
+
     def test_malformed_requirements_are_could_not_run_not_a_traceback(self):
         root = self._project({})
         (root / "requirements.json").write_text("{not json")

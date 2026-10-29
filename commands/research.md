@@ -94,7 +94,8 @@ hold. It also refuses an id that is no plain key, and a rail (`power[].rail`) or
 name — letters, digits and `_` — since the board is written with a rail as code, and the pin map, the board and the
 firmware name a signal: `power[0] rail is 'gnd rail', but a rail is a name — letters, digits and _ (ground, logic,
 motor, 5v): the board is written with it as code`.
-`--unverified` is the list to hand a person: each item, and what depends on it.
+`--unverified` is the list to hand a person: each item, and what depends on it. A bench result goes back with
+`parts.py --fact-set <id> <file>`, under the `write` key of its row, with a `source` that says who, when and how.
 
 Then `/spark:build`. `parts.py --promote <id> --project .` copies a verified record into the plugin's
 library, and the next project finds it with `--need`.

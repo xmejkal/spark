@@ -17,7 +17,7 @@ from collections import namedtuple
 import boards
 import parts
 import store
-from text_guards import TAGS_MAX, TEXT_MAX, clean
+from text_guards import LABEL_MAX, TAGS_MAX, TEXT_MAX, clean, list_key_problems
 
 #: What a part does (§5.6) — one list, in parts.py.
 VERBS = parts.VERBS
@@ -36,23 +36,37 @@ SPARKS_OWN = ("shelf", "library", "catalog")
 Link = namedtuple("Link", "target where path question")
 
 
+#: The keys of a part record that hold a fact with its source (P374): `--fact-set` writes them, a bench result among them.
+PROVENANCE_KEYS = ("facts", "body_mm", "pin_order_proof")
+#: A source is a sentence ("bench, date, tool, who"), so these keys keep up to this many characters of a text, above the longest record text.
+PROVENANCE_MAX = 1000
+
+
 def scrub(key, value):
-    """A value as it is written under `key` (P211): tags cleaned and lowercased, a text cut at its own cap, the rest as a label."""
+    """
+    A value as it is written under `key` (P211): tags cleaned and lowercased, a text cut at its own cap, the rest as a label.
+    The `PROVENANCE_KEYS` keep a text up to `PROVENANCE_MAX` and clean every string in them, an entry named `does` included.
+    """
     if key == "tags" and isinstance(value, list):
         return [clean(tag).lower() if isinstance(tag, str) else tag for tag in value]
     if key in TEXT_MAX and isinstance(value, str):
         return clean(value, TEXT_MAX[key])
-    return _scrubbed(value)
+    return _scrubbed(value, PROVENANCE_MAX, ()) if key in PROVENANCE_KEYS else _scrubbed(value)
 
 
-def _scrubbed(value):
-    """A value with every string in it cleaned — but not the fixed words (`does`, a photo's sha256) nor the ids an `is` names."""
+def list_provenance_key_problems(values):
+    """Why a key inside the `PROVENANCE_KEYS` of `values` cannot be written: scrub cleans a text, never a key (P374)."""
+    return [problem for key in PROVENANCE_KEYS if key in values for problem in list_key_problems(key, values[key])]
+
+
+def _scrubbed(value, cap=LABEL_MAX, skip=("sha256", "does")):
+    """A value with every string in it cleaned and cut at `cap` — but not the fixed words (`skip`: `does`, a photo's sha256) nor the ids an `is` names."""
     if isinstance(value, str):
-        return clean(value)
+        return clean(value, cap)
     if isinstance(value, list):
-        return [_scrubbed(item) for item in value]
+        return [_scrubbed(item, cap, skip) for item in value]
     if isinstance(value, dict):
-        return {key: item if key in ("sha256", "does") else _scrubbed(item) for key, item in value.items()}
+        return {key: item if key in skip else _scrubbed(item, cap, skip) for key, item in value.items()}
     return value
 
 

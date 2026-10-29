@@ -150,7 +150,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --validate --project .
 ```
 
 `--validate` refuses a record that gives a pin order without saying where it was read, or that cites a document the
-record does not include. `parts.py --unverified <id>` lists what nobody has checked, each item with what depends on it.
+record does not include. `parts.py --unverified <id>` lists what nobody has checked (a guessed outline too), each item
+with what depends on it and where a bench result goes back (`--fact-set`).
 
 A candidate not chosen whose datasheet was kept goes to the catalog in your store, with no seller listings. One seen
 only in a search is listed in the chosen record's alternatives.
