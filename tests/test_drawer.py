@@ -713,6 +713,13 @@ class TheCleanTextTest(unittest.TestCase):
                 self.assertEqual((code, said["status"]), (0, "ok"))
         self.assertEqual(json.loads((self.home / "drawer" / "thing.json").read_text())["about"], "a b")
 
+    def test_a_lone_surrogate_in_a_photo_file_name_is_cleaned_with_and_without_a_dry_run(self):
+        for flags in ([], ["--dry-run"]):
+            with self.subTest(flags=flags):
+                said, code = run(["--drawer-set", a_file([{"label": "thing", "count": 1, "photos": [{"sha256": "a" * 64, "file": "f\ud800"}]}])] + flags)
+                self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual(json.loads((self.home / "drawer" / "thing.json").read_text())["photos"][0]["file"], "f")
+
     def test_a_lone_surrogate_in_a_fixed_word_a_hash_or_an_id_is_cleaned_too(self):
         # the scrub used to skip `sha256`, `does` and `is`, so a surrogate in one passed on to the write
         self.assertEqual([drawer.scrub("function", [{"does": "se\udc80nse"}]), drawer.scrub("photos", [{"sha256": "a\ud800b"}]),
