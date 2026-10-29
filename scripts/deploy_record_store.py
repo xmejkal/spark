@@ -12,9 +12,9 @@ zone note of a time, and no line or question words: `board_look.say_last_deploy`
 import datetime
 import json
 
-import outcomes
+from spark.core import outcomes
 import store
-import zone_time
+from spark.core import zone_time
 
 
 # --- MVP ---

@@ -14,8 +14,8 @@ from pathlib import Path
 
 import board_grant
 import flash_image
-import outcomes
-import text_guards
+from spark.core import outcomes
+from spark.core import text_guards
 import tools
 from run_scenario import (EXPECT_PIN, NO_MAIN, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps, SimulationLimits,
                           file_hashes)

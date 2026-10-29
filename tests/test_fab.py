@@ -47,7 +47,7 @@ class TheDataIsInTheFileNotInTheCodeTest(unittest.TestCase):
         # The defect itself: a literal here and a literal there, agreeing only by luck.
         for name, literal in (("package_power_w", "0.063"), ("header_pin_side_mm", "0.64"),
                               ("min_annular_ring_mm", "0.25"), ("min_via_hole_mm", "0.3")):
-            for script in sorted((ROOT / "scripts").glob("*.py")):
+            for script in sorted(path for path in (ROOT / "scripts").rglob("*.py") if "stand_in" not in path.parts):
                 with self.subTest(number=name, script=script.name):
                     self.assertNotIn("= %s\n" % literal, script.read_text(),
                                      "%s is stated in code again" % name)

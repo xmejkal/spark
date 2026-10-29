@@ -22,7 +22,6 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-FOLDERS = ("scripts", "tools")
 #: The pages a person or an agent reads. A script that none of them names is reached only by reading source.
 PAGES = ("commands/*.md", "skills/**/*.md", "agents/*.md", ".claude/agents/*.md", "README.md", "docs/guide/**/*.md",
          "scrum/*.md")
@@ -43,8 +42,10 @@ class Script:
         self.is_command = re.search(r"__name__ == ['\"]__main__['\"]", source) is not None
         self.imports = {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import)
                         for alias in node.names}
-        self.imports |= {node.module.split(".")[0] for node in ast.walk(tree)
-                         if isinstance(node, ast.ImportFrom) and node.module}
+        froms = [node for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module]
+        self.imports |= {node.module.split(".")[0] for node in froms}
+        self.imports |= {node.module.split(".")[-1] for node in froms}  # from spark.core.outcomes import X
+        self.imports |= {alias.name for node in froms if node.module.split(".")[0] == "spark" for alias in node.names}
         self.flags = self._flags() if self.is_command and "argparse" in self.imports else []
 
     def _flags(self):
@@ -62,10 +63,15 @@ class Inventory:
 
     def __init__(self, root=ROOT):
         self.root = Path(root)
-        self.scripts = [Script(path, self.root) for folder in FOLDERS
-                        for path in sorted((self.root / folder).glob("*.py"))]
+        self.scripts = [Script(path, self.root) for path in self._files()]
         self.pages = {path.relative_to(self.root).as_posix(): path.read_text(errors="ignore")
                       for pattern in PAGES for path in sorted(self.root.glob(pattern)) if path.is_file()}
+
+    def _files(self):
+        """The scripts, in the spark package too but not the MicroPython stand-in, then the tools beside each other."""
+        scripts = self.root / "scripts"
+        return sorted(path for path in scripts.rglob("*.py") if "stand_in" not in path.relative_to(scripts).parts
+                      and path.name != "__init__.py") + sorted((self.root / "tools").glob("*.py"))
 
     def pages_naming(self, script):
         return [page for page, text in self.pages.items() if script.name in text]

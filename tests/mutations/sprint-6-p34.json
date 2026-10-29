@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/outcomes.py",
+  "file": "scripts/spark/core/outcomes.py",
   "name": "the shared rule forgets could-not-run (P34, now one home for six callers)",
   "find": "    return PROBLEMS if problems else (COULD_NOT_RUN if unchecked else OK)",
   "replace": "    return PROBLEMS if problems else OK"

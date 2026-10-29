@@ -11,7 +11,7 @@ import re
 from collections import namedtuple
 
 import parts
-from text_guards import TAGS_MAX, TEXT_MAX, clean
+from spark.core.text_guards import TAGS_MAX, TEXT_MAX, clean
 
 #: The words a need's `what` drops before WordOverlap counts it (P211).
 FILLER = frozenset(("a", "an", "the", "of", "for", "to", "and", "or", "with"))

@@ -1,12 +1,12 @@
 [
  {
-  "file": "scripts/outcomes.py",
+  "file": "scripts/spark/core/outcomes.py",
   "name": "the shared answer stops carrying what went unchecked",
   "find": "    result = {\"status\": status_of(problems, unchecked), \"problems\": problems, \"unchecked\": unchecked}",
   "replace": "    result = {\"status\": status_of(problems), \"problems\": problems, \"unchecked\": unchecked}"
  },
  {
-  "file": "scripts/outcomes.py",
+  "file": "scripts/spark/core/outcomes.py",
   "name": "an exit code stops following its status word",
   "find": "STATUS_FOR = {code: status for status, code in EXIT_FOR.items()}",
   "replace": "STATUS_FOR = {code: OK for status, code in EXIT_FOR.items()}"

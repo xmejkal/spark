@@ -15,9 +15,9 @@ import sys
 from pathlib import Path
 
 import board_codes
-import outcomes
-from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
-from text_guards import guard_lines, printable
+from spark.core import outcomes
+from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
+from spark.core.text_guards import guard_lines, printable
 
 #: How the store's record says a yes was given in a terminal: %s is the person's login name.
 TYPED_BY = "typed in a terminal by %s"

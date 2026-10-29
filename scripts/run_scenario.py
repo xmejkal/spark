@@ -33,11 +33,11 @@ import tempfile
 from pathlib import Path
 
 import flash_image
-import outcomes
+from spark.core import outcomes
 import sim_project
 import tools
-from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS
-from text_guards import guard_lines
+from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS
+from spark.core.text_guards import guard_lines
 
 # --- MVP ---
 #: The kinds of wokwi-cli scenario step that this reads by name: the one that sets a control, the one that reads a pin

@@ -28,6 +28,9 @@ class TheChecksTest(unittest.TestCase):
         said = check_docs.missing_names("run `/spark:build`, then `/spark:frobnicate`, check_all.py and frob.py")
         self.assertEqual(said, ["/spark:frobnicate names no command", "frob.py names no script"])
 
+    def test_a_script_in_a_package_under_scripts_may_be_named_by_its_file_name(self):
+        self.assertEqual(check_docs.missing_names("the exit codes live in `outcomes.py`"), [])
+
     def test_a_file_spark_writes_into_a_project_may_be_named(self):
         self.assertEqual(check_docs.missing_names("the project gets `pins.py`"), [])
 

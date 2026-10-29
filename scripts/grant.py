@@ -16,8 +16,8 @@ import flasher
 import store
 import tools
 from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
-from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
-from text_guards import guard_lines, guard_sentence, printable
+from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
+from spark.core.text_guards import guard_lines, guard_sentence, printable
 
 RESTART = ("the board restarts while it is read: a running program stops and starts again. Nothing is erased or "
            "written. If it then waits in download mode, press its %(reset)s once%(orientation)s.")

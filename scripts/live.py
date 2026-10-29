@@ -15,9 +15,9 @@ import boards
 import tools
 from board_connection import BoardConnection
 from board_console import ConsoleProbe
-from outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN
+from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN
 from restricted_pins import BrokenRecordError
-from text_guards import guard_sentence, printable
+from spark.core.text_guards import guard_sentence, printable
 
 EPILOG = """live.py --code 'print(1)' runs the code on the board on USB with mpremote's exec, after two checks that do not
 touch the board. First, the board must have a grant now: the person runs %s in their own terminal,

@@ -14,7 +14,7 @@ worse, it is not persuasive — you will delete the rule the first time it is in
 
 ### The three outcomes — `ok`, `problems`, `could-not-run`
 
-What every command exits with: **0**, **1**, **2**. They live in `scripts/outcomes.py`, which the
+What every command exits with: **0**, **1**, **2**. They live in `scripts/spark/core/outcomes.py`, which the
 command-line scripts import, so no command spells its own. Not every script keeps to them yet: a crash exits 1, and
 one script says `mismatch` for `problems` ([the guide for AI agents](docs/guide/agents.md#the-outcomes-and-their-exit-codes), P43).
 
@@ -30,7 +30,7 @@ A **reader** of one thing that may be absent (the board's Wokwi definition, a de
 raises. It returns a Value with a `state`: `recorded` (it read the thing), `none-recorded` (it looked and the thing is
 not there) or `not-checked` (it could not look, and `why` says what stopped it). A `not-checked` is said aloud as
 `not checked: <why>`, goes to an envelope's `unchecked` list, and never reads as a pass or as a fault of the board. The
-rule is in `scripts/outcomes.py`. P397 moved the board's Wokwi definition under it: `none-recorded` when the board
+rule is in `scripts/spark/core/outcomes.py`. P397 moved the board's Wokwi definition under it: `none-recorded` when the board
 record names no definition, `not-checked` when the store does not hold it as named.
 
 ### look and token — `look.py`

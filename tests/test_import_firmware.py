@@ -30,7 +30,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import import_child  # noqa: E402
 import import_firmware  # noqa: E402
-import outcomes  # noqa: E402
+from spark.core import outcomes  # noqa: E402
 
 
 STAND_IN = ROOT / "scripts" / "stand_in" / "machine.py"

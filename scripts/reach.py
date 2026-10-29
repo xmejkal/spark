@@ -15,8 +15,8 @@ import board_reach
 import tools
 from board_connection import BoardConnection
 from board_console import ConsoleProbe
-from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK
-from text_guards import guard_lines, guard_sentence, printable
+from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK
+from spark.core.text_guards import guard_lines, guard_sentence, printable
 
 #: What reach.py says after the board answered: mpremote's exec stops the firmware that ran (reach-test.md).
 FIRMWARE_STOPPED_MESSAGE = "the firmware is stopped: press R or replug to run it"

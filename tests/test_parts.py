@@ -37,7 +37,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
-import outcomes  # noqa: E402
+from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
 

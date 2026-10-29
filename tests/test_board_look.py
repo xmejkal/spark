@@ -21,7 +21,7 @@ from fakes import pin_time_zone  # noqa: E402
 import board_look  # noqa: E402
 import project_image  # noqa: E402
 import sim_project  # noqa: E402
-import outcomes  # noqa: E402
+from spark.core import outcomes  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from test_deploy import FOUND, ProjectCase, found  # noqa: E402
@@ -821,7 +821,7 @@ class RenamesTest(unittest.TestCase):
     def test_old_names_are_gone(self):
         import ast
         old = {"Report", "Look", "Reading"}
-        for each in sorted((ROOT / "scripts").glob("*.py")) + sorted((ROOT / "tests").glob("*.py")):
+        for each in sorted(path for path in (ROOT / "scripts").rglob("*.py") if "stand_in" not in path.parts) + sorted((ROOT / "tests").glob("*.py")):
             for node in ast.walk(ast.parse(each.read_text())):
                 named = node.name if isinstance(node, ast.ClassDef) else node.attr if isinstance(node, ast.Attribute) else \
                     node.id if isinstance(node, ast.Name) else None

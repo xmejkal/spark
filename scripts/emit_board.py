@@ -44,7 +44,7 @@ import emit_footprint  # noqa: E402
 import parts as parts_library  # noqa: E402
 import provenance  # noqa: E402
 
-from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
+from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: The tag that opens each trace in a board file, after its indent: `check_spine` counts the traces by it, and
 #: `tests/test_routes.py` holds the count to the build guide's.

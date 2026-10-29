@@ -44,8 +44,8 @@ from deploy_service import DeployService, FlashError
 from firmware_platform import FirmwarePlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
-from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, AnsweringParser, BadArgument
-from text_guards import guard_lines
+from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, AnsweringParser, BadArgument
+from spark.core.text_guards import guard_lines
 
 #: The line after a deploy that names the image on the board and whose yes erased it (P213, card A).
 DEPLOYED_LINE = "image sha256: %s, yes: %s"

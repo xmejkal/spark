@@ -147,7 +147,7 @@ Imported by the scripts above, and not run on their own, except `cost.py`:
 - `netlist.py`: the built design, as connectivity;
 - `copper.py`: how much current a piece of copper carries;
 - `fab.py`: what a board house can make;
-- `outcomes.py`: the exit codes and the three outcomes, defined once;
+- `spark/core/outcomes.py`: the exit codes and the three outcomes, defined once;
 - `store.py`: where spark keeps what it keeps;
 - `drawer.py`: what you own;
 - `needs.py`: what a goal needs, and what the store offers for each;

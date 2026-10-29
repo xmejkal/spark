@@ -652,7 +652,7 @@ before the flash, so relay that.
 
 ## The outcomes and their exit codes
 
-The exit codes are defined once, in [`scripts/outcomes.py`](../../scripts/outcomes.py); the command-line scripts
+The exit codes are defined once, in [`scripts/spark/core/outcomes.py`](../../scripts/spark/core/outcomes.py); the command-line scripts
 import them from there. Every script ends in exactly one of three outcomes, never a bare pass or fail:
 
 | exit | word | meaning |

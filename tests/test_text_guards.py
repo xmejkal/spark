@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import text_guards  # noqa: E402
+from spark.core import text_guards  # noqa: E402
 
 
 class OneLineTest(unittest.TestCase):

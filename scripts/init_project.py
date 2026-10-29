@@ -41,7 +41,7 @@ import store  # noqa: E402
 import tools  # noqa: E402
 from design import CIRCUIT_PATHS, one_board_message  # noqa: E402
 
-from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
+from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
 
 #: Where a built netlist usually is, so the rails can be named from the design rather than typed.
 

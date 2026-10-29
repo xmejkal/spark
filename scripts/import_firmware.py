@@ -45,7 +45,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from outcomes import EXIT_FOR, answer  # noqa: E402
+from spark.core.outcomes import EXIT_FOR, answer  # noqa: E402
 
 STAND_IN = Path(__file__).resolve().parent / "stand_in"
 #: framebuf and micropython, which a driver may ship itself: they come after the firmware's own folders on sys.path.

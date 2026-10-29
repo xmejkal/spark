@@ -2,7 +2,9 @@
  {"file": "tools/check_commit.py", "name": "the size says the total where it should say the growth",
   "find": "\" (%+d since %s)\" % (now - then, base)", "replace": "\" (%+d since %s)\" % (now, base)"},
  {"file": "tools/check_commit.py", "name": "every file under scripts/ is counted as code",
-  "find": "for name in listed.stdout.split() if name.endswith(\".py\"))", "replace": "for name in listed.stdout.split() if True)"},
+  "find": "for name in listed.stdout.split() if name.endswith(\".py\") and not name.startswith(\"scripts/stand_in/\"))", "replace": "for name in listed.stdout.split() if True)"},
+ {"file": "tools/check_commit.py", "name": "the size lists only the top of scripts/, so a package is not counted",
+  "find": "\"ls-tree\", \"-r\", \"--name-only\"", "replace": "\"ls-tree\", \"--name-only\""},
  {"file": "tools/check_commit.py", "name": "comments count as code",
   "find": "    comments = sum(token.string.count(\"\\n\") + 1 for token in tokenize.generate_tokens(io.StringIO(source).readline)", "replace": "    comments = 0 * sum(token.string.count(\"\\n\") + 1 for token in tokenize.generate_tokens(io.StringIO(source).readline)"}
 ]

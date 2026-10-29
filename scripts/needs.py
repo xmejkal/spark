@@ -20,7 +20,7 @@ import emit_footprint
 import matching
 import parts
 import store
-from text_guards import clean, printable
+from spark.core.text_guards import clean, printable
 
 #: How a need stands against the store (§3).
 MARKS = ("have", "have-unknown", "know", "gap")

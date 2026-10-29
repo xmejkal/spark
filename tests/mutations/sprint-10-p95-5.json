@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/text_guards.py",
+  "file": "scripts/spark/core/text_guards.py",
   "name": "a label keeps its control characters",
   "find": "    return CONTROL.sub(\" \", str(text)).strip()[:cap]",
   "replace": "    return str(text).strip()[:cap]"
@@ -60,7 +60,7 @@
   "replace": "    if not problems:\n        drawer.apply(changes)"
  },
  {
-  "file": "scripts/outcomes.py",
+  "file": "scripts/spark/core/outcomes.py",
   "name": "a listing is not cut by its size",
   "find": "        if shown and size > budget:",
   "replace": "        if False:"

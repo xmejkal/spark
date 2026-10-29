@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = {path.stem for path in (ROOT / "scripts").glob("*.py")}
+SCRIPTS = {path.stem for path in (ROOT / "scripts").rglob("*.py") if "stand_in" not in path.parts and path.name != "__init__.py"}
 
 #: Names that are vocabulary, not values: the outcomes every tool shares, which a test MUST name
 #: rather than restate — `outcomes.py` is where they are decided, and every script re-exports them.
@@ -94,6 +94,8 @@ def constant_reads(path):
     tree = ast.parse(path.read_text())
     imported = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import)
                 for alias in node.names if alias.name in SCRIPTS}
+    imported |= {alias.name for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)  # from spark.core import outcomes
+                 and (node.module or "").split(".")[0] == "spark" for alias in node.names if alias.name in SCRIPTS}
     return [(node.value.id, node.attr, node.lineno) for node in ast.walk(tree)
             if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
             and node.value.id in imported and re.fullmatch(r"[A-Z][A-Z0-9_]+", node.attr)]

@@ -21,7 +21,7 @@ import deploy_service  # noqa: E402
 import firmware_platform  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-import outcomes  # noqa: E402
+from spark.core import outcomes  # noqa: E402
 import store  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe  # noqa: E402
 from test_board_look import FOUND, done, found  # noqa: E402

@@ -47,7 +47,7 @@ TINY_TESTS = (
 
 def tiny_tree(extra=None):
     """A committed tree whose suite is TINY_TESTS, with the real suite_runs.py and outcomes.py, archived to a folder."""
-    files = {"scripts/outcomes.py": (ROOT / "scripts" / "outcomes.py").read_text(),
+    files = {"scripts/spark/core/outcomes.py": (ROOT / "scripts" / "spark" / "core" / "outcomes.py").read_text(),
              "tests/suite_runs.py": (TESTS / "suite_runs.py").read_text(),
              "tests/test_t.py": TINY_TESTS}
     files.update(extra or {})

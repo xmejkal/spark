@@ -20,7 +20,7 @@ import board_doctor
 import board_reach
 from board_connection import BoardUnreachableError
 from board_grant import MESSAGE_FOR
-from outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
+from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 from restricted_pins import RestrictedPins, whole_numbers_in
 
 #: The answer codes. RAN: the board ran the code (an empty answer counts). RAISED: the board ran it and it raised.
