@@ -61,8 +61,8 @@ The suite still reads source for rules about the code itself:
   A run that was killed never reaches that clean-up, so at start `suite_temp` also removes the `spark-tests-*` folders
   older than a day in the temp folder it inherited, through `tools/scratch.py` ([P435](https://github.com/xmejkal/spark/issues/579)).
   `scratch.remove_old_folders` removes only a plain directory that is the user's own, whose name starts with the prefix
-  and that nothing has written to for a day, and it never follows a link. It is standard library only. It costs about
-  1 ms for 1,273 entries.
+  and whose own mtime is a day old (it does not look inside), and it never follows a link. It lists a name only when
+  the folder is really gone, and a read-only folder inside does not stop it. It is standard library only.
 
 `test_converter.py` also checks the converter's TypeScript, comments stripped, for default paths it must not have.
 
@@ -93,8 +93,8 @@ python3 tools/mutate.py tests/mutations/*.json --for $changed --copy
 ```
 
 `--copy` removes its copy in a `finally`, and also when SIGTERM stops it (the signal becomes `SystemExit`, only in the
-main thread and only over the default handler). At every start, `mutate.py` removes its `mutate-run-*`, `mutate-import-*`
-and `mutate-copy-*` folders older than a day, which covers SIGKILL ([P435](https://github.com/xmejkal/spark/issues/579)).
+main thread and only over the default handler). At the start of every mutation run, with or without `--copy`, `mutate.py` removes its `mutate-run-*`,
+`mutate-import-*` and `mutate-copy-*` folders older than a day, which covers SIGKILL ([P435](https://github.com/xmejkal/spark/issues/579)).
 
 A row reported *refused* is a guard whose code moved, or whose replacement does not compile, import or parse.
 Re-anchor it or fix its `replace`, or delete it and give the reason.

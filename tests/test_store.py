@@ -41,6 +41,8 @@ def untracked(root):
     """The untracked entries git lists under `root`, empty folders too."""
     done = subprocess.run(["git", "ls-files", "--others", "--directory", "--exclude-standard"], cwd=str(root),
                           capture_output=True, text=True, timeout=30)
+    if done.returncode != 0:
+        raise unittest.SkipTest("git lists nothing here (no .git, as in a --copy run): %s" % done.stderr.strip()[:80])
     return set(done.stdout.split())
 
 

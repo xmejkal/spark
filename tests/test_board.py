@@ -324,14 +324,26 @@ class TheCoreTest(unittest.TestCase):
 
     def test_the_disk_line_is_there_below_the_limit_and_not_at_it(self):
         self.assertEqual(board.LOW_DISK_BYTES, 10 * 10**9)
-        self.assertEqual(board.disk_line(board.LOW_DISK_BYTES - 1), "disk: low — 10.0 GB free, under 10 GB")
-        self.assertEqual(board.disk_line(7_900_000_000), "disk: low — 7.9 GB free, under 10 GB")
+        self.assertEqual(board.disk_line(board.LOW_DISK_BYTES - 1).split(" — ")[:2], ["disk: " + board.DISK_LOW, "9.9 GB free, under 10 GB"])
+        self.assertEqual(board.disk_line(9_960_000_000).split(" — ")[1], "9.9 GB free, under 10 GB")
+        self.assertEqual(board.disk_line(7_900_000_000).split(" — ")[1], "7.9 GB free, under 10 GB")
+        self.assertEqual(board.disk_line(0).split(" — ")[1], "0.0 GB free, under 10 GB")
         self.assertIsNone(board.disk_line(board.LOW_DISK_BYTES))
+        self.assertEqual(board.DISK_LOW, "low")
+
+    def test_status_lines_end_with_the_disk_line_once_and_without_it_when_there_is_none(self):
+        items = [("spark", []), ("bin", [])]
+        low = board.disk_line(7_900_000_000)
+        with_disk = board.status_lines(items, [], [], set(), TODAY, disk=low)
+        self.assertEqual(with_disk[-1], low)
+        self.assertEqual([line for line in with_disk if line.startswith("disk:")], [low])
+        without = board.status_lines(items, [], [], set(), TODAY)
+        self.assertEqual(without, with_disk[:-1])
 
     def test_a_disk_that_cannot_be_read_is_could_not_run_and_a_real_one_is_not_an_error(self):
-        self.assertTrue(board.disk_status(tempfile.mkdtemp() + "/none").startswith("disk: could-not-run — "))
+        self.assertEqual(board.disk_status(tempfile.mkdtemp() + "/none").split(" — ")[0], "disk: could-not-run")
         line = board.disk_status(tempfile.gettempdir())
-        self.assertTrue(line is None or line.startswith("disk: low — "), line)
+        self.assertTrue(line is None or line.split(" — ")[0] == "disk: low", line)
 
     def test_status_ends_with_the_disk_line_when_the_disk_cannot_be_read_and_still_exits_zero(self):
         out, kept_tempdir, kept_path = io.StringIO(), tempfile.tempdir, os.environ["PATH"]
