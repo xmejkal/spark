@@ -218,6 +218,7 @@ NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, di
 CAPABILITIES = ("wake", "adc", "pwm")
 
 from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page, step as next_step  # noqa: E402, F401
+from brief import Brief  # noqa: E402
 import provenance  # noqa: E402
 import store  # noqa: E402
 from spark.core.text_guards import guard_lines, printable  # noqa: E402
@@ -889,16 +890,7 @@ DEFAULT_VENDOR_ORDER = ("dfrobot", "seeed")
 
 def vendor_order(project=None):
     """The vendors to research in, from the project's brief, else the default."""
-    if project:
-        brief = Path(project) / ".spark" / "project.json"
-        if brief.is_file():
-            try:
-                prefer = json.loads(brief.read_text()).get("prefer")
-            except ValueError:
-                prefer = None
-            if isinstance(prefer, list) and prefer and all(isinstance(v, str) for v in prefer):
-                return tuple(v.lower() for v in prefer)
-    return DEFAULT_VENDOR_ORDER
+    return Brief.from_project(project).prefer or DEFAULT_VENDOR_ORDER
 
 
 CATALOG_KEYS = ("schema", "id", "name", "kind")
@@ -1368,16 +1360,7 @@ def sellers(project=None):
     Where the person buys, local first, from the project's brief — or nothing, which the
     researcher reports as "no sellers named" rather than choosing a shop for them.
     """
-    if project:
-        brief = Path(project) / ".spark" / "project.json"
-        if brief.is_file():
-            try:
-                named = json.loads(brief.read_text()).get("sellers")
-            except ValueError:
-                named = None
-            if isinstance(named, list) and named and all(isinstance(v, str) for v in named):
-                return tuple(v.lower() for v in named)
-    return ()
+    return Brief.from_project(project).sellers or ()
 
 
 def need(words, project=None, matcher=None):

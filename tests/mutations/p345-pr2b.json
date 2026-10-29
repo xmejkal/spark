@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/brief.py",
+  "name": "Brief keeps a string must",
+  "find": "if isinstance(must, list) else []",
+  "replace": "if isinstance(must, (list, str)) else []"
+ }
+]
