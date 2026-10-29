@@ -24,8 +24,9 @@ wiring-record.json, which it keeps beside the sheet):
     shows, each part as spark's own pictogram (data/pictograms/). A part, a resistor or a jumper you moved in
     breadboard.json stays where you put it at the next build (P273, P287), if it still fits: a resistor with its
     joined pin in the row it joins, a jumper between the two rows the new layout joins (it keeps its holes and bends,
-    not its color). What it cannot keep is named on stderr, with why. The XIAO ESP32-C6 is drawn on a half breadboard, and a board with a
-    complete record (the FireBeetle) from the record on 63 columns, as breadboard.svg alone (P412); no rails yet; else the sheet says why, with a code, and an old drawing is removed;
+    not its color). What it cannot keep is named on stderr, with why. The XIAO ESP32-C6 is drawn on a half breadboard. A board with a
+    complete record (the FireBeetle) is drawn from the record on 63 columns, as breadboard.svg alone (P412). Rails are not drawn.
+    Otherwise the sheet says why, with a code, and an old drawing is removed;
   - after a rebuild (P300), "Changes since the last build" before the steps: one line for each thing to change on
     the bench, so you do not read the whole sheet again. A line says what to put in, take out, move or swap, and names
     a jumper by its two ends and the color the earlier sheet showed. It never names holes: you pick your own free rows.

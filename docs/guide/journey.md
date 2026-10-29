@@ -484,9 +484,10 @@ its tag can renumber. A line never names a hole, because you pick your own free 
 Two boards are drawn, and only when no point needs a rail or a supply from off the board. The Seeed Studio XIAO ESP32-C6
 is drawn from what spark measured in Wokwi (`data/wokwi-geometry.json`). The FireBeetle 2 ESP32-S3 is drawn from its own
 record ([P412](https://github.com/xmejkal/spark/issues/538)) on a 63-column breadboard: `breadboard.svg` shows each
-pad's label beside its pin, rings the two ground pads the record doubts, marks the USB-C end and says what is not
-verified. Wokwi has no part with its pins, so for the FireBeetle the sheet says `No Wokwi diagram exists for this board,
-by design`, and names the ground pad (GND2). A board whose record lacks a fact says which one.
+pad's label beside its pin, rings the two ground pads the record doubts and marks the USB end. Three things are not
+verified: the pads, the side of the row, and the USB end. The sheet says so and tells you to hold your board to the
+picture. Wokwi has no part with its pins, so for the FireBeetle the sheet says `There is no Wokwi diagram for this board.`
+It also names the ground pad (GND2). A board whose record lacks a fact says which one.
 The same project on the XIAO, as Wokwi shows its `breadboard.json`
 ([the measurement](../discovery/2026-10-16-p267-wokwi-holes/README.md)):
 

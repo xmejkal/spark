@@ -18,3 +18,28 @@ Findings of P412 ([#538](https://github.com/xmejkal/spark/issues/538)), 2026-10-
 | 12 | Plan: about 11 mutation rows | plan | acted | `tests/mutations/p412-record-board.json` holds 16 rows, each anchored once. Not run by the builder: the one run is after the review fixes |
 | 13 | A push to origin was refused once by the hook's board part, for cards of other work with no `Needed by` (#592, #596, #579) | build | raised | not mine and not fixable in the branch. The hook ran the quick suite green on each commit. The coordinator sets those fields |
 | 14 | `docs/discovery/.../refactor-plan.md` gains `part_shape.py` in the appendix, the glossary gains "shape" | plan | acted | done in commit 10 |
+
+## The three reviews of PR #603 (code lens, PO and UX lens, Opus refuter), and the fix round
+
+The coordinator's list names the findings by number and by what to do. A review number the list does not name has no row here: its text did not reach the builder.
+
+| # | claim | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 15 | Code lens 1, refuter 6: the subject of `no_header_fact` was found by splitting a sentence | review | acted | `emit_footprint.geometry_missing(board)` gives (field, note) pairs. The sentences come only from `_worded`, and `find_shape` takes the subject from the pair. A mutation row pins it |
+| 16 | Code lens 7, refuter 7: `header_disagrees` sometimes had no subject | review | acted | `kind_problem` gives (field, text). A `pads()` error names `physical.header.pins` (a count that disagrees) or `physical.header`. Every `header_disagrees` has a field |
+| 17 | Refuter 3 and 6: a header the pad code places wrongly was drawn (edge other than +y, rows against pin counts, more than two rows, a pitch of nothing, two pads at one place) | review | acted | `find_shape` refuses each with `header_disagrees` and the field. A missing `flush_edge` is refused too, because `pads()` assumes +y. Five mutation rows |
+| 18 | Refuter 3: `boards.validate` fails a doubtful pad that is no pad with no code | review | raised | later: `validate` returns sentences, as for every other rule. A code for it waits for the records wave (P446) |
+| 19 | Code lens 1 (second part): `[{}]` as `doubtful_pads` raised a TypeError | review | acted | each entry must be text, a validate problem otherwise, a test and a mutation row |
+| 20 | Refuter 7: a step to GND1 or GND3 reached a doubtful pad | review | acted | `find_pin_names` leaves the doubtful pads out. A step to one finds no pin and is refused as an older site, with no code (documented in agents.md). The steps print GND for every GNDn, so only a doubtful pad that is not a ground can meet this refusal |
+| 21 | Code lens 2: the picture printed "USB-C", a fact the record does not hold | review | acted | an unlabelled mark, and a `usb_end` group in the unverified groups with its note |
+| 22 | Code lens 10: the `pads` group was marked verified, though no fact of the record says so | review | acted | not verified, with a why that names the unresolved pads. `covers_holes` is said to be a drawing convention in `project_to_px` and in `data/wokwi-geometry.json` |
+| 23 | Code lens 3, 6, 8: callers compared the source's name | review | acted | `part_px` carries flags `wokwi_part`, `pad_labels`, `full_surface`. The four callers read flags. `RECORD_SOURCE` left `breadboard_drawing.py`, and `part_shape.RECORD` is the one name |
+| 24 | Code lens 6, 8: not-written drawings were tuples spliced by position | review | acted | `NotWritten(path, renderer, code, subject, why)`. `why_not_written` returns it or None, and `write()` and `check_spine` read attributes |
+| 25 | Code lens 8: names against `developing.md` | review | acted | `place_part` is `describe_part`, `pin_names` is `find_pin_names`, `board_px` is `find_board_px`, `find_source` returns the source and nothing more, `ground_line` is `board_lines` |
+| 26 | PO lens 3, 4, 5: the sheet | review | acted | one line says to hold the board to the picture and to tell spark if the pins sit on the other side. The doubtful pads are explained ("the record says they may have no net"). The Wokwi sentence is "There is no Wokwi diagram for this board. Use the picture." |
+| 27 | Code lens 12: a test read the sentence of `ground_line` | review | acted | the svg test asserts the part's `ground`, `doubtful` and notes. The sentence is only in the golden |
+| 28 | PO lens 1, 2, 6 to 10, refuter 8: the guides | review | acted | agents.md has a table of code, subject and next step, the kept fields (`code` null for an older refusal, `expected`, `drawn_from`), a test that pins them for the motor and the XIAO. README has the FireBeetle in its own sentence and the P267/P268 credit order back. The Build row says the picture alone. journey.md and `tools/journey.py` say what is unverified. Sentences are short and have no semicolons in the new text |
+| 29 | Code lens 5: the board is resolved more than once per build | review | raised | later: `_drawing_inputs`, `describe_parts` and `_plan_once` each ask the sources. Cheap, and the design (resolve once) belongs to the refactor of the build, P446 |
+| 30 | Code lens 9: the pad labels, the rings and the USB mark are drawn inside `SvgBreadboardDiagram` | review | raised | later: a `PadLabelLayer` renderer part is the right shape once a second board has labels. One board has them today |
+| 31 | Code lens 4: the old `NotDrawn` sites have no code | review | raised | later: the plan keeps them text-only. Codes for them are a card of their own |
+| 32 | Module size: `boards.py` rose to 973 | build | raised | `--accept-new` for `boards.py:<module>` (971 to 973, the entry test of `doubtful_pads`). The wave that splits records owns it |

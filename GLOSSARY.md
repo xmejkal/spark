@@ -323,10 +323,10 @@ owes only `body_mm` is written with a placeholder-outline warning. A fact nobody
 ### shape — where a part's pins sit, in mm
 
 A **shape** is a part's outline and its pins in millimetres, read from the part's own record (`part_shape.py`, P412):
-the board seen from above, USB-C down, origin at the top-left corner, y down. It holds facts only, each group with
-its source and whether it is verified. The drawn breadboard turns a shape into pixels (`part_px`) and draws a board
-from it when Wokwi has no part with its pins. Not "look" (`look.py` is the bench check) and not "geometry" (that is
-Wokwi's pixels, `data/wokwi-geometry.json`).
+the board seen from above, the USB end down, origin at the top-left corner, y down. It holds facts only. Each group
+has its source and says whether it is verified. The drawn breadboard turns a shape into pixels (`part_px`). It draws a
+board from the shape when Wokwi has no part with its pins. The word is not "look" (`look.py` is the bench check) and
+not "geometry" (that is Wokwi's pixels, `data/wokwi-geometry.json`).
 
 ---
 

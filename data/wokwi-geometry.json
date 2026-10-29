@@ -5,6 +5,7 @@
   "//tolerance_px": "How far a pin may lie from a hole center and still be in it. The worst measured fit is 1.2 px (the resistor's legs are 58.8 px apart, six pitches are 57.6).",
   "tolerance_px": 1.5,
   "parts": {
+    "//covers_holes": "covers_holes is a drawing convention, not a measured fact: true means the part's body hides the breadboard holes under it, so no other part may use them. A part drawn from its own record (part_shape.py) says true for the same reason.",
     "//board-xiao-esp32-c6": "wokwi/wokwi-boards boards/xiao-esp32-c6/board.json (read 2026-10-16, sha256 e5200e012416f096bcc188f9cb4fe8f292cd9d973dc0249513624bf5768856a8), its mm times 96 / 25.4. Its 18.1 x 23.4 mm is drawn as 68 x 88 px, and the turn goes about (34, 44), measured.",
     "//size": "Each type's drawn size in px, for a picture of it. Not derived from the center: the button's published size is not twice its measured center. XIAO: board.json's 18.1 x 23.4 mm drawn as 68 x 88 px (measured). LED: wokwi-elements src/led-element.ts, 40 x 50. Resistor: 15.645 x 3 mm in wokwi-elements, 59.13 x 11.34 px. Pushbutton: wokwi-elements, 67.28 x 45.35 px. Read by P267's refuter on 2026-10-16 (docs/discovery/2026-10-16-p267-drawn-breadboard/review/refuter.md).",
     "board-xiao-esp32-c6": {

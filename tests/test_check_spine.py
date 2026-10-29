@@ -421,6 +421,29 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertEqual((gone["did"], gone["code"], gone["subject"], gone["expected"]), ("not written", "no_wokwi_part", None, True))
         self.assertFalse((into / "breadboard.json").exists())
 
+    def kept_json_of(self, fixture_name):
+        """`report` with --json keeping one breadboard fixture's built circuit: the `kept` entries."""
+        import argparse
+        import contextlib
+        import io
+        import shutil
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / fixture_name
+        work = self.workdir()
+        shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+        args = argparse.Namespace(json=True, keep=Path(tempfile.mkdtemp()) / "project", requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+        return [entry for entry in json.loads(out.getvalue())["kept"] if Path(entry["file"]).name.startswith("breadboard.")]
+
+    def test_an_older_refusal_has_a_null_code_and_a_wrote_entry_of_wokwi_geometry_has_no_drawn_from(self):
+        for entry in self.kept_json_of("motor"):
+            if entry["did"] == "not written" and entry["file"].endswith((".json", ".svg")):
+                with self.subTest(file=entry["file"]):
+                    self.assertEqual((entry["code"], entry["subject"], entry["expected"]), (None, None, False))
+        wrote = [entry for entry in self.kept_json_of("button-light-xiao") if entry["did"] == "wrote"]
+        self.assertTrue(wrote)
+        self.assertTrue(all("drawn_from" not in entry for entry in wrote))
+
     def test_a_drawing_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
         import argparse
         import contextlib
