@@ -623,3 +623,4 @@ still hold and sit on no page.
 | `boards.validate`, `parts.validate`, `REQUIRED_KEYS` of both | `RecordKind.validate`, one named rule per function |
 | `parts.keep_in_store`, `keep_local`, `scan_datasheet`, `read_datasheet`, `fetch_documents` | `sourcing/datasheets.py`, the `Retriever`'s datasheet adapter |
 | `parts.audit`, `boards.footprint_stop` | design's `audit` and `board-list` Operations |
+| `part_shape.py` (P412, flat until wave 6: `PartShape`, `ShapeSource`, `find_part_px`) | design's `shapes/`, beside `emit_footprint`; records may import only core (rule U1) |
