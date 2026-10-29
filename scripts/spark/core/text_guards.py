@@ -27,7 +27,28 @@ COMMENT_UNSAFE = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029\ud800-\udfff]")
 
 def printable(text):
     """The text with each character that a terminal does not print as itself, such as a newline, shown as `?`."""
-    return "".join(each if each.isprintable() else "?" for each in text)
+    return "".join(each if each.isprintable() else "?" for each in str(text))
+
+
+# --- MVP ---
+#: What a `%` in a template converts: `%%` (the group is empty, and it takes no value) or a conversion letter (P444).
+CONVERSION = re.compile(r"%%|%[-#0 +]*[0-9.]*([a-zA-Z])")
+
+
+class ValueMessageError(Exception):
+    """
+    Error: a message made of a template and its values (P444). Each value goes into the template on one line: a number, and a
+    value for `%r` (whose `repr` already escapes control characters and surrogates), stay as they are; any other goes through
+    `printable`. The template keeps its own line breaks. The values as they were stay in `values`. The error classes that
+    put a path, a name or a record's field into a sentence inherit from it, and a raise passes the values as arguments.
+    """
+
+    def __init__(self, template, *values):
+        self.values = values
+        kinds = [kind for kind in CONVERSION.findall(template) if kind]
+        shown = tuple(value if isinstance(value, (int, float)) or kind == "r" else printable(value)
+                      for value, kind in zip(values, kinds + ["s"] * len(values)))
+        super().__init__(template % shown if values else template)
 
 
 def guard_lines(text):

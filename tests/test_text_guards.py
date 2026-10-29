@@ -31,6 +31,39 @@ class ListKeyProblemsTest(unittest.TestCase):
                          ["facts['a']['b'][1]['no\\u202ete']", "facts['x\\x1b']", "facts[7]"])
 
 
+class ValueMessageErrorTest(unittest.TestCase):
+    """P444 (#592): a message made of a template and values puts each value on one line, and keeps the raw values."""
+
+    def message(self, template, *values):
+        return str(text_guards.ValueMessageError(template, *values))
+
+    def test_a_value_is_flattened_and_the_template_keeps_its_line_break(self):
+        self.assertEqual(self.message("%s is bad:\n%s", "a\nGRANTED", "b\r"), "a?GRANTED is bad:\nb?")
+
+    def test_a_number_a_repr_and_a_percent_sign_stay_as_they_are(self):
+        self.assertEqual(self.message("%d%% of %r and %5.2f|%s", 7, "x\ny", 1.5, "z"), "7% of 'x\\ny' and  1.50|z")
+
+    def test_a_value_that_is_no_string_is_flattened_through_its_text(self):
+        self.assertEqual(self.message("%s %s %s", Path("/a\nb"), ValueError("c\nd"), None), "/a?b c?d None")
+
+    def test_a_tuple_is_one_value_and_not_the_arguments(self):
+        self.assertEqual(self.message("%s then %s", ("a\nb", 1), "c"), "('a\\nb', 1) then c")
+
+    def test_the_raw_values_stay_on_values(self):
+        raised = text_guards.ValueMessageError("%s", "a\nb")
+        self.assertEqual(raised.values, ("a\nb",))
+
+    def test_a_lone_surrogate_is_a_question_mark(self):
+        self.assertEqual(self.message("%s", "a\ud800b"), "a?b")
+
+    def test_a_template_with_no_value_stays_as_it_is(self):
+        self.assertEqual(self.message("100%"), "100%")
+
+    def test_one_value_too_many_still_fails_as_a_format_does(self):
+        with self.assertRaises(TypeError):
+            self.message("%s", "a", "b")
+
+
 class GuardLinesTest(unittest.TestCase):
     """P423 (#556): the text a script prints, line by line, with each line's own newlines kept."""
 
@@ -65,6 +98,12 @@ class GuardSentenceTest(unittest.TestCase):
 class PrintableTest(unittest.TestCase):
     def test_printable_shows_what_a_terminal_does_not_print_as_a_question_mark(self):
         self.assertEqual(text_guards.printable("a\nb\u202ec ok"), "a?b?c ok")
+
+    def test_a_value_that_is_no_string_is_shown_by_its_text(self):
+        self.assertEqual([text_guards.printable(each) for each in (Path("/a\nb"), ValueError("c\nd"), None)], ["/a?b", "c?d", "None"])
+
+    def test_a_lone_surrogate_shows_as_a_question_mark(self):
+        self.assertEqual(text_guards.printable("a\udfffb"), "a?b")
 
 
 class CleanTest(unittest.TestCase):
