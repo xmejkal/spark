@@ -328,6 +328,21 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
         questions = parts.unverified(["dfr0534-module"])
         self.assertIn("idle_current_ma", {q["fact"] for q in questions})
 
+    def test_a_joystick_lists_ten_rows_and_the_guessed_outline_row_says_where_it_goes_back(self):
+        # P373: the outline is a fact nobody checked, so it is listed beside the eight facts and the pin order.
+        home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
+        facts = {"fact_%d" % n: {"value": n, "verified": False, "source": "the maker's page", "why_it_matters": "it matters"}
+                 for n in range(8)}
+        record = part("x-joy", pin_order=["GND", "VCC", "X"], facts=facts, body_mm={
+            "width": 34, "height": 26, "verified": False, "source": "a guess from the photo", "why_it_matters": "the fit"})
+        (home / "catalog" / "x-joy.json").write_text(json.dumps(record))
+        with in_store(home):
+            said, code = run_json(["--unverified", "x-joy"])
+        self.assertEqual((code, len(said["assumptions"])), (0, 10))
+        self.assertEqual(said["assumptions"][-1], {"fact": "x-joy.body_mm", "basis": "unverified", "assumed": {"width": 34, "height": 26},
+                                                   "sentence": "the fit", "source": "a guess from the photo", "write": "body_mm"})
+        self.assertEqual([row["write"] for row in said["assumptions"][7:]], ["facts.fact_7", "pin_order_proof", "body_mm"])
+
 
 class FromPartsToAPinMapTest(unittest.TestCase):
     """The whole point: a list of modules in, a defensible pin map out."""

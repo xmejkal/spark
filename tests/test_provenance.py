@@ -66,3 +66,45 @@ class FactProblemsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def joystick(**overrides):
+    """A record shaped like the joystick module: facts, a pin order read from a page nobody checked, and a guessed outline."""
+    record = {"id": "x-joy", "pin_order": ["GND", "VCC", "X"], "pin_order_proof": {"verified": False, "source": "a photo"},
+              "body_mm": {"width": 34, "height": 26, "verified": False, "source": "a guess from the photo",
+                          "why_it_matters": "whether the module fits the board", "cites": ["page 2"]},
+              "facts": {"runs_at_3v3": {"value": True, "verified": False, "source": "the maker's page",
+                                        "why_it_matters": "the supply rail"},
+                        "supply_range_v": {"value": [3, 5], "verified": True, "source": "bench"}}}
+    return dict(record, **overrides)
+
+
+class ListUnverifiedFactsTest(unittest.TestCase):
+    def test_a_guessed_outline_is_listed_with_its_pair_its_why_its_source_and_where_it_goes_back(self):
+        rows = provenance.list_unverified_facts({"body_mm": {"width": 34, "height": 26, "verified": False, "source": "a guess",
+                                                             "why_it_matters": "the fit", "cites": ["page 2"]}})
+        self.assertEqual(rows, [{"fact": "body_mm", "assumed": {"width": 34, "height": 26}, "why_it_matters": "the fit",
+                                 "source": "a guess", "write": "body_mm"}])
+
+    def test_a_verified_outline_and_a_block_with_no_verified_are_not_listed(self):
+        for body in ({"width": 34, "height": 26, "verified": True, "source": "bench"}, {"width": 34, "height": 26}):
+            with self.subTest(body=body):
+                self.assertEqual(provenance.list_unverified_facts({"body_mm": body}), [])
+
+    def test_the_facts_come_first_then_the_pin_order_then_the_outline_each_with_its_write_key(self):
+        record = joystick()
+        record["facts"]["odd"] = 5  # a bare value where a fact belongs: nobody checked it
+        rows = provenance.list_unverified_facts(record)
+        self.assertEqual([(row["fact"], row["write"]) for row in rows],
+                         [("runs_at_3v3", "facts.runs_at_3v3"), ("odd", "facts.odd"), ("pin_order", "pin_order_proof"),
+                          ("body_mm", "body_mm")])
+        self.assertEqual(rows[1]["assumed"], 5)
+        self.assertEqual(rows[2]["assumed"], ["GND", "VCC", "X"])
+        self.assertEqual(rows[2]["why_it_matters"], "a pin order read wrong reverses a supply or swaps a signal")
+
+    def test_a_facts_that_is_no_object_is_one_row_with_no_write_key_and_never_a_traceback(self):
+        rows = provenance.list_unverified_facts(joystick(facts=5))
+        self.assertEqual([(row["fact"], row["write"]) for row in rows], [("facts", None)])
+        self.assertIn("repair the file by hand", rows[0]["why_it_matters"])
+        self.assertEqual(provenance.list_unverified_facts({}), [])
+

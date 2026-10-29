@@ -874,17 +874,8 @@ def signals_for(part_ids, project: Path = None) -> list:
 
 
 def open_questions_of(part, part_id=None):
-    """Every fact in one record nobody has checked — its pin order among them (P81)."""
-    part_id = part_id or part.get("id")
-    questions = [{"part": part_id, "fact": name, "assumed": fact.get("value"),
-                  "why_it_matters": fact.get("why_it_matters") or "", "source": fact.get("source", "")}
-                 for name, fact in (part.get("facts") or {}).items() if not fact.get("verified")]
-    proof = part.get("pin_order_proof")
-    if isinstance(proof, dict) and not proof.get("verified"):
-        questions.append({"part": part_id, "fact": "pin_order", "assumed": part.get("pin_order"),
-                          "why_it_matters": "a pin order read wrong reverses a supply or swaps a signal",
-                          "source": proof.get("source", "")})
-    return questions
+    """Every fact in one record nobody has checked — its pin order and its outline among them (P81, P373)."""
+    return [{"part": part_id or part.get("id"), **row} for row in provenance.list_unverified_facts(part)]
 
 
 def unverified(part_ids, project: Path = None) -> list:
@@ -1726,7 +1717,7 @@ def _op_unverified(args, project):
         if question["why_it_matters"]:
             lines.append("      %s" % question["why_it_matters"])
     assumptions = [{"fact": "%s.%s" % (q["part"], q["fact"]), "basis": "unverified", "assumed": q["assumed"],
-                    "sentence": q["why_it_matters"], "source": q["source"]} for q in questions]
+                    "sentence": q["why_it_matters"], "source": q["source"], "write": q["write"]} for q in questions]
     return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions)
 
 
