@@ -272,7 +272,7 @@ RULES = {
     "U1": "a leaf imports nothing of spark, matching imports no drawer, and no script reads a moved guard from its old module",
     "C1": "a file name under scripts/ is unique, and an exception name ends in Error",
     "C3": "an exit code has no second name (no EXIT_ alias)",
-    "V1": "a raise of a ValueMessageError or a subclass gives a constant string as the template and the values as arguments (P444)",
+    "V1": "a call of a ValueMessageError or a subclass gives a constant string as the template and the values as arguments (P444)",
 }
 
 #: V1: the class whose raises give a template and its values.
@@ -533,13 +533,20 @@ def unnamed_error(source, known):
 
 
 def raw_value_message(source, known):
-    """V1: a raise of a ValueMessageError or a subclass whose first argument is no string constant, such as a `%` or an f-string.
-    The count is per class name."""
+    """
+    V1: a call of a ValueMessageError or a subclass, in a raise or before it, whose template (the first argument, or the
+    keyword `template`) is no string constant, such as a `%`, an f-string or a call. A bare name `template` passes: it is a
+    helper handing its own template on. The count is per class name. A known limit: a class imported under another name
+    (`import ToolProblem as SP`) is not seen, and `X.of_lines(...)` is not counted, because it is safe by construction.
+    """
     seen = collections.Counter()
     for node in ast.walk(source.tree):
-        call = node.exc if isinstance(node, ast.Raise) else None
-        name = _dotted(call.func).split(".")[-1] if isinstance(call, ast.Call) and isinstance(call.func, (ast.Name, ast.Attribute)) else ""
-        if name in known.value_messages and call.args and not (isinstance(call.args[0], ast.Constant) and isinstance(call.args[0].value, str)):
+        name = _dotted(node.func).split(".")[-1] if isinstance(node, ast.Call) and isinstance(node.func, (ast.Name, ast.Attribute)) else ""
+        if name not in known.value_messages:
+            continue
+        first = node.args[0] if node.args else next((each.value for each in node.keywords if each.arg == "template"), None)
+        constant = isinstance(first, ast.Constant) and isinstance(first.value, str)
+        if first is not None and not constant and not (isinstance(first, ast.Name) and first.id == "template"):
             seen[name] += 1
     return _count("V1", source, seen)
 

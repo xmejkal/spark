@@ -513,6 +513,17 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
         self.assertIn("bash -c", said)
         self.assertIn("from .spark/tools.json", said)
 
+    def test_a_project_folder_with_a_newline_cannot_fake_a_line_of_status_or_a_dry_run(self):
+        # P444 (#592): the folder is a value of the line that names it
+        project = Path(tempfile.mkdtemp()) / "a\nGRANTED: board ok"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "tools.json").write_text(json.dumps({"pdftotext": {"install": {"npm": "npm install pdftotext"}}}))
+        for argv in (["--status", "--project", str(project)], ["--install", "pdftotext", "--dry-run", "--project", str(project)]):
+            with self.subTest(argv=argv):
+                _, said = self.cli(*argv, which=lambda exe: None if exe == "pdftotext" else "/usr/bin/" + exe)
+                self.assertIn("a?GRANTED: board ok", said)
+                self.assertEqual([line for line in said.splitlines() if line.lstrip().startswith("GRANTED")], [])
+
     # I2 and the tracebacks the rule says never happen.
     def test_status_names_an_entry_it_cannot_use_instead_of_crashing(self):
         project = project_with({"roles": {"bench": "mystery"}, "mystery": {"for": "something"}})

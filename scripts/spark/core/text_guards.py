@@ -31,29 +31,52 @@ def printable(text):
 
 
 # --- MVP ---
-#: What a `%` in a template converts: `%%` (the group is empty, and it takes no value) or a conversion letter (P444).
-CONVERSION = re.compile(r"%%|%[-#0 +]*[0-9.]*([a-zA-Z])")
+#: What a `%` in a template converts: `%%` (it takes no value) or flags, a width and a conversion letter (P444).
+CONVERSION = re.compile(r"%%|%([-#0 +]*[0-9.]*)([a-zA-Z])")
+#: What a template may not hold: a mapping key `%(name)s` or a `*` width, because the values are a tuple read in order.
+UNSUPPORTED = re.compile(r"%\(|%[-#0 +]*[0-9.]*\*")
+#: The types whose value is a number that no one can make hold a line break. A subclass is no number here: it can have its own `__str__`.
+NUMBERS = (int, float, bool)
 
 
 class ValueMessageError(Exception):
     """
-    Error: a message made of a template and its values (P444). Each value goes into the template on one line: a number, and a
-    value for `%r` (whose `repr` already escapes control characters and surrogates), stay as they are; any other goes through
-    `printable`. The template keeps its own line breaks. The values as they were stay in `values`. The error classes that
-    put a path, a name or a record's field into a sentence inherit from it, and a raise passes the values as arguments.
+    Error: a message made of a template and its values (P444). Each value goes into the template on one line: a number of
+    exactly the type `int`, `float` or `bool` stays as it is; a value for `%r` is shown as `printable(repr(value))`, the same
+    text with its control characters escaped; a value for `%c` and any other value goes through `printable`. The template keeps
+    its own line breaks. A template with no values is the message as it stands, so `%%` is not turned into `%` there. A template
+    with `%(name)s` or a `*` width raises TypeError when the error is made; no raise in spark uses either. The values as they
+    were stay in `values`. The error classes that put a path, a name or a record's field into a sentence inherit from it, and a
+    raise passes the values as arguments.
     """
 
     def __init__(self, template, *values):
         self.values = values
-        kinds = [kind for kind in CONVERSION.findall(template) if kind]
-        shown = tuple(value if isinstance(value, (int, float)) or kind == "r" else printable(value)
-                      for value, kind in zip(values, kinds + ["s"] * len(values)))
-        super().__init__(template % shown if values else template)
+        if UNSUPPORTED.search(template.replace("%%", "")):
+            raise TypeError("a template of a ValueMessageError takes no mapping key and no * width: " + repr(template))
+        kinds = [kind for _, kind in CONVERSION.findall(template) if kind]
+        shown = tuple(self.shown(value, kind) for value, kind in zip(values, kinds + ["s"] * len(values)))
+        text = CONVERSION.sub(lambda found: "%" + found.group(1) + "s" if found.group(2) == "r" else found.group(0), template)
+        super().__init__(text % shown if values else template)
+
+    @staticmethod
+    def shown(value, kind):
+        """The value as the message takes it: a number as it is, a `%c` one as the character, a `%r` one as its escaped text."""
+        if kind == "r":
+            return printable(repr(value))
+        if kind == "c":
+            return printable(chr(value) if type(value) is int else value)
+        return value if type(value) in NUMBERS else printable(value)
 
     @classmethod
     def of_lines(cls, lines, **keywords):
         """The error of several sentences, one per line: each is a value, flattened, and the line breaks between them stay."""
         return cls("\n".join(["%s"] * len(lines)), *lines, **keywords)
+
+
+def flat_line(template, *values):
+    """The text of a `ValueMessageError` of this template and these values, for a script that prints a line (P444)."""
+    return str(ValueMessageError(template, *values))
 
 
 def guard_lines(text):

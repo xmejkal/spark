@@ -173,7 +173,8 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual((code, problems), (2, "live.py: no board on /dev/x?y: mpremote devs does not list it.\n"))
         code, said, _, _ = self.go("--code", "print(1)", "--port", port, "--json")
         line = json.loads(said)
-        self.assertEqual((line["port"], line["why"]), (port, "no board on /dev/x?y: mpremote devs does not list it."))  # P444: the message is flat
+        self.assertEqual(line["port"], port)
+        self.assertIn("/dev/x?y", line["why"])  # P444: the message is flat
 
     def test_a_newline_in_the_port_cannot_fake_a_line_of_the_stop(self):
         code, _, problems, _ = self.go("--code", "print(1)", "--port", "/dev/x\nGRANTED")

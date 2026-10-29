@@ -40,7 +40,7 @@ sys.path.insert(0, str(SCRIPTS))
 import boards  # noqa: E402
 import store  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
-from spark.core.text_guards import ValueMessageError  # noqa: E402
+from spark.core.text_guards import ValueMessageError, flat_line  # noqa: E402
 
 #: What spark says of a tool whose `--version` said nothing; check_spine writes it, and both modules read it.
 UNKNOWN_VERSION = "unknown version"
@@ -580,11 +580,10 @@ MARKS = {"ok": "[ok  ]", "missing": "[????]", "off": "[off ]", "person": "[!   ]
 
 def print_status(project, personal):
     """The picture, one row per line; returns how many rows read missing — a broken entry counts, though nothing installs it."""
-    print("  spark's tools — personal: %s · project: %s\n"
-          % (personal or PERSONAL, Path(project) / PROJECT_FILE if project else "(none)"))
+    print(flat_line("  spark's tools — personal: %s · project: %s\n", personal or PERSONAL, Path(project) / PROJECT_FILE if project else "(none)"))
     rows = status(project, personal)
     for state, label, text in rows:
-        print("  %s %-17s %s" % (MARKS[state], label, text))
+        print(flat_line("  %s %-17s %s", MARKS[state], label, text))
     missing = to_install(project, personal)
     if missing:
         print("\n  %d to install: %s" % (len(missing), " ".join(missing)))
@@ -616,27 +615,26 @@ def main(argv=None, run=None):
         if args.install and args.dry_run:
             for step in plan(args.install, project, None):
                 if step["problem"]:
-                    print("  cannot:    %s" % step["problem"])
+                    print(flat_line("  cannot:    %s", step["problem"]))
                 elif step["here"]:
-                    print("  already here: %s (%s)" % (step["name"], step["here"]))
+                    print(flat_line("  already here: %s (%s)", step["name"], step["here"]))
                 else:
-                    print("  would run: %s%s" % (" ".join(step["argv"]), "   ← chosen by this project's .spark/tools.json"
-                                                 " — check it before you say yes" if step["from_project"] else ""))
+                    print(flat_line("  would run: %s%s", " ".join(step["argv"]), "   ← chosen by this project's .spark/tools.json"
+                        " — check it before you say yes" if step["from_project"] else ""))
                     if step["fetch"]:
-                        print("             keeps it as %s if its sha256 is %s..." % (DOWNLOADS / step["fetch"][0],
-                                                                                   step["fetch"][2][:12]))
+                        print(flat_line("             keeps it as %s if its sha256 is %s...", DOWNLOADS / step["fetch"][0], step["fetch"][2][:12]))
                     if step["from_project"]:
                         print("             (from .spark/tools.json)")
         elif args.install:
             for argv_ran in install(args.install, project, None, run):
-                print("  ran: %s" % " ".join(argv_ran))
+                print(flat_line("  ran: %s", " ".join(argv_ran)))
         elif args.on:
             choose([args.on, "on"], True, where)
             if merged(project)["tools"].get(args.on, {}).get("on") is False:
                 raise ToolProblem("%s is still off: %s", args.on, off_sentence(args.on, project))
             for argv_ran in install([args.on], project if scope == "project" else None, None, run):
-                print("  ran: %s" % " ".join(argv_ran))
-            print("  %s is on (%s)" % (args.on, where))
+                print(flat_line("  ran: %s", " ".join(argv_ran)))
+            print(flat_line("  %s is on (%s)", args.on, where))
         elif args.off:
             entry = merged(project)["tools"].get(args.off, {})
             choose([args.off, "on"], False, where)

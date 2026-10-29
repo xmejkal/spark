@@ -62,6 +62,26 @@ class ValueMessageErrorTest(unittest.TestCase):
     def test_of_lines_keeps_the_breaks_between_the_lines_and_flattens_each(self):
         self.assertEqual(str(text_guards.ValueMessageError.of_lines(["a\nb", "c"])), "a?b\nc")
 
+    def test_a_str_with_its_own_repr_a_number_with_its_own_str_and_a_c_conversion_cannot_break_the_line(self):
+        class Name(str):
+            def __repr__(self):
+                return "x\ny"
+
+        class Count(int):
+            def __str__(self):
+                return "a\nb"
+
+        self.assertEqual(self.message("%r|%s|%c|%c", Name("n"), Count(3), 10, "q"), "x?y|a?b|?|q")
+
+    def test_a_mapping_key_or_a_star_width_is_refused_when_the_error_is_made(self):
+        for template in ("%(name)s", "%*d", "%-*s", "ok %s %(a)s"):
+            with self.subTest(template=template), self.assertRaises(TypeError):
+                text_guards.ValueMessageError(template, "a")
+        self.assertEqual(self.message("100%%(x) %s", "a"), "100%(x) a")
+
+    def test_a_template_with_no_values_is_the_message_as_it_stands(self):
+        self.assertEqual(self.message("100%% sure %s"), "100%% sure %s")
+
     def test_one_value_too_many_still_fails_as_a_format_does(self):
         with self.assertRaises(TypeError):
             self.message("%s", "a", "b")

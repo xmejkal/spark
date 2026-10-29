@@ -127,7 +127,7 @@ class PortFinder:
         if len(on_usb) > 1:
             lines = [_listed(board) for board in on_usb]
             raise LookStop.of_lines(["%d boards on USB:" % len(on_usb)] + lines
-                                     + ["%s --port %s  (unplug one to tell them apart)" % (script, printable(port_of(on_usb[0]).device))],
+                                     + ["%s --port %s  (unplug one to tell them apart)" % (script, port_of(on_usb[0]).device)],
                                      reason=board_codes.TWO_BOARDS)
         return port_of(on_usb[0])
 

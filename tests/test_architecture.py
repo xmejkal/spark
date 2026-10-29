@@ -60,7 +60,7 @@ class ArchitectureRules(unittest.TestCase):
     test_u1_the_leaves_import_nothing_of_spark = rule_test("U1")
     test_c1_a_file_name_is_unique_and_an_exception_name_ends_in_error = rule_test("C1")
     test_c3_an_exit_code_has_no_second_name = rule_test("C3")
-    test_v1_a_value_message_error_is_raised_with_a_constant_template = rule_test("V1")
+    test_v1_a_value_message_error_is_made_with_a_constant_template = rule_test("V1")
 
     def test_every_rule_in_the_table_has_a_test_method_and_no_method_has_none(self):
         held = {method.rule for method in vars(type(self)).values() if hasattr(method, "rule")}
@@ -226,7 +226,7 @@ class PlantedBreachesTest(unittest.TestCase):
             "EXIT_THIS = outcomes.EXIT_OK\nEXIT_LOCAL = 3\n")})
         self.assertEqual(measure.breaches(root), {"C3:scripts/exits.py:EXIT_BAD": 1, "C3:scripts/exits.py:EXIT_THIS": 1})
 
-    def test_v1_a_raise_of_a_value_message_error_or_a_subclass_with_a_template_that_is_no_constant(self):
+    def test_v1_a_call_of_a_value_message_error_or_a_subclass_with_a_template_that_is_no_constant(self):
         root = planted({"scripts/raises.py": (
                             'class ValueMessageError(Exception):\n    """Error: x."""\n\n\n'
                             'class OneError(ValueMessageError):\n    """Error: x."""\n\n\n'
@@ -240,8 +240,12 @@ class PlantedBreachesTest(unittest.TestCase):
                             '    if a == 5:\n        raise TwoError("%s is " "bad" % a)\n'
                             '    if a == 6:\n        raise OtherError("%s is bad" % a)\n'
                             '    if a == 7:\n        raise OneError()\n'
-                            '    raise OneError.of_lines([a])\n')})
-        self.assertEqual(measure.breaches(root), {"V1:scripts/raises.py:OneError": 1, "V1:scripts/raises.py:TwoError": 3})
+                            '    if a == 8:\n        stop = OneError("%s is bad" % a)\n        raise stop\n'
+                            '    if a == 9:\n        raise OneError(template="%s is bad" % a)\n'
+                            '    if a == 10:\n        raise OneError(template="%s is bad", a=a)\n'
+                            '    raise OneError.of_lines([a])\n\n\n'
+                            'def say(template, *values):\n    return OneError(template, *values)\n')})
+        self.assertEqual(measure.breaches(root), {"V1:scripts/raises.py:OneError": 3, "V1:scripts/raises.py:TwoError": 3})
 
     def test_v1_a_baselined_count_that_the_code_no_longer_has_fails_as_gone(self):
         self.assertEqual(measure.compare({}, {"V1:scripts/x.py:OneError": 2}),

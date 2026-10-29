@@ -346,6 +346,15 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.assertEqual([each["code"] for each in envelope["unchecked"]], ["no_board_record"])
         self.assertNotIn("\n", envelope["unchecked"][0]["sentence"])
 
+    def test_a_board_that_is_no_string_stops_with_its_own_code_and_no_traceback(self):
+        for name in ({"id": "x"}, ["x"], 5):
+            with self.subTest(name=name):
+                self.board(name)
+                code, _, problems = self.go()
+                self.assertEqual(code, 2)
+                self.assertNotIn("Traceback", problems)
+                self.assertEqual([each["code"] for each in json.loads(self.go("--json")[1][-1])["unchecked"]], ["no_board_record"])
+
     def test_requirements_naming_no_board(self):
         (self.project / "requirements.json").write_text("{}")
         self.assertEqual(self.stops(), "look.py: requirements.json names no board\n")
