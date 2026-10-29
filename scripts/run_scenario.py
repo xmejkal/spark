@@ -15,7 +15,7 @@ run puts MicroPython and the project's firmware/ into a new flash image, so a ru
 build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
 wokwi-cli refuses a wokwi.toml that names none.
 
-The log goes to sim/runs/<name>.log: the date with its zone, the verdict, the step counts by kind (P345), the sha256 of
+The log goes to sim/runs/<name>.log: the date with its zone, the verdict, the step counts by kind and the step names (P345), the sha256 of
 the image it tested and of each file in that image, what the simulation cannot show, the scenario as run, and what
 wokwi-cli printed, which is the board's serial output among the scenario's
 progress. deploy.py reads the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
@@ -65,6 +65,10 @@ IMAGE_LINE = "image sha256: "
 FILE_LINE = "file sha256: "
 #: The log's line that counts the scenario's steps by kind (P345): what a passed run did, read by the look and the deploy question.
 STEP_COUNTS_LINE = "step counts: "
+#: The log's two lines for the names of the steps (P345): a marker with the count, then one name line each. A step's name is a claim
+#: that it tests the text it carries; the look compares the names with the brief's must lines. No marker means a log from before names.
+STEP_NAMES_LINE = "step names: "
+STEP_NAME_LINE = "step name: "
 #: What the line says when the steps are not RECORDED: a step has no key, so a kind would be a guess, or the log gave none.
 STEPS_NOT_READ = "not read"
 #: Why ScenarioSteps is outcomes.NOT_CHECKED (the reader rule is in outcomes.py), one sentence each.
@@ -72,6 +76,7 @@ WHY_NO_KEY = "a step of the scenario has no kind"
 WHY_NOT_COUNTED = "the log says its steps were not counted"
 WHY_BAD_COUNTS = "the log's step counts line is malformed"
 WHY_LOG_UNREADABLE = "the log cannot be read"
+WHY_BAD_NAMES = "the log's step names do not match its step names count"
 #: Why SimulationLimits is outcomes.NOT_CHECKED when the log has the section: it holds no limit line.
 WHY_NO_LIMIT_LINE = "the log's limits section has no limit line"
 #: Why SimulationLimits is outcomes.NOT_CHECKED when the section never reaches the scenario's section: the log is cut off.
@@ -116,6 +121,10 @@ class ScenarioSteps:
     how many steps have it. `state` is an outcomes word: RECORDED (counted), NONE_RECORDED (a log with no counts line, or a
     text with no step) or NOT_CHECKED (they could not be counted, and `why` says why). Nothing is derived from the counts
     of a state that is not RECORDED.
+
+    `names` are the step names, in order, each with its spaces collapsed (P345). `names_state` is an outcomes word apart from
+    `state`: RECORDED (the scenario or the log named them, perhaps none), NONE_RECORDED (a log from before names) or NOT_CHECKED
+    (`names_why` says why).
     """
 
     #: A key at the start of a step's text, plain or quoted. Anchored, so a kind named inside a value is no key.
@@ -124,8 +133,9 @@ class ScenarioSteps:
     #: The one key a step carries beside its kind: wokwi-cli prints it as the step's name (TestScenario.ts, validStepKeys).
     NAME_KEY = "name"
 
-    def __init__(self, counts, state=outcomes.RECORDED, why=None):
+    def __init__(self, counts, state=outcomes.RECORDED, why=None, names=(), names_state=outcomes.NONE_RECORDED, names_why=None):
         self.counts, self.state, self.why = dict(counts), state, why
+        self.names, self.names_state, self.names_why = tuple(names), names_state, names_why
 
     @classmethod
     def from_text(cls, steps):
@@ -136,23 +146,31 @@ class ScenarioSteps:
         first = next((cls.ITEM.match(line) for line in body if cls.ITEM.match(line)), None)
         if first is None:
             return cls({}, outcomes.NONE_RECORDED)
-        width, steps = len(first.group(1)), []
+        width, steps = len(first.group(1)), []  # each step: [its lines, the indent of its own keys or None, in flow form]
         for line in body:
             item = cls.ITEM.match(line)
             if item and len(item.group(1)) == width:
-                steps.append([line[item.end():].lstrip().lstrip("{")])
+                rest = line[item.end():].lstrip()
+                steps.append([[rest.lstrip("{")], len(line) - len(rest) if rest else None, rest.startswith("{")])
             elif len(line) - len(line.lstrip()) <= width:
                 break  # the steps list ended: a key of the scenario at its own indent
             elif steps:
-                steps[-1].append(line)
-        counts, keyless = {}, False
-        for step in steps:
-            kind = cls._kind(step)
+                steps[-1][0].append(line)
+                if steps[-1][1] is None:
+                    steps[-1][1] = len(line) - len(line.lstrip())
+        counts, keyless, names = {}, False, []
+        for texts, indent, flow in steps:
+            kind = cls._kind(texts)
             if kind:
                 counts[kind] = counts.get(kind, 0) + 1
             else:
                 keyless = True
-        return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY) if keyless else cls(counts)
+            name = cls._name(texts, indent, flow)
+            if name:
+                names.append(name)
+        if keyless:
+            return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY, names, outcomes.RECORDED)
+        return cls(counts, names=names, names_state=outcomes.RECORDED)
 
     @classmethod
     def _kind(cls, step):
@@ -164,14 +182,86 @@ class ScenarioSteps:
                 return kind
         return None
 
+    # --- MVP ---
+    @classmethod
+    def _name(cls, texts, indent, flow):
+        """
+        The step's own `name:` value, or None. Only the step's own keys count: in flow form the keys outside any nested `{}` or
+        `[]`, in block form the keys at the indent of its first key and outside any nested bracket. So the `name:` inside
+        `set-control: { part-id: b, name: pressed }` is the control's, not the step's.
+        """
+        if flow:
+            own = cls._pieces(" ".join(texts))
+        else:
+            own, depth = [], 0
+            for number, text in enumerate(texts):
+                if not depth and (number == 0 or len(text) - len(text.lstrip()) == indent):
+                    own.append(text)
+                depth = cls._depth(text, depth)
+        for piece in own:
+            key = cls.KEY.match(piece)
+            if key and (key.group(1) or key.group(2) or key.group(3)) == cls.NAME_KEY:
+                value = " ".join(piece[key.end():].split())
+                if len(value) > 1 and value[0] == value[-1] and value[0] in "'\"":
+                    value = " ".join(value[1:-1].split())
+                return value or None
+        return None
+
+    @staticmethod
+    def _unquoted(text):
+        """(index, character) of each character of `text` outside quotes. A quote opens only where a value starts, so `don't` holds none."""
+        shut, last = None, ""
+        for index, each in enumerate(text):
+            if shut:
+                shut = None if each == shut else shut
+            elif each in "'\"" and (not last or last in ":,{["):
+                shut = each
+            else:
+                yield index, each
+            if not each.isspace():
+                last = each
+
+    @classmethod
+    def _depth(cls, text, depth):
+        """The nesting depth of `{` and `[` after `text`, which began at `depth`."""
+        for _, each in cls._unquoted(text):
+            depth += (each in "{[") - (each in "}]")
+        return max(depth, 0)
+
+    @classmethod
+    def _pieces(cls, text):
+        """The comma-separated pieces of a flow step at its own level; the `}` that closes the step ends it."""
+        pieces, start, depth, end = [], 0, 0, len(text)
+        for index, each in cls._unquoted(text):
+            if each in "{[":
+                depth += 1
+            elif each in "}]":
+                if depth == 0:
+                    end = index
+                    break
+                depth -= 1
+            elif each == "," and depth == 0:
+                pieces.append(text[start:index])
+                start = index + 1
+        return pieces + [text[start:end]]
+    # --- end MVP ---
+
     @classmethod
     def from_log(cls, log):
-        """The ScenarioSteps a log's header counts. A log with no counts line (older) is NONE_RECORDED. One that says the steps
-        were not read, a malformed one and a file that cannot be read are NOT_CHECKED. It never raises."""
+        """The ScenarioSteps a log's header counts and names. A log with no counts line (older) is NONE_RECORDED, and one with no
+        names marker has names_state NONE_RECORDED. One that says the steps were not read, a malformed one, a names marker that
+        its name lines do not match and a file that cannot be read are NOT_CHECKED. It never raises."""
         try:
-            said = next((line[len(STEP_COUNTS_LINE):] for line in _header(log) if line.startswith(STEP_COUNTS_LINE)), None)
+            header = _header(log)
         except OSError:
-            return cls({}, outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
+            return cls({}, outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE, (), outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
+        counts = cls._counts_in(header)
+        return cls(counts.counts, counts.state, counts.why, *cls._names_in(header))
+
+    @classmethod
+    def _counts_in(cls, header):
+        """The ScenarioSteps (counts only) that a header's counts line says."""
+        said = next((line[len(STEP_COUNTS_LINE):] for line in header if line.startswith(STEP_COUNTS_LINE)), None)
         if said is None:
             return cls({}, outcomes.NONE_RECORDED)
         if said == STEPS_NOT_READ:
@@ -184,6 +274,19 @@ class ScenarioSteps:
             counts[kind] = int(number)
         return cls(counts)
 
+    # --- MVP ---
+    @staticmethod
+    def _names_in(header):
+        """(names, names_state, names_why) that a header says: the marker line, then that many name lines."""
+        marker = next((line[len(STEP_NAMES_LINE):] for line in header if line.startswith(STEP_NAMES_LINE)), None)
+        if marker is None:
+            return (), outcomes.NONE_RECORDED, None
+        names = [line[len(STEP_NAME_LINE):] for line in header if line.startswith(STEP_NAME_LINE)]
+        if not marker.isascii() or not marker.isdigit() or int(marker) != len(names):
+            return (), outcomes.NOT_CHECKED, WHY_BAD_NAMES
+        return names, outcomes.RECORDED, None
+    # --- end MVP ---
+
     def count(self, kind):
         """How many steps have this kind."""
         return self.counts.get(kind, 0)
@@ -191,15 +294,22 @@ class ScenarioSteps:
     # --- MVP ---
     @classmethod
     def merge(cls, steps):
-        """The ScenarioSteps of several runs together: the sum of the counts of the RECORDED ones. With none RECORDED, NONE_RECORDED."""
+        """
+        The ScenarioSteps of several runs together: the sum of the counts of the RECORDED ones, and the union of the names of
+        those whose names_state is RECORDED, each rule apart from the other. With none RECORDED, NONE_RECORDED.
+        """
+        steps = list(steps)
+        named = [each for each in steps if each.names_state == outcomes.RECORDED]
+        names = dict.fromkeys(name for each in named for name in each.names)
+        state = outcomes.RECORDED if named else outcomes.NONE_RECORDED
         counted = [each for each in steps if each.state == outcomes.RECORDED]
         if not counted:
-            return cls({}, outcomes.NONE_RECORDED)
+            return cls({}, outcomes.NONE_RECORDED, None, names, state)
         total = {}
         for each in counted:
             for kind, number in each.counts.items():
                 total[kind] = total.get(kind, 0) + number
-        return cls(total)
+        return cls(total, names=names, names_state=state)
     # --- end MVP ---
 
     def line(self):
@@ -208,6 +318,15 @@ class ScenarioSteps:
             return STEP_COUNTS_LINE + STEPS_NOT_READ
         kinds = sorted(set(self.counts) | {SET_CONTROL, EXPECT_PIN})
         return STEP_COUNTS_LINE + ", ".join("%s %d" % (kind, self.count(kind)) for kind in kinds)
+
+    # --- MVP ---
+    def log_lines(self):
+        """The log header's lines for the steps: the counts line, then the names marker and one line per name. A names_state
+        that is not RECORDED writes no marker (nothing is claimed), and none is written for a run, whose names are RECORDED."""
+        if self.names_state != outcomes.RECORDED:
+            return self.line()
+        return "\n".join([self.line(), STEP_NAMES_LINE + str(len(self.names))] + [STEP_NAME_LINE + name for name in self.names])
+    # --- end MVP ---
 
 
 # --- MVP ---
@@ -356,7 +475,7 @@ class ScenarioRun:
         self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s\n%s%s\n%s\n%s%s\n%s\n"
                             "--- wokwi-cli printed ---\n%s\n"
                             % (self.scenario.name, datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
-                               self.timeout_ms, sentence, ScenarioSteps.from_text(self.steps).line(), IMAGE_LINE,
+                               self.timeout_ms, sentence, ScenarioSteps.from_text(self.steps).log_lines(), IMAGE_LINE,
                                hashlib.sha256(self.flash).hexdigest(), files, shown, SCENARIO_SECTION, self.steps, said.strip()))
         return self.log
 
