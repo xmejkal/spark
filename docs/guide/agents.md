@@ -276,6 +276,17 @@ These write:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
   - `--drawer-set`, `--needs-set`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
     also uses the network.
+  - **A bench result goes back with `--fact-set`** ([P374](https://github.com/xmejkal/spark/issues/479)), under the `write`
+    key of the `--unverified` row. Write `verified: true` only for a result the person stated in this conversation, and
+    put in `source` who measured it, when and how, in the person's own zone: `bench, 2026-10-29, meter on the owned
+    board, Petr Smejkal`. Never fill the date from today unless the person says so. Run `--dry-run` first: `was` and
+    `now` show `verified` and the `source` in full, with control characters cleaned. Three writes, each in a file:
+    `{"facts": {"runs_at_3v3": {"value": true, "verified": true, "source": "<who, when, how>"}}}` replaces that one
+    entry whole and keeps the others; `{"body_mm": {"width": 33.5, "height": 25.8, "verified": true, "source": "<…>"}}`;
+    `{"pin_order_proof": {"verified": true, "source": "<…>"}}`. A rewrite drops the old `why_it_matters` and `cites`,
+    because a leftover `cites` would claim the manual backs a bench result. Exit 1 and nothing written when `verified`
+    is not true or false, a `source` is blank, a name is not lowercase letters, digits and `_`, or the record's own
+    `facts` is no object. A board record has no write path yet ([P394](https://github.com/xmejkal/spark/issues/510)).
 - `tools.py --install`, `--on`, `--off`, `--pin`, `--use` and `--new`.
 
 **To build someone else's project,** build a copy. Copy everything but `node_modules`
@@ -439,9 +450,12 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
 - `assumptions` is what an answer rests on that nobody has checked. It never changes the status, so read it whenever it
   is not empty. Each entry says what it is about (`fact`), why nobody has checked it (`basis`) and what depends on it
   (`sentence`).
-  - `--unverified` lists one per open fact: `fact` is `<part>.<fact>`, `basis` is `unverified`, `assumed` is the value
-    taken for now, and `source` is where it came from. Its old `data.questions` is gone; `data.parts` only repeats the
-    ids asked.
+  - `--unverified` lists one per fact whose `verified` is not true: `fact` is `<part>.<fact>`, `basis` is `unverified`,
+    `assumed` is the value taken for now, `source` is where it came from, and `write` is the key a result goes back to
+    with `--fact-set`: `facts.<name>`, `pin_order_proof` or `body_mm`. A guessed outline (`body_mm`) is listed, with its
+    width and height as `assumed`; an outline still empty is owed (`--audit`), not assumed. A `write` of null means the
+    record's `facts` is no object: repair the file by hand. Its old `data.questions` is gone; `data.parts` only repeats
+    the ids asked.
   - `--show` lists a CONFLICT that rests on an unverified fact: `fact` is `<part>.<pin>`, `basis` is `unmeasured`,
     `rests_on` names the facts to verify as `<part>.<fact>`, and `upgrade` says how. This `unmeasured` is a basis, not
     `check_all`'s `unmeasured[]` list.

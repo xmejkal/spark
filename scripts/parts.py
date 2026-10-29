@@ -1593,7 +1593,7 @@ OPERATIONS = (
      "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("fact-set", {"nargs": 2, "metavar": ("PART", "FILE")},
-     "fill what a record owes — a JSON object of the facts the chain reads, or its about, description and tags, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+     "fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how), or its about, description and tags, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
      (), ("layers", "owed", "broken", "no_function", "dangling", "stops_at_footprint")),

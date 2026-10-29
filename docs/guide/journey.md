@@ -651,6 +651,17 @@ Then `--requirements` wrote the file and put the record on the shelf:
 
 `--fact-set` never changes spark's own library: a library record is changed in spark's repository.
 
+**A bench result goes back the same way.** `parts.py --unverified soil-probe` lists every fact nobody confirmed, a guessed
+outline too, and each row's `write` key says where its result goes back. After you measure on the bench, the file holds
+the result with its source, who, when and how:
+
+```json
+{"facts": {"runs_at_3v3": {"value": true, "verified": true, "source": "bench, 2026-10-29, meter on the owned board, Petr Smejkal"}}}
+```
+
+`--fact-set soil-probe ../bench.json --project . --dry-run` shows the entry as it will be written, and the other entries
+stay. A `body_mm` or a `pin_order_proof` goes back the same way, with its `verified` and `source`.
+
 **What follows a gap.** A need marked `gap` has nothing in the store to pick. Left unpicked, it does not stop the
 building list, and `--requirements` says so. In a store of its own, the plant alarm with soil marked `gap`, the
 library's LED picked for the alarm and the FireBeetle for the board (`--pick . alarm=led-red-5mm board=firebeetle2-esp32s3`):

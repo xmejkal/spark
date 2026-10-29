@@ -139,8 +139,9 @@ with the Write tool — `[{"need": "soil", "id": "<the part>", "why": "…", "by
 A part pick whose record owes a fact the circuit needs — `footprint`, `pin_order`, `pin_order_proof`, `simulation` — cannot
 be built from; one that owes only its outline (`body_mm`) is written with a warning that the PCB step lays it out at a
 placeholder size. Fill each owed fact once, in the record's own home, from its
-source: a JSON object of the facts (`footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation`) in a file
-written with the Write tool, then
+source: a JSON object of the facts (`footprint`, `pin_order`, `pin_order_proof`, `body_mm`, `simulation`, or `facts`
+entries {value, verified, source} by name; a bench result is `verified: true` and its `source` says who, when and how)
+in a file written with the Write tool, then
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set <part> <file> --project <project> --dry-run
