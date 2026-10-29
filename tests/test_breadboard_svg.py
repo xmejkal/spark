@@ -42,8 +42,7 @@ def xiao_svg(pictures=None):
     with in_store():
         read = breadboard._read_build(XIAO / "requirements.json")
         layout = breadboard._plan_layout(read)
-    geometry = breadboard_drawing.WokwiGeometry.load()
-    return breadboard_drawing.SvgBreadboardDiagram(geometry, pictures=pictures).text(layout), layout
+    return breadboard_drawing.SvgBreadboardDiagram(pictures=pictures).text(layout), layout
 
 
 class ThePictogramsTest(unittest.TestCase):

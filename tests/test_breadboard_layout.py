@@ -24,9 +24,11 @@ import breadboard  # noqa: E402
 import breadboard_catalog  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_steps  # noqa: E402
+import part_shape  # noqa: E402
 from breadboard_drawing import HoleLedger, NotDrawn, WokwiGeometry, rotate  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
+RECORD_BOARD = ROOT / "tests" / "data" / "breadboard" / "button-light"
 GEOMETRY = WokwiGeometry.load()
 
 
@@ -198,6 +200,113 @@ class TheXiaoLayoutTest(unittest.TestCase):
         names = {"bb1:" + hole.name for hole in GEOMETRY.surface.holes}
         for wire in drawn["connections"]:
             self.assertLessEqual(set(wire[:2]), names)
+
+
+def record_inputs(read, surface=None, board=None):
+    """(geometry, catalog) for a board drawn from its record on the full-size surface, as the build gives the planner."""
+    board = board or read.built.board
+    part_px, _ = part_shape.find_part_px(board)
+    source, _ = part_shape.find_source(board)
+    geometry = GEOMETRY.with_part(board["wokwi_part_type"], part_px).with_surface(surface or breadboard_drawing.Surface.load_full())
+    catalog = breadboard_catalog.describe_parts(read, geometry)
+    catalog[breadboard_steps.THE_BOARD] = catalog[breadboard_steps.THE_BOARD]._replace(pins=source.pin_names(board))
+    return geometry, catalog
+
+
+class TheGeometryCopiesTest(unittest.TestCase):
+    def test_with_part_returns_a_copy_and_leaves_the_original_alone(self):
+        before = json.dumps(GEOMETRY.data, sort_keys=True)
+        copied = GEOMETRY.with_part("board-x", {"size": [1, 1], "center": [0, 0], "covers_holes": False, "pins": {}})
+        self.assertEqual(copied.part("board-x")["size"], [1, 1])
+        self.assertIsNot(copied, GEOMETRY)
+        self.assertEqual(json.dumps(GEOMETRY.data, sort_keys=True), before)
+        with self.assertRaises(NotDrawn):
+            GEOMETRY.part("board-x")
+
+    def test_with_surface_returns_a_copy_with_other_holes(self):
+        full = breadboard_drawing.Surface.load_full()
+        copied = GEOMETRY.with_surface(full)
+        self.assertEqual((copied.surface.type, GEOMETRY.surface.type), ("spark-breadboard-full", "wokwi-breadboard-half"))
+        self.assertEqual((len(full.terminal), full.rails, full.pitch), (630, [], 9.6))
+        self.assertEqual(len(GEOMETRY.surface.terminal), 300)
+
+
+class TheRecordBoardLayoutTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        with in_store():
+            cls.read = breadboard._read_build(RECORD_BOARD / "requirements.json")
+        cls.geometry, cls.catalog = record_inputs(cls.read)
+        cls.layout = breadboard_drawing.BreadboardPlanner(cls.geometry, cls.catalog).plan(cls.read.steps)
+
+    def test_the_board_sits_in_rows_b_and_i_so_a_and_j_stay_free(self):
+        board = self.layout.parts[0]
+        self.assertEqual(board.id, "board")
+        self.assertEqual({hole.name.split(".")[1] for hole in board.holes.values()}, {"b", "i"})
+        self.assertEqual((min(h.column for h in board.holes.values()), max(h.column for h in board.holes.values())), (6, 23))
+
+    def test_the_layout_holds_the_geometry_it_was_planned_on(self):
+        self.assertIs(self.layout.geometry, self.geometry)
+        self.assertEqual(self.layout.breadboard, "spark-breadboard-full")
+
+    def test_every_pin_lies_within_1_5_px_of_its_hole(self):
+        for part in self.layout.parts:
+            part_px = self.geometry.part(part.type)
+            turned = rotate(part_px["pins"], part_px["center"], part.rotate)
+            for pin, hole in part.holes.items():
+                x, y = turned[pin]
+                self.assertLessEqual(abs(part.left + x - hole.x), 1.5, (part.id, pin))
+                self.assertLessEqual(abs(part.top + y - hole.y), 1.5, (part.id, pin))
+
+    def test_a_jumper_in_a_board_pin_s_row_takes_the_free_hole_beside_the_body(self):
+        # the body covers the holes toward the gap, so the one hole a pin keeps is the far one: row a or row j
+        board_groups = {hole.group for hole in self.layout.parts[0].holes.values()}
+        ends = [hole for jumper in self.layout.jumpers for hole in (jumper.one, jumper.other) if hole.group in board_groups]
+        self.assertGreaterEqual(len(ends), 1)
+        self.assertEqual({hole.name.split(".")[1] for hole in ends} - {"a", "j"}, set())
+
+    def test_four_jumpers_and_the_same_bytes_twice(self):
+        self.assertEqual(len(self.layout.jumpers), 4)
+        again = breadboard_drawing.BreadboardPlanner(*record_inputs(self.read)).plan(self.read.steps)
+        self.assertEqual(again._replace(geometry=None), self.layout._replace(geometry=None))
+
+    def test_one_hole_fewer_refuses_the_board(self):
+        # a and j are taken everywhere but columns 46 to 63, which the board fills exactly; take one more a or j
+        # hole in the middle of them and the pin there has no free hole left
+        geometry, catalog = record_inputs(self.read)
+        placement = breadboard_drawing.FirstFitPartPlacement(geometry)
+
+        def place(also_taken):
+            ledger = HoleLedger(geometry.surface)
+            for hole in geometry.surface.terminal:
+                if hole.name.split(".")[1] in "aj" and (not 46 <= hole.column <= 63 or hole.name in also_taken):
+                    ledger.claim(hole, "taken")
+            return placement.place("board", catalog["board"], ledger)
+
+        self.assertEqual(min(h.column for h in place(()).holes.values()), 46)
+        for taken in ("55t.a", "55b.j"):
+            with self.subTest(taken=taken), self.assertRaises(NotDrawn) as refused:
+                place((taken,))
+            self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "board"))
+
+    def test_a_board_whose_rows_are_an_inch_apart_is_refused(self):
+        # 25.4 mm is ten pitches, so the pins land in rows b and j and no row beside them is free
+        board = json.loads(json.dumps(self.read.built.board))
+        board["physical"]["header"]["row_spacing_mm"] = 25.4
+        board["physical"]["width_mm"] = 27.94
+        with self.assertRaises(NotDrawn) as refused:
+            breadboard_drawing.BreadboardPlanner(*record_inputs(self.read, board=board)).plan(self.read.steps)
+        self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "board"))
+
+    def test_a_30_column_surface_fits_the_button_and_refuses_the_led(self):
+        full = json.loads((ROOT / "data" / "breadboards.json").read_text())["full"]
+        thirty = breadboard_drawing.Surface(dict(full, columns=30))
+        with self.assertRaises(NotDrawn) as refused:
+            breadboard_drawing.BreadboardPlanner(*record_inputs(self.read, thirty)).plan(self.read.steps)
+        self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "LedRed5mm"))
+        placed = breadboard_drawing.BreadboardPlanner(*record_inputs(self.read)).plan(self.read.steps).parts
+        button = next(part for part in placed if part.id == "TactileButton")
+        self.assertEqual((min(h.column for h in button.holes.values()), max(h.column for h in button.holes.values())), (26, 28))
 
 
 class AnOldDrawingTest(unittest.TestCase):

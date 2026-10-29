@@ -91,7 +91,7 @@ STEP_COLORS = breadboard_steps.StepColors()
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
 #: new entry here, and nothing else changes.
 DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),
-                     breadboard_drawing.SvgBreadboardDiagram(breadboard_drawing.WokwiGeometry.load(), STEP_COLORS))
+                     breadboard_drawing.SvgBreadboardDiagram(STEP_COLORS))
 #: What the sheet says of the bench: one line per change since the last build, in these words.
 CHANGE_LIST = breadboard_changes.ChangeList()
 #: The drawing a person edits in Wokwi, whose moves a rebuild keeps (P273).

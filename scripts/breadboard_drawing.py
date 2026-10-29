@@ -1,6 +1,6 @@
 """
-The drawn breadboard (P267, #300): the sheet's steps on a Wokwi half breadboard, each part's legs in holes and each
-step's jumper in the step's color, written as `breadboard.json`, a second Wokwi diagram.
+The drawn breadboard (P267, #300): the sheet's steps on a breadboard, each part's legs in holes and each
+step's jumper in the step's color, written as `breadboard.json`, a second Wokwi diagram, and as `breadboard.svg`.
 
 A pure planner turns the steps into holes, and a renderer turns the holes into a diagram. The planner reads the steps
 from `BreadboardSteps.anchored()`, so it never decides the wiring again. Where Wokwi draws each pin and hole comes from
@@ -11,6 +11,7 @@ only the jumpers are connections.
 """
 
 import collections
+import copy
 import json
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
@@ -19,6 +20,7 @@ import breadboard_steps
 import part_pictures
 
 WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
+BREADBOARDS_FILE = Path(__file__).resolve().parent.parent / "data" / "breadboards.json"
 
 #: Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, its group (the holes joined with it inside the
 #: board: a breadboard row such as 12t, or a rail such as tp), and its column (from 1; a rail hole has none, 0).
@@ -30,8 +32,8 @@ PlacedPart = collections.namedtuple("PlacedPart", "id type attrs left top rotate
 #: One jumper between two holes, drawn in the color of the step it belongs to, with the bends of its route as Wokwi
 #: writes them (strings such as "v-20"), empty when it runs straight.
 Jumper = collections.namedtuple("Jumper", "one other step route", defaults=((),))
-#: Value: the whole drawing as holes, which any renderer reads.
-BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers")
+#: Value: the whole drawing as holes, and the `geometry` it was planned on, which any renderer reads.
+BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers geometry")
 
 
 #: Why a board or a part cannot be drawn, as codes (P412): the code a build and an agent decide on, never the sentence.
@@ -45,7 +47,7 @@ CODES = {
     NO_DOUBTFUL_PAD_FACT: "the board's record does not say which pads are doubtful (physical.header.doubtful_pads), so no ground is picked",
     GROUND_NOT_ONE: "the board's ground pads, less the doubtful ones, are not exactly one; the subject names those left",
     DUPLICATE_PAD_LABEL: "two pads of the board's record have one label; the subject is the label",
-    NO_HOLE_LEFT: "a part leaves a pin with no free hole beside it on the breadboard; the subject is the part",
+    NO_HOLE_LEFT: "the breadboard has no place where a part fits with a free hole beside each of its pins; the subject is the part",
     NO_WOKWI_PART: "Wokwi has no part with this board's pins, so no Wokwi diagram is written, by design",
 }
 
@@ -69,6 +71,7 @@ class Surface:
 
     def __init__(self, board):
         self.type = board["type"]
+        self.pitch = board["pitch"]
         self.holes = []
         for number in range(1, board["columns"] + 1):
             x = board["first_column_x"] + board["pitch"] * (number - 1)
@@ -89,6 +92,11 @@ class Surface:
         rank.update({letter: (index, 0) for index, letter in enumerate(bottom)})
         self.by_gap = sorted(self.terminal, key=lambda hole: (hole.column,) + rank[hole.name.rsplit(".", 1)[1]])
 
+    @classmethod
+    def load_full(cls, path=BREADBOARDS_FILE):
+        """spark's own full-size surface, 63 columns and no rails (data/breadboards.json)."""
+        return cls(json.loads(Path(path).read_text())["full"])
+
     def hole_at(self, x, y, tolerance):
         """The terminal hole whose center lies within the tolerance of (x, y), else None."""
         return next((hole for hole in self.terminal if abs(hole.x - x) <= tolerance and abs(hole.y - y) <= tolerance),
@@ -96,8 +104,8 @@ class Surface:
 
 
 class WokwiGeometry:
-    """Value: where Wokwi draws each part's pins, and the surface of its half breadboard
-    (data/wokwi-geometry.json)."""
+    """Value: where Wokwi draws each part's pins, and the surface of its breadboard
+    (data/wokwi-geometry.json). A copy with another part or another surface (`with_part`, `with_surface`) leaves it as it was."""
 
     def __init__(self, data):
         self.data = data
@@ -107,6 +115,18 @@ class WokwiGeometry:
     @classmethod
     def load(cls, path=WOKWI_GEOMETRY_FILE):
         return cls(json.loads(Path(path).read_text()))
+
+    def with_part(self, wokwi_type, part_px):
+        """A copy that also knows one part's px (a board drawn from its record); this geometry is not changed."""
+        copied = copy.copy(self)
+        copied.data = dict(self.data, parts=dict(self.data["parts"], **{wokwi_type: part_px}))
+        return copied
+
+    def with_surface(self, surface):
+        """A copy whose holes are `surface`'s; this geometry is not changed."""
+        copied = copy.copy(self)
+        copied.surface = surface
+        return copied
 
     def part(self, wokwi_type):
         """{center, covers_holes, pins} of one Wokwi type, or NotDrawn naming it."""
@@ -165,7 +185,7 @@ class HoleLedger:
             if hole.column > after and self.group_is_free(hole.group):
                 self.claim(hole, by)
                 return hole
-        raise NotDrawn("the half breadboard has no free row left for %s" % by)
+        raise NotDrawn("the breadboard has no free row left for %s" % by)
 
 
 class PartPlacement:
@@ -191,7 +211,8 @@ class JumperPlacement:
 class FirstFitPartPlacement(PartPlacement):
     """
     The first turn and position, left to right, where every pin lies over a free hole, each pin in a group of its own
-    that holds nothing else, and every hole the part covers is free. A board that straddles the gap fits only when
+    that holds nothing else, and every hole the part covers is free. A part that covers holes also leaves each of its pins
+    a free hole in its group, for a jumper (P412). A board that straddles the gap fits only when
     turned, because its pins in one line would share a group. `pinned` (pin, group) puts one pin in a group that already
     holds something: a resistor's leg in the group of the pin it joins.
     """
@@ -219,12 +240,14 @@ class FirstFitPartPlacement(PartPlacement):
                 covered = self._covered(part_px, degrees, left, top, holes) if part_px.get("covers_holes") else []
                 if any(not ledger.is_free(hole) or hole.column <= after for hole in covered):
                     continue
+                if part_px.get("covers_holes") and not self._pins_keep_a_free_hole(holes, covered, ledger):
+                    continue
                 for pin, hole in holes.items():
                     ledger.claim(hole, "%s %s" % (part_id, pin))
                 for hole in covered:
                     ledger.claim(hole, "%s, which covers it" % part_id)
                 return PlacedPart(part_id, drawn.type, drawn.attrs, left, top, degrees, holes)
-        raise NotDrawn("%s does not fit on the half breadboard" % part_id)
+        raise NotDrawn("%s does not fit on the breadboard" % part_id, NO_HOLE_LEFT, part_id)
 
     def _fit(self, turned, left, top, ledger, after, pinned):
         holes = {}
@@ -239,6 +262,12 @@ class FirstFitPartPlacement(PartPlacement):
                 return None
             holes[pin] = hole
         return holes
+
+    def _pins_keep_a_free_hole(self, holes, covered, ledger):
+        """True when each pin's group keeps a hole that nothing takes and the body does not cover: a jumper needs it."""
+        taken = {hole.name for hole in list(holes.values()) + covered}
+        return all(any(hole.group == pin.group and ledger.is_free(hole) and hole.name not in taken
+                       for hole in self.geometry.surface.terminal) for pin in holes.values())
 
     def _covered(self, part_px, degrees, left, top, holes):
         """The holes under the part's body, besides its own pins: its box, turned, about its center."""
@@ -293,7 +322,7 @@ class BreadboardPlanner:
                 jumpers.append(Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
                                       ledger.claim_free_hole(self._group_of(anchor, placed, groups), anchor.name), number))
         return self.jumper_placement.place_jumpers(
-            BreadboardLayout(self.geometry.surface.type, list(placed.values()), jumpers), parts_only)
+            BreadboardLayout(self.geometry.surface.type, list(placed.values()), jumpers, self.geometry), parts_only)
 
     def _place_resistors(self, seated, placed, ledger, after):
         """A resistor has a fixed length, so it goes in with the leg that joins a row already in that row."""
@@ -414,14 +443,13 @@ class SvgBreadboardDiagram:
     #: The space around the outermost holes, in px.
     MARGIN_PX = 14
 
-    def __init__(self, geometry, colors=None, pictures=None):
-        self.geometry = geometry
+    def __init__(self, colors=None, pictures=None):
         self.colors = colors or breadboard_steps.StepColors()
         self.pictures = pictures or part_pictures.PictogramPartPictures()
 
     def text(self, layout):
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)
-        surface = self.geometry.surface
+        surface = layout.geometry.surface
         width = _round_px(max(hole.x for hole in surface.holes) + 2 * self.MARGIN_PX)
         height = _round_px(max(hole.y for hole in surface.holes) + self.MARGIN_PX)
         root = ElementTree.Element(_svg("svg"), {"width": str(width), "height": str(height),
@@ -441,15 +469,15 @@ class SvgBreadboardDiagram:
                                                         "x2": str(_round_px(last)), "y2": str(y), "stroke-width": "1",
                                                         "stroke": "#e53935" if rail.endswith("p") else "#1e88e5"})
         for part in layout.parts:
-            self._part(root, part)
+            self._part(root, part, layout.geometry)
         for jumper in layout.jumpers:
-            self._jumper(root, jumper)
+            self._jumper(root, jumper, layout.geometry.surface.pitch)
         for part in layout.parts:
-            self._label(root, part)  # last, so no wire or other part covers a pin or a name
+            self._label(root, part, layout.geometry)  # last, so no wire or other part covers a pin or a name
         return ElementTree.tostring(root, encoding="unicode") + "\n"
 
-    def _part(self, root, part):
-        part_px = self.geometry.part(part.type)
+    def _part(self, root, part, geometry):
+        part_px = geometry.part(part.type)
         picture = self.pictures.picture(part.type)
         cx, cy = part_px["center"]
         group = ElementTree.SubElement(root, _svg("g"), {
@@ -464,24 +492,24 @@ class SvgBreadboardDiagram:
         if picture.credit:
             ElementTree.SubElement(group, _svg("title")).text = picture.credit
 
-    def _label(self, root, part):
+    def _label(self, root, part, geometry):
         for hole in part.holes.values():
             ElementTree.SubElement(root, _svg("circle"), {"cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)),
                                                           "r": "2.5", "fill": "#2e7d32"})
-        cx, cy = self.geometry.part(part.type)["center"]
+        cx, cy = geometry.part(part.type)["center"]
         label = ElementTree.SubElement(root, _svg("text"), {
             "x": str(_round_px(part.left + cx)), "y": str(_round_px(part.top + cy)), "font-size": "8",
             "font-family": "sans-serif", "text-anchor": "middle", "fill": "#1a1a1a", "stroke": "#ffffff",
             "stroke-width": "2.5", "paint-order": "stroke"})
         label.text = part.id
 
-    def _jumper(self, root, jumper):
+    def _jumper(self, root, jumper, pitch):
         """One jumper along the holes: out of its first hole along the column, across between two rows of holes, and
         into its last hole. Its bends sit half a pitch off the holes, so no bend looks like a joint with a hole of
         another group."""
         color = self.colors.color(jumper.step)
         one, other = jumper.one, jumper.other
-        half = self.geometry.data["breadboard"]["pitch"] / 2
+        half = pitch / 2
         across = other.y - half if other.y > one.y else other.y + half
         ElementTree.SubElement(root, _svg("path"), {
             "d": "M%s %sL%s %sL%s %sL%s %s" % (

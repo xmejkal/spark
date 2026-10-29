@@ -45,7 +45,7 @@ MESSAGES = {
     PIN_OFF_HOLES: "its pin %s is not over a hole",
     HOLE_TAKEN: "hole %s is taken by %s",
     ROW_SHARED: "two of its pins share a row, or a row holds another part",
-    NO_ROOM: "the half breadboard has no room with it kept, so spark placed it",
+    NO_ROOM: "the breadboard has no room with it kept, so spark placed it",
     PIN_OFF_ROW: "its pin %s is no longer in the row it joins, so spark placed it",
     ROWS_NOT_JOINED: "no jumper of the new layout is left to join rows %s and %s, so spark drew its own",
     JUMPER_NOT_ON_BOARD: "it does not join two holes of the breadboard, so spark drew its own",
