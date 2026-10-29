@@ -7,7 +7,8 @@ The project's brief: what `.spark/project.json` says, read on each call.
     problem  None, or why a file that exists could not give a brief: PROBLEM_BAD_JSON, PROBLEM_NOT_OBJECT or PROBLEM_MUST_NOT_LIST
              (P345). The other fields are the empty brief then, apart from `prefer` and `sellers` when only `must` was wrong.
 
-`Brief.from_project` gives an empty brief for a missing file, a non-file, bad JSON or JSON that is not an object.
+`Brief.from_project` gives an empty brief for a missing file or a non-file, and an empty brief with `problem` set for bad JSON,
+JSON that is not an object, or a `must` that is not a list.
 An unreadable file raises OSError, and deeply nested JSON raises RecursionError, as the old readers did.
 """
 

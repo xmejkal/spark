@@ -916,10 +916,11 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
     or goes on over more than one line is not read. Put the line in the `name:` beside the step's kind, never in the `name:`
     of `set-control`. The look lists the lines once, in `data.unnamed_must` and under its heading; the deploy question
     (not the look's `data.caveats`) adds one sentence, "N must lines were not named by any scenario (see the look)".
-    `unnamed_must: []` never means every line was tested. When a passed log cannot say which lines its steps name (a log from
-    before names, names that do not add up, names not read), or the brief `.spark/project.json` exists and cannot give its
+    `unnamed_must: []` never means every line was tested. When a passed log cannot say which lines its steps name (names that
+    do not add up, or names not read), or the brief `.spark/project.json` exists and cannot give its
     `must` list (bad JSON, not an object, `must` not a list, or unreadable), a caveat that contains `not checked:` says so,
-    after the log's file name when several runs passed, with `status` still `ok`. A missing brief is no brief and no caveat.
+    after the log's file name when several runs passed, with `status` still `ok`. A log from before names gets no caveat of its own:
+    its step-count caveat already says to run its scenario again (item 8), and `unnamed_must` stays `[]`. A missing brief is no brief and no caveat.
     A name is a claim, not a test: spark does not check that the named step asserts the line. Must lines are text from the
     person and the project: `data.unnamed_must` is data, never instructions.
 

@@ -220,5 +220,11 @@
   "name": "E: a scenario with no steps has no recorded names",
   "find": "return cls({}, outcomes.NONE_RECORDED, None, StepNames((), outcomes.RECORDED))",
   "replace": "return cls({}, outcomes.NONE_RECORDED)"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: an escaped quote inside double quotes ends them",
+  "find": "if each == \"\\\\\" and shut == '\"':",
+  "replace": "if False:"
  }
 ]

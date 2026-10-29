@@ -230,7 +230,7 @@ class ScenarioSteps:
                                                and len(texts[number + 1]) - len(texts[number + 1].lstrip()) > indent):
                     raise ValueError("a step name over more than one line")
                 if len(value) > 1 and value[0] == value[-1] and value[0] in "'\"":
-                    value = " ".join((value[1:-1].replace("''", "'") if value[0] == "'" else value[1:-1]).split())
+                    value = " ".join((value[1:-1].replace("''", "'") if value[0] == "'" else value[1:-1].replace('\\"', '"').replace("\\\\", "\\")).split())
                 return value or None
         return None
 
@@ -246,14 +246,16 @@ class ScenarioSteps:
     def _unquoted(text):
         """
         (index, character) of each character of `text` outside quotes. A quote opens only where a value starts, so `don't` holds none.
-        Inside single quotes `''` is one quote, not the end.
+        Inside single quotes `''` is one quote, not the end; inside double quotes a backslash escapes the next character.
         """
         shut, last, skip = None, "", False
         for index, each in enumerate(text):
             if skip:
                 skip = False
             elif shut:
-                if each == shut and shut == "'" and text[index + 1:index + 2] == "'":
+                if each == "\\" and shut == '"':
+                    skip = True
+                elif each == shut and shut == "'" and text[index + 1:index + 2] == "'":
                     skip = True
                 elif each == shut:
                     shut = None

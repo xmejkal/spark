@@ -234,6 +234,10 @@ class TheStepNamesTest(unittest.TestCase):
         self.assertEqual(steps.names, ("LED #1 lights", "LED#2 lights", "LED", "LED #4 lights"))
         self.assertEqual(steps.counts, {"wait-serial": 5})
 
+    def test_an_escaped_quote_inside_double_quotes_does_not_end_them(self):
+        steps = self.named('- name: "say \\"hi\\" # x" # c', "  wait-serial: x", '- name: "say \\"hi\\""  # c', "  wait-serial: y")
+        self.assertEqual(steps.names, ('say "hi" # x', 'say "hi"'))
+
     def test_two_single_quotes_inside_single_quotes_are_one_quote(self):
         steps = self.named("- name: 'it''s on # now'  # c", "  wait-serial: x", "- name: 'a''' # c", "  wait-serial: y")
         self.assertEqual(steps.names, ("it's on # now", "a'"))
