@@ -713,7 +713,9 @@ def _pad_problems(board):
         if doubtful is not None and not isinstance(doubtful, list):
             problems.append("physical.header.doubtful_pads is %r; it must be a list of pad labels" % (doubtful,))
         for name in doubtful if isinstance(doubtful, list) else []:
-            if name not in pads:
+            if not isinstance(name, str):
+                problems.append("physical.header.doubtful_pads holds %r, but each entry is a pad label" % (name,))
+            elif name not in pads:
                 problems.append("physical.header.doubtful_pads names %r, which is not a pad in header_order" % (name,))
     return problems
 

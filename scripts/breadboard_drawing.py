@@ -21,8 +21,6 @@ import part_pictures
 
 WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
 BREADBOARDS_FILE = Path(__file__).resolve().parent.parent / "data" / "breadboards.json"
-#: What a part_px drawn from a board's own record says in `source` (`part_shape.RecordShapeSource`): the picture adds the pad labels.
-RECORD_SOURCE = "record"
 
 #: Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, its group (the holes joined with it inside the
 #: board: a breadboard row such as 12t, or a rail such as tp), and its column (from 1; a rail hole has none, 0).
@@ -54,6 +52,9 @@ CODES = {
 }
 
 
+#: Value: a drawing a build did not write: where it would be, its renderer, why as a code from CODES (None for an older
+#: refusal) with its subject (None when it has none), and the sentence a person reads.
+NotWritten = collections.namedtuple("NotWritten", "path renderer code subject why")
 #: The codes of a refusal that is no failure: the drawing is not written by design, and a retry gives the same.
 BY_DESIGN = (NO_WOKWI_PART,)
 
@@ -407,7 +408,7 @@ class WokwiBreadboardDiagram:
     SHEET_MESSAGE = ("An example layout is in breadboard.json: paste it into the diagram.json of a new project on "
                      "wokwi.com.")
     #: What the sheet says once when no Wokwi diagram is written for a board drawn from its own record.
-    SHEET_DECLINED_MESSAGE = "No Wokwi diagram exists for this board, by design: Wokwi has no part with its pins."
+    SHEET_DECLINED_MESSAGE = "There is no Wokwi diagram for this board. Use the picture."
     #: Why no file is written for such a board.
     DECLINED_MESSAGE = "Wokwi has no part with this board's pins"
 
@@ -416,10 +417,10 @@ class WokwiBreadboardDiagram:
         self.breadboard_id = breadboard_id
 
     def why_not_written(self, layout):
-        """None when the layout can be a Wokwi diagram, else (code, sentence): a board drawn from its own record has no Wokwi
-        part, so its pins would show the wrong board."""
-        if any(layout.geometry.part(part.type).get("source") == RECORD_SOURCE for part in layout.parts):
-            return NO_WOKWI_PART, self.DECLINED_MESSAGE
+        """None when the layout can be a Wokwi diagram, else the NotWritten (its path is only the file's name): a part that
+        says it is no Wokwi part would show the wrong board there."""
+        if any(not layout.geometry.part(part.type).get("wokwi_part", True) for part in layout.parts):
+            return NotWritten(Path(self.FILE_NAME), self, NO_WOKWI_PART, None, self.DECLINED_MESSAGE)
         return None
 
     def render(self, layout):
@@ -527,9 +528,9 @@ class SvgBreadboardDiagram:
 
     def _pad_labels(self, root, part, part_px):
         """A board drawn from its record (P412): each pad's label beside its pin inside the body, a dashed ring on a
-        doubtful pad, and the USB-C end. Drawn in the part's own frame, so it turns with the part."""
+        doubtful pad, and a mark at the USB end (named in no word, since its place is not verified). Drawn in the part's own frame, so it turns with the part."""
         cx, _ = part_px["center"]
-        width, height = part_px["size"]
+        height = part_px["size"][1]
         group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part, part_px)})
         for pad, (x, y) in part_px["pins"].items():
             if pad in part_px["doubtful"]:
@@ -545,14 +546,10 @@ class SvgBreadboardDiagram:
         ElementTree.SubElement(group, _svg("rect"), {
             "x": str(_round_px(cx - 17)), "y": str(_round_px(height - 12)), "width": "34", "height": "12", "rx": "3",
             "fill": "#cfd8dc", "stroke": "#455a64", "stroke-width": "1"})
-        usb = ElementTree.SubElement(group, _svg("text"), {
-            "x": str(_round_px(cx)), "y": str(_round_px(height - 4)), "font-size": "6", "font-family": "sans-serif",
-            "text-anchor": "middle", "fill": "#263238"})
-        usb.text = "USB-C"
 
     def _label(self, root, part, geometry):
         part_px = geometry.part(part.type)
-        if part_px.get("source") == RECORD_SOURCE:
+        if part_px.get("pad_labels"):
             self._pad_labels(root, part, part_px)
         for hole in part.holes.values():
             ElementTree.SubElement(root, _svg("circle"), {"cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)),

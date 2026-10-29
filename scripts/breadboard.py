@@ -369,7 +369,7 @@ def _drawing_inputs(read):
     catalog = breadboard_catalog.describe_parts(read, wokwi)
     board = read.built.board
     part_px, _ = part_shape.find_part_px(board, part_shape.sources_for(wokwi.data["parts"]))
-    if part_px.get("source") != breadboard_drawing.RECORD_SOURCE:
+    if not part_px.get("full_surface"):
         return wokwi, catalog
     geometry = wokwi.with_part(catalog[breadboard_steps.THE_BOARD].type, part_px)
     return geometry.with_surface(breadboard_drawing.Surface.load_full()), catalog
@@ -463,8 +463,7 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
         lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
         if len(drawn) < len(DRAWING_RENDERERS):
             lines += ["", breadboard_drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
-        ground = breadboard_catalog.ground_line(planned.layout)
-        lines += ["", ground] if ground else []
+        lines += [line for one in breadboard_catalog.board_lines(planned.layout) for line in ("", one)]
         if planned.differs:
             more = len(planned.differs) - 1
             lines += ["", "The drawing does not join the points the same way: %s%s. Wire from the steps above."
@@ -481,8 +480,8 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
     return "\n".join(lines) + "\n"
 
 
-#: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, [(path, renderer, code,
-#: subject, why)] for each one not written (code and subject are None for an older refusal), the [NotKeptResult] of the
+#: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, a NotWritten for each one not
+#: written (its code and subject are None for an older refusal), the [NotKeptResult] of the
 #: earlier parts not kept, the [WiringChange] since the last build (none on a first build), each end the drawing joins
 #: differently from the points ([DrawingDiffersResult], P279), and what a board's drawing was made from (`record`, or
 #: None for Wokwi's own geometry).
@@ -536,14 +535,13 @@ def write(requirements_path, out, circuit_path=None):
     new_record = breadboard_changes.WiringRecord.from_build(seated, colors, record, _spark_jumpers(
         planned, earlier_path, record))
     layout = planned.layout
-    declined = {renderer: renderer.why_not_written(layout) for _, renderer in paths} if layout else {}
-    drawn = [(path, renderer) for path, renderer in paths if layout and not declined.get(renderer)]
+    said = [(path, renderer, renderer.why_not_written(layout) if layout else None) for path, renderer in paths]
+    drawn = [(path, renderer) for path, renderer, why in said if layout and not why]
     if layout:
-        not_written = [(path, renderer, *declined[renderer][:1], None, declined[renderer][1])
-                       for path, renderer in paths if declined.get(renderer)]
+        not_written = [why._replace(path=path) for path, _, why in said if why]
     else:
-        not_written = [(path, renderer, planned.stopped.code, planned.stopped.subject, str(planned.stopped))
-                       for path, renderer in paths]
+        not_written = [breadboard_drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
+                                                     str(planned.stopped)) for path, renderer, _ in said]
     try:
         # every text is rendered before any file is written, so a renderer that fails leaves no new sheet either
         texts = [renderer.text(layout) for _, renderer in drawn]
@@ -553,8 +551,8 @@ def write(requirements_path, out, circuit_path=None):
         raise
     Path(out).write_text(sheet(requirements_path, read=read, planned=planned, change_lines=_change_lines(record, changes)))
     new_record.write(record_path)
-    for path, *_ in not_written:
-        path.unlink(missing_ok=True)  # a drawing left from an earlier build describes another one
+    for refused in not_written:
+        refused.path.unlink(missing_ok=True)  # a drawing left from an earlier build describes another one
     try:
         for (path, _), text in zip(drawn, texts):
             path.write_text(text)
@@ -565,7 +563,7 @@ def write(requirements_path, out, circuit_path=None):
     if not layout:
         return WriteResult(Path(out), [], not_written, [], changes)
     return WriteResult(Path(out), drawn, not_written, planned.not_kept, changes, planned.differs,
-                       breadboard_catalog.board_px(layout).get("source"))
+                       breadboard_catalog.find_board_px(layout).get("source"))
 
 
 def main(argv=None):
@@ -591,8 +589,8 @@ def main(argv=None):
         print("not kept: %s" % named.line, file=sys.stderr)
     for differs in written.differs:
         print("drawing differs: %s" % differs.why, file=sys.stderr)
-    for _, renderer, _, _, why in written.not_written:
-        print("%s not written: %s" % (renderer.FILE_NAME, why), file=sys.stderr)
+    for refused in written.not_written:
+        print("%s not written: %s" % (refused.renderer.FILE_NAME, refused.why), file=sys.stderr)
     return EXIT_OK
 
 

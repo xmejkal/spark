@@ -336,9 +336,9 @@ class AnOldDrawingTest(unittest.TestCase):
             written = breadboard.write(project / "requirements.json", project / "breadboard.md")
         self.assertEqual(written.drawings, [])
         # the board is drawn from its record now, so the plan stops at the module nothing says how to draw (an older refusal: no code)
-        self.assertEqual([(path.name, code, subject) for path, _, code, subject, _ in written.not_written],
+        self.assertEqual([(one.path.name, one.code, one.subject) for one in written.not_written],
                          [("breadboard.json", None, None), ("breadboard.svg", None, None)])
-        self.assertIn("L9110sModule", written.not_written[0][4])
+        self.assertIn("L9110sModule", written.not_written[0].why)
         self.assertFalse((project / "breadboard.json").exists())
 
 
@@ -355,7 +355,7 @@ class ABoardWhoseRecordLacksAFactIsRefusedWithItsCodeTest(unittest.TestCase):
         (project / "breadboard.svg").write_text("<svg/>")
         with in_store():
             written = breadboard.write(project / "requirements.json", project / "breadboard.md")
-        self.assertEqual([(path.name, code, subject) for path, _, code, subject, _ in written.not_written],
+        self.assertEqual([(one.path.name, one.code, one.subject) for one in written.not_written],
                          [("breadboard.json", "no_header_fact", "physical.header"), ("breadboard.svg", "no_header_fact", "physical.header")])
         self.assertEqual(written.drawings, [])
         self.assertFalse((project / "breadboard.svg").exists())
@@ -380,7 +380,7 @@ class AXiaoBuildOverAnOldDrawingTest(unittest.TestCase):
         with in_store():
             written = breadboard.write(project / "requirements.json", project / "breadboard.md")
         self.assertEqual(written.not_kept, [])
-        self.assertEqual([code for _, _, code, _, _ in written.not_written], ["no_wokwi_part"])
+        self.assertEqual([one.code for one in written.not_written], ["no_wokwi_part"])
         self.assertFalse((project / "breadboard.json").exists())
         self.assertTrue((project / "breadboard.svg").is_file())
 

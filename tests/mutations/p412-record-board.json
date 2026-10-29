@@ -1,18 +1,176 @@
 [
- {"file": "scripts/breadboard_drawing.py", "name": "the free-hole rule is dropped", "find": "if part_px.get(\"covers_holes\") and not self._pins_keep_a_free_hole(holes, covered, ledger):", "replace": "if False and not self._pins_keep_a_free_hole(holes, covered, ledger):"},
- {"file": "scripts/breadboard_drawing.py", "name": "a hole the body covers counts as free (the boundary)", "find": "hole.group == pin.group and ledger.is_free(hole) and hole.name not in taken", "replace": "hole.group == pin.group and ledger.is_free(hole)"},
- {"file": "scripts/breadboard_drawing.py", "name": "with_part leaks into the original geometry", "find": "        copied.data = dict(self.data, parts=dict(self.data[\"parts\"], **{wokwi_type: part_px}))", "replace": "        self.data[\"parts\"][wokwi_type] = part_px\n        copied.data = self.data"},
- {"file": "scripts/breadboard_drawing.py", "name": "Wokwi is not asked, so a board drawn from its record gets a Wokwi diagram", "find": "if any(layout.geometry.part(part.type).get(\"source\") == RECORD_SOURCE for part in layout.parts):", "replace": "if False:"},
- {"file": "scripts/breadboard_drawing.py", "name": "the last refusal loses its code", "find": "raise NotDrawn(\"%s does not fit on the breadboard\" % part_id, NO_HOLE_LEFT, part_id)", "replace": "raise NotDrawn(\"%s does not fit on the breadboard\" % part_id)"},
- {"file": "scripts/part_shape.py", "name": "the x flip is dropped", "find": "pins[label] = (round(x + width / 2, 4), round(height / 2 - y, 4))", "replace": "pins[label] = (round(x, 4), round(height / 2 - y, 4))"},
- {"file": "scripts/part_shape.py", "name": "the y flip is dropped", "find": "pins[label] = (round(x + width / 2, 4), round(height / 2 - y, 4))", "replace": "pins[label] = (round(x + width / 2, 4), round(y, 4))"},
- {"file": "scripts/part_shape.py", "name": "the source order is swapped", "find": "return (WokwiGeometryShapeSource(parts), RecordShapeSource())", "replace": "return (RecordShapeSource(), WokwiGeometryShapeSource(parts))"},
- {"file": "scripts/part_shape.py", "name": "a stand-in is drawn from Wokwi's entry", "find": "return None if board.get(\"wokwi_is_stand_in\") else self._measured(board)", "replace": "return self._measured(board)"},
- {"file": "scripts/part_shape.py", "name": "the silkscreen guard is dropped", "find": "if measured is None or board.get(\"wokwi_pin_naming\") != self.PIN_NAMING_SILKSCREEN:", "replace": "if measured is None:"},
- {"file": "scripts/part_shape.py", "name": "a doubtful ground is picked", "find": "and pad.get(\"rail\") == \"ground\" and name not in doubtful]", "replace": "and pad.get(\"rail\") == \"ground\"]"},
- {"file": "scripts/part_shape.py", "name": "a duplicate pad label is accepted", "find": "            if label in pins:", "replace": "            if False:"},
- {"file": "scripts/part_shape.py", "name": "a record without doubtful_pads is drawn", "find": "        if not isinstance(doubtful, list):", "replace": "        if False:"},
- {"file": "scripts/boards.py", "name": "validate accepts a doubtful pad that is no pad", "find": "            if name not in pads:\n                problems.append(\"physical.header.doubtful_pads names", "replace": "            if False:\n                problems.append(\"physical.header.doubtful_pads names"},
- {"file": "scripts/breadboard.py", "name": "a stale breadboard.json is kept", "find": "    for path, *_ in not_written:\n        path.unlink(missing_ok=True)", "replace": "    for path, *_ in not_written:\n        pass"},
- {"file": "scripts/breadboard.py", "name": "the keep step runs although Wokwi declines", "find": "if earlier_path is None or EDITABLE_DRAWING.why_not_written(fresh):", "replace": "if earlier_path is None:"}
+ {
+"file": "scripts/breadboard_drawing.py",
+"name": "the free-hole rule is dropped",
+"find": "if part_px.get(\"covers_holes\") and not self._pins_keep_a_free_hole(holes, covered, ledger):",
+"replace": "if False and not self._pins_keep_a_free_hole(holes, covered, ledger):"
+},
+ {
+"file": "scripts/breadboard_drawing.py",
+"name": "a hole the body covers counts as free (the boundary)",
+"find": "hole.group == pin.group and ledger.is_free(hole) and hole.name not in taken",
+"replace": "hole.group == pin.group and ledger.is_free(hole)"
+},
+ {
+"file": "scripts/breadboard_drawing.py",
+"name": "with_part leaks into the original geometry",
+"find": "        copied.data = dict(self.data, parts=dict(self.data[\"parts\"], **{wokwi_type: part_px}))",
+"replace": "        self.data[\"parts\"][wokwi_type] = part_px\n        copied.data = self.data"
+},
+ {
+"file": "scripts/breadboard_drawing.py",
+"name": "Wokwi is not asked, so a board drawn from its record gets a Wokwi diagram",
+"find": "if any(not layout.geometry.part(part.type).get(\"wokwi_part\", True) for part in layout.parts):",
+"replace": "if False:"
+},
+ {
+"file": "scripts/breadboard_drawing.py",
+"name": "the last refusal loses its code",
+"find": "raise NotDrawn(\"%s does not fit on the breadboard\" % part_id, NO_HOLE_LEFT, part_id)",
+"replace": "raise NotDrawn(\"%s does not fit on the breadboard\" % part_id)"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the x flip is dropped",
+"find": "pins[label] = (round(x + width / 2, 4), round(height / 2 - y, 4))",
+"replace": "pins[label] = (round(x, 4), round(height / 2 - y, 4))"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the y flip is dropped",
+"find": "pins[label] = (round(x + width / 2, 4), round(height / 2 - y, 4))",
+"replace": "pins[label] = (round(x + width / 2, 4), round(y, 4))"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the source order is swapped",
+"find": "return (WokwiGeometryShapeSource(parts), RecordShapeSource())",
+"replace": "return (RecordShapeSource(), WokwiGeometryShapeSource(parts))"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a stand-in is drawn from Wokwi's entry",
+"find": "return None if board.get(\"wokwi_is_stand_in\") else self._measured(board)",
+"replace": "return self._measured(board)"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the silkscreen guard is dropped",
+"find": "if measured is None or board.get(\"wokwi_pin_naming\") != self.PIN_NAMING_SILKSCREEN:",
+"replace": "if measured is None:"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a doubtful ground is picked",
+"find": "and pad.get(\"rail\") == \"ground\" and name not in doubtful]",
+"replace": "and pad.get(\"rail\") == \"ground\"]"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a duplicate pad label is accepted",
+"find": "            if label in pins:",
+"replace": "            if False:"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a record without doubtful_pads is drawn",
+"find": "        if not isinstance(doubtful, list):",
+"replace": "        if False:"
+},
+ {
+"file": "scripts/boards.py",
+"name": "validate accepts a doubtful pad that is no pad",
+"find": "            elif name not in pads:\n                problems.append(\"physical.header.doubtful_pads names",
+"replace": "            elif False:\n                problems.append(\"physical.header.doubtful_pads names"
+},
+ {
+"file": "scripts/breadboard.py",
+"name": "a stale breadboard.json is kept",
+"find": "    for refused in not_written:\n        refused.path.unlink(missing_ok=True)",
+"replace": "    for refused in not_written:\n        pass"
+},
+ {
+"file": "scripts/breadboard.py",
+"name": "the keep step runs although Wokwi declines",
+"find": "if earlier_path is None or EDITABLE_DRAWING.why_not_written(fresh):",
+"replace": "if earlier_path is None:"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "an edge other than +y is drawn",
+"find": "(\"flush_edge\", header.get(\"flush_edge\") == FLUSH_EDGE)",
+"replace": "(\"flush_edge\", True)"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a row count that disagrees is drawn",
+"find": "(\"rows\", header[\"rows\"] == len(header[\"pins\"]))",
+"replace": "(\"rows\", True)"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a third header row is drawn",
+"find": "(\"pins\", len(header[\"pins\"]) <= 2)",
+"replace": "(\"pins\", True)"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a pitch of nothing is drawn",
+"find": "(\"pitch_mm\", header[\"pitch_mm\"] > 0)",
+"replace": "(\"pitch_mm\", True)"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "two pads at one place are drawn",
+"find": "if len(set(pins.values())) != len(pins):",
+"replace": "if False:"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a step to a doubtful pad finds its pin",
+"find": "if label not in doubtful}, GND=shape.ground)",
+"replace": "}, GND=shape.ground)"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the record part says Wokwi has a part",
+"find": "\"wokwi_part\": False,",
+"replace": "\"wokwi_part\": True,"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the record part has no pad labels",
+"find": "\"pad_labels\": True,",
+"replace": "\"pad_labels\": False,"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the record part keeps the half breadboard",
+"find": "\"full_surface\": True}",
+"replace": "\"full_surface\": False}"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the subject of a missing fact is lost",
+"find": "breadboard_drawing.NO_HEADER_FACT, missing[0][0])",
+"replace": "breadboard_drawing.NO_HEADER_FACT)"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the pads are marked verified",
+"find": "\"pads\": {\"value\": pad_count, \"verified\": False,",
+"replace": "\"pads\": {\"value\": pad_count, \"verified\": True,"
+},
+ {
+"file": "scripts/boards.py",
+"name": "a doubtful pad entry that is no text is accepted",
+"find": "            if not isinstance(name, str):",
+"replace": "            if False:"
+},
+ {
+"file": "scripts/breadboard_catalog.py",
+"name": "the sheet does not say to hold the board to the picture",
+"find": "    if part_px.get(\"notes\"):",
+"replace": "    if False:"
+}
 ]

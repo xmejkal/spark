@@ -60,9 +60,11 @@ flowchart LR
 
 ![The layout on a breadboard](breadboard.svg) Each jumper has its step's color: 5 cyan, 6 blue, 7 purple, 8 magenta.
 
-No Wokwi diagram exists for this board, by design: Wokwi has no part with its pins.
+There is no Wokwi diagram for this board. Use the picture.
 
-On the board, GND is the pad GND2. The pads GND1 and GND3 are doubtful and are not used.
+On the board, GND is the pad GND2. The pads GND1 and GND3 are not used (the record says they may have no net).
+
+Hold your board to the picture. If the pins sit on the other side, tell spark.
 
 ### Points
 

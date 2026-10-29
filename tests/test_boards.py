@@ -277,7 +277,7 @@ class TheContractTest(unittest.TestCase):
     def test_a_doubtful_pad_must_be_a_pad_of_the_header_order(self):
         # P412: the drawn breadboard picks ground by this field, so a name that is no pad would leave a wrong ground
         physical = {"footprint_module": "X", "footprint_export": "X", "header_order": {"row": ["A", "GND"]}}
-        for doubtful, count in ((["GND"], 0), (["NOPE"], 1), ("GND", 1), (["GND", "NOPE", "NADA"], 2)):
+        for doubtful, count in ((["GND"], 0), (["NOPE"], 1), ("GND", 1), (["GND", "NOPE", "NADA"], 2), ([{}], 1), ([None, "GND"], 1)):
             with self.subTest(doubtful=doubtful):
                 problems = self._problems(physical=dict(physical, header={"doubtful_pads": doubtful}), pins={"A": 0})
                 self.assertEqual(len([p for p in problems if "doubtful_pads" in p]), count, problems)

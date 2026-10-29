@@ -398,7 +398,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertTrue((into / "breadboard.svg").is_file())
         self.assertIn("no drawn breadboard: ", said)
         self.assertNotIn("not written: ", (into / "breadboard.md").read_text())
-        self.assertIn("No Wokwi diagram exists for this board, by design", (into / "breadboard.md").read_text())
+        self.assertIn("There is no Wokwi diagram for this board", (into / "breadboard.md").read_text())
 
     def test_the_kept_entries_say_the_diagram_is_not_written_by_design_and_the_picture_is_from_the_record(self):
         import argparse

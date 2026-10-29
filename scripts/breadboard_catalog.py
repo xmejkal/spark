@@ -32,9 +32,9 @@ def describe_parts(read, geometry):
     shape source that places it (`part_shape`), or NotDrawn with a code says why none does. A board whose Wokwi pins are
     not its printed labels names no pins, so the drawing says which pin it cannot find. `geometry` must be Wokwi's own."""
     board = read.built.board
-    source, _ = part_shape.find_source(board, part_shape.sources_for(geometry.data["parts"]))
+    source = part_shape.find_source(board, part_shape.sources_for(geometry.data["parts"]))
     catalog = {breadboard_steps.THE_BOARD: breadboard_drawing.DrawnPart(
-        board.get("wokwi_part_type") or board.get("id"), {}, source.pin_names(board))}
+        board.get("wokwi_part_type") or board.get("id"), {}, source.find_pin_names(board))}
     for part in read.built.parts:
         wokwi = (part.get("simulation") or {}).get("wokwi") or {}
         if wokwi.get("part"):
@@ -45,16 +45,20 @@ def describe_parts(read, geometry):
     return catalog
 
 
-def board_px(layout):
+def find_board_px(layout):
     """The part_px the layout drew its board from, {} when it drew none."""
     return next((layout.geometry.part(part.type) for part in layout.parts if part.id == breadboard_steps.THE_BOARD), {})
 
 
-def ground_line(layout):
-    """For a board drawn from its own record, which pad every GND on this sheet is; None for any other board."""
-    part_px = board_px(layout)
-    if part_px.get("source") != breadboard_drawing.RECORD_SOURCE:
-        return None
-    return "On the board, GND is the pad %s.%s" % (
-        part_px["ground"], " The pads %s are doubtful and are not used." % " and ".join(part_px["doubtful"])
-        if part_px["doubtful"] else "")
+def board_lines(layout):
+    """What the sheet says of a board drawn from its own record, as lines: which pad GND is, why the doubtful pads are not
+    used, and that the picture is not verified. [] for any other board."""
+    part_px = find_board_px(layout)
+    lines = []
+    if part_px.get("ground"):
+        doubtful = " and ".join(part_px["doubtful"])
+        lines.append("On the board, GND is the pad %s.%s" % (part_px["ground"], " The pads %s are not used (the record says "
+                                                                "they may have no net)." % doubtful if doubtful else ""))
+    if part_px.get("notes"):
+        lines.append("Hold your board to the picture. If the pins sit on the other side, tell spark.")
+    return lines

@@ -830,8 +830,9 @@ def keep_breadboard(requirements, destination, stages=()):
     kept = [{"file": str(written.sheet), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written.sheet, why)}]
     kept += [{"file": str(path), "did": "wrote", "why": renderer.PURPOSE_MESSAGE, "line": "wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE),
               **({"drawn_from": written.drawn_from} if written.drawn_from else {})} for path, renderer in written.drawings]
-    kept += [{"file": str(path), "did": "not written", "code": code, "subject": subject, "expected": code in breadboard_drawing.BY_DESIGN,
-              "why": why, "line": "no %s: %s" % (renderer.NOUN, why)} for path, renderer, code, subject, why in written.not_written]
+    kept += [{"file": str(one.path), "did": "not written", "code": one.code, "subject": one.subject,
+              "expected": one.code in breadboard_drawing.BY_DESIGN, "why": one.why,
+              "line": "no %s: %s" % (one.renderer.NOUN, one.why)} for one in written.not_written]
     # what the person changes on the bench since the last sheet (P300)
     kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,
               "color": change.color, "why": breadboard.CHANGE_LIST.line(change),

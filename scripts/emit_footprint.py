@@ -121,10 +121,16 @@ def _worded(gaps):
     return ["%s (%s)" % (field, note) if note else field for field, note in gaps]
 
 
+def geometry_missing(board):
+    """What a board's file lacks for its pads and outline, as (field, note) pairs with "" for no note, or [] when nothing: the
+    fields for a program to read, where `geometry_gaps` has the sentences."""
+    return _geometry_missing(*_physical_and_header(board))
+
+
 def geometry_gaps(board):
     """What a board's file lacks for its pads and outline to be placed (the footprint's gaps without the module's name), each as its field and its
     note in parentheses, or [] when nothing. The drawn breadboard refuses on it before it reads a pad."""
-    return _worded(_geometry_missing(*_physical_and_header(board)))
+    return _worded(geometry_missing(board))
 
 
 def footprint_gaps(board):
@@ -166,21 +172,27 @@ def footprint_stop_line(board):
 DISAGREES_MESSAGE = "the board definition disagrees with itself: %s"
 
 
-def wrong_kind(physical):
-    """The first field of a board file with no `geometry_gaps` that holds a value of the wrong kind, said with its name, or None. The board
-    file's validation checks no header geometry, so `pads` and `render` would raise a TypeError on a pitch written as text."""
+def kind_problem(physical):
+    """(field, what is wrong with it) of the first field of a board file with no `geometry_gaps` that holds a value of the wrong kind, or
+    None. The board file's validation checks no header geometry, so `pads` and `render` would raise a TypeError on a pitch written as text."""
     header = physical["header"]
     numbers = [("physical.%s" % field, physical[field]) for field in ("width_mm", "height_mm")] + [
         ("physical.header.%s" % field, header[field]) for field in ("pitch_mm", "row_spacing_mm", "first_pad_from_edge_mm")]
     for name, value in numbers:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            return "%s is not a number" % name
+            return name, "%s is not a number" % name
     pins, order = header["pins"], physical["header_order"]
     if not isinstance(pins, list) or not all(isinstance(count, int) and not isinstance(count, bool) for count in pins):
-        return "physical.header.pins is not a list of whole numbers"
+        return "physical.header.pins", "physical.header.pins is not a list of whole numbers"
     if not isinstance(order, dict) or not all(isinstance(labels, list) for key, labels in order.items() if not key.startswith("//")):
-        return "physical.header_order is not an object with a list of labels for each row"
+        return "physical.header_order", "physical.header_order is not an object with a list of labels for each row"
     return None
+
+
+def wrong_kind(physical):
+    """The first field of a board file with no `geometry_gaps` that holds a value of the wrong kind, said with its name, or None."""
+    found = kind_problem(physical)
+    return found[1] if found else None
 
 
 def why_header_disagrees(board, rules=None):
