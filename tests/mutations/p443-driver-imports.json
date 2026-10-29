@@ -1,0 +1,92 @@
+[
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: time.sleep_ms really sleeps",
+  "find": "    \"sleep_ms\": lambda ms: None,",
+  "replace": "    \"sleep_ms\": lambda ms: time.sleep(ms / 10000),"
+ },
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: time.ticks_ms returns 1, so a clock seems to have moved",
+  "find": "    \"ticks_ms\": lambda: 0,",
+  "replace": "    \"ticks_ms\": lambda: 1,"
+ },
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: time.ticks_diff swaps its arguments",
+  "find": "lambda end, start: end - start,",
+  "replace": "lambda end, start: start - end,"
+ },
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: time.sleep_us is left out of the table",
+  "find": "    \"sleep_us\": lambda us: None,\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: the time names are set after the import, not before",
+  "find": "    add_micropython_time(time)\n    sys.path[:0] = argv[1:]\n    try:\n        importlib.import_module(argv[0])\n",
+  "replace": "    sys.path[:0] = argv[1:]\n    try:\n        importlib.import_module(argv[0])\n        add_micropython_time(time)\n"
+ },
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: the stand-in's words are not given back for a from import",
+  "find": "        if words is None:",
+  "replace": "        if True:"
+ },
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: every ImportError that names a loaded module gets the stand-in's words",
+  "find": "module.__dict__.get(\"_missed\")",
+  "replace": "(\"miss\", \"stand-in words\")"
+ },
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: a miss that was handed back is never cleared",
+  "find": "    module._missed = None\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: importing the child file runs main",
+  "find": "if __name__ == \"__main__\":\n    main(sys.argv[1:])",
+  "replace": "main(sys.argv[1:])"
+ },
+ {
+  "file": "scripts/import_firmware.py",
+  "name": "P443: the child runs without -I, so a firmware can import the helper",
+  "find": "[sys.executable, \"-I\", \"-B\", str(CHILD), name,",
+  "replace": "[sys.executable, \"-B\", str(CHILD), name,"
+ },
+ {
+  "file": "scripts/stand_in/fallback/micropython.py",
+  "name": "P443: alloc_emergency_exception_buf raises",
+  "find": "    \"\"\"Keeps no buffer, as there is no interpreter to give one to.\"\"\"\n",
+  "replace": "    raise OSError(size)\n"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P443: machine raises ImportError again, so hasattr raises",
+  "find": "    raise AttributeError(words)",
+  "replace": "    raise ImportError(words)"
+ },
+ {
+  "file": "scripts/stand_in/fallback/micropython.py",
+  "name": "P443: micropython raises ImportError again, so hasattr raises",
+  "find": "    raise AttributeError(words)",
+  "replace": "    raise ImportError(words)"
+ },
+ {
+  "file": "scripts/stand_in/fallback/framebuf.py",
+  "name": "P443: framebuf raises ImportError again, so hasattr raises",
+  "find": "    raise AttributeError(words)",
+  "replace": "    raise ImportError(words)"
+ },
+ {
+  "file": "scripts/stand_in/machine.py",
+  "name": "P443: a dunder probe is remembered as a miss, and it replaces the name before it",
+  "find": "    if name.startswith(\"__\"):  # the import machinery asks for __path__ and the like",
+  "replace": "    if False:  # the import machinery asks for __path__ and the like"
+ }
+]
