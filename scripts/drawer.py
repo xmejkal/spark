@@ -17,7 +17,7 @@ from collections import namedtuple
 import boards
 import parts
 import store
-from spark.core.text_guards import LABEL_MAX, TAGS_MAX, TEXT_MAX, clean, list_key_problems
+from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems
 
 #: What a part does (§5.6) — one list, in parts.py.
 VERBS = parts.VERBS
@@ -227,6 +227,7 @@ def settle(entry_id, before, values, known):
     values = {key: scrub(key, value) for key, value in values.items()}
     problems = [parts._problem(entry_id, "%s is not a drawer field — the fields are %s" % (key, ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
+    problems += [parts._problem(entry_id, each) for key, value in values.items() for each in list_key_problems(key, value, SURROGATE)]
     problems += [parts._problem(entry_id, CHECKS[key][1]) for key, value in values.items() if key in CHECKS and not CHECKS[key][0](value)]
     if before is None and "label" not in values:
         problems.append(parts._problem(entry_id, "a new entry needs a label — with no count it is owned, count unknown"))

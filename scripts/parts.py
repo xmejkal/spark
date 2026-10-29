@@ -2351,7 +2351,12 @@ def _say(op, answer, as_json):
     said = envelope("parts", op, answer.data, answer.problems, answer.unchecked, answer.next, answer.truncated,
                     notes=answer.notes, assumptions=answer.assumptions)
     if as_json:
-        print(json.dumps(said, ensure_ascii=False, separators=(",", ":")))
+        try:
+            line = json.dumps(said, ensure_ascii=False, separators=(",", ":"))
+            line.encode("utf-8")
+        except UnicodeEncodeError:  # a lone surrogate in a name the person gave (P445): JSON escapes it
+            line = json.dumps(said, separators=(",", ":"))
+        print(line)
     else:
         if not answer.lines:
             for item in list(answer.problems) + list(answer.unchecked):

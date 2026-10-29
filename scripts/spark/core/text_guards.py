@@ -83,20 +83,25 @@ def clean(text, cap=LABEL_MAX):
     return CONTROL.sub(" ", str(text)).strip()[:cap]
 
 
-def list_key_problems(where, value):
+#: A lone surrogate: it cannot be written as UTF-8, so a key that holds one is refused wherever keys are kept (P445).
+SURROGATE = re.compile("[\ud800-\udfff]")
+
+
+def list_key_problems(where, value, bad=CONTROL):
     """
     Every key at any depth in `value` that is no string or holds a control or bidi character (P374), as sentences that name
-    the key's path from `where`. A key is refused and never cleaned, because two cleaned keys can merge into one.
+    the key's path from `where`. A key is refused and never cleaned, because two cleaned keys can merge into one. `bad` is the
+    pattern a key may not hold: `CONTROL`, or `SURROGATE` where a control character in a key is allowed (a `used_in` key).
     """
     if isinstance(value, list):
-        return [problem for index, item in enumerate(value) for problem in list_key_problems("%s[%d]" % (where, index), item)]
+        return [problem for index, item in enumerate(value) for problem in list_key_problems("%s[%d]" % (where, index), item, bad)]
     problems = []
     for key, item in (value.items() if isinstance(value, dict) else ()):
         here = "%s[%r]" % (where, key)
-        if not isinstance(key, str) or CONTROL.search(key):
+        if not isinstance(key, str) or bad.search(key):
             problems.append("%s is a key that is no string or holds a control or bidi character: refused, never cleaned, "
                             "because two cleaned keys could merge" % here)
-        problems += list_key_problems(here, item)
+        problems += list_key_problems(here, item, bad)
     return problems
 
 
