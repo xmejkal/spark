@@ -13,7 +13,7 @@ import json
 import board_codes
 import board_doctor
 import boards
-import outcomes
+from spark.core import outcomes
 import ready_check
 from deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 

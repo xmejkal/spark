@@ -17,7 +17,7 @@ from collections import namedtuple
 import boards
 import parts
 import store
-from text_guards import LABEL_MAX, TAGS_MAX, TEXT_MAX, clean, list_key_problems
+from spark.core.text_guards import LABEL_MAX, TAGS_MAX, TEXT_MAX, clean, list_key_problems
 
 #: What a part does (§5.6) — one list, in parts.py.
 VERBS = parts.VERBS

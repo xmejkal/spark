@@ -24,7 +24,7 @@ import re
 import sys
 from pathlib import Path
 
-from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
+from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 
 #: What reaches the network (§6.7): these tools, every MCP tool (its name does not say whether it reaches the network), and a
 #: simple shell command that names one of these — unless that command says `--dry-run`, which opens no URL.

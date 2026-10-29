@@ -46,7 +46,9 @@ def missing_names(text, root=ROOT):
     return (["/spark:%s names no command" % name for name in commands
              if not (root / "commands" / ("%s.md" % name)).is_file()]
             + ["%s names no script" % name for name in scripts if name not in PROJECT_FILES
-               and not any((root / folder / name).is_file() for folder in ("scripts", "tools", "tests"))])
+               and not (any((root / folder / name).is_file() for folder in ("tools", "tests"))
+                        or any("stand_in" not in found.relative_to(root / "scripts").parts
+                               for found in (root / "scripts").rglob(name)))])
 
 
 def unlisted(root=ROOT):

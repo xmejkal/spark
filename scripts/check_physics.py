@@ -51,8 +51,8 @@ from check_footprints import package_of  # noqa: E402
 
 import netlist  # noqa: E402
 from emit_board import GROUND_NETS  # noqa: E402
-from outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, status_of  # noqa: E402
-from outcomes import COULD_NOT_RUN  # noqa: E402
+from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, status_of  # noqa: E402
+from spark.core.outcomes import COULD_NOT_RUN  # noqa: E402
 
 #: The copper arithmetic lives in its own module, because `emit_board` sizes traces by exactly
 #: the formula this file judges them with. Two copies is how a board passes its own tool and

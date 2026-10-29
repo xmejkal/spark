@@ -17,7 +17,7 @@ from typing import NamedTuple, Optional
 
 import boards
 import emit_board
-import outcomes
+from spark.core import outcomes
 import parts as parts_library
 import tools
 

@@ -495,9 +495,10 @@ test became rule U1. Each planted breach is caught with its rule. R4, R5, U2, X1
 slice that first needs them.
 
 S4, `outcomes` and the two core leaves into the package: `scripts/spark/core/outcomes.py`, `core/zone_time.py` and
-`core/text_guards.py`, with the 36 import lines in 32 files of `scripts/` and `tools/` (at `d064a65`) and the test imports changed.
+`core/text_guards.py`, with the 69 import lines in 48 files of `scripts/`, `tools/` and `tests/` (an `ast` count at `fdcb1b89`; 36 in 32 at `d064a65`, before OC3, OC8, S2 and P443) and the test imports changed.
 `provenance` waits for the records move. The slice is done when `scripts/outcomes.py` is gone, `tests/test_outcomes.py`
-imports `spark.core.outcomes`, and no golden changed.
+imports `spark.core.outcomes`, and no golden changed. Done in P441 (#586, PR W3-2). A file under `scripts/spark/` comes under
+the rules of that folder, so the move added one baseline entry, `X2:scripts/spark/core/outcomes.py:sys.stderr`.
 
 S5, the core contract. It creates only what `look` needs in S6: `OperationResult`, `Finding`, `NextStep`, the
 `Operation` base class with `schema()`, `Argument`, `SparkError`, `OutsideWorld`, `Privacy` as a pass-through,

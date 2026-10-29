@@ -9,7 +9,7 @@ import functools
 import hashlib
 
 import board_codes
-import outcomes
+from spark.core import outcomes
 import run_scenario
 import sim_project
 

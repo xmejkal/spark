@@ -39,7 +39,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
 import store  # noqa: E402
-from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
+from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: What spark says of a tool whose `--version` said nothing; check_spine writes it, and both modules read it.
 UNKNOWN_VERSION = "unknown version"

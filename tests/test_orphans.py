@@ -12,6 +12,7 @@ one looked alive. Nothing asked "who calls this?" — this does, at every commit
 import json
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -36,20 +37,36 @@ def routes():
     return "\n".join(path.read_text() for path in files)
 
 
+def script_files():
+    """Every script under scripts/, in the spark package too, but not the MicroPython stand-in or an `__init__.py`."""
+    scripts = ROOT / "scripts"
+    return sorted(path for path in scripts.rglob("*.py")
+                  if "stand_in" not in path.relative_to(scripts).parts and path.name != "__init__.py")
+
+
 def imports_in(scripts):
-    """Every module name another script imports, by reading the import lines of each script."""
+    """Every module name another script imports: the last word of a module, and the names a `from spark...` brings in."""
     named = set()
     for path in scripts:
         for line in path.read_text().splitlines():
-            match = re.match(r"\s*(?:import|from)\s+([a-z_]+)", line)
+            match = re.match(r"\s*(?:import|from)\s+([a-z_][a-z_.]*)(?:\s+import\s+(.*))?", line.split("#", 1)[0])
             if match:
-                named.add(match.group(1))
+                named.add(match.group(1).split(".")[-1])
+                if match.group(1).startswith("spark."):
+                    named.update(re.findall(r"[A-Za-z_]\w*", match.group(2) or ""))
     return named
 
 
 class NothingShipsUnusedTest(unittest.TestCase):
+    def test_an_import_line_names_its_module_and_a_spark_import_its_names_but_a_comment_names_nothing(self):
+        with tempfile.TemporaryDirectory() as folder:
+            one = Path(folder) / "one.py"
+            one.write_text("from spark.core import outcomes\nfrom other import moved  # grant, times\n"
+                           "from spark.core.zone_time import stamp  # the times\nimport plain\n")
+            self.assertEqual(imports_in([one]), {"core", "outcomes", "other", "zone_time", "stamp", "plain"})
+
     def test_every_script_is_routed_to_or_imported(self):
-        scripts = sorted((ROOT / "scripts").glob("*.py"))
+        scripts = script_files()
         text, imported = routes(), imports_in(scripts)
         orphans = [path.name for path in scripts
                    if path.stem not in LIBRARIES and path.name not in text
@@ -58,7 +75,7 @@ class NothingShipsUnusedTest(unittest.TestCase):
                                       "these, and no script imports them: %s" % orphans)
 
     def test_every_library_is_imported_by_a_script(self):
-        imported = imports_in(list((ROOT / "scripts").glob("*.py")))
+        imported = imports_in(script_files())
         unused = sorted(LIBRARIES - imported)
         self.assertEqual(unused, [], "libraries nothing imports: %s" % unused)
 
@@ -79,7 +96,7 @@ class NothingShipsUnusedTest(unittest.TestCase):
         names = {entry.get("exe") for key, entry in json.loads((ROOT / "data" / "tools.json").read_text()).items()
                  if isinstance(entry, dict) and entry.get("exe")} | {"bun"}
         named = {}
-        for path in sorted((ROOT / "scripts").glob("*.py")):
+        for path in script_files():
             if path.name == "tools.py":
                 continue
             text = path.read_text()

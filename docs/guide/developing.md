@@ -306,6 +306,18 @@ buttons from the record's `physical.buttons`. `board_doctor.step_sentence` does 
 PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `deploy_service.DeployResult` and
 `firmware_platform.FirmwarePlatform`. `deploy.py` only parses, prints and maps the exit code.
 
+### The package
+
+`scripts/spark/` is a package, and `scripts/` is on the path whenever a script runs (it is `sys.path[0]`) and in every
+test, so `import spark.core.outcomes` needs no path change. `scripts/spark/core/` holds the leaf modules every script
+shares: `outcomes` (the exit codes and the three outcomes), `text_guards` and `zone_time`. They import nothing of spark.
+A script writes `from spark.core import outcomes` and then `outcomes.EXIT_OK`, or `from spark.core.outcomes import
+EXIT_OK`. The other scripts stay flat in `scripts/` until their own card moves them. A tool that lists the scripts
+(`tools/inventory.py`, `tools/measure.py`, the tests that read every script) looks in the folders under `scripts/` too.
+Most of them leave out `scripts/stand_in/`, but `test_no_magic_strings` reads it too. `test_orphans`,
+`test_self_confirmation` and the inventory leave out each `__init__.py`. A child started with
+`python3 -I` never imports `spark.core`, because `-I` drops the script's folder from `sys.path`.
+
 ### The rules test
 
 `tests/test_architecture.py` reads `scripts/` and `tests/` with `ast` and holds each breach against

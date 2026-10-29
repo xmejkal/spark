@@ -28,9 +28,9 @@ from pathlib import Path
 import board_codes
 import board_look
 import store
-from zone_time import say_in_local_zone, stamp  # the grant's times (P401 moved them out, to break an import cycle)
+from spark.core.zone_time import say_in_local_zone, stamp  # the grant's times (P401 moved them out, to break an import cycle)
 from deploy_gate import ConsentStrategy, GateClosedError, format_rerun_line
-from outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
+from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 
 #: What a grant allows. A file with no `scope` (written before P242) is a live grant.
 SCOPE_LIVE, SCOPE_DEPLOY = "live", "deploy"

@@ -63,7 +63,7 @@ import emit_board  # noqa: E402
 import part_shape  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
-from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
+from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: Where the build keeps what it built, relative to the project (`check_spine.py … --keep .`).
 CIRCUIT = Path("dist") / "board" / "circuit.json"

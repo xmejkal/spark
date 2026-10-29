@@ -128,8 +128,8 @@ ONBOARD_BATTERY_SENSE = "onboard_battery_sense"
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
 GPIO_MIN, GPIO_MAX = 0, 63
 
-import outcomes  # noqa: E402
-from outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
+from spark.core import outcomes  # noqa: E402
+from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
 
 
 class BoardError(Exception):

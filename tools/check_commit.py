@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.append(str(ROOT / "tests"))  # after the rest: only suite_runs is wanted, and no test helper may shadow a module
 
-from outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
+from spark.core.outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
 from suite_runs import SLOW_PREFIX  # noqa: E402
 
 #: How many of the names left behind the gate's line shows; the count says the rest.
@@ -83,14 +83,15 @@ def code_lines(source):
 
 
 def scripts_size(root, rev):
-    """The code lines of `scripts/*.py` at a commit, read from git with no checkout; None for an unknown commit."""
-    listed = subprocess.run(["git", "-C", str(root), "ls-tree", "--name-only", rev, "scripts/"],
+    """The code lines of `scripts/**/*.py` at a commit, less the MicroPython stand-in, read from git with no checkout;
+    None for an unknown commit."""
+    listed = subprocess.run(["git", "-C", str(root), "ls-tree", "-r", "--name-only", rev, "scripts/"],
                             capture_output=True, text=True)
     if listed.returncode != 0:
         return None
     return sum(code_lines(subprocess.run(["git", "-C", str(root), "show", "%s:%s" % (rev, name)],
                                          capture_output=True, text=True).stdout)
-               for name in listed.stdout.split() if name.endswith(".py"))
+               for name in listed.stdout.split() if name.endswith(".py") and not name.startswith("scripts/stand_in/"))
 
 
 def size_line(root, commit, base="origin/main"):

@@ -44,10 +44,10 @@ def repo_with(files):
 
 
 class TheCommittedTreeIsMeasuredTest(unittest.TestCase):
-    OUTCOMES = (ROOT / "scripts" / "outcomes.py").read_text()
+    OUTCOMES = (ROOT / "scripts" / "spark" / "core" / "outcomes.py").read_text()
 
     def test_a_tree_whose_suite_passes_is_ok(self):
-        root = repo_with({"scripts/outcomes.py": self.OUTCOMES,
+        root = repo_with({"scripts/spark/core/outcomes.py": self.OUTCOMES,
                           "m.py": "def add(a, b):\n    return a + b\n",
                           "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
                                              "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n"})
@@ -60,7 +60,7 @@ class TheCommittedTreeIsMeasuredTest(unittest.TestCase):
 
     def test_a_file_left_uncommitted_makes_the_committed_tree_fail(self):
         # The C3 shape: the working tree has the module, the commit does not.
-        root = repo_with({"scripts/outcomes.py": self.OUTCOMES,
+        root = repo_with({"scripts/spark/core/outcomes.py": self.OUTCOMES,
                           "m.py": "import helper\ndef add(a, b):\n    return helper.plus(a, b)\n",
                           "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
                                              "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n"})
@@ -93,6 +93,11 @@ class TheSizeIsSaidTest(unittest.TestCase):
         self.assertEqual(check_commit.size_line(root, "HEAD", "HEAD~1"), "scripts/: 3 code lines (+2 since HEAD~1)")
         self.assertEqual(check_commit.size_line(root, "HEAD", "no-such-base"), "scripts/: 3 code lines")
 
+    def test_the_size_counts_a_package_under_scripts_but_not_the_micropython_stand_in(self):
+        root = repo_with({"scripts/a.py": "x = 1\n", "scripts/spark/core/b.py": "y = 2\nz = 3\n",
+                          "scripts/stand_in/machine.py": "q = 1\n"})
+        self.assertEqual(check_commit.size_line(root, "HEAD", "no-such-base"), "scripts/: 3 code lines")
+
 
 
 def head_and_config(root):
@@ -109,7 +114,7 @@ class TheHooksGitIsNotTheSuitesTest(unittest.TestCase):
     """
 
     def test_the_measured_suite_never_sees_the_hook_s_git_variables(self):
-        root = repo_with({"scripts/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
+        root = repo_with({"scripts/spark/core/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
                           "m.py": "def add(a, b):\n    return a + b\n",
                           "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
                                              "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n",
@@ -168,7 +173,7 @@ class TheSuiteLeavesNoTempBehindTest(unittest.TestCase):
     """
 
     def tree(self, *tests):
-        files = {"scripts/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
+        files = {"scripts/spark/core/outcomes.py": TheCommittedTreeIsMeasuredTest.OUTCOMES,
                  "m.py": "def add(a, b):\n    return a + b\n",
                  "tests/test_m.py": "import sys, unittest\nsys.path.insert(0, '.')\nimport m\n"
                                     "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n"}

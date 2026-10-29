@@ -8,7 +8,7 @@
  {"file": "scripts/parts.py", "name": "--unverified's open facts leave the envelope", "find": "lines, assumptions=assumptions, next=", "replace": "lines, next="},
  {"file": "scripts/parts.py", "name": "--unverified's open facts lose their source", "find": "\"source\": q[\"source\"], ", "replace": ""},
  {"file": "scripts/parts.py", "name": "a pick's notes leave the envelope", "find": "                  notes=[_note(note) for note in notes])", "replace": "                  notes=[])"},
- {"file": "scripts/outcomes.py", "name": "the envelope drops notes and assumptions", "find": "    said.update({key: list(value) for key, value in ((\"notes\", notes), (\"assumptions\", assumptions)) if value is not None})", "replace": "    pass"},
+ {"file": "scripts/spark/core/outcomes.py", "name": "the envelope drops notes and assumptions", "find": "    said.update({key: list(value) for key, value in ((\"notes\", notes), (\"assumptions\", assumptions)) if value is not None})", "replace": "    pass"},
  {"file": "scripts/parts.py", "name": "an answer with no lines no longer says its problems", "find": "            print(\"parts.py: %s%s\" % (item[\"sentence\"], \" — \" + item[\"fix\"] if item.get(\"fix\") else \"\"), file=sys.stderr)", "replace": "            pass"},
  {"file": "scripts/parts.py", "name": "a could-not-run item under the lines loses its heading", "find": "(\"could not check: \", answer.unchecked)", "replace": "(\"\", answer.unchecked)"},
  {"file": "scripts/parts.py", "name": "an item the lines already say is said again", "find": "            if not (said(item[\"sentence\"]) or said(item.get(\"subject\"))):", "replace": "            if True:"},

@@ -11,8 +11,8 @@ import board_envelope
 import board_look
 import boards
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
-from outcomes import EXIT_COULD_NOT_RUN, AnsweringParser, BadArgument
-from text_guards import guard_lines, guard_sentence
+from spark.core.outcomes import EXIT_COULD_NOT_RUN, AnsweringParser, BadArgument
+from spark.core.text_guards import guard_lines, guard_sentence
 
 EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash_id`. It writes nothing,
 erases nothing and changes no flash. The board restarts while esptool reads it: a running program stops and starts again.

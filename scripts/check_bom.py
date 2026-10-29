@@ -44,7 +44,7 @@ from pathlib import Path
 
 BOM_NAME = "bom.csv"
 
-from outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
 #: Design warnings that stop being warnings once the package is an order.
 FATAL_AT_FAB = ("supplier_footprint_mismatch_warning",)

@@ -43,9 +43,9 @@ sys.path.insert(0, str(SCRIPTS))
 import boards  # noqa: E402
 import design as design_library  # noqa: E402
 import parts as parts_library  # noqa: E402
-from text_guards import one_line  # noqa: E402
+from spark.core.text_guards import one_line  # noqa: E402
 
-from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_IMPOSSIBLE  # noqa: E402
+from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_IMPOSSIBLE  # noqa: E402
 
 #: What a signal can ask a pin for, from the contract that validates parts. Anything else in
 #: `needs` is refused rather than ignored, because a typo'd requirement silently dropped produces

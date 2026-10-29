@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 import netlist  # noqa: E402
-from outcomes import EXIT_FOR, OK, COULD_NOT_RUN, status_of  # noqa: E402
+from spark.core.outcomes import EXIT_FOR, OK, COULD_NOT_RUN, status_of  # noqa: E402
 
 #: A pull-up weaker than this cannot hold a bus high against its own capacitance; stronger than
 #: this and the driving pin cannot pull it down. Wide on purpose — this is a sanity band, not a

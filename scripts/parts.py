@@ -217,10 +217,10 @@ NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, di
 #: that validates parts owns the vocabulary and the file that consumes it follows.
 CAPABILITIES = ("wake", "adc", "pwm")
 
-from outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page, step as next_step  # noqa: E402, F401
+from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page, step as next_step  # noqa: E402, F401
 import provenance  # noqa: E402
 import store  # noqa: E402
-from text_guards import guard_lines, printable  # noqa: E402
+from spark.core.text_guards import guard_lines, printable  # noqa: E402
 
 
 class PartError(Exception):

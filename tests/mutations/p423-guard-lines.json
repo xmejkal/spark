@@ -1,12 +1,12 @@
 [
  {
-  "file": "scripts/text_guards.py",
+  "file": "scripts/spark/core/text_guards.py",
   "name": "guard_lines prints the text as it is, so a control character in a printed line reaches the terminal",
   "find": "    return \"\\n\".join(printable(line) for line in text.split(\"\\n\"))",
   "replace": "    return text"
  },
  {
-  "file": "scripts/text_guards.py",
+  "file": "scripts/spark/core/text_guards.py",
   "name": "clean keeps the line and paragraph separators U+2028 and U+2029, in a label and in a file name",
   "find": "\\u200f\\u2028\\u2029\\u202a",
   "replace": "\\u200f\\u202a"

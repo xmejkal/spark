@@ -24,7 +24,7 @@ import threading
 import urllib.parse
 from pathlib import Path
 
-from text_guards import CONTROL
+from spark.core.text_guards import CONTROL
 
 try:
     import fcntl

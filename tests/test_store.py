@@ -75,12 +75,12 @@ class TheSuiteStaysOutOfThePersonsStoreTest(unittest.TestCase):
         self.assertEqual(home_in(dict(os.environ)), store.home())
 
     def test_no_script_imports_unittest_so_a_real_run_never_gets_a_scratch_store(self):
-        importing = [path.name for path in sorted(SCRIPTS.glob("*.py"))
+        importing = [path.name for path in sorted(path for path in SCRIPTS.rglob("*.py") if "stand_in" not in path.parts)
                      if re.search(r"^\s*(import|from)\s+(unittest|doctest)\b", path.read_text(), re.M)]
         self.assertEqual(importing, [])
 
     def test_only_the_store_says_where_the_store_is(self):
-        spelled = [path.name for path in sorted(SCRIPTS.glob("*.py"))
+        spelled = [path.name for path in sorted(path for path in SCRIPTS.rglob("*.py") if "stand_in" not in path.parts)
                    if '".local"' in path.read_text() and path.name != "store.py"]
         self.assertEqual(spelled, [], "every path into the person's store comes from store.place()")
 
@@ -499,7 +499,7 @@ class TheOneDoorTest(unittest.TestCase):
         self.assertEqual(asked, [("https://v.example/a.pdf", "HEAD"), ("https://v.example/b.pdf", "GET")])
 
     def test_only_the_store_opens_a_url(self):
-        opening = [path.name for path in sorted(SCRIPTS.glob("*.py")) if "urlopen" in path.read_text() and path.name != "store.py"]
+        opening = [path.name for path in sorted(path for path in SCRIPTS.rglob("*.py") if "stand_in" not in path.parts) if "urlopen" in path.read_text() and path.name != "store.py"]
         self.assertEqual(opening, [], "spark's code reaches the network through store.fetch alone (§6.5)")
 
     def test_a_kept_file_lands_under_its_checksum(self):

@@ -47,7 +47,7 @@ import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
 import grant  # noqa: E402
 import import_firmware  # noqa: E402
-import outcomes  # noqa: E402
+from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 import test_deploy_gate  # noqa: E402
 import tools  # noqa: E402

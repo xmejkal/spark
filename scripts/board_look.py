@@ -25,11 +25,11 @@ import board_codes
 import boards
 import deploy_record_store
 import flasher
-import outcomes
+from spark.core import outcomes
 import project_image
 import sim_project
 import tools
-from text_guards import printable
+from spark.core.text_guards import printable
 
 #: mpremote devs lists these for Bluetooth and the debug console, and they are no board.
 NOT_A_BOARD = "0000:0000"

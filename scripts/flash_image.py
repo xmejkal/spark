@@ -25,7 +25,7 @@ import sys
 from collections import namedtuple
 from pathlib import Path
 
-from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
+from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 import boards
 import tools
 
