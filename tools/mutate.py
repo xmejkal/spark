@@ -59,18 +59,24 @@ import argparse
 import contextlib
 import json
 import re
+import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
 #: A developer's tool, not the product: it lives in tools/ and reaches the product's modules by path.
 SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scratch  # noqa: E402  (P435) stdlib only: removes the old folders a killed run left
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK  # noqa: E402
 
 CAUGHT, ESCAPED, REFUSED = "caught", "escaped", "refused"
+#: The names of the three kinds of folder a run makes in the temp folder; the sweep at the next start removes old ones (P435).
+RUN_PREFIX, IMPORT_PREFIX, COPY_PREFIX = "mutate-run-", "mutate-import-", "mutate-copy-"
 #: Which run caught a mutation (P98): the tests near the mutated file, or the whole suite.
 NEAR, FULL = "near", "full"
 
@@ -107,7 +113,7 @@ def suite_is_green(root, tests, only=(), failfast=False):
     stop = ["-f"] if failfast else []
     command, where = (([sys.executable, "-B", "-m", "unittest"] + stop + list(only), Path(root) / tests) if only else
                       ([sys.executable, "-B", "-m", "unittest", "discover", "-s", tests] + stop, Path(root)))
-    with _from_source("mutate-run-") as environment:
+    with _from_source(RUN_PREFIX) as environment:
         result = subprocess.run(command, cwd=str(where), capture_output=True, text=True, env=environment)
     verdict = (result.stderr or "") + (result.stdout or "")
     return result.returncode == 0 and "\nOK" in verdict
@@ -219,7 +225,7 @@ def _import_error(root, file):
     imported by its dotted name with `scripts/` on the path, so it finds its package (P440); see `import_spec`.
     """
     folder, dotted = import_spec(root, file)
-    with _from_source("mutate-import-") as environment:
+    with _from_source(IMPORT_PREFIX) as environment:
         done = subprocess.run([sys.executable, "-B", "-c", "import sys; sys.path.insert(0, sys.argv[1]); __import__(sys.argv[2])",
                                str(folder), dotted], cwd=str(root), capture_output=True, text=True, env=environment)
     return None if done.returncode == 0 else (done.stderr.strip().splitlines() or ["exit %d" % done.returncode])[-1]
@@ -307,13 +313,44 @@ def copy_of(root):
     """
     import shutil
     import tempfile
-    copy = Path(tempfile.mkdtemp(prefix="mutate-copy-")) / root.name
-    shutil.copytree(root, copy, symlinks=True,
-                    ignore=shutil.ignore_patterns(".git", ".worktrees", "node_modules", "__pycache__", LOCK_NAME))
+    made = Path(tempfile.mkdtemp(prefix=COPY_PREFIX))
+    copy = made / root.name
+    try:
+        shutil.copytree(root, copy, symlinks=True,
+                        ignore=shutil.ignore_patterns(".git", ".worktrees", "node_modules", "__pycache__", LOCK_NAME))
+    except BaseException:  # a file it cannot read, or a stop: no half-made folder stays
+        shutil.rmtree(made, ignore_errors=True)
+        raise
     for folder in (Path("."), Path("tools") / "circuit-to-wokwi"):
         if (root / folder / "node_modules").is_dir() and (copy / folder).is_dir():
             (copy / folder / "node_modules").symlink_to(root / folder / "node_modules")
     return copy
+
+
+def remove_old_scratch():
+    """Remove the folders of the three prefixes that a stopped run left in the temp folder, older than a day (P435)."""
+    import tempfile
+    for prefix in (RUN_PREFIX, IMPORT_PREFIX, COPY_PREFIX):
+        scratch.remove_old_folders(tempfile.gettempdir(), prefix, time.time())
+
+
+@contextlib.contextmanager
+def sigterm_as_exit():
+    """
+    Inside, SIGTERM raises SystemExit, so a `finally` runs (P435). Installed only in the main thread and only over the
+    default handler, and restored on the way out. SIGKILL cannot be caught: the sweep at the next start covers it.
+    """
+    def stop(number, frame):
+        raise SystemExit(128 + number)
+
+    installed = threading.current_thread() is threading.main_thread() and signal.getsignal(signal.SIGTERM) == signal.SIG_DFL
+    if installed:
+        signal.signal(signal.SIGTERM, stop)
+    try:
+        yield
+    finally:
+        if installed:
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
 
 class AnotherRunIsActive(Exception):
@@ -459,14 +496,17 @@ def main(argv=None):
         return EXIT_ESCAPED if wrong else EXIT_OK
 
     started = time.monotonic()
-    where = copy_of(root) if args.copy else root
+    remove_old_scratch()
+    where = None
     try:
-        results, restored = run(where, args.tests, mutations, copied=where is not root)
+        with sigterm_as_exit():
+            where = copy_of(root) if args.copy else root
+            results, restored = run(where, args.tests, mutations, copied=where is not root)
     except (AnotherRunIsActive, RedBeforeMutation) as stopped:
         print(str(stopped), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     finally:
-        if where is not root:
+        if where is not None and where is not root:
             __import__("shutil").rmtree(where.parent, ignore_errors=True)
     code = verdict(results, restored)
     if args.json:

@@ -13,8 +13,13 @@ about the tool and not about this repository's real suite.
 """
 
 import json
+import os
+import shutil
+import signal
+import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import unittest.mock
 from pathlib import Path
@@ -627,6 +632,82 @@ class AMutationRunInACopyTest(unittest.TestCase):
                 self.assertEqual(borrowed.resolve(), (root / folder / "node_modules").resolve())
         finally:
             __import__("shutil").rmtree(copy.parent)
+
+
+DAY = 24 * 3600
+
+
+def planted_folder(name, age):
+    """A folder `name` in this process's temp folder, last touched `age` seconds ago."""
+    folder = Path(tempfile.gettempdir()) / name
+    folder.mkdir()
+    when = time.time() - age
+    os.utime(folder, (when, when))
+    return folder
+
+
+class TheScratchOfAStoppedRunTest(unittest.TestCase):
+    """P435: a run that was killed leaves folders in the temp folder; the next start removes the old ones."""
+
+    def test_each_prefix_loses_its_old_folder_and_keeps_its_young_one(self):
+        for prefix in (mutate.RUN_PREFIX, mutate.IMPORT_PREFIX, mutate.COPY_PREFIX):
+            old, young = planted_folder(prefix + "old", 2 * DAY), planted_folder(prefix + "young", 60)
+            mutate.remove_old_scratch()
+            self.assertEqual([old.exists(), young.exists()], [False, True], prefix)
+
+    def test_the_prefixes_are_the_ones_the_run_makes(self):
+        self.assertEqual((mutate.RUN_PREFIX, mutate.IMPORT_PREFIX, mutate.COPY_PREFIX),
+                         ("mutate-run-", "mutate-import-", "mutate-copy-"))
+
+    def test_main_sweeps_at_its_start(self):
+        root = tiny_project_that_finds_itself()
+        old = planted_folder(mutate.COPY_PREFIX + "left-by-a-kill", 2 * DAY)
+        self.assertEqual(mutate.main([str(table(root, BREAK_ADD)), "--root", str(root), "--copy"]), mutate.EXIT_OK)
+        self.assertFalse(old.exists())
+
+    def test_a_copy_that_cannot_be_read_leaves_no_half_made_folder(self):
+        root = Path(tempfile.mkdtemp()) / "tree"
+        root.mkdir()
+        (root / "ok.py").write_text("x")
+        (root / "locked.py").write_text("x")
+        (root / "locked.py").chmod(0)
+        mine, kept = tempfile.mkdtemp(), tempfile.tempdir
+        tempfile.tempdir = mine
+        try:
+            with self.assertRaises(shutil.Error):
+                mutate.copy_of(root)
+        finally:
+            tempfile.tempdir = kept
+            (root / "locked.py").chmod(0o644)
+        self.assertEqual(os.listdir(mine), [])
+
+    def test_a_stop_by_sigterm_leaves_nothing_in_the_temp_folder(self):
+        root = tiny_project_that_finds_itself()
+        rows = table(root, *([BREAK_ADD] * 8))
+        mine = Path(tempfile.mkdtemp())
+        child = subprocess.Popen([sys.executable, str(ROOT / "tools" / "mutate.py"), str(rows), "--root", str(root), "--copy"],
+                                 env=dict(os.environ, TMPDIR=str(mine)), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            deadline = time.time() + 30
+            while time.time() < deadline and child.poll() is None and not list(mine.glob(mutate.COPY_PREFIX + "*")):
+                time.sleep(0.005)
+            seen = bool(list(mine.glob(mutate.COPY_PREFIX + "*")))
+            child.send_signal(signal.SIGTERM)
+            code = child.wait(timeout=60)
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.wait()
+        self.assertTrue(seen, "the copy never showed")
+        self.assertEqual(code, 128 + signal.SIGTERM)
+        self.assertEqual(os.listdir(mine), [])
+        shutil.rmtree(mine, ignore_errors=True)
+
+    def test_the_handler_is_put_back(self):
+        before = signal.getsignal(signal.SIGTERM)
+        with mutate.sigterm_as_exit():
+            self.assertNotEqual(signal.getsignal(signal.SIGTERM), before)
+        self.assertEqual(signal.getsignal(signal.SIGTERM), before)
 
 
 if __name__ == "__main__":
