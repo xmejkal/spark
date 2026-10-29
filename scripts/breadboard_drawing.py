@@ -181,12 +181,12 @@ class FirstFitPartPlacement(PartPlacement):
         self.geometry = geometry
 
     def place(self, part_id, drawn, ledger, after=0, pinned=None):
-        shape = self.geometry.part(drawn.type)
-        wanted = [pin for pin in drawn.pins.values() if pin not in shape["pins"]]
+        part_px = self.geometry.part(drawn.type)
+        wanted = [pin for pin in drawn.pins.values() if pin not in part_px["pins"]]
         if wanted:
             raise NotDrawn("data/wokwi-geometry.json has no pin %s on %s" % (wanted[0], drawn.type))
         for degrees in self.TURNS_DEGREES:
-            turned = rotate(shape["pins"], shape["center"], degrees)
+            turned = rotate(part_px["pins"], part_px["center"], degrees)
             first = pinned[0] if pinned else next(iter(turned))
             candidates = [hole for hole in self.geometry.surface.by_gap if not pinned or hole.group == pinned[1]]
             for start in candidates:
@@ -194,7 +194,7 @@ class FirstFitPartPlacement(PartPlacement):
                 holes = self._fit(turned, left, top, ledger, after, pinned)
                 if holes is None:
                     continue
-                covered = self._covered(shape, degrees, left, top, holes) if shape.get("covers_holes") else []
+                covered = self._covered(part_px, degrees, left, top, holes) if part_px.get("covers_holes") else []
                 if any(not ledger.is_free(hole) or hole.column <= after for hole in covered):
                     continue
                 for pin, hole in holes.items():
@@ -218,9 +218,9 @@ class FirstFitPartPlacement(PartPlacement):
             holes[pin] = hole
         return holes
 
-    def _covered(self, shape, degrees, left, top, holes):
+    def _covered(self, part_px, degrees, left, top, holes):
         """The holes under the part's body, besides its own pins: its box, turned, about its center."""
-        cx, cy = shape["center"]
+        cx, cy = part_px["center"]
         half_w, half_h = (cy, cx) if degrees % 180 else (cx, cy)
         mine = {hole.name for hole in holes.values()}
         return [hole for hole in self.geometry.surface.terminal if hole.name not in mine
@@ -427,13 +427,13 @@ class SvgBreadboardDiagram:
         return ElementTree.tostring(root, encoding="unicode") + "\n"
 
     def _part(self, root, part):
-        shape = self.geometry.part(part.type)
+        part_px = self.geometry.part(part.type)
         picture = self.pictures.picture(part.type)
-        cx, cy = shape["center"]
+        cx, cy = part_px["center"]
         group = ElementTree.SubElement(root, _svg("g"), {
             "transform": "translate(%s %s) rotate(%s %s %s)" % (_round_px(part.left), _round_px(part.top),
                                                                 part.rotate, _round_px(cx), _round_px(cy))})
-        width, height = shape["size"]
+        width, height = part_px["size"]
         x, y, view_width, view_height = picture.view_box
         inner = ElementTree.SubElement(group, _svg("g"), {"transform": "scale(%s %s) translate(%s %s)" % (
             _round_px(width / view_width), _round_px(height / view_height), _round_px(-x), _round_px(-y))})

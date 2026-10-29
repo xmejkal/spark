@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
+import breadboard_catalog  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_steps  # noqa: E402
 from breadboard_drawing import HoleLedger, NotDrawn, WokwiGeometry, rotate  # noqa: E402
@@ -149,7 +150,7 @@ class TheXiaoLayoutTest(unittest.TestCase):
         for number, point in enumerate(self.read.steps.points):
             for end in point.ends:
                 point_of[end.name] = number
-        catalog = breadboard._describe_parts(self.read, GEOMETRY)
+        catalog = breadboard_catalog.describe_parts(self.read, GEOMETRY)
         rows = {}
         for part in self.layout.parts:
             pins = {wokwi: name for name, wokwi in catalog[part.id].pins.items()}
@@ -231,7 +232,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         read = xiao_read()
         rail = breadboard_steps.StepPoint(read.steps.points[0].ends, None, True)
         steps = breadboard_steps.BreadboardSteps(read.steps.placed, [rail] + read.steps.points[1:])
-        planner = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard._describe_parts(read, GEOMETRY))
+        planner = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard_catalog.describe_parts(read, GEOMETRY))
         with self.assertRaisesRegex(NotDrawn, "goes on a rail, and rails are not drawn yet"):
             planner.plan(steps)
 
@@ -241,7 +242,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         last = read.steps.points[-1]
         supplied = breadboard_steps.StepPoint(last.ends, "VBAT", False)
         steps = breadboard_steps.BreadboardSteps(read.steps.placed, read.steps.points[:-1] + [supplied])
-        planner = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard._describe_parts(read, GEOMETRY))
+        planner = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard_catalog.describe_parts(read, GEOMETRY))
         with self.assertRaisesRegex(NotDrawn, "the VBAT supply comes from off the board"):
             planner.plan(steps)
 
@@ -259,7 +260,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
                   breadboard_steps.StepPoint([leg("R1", 1), leg("R2", 2)], None, False),
                   breadboard_steps.StepPoint([led_a, leg("R1", 2)], None, False)]
         steps = breadboard_steps.BreadboardSteps(read.steps.placed, points)
-        catalog = breadboard._describe_parts(read, GEOMETRY)
+        catalog = breadboard_catalog.describe_parts(read, GEOMETRY)
         catalog["R2"] = catalog["R1"]
         layout = breadboard_drawing.BreadboardPlanner(GEOMETRY, catalog).plan(steps)
         self.assertLessEqual({"R1", "R2"}, {part.id for part in layout.parts})
@@ -275,7 +276,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         read = xiao_read()
         points = [breadboard_steps.StepPoint([self.end_named(read, "LedRed5mm A"), self.leg("R1", 1)], None, False),
                   breadboard_steps.StepPoint([self.end_named(read, "TactileButton A"), self.leg("R1", 2)], None, False)]
-        planner = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard._describe_parts(read, GEOMETRY))
+        planner = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard_catalog.describe_parts(read, GEOMETRY))
         with self.assertRaisesRegex(NotDrawn, "both ends of R1 join other rows"):
             planner.plan(breadboard_steps.BreadboardSteps(read.steps.placed, points))
 
@@ -283,7 +284,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         read = xiao_read()
         points = [breadboard_steps.StepPoint([self.end_named(read, "board D8"), self.leg("R1", 1)], None, False),
                   breadboard_steps.StepPoint([self.end_named(read, "board D10"), self.leg("R1", 2)], None, False)]
-        layout = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard._describe_parts(read, GEOMETRY)).plan(
+        layout = breadboard_drawing.BreadboardPlanner(GEOMETRY, breadboard_catalog.describe_parts(read, GEOMETRY)).plan(
             breadboard_steps.BreadboardSteps(read.steps.placed, points))
         parts = {part.id: part for part in layout.parts}
         last = max(hole.column for part in layout.parts if part.id != "R1" for hole in part.holes.values())
@@ -291,13 +292,13 @@ class WhatIsNotDrawnTest(unittest.TestCase):
 
     def test_a_part_with_no_wokwi_drawing_is_named(self):
         read = xiao_read()
-        catalog = breadboard._describe_parts(read, GEOMETRY)
+        catalog = breadboard_catalog.describe_parts(read, GEOMETRY)
         del catalog["LedRed5mm"]
         with self.assertRaisesRegex(NotDrawn, "nothing says how to draw LedRed5mm in Wokwi"):
             breadboard_drawing.BreadboardPlanner(GEOMETRY, catalog).plan(read.steps)
 
     def test_a_resistor_value_is_in_ohms(self):
-        self.assertEqual([breadboard._to_ohms(v) for v in ("330Ω", "10kΩ", "4.7kΩ", "1MΩ", "")],
+        self.assertEqual([breadboard_catalog.to_ohms(v) for v in ("330Ω", "10kΩ", "4.7kΩ", "1MΩ", "")],
                          ["330", "10000", "4700", "1000000", ""])
 
 

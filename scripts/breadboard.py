@@ -50,6 +50,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assign_pins  # noqa: E402
+import breadboard_catalog  # noqa: E402
 import breadboard_changes  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
@@ -85,8 +86,6 @@ WIRING_VIEWS = (
     ("Diagram", "Each line is one step, with its number.", breadboard_steps.MermaidDiagram()),
 )
 
-#: The board record's `wokwi_pin_naming` when its Wokwi pins carry the printed labels, so a drawing can find them.
-PIN_NAMING_SILKSCREEN = "silkscreen"
 #: The one palette of step colors, for the sheet's color line and the drawing's jumpers alike.
 STEP_COLORS = breadboard_steps.StepColors()
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
@@ -98,8 +97,6 @@ CHANGE_LIST = breadboard_changes.ChangeList()
 #: The drawing a person edits in Wokwi, whose moves a rebuild keeps (P273).
 EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
                         if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
-#: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
-OHMS = {"": 1, "k": 1000, "M": 1000000}
 
 #: One connection point: the (component, port) pairs it joins, and the names of the nets on it.
 Point = collections.namedtuple("Point", "members nets")
@@ -364,38 +361,9 @@ def _read_build(requirements_path, circuit_path=None):
     return Read(built, circuit, resistors, point_lines, steps)
 
 
-def _to_ohms(resistance):
-    """'330Ω' or '10kΩ' as Wokwi's resistor value, in ohms."""
-    found = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([kM]?)\s*Ω?", resistance or "")
-    if not found:
-        return ""
-    ohms = float(found.group(1)) * OHMS[found.group(2)]
-    return str(int(ohms)) if ohms == int(ohms) else str(ohms)
-
-
-def _describe_parts(read, geometry):
-    """{component as the steps name it: how Wokwi draws it}, from the records. A board whose Wokwi pins are not its
-    printed labels names no pins, so the drawing says which pin it cannot find."""
-    board = read.built.board
-    catalog = {}
-    if board.get("wokwi_part_type"):
-        pins = (geometry.data["parts"].get(board["wokwi_part_type"]) or {}).get("pins") or {}
-        named = board.get("wokwi_pin_naming") == PIN_NAMING_SILKSCREEN
-        catalog[breadboard_steps.THE_BOARD] = breadboard_drawing.DrawnPart(board["wokwi_part_type"], {},
-                                                        {pin: pin for pin in pins} if named else {})
-    for part in read.built.parts:
-        wokwi = (part.get("simulation") or {}).get("wokwi") or {}
-        if wokwi.get("part"):
-            catalog[emit_board.component_name(part)] = breadboard_drawing.DrawnPart(
-                wokwi["part"], wokwi.get("attrs") or {}, wokwi.get("pins") or {})
-    for tag, value, _ in read.resistors.values():
-        catalog[tag] = breadboard_drawing.DrawnPart("wokwi-resistor", {"value": _to_ohms(value)}, {"1": "1", "2": "2"})
-    return catalog
-
-
 def _plan_layout(read):
     geometry = breadboard_drawing.WokwiGeometry.load()
-    return breadboard_drawing.BreadboardPlanner(geometry, _describe_parts(read, geometry)).plan(read.steps)
+    return breadboard_drawing.BreadboardPlanner(geometry, breadboard_catalog.describe_parts(read, geometry)).plan(read.steps)
 
 
 def drawing(requirements_path, circuit_path=None, read=None):
@@ -420,7 +388,7 @@ def _plan_once(read, earlier_path=None, record=None):
     except breadboard_drawing.NotDrawn as stopped:
         return PlannedLayout(None, str(stopped), [])
     geometry = breadboard_drawing.WokwiGeometry.load()
-    catalog = _describe_parts(read, geometry)
+    catalog = breadboard_catalog.describe_parts(read, geometry)
 
     def checked(layout, not_kept):
         differs = breadboard_match.DrawnNets(layout, geometry).differences(read.steps.points, catalog)

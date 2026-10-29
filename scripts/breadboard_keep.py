@@ -149,9 +149,9 @@ def _jumper_of(item, surface_id):
     return EarlierJumper(ends[0], ends[1], tuple(route))
 
 
-def pin_holes(geometry, shape, turn, left, top):
-    """{Wokwi pin: the Hole under it, or None} for a part of this shape turned and placed so."""
-    turned = breadboard_drawing.rotate(shape["pins"], shape["center"], turn)
+def pin_holes(geometry, part_px, turn, left, top):
+    """{Wokwi pin: the Hole under it, or None} for a part of this size turned and placed so."""
+    turned = breadboard_drawing.rotate(part_px["pins"], part_px["center"], turn)
     return {pin: geometry.hole_at(left + x, top + y) for pin, (x, y) in turned.items()}
 
 
@@ -193,14 +193,14 @@ class KeepMovesFirstFitPartPlacement(breadboard_drawing.FirstFitPartPlacement):
         if turn not in QUARTER_TURNS_DEGREES:
             return None, (TURN_UNKNOWN, MESSAGES[TURN_UNKNOWN] % turn)
         turn, left, top = int(turn), float(part["left"]), float(part["top"])
-        shape = self.geometry.part(drawn.type)
-        holes = pin_holes(self.geometry, shape, turn, left, top)
+        part_px = self.geometry.part(drawn.type)
+        holes = pin_holes(self.geometry, part_px, turn, left, top)
         off = next((pin for pin, hole in holes.items() if hole is None), None)
         if off is not None:
             return None, (PIN_OFF_HOLES, MESSAGES[PIN_OFF_HOLES] % off)
         if pinned and holes[pinned[0]].group != pinned[1]:
             return None, (PIN_OFF_ROW, MESSAGES[PIN_OFF_ROW] % pinned[0])
-        covered = self._covered(shape, turn, left, top, holes) if shape.get("covers_holes") else []
+        covered = self._covered(part_px, turn, left, top, holes) if part_px.get("covers_holes") else []
         for hole in list(holes.values()) + covered:
             if not ledger.is_free(hole):
                 return None, (HOLE_TAKEN, MESSAGES[HOLE_TAKEN] % (hole.name, ledger.taken[hole.name]))

@@ -48,7 +48,7 @@
   "replace": "0"
  },
  {
-  "file": "scripts/breadboard.py",
+  "file": "scripts/breadboard_catalog.py",
   "name": "M is thousand",
   "find": "\"M\": 1000000}",
   "replace": "\"M\": 1000}"
