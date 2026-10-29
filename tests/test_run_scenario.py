@@ -264,22 +264,22 @@ class TheStepNamesTest(unittest.TestCase):
         self.assertEqual(run_scenario.ScenarioSteps.from_log(log).names, ())
 
     def test_merge_unions_the_names_of_the_logs_that_name_and_keeps_its_own_rule_for_counts(self):
-        steps = run_scenario.ScenarioSteps
-        merged = steps.merge([steps({"set-control": 1}, names=("a", "b"), names_state="recorded"),
-                              steps({}, "not-checked", "why", ("zz",), "not-checked", "why"),
-                              steps({"wait-serial": 1}, names=("b", "c"), names_state="recorded"),
-                              steps({"wait-serial": 5}, names_state="none-recorded")])
+        steps, names = run_scenario.ScenarioSteps, run_scenario.StepNames
+        merged = steps.merge([steps({"set-control": 1}, named=names(("a", "b"), "recorded")),
+                              steps({}, "not-checked", "why", names(("zz",), "not-checked", "why")),
+                              steps({"wait-serial": 1}, named=names(("b", "c"), "recorded")),
+                              steps({"wait-serial": 5})])
         self.assertEqual((merged.names, merged.names_state, merged.counts), (("a", "b", "c"), "recorded",
                                                                            {"set-control": 1, "wait-serial": 6}))
 
     def test_a_log_that_counts_but_names_nothing_still_counts_in_a_merge(self):
-        steps = run_scenario.ScenarioSteps
-        merged = steps.merge([steps({"set-control": 1}), steps({}, "none-recorded", None, ("a",), "recorded")])
+        steps, names = run_scenario.ScenarioSteps, run_scenario.StepNames
+        merged = steps.merge([steps({"set-control": 1}), steps({}, "none-recorded", None, names(("a",), "recorded"))])
         self.assertEqual((merged.counts, merged.names, merged.names_state), ({"set-control": 1}, ("a",), "recorded"))
 
     def test_merge_of_logs_that_name_nothing_is_none_recorded_for_names(self):
-        steps = run_scenario.ScenarioSteps
-        merged = steps.merge([steps({"set-control": 1}), steps({}, names_state="not-checked")])
+        steps, names = run_scenario.ScenarioSteps, run_scenario.StepNames
+        merged = steps.merge([steps({"set-control": 1}), steps({}, named=names((), "not-checked"))])
         self.assertEqual((merged.names, merged.names_state, merged.counts), ((), "none-recorded", {"set-control": 1}))
 
 

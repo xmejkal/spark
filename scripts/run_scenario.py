@@ -30,6 +30,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 import flash_image
@@ -115,6 +116,16 @@ def with_ready_wait(scenario):
 
 
 # --- MVP ---
+@dataclass(frozen=True)
+class StepNames:
+    """Value: the names of a scenario's steps, in order, and an outcomes word for them: RECORDED (perhaps none), NONE_RECORDED or NOT_CHECKED (`why` says why)."""
+
+    names: tuple = ()
+    state: str = outcomes.NONE_RECORDED
+    why: str = None
+
+
+# --- MVP ---
 class ScenarioSteps:
     """
     Value: the steps of a scenario counted by kind. `counts` maps a step kind (the key of a step, such as `set-control`) to
@@ -133,9 +144,10 @@ class ScenarioSteps:
     #: The one key a step carries beside its kind: wokwi-cli prints it as the step's name (TestScenario.ts, validStepKeys).
     NAME_KEY = "name"
 
-    def __init__(self, counts, state=outcomes.RECORDED, why=None, names=(), names_state=outcomes.NONE_RECORDED, names_why=None):
+    def __init__(self, counts, state=outcomes.RECORDED, why=None, named=None):
         self.counts, self.state, self.why = dict(counts), state, why
-        self.names, self.names_state, self.names_why = tuple(names), names_state, names_why
+        named = named or StepNames()
+        self.names, self.names_state, self.names_why = tuple(named.names), named.state, named.why
 
     @classmethod
     def from_text(cls, steps):
@@ -169,8 +181,8 @@ class ScenarioSteps:
             if name:
                 names.append(name)
         if keyless:
-            return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY, names, outcomes.RECORDED)
-        return cls(counts, names=names, names_state=outcomes.RECORDED)
+            return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY, StepNames(names, outcomes.RECORDED))
+        return cls(counts, named=StepNames(names, outcomes.RECORDED))
 
     @classmethod
     def _kind(cls, step):
@@ -254,9 +266,9 @@ class ScenarioSteps:
         try:
             header = _header(log)
         except OSError:
-            return cls({}, outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE, (), outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
+            return cls({}, outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE, StepNames((), outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE))
         counts = cls._counts_in(header)
-        return cls(counts.counts, counts.state, counts.why, *cls._names_in(header))
+        return cls(counts.counts, counts.state, counts.why, cls._names_in(header))
 
     @classmethod
     def _counts_in(cls, header):
@@ -277,14 +289,14 @@ class ScenarioSteps:
     # --- MVP ---
     @staticmethod
     def _names_in(header):
-        """(names, names_state, names_why) that a header says: the marker line, then that many name lines."""
+        """The StepNames that a header says: the marker line, then that many name lines."""
         marker = next((line[len(STEP_NAMES_LINE):] for line in header if line.startswith(STEP_NAMES_LINE)), None)
         if marker is None:
-            return (), outcomes.NONE_RECORDED, None
+            return StepNames()
         names = [line[len(STEP_NAME_LINE):] for line in header if line.startswith(STEP_NAME_LINE)]
         if not marker.isascii() or not marker.isdigit() or int(marker) != len(names):
-            return (), outcomes.NOT_CHECKED, WHY_BAD_NAMES
-        return names, outcomes.RECORDED, None
+            return StepNames((), outcomes.NOT_CHECKED, WHY_BAD_NAMES)
+        return StepNames(names, outcomes.RECORDED)
     # --- end MVP ---
 
     def count(self, kind):
@@ -300,16 +312,16 @@ class ScenarioSteps:
         """
         steps = list(steps)
         named = [each for each in steps if each.names_state == outcomes.RECORDED]
-        names = dict.fromkeys(name for each in named for name in each.names)
+        names = tuple(dict.fromkeys(name for each in named for name in each.names))
         state = outcomes.RECORDED if named else outcomes.NONE_RECORDED
         counted = [each for each in steps if each.state == outcomes.RECORDED]
         if not counted:
-            return cls({}, outcomes.NONE_RECORDED, None, names, state)
+            return cls({}, outcomes.NONE_RECORDED, None, StepNames(names, state))
         total = {}
         for each in counted:
             for kind, number in each.counts.items():
                 total[kind] = total.get(kind, 0) + number
-        return cls(total, names=names, names_state=state)
+        return cls(total, named=StepNames(names, state))
     # --- end MVP ---
 
     def line(self):
