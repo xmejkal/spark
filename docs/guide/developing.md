@@ -321,7 +321,7 @@ Most of them leave out `scripts/stand_in/`, but `test_no_magic_strings` reads it
 ### The rules test
 
 `tests/test_architecture.py` reads `scripts/` and `tests/` with `ast` and holds each breach against
-`tests/architecture_baseline.json`. One test method checks one rule (R1, R2, R3, R6, T1, T2, T4, X2, U1, C1, C3). Each
+`tests/architecture_baseline.json`. One test method checks one rule (R1, R2, R3, R6, T1, T2, T4, X2, U1, C1, C3, V1). Each
 rule is one sentence in `measure.RULES` in `tools/measure.py`, which the test's docstrings and its failure messages read;
 `python3 tools/measure.py --rules` lists every breach with its rule.
 

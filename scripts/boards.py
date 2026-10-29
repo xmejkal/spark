@@ -128,12 +128,12 @@ ONBOARD_BATTERY_SENSE = "onboard_battery_sense"
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
 GPIO_MIN, GPIO_MAX = 0, 63
 
-from spark.core import outcomes  # noqa: E402
+from spark.core import outcomes, text_guards  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
 
 
-class BoardError(Exception):
-    """A board definition that cannot be used, with the reason a person needs to fix it."""
+class BoardError(text_guards.ValueMessageError):
+    """Error: a board definition that cannot be used, with the reason a person needs to fix it."""
 
 
 def walk_up(start: Path):

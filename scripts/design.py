@@ -41,6 +41,7 @@ sys.path.insert(0, str(SCRIPTS))
 import boards  # noqa: E402
 import parts as parts_library  # noqa: E402
 import provenance  # noqa: E402
+from spark.core.text_guards import ValueMessageError  # noqa: E402
 
 #: What `load` returns. `parts` are the requested instances: each a copy of its record, with
 #: `_instance` set when the requirements named it.
@@ -63,8 +64,8 @@ def one_board_message(circuits, flags=""):
             "with its own parts/ and run init_project.py in it" % (circuits[0], " " + flags if flags else ""))
 
 
-class DesignError(Exception):
-    """The input cannot be loaded, and this is why. Always a sentence, never a traceback."""
+class DesignError(ValueMessageError):
+    """Error: the input cannot be loaded, and this is why. Always a sentence, never a traceback."""
 
 
 #: Why two parts cannot share a name — said by this reader and by `needs` for the picks it writes, in the same words,
