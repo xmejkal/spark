@@ -36,14 +36,18 @@ class RemoveOldFoldersTest(unittest.TestCase):
         plain = Path(self.parent) / "spark-tests-file"
         plain.write_text("x")
         os.utime(plain, (time.time() - 2 * DAY,) * 2)
+        plain.chmod(0o644)
         self.assertEqual(self.sweep(), ["spark-tests-old"])
         self.assertEqual([old.exists(), new.exists(), other.exists(), plain.exists()], [False, True, True, True])
+        self.assertEqual(plain.stat().st_mode & 0o777, 0o644, "a plain file is not opened up")
 
     def test_a_link_stays_and_its_target_survives(self):
         target = planted(self.parent, "target", 2 * DAY)
         link = Path(self.parent) / "spark-tests-link"
         link.symlink_to(target)
+        target.chmod(0o755)
         self.assertEqual(self.sweep(), [])
+        self.assertEqual(target.stat().st_mode & 0o777, 0o755, "a link's target is not opened up")
         self.assertEqual([link.is_symlink(), (target / "f.txt").exists()], [True, True])
 
     def test_another_owner_stays(self):
