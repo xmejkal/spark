@@ -29,7 +29,7 @@ not stop the push either. All are said, never read as checked (P146).
 **Origin:** the runner reported `ok` for a flagship check that called a function which had never
 existed. Six more instances have been found since, in different files, by different people.
 
-**How we know it holds:** the status is decided in one place, `answer()` and `status_of()` in `scripts/outcomes.py`
+**How we know it holds:** the status is decided in one place, `answer()` and `status_of()` in `scripts/spark/core/outcomes.py`
 (moved there from `check_all.py` by P42; `check_all.py` imports them), so `ok` cannot be reached while anything went
 unchecked; `skipped` is `check_all.py`'s own fourth word, for a check nobody asked for. `check_spine.py` exits 2 rather
 than 0 when it could not be exercised.

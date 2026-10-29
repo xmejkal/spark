@@ -1,4 +1,4 @@
-"""P418 (#546): the text guards of `scripts/text_guards.py`, each tested on what it must take out."""
+"""P418 (#546): the text guards of `scripts/spark/core/text_guards.py`, each tested on what it must take out."""
 
 import sys
 import unittest

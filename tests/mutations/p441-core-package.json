@@ -1,0 +1,20 @@
+[
+ {
+  "file": "tests/test_orphans.py",
+  "name": "a comment after an import names modules as imported",
+  "find": "line.split(\"#\", 1)[0]",
+  "replace": "line"
+ },
+ {
+  "file": "tests/test_orphans.py",
+  "name": "every from-import names its names, not only spark's",
+  "find": "if match.group(1).startswith(\"spark.\"):",
+  "replace": "if True:"
+ },
+ {
+  "file": "tools/check_docs.py",
+  "name": "a stand-in file counts as a script",
+  "find": "any(\"stand_in\" not in found.relative_to(root / \"scripts\").parts",
+  "replace": "any(True"
+ }
+]

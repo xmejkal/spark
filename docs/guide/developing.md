@@ -314,7 +314,8 @@ shares: `outcomes` (the exit codes and the three outcomes), `text_guards` and `z
 A script writes `from spark.core import outcomes` and then `outcomes.EXIT_OK`, or `from spark.core.outcomes import
 EXIT_OK`. The other scripts stay flat in `scripts/` until their own card moves them. A tool that lists the scripts
 (`tools/inventory.py`, `tools/measure.py`, the tests that read every script) looks in the folders under `scripts/` too,
-and leaves out `scripts/stand_in/` and each `__init__.py`.
+and leaves out `scripts/stand_in/`; the tests and the inventory leave out each `__init__.py` too. A child started with
+`python3 -I` never imports `spark.core`, because `-I` drops the script's folder from `sys.path`.
 
 ### The rules test
 

@@ -12,6 +12,7 @@ one looked alive. Nothing asked "who calls this?" — this does, at every commit
 import json
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -44,18 +45,26 @@ def script_files():
 
 
 def imports_in(scripts):
-    """Every module name another script imports: the last word of a module and each name a `from` brings in."""
+    """Every module name another script imports: the last word of a module, and the names a `from spark...` brings in."""
     named = set()
     for path in scripts:
         for line in path.read_text().splitlines():
-            match = re.match(r"\s*(?:import|from)\s+([a-z_][a-z_.]*)(?:\s+import\s+(.*))?", line)
+            match = re.match(r"\s*(?:import|from)\s+([a-z_][a-z_.]*)(?:\s+import\s+(.*))?", line.split("#", 1)[0])
             if match:
                 named.add(match.group(1).split(".")[-1])
-                named.update(re.findall(r"[A-Za-z_]\w*", match.group(2) or ""))
+                if match.group(1).startswith("spark."):
+                    named.update(re.findall(r"[A-Za-z_]\w*", match.group(2) or ""))
     return named
 
 
 class NothingShipsUnusedTest(unittest.TestCase):
+    def test_an_import_line_names_its_module_and_a_spark_import_its_names_but_a_comment_names_nothing(self):
+        with tempfile.TemporaryDirectory() as folder:
+            one = Path(folder) / "one.py"
+            one.write_text("from spark.core import outcomes\nfrom other import moved  # grant, times\n"
+                           "from spark.core.zone_time import stamp  # the times\nimport plain\n")
+            self.assertEqual(imports_in([one]), {"core", "outcomes", "other", "zone_time", "stamp", "plain"})
+
     def test_every_script_is_routed_to_or_imported(self):
         scripts = script_files()
         text, imported = routes(), imports_in(scripts)
