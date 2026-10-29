@@ -19,6 +19,8 @@ def remove_tree(folder):
     removal ignores errors. If something stays, every folder under it gets u+rwx (never following a link), and the
     removal runs again.
     """
+    if os.path.islink(folder):  # a link is never opened up or followed: its target is not ours
+        return False
     shutil.rmtree(folder, ignore_errors=True)
     if os.path.lexists(folder):
         stack = [folder]

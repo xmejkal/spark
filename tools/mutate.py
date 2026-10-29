@@ -358,6 +358,23 @@ def sigterm_as_exit():
             signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
 
+# --- MVP ---
+@contextlib.contextmanager
+def sigterm_held():
+    """
+    Inside, a SIGTERM waits (main thread only): the copy's removal finishes, and the signal arrives after, to the handler
+    of sigterm_as_exit, which exits 143. Without it the handler's SystemExit would stop the removal half way.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    held = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+    try:
+        yield
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, held)
+
+
 class AnotherRunIsActive(Exception):
     """A lock is held: some other mutate run is rewriting these files right now."""
 
@@ -513,7 +530,8 @@ def main(argv=None):
             return EXIT_COULD_NOT_RUN
         finally:
             if where is not None and where is not root:
-                scratch.remove_tree(where.parent)
+                with sigterm_held():
+                    scratch.remove_tree(where.parent)
     code = verdict(results, restored)
     if args.json:
         print(json.dumps({"tool": "mutate", "restored": restored,

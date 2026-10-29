@@ -136,5 +136,17 @@
   "name": "status_lines drops the disk line",
   "find": "return lines + ([disk] if disk else [])",
   "replace": "return lines"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "a SIGTERM during the removal is not held",
+  "find": "signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})",
+  "replace": "signal.pthread_sigmask(signal.SIG_BLOCK, set())"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "a link is opened up and followed",
+  "find": "    if os.path.islink(folder):  # a link is never opened up or followed: its target is not ours\n        return False\n",
+  "replace": ""
  }
 ]

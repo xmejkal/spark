@@ -735,6 +735,19 @@ class TheScratchOfAStoppedRunTest(unittest.TestCase):
         self.assertEqual(os.listdir(mine), [])
         shutil.rmtree(mine, ignore_errors=True)
 
+    def test_a_sigterm_during_the_removal_of_the_copy_waits_for_it_and_exits_143(self):
+        root = tiny_project_that_finds_itself()
+        mine = Path(tempfile.mkdtemp())
+        # The child sends SIGTERM to itself from inside the removal of its copy, which only main's `finally` starts.
+        wrapper = ("import os, signal, sys\nsys.path.insert(0, %r)\nimport mutate, scratch\nreal = scratch.remove_tree\n"
+                   "def hit(folder):\n    os.kill(os.getpid(), signal.SIGTERM)\n    return real(folder)\n"
+                   "scratch.remove_tree = hit\nsys.exit(mutate.main(sys.argv[1:]))\n" % str(ROOT / "tools"))
+        done = subprocess.run([sys.executable, "-c", wrapper, str(table(root, BREAK_ADD)), "--root", str(root), "--copy"],
+                              env=dict(os.environ, TMPDIR=str(mine)), capture_output=True, text=True, timeout=120)
+        self.assertEqual(done.returncode, 128 + signal.SIGTERM, done.stderr[-300:])
+        self.assertEqual(os.listdir(mine), [])
+        shutil.rmtree(mine, ignore_errors=True)
+
     @unittest.skipIf(signal.getsignal(signal.SIGTERM) != signal.SIG_DFL, "the runner set its own SIGTERM handler")
     def test_the_handler_is_put_back(self):
         with mutate.sigterm_as_exit():

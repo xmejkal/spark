@@ -32,3 +32,12 @@ Findings of P435 (#579), 2026-10-29, Prague, one PR, built on main d86810ce from
 | 21 | Lens 8, refuter 8: the agents.md bullet too long; "about 1 ms" in developing.md; "nothing has written to it" is wrong | lens | acted | shortened to what to do; the number is gone (it stays in row 6); the docs say "whose own mtime is a day old (it does not look inside)" |
 | 22 | The one mutation run: 23 planted, 22 caught, 1 escaped | mutation | acted | the escape: "a link and a file are taken for folders" (the `S_ISDIR` check dropped) stayed green, because the extra `chmod` on a link's target was not looked at. The link and plain-file tests now assert the target's mode 0o755 and the file's mode 0o644 stay; the row re-run alone: caught. A later full run was not needed for the other 22 (the test change only adds asserts) |
 | 23 | Refuter: nothing outside ours was deleted | refuter | verified | stated in the review; the ownership proof is unchanged |
+
+## Second refuter round (fix commits), 2026-10-29
+
+| # | finding | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 24 | SIGTERM during the copy's removal leaves the copy (exit 143, 39,988 files left on a 40k-file project) | refuter | acted | `sigterm_held` blocks SIGTERM (`pthread_sigmask`, main thread only) around the removal; the signal arrives after it and the handler exits 143. Test: a child that sends SIGTERM to itself from inside the removal ends with 143 and an empty temp folder. `developing.md` says so |
+| 25 | `remove_tree(link to a 0o555 folder)` returned False but chmodded the target to 0o700 | refuter | acted | `remove_tree` returns False for a link before any chmod or scandir. Test: the target's mode stays 0o555 |
+| 26 | A 0o555 root alone crashes `--copy` with exit 1 (it cannot write `.mutate.lock`) | refuter | later | outside this PR: a card to make the lock failure a could-not-run with its cause |
+| 27 | The SIGTERM test sometimes tests `copy_of`'s own cleanup and not main's `finally` | refuter | later | the signal can land while `copy_of` still runs; the new removal test pins main's `finally` alone. A sharper stop test is a later row |

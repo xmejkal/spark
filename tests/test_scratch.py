@@ -50,6 +50,15 @@ class RemoveOldFoldersTest(unittest.TestCase):
         self.assertEqual(target.stat().st_mode & 0o777, 0o755, "a link's target is not opened up")
         self.assertEqual([link.is_symlink(), (target / "f.txt").exists()], [True, True])
 
+    def test_a_link_to_a_read_only_folder_is_not_opened_up(self):
+        target = planted(self.parent, "target", 2 * DAY)
+        target.chmod(0o555)
+        self.addCleanup(target.chmod, 0o755)
+        link = Path(self.parent) / "spark-tests-link"
+        link.symlink_to(target)
+        self.assertFalse(scratch.remove_tree(str(link)))
+        self.assertEqual(target.stat().st_mode & 0o777, 0o555)
+
     def test_another_owner_stays(self):
         folder = planted(self.parent, "spark-tests-old", 2 * DAY)
         self.assertEqual(self.sweep(owner=os.lstat(folder).st_uid + 1), [])
