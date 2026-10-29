@@ -21,6 +21,8 @@ import part_pictures
 
 WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
 BREADBOARDS_FILE = Path(__file__).resolve().parent.parent / "data" / "breadboards.json"
+#: What a part_px drawn from a board's own record says in `source` (`part_shape.RecordShapeSource`): the picture adds the pad labels.
+RECORD_SOURCE = "record"
 
 #: Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, its group (the holes joined with it inside the
 #: board: a breadboard row such as 12t, or a rail such as tp), and its column (from 1; a rail hole has none, 0).
@@ -442,6 +444,8 @@ class SvgBreadboardDiagram:
     SHEET_MESSAGE = "![The layout on a breadboard](breadboard.svg)"
     #: The space around the outermost holes, in px.
     MARGIN_PX = 14
+    #: The room under the holes for the note of a board whose facts are not all verified, in px.
+    NOTE_PX = 14
 
     def __init__(self, colors=None, pictures=None):
         self.colors = colors or breadboard_steps.StepColors()
@@ -450,8 +454,9 @@ class SvgBreadboardDiagram:
     def text(self, layout):
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)
         surface = layout.geometry.surface
+        notes = [note["sentence"] for part in layout.parts for note in layout.geometry.part(part.type).get("notes", [])]
         width = _round_px(max(hole.x for hole in surface.holes) + 2 * self.MARGIN_PX)
-        height = _round_px(max(hole.y for hole in surface.holes) + self.MARGIN_PX)
+        height = _round_px(max(hole.y for hole in surface.holes) + self.MARGIN_PX + (self.NOTE_PX if notes else 0))
         root = ElementTree.Element(_svg("svg"), {"width": str(width), "height": str(height),
                                                    "viewBox": "0 0 %s %s" % (width, height)})
         ElementTree.SubElement(root, _svg("rect"), {"width": str(width), "height": str(height), "rx": "6",
@@ -474,15 +479,24 @@ class SvgBreadboardDiagram:
             self._jumper(root, jumper, layout.geometry.surface.pitch)
         for part in layout.parts:
             self._label(root, part, layout.geometry)  # last, so no wire or other part covers a pin or a name
+        if notes:
+            note = ElementTree.SubElement(root, _svg("text"), {
+                "x": str(self.MARGIN_PX), "y": str(_round_px(height - 4)), "font-size": "8", "font-family": "sans-serif",
+                "fill": "#5d4037"})
+            note.text = ", ".join(notes)
         return ElementTree.tostring(root, encoding="unicode") + "\n"
+
+    @staticmethod
+    def _turn(part, part_px):
+        """The transform that puts a part's own frame where Wokwi shows it: moved to its corner, turned about its center."""
+        cx, cy = part_px["center"]
+        return "translate(%s %s) rotate(%s %s %s)" % (_round_px(part.left), _round_px(part.top), part.rotate,
+                                                      _round_px(cx), _round_px(cy))
 
     def _part(self, root, part, geometry):
         part_px = geometry.part(part.type)
         picture = self.pictures.picture(part.type)
-        cx, cy = part_px["center"]
-        group = ElementTree.SubElement(root, _svg("g"), {
-            "transform": "translate(%s %s) rotate(%s %s %s)" % (_round_px(part.left), _round_px(part.top),
-                                                                part.rotate, _round_px(cx), _round_px(cy))})
+        group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part, part_px)})
         width, height = part_px["size"]
         x, y, view_width, view_height = picture.view_box
         inner = ElementTree.SubElement(group, _svg("g"), {"transform": "scale(%s %s) translate(%s %s)" % (
@@ -492,11 +506,39 @@ class SvgBreadboardDiagram:
         if picture.credit:
             ElementTree.SubElement(group, _svg("title")).text = picture.credit
 
+    def _pad_labels(self, root, part, part_px):
+        """A board drawn from its record (P412): each pad's label beside its pin inside the body, a dashed ring on a
+        doubtful pad, and the USB-C end. Drawn in the part's own frame, so it turns with the part."""
+        cx, _ = part_px["center"]
+        width, height = part_px["size"]
+        group = ElementTree.SubElement(root, _svg("g"), {"transform": self._turn(part, part_px)})
+        for pad, (x, y) in part_px["pins"].items():
+            if pad in part_px["doubtful"]:
+                ElementTree.SubElement(group, _svg("circle"), {
+                    "cx": str(_round_px(x)), "cy": str(_round_px(y)), "r": "4", "fill": "none", "stroke": "#e65100",
+                    "stroke-width": "1", "stroke-dasharray": "2 1.5"})
+            inward = x < cx
+            label = ElementTree.SubElement(group, _svg("text"), {
+                "x": str(_round_px(x + (5 if inward else -5))), "y": str(_round_px(y + 2)), "font-size": "6",
+                "font-family": "sans-serif", "text-anchor": "start" if inward else "end", "fill": "#ffffff",
+                "stroke": "#0d47a1", "stroke-width": "1.5", "paint-order": "stroke"})
+            label.text = pad
+        ElementTree.SubElement(group, _svg("rect"), {
+            "x": str(_round_px(cx - 17)), "y": str(_round_px(height - 12)), "width": "34", "height": "12", "rx": "3",
+            "fill": "#cfd8dc", "stroke": "#455a64", "stroke-width": "1"})
+        usb = ElementTree.SubElement(group, _svg("text"), {
+            "x": str(_round_px(cx)), "y": str(_round_px(height - 4)), "font-size": "6", "font-family": "sans-serif",
+            "text-anchor": "middle", "fill": "#263238"})
+        usb.text = "USB-C"
+
     def _label(self, root, part, geometry):
+        part_px = geometry.part(part.type)
+        if part_px.get("source") == RECORD_SOURCE:
+            self._pad_labels(root, part, part_px)
         for hole in part.holes.values():
             ElementTree.SubElement(root, _svg("circle"), {"cx": str(_round_px(hole.x)), "cy": str(_round_px(hole.y)),
                                                           "r": "2.5", "fill": "#2e7d32"})
-        cx, cy = geometry.part(part.type)["center"]
+        cx, cy = part_px["center"]
         label = ElementTree.SubElement(root, _svg("text"), {
             "x": str(_round_px(part.left + cx)), "y": str(_round_px(part.top + cy)), "font-size": "8",
             "font-family": "sans-serif", "text-anchor": "middle", "fill": "#1a1a1a", "stroke": "#ffffff",

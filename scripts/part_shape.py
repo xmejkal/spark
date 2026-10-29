@@ -26,8 +26,8 @@ from breadboard_drawing import NotDrawn  # noqa: E402
 
 #: Pixels per millimetre: Wokwi draws 96 px to the inch.
 PX_PER_MM = 96 / 25.4
-#: The word that names a part_px drawn from a record (`part_px["source"]`).
-RECORD = "record"
+#: The word that names a part_px drawn from a record (`part_px["source"]`), as the drawing reads it.
+RECORD = breadboard_drawing.RECORD_SOURCE
 
 #: Value: a part in mm: its outline `size` (width, height), its `pins` {label: (x, y)}, the pad `ground` stands for, and
 #: its fact `groups` {name: {value, verified, source, why_it_matters, note}}.
