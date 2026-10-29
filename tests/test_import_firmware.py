@@ -16,6 +16,8 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -576,6 +578,56 @@ class TheChildIsAFileOfItsOwnTest(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
 
 
+class TheChildGivesTimeMicroPythonsNamesTest(unittest.TestCase):
+    """P443: micropython-lib's SSD1306_SPI sleeps in its constructor, and a driver builds it at module level."""
+
+    def test_the_six_names_are_set_with_their_fixed_values(self):
+        fake = types.ModuleType("fake_time")
+        import_child.add_micropython_time(fake)
+        self.assertIsNone(fake.sleep_ms(10_000))
+        self.assertIsNone(fake.sleep_us(10_000_000))
+        self.assertEqual((fake.ticks_ms(), fake.ticks_us()), (0, 0))
+        self.assertEqual(fake.ticks_add(5, 3), 8)
+        self.assertEqual(fake.ticks_diff(8, 5), 3)
+        self.assertEqual(fake.ticks_diff(5, 8), -3)
+
+    def test_this_process_s_own_time_is_left_alone(self):
+        import_child.add_micropython_time(types.ModuleType("fake_time"))
+        self.assertFalse(hasattr(time, "sleep_ms"))
+
+    def test_the_ssd1306_spi_shape_built_at_module_level_imports(self):
+        """micropython-lib's ssd1306.py: a reset pin, `time.sleep_ms(1)` and `sleep_ms(10)`, a FrameBuffer subclass."""
+        project = a_project(screen=(
+            "import time\nfrom machine import Pin, SoftSPI\nimport framebuf\n"
+            "class SSD1306_SPI(framebuf.FrameBuffer):\n"
+            "    def __init__(self, spi, dc, res, cs):\n"
+            "        dc.init(dc.OUT, value=0)\n        res.init(res.OUT, value=0)\n        cs.init(cs.OUT, value=1)\n"
+            "        self.spi, self.buffer = spi, bytearray(128 * 8)\n"
+            "        super().__init__(self.buffer, 128, 64, framebuf.MONO_VLSB)\n"
+            "        self.reset(res)\n"
+            "    def reset(self, res):\n"
+            "        res(1)\n        time.sleep_ms(1)\n        res(0)\n        time.sleep_ms(10)\n        res(1)\n"
+            "screen = SSD1306_SPI(SoftSPI(baudrate=1000000), Pin(1), Pin(2), Pin(3))\n"))
+        code, answer = answer_for(project)
+        self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
+
+    def test_a_long_sleep_at_import_does_not_wait(self):
+        project = a_project(slow="import time\ntime.sleep_ms(10_000)\ntime.sleep_us(10_000_000)\n")
+        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        self.assertEqual(module_named(answer, "slow")["status"], "imported", answer)
+
+    def test_a_wait_on_ticks_ms_times_out_because_it_is_always_zero(self):
+        project = a_project(wait=("import time\nstart = time.ticks_ms()\n"
+                                  "while time.ticks_diff(time.ticks_ms(), start) < 100:\n    pass\n"))
+        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        self.assertEqual(module_named(answer, "wait")["status"], "timed out", answer)
+
+    def test_real_time_stays_real(self):
+        project = a_project(clock="import time\nassert time.time() > 1e9\ntime.sleep(0.01)\n")
+        _, answer = answer_for(project)
+        self.assertEqual(module_named(answer, "clock")["status"], "imported", answer)
+
+
 class AModuleThatFailsIsAProblemTest(unittest.TestCase):
     def test_a_module_that_raises_says_the_exception_s_last_line(self):
         project = a_project(light="raise ValueError('no such pin')\n", pins="BUTTON = 4\n")
@@ -688,7 +740,7 @@ class WhenItCannotLookTest(unittest.TestCase):
         done = subprocess.run([sys.executable, str(SCRIPT), "--help"], capture_output=True, text=True)
         self.assertEqual(done.returncode, 0)
         for said in ("usage:", "main.py", "stand-in", "--timeout", "--json", "ADC", "I2S", "framebuf",
-                     "proves that the names exist and the module-level calls ran"):
+                     "sleep_ms", "proves that the names exist and the module-level calls ran"):
             self.assertIn(said, done.stdout)
         self.assertNotIn("nothing else", done.stdout)
 

@@ -23,8 +23,9 @@ last on sys.path. Per module the answer is one of:
 An `imported` proves that the names exist and the module-level calls ran. It does not prove that their arguments are
 right (the stand-ins take any), that a pin, a wire, a rate or a driver works, or that a device answers: a bus finds no
 device, so a module-level `assert 0x3C in i2c.scan()` fails here. Keep such a check in a function that main.py calls.
-Build a driver in a function that main.py calls too: a driver that calls `time.sleep_ms` in its constructor fails when
-the module builds it at import (CPython's `time` has no `sleep_ms`, and spark does not stand in for `time`).
+A driver that sleeps in its constructor imports, because the child gives `time` MicroPython's sleep_ms, sleep_us, ticks_ms,
+ticks_us, ticks_add and ticks_diff with fixed values (P443, see import_child.py). A sleep never waits, and ticks_ms() is
+always 0, so a driver's wait loop on it times out here.
 
 The boot files are left unrun on purpose: main.py starts the loop, so a two-line main.py over an importable module is
 the shape that can be tested. When firmware/ holds nothing to import but the boot files and pins.py, that is a
