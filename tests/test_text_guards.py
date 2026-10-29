@@ -74,9 +74,9 @@ class ValueMessageErrorTest(unittest.TestCase):
         self.assertEqual(self.message("%r|%s|%c|%c", Name("n"), Count(3), 10, "q"), "x?y|a?b|?|q")
 
     def test_a_mapping_key_or_a_star_width_is_refused_when_the_error_is_made(self):
-        for template in ("%(name)s", "%*d", "%-*s", "ok %s %(a)s"):
+        for template, values in (("%(name)s", ("a",)), ("%*d", (3, 5)), ("%-*s", (3, "a")), ("ok %s %(a)s", ("a", "b"))):
             with self.subTest(template=template), self.assertRaises(TypeError):
-                text_guards.ValueMessageError(template, "a")
+                text_guards.ValueMessageError(template, *values)
         self.assertEqual(self.message("100%%(x) %s", "a"), "100%(x) a")
 
     def test_a_template_with_no_values_is_the_message_as_it_stands(self):
