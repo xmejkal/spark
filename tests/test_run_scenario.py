@@ -245,6 +245,10 @@ class TheStepNamesTest(unittest.TestCase):
                 self.assertEqual((steps.names_state, steps.names_why, steps.names, steps.state),
                                  ("not-checked", "a step name is a block scalar or runs over more than one line", (), "recorded"))
 
+    def test_a_block_scalar_indicator_alone_makes_the_names_not_checked(self):
+        for item in (">", "|", "|-"):
+            self.assertEqual(self.named("- name: " + item, "  wait-serial: x").names_state, "not-checked")
+
     def test_a_name_that_the_next_line_goes_on_with_makes_the_names_not_checked(self):
         for items in (("- name: the LED", "    lights up", "  wait-serial: x"), ('- name: "the LED', '    lights"', "  wait-serial: x"),
                       ("- wait-serial: x", "  name: the LED", "    lights up")):

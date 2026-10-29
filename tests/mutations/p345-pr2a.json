@@ -72,12 +72,6 @@
   "replace": "            why = evidence.why_not_ready(found)\n            limits = evidence.find_limits(found)\n"
  },
  {
-  "file": "scripts/board_look.py",
-  "name": "the report shares the evidence's list of limits",
-  "find": "tuple(evidence.find_limits(found))",
-  "replace": "evidence.find_limits(found)"
- },
- {
   "file": "scripts/image_evidence.py",
   "name": "an unreadable log also gets the limits hint",
   "find": "if each.state == outcomes.NOT_CHECKED and not (said_unreadable and each.why == WHY_LOG_UNREADABLE)]",
