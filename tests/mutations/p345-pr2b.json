@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/brief.py",
+  "name": "Brief keeps a string must",
+  "find": "if isinstance(must, list) else ()",
+  "replace": "if isinstance(must, (list, str)) else ()"
+ },
+ {
+  "file": "scripts/brief.py",
+  "name": "an unreadable project.json reads as an empty brief",
+  "find": "        except ValueError:\n            return cls()",
+  "replace": "        except (OSError, ValueError):\n            return cls()"
+ },
+ {
+  "file": "scripts/brief.py",
+  "name": "a fifo at project.json is read",
+  "find": "if not path.is_file():",
+  "replace": "if not path.exists():"
+ }
+]
