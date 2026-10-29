@@ -77,6 +77,10 @@ class TheSheetTest(unittest.TestCase):
         self.assertIn("LedRed5mm K", grounds[0])
         self.assertEqual(len(re.findall(r"GND\d", self.text)), 3, "the pad GND uses, and the two doubtful ones, once each")
 
+    def test_the_sheet_reads_as_recorded(self):
+        # P412: the whole sheet of a board drawn from its record, word for word; regenerate it only on purpose
+        self.assertEqual(self.text, (FIXTURE / "breadboard.expected.md").read_text())
+
     def test_a_leg_the_record_describes_is_named(self):
         self.assertIn("LedRed5mm A (the anode, the longer leg)", self.text)
         self.assertIn("LedRed5mm K (the cathode, the shorter leg", self.text)

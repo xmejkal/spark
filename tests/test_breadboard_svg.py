@@ -180,6 +180,11 @@ class TheRecordBoardSvgTest(unittest.TestCase):
     def test_the_same_layout_gives_the_same_bytes(self):
         self.assertEqual(self.text, breadboard_drawing.SvgBreadboardDiagram().text(self.layout))
 
+    def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
+        # rendered and looked at once (pad labels, rings, USB-C end, note); regenerate the hash only on purpose
+        self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
+                         "22533f2a590c80bfbc2dd2c90fc1b1593734fe002684c7927a30e9fd6f04ba6e")
+
     def test_the_xiao_has_none_of_it(self):
         text, _ = xiao_svg()
         self.assertNotIn("USB-C", text)
