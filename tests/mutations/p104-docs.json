@@ -1,6 +1,6 @@
 [
  {"file": "tools/check_docs.py", "name": "a command that does not exist passes", "find": "if not (root / \"commands\" / (\"%s.md\" % name)).is_file()]", "replace": "if False]"},
- {"file": "tools/check_docs.py", "name": "a script that does not exist passes", "find": "and not (any((root / folder / name).is_file() for folder in (\"tools\", \"tests\"))\n                                    or any((root / \"scripts\").rglob(name)))])", "replace": "and False])"},
+ {"file": "tools/check_docs.py", "name": "a script that does not exist passes", "find": "and not (any((root / folder / name).is_file() for folder in (\"tools\", \"tests\"))\n                        or any(\"stand_in\" not in found.relative_to(root / \"scripts\").parts\n                               for found in (root / \"scripts\").rglob(name)))])", "replace": "and False])"},
  {"file": "tools/check_docs.py", "name": "an unlisted name passes", "find": "for name in names if name not in text]", "replace": "for name in names if False]"},
  {"file": "tools/check_docs.py", "name": "an unknown skill passes", "find": "if name not in skills]", "replace": "if False]"},
  {"file": "tools/check_docs.py", "name": "an unknown flag passes", "find": "for flag in flags if flag not in known]", "replace": "for flag in flags if False]"},
