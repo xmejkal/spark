@@ -51,6 +51,8 @@ def scrub(key, value):
         return [clean(tag).lower() if isinstance(tag, str) else tag for tag in value]
     if key in TEXT_MAX and isinstance(value, str):
         return clean(value, TEXT_MAX[key])
+    if key == "is":  # an id is a file name in the store, up to the name limit, and only control characters and surrogates go (P445)
+        return _scrubbed(value, store.FILE_NAME_MAX_BYTES)
     return _scrubbed(value, PROVENANCE_MAX) if key in PROVENANCE_KEYS else _scrubbed(value)
 
 

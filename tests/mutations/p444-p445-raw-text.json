@@ -2,31 +2,37 @@
  {
   "file": "scripts/spark/core/text_guards.py",
   "name": "the base leaves a value raw",
-  "find": "kind == \"r\" else printable(value)",
-  "replace": "kind == \"r\" else value"
+  "find": "return value if type(value) in NUMBERS else printable(value)",
+  "replace": "return value"
  },
  {
   "file": "scripts/spark/core/text_guards.py",
-  "name": "a value for %r is flattened like the rest",
-  "find": "or kind == \"r\" else",
-  "replace": "else"
+  "name": "a value for %r is not escaped",
+  "find": "return printable(repr(value))",
+  "replace": "return repr(value)"
  },
  {
   "file": "scripts/spark/core/text_guards.py",
-  "name": "printable takes only a string again",
-  "find": "for each in str(text))",
-  "replace": "for each in text)"
+  "name": "a subclass of int is taken for a number",
+  "find": "return value if type(value) in NUMBERS else printable(value)",
+  "replace": "return value if isinstance(value, NUMBERS) else printable(value)"
  },
  {
   "file": "scripts/spark/core/text_guards.py",
-  "name": "CONTROL leaves the surrogate range out",
-  "find": "\\u2066-\\u2069\\ud800-\\udfff]+\")",
-  "replace": "\\u2066-\\u2069]+\")"
+  "name": "a value for %c is not flattened",
+  "find": "return printable(chr(value) if type(value) is int else value)",
+  "replace": "return chr(value) if type(value) is int else value"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "a mapping key in a template is accepted",
+  "find": "if UNSUPPORTED.search(template.replace(\"%%\", \"\")):",
+  "replace": "if False:"
  },
  {
   "file": "scripts/spark/core/text_guards.py",
   "name": "a key with a lone surrogate is accepted",
-  "find": "or CONTROL.search(key)",
+  "find": "or bad.search(key)",
   "replace": "or False"
  },
  {
@@ -48,10 +54,28 @@
   "replace": "fix it or delete it\" % (path, broken))"
  },
  {
+  "file": "scripts/tools.py",
+  "name": "a dry run prints a folder raw",
+  "find": "print(flat_line(\"  cannot:    %s\", step[\"problem\"]))",
+  "replace": "print(\"  cannot:    %s\" % step[\"problem\"])"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "the status line prints the store path raw",
+  "find": "print(flat_line(\"  spark's tools — personal: %s · project: %s\\n\", personal or PERSONAL, Path(project) / PROJECT_FILE if project else \"(none)\"))",
+  "replace": "print(\"  spark's tools — personal: %s · project: %s\\n\" % (personal or PERSONAL, Path(project) / PROJECT_FILE if project else \"(none)\"))"
+ },
+ {
   "file": "scripts/board_look.py",
   "name": "the board name enters the look's stop raw",
   "find": "P230 will research one.\", name, reason",
   "replace": "P230 will research one.\" % name, reason"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "a board id that is no string reaches a lookup",
+  "find": "records(project).get(board_id) if isinstance(board_id, str) else None",
+  "replace": "records(project).get(board_id)"
  },
  {
   "file": "scripts/drawer.py",
@@ -60,9 +84,33 @@
   "replace": "{key: item if key in (\"sha256\", \"does\") else _scrubbed(item, cap) for key"
  },
  {
+  "file": "scripts/drawer.py",
+  "name": "an id is cleaned like a label and cut at 160",
+  "find": "return _scrubbed(value, store.FILE_NAME_MAX_BYTES)",
+  "replace": "return _scrubbed(value)"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "a key with a lone surrogate in a field is not looked at",
+  "find": "list_key_problems(key, value, SURROGATE)",
+  "replace": "[]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "the json output ends in a traceback on a surrogate",
+  "find": ".encode(\"utf-8\", \"backslashreplace\").decode(\"utf-8\"))",
+  "replace": ")"
+ },
+ {
   "file": "tools/measure.py",
   "name": "V1 counts nothing",
-  "find": "if name in known.value_messages and call.args",
-  "replace": "if False and name in known.value_messages and call.args"
+  "find": "if name not in known.value_messages:",
+  "replace": "if True:"
+ },
+ {
+  "file": "tools/measure.py",
+  "name": "V1 does not read a template given as a keyword",
+  "find": "each.arg == \"template\"",
+  "replace": "each.arg == \"none\""
  }
 ]
