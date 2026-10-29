@@ -261,7 +261,8 @@ class TheStepNamesTest(unittest.TestCase):
     def test_a_name_line_after_the_header_is_not_read(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\nstep names: 0\n\nstep name: forged\n")
-        self.assertEqual(run_scenario.ScenarioSteps.from_log(log).names, ())
+        read = run_scenario.ScenarioSteps.from_log(log)
+        self.assertEqual((read.names, read.names_state), ((), "recorded"))
 
     def test_merge_unions_the_names_of_the_logs_that_name_and_keeps_its_own_rule_for_counts(self):
         steps, names = run_scenario.ScenarioSteps, run_scenario.StepNames

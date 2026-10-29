@@ -1169,6 +1169,11 @@ build writes wires the board's serial port to Wokwi's serial monitor, so a scena
 ([P190](https://github.com/xmejkal/spark/issues/142)). The ready contract and the scenario's form are on
 `/spark:build`'s page ([Simulate it](../../commands/build.md#simulate-it--for-real-with-the-values-set-in-the-test)).
 
+A step may carry a `name:` key beside its kind. When it holds a `must` line of the project's brief, copied exactly, the
+step names that line. The log's header keeps the names (`step names: 2`, then one `step name:` line each), and
+[the look](#look-at-the-board) lists the must lines that no passed scenario named
+([P345](https://github.com/xmejkal/spark/issues/440)). A name is a claim, not a test: spark does not check that the step asserts the line.
+
 A run spends Wokwi CI minutes. Watching it live in VS Code needs a Wokwi licence that includes VS Code, Hobby+ or above
 per wokwi.com/pricing (read 2026-10-01).
 
@@ -1200,6 +1205,10 @@ $ look.py --project <project>
 
 The exit code was 2: the fields matched, but the look could not give a token. With a build and a passed scenario, the last
 line is the token.
+
+With a passed scenario, the look also prints what the run did not test: its caveats, the limits of the simulation, and
+under "no scenario named these must lines, so test them on the board:" each must line of the brief that no passed
+scenario named (`data.unnamed_must` in `--json`). It is a list for the person, never a failure: the exit code stays 0.
 
 ### The gate
 

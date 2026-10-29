@@ -15,6 +15,9 @@ run puts MicroPython and the project's firmware/ into a new flash image, so a ru
 build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
 wokwi-cli refuses a wokwi.toml that names none.
 
+A step's own `name:` key may hold a must line of the brief (copied exactly): the log's header names every step (P345), and the look lists the
+must lines that no passed scenario named.
+
 The log goes to sim/runs/<name>.log: the date with its zone, the verdict, the step counts by kind and the step names (P345), the sha256 of
 the image it tested and of each file in that image, what the simulation cannot show, the scenario as run, and what
 wokwi-cli printed, which is the board's serial output among the scenario's
