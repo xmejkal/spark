@@ -17,6 +17,9 @@ child is patched:
     time.ticks_diff(a, b)                   returns a - b, MicroPython's order, with no wrap
 
 Because ticks_ms() is always 0, a driver's wait loop on it times out here, and the timeout line blames the loop.
+
+A stand-in's missing name is an AttributeError, so `hasattr` and `getattr` with a default work. For `from machine import
+UART` Python drops the words, and the child gives them back as an ImportError that names the stand-in file.
 """
 
 import importlib
@@ -41,10 +44,30 @@ def add_micropython_time(module):
         setattr(module, name, function)
 
 
+def words_of_stand_in(error):
+    """
+    The words of the stand-in that `error` names, or None. Python turns a stand-in's AttributeError into a bare
+    ImportError for `from machine import X`, and the stand-in keeps the words in `_missed`. They are read from the
+    module's dict, never with getattr, which would call the stand-in's __getattr__. One miss is handed back once.
+    """
+    module = sys.modules.get(error.name)
+    missed = module.__dict__.get("_missed") if module is not None else None
+    if missed is None:
+        return None
+    module._missed = None
+    return missed[1]
+
+
 def main(argv):
     add_micropython_time(time)
     sys.path[:0] = argv[1:]
-    importlib.import_module(argv[0])
+    try:
+        importlib.import_module(argv[0])
+    except ImportError as error:
+        words = words_of_stand_in(error)
+        if words is None:
+            raise
+        raise ImportError(words, name=error.name) from None
 
 
 if __name__ == "__main__":

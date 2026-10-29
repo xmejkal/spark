@@ -23,6 +23,8 @@ last on sys.path. Per module the answer is one of:
 An `imported` proves that the names exist and the module-level calls ran. It does not prove that their arguments are
 right (the stand-ins take any), that a pin, a wire, a rate or a driver works, or that a device answers: a bus finds no
 device, so a module-level `assert 0x3C in i2c.scan()` fails here. Keep such a check in a function that main.py calls.
+A name a stand-in lacks is an AttributeError, so a driver's `hasattr(machine, "X")` probe is False. `from machine import X`
+is an ImportError with the stand-in file and the action, because the child gives the stand-in's words back (P443).
 A driver that sleeps in its constructor imports, because the child gives `time` MicroPython's sleep_ms, sleep_us, ticks_ms,
 ticks_us, ticks_add and ticks_diff with fixed values (P443, see import_child.py). A sleep never waits, and ticks_ms() is
 always 0, so a driver's wait loop on it times out here.

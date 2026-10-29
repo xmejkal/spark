@@ -26,10 +26,17 @@ class FrameBuffer:
         return 0 if c is None else None
 
 
+#: The last name asked for that this module lacks, as (name, words), for the import child to give back (P443).
+_missed = None
+
+
 def __getattr__(name):
+    global _missed
     if name.startswith("__"):  # the import machinery asks for __path__ and the like
         raise AttributeError(name)
     have = sorted(n for n in globals() if not n.startswith("_"))
-    raise ImportError("spark's stand-in framebuf (scripts/stand_in/fallback/framebuf.py) has %s and %s only, not %s: "
-                      "use only these at module level, or move the rest into a function that main.py calls"
-                      % (", ".join(have[:-1]), have[-1], name))
+    words = ("spark's stand-in framebuf (scripts/stand_in/fallback/framebuf.py) has %s and %s only, not %s: use only "
+             "these at module level, or move the rest into a function that main.py calls"
+             % (", ".join(have[:-1]), have[-1], name))
+    _missed = (name, words)
+    raise AttributeError(words)

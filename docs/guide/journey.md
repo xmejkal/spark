@@ -1110,7 +1110,7 @@ An `imported` proves that the names exist and the module-level calls ran. It doe
 or a driver works, or that a device answers. A bus finds no device, so a module-level check such as
 `assert 0x3C in i2c.scan()` fails the import: keep it in a function that `main.py` calls. A driver that sleeps in its constructor imports: the check
 gives `time` MicroPython's `sleep_ms`, `sleep_us`, `ticks_ms`, `ticks_us`, `ticks_add` and `ticks_diff` with fixed values
-(a sleep returns at once, `ticks_ms` is always 0). Because `ticks_ms` never moves, a driver's wait loop on it times out.
+(a sleep returns at once, `ticks_ms` is always 0), and `micropython.alloc_emergency_exception_buf` does nothing. A driver's `hasattr(machine, "X")` probe is False, and `from machine import X` is an ImportError with the action. Because `ticks_ms` never moves, a driver's wait loop on it times out.
 
 The command leaves `main.py` unrun, because `main.py` starts the loop. Keep it to two lines that call a module. The
 button-and-LED firmware does that (`import light`, then `light.run()`). You write your own, or Claude does. To try the
