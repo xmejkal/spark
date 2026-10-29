@@ -66,6 +66,13 @@ class RemoveOldFoldersTest(unittest.TestCase):
         planted(self.parent, "spark-tests-over", DAY + 5)
         self.assertEqual(self.sweep(), ["spark-tests-over"])
 
+    def test_exactly_a_day_old_stays(self):
+        folder = Path(self.parent) / "spark-tests-exact"
+        folder.mkdir()
+        os.utime(folder, (1_000_000_000, 1_000_000_000))
+        self.assertEqual(scratch.remove_old_folders(self.parent, "spark-tests-", 1_000_000_000 + DAY), [])
+        self.assertEqual(scratch.remove_old_folders(self.parent, "spark-tests-", 1_000_000_001 + DAY), ["spark-tests-exact"])
+
     def test_a_missing_parent_removes_nothing(self):
         self.assertEqual(scratch.remove_old_folders(self.parent + "/none", "spark-tests-", time.time()), [])
 
