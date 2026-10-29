@@ -183,7 +183,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         self.assertEqual(self.text, breadboard_drawing.SvgBreadboardDiagram().text(self.layout))
 
     def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
-        # rendered and looked at once (pad labels, rings, USB-C end, note); regenerate the hash only on purpose
+        # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose
         self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
                          "4f2a60144634428236b7295c7535132abebb92046d68b308e16ec5ee2ad1f972")
 

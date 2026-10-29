@@ -26,7 +26,7 @@ wiring-record.json, which it keeps beside the sheet):
     joined pin in the row it joins, a jumper between the two rows the new layout joins (it keeps its holes and bends,
     not its color). What it cannot keep is named on stderr, with why. The XIAO ESP32-C6 is drawn on a half breadboard. A board with a
     complete record (the FireBeetle) is drawn from the record on 63 columns, as breadboard.svg alone (P412). Rails are not drawn.
-    Otherwise the sheet says why, with a code, and an old drawing is removed;
+    Otherwise the sheet says why, and an old drawing is removed. The code is in check_spine's kept entries and in WriteResult;
   - after a rebuild (P300), "Changes since the last build" before the steps: one line for each thing to change on
     the bench, so you do not read the whole sheet again. A line says what to put in, take out, move or swap, and names
     a jumper by its two ends and the color the earlier sheet showed. It never names holes: you pick your own free rows.

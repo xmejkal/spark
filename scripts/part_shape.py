@@ -15,6 +15,7 @@ there never shows a board it is not.
 
 import collections
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -112,10 +113,30 @@ class RecordShapeSource(ShapeSource):
         """What `emit_footprint.pads` would place wrongly or place twice: more than two rows, a row count that disagrees with
         the pin counts, a pitch of nothing, an edge it does not handle."""
         header = physical["header"]
-        for field, ok in (("rows", header["rows"] == len(header["pins"])), ("pins", len(header["pins"]) <= 2),
-                          ("pitch_mm", header["pitch_mm"] > 0), ("flush_edge", header.get("flush_edge") == FLUSH_EDGE)):
+        sizes = (("physical.width_mm", physical["width_mm"]), ("physical.height_mm", physical["height_mm"]),
+                 ("physical.header.pitch_mm", header["pitch_mm"]), ("physical.header.row_spacing_mm", header["row_spacing_mm"]),
+                 ("physical.header.first_pad_from_edge_mm", header["first_pad_from_edge_mm"]))
+        for field, value in sizes:  # a size is a finite number above nothing: a negative one mirrors the board
+            if not math.isfinite(value) or value <= 0:
+                raise self._disagrees(field, "%s is not a finite number above 0" % field)
+        rows = header["rows"]
+        for field, ok in (("rows", type(rows) is int and rows == len(header["pins"])), ("pins", len(header["pins"]) <= 2),
+                          ("flush_edge", header.get("flush_edge") == FLUSH_EDGE)):
             if not ok:
                 raise self._disagrees("physical.header.%s" % field, "physical.header.%s does not fit the rest of the header" % field)
+
+    def _refuse_pads_outside(self, physical, placed):
+        """A pad outside the outline: the field that puts it out. Across the board, the row spacing; along it, where the first
+        pad starts, else the pitch."""
+        width, height = physical["width_mm"], physical["height_mm"]
+        for _, x, y in placed:
+            top = height / 2 - y
+            if not 0 <= x + width / 2 <= width:
+                raise self._disagrees("physical.header.row_spacing_mm", "a pad lies outside the board across its width")
+            if not 0 <= top <= height:
+                first = physical["header"]["first_pad_from_edge_mm"]
+                raise self._disagrees("physical.header.%s" % ("first_pad_from_edge_mm" if first > height else "pitch_mm"),
+                                      "a pad lies outside the board along its length")
 
     def find_shape(self, board):
         """The PartShape of this board's record, or NotDrawn with a code and a subject."""
@@ -132,6 +153,7 @@ class RecordShapeSource(ShapeSource):
             placed = emit_footprint.pads(board)
         except (ValueError, KeyError, TypeError) as exc:
             raise self._disagrees("physical.header.pins" if isinstance(exc, ValueError) else "physical.header", exc) from exc
+        self._refuse_pads_outside(physical, placed)
         width, height = physical["width_mm"], physical["height_mm"]
         pins = {}
         for label, x, y in placed:
@@ -139,7 +161,8 @@ class RecordShapeSource(ShapeSource):
                 raise NotDrawn("two pads of the board file are called %s" % label, breadboard_drawing.DUPLICATE_PAD_LABEL, label)
             pins[label] = (round(x + width / 2, 4), round(height / 2 - y, 4))
         if len(set(pins.values())) != len(pins):
-            raise self._disagrees("physical.header_order", "two pads sit at one place")
+            along = len({x for _, x, _ in placed}) == len({pins[label][0] for label in pins})  # one row's pads meet: the pitch
+            raise self._disagrees("physical.header.%s" % ("pitch_mm" if along else "row_spacing_mm"), "two pads sit at one place")
         doubtful = physical["header"].get("doubtful_pads")
         if not isinstance(doubtful, list):
             raise NotDrawn("the board file does not say which pads are doubtful: physical.header.doubtful_pads",

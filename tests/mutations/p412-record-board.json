@@ -104,8 +104,8 @@
  {
 "file": "scripts/part_shape.py",
 "name": "a row count that disagrees is drawn",
-"find": "(\"rows\", header[\"rows\"] == len(header[\"pins\"]))",
-"replace": "(\"rows\", True)"
+"find": "type(rows) is int and rows == len(header[\"pins\"])",
+"replace": "True"
 },
  {
 "file": "scripts/part_shape.py",
@@ -115,9 +115,9 @@
 },
  {
 "file": "scripts/part_shape.py",
-"name": "a pitch of nothing is drawn",
-"find": "(\"pitch_mm\", header[\"pitch_mm\"] > 0)",
-"replace": "(\"pitch_mm\", True)"
+"name": "a size of zero is drawn",
+"find": "or value <= 0:",
+"replace": "or value < 0:"
 },
  {
 "file": "scripts/part_shape.py",
@@ -172,5 +172,35 @@
 "name": "the sheet does not say to hold the board to the picture",
 "find": "    if part_px.get(\"notes\"):",
 "replace": "    if False:"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a negative or non-finite size is drawn",
+"find": "if not math.isfinite(value) or value <= 0:",
+"replace": "if False:"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a pad outside the outline is drawn",
+"find": "        self._refuse_pads_outside(physical, placed)\n",
+"replace": "        pass\n"
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "rows as a flag is accepted",
+"find": "type(rows) is int and ",
+"replace": ""
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "the pad-outside field is always the pitch",
+"find": "(\"first_pad_from_edge_mm\" if first > height else \"pitch_mm\")",
+"replace": "\"pitch_mm\""
+},
+ {
+"file": "scripts/part_shape.py",
+"name": "a meeting pair names no dimension",
+"find": "(\"pitch_mm\" if along else \"row_spacing_mm\")",
+"replace": "\"header_order\""
 }
 ]

@@ -119,10 +119,40 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
         del board["physical"]["header"]["flush_edge"]
         self.assertEqual(refusal(board), ("header_disagrees", "physical.header.flush_edge"))
 
-    def test_two_pads_at_one_place_disagree(self):
+    def test_a_size_that_is_not_a_finite_number_above_nothing_names_its_field(self):
+        nan, inf = float("nan"), float("inf")
+        for path, value in (("header.row_spacing_mm", -22.86), ("header.row_spacing_mm", 0), ("header.row_spacing_mm", nan),
+                            ("header.first_pad_from_edge_mm", -50), ("header.pitch_mm", inf), ("header.pitch_mm", -2.54),
+                            ("width_mm", -25.4), ("width_mm", 0), ("height_mm", -60.0), ("header.pitch_mm", 0)):
+            with self.subTest(field=path, value=value):
+                board = firebeetle()
+                *where, field = path.split(".")
+                node = board["physical"][where[0]] if where else board["physical"]
+                node[field] = value
+                code, subject = refusal(board)
+                self.assertEqual((code, subject), ("header_disagrees", "physical." + path))
+
+    def test_rows_must_be_a_whole_number_and_not_a_flag(self):
         board = firebeetle()
-        board["physical"]["header"]["row_spacing_mm"] = 0
-        self.assertEqual(refusal(board), ("header_disagrees", "physical.header_order"))
+        board["physical"]["header"]["rows"] = True
+        board["physical"]["header"]["pins"] = [18]
+        del board["physical"]["header_order"]["row_14"]
+        self.assertEqual(refusal(board), ("header_disagrees", "physical.header.rows"))
+
+    def test_a_pad_outside_the_outline_names_the_field_that_puts_it_out(self):
+        for field, value, named in (("row_spacing_mm", 40.0, "row_spacing_mm"), ("first_pad_from_edge_mm", 61.0, "first_pad_from_edge_mm"),
+                                    ("pitch_mm", 4.0, "pitch_mm"), ("height_mm", 1.0, "first_pad_from_edge_mm")):
+            with self.subTest(field=field, value=value):
+                board = firebeetle()
+                (board["physical"] if field == "height_mm" else board["physical"]["header"])[field] = value
+                self.assertEqual(refusal(board), ("header_disagrees", "physical.header." + named))
+
+    def test_pads_that_meet_name_the_dimension_that_makes_them_meet(self):
+        for field, value in (("pitch_mm", 1e-9), ("row_spacing_mm", 1e-9), ("pitch_mm", 1e308)):
+            with self.subTest(field=field, value=value):
+                board = firebeetle()
+                board["physical"]["header"][field] = value
+                self.assertEqual(refusal(board), ("header_disagrees", "physical.header." + field))
 
     def test_a_pad_order_that_does_not_fit_the_pin_counts_disagrees(self):
         board = firebeetle()
