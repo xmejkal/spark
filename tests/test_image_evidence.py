@@ -21,6 +21,7 @@ import sim_project  # noqa: E402
 import flash_image  # noqa: E402
 import tools  # noqa: E402
 from image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
+from run_scenario import ScenarioSteps  # noqa: E402
 from project_image import DeployError, ProjectImage  # noqa: E402
 from test_project_image import project_with_image, write_log  # noqa: E402
 
@@ -176,6 +177,66 @@ class PassedRunEvidenceTest(unittest.TestCase):
         with mock.patch.object(ProjectImage, "find_passed_logs", return_value=[self.project / "gone.log"]):
             self.assertEqual(PassedRunEvidence().caveats(self.image), [
                 "not checked: the log cannot be read; run its scenario again to count them"])
+
+    def named(self, names, name="a.log", marker=None):
+        """A passed run whose header holds a names marker (the count of `names` unless `marker`) and a name line for each, or none when `names` is None."""
+        write_log(self.project, name, "passed")
+        if names is not None:
+            log = self.project / "sim" / "runs" / name
+            lines = ["step names: %s" % (len(names) if marker is None else marker)] + ["step name: %s" % each for each in names]
+            log.write_text(log.read_text().replace("\n\n", "\n%s\n\n" % "\n".join(lines), 1))
+
+    def test_a_must_line_is_unnamed_when_no_passed_log_names_it(self):
+        self.named(["A", "B"], "a.log")
+        self.named(["B", "C"], "b.log")
+        found = PassedRunEvidence().find_unnamed_must(self.image, ["A", "C", "D", "B"])
+        self.assertEqual((found.lines, found.why), (["D"], None))
+
+    def test_case_and_spacing_do_not_matter_but_the_words_do(self):
+        self.named(["The  LED Lights", "the led goes off"])
+        found = PassedRunEvidence().find_unnamed_must(self.image, ["the led   lights", "The LED goes out"])
+        self.assertEqual((found.lines, found.why), (["The LED goes out"], None))
+
+    def test_a_must_line_with_a_hash_is_unnamed_because_the_scenario_text_loses_the_tail(self):
+        steps = ScenarioSteps.from_text("steps:\n  - name: fix issue #3\n    wait-serial: x\n")
+        self.named(list(steps.names))
+        self.assertEqual(PassedRunEvidence().find_unnamed_must(self.image, ["fix issue #3"]).lines, ["fix issue #3"])
+
+    def test_an_older_log_beside_a_new_one_leaves_the_new_one_to_decide(self):
+        self.named(None, "a.log")
+        self.named(["A"], "b.log")
+        found = PassedRunEvidence().find_unnamed_must(self.image, ["A", "B"])
+        self.assertEqual((found.lines, found.why), (["B"], None))
+
+    def test_only_older_logs_give_a_reason_and_no_line(self):
+        self.named(None)
+        found = PassedRunEvidence().find_unnamed_must(self.image, ["A"])
+        self.assertEqual((found.lines, found.why), ([], "no passed run's log names its steps"))
+
+    def test_a_log_whose_names_do_not_add_up_gives_its_reason(self):
+        self.named(["A"], marker=2)
+        found = PassedRunEvidence().find_unnamed_must(self.image, ["A"])
+        self.assertEqual((found.lines, found.why), ([], "the log's step names do not match its step names count"))
+
+    def test_a_log_with_a_good_marker_beside_a_broken_one_lets_the_good_one_decide(self):
+        self.named(["A"], "a.log", marker=2)
+        self.named(["A"], "b.log")
+        found = PassedRunEvidence().find_unnamed_must(self.image, ["A", "B"])
+        self.assertEqual((found.lines, found.why), (["B"], None))
+
+    def test_a_log_with_a_marker_and_no_name_leaves_every_line_unnamed(self):
+        self.named([])
+        found = PassedRunEvidence().find_unnamed_must(self.image, ["A", "B"])
+        self.assertEqual((found.lines, found.why), (["A", "B"], None))
+
+    def test_no_must_line_gives_no_line_and_no_reason_even_for_an_older_log(self):
+        self.named(None)
+        found = PassedRunEvidence().find_unnamed_must(self.image, [])
+        self.assertEqual((found.lines, found.why), ([], None))
+
+    def test_the_base_evidence_and_no_simulation_name_nothing(self):
+        found = NoSimulationEvidence(self.project).find_unnamed_must(self.image, ["A"])
+        self.assertEqual((found.lines, found.why), ([], None))
 
     def with_section(self, name, note_text):
         """The log `name` with this text as its limits section, where write_log puts it (right after the header)."""

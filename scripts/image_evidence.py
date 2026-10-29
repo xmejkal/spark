@@ -10,6 +10,7 @@ import hashlib
 import json
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import board_grant
@@ -20,6 +21,8 @@ import tools
 from run_scenario import (EXPECT_PIN, NO_MAIN, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps, SimulationLimits,
                           file_hashes)
 
+#: Why no must line can be compared with the names of the steps: every passed log is older than step names (an outcomes reason).
+WHY_NO_NAMES = "no passed run's log names its steps"
 #: What `ImageEvidence.simulation` says: a passed run tested the image, or no simulation did (the records keep it).
 SIMULATION_PASSED, SIMULATION_NONE = "passed", "none"
 #: What the person reads before the gate question when no simulation tested the image (deploy.py's docs quote it).
@@ -97,6 +100,21 @@ for name, path in json.loads(sys.stdin.read()):
         sys.exit(0)
 say(ok=True)
 """ % (UNREADABLE, SYNTAX, TOO_DEEP, BYTES)
+
+
+# --- MVP ---
+@dataclass(frozen=True)
+class UnnamedMust:
+    """Value: the must lines of the brief that no passed scenario named. `lines` is a list, `why` is None, or an outcomes reason that the logs could not say."""
+
+    lines: list
+    why: str = None
+
+
+def must_key(text):
+    """What a must line and a step name are compared by: the text with its spaces collapsed, in lower case. No fuzzy match."""
+    return " ".join(text.split()).casefold()
+# --- end MVP ---
 
 
 class CompileCheck:
@@ -186,6 +204,12 @@ class ImageEvidence(abc.ABC):
         return []
     # --- end MVP ---
 
+    # --- MVP ---
+    def find_unnamed_must(self, image, must):
+        """The UnnamedMust of the brief's `must` lines for `image`: none here, because no record of this evidence names a step."""
+        return UnnamedMust([], None)
+    # --- end MVP ---
+
     def way_out(self, image):
         """What to do instead of a refusal, as words that end its sentence, or "" when there is nothing to add."""
         return ""
@@ -238,6 +262,23 @@ class PassedRunEvidence(ImageEvidence):
         """The Limits in the limits section of every passed log of `image`, in name order, each once."""
         found = [limit for _, each in self._limits_of(image.find_passed_logs()) for limit in each.limits]
         return list(dict.fromkeys(found))
+    # --- end MVP ---
+
+    # --- MVP ---
+    def find_unnamed_must(self, image, must):
+        """
+        The UnnamedMust of `must`: the lines that no step name of a passed log equals under `must_key`. Only the logs whose names are
+        RECORDED decide, so an older log beside a newer one is ignored. With none RECORDED, no line is claimed and `why` says so. With no
+        must line there is nothing to say and no reason.
+        """
+        if not must:
+            return UnnamedMust([], None)
+        read = [ScenarioSteps.from_log(log) for log in image.find_passed_logs()]
+        named = ScenarioSteps.merge(read)
+        if named.names_state != outcomes.RECORDED:
+            return UnnamedMust([], next((each.names_why for each in read if each.names_state == outcomes.NOT_CHECKED), WHY_NO_NAMES))
+        said = {must_key(name) for name in named.names}
+        return UnnamedMust([line for line in must if must_key(line) not in said], None)
     # --- end MVP ---
 
     @staticmethod

@@ -20,11 +20,14 @@ import json
 import re
 import subprocess
 from collections import namedtuple
+from dataclasses import dataclass
 
 import board_codes
 import boards
+import brief
 import deploy_record_store
 import flasher
+import image_evidence
 from spark.core import outcomes
 import project_image
 import sim_project
@@ -49,6 +52,15 @@ TOKEN_LINE = "token  %s  for deploy.py --token. It is not your yes: deploy.py as
 # --- MVP ---
 #: The look's line above the limits of the project: what the passed runs cannot show, so only the board can.
 LIMITS_HEADING_MESSAGE = "what this simulation cannot show, so test it on the board:"
+#: The look's line above the must lines of the brief that no passed scenario named in a step's `name:`.
+MUST_UNNAMED_HEADING_MESSAGE = "no scenario named these must lines, so test them on the board:"
+#: What the person reads (and the deploy question, which puts the caveats first) of those lines: the count, singular or plural (option C).
+MUST_UNNAMED_CAVEAT_MESSAGES = ("%d must line was not named by any scenario (see the look)",
+                                "%d must lines were not named by any scenario (see the look)")
+#: Why the brief's must lines could not be compared with the step names, when project.json cannot be read.
+WHY_BRIEF_UNREADABLE = "the project's brief cannot be read"
+#: What the person does about a not-checked comparison of the must lines.
+MUST_UNNAMED_ADVICE = "run its scenario again to name its steps"
 # --- end MVP ---
 
 
@@ -233,18 +245,31 @@ def _recorded(value):
 VERDICT_STOP, VERDICT_WARNING, VERDICT_MATCH = "stop", "warning", "match"
 
 
+# --- MVP ---
+@dataclass(frozen=True)
+class RunGaps:
+    """Value: what the evidence says of the image, which is nothing when it refused the image. `simulation` is None or its word, `caveats` are sentences,
+    `limits` are sim_project.Limit and `unnamed_must` are the must lines that no passed scenario named."""
+
+    simulation: str = None
+    caveats: tuple = ()
+    limits: tuple = ()
+    unnamed_must: tuple = ()
+# --- end MVP ---
+
+
 class LookReport:
     """Value. What the look found. `stops` are Stops (a code and a sentence), `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
-    warning or stop. `simulation`, `caveats` and `limits` (sim_project.Limit) are what the evidence says of the image, or None, [] and [] when it refused the image.
+    warning or stop. `gaps` is the RunGaps of the image; `simulation`, `caveats`, `limits` and `unnamed_must` read it as they were (None and lists when the evidence refused the image).
     `last_deploy` is the deploy_record_store.LastDeploy of the board's MAC, whatever the evidence said."""
 
-    def __init__(self, port, reading, record, image, image_why, simulation, caveats, limits, last_deploy, also_on=None,
+    def __init__(self, port, reading, record, image, image_why, gaps, last_deploy, also_on=None,
                  image_code=board_codes.EVIDENCE_REFUSES):
         self.port, self.reading, self.record = port, reading, record
         self.also_on = None if also_on is None else tuple(also_on)  # None: a --port was named, so no node list was read
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
         self.image_code = image_code  # the board_codes code of image_why
-        self.simulation, self.caveats, self.limits = simulation, list(caveats), list(limits)
+        self.gaps = gaps
         self.last_deploy = last_deploy
         self.fields = compare(reading, record)
         self.stops, self.warnings = [], []
@@ -259,6 +284,24 @@ class LookReport:
                         for name, read_key, _, _ in FIELDS if self.fields[name] == "unknown"}
         self.verdict = (VERDICT_STOP if self.stops else
                         VERDICT_WARNING if self.warnings or self.unknown else VERDICT_MATCH)
+
+    @property
+    def simulation(self):
+        return self.gaps.simulation
+
+    @property
+    def caveats(self):
+        return list(self.gaps.caveats)
+
+    @property
+    def limits(self):
+        return list(self.gaps.limits)
+
+    # --- MVP ---
+    @property
+    def unnamed_must(self):
+        return list(self.gaps.unnamed_must)
+    # --- end MVP ---
 
     @property
     def status(self):
@@ -306,6 +349,7 @@ class LookReport:
                 "no_token_reason": self.no_token_reason() and self.no_token_reason().sentence,
                 "simulation": self.simulation, "caveats": list(self.caveats),
                 "limits": [{"component": limit.component, "sentence": limit.sentence} for limit in self.limits],
+                "unnamed_must": self.unnamed_must,
                 "last_deploy": self.last_deploy.to_dict()}
 
 
@@ -354,6 +398,10 @@ def report_lines(report, token=True):
     if report.limits:
         out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]
     # --- end MVP ---
+    # --- MVP ---
+    if report.unnamed_must:
+        out += [MUST_UNNAMED_HEADING_MESSAGE] + [sim_project.LIMIT_PREFIX + line for line in report.unnamed_must]
+    # --- end MVP ---
     if report.verdict == VERDICT_MATCH:
         out.append("all fields match the board record %s." % name)
     if token:
@@ -374,14 +422,17 @@ class LookService:
         listed = None if port else self.finder.require_one_board("look.py")
         port = port or listed.device
         reading = self.reader.read(port)
-        image, why, code, simulation, caveats, limits = None, None, board_codes.EVIDENCE_REFUSES, None, [], []
+        image, why, code, gaps = None, None, board_codes.EVIDENCE_REFUSES, RunGaps()
         try:
             found = project_image.ProjectImage(project)
             image = found.path
             why = evidence.why_not_ready(found)
             # --- MVP ---
             if why is None:  # what tested an image is stated only for one the evidence passes
-                simulation, caveats, limits = evidence.simulation, evidence.caveats(found), evidence.find_limits(found)
+                caveats = list(evidence.caveats(found))
+                unnamed = self.find_unnamed_must(evidence, found, project)
+                caveats += self.say_unnamed_must_caveats(unnamed)
+                gaps = RunGaps(evidence.simulation, tuple(caveats), tuple(evidence.find_limits(found)), tuple(unnamed.lines))
         except project_image.DeployError as cannot:
             why, code = str(cannot), cannot.reason  # image stays set when only the logs could not be read: the fit check needs it
         # --- MVP --- P436: the image check needs a tool that is missing; image stays set, there is no token
@@ -389,8 +440,28 @@ class LookService:
             why, code = str(cannot), board_codes.TOOL_MISSING
         # --- end MVP ---
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
-        return LookReport(port, reading, record, image, why, simulation, caveats, limits, deploy_record_store.DeployRecordStore().read_last_deploy(reading.mac),
+        return LookReport(port, reading, record, image, why, gaps, deploy_record_store.DeployRecordStore().read_last_deploy(reading.mac),
                           listed.also_on if listed else None, code)
+
+    # --- MVP ---
+    @staticmethod
+    def find_unnamed_must(evidence, found, project):
+        """The image_evidence.UnnamedMust of the project's brief for this evidence. A brief that cannot be read is a reason, never a crash."""
+        try:
+            must = brief.Brief.from_project(project).must
+        except OSError:
+            return image_evidence.UnnamedMust([], WHY_BRIEF_UNREADABLE)
+        return evidence.find_unnamed_must(found, list(must))
+
+    @staticmethod
+    def say_unnamed_must_caveats(unnamed):
+        """The caveats the unnamed must lines bring: the not-checked sentence when the logs could not say, else (option C) the count; never for no line."""
+        if unnamed.why:
+            return ["%s; %s" % (outcomes.NOT_CHECKED_MESSAGE % unnamed.why, MUST_UNNAMED_ADVICE)]
+        if unnamed.lines:
+            return [MUST_UNNAMED_CAVEAT_MESSAGES[len(unnamed.lines) != 1] % len(unnamed.lines)]
+        return []
+    # --- end MVP ---
 
     @staticmethod
     def record_of(project):

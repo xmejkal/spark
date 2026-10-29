@@ -17,11 +17,15 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_doctor  # noqa: E402
+import board_look  # noqa: E402
+import deploy_gate  # noqa: E402
 import boards  # noqa: E402
 import flash_image  # noqa: E402
 import look  # noqa: E402
 import sim_project  # noqa: E402
 import tools  # noqa: E402
+from fakes import FakeConsent  # noqa: E402
+from spark.core import outcomes  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
 RESTART = "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
@@ -250,6 +254,61 @@ class WhatThePersonSeesTest(LookScriptCase):
         data_ = json.loads(self.go("--json")[1][-1])["data"]
         self.assertEqual((data_["simulation"], len(data_["caveats"])), ("passed", 1))
         self.assertTrue(data_["caveats"][0].startswith("the passed run's scenario has no set-control step"))
+
+    def brief_with_must(self, *must):
+        (self.project / ".spark").mkdir(exist_ok=True)
+        (self.project / ".spark" / "project.json").write_text(json.dumps({"must": list(must)}))
+
+    def run_without_step_names(self):
+        """A passed run whose log is from before step names: its header holds no names marker and no name line."""
+        self.run_the_scenario()
+        log = next((self.project / "sim" / "runs").glob("*.log"))
+        log.write_text("".join(line for line in log.read_text().splitlines(True) if not line.startswith(("step names: ", "step name: "))))
+
+    def not_checked(self, data_):
+        return [each for each in data_["caveats"] if each.startswith(outcomes.NOT_CHECKED_MESSAGE.split("%s")[0])]
+
+    def test_the_look_exits_0_and_lists_the_unnamed_must_lines_in_text_and_json(self):
+        self.brief_with_must("the LED lights", "the LED goes off")
+        self.run_the_scenario()
+        code, said, _ = self.go()
+        self.assertEqual(code, 0)
+        self.assertEqual(said[said.index("  " + board_look.MUST_UNNAMED_HEADING_MESSAGE) + 1:][:2], ["  - the LED lights", "  - the LED goes off"])
+        code, lines, _ = self.go("--json")
+        data_ = json.loads(lines[-1])["data"]
+        self.assertEqual((code, data_["unnamed_must"], self.not_checked(data_)), (0, ["the LED lights", "the LED goes off"], []))
+
+    def test_the_caveats_hold_not_checked_exactly_when_a_log_could_not_say(self):
+        self.brief_with_must("the LED lights")
+        self.run_without_step_names()
+        code, lines, _ = self.go("--json")
+        data_ = json.loads(lines[-1])["data"]
+        self.assertEqual((code, data_["unnamed_must"], len(self.not_checked(data_))), (0, [], 1))
+        self.assertEqual(json.loads(lines[-1])["status"], "ok")
+
+    def test_an_older_log_and_no_must_line_say_nothing(self):
+        self.brief_with_must()
+        self.run_without_step_names()
+        code, lines, _ = self.go("--json")
+        data_ = json.loads(lines[-1])["data"]
+        self.assertEqual((code, data_["unnamed_must"], self.not_checked(data_)), (0, [], []))
+
+    def test_a_scenario_that_names_every_must_line_says_nothing(self):
+        self.brief_with_must("the LED lights")
+        self.scenario.write_text("name: s\nversion: 1\nsteps:\n  - name: the LED lights\n    wait-serial: on\n")
+        self.run_the_scenario()
+        data_ = json.loads(self.go("--json")[1][-1])["data"]
+        self.assertEqual((data_["unnamed_must"], self.not_checked(data_)), ([], []))
+
+    def test_the_count_of_the_unnamed_must_lines_reaches_the_deploy_question_apart_from_not_checked(self):
+        self.brief_with_must("a", "b")
+        self.run_the_scenario()
+        report = self.look()
+        consent = FakeConsent(True)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", report.caveats)
+        self.assertEqual(len(consent.asked), 1)
+        self.assertIn("2 must lines were not named by any scenario (see the look)", consent.asked[0])
+        self.assertEqual(self.not_checked({"caveats": report.caveats}), [])
 
     def test_the_json_look_carries_the_last_deploy_flat(self):
         self.run_the_scenario()

@@ -502,7 +502,7 @@ class LookReportToDictTest(LookCase):
             "fields": {"chip": "same", "flash": "same"}, "stops": [], "warnings": [], "unknown": {},
             "verdict": "match", "status": outcomes.OK, "token": report.token(), "no_token_reason": None,
             # LookCase's scenario only waits for text (the P345 caveat), so the passed run did not press anything
-            "simulation": "passed", "caveats": [NO_CONTROL_NO_PIN], "limits": [],
+            "simulation": "passed", "caveats": [NO_CONTROL_NO_PIN], "limits": [], "unnamed_must": [],
             "last_deploy": {"state": "none-recorded", "why": None, "project": None, "verdict": None, "deployed": None}})
         self.assertIsNotNone(as_dict["token"])
         json.dumps(as_dict)
@@ -561,19 +561,24 @@ class TheLookStatesTheSimulationTest(LookCase):
 
     def test_two_caveats_are_two_lines_in_the_evidence_s_order(self):
         self.run_the_scenario()
-        evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value=None))
-        evidence.caveats.return_value = ["first", "second"]
-        evidence.find_limits.return_value = []
+        evidence = self.passing(caveats=["first", "second"])
         lines = board_look.report_lines(self.look(evidence=evidence), token=False)
         self.assertEqual(lines[-4:-1], ["  simulation: passed", "  first", "  second"])
 
-    def limited(self, *limits, caveats=("first",)):
-        """A LookReport whose evidence passes the image and gives these caveats and (component, sentence) limits."""
-        self.run_the_scenario()
+    @staticmethod
+    def passing(caveats=(), limits=(), unnamed=()):
+        """Evidence that passes the image and gives these caveats, sim_project.Limit limits and unnamed must lines (the only Mock a look needs)."""
         evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value=None))
         evidence.caveats.return_value = list(caveats)
-        self.found = evidence.find_limits.return_value = [sim_project.Limit(*each) for each in limits]
-        return self.look(evidence=evidence)
+        evidence.find_limits.return_value = list(limits)
+        evidence.find_unnamed_must.return_value = image_evidence.UnnamedMust(list(unnamed), None)
+        return evidence
+
+    def limited(self, *limits, caveats=("first",), unnamed=()):
+        """A LookReport whose evidence passes the image and gives these caveats, (component, sentence) limits and unnamed must lines."""
+        self.run_the_scenario()
+        self.found = [sim_project.Limit(*each) for each in limits]
+        return self.look(evidence=self.passing(caveats, self.found, unnamed))
 
     def test_the_limits_follow_the_caveats_under_a_heading_and_come_before_the_match_and_the_token(self):
         report = self.limited(("ONBOARD_DISPLAY", "no part for the display. Test it on the board."),
@@ -603,6 +608,80 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.found.clear()  # the evidence's list, which the report must not share
         self.assertEqual(report.limits, [("A", "first")])
 
+    def test_the_unnamed_must_lines_follow_the_limits_under_a_heading_and_come_before_the_match_and_the_token(self):
+        report = self.limited(("ONBOARD_DISPLAY", "no part"), unnamed=("the LED blinks", "the button stops it"))
+        lines = board_look.report_lines(report)
+        self.assertEqual(lines[lines.index("  - ONBOARD_DISPLAY \u2014 no part"):-1], [
+            "  - ONBOARD_DISPLAY \u2014 no part", "  " + board_look.MUST_UNNAMED_HEADING_MESSAGE, "  - the LED blinks",
+            "  - the button stops it", "  all fields match the board record xiao-esp32-c6."])
+        self.assertTrue(lines[-1].startswith("  token  "))
+
+    def test_no_unnamed_must_lines_print_no_heading(self):
+        lines = board_look.report_lines(self.limited(), token=False)
+        self.assertNotIn("  " + board_look.MUST_UNNAMED_HEADING_MESSAGE, lines)
+
+    def test_a_newline_in_an_unnamed_must_line_shows_as_a_question_mark_and_the_json_keeps_it_raw(self):
+        report = self.limited(unnamed=("a\nb\x1b[31m",))
+        self.assertIn("  - a?b?[31m", board_look.report_lines(report, token=False))
+        as_dict = report.to_dict()
+        self.assertEqual(as_dict["unnamed_must"], ["a\nb\x1b[31m"])
+        json.dumps(as_dict)
+        as_dict["unnamed_must"].clear()
+        self.assertEqual(len(report.to_dict()["unnamed_must"]), 1)
+
+    def test_the_gaps_replace_four_parameters_and_the_report_reads_them_as_before(self):
+        gaps = board_look.RunGaps("passed", ("c",), (sim_project.Limit("X", "y"),), ("m",))
+        self.assertEqual(gaps, board_look.RunGaps("passed", ("c",), (sim_project.Limit("X", "y"),), ("m",)))
+        self.assertEqual(board_look.RunGaps(), board_look.RunGaps(None, (), (), ()))
+
+    def test_a_passed_run_that_names_a_must_line_leaves_the_other_unnamed(self):
+        (self.project / ".spark").mkdir()
+        (self.project / ".spark" / "project.json").write_text(json.dumps({"must": ["the LED lights", "the LED goes off"]}))
+        self.scenario.write_text("name: s\nversion: 1\nsteps:\n  - name: The  LED lights\n    set-control: { part-id: b, name: pressed, value: 1 }\n"
+                                 "  - expect-pin: { part-id: led, pin: A, value: 1 }\n")
+        self.run_the_scenario()
+        report = self.look()
+        self.assertEqual(report.unnamed_must, ["the LED goes off"])
+        self.assertEqual(report.caveats, [board_look.MUST_UNNAMED_CAVEAT_MESSAGES[0] % 1])
+        self.assertEqual(report.to_dict()["unnamed_must"], ["the LED goes off"])
+
+    def test_two_unnamed_must_lines_are_counted_in_the_plural(self):
+        (self.project / ".spark").mkdir()
+        (self.project / ".spark" / "project.json").write_text(json.dumps({"must": ["a", "b"]}))
+        self.scenario.write_text(CONTROLLED_SCENARIO)
+        self.run_the_scenario()
+        self.assertEqual(self.look().caveats, [board_look.MUST_UNNAMED_CAVEAT_MESSAGES[1] % 2])
+
+    def test_a_brief_with_no_must_line_adds_neither_a_line_nor_a_caveat(self):
+        self.scenario.write_text(CONTROLLED_SCENARIO)
+        self.run_the_scenario()
+        report = self.look()
+        self.assertEqual((report.unnamed_must, report.caveats), ([], []))
+
+    def test_a_brief_that_cannot_be_read_is_a_not_checked_caveat_and_no_line(self):
+        (self.project / ".spark").mkdir()
+        brief = self.project / ".spark" / "project.json"
+        brief.write_text(json.dumps({"must": ["a"]}))
+        brief.chmod(0)
+        self.addCleanup(brief.chmod, 0o644)
+        self.scenario.write_text(CONTROLLED_SCENARIO)
+        self.run_the_scenario()
+        report = self.look()
+        self.assertEqual(report.unnamed_must, [])
+        self.assertEqual(report.caveats, ["not checked: %s; %s" % (board_look.WHY_BRIEF_UNREADABLE, board_look.MUST_UNNAMED_ADVICE)])
+
+    def test_no_simulation_names_no_unnamed_must_line(self):
+        (self.project / ".spark").mkdir()
+        (self.project / ".spark" / "project.json").write_text(json.dumps({"must": ["a"]}))
+        self.run_the_scenario()
+
+        class Ready(image_evidence.NoSimulationEvidence):
+            def why_not_ready(self, image):
+                return None
+
+        report = self.look(evidence=Ready(self.project))
+        self.assertEqual((report.unnamed_must, report.caveats), ([], ["no simulation tested this image"]))
+
     def test_no_limits_print_no_heading(self):
         lines = board_look.report_lines(self.limited(), token=False)
         self.assertFalse([line for line in lines if "cannot show" in line])
@@ -618,7 +697,8 @@ class TheLookStatesTheSimulationTest(LookCase):
         report = self.look(evidence=evidence)
         evidence.caveats.assert_not_called()
         evidence.find_limits.assert_not_called()
-        self.assertEqual((report.simulation, report.caveats), (None, []))
+        evidence.find_unnamed_must.assert_not_called()
+        self.assertEqual((report.simulation, report.caveats, report.unnamed_must), (None, [], []))
 
     def test_a_log_that_cannot_be_read_gives_no_simulation_and_no_caveat(self):
         self.run_the_scenario()
