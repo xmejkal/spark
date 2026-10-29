@@ -57,15 +57,23 @@ class FactProblemsTest(unittest.TestCase):
     def test_an_unverified_fact_with_no_value_needs_no_reason(self):
         self.assertEqual(provenance.fact_problems("facts.a", {"value": None, "verified": False, "source": "s"}), [])
 
+    def test_a_verified_flag_that_is_no_bool_and_a_source_that_is_no_words_are_one_problem_each(self):
+        # P374: a bench result is `verified` true or false and names a source; "yes" and "" are neither.
+        good = {"value": 3, "verified": True, "source": "bench, 2026-10-29, meter, Petr"}
+        cases = [({"verified": "yes"}, "facts.a has verified 'yes', but it must be true or false"),
+                 ({"verified": 1}, "facts.a has verified 1, but it must be true or false"),
+                 ({"source": ""}, "facts.a has source '', but it must be words that say where the value came from"),
+                 ({"source": "  "}, "facts.a has source '  ', but it must be words that say where the value came from"),
+                 ({"source": None}, "facts.a has source None, but it must be words that say where the value came from")]
+        for change, sentence in cases:
+            with self.subTest(change=change):
+                self.assertEqual(provenance.fact_problems("facts.a", dict(good, **change)), [sentence])
+
     def test_a_fact_that_is_no_object_is_one_problem(self):
         for fact in ("s", 3, None, ["value"], True):
             with self.subTest(fact=fact):
                 self.assertEqual(provenance.fact_problems("facts.a", fact),
                                  ["facts.a is %r, but it is an object" % (fact,)])
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 def joystick(**overrides):
@@ -108,3 +116,29 @@ class ListUnverifiedFactsTest(unittest.TestCase):
         self.assertIn("repair the file by hand", rows[0]["why_it_matters"])
         self.assertEqual(provenance.list_unverified_facts({}), [])
 
+
+class ListEntryProblemsTest(unittest.TestCase):
+    GOOD = {"value": 3.3, "verified": True, "source": "bench, 2026-10-29, meter on the owned board, Petr Smejkal"}
+
+    def test_a_good_entry_has_no_problem_and_a_nothing_is_the_callers_to_refuse(self):
+        self.assertEqual(provenance.list_entry_problems({"runs_at_3v3": self.GOOD}, {"other": self.GOOD}), [])
+        self.assertEqual(provenance.list_entry_problems({"runs_at_3v3": self.GOOD}, None), [])
+        for nothing in (None, {}, []):
+            self.assertEqual(provenance.list_entry_problems(nothing, [1]), [])
+
+    def test_entries_that_are_no_object_give_one_problem(self):
+        self.assertEqual(provenance.list_entry_problems([self.GOOD], {}), ["facts is [%r], but it is an object of facts" % self.GOOD])
+
+    def test_a_name_outside_lowercase_letters_digits_and_underscores_is_one_problem(self):
+        for name in ("Bad Name", "line\nbreak", "ünï", "a-b"):
+            with self.subTest(name=name):
+                self.assertEqual(provenance.list_entry_problems({name: self.GOOD}, {}),
+                                 ["%r is no fact name: use lowercase letters, digits and underscores" % name])
+
+    def test_a_held_facts_that_is_no_object_is_one_problem_to_repair_by_hand(self):
+        self.assertEqual(provenance.list_entry_problems({"a": self.GOOD}, ["x"]),
+                         ["the record's own facts is ['x'], but it is an object — repair the file by hand first"])
+
+
+if __name__ == "__main__":
+    unittest.main()

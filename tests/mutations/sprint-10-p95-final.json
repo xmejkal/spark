@@ -18,7 +18,7 @@
  {"file": "scripts/drawer.py", "name": "only the label is cleaned",
   "find": "    values = {key: (value if key == \"is\" else _scrubbed(value)) for key, value in values.items()}", "replace": "    values = {key: (clean(value) if key == \"label\" and isinstance(value, str) else value) for key, value in values.items()}"},
  {"file": "scripts/drawer.py", "name": "a nested string is not cleaned",
-  "find": "        return {key: item if key in (\"sha256\", \"does\") else _scrubbed(item) for key, item in value.items()}", "replace": "        return value"},
+  "find": "        return {key: item if key in skip else _scrubbed(item, cap, skip) for key, item in value.items()}", "replace": "        return value"},
  {"file": "scripts/text_guards.py", "name": "C1 and bidi controls stay",
   "find": "[\\x00-\\x1f\\x7f-\\x9f\\u200e\\u200f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]+", "replace": "[\\x00-\\x1f\\x7f]+"},
  {"file": "scripts/parts.py", "name": "a negative --from is accepted",

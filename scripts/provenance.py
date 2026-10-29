@@ -4,6 +4,8 @@ their facts by one rule. A fact is {value, verified, source}, and an unverified 
 `parts.validate` and `boards.validate` call it.
 """
 
+import re
+
 
 # --- MVP ---
 #: Each fact must answer all three, or it is an opinion with a number attached.
@@ -21,6 +23,23 @@ def read_value(record, *path):
     return record.get("value") if isinstance(record, dict) else record
 
 
+#: A fact is written under a name of lowercase letters, digits and underscores; a name is a key that no scrub cleans.
+FACT_NAME = re.compile(r"[a-z0-9_]+")
+
+
+def list_type_problems(where, block):
+    """
+    The kinds that `verified` and `source` of a `block` must be, when they are there: `verified` true or false, and `source`
+    words (not blank). A key that is missing is the caller's own sentence (`fact_problems` says "has no 'x'"). It never raises.
+    """
+    problems = []
+    if "verified" in block and not isinstance(block["verified"], bool):
+        problems.append("%s has verified %r, but it must be true or false" % (where, block["verified"]))
+    if "source" in block and not (isinstance(block["source"], str) and block["source"].strip()):
+        problems.append("%s has source %r, but it must be words that say where the value came from" % (where, block["source"]))
+    return problems
+
+
 def fact_problems(where, fact):
     """
     Every way `fact` breaks the rule, as sentences that start with `where` (the caller's name for it). A fact that is
@@ -32,6 +51,7 @@ def fact_problems(where, fact):
     for key in REQUIRED_FACT_KEYS:
         if key not in fact:
             problems.append("%s has no %r — a number with no provenance is an opinion" % (where, key))
+    problems.extend(list_type_problems(where, fact))
     if fact.get("verified") and fact.get("value") is None:
         problems.append("%s is marked verified but has no value" % where)
     if fact.get("verified") is False and fact.get("value") is not None and not fact.get("why_it_matters"):
@@ -39,6 +59,30 @@ def fact_problems(where, fact):
         problems.append("%s is an unverified value with no why_it_matters; say what depends on it or do not "
                         "carry the number" % where)
     return problems
+
+
+def list_fact_problems(facts):
+    """`fact_problems` of each entry of a `facts` object, spelled `facts.<name>`. A `facts` that is no object gives one problem; it never raises."""
+    if not isinstance(facts, dict):
+        return ["facts is %r, but it is an object of facts" % (facts,)]
+    return [problem for name, fact in facts.items() for problem in fact_problems("facts.%s" % name, fact)]
+
+
+def list_entry_problems(entries, held):
+    """
+    Why `entries`, facts to write into a record whose own `facts` is `held`, cannot be written (P374). Each name is
+    lowercase letters, digits and underscores, and each entry holds under `list_fact_problems`. A `held` that is neither absent nor
+    an object is one problem: repair the file by hand first, it is never read as empty. Nothing, `{}` and `[]` give no
+    problem, because `parts._absent` refuses them already.
+    """
+    if entries is None or entries == {} or entries == []:
+        return []
+    problems = [] if held is None or isinstance(held, dict) else [
+        "the record's own facts is %r, but it is an object — repair the file by hand first" % (held,)]
+    if isinstance(entries, dict):
+        problems += ["%r is no fact name: use lowercase letters, digits and underscores" % name
+                     for name in entries if not FACT_NAME.fullmatch(name)]
+    return problems + list_fact_problems(entries)
 
 
 #: A top-level block that vouches for a fact of the record (`pin_order_proof` for `pin_order`): the fact it vouches for,

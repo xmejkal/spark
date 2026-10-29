@@ -730,6 +730,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
                 if key not in body:
                     problems.append("body_mm has no %r — a dimension with no provenance is a "
                                     "guess, and a generator cannot tell the difference" % key)
+            problems.extend(provenance.list_type_problems("body_mm", body))
             if body.get("verified") is False and not body.get("why_it_matters"):
                 problems.append("body_mm is unverified with no why_it_matters; say what depends "
                                 "on it — here, whether the modules physically fit the board")
@@ -833,8 +834,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
                 "land on one net and short into each other. Give each its own `polarity`, or they "
                 "are not separate outputs" % (", ".join(map(str, pins)), rail, polarity))
 
-    for name, fact in (part.get("facts") or {}).items():
-        problems.extend(provenance.fact_problems("facts.%s" % name, fact))
+    problems.extend(provenance.list_fact_problems(part.get("facts") or {}))
 
     problems.extend(host_part_problems(part))
     problems.extend(i2c_pullup_problems(part))
@@ -1966,6 +1966,15 @@ def _write_record(path, record):
     return store.write_file(path, json.dumps(record, indent=2, ensure_ascii=False) + "\n")
 
 
+def _set_by_name(record, values):
+    """`record` with `values` set, and the values it had: `facts` takes the written names over the held ones, the other names stay (P374)."""
+    after, was = dict(record, **values), {key: record.get(key) for key in values}
+    if isinstance(values.get("facts"), dict):
+        held = record.get("facts") if isinstance(record.get("facts"), dict) else {}
+        after["facts"], was["facts"] = dict(held, **values["facts"]), {name: held.get(name) for name in values["facts"]}
+    return after, was
+
+
 def _set_in_home(part_id, project, values, dry_run, refuse):
     """
     Set fields of a part record in its own home (§5.4) — the catalog's, a project's, or a listed project's behind a shelf
@@ -1982,11 +1991,11 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
     record = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(record, dict):
         return Answer(problems=[_problem(part_id, "%s is not a JSON object (%s) — repair the file by hand first" % (part_id, path))])
-    after = dict(record, **values)
+    after, was = _set_by_name(record, values)
     wrong = refuse(record, after, path)
     if wrong:
         return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
-    was, changes = {key: record.get(key) for key in values}, after != record
+    changes = after != record
     if changes and not dry_run:
         _write_record(path, after)
     shelf_copy = _refresh_shelf_copy(path, after, source, dry_run) if source else None
@@ -2009,22 +2018,22 @@ def _op_function_set(args, project):
 
 
 def _op_fact_set(args, project):
-    """Fill a record's chain facts, or set what it says of itself (about, description, tags — cleaned and capped as an entry's are)."""
+    """Fill a record's chain facts, write `facts` entries by name (a bench result and its source, P374), or set what it says of itself (about, description, tags)."""
     import drawer
     part_id, name = args.fact_set
     facts, unreadable = _read_json_input(name)
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
-    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING)):
-        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s; or of what a "
+    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + ("facts",))):
+        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s, or `facts` entries by name; or of what a "
                                                   "record says of itself: %s" % (", ".join(CHAIN_FACTS), ", ".join(drawer.DESCRIBING)))])
-    facts = {key: drawer.scrub(key, value) if key in drawer.DESCRIBING else value for key, value in facts.items()}
+    facts = {key: drawer.scrub(key, value) if key in drawer.DESCRIBING + drawer.PROVENANCE_KEYS else value for key, value in facts.items()}
     wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])]
     if wrong:
         return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
     return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: (
         ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
-        + sorted(set(broken_problems(after, path)) - set(broken_problems(record, path)))))
+        + sorted(set(provenance.list_entry_problems(facts.get("facts"), record.get("facts"))) | set(broken_problems(after, path)) - set(broken_problems(record, path)))))
 
 
 def _op_catalog(args, project):
