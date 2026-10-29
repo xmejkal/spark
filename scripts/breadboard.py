@@ -24,10 +24,8 @@ wiring-record.json, which it keeps beside the sheet):
     shows, each part as spark's own pictogram (data/pictograms/). A part, a resistor or a jumper you moved in
     breadboard.json stays where you put it at the next build (P273, P287), if it still fits: a resistor with its
     joined pin in the row it joins, a jumper between the two rows the new layout joins (it keeps its holes and bends,
-    not its color). What it cannot keep is named on stderr, with why. A board in data/wokwi-geometry.json is drawn (the XIAO ESP32-C6)
-    on a half breadboard, and a board with a complete record (the FireBeetle 2 ESP32-S3) is drawn from the record on a
-    63-column breadboard, as breadboard.svg alone, because Wokwi has no part with its pins (P412). Rails are not drawn
-    yet; otherwise the sheet says what is missing, with a code (breadboard_drawing.CODES), and an old drawing is removed;
+    not its color). What it cannot keep is named on stderr, with why. The XIAO ESP32-C6 is drawn on a half breadboard, and a board with a
+    complete record (the FireBeetle) from the record on 63 columns, as breadboard.svg alone (P412); no rails yet; else the sheet says why, with a code, and an old drawing is removed;
   - after a rebuild (P300), "Changes since the last build" before the steps: one line for each thing to change on
     the bench, so you do not read the whole sheet again. A line says what to put in, take out, move or swap, and names
     a jumper by its two ends and the color the earlier sheet showed. It never names holes: you pick your own free rows.
