@@ -10,10 +10,10 @@ import hashlib
 import json
 import subprocess
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 import board_grant
+from brief import UnnamedMust
 import flash_image
 from spark.core import outcomes
 from spark.core import text_guards
@@ -22,7 +22,9 @@ from run_scenario import (EXPECT_PIN, NO_MAIN, READY, SET_CONTROL, WHY_LOG_UNREA
                           file_hashes)
 
 #: Why no must line can be compared with the names of the steps: every passed log is older than step names (an outcomes reason).
-WHY_NO_NAMES = "no passed run's log names its steps"
+WHY_NO_NAMES = "the passed run's log is older than step names"
+#: What the person does about a log that cannot say which must lines its steps name.
+NAMES_ADVICE = "run its scenario again to name its steps"
 #: What `ImageEvidence.simulation` says: a passed run tested the image, or no simulation did (the records keep it).
 SIMULATION_PASSED, SIMULATION_NONE = "passed", "none"
 #: What the person reads before the gate question when no simulation tested the image (deploy.py's docs quote it).
@@ -103,14 +105,6 @@ say(ok=True)
 
 
 # --- MVP ---
-@dataclass(frozen=True)
-class UnnamedMust:
-    """Value: the must lines of the brief that no passed scenario named. `lines` is a list, `why` is None, or an outcomes reason that the logs could not say."""
-
-    lines: list
-    why: str = None
-
-
 def must_key(text):
     """What a must line and a step name are compared by: the text with its spaces collapsed, in lower case. No fuzzy match."""
     return " ".join(text.split()).casefold()
@@ -207,7 +201,7 @@ class ImageEvidence(abc.ABC):
     # --- MVP ---
     def find_unnamed_must(self, image, must):
         """The UnnamedMust of the brief's `must` lines for `image`: none here, because no record of this evidence names a step."""
-        return UnnamedMust([], None)
+        return UnnamedMust([])
     # --- end MVP ---
 
     def way_out(self, image):
@@ -267,18 +261,29 @@ class PassedRunEvidence(ImageEvidence):
     # --- MVP ---
     def find_unnamed_must(self, image, must):
         """
-        The UnnamedMust of `must`: the lines that no step name of a passed log equals under `must_key`. Only the logs whose names are
-        RECORDED decide, so an older log beside a newer one is ignored. With none RECORDED, no line is claimed and `why` says so. With no
-        must line there is nothing to say and no reason.
+        The UnnamedMust of `must`: the lines that no step name of a passed log equals under `must_key`, by the logs whose names are
+        RECORDED. A log that is NOT_CHECKED for names always gets a caveat, also beside a RECORDED one. A log from before names gets one
+        only when no log is RECORDED, and then no line is claimed. A caveat is left out when the log's control caveat already tells the
+        person to run its scenario again. With no must line there is nothing to say.
         """
         if not must:
-            return UnnamedMust([], None)
-        read = [ScenarioSteps.from_log(log) for log in image.find_passed_logs()]
+            return UnnamedMust([])
+        logs = image.find_passed_logs()
+        read = [ScenarioSteps.from_log(log) for log in logs]
         named = ScenarioSteps.merge(read)
+        counted = named.count(SET_CONTROL)
+        caveats = []
+        for log, each in zip(logs, read):
+            why = each.names_why if each.names_state == outcomes.NOT_CHECKED else WHY_NO_NAMES
+            if each.names_state == outcomes.RECORDED or (each.names_state == outcomes.NONE_RECORDED and named.names_state == outcomes.RECORDED):
+                continue
+            if each.state != outcomes.RECORDED and not counted:
+                continue  # the control caveat of this log already says to run its scenario again
+            caveats.append(PassedRunEvidence._named(log, "%s; %s" % (outcomes.NOT_CHECKED_MESSAGE % why, NAMES_ADVICE), len(logs) > 1))
         if named.names_state != outcomes.RECORDED:
-            return UnnamedMust([], next((each.names_why for each in read if each.names_state == outcomes.NOT_CHECKED), WHY_NO_NAMES))
+            return UnnamedMust([], tuple(caveats))
         said = {must_key(name) for name in named.names}
-        return UnnamedMust([line for line in must if must_key(line) not in said], None)
+        return UnnamedMust([line for line in must if must_key(line) not in said], tuple(caveats))
     # --- end MVP ---
 
     @staticmethod

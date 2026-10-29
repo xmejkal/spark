@@ -571,7 +571,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         evidence = mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value=None))
         evidence.caveats.return_value = list(caveats)
         evidence.find_limits.return_value = list(limits)
-        evidence.find_unnamed_must.return_value = image_evidence.UnnamedMust(list(unnamed), None)
+        evidence.find_unnamed_must.return_value = image_evidence.UnnamedMust(list(unnamed))
         return evidence
 
     def limited(self, *limits, caveats=("first",), unnamed=()):
@@ -642,7 +642,8 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.run_the_scenario()
         report = self.look()
         self.assertEqual(report.unnamed_must, ["the LED goes off"])
-        self.assertEqual(report.caveats, ["1 must line was not named by any scenario (see the look)"])
+        self.assertEqual(report.caveats, [])  # the count is the deploy question's, not a caveat of the look
+        self.assertEqual(report.question_caveats(), ["1 must line was not named by any scenario (see the look)"])
         self.assertEqual(report.to_dict()["unnamed_must"], ["the LED goes off"])
 
     def test_two_unnamed_must_lines_are_counted_in_the_plural(self):
@@ -650,13 +651,36 @@ class TheLookStatesTheSimulationTest(LookCase):
         (self.project / ".spark" / "project.json").write_text(json.dumps({"must": ["a", "b"]}))
         self.scenario.write_text(CONTROLLED_SCENARIO)
         self.run_the_scenario()
-        self.assertEqual(self.look().caveats, ["2 must lines were not named by any scenario (see the look)"])
+        self.assertEqual(self.look().question_caveats(), ["2 must lines were not named by any scenario (see the look)"])
 
     def test_a_brief_with_no_must_line_adds_neither_a_line_nor_a_caveat(self):
         self.scenario.write_text(CONTROLLED_SCENARIO)
         self.run_the_scenario()
         report = self.look()
         self.assertEqual((report.unnamed_must, report.caveats), ([], []))
+
+    def test_a_brief_that_exists_and_gives_no_must_list_is_a_not_checked_caveat_and_a_missing_one_is_not(self):
+        brief = self.project / ".spark" / "project.json"
+        brief.parent.mkdir()
+        self.scenario.write_text(CONTROLLED_SCENARIO)
+        self.run_the_scenario()
+        for text, why in (("{bad", "the project's brief is not valid JSON"), ("[1]", "the project's brief is not a JSON object"),
+                          ('{"must": "a"}', "the brief's must is not a list")):
+            brief.write_text(text)
+            with self.subTest(text=text):
+                self.assertEqual(self.look().caveats, ["not checked: %s; fix .spark/project.json, then look again" % why])
+        brief.unlink()
+        self.assertEqual(self.look().caveats, [])
+        brief.mkdir()  # a directory is no brief
+        self.assertEqual(self.look().caveats, [])
+
+    def test_a_brief_nested_too_deep_is_not_checked_and_the_look_goes_on(self):
+        brief = self.project / ".spark" / "project.json"
+        brief.parent.mkdir()
+        brief.write_text("[" * 200000)
+        self.scenario.write_text(CONTROLLED_SCENARIO)
+        self.run_the_scenario()
+        self.assertEqual(self.look().caveats, ["not checked: the project's brief cannot be read"])
 
     def test_a_brief_that_cannot_be_read_is_a_not_checked_caveat_and_no_line(self):
         (self.project / ".spark").mkdir()
@@ -668,7 +692,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.run_the_scenario()
         report = self.look()
         self.assertEqual(report.unnamed_must, [])
-        self.assertEqual(report.caveats, ["not checked: the project's brief cannot be read; run its scenario again to name its steps"])
+        self.assertEqual(report.caveats, ["not checked: the project's brief cannot be read"])
 
     def test_no_simulation_names_no_unnamed_must_line(self):
         (self.project / ".spark").mkdir()

@@ -8,8 +8,8 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "caveats reads only the first passed log",
-  "find": "logs = image.find_passed_logs()\n        read = ",
-  "replace": "logs = image.find_passed_logs()[:1]\n        read = "
+  "find": "logs = image.find_passed_logs()\n        read = [(log, ",
+  "replace": "logs = image.find_passed_logs()[:1]\n        read = [(log, "
  },
  {
   "file": "scripts/run_scenario.py",
@@ -62,7 +62,7 @@
  {
   "file": "scripts/board_look.py",
   "name": "report_lines prints the limits after the token",
-  "find": "    # --- MVP ---\n    if report.limits:\n        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]\n    # --- end MVP ---\n    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n",
+  "find": "    # --- MVP ---\n    if report.limits:\n        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]\n    # --- end MVP ---\n    # --- MVP ---\n    if report.unnamed_must:\n        out += [MUST_UNNAMED_HEADING_MESSAGE] + [sim_project.LIMIT_PREFIX + line for line in report.unnamed_must]\n    # --- end MVP ---\n    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n",
   "replace": "    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n    if report.limits:\n        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]\n"
  },
  {
@@ -74,8 +74,8 @@
  {
   "file": "scripts/board_look.py",
   "name": "the report shares the evidence's list of limits",
-  "find": "list(caveats), list(limits)",
-  "replace": "list(caveats), limits"
+  "find": "tuple(evidence.find_limits(found))",
+  "replace": "evidence.find_limits(found)"
  },
  {
   "file": "scripts/image_evidence.py",

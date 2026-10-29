@@ -40,6 +40,18 @@ class BriefTest(unittest.TestCase):
         for brief in (Brief.from_project(None), brief_of(None), brief_of("{not json"), brief_of("[1]")):
             self.assertEqual((brief.must, brief.prefer, brief.sellers), ((), None, None))
 
+    def test_a_file_that_gives_no_brief_has_a_problem_code_and_no_file_has_none(self):
+        self.assertEqual([brief_of(text).problem for text in (None, '{"must": []}', '{}', "{not json", "[1]", '{"must": "A"}', '{"must": null}')],
+                         [None, None, None, "bad-json", "not-object", "must-not-list", "must-not-list"])
+        self.assertIsNone(Brief.from_project(None).problem)
+        folder = Path(tempfile.mkdtemp())
+        (folder / ".spark" / "project.json").mkdir(parents=True)
+        self.assertIsNone(Brief.from_project(folder).problem)
+
+    def test_a_wrong_must_leaves_prefer_and_sellers_as_they_were_read(self):
+        brief = brief_of('{"must": "A", "prefer": ["Seeed"], "sellers": ["GME"]}')
+        self.assertEqual((brief.must, brief.prefer, brief.sellers), ((), ("seeed",), ("gme",)))
+
     def test_a_must_that_is_not_a_list_reads_as_empty(self):
         for text in ('{"must": "A"}', '{"must": 3}', '{"must": {"a": "b"}}', '{"must": null}'):
             self.assertEqual(brief_of(text).must, ())

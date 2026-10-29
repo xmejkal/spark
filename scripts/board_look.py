@@ -27,7 +27,6 @@ import boards
 import brief
 import deploy_record_store
 import flasher
-import image_evidence
 from spark.core import outcomes
 import project_image
 import sim_project
@@ -54,13 +53,16 @@ TOKEN_LINE = "token  %s  for deploy.py --token. It is not your yes: deploy.py as
 LIMITS_HEADING_MESSAGE = "what this simulation cannot show, so test it on the board:"
 #: The look's line above the must lines of the brief that no passed scenario named in a step's `name:`.
 MUST_UNNAMED_HEADING_MESSAGE = "no scenario named these must lines, so test them on the board:"
-#: What the person reads (and the deploy question, which puts the caveats first) of those lines: the count, singular or plural (option C).
+#: What the deploy question says of those lines (deploy_service adds it after the look's caveats): the count, singular or plural (option C).
 MUST_UNNAMED_CAVEAT_MESSAGES = ("%d must line was not named by any scenario (see the look)",
                                 "%d must lines were not named by any scenario (see the look)")
-#: Why the brief's must lines could not be compared with the step names, when project.json cannot be read.
+#: Why the brief's must lines could not be compared with the step names: the file cannot be read, or the brief.Brief.problem code.
 WHY_BRIEF_UNREADABLE = "the project's brief cannot be read"
-#: What the person does about a not-checked comparison of the must lines.
-MUST_UNNAMED_ADVICE = "run its scenario again to name its steps"
+BRIEF_PROBLEM_WHYS = {brief.PROBLEM_BAD_JSON: "the project's brief is not valid JSON",
+                      brief.PROBLEM_NOT_OBJECT: "the project's brief is not a JSON object",
+                      brief.PROBLEM_MUST_NOT_LIST: "the brief's must is not a list"}
+#: What the person does about a brief that exists and cannot give its must lines.
+BRIEF_ADVICE = "fix .spark/project.json, then look again"
 # --- end MVP ---
 
 
@@ -301,6 +303,11 @@ class LookReport:
     @property
     def unnamed_must(self):
         return list(self.gaps.unnamed_must)
+
+    def question_caveats(self):
+        """The caveats for the deploy question: the look's own, then (option C) one sentence that counts the unnamed must lines. The look lists them once."""
+        count = len(self.gaps.unnamed_must)
+        return self.caveats + ([MUST_UNNAMED_CAVEAT_MESSAGES[count != 1] % count] if count else [])
     # --- end MVP ---
 
     @property
@@ -431,7 +438,7 @@ class LookService:
             if why is None:  # what tested an image is stated only for one the evidence passes
                 caveats = list(evidence.caveats(found))
                 unnamed = self.find_unnamed_must(evidence, found, project)
-                caveats += self.say_unnamed_must_caveats(unnamed)
+                caveats += unnamed.caveats
                 gaps = RunGaps(evidence.simulation, tuple(caveats), tuple(evidence.find_limits(found)), tuple(unnamed.lines))
         except project_image.DeployError as cannot:
             why, code = str(cannot), cannot.reason  # image stays set when only the logs could not be read: the fit check needs it
@@ -446,21 +453,14 @@ class LookService:
     # --- MVP ---
     @staticmethod
     def find_unnamed_must(evidence, found, project):
-        """The image_evidence.UnnamedMust of the project's brief for this evidence. A brief that cannot be read is a reason, never a crash."""
+        """The brief.UnnamedMust of the project's brief for this evidence. A brief that cannot be read, or has no must list, is a not-checked caveat, never a crash."""
         try:
-            must = brief.Brief.from_project(project).must
-        except OSError:
-            return image_evidence.UnnamedMust([], WHY_BRIEF_UNREADABLE)
-        return evidence.find_unnamed_must(found, list(must))
-
-    @staticmethod
-    def say_unnamed_must_caveats(unnamed):
-        """The caveats the unnamed must lines bring: the not-checked sentence when the logs could not say, else (option C) the count; never for no line."""
-        if unnamed.why:
-            return ["%s; %s" % (outcomes.NOT_CHECKED_MESSAGE % unnamed.why, MUST_UNNAMED_ADVICE)]
-        if unnamed.lines:
-            return [MUST_UNNAMED_CAVEAT_MESSAGES[len(unnamed.lines) != 1] % len(unnamed.lines)]
-        return []
+            read = brief.Brief.from_project(project)
+        except (OSError, RecursionError):
+            return brief.UnnamedMust([], (outcomes.NOT_CHECKED_MESSAGE % WHY_BRIEF_UNREADABLE,))
+        if read.problem:
+            return brief.UnnamedMust([], ("%s; %s" % (outcomes.NOT_CHECKED_MESSAGE % BRIEF_PROBLEM_WHYS[read.problem], BRIEF_ADVICE),))
+        return evidence.find_unnamed_must(found, list(read.must))
     # --- end MVP ---
 
     @staticmethod

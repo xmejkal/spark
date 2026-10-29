@@ -76,6 +76,15 @@ class TheFlashTest(ServiceCase):
         self.service().deploy(report, report.token(), consent, self.lines.append)
         self.assertTrue(consent.asked[0].startswith("the passed run's scenario has no set-control step"), consent.asked[0])
 
+    def test_the_gate_question_counts_the_unnamed_must_lines_once_after_the_look_s_caveats(self):
+        (self.project / ".spark").mkdir()
+        (self.project / ".spark" / "project.json").write_text('{"must": ["a", "b"]}')
+        report = self.look()
+        consent = FakeConsent(True)
+        self.service().deploy(report, report.token(), consent, self.lines.append)
+        self.assertEqual(consent.asked[0].count("2 must lines were not named by any scenario (see the look)"), 1)
+        self.assertTrue(consent.asked[0].startswith("the passed run's scenario has no set-control step"), consent.asked[0])
+
     def test_a_failed_flash_is_a_deploy_error_with_the_sentence_and_the_hint(self):
         report = self.look()
         self.fails = True

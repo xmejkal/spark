@@ -304,7 +304,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario()
         report = self.look()
         consent = FakeConsent(True)
-        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", report.caveats)
+        deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", report.question_caveats())
         self.assertEqual(len(consent.asked), 1)
         self.assertIn("2 must lines were not named by any scenario (see the look)", consent.asked[0])
         self.assertEqual(self.not_checked({"caveats": report.caveats}), [])
