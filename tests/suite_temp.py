@@ -5,7 +5,7 @@ One run of the suite on main c49a17e left 2,291 entries, 26 MB, in an empty temp
 hook runs the suite at every push: 281 `tempfile.mkdtemp()` calls in 28 test files (an AST count at
 c49a17e), many in helpers outside any test, a lock file per scratch store, a scratch store per process.
 Removing each where it is made would be 281 edits, and the next test written would leak again. Instead
-every test module imports this first: it makes ONE folder under whatever temp folder the process
+every test module imports this first: it removes the old folders a killed run left (P435), makes ONE folder under whatever temp folder the process
 inherited, points `tempfile` at it — and TMPDIR too, so every script a test starts writes there as well —
 and removes it at exit. `tests/test_suite_temp.py` pins that every test module has, after its
 standard-library imports and before anything else, the two lines
@@ -22,10 +22,23 @@ under this one name: `discover -s tests` puts tests/ on the path itself; `tools/
 import atexit
 import os
 import shutil
+import sys
 import tempfile
+import time
+
+#: The name every suite folder starts with; the sweep below removes only such folders.
+SUITE_PREFIX = "spark-tests-"
+
+# P435: a run that was killed never reached its `atexit`. The next run removes the old folders it left, in the temp
+# folder this process inherited, before it makes its own. `scratch` is standard library only, as this module is.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
+import scratch  # noqa: E402
+
+sys.path.pop(0)
+scratch.remove_old_folders(tempfile.gettempdir(), SUITE_PREFIX, time.time())
 
 #: The folder this process's temp files go under; a script a test starts inherits it through TMPDIR.
-ROOT = tempfile.mkdtemp(prefix="spark-tests-")
+ROOT = tempfile.mkdtemp(prefix=SUITE_PREFIX)
 _MADE, _MADE_BY = ROOT, os.getpid()
 
 

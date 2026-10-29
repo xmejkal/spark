@@ -95,6 +95,20 @@ class AProcessThatAsksLeavesNothingTest(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertEqual(os.listdir(fresh), [])
 
+    def test_it_removes_the_old_suite_folders_a_killed_run_left_and_nothing_else(self):
+        fresh = Path(tempfile.mkdtemp())
+        old, young, other = fresh / "spark-tests-old", fresh / "spark-tests-young", fresh / "tmpXYZ"
+        for folder in (old, young, other):
+            folder.mkdir()
+        two_days_ago = time.time() - 2 * 24 * 3600
+        for folder in (old, other):
+            os.utime(folder, (two_days_ago, two_days_ago))
+        child = "import sys; sys.path.insert(0, %r); import suite_temp" % str(TESTS)
+        done = subprocess.run([sys.executable, "-c", child], env=dict(os.environ, TMPDIR=str(fresh)),
+                              capture_output=True, text=True, timeout=60)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(sorted(os.listdir(fresh)), ["spark-tests-young", "tmpXYZ"])
+
     def test_it_removes_nothing_but_the_folder_it_made_in_the_process_that_made_it(self):
         other = Path(tempfile.mkdtemp())
         (other / "kept").write_text("somebody else's\n")
