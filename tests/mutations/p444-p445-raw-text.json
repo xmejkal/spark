@@ -1,0 +1,68 @@
+[
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "the base leaves a value raw",
+  "find": "kind == \"r\" else printable(value)",
+  "replace": "kind == \"r\" else value"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "a value for %r is flattened like the rest",
+  "find": "or kind == \"r\" else",
+  "replace": "else"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "printable takes only a string again",
+  "find": "for each in str(text))",
+  "replace": "for each in text)"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "CONTROL leaves the surrogate range out",
+  "find": "\\u2066-\\u2069\\ud800-\\udfff]+\")",
+  "replace": "\\u2066-\\u2069]+\")"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "a key with a lone surrogate is accepted",
+  "find": "or CONTROL.search(key)",
+  "replace": "or False"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "a file name with a lone surrogate is accepted",
+  "find": "if CONTROL.search(name):",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "the projects list path enters its sentence raw",
+  "find": "in each project\", path, broken)",
+  "replace": "in each project\" % (path, broken))"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "the tools file path enters its sentence raw",
+  "find": "fix it or delete it\", path, broken)",
+  "replace": "fix it or delete it\" % (path, broken))"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "the board name enters the look's stop raw",
+  "find": "P230 will research one.\", name, reason",
+  "replace": "P230 will research one.\" % name, reason"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "the scrub skips sha256 and does again",
+  "find": "{key: _scrubbed(item, cap) for key",
+  "replace": "{key: item if key in (\"sha256\", \"does\") else _scrubbed(item, cap) for key"
+ },
+ {
+  "file": "tools/measure.py",
+  "name": "V1 counts nothing",
+  "find": "if name in known.value_messages and call.args",
+  "replace": "if False and name in known.value_messages and call.args"
+ }
+]
