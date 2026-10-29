@@ -132,7 +132,7 @@ class EsptoolStopTest(unittest.TestCase):
 
     def test_a_tools_list_it_cannot_use_keeps_the_stop_and_says_no_doctor(self):
         from unittest import mock
-        stop = LookStop("could not read the board on %s" % PORT, PORT, SAID, reason="board_not_read")
+        stop = LookStop("could not read the board on %s", PORT, port=PORT, tool_said=SAID, reason="board_not_read")
         with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("mpremote is not installed")):
             lines = board_doctor.stop_lines("grant.py", stop, ".", None)
         self.assertEqual(lines, ["grant.py: could not read the board on %s (no doctor: mpremote is not installed)" % PORT])

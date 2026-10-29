@@ -31,6 +31,67 @@ class ListKeyProblemsTest(unittest.TestCase):
                          ["facts['a']['b'][1]['no\\u202ete']", "facts['x\\x1b']", "facts[7]"])
 
 
+class ValueMessageErrorTest(unittest.TestCase):
+    """P444 (#592): a message made of a template and values puts each value on one line, and keeps the raw values."""
+
+    def message(self, template, *values):
+        return str(text_guards.ValueMessageError(template, *values))
+
+    def test_a_value_is_flattened_and_the_template_keeps_its_line_break(self):
+        self.assertEqual(self.message("%s is bad:\n%s", "a\nGRANTED", "b\r"), "a?GRANTED is bad:\nb?")
+
+    def test_a_number_a_repr_and_a_percent_sign_stay_as_they_are(self):
+        self.assertEqual(self.message("%d%% of %r and %5.2f|%s", 7, "x\ny", 1.5, "z"), "7% of 'x\\ny' and  1.50|z")
+
+    def test_a_value_that_is_no_string_is_flattened_through_its_text(self):
+        self.assertEqual(self.message("%s %s %s", Path("/a\nb"), ValueError("c\nd"), None), "/a?b c?d None")
+
+    def test_a_tuple_is_one_value_and_not_the_arguments(self):
+        self.assertEqual(self.message("%s then %s", ("a\nb", 1), "c"), "('a\\nb', 1) then c")
+
+    def test_the_raw_values_stay_on_values(self):
+        raised = text_guards.ValueMessageError("%s", "a\nb")
+        self.assertEqual(raised.values, ("a\nb",))
+
+    def test_a_lone_surrogate_is_a_question_mark(self):
+        self.assertEqual(self.message("%s", "a\ud800b"), "a?b")
+
+    def test_a_template_with_no_value_stays_as_it_is(self):
+        self.assertEqual(self.message("100%"), "100%")
+
+    def test_of_lines_keeps_the_breaks_between_the_lines_and_flattens_each(self):
+        self.assertEqual(str(text_guards.ValueMessageError.of_lines(["a\nb", "c"])), "a?b\nc")
+
+    def test_a_str_with_its_own_repr_a_number_with_its_own_str_and_a_c_conversion_cannot_break_the_line(self):
+        class Name(str):
+            def __repr__(self):
+                return "x\ny"
+
+        class Count(int):
+            def __str__(self):
+                return "a\nb"
+
+        self.assertEqual(self.message("%r|%s|%c|%c", Name("n"), Count(3), 10, "q"), "x?y|a?b|?|q")
+
+    def test_a_mapping_key_or_a_star_width_is_refused_when_the_error_is_made(self):
+        for template, values in (("%(name)s", ("a",)), ("%*d", (3, 5)), ("%-*s", (3, "a")), ("ok %s %(a)s", ("a", "b"))):
+            with self.subTest(template=template), self.assertRaises(TypeError):
+                text_guards.ValueMessageError(template, *values)
+        self.assertEqual(self.message("100%%(x) %s", "a"), "100%(x) a")
+
+    def test_a_template_with_no_values_is_the_message_as_it_stands(self):
+        self.assertEqual(self.message("100%% sure %s"), "100%% sure %s")
+
+    def test_one_value_too_many_still_fails_as_a_format_does(self):
+        with self.assertRaises(TypeError):
+            self.message("%s", "a", "b")
+
+
+class ASurrogateKeyTest(unittest.TestCase):
+    def test_a_key_with_a_lone_surrogate_is_refused(self):
+        self.assertEqual(len(text_guards.list_key_problems("facts", {"a\ud800": 1})), 1)
+
+
 class GuardLinesTest(unittest.TestCase):
     """P423 (#556): the text a script prints, line by line, with each line's own newlines kept."""
 
@@ -66,8 +127,17 @@ class PrintableTest(unittest.TestCase):
     def test_printable_shows_what_a_terminal_does_not_print_as_a_question_mark(self):
         self.assertEqual(text_guards.printable("a\nb\u202ec ok"), "a?b?c ok")
 
+    def test_a_value_that_is_no_string_is_shown_by_its_text(self):
+        self.assertEqual([text_guards.printable(each) for each in (Path("/a\nb"), ValueError("c\nd"), None)], ["/a?b", "c?d", "None"])
+
+    def test_a_lone_surrogate_shows_as_a_question_mark(self):
+        self.assertEqual(text_guards.printable("a\udfffb"), "a?b")
+
 
 class CleanTest(unittest.TestCase):
+    def test_a_lone_surrogate_becomes_a_space(self):
+        self.assertEqual(text_guards.clean("a\ud800b\udfffc"), "a b c")
+
     def test_a_line_or_paragraph_separator_becomes_a_space(self):
         self.assertEqual(text_guards.clean("a\u2028b\u2029c"), "a b c")
 

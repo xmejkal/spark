@@ -24,7 +24,7 @@ import threading
 import urllib.parse
 from pathlib import Path
 
-from spark.core.text_guards import CONTROL
+from spark.core.text_guards import CONTROL, ValueMessageError
 
 try:
     import fcntl
@@ -114,8 +114,8 @@ FILE_NAME_MAX_BYTES = 255
 WEB_SCHEMES = ("http", "https")
 
 
-class StoreProblem(Exception):
-    """A store spark cannot read, or a write it will not make. The message is the whole sentence."""
+class StoreProblem(ValueMessageError):
+    """Error: a store spark cannot read, or a write it will not make. The message is the whole sentence; its values are flattened (P444)."""
 
 
 def slug(text):
@@ -200,7 +200,7 @@ def locked():
 def _target(name, key):
     """Where a key goes inside a place (§5.1), refusing a key that is not plain."""
     if key is not None and not PLAIN.fullmatch(key):
-        raise StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so it could leave %s" % (key, name))
+        raise StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so it could leave %s", key, name)
     return place(name) / (key + ".json") if key is not None else place(name)
 
 
@@ -209,7 +209,7 @@ def _make_ready(name, target):
     private = name in PRIVATE
     if private and inside_git(target):
         raise StoreProblem("%s would be inside the git work tree at %s — what you own stays out of every repository; "
-                           "point SPARK_HOME at a folder outside it" % (target, inside_git(target)))
+                           "point SPARK_HOME at a folder outside it", target, inside_git(target))
     target.parent.mkdir(parents=True, exist_ok=True)
     if private:
         for folder in {home(), target.parent}:
@@ -236,9 +236,9 @@ def projects():
     try:
         listed = json.loads(path.read_text(encoding="utf-8"))
     except ValueError as broken:
-        raise StoreProblem("%s is not JSON (%s) — fix it, or delete it and run /spark:init in each project" % (path, broken))
+        raise StoreProblem("%s is not JSON (%s) — fix it, or delete it and run /spark:init in each project", path, broken)
     if not isinstance(listed, dict) or not all(isinstance(folder, str) for folder in listed.values()):
-        raise StoreProblem("%s is not an object of project folders — fix it, or delete it and run /spark:init in each project" % path)
+        raise StoreProblem("%s is not an object of project folders — fix it, or delete it and run /spark:init in each project", path)
     return {name: Path(folder) for name, folder in listed.items()}
 
 
@@ -300,7 +300,7 @@ def events():
         except ValueError:  # not JSON, or not UTF-8 (UnicodeDecodeError is a ValueError)
             event = None
         if not (isinstance(event, dict) and isinstance(event.get("event"), str)):
-            raise StoreProblem("%s line %d is not a history event — fix it by hand" % (path, number))
+            raise StoreProblem("%s line %d is not a history event — fix it by hand", path, number)
         said.append(event)
     return said
 
@@ -346,9 +346,9 @@ def _must_be_web(url, redirected_from=None):
     if scheme in WEB_SCHEMES + (("file",) if "unittest" in sys.modules else ()):
         return
     if redirected_from:
-        raise StoreProblem("%s was redirected to a URL whose scheme is %s, and spark follows a redirect only to http or https"
-                           % (redirected_from, scheme or "missing"))
-    raise StoreProblem("%s is not fetched: its scheme is %s, and spark opens only http and https" % (url, scheme or "missing"))
+        raise StoreProblem("%s was redirected to a URL whose scheme is %s, and spark follows a redirect only to http or https",
+                           redirected_from, scheme or "missing")
+    raise StoreProblem("%s is not fetched: its scheme is %s, and spark opens only http and https", url, scheme or "missing")
 
 
 def fetch(url, method="GET"):
@@ -367,7 +367,7 @@ def fetch(url, method="GET"):
     except StoreProblem:
         raise
     except Exception as unreachable:  # noqa: BLE001 — every way of not answering is the same answer here
-        raise StoreProblem("%s does not answer (%s)" % (url, unreachable))
+        raise StoreProblem("%s does not answer (%s)", url, unreachable)
 
 
 def file_name_problem(name):
@@ -398,7 +398,7 @@ def keep(payload, name):
     """
     problem = file_name_problem(name)
     if problem:
-        raise StoreProblem(problem)
+        raise StoreProblem("%s", problem)
     digest = hashlib.sha256(payload).hexdigest()
     folder = place("sources") / digest
     folder.mkdir(parents=True, exist_ok=True)
@@ -406,7 +406,7 @@ def keep(payload, name):
     try:
         part.write_bytes(payload)
         if hashlib.sha256(part.read_bytes()).hexdigest() != digest:
-            raise StoreProblem("%s was not kept: what was written is not what was fetched" % name)
+            raise StoreProblem("%s was not kept: what was written is not what was fetched", name)
         part.replace(folder / name)
     except BaseException:
         part.unlink(missing_ok=True)

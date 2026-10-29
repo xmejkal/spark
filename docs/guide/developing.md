@@ -321,7 +321,7 @@ Most of them leave out `scripts/stand_in/`, but `test_no_magic_strings` reads it
 ### The rules test
 
 `tests/test_architecture.py` reads `scripts/` and `tests/` with `ast` and holds each breach against
-`tests/architecture_baseline.json`. One test method checks one rule (R1, R2, R3, R6, T1, T2, T4, X2, U1, C1, C3). Each
+`tests/architecture_baseline.json`. One test method checks one rule (R1, R2, R3, R6, T1, T2, T4, X2, U1, C1, C3, V1). Each
 rule is one sentence in `measure.RULES` in `tools/measure.py`, which the test's docstrings and its failure messages read;
 `python3 tools/measure.py --rules` lists every breach with its rule.
 
@@ -333,9 +333,19 @@ refuses a new or risen breach. `--accept-new` writes those too: use it only for 
 rebases on another one, and give the reason in the PR. A failure names the rule and its limit, the file, the name and
 the value, and `python3 tools/measure.py --rules` shows every breach.
 
-R6 and C1 list a class by its qualified name (`Outer.Inner`). T1, T2, T4, X2 and C3 count the breaches of a file under
+R6 and C1 list a class by its qualified name (`Outer.Inner`). V1 lists the raises of a `ValueMessageError` or a subclass
+whose template is no string constant, per class (`V1:file:Class`); see the next section. T1, T2, T4, X2 and C3 count the breaches of a file under
 one key: they say how many, not where, so a new breach next to an old one shows only as a higher count. A baseline of
 200 entries hides what it lists: each slice pays down the lines it touches.
+
+### Messages that hold a value (V1)
+
+An error that puts a path, a name or a record's field into its sentence inherits from `ValueMessageError`
+(`scripts/spark/core/text_guards.py`, [P444](https://github.com/xmejkal/spark/issues/592)) and a raise passes the values as
+arguments: `raise ToolProblem("%s is not JSON (%s)", path, broken)`, never `"..." % (path, broken)`. The class puts each value on
+one line, keeps a number and a `%r` value as they are, and keeps the raw values on `.values`. Rule V1 counts the raises that
+still build the text first; the baseline lists them and may only shrink. `Class.of_lines([...])` raises several sentences, one
+per line, each flattened.
 
 ### One responsibility, one name
 

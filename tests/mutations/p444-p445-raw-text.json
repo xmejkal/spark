@@ -1,0 +1,146 @@
+[
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "the base leaves a value raw",
+  "find": "return value if type(value) in NUMBERS else printable(value)",
+  "replace": "return value"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "a value for %r is not escaped",
+  "find": "return printable(repr(value))",
+  "replace": "return repr(value)"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "a subclass of int is taken for a number",
+  "find": "return value if type(value) in NUMBERS else printable(value)",
+  "replace": "return value if isinstance(value, NUMBERS) else printable(value)"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "a value for %c is not flattened",
+  "find": "return printable(chr(value) if type(value) is int else value)",
+  "replace": "return chr(value) if type(value) is int else value"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "a mapping key in a template is accepted",
+  "find": "if UNSUPPORTED.search(template.replace(\"%%\", \"\")):",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/spark/core/text_guards.py",
+  "name": "a key with a lone surrogate is accepted",
+  "find": "or bad.search(key)",
+  "replace": "or False"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "a file name with a lone surrogate is accepted",
+  "find": "if CONTROL.search(name):",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "the projects list path enters its sentence raw",
+  "find": "in each project\", path, broken)",
+  "replace": "in each project\" % (path, broken))"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "the tools file path enters its sentence raw",
+  "find": "fix it or delete it\", path, broken)",
+  "replace": "fix it or delete it\" % (path, broken))"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "a dry run prints a folder raw",
+  "find": "print(flat_line(\"  cannot:    %s\", step[\"problem\"]))",
+  "replace": "print(\"  cannot:    %s\" % step[\"problem\"])"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "the status line prints the store path raw",
+  "find": "print(flat_line(\"  spark's tools — personal: %s · project: %s\\n\", personal or PERSONAL, Path(project) / PROJECT_FILE if project else \"(none)\"))",
+  "replace": "print(\"  spark's tools — personal: %s · project: %s\\n\" % (personal or PERSONAL, Path(project) / PROJECT_FILE if project else \"(none)\"))"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "the board name enters the look's stop raw",
+  "find": "P230 will research one.\", name, reason",
+  "replace": "P230 will research one.\" % name, reason"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "a board id that is no string reaches a lookup",
+  "find": "records(project).get(board_id) if isinstance(board_id, str) else None",
+  "replace": "records(project).get(board_id)"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "the scrub skips sha256 and does again",
+  "find": "{key: _scrubbed(item, cap) for key",
+  "replace": "{key: item if key in (\"sha256\", \"does\") else _scrubbed(item, cap) for key"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "an id is cleaned like a label and cut at 160",
+  "find": "_in_bytes(_scrubbed(value, store.FILE_NAME_MAX_BYTES), store.FILE_NAME_MAX_BYTES)",
+  "replace": "_in_bytes(_scrubbed(value), store.FILE_NAME_MAX_BYTES)"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "a key with a lone surrogate in a field is not looked at",
+  "find": "list_key_problems(key, value, SURROGATE)",
+  "replace": "[]"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "the json output ends in a traceback on a surrogate",
+  "find": ".encode(\"utf-8\", \"backslashreplace\").decode(\"utf-8\"))",
+  "replace": ")"
+ },
+ {
+  "file": "tools/measure.py",
+  "name": "V1 counts nothing",
+  "find": "if name not in known.value_messages:",
+  "replace": "if True:"
+ },
+ {
+  "file": "tools/measure.py",
+  "name": "V1 does not read a template given as a keyword",
+  "find": "each.arg == \"template\"",
+  "replace": "each.arg == \"none\""
+ },
+ {
+  "file": "tools/measure.py",
+  "name": "V1 lets any file hand a bare template on",
+  "find": "handing_on = source.file.endswith(\"spark/core/text_guards.py\")",
+  "replace": "handing_on = True"
+ },
+ {
+  "file": "tools/measure.py",
+  "name": "V1 does not read a ** argument",
+  "find": "any(each.arg is None for each in node.keywords)",
+  "replace": "False"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "--off prints the store path raw",
+  "find": "print(flat_line(\"  %s is off (%s)\", args.off, where))",
+  "replace": "print(\"  %s is off (%s)\" % (args.off, where))"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "an unknown field name enters its sentence raw",
+  "find": "% (printable(key), \", \".join(FIELDS))",
+  "replace": "% (key, \", \".join(FIELDS))"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "an id is cut by characters, not bytes",
+  "find": "return _in_bytes(_scrubbed(value, store.FILE_NAME_MAX_BYTES), store.FILE_NAME_MAX_BYTES)",
+  "replace": "return _scrubbed(value, store.FILE_NAME_MAX_BYTES)"
+ }
+]

@@ -1,6 +1,6 @@
 [
  {"file": "scripts/store.py", "name": "a URL that does not answer is empty bytes",
-  "find": "        raise StoreProblem(\"%s does not answer (%s)\" % (url, unreachable))", "replace": "        return b\"\""},
+  "find": "        raise StoreProblem(\"%s does not answer (%s)\", url, unreachable)", "replace": "        return b\"\""},
  {"file": "scripts/store.py", "name": "a kept file is not checked",
   "find": "    if hashlib.sha256(part.read_bytes()).hexdigest() != digest:\n", "replace": "    if False:\n"},
  {"file": "scripts/store.py", "name": "a name may leave the sources",
@@ -49,7 +49,7 @@
  {"file": "scripts/store.py", "name": "a name too long to be kept is accepted, and fails after the downloads",
   "find": "    if size > FILE_NAME_MAX_BYTES:\n", "replace": "    if False:\n"},
  {"file": "scripts/spark/core/text_guards.py", "name": "direction marks and line separators pass as ordinary characters of a name",
-  "find": "\\u200e\\u200f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]", "replace": "]"},
+  "find": "\\u200e\\u200f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069\\ud800-\\udfff]", "replace": "]"},
  {"file": "scripts/parts.py", "name": "a dry run of --keep does not ask whether the name can be kept",
   "find": "        return store.keep(payload, name)\n    problem = store.file_name_problem(name)\n", "replace": "        return store.keep(payload, name)\n    problem = None\n"}
 ]

@@ -272,13 +272,16 @@ RULES = {
     "U1": "a leaf imports nothing of spark, matching imports no drawer, and no script reads a moved guard from its old module",
     "C1": "a file name under scripts/ is unique, and an exception name ends in Error",
     "C3": "an exit code has no second name (no EXIT_ alias)",
+    "V1": "a call of a ValueMessageError or a subclass gives a constant string as the template and the values as arguments (P444)",
 }
 
+#: V1: the class whose raises give a template and its values.
+VALUE_MESSAGE = "ValueMessageError"
 Breach = collections.namedtuple("Breach", "rule file name value")
 #: One source file: its path under the root (with `/`), its tree and its text.
 SourceFile = collections.namedtuple("SourceFile", "file tree text")
 #: What a rule needs to know of the other scripts: their stems and the names of the exceptions they define.
-ScriptNames = collections.namedtuple("ScriptNames", "stems exceptions")
+ScriptNames = collections.namedtuple("ScriptNames", "stems exceptions value_messages", defaults=(frozenset(),))
 #: One difference between the breaches and the baseline. `kind` is one of NEW, ROSE, FELL and GONE.
 Drift = collections.namedtuple("Drift", "key kind found allowed")
 NEW, ROSE, FELL, GONE = "new-breach", "value-rose", "value-fell", "entry-gone"
@@ -529,6 +532,29 @@ def unnamed_error(source, known):
                                                    if node.name in known.exceptions and not node.name.endswith("Error")))
 
 
+def raw_value_message(source, known):
+    """
+    V1: a call of a ValueMessageError or a subclass, in a raise or before it, whose template (the first argument, or the
+    keyword `template`) is no string constant, such as a `%`, an f-string, a name or a call, or whose arguments hold a `**`.
+    Only `scripts/spark/core/text_guards.py`, where the helpers hand their own `template` on, may pass the bare name
+    `template`. The count is per class name. Known limits: a class under another name (`import ToolProblem as SP`,
+    `P = ToolProblem`) is not seen; `X.of_lines(...)` is not counted, because it is safe by construction; a helper
+    `def f(template)` outside text_guards is counted, so the baseline or a fix covers it.
+    """
+    seen = collections.Counter()
+    handing_on = source.file.endswith("spark/core/text_guards.py")
+    for node in ast.walk(source.tree):
+        name = _dotted(node.func).split(".")[-1] if isinstance(node, ast.Call) and isinstance(node.func, (ast.Name, ast.Attribute)) else ""
+        if name not in known.value_messages:
+            continue
+        first = node.args[0] if node.args else next((each.value for each in node.keywords if each.arg == "template"), None)
+        constant = isinstance(first, ast.Constant) and isinstance(first.value, str)
+        passed_on = handing_on and isinstance(first, ast.Name) and first.id == "template"
+        if (first is not None and not constant and not passed_on) or (not handing_on and any(each.arg is None for each in node.keywords)):
+            seen[name] += 1
+    return _count("V1", source, seen)
+
+
 def exit_alias(source, known):
     """C3: `from outcomes import X as EXIT_Y` with another name, or `EXIT_Y = ...EXIT_X`: a second name for an exit code."""
     seen = collections.Counter()
@@ -547,7 +573,7 @@ def exit_alias(source, known):
 #: The rules that read one script. T2 reads the tests and the two clauses on the whole tree (C1 file names, U1 leaves) are in `breaches`.
 #: T1, T2, T4, X2 and C3 count the breaches of a file under one key: they say how many, not where.
 SCRIPT_RULES = (long_code, deep_nesting, many_parameters, class_without_role, effect_outside_adapter, branch_on_imports,
-                output_in_spark, leaf_imports, unnamed_error, exit_alias)
+                output_in_spark, leaf_imports, unnamed_error, exit_alias, raw_value_message)
 
 
 def mock_patches(source):
@@ -570,16 +596,21 @@ def sources_of(root, paths):
     return found
 
 
-def exceptions_of(scripts):
-    """The names of the exception classes the scripts define: a class with an exception for a base, found until no more turn up."""
+def subclasses_of(scripts, roots):
+    """The names of the classes the scripts define that have one of `roots` for a base, found until no more turn up, `roots` included."""
     classes = [(node.name, {_dotted(b).split(".")[-1] for b in node.bases})
                for source in scripts for node in ast.walk(source.tree) if isinstance(node, ast.ClassDef)]
-    known = set(EXCEPTION_NAMES)
+    known = set(roots)
     while True:
         more = {name for name, bases in classes if bases & known} - known
         if not more:
-            return known - EXCEPTION_NAMES
+            return known
         known |= more
+
+
+def exceptions_of(scripts):
+    """The names of the exception classes the scripts define: a class with an exception for a base, found until no more turn up."""
+    return subclasses_of(scripts, EXCEPTION_NAMES) - EXCEPTION_NAMES
 
 
 def breaches(root=ROOT):
@@ -587,7 +618,7 @@ def breaches(root=ROOT):
     root = pathlib.Path(root)
     scripts = sources_of(root, script_paths(root))
     stems = {pathlib.PurePosixPath(s.file).stem for s in scripts}
-    known = ScriptNames(stems, exceptions_of(scripts))
+    known = ScriptNames(stems, exceptions_of(scripts), subclasses_of(scripts, {VALUE_MESSAGE}))
     found = [b for source in scripts for rule in SCRIPT_RULES for b in rule(source, known)]
     found += [b for source in sources_of(root, sorted((root / "tests").glob("test_*.py"))) for b in mock_patches(source)]
     names = collections.Counter(pathlib.PurePosixPath(s.file).name for s in scripts if not s.file.endswith("__init__.py"))

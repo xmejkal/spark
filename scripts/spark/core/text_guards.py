@@ -8,11 +8,11 @@ import re
 
 
 # --- MVP ---
-#: A label is shown and matched, never obeyed (§6.4.6): `clean` turns each run of control and bidi characters into a space,
+#: A label is shown and matched, never obeyed (§6.4.6): `clean` turns each run of control and bidi characters and lone surrogates (P445) into a space,
 #: and the label stops at 160 characters. The line and paragraph separators (U+2028/9) are in the set: a terminal prints them
 #: as `?`, and a file name must not hold them (`store.file_name_problem` reads this set too, P423).
 LABEL_MAX = 160
-CONTROL = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]+")
+CONTROL = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ud800-\udfff]+")
 
 #: What an entry or a record says of itself for a chooser (P211): one sentence and a paragraph, each capped — data, never obeyed.
 TEXT_MAX = {"about": 200, "description": 1000}
@@ -27,7 +27,56 @@ COMMENT_UNSAFE = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029\ud800-\udfff]")
 
 def printable(text):
     """The text with each character that a terminal does not print as itself, such as a newline, shown as `?`."""
-    return "".join(each if each.isprintable() else "?" for each in text)
+    return "".join(each if each.isprintable() else "?" for each in str(text))
+
+
+# --- MVP ---
+#: What a `%` in a template converts: `%%` (it takes no value) or flags, a width and a conversion letter (P444).
+CONVERSION = re.compile(r"%%|%([-#0 +]*[0-9.]*)([a-zA-Z])")
+#: What a template may not hold: a mapping key `%(name)s` or a `*` width, because the values are a tuple read in order.
+UNSUPPORTED = re.compile(r"%\(|%[-#0 +]*[0-9.]*\*")
+#: The types whose value is a number that no one can make hold a line break. A subclass is no number here: it can have its own `__str__`.
+NUMBERS = (int, float, bool)
+
+
+class ValueMessageError(Exception):
+    """
+    Error: a message made of a template and its values (P444). Each value goes into the template on one line: a number of
+    exactly the type `int`, `float` or `bool` stays as it is; a value for `%r` is shown as `printable(repr(value))`, the same
+    text with its control characters escaped; a value for `%c` and any other value goes through `printable`. The template keeps
+    its own line breaks. A template with no values is the message as it stands, so `%%` is not turned into `%` there. A template
+    with `%(name)s` or a `*` width raises TypeError when the error is made; no raise in spark uses either. The values as they
+    were stay in `values`. The error classes that put a path, a name or a record's field into a sentence inherit from it, and a
+    raise passes the values as arguments.
+    """
+
+    def __init__(self, template, *values):
+        self.values = values
+        if UNSUPPORTED.search(template.replace("%%", "")):
+            raise TypeError("a template of a ValueMessageError takes no mapping key and no * width: " + repr(template))
+        kinds = [kind for _, kind in CONVERSION.findall(template) if kind]
+        shown = tuple(self.shown(value, kind) for value, kind in zip(values, kinds + ["s"] * len(values)))
+        text = CONVERSION.sub(lambda found: "%" + found.group(1) + "s" if found.group(2) == "r" else found.group(0), template)
+        super().__init__(text % shown if values else template)
+
+    @staticmethod
+    def shown(value, kind):
+        """The value as the message takes it: a number as it is, a `%c` one as the character, a `%r` one as its escaped text."""
+        if kind == "r":
+            return printable(repr(value))
+        if kind == "c":
+            return printable(chr(value) if type(value) is int else value)
+        return value if type(value) in NUMBERS else printable(value)
+
+    @classmethod
+    def of_lines(cls, lines, **keywords):
+        """The error of several sentences, one per line: each is a value, flattened, and the line breaks between them stay."""
+        return cls("\n".join(["%s"] * len(lines)), *lines, **keywords)
+
+
+def flat_line(template, *values):
+    """The text of a `ValueMessageError` of this template and these values, for a script that prints a line (P444)."""
+    return str(ValueMessageError(template, *values))
 
 
 def guard_lines(text):
@@ -57,20 +106,25 @@ def clean(text, cap=LABEL_MAX):
     return CONTROL.sub(" ", str(text)).strip()[:cap]
 
 
-def list_key_problems(where, value):
+#: A lone surrogate: it cannot be written as UTF-8, so a key that holds one is refused wherever keys are kept (P445).
+SURROGATE = re.compile("[\ud800-\udfff]")
+
+
+def list_key_problems(where, value, bad=CONTROL):
     """
     Every key at any depth in `value` that is no string or holds a control or bidi character (P374), as sentences that name
-    the key's path from `where`. A key is refused and never cleaned, because two cleaned keys can merge into one.
+    the key's path from `where`. A key is refused and never cleaned, because two cleaned keys can merge into one. `bad` is the
+    pattern a key may not hold: `CONTROL`, or `SURROGATE` where a control character in a key is allowed (a `used_in` key).
     """
     if isinstance(value, list):
-        return [problem for index, item in enumerate(value) for problem in list_key_problems("%s[%d]" % (where, index), item)]
+        return [problem for index, item in enumerate(value) for problem in list_key_problems("%s[%d]" % (where, index), item, bad)]
     problems = []
     for key, item in (value.items() if isinstance(value, dict) else ()):
         here = "%s[%r]" % (where, key)
-        if not isinstance(key, str) or CONTROL.search(key):
+        if not isinstance(key, str) or bad.search(key):
             problems.append("%s is a key that is no string or holds a control or bidi character: refused, never cleaned, "
                             "because two cleaned keys could merge" % here)
-        problems += list_key_problems(here, item)
+        problems += list_key_problems(here, item, bad)
     return problems
 
 

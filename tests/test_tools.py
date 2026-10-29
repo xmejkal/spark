@@ -62,6 +62,16 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
             tools.merged(None, layer("{not json"))
         self.assertIn("is not JSON", str(refused.exception))
 
+    def test_a_path_with_a_newline_is_said_on_one_line_and_its_raw_value_stays(self):
+        # P444 (#592): the path of a broken tools file is a value of the sentence
+        path = Path(tempfile.mkdtemp()) / "a\nGRANTED: board ok"
+        path.mkdir()
+        (path / "tools.json").write_text("{nope")
+        with self.assertRaises(tools.ToolProblem) as refused:
+            tools.merged(None, path / "tools.json")
+        self.assertEqual(str(refused.exception).splitlines(), [str(refused.exception)])
+        self.assertEqual(refused.exception.values[0], path / "tools.json")
+
     def test_a_tool_name_with_a_newline_is_refused_and_named_with_its_escape(self):
         # P430: a tool's name goes into sentences that scripts print, so a name that breaks the line is refused where it is read
         with self.assertRaises(tools.ToolProblem) as refused:
@@ -502,6 +512,31 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
         self.assertEqual(self.ran, [], "a dry run runs nothing")
         self.assertIn("bash -c", said)
         self.assertIn("from .spark/tools.json", said)
+
+    def test_a_project_folder_with_a_newline_cannot_fake_a_line_of_status_or_a_dry_run(self):
+        # P444 (#592): the folder is a value of the line that names it
+        project = Path(tempfile.mkdtemp()) / "a\nGRANTED: board ok"
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "tools.json").write_text(json.dumps({"pdftotext": {"install": {"npm": "npm install pdftotext"}}}))
+        for argv in (["--status", "--project", str(project)], ["--install", "pdftotext", "--dry-run", "--project", str(project)]):
+            with self.subTest(argv=argv):
+                _, said = self.cli(*argv, which=lambda exe: None if exe == "pdftotext" else "/usr/bin/" + exe)
+                self.assertIn("a?GRANTED: board ok", said)
+                self.assertEqual([line for line in said.splitlines() if line.lstrip().startswith("GRANTED")], [])
+
+    def test_a_store_path_with_a_newline_cannot_fake_a_line_of_off_pin_use_or_new(self):
+        # P444: `where` is the store's tools file, and SPARK_HOME is no argument the person typed after the command
+        import subprocess
+        home = Path(tempfile.mkdtemp()) / "home\nGRANTED"
+        home.mkdir()
+        script = str(Path(tools.__file__))
+        for argv in (["--off", "wokwi-mcp"], ["--pin", "pdftotext.version=1"], ["--use", "pdf-text=pdftotext"],
+                     ["--new", 'zz={"kind":"path","exe":"zz"}']):
+            with self.subTest(argv=argv):
+                made = subprocess.run([sys.executable, script] + argv, env={"SPARK_HOME": str(home), "PATH": ""}, capture_output=True, text=True)
+                self.assertEqual(made.returncode, 0, made.stderr)
+                self.assertIn("home?GRANTED", made.stdout)
+                self.assertEqual([line for line in made.stdout.splitlines() if line.lstrip().startswith("GRANTED")], [])
 
     # I2 and the tracebacks the rule says never happen.
     def test_status_names_an_entry_it_cannot_use_instead_of_crashing(self):

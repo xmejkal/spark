@@ -705,6 +705,48 @@ class TheCleanTextTest(unittest.TestCase):
                          ("a b c d e", "a b c d e", "a b c d e", {"number": "a b c d e", "maker": "a b c d e"},
                           {"seller": "a b c d e", "product": "a b c d e"}, [{"does": "sense", "what": "a b c d e"}], "a b c d e"))
 
+    def test_a_lone_surrogate_in_a_text_is_cleaned_with_and_without_a_dry_run(self):
+        # P445 (#596): it passed the guard, and the real write ended in a UnicodeEncodeError while the dry run said ok
+        for flags in ([], ["--dry-run"]):
+            with self.subTest(flags=flags):
+                said, code = run(["--drawer-set", a_file([{"label": "thing", "count": 1, "about": "a\ud800b"}])] + flags)
+                self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual(json.loads((self.home / "drawer" / "thing.json").read_text())["about"], "a b")
+
+    def test_a_lone_surrogate_in_a_photo_file_name_is_cleaned_with_and_without_a_dry_run(self):
+        for flags in ([], ["--dry-run"]):
+            with self.subTest(flags=flags):
+                said, code = run(["--drawer-set", a_file([{"label": "thing", "count": 1, "photos": [{"sha256": "a" * 64, "file": "f\ud800"}]}])] + flags)
+                self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual(json.loads((self.home / "drawer" / "thing.json").read_text())["photos"][0]["file"], "f")
+
+    def test_a_key_with_a_lone_surrogate_is_refused_with_and_without_a_dry_run(self):
+        # P445: a used_in, photos or function key was never cleaned, so the dry run said ok and the real write crashed
+        run(["--drawer-set", a_file([{"label": "xiao", "count": 1}])])
+        for field, value in (("used_in", {"a\ud800": 1}), ("photos", [{"sha256": "a" * 64, "file": "f", "k\ud800": 1}]),
+                             ("function", [{"does": "sense", "what": "x", "k\ud800": 1}])):
+            for flags in ([], ["--dry-run"]):
+                with self.subTest(field=field, flags=flags):
+                    said, code = run(["--drawer-set", a_file([{"entry": "xiao", field: value}])] + flags)
+                    self.assertEqual((code, said["status"]), (1, "problems"))
+        self.assertEqual(self.home.joinpath("drawer", "xiao.json").read_text().count("\\ud800"), 0)
+
+    def test_a_field_name_with_a_lone_surrogate_does_not_crash_the_json_output(self):
+        env = dict(os.environ, SPARK_HOME=str(self.home))
+        for flags in ([], ["--dry-run"]):
+            with self.subTest(flags=flags):
+                made = subprocess.run([sys.executable, str(Path(parts.__file__)), "--drawer-set", a_file([{"label": "x", "zz\ud800": 1}]), "--json"] + flags,
+                                      env=env, capture_output=True)
+                self.assertEqual((made.returncode, b"Traceback" in made.stderr), (1, False))
+                self.assertEqual(json.loads(made.stdout)["status"], "problems")
+                self.assertNotIn(b"ud800", made.stdout)  # the key is shown with `?`, not as an escape
+
+    def test_a_lone_surrogate_in_a_fixed_word_a_hash_or_an_id_is_cleaned_too(self):
+        # the scrub used to skip `sha256`, `does` and `is`, so a surrogate in one passed on to the write
+        self.assertEqual([drawer.scrub("function", [{"does": "se\udc80nse"}]), drawer.scrub("photos", [{"sha256": "a\ud800b"}]),
+                          drawer.scrub("is", {"part": "x\udfffy"}), drawer.scrub("is", {"part": "a" * 300}), drawer.scrub("is", {"part": "é" * 200})],
+                         [[{"does": "se nse"}], [{"sha256": "a b"}], {"part": "x y"}, {"part": "a" * 255}, {"part": "é" * 127}])
+
 
 class TheSmallFixesTest(unittest.TestCase):
     def setUp(self):

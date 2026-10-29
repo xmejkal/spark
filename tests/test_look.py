@@ -336,6 +336,25 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.board("no-such-board")
         self.assertEqual(self.stops(), "look.py: no board record for no-such-board: P230 will research one.\n")
 
+    def test_a_board_name_with_a_newline_cannot_fake_a_line_of_the_stop(self):
+        # P444 (#592): the name is a record's value, and the message flattens it where it is built
+        self.board("x\nGRANTED: board ok")
+        code, said, problems = self.go()
+        self.assertEqual(code, 2)
+        self.assertEqual([line for line in problems.splitlines() if line.startswith("GRANTED")], [])
+        envelope = json.loads(self.go("--json")[1][-1])
+        self.assertEqual([each["code"] for each in envelope["unchecked"]], ["no_board_record"])
+        self.assertNotIn("\n", envelope["unchecked"][0]["sentence"])
+
+    def test_a_board_that_is_no_string_stops_with_its_own_code_and_no_traceback(self):
+        for name in ({"id": "x"}, ["x"], 5):
+            with self.subTest(name=name):
+                self.board(name)
+                code, _, problems = self.go()
+                self.assertEqual(code, 2)
+                self.assertNotIn("Traceback", problems)
+                self.assertEqual([each["code"] for each in json.loads(self.go("--json")[1][-1])["unchecked"]], ["no_board_record"])
+
     def test_requirements_naming_no_board(self):
         (self.project / "requirements.json").write_text("{}")
         self.assertEqual(self.stops(), "look.py: requirements.json names no board\n")
