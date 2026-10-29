@@ -34,8 +34,30 @@ Jumper = collections.namedtuple("Jumper", "one other step route", defaults=((),)
 BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts jumpers")
 
 
+#: Why a board or a part cannot be drawn, as codes (P412): the code a build and an agent decide on, never the sentence.
+NO_HEADER_FACT, HEADER_DISAGREES = "no_header_fact", "header_disagrees"
+NO_DOUBTFUL_PAD_FACT, GROUND_NOT_ONE = "no_doubtful_pad_fact", "ground_not_one"
+DUPLICATE_PAD_LABEL, NO_HOLE_LEFT, NO_WOKWI_PART = "duplicate_pad_label", "no_hole_left", "no_wokwi_part"
+#: Each code with the one sentence that says what it means. A refusal with no code is an older site, whose text stands.
+CODES = {
+    NO_HEADER_FACT: "the board's record lacks a field its pads or its outline need; the subject is the first field",
+    HEADER_DISAGREES: "the board's record disagrees with itself, a value of the wrong kind or a pad order that does not fit the pin counts",
+    NO_DOUBTFUL_PAD_FACT: "the board's record does not say which pads are doubtful (physical.header.doubtful_pads), so no ground is picked",
+    GROUND_NOT_ONE: "the board's ground pads, less the doubtful ones, are not exactly one; the subject names those left",
+    DUPLICATE_PAD_LABEL: "two pads of the board's record have one label; the subject is the label",
+    NO_HOLE_LEFT: "a part leaves a pin with no free hole beside it on the breadboard; the subject is the part",
+    NO_WOKWI_PART: "Wokwi has no part with this board's pins, so no Wokwi diagram is written, by design",
+}
+
+
 class NotDrawn(Exception):
-    """The steps cannot be drawn: a fact the drawing needs is missing, or the half breadboard has no room."""
+    """The steps cannot be drawn: a fact the drawing needs is missing, or the breadboard has no room. `code` (one of
+    CODES, or None for an older site) and `subject` say which, so a caller never reads the message."""
+
+    def __init__(self, message, code=None, subject=None):
+        super().__init__(message)
+        self.code = code
+        self.subject = subject
 
 
 class Surface:
