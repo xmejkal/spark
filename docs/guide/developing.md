@@ -58,6 +58,11 @@ The suite still reads source for rules about the code itself:
 
   `tests/suite_temp.py` gives the test process one temp folder and removes it when the process exits, so a test's
   `tempfile.mkdtemp()` needs no cleanup of its own. The first line lets `python3 -m unittest tests.test_x` find it.
+  A run that was killed never reaches that clean-up, so at start `suite_temp` also removes the `spark-tests-*` folders
+  older than a day in the temp folder it inherited, through `tools/scratch.py` ([P435](https://github.com/xmejkal/spark/issues/579)).
+  `scratch.remove_old_folders` removes only a plain directory that is the user's own, whose name starts with the prefix
+  and whose own mtime is a day old (it does not look inside), and it never follows a link. It lists a name only when
+  the folder is really gone, and a read-only folder inside does not stop it. It is standard library only.
 
 `test_converter.py` also checks the converter's TypeScript, comments stripped, for default paths it must not have.
 
@@ -86,6 +91,11 @@ tester puts the defects that the fix prevents back into the changed lines, in a 
 changed=$(git diff --name-only origin/main...HEAD)     # the files your branch changed
 python3 tools/mutate.py tests/mutations/*.json --for $changed --copy
 ```
+
+`--copy` removes its copy in a `finally`, and also when SIGTERM stops it (the signal becomes `SystemExit`, only in the
+main thread and only over the default handler). A SIGTERM that comes during the removal itself waits until the removal
+is done, and then exits 143. At the start of every mutation run, with or without `--copy`, `mutate.py` removes its `mutate-run-*`,
+`mutate-import-*` and `mutate-copy-*` folders older than a day, which covers SIGKILL ([P435](https://github.com/xmejkal/spark/issues/579)).
 
 A row reported *refused* is a guard whose code moved, or whose replacement does not compile, import or parse.
 Re-anchor it or fix its `replace`, or delete it and give the reason.

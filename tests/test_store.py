@@ -27,10 +27,37 @@ PERSONS = Path.home() / ".local" / "share" / "spark"
 
 
 def home_in(env):
-    """What `store.home()` answers in a fresh process with exactly this environment — a process with no unittest in it."""
-    done = subprocess.run([sys.executable, "-c", "import store; print(store.home())"], cwd=SCRIPTS, env=env,
+    """
+    What `store.home()` answers in a fresh process with exactly this environment — a process with no unittest in it.
+    `-B`: Apple's Python 3.9 writes its bytecode cache under `$HOME/Library/Caches` even when `-c` imports nothing to
+    cache, and with `HOME=/nowhere` and the cwd `scripts/` that made `scripts/nowhere/` (P435).
+    """
+    done = subprocess.run([sys.executable, "-B", "-c", "import store; print(store.home())"], cwd=SCRIPTS, env=env,
                           capture_output=True, text=True, timeout=30)
     return Path(done.stdout.strip())
+
+
+def untracked(root):
+    """The untracked entries git lists under `root`, empty folders too."""
+    done = subprocess.run(["git", "ls-files", "--others", "--directory", "--exclude-standard"], cwd=str(root),
+                          capture_output=True, text=True, timeout=30)
+    if done.returncode != 0:
+        raise unittest.SkipTest("git lists nothing here (no .git, as in a --copy run): %s" % done.stderr.strip()[:80])
+    return set(done.stdout.split())
+
+
+class TheHomeLeavesNoFolderBehindTest(unittest.TestCase):
+    def test_the_listing_sees_an_empty_folder(self):
+        repo = tempfile.mkdtemp()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, timeout=30)
+        (Path(repo) / "nowhere" / "Library").mkdir(parents=True)
+        self.assertEqual(untracked(repo), {"nowhere/"})
+
+    def test_home_in_makes_no_folder_under_the_repository(self):
+        before = untracked(ROOT)
+        home_in({"HOME": "/nowhere"})
+        self.assertEqual(untracked(ROOT) - before, set())
+        self.assertFalse((SCRIPTS / "nowhere").exists())
 
 
 class TheHomeTest(unittest.TestCase):

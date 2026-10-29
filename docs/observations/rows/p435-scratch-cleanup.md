@@ -1,0 +1,43 @@
+# P435: the suite and the mutation tool clean their scratch, and a low-disk warning
+
+Findings of P435 (#579), 2026-10-29, Prague, one PR, built on main d86810ce from plan v3 (two council rounds). Each claim of the plan was checked in this tree.
+
+| # | claim | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 1 | Plan: `tests/test_suite_temp.py:30-54` (`asks_first`) "allows that one line; update the pin and its tests" | plan | rejected | wrong: `asks_first` reads the test modules, never `suite_temp.py` itself, so the new `sys.path` line in `suite_temp` needs no pin change. A subprocess test was added in `test_suite_temp.py` |
+| 2 | Plan: `main(["status"])` "prints a line that starts `disk:` (whatever the real free space)" | plan | acted | wrong: with enough space `disk_line` returns None and nothing prints. The wiring test points `tempfile.tempdir` at a folder that is not there and `PATH` at an empty folder, so the board lines say could-not-run and the disk line says `disk: could-not-run`. The low and ok cases are pinned on `disk_line` |
+| 3 | Plan: real `status` output is not forced to low disk | plan | acted | three existing exact-output tests in `test_board.py` would fail on a Mac with under 10 GB free; they read the output through `without_disk` |
+| 4 | Part B cause: `home_in` writes `scripts/nowhere/` under Apple's Python 3.9 | plan | verified | `rm -r scripts/nowhere; /usr/bin/python3 -m unittest tests.test_store` (3.9.6) made `scripts/nowhere/Library`. With `-B` in `home_in` it stays absent: 80 tests OK, `test ! -e scripts/nowhere` true. Removing `-B` makes the new test fail (`'scripts/nowhere/'`). P431 row 35 (the untracked `scripts/nowhere/Library/Caches/com.apple.python`) is closed by this |
+| 5 | A mutation row for `-B` in `home_in` | build | rejected | the defect shows only under `/usr/bin/python3` and mutate runs the suite with the interpreter it was started with, so no row would be caught on 3.10. The test was proved by hand (row 4) |
+| 6 | Plan: sweep cost under 50 ms, measured on the scan alone | plan | verified | the real `remove_old_folders`, warm, `time.perf_counter`, 200 passes over the real `$TMPDIR` (1,273 entries) with `now=0` so that nothing is removed: 0.77 ms for one prefix, 3.1 ms for the four prefixes of `mutate.main`. Under the 50 ms limit; every process sweeps |
+| 7 | Plan: the stop test runs the real `mutate.py` | plan | verified | `test_a_stop_by_sigterm_leaves_nothing_in_the_temp_folder` starts `tools/mutate.py --copy` on a tiny project (8 rows) with its own TMPDIR, sends SIGTERM when `mutate-copy-*` shows, and asserts exit 143 and an empty TMPDIR. Run five times alone: green each time. Without the handler the child dies with -15 |
+| 8 | Plan: mutation rows "about 8" | plan | acted | 17 rows in `tests/mutations/p435-scratch-cleanup.json`, anchors checked with `--anchors`, not run (it runs once after review). The exact-edge row needed a test with a fixed `now` (a day to the second), added |
+| 9 | Plan: D is `main` printing after the status | plan | acted | the disk line comes last, after the board lines or their could-not-run line, with its own guard outside the status `try` |
+| 10 | The hook that runs `board.py status` at session start | plan | raised | not in the repo; the PO's own setting. The PR says so |
+
+## Review round (Sonnet lens, Opus refuter), 2026-10-29
+
+| # | finding | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 11 | Refuter 7: a 0o555 subfolder in the tree leaves `mutate-copy-*/…/ro/f` after exit 0 | refuter | acted | `scratch.remove_tree` (plain removal, then u+rwx on every folder under it without following links, then again) serves the copy's `finally`, `copy_of`'s failure path and the sweep. Test: a copy run on a tree with a read-only folder leaves its own temp folder empty |
+| 12 | Refuter 7: a 0o555 root with `node_modules` raised `PermissionError` outside `copy_of`'s try and left the copy | refuter | acted | the link loop is inside the try; the failure path removes the copy. Test: `PermissionError` and an empty temp folder (skipped for root) |
+| 13 | `remove_old_folders` listed a name though the folder stayed | refuter | acted | a name is listed only if `remove_tree` says the folder is gone. Test: an old folder in a read-only parent stays and is not listed |
+| 14 | Refuter 5, lens 1, 2: 9.96 GB printed "10.0 GB free, under 10 GB" | review | acted | the number is floored to 0.1 GB in integers (`free // (GB // 10) / 10`); tests pin 9.9 for both `LIMIT - 1` and 9.96e9 |
+| 15 | `tempfile.gettempdir()` outside the disk guard; bare strings for the codes | review | acted | `disk_status(folder=None)` finds the temp folder inside its guard; `DISK_LOW = "low"`, and `COULD_NOT_RUN` comes from `spark.core.outcomes` (`board.py` puts `scripts/` on its path, as `check_commit.py` does). Tests assert the code part and the number |
+| 16 | Status prints a low line once and after the board lines, without `mock.patch` | review | acted | `status_lines(..., disk=None)` appends the disk line; `main` reads the disk once, outside the board `try`, and prints it after the could-not-run line too. Test on `status_lines` with a low line given |
+| 17 | The SIGTERM test raced (a fast child could end first) | lens 3, refuter 6 | acted | the project's test waits for a file that never comes, so the child sits inside its run, copy made, until the signal; the message names the child's exit code if it ended first. Ran 3 times green |
+| 18 | The unreadable-copy test fails as root; the handler test fails when the runner set a handler; `untracked()` fails with no `.git` | lens 4, 5, 6 | acted | skipIf `geteuid() == 0` (also the read-only root test); skipIf a non-default SIGTERM handler; `untracked` raises `SkipTest` when git exits non-zero (a `--copy` run has no `.git`) |
+| 19 | Two planted-folder helpers and a second `DAY` | lens 3 | acted | one `planted_folder` in `tests/suite_runs.py`; `DAY = scratch.OLD_AFTER_SECONDS` |
+| 20 | Lens 5, 7: the copy's removal ran after the handler was restored; `getattr(os, "getuid")` fallback; local `import tempfile`; the sweep runs on every run | lens | acted | the `try` sits inside `sigterm_as_exit`; `os.getuid()` direct; `tempfile` imported at the top of `mutate.py`; a comment says only the default handler is replaced; the docs say every mutation run sweeps, with or without `--copy`; `# --- MVP ---` marks on the new functions |
+| 21 | Lens 8, refuter 8: the agents.md bullet too long; "about 1 ms" in developing.md; "nothing has written to it" is wrong | lens | acted | shortened to what to do; the number is gone (it stays in row 6); the docs say "whose own mtime is a day old (it does not look inside)" |
+| 22 | The one mutation run: 23 planted, 22 caught, 1 escaped | mutation | acted | the escape: "a link and a file are taken for folders" (the `S_ISDIR` check dropped) stayed green, because the extra `chmod` on a link's target was not looked at. The link and plain-file tests now assert the target's mode 0o755 and the file's mode 0o644 stay; the row re-run alone: caught. A later full run was not needed for the other 22 (the test change only adds asserts) |
+| 23 | Refuter: nothing outside ours was deleted | refuter | verified | stated in the review; the ownership proof is unchanged |
+
+## Second refuter round (fix commits), 2026-10-29
+
+| # | finding | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 24 | SIGTERM during the copy's removal leaves the copy (exit 143, 39,988 files left on a 40k-file project) | refuter | acted | `sigterm_held` blocks SIGTERM (`pthread_sigmask`, main thread only) around the removal; the signal arrives after it and the handler exits 143. Test: a child that sends SIGTERM to itself from inside the removal ends with 143 and an empty temp folder. `developing.md` says so |
+| 25 | `remove_tree(link to a 0o555 folder)` returned False but chmodded the target to 0o700 | refuter | acted | `remove_tree` returns False for a link before any chmod or scandir. Test: the target's mode stays 0o555 |
+| 26 | A 0o555 root alone crashes `--copy` with exit 1 (it cannot write `.mutate.lock`) | refuter | raised | later, outside this PR: a card to make the lock failure a could-not-run with its cause |
+| 27 | The SIGTERM test sometimes tests `copy_of`'s own cleanup and not main's `finally` | refuter | raised | later: the signal can land while `copy_of` still runs; the new removal test pins main's `finally` alone. A sharper stop test is a later row |

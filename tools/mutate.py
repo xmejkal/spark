@@ -59,18 +59,25 @@ import argparse
 import contextlib
 import json
 import re
+import signal
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 from pathlib import Path
 
 #: A developer's tool, not the product: it lives in tools/ and reaches the product's modules by path.
 SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scratch  # noqa: E402  (P435) stdlib only: removes the old folders a killed run left
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK  # noqa: E402
 
 CAUGHT, ESCAPED, REFUSED = "caught", "escaped", "refused"
+#: The names of the three kinds of folder a run makes in the temp folder; the sweep at the next start removes old ones (P435).
+RUN_PREFIX, IMPORT_PREFIX, COPY_PREFIX = "mutate-run-", "mutate-import-", "mutate-copy-"
 #: Which run caught a mutation (P98): the tests near the mutated file, or the whole suite.
 NEAR, FULL = "near", "full"
 
@@ -84,7 +91,6 @@ def _from_source(prefix):
     """
     import os
     import shutil
-    import tempfile
     run = Path(tempfile.mkdtemp(prefix=prefix))
     try:
         (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
@@ -107,7 +113,7 @@ def suite_is_green(root, tests, only=(), failfast=False):
     stop = ["-f"] if failfast else []
     command, where = (([sys.executable, "-B", "-m", "unittest"] + stop + list(only), Path(root) / tests) if only else
                       ([sys.executable, "-B", "-m", "unittest", "discover", "-s", tests] + stop, Path(root)))
-    with _from_source("mutate-run-") as environment:
+    with _from_source(RUN_PREFIX) as environment:
         result = subprocess.run(command, cwd=str(where), capture_output=True, text=True, env=environment)
     verdict = (result.stderr or "") + (result.stdout or "")
     return result.returncode == 0 and "\nOK" in verdict
@@ -219,7 +225,7 @@ def _import_error(root, file):
     imported by its dotted name with `scripts/` on the path, so it finds its package (P440); see `import_spec`.
     """
     folder, dotted = import_spec(root, file)
-    with _from_source("mutate-import-") as environment:
+    with _from_source(IMPORT_PREFIX) as environment:
         done = subprocess.run([sys.executable, "-B", "-c", "import sys; sys.path.insert(0, sys.argv[1]); __import__(sys.argv[2])",
                                str(folder), dotted], cwd=str(root), capture_output=True, text=True, env=environment)
     return None if done.returncode == 0 else (done.stderr.strip().splitlines() or ["exit %d" % done.returncode])[-1]
@@ -299,6 +305,7 @@ def retarget_tables(tables, old, new):
     return EXIT_OK
 
 
+# --- MVP ---
 def copy_of(root):
     """
     The tree at `root` in a temporary folder, without .git, worktrees or caches (P208). A run that mutates the copy never
@@ -306,14 +313,66 @@ def copy_of(root):
     JavaScript dependencies are borrowed, not copied, as the push gate does.
     """
     import shutil
-    import tempfile
-    copy = Path(tempfile.mkdtemp(prefix="mutate-copy-")) / root.name
-    shutil.copytree(root, copy, symlinks=True,
-                    ignore=shutil.ignore_patterns(".git", ".worktrees", "node_modules", "__pycache__", LOCK_NAME))
-    for folder in (Path("."), Path("tools") / "circuit-to-wokwi"):
-        if (root / folder / "node_modules").is_dir() and (copy / folder).is_dir():
-            (copy / folder / "node_modules").symlink_to(root / folder / "node_modules")
+    made = Path(tempfile.mkdtemp(prefix=COPY_PREFIX))
+    copy = made / root.name
+    try:
+        shutil.copytree(root, copy, symlinks=True,
+                        ignore=shutil.ignore_patterns(".git", ".worktrees", "node_modules", "__pycache__", LOCK_NAME))
+        for folder in (Path("."), Path("tools") / "circuit-to-wokwi"):
+            if (root / folder / "node_modules").is_dir() and (copy / folder).is_dir():
+                (copy / folder / "node_modules").symlink_to(root / folder / "node_modules")
+    except BaseException:  # a file it cannot read, a read-only root, or a stop: no half-made folder stays
+        scratch.remove_tree(made)
+        raise
     return copy
+
+
+# --- MVP ---
+def remove_old_scratch():
+    """
+    Remove the folders of the three prefixes that a stopped run left in the temp folder, older than a day (P435). Every
+    mutation run does it at its start, with or without --copy (--anchors and --retarget do not).
+    """
+    for prefix in (RUN_PREFIX, IMPORT_PREFIX, COPY_PREFIX):
+        scratch.remove_old_folders(tempfile.gettempdir(), prefix, time.time())
+
+
+# --- MVP ---
+@contextlib.contextmanager
+def sigterm_as_exit():
+    """
+    Inside, SIGTERM raises SystemExit, so a `finally` runs (P435). Installed only in the main thread and only over the
+    default handler, and restored on the way out. SIGKILL cannot be caught: the sweep at the next start covers it.
+    """
+    def stop(number, frame):
+        raise SystemExit(128 + number)
+
+    # Only the default handler is replaced: a handler somebody else set (a runner, a test harness) is theirs and stays.
+    installed = threading.current_thread() is threading.main_thread() and signal.getsignal(signal.SIGTERM) == signal.SIG_DFL
+    if installed:
+        signal.signal(signal.SIGTERM, stop)
+    try:
+        yield
+    finally:
+        if installed:
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
+
+# --- MVP ---
+@contextlib.contextmanager
+def sigterm_held():
+    """
+    Inside, a SIGTERM waits (main thread only): the copy's removal finishes, and the signal arrives after, to the handler
+    of sigterm_as_exit, which exits 143. Without it the handler's SystemExit would stop the removal half way.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    held = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+    try:
+        yield
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, held)
 
 
 class AnotherRunIsActive(Exception):
@@ -420,7 +479,8 @@ def main(argv=None):
     parser.add_argument("--for", dest="paths", nargs="+", metavar="PATH",
                         help="only the rows for these files, or for everything under these folders")
     parser.add_argument("--copy", action="store_true",
-                        help="mutate a temporary copy of the tree, never the files you or an agent have open")
+                        help="mutate a temporary copy of the tree, never the files you or an agent have open; "
+                             "the copy is removed also when SIGTERM stops the run")
     parser.add_argument("--retarget", nargs=2, metavar=("OLD", "NEW"),
                         help="instead of a run: in these tables, move every row whose `file` is OLD to NEW (the text is "
                              "edited, so the tables keep their alignment); then prove them with --anchors")
@@ -459,15 +519,19 @@ def main(argv=None):
         return EXIT_ESCAPED if wrong else EXIT_OK
 
     started = time.monotonic()
-    where = copy_of(root) if args.copy else root
-    try:
-        results, restored = run(where, args.tests, mutations, copied=where is not root)
-    except (AnotherRunIsActive, RedBeforeMutation) as stopped:
-        print(str(stopped), file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    finally:
-        if where is not root:
-            __import__("shutil").rmtree(where.parent, ignore_errors=True)
+    remove_old_scratch()
+    where = None
+    with sigterm_as_exit():  # also around the copy's removal: no window back at the default handler
+        try:
+            where = copy_of(root) if args.copy else root
+            results, restored = run(where, args.tests, mutations, copied=where is not root)
+        except (AnotherRunIsActive, RedBeforeMutation) as stopped:
+            print(str(stopped), file=sys.stderr)
+            return EXIT_COULD_NOT_RUN
+        finally:
+            if where is not None and where is not root:
+                with sigterm_held():
+                    scratch.remove_tree(where.parent)
     code = verdict(results, restored)
     if args.json:
         print(json.dumps({"tool": "mutate", "restored": restored,

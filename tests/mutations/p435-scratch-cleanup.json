@@ -1,0 +1,152 @@
+[
+ {
+  "file": "tools/scratch.py",
+  "name": "the prefix test is dropped",
+  "find": "if not name.startswith(prefix):",
+  "replace": "if False:"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "the age test is flipped",
+  "find": "if found.st_mtime < now - OLD_AFTER_SECONDS and remove_tree(full):",
+  "replace": "if found.st_mtime > now - OLD_AFTER_SECONDS and remove_tree(full):"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "a folder exactly a day old goes",
+  "find": "if found.st_mtime < now - OLD_AFTER_SECONDS and remove_tree(full):",
+  "replace": "if found.st_mtime <= now - OLD_AFTER_SECONDS and remove_tree(full):"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "a link and a file are taken for folders",
+  "find": "if not stat.S_ISDIR(found.st_mode) or found.st_uid != owner:",
+  "replace": "if found.st_uid != owner:"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "the owner test is dropped",
+  "find": "or found.st_uid != owner:",
+  "replace": "or False:"
+ },
+ {
+  "file": "tests/suite_temp.py",
+  "name": "the suite does not sweep at start",
+  "find": "scratch.remove_old_folders(tempfile.gettempdir(), SUITE_PREFIX, time.time())",
+  "replace": "pass"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "main does not sweep",
+  "find": "    remove_old_scratch()\n",
+  "replace": "    pass\n"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "the sweep forgets the import prefix",
+  "find": "for prefix in (RUN_PREFIX, IMPORT_PREFIX, COPY_PREFIX):",
+  "replace": "for prefix in (RUN_PREFIX, COPY_PREFIX):"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "SIGTERM is not turned into an exit",
+  "find": "signal.signal(signal.SIGTERM, stop)",
+  "replace": "pass"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "the old SIGTERM handler is not restored",
+  "find": "signal.signal(signal.SIGTERM, signal.SIG_DFL)",
+  "replace": "pass"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "the copy is not removed on the way out",
+  "find": "if where is not None and where is not root:",
+  "replace": "if False:"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "a half-made copy stays",
+  "find": "        scratch.remove_tree(made)\n        raise",
+  "replace": "        raise"
+ },
+ {
+  "file": "tools/board.py",
+  "name": "the limit is a tenth of what it says",
+  "find": "LOW_DISK_BYTES = 10 * GB",
+  "replace": "LOW_DISK_BYTES = 1 * GB"
+ },
+ {
+  "file": "tools/board.py",
+  "name": "the line shows at the limit",
+  "find": "if free_bytes >= LOW_DISK_BYTES:",
+  "replace": "if free_bytes > LOW_DISK_BYTES:"
+ },
+ {
+  "file": "tools/board.py",
+  "name": "the line is never None",
+  "find": "if free_bytes >= LOW_DISK_BYTES:",
+  "replace": "if free_bytes < 0:"
+ },
+ {
+  "file": "tools/board.py",
+  "name": "a disk that cannot be read raises",
+  "find": "except OSError as unread:",
+  "replace": "except KeyError as unread:"
+ },
+ {
+  "file": "tools/board.py",
+  "name": "status does not print the disk line",
+  "find": "            if disk:\n                print(disk)",
+  "replace": "            if False:\n                print(disk)"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "a name is listed though the folder stays",
+  "find": "return not os.path.lexists(folder)",
+  "replace": "return True"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "a read-only folder inside is not opened up",
+  "find": "os.chmod(here, stat.S_IRWXU)",
+  "replace": "pass"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "a failed copy is removed without opening read-only folders",
+  "find": "scratch.remove_tree(made)",
+  "replace": "shutil.rmtree(made, ignore_errors=True)"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "the run's copy is removed without opening read-only folders",
+  "find": "scratch.remove_tree(where.parent)",
+  "replace": "__import__(\"shutil\").rmtree(where.parent, ignore_errors=True)"
+ },
+ {
+  "file": "tools/board.py",
+  "name": "the disk number is rounded, not floored",
+  "find": "free_bytes // (GB // 10) / 10",
+  "replace": "free_bytes / GB"
+ },
+ {
+  "file": "tools/board.py",
+  "name": "status_lines drops the disk line",
+  "find": "return lines + ([disk] if disk else [])",
+  "replace": "return lines"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "a SIGTERM during the removal is not held",
+  "find": "signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})",
+  "replace": "signal.pthread_sigmask(signal.SIG_BLOCK, set())"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "a link is opened up and followed",
+  "find": "    if os.path.islink(folder):  # a link is never opened up or followed: its target is not ours\n        return False\n",
+  "replace": ""
+ }
+]
