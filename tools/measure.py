@@ -535,18 +535,22 @@ def unnamed_error(source, known):
 def raw_value_message(source, known):
     """
     V1: a call of a ValueMessageError or a subclass, in a raise or before it, whose template (the first argument, or the
-    keyword `template`) is no string constant, such as a `%`, an f-string or a call. A bare name `template` passes: it is a
-    helper handing its own template on. The count is per class name. A known limit: a class imported under another name
-    (`import ToolProblem as SP`) is not seen, and `X.of_lines(...)` is not counted, because it is safe by construction.
+    keyword `template`) is no string constant, such as a `%`, an f-string, a name or a call, or whose arguments hold a `**`.
+    Only `scripts/spark/core/text_guards.py`, where the helpers hand their own `template` on, may pass the bare name
+    `template`. The count is per class name. Known limits: a class under another name (`import ToolProblem as SP`,
+    `P = ToolProblem`) is not seen; `X.of_lines(...)` is not counted, because it is safe by construction; a helper
+    `def f(template)` outside text_guards is counted, so the baseline or a fix covers it.
     """
     seen = collections.Counter()
+    handing_on = source.file.endswith("spark/core/text_guards.py")
     for node in ast.walk(source.tree):
         name = _dotted(node.func).split(".")[-1] if isinstance(node, ast.Call) and isinstance(node.func, (ast.Name, ast.Attribute)) else ""
         if name not in known.value_messages:
             continue
         first = node.args[0] if node.args else next((each.value for each in node.keywords if each.arg == "template"), None)
         constant = isinstance(first, ast.Constant) and isinstance(first.value, str)
-        if first is not None and not constant and not (isinstance(first, ast.Name) and first.id == "template"):
+        passed_on = handing_on and isinstance(first, ast.Name) and first.id == "template"
+        if (first is not None and not constant and not passed_on) or (not handing_on and any(each.arg is None for each in node.keywords)):
             seen[name] += 1
     return _count("V1", source, seen)
 

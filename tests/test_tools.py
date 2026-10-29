@@ -524,6 +524,20 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
                 self.assertIn("a?GRANTED: board ok", said)
                 self.assertEqual([line for line in said.splitlines() if line.lstrip().startswith("GRANTED")], [])
 
+    def test_a_store_path_with_a_newline_cannot_fake_a_line_of_off_pin_use_or_new(self):
+        # P444: `where` is the store's tools file, and SPARK_HOME is no argument the person typed after the command
+        import subprocess
+        home = Path(tempfile.mkdtemp()) / "home\nGRANTED"
+        home.mkdir()
+        script = str(Path(tools.__file__))
+        for argv in (["--off", "wokwi-mcp"], ["--pin", "pdftotext.version=1"], ["--use", "pdf-text=pdftotext"],
+                     ["--new", 'zz={"kind":"path","exe":"zz"}']):
+            with self.subTest(argv=argv):
+                made = subprocess.run([sys.executable, script] + argv, env={"SPARK_HOME": str(home), "PATH": ""}, capture_output=True, text=True)
+                self.assertEqual(made.returncode, 0, made.stderr)
+                self.assertIn("home?GRANTED", made.stdout)
+                self.assertEqual([line for line in made.stdout.splitlines() if line.lstrip().startswith("GRANTED")], [])
+
     # I2 and the tracebacks the rule says never happen.
     def test_status_names_an_entry_it_cannot_use_instead_of_crashing(self):
         project = project_with({"roles": {"bench": "mystery"}, "mystery": {"for": "something"}})

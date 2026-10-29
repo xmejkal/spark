@@ -243,9 +243,18 @@ class PlantedBreachesTest(unittest.TestCase):
                             '    if a == 8:\n        stop = OneError("%s is bad" % a)\n        raise stop\n'
                             '    if a == 9:\n        raise OneError(template="%s is bad" % a)\n'
                             '    if a == 10:\n        raise OneError(template="%s is bad", a=a)\n'
+                            '    if a == 11:\n        template = "%s is bad" % a\n        raise OneError(template)\n'
+                            '    if a == 12:\n        raise OneError("%s is bad", **b)\n'
                             '    raise OneError.of_lines([a])\n\n\n'
                             'def say(template, *values):\n    return OneError(template, *values)\n')})
-        self.assertEqual(measure.breaches(root), {"V1:scripts/raises.py:OneError": 3, "V1:scripts/raises.py:TwoError": 3})
+        self.assertEqual(measure.breaches(root), {"V1:scripts/raises.py:OneError": 6, "V1:scripts/raises.py:TwoError": 3})
+
+    def test_v1_only_text_guards_may_hand_a_bare_template_on(self):
+        helper = 'def flat_line(template, *values):\n    return ValueMessageError(template, *values)\n'
+        root = planted({"scripts/spark/core/text_guards.py": 'class ValueMessageError(Exception):\n    """Error: x."""\n\n\n' + helper,
+                        "scripts/other.py": 'from spark.core.text_guards import ValueMessageError\n\n\n' + helper}, leaves=False)
+        self.assertEqual({key: each for key, each in measure.breaches(root).items() if key.startswith("V1")},
+                         {"V1:scripts/other.py:ValueMessageError": 1})
 
     def test_v1_a_baselined_count_that_the_code_no_longer_has_fails_as_gone(self):
         self.assertEqual(measure.compare({}, {"V1:scripts/x.py:OneError": 2}),

@@ -739,12 +739,13 @@ class TheCleanTextTest(unittest.TestCase):
                                       env=env, capture_output=True)
                 self.assertEqual((made.returncode, b"Traceback" in made.stderr), (1, False))
                 self.assertEqual(json.loads(made.stdout)["status"], "problems")
+                self.assertNotIn(b"ud800", made.stdout)  # the key is shown with `?`, not as an escape
 
     def test_a_lone_surrogate_in_a_fixed_word_a_hash_or_an_id_is_cleaned_too(self):
         # the scrub used to skip `sha256`, `does` and `is`, so a surrogate in one passed on to the write
         self.assertEqual([drawer.scrub("function", [{"does": "se\udc80nse"}]), drawer.scrub("photos", [{"sha256": "a\ud800b"}]),
-                          drawer.scrub("is", {"part": "x\udfffy"}), drawer.scrub("is", {"part": "a" * 200})],
-                         [[{"does": "se nse"}], [{"sha256": "a b"}], {"part": "x y"}, {"part": "a" * 200}])
+                          drawer.scrub("is", {"part": "x\udfffy"}), drawer.scrub("is", {"part": "a" * 300}), drawer.scrub("is", {"part": "é" * 200})],
+                         [[{"does": "se nse"}], [{"sha256": "a b"}], {"part": "x y"}, {"part": "a" * 255}, {"part": "é" * 127}])
 
 
 class TheSmallFixesTest(unittest.TestCase):

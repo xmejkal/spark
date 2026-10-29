@@ -17,7 +17,7 @@ from collections import namedtuple
 import boards
 import parts
 import store
-from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems
+from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems, printable
 
 #: What a part does (§5.6) — one list, in parts.py.
 VERBS = parts.VERBS
@@ -52,13 +52,20 @@ def scrub(key, value):
     if key in TEXT_MAX and isinstance(value, str):
         return clean(value, TEXT_MAX[key])
     if key == "is":  # an id is a file name in the store, up to the name limit, and only control characters and surrogates go (P445)
-        return _scrubbed(value, store.FILE_NAME_MAX_BYTES)
+        return _in_bytes(_scrubbed(value, store.FILE_NAME_MAX_BYTES), store.FILE_NAME_MAX_BYTES)
     return _scrubbed(value, PROVENANCE_MAX) if key in PROVENANCE_KEYS else _scrubbed(value)
 
 
 def list_provenance_key_problems(values):
     """Why a key inside the `PROVENANCE_KEYS` of `values` cannot be written: scrub cleans a text, never a key (P374)."""
     return [problem for key in PROVENANCE_KEYS if key in values for problem in list_key_problems(key, values[key])]
+
+
+def _in_bytes(value, size):
+    """A value with every string in it cut to at most `size` bytes of UTF-8, never in the middle of a character."""
+    if isinstance(value, str):
+        return value.encode("utf-8")[:size].decode("utf-8", "ignore")
+    return {key: _in_bytes(item, size) for key, item in value.items()} if isinstance(value, dict) else value
 
 
 def _scrubbed(value, cap=LABEL_MAX):
@@ -122,7 +129,7 @@ def entries():
         for key, value in found[path.stem].items():
             if key != "schema" and (key not in FIELDS or not CHECKS[key][0](value)):
                 raise store.StoreProblem("%s: %s — fix it by hand; the drawer is read whole or not at all"
-                                         % (path, "`%s` is not a drawer field" % key if key not in FIELDS else "`%s`: %s" % (key, CHECKS[key][1])))
+                                         % (path, "`%s` is not a drawer field" % printable(key) if key not in FIELDS else "`%s`: %s" % (key, CHECKS[key][1])))
     return found
 
 
@@ -227,7 +234,7 @@ def settle(entry_id, before, values, known):
     {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
     """
     values = {key: scrub(key, value) for key, value in values.items()}
-    problems = [parts._problem(entry_id, "%s is not a drawer field — the fields are %s" % (key, ", ".join(FIELDS)))
+    problems = [parts._problem(entry_id, "%s is not a drawer field — the fields are %s" % (printable(key), ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
     problems += [parts._problem(entry_id, each) for key, value in values.items() for each in list_key_problems(key, value, SURROGATE)]
     problems += [parts._problem(entry_id, CHECKS[key][1]) for key, value in values.items() if key in CHECKS and not CHECKS[key][0](value)]

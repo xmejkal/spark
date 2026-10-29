@@ -642,14 +642,13 @@ def main(argv=None, run=None):
                 try:
                     (run or run_checked)(["claude", "mcp", "remove", "--scope", scope, args.off])
                 except (OSError, subprocess.CalledProcessError):
-                    print("  %s was not registered with Claude Code at %s scope — nothing to remove" % (args.off, scope))
+                    print(flat_line("  %s was not registered with Claude Code at %s scope — nothing to remove", args.off, scope))
             elif entry.get("owner") == "spark":
-                print("  %s is spark's own server and stays loaded with the plugin — disable it in /mcp" % args.off)
-            print("  %s is off (%s)" % (args.off, where))
+                print(flat_line("  %s is spark's own server and stays loaded with the plugin — disable it in /mcp", args.off))
+            print(flat_line("  %s is off (%s)", args.off, where))
         elif args.use:
             role, _, tool_name = args.use.partition("=")
-            print("  %s → %s (%s)" % (role, tool_name, use(role, tool_name, project if scope == "project" else None,
-                                                          None)))
+            print(flat_line("  %s → %s (%s)", role, tool_name, use(role, tool_name, project if scope == "project" else None, None)))
         elif args.new:
             name, _, text = args.new.partition("=")
             try:
@@ -659,13 +658,13 @@ def main(argv=None, run=None):
             problem = new_entry_problem(entry)
             if problem:
                 raise ToolProblem("%s: %s — nothing written", name, problem)
-            print("  %s written (%s); point a job at it: /spark:setup use <role>=%s" % (name, choose([name], entry, where), name))
+            print(flat_line("  %s written (%s); point a job at it: /spark:setup use <role>=%s", name, choose([name], entry, where), name))
         elif args.pin:
             target, _, value = args.pin.partition("=")
             name, _, field = target.partition(".")
             written = choose([name, field or "version"], value, where)
-            print("  %s %s pinned to %s (%s); to install it: tools.py --install %s%s"
-                  % (name, field or "version", value, written, name, " --project %s" % project if project else ""))
+            print(flat_line("  %s %s pinned to %s (%s); to install it: tools.py --install %s%s",
+                            name, field or "version", value, written, name, " --project %s" % project if project else ""))
     except ToolProblem as problem:
         print("tools.py: %s" % problem, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
