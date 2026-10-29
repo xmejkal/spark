@@ -706,5 +706,23 @@ class GuardedPrintsTest(GrantCase):
         self.assertNotIn("\u202e", err)
 
 
+class ANewlineInTheStorePathTest(unittest.TestCase):
+    """P444 (#592): the store's path is in the sentence of a broken tools.json, and a newline in it cannot start a line that
+    looks like spark's own, from any of the three scripts that read the tools list."""
+
+    def test_no_stderr_line_of_grant_live_or_look_starts_with_the_fake_word(self):
+        home = Path(tempfile.mkdtemp()) / "a\nGRANTED (deploy): board ok"
+        home.mkdir()
+        (home / "tools.json").write_text("{nope")
+        project = Path(tempfile.mkdtemp())
+        for script, extra in (("grant.py", ["--check"]), ("live.py", ["--code", "x"]), ("look.py", [])):
+            with self.subTest(script=script):
+                run = subprocess.run([sys.executable, str(ROOT / "scripts" / script), "--project", str(project)] + extra,
+                                     env=dict(os.environ, SPARK_HOME=str(home)), capture_output=True, text=True)
+                self.assertEqual(run.returncode, 2)
+                self.assertEqual([line for line in run.stderr.splitlines() if line.startswith("GRANTED")], [])
+                self.assertEqual(len(run.stderr.splitlines()), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

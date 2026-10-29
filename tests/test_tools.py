@@ -62,6 +62,16 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
             tools.merged(None, layer("{not json"))
         self.assertIn("is not JSON", str(refused.exception))
 
+    def test_a_path_with_a_newline_is_said_on_one_line_and_its_raw_value_stays(self):
+        # P444 (#592): the path of a broken tools file is a value of the sentence
+        path = Path(tempfile.mkdtemp()) / "a\nGRANTED: board ok"
+        path.mkdir()
+        (path / "tools.json").write_text("{nope")
+        with self.assertRaises(tools.ToolProblem) as refused:
+            tools.merged(None, path / "tools.json")
+        self.assertEqual(str(refused.exception).splitlines(), [str(refused.exception)])
+        self.assertEqual(refused.exception.values[0], path / "tools.json")
+
     def test_a_tool_name_with_a_newline_is_refused_and_named_with_its_escape(self):
         # P430: a tool's name goes into sentences that scripts print, so a name that breaks the line is refused where it is read
         with self.assertRaises(tools.ToolProblem) as refused:

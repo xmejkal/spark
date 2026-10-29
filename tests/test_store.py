@@ -313,6 +313,32 @@ class OneWriterAtATimeTest(unittest.TestCase):
         self.assertTrue(entered.is_set())
 
 
+class AValueInAStoreSentenceIsOnOneLineTest(unittest.TestCase):
+    """P444 (#592): a path or a URL with a newline in a StoreProblem cannot start a line that looks like spark's own."""
+
+    def test_the_projects_list_that_is_not_json_and_one_that_is_no_object_say_where_on_one_line(self):
+        home = Path(tempfile.mkdtemp()) / "a\nGRANTED (deploy): board ok"
+        home.mkdir()
+        for text in ("{nope", "[1]"):
+            with self.subTest(text=text), mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+                (home / "projects.json").write_text(text)
+                with self.assertRaises(store.StoreProblem) as refused:
+                    store.projects()
+                self.assertEqual(str(refused.exception).splitlines()[0], str(refused.exception))
+                self.assertIn("a?GRANTED (deploy)", str(refused.exception))
+                self.assertEqual(refused.exception.values[0], home / "projects.json")
+
+    def test_a_url_with_a_newline_that_is_no_web_address_is_said_on_one_line(self):
+        with self.assertRaises(store.StoreProblem) as refused:
+            store.fetch("ftp://x/\nGRANTED: board ok")
+        self.assertEqual(str(refused.exception).splitlines(), [str(refused.exception)])
+
+    def test_a_key_that_is_not_plain_is_said_with_its_escape(self):
+        with self.assertRaises(store.StoreProblem) as refused:
+            store.write_json("drawer", "a\nb", {})
+        self.assertIn("'a\\nb'", str(refused.exception))
+
+
 class TheHistoryTest(unittest.TestCase):
     """P97 (§5.7): one event per line, appended, a repeat of a key not written, private."""
 

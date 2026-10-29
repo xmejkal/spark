@@ -59,6 +59,9 @@ class ValueMessageErrorTest(unittest.TestCase):
     def test_a_template_with_no_value_stays_as_it_is(self):
         self.assertEqual(self.message("100%"), "100%")
 
+    def test_of_lines_keeps_the_breaks_between_the_lines_and_flattens_each(self):
+        self.assertEqual(str(text_guards.ValueMessageError.of_lines(["a\nb", "c"])), "a?b\nc")
+
     def test_one_value_too_many_still_fails_as_a_format_does(self):
         with self.assertRaises(TypeError):
             self.message("%s", "a", "b")

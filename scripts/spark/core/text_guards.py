@@ -50,6 +50,11 @@ class ValueMessageError(Exception):
                       for value, kind in zip(values, kinds + ["s"] * len(values)))
         super().__init__(template % shown if values else template)
 
+    @classmethod
+    def of_lines(cls, lines, **keywords):
+        """The error of several sentences, one per line: each is a value, flattened, and the line breaks between them stay."""
+        return cls("\n".join(["%s"] * len(lines)), *lines, **keywords)
+
 
 def guard_lines(text):
     """
