@@ -22,7 +22,9 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import check_backlog  # noqa: E402
+from spark.core.outcomes import COULD_NOT_RUN  # noqa: E402
 
 OWNER = "xmejkal"
 #: Each board: its name in the status, its project number, the repository it holds (P102a's spec §2).
@@ -171,13 +173,13 @@ def _boards_join(boards, each, today):
     return [_on_board(name, said) for name, items in boards for said in each(items, today)]
 
 
-def status_lines(boards, prs, closes, worked, today, bin_why="no bin board was given"):
+def status_lines(boards, prs, closes, worked, today, bin_why="no bin board was given", disk=None):
     """
     The status, both boards: boards [(name, items)], prs [(repo, number, title, draft)], closes [(date, first line)],
     worked {date}. The bin's cards count in the verdict as at the gate (the flight total, the lane, an undated wait);
     with no bin among the boards that is said with `bin_why` — gather()'s cause for setting it aside — and spark's cards
     are counted alone. UnknownStage (check_backlog) for a card in a stage the gate does not know or a spark board with
-    no Status on any card: the caller says could-not-run (P167).
+    no Status on any card: the caller says could-not-run (P167). `disk` is the disk line (disk_status) or None; it comes last.
     """
     spark = dict(boards)["spark"]
     # Where a card stands is the gate's one rule (check_backlog.stage_of): a stage it does not know, or a board with no
@@ -202,7 +204,7 @@ def status_lines(boards, prs, closes, worked, today, bin_why="no bin board was g
     gap = missing_close(worked, {day for day, _ in closes}, today)
     if gap:
         lines.append("  ! the day of %s has no close — write it first" % gap.isoformat())
-    return lines
+    return lines + ([disk] if disk else [])
 
 
 #: One page of a board: GitHub hands a project's items over 100 at a time, so read_board() asks page after page with
@@ -315,19 +317,31 @@ GB = 10**9
 LOW_DISK_BYTES = 10 * GB
 
 
+#: The codes after `disk:`; an agent keys on these and not on the English after the dash.
+DISK_LOW = "low"
+
+
+# --- MVP ---
 def disk_line(free_bytes):
-    """The one line that warns of low disk, or None when there is enough. The first word after `disk:` is the code."""
+    """
+    The one line that warns of low disk, or None when there is enough. The code after `disk:` is DISK_LOW. The number is
+    floored to 0.1 GB, so a disk just under the limit never reads as the limit.
+    """
     if free_bytes >= LOW_DISK_BYTES:
         return None
-    return "disk: low — %.1f GB free, under %d GB" % (free_bytes / GB, LOW_DISK_BYTES // GB)
+    return "disk: %s — %.1f GB free, under %d GB" % (DISK_LOW, free_bytes // (GB // 10) / 10, LOW_DISK_BYTES // GB)
 
 
-def disk_status(folder):
-    """The disk line for the disk that holds `folder`; could-not-run with its cause when the disk cannot be read (W1)."""
+# --- MVP ---
+def disk_status(folder=None):
+    """
+    The disk line for the disk that holds `folder` (default: the temp folder); could-not-run with its cause when the disk
+    cannot be read (W1). Finding the temp folder is inside the guard too.
+    """
     try:
-        return disk_line(shutil.disk_usage(folder).free)
+        return disk_line(shutil.disk_usage(folder or tempfile.gettempdir()).free)
     except OSError as unread:
-        return "disk: could-not-run — %s" % (unread.strerror or type(unread).__name__)
+        return "disk: %s — %s" % (COULD_NOT_RUN, unread.strerror or type(unread).__name__)
 
 
 #: What each verb's --help says it does, each claim read off the code below (P146 council, C3): status_lines() for what
@@ -364,16 +378,16 @@ def main(argv=None):
         return 0
     today = dt.date.today()
     if args.verb == "status":
+        disk = disk_status()  # its own guard: a disk not read never hides the board's lines
         try:
             boards, prs, closes, _, bin_why = gather(STATUS_TIMEOUT)
             since = max((day for day, _ in closes), default=today - dt.timedelta(days=14))
             print("\n".join(status_lines(boards, prs, closes, work_days(args.when_in or [os.getcwd()], since), today,
-                                         bin_why=bin_why or "no bin board was given")))
+                                         bin_why=bin_why or "no bin board was given", disk=disk)))
         except Exception as broken:  # a session start must never fail (the spec, §2); W1: a look not made is could-not-run
             print("board: could-not-run — %s" % (broken or type(broken).__name__))
-        warning = disk_status(tempfile.gettempdir())  # its own guard: a disk not read never hides the board's lines
-        if warning:
-            print(warning)
+            if disk:
+                print(disk)
         return 0
     try:
         boards, prs, closes, project_id, _ = gather()
