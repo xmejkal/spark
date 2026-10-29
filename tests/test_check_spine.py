@@ -391,12 +391,58 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("wrote %s — an example layout" % (into / "breadboard.json"), said)
         self.assertIn("An example layout is in breadboard.json", (into / "breadboard.md").read_text())
 
-    def test_a_board_spark_cannot_draw_gets_its_sheet_and_the_reason(self):
+    def test_a_board_drawn_from_its_record_gets_the_picture_and_no_wokwi_diagram_by_design(self):
+        # P412: Wokwi has no part with the FireBeetle's pins, so only breadboard.svg is written
         into, said = self.keep_a_build_of("button-light")
         self.assertFalse((into / "breadboard.json").exists())
-        self.assertIn("no drawn breadboard: no Wokwi pin positions for board-esp32-s3-devkitc-1", said)
-        self.assertIn("breadboard.json and breadboard.svg not written: no Wokwi pin positions",
-                      (into / "breadboard.md").read_text())
+        self.assertTrue((into / "breadboard.svg").is_file())
+        self.assertIn("no drawn breadboard: ", said)
+        self.assertNotIn("not written: ", (into / "breadboard.md").read_text())
+        self.assertIn("There is no Wokwi diagram for this board", (into / "breadboard.md").read_text())
+
+    def test_the_kept_entries_say_the_diagram_is_not_written_by_design_and_the_picture_is_from_the_record(self):
+        import argparse
+        import contextlib
+        import io
+        import shutil
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
+        work = self.workdir()
+        shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+        into = Path(tempfile.mkdtemp()) / "project"
+        into.mkdir()
+        (into / "breadboard.json").write_text("{}")  # an old drawing, which describes another build
+        args = argparse.Namespace(json=True, keep=into, requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+        kept = json.loads(out.getvalue())["kept"]
+        by_file = {Path(entry["file"]).name: entry for entry in kept if Path(entry["file"]).name.startswith("breadboard.")}
+        self.assertEqual((by_file["breadboard.svg"]["did"], by_file["breadboard.svg"]["drawn_from"]), ("wrote", "record"))
+        gone = by_file["breadboard.json"]
+        self.assertEqual((gone["did"], gone["code"], gone["subject"], gone["expected"]), ("not written", "no_wokwi_part", None, True))
+        self.assertFalse((into / "breadboard.json").exists())
+
+    def kept_json_of(self, fixture_name):
+        """`report` with --json keeping one breadboard fixture's built circuit: the `kept` entries."""
+        import argparse
+        import contextlib
+        import io
+        import shutil
+        fixture = Path(__file__).resolve().parent / "data" / "breadboard" / fixture_name
+        work = self.workdir()
+        shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
+        args = argparse.Namespace(json=True, keep=Path(tempfile.mkdtemp()) / "project", requirements=str(fixture / "requirements.json"))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+        return [entry for entry in json.loads(out.getvalue())["kept"] if Path(entry["file"]).name.startswith("breadboard.")]
+
+    def test_an_older_refusal_has_a_null_code_and_a_wrote_entry_of_wokwi_geometry_has_no_drawn_from(self):
+        for entry in self.kept_json_of("motor"):
+            if entry["did"] == "not written" and entry["file"].endswith((".json", ".svg")):
+                with self.subTest(file=entry["file"]):
+                    self.assertEqual((entry["code"], entry["subject"], entry["expected"]), (None, None, False))
+        wrote = [entry for entry in self.kept_json_of("button-light-xiao") if entry["did"] == "wrote"]
+        self.assertTrue(wrote)
+        self.assertTrue(all("drawn_from" not in entry for entry in wrote))
 
     def test_a_drawing_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
         import argparse

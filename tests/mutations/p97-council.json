@@ -19,7 +19,7 @@
  {"file": "scripts/check_spine.py", "name": "C-2: the verdict stands alone over needs left off the board", "find": "if unserved and code == EXIT_OK else \"\"))", "replace": "if False else \"\"))"},
  {"file": "scripts/check_spine.py", "name": "C-2: the verdict is not handed the requirements file's note", "find": "    return report(stages, args, workdir, requirements)", "replace": "    return report(stages, args, workdir)"},
  {"file": "scripts/check_spine.py", "name": "C-2: the JSON verdict leaves the note out", "find": "        said.update({\"unserved\": requirements[\"unserved\"]} if left_off(requirements) else {})", "replace": "        pass"},
- {"file": "scripts/emit_footprint.py", "name": "C-7: no board stops at the footprint stage", "find": "    return _missing(physical, header if isinstance(header, dict) else None)", "replace": "    return []"},
+ {"file": "scripts/emit_footprint.py", "name": "C-7: no board stops at the footprint stage", "find": "    return _missing(*_physical_and_header(board))", "replace": "    return []"},
  {"file": "scripts/needs.py", "name": "C-7: --match's board candidates never say they stop", "find": "            said[\"stops_at\"] = \"footprint\" if emit_footprint.footprint_gaps(record) else None", "replace": "            said[\"stops_at\"] = None"},
  {"file": "scripts/parts.py", "name": "C-7: --match's text drops the footprint stage", "find": "c.get(\"stop_line\") or \"\"]", "replace": "\"\"]"},
  {"file": "scripts/parts.py", "name": "C-7: --audit counts no board as stopping", "find": "        elif kind == \"board\" and emit_footprint.footprint_gaps(record):  # C-7: a board owes nothing, and may still stop the chain", "replace": "        elif False:"},

@@ -42,7 +42,9 @@
       "//alignment": "Both rows are flush at the end away from USB-C; the 18-pin row runs four pitches further toward the USB end.",
       "//first_pad_from_edge_mm": "Centre of the first pad of BOTH rows, from the flush edge. This was prose inside the line above until 2026-09-25, which meant the one number tying the pads to the outline could not be read by anything - the same defect as the header order itself. Check: 60.0/2 - 5.2 = 24.80 mm, where the hand-checked footprint puts pad 1.",
       "first_pad_from_edge_mm": 5.2,
-      "flush_edge": "+y"
+      "flush_edge": "+y",
+      "//doubtful_pads": "P412: header_order calls pads 14 and 16 of the 18-pin row GND1 and GND3, and says a later reading of the same schematic and the board photo silkscreens them NC with no net. A jumper to an NC pad does nothing, so the drawn breadboard never names them as ground. Settle it with a continuity meter, module to pad.",
+      "doubtful_pads": ["GND1", "GND3"]
     },
     "mounting_holes": {
       "count": 4,

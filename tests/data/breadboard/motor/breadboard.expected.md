@@ -99,7 +99,7 @@ flowchart LR
   n21 ---|"20"| n19
 ```
 
-breadboard.json and breadboard.svg not written: no Wokwi pin positions for board-esp32-s3-devkitc-1 in data/wokwi-geometry.json.
+breadboard.json and breadboard.svg not written: nothing says how to draw L9110sModule in Wokwi.
 
 ### Points
 

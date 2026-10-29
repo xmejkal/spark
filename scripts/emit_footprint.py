@@ -80,8 +80,8 @@ def pad_diameter_mm(hole_mm, rules=None):
     return round(hole_mm + 2 * fab.annular_ring_to_draw_mm(rules), 3)
 
 
-def _missing(physical, header):
-    """Every field this script needs and cannot derive, named individually, as (field, note) with "" for a field that needs no note."""
+def _geometry_missing(physical, header):
+    """Every field the pads and the outline need and cannot be derived, named individually, as (field, note) with "" for a field that needs no note."""
     gaps = []
     if not header:
         return [("physical.header", "no header geometry at all")]
@@ -93,17 +93,44 @@ def _missing(physical, header):
             gaps.append(("physical.%s" % field, ""))
     if not physical.get("header_order"):
         gaps.append(("physical.header_order", "which label is on which pad — not derivable"))
-    if not physical.get("footprint_export"):
+    return gaps
+
+
+def _missing(physical, header):
+    """Every field this script needs and cannot derive, named individually, as (field, note) with "" for a field that needs no note."""
+    gaps = _geometry_missing(physical, header)
+    if header and not physical.get("footprint_export"):
         gaps.append(("physical.footprint_export", "what the module should be called"))
     return gaps
 
 
-def _gaps(board):
-    """`_missing` of a board; a board that is no object lacks all of it. A `physical` or a `header` that is no object is no geometry."""
+def _physical_and_header(board):
+    """(physical, header) of a board; a board that is no object lacks all of it. A `physical` or a `header` that is no object is no geometry (header None)."""
     board = board if isinstance(board, dict) else {}
     physical = board.get("physical") if isinstance(board.get("physical"), dict) else {}
     header = physical.get("header")
-    return _missing(physical, header if isinstance(header, dict) else None)
+    return physical, header if isinstance(header, dict) else None
+
+
+def _gaps(board):
+    """`_missing` of a board."""
+    return _missing(*_physical_and_header(board))
+
+
+def _worded(gaps):
+    return ["%s (%s)" % (field, note) if note else field for field, note in gaps]
+
+
+def geometry_missing(board):
+    """What a board's file lacks for its pads and outline, as (field, note) pairs with "" for no note, or [] when nothing: the
+    fields for a program to read, where `geometry_gaps` has the sentences."""
+    return _geometry_missing(*_physical_and_header(board))
+
+
+def geometry_gaps(board):
+    """What a board's file lacks for its pads and outline to be placed (the footprint's gaps without the module's name), each as its field and its
+    note in parentheses, or [] when nothing. The drawn breadboard refuses on it before it reads a pad."""
+    return _worded(geometry_missing(board))
 
 
 def footprint_gaps(board):
@@ -112,7 +139,7 @@ def footprint_gaps(board):
     [] when nothing — the one rule by which this script refuses, and by which `--match`, `--audit` and `--requirements` say a
     board stops the chain at the footprint stage (C-7, P121) before anyone builds.
     """
-    return ["%s (%s)" % (field, note) if note else field for field, note in _gaps(board)]
+    return _worded(_gaps(board))
 
 
 # --- MVP --- (P411) the gaps `footprint_gaps` finds are said two ways, each from the same facts: the list, for the build and
@@ -145,21 +172,27 @@ def footprint_stop_line(board):
 DISAGREES_MESSAGE = "the board definition disagrees with itself: %s"
 
 
-def _wrong_kind(physical):
-    """The first field of a complete board file that holds a value of the wrong kind, said with its name, or None. The board
-    file's validation checks no header geometry, so `pads` and `render` would raise a TypeError on a pitch written as text."""
+def kind_problem(physical):
+    """(field, what is wrong with it) of the first field of a board file with no `geometry_gaps` that holds a value of the wrong kind, or
+    None. The board file's validation checks no header geometry, so `pads` and `render` would raise a TypeError on a pitch written as text."""
     header = physical["header"]
     numbers = [("physical.%s" % field, physical[field]) for field in ("width_mm", "height_mm")] + [
         ("physical.header.%s" % field, header[field]) for field in ("pitch_mm", "row_spacing_mm", "first_pad_from_edge_mm")]
     for name, value in numbers:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            return "%s is not a number" % name
+            return name, "%s is not a number" % name
     pins, order = header["pins"], physical["header_order"]
     if not isinstance(pins, list) or not all(isinstance(count, int) and not isinstance(count, bool) for count in pins):
-        return "physical.header.pins is not a list of whole numbers"
+        return "physical.header.pins", "physical.header.pins is not a list of whole numbers"
     if not isinstance(order, dict) or not all(isinstance(labels, list) for key, labels in order.items() if not key.startswith("//")):
-        return "physical.header_order is not an object with a list of labels for each row"
+        return "physical.header_order", "physical.header_order is not an object with a list of labels for each row"
     return None
+
+
+def wrong_kind(physical):
+    """The first field of a board file with no `geometry_gaps` that holds a value of the wrong kind, said with its name, or None."""
+    found = kind_problem(physical)
+    return found[1] if found else None
 
 
 def why_header_disagrees(board, rules=None):
@@ -170,7 +203,7 @@ def why_header_disagrees(board, rules=None):
     """
     if footprint_gaps(board):
         return None
-    wrong = _wrong_kind(board["physical"])
+    wrong = wrong_kind(board["physical"])
     if wrong:
         return DISAGREES_MESSAGE % wrong
     try:

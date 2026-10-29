@@ -43,6 +43,7 @@ PINNED = "pinned to the literal in the same assertion: the literal is the expect
 MAY_READ = {
     "outcomes.RECORDED": PINNED, "outcomes.NONE_RECORDED": PINNED, "outcomes.NOT_CHECKED": PINNED,
     "outcomes.NOT_CHECKED_MESSAGE": PINNED,
+    "breadboard_drawing.CODES": PINNED,
     "board_console.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
     "ready_check.HASH_FILES": "the board code under test, rendered; the words it must print are literals in the test (P260)",
     "assign_pins.BUS_LINES": SAMENESS, "parts.BUSES": SAMENESS,

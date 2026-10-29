@@ -1,0 +1,23 @@
+{
+ "//": "spark's own breadboard surface for a board drawn from its own record (P412): 63 columns, the half board's pitch, first column and rows, no rails. The columns are the PO's word, 2026-10-29; the model is not recorded, and rails are not recorded or drawn. Wokwi-measured facts stay in data/wokwi-geometry.json.",
+ "full": {
+  "type": "spark-breadboard-full",
+  "columns": 63,
+  "pitch": 9.6,
+  "first_column_x": 26,
+  "letters_y": {
+   "a": 51,
+   "b": 60.6,
+   "c": 70.2,
+   "d": 79.8,
+   "e": 89.4,
+   "f": 118.2,
+   "g": 127.8,
+   "h": 137.4,
+   "i": 147,
+   "j": 156.6
+  },
+  "top_letters": "abcde",
+  "rails_y": {}
+ }
+}

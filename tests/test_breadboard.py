@@ -73,8 +73,13 @@ class TheSheetTest(unittest.TestCase):
     def test_the_board_s_ground_pads_are_one_point(self):
         grounds = [line for line in self.connections() if "board GND" in line]
         self.assertEqual(len(grounds), 1, self.text)
-        self.assertNotRegex(self.text, r"GND\d")
+        self.assertNotRegex("\n".join(self.connections()), r"GND\d")
         self.assertIn("LedRed5mm K", grounds[0])
+        self.assertEqual(len(re.findall(r"GND\d", self.text)), 3, "the pad GND uses, and the two doubtful ones, once each")
+
+    def test_the_sheet_reads_as_recorded(self):
+        # P412: the whole sheet of a board drawn from its record, word for word; regenerate it only on purpose
+        self.assertEqual(self.text, (FIXTURE / "breadboard.expected.md").read_text())
 
     def test_a_leg_the_record_describes_is_named(self):
         self.assertIn("LedRed5mm A (the anode, the longer leg)", self.text)

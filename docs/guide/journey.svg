@@ -75,14 +75,18 @@
 <rect x="1214" y="696" width="96" height="36" rx="18" fill="#adf0c7"/>
 <text x="1262" y="721" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
 <text x="1214" y="766" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Ran end to end on</text>
-<text x="1214" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-11. The drawing is</text>
-<text x="1214" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">on the XIAO C6 only. The</text>
-<text x="1214" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">page of tabs ran,</text>
-<text x="1214" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-16. A moved part,</text>
-<text x="1214" y="936" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">jumper or resistor is kept,</text>
-<text x="1214" y="970" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-18. The library's</text>
-<text x="1214" y="1004" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">XIAO record builds button +</text>
-<text x="1214" y="1038" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">LED, 2026-10-18.</text>
+<text x="1214" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-11. Drawn on a half</text>
+<text x="1214" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">breadboard for the XIAO C6</text>
+<text x="1214" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">(a Wokwi diagram). A</text>
+<text x="1214" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">picture alone for the</text>
+<text x="1214" y="936" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">FireBeetle 2 S3, from its</text>
+<text x="1214" y="970" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">record, 2026-10-29. The</text>
+<text x="1214" y="1004" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">page of tabs ran,</text>
+<text x="1214" y="1038" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-16. A moved part,</text>
+<text x="1214" y="1072" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">jumper or resistor is kept,</text>
+<text x="1214" y="1106" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-18. The library's</text>
+<text x="1214" y="1140" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">XIAO record builds button +</text>
+<text x="1214" y="1174" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">LED, 2026-10-18.</text>
 <line x1="227" y1="1318" x2="1373" y2="1318" stroke="#b0b0b0" stroke-width="4"/>
 <circle cx="227" cy="1318" r="36" fill="#2dc75c"/>
 <text x="227" y="1329" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">5</text>

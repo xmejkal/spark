@@ -94,7 +94,7 @@ not; delete it to have it regenerated. With `--json`, each file is listed under 
 why. After a build that finished, it also writes `breadboard.md`, new each time: the parts, the resistors they ask
 for, numbered wiring steps (one connection each) and a mermaid diagram of them, by the board's printed labels and the parts' legs, and what each record says to check before power
 ([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. Beside it,
-`breadboard.json` is an example layout of the same steps on a half breadboard, each jumper in its step's color
+`breadboard.json` is an example layout of the same steps on a half breadboard (a board with a complete record, such as the FireBeetle 2 ESP32-S3, is drawn from the record on a 63-column breadboard as `breadboard.svg` alone, P412), each jumper in its step's color
 ([P267](https://github.com/xmejkal/spark/issues/300)). The person pastes it into the `diagram.json` of a new project
 on wokwi.com and compares it with their own breadboard. `breadboard.svg` is the same layout as a picture, which the
 sheet shows inline, each part as a plain pictogram ([P268](https://github.com/xmejkal/spark/issues/302)). A part you move in it stays where you put it at the next build ([P273](https://github.com/xmejkal/spark/issues/309)),

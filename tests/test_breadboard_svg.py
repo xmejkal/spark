@@ -28,6 +28,7 @@ import breadboard  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_steps  # noqa: E402
 import part_pictures  # noqa: E402
+from test_breadboard_layout import RECORD_BOARD, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 MOTOR = ROOT / "tests" / "data" / "breadboard" / "motor"
@@ -42,8 +43,7 @@ def xiao_svg(pictures=None):
     with in_store():
         read = breadboard._read_build(XIAO / "requirements.json")
         layout = breadboard._plan_layout(read)
-    geometry = breadboard_drawing.WokwiGeometry.load()
-    return breadboard_drawing.SvgBreadboardDiagram(geometry, pictures=pictures).text(layout), layout
+    return breadboard_drawing.SvgBreadboardDiagram(pictures=pictures).text(layout), layout
 
 
 class ThePictogramsTest(unittest.TestCase):
@@ -138,6 +138,59 @@ def without_pictures(text):
             if child.tag.endswith("title") or (child.get("transform") or "").startswith("scale"):
                 group.remove(child)
     return ElementTree.tostring(root, encoding="unicode")
+
+
+def record_svg():
+    with in_store():
+        read = breadboard._read_build(RECORD_BOARD / "requirements.json")
+    layout = breadboard_drawing.BreadboardPlanner(*record_inputs(read)).plan(read.steps)
+    return breadboard_drawing.SvgBreadboardDiagram().text(layout), layout
+
+
+class TheRecordBoardSvgTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.text, cls.layout = record_svg()
+        cls.root = ElementTree.fromstring(cls.text)
+        cls.texts = [element.text for element in cls.root.iter("{http://www.w3.org/2000/svg}text")]
+
+    def test_every_pad_label_is_written_once_beside_its_pin(self):
+        board = self.layout.geometry.part(self.layout.parts[0].type)
+        self.assertEqual(len(board["pins"]), 32)
+        for pad in board["pins"]:
+            self.assertEqual(self.texts.count(pad), 1, pad)
+
+    def test_a_doubtful_pad_has_a_dashed_ring_and_the_others_have_none(self):
+        rings = [c for c in self.root.iter("{http://www.w3.org/2000/svg}circle") if c.get("stroke-dasharray")]
+        self.assertEqual(len(rings), 2)
+
+    def test_the_usb_end_is_marked_with_no_word_of_its_own(self):
+        marks = [rect for rect in self.root.iter("{http://www.w3.org/2000/svg}rect") if rect.get("fill") == "#cfd8dc"]
+        self.assertEqual(len(marks), 1)
+        self.assertNotIn("USB-C", self.texts)
+
+    def test_the_note_is_the_unverified_groups_of_the_board_once_and_the_board_keeps_its_ground_and_doubts(self):
+        board = self.layout.geometry.part(self.layout.parts[0].type)
+        self.assertEqual((board["ground"], board["doubtful"]), ("GND2", ["GND1", "GND3"]))
+        self.assertEqual(self.texts.count(", ".join(note["sentence"] for note in board["notes"])), 1)
+
+    def test_the_surface_has_63_columns_and_no_rail_lines(self):
+        holes = re.findall(r"M[\d.]+ [\d.]+h0", [p.get("d") for p in self.root.findall("svg:path", NS)][0])
+        self.assertEqual(len(holes), 630)
+        self.assertEqual(len(self.root.findall("svg:line", NS)), 0)
+
+    def test_the_same_layout_gives_the_same_bytes(self):
+        self.assertEqual(self.text, breadboard_drawing.SvgBreadboardDiagram().text(self.layout))
+
+    def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
+        # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose
+        self.assertEqual(hashlib.sha256(self.text.encode()).hexdigest(),
+                         "4f2a60144634428236b7295c7535132abebb92046d68b308e16ec5ee2ad1f972")
+
+    def test_the_xiao_has_none_of_it(self):
+        text, _ = xiao_svg()
+        self.assertNotIn("#cfd8dc", text)
+        self.assertNotIn("stroke-dasharray", text)
 
 
 class TheSheetShowsItTest(unittest.TestCase):

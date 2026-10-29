@@ -225,6 +225,14 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
                          "derived from the rest:\n  physical.width_mm\n  physical.header_order (which label is on which pad — not derivable)")
         self.assertIsNone(emit_footprint.why_no_footprint(firebeetle()))
 
+    def test_the_geometry_gaps_leave_out_the_modules_name_and_the_footprint_gaps_keep_it(self):
+        board = firebeetle()
+        del board["physical"]["footprint_export"], board["physical"]["height_mm"]
+        self.assertEqual(emit_footprint.geometry_gaps(board), ["physical.height_mm"])
+        self.assertEqual(emit_footprint.footprint_gaps(board),
+                         ["physical.height_mm", "physical.footprint_export (what the module should be called)"])
+        self.assertEqual(emit_footprint.geometry_gaps(None), ["physical.header (no header geometry at all)"])
+
     def test_the_line_names_the_one_field_that_is_missing_without_its_note(self):
         board = firebeetle()
         del board["physical"]["header"]
