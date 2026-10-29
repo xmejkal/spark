@@ -437,7 +437,7 @@ class TheFinalReviewTest(unittest.TestCase):
                 mock.patch.object(board, "status_lines", side_effect=AttributeError("'NoneType' object has no attribute 'get'")), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue(), "board: could-not-run — 'NoneType' object has no attribute 'get'\n")
+        self.assertEqual(without_disk(out.getvalue()), "board: could-not-run — 'NoneType' object has no attribute 'get'\n")
 
 
 class TheWholeBoardTest(unittest.TestCase):
@@ -486,7 +486,7 @@ class TheWholeBoardTest(unittest.TestCase):
         out = io.StringIO()
         with mock.patch.object(board, "_gh", gh), contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue(), "board: could-not-run — the spark board holds 130 items, 0 were read\n")
+        self.assertEqual(without_disk(out.getvalue()), "board: could-not-run — the spark board holds 130 items, 0 were read\n")
         self.assertEqual(len(asked), 50)
 
     def test_the_bin_s_board_read_in_part_is_set_aside_with_its_cause_and_spark_is_judged_alone(self):
@@ -500,7 +500,7 @@ class TheWholeBoardTest(unittest.TestCase):
         with mock.patch.object(board, "_gh", gh), mock.patch.object(board, "work_days", return_value=set()), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue().splitlines()[:3], [
+        self.assertEqual(without_disk(out.getvalue()).splitlines()[:3], [
             "spark — 101 open, the limits hold · trial check 2026-11-02",
             "  ! the bin's board could not be read (it holds 25 items, 2 were read) — its cards were not counted or checked",
             "  in flight: nothing"])
@@ -530,7 +530,7 @@ class TheWholeBoardTest(unittest.TestCase):
         with mock.patch.object(board, "_gh", gh), mock.patch.object(board, "work_days", return_value=set()), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue().splitlines()[0], "spark — 101 open, the limits hold · trial check 2026-11-02")
+        self.assertEqual(without_disk(out.getvalue()).splitlines()[0], "spark — 101 open, the limits hold · trial check 2026-11-02")
 
     def test_a_board_whose_pages_held_fewer_than_it_holds_is_could_not_run_not_the_limits(self):
         # The last page came and 130 were promised: nothing of what was read is judged, and the status says the two numbers.
@@ -538,7 +538,7 @@ class TheWholeBoardTest(unittest.TestCase):
         out = io.StringIO()
         with mock.patch.object(board, "_gh", gh), contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue(), "board: could-not-run — the spark board holds 130 items, 1 were read\n")
+        self.assertEqual(without_disk(out.getvalue()), "board: could-not-run — the spark board holds 130 items, 1 were read\n")
 
     def test_a_close_over_a_board_read_in_part_is_could_not_run_and_posts_nothing(self):
         gh, asked = self.paged_gh(1, says=130)
@@ -569,7 +569,7 @@ class TheStageTest(unittest.TestCase):
         with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None)), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue(), 'board: could-not-run — #7 P7 — b is in a stage the gate does not know: "Doing"\n')
+        self.assertEqual(without_disk(out.getvalue()), 'board: could-not-run — #7 P7 — b is in a stage the gate does not know: "Doing"\n')
 
     def test_a_bin_card_in_an_unknown_stage_is_named_by_its_board(self):
         bin_items = board.to_items(project(node(19, "B19 — e", "Doing")))
@@ -600,7 +600,7 @@ class TheStageTest(unittest.TestCase):
         with mock.patch.object(board, "gather", return_value=([("spark", items), ("bin", [])], [], [], "P", None)), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue(), "board: could-not-run — no card of the 2 on the spark board has a Status — the field's keys may "
+        self.assertEqual(without_disk(out.getvalue()), "board: could-not-run — no card of the 2 on the spark board has a Status — the field's keys may "
                                          "have changed, or every card is new\n")
 
     def test_the_bin_s_board_with_no_status_on_any_card_is_set_aside_by_gather_and_said(self):
@@ -613,7 +613,7 @@ class TheStageTest(unittest.TestCase):
         with mock.patch.object(board, "_gh", gh), mock.patch.object(board, "work_days", return_value=set()), \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        self.assertEqual(out.getvalue().splitlines()[:2], [
+        self.assertEqual(without_disk(out.getvalue()).splitlines()[:2], [
             "spark — 1 open, the limits hold · trial check 2026-11-02",
             "  ! the bin's board could not be read (no card of its 2 has a Status) — its cards were not counted or checked"])
 
