@@ -57,6 +57,23 @@ def clean(text, cap=LABEL_MAX):
     return CONTROL.sub(" ", str(text)).strip()[:cap]
 
 
+def list_key_problems(where, value):
+    """
+    Every key at any depth in `value` that is no string or holds a control or bidi character (P374), as sentences that name
+    the key's path from `where`. A key is refused and never cleaned, because two cleaned keys can merge into one.
+    """
+    if isinstance(value, list):
+        return [problem for index, item in enumerate(value) for problem in list_key_problems("%s[%d]" % (where, index), item)]
+    problems = []
+    for key, item in (value.items() if isinstance(value, dict) else ()):
+        here = "%s[%r]" % (where, key)
+        if not isinstance(key, str) or CONTROL.search(key):
+            problems.append("%s is a key that is no string or holds a control or bidi character: refused, never cleaned, "
+                            "because two cleaned keys could merge" % here)
+        problems += list_key_problems(here, item)
+    return problems
+
+
 def one_line(text):
     """
     Words a generated file keeps in a `#` or `//` line comment, on that one line (concern 1, P87's line-comment half): every

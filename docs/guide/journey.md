@@ -651,16 +651,43 @@ Then `--requirements` wrote the file and put the record on the shelf:
 
 `--fact-set` never changes spark's own library: a library record is changed in spark's repository.
 
-**A bench result goes back the same way.** `parts.py --unverified soil-probe` lists every fact nobody confirmed, a guessed
-outline too, and each row's `write` key says where its result goes back. After you measure on the bench, the file holds
-the result with its source, who, when and how:
+**A bench result goes back the same way.** The probe's outline was a guess from a ruler. In a store where the record
+carries the three facts of `../facts.json`, `--unverified` lists it beside the pin order, and says what to do next:
 
-```json
-{"facts": {"runs_at_3v3": {"value": true, "verified": true, "source": "bench, 2026-10-29, meter on the owned board, Petr Smejkal"}}}
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified soil-probe
 ```
 
-`--fact-set soil-probe ../bench.json --project . --dry-run` shows the entry as it will be written, and the other entries
-stay. A `body_mm` or a `pin_order_proof` goes back the same way, with its `verified` and `source`.
+<!-- output: run 2026-10-29, spark 0.9.0 -->
+```text
+  2 thing(s) nobody has checked:
+
+  soil-probe.pin_order = ['GND', 'VCC', 'Signal']
+      a pin order read wrong reverses a supply or swaps a signal
+  soil-probe.body_mm = {'width': 10, 'height': 6}
+      where the socket sits
+  next: parts.py --fact-set soil-probe <file> — write a checked result back with its source
+```
+
+With `--json`, each row of `assumptions` also carries `write`, the key its result goes back to (`body_mm` here). After you
+measure the probe with a caliper, the file holds the result with its source: who, when and how.
+
+```json
+{"body_mm": {"width": 10.4, "height": 6.1, "verified": true, "source": "bench, 2026-10-29, caliper on the owned probe, Petr Smejkal"}}
+```
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --fact-set soil-probe ../bench.json --dry-run
+```
+
+<!-- output: run 2026-10-29, spark 0.9.0 -->
+```text
+  would set soil-probe (<store>/catalog/soil-probe.json): body_mm {"width": 10, "height": 6, "verified": false, "source": "measured with a ruler", "why_it_matters": "where the socket sits"} → {"width": 10.4, "height": 6.1, "verified": true, "source": "bench, 2026-10-29, caliper on the owned probe, Petr Smejkal"}
+```
+
+Without `--dry-run` it writes, and `--unverified` then lists the pin order only. A `facts` entry goes back the same way,
+by name: `{"facts": {"runs_at_3v3": {"value": true, "verified": true, "source": "…"}}}` keeps the other entries. A write
+replaces the whole block, so the file holds what the block should keep (`note`, `where`).
 
 **What follows a gap.** A need marked `gap` has nothing in the store to pick. Left unpicked, it does not stop the
 building list, and `--requirements` says so. In a store of its own, the plant alarm with soil marked `gap`, the

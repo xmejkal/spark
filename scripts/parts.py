@@ -215,7 +215,7 @@ NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, di
 #: that validates parts owns the vocabulary and the file that consumes it follows.
 CAPABILITIES = ("wake", "adc", "pwm")
 
-from outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page  # noqa: E402, F401
+from outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page, step as next_step  # noqa: E402, F401
 import provenance  # noqa: E402
 import store  # noqa: E402
 from text_guards import guard_lines, printable  # noqa: E402
@@ -834,7 +834,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
                 "land on one net and short into each other. Give each its own `polarity`, or they "
                 "are not separate outputs" % (", ".join(map(str, pins)), rail, polarity))
 
-    problems.extend(provenance.list_fact_problems(part.get("facts") or {}))
+    problems.extend(provenance.list_fact_problems(part.get("facts")))
 
     problems.extend(host_part_problems(part))
     problems.extend(i2c_pullup_problems(part))
@@ -1593,7 +1593,7 @@ OPERATIONS = (
      "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("fact-set", {"nargs": 2, "metavar": ("PART", "FILE")},
-     "fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how), or its about, description and tags, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+     "fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how; a text in it has its control characters turned into a space and is cut at 1000 characters, and a key with a control character is refused), or its about, description and tags, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
      (), ("layers", "owed", "broken", "no_function", "dangling", "stops_at_footprint")),
@@ -1718,7 +1718,7 @@ def _op_unverified(args, project):
             lines.append("      %s" % question["why_it_matters"])
     assumptions = [{"fact": "%s.%s" % (q["part"], q["fact"]), "basis": "unverified", "assumed": q["assumed"],
                     "sentence": q["why_it_matters"], "source": q["source"], "write": q["write"]} for q in questions]
-    return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions)
+    return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions, next=[next_step("fact-set", ["--fact-set", questions[0]["part"], "<file>"], "write a checked result back with its source", ["writes"])] if questions else [])
 
 
 def _brief(part):
@@ -2028,7 +2028,7 @@ def _op_fact_set(args, project):
         return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s, or `facts` entries by name; or of what a "
                                                   "record says of itself: %s" % (", ".join(CHAIN_FACTS), ", ".join(drawer.DESCRIBING)))])
     facts = {key: drawer.scrub(key, value) if key in drawer.DESCRIBING + drawer.PROVENANCE_KEYS else value for key, value in facts.items()}
-    wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])]
+    wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])] + drawer.list_provenance_key_problems(facts)
     if wrong:
         return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
     return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: (

@@ -18,6 +18,19 @@ class OneLineTest(unittest.TestCase):
                 self.assertEqual(text_guards.one_line("a%sb" % ends), "a b")
 
 
+class ListKeyProblemsTest(unittest.TestCase):
+    """P374: a key at any depth with a control or bidi character, or no string, is refused with its path; a clean one is not."""
+
+    def test_a_clean_value_has_no_problem(self):
+        self.assertEqual(text_guards.list_key_problems("facts", {"a": {"b": [{"c": 1}], "d": "note\u202e"}}), [])
+        self.assertEqual(text_guards.list_key_problems("facts", 5), [])
+
+    def test_a_bad_key_is_named_by_its_path_at_every_depth(self):
+        value = {"a": {"b": [{"c": 1}, {"no\u202ete": 2}]}, "x\x1b": 3, 7: 4}
+        self.assertEqual([problem.split(" is a key")[0] for problem in text_guards.list_key_problems("facts", value)],
+                         ["facts['a']['b'][1]['no\\u202ete']", "facts['x\\x1b']", "facts[7]"])
+
+
 class GuardLinesTest(unittest.TestCase):
     """P423 (#556): the text a script prints, line by line, with each line's own newlines kept."""
 

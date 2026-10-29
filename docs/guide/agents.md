@@ -283,10 +283,14 @@ These write:
     `now` show `verified` and the `source` in full, with control characters cleaned. Three writes, each in a file:
     `{"facts": {"runs_at_3v3": {"value": true, "verified": true, "source": "<who, when, how>"}}}` replaces that one
     entry whole and keeps the others; `{"body_mm": {"width": 33.5, "height": 25.8, "verified": true, "source": "<…>"}}`;
-    `{"pin_order_proof": {"verified": true, "source": "<…>"}}`. A rewrite drops the old `why_it_matters` and `cites`,
-    because a leftover `cites` would claim the manual backs a bench result. Exit 1 and nothing written when `verified`
-    is not true or false, a `source` is blank, a name is not lowercase letters, digits and `_`, or the record's own
-    `facts` is no object. A board record has no write path yet ([P394](https://github.com/xmejkal/spark/issues/510)).
+    `{"pin_order_proof": {"verified": true, "source": "<…>"}}`. A write replaces the whole entry or block, so
+    it drops what the file leaves out: copy the row's current block into the file first (the `assumed` keys, `note`,
+    `where`), and keep a `cites` only if that source still backs the written value. A bench result keeps the manual's
+    citation when the manual states the same value, and loses it when the bench differs. The text is cleaned as the
+    dry run's `now` shows: a control character, a newline too, becomes a space, and a text is cut at 1000 characters
+    (a fact's string `value` as well). Exit 1 and nothing written when `verified` is not true or false, a `source` is
+    blank, a name is not lowercase letters, digits and `_`, a key at any depth holds a control or bidi character (it is
+    refused, never cleaned), or the record's own `facts` is no object. A board record has no write path yet ([P394](https://github.com/xmejkal/spark/issues/510)).
 - `tools.py --install`, `--on`, `--off`, `--pin`, `--use` and `--new`.
 
 **To build someone else's project,** build a copy. Copy everything but `node_modules`
@@ -453,7 +457,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
   - `--unverified` lists one per fact whose `verified` is not true: `fact` is `<part>.<fact>`, `basis` is `unverified`,
     `assumed` is the value taken for now, `source` is where it came from, and `write` is the key a result goes back to
     with `--fact-set`: `facts.<name>`, `pin_order_proof` or `body_mm`. A guessed outline (`body_mm`) is listed, with its
-    width and height as `assumed`; an outline still empty is owed (`--audit`), not assumed. A `write` of null means the
+    width and height as `assumed`. A skeleton outline (verified false, width and height null) is listed too, with nulls:
+    it must be measured, and a null is never a value to copy back. A `write` of null means the
     record's `facts` is no object: repair the file by hand. Its old `data.questions` is gone; `data.parts` only repeats
     the ids asked.
   - `--show` lists a CONFLICT that rests on an unverified fact: `fact` is `<part>.<pin>`, `basis` is `unmeasured`,

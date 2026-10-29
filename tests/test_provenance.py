@@ -64,7 +64,8 @@ class FactProblemsTest(unittest.TestCase):
                  ({"verified": 1}, "facts.a has verified 1, but it must be true or false"),
                  ({"source": ""}, "facts.a has source '', but it must be words that say where the value came from"),
                  ({"source": "  "}, "facts.a has source '  ', but it must be words that say where the value came from"),
-                 ({"source": None}, "facts.a has source None, but it must be words that say where the value came from")]
+                 ({"source": None}, "facts.a has source None, but it must be words that say where the value came from"),
+                 ({"verified": "no", "value": None}, "facts.a has verified 'no', but it must be true or false")]
         for change, sentence in cases:
             with self.subTest(change=change):
                 self.assertEqual(provenance.fact_problems("facts.a", dict(good, **change)), [sentence])
@@ -114,7 +115,12 @@ class ListUnverifiedFactsTest(unittest.TestCase):
         rows = provenance.list_unverified_facts(joystick(facts=5))
         self.assertEqual([(row["fact"], row["write"]) for row in rows], [("facts", None)])
         self.assertIn("repair the file by hand", rows[0]["why_it_matters"])
+        for empty in ([], "", 0):  # falsy, and still no object: one row, never read as no facts
+            with self.subTest(facts=empty):
+                self.assertEqual([(row["fact"], row["write"]) for row in provenance.list_unverified_facts(joystick(facts=empty))],
+                                 [("facts", None)])
         self.assertEqual(provenance.list_unverified_facts({}), [])
+        self.assertEqual(provenance.list_unverified_facts({"facts": None}), [])
 
 
 class ListEntryProblemsTest(unittest.TestCase):
@@ -127,7 +133,12 @@ class ListEntryProblemsTest(unittest.TestCase):
             self.assertEqual(provenance.list_entry_problems(nothing, [1]), [])
 
     def test_entries_that_are_no_object_give_one_problem(self):
-        self.assertEqual(provenance.list_entry_problems([self.GOOD], {}), ["facts is [%r], but it is an object of facts" % self.GOOD])
+        self.assertEqual(provenance.list_entry_problems([self.GOOD], {}), ["facts is [%r], but it is an object" % self.GOOD])
+        self.assertEqual(provenance.list_fact_problems([self.GOOD]), [], "parts.type_problems says it, once")
+
+    def test_a_name_that_is_no_string_is_one_problem_and_never_a_traceback(self):
+        self.assertEqual(provenance.list_entry_problems({1: self.GOOD}, {}),
+                         ["1 is no fact name: use lowercase letters, digits and underscores"])
 
     def test_a_name_outside_lowercase_letters_digits_and_underscores_is_one_problem(self):
         for name in ("Bad Name", "line\nbreak", "ünï", "a-b"):

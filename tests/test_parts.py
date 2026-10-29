@@ -342,6 +342,11 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
         self.assertEqual(said["assumptions"][-1], {"fact": "x-joy.body_mm", "basis": "unverified", "assumed": {"width": 34, "height": 26},
                                                    "sentence": "the fit", "source": "a guess from the photo", "write": "body_mm"})
         self.assertEqual([row["write"] for row in said["assumptions"][7:]], ["facts.fact_7", "pin_order_proof", "body_mm"])
+        self.assertEqual([(step["op"], step["argv"], step["effects"]) for step in said["next"]],
+                         [("fact-set", ["--fact-set", "x-joy", "<file>"], ["writes"])])
+        with in_store(home), contextlib.redirect_stdout(io.StringIO()) as out:
+            parts.main(["--unverified", "x-joy"])
+        self.assertTrue(out.getvalue().rstrip().splitlines()[-1].startswith("  next: parts.py --fact-set x-joy <file> — "), out.getvalue())
 
 
 class FromPartsToAPinMapTest(unittest.TestCase):
@@ -2500,7 +2505,7 @@ class ABenchResultGoesBackWithItsSourceTest(unittest.TestCase):
         cases = [
             ("an entry whose verified is no bool", {}, {"facts": {"good": self.entry(), "bad": self.entry(verified="yes")}},
              "facts.bad has verified 'yes', but it must be true or false"),
-            ("entries that are a list", {}, {"facts": [self.entry()]}, "but it is an object of facts"),
+            ("entries that are a list", {}, {"facts": [self.entry()]}, "facts is [{'value': True"),
             ("a name outside the pattern", {}, {"facts": {"good": self.entry(), "Bad Name": self.entry()}},
              "'Bad Name' is no fact name: use lowercase letters, digits and underscores"),
             ("a record whose own facts is a list", {"facts": ["x"]}, {"facts": {"good": self.entry()}},
@@ -2509,6 +2514,15 @@ class ABenchResultGoesBackWithItsSourceTest(unittest.TestCase):
              "facts.old has no 'source' — a number with no provenance is an opinion"),
             ("a bench outline with no words for a source", {}, {"body_mm": bad_outline},
              "body_mm has source '', but it must be words that say where the value came from"),
+            ("a key with a bidi character in an entry", {}, {"facts": {"x": dict(self.entry(), **{"no\u202ete": 1})}},
+             "facts['x']['no\\u202ete'] is a key that is no string or holds a control or bidi character"),
+            ("a key with a control character in a value", {}, {"facts": {"x": self.entry(value={"k": [{"a\x1b": 1}]})}},
+             "facts['x']['value']['k'][0]['a\\x1b'] is a key"),
+            ("a key with a bidi character in a bench outline", {}, {"body_mm": {
+                "width": 34, "height": 26, "verified": True, "source": self.BENCH, "no\u202ete": 1}},
+             "body_mm['no\\u202ete'] is a key"),
+            ("a key with a control character in a bench pin order proof", {}, {"pin_order_proof": {
+                "verified": True, "source": self.BENCH, "no\x00te": 1}}, "pin_order_proof['no\\x00te'] is a key"),
         ]
         for what, held, content, sentence in cases:
             home = self.a_joystick(**held)
@@ -2518,7 +2532,7 @@ class ABenchResultGoesBackWithItsSourceTest(unittest.TestCase):
                 for flags in ([], ["--dry-run"]):
                     said, code = run_json(["--fact-set", "x-joy", self.given(content)] + flags)
                     self.assertEqual((said["status"], code), ("problems", 1), said)
-                    self.assertEqual(len([p for p in said["problems"] if sentence in p["sentence"]]), 1, said["problems"])
+                    self.assertEqual([sentence in p["sentence"] for p in said["problems"]], [True], said["problems"])  # one fault, one sentence
                 self.assertEqual(path.read_bytes(), before)
 
 

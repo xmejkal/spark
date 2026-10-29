@@ -9,10 +9,16 @@
  {"file": "scripts/parts.py", "name": "a written fact is checked only against the record's old faults", "find": "sorted(set(provenance.list_entry_problems(facts.get(\"facts\"), record.get(\"facts\"))) | set(broken_problems(after, path))", "replace": "sorted(set(broken_problems(after, path))"},
  {"file": "scripts/provenance.py", "name": "a verified flag may be any kind", "find": "    if \"verified\" in block and not isinstance(block[\"verified\"], bool):", "replace": "    if False:"},
  {"file": "scripts/provenance.py", "name": "a source may be blank", "find": "    if \"source\" in block and not (isinstance(block[\"source\"], str) and block[\"source\"].strip()):", "replace": "    if False:"},
- {"file": "scripts/provenance.py", "name": "a fact name may be anything", "find": "for name in entries if not FACT_NAME.fullmatch(name)]", "replace": "for name in entries if False]"},
+ {"file": "scripts/provenance.py", "name": "a fact name may be anything", "find": "for name in entries if not (isinstance(name, str) and FACT_NAME.fullmatch(name))]", "replace": "for name in entries if False]"},
  {"file": "scripts/parts.py", "name": "a body_mm may have a blank source", "find": "            problems.extend(provenance.list_type_problems(\"body_mm\", body))", "replace": "            pass"},
  {"file": "scripts/parts.py", "name": "facts is not a key a write may set", "find": "set(CHAIN_FACTS + drawer.DESCRIBING + (\"facts\",))", "replace": "set(CHAIN_FACTS + drawer.DESCRIBING)"},
  {"file": "scripts/parts.py", "name": "a bench result is written unclean", "find": "if key in drawer.DESCRIBING + drawer.PROVENANCE_KEYS else value", "replace": "if key in drawer.DESCRIBING else value"},
  {"file": "scripts/drawer.py", "name": "a bench source is cut at 160", "find": "_scrubbed(value, PROVENANCE_MAX, ())", "replace": "_scrubbed(value, LABEL_MAX, ())"},
- {"file": "scripts/drawer.py", "name": "an entry named does is not cleaned", "find": "_scrubbed(value, PROVENANCE_MAX, ())", "replace": "_scrubbed(value, PROVENANCE_MAX)"}
+ {"file": "scripts/drawer.py", "name": "an entry named does is not cleaned", "find": "_scrubbed(value, PROVENANCE_MAX, ())", "replace": "_scrubbed(value, PROVENANCE_MAX)"},
+ {"file": "scripts/parts.py", "name": "a key with a control character is written", "find": " + drawer.list_provenance_key_problems(facts)", "replace": ""},
+ {"file": "scripts/text_guards.py", "name": "a key that is no string passes", "find": "        if not isinstance(key, str) or CONTROL.search(key):", "replace": "        if False:"},
+ {"file": "scripts/text_guards.py", "name": "a key inside a list is not walked", "find": "        return [problem for index, item in enumerate(value) for problem in list_key_problems(\"%s[%d]\" % (where, index), item)]", "replace": "        return []"},
+ {"file": "scripts/parts.py", "name": "the list names no next step", "find": "if questions else [])", "replace": "if False else [])"},
+ {"file": "scripts/provenance.py", "name": "a facts that is falsy and no object is read as none", "find": "    facts = {} if record.get(\"facts\") is None else record[\"facts\"]", "replace": "    facts = record.get(\"facts\") or {}"},
+ {"file": "scripts/provenance.py", "name": "a verified word with no value is a second sentence", "find": "    if fact.get(\"verified\") is True and fact.get(\"value\") is None:", "replace": "    if fact.get(\"verified\") and fact.get(\"value\") is None:"}
 ]

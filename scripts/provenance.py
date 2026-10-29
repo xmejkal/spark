@@ -52,7 +52,7 @@ def fact_problems(where, fact):
         if key not in fact:
             problems.append("%s has no %r — a number with no provenance is an opinion" % (where, key))
     problems.extend(list_type_problems(where, fact))
-    if fact.get("verified") and fact.get("value") is None:
+    if fact.get("verified") is True and fact.get("value") is None:
         problems.append("%s is marked verified but has no value" % where)
     if fact.get("verified") is False and fact.get("value") is not None and not fact.get("why_it_matters"):
         # An unverified guess that nobody explains is how an assumption becomes a fact.
@@ -62,16 +62,17 @@ def fact_problems(where, fact):
 
 
 def list_fact_problems(facts):
-    """`fact_problems` of each entry of a `facts` object, spelled `facts.<name>`. A `facts` that is no object gives one problem; it never raises."""
+    """`fact_problems` of each entry of a `facts` object, spelled `facts.<name>`. A `facts` that is no object gives none: `parts.type_problems` says so. It never raises."""
     if not isinstance(facts, dict):
-        return ["facts is %r, but it is an object of facts" % (facts,)]
+        return []
     return [problem for name, fact in facts.items() for problem in fact_problems("facts.%s" % name, fact)]
 
 
 def list_entry_problems(entries, held):
     """
     Why `entries`, facts to write into a record whose own `facts` is `held`, cannot be written (P374). Each name is
-    lowercase letters, digits and underscores, and each entry holds under `list_fact_problems`. A `held` that is neither absent nor
+    lowercase letters, digits and underscores, and each entry holds under `list_fact_problems`. Entries that are no object are one
+    problem, in the words of `parts.type_problems`, so that the two are one message. A `held` that is neither absent nor
     an object is one problem: repair the file by hand first, it is never read as empty. Nothing, `{}` and `[]` give no
     problem, because `parts._absent` refuses them already.
     """
@@ -79,9 +80,10 @@ def list_entry_problems(entries, held):
         return []
     problems = [] if held is None or isinstance(held, dict) else [
         "the record's own facts is %r, but it is an object — repair the file by hand first" % (held,)]
-    if isinstance(entries, dict):
-        problems += ["%r is no fact name: use lowercase letters, digits and underscores" % name
-                     for name in entries if not FACT_NAME.fullmatch(name)]
+    if not isinstance(entries, dict):
+        return problems + ["facts is %r, but it is an object" % (entries,)]
+    problems += ["%r is no fact name: use lowercase letters, digits and underscores" % (name,)
+                 for name in entries if not (isinstance(name, str) and FACT_NAME.fullmatch(name))]
     return problems + list_fact_problems(entries)
 
 
@@ -106,7 +108,7 @@ def list_unverified_facts(record):
     top-level object with a `verified` key, such as `body_mm`, in record order. `write` names where the result goes back:
     `facts.<name>`, `pin_order_proof` or `body_mm`. A `facts` that is no object gives one row with `write` None. It never raises.
     """
-    facts = record.get("facts") or {}
+    facts = {} if record.get("facts") is None else record["facts"]
     if not isinstance(facts, dict):
         return [{"fact": "facts", "assumed": facts, "write": None, "source": "",
                  "why_it_matters": "facts is not an object, so nothing in it can be read — repair the file by hand"}]
