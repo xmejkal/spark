@@ -1,0 +1,16 @@
+# P435: the suite and the mutation tool clean their scratch, and a low-disk warning
+
+Findings of P435 (#579), 2026-10-29, Prague, one PR, built on main d86810ce from plan v3 (two council rounds). Each claim of the plan was checked in this tree.
+
+| # | claim | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 1 | Plan: `tests/test_suite_temp.py:30-54` (`asks_first`) "allows that one line; update the pin and its tests" | plan | rejected | wrong: `asks_first` reads the test modules, never `suite_temp.py` itself, so the new `sys.path` line in `suite_temp` needs no pin change. A subprocess test was added in `test_suite_temp.py` |
+| 2 | Plan: `main(["status"])` "prints a line that starts `disk:` (whatever the real free space)" | plan | acted | wrong: with enough space `disk_line` returns None and nothing prints. The wiring test points `tempfile.tempdir` at a folder that is not there and `PATH` at an empty folder, so the board lines say could-not-run and the disk line says `disk: could-not-run`. The low and ok cases are pinned on `disk_line` |
+| 3 | Plan: real `status` output is not forced to low disk | plan | acted | three existing exact-output tests in `test_board.py` would fail on a Mac with under 10 GB free; they read the output through `without_disk` |
+| 4 | Part B cause: `home_in` writes `scripts/nowhere/` under Apple's Python 3.9 | plan | verified | `rm -r scripts/nowhere; /usr/bin/python3 -m unittest tests.test_store` (3.9.6) made `scripts/nowhere/Library`. With `-B` in `home_in` it stays absent: 80 tests OK, `test ! -e scripts/nowhere` true. Removing `-B` makes the new test fail (`'scripts/nowhere/'`). P431 row 35 (the untracked `scripts/nowhere/Library/Caches/com.apple.python`) is closed by this |
+| 5 | A mutation row for `-B` in `home_in` | build | rejected | the defect shows only under `/usr/bin/python3` and mutate runs the suite with the interpreter it was started with, so no row would be caught on 3.10. The test was proved by hand (row 4) |
+| 6 | Plan: sweep cost under 50 ms, measured on the scan alone | plan | verified | the real `remove_old_folders`, warm, `time.perf_counter`, 200 passes over the real `$TMPDIR` (1,273 entries) with `now=0` so that nothing is removed: 0.77 ms for one prefix, 3.1 ms for the four prefixes of `mutate.main`. Under the 50 ms limit; every process sweeps |
+| 7 | Plan: the stop test runs the real `mutate.py` | plan | verified | `test_a_stop_by_sigterm_leaves_nothing_in_the_temp_folder` starts `tools/mutate.py --copy` on a tiny project (8 rows) with its own TMPDIR, sends SIGTERM when `mutate-copy-*` shows, and asserts exit 143 and an empty TMPDIR. Run five times alone: green each time. Without the handler the child dies with -15 |
+| 8 | Plan: mutation rows "about 8" | plan | acted | 17 rows in `tests/mutations/p435-scratch-cleanup.json`, anchors checked with `--anchors`, not run (it runs once after review). The exact-edge row needed a test with a fixed `now` (a day to the second), added |
+| 9 | Plan: D is `main` printing after the status | plan | acted | the disk line comes last, after the board lines or their could-not-run line, with its own guard outside the status `try` |
+| 10 | The hook that runs `board.py status` at session start | plan | raised | not in the repo; the PO's own setting. The PR says so |

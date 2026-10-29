@@ -457,7 +457,8 @@ def main(argv=None):
     parser.add_argument("--for", dest="paths", nargs="+", metavar="PATH",
                         help="only the rows for these files, or for everything under these folders")
     parser.add_argument("--copy", action="store_true",
-                        help="mutate a temporary copy of the tree, never the files you or an agent have open")
+                        help="mutate a temporary copy of the tree, never the files you or an agent have open; "
+                             "the copy is removed also when SIGTERM stops the run")
     parser.add_argument("--retarget", nargs=2, metavar=("OLD", "NEW"),
                         help="instead of a run: in these tables, move every row whose `file` is OLD to NEW (the text is "
                              "edited, so the tables keep their alignment); then prove them with --anchors")
