@@ -163,7 +163,7 @@ class TheSourcesAreAskedInOrderTest(unittest.TestCase):
     def test_the_order_decides(self):
         board = xiao()
         board["physical"]["header"]["doubtful_pads"] = []
-        self.assertEqual(part_shape.find_part_px(board, tuple(reversed(part_shape.SHAPE_SOURCES)))[1], "record")
+        self.assertEqual(part_shape.find_part_px(board, (RECORD, part_shape.WokwiGeometryShapeSource()))[1], "record")
         self.assertEqual(part_shape.find_part_px(board)[1], "wokwi")
 
 
@@ -172,7 +172,7 @@ class EveryShapeSourceKeepsTheContractTest(unittest.TestCase):
 
     def test_both_sources_on_both_boards(self):
         for board in (xiao(), firebeetle()):
-            for source in part_shape.SHAPE_SOURCES:
+            for source in (part_shape.WokwiGeometryShapeSource(), RECORD):
                 with self.subTest(board=board["id"], source=source.NAME):
                     try:
                         part_px = source.place_part(copy.deepcopy(board))

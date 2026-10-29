@@ -12,9 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import breadboard_drawing  # noqa: E402
 import breadboard_steps  # noqa: E402
 import emit_board  # noqa: E402
+import part_shape  # noqa: E402
 
-#: The board record's `wokwi_pin_naming` when its Wokwi pins carry the printed labels, so a drawing can find them.
-PIN_NAMING_SILKSCREEN = "silkscreen"
 #: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
 OHMS = {"": 1, "k": 1000, "M": 1000000}
 
@@ -34,10 +33,8 @@ def describe_parts(read, geometry):
     board = read.built.board
     catalog = {}
     if board.get("wokwi_part_type"):
-        pins = (geometry.data["parts"].get(board["wokwi_part_type"]) or {}).get("pins") or {}
-        named = board.get("wokwi_pin_naming") == PIN_NAMING_SILKSCREEN
-        catalog[breadboard_steps.THE_BOARD] = breadboard_drawing.DrawnPart(board["wokwi_part_type"], {},
-                                                        {pin: pin for pin in pins} if named else {})
+        pins = part_shape.WokwiGeometryShapeSource(geometry.data["parts"]).pin_names(board)
+        catalog[breadboard_steps.THE_BOARD] = breadboard_drawing.DrawnPart(board["wokwi_part_type"], {}, pins)
     for part in read.built.parts:
         wokwi = (part.get("simulation") or {}).get("wokwi") or {}
         if wokwi.get("part"):
