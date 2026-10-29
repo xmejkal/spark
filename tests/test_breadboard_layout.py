@@ -203,14 +203,12 @@ class TheXiaoLayoutTest(unittest.TestCase):
 
 
 def record_inputs(read, surface=None, board=None):
-    """(geometry, catalog) for a board drawn from its record on the full-size surface, as the build gives the planner."""
+    """(geometry, catalog) for a board drawn from its record on the full-size surface, as the build gives the planner;
+    `board` is a changed copy of the build's board record, `surface` another breadboard."""
     board = board or read.built.board
     part_px, _ = part_shape.find_part_px(board)
-    source, _ = part_shape.find_source(board)
     geometry = GEOMETRY.with_part(board["wokwi_part_type"], part_px).with_surface(surface or breadboard_drawing.Surface.load_full())
-    catalog = breadboard_catalog.describe_parts(read, geometry)
-    catalog[breadboard_steps.THE_BOARD] = catalog[breadboard_steps.THE_BOARD]._replace(pins=source.pin_names(board))
-    return geometry, catalog
+    return geometry, breadboard_catalog.describe_parts(read, GEOMETRY)
 
 
 class TheGeometryCopiesTest(unittest.TestCase):
@@ -289,6 +287,25 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
                 place((taken,))
             self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "board"))
 
+    def test_a_pull_up_through_a_second_resistor_draws_with_the_leg_in_the_jumper_s_row(self):
+        # D3 pulled up to 3V3 by R2, run in memory: the resistor's leg joins the row of the jumper from D3, and never the
+        # row of the board's own D3 pin, so that pin keeps its one free hole for the jumper
+        points = list(self.read.steps.points)
+        d3 = next(i for i, point in enumerate(points) if any(end.name == "board D3" for end in point.ends))
+        first = breadboard_steps.End(breadboard_steps.RESISTOR, "R2", "R2 end 1", "R2, end 1", "1", "pull-up on", "10kΩ")
+        second = breadboard_steps.End(breadboard_steps.RESISTOR, "R2", "R2 end 2", "R2, end 2", "2", "pull-up on", "10kΩ")
+        points[d3] = breadboard_steps.StepPoint(points[d3].ends + [first], None, False)
+        points.append(breadboard_steps.StepPoint(
+            [breadboard_steps.End("board", breadboard_steps.THE_BOARD, "board 3V3", "board 3V3", "3V3"), second],
+            None, False))
+        steps = breadboard_steps.BreadboardSteps(self.read.steps.placed, points)
+        catalog = dict(self.catalog, R2=breadboard_drawing.DrawnPart("wokwi-resistor", {"value": "10000"}, {"1": "1", "2": "2"}))
+        layout = breadboard_drawing.BreadboardPlanner(self.geometry, catalog).plan(steps)
+        board_groups = {hole.group for hole in layout.parts[0].holes.values()}
+        resistor = next(part for part in layout.parts if part.id == "R2")
+        self.assertEqual({hole.group for hole in resistor.holes.values()} & board_groups, set())
+        self.assertGreaterEqual(len(layout.jumpers), 3)
+
     def test_a_board_whose_rows_are_an_inch_apart_is_refused(self):
         # 25.4 mm is ten pitches, so the pins land in rows b and j and no row beside them is free
         board = json.loads(json.dumps(self.read.built.board))
@@ -318,8 +335,54 @@ class AnOldDrawingTest(unittest.TestCase):
         with in_store():
             written = breadboard.write(project / "requirements.json", project / "breadboard.md")
         self.assertEqual(written.drawings, [])
-        self.assertIn("no Wokwi pin positions", written.why)
+        # the board is drawn from its record now, so the plan stops at the module nothing says how to draw (an older refusal: no code)
+        self.assertEqual([(path.name, code, subject) for path, _, code, subject, _ in written.not_written],
+                         [("breadboard.json", None, None), ("breadboard.svg", None, None)])
+        self.assertIn("L9110sModule", written.not_written[0][4])
         self.assertFalse((project / "breadboard.json").exists())
+
+
+class ABoardWhoseRecordLacksAFactIsRefusedWithItsCodeTest(unittest.TestCase):
+    def test_write_says_which_field_is_missing_for_each_drawing_and_writes_neither(self):
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "headerless"
+        shutil.copytree(RECORD_BOARD, project)
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        del board["physical"]["header"]
+        (project / "boards").mkdir(exist_ok=True)
+        (project / "boards" / "firebeetle2-esp32s3.json").write_text(json.dumps(board))
+        (project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "firebeetle2-esp32s3"}))
+        (project / "breadboard.svg").write_text("<svg/>")
+        with in_store():
+            written = breadboard.write(project / "requirements.json", project / "breadboard.md")
+        self.assertEqual([(path.name, code, subject) for path, _, code, subject, _ in written.not_written],
+                         [("breadboard.json", "no_header_fact", "physical.header"), ("breadboard.svg", "no_header_fact", "physical.header")])
+        self.assertEqual(written.drawings, [])
+        self.assertFalse((project / "breadboard.svg").exists())
+
+
+class AXiaoBuildOverAnOldDrawingTest(unittest.TestCase):
+    def test_a_board_drawn_from_its_record_removes_an_old_breadboard_json_and_names_no_move_not_kept(self):
+        import shutil
+        project = Path(tempfile.mkdtemp()) / "fire"
+        shutil.copytree(RECORD_BOARD, project)
+        # an earlier XIAO build left this one behind; the new build does not write a Wokwi diagram
+        with in_store():
+            shutil.copy(XIAO / "requirements.json", project / "requirements.json")
+            shutil.copytree(XIAO / "dist", project / "dist", dirs_exist_ok=True)
+            shutil.copytree(XIAO / "boards", project / "boards", dirs_exist_ok=True) if (XIAO / "boards").exists() else None
+            breadboard.write(project / "requirements.json", project / "breadboard.md")
+        self.assertTrue((project / "breadboard.json").is_file())
+        shutil.rmtree(project / "dist")
+        shutil.copytree(RECORD_BOARD / "dist", project / "dist")
+        shutil.copy(RECORD_BOARD / "requirements.json", project / "requirements.json")
+        shutil.rmtree(project / "boards", ignore_errors=True)
+        with in_store():
+            written = breadboard.write(project / "requirements.json", project / "breadboard.md")
+        self.assertEqual(written.not_kept, [])
+        self.assertEqual([code for _, _, code, _, _ in written.not_written], ["no_wokwi_part"])
+        self.assertFalse((project / "breadboard.json").exists())
+        self.assertTrue((project / "breadboard.svg").is_file())
 
 
 class OnePlanPerWriteTest(unittest.TestCase):

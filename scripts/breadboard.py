@@ -59,6 +59,7 @@ import breadboard_steps  # noqa: E402
 import design  # noqa: E402
 import drawer  # noqa: E402
 import emit_board  # noqa: E402
+import part_shape  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
 from outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
@@ -361,9 +362,22 @@ def _read_build(requirements_path, circuit_path=None):
     return Read(built, circuit, resistors, point_lines, steps)
 
 
+def _drawing_inputs(read):
+    """(geometry, catalog) the layout is planned on. Wokwi's own geometry for a board it measured; for a board drawn
+    from its own record, a copy that holds its part_px and spark's 63-column breadboard (P412)."""
+    wokwi = breadboard_drawing.WokwiGeometry.load()
+    catalog = breadboard_catalog.describe_parts(read, wokwi)
+    board = read.built.board
+    part_px, _ = part_shape.find_part_px(board, part_shape.sources_for(wokwi.data["parts"]))
+    if part_px.get("source") != breadboard_drawing.RECORD_SOURCE:
+        return wokwi, catalog
+    geometry = wokwi.with_part(catalog[breadboard_steps.THE_BOARD].type, part_px)
+    return geometry.with_surface(breadboard_drawing.Surface.load_full()), catalog
+
+
 def _plan_layout(read):
-    geometry = breadboard_drawing.WokwiGeometry.load()
-    return breadboard_drawing.BreadboardPlanner(geometry, breadboard_catalog.describe_parts(read, geometry)).plan(read.steps)
+    geometry, catalog = _drawing_inputs(read)
+    return breadboard_drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
 
 
 def drawing(requirements_path, circuit_path=None, read=None):
@@ -371,10 +385,10 @@ def drawing(requirements_path, circuit_path=None, read=None):
     return EDITABLE_DRAWING.text(_plan_layout(read or _read_build(requirements_path, circuit_path)))
 
 
-#: One plan of the layout for a sheet and its drawings: the layout, or why it could not be planned, and the earlier
-#: parts it could not keep as the person left them ([NotKeptResult]), the fresh layout, and each end the layout joins
-#: differently from the points ([DrawingDiffersResult], P279).
-PlannedLayout = collections.namedtuple("PlannedLayout", "layout why not_kept fresh differs", defaults=(None, ()))
+#: One plan of the layout for a sheet and its drawings: the layout, or what stopped it (a NotDrawn, with its code and
+#: subject), and the earlier parts it could not keep as the person left them ([NotKeptResult]), the fresh layout, and
+#: each end the layout joins differently from the points ([DrawingDiffersResult], P279).
+PlannedLayout = collections.namedtuple("PlannedLayout", "layout stopped not_kept fresh differs", defaults=(None, ()))
 
 
 def _plan_once(read, earlier_path=None, record=None):
@@ -386,16 +400,15 @@ def _plan_once(read, earlier_path=None, record=None):
     try:
         fresh = _plan_layout(read)
     except breadboard_drawing.NotDrawn as stopped:
-        return PlannedLayout(None, str(stopped), [])
-    geometry = breadboard_drawing.WokwiGeometry.load()
-    catalog = breadboard_catalog.describe_parts(read, geometry)
+        return PlannedLayout(None, stopped, [])
+    geometry, catalog = _drawing_inputs(read)
 
     def checked(layout, not_kept):
-        differs = breadboard_match.DrawnNets(layout, geometry).differences(read.steps.points, catalog)
+        differs = breadboard_match.DrawnNets(layout, layout.geometry).differences(read.steps.points, catalog)
         return PlannedLayout(layout, None, not_kept, fresh, differs)
 
-    if earlier_path is None:
-        return checked(fresh, [])
+    if earlier_path is None or EDITABLE_DRAWING.why_not_written(fresh):
+        return checked(fresh, [])  # no Wokwi diagram is written, so no earlier one is kept
     earlier = breadboard_keep.EarlierDiagram.read(earlier_path, geometry.surface.type)
     if earlier is None:
         return checked(fresh, [])
@@ -444,16 +457,21 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
     if planned.layout:
         colors = "Each jumper has its step's color: %s." % ", ".join(
             "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step)) for jumper in planned.layout.jumpers)
-        first, *others = DRAWING_RENDERERS
+        drawn = [renderer for renderer in DRAWING_RENDERERS if not renderer.why_not_written(planned.layout)]
+        first, *others = drawn
         lines += ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
         lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
+        if len(drawn) < len(DRAWING_RENDERERS):
+            lines += ["", breadboard_drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
+        ground = breadboard_catalog.ground_line(planned.layout)
+        lines += ["", ground] if ground else []
         if planned.differs:
             more = len(planned.differs) - 1
             lines += ["", "The drawing does not join the points the same way: %s%s. Wire from the steps above."
                       % (planned.differs[0].why, ", and %d more" % more if more else "")]
     else:
         lines += ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
-                                                planned.why)]
+                                                planned.stopped)]
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
     lines += read.point_lines
@@ -463,11 +481,13 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
     return "\n".join(lines) + "\n"
 
 
-#: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, why none was (the
-#: plan fails for every drawing at once), else None, the [NotKeptResult] of the earlier parts not kept, and the
-#: [WiringChange] since the last build (none on a first build), and each end the drawing joins differently from the
-#: points ([DrawingDiffersResult], P279).
-WriteResult = collections.namedtuple("WriteResult", "sheet drawings why not_kept changes differs", defaults=((),))
+#: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, [(path, renderer, code,
+#: subject, why)] for each one not written (code and subject are None for an older refusal), the [NotKeptResult] of the
+#: earlier parts not kept, the [WiringChange] since the last build (none on a first build), each end the drawing joins
+#: differently from the points ([DrawingDiffersResult], P279), and what a board's drawing was made from (`record`, or
+#: None for Wokwi's own geometry).
+WriteResult = collections.namedtuple("WriteResult", "sheet drawings not_written not_kept changes differs drawn_from",
+                                     defaults=((), None))
 
 
 def _spark_jumpers(planned, earlier_path, record):
@@ -515,27 +535,37 @@ def write(requirements_path, out, circuit_path=None):
                if record and not record.why_unread else [])
     new_record = breadboard_changes.WiringRecord.from_build(seated, colors, record, _spark_jumpers(
         planned, earlier_path, record))
+    layout = planned.layout
+    declined = {renderer: renderer.why_not_written(layout) for _, renderer in paths} if layout else {}
+    drawn = [(path, renderer) for path, renderer in paths if layout and not declined.get(renderer)]
+    if layout:
+        not_written = [(path, renderer, *declined[renderer][:1], None, declined[renderer][1])
+                       for path, renderer in paths if declined.get(renderer)]
+    else:
+        not_written = [(path, renderer, planned.stopped.code, planned.stopped.subject, str(planned.stopped))
+                       for path, renderer in paths]
     try:
         # every text is rendered before any file is written, so a renderer that fails leaves no new sheet either
-        texts = [renderer.text(planned.layout) for renderer in DRAWING_RENDERERS] if planned.layout else []
+        texts = [renderer.text(layout) for _, renderer in drawn]
     except Exception:
         for path, _ in paths:
             path.unlink(missing_ok=True)
         raise
     Path(out).write_text(sheet(requirements_path, read=read, planned=planned, change_lines=_change_lines(record, changes)))
     new_record.write(record_path)
-    if not planned.layout:
-        for path, _ in paths:
-            path.unlink(missing_ok=True)
-        return WriteResult(Path(out), [], planned.why, [], changes)
+    for path, *_ in not_written:
+        path.unlink(missing_ok=True)  # a drawing left from an earlier build describes another one
     try:
-        for (path, _), text in zip(paths, texts):
+        for (path, _), text in zip(drawn, texts):
             path.write_text(text)
     except Exception:
         for path, _ in paths:
             path.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
         raise
-    return WriteResult(Path(out), paths, None, planned.not_kept, changes, planned.differs)
+    if not layout:
+        return WriteResult(Path(out), [], not_written, [], changes)
+    return WriteResult(Path(out), drawn, not_written, planned.not_kept, changes, planned.differs,
+                       breadboard_catalog.board_px(layout).get("source"))
 
 
 def main(argv=None):
@@ -561,9 +591,8 @@ def main(argv=None):
         print("not kept: %s" % named.line, file=sys.stderr)
     for differs in written.differs:
         print("drawing differs: %s" % differs.why, file=sys.stderr)
-    if written.why:
-        for renderer in DRAWING_RENDERERS:
-            print("%s not written: %s" % (renderer.FILE_NAME, written.why), file=sys.stderr)
+    for _, renderer, _, _, why in written.not_written:
+        print("%s not written: %s" % (renderer.FILE_NAME, why), file=sys.stderr)
     return EXIT_OK
 
 

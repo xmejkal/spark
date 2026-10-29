@@ -202,8 +202,13 @@ These write:
   what you have, and refuses a failed or stale build. Its Wiring section has numbered steps (one connection each),
   a mermaid diagram whose edges are those steps, and the points as a check list. Beside it it writes, at each build,
   `breadboard.json` (P267): the same steps on a Wokwi half breadboard, each jumper in its step's color, as a Wokwi
-  diagram. Only a board in `data/wokwi-geometry.json` is drawn, today the XIAO ESP32-C6, and rails are not drawn yet.
-  Otherwise the sheet and stderr say `breadboard.json not written:` and the missing fact, and an old file is removed.
+  diagram, and `breadboard.svg` (P268), the picture. A board in `data/wokwi-geometry.json` is drawn on that half
+  breadboard (the XIAO ESP32-C6). A board with a complete record is drawn from the record on a 63-column breadboard
+  (P412, the FireBeetle 2 ESP32-S3), with `breadboard.svg` alone, because Wokwi has no part with its pins. Rails are not
+  drawn yet. Otherwise the sheet and stderr say `breadboard.json not written:` and the reason, and an old file is
+  removed. A refusal has a code: `no_header_fact` (the record lacks a field, the subject names it), `header_disagrees`,
+  `no_doubtful_pad_fact`, `ground_not_one`, `duplicate_pad_label`, `no_hole_left` (a part with no free hole beside
+  its pins, the subject is the part) and `no_wokwi_part` (by design: no retry).
   A part moved in the earlier `breadboard.json` stays there (P273, `breadboard_keep.py`): `breadboard.write()` reads the
   earlier file before it writes, and a part keeps its place if its pins are over free holes, one
   row each. A resistor is checked when it is placed (P287): its joined pin must still lie in the row it joins and its other pin
@@ -422,7 +427,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `check_vendor_pins.py` | **a bare list**, one entry per board file. A compared board: `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. A could-not-run: `board`, `status` and `reason`. A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose header held no pins; a live run refused before or during the fetch has none. `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
 | `import_firmware.py` | `modules`, `problems`, `status`, `tool`, `unchecked`. Each of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`. A project with no `firmware/` folder is `could-not-run`. One with nothing to import but `main.py`, `boot.py` and `pins.py` is `problems`. Its firmware cannot be imported without running `main.py` |
-| `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`. `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed. With `--keep` or `--sim-dir`, `kept` lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`, `removed`, `not written` or `not kept`) and `why` |
+| `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`. `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed. With `--keep` or `--sim-dir`, `kept` lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`, `removed`, `not written` or `not kept`) and `why`; an entry of a drawing not written adds `code`, `subject` and `expected` (`true` means by design, not a failure: do not retry), and the `breadboard.svg` of a board drawn from its record adds `drawn_from` (`record`) |
 | `look.py`, `deploy.py` | the envelope, as `parts.py`'s: see below |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 

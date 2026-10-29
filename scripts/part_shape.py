@@ -47,7 +47,7 @@ def project_to_px(shape):
              for name, group in shape.groups.items() if group["verified"] is False]
     return {"size": [_px(width), _px(height)], "center": [_px(width / 2), _px(height / 2)], "covers_holes": True,
             "pins": {label: [_px(x), _px(y)] for label, (x, y) in shape.pins.items()},
-            "doubtful": list(shape.groups.get("doubtful_pads", {}).get("value") or []),
+            "doubtful": list(shape.groups.get("doubtful_pads", {}).get("value") or []), "ground": shape.ground,
             "source": RECORD, "notes": notes}
 
 
@@ -156,9 +156,13 @@ class RecordShapeSource(ShapeSource):
         return dict({label: label for label in shape.pins}, GND=shape.ground)
 
 
-#: The sources in the order they are asked: Wokwi's measured board first, so a board with a complete record that Wokwi
-#: also draws right keeps its measured numbers, and a stand-in is never drawn.
-SHAPE_SOURCES = (WokwiGeometryShapeSource(), RecordShapeSource())
+def sources_for(parts=None):
+    """The sources in the order they are asked: Wokwi's measured board first (from `parts`, else from the file), so a
+    board with a complete record that Wokwi also draws right keeps its measured numbers, and a stand-in is never drawn."""
+    return (WokwiGeometryShapeSource(parts), RecordShapeSource())
+
+
+SHAPE_SOURCES = sources_for()
 
 
 def find_source(board, sources=SHAPE_SOURCES):

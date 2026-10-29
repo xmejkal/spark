@@ -54,6 +54,10 @@ CODES = {
 }
 
 
+#: The codes of a refusal that is no failure: the drawing is not written by design, and a retry gives the same.
+BY_DESIGN = (NO_WOKWI_PART,)
+
+
 class NotDrawn(Exception):
     """The steps cannot be drawn: a fact the drawing needs is missing, or the breadboard has no room. `code` (one of
     CODES, or None for an older site) and `subject` say which, so a caller never reads the message."""
@@ -391,7 +395,7 @@ def end_group(end, placed, catalog, groups=None):
 class WokwiBreadboardDiagram:
     """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color. Its constructor takes the
     colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
-    below and `text(layout)`, which `breadboard.DRAWING_RENDERERS` and the build read."""
+    below, `text(layout)` and `why_not_written(layout)`, which `breadboard.DRAWING_RENDERERS` and the build read."""
 
     #: The file it writes, beside the sheet.
     FILE_NAME = "breadboard.json"
@@ -402,10 +406,21 @@ class WokwiBreadboardDiagram:
     #: What the sheet says about the file, under its steps.
     SHEET_MESSAGE = ("An example layout is in breadboard.json: paste it into the diagram.json of a new project on "
                      "wokwi.com.")
+    #: What the sheet says once when no Wokwi diagram is written for a board drawn from its own record.
+    SHEET_DECLINED_MESSAGE = "No Wokwi diagram exists for this board, by design: Wokwi has no part with its pins."
+    #: Why no file is written for such a board.
+    DECLINED_MESSAGE = "Wokwi has no part with this board's pins"
 
     def __init__(self, colors=None, breadboard_id="bb1"):
         self.colors = colors or breadboard_steps.StepColors()
         self.breadboard_id = breadboard_id
+
+    def why_not_written(self, layout):
+        """None when the layout can be a Wokwi diagram, else (code, sentence): a board drawn from its own record has no Wokwi
+        part, so its pins would show the wrong board."""
+        if any(layout.geometry.part(part.type).get("source") == RECORD_SOURCE for part in layout.parts):
+            return NO_WOKWI_PART, self.DECLINED_MESSAGE
+        return None
 
     def render(self, layout):
         parts = [{"type": layout.breadboard, "id": self.breadboard_id, "top": 0, "left": 0, "attrs": {}}]
@@ -450,6 +465,10 @@ class SvgBreadboardDiagram:
     def __init__(self, colors=None, pictures=None):
         self.colors = colors or breadboard_steps.StepColors()
         self.pictures = pictures or part_pictures.PictogramPartPictures()
+
+    def why_not_written(self, layout):
+        """None: the picture is written for any layout."""
+        return None
 
     def text(self, layout):
         ElementTree.register_namespace("", part_pictures.SVG_NAMESPACE)

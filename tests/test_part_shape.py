@@ -133,6 +133,14 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
         self.assertTrue(all(sentence and "\n" not in sentence for sentence in breadboard_drawing.CODES.values()))
 
 
+class TheGuideNamesEveryCodeTest(unittest.TestCase):
+    def test_agents_md_names_every_code_and_the_kept_fields(self):
+        text = (ROOT / "docs" / "guide" / "agents.md").read_text()
+        self.assertEqual([code for code in breadboard_drawing.CODES if "`%s`" % code not in text], [])
+        for field in ("code", "subject", "expected", "drawn_from"):
+            self.assertIn("`%s`" % field, text)
+
+
 class TheSourcesAreAskedInOrderTest(unittest.TestCase):
     def test_the_xiao_stays_on_the_wokwi_source_and_its_px_are_the_measured_ones(self):
         part_px, name = part_shape.find_part_px(xiao())
