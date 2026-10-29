@@ -62,6 +62,7 @@ import re
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -90,7 +91,6 @@ def _from_source(prefix):
     """
     import os
     import shutil
-    import tempfile
     run = Path(tempfile.mkdtemp(prefix=prefix))
     try:
         (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
@@ -305,6 +305,7 @@ def retarget_tables(tables, old, new):
     return EXIT_OK
 
 
+# --- MVP ---
 def copy_of(root):
     """
     The tree at `root` in a temporary folder, without .git, worktrees or caches (P208). A run that mutates the copy never
@@ -312,28 +313,31 @@ def copy_of(root):
     JavaScript dependencies are borrowed, not copied, as the push gate does.
     """
     import shutil
-    import tempfile
     made = Path(tempfile.mkdtemp(prefix=COPY_PREFIX))
     copy = made / root.name
     try:
         shutil.copytree(root, copy, symlinks=True,
                         ignore=shutil.ignore_patterns(".git", ".worktrees", "node_modules", "__pycache__", LOCK_NAME))
-    except BaseException:  # a file it cannot read, or a stop: no half-made folder stays
-        shutil.rmtree(made, ignore_errors=True)
+        for folder in (Path("."), Path("tools") / "circuit-to-wokwi"):
+            if (root / folder / "node_modules").is_dir() and (copy / folder).is_dir():
+                (copy / folder / "node_modules").symlink_to(root / folder / "node_modules")
+    except BaseException:  # a file it cannot read, a read-only root, or a stop: no half-made folder stays
+        scratch.remove_tree(made)
         raise
-    for folder in (Path("."), Path("tools") / "circuit-to-wokwi"):
-        if (root / folder / "node_modules").is_dir() and (copy / folder).is_dir():
-            (copy / folder / "node_modules").symlink_to(root / folder / "node_modules")
     return copy
 
 
+# --- MVP ---
 def remove_old_scratch():
-    """Remove the folders of the three prefixes that a stopped run left in the temp folder, older than a day (P435)."""
-    import tempfile
+    """
+    Remove the folders of the three prefixes that a stopped run left in the temp folder, older than a day (P435). Every
+    mutation run does it at its start, with or without --copy (--anchors and --retarget do not).
+    """
     for prefix in (RUN_PREFIX, IMPORT_PREFIX, COPY_PREFIX):
         scratch.remove_old_folders(tempfile.gettempdir(), prefix, time.time())
 
 
+# --- MVP ---
 @contextlib.contextmanager
 def sigterm_as_exit():
     """
@@ -343,6 +347,7 @@ def sigterm_as_exit():
     def stop(number, frame):
         raise SystemExit(128 + number)
 
+    # Only the default handler is replaced: a handler somebody else set (a runner, a test harness) is theirs and stays.
     installed = threading.current_thread() is threading.main_thread() and signal.getsignal(signal.SIGTERM) == signal.SIG_DFL
     if installed:
         signal.signal(signal.SIGTERM, stop)
@@ -499,16 +504,16 @@ def main(argv=None):
     started = time.monotonic()
     remove_old_scratch()
     where = None
-    try:
-        with sigterm_as_exit():
+    with sigterm_as_exit():  # also around the copy's removal: no window back at the default handler
+        try:
             where = copy_of(root) if args.copy else root
             results, restored = run(where, args.tests, mutations, copied=where is not root)
-    except (AnotherRunIsActive, RedBeforeMutation) as stopped:
-        print(str(stopped), file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    finally:
-        if where is not None and where is not root:
-            __import__("shutil").rmtree(where.parent, ignore_errors=True)
+        except (AnotherRunIsActive, RedBeforeMutation) as stopped:
+            print(str(stopped), file=sys.stderr)
+            return EXIT_COULD_NOT_RUN
+        finally:
+            if where is not None and where is not root:
+                scratch.remove_tree(where.parent)
     code = verdict(results, restored)
     if args.json:
         print(json.dumps({"tool": "mutate", "restored": restored,

@@ -9,7 +9,9 @@ The skip's reason starts with SLOW_PREFIX, so the gate counts the slow skips apa
 """
 
 import os
+import time
 import unittest
+from pathlib import Path
 
 #: What every slow mark's skip reason starts with; the gate counts the skips that start with it, and no others.
 SLOW_PREFIX = "slow: "
@@ -23,3 +25,13 @@ def slow(reason):
     if not reason.strip():
         raise ValueError("a slow mark needs its reason: what the test runs and its measured seconds")
     return unittest.skipIf(QUICK, SLOW_PREFIX + reason)
+
+
+def planted_folder(parent, name, age):
+    """A folder `name` with a file in it under `parent`, last touched `age` seconds before now (P435)."""
+    folder = Path(parent) / name
+    folder.mkdir()
+    (folder / "f.txt").write_text("x")
+    when = time.time() - age
+    os.utime(folder, (when, when))
+    return folder

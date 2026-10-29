@@ -17,18 +17,9 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
 import scratch  # noqa: E402
+from suite_runs import planted_folder as planted  # noqa: E402
 
 DAY = scratch.OLD_AFTER_SECONDS
-
-
-def planted(parent, name, age):
-    """A folder `name` with a file in it, last touched `age` seconds before now."""
-    folder = Path(parent) / name
-    folder.mkdir()
-    (folder / "f.txt").write_text("x")
-    when = time.time() - age
-    os.utime(folder, (when, when))
-    return folder
 
 
 class RemoveOldFoldersTest(unittest.TestCase):
@@ -72,6 +63,30 @@ class RemoveOldFoldersTest(unittest.TestCase):
         os.utime(folder, (1_000_000_000, 1_000_000_000))
         self.assertEqual(scratch.remove_old_folders(self.parent, "spark-tests-", 1_000_000_000 + DAY), [])
         self.assertEqual(scratch.remove_old_folders(self.parent, "spark-tests-", 1_000_000_001 + DAY), ["spark-tests-exact"])
+
+    def test_a_read_only_folder_inside_goes_too(self):
+        old = planted(self.parent, "spark-tests-old", 2 * DAY)
+        (old / "ro").mkdir()
+        (old / "ro" / "f").write_text("x")
+        (old / "ro").chmod(0o555)
+        (old / "deep").mkdir()
+        (old / "deep" / "x").mkdir()
+        (old / "deep" / "x" / "f").write_text("x")
+        (old / "deep").chmod(0)
+        os.utime(old, (time.time() - 2 * DAY,) * 2)  # the setup above touched it
+        self.assertEqual(self.sweep(), ["spark-tests-old"])
+        self.assertFalse(old.exists())
+
+    @unittest.skipIf(os.geteuid() == 0, "root can remove from a read-only folder")
+    def test_a_name_is_listed_only_when_the_folder_is_gone(self):
+        locked = Path(tempfile.mkdtemp())
+        folder = planted(locked, "spark-tests-old", 2 * DAY)
+        locked.chmod(0o555)
+        try:
+            self.assertEqual(scratch.remove_old_folders(str(locked), "spark-tests-", time.time()), [])
+            self.assertTrue(folder.exists())
+        finally:
+            locked.chmod(0o755)
 
     def test_a_missing_parent_removes_nothing(self):
         self.assertEqual(scratch.remove_old_folders(self.parent + "/none", "spark-tests-", time.time()), [])
