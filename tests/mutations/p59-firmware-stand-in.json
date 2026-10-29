@@ -38,8 +38,8 @@
  {
   "file": "scripts/import_firmware.py",
   "name": "P59: bytecode is written into the person's firmware folder",
-  "find": "[sys.executable, \"-B\", \"-c\", IMPORT_ONE,",
-  "replace": "[sys.executable, \"-c\", IMPORT_ONE,"
+  "find": "[sys.executable, \"-I\", \"-B\", str(CHILD), name,",
+  "replace": "[sys.executable, \"-I\", str(CHILD), name,"
  },
  {
   "file": "scripts/import_firmware.py",

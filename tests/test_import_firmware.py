@@ -16,6 +16,8 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -26,6 +28,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import import_child  # noqa: E402
 import import_firmware  # noqa: E402
 import outcomes  # noqa: E402
 
@@ -118,19 +121,30 @@ class ThePinsRememberTheirLevelsTest(unittest.TestCase):
         button.init(self.Pin.IN, self.Pin.PULL_UP)
         self.assertEqual(button.value(), 1)
 
-    def test_what_the_stand_in_lacks_is_an_import_error_that_names_it(self):
-        for statement in ("from machine import UART", "import machine; machine.Timer"):
-            with self.subTest(statement=statement):
-                done = subprocess.run([sys.executable, "-c", statement], capture_output=True, text=True,
-                                      env={"PYTHONPATH": str(STAND_IN.parent)})
-                self.assertNotEqual(done.returncode, 0)
-                self.assertIn("ImportError", done.stderr)
-                self.assertIn("stand-in", done.stderr)
-                self.assertIn("move the rest into a function that main.py calls", done.stderr)
-                self.assertNotIn("Pin and PWM only", done.stderr)
+    def test_what_the_stand_in_lacks_is_an_attribute_error_that_names_it(self):
+        done = subprocess.run([sys.executable, "-c", "import machine; machine.Timer"], capture_output=True, text=True,
+                              env={"PYTHONPATH": str(STAND_IN.parent)})
+        self.assertNotEqual(done.returncode, 0)
+        self.assertIn("AttributeError", done.stderr)
+        self.assertIn("stand-in", done.stderr)
+        self.assertIn("move the rest into a function that main.py calls", done.stderr)
+        self.assertNotIn("Pin and PWM only", done.stderr)
+
+    def test_a_from_import_of_what_it_lacks_is_an_import_error_through_the_child(self):
+        _, answer = answer_for(a_project(light="from machine import UART\n"))
+        detail = module_named(answer, "light")["detail"]
+        self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
+        self.assertTrue(detail.startswith("ImportError: "), detail)
+        self.assertIn("scripts/stand_in/machine.py", detail)
+        self.assertIn("not UART", detail)
+        self.assertIn("move the rest into a function that main.py calls", detail)
+
+    def test_hasattr_and_getattr_with_a_default_see_nothing_for_what_it_lacks(self):
+        self.assertFalse(hasattr(self.machine, "UART"))
+        self.assertIsNone(getattr(self.machine, "UART", None))
 
     def test_the_error_lists_the_classes_sorted_and_not_the_helpers(self):
-        with self.assertRaises(ImportError) as caught:
+        with self.assertRaises(AttributeError) as caught:
             self.machine.UART
         self.assertIn("has ADC, I2C, I2S, PWM, Pin, SPI, SoftI2C and SoftSPI only, not UART", str(caught.exception))
         self.assertNotIn("set_level", str(caught.exception))
@@ -342,19 +356,41 @@ class TheDisplayDriverStandInsTest(unittest.TestCase):
             self.assertIsNone(call())
         self.assertEqual(buf, bytearray(8))
 
-    def test_a_name_the_stand_in_lacks_is_an_import_error_with_its_own_file_names_and_action(self):
+    MICROPYTHON_HAS = "has alloc_emergency_exception_buf, bytecode, const, native and viper only"
+    FRAMEBUF_HAS = "has FrameBuffer, GS2_HMSB, GS4_HMSB, GS8, MONO_HLSB, MONO_HMSB, MONO_VLSB and RGB565 only"
+
+    def test_a_name_the_stand_in_lacks_is_an_attribute_error_with_its_own_file_names_and_action(self):
         for module, statement, have in (
-                ("micropython", "from micropython import opt_level", "has bytecode, const, native and viper only"),
-                ("framebuf", "import framebuf; framebuf.Nothing",
-                 "has FrameBuffer, GS2_HMSB, GS4_HMSB, GS8, MONO_HLSB, MONO_HMSB, MONO_VLSB and RGB565 only")):
+                ("micropython", "import micropython; micropython.opt_level", self.MICROPYTHON_HAS),
+                ("framebuf", "import framebuf; framebuf.Nothing", self.FRAMEBUF_HAS)):
             with self.subTest(module=module):
                 done = subprocess.run([sys.executable, "-c", statement], capture_output=True, text=True,
                                       env={"PYTHONPATH": str(FALLBACK)})
                 self.assertNotEqual(done.returncode, 0)
-                self.assertIn("ImportError", done.stderr)
+                self.assertIn("AttributeError", done.stderr)
                 self.assertIn("scripts/stand_in/fallback/%s.py" % module, done.stderr)
                 self.assertIn(have, done.stderr)
                 self.assertIn("move the rest into a function that main.py calls", done.stderr)
+
+    def test_a_from_import_of_what_a_stand_in_lacks_is_an_import_error_through_the_child(self):
+        for module, have in (("micropython", self.MICROPYTHON_HAS), ("framebuf", self.FRAMEBUF_HAS)):
+            with self.subTest(module=module):
+                _, answer = answer_for(a_project(light="from %s import Nothing\n" % module))
+                detail = module_named(answer, "light")["detail"]
+                self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
+                self.assertTrue(detail.startswith("ImportError: "), detail)
+                self.assertIn("scripts/stand_in/fallback/%s.py" % module, detail)
+                self.assertIn(have, detail)
+                self.assertIn("not Nothing", detail)
+
+    def test_hasattr_and_getattr_with_a_default_see_nothing_for_what_they_lack(self):
+        for module in (self.framebuf, self.micropython):
+            with self.subTest(module=module.__name__):
+                self.assertFalse(hasattr(module, "Nothing"))
+                self.assertIsNone(getattr(module, "Nothing", None))
+
+    def test_alloc_emergency_exception_buf_keeps_nothing(self):
+        self.assertIsNone(self.micropython.alloc_emergency_exception_buf(100))
 
     def test_a_subclass_may_define_width_as_a_property(self):
         framebuf = self.framebuf
@@ -556,6 +592,164 @@ class TheCommandRunsFromWhereTheyAreTest(unittest.TestCase):
         self.assertEqual(module_named(answer, "light")["detail"], "EOFError: EOF when reading a line")
 
 
+class TheChildIsAFileOfItsOwnTest(unittest.TestCase):
+    """P443: the child that imports one module is scripts/import_child.py, run with -I."""
+
+    def test_a_firmware_cannot_import_the_child_file(self):
+        project = a_project(light="import import_child\n")
+        _, answer = answer_for(project)
+        self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
+        self.assertIn("No module named 'import_child'", module_named(answer, "light")["detail"])
+
+    def test_the_child_imports_the_module_from_the_folders_given(self):
+        project = a_project(light="import sys\nassert sys.path[0].endswith('first'), sys.path\n")
+        done = subprocess.run([sys.executable, "-I", "-B", str(ROOT / "scripts" / "import_child.py"), "light",
+                               str(project / "first"), str(project / "firmware")], capture_output=True, text=True)
+        self.assertEqual(done.returncode, 0, done.stderr)
+
+
+class TheChildGivesTimeMicroPythonsNamesTest(unittest.TestCase):
+    """P443: micropython-lib's SSD1306_SPI sleeps in its constructor, and a driver builds it at module level."""
+
+    def test_the_six_names_are_set_with_their_fixed_values(self):
+        fake = types.ModuleType("fake_time")
+        import_child.add_micropython_time(fake)
+        self.assertIsNone(fake.sleep_ms(10_000))
+        self.assertIsNone(fake.sleep_us(10_000_000))
+        self.assertEqual((fake.ticks_ms(), fake.ticks_us()), (0, 0))
+        self.assertEqual(fake.ticks_add(5, 3), 8)
+        self.assertEqual(fake.ticks_diff(8, 5), 3)
+        self.assertEqual(fake.ticks_diff(5, 8), -3)
+
+    def test_this_process_s_own_time_is_left_alone(self):
+        """Importing the child file, as the top of this file did, patches nothing."""
+        import_child.add_micropython_time(types.ModuleType("fake_time"))
+        self.assertFalse(hasattr(time, "sleep_ms"))
+
+    def test_the_ssd1306_spi_shape_built_at_module_level_imports(self):
+        """micropython-lib's ssd1306.py: a reset pin, `time.sleep_ms(1)` and `sleep_ms(10)`, a FrameBuffer subclass."""
+        project = a_project(screen=(
+            "import time\nfrom machine import Pin, SoftSPI\nimport framebuf\n"
+            "class SSD1306_SPI(framebuf.FrameBuffer):\n"
+            "    def __init__(self, spi, dc, res, cs):\n"
+            "        dc.init(dc.OUT, value=0)\n        res.init(res.OUT, value=0)\n        cs.init(cs.OUT, value=1)\n"
+            "        self.spi, self.buffer = spi, bytearray(128 * 8)\n"
+            "        super().__init__(self.buffer, 128, 64, framebuf.MONO_VLSB)\n"
+            "        self.reset(res)\n"
+            "    def reset(self, res):\n"
+            "        res(1)\n        time.sleep_ms(1)\n        res(0)\n        time.sleep_ms(10)\n        res(1)\n"
+            "screen = SSD1306_SPI(SoftSPI(baudrate=1000000), Pin(1), Pin(2), Pin(3))\n"))
+        code, answer = answer_for(project)
+        self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
+
+    def test_a_long_sleep_at_import_does_not_wait(self):
+        project = a_project(slow="import time\ntime.sleep_ms(10_000)\ntime.sleep_us(10_000_000)\n")
+        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        self.assertEqual(module_named(answer, "slow")["status"], "imported", answer)
+
+    def test_a_wait_on_ticks_ms_times_out_because_it_is_always_zero(self):
+        project = a_project(wait=("import time\nstart = time.ticks_ms()\n"
+                                  "while time.ticks_diff(time.ticks_ms(), start) < 100:\n    pass\n"))
+        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        self.assertEqual(module_named(answer, "wait")["status"], "timed out", answer)
+
+    def test_real_time_stays_real(self):
+        project = a_project(clock="import time\nassert time.time() > 1e9\ntime.sleep(0.01)\n")
+        _, answer = answer_for(project)
+        self.assertEqual(module_named(answer, "clock")["status"], "imported", answer)
+
+
+class TheChildGivesBackAStandInsWordsTest(unittest.TestCase):
+    """P443: `hasattr` sees an AttributeError, and `from X import name` still says why in an ImportError."""
+
+    def detail_of(self, source):
+        _, answer = answer_for(a_project(light=source))
+        return module_named(answer, "light")["status"], module_named(answer, "light")["detail"]
+
+    def test_the_ssd1306_spi_shape_with_its_exception_buffer_imports(self):
+        project = a_project(screen=(
+            "import micropython\nimport time\nfrom machine import Pin, SoftSPI\nimport framebuf\n"
+            "micropython.alloc_emergency_exception_buf(100)\n"
+            "class SSD1306_SPI(framebuf.FrameBuffer):\n"
+            "    def __init__(self, spi, res):\n"
+            "        self.spi, self.buffer = spi, bytearray(128 * 8)\n"
+            "        super().__init__(self.buffer, 128, 64, framebuf.MONO_VLSB)\n"
+            "        res(1)\n        time.sleep_ms(1)\n        res(0)\n        time.sleep_ms(10)\n        res(1)\n"
+            "screen = SSD1306_SPI(SoftSPI(baudrate=1000000), Pin(1, Pin.OUT))\n"))
+        code, answer = answer_for(project)
+        self.assertEqual((code, answer["status"]), (outcomes.EXIT_OK, outcomes.OK), answer)
+
+    def test_a_probe_for_a_name_a_stand_in_lacks_imports_for_all_three_stand_ins(self):
+        source = ("import framebuf, machine, micropython\n"
+                  "for module in (framebuf, machine, micropython):\n"
+                  "    assert not hasattr(module, 'Nothing')\n"
+                  "    assert getattr(module, 'Nothing', None) is None\n")
+        self.assertEqual(self.detail_of(source), ("imported", ""))
+
+    def test_a_probe_and_then_a_from_import_names_the_name_of_the_from_import(self):
+        status, detail = self.detail_of("import machine\nhasattr(machine, 'Timer')\nfrom machine import UART\n")
+        self.assertEqual(status, "raised")
+        self.assertIn("not UART", detail)
+        self.assertNotIn("Timer", detail)
+
+    def test_a_dunder_miss_clears_the_name_remembered_so_it_gives_the_plain_error(self):
+        status, detail = self.detail_of("import machine\nhasattr(machine, 'UART')\nfrom machine import __version__\n")
+        self.assertEqual(status, "raised")
+        self.assertIn("cannot import name '__version__'", detail)
+        self.assertNotIn("stand-in", detail)
+
+    def test_a_from_import_of_a_good_name_and_a_missing_one_still_gets_the_words(self):
+        status, detail = self.detail_of("from machine import Pin, UART\n")
+        self.assertEqual(status, "raised")
+        self.assertIn("not UART", detail)
+
+    def test_a_firmware_module_with_a_missed_of_its_own_keeps_the_plain_error(self):
+        for own in ("0", "[]", "'ab'", "('x', 'y')"):
+            with self.subTest(own=own):
+                project = a_project(fw="_missed = %s\n" % own, light="from fw import nope\n")
+                _, answer = answer_for(project)
+                self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
+                self.assertIn("cannot import name 'nope'", module_named(answer, "light")["detail"])
+
+    def test_an_import_error_of_the_firmware_s_own_keeps_its_words(self):
+        for source, said in (("from nothere import x\n", "No module named 'nothere'"),
+                             ("raise ImportError('plain')\n", "ImportError: plain"),
+                             ("import machine\nraise ImportError('plain', name='machine')\n", "ImportError: plain")):
+            with self.subTest(source=source):
+                status, detail = self.detail_of(source)
+                self.assertEqual(status, "raised")
+                self.assertIn(said, detail)
+
+    def test_one_miss_is_handed_back_once(self):
+        module = a_stand_in("machine")
+        sys.modules["stand_in_machine_under_test"] = module
+        try:
+            error = ImportError("cannot import name", name="stand_in_machine_under_test")
+            self.assertIsNone(import_child.words_of_stand_in(error))
+            getattr(module, "Nothing", None)
+            self.assertIn("not Nothing", import_child.words_of_stand_in(error))
+            self.assertIsNone(import_child.words_of_stand_in(error))
+        finally:
+            del sys.modules["stand_in_machine_under_test"]
+
+    def test_an_error_with_no_name_or_a_module_that_is_not_loaded_has_no_words(self):
+        self.assertIsNone(import_child.words_of_stand_in(ImportError("plain")))
+        self.assertIsNone(import_child.words_of_stand_in(ImportError("plain", name="not_loaded_anywhere")))
+
+    def test_each_stand_in_remembers_a_miss_and_a_dunder_clears_it(self):
+        for name in ("machine", "framebuf", "micropython"):
+            with self.subTest(stand_in=name):
+                module = a_stand_in(name)
+                self.assertIsNone(module._missed)
+                self.assertIsNone(getattr(module, "__spark__", None))
+                self.assertIsNone(module._missed)
+                self.assertIsNone(getattr(module, "Nothing", None))
+                self.assertEqual(module._missed[0], "Nothing")
+                self.assertIn("not Nothing", module._missed[1])
+                self.assertIsNone(getattr(module, "__spark__", None))
+                self.assertIsNone(module._missed)
+
+
 class AModuleThatFailsIsAProblemTest(unittest.TestCase):
     def test_a_module_that_raises_says_the_exception_s_last_line(self):
         project = a_project(light="raise ValueError('no such pin')\n", pins="BUTTON = 4\n")
@@ -668,7 +862,7 @@ class WhenItCannotLookTest(unittest.TestCase):
         done = subprocess.run([sys.executable, str(SCRIPT), "--help"], capture_output=True, text=True)
         self.assertEqual(done.returncode, 0)
         for said in ("usage:", "main.py", "stand-in", "--timeout", "--json", "ADC", "I2S", "framebuf",
-                     "proves that the names exist and the module-level calls ran"):
+                     "sleep_ms", "proves that the names exist and the module-level calls ran"):
             self.assertIn(said, done.stdout)
         self.assertNotIn("nothing else", done.stdout)
 

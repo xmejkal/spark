@@ -5,7 +5,8 @@ It is NOT the chip. It has a `Pin`, a `PWM`, an `ADC`, an `SPI` and `SoftSPI`, a
 Pins remember the level written to them, and a test sets an input with `set_level(gpio, level)` and reads an output
 with `level(gpio)`. A PWM keeps the last frequency and duty set on it and makes no signal (P352). The other classes
 keep their arguments and return a fixed value (P421, below). It knows nothing of which GPIO exists or of interrupts
-firing. A firmware that imports any other name gets an ImportError that names this file.
+firing. A firmware that imports any other name gets an ImportError that names this file, and `hasattr` and `getattr` with a
+default see an AttributeError (P443).
 """
 
 #: GPIO number -> the level the firmware last wrote, or a test last set. Pins share it, as pins of one chip would.
@@ -213,10 +214,18 @@ class I2S(_StandIn):
         self.handler = handler
 
 
+#: The last name asked for that this module lacks, as (name, words). Python turns the AttributeError into a bare
+#: ImportError for `from machine import X`, and the import child reads this to give the words back (P443).
+_missed = None
+
+
 def __getattr__(name):
+    global _missed
     if name.startswith("__"):  # the import machinery asks for __path__ and the like
+        _missed = None  # a dunder miss is not the name an earlier probe left
         raise AttributeError(name)
     have = sorted(n for n, value in globals().items() if isinstance(value, type) and not n.startswith("_"))
-    raise ImportError("spark's stand-in machine (scripts/stand_in/machine.py) has %s and %s only, not %s: use only "
-                      "these at module level, or move the rest into a function that main.py calls"
-                      % (", ".join(have[:-1]), have[-1], name))
+    words = ("spark's stand-in machine (scripts/stand_in/machine.py) has %s and %s only, not %s: use only these at "
+             "module level, or move the rest into a function that main.py calls" % (", ".join(have[:-1]), have[-1], name))
+    _missed = (name, words)
+    raise AttributeError(words)
