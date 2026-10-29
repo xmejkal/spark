@@ -668,7 +668,8 @@ class TheOneDoorTest(unittest.TestCase):
                             ("a\u200eb.pdf", r"'a\u200eb.pdf'"), ("a\u200fb.pdf", r"'a\u200fb.pdf'"),
                             ("a\u2028b.pdf", r"'a\u2028b.pdf'"), ("a\u2029b.pdf", r"'a\u2029b.pdf'"),
                             ("a\u202ab.pdf", r"'a\u202ab.pdf'"), ("a\u202eb.pdf", r"'a\u202eb.pdf'"),
-                            ("a\u2066b.pdf", r"'a\u2066b.pdf'"), ("a\u2069b.pdf", r"'a\u2069b.pdf'")):
+                            ("a\u2066b.pdf", r"'a\u2066b.pdf'"), ("a\u2069b.pdf", r"'a\u2069b.pdf'"),
+                            ("a\ud800b.pdf", r"'a\ud800b.pdf'"), ("a\udfffb.pdf", r"'a\udfffb.pdf'")):
             with self.subTest(name=name):
                 self.assertEqual(store.file_name_problem(name), shown + " has a control character in it, so it is not a file name")
                 with self.assertRaises(store.StoreProblem) as refused:

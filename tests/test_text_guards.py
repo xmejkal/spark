@@ -64,6 +64,11 @@ class ValueMessageErrorTest(unittest.TestCase):
             self.message("%s", "a", "b")
 
 
+class ASurrogateKeyTest(unittest.TestCase):
+    def test_a_key_with_a_lone_surrogate_is_refused(self):
+        self.assertEqual(len(text_guards.list_key_problems("facts", {"a\ud800": 1})), 1)
+
+
 class GuardLinesTest(unittest.TestCase):
     """P423 (#556): the text a script prints, line by line, with each line's own newlines kept."""
 
@@ -107,6 +112,9 @@ class PrintableTest(unittest.TestCase):
 
 
 class CleanTest(unittest.TestCase):
+    def test_a_lone_surrogate_becomes_a_space(self):
+        self.assertEqual(text_guards.clean("a\ud800b\udfffc"), "a b c")
+
     def test_a_line_or_paragraph_separator_becomes_a_space(self):
         self.assertEqual(text_guards.clean("a\u2028b\u2029c"), "a b c")
 

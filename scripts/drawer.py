@@ -45,13 +45,13 @@ PROVENANCE_MAX = 1000
 def scrub(key, value):
     """
     A value as it is written under `key` (P211): tags cleaned and lowercased, a text cut at its own cap, the rest as a label.
-    The `PROVENANCE_KEYS` keep a text up to `PROVENANCE_MAX` and clean every string in them, an entry named `does` included.
+    The `PROVENANCE_KEYS` keep a text up to `PROVENANCE_MAX` and clean every string in them.
     """
     if key == "tags" and isinstance(value, list):
         return [clean(tag).lower() if isinstance(tag, str) else tag for tag in value]
     if key in TEXT_MAX and isinstance(value, str):
         return clean(value, TEXT_MAX[key])
-    return _scrubbed(value, PROVENANCE_MAX, ()) if key in PROVENANCE_KEYS else _scrubbed(value)
+    return _scrubbed(value, PROVENANCE_MAX) if key in PROVENANCE_KEYS else _scrubbed(value)
 
 
 def list_provenance_key_problems(values):
@@ -59,14 +59,14 @@ def list_provenance_key_problems(values):
     return [problem for key in PROVENANCE_KEYS if key in values for problem in list_key_problems(key, values[key])]
 
 
-def _scrubbed(value, cap=LABEL_MAX, skip=("sha256", "does")):
-    """A value with every string in it cleaned and cut at `cap` — but not the fixed words (`skip`: `does`, a photo's sha256) nor the ids an `is` names."""
+def _scrubbed(value, cap=LABEL_MAX):
+    """A value with every string in it cleaned and cut at `cap`: a photo's sha256 and an `is` too, because a lone surrogate in any of them ends a write (P445)."""
     if isinstance(value, str):
         return clean(value, cap)
     if isinstance(value, list):
-        return [_scrubbed(item, cap, skip) for item in value]
+        return [_scrubbed(item, cap) for item in value]
     if isinstance(value, dict):
-        return {key: item if key in skip else _scrubbed(item, cap, skip) for key, item in value.items()}
+        return {key: _scrubbed(item, cap) for key, item in value.items()}
     return value
 
 
@@ -224,7 +224,7 @@ def settle(entry_id, before, values, known):
     drops a stale `is` when nothing matches; an entry with a number and no `is` key is linked once. A change is
     {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
     """
-    values = {key: (value if key == "is" else scrub(key, value)) for key, value in values.items()}
+    values = {key: scrub(key, value) for key, value in values.items()}
     problems = [parts._problem(entry_id, "%s is not a drawer field — the fields are %s" % (key, ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
     problems += [parts._problem(entry_id, CHECKS[key][1]) for key, value in values.items() if key in CHECKS and not CHECKS[key][0](value)]

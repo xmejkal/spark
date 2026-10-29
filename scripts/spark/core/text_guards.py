@@ -8,11 +8,11 @@ import re
 
 
 # --- MVP ---
-#: A label is shown and matched, never obeyed (§6.4.6): `clean` turns each run of control and bidi characters into a space,
+#: A label is shown and matched, never obeyed (§6.4.6): `clean` turns each run of control and bidi characters and lone surrogates (P445) into a space,
 #: and the label stops at 160 characters. The line and paragraph separators (U+2028/9) are in the set: a terminal prints them
 #: as `?`, and a file name must not hold them (`store.file_name_problem` reads this set too, P423).
 LABEL_MAX = 160
-CONTROL = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]+")
+CONTROL = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ud800-\udfff]+")
 
 #: What an entry or a record says of itself for a chooser (P211): one sentence and a paragraph, each capped — data, never obeyed.
 TEXT_MAX = {"about": 200, "description": 1000}

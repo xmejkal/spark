@@ -705,6 +705,20 @@ class TheCleanTextTest(unittest.TestCase):
                          ("a b c d e", "a b c d e", "a b c d e", {"number": "a b c d e", "maker": "a b c d e"},
                           {"seller": "a b c d e", "product": "a b c d e"}, [{"does": "sense", "what": "a b c d e"}], "a b c d e"))
 
+    def test_a_lone_surrogate_in_a_text_is_cleaned_with_and_without_a_dry_run(self):
+        # P445 (#596): it passed the guard, and the real write ended in a UnicodeEncodeError while the dry run said ok
+        for flags in ([], ["--dry-run"]):
+            with self.subTest(flags=flags):
+                said, code = run(["--drawer-set", a_file([{"label": "thing", "count": 1, "about": "a\ud800b"}])] + flags)
+                self.assertEqual((code, said["status"]), (0, "ok"))
+        self.assertEqual(json.loads((self.home / "drawer" / "thing.json").read_text())["about"], "a b")
+
+    def test_a_lone_surrogate_in_a_fixed_word_a_hash_or_an_id_is_cleaned_too(self):
+        # the scrub used to skip `sha256`, `does` and `is`, so a surrogate in one passed on to the write
+        self.assertEqual([drawer.scrub("function", [{"does": "se\udc80nse"}]), drawer.scrub("photos", [{"sha256": "a\ud800b"}]),
+                          drawer.scrub("is", "x\udfffy")],
+                         [[{"does": "se nse"}], [{"sha256": "a b"}], "x y"])
+
 
 class TheSmallFixesTest(unittest.TestCase):
     def setUp(self):
