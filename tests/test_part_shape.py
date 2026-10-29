@@ -195,6 +195,15 @@ class TheSourcesAreAskedInOrderTest(unittest.TestCase):
         with self.assertRaises(breadboard_drawing.NotDrawn):
             part_shape.find_part_px(board, (part_shape.WokwiGeometryShapeSource(parts), RECORD))
 
+    def test_a_wokwi_board_names_pins_only_when_its_wokwi_pins_are_the_printed_labels(self):
+        parts = {"board-x": {"size": [1, 1], "center": [0, 0], "covers_holes": True, "pins": {"D0": [0, 0], "D1": [1, 1]}}}
+        source = part_shape.WokwiGeometryShapeSource(parts)
+        board = {"wokwi_part_type": "board-x", "wokwi_pin_naming": "silkscreen"}
+        self.assertEqual(source.find_pin_names(board), {"D0": "D0", "D1": "D1"})
+        self.assertEqual(source.find_pin_names(dict(board, wokwi_pin_naming="gpio")), {})
+        self.assertEqual(source.find_pin_names({"wokwi_part_type": "board-x"}), {})
+        self.assertEqual(source.find_pin_names({"wokwi_part_type": "board-none", "wokwi_pin_naming": "silkscreen"}), {})
+
     def test_the_order_decides(self):
         board = xiao()
         board["physical"]["header"]["doubtful_pads"] = []
