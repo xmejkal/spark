@@ -29,6 +29,9 @@ For an image that a passed run tested, the look also prints what that run did no
 simulation cannot show, so test it on the board:" the limits of the project that sim/WHAT-THIS-CANNOT-SHOW.md holds, read
 from the limits section of every passed log. --json has them as data.limits, a list of {component, sentence}. With
 --no-simulation no log is read, so no limits are printed, and an empty list is not a pass: it never means the project has none.
+Under "no scenario named these must lines, so test them on the board:" it lists each must line of .spark/project.json that no passed
+scenario named in a step's own name: key (--json: data.unnamed_must). [] is not a pass: when a log cannot say, a caveat that contains
+"not checked:" says so.
 
 With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a token
 even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it. --no-simulation gives a

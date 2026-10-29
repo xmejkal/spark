@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 import board_grant
+from brief import UnnamedMust
 import flash_image
 from spark.core import outcomes
 from spark.core import text_guards
@@ -20,6 +21,10 @@ import tools
 from run_scenario import (EXPECT_PIN, NO_MAIN, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps, SimulationLimits,
                           file_hashes)
 
+#: Why no must line can be compared with the names of the steps: every passed log is older than step names (an outcomes reason).
+WHY_NO_NAMES = "the passed run's log is older than step names"
+#: What the person does about a log that cannot say which must lines its steps name.
+NAMES_ADVICE = "run its scenario again to name its steps"
 #: What `ImageEvidence.simulation` says: a passed run tested the image, or no simulation did (the records keep it).
 SIMULATION_PASSED, SIMULATION_NONE = "passed", "none"
 #: What the person reads before the gate question when no simulation tested the image (deploy.py's docs quote it).
@@ -97,6 +102,13 @@ for name, path in json.loads(sys.stdin.read()):
         sys.exit(0)
 say(ok=True)
 """ % (UNREADABLE, SYNTAX, TOO_DEEP, BYTES)
+
+
+# --- MVP ---
+def must_key(text):
+    """What a must line and a step name are compared by: the text with its spaces collapsed, in lower case. No fuzzy match."""
+    return " ".join(text.split()).casefold()
+# --- end MVP ---
 
 
 class CompileCheck:
@@ -186,6 +198,12 @@ class ImageEvidence(abc.ABC):
         return []
     # --- end MVP ---
 
+    # --- MVP ---
+    def find_unnamed_must(self, image, must):
+        """The UnnamedMust of the brief's `must` lines for `image`: none here, because no record of this evidence names a step."""
+        return UnnamedMust([])
+    # --- end MVP ---
+
     def way_out(self, image):
         """What to do instead of a refusal, as words that end its sentence, or "" when there is nothing to add."""
         return ""
@@ -238,6 +256,34 @@ class PassedRunEvidence(ImageEvidence):
         """The Limits in the limits section of every passed log of `image`, in name order, each once."""
         found = [limit for _, each in self._limits_of(image.find_passed_logs()) for limit in each.limits]
         return list(dict.fromkeys(found))
+    # --- end MVP ---
+
+    # --- MVP ---
+    def find_unnamed_must(self, image, must):
+        """
+        The UnnamedMust of `must`: the lines that no step name of a passed log equals under `must_key`, by the logs whose names are
+        RECORDED. A log that is NOT_CHECKED for names always gets a caveat, also beside a RECORDED one. A log from before names gets one
+        only when no log is RECORDED, and then no line is claimed. A caveat is left out when the log's control caveat already tells the
+        person to run its scenario again. With no must line there is nothing to say.
+        """
+        if not must:
+            return UnnamedMust([])
+        logs = image.find_passed_logs()
+        read = [ScenarioSteps.from_log(log) for log in logs]
+        named = ScenarioSteps.merge(read)
+        counted = named.count(SET_CONTROL)
+        caveats = []
+        for log, each in zip(logs, read):
+            why = each.names_why if each.names_state == outcomes.NOT_CHECKED else WHY_NO_NAMES
+            if each.names_state == outcomes.RECORDED or (each.names_state == outcomes.NONE_RECORDED and named.names_state == outcomes.RECORDED):
+                continue
+            if each.state != outcomes.RECORDED and not counted:
+                continue  # the control caveat of this log already says to run its scenario again
+            caveats.append(PassedRunEvidence._named(log, "%s; %s" % (outcomes.NOT_CHECKED_MESSAGE % why, NAMES_ADVICE), len(logs) > 1))
+        if named.names_state != outcomes.RECORDED:
+            return UnnamedMust([], tuple(caveats))
+        said = {must_key(name) for name in named.names}
+        return UnnamedMust([line for line in must if must_key(line) not in said], tuple(caveats))
     # --- end MVP ---
 
     @staticmethod

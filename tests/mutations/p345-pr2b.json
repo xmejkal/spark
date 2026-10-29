@@ -8,13 +8,223 @@
  {
   "file": "scripts/brief.py",
   "name": "an unreadable project.json reads as an empty brief",
-  "find": "        except ValueError:\n            return cls()",
-  "replace": "        except (OSError, ValueError):\n            return cls()"
+  "find": "        except ValueError:\n            return cls(problem=PROBLEM_BAD_JSON)",
+  "replace": "        except (OSError, ValueError):\n            return cls(problem=PROBLEM_BAD_JSON)"
  },
  {
   "file": "scripts/brief.py",
   "name": "a fifo at project.json is read",
   "find": "if not path.is_file():",
   "replace": "if not path.exists():"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "unnamed must reads the first passed log only",
+  "find": "read = [ScenarioSteps.from_log(log) for log in logs]",
+  "replace": "read = [ScenarioSteps.from_log(log) for log in logs][:1]"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "a must line matches a name only in the same case",
+  "find": "return \" \".join(text.split()).casefold()",
+  "replace": "return \" \".join(text.split())"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "a must line matches a name only with the same spacing",
+  "find": "return \" \".join(text.split()).casefold()",
+  "replace": "return text.casefold()"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "from_log reads a name line after the header",
+  "find": "cls._names_in(header))",
+  "replace": "cls._names_in(Path(log).read_text(errors=\"replace\").splitlines()))"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "write_log writes no names marker",
+  "find": ".from_text(self.steps).log_lines()",
+  "replace": ".from_text(self.steps).line()"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a log without a names marker counts as naming nothing",
+  "find": "            return StepNames()\n        if marker == STEPS_NOT_READ:",
+  "replace": "            return StepNames((), outcomes.RECORDED)\n        if marker == STEPS_NOT_READ:"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a nested name in a flow step is read as the step's name",
+  "find": "for piece in cls._pieces(\" \".join(texts))]",
+  "replace": "for piece in \" \".join(texts).replace(\"{\", \",\").replace(\"[\", \",\").split(\",\")]"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a nested name in a block step is read as the step's name",
+  "find": "if not depth and (number == 0 or len(text) - len(text.lstrip()) == indent):",
+  "replace": "if number == 0 or len(text) - len(text.lstrip()) >= indent:"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "report_lines prints the unnamed must lines without printable",
+  "find": "return [\"  \" + printable(line) for line in out]",
+  "replace": "return [\"  \" + str(line) for line in out]"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "to_dict omits unnamed_must",
+  "find": "                \"unnamed_must\": self.unnamed_must,\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "a refused image is asked for its unnamed must lines",
+  "find": "if why is None:  # what tested an image",
+  "replace": "if True:  # what tested an image"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "a caveat is reported for no must line",
+  "find": "        if not must:\n            return UnnamedMust([])\n        logs =",
+  "replace": "        logs ="
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a flow step reads name as its kind",
+  "find": "if kind and kind != cls.NAME_KEY:",
+  "replace": "if kind:"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "A: a log not checked for names beside a recorded one gets no caveat",
+  "find": "if each.names_state == outcomes.RECORDED or (",
+  "replace": "if named.names_state == outcomes.RECORDED or ("
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "A: the names caveat does not start with the log's name when several passed",
+  "find": "NAMES_ADVICE), len(logs) > 1))",
+  "replace": "NAMES_ADVICE), False))"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "B: a log whose control caveat already says to run it again gets a second caveat",
+  "find": "if each.state != outcomes.RECORDED and not counted:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "B: the deploy question does not count the unnamed must lines",
+  "find": "return self.caveats + ([MUST_UNNAMED_CAVEAT_MESSAGES[count != 1] % count] if count else [])",
+  "replace": "return self.caveats"
+ },
+ {
+  "file": "scripts/deploy_service.py",
+  "name": "B: the gate gets the look's caveats without the count",
+  "find": "image_path, report.question_caveats())",
+  "replace": "image_path, report.caveats)"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "B: the count sentence is also a caveat of the look",
+  "find": "caveats += unnamed.caveats\n",
+  "replace": "caveats += list(unnamed.caveats) + (['%d must lines were not named by any scenario (see the look)' % len(unnamed.lines)] if unnamed.lines else [])\n"
+ },
+ {
+  "file": "scripts/brief.py",
+  "name": "C: bad JSON in the brief reads as no brief",
+  "find": "            return cls(problem=PROBLEM_BAD_JSON)",
+  "replace": "            return cls()"
+ },
+ {
+  "file": "scripts/brief.py",
+  "name": "C: a brief that is not an object reads as no brief",
+  "find": "            return cls(problem=PROBLEM_NOT_OBJECT)",
+  "replace": "            return cls()"
+ },
+ {
+  "file": "scripts/brief.py",
+  "name": "C: a must that is not a list gives no problem",
+  "find": "problem=PROBLEM_MUST_NOT_LIST if \"must\" in data and not isinstance(must, list) else None,",
+  "replace": "problem=None,"
+ },
+ {
+  "file": "scripts/brief.py",
+  "name": "C: a missing brief has a problem",
+  "find": "        if not path.is_file():\n            return cls()",
+  "replace": "        if not path.is_file():\n            return cls(problem=PROBLEM_BAD_JSON)"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "C: a brief nested too deep crashes the look",
+  "find": "except (OSError, RecursionError):",
+  "replace": "except OSError:"
+ },
+ {
+  "file": "scripts/board_look.py",
+  "name": "C: the look ignores a brief problem",
+  "find": "if read.problem:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: the comment cut ignores quotes",
+  "find": "for index, each in cls._unquoted(line):\n            if each == \"#\"",
+  "replace": "for index, each in enumerate(line):\n            if each == \"#\""
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: a hash with no white space before it starts a comment",
+  "find": "if each == \"#\" and (index == 0 or line[index - 1].isspace()):",
+  "replace": "if each == \"#\":"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: two single quotes in a single-quoted name stay two",
+  "find": "(value[1:-1].replace(\"''\", \"'\") if",
+  "replace": "(value[1:-1] if"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: two single quotes inside single quotes end the quote",
+  "find": "if each == shut and shut == \"'\" and text[index + 1:index + 2] == \"'\":",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: a block scalar is read as a name",
+  "find": "if value[:1] in (\">\", \"|\") or (number",
+  "replace": "if (number"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: a name that the next line goes on with is read",
+  "find": "len(texts[number + 1]) - len(texts[number + 1].lstrip()) > indent):",
+  "replace": "len(texts[number + 1]) - len(texts[number + 1].lstrip()) > 999):"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: names not read write no marker",
+  "find": "        if self.names_state == outcomes.NOT_CHECKED:\n            return",
+  "replace": "        if False:\n            return"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: a not read names marker reads as a count",
+  "find": "if marker == STEPS_NOT_READ:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "E: a scenario with no steps has no recorded names",
+  "find": "return cls({}, outcomes.NONE_RECORDED, None, StepNames((), outcomes.RECORDED))",
+  "replace": "return cls({}, outcomes.NONE_RECORDED)"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "D: an escaped quote inside double quotes ends them",
+  "find": "if each == \"\\\\\" and shut == '\"':",
+  "replace": "if False:"
  }
 ]

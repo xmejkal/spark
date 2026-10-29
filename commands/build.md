@@ -275,7 +275,8 @@ prints a line for each change that a scenario waits on.
 
 The scenario holds only behaviour. Claude writes it from the person's words, and spark ships none, because the pin map
 holds pins, not behaviour. A scenario's `set-control` lines press a button or move a chip's slider (a probe's
-`moisturePct`), and its `wait-serial` and `expect-pin` lines are what it asserts. Put it in `sim/scenarios/`, which
+`moisturePct`), and its `wait-serial` and `expect-pin` lines are what it asserts. Name each `must` line of the brief in a step: put the line, copied exactly (in quotes when it holds ` #`), in the step's own `name:` key, on one line, beside
+its kind, not in `set-control`'s `name:`. The look lists the must lines that no passed scenario named. Put it in `sim/scenarios/`, which
 you create. A scenario needs `name:` and `version: 1`, or wokwi-cli refuses it ("Scenario name is missing"). Part ids
 and pin names come from `sim/diagram.json`. `set-control` takes `name:`, and `expect-pin` takes `pin:`. The button-and-LED project's scenario,
 written from "the LED lights while the button is held", passed on 2026-10-12
@@ -285,7 +286,8 @@ written from "the LED lights while the button is held", passed on 2026-10-12
 name: the button lights the LED
 version: 1
 steps:
-  - set-control: { part-id: tactilebutton, name: pressed, value: 1 }
+  - name: the button lights the LED                       # a must line of the brief, copied exactly
+    set-control: { part-id: tactilebutton, name: pressed, value: 1 }
   - wait-serial: "LED on"                                  # a line the firmware prints when the LED changes
   - expect-pin: { part-id: ledred5mm, pin: A, value: 1 }
   - set-control: { part-id: tactilebutton, name: pressed, value: 0 }

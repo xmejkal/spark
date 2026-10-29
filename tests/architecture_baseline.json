@@ -79,7 +79,7 @@
 "R3:scripts/board_facts.py:facts": 7,
 "R3:scripts/board_grant.py:GrantService.issue": 6,
 "R3:scripts/board_live.py:LiveTryService.__init__": 6,
-"R3:scripts/board_look.py:LookReport.__init__": 11,
+"R3:scripts/board_look.py:LookReport.__init__": 9,
 "R3:scripts/breadboard_drawing.py:FirstFitPartPlacement._fit": 6,
 "R3:scripts/breadboard_keep.py:name_jumpers_not_kept": 7,
 "R3:scripts/check_spine.py:run": 6,
