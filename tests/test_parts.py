@@ -348,6 +348,22 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
             parts.main(["--unverified", "x-joy"])
         self.assertTrue(out.getvalue().rstrip().splitlines()[-1].startswith("  next: parts.py --fact-set x-joy <file> — "), out.getvalue())
 
+    def test_the_next_step_names_the_first_part_with_a_row_that_can_go_back_and_none_when_no_row_can(self):
+        # P373: a record whose facts is no object has one row with `write` null, and `--fact-set` would refuse it.
+        home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
+        (home / "catalog" / "x-bad.json").write_text(json.dumps(part("x-bad", facts=[])))
+        (home / "catalog" / "x-good.json").write_text(json.dumps(part("x-good", facts={
+            "f": {"value": 1, "verified": False, "source": "the maker's page", "why_it_matters": "it matters"}})))
+        with in_store(home):
+            both, _ = run_json(["--unverified", "x-bad", "x-good"])
+            alone, _ = run_json(["--unverified", "x-bad"])
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                parts.main(["--unverified", "x-bad"])
+        self.assertEqual([step["argv"] for step in both["next"]], [["--fact-set", "x-good", "<file>"]])
+        self.assertEqual(([row["write"] for row in alone["assumptions"]], alone["next"]), ([None], []))
+        self.assertNotIn("next:", out.getvalue())
+        self.assertIn("repair the file by hand", out.getvalue())
+
 
 class FromPartsToAPinMapTest(unittest.TestCase):
     """The whole point: a list of modules in, a defensible pin map out."""

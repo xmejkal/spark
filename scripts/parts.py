@@ -111,6 +111,8 @@ def aliases(record):
 
 #: The facts the chain reads from a part record (§5.4): absent, the record owes them, and no build can place it.
 CHAIN_FACTS = ("footprint", "pin_order", "pin_order_proof", "body_mm", "simulation")
+#: What `--unverified` says after its list: a result goes back with `--fact-set`, under a row's `write` key.
+WRITE_BACK_HINT = "write a checked result back with its source"
 
 
 def _absent(key, value):
@@ -712,12 +714,8 @@ def validate(part: dict, path: Path, owed=()) -> list:
             problems.append("needs[%d] signal is %r, but a signal is a name — letters, digits and _ (MOTOR_IA, STATUS_LED): "
                             "the pin map and the board name it, and firmware is written against it" % (index, signal))
 
-    # Dimensions are a real schema, not an open fact, because every part has an outline and a
-    # generator reads them structurally to decide where things go. They sat OUTSIDE the
-    # provenance contract as a bare `{"width": .., "height": ..}` — so one part carried a
-    # measured size, one carried an unsourced guess wearing exactly the same clothes, and one
-    # carried nothing at all and silently became 16 x 12 mm inside the generator. Placement was
-    # then proven not to overlap, using numbers nobody had taken.
+    # Dimensions are a real schema, not an open fact: a generator reads them to decide where things go, and a bare size let a guess
+    # pass for a measurement (an outline that was missing silently became 16 x 12 mm).
     body = part.get("body_mm")
     if body is not None and "body_mm" not in owed:
         if not isinstance(body, dict):
@@ -1718,7 +1716,9 @@ def _op_unverified(args, project):
             lines.append("      %s" % question["why_it_matters"])
     assumptions = [{"fact": "%s.%s" % (q["part"], q["fact"]), "basis": "unverified", "assumed": q["assumed"],
                     "sentence": q["why_it_matters"], "source": q["source"], "write": q["write"]} for q in questions]
-    return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions, next=[next_step("fact-set", ["--fact-set", questions[0]["part"], "<file>"], "write a checked result back with its source", ["writes"])] if questions else [])
+    owners = [q["part"] for q in questions if q["write"]]  # a row with no `write` cannot go back by --fact-set
+    follow = [next_step("fact-set", ["--fact-set", owners[0], "<file>"], WRITE_BACK_HINT, ["writes"])] if owners else []
+    return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions, next=follow)
 
 
 def _brief(part):

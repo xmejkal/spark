@@ -459,7 +459,9 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
     with `--fact-set`: `facts.<name>`, `pin_order_proof` or `body_mm`. A guessed outline (`body_mm`) is listed, with its
     width and height as `assumed`. A skeleton outline (verified false, width and height null) is listed too, with nulls:
     it must be measured, and a null is never a value to copy back. A `write` of null means the
-    record's `facts` is no object: repair the file by hand. Its old `data.questions` is gone; `data.parts` only repeats
+    record's `facts` is no object: repair the file by hand. `next` holds one `--fact-set <part> <file>` step, for the first
+    part that has a row with a `write` key; with no such row it is empty, and the row's sentence already says to repair
+    the file by hand. The text ends with the same step as a `next:` line. Its old `data.questions` is gone; `data.parts` only repeats
     the ids asked.
   - `--show` lists a CONFLICT that rests on an unverified fact: `fact` is `<part>.<pin>`, `basis` is `unmeasured`,
     `rests_on` names the facts to verify as `<part>.<fact>`, and `upgrade` says how. This `unmeasured` is a basis, not
