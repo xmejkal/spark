@@ -1,15 +1,16 @@
 """
-The project's brief: what `.spark/project.json` says, read once.
+The project's brief: what `.spark/project.json` says, read on each call.
 
     must     lines the design must meet (strings; anything else is dropped)
     prefer   vendors to research in, lower-cased, or None when the brief does not say
     sellers  where the person buys, lower-cased, or None when the brief does not say
 
-`Brief.from_project` never raises: a missing file, bad JSON or a wrong shape reads as an empty brief.
+`Brief.from_project` gives an empty brief for a missing file, a non-file, bad JSON or JSON that is not an object.
+An unreadable file raises OSError, and deeply nested JSON raises RecursionError, as the old readers did.
 """
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -26,7 +27,7 @@ def _names(value):
 class Brief:
     """Value: what the brief of one project says (see the top of this file)."""
 
-    must: list = field(default_factory=list)
+    must: tuple = ()
     prefer: tuple = None
     sellers: tuple = None
 
@@ -35,15 +36,18 @@ class Brief:
         """The brief of this project folder (None reads as empty), from `.spark/project.json`."""
         if not project:
             return cls()
+        path = Path(project) / ".spark" / "project.json"
+        if not path.is_file():
+            return cls()
         try:
-            data = json.loads((Path(project) / ".spark" / "project.json").read_text())
-        except (OSError, ValueError):
+            data = json.loads(path.read_text())
+        except ValueError:
             return cls()
         if not isinstance(data, dict):
             return cls()
         must = data.get("must")
         return cls(
-            must=[each for each in must if isinstance(each, str)] if isinstance(must, list) else [],
+            must=tuple(each for each in must if isinstance(each, str)) if isinstance(must, list) else (),
             prefer=_names(data.get("prefer")),
             sellers=_names(data.get("sellers")),
         )
