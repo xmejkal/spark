@@ -8,25 +8,25 @@
  {
   "file": "tools/scratch.py",
   "name": "the age test is flipped",
-  "find": "if found.st_mtime < now - OLD_AFTER_SECONDS:",
-  "replace": "if found.st_mtime > now - OLD_AFTER_SECONDS:"
+  "find": "if found.st_mtime < now - OLD_AFTER_SECONDS and remove_tree(full):",
+  "replace": "if found.st_mtime > now - OLD_AFTER_SECONDS and remove_tree(full):"
  },
  {
   "file": "tools/scratch.py",
   "name": "a folder exactly a day old goes",
-  "find": "if found.st_mtime < now - OLD_AFTER_SECONDS:",
-  "replace": "if found.st_mtime <= now - OLD_AFTER_SECONDS:"
+  "find": "if found.st_mtime < now - OLD_AFTER_SECONDS and remove_tree(full):",
+  "replace": "if found.st_mtime <= now - OLD_AFTER_SECONDS and remove_tree(full):"
  },
  {
   "file": "tools/scratch.py",
   "name": "a link and a file are taken for folders",
-  "find": "if not stat.S_ISDIR(found.st_mode) or (owner is not None and found.st_uid != owner):",
-  "replace": "if owner is not None and found.st_uid != owner:"
+  "find": "if not stat.S_ISDIR(found.st_mode) or found.st_uid != owner:",
+  "replace": "if found.st_uid != owner:"
  },
  {
   "file": "tools/scratch.py",
   "name": "the owner test is dropped",
-  "find": "or (owner is not None and found.st_uid != owner):",
+  "find": "or found.st_uid != owner:",
   "replace": "or False:"
  },
  {
@@ -68,7 +68,7 @@
  {
   "file": "tools/mutate.py",
   "name": "a half-made copy stays",
-  "find": "        shutil.rmtree(made, ignore_errors=True)\n        raise",
+  "find": "        scratch.remove_tree(made)\n        raise",
   "replace": "        raise"
  },
  {
@@ -98,7 +98,43 @@
  {
   "file": "tools/board.py",
   "name": "status does not print the disk line",
-  "find": "        if warning:\n            print(warning)",
-  "replace": "        if False:\n            print(warning)"
+  "find": "            if disk:\n                print(disk)",
+  "replace": "            if False:\n                print(disk)"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "a name is listed though the folder stays",
+  "find": "return not os.path.lexists(folder)",
+  "replace": "return True"
+ },
+ {
+  "file": "tools/scratch.py",
+  "name": "a read-only folder inside is not opened up",
+  "find": "os.chmod(here, stat.S_IRWXU)",
+  "replace": "pass"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "a failed copy is removed without opening read-only folders",
+  "find": "scratch.remove_tree(made)",
+  "replace": "shutil.rmtree(made, ignore_errors=True)"
+ },
+ {
+  "file": "tools/mutate.py",
+  "name": "the run's copy is removed without opening read-only folders",
+  "find": "scratch.remove_tree(where.parent)",
+  "replace": "__import__(\"shutil\").rmtree(where.parent, ignore_errors=True)"
+ },
+ {
+  "file": "tools/board.py",
+  "name": "the disk number is rounded, not floored",
+  "find": "free_bytes // (GB // 10) / 10",
+  "replace": "free_bytes / GB"
+ },
+ {
+  "file": "tools/board.py",
+  "name": "status_lines drops the disk line",
+  "find": "return lines + ([disk] if disk else [])",
+  "replace": "return lines"
  }
 ]
