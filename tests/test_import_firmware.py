@@ -601,9 +601,6 @@ class TheChildIsAFileOfItsOwnTest(unittest.TestCase):
         self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
         self.assertIn("No module named 'import_child'", module_named(answer, "light")["detail"])
 
-    def test_importing_the_child_file_runs_nothing(self):
-        self.assertTrue(callable(import_child.main))
-
     def test_the_child_imports_the_module_from_the_folders_given(self):
         project = a_project(light="import sys\nassert sys.path[0].endswith('first'), sys.path\n")
         done = subprocess.run([sys.executable, "-I", "-B", str(ROOT / "scripts" / "import_child.py"), "light",
@@ -625,6 +622,7 @@ class TheChildGivesTimeMicroPythonsNamesTest(unittest.TestCase):
         self.assertEqual(fake.ticks_diff(5, 8), -3)
 
     def test_this_process_s_own_time_is_left_alone(self):
+        """Importing the child file, as the top of this file did, patches nothing."""
         import_child.add_micropython_time(types.ModuleType("fake_time"))
         self.assertFalse(hasattr(time, "sleep_ms"))
 
@@ -694,11 +692,24 @@ class TheChildGivesBackAStandInsWordsTest(unittest.TestCase):
         self.assertIn("not UART", detail)
         self.assertNotIn("Timer", detail)
 
-    def test_a_dunder_probe_does_not_replace_the_name_remembered(self):
-        status, detail = self.detail_of("import machine\nhasattr(machine, 'UART')\nhasattr(machine, '__spark__')\n"
-                                        "raise ImportError('x', name='machine')\n")
+    def test_a_dunder_miss_clears_the_name_remembered_so_it_gives_the_plain_error(self):
+        status, detail = self.detail_of("import machine\nhasattr(machine, 'UART')\nfrom machine import __version__\n")
+        self.assertEqual(status, "raised")
+        self.assertIn("cannot import name '__version__'", detail)
+        self.assertNotIn("stand-in", detail)
+
+    def test_a_from_import_of_a_good_name_and_a_missing_one_still_gets_the_words(self):
+        status, detail = self.detail_of("from machine import Pin, UART\n")
         self.assertEqual(status, "raised")
         self.assertIn("not UART", detail)
+
+    def test_a_firmware_module_with_a_missed_of_its_own_keeps_the_plain_error(self):
+        for own in ("0", "[]", "'ab'", "('x', 'y')"):
+            with self.subTest(own=own):
+                project = a_project(fw="_missed = %s\n" % own, light="from fw import nope\n")
+                _, answer = answer_for(project)
+                self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
+                self.assertIn("cannot import name 'nope'", module_named(answer, "light")["detail"])
 
     def test_an_import_error_of_the_firmware_s_own_keeps_its_words(self):
         for source, said in (("from nothere import x\n", "No module named 'nothere'"),
@@ -725,7 +736,7 @@ class TheChildGivesBackAStandInsWordsTest(unittest.TestCase):
         self.assertIsNone(import_child.words_of_stand_in(ImportError("plain")))
         self.assertIsNone(import_child.words_of_stand_in(ImportError("plain", name="not_loaded_anywhere")))
 
-    def test_each_stand_in_remembers_a_miss_but_not_a_dunder(self):
+    def test_each_stand_in_remembers_a_miss_and_a_dunder_clears_it(self):
         for name in ("machine", "framebuf", "micropython"):
             with self.subTest(stand_in=name):
                 module = a_stand_in(name)
@@ -735,6 +746,8 @@ class TheChildGivesBackAStandInsWordsTest(unittest.TestCase):
                 self.assertIsNone(getattr(module, "Nothing", None))
                 self.assertEqual(module._missed[0], "Nothing")
                 self.assertIn("not Nothing", module._missed[1])
+                self.assertIsNone(getattr(module, "__spark__", None))
+                self.assertIsNone(module._missed)
 
 
 class AModuleThatFailsIsAProblemTest(unittest.TestCase):

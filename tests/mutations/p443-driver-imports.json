@@ -49,9 +49,9 @@
  },
  {
   "file": "scripts/import_child.py",
-  "name": "P443: importing the child file runs main",
+  "name": "P443: importing the child file patches this process's time",
   "find": "if __name__ == \"__main__\":\n    main(sys.argv[1:])",
-  "replace": "main(sys.argv[1:])"
+  "replace": "add_micropython_time(time)\n\n\nif __name__ == \"__main__\":\n    main(sys.argv[1:])"
  },
  {
   "file": "scripts/import_firmware.py",
@@ -85,8 +85,14 @@
  },
  {
   "file": "scripts/stand_in/machine.py",
-  "name": "P443: a dunder probe is remembered as a miss, and it replaces the name before it",
-  "find": "    if name.startswith(\"__\"):  # the import machinery asks for __path__ and the like",
-  "replace": "    if False:  # the import machinery asks for __path__ and the like"
+  "name": "P443: a dunder miss leaves the name an earlier probe remembered",
+  "find": "        _missed = None  # a dunder miss is not the name an earlier probe left\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/import_child.py",
+  "name": "P443: the stand_in folder check is dropped, so a firmware's own _missed is read",
+  "find": "    return isinstance(file, str) and STAND_IN_FOLDER in Path(file).resolve().parents",
+  "replace": "    return True"
  }
 ]

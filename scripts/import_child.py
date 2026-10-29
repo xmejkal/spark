@@ -25,6 +25,10 @@ UART` Python drops the words, and the child gives them back as an ImportError th
 import importlib
 import sys
 import time
+from pathlib import Path
+
+#: The stand-ins live under this folder. A firmware module with a `_missed` of its own is not one.
+STAND_IN_FOLDER = Path(__file__).resolve().parent / "stand_in"
 
 #: MicroPython's time names, with the fixed values the child gives them.
 MICROPYTHON_TIME = {
@@ -44,14 +48,23 @@ def add_micropython_time(module):
         setattr(module, name, function)
 
 
+def is_stand_in(module):
+    """True when `module` was loaded from spark's stand_in folder."""
+    file = module.__dict__.get("__file__")
+    return isinstance(file, str) and STAND_IN_FOLDER in Path(file).resolve().parents
+
+
 def words_of_stand_in(error):
     """
     The words of the stand-in that `error` names, or None. Python turns a stand-in's AttributeError into a bare
     ImportError for `from machine import X`, and the stand-in keeps the words in `_missed`. They are read from the
-    module's dict, never with getattr, which would call the stand-in's __getattr__. One miss is handed back once.
+    module's dict, never with getattr, which would call the stand-in's __getattr__. One miss is handed back once, and
+    only a module from the stand_in folder counts: a firmware module may have a `_missed` of its own.
     """
     module = sys.modules.get(error.name)
-    missed = module.__dict__.get("_missed") if module is not None else None
+    if module is None or not is_stand_in(module):
+        return None
+    missed = module.__dict__.get("_missed")
     if missed is None:
         return None
     module._missed = None

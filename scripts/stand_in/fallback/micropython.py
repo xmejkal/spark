@@ -33,6 +33,7 @@ _missed = None
 def __getattr__(name):
     global _missed
     if name.startswith("__"):  # the import machinery asks for __path__ and the like
+        _missed = None  # a dunder miss is not the name an earlier probe left
         raise AttributeError(name)
     have = sorted(n for n in globals() if not n.startswith("_"))
     words = ("spark's stand-in micropython (scripts/stand_in/fallback/micropython.py) has %s and %s only, not %s: use "
