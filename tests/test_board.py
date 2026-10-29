@@ -24,6 +24,11 @@ TODAY = dt.date(2026, 10, 7)
 BODY = "### Needed by\n\nthe PO\n\n### Value proven by\n\nx\n"
 
 
+def without_disk(text):
+    """`text` without the disk line (P435): it follows the real free space, which these tests do not set."""
+    return "".join(line for line in text.splitlines(keepends=True) if not line.startswith("disk:"))
+
+
 def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",), waiting=None, since=None, slice_="team tools",
          parent=None, parent_closed=False):
     values = [{"name": status, "updatedAt": changed, "field": {"name": "Status"}},
@@ -196,7 +201,7 @@ class TheCoreTest(unittest.TestCase):
                 mock.patch.object(board, "work_days", side_effect=lambda dirs, since: {d for d in days if d >= since}) as git, \
                 contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
-        return out.getvalue().splitlines(), git
+        return without_disk(out.getvalue()).splitlines(), git
 
     def epic_with_an_appetite(self, changed):
         """A card in Discovery that carries an Appetite of 3 — a number field the board holds as process data."""
@@ -315,7 +320,31 @@ class TheCoreTest(unittest.TestCase):
         with mock.patch.object(board, "gather", side_effect=RuntimeError("could not resolve host")), contextlib.redirect_stdout(out):
             self.assertEqual(board.main(["status"]), 0)
         # W1: a look that could not be made is could-not-run; `skipped` is a check nobody asked for (P146 council, C4).
-        self.assertEqual(out.getvalue(), "board: could-not-run — could not resolve host\n")
+        self.assertEqual(without_disk(out.getvalue()), "board: could-not-run — could not resolve host\n")
+
+    def test_the_disk_line_is_there_below_the_limit_and_not_at_it(self):
+        self.assertEqual(board.LOW_DISK_BYTES, 10 * 10**9)
+        self.assertEqual(board.disk_line(board.LOW_DISK_BYTES - 1), "disk: low — 10.0 GB free, under 10 GB")
+        self.assertEqual(board.disk_line(7_900_000_000), "disk: low — 7.9 GB free, under 10 GB")
+        self.assertIsNone(board.disk_line(board.LOW_DISK_BYTES))
+
+    def test_a_disk_that_cannot_be_read_is_could_not_run_and_a_real_one_is_not_an_error(self):
+        self.assertTrue(board.disk_status(tempfile.mkdtemp() + "/none").startswith("disk: could-not-run — "))
+        line = board.disk_status(tempfile.gettempdir())
+        self.assertTrue(line is None or line.startswith("disk: low — "), line)
+
+    def test_status_ends_with_the_disk_line_when_the_disk_cannot_be_read_and_still_exits_zero(self):
+        out, kept_tempdir, kept_path = io.StringIO(), tempfile.tempdir, os.environ["PATH"]
+        no_gh, gone = tempfile.mkdtemp(), tempfile.mkdtemp() + "/none"
+        tempfile.tempdir = gone  # a temp folder that is not there: the read fails
+        os.environ["PATH"] = no_gh  # no gh: the board lines say could-not-run and the disk line still comes
+        try:
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(board.main(["status"]), 0)
+        finally:
+            tempfile.tempdir, os.environ["PATH"] = kept_tempdir, kept_path
+        lines = out.getvalue().splitlines()
+        self.assertEqual([line.split(" — ")[0] for line in lines], ["board: could-not-run", "disk: could-not-run"])
 
     def test_status_outside_the_named_folders_prints_nothing(self):
         out = io.StringIO()
@@ -366,7 +395,8 @@ class TheFinalReviewTest(unittest.TestCase):
             self.assertEqual(board.main(["status"]), 0)
         self.assertEqual(run.call_args.kwargs["timeout"], board.STATUS_TIMEOUT)
         self.assertLessEqual(board.STATUS_TIMEOUT, 10)
-        self.assertEqual(out.getvalue(), "board: could-not-run — gh did not answer in %d s\n" % board.STATUS_TIMEOUT)
+        self.assertEqual(without_disk(out.getvalue()),
+                         "board: could-not-run — gh did not answer in %d s\n" % board.STATUS_TIMEOUT)
 
     def test_working_days_are_commits_on_any_branch_in_the_named_folders(self):
         root = Path(tempfile.mkdtemp())

@@ -15,8 +15,10 @@ import argparse
 import datetime as dt
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -308,6 +310,26 @@ def gather(timeout=CLOSE_TIMEOUT):
     return boards, prs, closes, project_id, bin_why
 
 
+GB = 10**9
+#: Under this much free disk, the session start says so (P435): a mutation run or a store copy can fill the rest.
+LOW_DISK_BYTES = 10 * GB
+
+
+def disk_line(free_bytes):
+    """The one line that warns of low disk, or None when there is enough. The first word after `disk:` is the code."""
+    if free_bytes >= LOW_DISK_BYTES:
+        return None
+    return "disk: low — %.1f GB free, under %d GB" % (free_bytes / GB, LOW_DISK_BYTES // GB)
+
+
+def disk_status(folder):
+    """The disk line for the disk that holds `folder`; could-not-run with its cause when the disk cannot be read (W1)."""
+    try:
+        return disk_line(shutil.disk_usage(folder).free)
+    except OSError as unread:
+        return "disk: could-not-run — %s" % (unread.strerror or type(unread).__name__)
+
+
 #: What each verb's --help says it does, each claim read off the code below (P146 council, C3): status_lines() for what
 #: the status prints, close_update() for when a close is at risk and the day it refuses, main() for the exit codes.
 STATUS_HELP = ("print the state of both boards: the gate's verdict, the cards in flight (expedite and bench marked), "
@@ -315,7 +337,8 @@ STATUS_HELP = ("print the state of both boards: the gate's verdict, the cards in
                "two), open PRs, the last close and a working day left without one. A board it could not read, or a card "
                "in a stage the gate does not know, makes the whole status one line, could-not-run with its cause; cards "
                "with no Status are said; the bin's board read in part, or with no Status on any card, is set aside and "
-               "said, and spark's cards are counted alone. It always exits 0, since a session start must never fail")
+               "said, and spark's cards are counted alone. With under 10 GB free in the temp folder's disk, a last line "
+               "'disk: low — …' says so. It always exits 0, since a session start must never fail")
 CLOSE_HELP = ("post the day's one status update to spark's board: the line, then what is in flight and what waits on the "
               "PO. It is at risk when the gate finds a problem or a wait is older than three days, else on track. It "
               "refuses a day already closed (exit 1), and exits 1 with could-not-run when the boards could not be read "
@@ -348,6 +371,9 @@ def main(argv=None):
                                          bin_why=bin_why or "no bin board was given")))
         except Exception as broken:  # a session start must never fail (the spec, §2); W1: a look not made is could-not-run
             print("board: could-not-run — %s" % (broken or type(broken).__name__))
+        warning = disk_status(tempfile.gettempdir())  # its own guard: a disk not read never hides the board's lines
+        if warning:
+            print(warning)
         return 0
     try:
         boards, prs, closes, project_id, _ = gather()
