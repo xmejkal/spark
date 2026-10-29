@@ -81,6 +81,9 @@ WHY_NOT_COUNTED = "the log says its steps were not counted"
 WHY_BAD_COUNTS = "the log's step counts line is malformed"
 WHY_LOG_UNREADABLE = "the log cannot be read"
 WHY_BAD_NAMES = "the log's step names do not match its step names count"
+WHY_NAMES_NOT_READ = "the log says its step names were not read"
+#: Why the names of a scenario's steps are outcomes.NOT_CHECKED: a name is a block scalar or runs on over more than one line.
+WHY_NAME_NOT_READ = "a step name is a block scalar or runs over more than one line"
 #: Why SimulationLimits is outcomes.NOT_CHECKED when the log has the section: it holds no limit line.
 WHY_NO_LIMIT_LINE = "the log's limits section has no limit line"
 #: Why SimulationLimits is outcomes.NOT_CHECKED when the section never reaches the scenario's section: the log is cut off.
@@ -155,12 +158,12 @@ class ScenarioSteps:
     @classmethod
     def from_text(cls, steps):
         """The ScenarioSteps of a scenario's text, comments cut as with_ready_wait cuts them. Only the items at the indent of the first step count."""
-        lines = [line.split("#")[0].rstrip() for line in steps.splitlines()]
+        lines = [cls._uncomment(line).rstrip() for line in steps.splitlines()]
         start = next((i for i, line in enumerate(lines) if line == "steps:"), None)
         body = [] if start is None else [line for line in lines[start + 1:] if line.strip()]
         first = next((cls.ITEM.match(line) for line in body if cls.ITEM.match(line)), None)
         if first is None:
-            return cls({}, outcomes.NONE_RECORDED)
+            return cls({}, outcomes.NONE_RECORDED, None, StepNames((), outcomes.RECORDED))
         width, steps = len(first.group(1)), []  # each step: [its lines, the indent of its own keys or None, in flow form]
         for line in body:
             item = cls.ITEM.match(line)
@@ -173,19 +176,24 @@ class ScenarioSteps:
                 steps[-1][0].append(line)
                 if steps[-1][1] is None:
                     steps[-1][1] = len(line) - len(line.lstrip())
-        counts, keyless, names = {}, False, []
+        counts, keyless, names, unread = {}, False, [], False
         for texts, indent, flow in steps:
             kind = cls._kind(texts)
             if kind:
                 counts[kind] = counts.get(kind, 0) + 1
             else:
                 keyless = True
-            name = cls._name(texts, indent, flow)
+            try:
+                name = cls._name(texts, indent, flow)
+            except ValueError:
+                unread = True
+                continue
             if name:
                 names.append(name)
+        named = StepNames((), outcomes.NOT_CHECKED, WHY_NAME_NOT_READ) if unread else StepNames(names, outcomes.RECORDED)
         if keyless:
-            return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY, StepNames(names, outcomes.RECORDED))
-        return cls(counts, named=StepNames(names, outcomes.RECORDED))
+            return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY, named)
+        return cls(counts, named=named)
 
     @classmethod
     def _kind(cls, step):
@@ -203,32 +211,52 @@ class ScenarioSteps:
         """
         The step's own `name:` value, or None. Only the step's own keys count: in flow form the keys outside any nested `{}` or
         `[]`, in block form the keys at the indent of its first key and outside any nested bracket. So the `name:` inside
-        `set-control: { part-id: b, name: pressed }` is the control's, not the step's.
+        `set-control: { part-id: b, name: pressed }` is the control's, not the step's. Raises ValueError for a name that is a block
+        scalar (`>`, `|`) or that the next line goes on with: spark does not read those.
         """
         if flow:
-            own = cls._pieces(" ".join(texts))
+            own = [(piece, None) for piece in cls._pieces(" ".join(texts))]
         else:
             own, depth = [], 0
             for number, text in enumerate(texts):
                 if not depth and (number == 0 or len(text) - len(text.lstrip()) == indent):
-                    own.append(text)
+                    own.append((text, number))
                 depth = cls._depth(text, depth)
-        for piece in own:
+        for piece, number in own:
             key = cls.KEY.match(piece)
             if key and (key.group(1) or key.group(2) or key.group(3)) == cls.NAME_KEY:
                 value = " ".join(piece[key.end():].split())
+                if value[:1] in (">", "|") or (number is not None and number + 1 < len(texts)
+                                               and len(texts[number + 1]) - len(texts[number + 1].lstrip()) > indent):
+                    raise ValueError("a step name over more than one line")
                 if len(value) > 1 and value[0] == value[-1] and value[0] in "'\"":
-                    value = " ".join(value[1:-1].split())
+                    value = " ".join((value[1:-1].replace("''", "'") if value[0] == "'" else value[1:-1]).split())
                 return value or None
         return None
 
+    @classmethod
+    def _uncomment(cls, line):
+        """The line without its comment: a `#` outside quotes with white space before it, or at the start, and all after it."""
+        for index, each in cls._unquoted(line):
+            if each == "#" and (index == 0 or line[index - 1].isspace()):
+                return line[:index]
+        return line
+
     @staticmethod
     def _unquoted(text):
-        """(index, character) of each character of `text` outside quotes. A quote opens only where a value starts, so `don't` holds none."""
-        shut, last = None, ""
+        """
+        (index, character) of each character of `text` outside quotes. A quote opens only where a value starts, so `don't` holds none.
+        Inside single quotes `''` is one quote, not the end.
+        """
+        shut, last, skip = None, "", False
         for index, each in enumerate(text):
-            if shut:
-                shut = None if each == shut else shut
+            if skip:
+                skip = False
+            elif shut:
+                if each == shut and shut == "'" and text[index + 1:index + 2] == "'":
+                    skip = True
+                elif each == shut:
+                    shut = None
             elif each in "'\"" and (not last or last in ":,{["):
                 shut = each
             else:
@@ -296,6 +324,8 @@ class ScenarioSteps:
         marker = next((line[len(STEP_NAMES_LINE):] for line in header if line.startswith(STEP_NAMES_LINE)), None)
         if marker is None:
             return StepNames()
+        if marker == STEPS_NOT_READ:
+            return StepNames((), outcomes.NOT_CHECKED, WHY_NAMES_NOT_READ)
         names = [line[len(STEP_NAME_LINE):] for line in header if line.startswith(STEP_NAME_LINE)]
         if not marker.isascii() or not marker.isdigit() or int(marker) != len(names):
             return StepNames((), outcomes.NOT_CHECKED, WHY_BAD_NAMES)
@@ -336,8 +366,10 @@ class ScenarioSteps:
 
     # --- MVP ---
     def log_lines(self):
-        """The log header's lines for the steps: the counts line, then the names marker and one line per name. A names_state
-        that is not RECORDED writes no marker (nothing is claimed), and none is written for a run, whose names are RECORDED."""
+        """The log header's lines for the steps: the counts line, then the names marker and one line per name. Names that were
+        not read write `step names: not read`; a names_state of NONE_RECORDED writes no marker (nothing is claimed)."""
+        if self.names_state == outcomes.NOT_CHECKED:
+            return "\n".join([self.line(), STEP_NAMES_LINE + STEPS_NOT_READ])
         if self.names_state != outcomes.RECORDED:
             return self.line()
         return "\n".join([self.line(), STEP_NAMES_LINE + str(len(self.names))] + [STEP_NAME_LINE + name for name in self.names])

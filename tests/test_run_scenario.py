@@ -227,6 +227,47 @@ class TheStepNamesTest(unittest.TestCase):
     def test_a_name_that_is_empty_after_the_quotes_is_no_name(self):
         self.assertEqual(self.named('- name: ""', "  wait-serial: x").names, ())
 
+    def test_a_hash_with_white_space_before_it_starts_a_comment_outside_quotes_only(self):
+        steps = self.named('- name: "LED #1 lights"', "  wait-serial: x", "- name: LED#2 lights", "  wait-serial: y",
+                           "- name: LED #3 lights", "  wait-serial: z", "- name: 'LED #4 lights'  # a comment", "  wait-serial: w",
+                           "- wait-serial: 'a # b'  # c")
+        self.assertEqual(steps.names, ("LED #1 lights", "LED#2 lights", "LED", "LED #4 lights"))
+        self.assertEqual(steps.counts, {"wait-serial": 5})
+
+    def test_two_single_quotes_inside_single_quotes_are_one_quote(self):
+        steps = self.named("- name: 'it''s on # now'  # c", "  wait-serial: x", "- name: 'a''' # c", "  wait-serial: y")
+        self.assertEqual(steps.names, ("it's on # now", "a'"))
+
+    def test_a_block_scalar_name_makes_the_names_not_checked(self):
+        for item in (">", "|", ">-", "|+"):
+            steps = self.named("- name: " + item, "    the LED lights", "  wait-serial: x")
+            with self.subTest(item=item):
+                self.assertEqual((steps.names_state, steps.names_why, steps.names, steps.state),
+                                 ("not-checked", "a step name is a block scalar or runs over more than one line", (), "recorded"))
+
+    def test_a_name_that_the_next_line_goes_on_with_makes_the_names_not_checked(self):
+        for items in (("- name: the LED", "    lights up", "  wait-serial: x"), ('- name: "the LED', '    lights"', "  wait-serial: x"),
+                      ("- wait-serial: x", "  name: the LED", "    lights up")):
+            with self.subTest(items=items):
+                self.assertEqual(self.named(*items).names_state, "not-checked")
+
+    def test_a_name_followed_by_a_key_with_a_nested_block_is_read(self):
+        steps = self.named("- name: the LED lights", "  set-control:", "    part-id: b", "    name: pressed")
+        self.assertEqual((steps.names, steps.names_state), (("the LED lights",), "recorded"))
+
+    def test_names_not_read_write_a_not_read_marker_and_read_back_as_not_checked(self):
+        log = Path(tempfile.mkdtemp()) / "a.log"
+        steps = self.named("- name: >", "    x", "  wait-serial: y")
+        log.write_text("# a, run 2026-10-24T10:00:00+02:00, timeout 1 ms\nverdict: passed\n%s\n\nbody\n" % steps.log_lines())
+        self.assertIn("step names: not read\n", log.read_text())
+        read = run_scenario.ScenarioSteps.from_log(log)
+        self.assertEqual((read.names_state, read.names_why), ("not-checked", "the log says its step names were not read"))
+
+    def test_a_scenario_with_no_steps_has_recorded_zero_names(self):
+        steps = run_scenario.ScenarioSteps.from_text("name: x\n")
+        self.assertEqual((steps.state, steps.names, steps.names_state), ("none-recorded", (), "recorded"))
+        self.assertIn("step names: 0", steps.log_lines())
+
     def test_the_lines_round_trip_through_a_log_header(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         for items, number in (((("- name: a b", "  wait-serial: x"), 1)), ((("- wait-serial: x",), 0))):
