@@ -115,7 +115,7 @@ WEB_SCHEMES = ("http", "https")
 
 
 class StoreProblem(ValueMessageError):
-    """A store spark cannot read, or a write it will not make. The message is the whole sentence; its values are flattened (P444)."""
+    """Error: a store spark cannot read, or a write it will not make. The message is the whole sentence; its values are flattened (P444)."""
 
 
 def slug(text):

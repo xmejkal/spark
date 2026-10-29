@@ -159,7 +159,7 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("  gpio    the code writes 1, 15, each a GPIO of this board\n", said + "\n")
 
-    # --- MVP --- (P430, #569) the printed lines are guarded, the --json values stay raw
+    # --- MVP --- (P430, #569) the printed lines are guarded, the --json values stay raw; the message of a stop is flat in both (P444)
     def test_a_board_reply_with_control_characters_shows_guarded_and_json_keeps_it_raw(self):
         reply = "a\x1b[31m\u202eb\n"
         _, said, _, _ = self.go("--code", "print(1)", answers=(reply, ""))
@@ -173,7 +173,7 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual((code, problems), (2, "live.py: no board on /dev/x?y: mpremote devs does not list it.\n"))
         code, said, _, _ = self.go("--code", "print(1)", "--port", port, "--json")
         line = json.loads(said)
-        self.assertEqual((line["port"], line["why"]), (port, "no board on %s: mpremote devs does not list it." % port))
+        self.assertEqual((line["port"], line["why"]), (port, "no board on /dev/x?y: mpremote devs does not list it."))  # P444: the message is flat
 
     def test_a_newline_in_the_port_cannot_fake_a_line_of_the_stop(self):
         code, _, problems, _ = self.go("--code", "print(1)", "--port", "/dev/x\nGRANTED")
@@ -200,7 +200,7 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual(len(err.getvalue().splitlines()), 1, err.getvalue())
         self.assertIn("a?GRANTED: board ok", err.getvalue())
-        self.assertIn("a\nGRANTED: board ok", json.loads(out.getvalue())["why"])  # --json keeps it raw
+        self.assertIn("a?GRANTED: board ok", json.loads(out.getvalue())["why"])  # P444: --json carries the flat message
 
 
 if __name__ == "__main__":

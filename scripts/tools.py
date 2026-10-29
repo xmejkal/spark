@@ -62,7 +62,7 @@ Tool = namedtuple("Tool", "name role entry command")
 
 
 class ToolProblem(ValueMessageError):
-    """A tool spark cannot use — missing, refused, turned off, or a list it cannot read. The message is the whole sentence; its values are flattened (P444)."""
+    """Error: a tool spark cannot use — missing, refused, turned off, or a list it cannot read. The message is the whole sentence; its values are flattened (P444)."""
 
 
 def _read(path):
