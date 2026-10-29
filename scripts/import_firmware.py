@@ -53,9 +53,10 @@ BOOT_FILE, PIN_MAP, PIN_MODULE = "main.py", "pins.py", "pins"
 BOOT_FILES = ("boot.py", BOOT_FILE)
 DEFAULT_TIMEOUT_S = 5.0
 IMPORTED, RAISED, TIMED_OUT = "imported", "raised", "timed out"
-#: What each child runs: import the module argv[1], with the folders argv[2:] first on sys.path, in that order. They are
-#: the machine stand-in, firmware/, firmware/lib (where MicroPython looks for drivers) and the fallback stand-ins.
-IMPORT_ONE = "import importlib, sys; sys.path[:0] = sys.argv[2:]; importlib.import_module(sys.argv[1])"
+#: What each child runs (P443): import the module that is its first argument, with the folders after it first on sys.path,
+#: in that order. They are the machine stand-in, firmware/, firmware/lib (where MicroPython looks for drivers) and the
+#: fallback stand-ins.
+CHILD = Path(__file__).resolve().parent / "import_child.py"
 NOTHING_TO_IMPORT = ("firmware/ holds nothing to import but %s, %s and %s. The firmware cannot be imported without "
                      "running %s: move the code out of %s into a module that %s calls"
                      % (BOOT_FILES + (PIN_MAP, BOOT_FILE, BOOT_FILE, BOOT_FILE)))
@@ -63,8 +64,8 @@ NOTHING_TO_IMPORT = ("firmware/ holds nothing to import but %s, %s and %s. The f
 
 def import_one(name, firmware, timeout_s):
     """One module imported in a process of its own, as (status word, detail); the detail is empty when it imported."""
-    # -B: no __pycache__ in the person's folder
-    command = [sys.executable, "-B", "-c", IMPORT_ONE, name,
+    # -B: no __pycache__ in the person's folder. -I: the child's own folder and the current folder stay off sys.path
+    command = [sys.executable, "-I", "-B", str(CHILD), name,
                str(STAND_IN), str(firmware), str(firmware / "lib"), str(FALLBACK)]
     try:
         done = subprocess.run(command, cwd=str(firmware), capture_output=True, text=True, errors="replace",

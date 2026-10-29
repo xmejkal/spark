@@ -26,6 +26,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import import_child  # noqa: E402
 import import_firmware  # noqa: E402
 import outcomes  # noqa: E402
 
@@ -554,6 +555,25 @@ class TheCommandRunsFromWhereTheyAreTest(unittest.TestCase):
         answer = json.loads(done.stdout)
         self.assertEqual(done.returncode, outcomes.EXIT_PROBLEMS, answer)
         self.assertEqual(module_named(answer, "light")["detail"], "EOFError: EOF when reading a line")
+
+
+class TheChildIsAFileOfItsOwnTest(unittest.TestCase):
+    """P443: the child that imports one module is scripts/import_child.py, run with -I."""
+
+    def test_a_firmware_cannot_import_the_child_file(self):
+        project = a_project(light="import import_child\n")
+        _, answer = answer_for(project)
+        self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
+        self.assertIn("No module named 'import_child'", module_named(answer, "light")["detail"])
+
+    def test_importing_the_child_file_runs_nothing(self):
+        self.assertTrue(callable(import_child.main))
+
+    def test_the_child_imports_the_module_from_the_folders_given(self):
+        project = a_project(light="import sys\nassert sys.path[0].endswith('first'), sys.path\n")
+        done = subprocess.run([sys.executable, "-I", "-B", str(ROOT / "scripts" / "import_child.py"), "light",
+                               str(project / "first"), str(project / "firmware")], capture_output=True, text=True)
+        self.assertEqual(done.returncode, 0, done.stderr)
 
 
 class AModuleThatFailsIsAProblemTest(unittest.TestCase):
