@@ -612,13 +612,13 @@ class TheLookStatesTheSimulationTest(LookCase):
         report = self.limited(("ONBOARD_DISPLAY", "no part"), unnamed=("the LED blinks", "the button stops it"))
         lines = board_look.report_lines(report)
         self.assertEqual(lines[lines.index("  - ONBOARD_DISPLAY \u2014 no part"):-1], [
-            "  - ONBOARD_DISPLAY \u2014 no part", "  " + board_look.MUST_UNNAMED_HEADING_MESSAGE, "  - the LED blinks",
+            "  - ONBOARD_DISPLAY \u2014 no part", "  no scenario named these must lines, so test them on the board:", "  - the LED blinks",
             "  - the button stops it", "  all fields match the board record xiao-esp32-c6."])
         self.assertTrue(lines[-1].startswith("  token  "))
 
     def test_no_unnamed_must_lines_print_no_heading(self):
         lines = board_look.report_lines(self.limited(), token=False)
-        self.assertNotIn("  " + board_look.MUST_UNNAMED_HEADING_MESSAGE, lines)
+        self.assertNotIn("  no scenario named these must lines, so test them on the board:", lines)
 
     def test_a_newline_in_an_unnamed_must_line_shows_as_a_question_mark_and_the_json_keeps_it_raw(self):
         report = self.limited(unnamed=("a\nb\x1b[31m",))
@@ -642,7 +642,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.run_the_scenario()
         report = self.look()
         self.assertEqual(report.unnamed_must, ["the LED goes off"])
-        self.assertEqual(report.caveats, [board_look.MUST_UNNAMED_CAVEAT_MESSAGES[0] % 1])
+        self.assertEqual(report.caveats, ["1 must line was not named by any scenario (see the look)"])
         self.assertEqual(report.to_dict()["unnamed_must"], ["the LED goes off"])
 
     def test_two_unnamed_must_lines_are_counted_in_the_plural(self):
@@ -650,7 +650,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         (self.project / ".spark" / "project.json").write_text(json.dumps({"must": ["a", "b"]}))
         self.scenario.write_text(CONTROLLED_SCENARIO)
         self.run_the_scenario()
-        self.assertEqual(self.look().caveats, [board_look.MUST_UNNAMED_CAVEAT_MESSAGES[1] % 2])
+        self.assertEqual(self.look().caveats, ["2 must lines were not named by any scenario (see the look)"])
 
     def test_a_brief_with_no_must_line_adds_neither_a_line_nor_a_caveat(self):
         self.scenario.write_text(CONTROLLED_SCENARIO)
@@ -668,7 +668,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.run_the_scenario()
         report = self.look()
         self.assertEqual(report.unnamed_must, [])
-        self.assertEqual(report.caveats, ["not checked: %s; %s" % (board_look.WHY_BRIEF_UNREADABLE, board_look.MUST_UNNAMED_ADVICE)])
+        self.assertEqual(report.caveats, ["not checked: the project's brief cannot be read; run its scenario again to name its steps"])
 
     def test_no_simulation_names_no_unnamed_must_line(self):
         (self.project / ".spark").mkdir()

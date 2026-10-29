@@ -17,7 +17,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_doctor  # noqa: E402
-import board_look  # noqa: E402
 import deploy_gate  # noqa: E402
 import boards  # noqa: E402
 import flash_image  # noqa: E402
@@ -273,7 +272,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario()
         code, said, _ = self.go()
         self.assertEqual(code, 0)
-        self.assertEqual(said[said.index("  " + board_look.MUST_UNNAMED_HEADING_MESSAGE) + 1:][:2], ["  - the LED lights", "  - the LED goes off"])
+        self.assertEqual(said[said.index("  no scenario named these must lines, so test them on the board:") + 1:][:2], ["  - the LED lights", "  - the LED goes off"])
         code, lines, _ = self.go("--json")
         data_ = json.loads(lines[-1])["data"]
         self.assertEqual((code, data_["unnamed_must"], self.not_checked(data_)), (0, ["the LED lights", "the LED goes off"], []))
