@@ -199,9 +199,46 @@ class RunOperationTest(unittest.TestCase):
                                    "fix": "report this to the spark maintainers with the stderr traceback"}], "next": [], "truncated": None}
         self.assertEqual(json.loads(out), expected)
         self.assertEqual(out, json.dumps(expected, separators=(",", ":")) + "\n")  # the key order, as the goldens compare it
-        self.assertTrue(err.startswith("toy: crashed, RuntimeError\nTraceback (most recent call last):\n"), err)
+        self.assertTrue(err.startswith("toy: crashed, RuntimeError\nreport this to the spark maintainers with the stderr traceback\n"
+                                       "Traceback (most recent call last):\n"), err)
         self.assertIn("RuntimeError: boom at /opt/someone/project", err)
         self.assertNotIn("/opt/someone", out)
+
+    def test_a_message_with_a_newline_cannot_fake_a_line_on_stderr_and_a_class_with_one_stays_one_line(self):
+        class Faking(Toy):
+            """Operation: the toy that crashes with a message holding a fake report line."""
+
+            def run(self, project, what, left, right, *, outside):
+                raise RuntimeError("boom\ntoy: ok, token abcd")
+        import contextlib
+        import io
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            run_cli(TEXT, Faking(), ["--json"], outside_builder=None, outside=FakeOutsideWorld())
+        self.assertEqual([line for line in err.getvalue().splitlines() if line.startswith("toy: ok")], [])
+        self.assertIn("RuntimeError: boom?toy: ok, token abcd", err.getvalue())
+        Odd = type("Bad\nName", (RuntimeError,), {})
+
+        class OddlyNamed(Toy):
+            """Operation: the toy that crashes with a class whose name holds a newline."""
+
+            def run(self, project, what, left, right, *, outside):
+                raise Odd("x")
+        result = run_operation(OddlyNamed(), {"project": None, "what": "ok", "left": False, "right": False}, FakeOutsideWorld())
+        self.assertEqual(result.findings[0].sentence, "Bad?Name: the traceback is on stderr")
+        self.assertEqual(result.diagnostics[0], "toy: crashed, Bad?Name")
+        self.assertFalse([line for line in result.diagnostics if "\n" in line])
+
+    def test_a_builder_that_crashes_is_a_crash_envelope_too(self):
+        def builder(project, effects):
+            raise OSError("no tools file")
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = run_cli(TEXT, Toy(), ["--json"], outside_builder=builder)
+        self.assertEqual((code, json.loads(out.getvalue())["unchecked"][0]["code"]), (2, "crash"))
+        self.assertIn("OSError", json.loads(out.getvalue())["unchecked"][0]["sentence"])
 
     def test_an_undeclared_run_is_refused(self):
         outside = build_outside_world((READS,), find_tool={"flasher": TOOL}.get)

@@ -13,7 +13,7 @@ from spark.core import codes, outcomes
 from spark.core.errors import SparkError
 from spark.core.operation import JSON_DEST, JSON_FLAG
 from spark.core.result import Finding, OperationResult
-from spark.core.text_guards import guard_lines
+from spark.core.text_guards import guard_lines, printable
 
 # --- MVP ---
 #: Value: what a CLI says of itself in `--help`: its file name, one sentence, and the text after the arguments.
@@ -21,8 +21,9 @@ HelpText = namedtuple("HelpText", "prog description epilog")
 #: The sentence of a crash's Finding holds the class only, because the message can carry a home path.
 CRASH_MESSAGE = "%s: the traceback is on stderr"
 CRASH_FIX = "report this to the spark maintainers with the stderr traceback"
-#: The first diagnostics line of a crash: the op and the class, before the traceback.
+#: The first diagnostics line of a crash: the op and the class, then the fix, then the traceback under Python's heading.
 CRASHED_MESSAGE = "%s: crashed, %s"
+TRACEBACK_HEADING = "Traceback (most recent call last):"
 BAD_ARGUMENT_FIX = "%s --help lists the arguments"
 
 
@@ -42,18 +43,27 @@ class TextReport:
         return "\n".join(result.lines)
 
 
-def run_operation(operation, values, outside):
-    """The OperationResult of `operation.run(**values, outside=outside)`. A SparkError is one Finding of its status. Any
-    other exception is a crash: one unchecked Finding with code `crash` and the class in its sentence, and the traceback
-    in `diagnostics`, never in the envelope (an exception's message can carry a home path)."""
+def run_operation(operation, values, outside=None, build_outside=None):
+    """The OperationResult of `operation.run(**values, outside=outside)`, `outside` built by `build_outside()` when None. A
+    SparkError is one Finding of its status. Any other exception, the builder's too, is a crash: one unchecked Finding with
+    code `crash` and the class in its sentence, and in `diagnostics` the op and the class, the fix, and the traceback,
+    never in the envelope (an exception's message can carry a home path, so it goes to stderr, on one line)."""
     try:
-        return operation.run(**values, outside=outside)
+        return operation.run(**values, outside=outside or build_outside())
     except SparkError as refused:
         return OperationResult(findings=[Finding(refused.status, None, refused.code, str(refused), refused.fix)])
     except Exception as crashed:  # noqa: BLE001  the core's one catch-all: a crash is answered as could-not-run, never hidden
-        name = type(crashed).__name__
+        name = printable(type(crashed).__name__)
         return OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.CRASH, CRASH_MESSAGE % name, CRASH_FIX)],
-                               diagnostics=[CRASHED_MESSAGE % (operation.name, name)] + traceback.format_exc().rstrip("\n").split("\n"))
+                               diagnostics=[CRASHED_MESSAGE % (operation.name, name), CRASH_FIX] + traceback_lines(crashed))
+
+
+def traceback_lines(crashed):
+    """The traceback of `crashed` as lines: the frames as Python prints them, then the exception's own line through
+    `printable`, so a message with a newline cannot fake a line of what the person reads."""
+    frames = "".join(traceback.format_tb(crashed.__traceback__)).rstrip("\n")
+    own = "".join(traceback.format_exception_only(type(crashed), crashed)).rstrip("\n")
+    return [TRACEBACK_HEADING] + (frames.split("\n") if frames else []) + [printable(own)]
 
 
 def parser_for(text, operation):
@@ -92,7 +102,7 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
         print(JsonEnvelope.render(refused, operation.name, operation.name))
         return outcomes.EXIT_COULD_NOT_RUN
     as_json = values.pop(JSON_DEST)
-    result = run_operation(operation, values, outside or outside_builder(values.get("project"), operation.effects))
+    result = run_operation(operation, values, outside, lambda: outside_builder(values.get("project"), operation.effects))
     said = JsonEnvelope.render(result, operation.name, operation.name) if as_json else TextReport.render(result)
     if said:
         print(said)
