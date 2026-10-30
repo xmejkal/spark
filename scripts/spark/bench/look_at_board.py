@@ -1,7 +1,8 @@
 """
 The look as an Operation on the core (P442, W3-3): read the board on USB without changing it, compare it with the
 project's board record, and give a token. look.py is its CLI. The lines, the findings and the next step are the ones
-look.py printed before it (board_look.report_lines and board_envelope's look items), so the goldens did not change.
+look.py printed before it (board_look.report_lines and board_envelope's look items), so no golden changed; a crash, now a
+`crash` envelope and exit 2, is the one new output.
 """
 
 import board_codes

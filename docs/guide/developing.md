@@ -342,8 +342,10 @@ class with `name` (the `op` the envelope prints), `arguments` (its `Argument`s, 
 fix), `next` (a `NextStep` per step an agent may take), `lines` (the report a person reads), `diagnostics` (lines for
 the person beside the answer: the board doctor's, a crash's traceback) and `notes`. `status()` is `outcomes.status_of`
 over the findings, so `ok` stays unreachable while anything is unchecked, and `to_envelope(tool, op)` is the envelope
-in today's key order. An Operation reaches the outside only through `outside`, an `OutsideWorld`
-(`spark.core.outside`): `run` runs a program and `find_tool` gives a tool by its name. `build_outside_world(effects,
+in today's key order. An Operation runs a program and finds a tool only through `outside`, an `OutsideWorld`
+(`spark.core.outside`): `run` runs a program and `find_tool` gives a tool by its name. The rest of the outside (the
+project's files, the store, and the child Python that `image_evidence.CompileCheck` starts) still goes direct, and
+moves behind the outside with its own card. `build_outside_world(effects,
 find_tool)` gives the real `run` only when the effects hold `runs`, and a stub that raises `SparkError` with code
 `undeclared_effect` otherwise; an area's builder, `spark.bench.build_project_outside_world(project, effects)`, adds the
 project's tool finder. A test gives a `FakeOutsideWorld`. `SparkError` (`spark.core.errors`) is the one error an
@@ -351,12 +353,12 @@ Operation raises to answer instead of crashing: a `ValueMessageError` with `code
 
 `spark.core.cli` holds the frontends. `run_operation(operation, values, outside)` runs for any frontend and turns a
 `SparkError` into one Finding of its status, and any other exception into one unchecked Finding with code `crash`: the
-sentence names the exception class only, because a message can carry a home path, and the traceback goes to
-`diagnostics`. `run_cli(text, operation, argv, *, outside_builder, outside=None)` is the CLI: it parses the Operation's
+sentence names the exception class only, because a message can carry a home path, and `diagnostics` gets the op and
+the class, the fix, and the traceback, its last line through `printable`. `run_cli(text, operation, argv, *, outside_builder, outside=None)` is the CLI: it parses the Operation's
 arguments with `outcomes.AnsweringParser` (a bad flag is a `bad_argument` envelope under `--json`, the usage without),
 runs, renders with `JsonEnvelope` or `TextReport` (the two Renderers, which decide nothing again), prints the diagnostics
-on stderr through `guard_lines` and returns `EXIT_FOR[status]`. It is the one function in `scripts/spark/` that may
-print (rule X2, with the Renderers and the terminal consent). A script's `main(argv=None, outside=None)` is one call
+on stderr through `guard_lines` and returns `EXIT_FOR[status]`. It is the one function in `scripts/spark/` that prints
+(rule X2 names it by file and name, with the Renderers and the terminal consent). A script's `main(argv=None, outside=None)` is one call
 of `run_cli`; `scripts/look.py` is the first, over `LookAtBoard`. The core's own codes are in `spark.core.codes`.
 
 ```mermaid
@@ -399,6 +401,15 @@ classDiagram
     effects
     needs_yes
     needs_person
+  }
+  class Argument {
+    <<Value>>
+    flags
+    dest
+    kind
+    help
+    default
+    group
   }
   class OutsideWorld {
     <<Value>>
