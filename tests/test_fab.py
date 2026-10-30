@@ -173,7 +173,7 @@ class ARulesFileOfTheWrongKindIsRefusedTest(unittest.TestCase):
                             ({"fabrication": None}, None), ({}, None), ({"fabrication": {}}, None),
                             ({"fabrication": 5}, "fabrication"), ({"fabrication": "x"}, "fabrication"),
                             ({"fabrication": []}, "fabrication"), ({"fabrication": 0}, "fabrication"),
-                            ([], fab.WHOLE_FILE), (None, fab.WHOLE_FILE), (5, fab.WHOLE_FILE), ("x", fab.WHOLE_FILE)):
+                            ([], "(top level)"), (None, "(top level)"), (5, "(top level)"), ("x", "(top level)")):
             with self.subTest(rules=repr(rules)[:50]):
                 self.assertEqual(fab.fabrication_problem(rules), said)
 
@@ -190,7 +190,7 @@ class ARulesFileOfTheWrongKindIsRefusedTest(unittest.TestCase):
                                                 "or remove the key to use the default" % path)
 
     def test_a_rules_file_that_is_no_object_says_so(self):
-        for text, field in (("[]", fab.WHOLE_FILE), ("null", fab.WHOLE_FILE), ('{"fabrication": 5}', "fabrication")):
+        for text, field in (("[]", "(top level)"), ("null", "(top level)"), ('{"fabrication": 5}', "fabrication")):
             with self.subTest(text=text):
                 path = self.rules_file(text)
                 with self.assertRaises(fab.RulesError) as caught:
