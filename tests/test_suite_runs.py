@@ -11,6 +11,7 @@ and it counts only the slow skips, never a real one (a missing tool).
 
 import ast
 import contextlib
+import importlib.util
 import io
 import os
 import re
@@ -227,6 +228,15 @@ class AMutationRunNeverRunsTheQuickRunTest(unittest.TestCase):
                 self.assertNotIn("SPARK_SUITE", environment)
                 self.assertEqual(environment["SPARK_KEPT"], "kept", "only the one variable goes")
                 self.assertEqual(environment["PYTHONDONTWRITEBYTECODE"], "1")
+
+
+class NeedsLittlefsTest(unittest.TestCase):
+    def test_it_skips_exactly_where_the_littlefs_package_is_missing(self):
+        # P452: a mark that always skips would hide 24 tests on the Python that has the package
+        marked = suite_runs.needs_littlefs(lambda: None)
+        self.assertEqual(getattr(marked, "__unittest_skip__", False), importlib.util.find_spec("littlefs") is None)
+        if hasattr(marked, "__unittest_skip_why__"):
+            self.assertFalse(marked.__unittest_skip_why__.startswith(suite_runs.SLOW_PREFIX), "the gate counts it as a real skip")
 
 
 if __name__ == "__main__":

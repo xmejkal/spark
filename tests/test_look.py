@@ -27,6 +27,7 @@ import sim_project  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent, FakeOutsideWorld  # noqa: E402
 from spark.core import outcomes  # noqa: E402
+from suite_runs import needs_littlefs  # noqa: E402
 from test_board_look import LookCase, data, done, found  # noqa: E402
 
 RESTART = "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
@@ -68,6 +69,7 @@ class LookScriptCase(LookCase):
 
 
 class WhatThePersonSeesTest(LookScriptCase):
+    @needs_littlefs
     def test_a_matching_board(self):
         self.run_the_scenario()
         code, said, problems = self.go()
@@ -88,6 +90,7 @@ class WhatThePersonSeesTest(LookScriptCase):
             sim_project.limits_note([("ONBOARD_DISPLAY", "no part for the display. Test it on the board.")]))
         self.run_the_scenario()
 
+    @needs_littlefs
     def test_the_text_look_lists_the_limits_of_the_passed_run_after_the_caveat(self):
         self.run_the_scenario_with_a_note()
         code, said, _ = self.go()
@@ -96,6 +99,7 @@ class WhatThePersonSeesTest(LookScriptCase):
             SIMULATION, CAVEAT, "  what this simulation cannot show, so test it on the board:",
             "  - ONBOARD_DISPLAY — no part for the display. Test it on the board."])
 
+    @needs_littlefs
     def test_the_json_look_carries_the_limits_of_the_passed_run(self):
         self.run_the_scenario_with_a_note()
         data = json.loads(self.go("--json")[1][-1])["data"]
@@ -107,6 +111,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertFalse([line for line in said if "cannot show" in line])
         self.assertEqual(json.loads(self.go("--json")[1][-1])["data"]["limits"], [])
 
+    @needs_littlefs
     def test_a_flash_that_differs_but_holds_the_image_is_a_warning_with_its_token(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -117,6 +122,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(said[7:9], [SIMULATION, CAVEAT])
         self.assertTrue(said[9].startswith("  token  "))
 
+    @needs_littlefs
     def test_a_field_the_board_did_not_say_is_unknown_and_the_look_could_not_check_it(self):
         self.run_the_scenario()
         code, said, _ = self.go(esptool="c6-flash-id-garbled.txt")
@@ -125,6 +131,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertIn("  1 field unknown (flash: the board did not say): deploy.py will ask you to accept it.", said)
         self.assertTrue(said[-1].startswith("  token  "))
 
+    @needs_littlefs
     def test_a_port_with_a_newline_and_a_right_to_left_override_shows_as_one_line_with_question_marks(self):
         # P423: the report's items are guarded one by one, so a newline in a value cannot fake a line of the look
         self.run_the_scenario()
@@ -177,6 +184,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertIn("a?GRANTED (deploy): board ok", err.getvalue())
         self.assertEqual([line for line in err.getvalue().splitlines() if line.startswith("GRANTED")], [])
 
+    @needs_littlefs
     def test_another_chip_is_a_stop_with_no_token(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -186,6 +194,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(said[-4:], ["  this board is an esp32c6, the project is for an esp32s3: deploy.py will refuse.",
                                      SIMULATION, CAVEAT, "  no token: the look found a stop"])
 
+    @needs_littlefs
     def test_a_flash_too_small_for_the_image_is_a_stop_even_when_the_record_lists_it(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -194,6 +203,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertIn("  the flash is 2 MB, the image needs 4 MB: deploy.py will refuse.", said)
         self.assertEqual(said[-1], "  no token: the look found a stop")
 
+    @needs_littlefs
     def test_a_flash_in_the_records_list_that_is_too_small_exits_1_not_0(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -217,6 +227,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(said[-1], "  no token: sim/wokwi.toml line 3 names the firmware in a form spark cannot read. "
                          'To fix it, write it as firmware = "name.bin".')
 
+    @needs_littlefs
     def test_ignore_older_runs_gives_a_token_where_an_older_log_tested_another_image(self):
         self.run_the_scenario()
         (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(2)\n")
@@ -230,6 +241,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(code, 0)
         self.assertEqual(said[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
 
+    @needs_littlefs
     def test_no_simulation_gives_a_token_for_firmware_as_it_is_with_no_run_log(self):
         self.build_from_firmware()
         code, said, _ = self.go()
@@ -239,6 +251,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(code, 0)
         self.assertEqual(said[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
 
+    @needs_littlefs
     def test_no_simulation_with_firmware_changed_after_the_image_gives_no_token_and_the_build_command(self):
         self.build_from_firmware()
         (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(3)\n")
@@ -248,7 +261,7 @@ class WhatThePersonSeesTest(LookScriptCase):
 
     def test_no_simulation_with_a_finder_that_lacks_littlefs_gives_no_token_and_the_install_line(self):
         # P442: the image check asks the finder the look was given, not tools.find, so the fake decides what is installed
-        self.build_from_firmware()
+        self.image.write_bytes(b"x")  # P452: the finder answers before the image is read, so no littlefs is needed to build one
 
         asked = []
 
@@ -265,6 +278,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual([item["code"] for item in no_token], ["tool_missing"])
         self.assertIn("not-installed is not installed", no_token[0]["sentence"])
 
+    @needs_littlefs
     def test_the_json_look_says_none_and_its_deploy_step_carries_the_flag(self):
         self.build_from_firmware()
         code, said, _ = self.go("--no-simulation", "--json")
@@ -272,6 +286,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual((code, envelope["data"]["simulation"]), (0, "none"))
         self.assertIn("--no-simulation", envelope["next"][0]["argv"])
 
+    @needs_littlefs
     def test_the_json_look_carries_the_simulation_and_the_caveats_of_the_passed_run(self):
         self.run_the_scenario()
         data_ = json.loads(self.go("--json")[1][-1])["data"]
@@ -291,6 +306,7 @@ class WhatThePersonSeesTest(LookScriptCase):
     def not_checked(self, data_):
         return [each for each in data_["caveats"] if each.startswith(outcomes.NOT_CHECKED_MESSAGE.split("%s")[0])]
 
+    @needs_littlefs
     def test_the_look_exits_0_and_lists_the_unnamed_must_lines_in_text_and_json(self):
         self.brief_with_must("the LED lights", "the LED goes off")
         self.run_the_scenario()
@@ -301,6 +317,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         data_ = json.loads(lines[-1])["data"]
         self.assertEqual((code, data_["unnamed_must"], self.not_checked(data_)), (0, ["the LED lights", "the LED goes off"], []))
 
+    @needs_littlefs
     def test_the_caveats_hold_not_checked_exactly_when_a_log_could_not_say(self):
         self.brief_with_must("the LED lights")
         self.run_without_step_names()
@@ -309,6 +326,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual((code, data_["unnamed_must"], len(self.not_checked(data_))), (0, [], 1))
         self.assertEqual(json.loads(lines[-1])["status"], "ok")
 
+    @needs_littlefs
     def test_an_older_log_and_no_must_line_say_nothing(self):
         self.brief_with_must()
         self.run_without_step_names()
@@ -323,6 +341,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         data_ = json.loads(self.go("--json")[1][-1])["data"]
         self.assertEqual((data_["unnamed_must"], self.not_checked(data_)), ([], []))
 
+    @needs_littlefs
     def test_the_count_of_the_unnamed_must_lines_reaches_the_deploy_question_apart_from_not_checked(self):
         self.brief_with_must("a", "b")
         self.run_the_scenario()
@@ -339,16 +358,19 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(data_["last_deploy"], {"state": "none-recorded", "why": None, "project": None, "verdict": None,
                                                 "deployed": None})
 
+    @needs_littlefs
     def test_the_json_look_of_an_image_no_run_tested_says_null_and_no_caveat(self):
         self.build_from_firmware()
         data_ = json.loads(self.go("--json")[1][-1])["data"]
         self.assertEqual((data_["simulation"], data_["caveats"]), (None, []))
 
+    @needs_littlefs
     def test_the_text_look_says_none_and_its_caveat_with_the_flag(self):
         self.build_from_firmware()
         said = self.go("--no-simulation")[1]
         self.assertEqual(said[said.index("  simulation: none"):][:2], ["  simulation: none", "  no simulation tested this image"])
 
+    @needs_littlefs
     def test_the_next_step_names_a_deploy_grant_only_where_a_grant_may_answer(self):
         self.build_from_firmware()
         none = json.loads(self.go("--no-simulation", "--json")[1][-1])["next"][0]["why"]
@@ -408,6 +430,7 @@ class WhatStopsTheLookTest(LookScriptCase):
             "look.py --port /dev/cu.usbmodem101  (unplug one to tell them apart)"])
         self.assertFalse([each for each in self.ran if "flash_id" in each])  # none was read: each read restarts a board
 
+    @needs_littlefs
     def test_two_boards_with_a_port_reads_that_one(self):
         self.run_the_scenario()
         code, said, _ = self.go("--port", "/dev/cu.usbserial-1410", devs="mpremote-devs-two.txt")
@@ -451,6 +474,7 @@ class WhatStopsTheLookTest(LookScriptCase):
 class TheOperationTest(LookScriptCase):
     """P442: the look runs without a CLI: run_operation over LookAtBoard gives the result, and nothing is printed."""
 
+    @needs_littlefs
     def test_run_operation_gives_the_lines_the_findings_and_the_deploy_step_with_no_stdout(self):
         self.run_the_scenario()
         values = {"project": self.project, "port": None, "ignore_older_runs": False, "no_simulation": False}
@@ -465,6 +489,7 @@ class TheOperationTest(LookScriptCase):
         self.assertEqual([(step.op, step.needs_yes, step.argv[3]) for step in result.next], [("deploy", True, self.token())])
         self.assertEqual(result.data["token"], self.token())
 
+    @needs_littlefs
     def test_run_operation_on_an_unknown_field_gives_the_unchecked_finding(self):
         self.run_the_scenario()
         values = {"project": self.project, "port": None, "ignore_older_runs": False, "no_simulation": False}
