@@ -189,16 +189,10 @@ def kind_problem(physical):
     return None
 
 
-def wrong_kind(physical):
-    """The first field of a board file with no `geometry_gaps` that holds a value of the wrong kind, said with its name, or None."""
-    found = kind_problem(physical)
-    return found[1] if found else None
-
-
 def why_wrong_kind(board):
     """The board's disagreement with itself, said, when a field holds a value of the wrong kind, or None. Ask it of a board with no `footprint_gaps`."""
-    wrong = wrong_kind(board["physical"])
-    return DISAGREES_MESSAGE % wrong if wrong else None
+    found = kind_problem(board["physical"])
+    return DISAGREES_MESSAGE % found[1] if found else None
 
 
 def why_header_disagrees(board, rules=None):
