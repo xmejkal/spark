@@ -179,8 +179,8 @@ def kind_problem(physical):
     numbers = [("physical.%s" % field, physical[field]) for field in ("width_mm", "height_mm")] + [
         ("physical.header.%s" % field, header[field]) for field in ("pitch_mm", "row_spacing_mm", "first_pad_from_edge_mm")]
     for name, value in numbers:
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            return name, "%s is not a number" % name
+        if not fab.is_finite_number(value):  # --- MVP --- (P434): a 400-digit int was an OverflowError in `render` and `part_shape`
+            return name, "%s is not a finite number" % name
     pins, order = header["pins"], physical["header_order"]
     if not isinstance(pins, list) or not all(isinstance(count, int) and not isinstance(count, bool) for count in pins):
         return "physical.header.pins", "physical.header.pins is not a list of whole numbers"
@@ -208,7 +208,7 @@ def why_header_disagrees(board, rules=None):
         return DISAGREES_MESSAGE % wrong
     try:
         render(board, rules)
-    except (ValueError, KeyError, TypeError) as exc:  # TypeError: a project's rules value of the wrong kind reaches it until P434 (#576) checks rules values
+    except (ValueError, KeyError, TypeError) as exc:
         return DISAGREES_MESSAGE % exc
     return None
 
@@ -300,7 +300,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("--board", required=True, help="board id, as in boards/<id>.json")
     parser.add_argument("-o", "--out", help="write here instead of stdout")
-    parser.add_argument("--project", help="a project directory whose boards/ is searched first")
+    parser.add_argument("--project", help="a project directory whose boards/ is searched first; its rules.json must hold finite numbers (else exit 2)")
     parser.add_argument("--json", action="store_true", help="machine-readable result")
     args = parser.parse_args(argv)
 
@@ -310,14 +310,14 @@ def main(argv=None):
     try:
         project = Path(args.project) if args.project else boards.project_or_library()
         board = boards.load(project, args.board)
+        rules = design.rules_in(project)  # --- MVP --- (P434): a rules file of the wrong kind is named, not blamed on the board
     except Exception as exc:  # noqa: BLE001 — the message is the product
-        return _report(args, EXIT_COULD_NOT_RUN, "no board to generate from: %s" % exc)
+        return _report(args, EXIT_COULD_NOT_RUN, "no board or rules to generate from: %s" % exc)
 
     refusal = why_no_footprint(board)
     if refusal:
         return _report(args, EXIT_COULD_NOT_RUN, refusal)
 
-    rules = design.rules_in(project)
     disagreement = why_header_disagrees(board, rules)
     if disagreement:
         return _report(args, EXIT_PROBLEMS, disagreement)

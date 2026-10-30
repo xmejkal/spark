@@ -708,7 +708,7 @@ count.
    cannot give a footprint stops at `[????] footprint`, before the schematic. The detail names each missing fact (the
    gaps `emit_footprint.py` names), then says what the build still gives: with `--keep`, the kept lines say whether
    `firmware/pins.py` was written. A board whose header and pad order disagree, or hold a value of the wrong kind (a pitch
-   written as text), stops at `[????] footprint` too, in the sentence `the board definition disagrees with itself: …` (P411); a value of the wrong kind is named by its field, as `physical.header.pitch_mm is not a number`.
+   written as text), stops at `[????] footprint` too, in the sentence `the board definition disagrees with itself: …` (P411); a value of the wrong kind is named by its field, as `physical.header.pitch_mm is not a finite number` (a 400-digit number is one too).
    A fault in the requirements file (an unknown need, two parts of one name, pins that
    cannot be placed) is said first, under `schematic`. `emit_board.py` alone refuses that board with the same sentence,
    in the same order, exit 2 ([P407](https://github.com/xmejkal/spark/issues/532)).
@@ -793,7 +793,10 @@ Today's output also carries `"unmeasured": 0`, after `status`.
    [P111](https://github.com/xmejkal/spark/issues/45).
 
    **`fabrication: {}`** in rules.json means the plugin's default two-layer process, as the file's own `//fabrication`
-   comment says. So buildability is measured against spark's defaults, not the person's board house; tell them.
+   comment says. So buildability is measured against spark's defaults, not the person's board house; tell them. A `fabrication` value that is
+   not a finite number (text, `true`, `NaN`, a huge integer) is refused when the file is read, with the rules path and the
+   field (`fabrication.drill_step_mm`): `emit_footprint.py` and `check_footprints.py --rules` exit 2, and the build stops.
+   Remove the key to use the default.
 
    **What clears a `!` line.** In the journey's run, physics was could-not-run for these reasons:
    - **A part's current.** A power pin names one of its record's facts: `"draws"` or `"can_supply"`. The FireBeetle's
