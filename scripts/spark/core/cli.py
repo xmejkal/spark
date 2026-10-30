@@ -23,7 +23,8 @@ CRASH_MESSAGE = "%s: the traceback is on stderr"
 CRASH_FIX = "report this to the spark maintainers with the stderr traceback"
 #: The first diagnostics line of a crash: the op and the class, then the fix, then the traceback under Python's heading.
 CRASHED_MESSAGE = "%s: crashed, %s"
-TRACEBACK_HEADING = "Traceback (most recent call last):"
+#: How Python starts a frame's chunk of a traceback; the other chunks are one sentence each.
+FRAME_START = '  File "'
 BAD_ARGUMENT_FIX = "%s --help lists the arguments"
 
 
@@ -59,11 +60,14 @@ def run_operation(operation, values, outside=None, build_outside=None):
 
 
 def traceback_lines(crashed):
-    """The traceback of `crashed` as lines: the frames as Python prints them, then the exception's own line through
-    `printable`, so a message with a newline cannot fake a line of what the person reads."""
-    frames = "".join(traceback.format_tb(crashed.__traceback__)).rstrip("\n")
-    own = "".join(traceback.format_exception_only(type(crashed), crashed)).rstrip("\n")
-    return [TRACEBACK_HEADING] + (frames.split("\n") if frames else []) + [printable(own)]
+    """The traceback of `crashed` as lines, its causes and contexts too, as Python prints them: a frame's chunk line by
+    line, every other chunk (the heading, a cause sentence, the exception's own line) as one line through `printable`,
+    so a message with a newline cannot fake a line of what the person reads."""
+    lines = []
+    for chunk in traceback.TracebackException.from_exception(crashed).format():
+        text = chunk.strip("\n")
+        lines += [printable(line) for line in text.split("\n")] if text.startswith(FRAME_START) else [printable(text)]
+    return lines
 
 
 def parser_for(text, operation):

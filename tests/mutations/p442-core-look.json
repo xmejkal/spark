@@ -15,5 +15,6 @@
  {"file": "scripts/image_evidence.py", "name": "_why_image_differs ignores the finder it is given", "find": "(self.find_tool or tools.find)(\"littlefs\", project=None)", "replace": "tools.find(\"littlefs\")"},
  {"file": "scripts/spark/bench/look_at_board.py", "name": "the look's deploy step comes without a token", "find": "deploy_step(\n            project, token, report.port, evidence,", "replace": "deploy_step(\n            project, None, report.port, evidence,"},
  {"file": "scripts/spark/bench/look_at_board.py", "name": "a last deploy not checked is a pass", "find": "if report.last_deploy_not_checked():", "replace": "if False:"},
- {"file": "scripts/spark/bench/__init__.py", "name": "the project's finder drops the project", "find": "find_tool=lambda name, project=project: tools.find(name, project))", "replace": "find_tool=lambda name, project=None: tools.find(name))"}
+ {"file": "scripts/spark/bench/__init__.py", "name": "the project's finder drops the project", "find": "find_tool=lambda name, project=project: tools.find(name, project))", "replace": "find_tool=lambda name, project=None: tools.find(name))"},
+ {"file": "scripts/spark/core/cli.py", "name": "a chained cause is dropped from the traceback", "find": "for chunk in traceback.TracebackException.from_exception(crashed).format():", "replace": "for chunk in traceback.format_exception_only(type(crashed), crashed):"}
 ]

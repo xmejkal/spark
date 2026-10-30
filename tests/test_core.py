@@ -229,6 +229,30 @@ class RunOperationTest(unittest.TestCase):
         self.assertEqual(result.diagnostics[0], "toy: crashed, Bad?Name")
         self.assertFalse([line for line in result.diagnostics if "\n" in line])
 
+    def test_a_chained_cause_and_a_context_stay_on_stderr(self):
+        class Chained(Toy):
+            """Operation: the toy that crashes with a cause, and with a context."""
+
+            def run(self, project, what, left, right, *, outside):
+                if what == "cause":
+                    raise RuntimeError("outer") from KeyError("root cause")
+                try:
+                    1 / 0
+                finally:
+                    raise RuntimeError("while handling")
+        import contextlib
+        import io
+        for what, said in (("cause", ["KeyError: 'root cause'", "The above exception was the direct cause of the following exception:"]),
+                           ("context", ["ZeroDivisionError: division by zero", "During handling of the above exception, another exception occurred:"])):
+            with self.subTest(what=what):
+                err = io.StringIO()
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+                    run_cli(TEXT, Chained(), ["--what", what], outside_builder=None, outside=FakeOutsideWorld())
+                lines = err.getvalue().splitlines()
+                for line in said:
+                    self.assertIn(line, lines)
+                self.assertEqual(lines.count("Traceback (most recent call last):"), 2 if what == "context" else 1)  # a cause raised by `from` has no frames
+
     def test_a_builder_that_crashes_is_a_crash_envelope_too(self):
         def builder(project, effects):
             raise OSError("no tools file")
