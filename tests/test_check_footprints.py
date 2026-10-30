@@ -521,6 +521,18 @@ class TheExitCodeFollowsTheStatusTest(unittest.TestCase):
                 self.assertIn(str(rules), said.getvalue())
                 self.assertIn(field, said.getvalue())
 
+    def test_a_rules_refusal_with_json_is_json(self):
+        import tempfile
+        work = Path(tempfile.mkdtemp())
+        (work / "circuit.json").write_text("[]")
+        (work / "rules.json").write_text('{"fabrication": {"min_annular_ring_mm": "0.3"}}')
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            code = check_footprints.main([str(work / "circuit.json"), "--rules", str(work / "rules.json"), "--json"])
+        found = json.loads(said.getvalue())
+        self.assertEqual((code, found["tool"], found["status"]), (check_footprints.EXIT_COULD_NOT_RUN, "check_footprints", "could-not-run"))
+        self.assertIn("fabrication.min_annular_ring_mm", found["message"])
+
     def test_it_imports_fab_and_not_design(self):
         self.assertFalse(hasattr(check_footprints, "design"))
         self.assertTrue(hasattr(check_footprints, "fab"))

@@ -1496,9 +1496,18 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         stages = self.run_spine(project, wanted)
         self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail),
                          ("footprint", check_spine.COULD_NOT_RUN,
-                          "the board definition disagrees with itself: physical.header.pitch_mm is not a finite number"))
+                          "the board definition disagrees with itself: physical.header.pitch_mm is not a finite number\n" + self.HINT))
 
     # --- MVP ---
+    def test_a_huge_width_stops_the_footprint_stage_naming_the_field(self):
+        # P434: a 400-digit width was an OverflowError out of `emit_board.place`, a "crashed" schematic stage
+        project, wanted = self.project_without("physical.header.drill_mm")
+        self.edit_record(project, lambda record: record["physical"].update(width_mm=10 ** 400))
+        stages = self.run_spine(project, wanted)
+        self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail),
+                         ("footprint", check_spine.COULD_NOT_RUN,
+                          "the board definition disagrees with itself: physical.width_mm is not a finite number\n" + self.HINT))
+
     def test_a_project_rule_of_the_wrong_kind_stops_the_inputs_read_naming_the_file(self):
         project, wanted = self.project_without("physical.header.drill_mm")
         (project / ".spark" / "rules.json").write_text(json.dumps({"fabrication": {"drill_step_mm": "0.1"}}))
@@ -1540,7 +1549,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         self.edit_record(project, lambda record: record["physical"]["header"].update(pitch_mm="2.54"))
         workdir, stages = self.run_to_the_footprint(project, wanted)
         self.assertEqual(stages[-1].name, "footprint")
-        self.assertEqual([path.name for path in workdir.glob("*.tsx")], ["board.tsx"])
+        self.assertEqual(list(workdir.glob("*.tsx")), [])  # P434: it stops before the schematic is written, as a missing fact does
 
     def test_an_unreadable_rules_file_stops_the_build_naming_the_file_and_is_not_no_rules(self):
         project, wanted = self.project_without("physical.header.drill_mm")

@@ -563,7 +563,7 @@ def main(argv=None):
 
     rules, why = rules_asked(args.rules)
     if why:
-        print(why)
+        print(json.dumps({"tool": "check_footprints", "status": COULD_NOT_RUN, "message": why}) if args.json else why)
         return EXIT_COULD_NOT_RUN
 
     findings = run(json.loads(path.read_text()), rules=rules)

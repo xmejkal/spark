@@ -195,6 +195,12 @@ def wrong_kind(physical):
     return found[1] if found else None
 
 
+def why_wrong_kind(board):
+    """The board's disagreement with itself, said, when a field holds a value of the wrong kind, or None (also when something is missing)."""
+    wrong = None if footprint_gaps(board) else wrong_kind(board["physical"])
+    return DISAGREES_MESSAGE % wrong if wrong else None
+
+
 def why_header_disagrees(board, rules=None):
     """
     Why the footprint of `board` cannot be drawn although nothing is missing, or None when it can (or when something is
@@ -203,9 +209,9 @@ def why_header_disagrees(board, rules=None):
     """
     if footprint_gaps(board):
         return None
-    wrong = wrong_kind(board["physical"])
+    wrong = why_wrong_kind(board)
     if wrong:
-        return DISAGREES_MESSAGE % wrong
+        return wrong
     try:
         render(board, rules)
     except (ValueError, KeyError, TypeError) as exc:
@@ -304,13 +310,13 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true", help="machine-readable result")
     args = parser.parse_args(argv)
 
-    # Resolving the project has to sit INSIDE the guard. It raises when there is no project
+    # --- MVP --- (P434: so does the rules file, whose fault is named, not blamed on the board) Resolving the project has to sit INSIDE the guard. It raises when there is no project
     # around, and outside the try that escaped `main` as a traceback — so a caller asking for an
     # exit code got an exception instead, and whoever called it reported the crash as a verdict.
     try:
         project = Path(args.project) if args.project else boards.project_or_library()
         board = boards.load(project, args.board)
-        rules = design.rules_in(project)  # --- MVP --- (P434): a rules file of the wrong kind is named, not blamed on the board
+        rules = design.rules_in(project)
     except Exception as exc:  # noqa: BLE001 — the message is the product
         return _report(args, EXIT_COULD_NOT_RUN, "no board or rules to generate from: %s" % exc)
 
