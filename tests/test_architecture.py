@@ -187,8 +187,10 @@ class PlantedBreachesTest(unittest.TestCase):
 
     def test_x2_output_in_spark_outside_a_renderer_the_terminal_consent_and_run_cli(self):
         root = planted({
+            "scripts/spark/core/cli.py": "import sys\n\n\ndef run_cli():\n    print(sys.stderr)\n\n\ndef other():\n    def run_cli():\n        print(1)\n",
             "scripts/spark/core/out.py": (
                 "import sys\nimport sys as system\n\n\ndef main():\n    pass\n\n\ndef run_cli():\n    print(sys.stderr)\n\n\n"
+                'class Service:\n    """Service: runs."""\n\n    def run_cli(self):\n        print(2)\n\n\n'
                 "def run():\n    print(\"x\")\n    answer = input()\n"
                 "    sys.stdout.write(answer)\n    system.stderr.write(answer)\n    sys.exit(1)\n    sys.stdin.readline()\n"
                 "    raise SystemExit(2)\n\n\n"
@@ -196,10 +198,12 @@ class PlantedBreachesTest(unittest.TestCase):
                 'class TerminalConsentStrategy:\n    """Strategy: asks on the terminal."""\n\n    def ask(self):\n        return input()\n'),
             "scripts/other.py": "def run():\n    print(\"x\")\n"})
         self.assertEqual(measure.breaches(root), {
-            "X2:scripts/spark/core/out.py:input": 1, "X2:scripts/spark/core/out.py:main": 1, "X2:scripts/spark/core/out.py:print": 1,
+            "X2:scripts/spark/core/cli.py:print": 1,  # the nested run_cli; the top-level one in cli.py is X2's named function
+            "X2:scripts/spark/core/out.py:input": 1, "X2:scripts/spark/core/out.py:main": 1, "X2:scripts/spark/core/out.py:print": 3,
+            "X2:scripts/spark/core/out.py:sys.stderr": 2,
             "X2:scripts/spark/core/out.py:readline": 1, "X2:scripts/spark/core/out.py:sys.exit": 1,
             "X2:scripts/spark/core/out.py:sys.stdin": 1, "X2:scripts/spark/core/out.py:sys.stdout": 1,
-            "X2:scripts/spark/core/out.py:sys.stderr": 1, "X2:scripts/spark/core/out.py:SystemExit": 1})
+            "X2:scripts/spark/core/out.py:SystemExit": 1})
 
     def test_u1_a_leaf_that_imports_a_script_matching_with_drawer_a_moved_guard_and_a_missing_leaf(self):
         root = planted({

@@ -249,8 +249,9 @@ LEAVES = ("board_codes", "outcomes", "provenance", "text_guards", "zone_time")
 MOVED_GUARDS = {"drawer": {"clean", "CONTROL", "LABEL_MAX", "TEXT_MAX", "TAGS_MAX"}, "parts": {"one_line", "COMMENT_UNSAFE"}}
 #: X2: a class that may print, read and exit in `scripts/spark/`: the Renderers (by role word) and the terminal consent.
 TERMINAL_CLASSES = ("TerminalConsentStrategy",)
-#: X2: the one function that may print in `scripts/spark/`: the CLI frontend, which prints what a Renderer rendered (P442).
-TERMINAL_FUNCTIONS = ("run_cli",)
+#: X2: the one function that prints in `scripts/spark/`, by file and top-level name: the CLI frontend, which prints what a
+#: Renderer rendered (P442). A nested def or a method of that name elsewhere is counted.
+TERMINAL_FUNCTIONS = (("scripts/spark/core/cli.py", "run_cli"),)
 EXCEPTION_NAMES = {name for name, value in vars(builtins).items() if isinstance(value, type) and issubclass(value, BaseException)}
 #: T1: the calls of `time` that read the clock or sleep.
 CLOCK_CALLS = {"time", "time_ns", "monotonic", "monotonic_ns", "perf_counter", "perf_counter_ns", "process_time", "sleep",
@@ -358,8 +359,12 @@ def _is_adapter(node):
 
 
 def _may_print(node):
-    return isinstance(node, ast.ClassDef) and (role_word_of(node) == "Renderer" or node.name in TERMINAL_CLASSES) \
-        or isinstance(node, ast.FunctionDef) and node.name in TERMINAL_FUNCTIONS
+    return isinstance(node, ast.ClassDef) and (role_word_of(node) == "Renderer" or node.name in TERMINAL_CLASSES)
+
+
+def _terminal_functions(source):
+    """The top-level defs of `source` that X2 names in TERMINAL_FUNCTIONS, by id."""
+    return {id(node) for node in source.tree.body if isinstance(node, ast.FunctionDef) and (source.file, node.name) in TERMINAL_FUNCTIONS}
 
 
 def _dotted(node):
@@ -490,8 +495,8 @@ def output_in_spark(source, known):
     """X2: main, print, input, sys.stdin, sys.stdout, sys.stderr, sys.exit, readline or SystemExit in scripts/spark/, outside the Renderers, the terminal consent and `run_cli`."""
     if not source.file.startswith("scripts/spark/"):
         return []
-    aliases, seen = aliases_of(source.tree), collections.Counter()
-    for node in walk_outside(source.tree, _may_print):
+    aliases, seen, exempt = aliases_of(source.tree), collections.Counter(), _terminal_functions(source)
+    for node in walk_outside(source.tree, lambda node: _may_print(node) or id(node) in exempt):
         if isinstance(node, ast.FunctionDef) and node.name == "main":
             seen["main"] += 1
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in ("print", "input"):
