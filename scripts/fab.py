@@ -22,7 +22,10 @@ moving it would trade prose that explains a formula for a lookup that does not.
 """
 
 import json
+import math
 from pathlib import Path
+
+from spark.core.text_guards import ValueMessageError
 
 FILE = Path(__file__).resolve().parent.parent / "data" / "fabrication.json"
 
@@ -36,6 +39,55 @@ def process(name, rules=None):
     """A fabrication number, or the project's own if its rules file states one under `fabrication`."""
     stated = ((rules or {}).get("fabrication") or {}).get(name)
     return DATA["process"][name] if stated is None else stated
+
+
+# --- MVP --- (P434, #576) one reader of a rules file, so a value of the wrong kind is refused where the file is read
+#: What `fabrication_problem` says for a rules file whose top level is no object.
+WHOLE_FILE = "(top level)"
+
+
+class RulesError(ValueMessageError):
+    """Error: a rules file cannot be read, or states a `fabrication` value that is no finite number, and this is why."""
+
+
+def is_finite_number(value):
+    """True for an int or a float that is no bool, no NaN, no infinity and not too big for a float (a 400-digit int)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
+
+
+def fabrication_problem(rules):
+    """None for no problem, else the field at fault: WHOLE_FILE, `fabrication`, or `fabrication.<key>` for the first key of the
+    process stated with a value that is no finite number. A null `fabrication` or key is the default; other keys are left alone."""
+    if not isinstance(rules, dict):
+        return WHOLE_FILE
+    stated = rules.get("fabrication")
+    if stated is None:
+        return None
+    if not isinstance(stated, dict):
+        return "fabrication"
+    for key in DATA["process"]:
+        if stated.get(key) is not None and not is_finite_number(stated[key]):
+            return "fabrication." + key
+    return None
+
+
+def read_rules(path):
+    """The rules in a project's rules file, or a RulesError that names the file (and the field)."""
+    try:
+        rules = json.loads(Path(path).read_text())
+    except (OSError, ValueError) as broken:
+        raise RulesError("%s could not be read: %s", path, broken) from broken
+    field = fabrication_problem(rules)
+    if field in (WHOLE_FILE, "fabrication"):
+        raise RulesError("%s: %s is not an object", path, field)
+    if field is not None:
+        raise RulesError("%s: %s is not a finite number; write a number, or remove the key to use the default", path, field)
+    return rules
 
 
 def part(name):

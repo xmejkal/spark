@@ -39,6 +39,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+import fab  # noqa: E402
 import parts as parts_library  # noqa: E402
 import provenance  # noqa: E402
 from spark.core.text_guards import ValueMessageError  # noqa: E402
@@ -370,9 +371,9 @@ def rules_in(project):
     if not path.is_file():
         return {}
     try:
-        return json.loads(path.read_text())
-    except (ValueError, OSError) as broken:
-        raise DesignError("%s could not be read: %s" % (path, broken)) from broken
+        return fab.read_rules(path)  # --- MVP --- (P434): also refuses a `fabrication` value that is no finite number
+    except fab.RulesError as refused:
+        raise DesignError(str(refused)) from refused
 
 
 def load(path, project=None, board_id=None):

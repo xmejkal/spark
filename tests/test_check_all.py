@@ -426,6 +426,21 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         self.assertIn("broken.requirements.json", json.dumps(result))
 
 
+    # --- MVP ---
+    def test_buildability_refuses_a_rule_of_the_wrong_kind_naming_the_file_and_the_field(self):
+        # P434: the raw read gave a TypeError for text and a silent ok for NaN
+        root = self._project(True)
+        (root / "circuit.json").write_text("[]")
+        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        for value in ("0.1", float("nan")):
+            with self.subTest(value=str(value)):
+                (root / "rules.json").write_text(json.dumps({"fabrication": {"plating_thickness_mm": value}}))
+                result = check.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(root / "rules.json")})
+                self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
+                self.assertIn("fabrication.plating_thickness_mm is not a finite number", json.dumps(result))
+                self.assertIn("rules.json", json.dumps(result))
+
+
 class AnAdvisoryIsSaidAndDoesNotFailTest(unittest.TestCase):
     """P57: a ring the board house makes but does not recommend reaches the answer as a `?`."""
 
