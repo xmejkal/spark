@@ -167,6 +167,18 @@ class LoadingTest(unittest.TestCase):
             design.load(path)
         self.assertIn("rules.json", str(caught.exception))
 
+    # --- MVP ---
+    def test_a_rule_of_the_wrong_kind_is_an_error_naming_the_file_and_the_field(self):
+        root, path = project(rules={"fabrication": {"drill_step_mm": "0.1"}})
+        with self.assertRaises(design.DesignError) as caught:
+            design.rules_in(root)
+        self.assertIn(".spark/rules.json: fabrication.drill_step_mm is not a finite number", str(caught.exception))
+        self.assertIsInstance(caught.exception.__cause__, design.fab.RulesError)
+
+    def test_a_rules_file_that_is_fine_is_read(self):
+        root, path = project(rules={"fabrication": {"drill_step_mm": 0.3}})
+        self.assertEqual(design.rules_in(root), {"fabrication": {"drill_step_mm": 0.3}})
+
     def test_parts_come_back_as_instances(self):
         root, path = project(requirements={
             "board": "firebeetle2-esp32s3",

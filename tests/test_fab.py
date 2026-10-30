@@ -145,5 +145,65 @@ class AProjectsOwnProcessReachesEveryRuleTest(unittest.TestCase):
         self.assertEqual(copper.COPPER_THICKNESS_MM, fab.process("copper_thickness_mm"))
 
 
+# --- MVP ---
+class ARulesFileOfTheWrongKindIsRefusedTest(unittest.TestCase):
+    """P434: `fab.process` returns a project's own value unchecked, so the reader refuses what is no finite number."""
+
+    def rules_file(self, text):
+        path = Path(tempfile.mkdtemp()) / "rules.json"
+        path.write_text(text if isinstance(text, str) else json.dumps(text))
+        return path
+
+    def test_a_finite_number_is_an_int_or_a_float_that_is_no_bool(self):
+        class Text(str):
+            pass
+        for value, said in ((1, True), (0.1, True), (-2, True), ("1", False), (Text("1"), False), (True, False), (float("nan"), False),
+                            (float("inf"), False), (10 ** 400, False), (None, False)):
+            with self.subTest(value=repr(value)[:20]):
+                self.assertIs(fab.is_finite_number(value), said)
+
+    def test_the_problem_is_the_first_field_stated_with_no_finite_number(self):
+        for rules, said in (({"fabrication": {"drill_step_mm": "0.1"}}, "fabrication.drill_step_mm"),
+                            ({"fabrication": {"drill_step_mm": True}}, "fabrication.drill_step_mm"),
+                            ({"fabrication": {"drill_step_mm": float("nan")}}, "fabrication.drill_step_mm"),
+                            ({"fabrication": {"drill_step_mm": float("inf")}}, "fabrication.drill_step_mm"),
+                            ({"fabrication": {"plating_thickness_mm": 10 ** 400}}, "fabrication.plating_thickness_mm"),
+                            ({"fabrication": {"drill_step_mm": None, "plating_thickness_mm": [1]}}, "fabrication.plating_thickness_mm"),
+                            ({"fabrication": {"drill_step_mm": 0.1, "unknown": "text", "// note": "text"}}, None),
+                            ({"fabrication": None}, None), ({}, None), ({"fabrication": {}}, None),
+                            ({"fabrication": 5}, "fabrication"), ({"fabrication": "x"}, "fabrication"),
+                            ({"fabrication": []}, "fabrication"), ({"fabrication": 0}, "fabrication"),
+                            ([], fab.WHOLE_FILE), (None, fab.WHOLE_FILE), (5, fab.WHOLE_FILE), ("x", fab.WHOLE_FILE)):
+            with self.subTest(rules=repr(rules)[:50]):
+                self.assertEqual(fab.fabrication_problem(rules), said)
+
+    def test_a_rules_file_that_is_fine_is_read(self):
+        rules = {"fabrication": {"drill_step_mm": 0.3}, "other": "text"}
+        self.assertEqual(fab.read_rules(self.rules_file(rules)), rules)
+        self.assertEqual(fab.read_rules(self.rules_file({"fabrication": None})), {"fabrication": None})
+
+    def test_a_value_of_the_wrong_kind_names_the_file_and_the_field(self):
+        path = self.rules_file({"fabrication": {"drill_step_mm": "0.1"}})
+        with self.assertRaises(fab.RulesError) as caught:
+            fab.read_rules(path)
+        self.assertEqual(str(caught.exception), "%s: fabrication.drill_step_mm is not a finite number; write a number, "
+                                                "or remove the key to use the default" % path)
+
+    def test_a_rules_file_that_is_no_object_says_so(self):
+        for text, field in (("[]", fab.WHOLE_FILE), ("null", fab.WHOLE_FILE), ('{"fabrication": 5}', "fabrication")):
+            with self.subTest(text=text):
+                path = self.rules_file(text)
+                with self.assertRaises(fab.RulesError) as caught:
+                    fab.read_rules(path)
+                self.assertEqual(str(caught.exception), "%s: %s is not an object" % (path, field))
+
+    def test_a_rules_file_nobody_can_parse_names_the_file(self):
+        for path in (self.rules_file("{broken"), Path(tempfile.mkdtemp()) / "gone.json"):
+            with self.subTest(path=path.name):
+                with self.assertRaises(fab.RulesError) as caught:
+                    fab.read_rules(path)
+                self.assertIn("%s could not be read" % path, str(caught.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

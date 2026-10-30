@@ -502,6 +502,29 @@ class TheExitCodeFollowsTheStatusTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             return check_footprints.main([str(path)])
 
+    # --- MVP ---
+    def test_a_rules_file_of_the_wrong_kind_is_could_not_run_naming_the_file(self):
+        # P434: the raw read let a text value reach the arithmetic
+        import tempfile
+        work = Path(tempfile.mkdtemp())
+        circuit = work / "circuit.json"
+        circuit.write_text("[]")
+        for text, field in (('{"fabrication": {"min_annular_ring_mm": "0.3"}}', "fabrication.min_annular_ring_mm"),
+                            ("[]", "(top level)"), ("{broken", "could not be read")):
+            with self.subTest(text=text):
+                rules = work / "rules.json"
+                rules.write_text(text)
+                said = io.StringIO()
+                with contextlib.redirect_stdout(said):
+                    code = check_footprints.main([str(circuit), "--rules", str(rules)])
+                self.assertEqual(code, check_footprints.EXIT_COULD_NOT_RUN)
+                self.assertIn(str(rules), said.getvalue())
+                self.assertIn(field, said.getvalue())
+
+    def test_it_imports_fab_and_not_design(self):
+        self.assertFalse(hasattr(check_footprints, "design"))
+        self.assertTrue(hasattr(check_footprints, "fab"))
+
     def test_a_shape_it_cannot_read_exits_could_not_run(self):
         pill = [{"type": "pcb_plated_hole", "shape": "pill", "pcb_component_id": "pcb_J1",
                  "x": index * 2.54, "y": 0.0} for index in range(4)]

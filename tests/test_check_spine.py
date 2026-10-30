@@ -1496,16 +1496,25 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         stages = self.run_spine(project, wanted)
         self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail),
                          ("footprint", check_spine.COULD_NOT_RUN,
-                          "the board definition disagrees with itself: physical.header.pitch_mm is not a number"))
+                          "the board definition disagrees with itself: physical.header.pitch_mm is not a finite number"))
 
-    def test_a_project_rule_of_the_wrong_kind_stops_the_footprint_stage_not_the_build(self):
-        # fab.process returns a project's own value unchecked: a drill step written as text was a TypeError out of `render`
+    # --- MVP ---
+    def test_a_huge_width_stops_the_footprint_stage_naming_the_field(self):
+        # P434: a 400-digit width raised an OverflowError that the stage reported as a crash
+        project, wanted = self.project_without("physical.header.drill_mm")
+        self.edit_record(project, lambda record: record["physical"].update(width_mm=10 ** 400))
+        stages = self.run_spine(project, wanted)
+        self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail),
+                         ("footprint", check_spine.COULD_NOT_RUN,
+                          "the board definition disagrees with itself: physical.width_mm is not a finite number"))
+
+    def test_a_project_rule_of_the_wrong_kind_stops_the_inputs_read_naming_the_file(self):
         project, wanted = self.project_without("physical.header.drill_mm")
         (project / ".spark" / "rules.json").write_text(json.dumps({"fabrication": {"drill_step_mm": "0.1"}}))
-        stages = self.run_spine(project, wanted)
-        self.assertEqual((stages[-1].name, stages[-1].status), ("footprint", check_spine.COULD_NOT_RUN))
-        # P432: the spine asks `why_header_disagrees` with the project's rules, as the footprint script does
-        self.assertTrue(stages[-1].detail.startswith("the board definition disagrees with itself: "), stages[-1].detail)
+        workdir, stages = self.run_to_the_footprint(project, wanted)
+        self.assertEqual((stages[-1].name, stages[-1].status), ("schematic", check_spine.COULD_NOT_RUN))
+        self.assertIn("fabrication.drill_step_mm is not a finite number", stages[-1].detail)
+        self.assertEqual(list(workdir.glob("*.tsx")), [])
 
     def run_to_the_footprint(self, project, wanted):
         """`run` with the board engine missing, so it stops after the footprint stage: (the work folder, its stages)."""

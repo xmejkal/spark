@@ -260,11 +260,14 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
 
     def test_a_value_of_the_wrong_kind_is_a_disagreement_that_names_the_field(self):
         # boards.validate checks no header geometry: a pitch written as text reached `pads` and raised a TypeError
-        for where, field, value, said in (("header", "pitch_mm", "2.54", "physical.header.pitch_mm is not a number"),
-                                          ("header", "first_pad_from_edge_mm", True, "physical.header.first_pad_from_edge_mm is not a number"),
+        for where, field, value, said in (("header", "pitch_mm", "2.54", "physical.header.pitch_mm is not a finite number"),
+                                          ("header", "first_pad_from_edge_mm", True, "physical.header.first_pad_from_edge_mm is not a finite number"),
                                           ("header", "pins", 18, "physical.header.pins is not a list of whole numbers"),
                                           ("header", "pins", ["6", "6"], "physical.header.pins is not a list of whole numbers"),
-                                          (None, "width_mm", "21", "physical.width_mm is not a number"),
+                                          (None, "width_mm", "21", "physical.width_mm is not a finite number"),
+                                          (None, "width_mm", 10 ** 400, "physical.width_mm is not a finite number"),
+                                          (None, "height_mm", 10 ** 400, "physical.height_mm is not a finite number"),
+                                          ("header", "row_spacing_mm", float("inf"), "physical.header.row_spacing_mm is not a finite number"),
                                           (None, "header_order", [1, 2], "physical.header_order is not an object with a list of labels for each row"),
                                           (None, "header_order", {"left": 5, "right": 5},
                                            "physical.header_order is not an object with a list of labels for each row")):
@@ -308,6 +311,28 @@ class TheCommandLineTest(unittest.TestCase):
             code = emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(library.parent)])
         self.assertEqual((code, err.getvalue()), (emit_footprint.EXIT_PROBLEMS,
                                                   "problems: the board definition disagrees with itself: physical.header.pins is not a list of whole numbers\n"))
+
+    # --- MVP ---
+    def test_a_project_rule_of_the_wrong_kind_exits_could_not_run_naming_the_file_not_the_board(self):
+        # P434: the text drill step was a TypeError that `why_header_disagrees` blamed on the board
+        import contextlib
+        import io
+        from board_library import library_without
+        library = library_without("physical.header.drill_mm")
+        rules = library.parent / ".spark" / "rules.json"
+        rules.parent.mkdir(exist_ok=True)
+        rules.write_text(json.dumps({"fabrication": {"drill_step_mm": "0.1"}}))
+        err, out = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(library.parent)])
+        self.assertEqual(code, emit_footprint.EXIT_COULD_NOT_RUN)
+        self.assertIn("fabrication.drill_step_mm is not a finite number", err.getvalue())
+        self.assertNotIn("disagrees with itself", err.getvalue())
+        with contextlib.redirect_stdout(out):
+            code = emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(library.parent), "--json"])
+        said = json.loads(out.getvalue())
+        self.assertEqual((code, said["status"]), (emit_footprint.EXIT_COULD_NOT_RUN, "could-not-run"))
+        self.assertIn("%s: fabrication.drill_step_mm is not a finite number" % rules, said["message"])
 
     def test_a_missing_board_exits_could_not_run(self):
         self.assertEqual(emit_footprint.main(["--board", "no-such-board", "--json"]),
