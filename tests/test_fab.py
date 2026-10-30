@@ -170,7 +170,7 @@ class ARulesFileOfTheWrongKindIsRefusedTest(unittest.TestCase):
                             ({"fabrication": {"plating_thickness_mm": 10 ** 400}}, "fabrication.plating_thickness_mm"),
                             ({"fabrication": {"drill_step_mm": None, "plating_thickness_mm": [1]}}, "fabrication.plating_thickness_mm"),
                             ({"fabrication": {"drill_step_mm": 0.1, "unknown": "text", "// note": "text"}}, None),
-                            ({"fabrication": None}, None), ({}, None), ({"fabrication": {}}, None),
+                            ({"fabrication": {"drill_step_mm": None}}, None), ({"fabrication": None}, None), ({}, None), ({"fabrication": {}}, None),
                             ({"fabrication": 5}, "fabrication"), ({"fabrication": "x"}, "fabrication"),
                             ({"fabrication": []}, "fabrication"), ({"fabrication": 0}, "fabrication"),
                             ([], "(top level)"), (None, "(top level)"), (5, "(top level)"), ("x", "(top level)")):

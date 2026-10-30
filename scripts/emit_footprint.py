@@ -196,8 +196,8 @@ def wrong_kind(physical):
 
 
 def why_wrong_kind(board):
-    """The board's disagreement with itself, said, when a field holds a value of the wrong kind, or None (also when something is missing)."""
-    wrong = None if footprint_gaps(board) else wrong_kind(board["physical"])
+    """The board's disagreement with itself, said, when a field holds a value of the wrong kind, or None. Ask it of a board with no `footprint_gaps`."""
+    wrong = wrong_kind(board["physical"])
     return DISAGREES_MESSAGE % wrong if wrong else None
 
 

@@ -17,3 +17,4 @@
 | 13 | Mutation rows 12 and 13 matched no line | reviewer | verified, acted | re-anchored on `rules_asked` and `emit_footprint.main`; every find occurs once |
 | 14 | Behaviour changes the PR body must list: a null or list top level and a `fabrication` of `[]`, `0` or `false` are refused (main accepted them); a NaN or 1e400 board width now stops at the footprint stage; the text "no board to generate from" became "no board or rules to generate from" | refuter | acted | listed in the PR body |
 | 15 | `emit_footprint.main` catches `Exception` around `boards.load`, so a bug in the loader reads as "no board or rules" | reviewer | closed | later, not this card |
+| 16 | The one mutation run: 2 escaped (a null key checked as a value; a guard in `why_wrong_kind` that no caller needs) | mutation run | acted | a test row for a null key, which now catches it; the redundant guard is removed with its row |

@@ -15,6 +15,5 @@
  {"file": "scripts/emit_footprint.py", "name": "P434: main reads no rules", "find": "        rules = design.rules_in(project)", "replace": "        rules = {}"},
  {"file": "scripts/check_all.py", "name": "P434: buildability reads the rules raw again", "find": "rules = fab.read_rules(stated) if stated else None", "replace": "rules = json.loads(Path(stated).read_text()) if stated else None"},
  {"file": "scripts/emit_board.py", "name": "P434: read_inputs lets a board number of the wrong kind through", "find": " or emit_footprint.why_wrong_kind(board)  #", "replace": "  #"},
- {"file": "scripts/emit_footprint.py", "name": "P434: a gap-free board is not asked for its kinds", "find": "    wrong = None if footprint_gaps(board) else wrong_kind(board[\"physical\"])", "replace": "    wrong = wrong_kind(board[\"physical\"])"},
  {"file": "scripts/check_footprints.py", "name": "P434: a rules refusal with --json is bare text", "find": "print(json.dumps({\"tool\": \"check_footprints\", \"status\": COULD_NOT_RUN, \"message\": why}) if args.json else why)", "replace": "print(why)"}
 ]
