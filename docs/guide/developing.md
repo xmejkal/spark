@@ -12,8 +12,9 @@ The count is whatever that prints. A count written into the README rotted three 
 appears only inside a dated output, like the push below.
 
 **No `littlefs-python`, no image tests** ([P452](https://github.com/xmejkal/spark/issues/607)). On a Python without
-that package, the tests that build or check a flash image skip with the reason "the littlefs package is not installed".
-Run `/spark:setup` to install it and run them.
+that package, the tests of [`tests/test_look.py`](../../tests/test_look.py) that build or check a flash image skip with the reason
+"the littlefs package is not installed". The other test files that need it follow in P456. Run `/spark:setup` to install
+it and run them.
 
 **Two runs of the suite** ([P425](https://github.com/xmejkal/spark/issues/559)). The plain command above is the full
 run: every test. The push hook runs the quick run, which skips the tests marked `@slow`

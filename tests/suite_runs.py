@@ -5,7 +5,9 @@ A test that costs more than about 2 s, with a reason anyone can check, wears `@s
 what the test runs and its measured seconds with the date. `SPARK_SUITE=quick` skips every marked test, and
 `tools/check_commit.py` sets it for its quick run; a plain `python3 -m unittest discover -s tests` runs all.
 The skip's reason starts with SLOW_PREFIX, so the gate counts the slow skips apart from the real ones
-(a missing tool, a missing program). `needs_littlefs` skips with its own reason, not SLOW_PREFIX. It is not named `test_*.py`, so the suite never loads it as tests.
+(a missing tool, a missing program).
+`needs_littlefs` skips with its own reason, not SLOW_PREFIX.
+This module is not named `test_*.py`, so the suite never loads it as tests.
 """
 
 import importlib.util

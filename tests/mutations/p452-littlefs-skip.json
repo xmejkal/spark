@@ -1,0 +1,3 @@
+[
+ {"file": "tests/suite_runs.py", "name": "needs_littlefs skips on every Python", "find": "needs_littlefs = unittest.skipUnless(importlib.util.find_spec(\"littlefs\"),", "replace": "needs_littlefs = unittest.skipUnless(False,"}
+]
