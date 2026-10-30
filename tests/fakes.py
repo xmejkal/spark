@@ -173,6 +173,6 @@ class FakeOutsideWorld:
         assert self._run, "the test gave no run, and the Operation asked to run %r" % (command,)
         return self._run(command, **options)
 
-    def find_tool(self, name):
+    def find_tool(self, name, **where):
         assert self._find_tool, "the test gave no find_tool, and the Operation asked for %r" % (name,)
-        return self._find_tool(name)
+        return self._find_tool(name, **where)

@@ -13,7 +13,8 @@ from spark.core.operation import RUNS
 
 # --- MVP ---
 #: Value: `run` runs a program as `subprocess.run` does, and `find_tool` gives the `tools.Tool` for a role or a tool's
-#: name, or raises `tools.ToolProblem`. Each is the real thing, a Fake or a refusing stub, as `build_outside_world` chose.
+#: name, or raises `tools.ToolProblem`; `find_tool(name, project=None)` asks the shared tools lists without the project's.
+#: Each is the real thing, a Fake or a refusing stub, as `build_outside_world` chose.
 OutsideWorld = namedtuple("OutsideWorld", "run find_tool")
 
 

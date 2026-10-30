@@ -158,7 +158,7 @@ class TheNoSimulationDryRunTest(ProjectCase):
             return found(name)
         code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=find)
         self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
-        self.assertIn(("littlefs", (), {}), asked)
+        self.assertIn(("littlefs", (), {"project": None}), asked)
 
     def test_the_dry_run_json_names_the_look_step_with_the_flag(self):
         code, said, _, _ = self.deploy("--dry-run", "--no-simulation", "--json")

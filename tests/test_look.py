@@ -250,11 +250,17 @@ class WhatThePersonSeesTest(LookScriptCase):
         # P442: the image check asks the finder the look was given, not tools.find, so the fake decides what is installed
         self.build_from_firmware()
 
-        def without_littlefs(name):
+        asked = []
+
+        def without_littlefs(name, **where):
+            asked.append((name, where))
             return found(name) if name != "littlefs" else found("not-installed")
         code, said, _ = self.go_with(FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
                                                       else done(data("c6-flash-id.txt")), find_tool=without_littlefs), "--no-simulation", "--json")
         self.assertEqual(code, 2)
+        # as main asked it (flash_image.main's `tools.find("littlefs")`): the shared lists, not the project's file (row 23)
+        self.assertEqual([where for name, where in asked if name == "littlefs"], [{"project": None}])
+        self.assertEqual([where for name, where in asked if name != "littlefs"], [{}] * (len(asked) - 1))
         no_token = [item for item in json.loads(said[-1])["unchecked"] if item["sentence"].startswith("no token: ")]
         self.assertEqual([item["code"] for item in no_token], ["tool_missing"])
         self.assertIn("not-installed is not installed", no_token[0]["sentence"])
