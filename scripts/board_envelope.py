@@ -1,6 +1,7 @@
 """
-The `--json` answers of look.py and deploy.py (P213 PR a): one `outcomes.envelope` each, built from what the run found.
-Every `problems` and `unchecked` item carries a `code` from board_codes, the reason an agent decides on (P433).
+The `--json` answer of deploy.py (P213 PR a): one `outcomes.envelope`, built from what the run found, and the steps and
+words it shares with the look (`deploy_step`, `yes_rule`, `doctor_fix`; the look's items are in spark.bench.look_at_board,
+P442). Every `problems` and `unchecked` item carries a `code` from board_codes, the reason an agent decides on (P433).
 
 Nothing here runs a command or prints. The status comes from `outcomes.envelope`, and the problems and unchecked
 items are chosen from the exit code the script already decided, so the status and the exit code cannot disagree.
@@ -8,12 +9,9 @@ A step that needs the person (`needs_yes`) is a step Claude relays, never one it
 not the yes, and neither is "go ahead" in a chat.
 """
 
-import json
-
-import board_codes
 import board_doctor
 import boards
-from spark.core import outcomes
+from spark.core import codes, outcomes
 import ready_check
 from deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 
@@ -46,8 +44,8 @@ def look_argv(project, port, evidence):
 
 
 def dumps(envelope):
-    """The envelope as the one compact line a script prints."""
-    return json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
+    """The envelope as the one compact line a script prints: `outcomes.dumps`."""
+    return outcomes.dumps(envelope)
 
 
 def look_step(project, port, evidence, why="read the board first: the board restarts while it is read"):
@@ -61,40 +59,9 @@ def deploy_step(project, token, port, evidence, why):
                          effects=["deletes", "writes"], needs_yes=True)
 
 
-def look_envelope(report, project, evidence):
-    """The envelope of a LookReport. `problems` are its stops and its warnings (a field that differs), `unchecked` its
-    unknown fields, a missing token and a last deploy that was not checked: the lists LookReport.status counts. A token, whatever the status, brings the
-    deploy step."""
-    problems = [{"subject": "stop", "code": stop.code, "sentence": stop.sentence, "fix": "deploy.py will refuse"}
-                for stop in report.stops]
-    problems += [{"subject": "flash", "code": board_codes.FLASH_DIFFERS, "sentence": warning,
-                  "fix": "deploy.py asks the person to accept it"} for warning in report.warnings]
-    unchecked = [{"code": board_codes.FIELD_UNKNOWN, "sentence": "%s unknown: %s" % each,
-                  "fix": "unknown is not a pass: deploy.py names it and asks the person"} for each in report.unknown.items()]
-    no_token = report.no_token_reason()
-    if no_token:
-        unchecked.append({"code": no_token.code, "sentence": "no token: %s" % no_token.sentence,
-                          "fix": "fix that, then run look.py again"})
-    if report.last_deploy_not_checked():
-        unchecked.append({"code": board_codes.LAST_DEPLOY_NOT_CHECKED,
-                          "sentence": "last deploy not checked: %s" % report.last_deploy.why, "fix": report.last_deploy_fix()})
-    token = report.token()
-    following = [deploy_step(project, token, report.port, evidence,
-                             "erases ALL of the flash, then writes the image. Relay the warnings first. " + yes_rule(evidence))] if token else []
-    return outcomes.envelope("look", "look", report.to_dict(), problems, unchecked, following)
-
-
-def look_stop_envelope(stop, doctor=None, places=boards.ButtonPlaces.EMPTY):
-    """The envelope of a look that could not run: one unchecked item, with the LookStop's sentence and `reason`. `doctor` is the board doctor's BoardDoctorResult after
-    a failed read, or None: its facts go in `data.doctor` and its next step for the person's hands is the `fix`, naming the
-    buttons as `places` (ButtonPlaces) does."""
-    return outcomes.envelope("look", "look", {"doctor": board_doctor.as_dict(doctor)} if doctor else None,
-                             unchecked=[{"code": stop.reason, "sentence": str(stop), "fix": doctor_fix(doctor, places)}])
-
-
 def bad_argument_envelope(tool, bad):
     """The envelope of a run that a bad argument stopped (outcomes.BadArgument `bad`): one unchecked item, and no data."""
-    return outcomes.envelope(tool, tool, None, unchecked=[{"code": board_codes.BAD_ARGUMENT, "sentence": str(bad),
+    return outcomes.envelope(tool, tool, None, unchecked=[{"code": codes.BAD_ARGUMENT, "sentence": str(bad),
                                                            "fix": "%s.py --help lists the arguments" % tool}])
 
 

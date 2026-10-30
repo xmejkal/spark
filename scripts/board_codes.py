@@ -10,6 +10,8 @@ site names its code in `reason`, and `CODES` says in one sentence what each code
     the gate's refusals    a GateClosedError's `reason`: the deploy gate stays shut
     the grant's refusals   a GrantRefusedError's `reason`, from its WHY_ word (board_grant.CODE_FOR_WHY)
     deploy's own           a DeployError's `reason`, and what deploy.py reports when the flash or the board's start fails
+
+The codes every Operation can write (`bad_argument`, `crash`) are the core's, in `spark.core.codes` (P442).
 """
 
 # --- MVP ---
@@ -33,10 +35,9 @@ ANSWERED_NO, GRANT_ENDED = "answered_no", "grant_ended"
 NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE = "no_sim_toml", "firmware_line_bad", "no_image"
 LOG_UNREADABLE, CHIP_UNKNOWN = "log_unreadable", "chip_unknown"
 EVIDENCE_REFUSES, IMAGE_CHANGED = "evidence_refuses", "image_changed"
-#: What deploy.py reports on its own: the flash, the board's start, and an argument it cannot run with.
+#: What deploy.py reports on its own: the flash and the board's start.
 FLASH_FAILED = "flash_failed"
 READY_NOT_SEEN, READY_UNKNOWN = "ready_not_seen", "ready_unknown"
-BAD_ARGUMENT = "bad_argument"
 #: Not in the look or deploy envelope: the reasons of grant.py's refusals (board_grant.CODE_FOR_WHY).
 NOT_A_GRANT, BAD_MINUTES, BAD_SCOPE, SERIAL_NOT_MAC = "not_a_grant", "bad_minutes", "bad_scope", "serial_not_mac"
 
@@ -75,7 +76,6 @@ CODES = {
     FLASH_FAILED: "a flash command failed, so the board may be erased and not written",
     READY_NOT_SEEN: "the board's files differ from the image, the firmware stopped with an error, or it printed no ready",
     READY_UNKNOWN: "the board could not be read after the flash, or the passed run's log names no files",
-    BAD_ARGUMENT: "an argument that the script cannot run with",
     NOT_A_GRANT: "the store's grant file for the board is not a grant for it",
     BAD_MINUTES: "--minutes is not a whole number from 1 to 1440",
     BAD_SCOPE: "--scope is not a scope a grant has",

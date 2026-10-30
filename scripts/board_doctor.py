@@ -154,14 +154,16 @@ class BoardDoctorService:
         return BoardDoctorResult(tuple(results), tool_said, step, IF_NOT_HELPED.get(step))
 
 
-def after_esptool(stop, project, run):
+def after_esptool(stop, project, run, find_tool=None):
     """The BoardDoctorResult for a board_look.LookStop from esptool's read, or None when the stop names no port (it
-    was no failed read). The tools come from the project's tools list. tools.ToolProblem and UnknownStepError pass up."""
+    was no failed read). The tools come from `find_tool` (a name -> tools.Tool), the project's tools list when None.
+    tools.ToolProblem and UnknownStepError pass up."""
     if stop.port is None:
         return None
-    shell = tools.find("board-shell", project)
+    find_tool = find_tool or (lambda name: tools.find(name, project))
+    shell = find_tool("board-shell")
     doctor = BoardDoctorService.for_board(PortFinder(shell, run), ConsoleProbe.for_tool(shell, stop.port, run))
-    return doctor.examine(stop.port, tools.find("flasher", project), stop.tool_said)
+    return doctor.examine(stop.port, find_tool("flasher"), stop.tool_said)
 
 
 def step_sentence(code, places=boards.ButtonPlaces.EMPTY):
@@ -169,11 +171,11 @@ def step_sentence(code, places=boards.ButtonPlaces.EMPTY):
     return MESSAGE_FOR[code] % {"boot": places.boot, "reset": places.reset, "orientation": places.orientation}
 
 
-def stop_answer(script, stop, project, run):
+def stop_answer(script, stop, project, run, find_tool=None):
     """(the lines a script prints, the BoardDoctorResult or None) when esptool's look stopped with `stop`. After a failed
-    read, the board doctor's facts and next step follow, and the next step is the last line."""
+    read, the board doctor's facts and next step follow, and the next step is the last line. `find_tool` as `after_esptool`."""
     try:
-        result = after_esptool(stop, project, run)
+        result = after_esptool(stop, project, run, find_tool)
     except (tools.ToolProblem, UnknownStepError) as cannot:
         return ["%s: %s (no doctor: %s)" % (script, stop, cannot)], None
     if result is None:
@@ -182,9 +184,9 @@ def stop_answer(script, stop, project, run):
         "  " + line for line in describe(result, boards.ButtonPlaces.of_project(project))], result
 
 
-def stop_lines(script, stop, project, run):
+def stop_lines(script, stop, project, run, find_tool=None):
     """The lines of `stop_answer`."""
-    return stop_answer(script, stop, project, run)[0]
+    return stop_answer(script, stop, project, run, find_tool)[0]
 
 
 def describe(result, places=boards.ButtonPlaces.EMPTY):

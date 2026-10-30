@@ -36,10 +36,10 @@
   "replace": "return [\"  \" + line for line in out]"
  },
  {
-  "file": "scripts/look.py",
-  "name": "the look's failed read prints its lines without the guard",
-  "find": "print(guard_sentence(\"\\n\".join(lines), args.port, args.project, places.boot, places.reset, places.orientation),\n              file=sys.stderr)",
-  "replace": "print(\"\\n\".join(lines), file=sys.stderr)"
+  "file": "scripts/spark/core/cli.py",
+  "name": "the look's failed read prints its lines without the guard: run_cli prints the diagnostics raw",
+  "find": "print(guard_lines(\"\\n\".join(result.diagnostics)), file=sys.stderr)",
+  "replace": "print(\"\\n\".join(result.diagnostics), file=sys.stderr)"
  },
  {
   "file": "scripts/deploy.py",

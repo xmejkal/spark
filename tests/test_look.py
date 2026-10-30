@@ -1,5 +1,6 @@
 """P219 step 3 (#201): look.py prints what the look found, in the lines a person reads, and changes nothing on the board."""
 
+import ast
 import contextlib
 import hashlib
 import io
@@ -16,16 +17,17 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_doctor  # noqa: E402
 import deploy_gate  # noqa: E402
 import boards  # noqa: E402
 import flash_image  # noqa: E402
 import look  # noqa: E402
+from spark.bench import look_at_board  # noqa: E402
+from spark.core.cli import run_operation  # noqa: E402
 import sim_project  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent  # noqa: E402
+from fakes import FakeConsent, FakeOutsideWorld  # noqa: E402
 from spark.core import outcomes  # noqa: E402
-from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
+from test_board_look import LookCase, data, done, found  # noqa: E402
 
 RESTART = "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
 MAC = "8c:bf:ea:xx:xx:xx"
@@ -44,16 +46,19 @@ class LookScriptCase(LookCase):
             self.ran.append(command)
             return done(data(devs)) if "devs" in command else done(text or data(esptool), 1 if fail else 0)
 
+        return self.go_with(FakeOutsideWorld(run=run, find_tool=found), *argv)
+
+    def go_with(self, outside, *argv):
+        """(exit code, stdout lines, stderr) of look.py on `outside`, a FakeOutsideWorld, so no test patches tools.find (P442)."""
         out, err = io.StringIO(), io.StringIO()
-        with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)), \
-                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = look.main(["--project", str(self.project), *argv], run=run)
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = look.main(["--project", str(self.project), *argv], outside=outside)
         return code, out.getvalue().splitlines(), err.getvalue()
 
     def build_from_firmware(self):
         """The image of firmware/ with no run, as flash_image.py writes it."""
         patcher = mock.patch.object(flash_image, "interpreter_for",
-                                    side_effect=lambda given, project=None: flash_image.Interpreter(self.micropython, 0))
+                                    side_effect=lambda given, project=None, find_tool=None: flash_image.Interpreter(self.micropython, 0))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
@@ -132,10 +137,10 @@ class WhatThePersonSeesTest(LookScriptCase):
     def test_a_port_with_an_override_shows_as_a_question_mark_in_the_stop_on_stderr(self):
         # P423: the failed read's lines go through guard_lines too
         self.run_the_scenario()
-        with mock.patch.object(board_doctor, "after_esptool", return_value=None):
-            code, _, problems = self.go("--port", "/dev/cu.usb\u202emodem", fail=True)
+        code, _, problems = self.go("--port", "/dev/cu.usb\u202emodem", fail=True)
         self.assertEqual(code, 2)
-        self.assertTrue(problems.startswith("look.py: could not read the board on /dev/cu.usb?modem."), problems)
+        self.assertEqual(problems.splitlines()[0], "look.py: could not read the board on /dev/cu.usb?modem")
+        self.assertNotIn("\u202e", problems)
 
     def test_a_newline_in_the_port_cannot_fake_a_line_of_the_stop_and_json_keeps_the_port_raw(self):
         # P430: the port goes into the stop's first line, so it is put on one line before the stop is guarded
@@ -240,6 +245,25 @@ class WhatThePersonSeesTest(LookScriptCase):
         code, said, _ = self.go("--no-simulation")
         self.assertEqual(code, 2)
         self.assertRegex(said[-1], r"^  no token: .*flash_image\.py --project .* --files firmware -o ")
+
+    def test_no_simulation_with_a_finder_that_lacks_littlefs_gives_no_token_and_the_install_line(self):
+        # P442: the image check asks the finder the look was given, not tools.find, so the fake decides what is installed
+        self.build_from_firmware()
+
+        asked = []
+
+        def without_littlefs(name, **where):
+            asked.append((name, where))
+            return found(name) if name != "littlefs" else found("not-installed")
+        code, said, _ = self.go_with(FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
+                                                      else done(data("c6-flash-id.txt")), find_tool=without_littlefs), "--no-simulation", "--json")
+        self.assertEqual(code, 2)
+        # as main asked it (flash_image.main's `tools.find("littlefs")`): the shared lists, not the project's file (row 23)
+        self.assertEqual([where for name, where in asked if name == "littlefs"], [{"project": None}])
+        self.assertEqual([where for name, where in asked if name != "littlefs"], [{}] * (len(asked) - 1))
+        no_token = [item for item in json.loads(said[-1])["unchecked"] if item["sentence"].startswith("no token: ")]
+        self.assertEqual([item["code"] for item in no_token], ["tool_missing"])
+        self.assertIn("not-installed is not installed", no_token[0]["sentence"])
 
     def test_the_json_look_says_none_and_its_deploy_step_carries_the_flag(self):
         self.build_from_firmware()
@@ -418,11 +442,79 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.assertEqual(self.stops(), "look.py: requirements.json names no board\n")
 
     def test_a_tool_that_is_missing(self):
+        def missing(name):
+            raise tools.ToolProblem("no esptool")
+        code, said, problems = self.go_with(FakeOutsideWorld(find_tool=missing))
+        self.assertEqual((code, said, problems), (2, [], "look.py: no esptool\n"))
+
+
+class TheOperationTest(LookScriptCase):
+    """P442: the look runs without a CLI: run_operation over LookAtBoard gives the result, and nothing is printed."""
+
+    def test_run_operation_gives_the_lines_the_findings_and_the_deploy_step_with_no_stdout(self):
+        self.run_the_scenario()
+        values = {"project": self.project, "port": None, "ignore_older_runs": False, "no_simulation": False}
         out, err = io.StringIO(), io.StringIO()
-        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("no esptool")), \
-                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = look.main(["--project", str(self.project)])
-        self.assertEqual((code, out.getvalue(), err.getvalue()), (2, "", "look.py: no esptool\n"))
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            result = run_operation(look_at_board.LookAtBoard(), values, FakeOutsideWorld(
+                run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command else done(data("c6-flash-id.txt")),
+                find_tool=found))
+        self.assertEqual((out.getvalue(), err.getvalue(), result.status(), result.findings, result.diagnostics), ("", "", "ok", [], ()))
+        self.assertEqual(result.lines[1:3], ["  port   /dev/cu.usbmodem101", "  mac    " + MAC])
+        self.assertEqual(result.lines[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
+        self.assertEqual([(step.op, step.needs_yes, step.argv[3]) for step in result.next], [("deploy", True, self.token())])
+        self.assertEqual(result.data["token"], self.token())
+
+    def test_run_operation_on_an_unknown_field_gives_the_unchecked_finding(self):
+        self.run_the_scenario()
+        values = {"project": self.project, "port": None, "ignore_older_runs": False, "no_simulation": False}
+        result = run_operation(look_at_board.LookAtBoard(), values, FakeOutsideWorld(
+            run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command else done(data("c6-flash-id-garbled.txt")),
+            find_tool=found))
+        self.assertEqual((result.status(), [(f.severity, f.subject, f.code) for f in result.findings]),
+                         ("could-not-run", [("could-not-run", None, "field_unknown")]))
+
+
+class ACrashTest(LookScriptCase):
+    """P442: a crash is answered as could-not-run, with an envelope under --json, and never hidden."""
+
+    def crashing(self):
+        def run(command, **kw):
+            raise RuntimeError("boom at /opt/someone/project")
+        return FakeOutsideWorld(run=run, find_tool=found)
+
+    def test_a_crash_with_json_is_an_envelope_with_code_crash_and_exit_2(self):
+        self.run_the_scenario()
+        code, said, problems = self.go_with(self.crashing(), "--json")
+        envelope = json.loads(said[-1])
+        self.assertEqual((code, len(said), envelope["status"], envelope["data"], envelope["problems"], envelope["next"]),
+                         (2, 1, "could-not-run", None, [], []))
+        self.assertEqual([(item["code"], item["fix"]) for item in envelope["unchecked"]],
+                         [("crash", "report this to the spark maintainers with the stderr traceback")])
+        self.assertIn("RuntimeError: boom at /opt/someone/project", problems)
+
+    def test_a_crash_without_json_says_the_class_on_stderr_and_exits_2(self):
+        self.run_the_scenario()
+        code, said, problems = self.go_with(self.crashing())
+        self.assertEqual((code, said), (2, []))
+        self.assertEqual(problems.splitlines()[:3], ["look: crashed, RuntimeError", "report this to the spark maintainers with the stderr traceback",
+                                                     "Traceback (most recent call last):"])
+
+    def test_the_sentence_of_a_crash_holds_no_message(self):
+        self.run_the_scenario()
+        said = self.go_with(self.crashing(), "--json")[1][-1]
+        self.assertEqual(json.loads(said)["unchecked"][0]["sentence"], "RuntimeError: the traceback is on stderr")
+        self.assertNotIn("/opt/someone", said)
+
+    def test_the_bench_lists_the_look_for_the_frontends(self):
+        from spark import bench
+        self.assertEqual(bench.OPERATIONS, {"look": bench.look_at_board.LookAtBoard})
+
+    def test_look_imports_no_area_module_but_spark_bench(self):
+        tree = ast.parse(Path(look.__file__).read_text())
+        imported = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)} \
+            | {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+        self.assertEqual(imported, {"sys", "spark.bench", "spark.bench.look_at_board", "spark.core.cli"})
 
 
 class TheHelpTest(unittest.TestCase):

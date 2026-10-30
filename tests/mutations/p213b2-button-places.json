@@ -8,7 +8,7 @@
 {"file":"scripts/flasher.py","name":"flasher drops places","find":"self.boot_hint = self.boot_hint_for(places)","replace":"self.boot_hint = self.boot_hint_for(boards.ButtonPlaces.EMPTY)"},
 {"file":"scripts/firmware_platform.py","name":"record_of lets BoardError out","find":"except (OSError, ValueError, AttributeError, boards.BoardError) as cannot:","replace":"except (OSError, ValueError, AttributeError) as cannot:"},
 {"file":"scripts/board_look.py","name":"reader ignores its hint","find":"raise LookStop(\"could not read the board on %s. %s\", port, self.boot_hint, port=port,","replace":"raise LookStop(\"could not read the board on %s. %s\", port, flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY), port=port,"},
-{"file":"scripts/board_look.py","name":"looker drops project hint","find":"EsptoolReader(tools.find(\"flasher\", project), run, hint))","replace":"EsptoolReader(tools.find(\"flasher\", project), run))"},
+{"file":"scripts/board_look.py","name":"looker drops project hint","find":"EsptoolReader(find_tool(\"flasher\"), run, hint))","replace":"EsptoolReader(find_tool(\"flasher\"), run))"},
 {"file":"scripts/deploy_service.py","name":"no_reset uses empty places","find":"download_mode.no_reset(places)","replace":"download_mode.no_reset()"},
 {"file":"scripts/deploy.py","name":"deploy press_reset ignores project","find":"download_mode.press_reset(boards.ButtonPlaces.of_project(args.project))","replace":"download_mode.press_reset()"}
 ]

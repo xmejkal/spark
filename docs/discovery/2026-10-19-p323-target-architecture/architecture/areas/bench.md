@@ -27,8 +27,9 @@ it. It never writes or erases without a gate that the person opened, and it says
 ### Its components
 
 One module per Operation, named after it: `look_at_board.py` (`LookAtBoard`, op `look`), `deploy_image.py`,
-`issue_grant.py`, `check_grant.py`, `run_live_code.py`, `reach_board.py`. `bench/__init__.py` holds `OPERATIONS` and the
-area's index. The modules keep today's `board_` and `deploy_` prefixes, so no name repeats a CLI's name (rule C1). An
+`issue_grant.py`, `check_grant.py`, `run_live_code.py`, `reach_board.py`. `bench/__init__.py` holds `OPERATIONS` and
+`build_project_outside_world`, the area's builder of core's `OutsideWorld` (P442: `look_at_board.py` exists, the look's
+findings and lines are its own, and `board_envelope.py` keeps deploy's envelope and the shared steps). The modules keep today's `board_` and `deploy_` prefixes, so no name repeats a CLI's name (rule C1). An
 arrow in the diagram is an import at `d064a65`, read with `ast`.
 
 ```mermaid

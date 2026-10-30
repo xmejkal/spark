@@ -303,7 +303,8 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Decorator | wraps an object of another class, has the same methods, and adds one behaviour around them | what it adds, then the whole name of what it wraps | `RetryingBoardConnection` cures the board once and runs the code again |
 | Renderer | turns one value into lines of a sheet or the text of a file, and decides nothing again | what it draws, then its form | `NumberedList` and `MermaidDiagram` render the steps (`WIRING_VIEWS`); `WokwiBreadboardDiagram` and `SvgBreadboardDiagram` render the layout (`DRAWING_RENDERERS`), with `FILE_NAME`, `NOUN`, `PURPOSE_MESSAGE` and `SHEET_MESSAGE` |
 | Platform | a bundle of factories for the parts that depend on the firmware's language: each `make_` method builds one | a plain noun; the docstring says what varies | `FirmwarePlatform` builds the flasher, the board connection, the ready check and the console probe for MicroPython |
-| Fake | stands in for a real part in the tests, in `tests/fakes.py` | `Fake`, then the whole name of the part | `FakeBoardConnection`, `FakeConsoleProbe` |
+| Fake | stands in for a real part in the tests, in `tests/fakes.py` | `Fake`, then the whole name of the part | `FakeBoardConnection`, `FakeConsoleProbe`, `FakeOutsideWorld` |
+| Operation | one job, with one public method, `run()`: a class with `name`, `arguments` and `effects`, which a frontend runs through the core (see [The core contract](#the-core-contract)) | a verb, then its object | `LookAtBoard` |
 
 The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
 gave `ConsentStrategy`, `TerminalConsentStrategy`, `GateClosedError`, `require_open_gate` and the unit suffixes. PR 4
@@ -319,14 +320,132 @@ PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `
 ### The package
 
 `scripts/spark/` is a package, and `scripts/` is on the path whenever a script runs (it is `sys.path[0]`) and in every
-test, so `import spark.core.outcomes` needs no path change. `scripts/spark/core/` holds the leaf modules every script
-shares: `outcomes` (the exit codes and the three outcomes), `text_guards` and `zone_time`. They import nothing of spark.
-A script writes `from spark.core import outcomes` and then `outcomes.EXIT_OK`, or `from spark.core.outcomes import
-EXIT_OK`. The other scripts stay flat in `scripts/` until their own card moves them. A tool that lists the scripts
+test, so `import spark.core.outcomes` needs no path change. `scripts/spark/core/` holds the core contract (the next
+section) and the leaf modules every script shares: `outcomes` (the exit codes and the three outcomes), `text_guards`,
+`zone_time` and `codes`. The leaves import nothing of spark. A script writes `from spark.core import outcomes` and then
+`outcomes.EXIT_OK`, or `from spark.core.outcomes import EXIT_OK`. `scripts/spark/bench/` is the first area package: one
+module per Operation (`look_at_board`), and `OPERATIONS` and the area's `build_project_outside_world` in its `__init__.py`.
+The other scripts stay flat in `scripts/` until their own card moves them. A tool that lists the scripts
 (`tools/inventory.py`, `tools/measure.py`, the tests that read every script) looks in the folders under `scripts/` too.
 Most of them leave out `scripts/stand_in/`, but `test_no_magic_strings` reads it too. `test_orphans`,
-`test_self_confirmation` and the inventory leave out each `__init__.py`. A child started with
-`python3 -I` never imports `spark.core`, because `-I` drops the script's folder from `sys.path`.
+`test_self_confirmation` and the inventory leave out each `__init__.py` as a script to route, and `test_orphans` counts
+the imports of a package's `__init__.py`. A child started with `python3 -I` never imports `spark.core`, because `-I`
+drops the script's folder from `sys.path`.
+
+### The core contract
+
+The core ([P442](https://github.com/xmejkal/spark/issues/587), wave 3 of the refactor) is what every area and every
+frontend shares, so that a CLI, an agent or an MCP tool runs the same code. An Operation (`spark.core.operation`) is a
+class with `name` (the `op` the envelope prints), `arguments` (its `Argument`s, as argparse adds them) and `effects`
+(`reads`, `runs`, `board`), and one public method, `run(**values, outside)`, which returns an `OperationResult`
+(`spark.core.result`): `data`, `findings` (a `Finding` per thing found, with its severity, subject, code, sentence and
+fix), `next` (a `NextStep` per step an agent may take), `lines` (the report a person reads), `diagnostics` (lines for
+the person beside the answer: the board doctor's, a crash's traceback) and `notes`. `status()` is `outcomes.status_of`
+over the findings, so `ok` stays unreachable while anything is unchecked, and `to_envelope(tool, op)` is the envelope
+in today's key order. An Operation runs a program and finds a tool only through `outside`, an `OutsideWorld`
+(`spark.core.outside`): `run` runs a program and `find_tool` gives a tool by its name. The rest of the outside (the
+project's files, the store, and the child Python that `image_evidence.CompileCheck` starts) still goes direct, and
+moves behind the outside with its own card. `build_outside_world(effects,
+find_tool)` gives the real `run` only when the effects hold `runs`, and a stub that raises `SparkError` with code
+`undeclared_effect` otherwise; an area's builder, `spark.bench.build_project_outside_world(project, effects)`, adds the
+project's tool finder. A test gives a `FakeOutsideWorld`. `SparkError` (`spark.core.errors`) is the one error an
+Operation raises to answer instead of crashing: a `ValueMessageError` with `code`, `fix` and `status`.
+
+`spark.core.cli` holds the frontends. `run_operation(operation, values, outside)` runs for any frontend and turns a
+`SparkError` into one Finding of its status, and any other exception into one unchecked Finding with code `crash`: the
+sentence names the exception class only, because a message can carry a home path, and `diagnostics` gets the op and
+the class, the fix, and the traceback, its last line through `printable`. `run_cli(text, operation, argv, *, outside_builder, outside=None)` is the CLI: it parses the Operation's
+arguments with `outcomes.AnsweringParser` (a bad flag is a `bad_argument` envelope under `--json`, the usage without),
+runs, renders with `JsonEnvelope` or `TextReport` (the two Renderers, which decide nothing again), prints the diagnostics
+on stderr through `guard_lines` and returns `EXIT_FOR[status]`. Rule X2 names it by file and name as the function that
+prints in `scripts/spark/`, beside the Renderers and the terminal consent; `outcomes.AnsweringParser.exit_with_usage`
+prints the usage too and stands in the baseline. A script's `main(argv=None, outside=None)` is one call
+of `run_cli`; `scripts/look.py` is the first, over `LookAtBoard`. The core's own codes are in `spark.core.codes`.
+
+```mermaid
+classDiagram
+  class Operation {
+    <<Operation>>
+    name
+    arguments
+    effects
+    run(**values, outside) OperationResult
+  }
+  class LookAtBoard {
+    <<Operation>>
+    run(project, port, ignore_older_runs, no_simulation, outside)
+  }
+  class OperationResult {
+    <<Result>>
+    data
+    findings
+    next
+    lines
+    diagnostics
+    notes
+    status()
+    to_envelope(tool, op)
+  }
+  class Finding {
+    <<Value>>
+    severity
+    subject
+    code
+    sentence
+    fix
+  }
+  class NextStep {
+    <<Value>>
+    op
+    argv
+    why
+    effects
+    needs_yes
+    needs_person
+  }
+  class Argument {
+    <<Value>>
+    flags
+    dest
+    kind
+    help
+    default
+    group
+  }
+  class OutsideWorld {
+    <<Value>>
+    run
+    find_tool
+  }
+  class SparkError {
+    <<Error>>
+    code
+    fix
+    status
+  }
+  class JsonEnvelope {
+    <<Renderer>>
+    render(result, tool, op)
+  }
+  class TextReport {
+    <<Renderer>>
+    render(result)
+  }
+  class cli {
+    run_operation(operation, values, outside)
+    run_cli(text, operation, argv, outside_builder, outside)
+  }
+  Operation <|-- LookAtBoard
+  Operation o-- Argument
+  Operation ..> OperationResult
+  Operation ..> OutsideWorld
+  Operation ..> SparkError
+  OperationResult o-- Finding
+  OperationResult o-- NextStep
+  cli ..> Operation
+  cli ..> JsonEnvelope
+  cli ..> TextReport
+```
 
 ### The rules test
 
@@ -371,7 +490,7 @@ to the rules we set". New code follows them now. Today's names change in the nam
    | Level | Its one responsibility | Its name | Example |
    |---|---|---|---|
    | CLI | one topic for a person and Claude, with one subcommand per job | a noun | `parts.py`, with `parts.py show` |
-   | Operation | one job, with one public method, `run()` | a verb, then its object | `ShowPart` |
+   | Operation | one job, with one public method, `run()` | a verb, then its object | `LookAtBoard`, `ShowPart` |
    | helper | one thing, with several methods about it | an `-er` noun or a plain noun | `BoardReader`, `PortFinder` |
 
 4. An Operation's module, class and op name (printed as `op` in the JSON) use the same words: the module `show_part`,

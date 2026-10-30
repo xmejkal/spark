@@ -56,7 +56,7 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "look-ignores-flag",
-  "find": "return NoSimulationEvidence(project) if no_simulation else",
+  "find": "return NoSimulationEvidence(project, find_tool) if no_simulation else",
   "replace": "return PassedRunEvidence(ignore_older_runs) if no_simulation else"
  },
  {

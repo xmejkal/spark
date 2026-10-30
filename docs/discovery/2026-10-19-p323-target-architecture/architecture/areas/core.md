@@ -17,17 +17,17 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 |---|---|
 | `core/outcomes.py` | the status words, `EXIT_FOR`, `status_of`, `envelope`, `step`, `page`, moved from `scripts/outcomes.py` |
 | `core/result.py` | `OperationResult`, `Finding`, `NextStep` |
-| `core/operation.py` | the `Operation` base class with `schema()`, `Argument`, `COMMON_ARGUMENTS` (`--project`, `--json`, `--port`, `--dry-run`, `--out`, `--timeout`) |
+| `core/operation.py` | the `Operation` base class, `Argument`, `COMMON_ARGUMENTS` (`--project`, `--json`, `--port`; `--dry-run`, `--out`, `--timeout` and `schema()` wait for their first user), the effects `READS`, `RUNS`, `BOARD` |
 | `core/errors.py` | `SparkError` |
-| `core/codes.py` | the codes two or more areas emit, such as `tool_missing`, `crash`, `bad_argument` |
-| `core/outside.py` | `OutsideWorld`, `Privacy`, `pick` |
-| `core/cli.py` | `run_operation(..., trace=None)`, which masks with `Privacy` and then calls `trace`, `run_cli`, `TextReport`, `JsonEnvelope` |
+| `core/codes.py` | the codes the core writes for every Operation: `bad_argument`, `crash`, `undeclared_effect` (`tool_missing` stays the bench's) |
+| `core/outside.py` | `OutsideWorld` (`run`, `find_tool`), `build_outside_world`; `Privacy` and `pick` wait |
+| `core/cli.py` | `run_operation(operation, values, outside)`, `run_cli(text, operation, argv, *, outside_builder, outside=None)`, `HelpText`, `TextReport`, `JsonEnvelope`; `trace` and `Privacy` wait |
 | `core/zone_time.py` | the leaf `zone_time`: times with their zone |
 | `core/text_guards.py` | the leaf `text_guards` (once `screen_text`, renamed in P418): the guards where text leaves spark |
 
 | Seam | Kind | Who fills it |
 |---|---|---|
-| `OutsideWorld` | Value of callables and one mapping: `run`, `write`, `fetch`, `clock`, `consent`, `environ` | `records.build_outside` in production, `FakeOutsideWorld` in tests |
+| `OutsideWorld` | Value of callables: `run` and `find_tool` today; `write`, `fetch`, `clock`, `consent`, `environ` with their first user | `spark.bench.build_project_outside_world` in production, `FakeOutsideWorld` in tests |
 | `Privacy` | Value: path replacements and secret values to mask | records, from the record folders and `account_env` rows (`tools.py:339`) |
 | the frontend | a function that calls `run_operation` and renders the result | `run_cli` today, an MCP server later |
 
@@ -52,7 +52,10 @@ classDiagram
     findings
     next
     lines
+    diagnostics
+    notes
     status()
+    to_envelope(tool, op)
   }
   class Finding {
     <<Value>>
@@ -73,11 +76,7 @@ classDiagram
   class OutsideWorld {
     <<Value>>
     run
-    write
-    fetch
-    clock
-    consent
-    environ
+    find_tool
   }
   class SparkError {
     <<Error>>
@@ -94,8 +93,8 @@ classDiagram
 ```
 
 An Operation is a class with one public method, `run`. Its keyword parameters are its arguments' `dest` names, plus
-`outside` and `backends`: `LookAtBoard.run(self, project, port, no_simulation, ignore_older_runs, *, outside,
-backends)`. Its module is named after it, and the area's `OPERATIONS` in `__init__.py` maps each printed `op` to its
+`outside`: `LookAtBoard.run(self, project, port, ignore_older_runs, no_simulation, *, outside)` (P442; `backends` folded
+into `outside.find_tool`). Its module is named after it, and the area's `OPERATIONS` in `__init__.py` maps each printed `op` to its
 class. One test checks that every `Argument.dest` names a parameter. `SparkError.status` is an instance field with
 the class default `could-not-run`: `ImpossibleError` (today `assign_pins.Impossible`) defaults to `problems`, and
 `GateClosedError` sets it per instance, as its `code` is today.
@@ -111,8 +110,8 @@ the declared effects need and puts a refusing stub in the others. A call to a st
 
 ### The main flow
 
-The signature is `run_cli(prog, operations, argv=None, *, build_outside, outside=None)`. A CLI's `main(argv=None,
-outside=None)` passes its `outside` on. A test passes a `FakeOutsideWorld` there, and production passes nothing.
+The signature is `run_cli(text, operation, argv=None, *, outside_builder, outside=None)`, `text` a `HelpText(prog,
+description, epilog)` (P442; a mapping of Operations comes with S9). A CLI's `main(argv=None, outside=None)` passes its `outside` on. A test passes a `FakeOutsideWorld` there, and production passes nothing.
 
 ```mermaid
 sequenceDiagram

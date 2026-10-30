@@ -39,6 +39,7 @@ import check_footprints  # noqa: E402
 import check_physics  # noqa: E402
 import check_spine  # noqa: E402
 import board_codes  # noqa: E402
+from spark.core import codes  # noqa: E402
 import board_grant  # noqa: E402
 import board_look  # noqa: E402
 import check_vendor_pins  # noqa: E402
@@ -225,14 +226,17 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
 
 
 class TheBenchCodesTableTest(unittest.TestCase):
-    """P433: every code that look.py and deploy.py write is in board_codes.CODES, which says it in one sentence."""
+    """P433: every code that look.py and deploy.py write is in board_codes.CODES or the core's codes.CODES (P442), which say
+    it in one sentence."""
 
-    def test_the_table_holds_each_constant_of_the_module_once_with_a_sentence(self):
-        constants = {name: value for name, value in vars(board_codes).items() if name.isupper() and isinstance(value, str)}
-        self.assertEqual(sorted(constants.values()), sorted(board_codes.CODES))
-        sentences = list(board_codes.CODES.values())
-        self.assertTrue(all(sentence.strip() for sentence in sentences))
-        self.assertEqual(len(set(sentences)), len(sentences))
+    def test_the_tables_hold_each_constant_of_their_module_once_with_a_sentence_and_share_no_code(self):
+        for module in (board_codes, codes):
+            constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)}
+            self.assertEqual(sorted(constants.values()), sorted(module.CODES))
+            sentences = list(module.CODES.values())
+            self.assertTrue(all(sentence.strip() for sentence in sentences))
+            self.assertEqual(len(set(sentences)), len(sentences))
+        self.assertEqual(set(board_codes.CODES) & set(codes.CODES), set())
 
     @slow("runs the look, gate, grant and doctor test modules once more under a spy, 1 test, 15.7 s on 2026-10-27")
     def test_every_reason_raised_is_in_the_table(self):
@@ -257,7 +261,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
     def test_agents_md_names_every_code(self):
         text = (ROOT / "docs" / "guide" / "agents.md").read_text()
-        self.assertEqual([code for code in board_codes.CODES if "`%s`" % code not in text], [])
+        self.assertEqual([code for code in list(board_codes.CODES) + list(codes.CODES) if "`%s`" % code not in text], [])
 
     def test_every_why_a_site_raises_a_grant_refusal_with_has_a_code(self):
         tree = ast.parse(Path(board_grant.__file__).read_text())

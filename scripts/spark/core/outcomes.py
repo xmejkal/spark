@@ -105,6 +105,11 @@ def envelope(tool, op, data=None, problems=(), unchecked=(), next_steps=(), trun
     return said
 
 
+def dumps(envelope):
+    """The envelope as the one compact line a script prints (it was board_envelope.dumps, which now calls this)."""
+    return json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
+
+
 def step(op, argv, why, effects=(), needs_yes=False, needs_person=None):
     """A step an agent may take next (§6.4.2): ids only in `argv` — a label or a reason travels in a file. `needs_person`
     is a key only for a step that passes it: True when the person must use their hands first (press a button) and the

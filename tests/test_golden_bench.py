@@ -12,6 +12,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 
 import golden_bench  # noqa: E402
 import board_codes  # noqa: E402
+from spark.core import codes  # noqa: E402
 
 
 class BenchGoldenTest(unittest.TestCase):
@@ -49,7 +50,7 @@ class BenchGoldenTest(unittest.TestCase):
                  for golden in sorted(golden_bench.GOLDEN_DIR.glob(pattern))
                  for key in ("problems", "unchecked") for item in json.loads(golden.read_text())[key]]
         self.assertTrue(items, "no golden holds an item, so the test would pass for nothing")
-        self.assertEqual([name for name, item in items if item.get("code") not in board_codes.CODES], [])
+        self.assertEqual([name for name, item in items if item.get("code") not in {**board_codes.CODES, **codes.CODES}], [])
 
     def test_the_token_ends_in_the_image_hash(self):
         # The goldens print the image half as <image>, so this pins it: the first 4 hex of the image's sha256.

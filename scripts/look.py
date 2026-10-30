@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
 """Read the board on USB without changing it, compare it with the project's board record, and print a token (P219)."""
 
-import argparse
-import subprocess
 import sys
-from pathlib import Path
 
-import board_doctor
-import board_envelope
-import board_look
-import boards
-from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
-from spark.core.outcomes import EXIT_COULD_NOT_RUN, AnsweringParser, BadArgument
-from spark.core.text_guards import guard_lines, guard_sentence
+from spark.bench import build_project_outside_world
+from spark.bench.look_at_board import LookAtBoard
+from spark.core.cli import HelpText, run_cli
 
 EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash_id`. It writes nothing,
 erases nothing and changes no flash. The board restarts while esptool reads it: a running program stops and starts again.
@@ -49,53 +42,15 @@ board doctor's lines still go to stderr. Every `problems` and `unchecked` item h
 exits 2. Exit codes do not change; the envelope's status is the exit code's.
 
 Exit codes: 0 every field matches, there is a token and the last deploy was checked, 1 a field differs or the look found a stop, 2 it could not run
-or could not check something (a field unknown, no token, a last deploy it could not check), and the sentence says why."""
+or could not check something (a field unknown, no token, a last deploy it could not check), and the sentence says why. A crash is 2 too: with --json
+an envelope with one unchecked item, code crash; on stderr `look: crashed, <class>`, what to do, and the traceback. Without --json the same
+on stderr and nothing on stdout."""
 
 
-def main(argv=None, run=subprocess.run):
-    """Print the look. `run` is how a command runs. Returns the exit code."""
-    parser = AnsweringParser(prog="look.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
-                             formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--project", type=Path, default=Path("."),
-                        help="the project folder with requirements.json and sim/ (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
-                        "(one board on two nodes named by its serial counts once)")
-    which = parser.add_mutually_exclusive_group()
-    which.add_argument(IGNORE_OLDER_RUNS_FLAG, action="store_true",
-                       help="give a token even when a log in sim/runs/ tested another image (default: no token)")
-    which.add_argument(NO_SIMULATION_FLAG, action="store_true",
-                       help="give a token for an image that no simulation tested, when firmware/ has a main.py, "
-                       "compiles and is what the image holds (default: a passed run must name the image)")
-    parser.add_argument("--json", action="store_true", help="print one envelope on stdout (docs/guide/agents.md)")
-    argv = sys.argv[1:] if argv is None else list(argv)
-    try:
-        args = parser.parse_args(argv)
-    except BadArgument as bad:  # P433: with --json an envelope, else the usage on stderr as argparse prints it
-        if "--json" not in argv:
-            parser.exit_with_usage(guard_lines(str(bad)))
-        _print_json(board_envelope.bad_argument_envelope("look", bad))
-        return EXIT_COULD_NOT_RUN
-    evidence = evidence_for(args.project, args.no_simulation, args.ignore_older_runs)
-    try:
-        report = board_look.looker(args.project, run).run(args.project, args.port, evidence)
-    except board_look.LookStop as stop:
-        lines, doctor = board_doctor.stop_answer("look.py", stop, args.project, run)
-        places = boards.ButtonPlaces.of_project(args.project)
-        # --- MVP --- the port, the project path (a tool problem names its tools file) and the button words, each on one line (P430)
-        print(guard_sentence("\n".join(lines), args.port, args.project, places.boot, places.reset, places.orientation),
-              file=sys.stderr)
-        if args.json:
-            _print_json(board_envelope.look_stop_envelope(stop, doctor, places))
-        return EXIT_COULD_NOT_RUN
-    if args.json:
-        _print_json(board_envelope.look_envelope(report, args.project.resolve(), evidence))
-    else:
-        print("\n".join(board_look.report_lines(report)))
-    return report.exit_code()
-
-
-def _print_json(envelope):
-    print(board_envelope.dumps(envelope))
+def main(argv=None, outside=None):
+    """Print the look. `outside` is the OutsideWorld a test gives; a run builds the project's. Returns the exit code."""
+    return run_cli(HelpText("look.py", __doc__.strip().split("\n\n")[0], EPILOG), LookAtBoard(), argv,
+                   outside_builder=build_project_outside_world, outside=outside)
 
 
 if __name__ == "__main__":

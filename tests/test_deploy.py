@@ -127,7 +127,7 @@ class TheNoSimulationDryRunTest(ProjectCase):
     def setUp(self):
         super().setUp()
         patcher = mock.patch.object(flash_image, "interpreter_for",
-                                    side_effect=lambda given, project=None: flash_image.Interpreter(self.micropython, 0))
+                                    side_effect=lambda given, project=None, find_tool=None: flash_image.Interpreter(self.micropython, 0))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
@@ -148,6 +148,17 @@ class TheNoSimulationDryRunTest(ProjectCase):
         code, _, problems, ran = self.deploy("--dry-run", "--no-simulation")
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
         self.assertIn("firmware/main.py, line", problems)
+
+    def test_the_image_check_asks_for_littlefs_without_the_project_as_flash_image_does(self):
+        # P442: with no finder given, the evidence asks tools.find as main did, so a project's tools file changes nothing here
+        asked = []
+
+        def find(name, *args, **kwargs):
+            asked.append((name, args, kwargs))
+            return found(name)
+        code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=find)
+        self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
+        self.assertIn(("littlefs", (), {"project": None}), asked)
 
     def test_the_dry_run_json_names_the_look_step_with_the_flag(self):
         code, said, _, _ = self.deploy("--dry-run", "--no-simulation", "--json")

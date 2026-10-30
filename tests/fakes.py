@@ -158,3 +158,21 @@ class FakeTscircuitExport:
         self.asked.append((str(circuit_path), form))
         return self.results.get(form, tabbed_page.SvgExportResult(
             '<svg xmlns="http://www.w3.org/2000/svg"><title>fake %s</title></svg>' % form, None))
+
+
+class FakeOutsideWorld:
+    """Fake OutsideWorld (spark.core.outside): `run` answers a command as `subprocess.run` would, with the callable a test
+    gives, and keeps each command in `ran`; `find_tool` gives a tools.Tool by its name with the callable given (a dict's
+    `get`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program."""
+
+    def __init__(self, run=None, find_tool=None):
+        self.ran, self._run, self._find_tool = [], run, find_tool
+
+    def run(self, command, **options):
+        self.ran.append(command)
+        assert self._run, "the test gave no run, and the Operation asked to run %r" % (command,)
+        return self._run(command, **options)
+
+    def find_tool(self, name, **where):
+        assert self._find_tool, "the test gave no find_tool, and the Operation asked for %r" % (name,)
+        return self._find_tool(name, **where)
