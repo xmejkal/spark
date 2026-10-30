@@ -75,8 +75,8 @@ class LookAtBoard(Operation):
         """The result of a LookStop: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
         lines, doctor = board_doctor.stop_answer(SCRIPT, stop, project, outside.run, outside.find_tool)
         places = boards.ButtonPlaces.of_project(project)
-        # the port, the project path (a tool problem names its tools file) and the button words, each on one line (P430)
-        said = guard_sentence("\n".join(lines), port, project, places.boot, places.reset, places.orientation)
+        # the port and the button words, each on one line (P430); a tool problem's path is flat already (P444)
+        said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
         return OperationResult({"doctor": board_doctor.as_dict(doctor)} if doctor else None,
                                [Finding(outcomes.COULD_NOT_RUN, None, stop.reason, str(stop), board_envelope.doctor_fix(doctor, places))],
                                diagnostics=said.split("\n"))
