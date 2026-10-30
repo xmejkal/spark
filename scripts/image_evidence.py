@@ -352,8 +352,9 @@ class NoSimulationEvidence(ImageEvidence):
 
     def __init__(self, project, find_tool=None):
         self.project = Path(project)
-        #: a name -> tools.Tool, for the image check's littlefs and MicroPython build; the project's tools list when None
-        self.find_tool = find_tool or (lambda name: tools.find(name, self.project))
+        #: a name -> tools.Tool for the image check's littlefs and MicroPython build, or None: then littlefs is asked of the
+        #: tools list without the project, as flash_image.main asks, and the build with it, as interpreter_for always did
+        self.find_tool = find_tool
 
     def why_not_ready(self, image):
         """None, or one sentence. A broken file is a sentence; a missing tool raises a tools.ToolProblem (P436)."""
@@ -393,7 +394,7 @@ class NoSimulationEvidence(ImageEvidence):
     # --- MVP --- P436: a missing tool raises its ToolProblem (tool_missing: /spark:setup); an unreadable file is a sentence
     def _why_image_differs(self, image):
         try:
-            self.find_tool("littlefs")  # as flash_image.main does, so a missing littlefs names its install line
+            (self.find_tool or tools.find)("littlefs")  # as flash_image.main does, so a missing littlefs names its install line
             built = flash_image.interpreter_for(None, self.project, self.find_tool).image(flash_image.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tools.ToolProblem, ImportError) as cannot:
