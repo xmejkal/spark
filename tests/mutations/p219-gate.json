@@ -67,9 +67,9 @@
   "replace": ".run(self.project, port, type(self.evidence)())"
  },
  {
-  "file": "scripts/look.py",
+  "file": "scripts/spark/bench/look_at_board.py",
   "name": "look.py ignores flag",
-  "find": ".run(args.project, args.port, evidence)",
-  "replace": ".run(args.project, args.port, PassedRunEvidence())"
+  "find": ".run(project, port, evidence)",
+  "replace": ".run(project, port, evidence_for(project, False, False, outside.find_tool))"
  }
 ]

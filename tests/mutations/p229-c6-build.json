@@ -12,7 +12,7 @@
  {"file": "scripts/flash_image.py", "name": "compare the wrong tool field", "find": "entry.get(\"micropython_port\") == build", "replace": "entry.get(\"file\", \"\").startswith(build[:5])"},
  {"file": "scripts/flash_image.py", "name": "read the board from the wrong file", "find": "Path(project) / \"requirements.json\"", "replace": "Path(project) / \"project.json\""},
  {"file": "scripts/flash_image.py", "name": "the build-found branch is never taken", "find": "    if not build:\n", "replace": "    if True:\n"},
- {"file": "scripts/flash_image.py", "name": "the build's tool is looked up without the project", "find": "Path(tools.find(name, project).command[0])", "replace": "Path(tools.find(name).command[0])"},
+ {"file": "scripts/flash_image.py", "name": "the build's tool is looked up without the project", "find": "Path(find_tool(name).command[0])", "replace": "Path(tools.find(name).command[0])"},
  {"file": "scripts/flash_image.py", "name": "the lists are read without the project", "find": "tools.merged(project)[\"tools\"]", "replace": "tools.merged()[\"tools\"]"},
  {"file": "data/tools.json", "name": "the XIAO C6 entry names no build", "find": "\"micropython_port\": \"SEEED_XIAO_ESP32C6\",", "replace": ""}
 ]

@@ -44,6 +44,11 @@ def script_files():
                   if "stand_in" not in path.relative_to(scripts).parts and path.name != "__init__.py")
 
 
+def package_files():
+    """Each `__init__.py` under scripts/spark: not a script to route, but its imports count (spark.bench imports its Operations, P442)."""
+    return sorted((ROOT / "scripts" / "spark").rglob("__init__.py"))
+
+
 def imports_in(scripts):
     """Every module name another script imports: the last word of a module, and the names a `from spark...` brings in."""
     named = set()
@@ -67,7 +72,7 @@ class NothingShipsUnusedTest(unittest.TestCase):
 
     def test_every_script_is_routed_to_or_imported(self):
         scripts = script_files()
-        text, imported = routes(), imports_in(scripts)
+        text, imported = routes(), imports_in(scripts + package_files())
         orphans = [path.name for path in scripts
                    if path.stem not in LIBRARIES and path.name not in text
                    and path.stem not in imported]
@@ -75,7 +80,7 @@ class NothingShipsUnusedTest(unittest.TestCase):
                                       "these, and no script imports them: %s" % orphans)
 
     def test_every_library_is_imported_by_a_script(self):
-        imported = imports_in(script_files())
+        imported = imports_in(script_files() + package_files())
         unused = sorted(LIBRARIES - imported)
         self.assertEqual(unused, [], "libraries nothing imports: %s" % unused)
 
