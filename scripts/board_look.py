@@ -478,11 +478,12 @@ class LookService:
             raise LookStop("no board record for %s: P230 will research one.", name, reason=board_codes.NO_BOARD_RECORD)
 
 
-def looker(project, run=subprocess.run):
-    """A LookService with mpremote and esptool as the project's tools list finds them. tools.ToolProblem becomes a LookStop."""
+def looker(project, run=subprocess.run, find_tool=None):
+    """A LookService with mpremote and esptool as `find_tool` (a name -> tools.Tool; the project's tools list when None)
+    finds them. tools.ToolProblem becomes a LookStop."""
+    find_tool = find_tool or (lambda name: tools.find(name, project))
     try:
         hint = flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.of_project(project))
-        return LookService(PortFinder(tools.find("board-shell", project), run),
-                           EsptoolReader(tools.find("flasher", project), run, hint))
+        return LookService(PortFinder(find_tool("board-shell"), run), EsptoolReader(find_tool("flasher"), run, hint))
     except tools.ToolProblem as cannot:
         raise LookStop("%s", cannot, reason=board_codes.TOOL_MISSING)

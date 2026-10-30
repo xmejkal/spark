@@ -127,7 +127,7 @@ class TheNoSimulationDryRunTest(ProjectCase):
     def setUp(self):
         super().setUp()
         patcher = mock.patch.object(flash_image, "interpreter_for",
-                                    side_effect=lambda given, project=None: flash_image.Interpreter(self.micropython, 0))
+                                    side_effect=lambda given, project=None, find_tool=None: flash_image.Interpreter(self.micropython, 0))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))

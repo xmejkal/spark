@@ -133,22 +133,24 @@ def build_entry(project):
     return build, None
 
 
-def interpreter_for(given, project=None):
+def interpreter_for(given, project=None, find_tool=None):
     """
     The MicroPython build and its offset: the file given, at the offset of the board's build (0 when no entry
     holds that build), else the tools list's download for the build the project's board names (P229), else the
     firmware-image role's (P82). A board whose build no tool holds is a ToolProblem, never another chip's build.
+    `find_tool` (a name -> tools.Tool) finds the download; the project's tools list when None.
     """
     build, held = build_entry(project)
+    find_tool = find_tool or (lambda name: tools.find(name, project))
     if given:
         return Interpreter(Path(given), offset_of(held[1]) if held else 0)
     if held:
         name, entry = held
-        return Interpreter(Path(tools.find(name, project).command[0]), offset_of(entry))
+        return Interpreter(Path(find_tool(name).command[0]), offset_of(entry))
     if build:
         raise tools.ToolProblem("no tool on the tools list holds the MicroPython build %s that the board names; add "
                                 "one from https://micropython.org/download/%s/" % (build, build))
-    found = tools.find("firmware-image", project)
+    found = find_tool("firmware-image")
     return Interpreter(Path(found.command[0]), offset_of(found.entry))
 
 

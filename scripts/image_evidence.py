@@ -350,8 +350,10 @@ class NoSimulationEvidence(ImageEvidence):
     simulation = SIMULATION_NONE
     grant_refusal = board_grant.WHY_NO_SIMULATION
 
-    def __init__(self, project):
+    def __init__(self, project, find_tool=None):
         self.project = Path(project)
+        #: a name -> tools.Tool, for the image check's littlefs and MicroPython build; the project's tools list when None
+        self.find_tool = find_tool or (lambda name: tools.find(name, self.project))
 
     def why_not_ready(self, image):
         """None, or one sentence. A broken file is a sentence; a missing tool raises a tools.ToolProblem (P436)."""
@@ -391,8 +393,8 @@ class NoSimulationEvidence(ImageEvidence):
     # --- MVP --- P436: a missing tool raises its ToolProblem (tool_missing: /spark:setup); an unreadable file is a sentence
     def _why_image_differs(self, image):
         try:
-            tools.find("littlefs")  # as flash_image.main does, so a missing littlefs names its install line
-            built = flash_image.interpreter_for(None, self.project).image(flash_image.files_under(self.project / "firmware"))
+            self.find_tool("littlefs")  # as flash_image.main does, so a missing littlefs names its install line
+            built = flash_image.interpreter_for(None, self.project, self.find_tool).image(flash_image.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tools.ToolProblem, ImportError) as cannot:
             raise tools.ToolProblem(CANNOT_CHECK_MESSAGE % (image.path.name, cannot))
@@ -416,6 +418,7 @@ class NoSimulationEvidence(ImageEvidence):
         return [NO_SIMULATION_FLAG]
 
 
-def evidence_for(project, no_simulation, ignore_older_runs):
-    """The evidence the flags of look.py and deploy.py select (they exclude each other in argparse)."""
-    return NoSimulationEvidence(project) if no_simulation else PassedRunEvidence(ignore_older_runs)
+def evidence_for(project, no_simulation, ignore_older_runs, find_tool=None):
+    """The evidence the flags of look.py and deploy.py select (they exclude each other in argparse). `find_tool` is the
+    NoSimulationEvidence's (a name -> tools.Tool), the project's tools list when None."""
+    return NoSimulationEvidence(project, find_tool) if no_simulation else PassedRunEvidence(ignore_older_runs)

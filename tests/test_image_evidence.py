@@ -408,7 +408,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     raising = None  # P436: a test sets what the interpreter's lookup raises, so it needs no patch of its own
 
-    def find_interpreter(self, given, project=None):
+    def find_interpreter(self, given, project=None, find_tool=None):
         if self.raising:
             raise self.raising
         return flash_image.Interpreter(self.interpreter, self.offset)
