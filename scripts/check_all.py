@@ -54,6 +54,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
 import design  # noqa: E402
+import fab  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN  # noqa: E402
 
@@ -229,7 +230,10 @@ class Buildability(Check):
         # defaults, which is the right answer and not a skip. Declaring `rules` among this
         # check's inputs made a project that has none skip buildability altogether.
         stated = inputs.get("rules")
-        rules = json.loads(Path(stated).read_text()) if stated else None
+        try:
+            rules = fab.read_rules(stated) if stated else None  # --- MVP --- (P434): a value of the wrong kind is refused, naming the file
+        except fab.RulesError as refused:
+            return answer(unchecked=[str(refused)])
         findings = check_footprints.run(circuit_of(inputs), placeholders, rules=rules)
 
         def of(severity):

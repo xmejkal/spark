@@ -103,6 +103,11 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
         board["physical"]["header"]["pitch_mm"] = "2.54"
         self.assertEqual(refusal(board), ("header_disagrees", "physical.header.pitch_mm"))
 
+    def test_a_number_too_big_for_a_float_disagrees_instead_of_crashing(self):
+        board = firebeetle()
+        board["physical"]["width_mm"] = 10 ** 400
+        self.assertEqual(refusal(board), ("header_disagrees", "physical.width_mm"))
+
     def test_a_header_the_pad_code_cannot_place_names_the_field(self):
         for field, value in (("flush_edge", "-y"), ("rows", 3), ("pitch_mm", 0), ("pins", [18, 14, 2])):
             with self.subTest(field=field):

@@ -1,0 +1,23 @@
+# P434 rule kinds: findings rows
+
+| # | claim | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 1 | `fab.process` returns the stated value unchecked at fab.py:37 | card | verified | held: `process` is lines 35-38 of main's fab.py, so the card's :37 is right (the plan's "off by one" was wrong) |
+| 2 | A text `drill_step_mm` is a TypeError in `emit_footprint.render`, blamed on the board by `why_header_disagrees` | card | verified, acted | now refused by `fab.read_rules` when the rules file is read; `emit_footprint.main` exits could-not-run naming the file and the field |
+| 3 | A 400-digit `width_mm` reaches the footprint stage of the spine as a "crashed" stage | plan | rejected, then acted | wrong: the OverflowError is in `emit_board.place` at `width = column_x + widest + MARGIN_MM`, so the spine stopped at the schematic stage as `emit_board.py crashed`. Review fix: `emit_board.read_inputs` now asks `emit_footprint.why_wrong_kind`, so the CLI prints a sentence naming `physical.width_mm` and the spine stops at the footprint stage; a text `pitch_mm` now stops there too, before `board.tsx` is written |
+| 4 | `emit_footprint.main` called `design.rules_in` outside its try | plan | verified, acted | a rules file of the wrong kind would have been a traceback; now inside a try, exit 2 |
+| 5 | `check_footprints.main` read the rules file raw | plan | verified, acted | now `fab.read_rules`, exit 2 with the sentence on stdout; imports `fab` only |
+| 6 | JSON `NaN` and `Infinity` parse, so `drill_step_mm: NaN` was a ValueError blamed on the board and `inf` gave a NaN hole silently; `true` gave a 1 mm step silently | plan | verified, acted | all refused by `fab.is_finite_number` |
+| 7 | A zero or negative `fabrication` value (ZeroDivisionError, a wrong hole) | plan | closed | out of this card; proposed card: a per-key table, since `annular_ring_margin_mm` may be 0 |
+| 8 | Other raw readers of rules.json (check_physics.py, compare_design.py, and check_all.py lines 132 and 144) | plan | closed | out of this card; proposed card: every reader goes through `fab.read_rules` |
+| 9 | A top level that is no object, or a null `fabrication` | council | acted | a top level that is no object is refused; `fabrication: null` stays the default (pinned by a test) |
+| 10 | `check_all.py` Buildability read `--rules` raw: text gave `[????] TypeError`, NaN a silent ok | refuter | verified, acted | reads through `fab.read_rules`; a refusal is a could-not-run answer naming the file and the field. Tests for text and NaN, a mutation row |
+| 11 | `check_footprints --json` printed a rules refusal as bare text | reviewer | verified, acted | prints `{"tool", "status": "could-not-run", "message"}`; a test |
+| 12 | The `agents.md` and `commands/build.md` sentences were stale ("is not a number", "refused when the file is read") | reviewer | acted | both say "finite number" and name the readers |
+| 13 | Mutation rows 12 and 13 matched no line | reviewer | verified, acted | re-anchored on `rules_asked` and `emit_footprint.main`; every find occurs once |
+| 14 | Behaviour changes the PR body must list: a null or list top level and a `fabrication` of `[]`, `0` or `false` are refused (main accepted them); a NaN or 1e400 board width now stops at the footprint stage; the text "no board to generate from" became "no board or rules to generate from" | refuter | acted | listed in the PR body |
+| 15 | `emit_footprint.main` catches `Exception` around `boards.load`, so a bug in the loader reads as "no board or rules" | reviewer | closed | later, not this card |
+| 16 | The one mutation run: 2 escaped (a null key checked as a value; a guard in `why_wrong_kind` that no caller needs) | mutation run | acted | a test row for a null key, which now catches it; the redundant guard is removed with its row |
+| 17 | `check_all.py` physics (line 144) and rules-vs-netlist (line 132) still read rules raw: a missing or unreadable file is a PermissionError, a top level that is no object an AttributeError, and neither names the file | refuter | closed | in the proposed card "every rules.json reader goes through `fab.read_rules`" |
+| 18 | Mutation rows in other tables went stale: p411 (two rows), sprint-6-p46, p432-one-refusal and sprint-3-p11 matched 0 lines; p97-council "F9" already matched 0 on main | refuter | acted | the five re-anchored on the new code (`why_wrong_kind` now holds `wrong_kind`'s one job); the F9 row is not from this card and stays for its owner |
+| 19 | `commands/build.md` said a text drill step stops the footprint stage "until P434" | refuter | acted | says it stops at the schematic stage and names the file and the field |

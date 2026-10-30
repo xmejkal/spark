@@ -532,13 +532,27 @@ def render(findings, design):
     return "\n".join(lines)
 
 
+# --- MVP --- (P434)
+def rules_asked(argument):
+    """(the rules of `--rules`, None), or (None, why they cannot be read): a missing file, or a value of the wrong kind."""
+    if not argument:
+        return None, None
+    if not Path(argument).is_file():
+        return None, "no rules file at %s" % argument
+    try:
+        return fab.read_rules(argument), None
+    except fab.RulesError as refused:
+        return None, str(refused)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="check_footprints.py",
         description="Check that a board can actually be built and populated.")
     parser.add_argument("circuit", help="the built netlist, usually dist/board/circuit.json")
     parser.add_argument("--rules", help="the project's .spark/rules.json, whose `fabrication` "
-                                        "section says what ITS board house can make")
+                                        "section says what ITS board house can make "
+                                        "(a value that is no finite number is refused: exit 2)")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -547,13 +561,10 @@ def main(argv=None):
         print("no built design at %s — build it first" % path)
         return EXIT_COULD_NOT_RUN
 
-    rules = None
-    if args.rules:
-        rules_path = Path(args.rules)
-        if not rules_path.is_file():
-            print("no rules file at %s" % rules_path)
-            return EXIT_COULD_NOT_RUN
-        rules = json.loads(rules_path.read_text())
+    rules, why = rules_asked(args.rules)
+    if why:
+        print(json.dumps({"tool": "check_footprints", "status": COULD_NOT_RUN, "message": why}) if args.json else why)
+        return EXIT_COULD_NOT_RUN
 
     findings = run(json.loads(path.read_text()), rules=rules)
     problems, unchecked = problems_in(findings), unchecked_in(findings)

@@ -1091,7 +1091,7 @@ def read_inputs(path, project, board_id=None):
         # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
         # which reads as "problems found" to anything that knows three outcomes.
         raise RefusedInput(SCHEMATIC_STAGE, str(broken)) from broken
-    no_footprint = emit_footprint.why_no_footprint(board)
+    no_footprint = emit_footprint.why_no_footprint(board) or emit_footprint.why_wrong_kind(board)  # --- MVP --- (P434): `place` does arithmetic on them
     if no_footprint:
         raise RefusedInput(FOOTPRINT_STAGE, no_footprint)
     return BoardInputs(design, assignments)
