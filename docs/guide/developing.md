@@ -357,8 +357,9 @@ sentence names the exception class only, because a message can carry a home path
 the class, the fix, and the traceback, its last line through `printable`. `run_cli(text, operation, argv, *, outside_builder, outside=None)` is the CLI: it parses the Operation's
 arguments with `outcomes.AnsweringParser` (a bad flag is a `bad_argument` envelope under `--json`, the usage without),
 runs, renders with `JsonEnvelope` or `TextReport` (the two Renderers, which decide nothing again), prints the diagnostics
-on stderr through `guard_lines` and returns `EXIT_FOR[status]`. It is the one function in `scripts/spark/` that prints
-(rule X2 names it by file and name, with the Renderers and the terminal consent). A script's `main(argv=None, outside=None)` is one call
+on stderr through `guard_lines` and returns `EXIT_FOR[status]`. Rule X2 names it by file and name as the function that
+prints in `scripts/spark/`, beside the Renderers and the terminal consent; `outcomes.AnsweringParser.exit_with_usage`
+prints the usage too and stands in the baseline. A script's `main(argv=None, outside=None)` is one call
 of `run_cli`; `scripts/look.py` is the first, over `LookAtBoard`. The core's own codes are in `spark.core.codes`.
 
 ```mermaid
