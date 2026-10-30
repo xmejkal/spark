@@ -17,11 +17,12 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_doctor  # noqa: E402
 import deploy_gate  # noqa: E402
 import boards  # noqa: E402
 import flash_image  # noqa: E402
 import look  # noqa: E402
+from spark.bench import look_at_board  # noqa: E402
+from spark.core.cli import run_operation  # noqa: E402
 import sim_project  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent, FakeOutsideWorld  # noqa: E402
@@ -136,10 +137,10 @@ class WhatThePersonSeesTest(LookScriptCase):
     def test_a_port_with_an_override_shows_as_a_question_mark_in_the_stop_on_stderr(self):
         # P423: the failed read's lines go through guard_lines too
         self.run_the_scenario()
-        with mock.patch.object(board_doctor, "after_esptool", return_value=None):
-            code, _, problems = self.go("--port", "/dev/cu.usb\u202emodem", fail=True)
+        code, _, problems = self.go("--port", "/dev/cu.usb\u202emodem", fail=True)
         self.assertEqual(code, 2)
-        self.assertTrue(problems.startswith("look.py: could not read the board on /dev/cu.usb?modem."), problems)
+        self.assertEqual(problems.splitlines()[0], "look.py: could not read the board on /dev/cu.usb?modem")
+        self.assertNotIn("\u202e", problems)
 
     def test_a_newline_in_the_port_cannot_fake_a_line_of_the_stop_and_json_keeps_the_port_raw(self):
         # P430: the port goes into the stop's first line, so it is put on one line before the stop is guarded
@@ -441,6 +442,33 @@ class WhatStopsTheLookTest(LookScriptCase):
         self.assertEqual((code, said, problems), (2, [], "look.py: no esptool\n"))
 
 
+class TheOperationTest(LookScriptCase):
+    """P442: the look runs without a CLI: run_operation over LookAtBoard gives the result, and nothing is printed."""
+
+    def test_run_operation_gives_the_lines_the_findings_and_the_deploy_step_with_no_stdout(self):
+        self.run_the_scenario()
+        values = {"project": self.project, "port": None, "ignore_older_runs": False, "no_simulation": False}
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            result = run_operation(look_at_board.LookAtBoard(), values, FakeOutsideWorld(
+                run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command else done(data("c6-flash-id.txt")),
+                find_tool=found))
+        self.assertEqual((out.getvalue(), err.getvalue(), result.status(), result.findings, result.diagnostics), ("", "", "ok", [], ()))
+        self.assertEqual(result.lines[1:3], ["  port   /dev/cu.usbmodem101", "  mac    " + MAC])
+        self.assertEqual(result.lines[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
+        self.assertEqual([(step.op, step.needs_yes, step.argv[3]) for step in result.next], [("deploy", True, self.token())])
+        self.assertEqual(result.data["token"], self.token())
+
+    def test_run_operation_on_an_unknown_field_gives_the_unchecked_finding(self):
+        self.run_the_scenario()
+        values = {"project": self.project, "port": None, "ignore_older_runs": False, "no_simulation": False}
+        result = run_operation(look_at_board.LookAtBoard(), values, FakeOutsideWorld(
+            run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command else done(data("c6-flash-id-garbled.txt")),
+            find_tool=found))
+        self.assertEqual((result.status(), [(f.severity, f.subject, f.code) for f in result.findings]),
+                         ("could-not-run", [("could-not-run", None, "field_unknown")]))
+
+
 class ACrashTest(LookScriptCase):
     """P442: a crash is answered as could-not-run, with an envelope under --json, and never hidden."""
 
@@ -463,7 +491,8 @@ class ACrashTest(LookScriptCase):
         self.run_the_scenario()
         code, said, problems = self.go_with(self.crashing())
         self.assertEqual((code, said), (2, []))
-        self.assertTrue(problems.startswith("look: crashed, RuntimeError\nTraceback (most recent call last):\n"), problems)
+        self.assertEqual(problems.splitlines()[:3], ["look: crashed, RuntimeError", "report this to the spark maintainers with the stderr traceback",
+                                                     "Traceback (most recent call last):"])
 
     def test_the_sentence_of_a_crash_holds_no_message(self):
         self.run_the_scenario()
