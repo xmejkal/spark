@@ -33,7 +33,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 BASELINE = "tests/architecture_baseline.json"
 #: The role words of `docs/guide/developing.md`, "Patterns and names in spark's core".
 ROLES = ("Service", "Strategy", "Adapter", "Result", "Error", "Value", "Store",
-         "Decorator", "Renderer", "Platform", "Fake")
+         "Decorator", "Renderer", "Platform", "Fake", "Operation")
 THIN_MAIN = 40       # lines: a main() this long or shorter only parses and prints
 THIN_FUNCTIONS = 3   # top-level functions besides main() a thin CLI may keep
 FAT_MAIN = 80        # lines: a main() this long holds logic
@@ -249,6 +249,8 @@ LEAVES = ("board_codes", "outcomes", "provenance", "text_guards", "zone_time")
 MOVED_GUARDS = {"drawer": {"clean", "CONTROL", "LABEL_MAX", "TEXT_MAX", "TAGS_MAX"}, "parts": {"one_line", "COMMENT_UNSAFE"}}
 #: X2: a class that may print, read and exit in `scripts/spark/`: the Renderers (by role word) and the terminal consent.
 TERMINAL_CLASSES = ("TerminalConsentStrategy",)
+#: X2: the one function that may print in `scripts/spark/`: the CLI frontend, which prints what a Renderer rendered (P442).
+TERMINAL_FUNCTIONS = ("run_cli",)
 EXCEPTION_NAMES = {name for name, value in vars(builtins).items() if isinstance(value, type) and issubclass(value, BaseException)}
 #: T1: the calls of `time` that read the clock or sleep.
 CLOCK_CALLS = {"time", "time_ns", "monotonic", "monotonic_ns", "perf_counter", "perf_counter_ns", "process_time", "sleep",
@@ -268,7 +270,7 @@ RULES = {
     "T1": "only an Adapter runs a program, reads the clock or the environment, calls the network or writes a file",
     "T2": "a test file never adds a mock.patch (mock.patch.dict on os.environ is the exception)",
     "T4": "code never branches on what is imported, as in `\"unittest\" in sys.modules`",
-    "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr or exit outside a Renderer and the terminal consent",
+    "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr or exit outside a Renderer, the terminal consent and run_cli",
     "U1": "a leaf imports nothing of spark, matching imports no drawer, and no script reads a moved guard from its old module",
     "C1": "a file name under scripts/ is unique, and an exception name ends in Error",
     "C3": "an exit code has no second name (no EXIT_ alias)",
@@ -356,7 +358,8 @@ def _is_adapter(node):
 
 
 def _may_print(node):
-    return isinstance(node, ast.ClassDef) and (role_word_of(node) == "Renderer" or node.name in TERMINAL_CLASSES)
+    return isinstance(node, ast.ClassDef) and (role_word_of(node) == "Renderer" or node.name in TERMINAL_CLASSES) \
+        or isinstance(node, ast.FunctionDef) and node.name in TERMINAL_FUNCTIONS
 
 
 def _dotted(node):
@@ -484,7 +487,7 @@ def branch_on_imports(source, known):
 
 
 def output_in_spark(source, known):
-    """X2: main, print, input, sys.stdin, sys.stdout, sys.stderr, sys.exit, readline or SystemExit in scripts/spark/, outside the Renderers and the terminal consent."""
+    """X2: main, print, input, sys.stdin, sys.stdout, sys.stderr, sys.exit, readline or SystemExit in scripts/spark/, outside the Renderers, the terminal consent and `run_cli`."""
     if not source.file.startswith("scripts/spark/"):
         return []
     aliases, seen = aliases_of(source.tree), collections.Counter()

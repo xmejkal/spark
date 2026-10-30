@@ -185,10 +185,11 @@ class PlantedBreachesTest(unittest.TestCase):
             "if \"a\" in (1 if \"b\" in sys.modules else 2):\n    pass\n")})
         self.assertEqual(measure.breaches(root), {"T4:scripts/branch.py:sys.modules": 3})
 
-    def test_x2_output_in_spark_outside_a_renderer_and_the_terminal_consent(self):
+    def test_x2_output_in_spark_outside_a_renderer_the_terminal_consent_and_run_cli(self):
         root = planted({
             "scripts/spark/core/out.py": (
-                "import sys\nimport sys as system\n\n\ndef main():\n    pass\n\n\ndef run():\n    print(\"x\")\n    answer = input()\n"
+                "import sys\nimport sys as system\n\n\ndef main():\n    pass\n\n\ndef run_cli():\n    print(sys.stderr)\n\n\n"
+                "def run():\n    print(\"x\")\n    answer = input()\n"
                 "    sys.stdout.write(answer)\n    system.stderr.write(answer)\n    sys.exit(1)\n    sys.stdin.readline()\n"
                 "    raise SystemExit(2)\n\n\n"
                 'class Draw:\n    """Renderer: draws lines."""\n\n    def draw(self):\n        print("ok")\n\n\n'
