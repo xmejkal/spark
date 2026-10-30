@@ -366,7 +366,7 @@ the code at `d064a65` under this name.
 | `LookStopError` | plan v1 | `bench/board_look.py` | Error | exists as `LookStop` |
 | `RunLog`, `status_of_run` | plan v1 | `firmware/scenario_run.py` | Value, a function | not built yet (`run_record` builds a tuple, `verdict` stays) |
 | `Brief` | comment 4 | `records/brief.py` | Value | not built yet (exists as `parts.vendor_order` and `parts.sellers`) |
-| `OutsideWorld`, `Backends` | plan v1 | `core/outside.py`, `records/backends.py` | Values | not built yet |
+| `OutsideWorld`, `Backends` | plan v1 | `core/outside.py`, `records/backends.py` | Values | `OutsideWorld` exists (P442, `run` and `find_tool`); `Backends` is not built, `find_tool` serves the look |
 | the "not checked" note in `needs.plan_pick` | P397 PR 2 [#513](https://github.com/xmejkal/spark/issues/513) | `design/needs.py` | a sentence | not built yet. The `SimulatedPart` reader's state is built (PR 1) |
 | `ScenarioSteps.component_ids`, the id check in `ScenarioRun.problem`, `--dry-run` | P399 [#515](https://github.com/xmejkal/spark/issues/515) | `firmware/scenario_steps.py`, `firmware/scenario_run.py` | a method, a check, an argument | not built yet |
 | the must lines a scenario names, and the look's list of unnamed ones | P345 PR 2 [#440](https://github.com/xmejkal/spark/issues/440) | `firmware/scenario_steps.py`, `bench/board_look.py` | a Value field, a line | exists in `run_scenario` (`StepNames`), `image_evidence` (`UnnamedMust`) and `board_look` (`RunGaps`); `Brief` is `scripts/brief.py`. The modules are not built yet |
@@ -506,7 +506,9 @@ S5, the core contract. It creates only what `look` needs in S6: `OperationResult
 S9 with its first caller, and `Backends` with `ToolFinder` in S6 with `look`'s `tools.find` patches. `SparkError.status`
 is an instance field with the class default `could-not-run`, because `GateClosedError` carries 1 or 2 per instance
 today. Section 4's four tests are in it. When a toy Operation passes every path (ok, problems, `could-not-run`, bad
-flag, `SparkError`, crash, undeclared effect) and an unchecked Finding never gives `ok`, the slice is done.
+flag, `SparkError`, crash, undeclared effect) and an unchecked Finding never gives `ok`, the slice is done. Done in P442
+(#587, PR W3-3), with the wave 3 plan's cut: `schema()`, `Privacy`, `trace`, `Backends` and `ToolFinder` wait for their
+first user; `OutsideWorld` holds `run` and `find_tool`, and `SparkError` is a `ValueMessageError`.
 
 S6, `look` on the core: `spark/bench/look_at_board.py` with `LookAtBoard`, `OPERATIONS` in `spark/bench/__init__.py`,
 `Backends` with `ToolFinder`, and `look.main` at most 15 lines by `ast`. It is an output slice for one path. A crash
@@ -514,7 +516,10 @@ exits 1 with a traceback and no envelope today (`docs/guide/agents.md`). On the 
 code `crash` and exits 2. The crash Finding's sentence is the exception class and a fixed message, because an exception
 message can carry a home path. The traceback goes to stderr. The slice adds a crash golden and changes `agents.md`'s crash lines. S7b and S9 do the same
 for the other four bench CLIs, and each area's output slice in wave 6 for the rest. When the look goldens change only
-on the crash path and `look.py` imports no area module but `spark.bench`, the slice is done.
+on the crash path and `look.py` imports no area module but `spark.bench`, the slice is done. Done in P442 (#587): no
+golden changed and none was added, because no input found crashes the look (its inputs are guarded) and a planted fault
+would need a branch on a test; the crash path is proven by unit tests. The tool finder is `OutsideWorld.find_tool`,
+threaded through `looker`, the board doctor, the image evidence and `interpreter_for`, so `test_look` patches `tools.find` nowhere.
 
 ### Wave 4: the bench on the core
 

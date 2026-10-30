@@ -29,9 +29,10 @@ Back to [the architecture](README.md).
 | fix | The text that says what to do about a Finding. A string, as today (`board_envelope.look_envelope`). |
 | sentence | The text a person reads in a Finding. |
 | why | The text a person reads in a NextStep. |
-| lines | Text for a person. stdout without `--json`, stderr with it. Replaces the proposed `diagnostics`. |
+| lines | The report a person reads: stdout without `--json`. `OperationResult.lines` (P442). |
+| diagnostics | Lines for the person beside the answer, such as the board doctor's or a crash's traceback: stderr in a CLI, a log in a server. `OperationResult.diagnostics` (P442). |
 | effect | What an Operation does outside: `reads`, `writes`, `runs` (a tool), `network`, `board`, `deletes`. `runs` is proposed. The code and the goldens say `deletes`. |
-| OutsideWorld | The Value that holds the callables for every effect: run, write, fetch, clock, consent, and the `environ` variables the Operation reads. Proposed. |
+| OutsideWorld | The Value that holds the callables for every effect: `run` and `find_tool` exist (P442); write, fetch, clock, consent and the `environ` variables the Operation reads come with their first user. |
 | probe | A read-only look at a board or a port: `ConsoleProbe`, `ReadyProbe`, `DoctorProbe`. It changes nothing on the board. A class that changes the port, such as today's `ConsoleProbe.cure`, is no probe: the names pass (P382) splits it. |
 | backend | A swappable outside thing: a tool, the firmware platform, the store or the simulator. |
 | Backends | The Value that holds every backend choice of one run, built once. Proposed. |

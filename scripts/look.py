@@ -42,7 +42,8 @@ board doctor's lines still go to stderr. Every `problems` and `unchecked` item h
 exits 2. Exit codes do not change; the envelope's status is the exit code's.
 
 Exit codes: 0 every field matches, there is a token and the last deploy was checked, 1 a field differs or the look found a stop, 2 it could not run
-or could not check something (a field unknown, no token, a last deploy it could not check), and the sentence says why."""
+or could not check something (a field unknown, no token, a last deploy it could not check), and the sentence says why. A crash is 2 too: with --json
+an envelope with one unchecked item, code crash, and the traceback on stderr; without it the traceback alone, nothing on stdout."""
 
 
 def main(argv=None, outside=None):

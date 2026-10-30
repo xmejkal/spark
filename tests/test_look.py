@@ -471,6 +471,10 @@ class ACrashTest(LookScriptCase):
         self.assertEqual(json.loads(said)["unchecked"][0]["sentence"], "RuntimeError: the traceback is on stderr")
         self.assertNotIn("/opt/someone", said)
 
+    def test_the_bench_lists_the_look_for_the_frontends(self):
+        from spark import bench
+        self.assertEqual(bench.OPERATIONS, {"look": bench.look_at_board.LookAtBoard})
+
     def test_look_imports_no_area_module_but_spark_bench(self):
         tree = ast.parse(Path(look.__file__).read_text())
         imported = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)} \

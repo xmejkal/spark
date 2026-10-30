@@ -442,7 +442,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `emit_footprint.py` | `check`, `message`, `status` |
 | `import_firmware.py` | `modules`, `problems`, `status`, `tool`, `unchecked`. Each of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`. A project with no `firmware/` folder is `could-not-run`. One with nothing to import but `main.py`, `boot.py` and `pins.py` is `problems`. Its firmware cannot be imported without running `main.py` |
 | `check_spine.py` | `check`, `stages`, `status`, and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`. `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed. With `--keep` or `--sim-dir`, `kept` lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`, `removed`, `not written` or `not kept`) and `why`. A `not written` entry of a drawing has `code` (`null` for an older refusal), `subject` and `expected` (`true` means by design, so do not retry). A `wrote` entry for `breadboard.svg` may have `drawn_from` (`record`) |
-| `look.py`, `deploy.py` | the envelope, as `parts.py`'s: see below |
+| `look.py`, `deploy.py` | the envelope, as `parts.py`'s: see below. A crash in `look.py` is an envelope too, code `crash`, exit 2 |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 
 Checking a shipped board's pin map, as an agent does, without the network:
@@ -553,7 +553,8 @@ it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.
 `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated`, and `notes` for deploy) on stdout. The status is
 the exit code's: `ok` 0, `problems` 1, `could-not-run` 2. With `--json`, deploy.py prints every line a person reads, and
 the flash tool's own output, on **stderr**, so stdout holds the envelope alone. A bad flag prints an envelope with `--json` (below).
-A raise after the flash (a traceback) prints no envelope; read the exit code and stderr.
+A raise after the flash (a traceback) prints no envelope; read the exit code and stderr. A crash in `look.py` prints an envelope with
+one `unchecked` item, code `crash`, and exits 2; the traceback is on stderr, never in the envelope ([P442](https://github.com/xmejkal/spark/issues/587)).
 
 **The `code` of an item** ([P433](https://github.com/xmejkal/spark/issues/575)). Every item of `problems` and `unchecked` in
 `look.py --json` and `deploy.py --json` has `code`, the cause in one word. Decide on the code, never on the sentence. The codes
@@ -594,8 +595,10 @@ The column "needs the person" says whether the next step waits on the person's h
 | `ready_not_seen` | deploy, stage `verify` | the board's files differ from the image, the firmware stopped with an error, or it printed no `ready`. The sentence tells which | fix the firmware, then look.py and a new yes | yes |
 | `ready_unknown` | deploy, stage `verify` | the board could not be read after the flash, or the passed run's log names no files. The sentence tells which | run the `watch` step; if it has `needs_person`, tell the person first | if `needs_person` |
 | `bad_argument` | both scripts | an argument that the script cannot run with (below) | fix the flag, run again | no |
+| `crash` | `look.py` | the look crashed: a defect in spark, never in the project. The sentence names the exception class; the traceback is on stderr | report it to the spark maintainers with the stderr traceback; running the look again for it is no use | yes |
+| `undeclared_effect` | `look.py` | the operation reached an outside that its effects do not declare: a defect in spark | report it, as for `crash` | yes |
 
-The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `serial_not_mac` and `no_mac` are in the table of `scripts/board_codes.py` too. They name the reasons of
+`bad_argument`, `crash` and `undeclared_effect` are the core's codes, in `scripts/spark/core/codes.py`: every operation can write them. The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `serial_not_mac` and `no_mac` are in the table of `scripts/board_codes.py` too. They name the reasons of
 `grant.py`'s refusals, which do not reach this envelope. With two stops, the deploy gate's `code` is the first stop's.
 
 **A bad flag.** With `--json`, `look.py` and `deploy.py` print an envelope for an argument they cannot run with, such as
@@ -681,7 +684,7 @@ count.
 
 1. `check_vendor_pins.py --json` prints a bare list and says `mismatch` where this table says `problems`, and the
    `--json` shapes differ by script ([P43](https://github.com/xmejkal/spark/issues/11)).
-2. **A crash exits 1, which this table reads as `problems`.** Run on its own, a script can crash on an input it cannot
+2. **A crash exits 1, which this table reads as `problems`, except `look.py`, which prints a `crash` envelope and exits 2.** Run on its own, a script can crash on an input it cannot
    read: exit 1, a traceback on stderr, nothing on stdout ([P131](https://github.com/xmejkal/spark/issues/65)). The
    inputs:
    - a circuit or rules file that is not JSON (`check_footprints.py`, `check_physics.py`);
