@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import flash_image  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 #: MicroPython v1.29.0's own numbers for ESP32_GENERIC_S3, which the image has to match. Literals
 #: from its source, never read back from `flash_image`: the test used the module's constants to
@@ -113,6 +114,16 @@ class TheImageTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("micropython.org", err.getvalue())
 
+
+
+class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
+    def test_a_newline_in_the_project_path_gives_one_line_in_a_requirements_file_that_cannot_be_read(self):
+        project = Path(tempfile.mkdtemp()) / NASTY
+        project.mkdir()
+        (project / "requirements.json").write_text("{not json")
+        with self.assertRaises(flash_image.tools.ToolProblem) as caught:
+            flash_image.board_build(project)
+        assert_flat(self, caught.exception)
 
 
 class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):

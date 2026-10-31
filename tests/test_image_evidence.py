@@ -24,6 +24,7 @@ from image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidenc
 from run_scenario import ScenarioSteps  # noqa: E402
 from project_image import DeployError, ProjectImage  # noqa: E402
 from test_project_image import project_with_image, write_log  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 FAILED = "failed (wokwi-cli exit 1)"
 
@@ -472,6 +473,17 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         with self.assertRaises(tools.ToolProblem) as raised:
             self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
+
+    def test_a_newline_in_the_image_name_gives_one_line_in_the_check_words_of_a_missing_tool_and_of_an_unreadable_file(self):
+        named = mock.Mock(path=Path(NASTY))
+        self.raising = tools.ToolProblem("no tool holds it")
+        with self.assertRaises(tools.ToolProblem) as raised:
+            NoSimulationEvidence(self.project)._why_image_differs(named)
+        assert_flat(self, raised.exception)
+        self.raising = OSError("gone")
+        said = NoSimulationEvidence(self.project)._why_image_differs(named)
+        self.assertIn("a?GRANTED: board ok", said)
+        self.assertNotIn("\n", said)
 
     def test_a_missing_littlefs_raises_its_tool_problem_with_the_install_line(self):
         def find(name, *args, **kwargs):

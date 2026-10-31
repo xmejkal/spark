@@ -235,7 +235,5 @@
 "T2:tests/test_tabbed_page.py:mock.patch": 2,
 "T2:tests/test_tools.py:mock.patch": 48,
 "T4:scripts/store.py:sys.modules": 2,
-"V1:scripts/flash_image.py:ToolProblem": 4,
-"V1:scripts/image_evidence.py:ToolProblem": 1,
 "X2:scripts/spark/core/outcomes.py:sys.stderr": 1
 }

@@ -388,7 +388,7 @@ class NoSimulationEvidence(ImageEvidence):
         try:
             flash_image.board_build(self.project)
         except tools.ToolProblem as cannot:
-            return CANNOT_CHECK_MESSAGE % (image.path.name, cannot)
+            return text_guards.flat_line(CANNOT_CHECK_MESSAGE, image.path.name, cannot)
         return None
 
     # --- MVP --- P436: a missing tool raises its ToolProblem (tool_missing: /spark:setup); an unreadable file is a sentence
@@ -398,9 +398,9 @@ class NoSimulationEvidence(ImageEvidence):
             built = flash_image.interpreter_for(None, self.project, self.find_tool).image(flash_image.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tools.ToolProblem, ImportError) as cannot:
-            raise tools.ToolProblem(CANNOT_CHECK_MESSAGE % (image.path.name, cannot))
+            raise tools.ToolProblem("%s", text_guards.flat_line(CANNOT_CHECK_MESSAGE, image.path.name, cannot))
         except (OSError, ValueError) as cannot:
-            return CANNOT_CHECK_MESSAGE % (image.path.name, cannot)
+            return text_guards.flat_line(CANNOT_CHECK_MESSAGE, image.path.name, cannot)
         except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as flash_image does
             if type(cannot).__name__ != "LittleFSError":
                 raise
