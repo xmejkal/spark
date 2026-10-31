@@ -60,10 +60,11 @@ order: the look, its token, then the person's yes.
    run it. A step with `needs_person: true` waits for the person's hands (the RESET press): relay it first. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line.
 
 If deploy.py refuses, relay its sentence word for word. The token is not the yes, and "go ahead" in a chat is not the
-yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. On macOS the board
+yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. The line starts with
+`SPARK_HOME=<the store>` when the run had one, so a new terminal window uses the same MicroPython build and grants. On macOS the board
 shows as `/dev/cu.usbmodem…`.
 
-deploy.py flashes only an image that passed, unless the person chose `--no-simulation` (below). The image is the one `sim/wokwi.toml` names. A log in `sim/runs/` must name
+deploy.py flashes only an image that passed, unless the person chose `--no-simulation` (below). The image is the one the `firmware = ` line of `sim/wokwi.toml` names. A build writes that line as a comment, so until the first scenario run writes it, the image is `sim/flash-with-firmware.bin`. A log in `sim/runs/` must name
 its sha256 with `verdict: passed`, and no log may name it with another verdict. A log from an older spark names no image,
 so run the scenario again. If a file in `firmware/` changed after the run, deploy.py says so: the board gets the image
 that passed, not the change. A run log that tested another image refuses the flash, because its scenario never tested
@@ -73,7 +74,7 @@ another chip.
 
 **No simulation (P337).** A walk on a real board may have no passed run, for example when the firmware uses PWM, which the simulator lacks. Then the board is the test. The flow:
 
-1. Build the image from `firmware/`: `${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --project . --files firmware -o <the image sim/wokwi.toml names>`.
+1. Build the image from `firmware/`: `${CLAUDE_PLUGIN_ROOT}/scripts/flash_image.py --project . --files firmware -o <the image: sim/flash-with-firmware.bin until a scenario run writes the `firmware = ` line of sim/wokwi.toml>`.
 2. `look.py --no-simulation --json`. It gives a token only when `firmware/main.py` exists, every `.py` file under `firmware/` compiles and the image holds `firmware/` as it is now. Else it says why, and names the build command.
 3. `deploy.py --no-simulation --json --token <the token>`. Its question starts with "no simulation tested this image". Only the person's typed yes answers it. A deploy grant never does, and deploy.py offers no grant line. The flag cannot be given with `--ignore-older-runs`.
 

@@ -7,7 +7,8 @@ Put the flash image onto the board: one that a passed run names (P192), or, with
     deploy.py --token 3f9a-0c1e                  # look again, ask yes in your terminal, erase, then write the image
     deploy.py --no-simulation --token 3f9a-0c1e  # the same for an image no simulation tested (--help)
 
-The image is the one sim/wokwi.toml names. run_scenario.py writes it, MicroPython and the project's firmware/ in one
+The image is the one the `firmware = ` line of sim/wokwi.toml names. A build writes that line as a comment, so until
+a scenario run writes it, the image is sim/flash-with-firmware.bin. run_scenario.py writes the image, MicroPython and the project's firmware/ in one
 flash image, and tests it: each run's log names the image's sha256. This flashes the image only when a run that passed
 names it and no run with another verdict does. esptool erases the flash and writes the image at 0x0, where the
 simulator loaded it. Then deploy.py copies a facts file, spark.json, to the board and reads it back (board_facts.py,
@@ -58,7 +59,8 @@ EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), a
 (--ignore-older-runs flashes anyway).
 
 --no-simulation flashes an image that no simulation tested, as the board is the test. Build the image first with
-`flash_image.py --project . --files firmware -o <the image sim/wokwi.toml names>`. Then look.py and deploy.py both need
+`flash_image.py --project . --files firmware -o <the image: sim/flash-with-firmware.bin until a scenario run writes
+the `firmware = ` line of sim/wokwi.toml>`. Then look.py and deploy.py both need
 --no-simulation. deploy.py refuses when firmware/main.py is missing, a .py file under firmware/ does not compile (or kills
 the compiler, or takes over 30 s), a run in
 sim/runs/ failed on this image, or the image is not firmware/ as it is now. It does not run the firmware, so a
@@ -73,7 +75,9 @@ When the board refuses mpremote's raw REPL for the facts copy after the flash, t
 The gate: run look.py first and pass its token. deploy.py looks at the board again (the board restarts) and refuses a
 stop (another chip, a flash too small for the image) or a token that is not this board's and this image's. Then it
 asks in your terminal, naming every warning: type yes to accept them and erase. Only a real terminal can answer.
-A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run in your own terminal window. "Go
+A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run in your own terminal window. It
+starts with SPARK_HOME=<your store> when this run had one, so the new window finds the same MicroPython build and
+grants. "Go
 ahead" in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
 
 The one other yes is a deploy grant: you ran `grant.py --scope deploy --minutes N` once in your own terminal, for this

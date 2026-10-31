@@ -282,6 +282,11 @@ class TextIsDataTest(unittest.TestCase):
         missing = [str(path.relative_to(ROOT)) for path in files if TEXT_IS_DATA not in " ".join(path.read_text().split())]
         self.assertEqual(missing, [])
 
+    def test_the_deploy_command_names_the_image_a_build_leaves_for_the_no_simulation_way(self):
+        # P463: a build writes the firmware line as a comment, so until a run names the image it is run_scenario's default
+        text = " ".join((ROOT / "commands" / "deploy.md").read_text().split())
+        self.assertIn("sim/flash-with-firmware.bin", text)
+
     def test_the_deploy_command_runs_the_look_and_deploy_but_never_the_grant(self):
         # P213: the grant is the person's yes in their own terminal, so Claude Code asks before grant.py runs
         front = (ROOT / "commands" / "deploy.md").read_text().split("---")[1]

@@ -579,16 +579,16 @@ The column "needs the person" says whether the next step waits on the person's h
 | `field_unknown` | `unchecked` | the board or the record did not say a field | relay it; deploy.py asks the person to accept it | yes |
 | `stop_found` | `unchecked` | the look found a stop, so it gave no token. The stop is its own item | as for the stop | yes |
 | `no_mac` | `unchecked`, deploy stage `gate` | the board's MAC could not be read, so the look gave no token. `grant.py` refuses with it too | reconnect the board, run look.py again | yes |
-| `evidence_refuses` | `unchecked` of a look, deploy stage `plan` | the evidence refuses the image: no passed run names it, a run tested another image, or another check failed. The sentence names the way out | run a scenario, or what the sentence names, then look.py again | no |
+| `evidence_refuses` | `unchecked` of a look, deploy stage `plan` | the evidence refuses the image: no passed run names it, a run tested another image, or another check failed. The sentence names the way out, or the no-simulation way | run a scenario, or what the sentence names (or the no-simulation way it names), then look.py again | no |
 | `last_deploy_not_checked` | `unchecked` | spark's record of the board's last deploy could not be read | relay the `fix` (repair the record), run look.py again | yes |
-| `no_terminal` | deploy, stage `gate` | there is no terminal for the person's yes. `data.run_in_terminal` is the line | give the person the line, word for word | yes |
+| `no_terminal` | deploy, stage `gate` | there is no terminal for the person's yes. `data.run_in_terminal` is the line. It starts with `SPARK_HOME=<store>` when the run had one | give the person the line, word for word | yes |
 | `token_missing` | deploy, stage `gate` | deploy.py got no token, so no look came before it | run look.py, then deploy.py with its token | no |
 | `token_stale` | deploy, stage `gate` | the board or the image is not the one the token names | run look.py again | no |
 | `answered_no` | deploy, stage `gate` | the person answered no | stop | yes |
 | `grant_ended` | deploy, stage `gate` or `flash` | the deploy grant ended before the erase. At stage `flash`, `board_state` is `may_be_erased` | ask the person for a new grant or a typed yes. At stage `flash`, tell the person the board may be erased | yes |
 | `no_sim_toml` | deploy, stage `plan` or a look | the project has no `sim/wokwi.toml` | build first (`/spark:build --keep`) | no |
 | `firmware_line_bad` | deploy, stage `plan` or a look | the firmware line of `sim/wokwi.toml` cannot be read, or names an image outside `sim/` | fix the line as the sentence says, build again | no |
-| `no_image` | deploy, stage `plan` or a look | the image that `sim/wokwi.toml` names is not there yet | run a scenario | no |
+| `no_image` | deploy, stage `plan` or a look | the image that `sim/wokwi.toml` names is not there yet (a build writes the `firmware = ` line as a comment, so until a run writes it the image is `sim/flash-with-firmware.bin`) | run a scenario, or the no-simulation way the sentence names | no |
 | `log_unreadable` | deploy, stage `plan` or a look | a run log in `sim/runs/` cannot be read | repair or remove the log, run look.py again | yes |
 | `chip_unknown` | deploy, stage `plan` | the chip of the project's board record cannot be read | fix the board in `requirements.json` | no |
 | `image_changed` | deploy, stage `gate` | the image changed after the person's yes | run look.py again | no |
@@ -631,7 +631,7 @@ the sentence if you must tell which. The check is the word `--json` in the argum
   The board doctor's `fix` and `data.person_action` are text for the person, not steps, so they carry no flag.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
   and "go ahead" in a chat is not the yes. With no terminal (the exit is 2), `next` holds the `deploy` step to relay and
-  `data.run_in_terminal` is the line to give the person word for word; a `grant` step is added when a deploy grant could
+  `data.run_in_terminal` is the line to give the person word for word (it and the `grant` line start with `SPARK_HOME=<store>` when the run had one, so the new terminal window finds the same MicroPython build and grants); a `grant` step is added when a deploy grant could
   cover it. Never run either one yourself.
 - `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must press the
   board's RESET, `data.person_action` says so, with its place when the board record has it, but only after the wait for the press ran out. So tell the person before you run
@@ -645,7 +645,7 @@ the sentence if you must tell which. The check is the word `--json` in the argum
 
 For firmware that no simulation can test (P337). Three steps, then the person's yes:
 
-1. `flash_image.py --project <p> --files firmware -o <image>`, where `<image>` is the file `sim/wokwi.toml` names.
+1. `flash_image.py --project <p> --files firmware -o <image>`, where `<image>` is the file the `firmware = ` line of `sim/wokwi.toml` names. A build writes that line as a comment, so until a scenario run writes it, `<image>` is `sim/flash-with-firmware.bin`.
 2. `look.py --project <p> --no-simulation --json`. It gives a token only when `firmware/main.py` exists, every `.py` file
    under `firmware/` compiles, no run in `sim/runs/` failed on the image, and the image holds `firmware/` as it is now. The compile runs in one child process for all the files. A source that
    kills the compiler, or one that takes longer than 30 s, is a refusal that names the last file the child began, for example
