@@ -185,18 +185,10 @@ class Board(netlist.Netlist):
             for net_name in nets_of_trace.get(element.get("source_trace_id"), []):
                 segments.setdefault(net_name, []).extend(measured)
 
-        # The width a net SUSTAINS, not the narrowest copper anywhere on it.
-        #
-        # Measured on a generated board: asking the router for 1.50 mm produced 86 segments at
-        # 1.50 and six between 0.12 and 0.85 mm LONG at 1.20 mm wide — every one the last step
-        # into a 1.2 mm pad. Judging those by a formula for long uniform traces called a
-        # correctly sized 2.9 A rail unbuildable, and the remedy it printed — "widen this net" —
-        # was for a trace that was already wide enough.
-        #
-        # A neck that short cannot reach a steady temperature: it is bonded to a pad and a plated
-        # barrel, both heatsinks. The constriction is real and it belongs to the PAD, which is
-        # `check_footprints`' subject. Falling back to the absolute minimum when a net is ALL
-        # necks keeps a genuinely tiny net from passing by having no long segment to judge.
+        # The width a net SUSTAINS, not the narrowest copper anywhere on it. On a generated board, six segments 0.12 to 0.85 mm
+        # long at 1.20 mm wide were the last step into a 1.2 mm pad; judged as a long uniform trace, a correctly sized 2.9 A rail
+        # was called unbuildable. A neck that short is bonded to a pad and a plated barrel, both heatsinks, and belongs to the PAD
+        # (`check_footprints`' subject). A net that is ALL necks falls back to the absolute minimum, so it cannot pass unjudged.
         narrowest = {}
         for net_name, measured in segments.items():
             sustained = copper.sustained_width_mm(measured)
@@ -617,6 +609,18 @@ def render(result):
     return "\n".join(lines)
 
 
+# --- MVP --- (P455, #616) the rules go through `fab.read_rules`, so a refusal is a sentence and exit 2, not a traceback
+def rules_or_reason(circuit_path, rules_path):
+    """`(rules, None)`, or `(None, why nothing can run)`: a file that is missing, or rules that fab.read_rules refuses."""
+    for path, what in ((circuit_path, "built design"), (rules_path, "rules")):
+        if not path.is_file():
+            return None, "no %s at %s" % (what, path)
+    try:
+        return fab.read_rules(rules_path), None
+    except fab.RulesError as refused:
+        return None, str(refused)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="check_physics.py",
@@ -624,28 +628,21 @@ def main(argv=None):
     parser.add_argument("circuit", help="the built netlist, usually dist/board/circuit.json")
     parser.add_argument("--rules", help="JSON naming rails, currents and voltages. Run alone, physics "
                         "reads no part records, so no resistor clears by the rail-span bound; "
-                        "check_all --project reads them")
+                        "check_all --project reads them. A top level that is no object, a value that is no finite number or is below its lowest: exit 2, naming the file")
     parser.add_argument("--json", action="store_true", help="the result as data")
     args = parser.parse_args(argv)
 
     circuit_path = Path(args.circuit)
     rules_path = Path(args.rules or circuit_path.parent.parent.parent / ".spark/rules.json")
-    for path, what in ((circuit_path, "built design"), (rules_path, "rules")):
-        if not path.is_file():
-            result = {"tool": "check_physics", "status": COULD_NOT_RUN,
-                      "reason": "no %s at %s" % (what, path)}
-            print(json.dumps(result, indent=2) if args.json else render(result))
-            return EXIT_COULD_NOT_RUN
+    rules, reason = rules_or_reason(circuit_path, rules_path)
+    if reason:
+        result = {"tool": "check_physics", "status": COULD_NOT_RUN, "reason": reason}
+        print(json.dumps(result, indent=2) if args.json else render(result))
+        return EXIT_COULD_NOT_RUN
 
-    findings = run(json.loads(circuit_path.read_text()), json.loads(rules_path.read_text()))
+    findings = run(json.loads(circuit_path.read_text()), rules)
     problems = [f for f in findings if f.severity == PROBLEM]
-    # A rule that could not look has approved nothing. This built both the status and the exit
-    # code from `problems` alone, so every `could-not-run` this file emits — an unstated rail, a
-    # resistor whose current no netlist records — was invisible to a caller, and the script whose
-    # own docstring says an unchecked rail must never look like a passing one answered
-    # `status: ok`, exit 0, over findings that were every one of them could-not-run. `check_all`'s
-    # wrapper splits the severities itself, which is why this survived: it was wrong only where
-    # the script is run directly, which is exactly how the smart bin's `make check` runs it.
+    # A rule that could not look has approved nothing: its could-not-run findings count, so the status and exit code are not `ok`.
     unchecked = [f for f in findings if f.severity == COULD_NOT_RUN]
     status = status_of(problems, unchecked)
     result = {

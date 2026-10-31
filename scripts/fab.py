@@ -41,13 +41,15 @@ def process(name, rules=None):
     return DATA["process"][name] if stated is None else stated
 
 
-# --- MVP --- (P434, #576) one reader of a rules file, so a value of the wrong kind is refused where the file is read
+# --- MVP --- (P434, #576; P454, #615) one reader of a rules file, so a value of the wrong kind or below its lowest is refused where the file is read
 #: What `fabrication_problem` says for a rules file whose top level is no object.
 WHOLE_FILE = "(top level)"
+#: The reasons `fabrication_problem` gives, as codes: the field is no object, no finite number, or below its lowest.
+NOT_AN_OBJECT, NOT_A_NUMBER, TOO_LOW = "not-an-object", "not-a-number", "too-low"
 
 
 class RulesError(ValueMessageError):
-    """Error: a rules file cannot be read, or states a `fabrication` value that is no finite number, and this is why."""
+    """Error: a rules file cannot be read, or states a `fabrication` value that is no finite number or is below its lowest, and this is why."""
 
 
 def is_finite_number(value):
@@ -60,19 +62,38 @@ def is_finite_number(value):
         return False
 
 
+def lowest_words(key):
+    """The limit of a process key as words: `above 0` or `at least 0`, from the key of its entry in `DATA["lowest"]`."""
+    (kind, number), = DATA["lowest"][key].items()
+    return "%s %s" % (kind.replace("_", " "), number)
+
+
+def is_below_lowest(key, value):
+    """True when a finite number is refused by the limit of its process key: at or under an `above`, under an `at_least`."""
+    limit = DATA["lowest"][key]
+    if "above" in limit:
+        return value <= limit["above"]
+    return value < limit["at_least"]
+
+
 def fabrication_problem(rules):
-    """None for no problem, else the field at fault: WHOLE_FILE, `fabrication`, or `fabrication.<key>` for the first key of the
-    process stated with a value that is no finite number. A null `fabrication` or key is the default; other keys are left alone."""
+    """None for no problem, else `(field, reason)`: the field at fault (WHOLE_FILE, `fabrication`, or `fabrication.<key>` for the
+    first key of the process stated wrongly) and why, NOT_AN_OBJECT, NOT_A_NUMBER or TOO_LOW. A null `fabrication` or key is the
+    default; other keys are left alone."""
     if not isinstance(rules, dict):
-        return WHOLE_FILE
+        return WHOLE_FILE, NOT_AN_OBJECT
     stated = rules.get("fabrication")
     if stated is None:
         return None
     if not isinstance(stated, dict):
-        return "fabrication"
+        return "fabrication", NOT_AN_OBJECT
     for key in DATA["process"]:
-        if stated.get(key) is not None and not is_finite_number(stated[key]):
-            return "fabrication." + key
+        if stated.get(key) is None:
+            continue
+        if not is_finite_number(stated[key]):
+            return "fabrication." + key, NOT_A_NUMBER
+        if is_below_lowest(key, stated[key]):
+            return "fabrication." + key, TOO_LOW
     return None
 
 
@@ -82,12 +103,16 @@ def read_rules(path):
         rules = json.loads(Path(path).read_text())
     except (OSError, ValueError) as broken:
         raise RulesError("%s could not be read: %s", path, broken) from broken
-    field = fabrication_problem(rules)
-    if field in (WHOLE_FILE, "fabrication"):
+    problem = fabrication_problem(rules)
+    if problem is None:
+        return rules
+    field, reason = problem
+    if reason == NOT_AN_OBJECT:
         raise RulesError("%s: %s is not an object", path, field)
-    if field is not None:
+    if reason == NOT_A_NUMBER:
         raise RulesError("%s: %s is not a finite number; write a number, or remove the key to use the default", path, field)
-    return rules
+    raise RulesError("%s: %s must be %s; write a larger number, or remove the key to use the default",
+                     path, field, lowest_words(field.rpartition(".")[2]))
 
 
 def part(name):

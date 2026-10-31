@@ -1,0 +1,11 @@
+[
+ {"file": "scripts/fab.py", "name": "P454: a value equal to an `above` limit is let through", "find": "value <= limit[\"above\"]", "replace": "value < limit[\"above\"]"},
+ {"file": "scripts/fab.py", "name": "P454: a value equal to an `at_least` limit is refused", "find": "value < limit[\"at_least\"]", "replace": "value <= limit[\"at_least\"]"},
+ {"file": "scripts/fab.py", "name": "P454: the lowest is never looked at", "find": "if is_below_lowest(key, stated[key]):", "replace": "if False:"},
+ {"file": "scripts/fab.py", "name": "P454: a too-low value is said as no number", "find": "return \"fabrication.\" + key, TOO_LOW", "replace": "return \"fabrication.\" + key, NOT_A_NUMBER"},
+ {"file": "data/fabrication.json", "name": "P454: the drill step may be zero", "find": "\"drill_step_mm\": {\"above\": 0}", "replace": "\"drill_step_mm\": {\"at_least\": 0}"},
+ {"file": "scripts/check_all.py", "name": "P455: Check.run does not refuse a rules file in one sentence", "find": "except fab.RulesError as refused:", "replace": "except ZeroDivisionError as refused:"},
+ {"file": "scripts/check_physics.py", "name": "P455: check_physics lets a refused rules file crash", "find": "except fab.RulesError as refused:", "replace": "except ZeroDivisionError as refused:"},
+ {"file": "scripts/compare_design.py", "name": "P455: compare_design lets a refused rules file crash", "find": "except fab.RulesError as refused:", "replace": "except ZeroDivisionError as refused:"},
+ {"file": "scripts/fab.py", "name": "P454: the number test runs after the limit (a text value is a TypeError)", "find": "        if not is_finite_number(stated[key]):\n            return \"fabrication.\" + key, NOT_A_NUMBER\n        if is_below_lowest(key, stated[key]):\n            return \"fabrication.\" + key, TOO_LOW", "replace": "        if is_below_lowest(key, stated[key]):\n            return \"fabrication.\" + key, TOO_LOW\n        if not is_finite_number(stated[key]):\n            return \"fabrication.\" + key, NOT_A_NUMBER"}
+]

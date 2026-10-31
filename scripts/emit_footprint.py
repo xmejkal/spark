@@ -300,7 +300,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("--board", required=True, help="board id, as in boards/<id>.json")
     parser.add_argument("-o", "--out", help="write here instead of stdout")
-    parser.add_argument("--project", help="a project directory whose boards/ is searched first; its rules.json must hold finite numbers (else exit 2)")
+    parser.add_argument("--project", help="a project directory whose boards/ is searched first; its rules.json must hold finite numbers, none below its lowest (else exit 2)")
     parser.add_argument("--json", action="store_true", help="machine-readable result")
     args = parser.parse_args(argv)
 

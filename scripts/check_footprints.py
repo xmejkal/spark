@@ -552,7 +552,7 @@ def main(argv=None):
     parser.add_argument("circuit", help="the built netlist, usually dist/board/circuit.json")
     parser.add_argument("--rules", help="the project's .spark/rules.json, whose `fabrication` "
                                         "section says what ITS board house can make "
-                                        "(a value that is no finite number is refused: exit 2)")
+                                        "(a value that is no finite number or is below its lowest is refused: exit 2)")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
