@@ -440,8 +440,8 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     def test_a_file_changed_after_the_image_refuses_and_names_the_build_command(self):
         (self.firmware / "main.py").write_text("print('ready')\nprint(2)\n")
-        self.assertEqual(self.why(), "flash-with-firmware.bin does not match a build of firmware/ as it is now (firmware/ changed, "
-                         "or spark builds images another way since): build it with flash_image.py --project %s --files firmware -o %s"
+        self.assertEqual(self.why(), "flash-with-firmware.bin does not match a build of firmware/ as it is now (firmware/, the board's MicroPython "
+                         "or how spark builds images changed since): build it with flash_image.py --project %s --files firmware -o %s"
                          % (self.project.resolve(), self.image.path))
 
     def test_a_file_that_does_not_compile_refuses_with_its_file_and_line(self):

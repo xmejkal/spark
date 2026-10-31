@@ -43,6 +43,9 @@ MD5_MAGIC = b"\xeb\xeb"                    # gen_esp32part.py:23 MD5_PARTITION_B
 DATA_TYPE = 0x01                           # gen_esp32part.py:38 DATA_TYPE; esp_partition.h:52 ESP_PARTITION_TYPE_DATA
 FAT_SUBTYPE = 0x81                         # gen_esp32part.py:87 'fat'; esp_partition.h:112 ESP_PARTITION_SUBTYPE_DATA_FAT
 VFS_LABEL = b"vfs"                         # MicroPython ports/esp32/modules/flashbdev.py:4 Partition.find(TYPE_DATA, label="vfs")
+#: The first 128 bytes of the table in ESP32_GENERIC_S3-20260824-v1.29.0.bin (sha256 1dd9dcd27ba2d6a1cb7f7b49a063f46d3d807d68b0151161233920228285e300),
+#: read from flash offset 0x8000 on 2026-10-31: nvs, phy_init, factory, then the MD5 entry. The other two v1.29.0 builds hold the same bytes.
+S3_TABLE = bytes.fromhex("aa50010200900000006000006e76730000000000000000000000000000000000aa50010100f00000001000007068795f696e6974000000000000000000000000aa5000000000010000001f00666163746f727900000000000000000000000000ebebffffffffffffffffffffffffffff8405a9bb5ce0b84c4f2ca5de9a76b050")
 VFS_SIZE = 0x200000                        # the 2 MB spark's littlefs fills: 512 blocks of 4096
 WRONG_BLOCK_COUNT = 3584                   # what MicroPython registers itself on a 16 MB flash: 14 MB / 4096 (main.c:255-275)
 
@@ -155,7 +158,6 @@ class TheImageTest(unittest.TestCase):
         self.assertIn("micropython.org", err.getvalue())
 
 
-
 class TheImageHoldsAVfsPartitionTest(unittest.TestCase):
     """P461: the table in the image names the 2 MB file system spark wrote, so MicroPython does not register its own."""
 
@@ -177,13 +179,22 @@ class TheImageHoldsAVfsPartitionTest(unittest.TestCase):
         self.assertEqual(rest[:16], MD5_MAGIC + b"\xff" * 14)
         self.assertEqual(rest[32:], b"\xff" * (TABLE_SIZE - len(covered) - 32))
 
-    def test_the_original_esp32_s_table_is_found_at_0x8000_of_the_flash_and_the_bytes_around_it_stay(self):
-        interpreter = fake_interpreter(head=b"\xe9ESP", offset=ESP32_INTERPRETER_OFFSET)
-        flash = self.image_of(interpreter, offset=ESP32_INTERPRETER_OFFSET)
-        self.assertEqual(table_of(flash)[0][-1], ("vfs", DATA_TYPE, FAT_SUBTYPE, MICROPYTHON_VFS_OFFSET, VFS_SIZE))
-        after = BOOTLOADER_TABLE_OFFSET + TABLE_SIZE
-        self.assertEqual(flash[ESP32_INTERPRETER_OFFSET:BOOTLOADER_TABLE_OFFSET], interpreter[:BOOTLOADER_TABLE_OFFSET - ESP32_INTERPRETER_OFFSET])
-        self.assertEqual(flash[after:ESP32_INTERPRETER_OFFSET + len(interpreter)], interpreter[after - ESP32_INTERPRETER_OFFSET:])
+    def test_the_table_is_found_at_0x8000_of_the_flash_and_every_byte_around_it_stays(self):
+        for offset in (0, ESP32_INTERPRETER_OFFSET):
+            with self.subTest(offset=offset):
+                interpreter = fake_interpreter(head=b"\xe9ESP", offset=offset)
+                flash = self.image_of(interpreter, offset=offset)
+                self.assertEqual(table_of(flash)[0][-1], ("vfs", DATA_TYPE, FAT_SUBTYPE, MICROPYTHON_VFS_OFFSET, VFS_SIZE))
+                start = BOOTLOADER_TABLE_OFFSET - offset
+                self.assertEqual(flash[offset:BOOTLOADER_TABLE_OFFSET], interpreter[:start])
+                self.assertEqual(flash[BOOTLOADER_TABLE_OFFSET + TABLE_SIZE:offset + len(interpreter)], interpreter[start + TABLE_SIZE:])
+
+    def test_the_real_table_of_the_s3_interpreter_is_parsed_and_its_entries_stay_byte_for_byte(self):
+        interpreter = fake_interpreter(table=S3_TABLE)
+        self.assertEqual(flash_image.PartitionTable.read(interpreter, 0).entries,
+                         (("nvs", 1, 2, 0x9000, 0x6000, 0), ("phy_init", 1, 1, 0xf000, 0x1000, 0), ("factory", 0, 0, 0x10000, 0x1f0000, 0)))
+        flash = self.image_of(interpreter)
+        self.assertEqual(flash[BOOTLOADER_TABLE_OFFSET:BOOTLOADER_TABLE_OFFSET + 3 * ENTRY_SIZE], S3_TABLE[:3 * ENTRY_SIZE])
 
     @needs_littlefs
     def test_the_littlefs_mounts_with_the_block_count_the_vfs_partition_gives(self):
@@ -213,8 +224,10 @@ class TheImageHoldsAVfsPartitionTest(unittest.TestCase):
             flash_image.image(interpreter, self.files, offset=offset)
         return str(said.exception)
 
-    def test_an_offset_past_the_table_is_refused(self):
-        self.assertIn("partition table", self.refused(fake_interpreter(size=0x9000), offset=BOOTLOADER_TABLE_OFFSET + 1))
+    def test_an_offset_past_the_table_is_refused_where_a_negative_slice_would_give_wrong_bytes(self):
+        for offset in (BOOTLOADER_TABLE_OFFSET + 1, 0x10000):  # a build of 0x20000 bytes: its last 0xC00 are a full, wrong table
+            with self.subTest(offset=offset):
+                self.assertIn("starts past the partition table", self.refused(fake_interpreter(size=0x20000), offset=offset))
 
     def test_an_interpreter_too_short_to_hold_the_table_is_refused_with_the_boundary_exact(self):
         size = BOOTLOADER_TABLE_OFFSET + TABLE_SIZE
@@ -234,9 +247,25 @@ class TheImageHoldsAVfsPartitionTest(unittest.TestCase):
         self.assertIn("0x200000", self.refused(fake_interpreter(table=table_bytes(past))))
         self.assertEqual(table_of(self.image_of())[0][2], ("factory", 0, 0, 0x10000, 0x1f0000))  # ends at exactly 0x200000
 
+    def test_an_ffat_inside_the_old_area_is_refused_for_being_an_ffat(self):
+        ffat = ("ffat", DATA_TYPE, FAT_SUBTYPE, 0x1f0000, 0x1000)  # ends before 0x200000, so only its label is wrong
+        self.assertIn('"ffat" entry', self.refused(fake_interpreter(table=table_bytes(MICROPYTHON_TABLE + (ffat,)))))
+
+    def test_a_label_that_is_not_text_is_refused_with_what_to_do(self):
+        table = bytearray(table_bytes())
+        table[2 * ENTRY_SIZE + 12] = 0xff  # the first byte of the factory's label (entry offset 12)
+        self.assertIn("micropython.org/download", self.refused(fake_interpreter(table=bytes(table))))
+
+    def test_a_table_with_no_room_for_the_end_slot_is_refused_and_one_with_room_is_not(self):
+        def table_of_(count):  # the table holds `count` entries before the vfs, all data partitions below 0x200000
+            return table_bytes(tuple(("p%d" % index, DATA_TYPE, 2, 0x10000 + index * 0x1000, 0x1000) for index in range(count)))
+        # 0xC00 / 32 = 96 slots: n entries and the MD5 entry fill n + 1, and ESP-IDF refuses 96 (gen_esp32part.py:412)
+        self.assertEqual(len(table_of(self.image_of(fake_interpreter(table=table_of_(93))))[0]), 94)
+        self.assertIn("room", self.refused(fake_interpreter(table=table_of_(94))))
+
     def test_a_different_vfs_is_refused(self):
         for other in (("vfs", DATA_TYPE, FAT_SUBTYPE, 0x300000, 0x100000), ("vfs", DATA_TYPE, FAT_SUBTYPE, MICROPYTHON_VFS_OFFSET, 0x100000),
-                      ("vfs", DATA_TYPE, 0x82, MICROPYTHON_VFS_OFFSET, VFS_SIZE), ("ffat", DATA_TYPE, FAT_SUBTYPE, 0x300000, 0x100000)):
+                      ("vfs", DATA_TYPE, 0x82, MICROPYTHON_VFS_OFFSET, VFS_SIZE)):
             with self.subTest(other=other):
                 self.assertIn(other[0], self.refused(fake_interpreter(table=table_bytes(MICROPYTHON_TABLE + (other,)))))
 

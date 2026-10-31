@@ -74,8 +74,8 @@ class PartitionTable(namedtuple("PartitionTable", "entries")):
     register the rest of the physical flash as one, which on a 16 MB board is not the 2 MB spark wrote (P461).
     """
     TABLE_OFFSET = 0x8000   # where the bootloader reads the table in the flash
-    SIZE = 0xC00            # the table's length: the entries, the MD5 entry and 0xff
-    ENTRY = struct.Struct("<2sBBLL16sL")
+    TABLE_SIZE = 0xC00            # the table's length: the entries, the MD5 entry and 0xff
+    ENTRY_FORMAT = struct.Struct("<2sBBLL16sL")
     ENTRY_MAGIC = b"\xaa\x50"
     MD5_MAGIC = b"\xeb\xeb" + b"\xff" * 14
     FILESYSTEM = ("vfs", 0x01, 0x81, FILESYSTEM_OFFSET, FLASH_SIZE - FILESYSTEM_OFFSET, 0)   # data, fat
@@ -88,17 +88,21 @@ class PartitionTable(namedtuple("PartitionTable", "entries")):
             raise ValueError("MicroPython at %#x starts past the partition table at %#x, so the image cannot say where its "
                              "file system is: use the build for the board's chip from micropython.org/download"
                              % (offset, cls.TABLE_OFFSET))
-        table = interpreter[start:start + cls.SIZE]
-        if len(table) < cls.SIZE:
+        table = interpreter[start:start + cls.TABLE_SIZE]
+        if len(table) < cls.TABLE_SIZE:
             raise ValueError("MicroPython is %d bytes, too short to hold a partition table at %#x, so the image cannot say "
                              "where its file system is: use the build for the board's chip from micropython.org/download"
                              % (len(interpreter), cls.TABLE_OFFSET))
         entries = []
-        for position in range(0, cls.SIZE, cls.ENTRY.size):
-            chunk = table[position:position + cls.ENTRY.size]
+        for position in range(0, cls.TABLE_SIZE, cls.ENTRY_FORMAT.size):
+            chunk = table[position:position + cls.ENTRY_FORMAT.size]
             if chunk[:2] == cls.ENTRY_MAGIC:
-                _, kind, subtype, where, size, label, flags = cls.ENTRY.unpack(chunk)
-                entries.append((label.rstrip(b"\x00").decode(), kind, subtype, where, size, flags))
+                _, kind, subtype, where, size, label, flags = cls.ENTRY_FORMAT.unpack(chunk)
+                try:
+                    entries.append((label.rstrip(b"\x00").decode(), kind, subtype, where, size, flags))
+                except UnicodeDecodeError:
+                    raise ValueError("a partition label in the interpreter's table is not text, so the interpreter is damaged: "
+                                     "download the build again from micropython.org/download")
                 continue
             if chunk[:16] == cls.MD5_MAGIC and chunk[16:] != hashlib.md5(table[:position]).digest():
                 raise ValueError("the partition table's MD5 does not match its entries, so the interpreter is damaged: "
@@ -119,15 +123,19 @@ class PartitionTable(namedtuple("PartitionTable", "entries")):
             if label != "vfs" and where + size > FILESYSTEM_OFFSET:
                 raise ValueError('the partition "%s" ends at %#x, past %#x where the file system starts: use the build for '
                                  "the board's chip from micropython.org/download" % (label, where + size, FILESYSTEM_OFFSET))
-        return PartitionTable(tuple(entry for entry in self.entries if entry != self.FILESYSTEM) + (self.FILESYSTEM,))
+        entries = tuple(entry for entry in self.entries if entry != self.FILESYSTEM) + (self.FILESYSTEM,)
+        if (len(entries) + 1) * self.ENTRY_FORMAT.size >= self.TABLE_SIZE:  # the MD5 entry too, and ESP-IDF refuses a full table
+            raise ValueError("the partition table has no room for the vfs entry and an MD5 entry: use the build for the "
+                             "board's chip from micropython.org/download")
+        return PartitionTable(entries)
 
     def placed_in(self, interpreter, offset):
         """The interpreter's bytes with this table, and a new MD5 entry, in place of its own."""
-        body = b"".join(self.ENTRY.pack(self.ENTRY_MAGIC, kind, subtype, where, size, label.encode(), flags)
+        body = b"".join(self.ENTRY_FORMAT.pack(self.ENTRY_MAGIC, kind, subtype, where, size, label.encode(), flags)
                         for label, kind, subtype, where, size, flags in self.entries)
-        table = (body + self.MD5_MAGIC + hashlib.md5(body).digest()).ljust(self.SIZE, b"\xff")
+        table = (body + self.MD5_MAGIC + hashlib.md5(body).digest()).ljust(self.TABLE_SIZE, b"\xff")
         start = self.TABLE_OFFSET - offset
-        return interpreter[:start] + table + interpreter[start + self.SIZE:]
+        return interpreter[:start] + table + interpreter[start + self.TABLE_SIZE:]
 # --- end MVP ---
 
 

@@ -43,21 +43,15 @@
  },
  {
   "file": "scripts/flash_image.py",
-  "name": "an offset one byte past the table is not refused",
-  "find": "if start < 0:",
-  "replace": "if start < -1:"
- },
- {
-  "file": "scripts/flash_image.py",
   "name": "an interpreter that ends exactly at the table's end is refused",
-  "find": "if len(table) < cls.SIZE:",
-  "replace": "if len(table) <= cls.SIZE:"
+  "find": "if len(table) < cls.TABLE_SIZE:",
+  "replace": "if len(table) <= cls.TABLE_SIZE:"
  },
  {
   "file": "scripts/flash_image.py",
   "name": "an interpreter one byte short of the table is accepted",
-  "find": "if len(table) < cls.SIZE:",
-  "replace": "if len(table) < cls.SIZE - 1:"
+  "find": "if len(table) < cls.TABLE_SIZE:",
+  "replace": "if len(table) < cls.TABLE_SIZE - 1:"
  },
  {
   "file": "scripts/flash_image.py",
@@ -82,5 +76,47 @@
   "name": "an ffat entry is accepted",
   "find": "label in (\"vfs\", \"ffat\") and entry",
   "replace": "label == \"vfs\" and entry"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "an offset past the table is not refused (a negative slice gives wrong bytes)",
+  "find": "if start < 0:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "an offset one byte past the table is not refused",
+  "find": "if start < 0:",
+  "replace": "if start < -1:"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "a different vfs is accepted",
+  "find": "entry != self.FILESYSTEM:\n                raise",
+  "replace": "False:\n                raise"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "the interpreter after the table is taken from the wrong place",
+  "find": "interpreter[start + self.TABLE_SIZE:]",
+  "replace": "interpreter[self.TABLE_SIZE:]"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "the table is placed where the interpreter starts at 0",
+  "find": "start = self.TABLE_OFFSET - offset\n        return",
+  "replace": "start = self.TABLE_OFFSET\n        return"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "the table is padded with zeros, not 0xff",
+  "find": ".ljust(self.TABLE_SIZE, b\"\\xff\")",
+  "replace": ".ljust(self.TABLE_SIZE, b\"\\x00\")"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "a table with no room for the end slot is accepted",
+  "find": "* self.ENTRY_FORMAT.size >= self.TABLE_SIZE",
+  "replace": "* self.ENTRY_FORMAT.size > self.TABLE_SIZE"
  }
 ]

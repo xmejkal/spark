@@ -24,10 +24,11 @@ def table_bytes(entries=MICROPYTHON_TABLE, md5=True):
 
 
 def fake_interpreter(head=b"\xe9", size=0x9000, offset=0, table=None):
-    """An interpreter that starts with `head`, then zeros, with `table` (the MicroPython table) where the flash
-    has it, 0x8000 - `offset` in the interpreter, and `size` bytes long."""
-    flash = bytearray(size)
+    """An interpreter that starts with `head`, then a pattern that never repeats within a table's span (so a shifted
+    copy shows), with `table` (the MicroPython table) where the flash has it, 0x8000 - `offset` in the interpreter,
+    and `size` bytes long."""
+    flash = bytearray(position % 251 for position in range(size))
     flash[:len(head)] = head
     start = TABLE_OFFSET - offset
-    flash[start:start + TABLE_SIZE] = table_bytes() if table is None else table
+    flash[start:start + TABLE_SIZE] = (table_bytes() if table is None else table).ljust(TABLE_SIZE, b"\xff")
     return bytes(flash[:size])
