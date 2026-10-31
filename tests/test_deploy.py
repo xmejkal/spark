@@ -14,6 +14,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 from suite_runs import needs_littlefs  # noqa: E402
+from micropython_fakes import fake_interpreter  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -64,7 +65,7 @@ class ProjectCase(unittest.TestCase):
         self.scenario = sim / "scenarios" / "s.scenario.yaml"
         self.scenario.write_text(SCENARIO)
         self.micropython = self.project / "micropython.bin"
-        self.micropython.write_bytes(b"\xe9" + b"\x00" * 999)
+        self.micropython.write_bytes(fake_interpreter())
         self.image = sim / "flash-with-firmware.bin"
 
     def run_the_scenario(self, exit_code=0, scenario=None):

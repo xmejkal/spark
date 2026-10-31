@@ -15,6 +15,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 from suite_runs import needs_littlefs  # noqa: E402
+from micropython_fakes import fake_interpreter  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -380,7 +381,7 @@ class ProjectCase(unittest.TestCase):
         self.scenario = sim / "scenarios" / "lights.v2.scenario.yaml"
         self.scenario.write_text(SCENARIO)
         self.micropython = self.project / "micropython.bin"
-        self.micropython.write_bytes(b"\xe9" + b"\x00" * 999)
+        self.micropython.write_bytes(fake_interpreter())
         self.seen = self.project / "seen.json"
         self.log = sim / "runs" / "lights.v2.log"
 
@@ -533,7 +534,7 @@ class TheLogNamesTheImageTest(ProjectCase):
     def test_with_no_build_given_the_image_starts_with_the_build_the_board_names(self):
         (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
         c6 = self.project / "c6.bin"
-        c6.write_bytes(b"\xe9C6" + b"\x00" * 997)
+        c6.write_bytes(fake_interpreter(head=b"\xe9C6"))
         real_find = tools.find
         found = tools.Tool("micropython-xiao-esp32c6", None, {}, [str(c6)])
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_EXIT": "0", "FAKE_WOKWI_OUT": READY_MATCHED,
@@ -800,7 +801,7 @@ class TheFixReviewFoundTheseTest(ProjectCase):
 
     @needs_littlefs
     def test_an_interpreter_too_large_for_its_slot_could_not_run_before_anything_is_paid(self):
-        self.micropython.write_bytes(b"\xe9" + b"\x00" * (3 * 1024 * 1024))
+        self.micropython.write_bytes(fake_interpreter(size=3 * 1024 * 1024))
         status, said, _ = self.run_with()
         self.assertEqual(status, COULD_NOT_RUN)
         self.assertIn("would pass 0x200000, where the filesystem starts", said)
@@ -832,13 +833,14 @@ class TheOriginalEsp32sImageTest(ProjectCase):
     """P335: the image a run hands the simulator holds the interpreter where its entry says it starts."""
 
     def test_the_run_s_image_holds_the_interpreter_at_0x1000(self):
+        self.micropython.write_bytes(fake_interpreter(offset=0x1000))
         chosen = flash_image.Interpreter(self.micropython, 0x1000)  # micropython.org/download/ESP32_GENERIC/: write_flash 0x1000
         with mock.patch.object(flash_image, "interpreter_for", return_value=chosen):
             status, said, _ = self.run_with()
         self.assertEqual(status, OK, said)
         image = (self.project / "sim" / "flash-with-firmware.bin").read_bytes()
         self.assertEqual(image[:0x1000], b"\xff" * 0x1000)
-        self.assertEqual(image[0x1000:0x1000 + 1000], self.micropython.read_bytes())
+        self.assertEqual(image[0x1000:0x8000], self.micropython.read_bytes()[:0x7000])
 
 
 class TheCommandTest(ProjectCase):
@@ -871,7 +873,7 @@ class TheCommandTest(ProjectCase):
                      str(self.micropython), "--timeout-ms", "1234")
         self.assertIn("--timeout 1234", " ".join(json.loads(self.seen.read_text())["args"]))
         image = (self.project / "sim" / "flash-with-firmware.bin").read_bytes()
-        self.assertEqual(image[:1000], self.micropython.read_bytes()[:1000])
+        self.assertEqual(image[:0x8000], self.micropython.read_bytes()[:0x8000])
 
     @needs_littlefs
     def test_without_a_token_nothing_runs_and_it_says_where_to_get_one(self):

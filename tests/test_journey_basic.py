@@ -31,6 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 from suite_runs import needs_littlefs, slow  # noqa: E402
+from micropython_fakes import fake_interpreter  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -256,7 +257,7 @@ def run_the_scenario(project):
     (project / "sim" / "scenarios").mkdir(exist_ok=True)
     scenario = Path(shutil.copy(SCENARIO_FIXTURE, project / "sim" / "scenarios"))
     interpreter = Path(tempfile.mkdtemp()) / "micropython.bin"
-    interpreter.write_bytes(b"\xe9" + b"\x00" * 999)
+    interpreter.write_bytes(fake_interpreter())
     with unittest.mock.patch.dict(os.environ, {"FAKE_WOKWI_SERIAL": "ready\nLED on\nLED off\n"}):
         return run_scenario.ScenarioRun(project, scenario, micropython=interpreter).run(FAKE_WOKWI_CLI)[1]
 

@@ -20,10 +20,12 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "tests"))
 
 import boards  # noqa: E402
 import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
+from micropython_fakes import fake_interpreter  # noqa: E402
 
 GOLDEN_DIR = ROOT / "tests" / "golden"
 FAKE_MODULES = ROOT / "tests" / "fake_modules"
@@ -98,7 +100,7 @@ def build_project(folder):
     scenario = sim / "scenarios" / "s.scenario.yaml"
     scenario.write_text('name: s\nversion: 1\nsteps:\n  - wait-serial: "LED on"\n')
     micropython = project / "micropython.bin"
-    micropython.write_bytes(b"\xe9" + b"\x00" * 999)
+    micropython.write_bytes(fake_interpreter())
     told = {"FAKE_WOKWI_SERIAL": "ready\nLED on\n", "FAKE_WOKWI_EXIT": "0",
             "FAKE_WOKWI_OUT": '[s] Expected text matched: "ready"\n', "FAKE_WOKWI_ERR": ""}
     with mock.patch.dict(os.environ, told):
