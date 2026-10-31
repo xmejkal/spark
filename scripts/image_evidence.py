@@ -8,6 +8,7 @@ today's evidence, a run in sim/runs/ that passed on the image's sha256. It write
 import abc
 import hashlib
 import json
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +16,7 @@ from pathlib import Path
 import board_grant
 from brief import UnnamedMust
 import flash_image
+from project_image import BUILD_IMAGE_HINT, NO_SIMULATION_FLAG
 from spark.core import outcomes
 from spark.core import text_guards
 import tools
@@ -53,8 +55,6 @@ def cannot_check(name, cause, error=text_guards.ValueMessageError):
     return error("\n".join([CANNOT_CHECK_MESSAGE] + ["%s"] * (len(lines) - 1)), name, *lines)
 
 
-#: The flag that deploys an image from firmware/ with no simulation.
-NO_SIMULATION_FLAG = "--no-simulation"
 #: The flag that turns a run of another image from a refusal into a note.
 IGNORE_OLDER_RUNS_FLAG = "--ignore-older-runs"
 #: How a refusal for a run that tested another image ends: what to do instead (the PO, 2026-10-12: refuse by default).
@@ -414,9 +414,12 @@ class NoSimulationEvidence(ImageEvidence):
                 raise
             return "firmware/ does not fit the image's file system: %s" % cannot
         if held != built:
+            build, held = flash_image.build_entry(self.project)
+            own = flash_image.own_build_hint_for(self.project, build, held and held[0])
             return ("%s does not match a build of firmware/ as it is now (firmware/, the board's MicroPython or how spark "
-                    "builds images changed since): build it with flash_image.py --project %s --files firmware -o %s"
-                    % (image.path.name, self.project.resolve(), image.path))
+                    "builds images changed since): %s%s"
+                    % (image.path.name, BUILD_IMAGE_HINT % (shlex.quote(str(self.project.resolve())), shlex.quote(str(image.path.resolve()))),
+                       "; or " + own if own else ""))
         return None
     # --- end MVP ---
 

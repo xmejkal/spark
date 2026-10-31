@@ -1,11 +1,16 @@
 """P337: PassedRunEvidence is the evidence that a passed run in sim/runs/ names the image (A). NoSimulationEvidence is
 firmware/ in place of a run (B)."""
 
+import contextlib
 import hashlib
+import io
 import json
 import os
+import shlex
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -442,7 +447,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         (self.firmware / "main.py").write_text("print('ready')\nprint(2)\n")
         self.assertEqual(self.why(), "flash-with-firmware.bin does not match a build of firmware/ as it is now (firmware/, the board's MicroPython "
                          "or how spark builds images changed since): build it with flash_image.py --project %s --files firmware -o %s"
-                         % (self.project.resolve(), self.image.path))
+                         % (self.project.resolve(), self.image.path.resolve()))
 
     def test_a_file_that_does_not_compile_refuses_with_its_file_and_line(self):
         (self.firmware / "lib").mkdir()
@@ -594,6 +599,50 @@ class NoSimulationEvidenceTest(unittest.TestCase):
                          ("none", ["no simulation tested this image"], ["--no-simulation"], []))
         self.assertEqual(evidence.grant_refusal, "no simulation")
         self.assertEqual(evidence.way_out(self.image), "")
+
+
+@needs_littlefs
+class TheOwnBuildHintTest(unittest.TestCase):
+    """P463: the refusal for an image built with another MicroPython names the tools-list entry that fixes it, and the
+    two commands it prints work as printed. No interpreter lookup is patched; the downloads folder is a temp one."""
+
+    NAME = "micropython-esp32s3"
+
+    def setUp(self):
+        self.project = project_with_image()
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3"}))
+        self.firmware = self.project / "firmware"
+        self.firmware.mkdir()
+        (self.firmware / "main.py").write_text("print('ready')\n")
+        self.downloads = tools.DOWNLOADS  # the suite's scratch store, so the folder goes with the test
+        self.downloads.mkdir(parents=True, exist_ok=True)
+        self.addCleanup(shutil.rmtree, self.downloads, True)
+        (self.downloads / tools.merged(self.project)["tools"][self.NAME]["file"]).write_bytes(fake_interpreter())
+        self.own = Path(tempfile.mkdtemp()) / "my-micropython.bin"
+        self.own.write_bytes(fake_interpreter(size=0xA000))
+        with contextlib.redirect_stdout(io.StringIO()):
+            flash_image.main(["--project", str(self.project), "--micropython", str(self.own), "--files", str(self.firmware),
+                              "-o", str(self.project / "sim" / "flash-with-firmware.bin")])
+
+    def why(self):
+        return NoSimulationEvidence(self.project).why_not_ready(ProjectImage(self.project))
+
+    def test_the_refusal_names_the_entry_of_the_boards_build(self):
+        why = self.why()
+        self.assertIn("; or to use another MicroPython build, name it in this project's tools list: tools.py --project %s --new %s="
+                      % (self.project.resolve(), self.NAME), why)
+        self.assertNotIn("micropython_port", why)  # the merge keeps that field of the default entry
+
+    @unittest.skipUnless(shutil.which("curl"), "curl is not installed, and the printed install command runs it")
+    def test_the_two_printed_commands_make_the_refusal_go_away(self):
+        hint = self.why().split("name it in this project's tools list: ", 1)[1]
+        new, install = (command.replace("<file>", self.own.name).replace("<url>", self.own.as_uri())
+                        .replace("<sha256>", hashlib.sha256(self.own.read_bytes()).hexdigest()) for command in hint.split(", then "))
+        for command in (new, install):
+            self.assertEqual(shlex.split(command)[0], "tools.py")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(tools.main(shlex.split(command)[1:]), 0, command)
+        self.assertIsNone(self.why())
 
 
 class CompileCheckTest(unittest.TestCase):

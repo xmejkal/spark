@@ -741,7 +741,7 @@ class TheLookStatesTheSimulationTest(LookCase):
     def test_an_image_the_evidence_refuses_has_no_simulation_and_no_caveat(self):
         report = self.look()  # no scenario has run: no image
         self.assertEqual((report.simulation, report.caveats), (None, []))
-        self.assertFalse([line for line in board_look.report_lines(report) if "simulation" in line])
+        self.assertFalse([line for line in board_look.report_lines(report) if "simulation:" in line or "no simulation tested" in line])
 
     def test_a_refused_image_is_not_asked_for_its_caveats(self):
         self.run_the_scenario()  # an image to ask about: without one the evidence is never reached

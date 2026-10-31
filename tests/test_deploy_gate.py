@@ -38,6 +38,16 @@ import flasher  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
+
+
+#: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
+IMPORT_HOME = os.environ["SPARK_HOME"]
+
+
+def line_made_at_import(line):
+    """`line` led by the store of the import, as board_grant's constants are."""
+    with mock.patch.dict(os.environ, {"SPARK_HOME": IMPORT_HOME}):
+        return store.prefix_home(line)
 from fakes import FakeConsent, FakeConsoleProbe, FakeLocalClock, pin_time_zone  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
@@ -949,10 +959,8 @@ class TheStandingYesTest(GateCase):
         self.give()
         self.clock.advance(minutes=30)
         grant_py = str(Path(board_grant.__file__).with_name("grant.py").resolve())
-        self.assertIn(grant_py + " --scope deploy --minutes N", board_grant.DEPLOY_GRANT_COMMAND)
-        # the constant is read at import with the store then, so the sentence is compared with it, not with this test's store
-        self.assertAsksInTheTerminal("the deploy grant for this board ended: the person runs %s again"
-                                     % board_grant.DEPLOY_GRANT_COMMAND)
+        self.assertAsksInTheTerminal("the deploy grant for this board ended: the person runs %s --scope deploy "
+                                     "--minutes N again" % line_made_at_import(grant_py))
 
     @needs_littlefs
     def test_only_a_live_grant_asks_in_the_terminal(self):
@@ -1172,7 +1180,8 @@ class TheNoSimulationDeployTest(GateCase):
         (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(2)\n")
         code, _, problems = self.deploy("--no-simulation", "--token", token, consent=FakeConsent(True))
         self.assertEqual((code, self.flashed()), (2, []))
-        self.assertIn("flash_image.py --project %s --files firmware -o %s" % (self.project.resolve(), self.image), problems)
+        self.assertIn("flash_image.py --project %s --files firmware -o %s" % (shlex.quote(str(self.project.resolve())),
+                                                                                shlex.quote(str(self.image.resolve()))), problems)
 
     def test_without_the_flag_a_project_with_no_run_log_is_refused_as_before(self):
         code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True))

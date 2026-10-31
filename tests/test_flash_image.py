@@ -343,6 +343,28 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
             flash_image.interpreter_for(None, self.project_on("xiao-esp32-c6"))
         self.assertIn("SEEED_XIAO_ESP32C6", str(said.exception))
 
+    def test_that_refusal_names_the_tools_entry_to_write_with_the_two_fields_that_tie_it_to_the_build(self):
+        # P463: the person can name their own build; no entry holds this one yet, so the entry needs the build and the contract
+        import tools
+        project = self.project_on("firebeetle2-esp32s3")
+        (project / ".spark").mkdir()
+        (project / ".spark" / "tools.json").write_text(json.dumps({"micropython-esp32s3": {"micropython_port": "ELSEWHERE"}}))
+        with self.assertRaises(tools.ToolProblem) as said:
+            flash_image.interpreter_for(None, project)
+        self.assertIn("name it in this project's tools list: tools.py --project %s --new <name>='{\"kind\": \"download\", "
+                      "\"file\": \"<file>\", \"url\": \"<url>\", \"sha256\": \"<sha256>\", \"micropython_port\": "
+                      "\"ESP32_GENERIC_S3\", \"meets\": [\"micropython-esp32-bin\"]}', then tools.py --project %s --install <name>"
+                      % (project.resolve(), project.resolve()), str(said.exception))
+
+    def test_the_hint_names_the_entry_that_holds_the_build_and_leaves_its_fields_to_the_merge(self):
+        hint = flash_image.own_build_hint_for("/my project", "SEEED_XIAO_ESP32C6", "micropython-xiao-esp32c6")
+        self.assertIn("--new micropython-xiao-esp32c6='{\"kind\": \"download\", \"file\": \"<file>\", \"url\": \"<url>\", "
+                      "\"sha256\": \"<sha256>\"}', then tools.py --project '/my project' --install micropython-xiao-esp32c6", hint)
+        self.assertNotIn("micropython_port", hint)
+
+    def test_a_project_with_no_build_gets_no_hint(self):
+        self.assertEqual(flash_image.own_build_hint_for("/p", None, None), "")
+
     def test_a_named_board_with_no_build_in_its_record_is_refused_not_given_the_default(self):
         import tools
         with mock.patch.object(tools, "merged", return_value=self.two_builds()), self.assertRaises(tools.ToolProblem) as said:

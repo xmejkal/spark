@@ -55,6 +55,24 @@ class TheImageTest(unittest.TestCase):
         self.assertIn("run a scenario first", str(said.exception))
         self.assertEqual(said.exception.reason, "no_image")
 
+    def test_the_missing_image_sentence_names_the_no_simulation_way_with_the_build_command(self):
+        # P463: a build writes no image, so a person with no simulation needs the build command and the look
+        project = project_with_image()
+        (project / "sim" / "flash-with-firmware.bin").unlink()
+        with self.assertRaises(DeployError) as said:
+            ProjectImage(project)
+        self.assertTrue(str(said.exception).endswith(
+            ", or, with no simulation, the board is the test: build it with flash_image.py --project %s --files firmware -o %s, "
+            "then run look.py --no-simulation" % (project.resolve(), (project / "sim" / "flash-with-firmware.bin").resolve())),
+            str(said.exception))
+
+    def test_a_path_with_a_space_in_the_build_command_is_quoted(self):
+        project = project_with_image().rename(Path(tempfile.mkdtemp()) / "my project")
+        (project / "sim" / "flash-with-firmware.bin").unlink()
+        with self.assertRaises(DeployError) as said:
+            ProjectImage(project)
+        self.assertIn("--project '%s' --files" % project.resolve(), str(said.exception))
+
     def test_a_firmware_line_that_is_no_string_is_a_deploy_error_with_one_sentence(self):
         # P429: `firmware = 3` raised a TypeError
         project = project_with_image()
@@ -138,6 +156,10 @@ class TheRunLogsTest(unittest.TestCase):
     def test_why_untested_says_so_when_no_run_names_this_image(self):
         write_log(self.project, "a.log", "passed", "0")
         self.assertIn("no run in sim/runs/ tested %s as it is now" % self.image.path.name, self.image.why_untested())
+
+    def test_the_untested_sentence_names_the_no_simulation_way(self):
+        self.assertTrue(self.image.why_untested().endswith(
+            "run its scenario again with run_scenario.py, or, with no simulation, the board is the test: run look.py --no-simulation"))
 
     def test_why_other_runs_is_none_when_every_log_names_this_image(self):
         write_log(self.project, "a.log", "passed")

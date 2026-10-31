@@ -247,7 +247,9 @@ class WhatThePersonSeesTest(LookScriptCase):
         code, said, _ = self.go()
         self.assertEqual(code, 2)
         self.assertRegex(said[-1], r"^  no token: .*no run in sim/runs/ tested")
-        code, said, _ = self.go("--no-simulation")
+        flag = said[-1].rsplit("run look.py ", 1)[1]  # P463: the sentence names the way, and the way works
+        self.assertEqual(flag, "--no-simulation")
+        code, said, _ = self.go(flag)
         self.assertEqual(code, 0)
         self.assertEqual(said[-1], "  token  %s  for deploy.py --token. It is not your yes: deploy.py asks for that." % self.token())
 
