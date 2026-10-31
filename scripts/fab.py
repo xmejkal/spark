@@ -101,7 +101,7 @@ def read_rules(path):
     """The rules in a project's rules file, or a RulesError that names the file (and the field)."""
     try:
         rules = json.loads(Path(path).read_text())
-    except (OSError, ValueError) as broken:
+    except (OSError, ValueError, RecursionError) as broken:
         raise RulesError("%s could not be read: %s", path, broken) from broken
     problem = fabrication_problem(rules)
     if problem is None:

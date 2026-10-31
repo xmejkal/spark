@@ -243,7 +243,7 @@ class ARulesFileOfTheWrongKindIsRefusedTest(unittest.TestCase):
                 self.assertEqual(str(caught.exception), "%s: %s is not an object" % (path, field))
 
     def test_a_rules_file_nobody_can_parse_names_the_file(self):
-        for path in (self.rules_file("{broken"), Path(tempfile.mkdtemp()) / "gone.json"):
+        for path in (self.rules_file("{broken"), self.rules_file("[" * 100000 + "]" * 100000), Path(tempfile.mkdtemp()) / "gone.json"):
             with self.subTest(path=path.name):
                 with self.assertRaises(fab.RulesError) as caught:
                     fab.read_rules(path)

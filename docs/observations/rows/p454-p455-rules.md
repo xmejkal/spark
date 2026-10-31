@@ -20,3 +20,6 @@ Findings of P454 (#615) and P455 (#616), 2026-10-31, Prague, built on main 00a41
 | 14 | `check_physics.py` was at 662 of 662 lines | review | acted | after: 659; `main` 39 to 32; `run` kept at 62; the long comment in `Board.narrowest_by_net` shortened, `--accept-new` not used |
 | 15 | The old compare_design sentence "not valid JSON" for a broken rules file | plan | acted | now "could not be read" from `fab.read_rules`; no test or doc asserted the old text; the circuit keeps "not valid JSON" |
 | 16 | Buildability's own try is redundant | plan | acted | removed: `Check.run` refuses `fab.RulesError` for every check |
+| 17 | Deeply nested JSON (100,000 brackets) crashed every reader with a RecursionError | refuter | acted | `read_rules` catches `RecursionError` with `OSError` and `ValueError`; a row in test_fab's parse test |
+| 18 | A finite value above its lowest can still overflow: `drill_step_mm: 1e-320` and `plating_thickness_mm: 1e308` give an OverflowError at emit_footprint.py:66, `annular_ring_margin_mm: 1e308` writes `infmm` | refuter | raised | not in either card's words, and no person writes such a value; a later card would refuse a hole or pad that is not finite |
+| 19 | agents.md said "at or below its lowest", against its own clause that the margin may be 0 | refuter | acted | now "below its lowest", as the `--help` texts say |

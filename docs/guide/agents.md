@@ -798,7 +798,7 @@ Today's output also carries `"unmeasured": 0`, after `status`.
 
    **`fabrication: {}`** in rules.json means the plugin's default two-layer process, as the file's own `//fabrication`
    comment says. So buildability is measured against spark's defaults, not the person's board house; tell them. A `fabrication` value that is
-   not a finite number (text, `true`, `NaN`, a huge integer), or at or below its lowest (`drill_step_mm: 0`; `data/fabrication.json` holds one limit per key, and only `annular_ring_margin_mm` may be 0), is refused when the file is read (by `emit_footprint.py`, `check_footprints.py --rules`, `check_physics.py --rules`, `compare_design.py --rules`, `check_all.py` and the build), with the rules path and the
+   not a finite number (text, `true`, `NaN`, a huge integer), or below its lowest (`drill_step_mm: 0`; `data/fabrication.json` holds one limit per key, and only `annular_ring_margin_mm` may be 0), is refused when the file is read (by `emit_footprint.py`, `check_footprints.py --rules`, `check_physics.py --rules`, `compare_design.py --rules`, `check_all.py` and the build), with the rules path and the
    field (`fabrication.drill_step_mm`): the four scripts exit 2, and the build stops. `check_all.py` gives the same refusal on three lines (buildability, physics, rules-vs-netlist), also for a top level that is no object or a file nobody can read.
    Remove the key to use the default.
 
