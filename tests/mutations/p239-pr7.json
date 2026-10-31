@@ -200,7 +200,13 @@
  {
   "file": "scripts/tools.py",
   "name": "--pin writes a version below the floor",
-  "find": "    if not field and versions.is_older(value, oldest):",
+  "find": "    if field == \"version\" and oldest and (versions.release_tuple(value) is None or versions.is_older(value, oldest)):",
   "replace": "    if False:"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "--pin writes a version with no digits",
+  "find": "(versions.release_tuple(value) is None or versions.is_older(value, oldest))",
+  "replace": "versions.is_older(value, oldest)"
  }
 ]
