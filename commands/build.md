@@ -212,7 +212,7 @@ build stops on a net with one member. Add the connector to the parts list.
 The refusals come in one order: the requirements, the pins, the footprint. The footprint step prints no `wrote <path>` line
 on stderr; the stage list's `footprint` line is the only word of it. A project rule of the wrong kind (a drill step written
 as text) stops the build at the schematic stage, where the rules file is read, and names `.spark/rules.json` and the field
-([P434](https://github.com/xmejkal/spark/issues/576)). `emit_board.py` run alone prints the library
+([P434](https://github.com/xmejkal/spark/issues/576)). A requirements file whose `signals` or `parts` is no list, or whose `pin` is no pin name (a non-empty string such as `"D0"`), is refused under `requirements`, naming the file and the field; a rules path that is a folder is refused under `schematic` ([P438](https://github.com/xmejkal/spark/issues/583)). `emit_board.py` run alone prints the library
 note (`no project up from the requirements file …`) only after its input is accepted, so a refused input prints only its
 refusal.
 
