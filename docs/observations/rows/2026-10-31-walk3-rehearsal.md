@@ -2,7 +2,7 @@
 
 Findings of Claude's rehearsal of walk 3 part 1, 2026-10-31, Prague, on main 4dc0af9d, before the PO's free walk. Every step up to the flash ran with exit 0. Spark's two flashes wrote and verified, but the board did not start. Plain MicroPython plus `mpremote cp` by hand worked: the D13 LED lit while D14 was held. The diary stays outside the repository, in the PO's walk folder, with the board logs.
 
-The council: one agent on Sonnet 5.5 with four lenses (PO assistant, tech lead, senior developer, AI and UX), and the refuter on Opus 5.5 for the flash causes. The refuter broke the first B3 claim (deploy does wait for RESET) and showed that the octal build did not cause the failed flash. It found the real cause in MicroPython's source and reproduced the littlefs refusal. The lead checked the deploy and diagram claims in the code.
+The council: one agent on Sonnet 5.5 with four lenses (PO assistant, tech lead, senior developer, AI and UX), and the refuter on Opus 5.5 for the flash causes. The refuter broke the first claim that deploy reads the board without waiting for the RESET press (row 21) and showed that the octal build did not cause the failed flash. It found the real cause in MicroPython's source, tag v1.29.0, commit 0fd6c573ea815774668bbb16b8e197c8822368b2 (https://github.com/micropython/micropython/tree/v1.29.0), and reproduced the littlefs refusal with littlefs-python 0.19. The lead checked the deploy and diagram claims in the code.
 
 New cards, all in Idea under their epics: P461 (#629), P462 (#630), P463 (#631), P464 (#632), P465 (#633), P466 (#634), P467 (#635), P468 (#636), P469 (#637).
 
@@ -11,7 +11,7 @@ New cards, all in Idea under their epics: P461 (#629), P462 (#630), P463 (#631),
 | 1 | `--match` lists a joystick before the onboard button and five LED matrices before the onboard LED | diary | acted | P467 (#635) |
 | 2 | The firmware guessed the LED polarity and the button's pressed level, and the pin map names only the LED's gap | diary | acted | P464 (#632), first slice |
 | 3 | The simulation cannot press the onboard button or see the onboard LED: no Wokwi definition | diary | raised | comment on P447 (#599), parked |
-| 4 | A board-only diagram has no serial monitor, so `wait-serial` hears nothing | diary, lead | acted | P468 (#636). The rehearsal's `diagram.json` has no connections. `check_spine.py:266` only reports it |
+| 4 | A board-only diagram has no serial monitor, so `wait-serial` hears nothing | diary, lead | acted | P468 (#636). The rehearsal's `diagram.json` has no connections. `check_spine.py:606-608` only warns about it |
 | 5 | The look's no-token line names only a scenario run, not `--no-simulation` | diary | acted | P463 (#631) |
 | 6 | `commands/deploy.md` says `sim/wokwi.toml` names the image, but only a comment does | diary | acted | P463 (#631) |
 | 7 | `init_project.py` takes `--project .`, `import_firmware.py` a bare folder | diary, tech lead | raised | comment on P382 (#489), the names pass |
@@ -34,7 +34,7 @@ New cards, all in Idea under their epics: P461 (#629), P462 (#630), P463 (#631),
 | 24 | The charge LED blinks with no battery (DFRobot wiki) | diary | raised | comment on P340 (#434) |
 | 25 | The GDI backlight LCD_BL shares GPIO21 with the onboard LED | diary | raised | comment on P460 (#628). Walk 3 part 2 cannot keep the LED |
 | 26 | After the second flash and a replug, no USB device at all | diary | closed | explained by row 29 |
-| 27 | esptool's restart left the bare build in download mode | diary, refuter | closed | outside spark, row 28 |
+| 27 | esptool's restart most likely left the bare build in download mode (only the chip's own port showed) | diary, refuter | closed | outside spark, row 28 |
 | 28 | esptool's RTS restart leaves the FireBeetle 2 in download mode, and only a power-up or RESET starts the firmware | diary | acted | P462 (#630) |
 | 29 | The image writes a 2 MB littlefs, and MicroPython mounts 14 MB on a 16 MB board | diary, refuter | acted | P461 (#629). `flash_image.py:33,50`. MicroPython v1.29 `main.c:255-275` sizes the vfs to the end of flash, `lfs2.c:4607-4613` refuses the mount (reproduced: `LFS_ERR_INVAL`), `_boot.py` loops in `fs_corrupted()` before USB starts. The UART0 text is not yet seen |
 | 30 | The button idles at 1 and reads 0 while held | diary, bench | raised | a bench fact. Written only on the PO's yes |
@@ -44,4 +44,4 @@ New cards, all in Idea under their epics: P461 (#629), P462 (#630), P463 (#631),
 | 34 | The 16 MB image is also built for Wokwi, whose S3 flash size nobody checked | refuter | acted | in P461 (#629)'s plan question |
 | 35 | The rehearsal ran the scripts, not the `/spark:*` commands or the agents | diary, council | raised | the free walk runs the commands |
 | 36 | The first B2 card (the build per SKU) before the walk | lead | rejected | the refuter: no evidence that the build caused the failure. It goes to P349 (#445) |
-| 37 | `wait_for_reset` counts any time the port goes and comes back. The log shows `rst:0x15 (USB_UART_CHIP_RESET)` before "reset seen" | refuter, lead | acted | P462 (#630). `board_console.py:139-148`. Unproven on the bench which tool caused it |
+| 37 | `wait_for_reset` counts any time the port goes and comes back. The log shows `rst:0x15 (USB_UART_CHIP_RESET)` before "reset seen" | refuter, lead | acted | P462 (#630). `board_console.py:139-148`. Comment on P379 (#486), the same failure family. Unproven on the bench which tool caused it |
