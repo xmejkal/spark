@@ -47,21 +47,21 @@ def read(project):
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except ValueError as broken:
-        raise store.StoreProblem("%s is not JSON (%s)" % (path, broken))
+        raise store.StoreProblem("%s is not JSON (%s)", path, broken)
     if not (isinstance(data, dict) and isinstance(data.get("needs"), list)
             and all(isinstance(need, dict) and isinstance(need.get("id"), str) for need in data["needs"])):
-        raise store.StoreProblem('%s is not {"schema": 1, "needs": [{"id", "does", "what", …}]} — fix it by hand' % path)
+        raise store.StoreProblem('%s is not {"schema": 1, "needs": [{"id", "does", "what", …}]} — fix it by hand', path)
     stray = sorted(set(data) - {"schema", "needs"})
     if stray:
-        raise store.StoreProblem("%s holds %s, which a needs file does not — fix it by hand" % (path, ", ".join(stray)))
+        raise store.StoreProblem("%s holds %s, which a needs file does not — fix it by hand", path, ", ".join(stray))
     if data.get("schema", 1) != 1:
-        raise store.StoreProblem("%s is schema %r — this spark reads schema 1" % (path, data["schema"]))
+        raise store.StoreProblem("%s is schema %r — this spark reads schema 1", path, data["schema"])
     ids = [need["id"] for need in data["needs"]]
     for need in data["needs"]:
         said = ((["`id` is not lower-case letters, digits and '-'"] if not store.PLAIN.fullmatch(need["id"]) else [])
                 + (["is there more than once"] if ids.count(need["id"]) > 1 else []) + faults(need, held_only=True))
         if said:
-            raise store.StoreProblem("%s: need %r: %s — fix it by hand" % (path, need["id"], said[0]))
+            raise store.StoreProblem("%s: need %r: %s — fix it by hand", path, need["id"], said[0])
     return data["needs"]
 
 
@@ -406,8 +406,8 @@ def plan_pick(project, given, passed_over=()):
             problems.append(parts._problem(need_id, "no record or drawer entry called %s — --match lists the candidates" % pick_id))
         elif not (store.PLAIN.fullmatch(pick_id) and store.PLAIN.fullmatch(named)):  # the key given, and the id written
             raise store.StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so a pick cannot name it: "
-                                     "rename the drawer entry, or the record's file, then pick it"
-                                     % (named if store.PLAIN.fullmatch(pick_id) else pick_id))
+                                     "rename the drawer entry, or the record's file, then pick it",
+                                     named if store.PLAIN.fullmatch(pick_id) else pick_id)
         elif pick not in picked.setdefault(need_id, []):
             picked[need_id].append(pick)
             renamed = "%s: the drawer entry of %s — picked as that record" % (pick_id, named)
@@ -740,11 +740,11 @@ def requirements(project):
     try:
         held = json.loads(file.read_text(encoding="utf-8")) if file.is_file() else {}
     except ValueError as broken:
-        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand" % (file, broken))
+        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand", file, broken)
     held = held if isinstance(held, dict) else {}
     existing = held.get("parts") or []
     if not isinstance(existing, list):
-        raise store.StoreProblem("%s: `parts` is not a list — fix it by hand" % file)
+        raise store.StoreProblem("%s: `parts` is not a list — fix it by hand", file)
     after, kept, naming = _merge_parts(existing, wanted)
     content = dict(held, board=board_picks[0] if board_picks else None, parts=after)
     unserved = _unserved(needs, known, entries)

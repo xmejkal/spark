@@ -85,7 +85,7 @@
  },
  {
   "file": "scripts/drawer.py",
-  "name": "an id is cleaned like a label and cut at 160",
+  "name": "an id is cleaned like a label and cut at 255",
   "find": "_in_bytes(_scrubbed(value, store.FILE_NAME_MAX_BYTES), store.FILE_NAME_MAX_BYTES)",
   "replace": "_in_bytes(_scrubbed(value), store.FILE_NAME_MAX_BYTES)"
  },

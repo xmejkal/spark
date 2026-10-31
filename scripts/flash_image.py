@@ -86,13 +86,14 @@ def board_build(project):
     try:
         board = json.loads(requirements.read_text()).get("board")
     except (OSError, ValueError, AttributeError) as cannot:
-        raise tools.ToolProblem("%s cannot be read, so its board's MicroPython build is not known: %s" % (requirements, cannot))
+        raise tools.ToolProblem("%s cannot be read, so its board's MicroPython build is not known: %s", requirements, cannot)
     if not board:
         return None
     try:
         return boards.get(Path(project), "micropython_port", board)
     except boards.BoardError as cannot:
-        raise tools.ToolProblem("the board %s names no MicroPython build that can be read: %s" % (board, cannot))
+        first, *rest = str(cannot).split("\n")  # the problem's own lines stay lines; the board's name is a value
+        raise tools.ToolProblem.of_lines(["the board %s names no MicroPython build that can be read: %s" % (board, first)] + rest)
 
 
 def project_here():
@@ -115,7 +116,7 @@ def offset_of(entry):
     """Where an entry's build starts in the flash: its `flash_offset`, else 0. A broken one is a ToolProblem."""
     problem = tools.flash_offset_problem(entry)
     if problem:
-        raise tools.ToolProblem("the MicroPython build's tools list entry is broken: %s" % problem)
+        raise tools.ToolProblem("the MicroPython build's tools list entry is broken: %s", problem)
     return int(entry.get("flash_offset", "0"), 0)
 
 
@@ -149,7 +150,7 @@ def interpreter_for(given, project=None, find_tool=None):
         return Interpreter(Path(find_tool(name).command[0]), offset_of(entry))
     if build:
         raise tools.ToolProblem("no tool on the tools list holds the MicroPython build %s that the board names; add "
-                                "one from https://micropython.org/download/%s/" % (build, build))
+                                "one from https://micropython.org/download/%s/", build, build)
     found = find_tool("firmware-image")
     return Interpreter(Path(found.command[0]), offset_of(found.entry))
 

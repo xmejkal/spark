@@ -34,6 +34,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import check_all  # noqa: E402
 import check_footprints  # noqa: E402
 import design  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 
 def written(name, payload):
@@ -241,6 +242,12 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("[]")
         return root
+
+    def test_a_newline_in_the_folder_gives_one_line_in_checked_folder(self):
+        folder = Path(tempfile.mkdtemp()) / NASTY
+        with self.assertRaises(design.DesignError) as caught:
+            check_all.CheckedFolder.at(folder)
+        assert_flat(self, caught.exception, folder)
 
     def test_it_finds_what_a_usual_layout_holds(self):
         root = self._project("dist/board/circuit.json", ".spark/rules.json", "board-gerbers.zip")

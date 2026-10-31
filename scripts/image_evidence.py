@@ -45,6 +45,14 @@ ONE_RUN_MESSAGE = "the passed run's scenario has"
 MANY_RUNS_MESSAGE = "the passed runs (%s) have"
 #: P436: the words of the image check that could not run, as a sentence and as a tools.ToolProblem.
 CANNOT_CHECK_MESSAGE = "cannot check %s against firmware/: %s"
+
+
+def cannot_check(name, cause, error=text_guards.ValueMessageError):
+    """The error of CANNOT_CHECK_MESSAGE for this name and cause: each line of the cause is a value, so its line breaks stay (P451)."""
+    lines = str(cause).split("\n")
+    return error("\n".join([CANNOT_CHECK_MESSAGE] + ["%s"] * (len(lines) - 1)), name, *lines)
+
+
 #: The flag that deploys an image from firmware/ with no simulation.
 NO_SIMULATION_FLAG = "--no-simulation"
 #: The flag that turns a run of another image from a refusal into a note.
@@ -388,7 +396,7 @@ class NoSimulationEvidence(ImageEvidence):
         try:
             flash_image.board_build(self.project)
         except tools.ToolProblem as cannot:
-            return CANNOT_CHECK_MESSAGE % (image.path.name, cannot)
+            return str(cannot_check(image.path.name, cannot))
         return None
 
     # --- MVP --- P436: a missing tool raises its ToolProblem (tool_missing: /spark:setup); an unreadable file is a sentence
@@ -398,9 +406,9 @@ class NoSimulationEvidence(ImageEvidence):
             built = flash_image.interpreter_for(None, self.project, self.find_tool).image(flash_image.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tools.ToolProblem, ImportError) as cannot:
-            raise tools.ToolProblem(CANNOT_CHECK_MESSAGE % (image.path.name, cannot))
+            raise cannot_check(image.path.name, cannot, tools.ToolProblem)
         except (OSError, ValueError) as cannot:
-            return CANNOT_CHECK_MESSAGE % (image.path.name, cannot)
+            return str(cannot_check(image.path.name, cannot))
         except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as flash_image does
             if type(cannot).__name__ != "LittleFSError":
                 raise

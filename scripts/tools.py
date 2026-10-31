@@ -266,11 +266,11 @@ def off_sentence(tool_name, project=None, personal=None):
     """Why a tool is off and how to turn it on in the file that turned it off — a project's file wins over the person's."""
     setter = setter_of(tool_name, "on", project, personal)
     if project and setter == Path(project) / PROJECT_FILE:
-        return ("%s is turned off in this project's .spark/tools.json — turn it on there: /spark:setup add %s --project ."
-                % (tool_name, tool_name))
+        return flat_line("%s is turned off in this project's .spark/tools.json — turn it on there: /spark:setup add %s --project .",
+                         tool_name, tool_name)
     if setter == DEFAULTS:
-        return "%s is off unless you turn it on — /spark:setup add %s" % (tool_name, tool_name)
-    return "%s is turned off in %s — turn it on: /spark:setup add %s" % (tool_name, setter, tool_name)
+        return flat_line("%s is off unless you turn it on — /spark:setup add %s", tool_name, tool_name)
+    return flat_line("%s is turned off in %s — turn it on: /spark:setup add %s", tool_name, setter, tool_name)
 
 
 def command_for(tool):
@@ -550,7 +550,7 @@ def entry_problem(entry):
         except ValueError:
             unknown = ["a stray brace"]
         if unknown:
-            return "its %s install line names {%s}; only {version} and {core} are filled" % (manager, unknown[0])
+            return flat_line("its %s install line names {%s}; only {version} and {core} are filled", manager, unknown[0])
     return None
 
 

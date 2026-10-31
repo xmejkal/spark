@@ -73,6 +73,11 @@ class ValueMessageError(Exception):
         """The error of several sentences, one per line: each is a value, flattened, and the line breaks between them stay."""
         return cls("\n".join(["%s"] * len(lines)), *lines, **keywords)
 
+    @classmethod
+    def of_error(cls, error):
+        """The error that says what another error says, line by line: each line of `str(error)` is a value, and its line breaks stay (P451)."""
+        return cls.of_lines(str(error).split("\n"))
+
 
 def flat_line(template, *values):
     """The text of a `ValueMessageError` of this template and these values, for a script that prints a line (P444)."""

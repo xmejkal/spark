@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import design  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 
 def project(rules=None, requirements=None, sub=None):
@@ -67,6 +68,38 @@ class ReadingTheRequirementsTest(unittest.TestCase):
             design.read(path)
         self.assertIn("bad.json", str(caught.exception))
         self.assertIn("not JSON", str(caught.exception))
+
+    def test_a_newline_in_the_requirements_path_gives_one_line_in_read(self):
+        path = Path(tempfile.mkdtemp()) / NASTY
+        with self.assertRaises(design.DesignError) as caught:
+            design.read(path)
+        assert_flat(self, caught.exception, path)
+
+    def test_a_part_error_keeps_its_two_lines_and_a_path_with_a_newline_gives_one_line_in_record(self):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        with self.assertRaises(design.DesignError) as caught:
+            design.record("no-such-part", root)
+        self.assertEqual(len(str(caught.exception).split("\n")), 2, str(caught.exception))
+        home = Path(tempfile.mkdtemp()) / NASTY
+        (home / ".spark").mkdir(parents=True)
+        (home / "parts").mkdir()
+        (home / "parts" / "bad.json").write_text("{}")
+        with self.assertRaises(design.DesignError) as caught:
+            design.record("bad", home)
+        assert_flat(self, caught.exception)
+        self.assertGreater(len(str(caught.exception).split("\n")), 2, "the problem lines stay lines")
+        (home / "boards").mkdir()
+        (home / "boards" / "worse.json").write_text(json.dumps({"id": "worse"}))
+        (home / "car.requirements.json").write_text(json.dumps({"board": "worse", "parts": []}))
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(home / "car.requirements.json")
+        assert_flat(self, caught.exception)
+        self.assertGreater(len(str(caught.exception).split("\n")), 2, "the problem lines stay lines")
+        with self.assertRaises(design.DesignError) as caught:
+            design.signals_of([{"id": "bad"}], {}, home)
+        assert_flat(self, caught.exception)
+        self.assertGreater(len(str(caught.exception).split("\n")), 2, "the problem lines stay lines")
 
     def test_a_list_is_not_a_requirements_file(self):
         path = Path(tempfile.mkdtemp()) / "list.json"

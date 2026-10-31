@@ -24,6 +24,7 @@ from image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidenc
 from run_scenario import ScenarioSteps  # noqa: E402
 from project_image import DeployError, ProjectImage  # noqa: E402
 from test_project_image import project_with_image, write_log  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 FAILED = "failed (wokwi-cli exit 1)"
 
@@ -473,6 +474,17 @@ class NoSimulationEvidenceTest(unittest.TestCase):
             self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
 
+    def test_a_newline_in_the_image_name_gives_one_line_in_the_check_words_of_a_missing_tool_and_of_an_unreadable_file(self):
+        named = mock.Mock(path=Path(NASTY))
+        self.raising = tools.ToolProblem("no tool holds it")
+        with self.assertRaises(tools.ToolProblem) as raised:
+            NoSimulationEvidence(self.project)._why_image_differs(named)
+        assert_flat(self, raised.exception)
+        self.raising = OSError("gone")
+        said = NoSimulationEvidence(self.project)._why_image_differs(named)
+        self.assertIn("a?GRANTED: board ok", said)
+        self.assertNotIn("\n", said)
+
     def test_a_missing_littlefs_raises_its_tool_problem_with_the_install_line(self):
         def find(name, *args, **kwargs):
             raise tools.ToolProblem("littlefs (littlefs-python) is not installed — install: python3 -m pip install --user littlefs-python")
@@ -492,6 +504,13 @@ class NoSimulationEvidenceTest(unittest.TestCase):
     def test_a_board_record_that_cannot_be_read_stays_a_sentence_not_a_missing_tool(self):
         (self.project / "requirements.json").write_text("{not json")
         self.assertIn("requirements.json cannot be read, so its board's MicroPython build is not known", self.why())
+
+    def test_an_unknown_board_id_keeps_the_available_list_on_its_own_line(self):
+        (self.project / "requirements.json").write_text('{"board": "nosuch-board"}')
+        said = self.why().split("\n")
+        self.assertEqual(said[0], "cannot check flash-with-firmware.bin against firmware/: the board nosuch-board names no "
+                         "MicroPython build that can be read: no board definition for 'nosuch-board'.")
+        self.assertTrue(said[1].startswith("  available: "), said)
 
     def test_an_unreadable_interpreter_is_a_sentence(self):
         self.interpreter.unlink()  # OSError, not a missing tool: it stays a sentence, evidence_refuses

@@ -62,6 +62,9 @@ class ValueMessageErrorTest(unittest.TestCase):
     def test_of_lines_keeps_the_breaks_between_the_lines_and_flattens_each(self):
         self.assertEqual(str(text_guards.ValueMessageError.of_lines(["a\nb", "c"])), "a?b\nc")
 
+    def test_of_error_says_what_another_error_says_line_by_line(self):
+        self.assertEqual(str(text_guards.ValueMessageError.of_error(ValueError("a\n  b\x1b[2J"))), "a\n  b?[2J")
+
     def test_a_str_with_its_own_repr_a_number_with_its_own_str_and_a_c_conversion_cannot_break_the_line(self):
         class Name(str):
             def __repr__(self):

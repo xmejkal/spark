@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import tools  # noqa: E402
+from flat_message import NASTY  # noqa: E402
 
 DEFAULTS = {
     "roles": {"pdf-text": "pdftotext"},
@@ -207,6 +208,19 @@ class FindingAToolTest(unittest.TestCase):
 def which_all_but(*absent):
     """A fake shutil.which: every program is in /usr/bin except the ones named."""
     return lambda exe: None if exe in absent else "/usr/bin/" + exe
+
+
+class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
+    def test_a_newline_in_a_tool_name_gives_one_line_in_the_off_row(self):
+        said = tools.off_sentence(NASTY, personal=Path(tempfile.mkdtemp()) / "none.json")
+        self.assertIn("a?GRANTED: board ok", said)
+        self.assertEqual([line for line in said.split("\n") if line.startswith("GRANTED")], [])
+        self.assertNotIn("\n", said)
+
+    def test_a_newline_in_an_install_key_gives_one_line_in_the_entry_problem(self):
+        problem = tools.entry_problem({"kind": "path", "exe": "x", "install": {"a\nGRANTED": "pip {nope}"}})
+        self.assertIn("a?GRANTED", problem)
+        self.assertNotIn("\n", problem)
 
 
 class SetupTest(unittest.TestCase):

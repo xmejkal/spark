@@ -32,8 +32,8 @@
  {
   "file": "scripts/parts.py",
   "name": "promotion overwrites",
-  "find": "    if target.exists():\n        raise PartError(\"%s exists; a promotion never overwrites\" % target)",
-  "replace": "    if False:\n        raise PartError(\"%s exists; a promotion never overwrites\" % target)"
+  "find": "    if target.exists():\n        raise PartError(\"%s exists; a promotion never overwrites\", target)",
+  "replace": "    if False:\n        raise PartError(\"%s exists; a promotion never overwrites\", target)"
  },
  {
   "file": "scripts/parts.py",

@@ -160,8 +160,8 @@ def project_root(start: Path = None) -> Path:
                 or (directory / SPARK_DIR).is_dir():
             return directory
     raise BoardError(
-        f"no project here: nothing up from {here} holds {PROJECT_BOARDS_DIR}/{SELECTION_NAME} "
-        f"or {SPARK_DIR}/")
+        "no project here: nothing up from %s holds %s/%s or %s/",
+        here, PROJECT_BOARDS_DIR, SELECTION_NAME, SPARK_DIR)
 
 
 #: The plugin's own root: what a design in no project is built from — its shipped boards and
@@ -186,11 +186,11 @@ def project_or_library(start: Path = None) -> Path:
 
 def _read_json(path: Path, what: str) -> dict:
     if not path.is_file():
-        raise BoardError(f"no {what} at {path}")
+        raise BoardError("no %s at %s", what, path)
     try:
         return json.loads(path.read_text())
     except ValueError as broken:
-        raise BoardError(f"{path} is not valid JSON: {broken}") from broken
+        raise BoardError("%s is not valid JSON: %s", path, broken) from broken
 
 
 def selection_file(project: Path) -> Path:
@@ -215,14 +215,13 @@ def active_id(project: Path) -> str:
     selection = _read_json(selection_file(project), "board selection")
     board_id = selection.get("board")
     if not board_id:
-        raise BoardError(f"{selection_file(project)} names no board "
-                         f'(expected a "board" key holding a board id)')
+        raise BoardError('%s names no board (expected a "board" key holding a board id)', selection_file(project))
     if not isinstance(board_id, str):
         raise BoardError(
-            f'{selection_file(project)} holds {board_id!r} where a board id belongs. '
-            f"A project is built around ONE board: `.spark/board.json` is one file per project "
-            f"and every consumer reads it. Two boards means two projects — a car and its remote "
-            f"are separate designs that happen to talk to each other.")
+            "%s holds %r where a board id belongs. "
+            "A project is built around ONE board: `.spark/board.json` is one file per project "
+            "and every consumer reads it. Two boards means two projects — a car and its remote "
+            "are separate designs that happen to talk to each other.", selection_file(project), board_id)
     return board_id
 
 
@@ -237,8 +236,7 @@ def definition_path(project: Path, board_id: str = None) -> Path:
     found = records(project).get(board_id) if isinstance(board_id, str) else None
     if found:
         return found[1]
-    raise BoardError(f"no board definition for {board_id!r}.\n"
-                     f"  available: {', '.join(available(project)) or '(none)'}")
+    raise BoardError("no board definition for %r.\n  available: %s", board_id, ", ".join(available(project)) or "(none)")
 
 
 def available(project: Path) -> list:
@@ -268,8 +266,7 @@ def load(project: Path, board_id: str = None) -> dict:
     board = _read_json(path, "board definition")
     problems = validate(board, path)
     if problems:
-        raise BoardError(f"{path} does not meet the board contract:\n" +
-                         "\n".join(f"  - {problem}" for problem in problems))
+        raise BoardError.of_lines([f"{path} does not meet the board contract:"] + [f"  - {problem}" for problem in problems])
     return board
 
 
@@ -884,8 +881,7 @@ def get(project: Path, key_path: str, board_id: str = None):
     value = load(project, board_id)
     for step in key_path.split(KEY_PATH_SEPARATOR):
         if not isinstance(value, dict) or step not in value:
-            raise BoardError(f"no {key_path!r} in this board definition "
-                             f"(stopped at {step!r})")
+            raise BoardError("no %r in this board definition (stopped at %r)", key_path, step)
         value = value[step]
     return value
 
