@@ -14,4 +14,4 @@ Findings of P456 (#621), 2026-10-31, Prague, built on main b9156270 (includes P4
 | 8 | Step 4: fake-finder tests might run on 3.9 with a stand-in image | plan | rejected | `ToolMissingEvidenceTest` with `write_bytes(b"x")` passed on 3.10 and failed on 3.9: the littlefs check runs before the interpreter lookup. `test_a_missing_interpreter_is_could_not_run...` (flash_image), `test_a_missing_tool_could_not_run...` (run_scenario) and `test_a_missing_image_tool_with_no_simulation...` (deploy_json) fail on 3.9 undecorated for the same reason. Kept decorated; the undecorated fake-finder tests that already pass (e.g. board_look `test_a_missing_image_tool_is_tool_missing...`) keep running |
 | 9 | Later (proposed): an injected image checker would let the port, chip, flash and tool-missing tests run on 3.9 | P452 row 5 | raised (LATER) | also unblocks step 4 above |
 | 10 | Later (proposed): a CI job on Python 3.9 | plan | raised (LATER) | catches a test that needs littlefs and is not marked |
-| 11 | Mutation table | plan | none | tests only, no script logic changes |
+| 11 | Mutation table | plan | closed | tests only, no script logic changes |
