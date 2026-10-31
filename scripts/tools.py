@@ -209,10 +209,32 @@ def _python_versions(entry):
     """
     if not entry.get("version"):
         return {}
+    return {"version": _installed_release(entry)}
+
+
+def _installed_release(entry):
+    """The version of a Python tool's module as installed for this interpreter, or None when it has no metadata."""
     try:
-        return {"version": importlib.metadata.version(entry["module"])}
+        return importlib.metadata.version(entry["module"])
     except importlib.metadata.PackageNotFoundError:
-        return {"version": None}
+        return None
+
+
+def _version_key(version):
+    """A version as a tuple to compare: the leading digits of each dotted part, up to the first part that is not all
+    digits, and no trailing zeros. So 5.0, 5.0.0, 5.0.0b1, 5.0.dev0 and 5.0.post1 are all (5,): a pre-release counts as
+    its release. None for a value with no digits."""
+    key = []
+    for part in str(version).split("."):
+        digits = part[:len(part) - len(part.lstrip("0123456789"))]
+        if not digits:
+            break
+        key.append(int(digits))
+        if digits != part:
+            break
+    while key and key[-1] == 0:
+        key.pop()
+    return tuple(key) if key else None
 
 
 def _npm_versions(entry, command):
@@ -307,7 +329,17 @@ def find(name, project=None, personal=None, _seen=()):
     if command is None:
         raise ToolProblem("%s (%s) is not installed — install: %s",
                           role or tool_name, tool_name, install_hint(entry) or "see its entry in %s" % DEFAULTS)
+    _refuse_too_old(tool_name, entry)
     return Tool(tool_name, role, entry, command)
+
+
+def _refuse_too_old(tool_name, entry):
+    """A Python tool installed below its `oldest_version` is a ToolProblem with the install line. A version nobody can
+    read, or a floor with no digits, refuses nothing."""
+    oldest, here = entry.get("oldest_version"), _installed_release(entry) if entry.get("kind") == "python" else None
+    if oldest and here and None not in (_version_key(oldest), _version_key(here)) and _version_key(here) < _version_key(oldest):
+        raise ToolProblem("%s %s is too old: spark needs %s or newer. Install: %s",
+                          tool_name, here, oldest, install_hint(entry) or "see its entry in %s" % DEFAULTS)
 
 
 def status(project=None, personal=None):

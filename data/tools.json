@@ -133,6 +133,7 @@
     "module": "esptool",
     "silent_step": "hold_boot",
     "version": "5.5.0",
+    "oldest_version": "5.0",
     "install": {
       "pip": "python3 -m pip install --user esptool=={version}"
     }
