@@ -10,7 +10,7 @@ Written 2026-10-31 (Prague), before the walk. Refs P100 #6 (the MVP) and the wal
 Marks. **(D)** proved by a dry run on 2026-10-31. It ran in a scratch project and a scratch copy of the store. No USB,
 no Wokwi run, no board. **(R)** read from code or the board record only. Nothing was deployed.
 
-Facts for all steps. The sheet draws 63 columns and no rails. The board record has `wokwi_is_stand_in: true`, no
+Facts that hold for every step: The sheet draws 63 columns and no rails. The board record has `wokwi_is_stand_in: true`, no
 `physical.buttons`, and `pins` D3 = GPIO38 and A5 = GPIO11.
 
 | # | step | prediction (2026-10-31) | mark |
@@ -22,8 +22,8 @@ Facts for all steps. The sheet draws 63 columns and no rails. The board record h
 | 5 | Requirements | After the picks, `--requirements` writes `board`, `tactile-button`, `led-red-5mm` and no `board_only`. | D |
 | 6 | Build | `check_spine.py requirements.json --keep .` exits 0 in about 8 s, with "the chain runs end to end". It writes `breadboard.md`, `breadboard.svg`, `page.html`, `firmware/pins.py` and `sim/`. | D |
 | 7 | Pin map | `BUTTON = 38`, `BUTTON_PULL = "up"`, `STATUS_LED = 11`, `ONBOARD_LED = 21`, `ONBOARD_BUTTON = 47`. No polarity line for the onboard LED. | D |
-| 8 | Sheet | 9 steps. Parts: a 330 ohm R1, the LED, the button, "a breadboard and jumper wires" (all "to get" except the button). Jumpers: A5 to R1, D3 to the button, GND (pad GND2) to the LED cathode. The picture caveat reads "pads not verified, row side not verified, USB end not verified, GND1 and GND3 doubtful". Its text says "no Wokwi diagram for this board". | D |
-| 9 | Fit | The board pins sit 9 holes apart, so on a normal breadboard each row of the board keeps 3 to 4 free holes. The first sheet step says "each pin in its own row". The sheet states no column numbers. | R |
+| 8 | Sheet | 9 steps. Parts: a 330 ohm R1, the LED, the button, "a breadboard and jumper wires" (all "to get" except the button). Jumpers: A5 to R1, D3 to the button, GND (pad GND2) to the LED cathode. The picture caveat reads "pads not verified, row side not verified, USB end not verified, GND1 and GND3 doubtful". Its text says "There is no Wokwi diagram for this board. Use the picture." (breadboard_drawing.py:411): that line is about the breadboard picture, not the simulation diagram of step 12. | D |
+| 9 | Fit | The board pins sit 9 holes apart, so on a normal breadboard each row of the board keeps 4 free holes on each side (record `row_spacing_mm` 22.86 mm, 9 pitches). The first sheet step says "each pin in its own row". The sheet states no column numbers. | R |
 | 10 | Checks | First run: exit 2, "nothing found by the 2 check(s) that completed, of 5" (physics has no rails). After `init_project.py --force`: "nothing found by the 4 check(s) that completed, of 5, resting on 4 ? line(s)". It names the internal pull-up of the button as a line "no netlist shows". | D |
 | 11 | Firmware | Claude writes `firmware/light.py` and `main.py`, and `import_firmware.py` prints `ok` at the first run. A stand-in `machine` has `Pin` with `PULL_UP`. | D |
 | 12 | Simulate | The diagram uses `board-esp32-s3-devkitc-1` for the FireBeetle, and a `wokwi-pushbutton`, `wokwi-led` and `wokwi-resistor`. `WHAT-THIS-CANNOT-SHOW.md` and the build output do NOT say that the board is a stand-in. They name only the LED, the button and "onboard GPIOs not checked". A scenario can press the button, unlike walk 2. It spends Wokwi minutes, so the PO is asked first. The firmware must print `ready`. | D (diagram, notes), R (run) |
@@ -45,7 +45,7 @@ Facts for all steps. The sheet draws 63 columns and no rails. The board record h
 2. **The drawer holds no resistor, LED, breadboard or jumper** (D: step 2). The sheet lists them as "to get". Walk 1
    found that the PO had no resistors. Without R1 the LED must not be wired. No code fix. Check the kit before the
    walk. One spare 330 ohm resistor ends this risk.
-3. **The simulation hides that the board is a stand-in** (D: the three lines of `WHAT-THIS-CANNOT-SHOW.md`). A pass
+3. **The simulation hides that the board is a stand-in** (D: the three lines of `WHAT-THIS-CANNOT-SHOW.md`; the record says it at boards/firebeetle2-esp32s3.json:108 and :119, but `sim_project.limits_of` reads only the parts). A pass
    proves the firmware only. A small fix exists. When the record has `wokwi_is_stand_in`, print one line from
    the record's `//wokwi_part_type` sentence. Pins 38 and 11 were not looked up in Wokwi's own board file.
 4. **The breadboard picture is not trusted.** Its own caption lists four doubts: pads, row side, USB end, and
