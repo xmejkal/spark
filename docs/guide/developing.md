@@ -324,8 +324,10 @@ PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `
 
 ### The package
 
-`scripts/spark/` is a package, and `scripts/` is on the path whenever a script runs (it is `sys.path[0]`) and in every
-test, so `import spark.core.outcomes` needs no path change. `scripts/spark/core/` holds the core contract (the next
+`scripts/spark/` is a package, and `scripts/` is on the path in every test. Every entry script (one with a `__main__`
+guard) puts its own folder on `sys.path` with `sys.path.insert(0, str(Path(__file__).resolve().parent))` before its first
+sibling import, so it runs under `python3 -I` (which drops the script's folder and ignores PYTHONPATH). `tests/test_scripts_isolated.py`
+names the rule. A library needs no such line. `scripts/spark/core/` holds the core contract (the next
 section) and the leaf modules every script shares: `outcomes` (the exit codes and the three outcomes), `text_guards`,
 `zone_time` and `codes`. The leaves import nothing of spark. A script writes `from spark.core import outcomes` and then
 `outcomes.EXIT_OK`, or `from spark.core.outcomes import EXIT_OK`. `scripts/spark/bench/` is the first area package: one
@@ -334,8 +336,8 @@ The other scripts stay flat in `scripts/` until their own card moves them. A too
 (`tools/inventory.py`, `tools/measure.py`, the tests that read every script) looks in the folders under `scripts/` too.
 Most of them leave out `scripts/stand_in/`, but `test_no_magic_strings` reads it too. `test_orphans`,
 `test_self_confirmation` and the inventory leave out each `__init__.py` as a script to route, and `test_orphans` counts
-the imports of a package's `__init__.py`. A child started with `python3 -I` never imports `spark.core`, because `-I`
-drops the script's folder from `sys.path`.
+the imports of a package's `__init__.py`. A child started with `python3 -I` imports `spark.core` because its entry script puts its own folder on
+`sys.path` (`import_child.py` is exempt: its first argument is a module).
 
 ### The core contract
 

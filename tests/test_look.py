@@ -539,7 +539,7 @@ class ACrashTest(LookScriptCase):
         tree = ast.parse(Path(look.__file__).read_text())
         imported = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)} \
             | {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
-        self.assertEqual(imported, {"sys", "spark.bench", "spark.bench.look_at_board", "spark.core.cli"})
+        self.assertEqual(imported, {"sys", "pathlib", "spark.bench", "spark.bench.look_at_board", "spark.core.cli"})
 
 
 class TheHelpTest(unittest.TestCase):
