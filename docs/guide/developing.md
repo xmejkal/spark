@@ -467,8 +467,8 @@ refuses a new or risen breach. `--accept-new` writes those too: use it only for 
 rebases on another one, and give the reason in the PR. A failure names the rule and its limit, the file, the name and
 the value, and `python3 tools/measure.py --rules` shows every breach.
 
-R6 and C1 list a class by its qualified name (`Outer.Inner`). V1 lists the raises of a `ValueMessageError` or a subclass
-whose template is no string constant, per class (`V1:file:Class`); see the next section. T1, T2, T4, X2 and C3 count the breaches of a file under
+R6 and C1 list a class by its qualified name (`Outer.Inner`). V1 counts the raises of a `ValueMessageError` or a subclass
+whose template is no string constant, per class (`V1:file:Class`); its baseline is empty since P451, see the next section. T1, T2, T4, X2 and C3 count the breaches of a file under
 one key: they say how many, not where, so a new breach next to an old one shows only as a higher count. A baseline of
 200 entries hides what it lists: each slice pays down the lines it touches.
 
@@ -478,8 +478,15 @@ An error that puts a path, a name or a record's field into its sentence inherits
 (`scripts/spark/core/text_guards.py`, [P444](https://github.com/xmejkal/spark/issues/592)) and a raise passes the values as
 arguments: `raise ToolProblem("%s is not JSON (%s)", path, broken)`, never `"..." % (path, broken)`. The class puts each value on
 one line, keeps a number and a `%r` value as they are, and keeps the raw values on `.values`. Rule V1 counts the raises that
-still build the text first; the baseline lists them and may only shrink. `Class.of_lines([...])` raises several sentences, one
-per line, each flattened.
+build the text first. Its baseline has no entry (P451, [#606](https://github.com/xmejkal/spark/issues/606)), and
+`tests/test_architecture.py` fails if one comes back, so a new raw site is fixed and never baselined.
+`Class.of_lines([...])` raises several sentences, one per line, each flattened; `Class.of_error(error)` does the same for
+the lines of another error, so a nested error keeps its line breaks.
+
+What V1 does not see, so a reviewer looks for it: a class under another name (`import ToolProblem as SP`, `P = ToolProblem`),
+the lines that `X.of_lines(...)` and `X.of_error(...)` take (safe by construction), and a message built before the raise
+(`msg = ...; raise E(msg)`, or a sentence a function returns, such as `tools.off_sentence` and `tools.entry_problem`, which
+use `flat_line` by hand).
 
 ### One responsibility, one name
 

@@ -62,6 +62,9 @@ class ArchitectureRules(unittest.TestCase):
     test_c3_an_exit_code_has_no_second_name = rule_test("C3")
     test_v1_a_value_message_error_is_made_with_a_constant_template = rule_test("V1")
 
+    def test_v1_has_no_baseline_entry_so_a_new_raw_site_cannot_be_hidden_in_it(self):
+        self.assertEqual([key for key in self.baseline if key.startswith("V1:")], [])
+
     def test_every_rule_in_the_table_has_a_test_method_and_no_method_has_none(self):
         held = {method.rule for method in vars(type(self)).values() if hasattr(method, "rule")}
         self.assertEqual(held, set(measure.RULES))

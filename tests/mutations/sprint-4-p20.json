@@ -14,8 +14,8 @@
  {
   "file": "scripts/design.py",
   "name": "a malformed record escapes as a traceback (B10)",
-  "find": "    except ValueError as broken:\n        raise DesignError(\"the record for %r is not JSON: %s\" % (part_id, broken)) from broken",
-  "replace": "    except ImportError as broken:\n        raise DesignError(\"the record for %r is not JSON: %s\" % (part_id, broken)) from broken"
+  "find": "    except ValueError as broken:\n        raise DesignError(\"the record for %r is not JSON: %s\", part_id, broken) from broken",
+  "replace": "    except ImportError as broken:\n        raise DesignError(\"the record for %r is not JSON: %s\", part_id, broken) from broken"
  },
  {
   "file": "scripts/design.py",

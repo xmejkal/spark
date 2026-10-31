@@ -89,6 +89,17 @@ class ReadingTheRequirementsTest(unittest.TestCase):
             design.record("bad", home)
         assert_flat(self, caught.exception)
         self.assertGreater(len(str(caught.exception).split("\n")), 2, "the problem lines stay lines")
+        (home / "boards").mkdir()
+        (home / "boards" / "worse.json").write_text(json.dumps({"id": "worse"}))
+        (home / "car.requirements.json").write_text(json.dumps({"board": "worse", "parts": []}))
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(home / "car.requirements.json")
+        assert_flat(self, caught.exception)
+        self.assertGreater(len(str(caught.exception).split("\n")), 2, "the problem lines stay lines")
+        with self.assertRaises(design.DesignError) as caught:
+            design.signals_of([{"id": "bad"}], {}, home)
+        assert_flat(self, caught.exception)
+        self.assertGreater(len(str(caught.exception).split("\n")), 2, "the problem lines stay lines")
 
     def test_a_list_is_not_a_requirements_file(self):
         path = Path(tempfile.mkdtemp()) / "list.json"
