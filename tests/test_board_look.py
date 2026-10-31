@@ -12,6 +12,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import needs_littlefs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -334,6 +335,7 @@ class LookNamesTheButtonsTest(LookCase):
 
 
 class LookTest(LookCase):
+    @needs_littlefs
     def test_a_matching_board_passes_with_a_token(self):
         self.run_the_scenario()
         report = self.look()
@@ -341,6 +343,7 @@ class LookTest(LookCase):
         self.assertEqual(report.fields, {"chip": "same", "flash": "same"})
         self.assertRegex(report.token(), r"^[0-9a-f]{4}-[0-9a-f]{4}$")
 
+    @needs_littlefs
     def test_the_token_is_the_mac_half_and_the_image_half_not_the_port(self):
         import hashlib
         self.run_the_scenario()
@@ -349,6 +352,7 @@ class LookTest(LookCase):
                                            hashlib.sha256(self.image.read_bytes()).hexdigest()[:4]))
         self.assertEqual(self.look(port="/dev/cu.usbmodem999").token(), token)
 
+    @needs_littlefs
     def test_another_image_changes_only_the_second_half(self):
         self.run_the_scenario()
         first = self.look().token()
@@ -366,6 +370,7 @@ class LookTest(LookCase):
         self.assertEqual(report.stops, [board_look.Stop("chip_differs", "this board is an esp32c6, the project is for an esp32s3")])
         self.assertIsNone(report.token())
 
+    @needs_littlefs
     def test_a_flash_that_differs_but_holds_the_image_is_a_warning_and_keeps_its_token(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -374,6 +379,7 @@ class LookTest(LookCase):
         self.assertIn("the flash differs: 8 MB, the record says 16 or 4", report.warnings[0])
         self.assertIsNotNone(report.token())
 
+    @needs_littlefs
     def test_a_flash_smaller_than_the_image_is_a_stop(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -390,6 +396,7 @@ class LookTest(LookCase):
         text = data("s3-flash-id-16mb.txt").replace("16MB", "%dMB" % megabytes)
         return self.look(text=text)
 
+    @needs_littlefs
     def test_the_fit_check_runs_when_the_flash_is_in_the_records_list(self):
         report = self.fit("firebeetle2-esp32s3", 4, 1)  # the record says [16, 4], the board 4: same, yet too small
         self.assertEqual((report.fields["flash"], report.stops), ("same", [board_look.Stop("flash_too_small", "the flash is 4 MB, the image needs 5 MB")]))
@@ -401,6 +408,7 @@ class LookTest(LookCase):
         self.assertEqual((report.verdict, report.token()), ("match", None))
         self.assertEqual((report.status, report.exit_code()), (outcomes.COULD_NOT_RUN, outcomes.EXIT_COULD_NOT_RUN))
 
+    @needs_littlefs
     def test_an_image_of_exactly_the_flash_read_fits(self):
         report = self.fit("firebeetle2-esp32s3", 4, 0)
         self.assertEqual((report.verdict, report.stops), ("match", []))
@@ -430,6 +438,7 @@ class LookTest(LookCase):
         self.assertIn("run a scenario first", report.no_token_reason().sentence)
         self.assertEqual(report.fields, {"chip": "same", "flash": "same"})
 
+    @needs_littlefs
     def test_an_image_no_passed_run_names_means_no_token(self):
         self.run_the_scenario()
         self.image.write_bytes(b"x" + self.image.read_bytes()[1:])  # the same size: the fit check is not in play
@@ -438,6 +447,7 @@ class LookTest(LookCase):
         self.assertEqual(report.no_token_reason().code, "evidence_refuses")
         self.assertIn("no run in sim/runs/ tested", report.no_token_reason().sentence)
 
+    @needs_littlefs
     def test_a_log_that_tested_another_image_means_no_token_unless_told_to_ignore_it(self):
         self.run_the_scenario()
         runs = self.project / "sim" / "runs"
@@ -447,6 +457,7 @@ class LookTest(LookCase):
         self.assertIn("old.log tested another image", report.no_token_reason().sentence)
         self.assertIsNotNone(self.look(ignore_older_runs=True).token())
 
+    @needs_littlefs
     def test_a_log_that_cannot_be_read_still_lets_the_fit_check_run(self):
         self.run_the_scenario()
         self.image.write_bytes(self.image.read_bytes() + b"x")  # 4 MB + 1 byte on a 4 MB flash
@@ -493,6 +504,7 @@ class LookTest(LookCase):
 class LookReportToDictTest(LookCase):
     """P239 PR 6: the facts of a look as plain values, for the --json of P213. Nothing prints them yet."""
 
+    @needs_littlefs
     def test_a_match_with_a_token(self):
         self.run_the_scenario()
         report = self.look()
@@ -536,11 +548,13 @@ class LookReportToDictTest(LookCase):
 class TheLookStatesTheSimulationTest(LookCase):
     """P345: the look says what tested the image and what that test did not do, only when the evidence passes the image."""
 
+    @needs_littlefs
     def test_a_passed_run_that_pressed_and_read_nothing_is_simulation_passed_with_its_caveat(self):
         self.run_the_scenario()
         report = self.look()
         self.assertEqual((report.simulation, report.caveats), ("passed", [NO_CONTROL_NO_PIN]))
 
+    @needs_littlefs
     def test_a_passed_run_with_a_control_and_a_pin_has_no_caveat(self):
         self.scenario.write_text(CONTROLLED_SCENARIO)
         self.run_the_scenario()
@@ -550,6 +564,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertIn("  simulation: passed", lines)
         self.assertEqual(lines.index("  simulation: passed") + 1, lines.index("  all fields match the board record xiao-esp32-c6."))
 
+    @needs_littlefs
     def test_the_caveats_are_printed_in_order_after_the_fields_stops_and_warnings_and_before_the_match_and_the_token(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -559,6 +574,7 @@ class TheLookStatesTheSimulationTest(LookCase):
                          [warning, "  simulation: passed", "  " + NO_CONTROL_NO_PIN])
         self.assertTrue(lines[-1].startswith("  token  "))
 
+    @needs_littlefs
     def test_two_caveats_are_two_lines_in_the_evidence_s_order(self):
         self.run_the_scenario()
         evidence = self.passing(caveats=["first", "second"])
@@ -580,6 +596,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.found = [sim_project.Limit(*each) for each in limits]
         return self.look(evidence=self.passing(caveats, self.found, unnamed))
 
+    @needs_littlefs
     def test_the_limits_follow_the_caveats_under_a_heading_and_come_before_the_match_and_the_token(self):
         report = self.limited(("ONBOARD_DISPLAY", "no part for the display. Test it on the board."),
                               ("", "a line with no component"))
@@ -590,10 +607,12 @@ class TheLookStatesTheSimulationTest(LookCase):
             "  all fields match the board record xiao-esp32-c6."])
         self.assertTrue(lines[-1].startswith("  token  "))
 
+    @needs_littlefs
     def test_a_control_character_in_a_limit_shows_as_a_question_mark(self):
         lines = board_look.report_lines(self.limited(("A\nB", "two\x1b[31mlines")), token=False)
         self.assertIn("  - A?B — two?[31mlines", lines)
 
+    @needs_littlefs
     def test_to_dict_gives_each_limit_as_a_component_and_a_sentence_and_copies_the_list(self):
         report = self.limited(("ONBOARD_DISPLAY", "no part"), ("", "bare"))
         as_dict = report.to_dict()
@@ -603,11 +622,13 @@ class TheLookStatesTheSimulationTest(LookCase):
         as_dict["limits"].clear()
         self.assertEqual(len(report.to_dict()["limits"]), 2)
 
+    @needs_littlefs
     def test_the_report_keeps_its_own_copy_of_the_limits(self):
         report = self.limited(("A", "first"))
         self.found.clear()  # the evidence's list, which the report must not share
         self.assertEqual(report.limits, [("A", "first")])
 
+    @needs_littlefs
     def test_the_unnamed_must_lines_follow_the_limits_under_a_heading_and_come_before_the_match_and_the_token(self):
         report = self.limited(("ONBOARD_DISPLAY", "no part"), unnamed=("the LED blinks", "the button stops it"))
         lines = board_look.report_lines(report)
@@ -620,6 +641,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         lines = board_look.report_lines(self.limited(), token=False)
         self.assertNotIn("  no scenario named these must lines, so test them on the board:", lines)
 
+    @needs_littlefs
     def test_a_newline_in_an_unnamed_must_line_shows_as_a_question_mark_and_the_json_keeps_it_raw(self):
         report = self.limited(unnamed=("a\nb\x1b[31m",))
         self.assertIn("  - a?b?[31m", board_look.report_lines(report, token=False))
@@ -634,6 +656,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertEqual(gaps, board_look.RunGaps("passed", ("c",), (sim_project.Limit("X", "y"),), ("m",)))
         self.assertEqual(board_look.RunGaps(), board_look.RunGaps(None, (), (), ()))
 
+    @needs_littlefs
     def test_a_passed_run_that_names_a_must_line_leaves_the_other_unnamed(self):
         (self.project / ".spark").mkdir()
         (self.project / ".spark" / "project.json").write_text(json.dumps({"must": ["the LED lights", "the LED goes off"]}))
@@ -646,6 +669,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertEqual(report.question_caveats(), ["1 must line was not named by any scenario (see the look)"])
         self.assertEqual(report.to_dict()["unnamed_must"], ["the LED goes off"])
 
+    @needs_littlefs
     def test_two_unnamed_must_lines_are_counted_in_the_plural(self):
         (self.project / ".spark").mkdir()
         (self.project / ".spark" / "project.json").write_text(json.dumps({"must": ["a", "b"]}))
@@ -659,6 +683,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         report = self.look()
         self.assertEqual((report.unnamed_must, report.caveats), ([], []))
 
+    @needs_littlefs
     def test_a_brief_that_exists_and_gives_no_must_list_is_a_not_checked_caveat_and_a_missing_one_is_not(self):
         brief = self.project / ".spark" / "project.json"
         brief.parent.mkdir()
@@ -674,6 +699,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         brief.mkdir()  # a directory is no brief
         self.assertEqual(self.look().caveats, [])
 
+    @needs_littlefs
     def test_a_brief_nested_too_deep_is_not_checked_and_the_look_goes_on(self):
         brief = self.project / ".spark" / "project.json"
         brief.parent.mkdir()
@@ -682,6 +708,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.run_the_scenario()
         self.assertEqual(self.look().caveats, ["not checked: the project's brief cannot be read"])
 
+    @needs_littlefs
     def test_a_brief_that_cannot_be_read_is_a_not_checked_caveat_and_no_line(self):
         (self.project / ".spark").mkdir()
         brief = self.project / ".spark" / "project.json"
@@ -694,6 +721,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertEqual(report.unnamed_must, [])
         self.assertEqual(report.caveats, ["not checked: the project's brief cannot be read"])
 
+    @needs_littlefs
     def test_no_simulation_names_no_unnamed_must_line(self):
         (self.project / ".spark").mkdir()
         (self.project / ".spark" / "project.json").write_text(json.dumps({"must": ["a"]}))
@@ -730,6 +758,7 @@ class TheLookStatesTheSimulationTest(LookCase):
             report = self.look()
         self.assertEqual((report.simulation, report.caveats), (None, []))
 
+    @needs_littlefs
     def test_no_simulation_says_none_with_its_caveat(self):
         report = self.look(evidence=image_evidence.NoSimulationEvidence(self.project))
         self.assertEqual((report.simulation, report.caveats), (None, []))  # no image yet: refused
@@ -753,6 +782,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertEqual(self.look().to_dict()["last_deploy"], {"state": "recorded", "why": None, "project": "blink-c6",
                          "verdict": "ready seen", "deployed": "2026-10-19T09:24:50+02:00"})
 
+    @needs_littlefs
     def test_the_json_carries_both(self):
         self.run_the_scenario()
         as_dict = self.look().to_dict()
@@ -761,6 +791,7 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertEqual(len(self.look().caveats), 1)
 
 
+@needs_littlefs
 class TheLookCodesTheImageRefusalTest(LookCase):
     """P436: a tool the image check needs that is missing is tool_missing; any other refusal stays evidence_refuses.
     The evidence is a small fake: the words of NoSimulationEvidence are tested in test_image_evidence."""
@@ -813,6 +844,7 @@ class ReportLinesTest(LookCase):
         self.assertIn("  last deploy not checked: spark's record of it cannot be read: repair or remove %s, then run "
                       "look.py again." % record, lines)
 
+    @needs_littlefs
     def test_a_look_is_could_not_run_when_its_last_deploy_was_not_checked_and_ok_when_none_was_recorded(self):
         self.run_the_scenario()
         report = self.look()
@@ -834,6 +866,7 @@ class ReportLinesTest(LookCase):
                                    "deployed": "2026-10-20T09:24:50+02:00"}, "ready seen", "a test")
         self.assertEqual(self.look().last_deploy.project, "blink-c6")
 
+    @needs_littlefs
     def test_the_token_line_is_there_unless_asked_not_to(self):
         self.run_the_scenario()
         report = self.look()
@@ -847,6 +880,7 @@ class ReportLinesTest(LookCase):
         self.assertIn("  2 fields unknown (chip: the record does not hold it, flash: the record does not hold it): "
                       "deploy.py will ask you to accept it.", lines)
 
+    @needs_littlefs
     def test_a_stop_is_said(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")

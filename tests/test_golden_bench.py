@@ -9,12 +9,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import needs_littlefs  # noqa: E402
 
 import golden_bench  # noqa: E402
 import board_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
 
 
+@needs_littlefs
 class BenchGoldenTest(unittest.TestCase):
     """Each Case of golden_bench.CASES is one test, named after its golden, run in one project built for the class."""
 

@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
-from suite_runs import slow  # noqa: E402
+from suite_runs import needs_littlefs, slow  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -396,6 +396,7 @@ class TheBasicJourneyTest(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertEqual(sorted(entry["module"] for entry in json.loads(done.stdout)["modules"]), ["light", "pins"])
 
+    @needs_littlefs
     def test_every_stage_leaves_what_the_next_one_reads(self):
         self.skip_without_the_build()
         self.assertEqual(self.verdict["status"], check_spine.OK, self.verdict)
@@ -426,6 +427,7 @@ class TheBasicJourneyTest(unittest.TestCase):
         self.assertIn("TactileButton.A: held up by the board's internal pull-up", " ".join(rules.get("unmeasured", [])),
                       "P204: the firmware's pull-up is said, since no netlist shows it")
 
+    @needs_littlefs
     def test_removing_any_stage_s_file_names_that_stage(self):
         # The card's proof: this test is only worth its run time if it goes red, by name, when a stage stops writing.
         self.skip_without_the_build()

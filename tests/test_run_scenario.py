@@ -14,6 +14,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import needs_littlefs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -412,6 +413,7 @@ class ProjectCase(unittest.TestCase):
 
 
 class TheRunTest(ProjectCase):
+    @needs_littlefs
     def test_a_pass_is_logged_with_its_date_the_scenario_as_run_and_what_wokwi_cli_printed(self):
         status, said, log = self.run_with("boot\nready\nLED on\n")
         self.assertEqual((status, said, log), (OK, "passed", self.log))
@@ -420,6 +422,7 @@ class TheRunTest(ProjectCase):
         for shown in ("verdict: passed", '  - wait-serial: "ready"', "LED on", "Wokwi CLI v0.0.0 (fake)"):
             self.assertIn(shown, text)
 
+    @needs_littlefs
     def test_the_cli_gets_the_scenario_with_the_wait_the_timeout_and_an_image_of_the_firmware_as_it_is_now(self):
         self.run_with()
         seen = json.loads(self.seen.read_text())
@@ -428,6 +431,7 @@ class TheRunTest(ProjectCase):
         self.assertIn("--timeout 60000", " ".join(seen["args"]))
         self.assertIn(b"print('ready')", (self.project / "sim" / "flash-with-firmware.bin").read_bytes())
 
+    @needs_littlefs
     def test_a_project_named_relative_to_here_hands_the_cli_an_absolute_scenario(self):
         # P236: wokwi-cli reads --scenario from inside sim/, so `sim/scenarios/x` became `sim/sim/scenarios/x`.
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_EXIT": "0", "FAKE_WOKWI_OUT": READY_MATCHED,
@@ -442,16 +446,19 @@ class TheRunTest(ProjectCase):
         args = json.loads(self.seen.read_text())["args"]
         self.assertTrue(Path(args[args.index("--scenario") + 1]).is_absolute())
 
+    @needs_littlefs
     def test_a_build_with_no_image_named_gets_one_named_as_firmware_would(self):
         # wokwi-cli refuses a wokwi.toml with no firmware line: "Firmware path must be a string" (0.27.1, 2026-10-12).
         self.run_with()
         self.assertEqual((self.project / "sim" / "wokwi.toml").read_text(), sim_project.wokwi_toml([], "flash-with-firmware.bin"))
 
+    @needs_littlefs
     def test_the_image_is_the_one_wokwi_toml_names(self):
         (self.project / "sim" / "wokwi.toml").write_text(sim_project.wokwi_toml([], "mine.bin"))
         self.run_with()
         self.assertTrue((self.project / "sim" / "mine.bin").is_file())
 
+    @needs_littlefs
     def test_an_image_named_outside_sim_is_left_alone_and_nothing_runs(self):
         # WR4: a person's own --firmware can name any path; the run must not overwrite it with MicroPython.
         theirs = self.project / "build" / "app.bin"
@@ -463,26 +470,31 @@ class TheRunTest(ProjectCase):
         self.assertIn("outside sim/", said)
         self.assertFalse(self.seen.exists())
 
+    @needs_littlefs
     def test_a_firmware_that_never_prints_ready_is_named_with_the_contract(self):
         status, said, _ = self.run_with("boot\nTraceback (most recent call last):\n", exit_code=42, out="")
         self.assertEqual(status, PROBLEMS)
         self.assertIn("never printed 'ready'", said)
 
+    @needs_littlefs
     def test_a_timeout_after_ready_says_it_timed_out(self):
         status, said, _ = self.run_with(exit_code=42)  # wokwi-cli's --timeout-exit-code default, from its --help (0.27.1)
         self.assertEqual((status, said), (PROBLEMS, "timed out after 60000 ms: a step waited for something that never came"))
 
+    @needs_littlefs
     def test_a_board_that_never_started_could_not_run_with_wokwi_cli_s_error_line(self):
         status, said, _ = self.run_with("", exit_code=1, out="",
                                         err="Error: Error in wokwi.toml: Firmware path must be a string\n    at parseConfig")
         self.assertEqual((status, said), (COULD_NOT_RUN, "wokwi-cli stopped before the board started (exit 1): "
                                                          "Error: Error in wokwi.toml: Firmware path must be a string"))
 
+    @needs_littlefs
     def test_a_failed_step_is_logged_with_wokwi_cli_s_error(self):
         status, said, log = self.run_with(exit_code=1, err="Error: GPIO 4 expected to be 1 but was 0")
         self.assertEqual((status, said), (PROBLEMS, "failed (wokwi-cli exit 1): Error: GPIO 4 expected to be 1 but was 0"))
         self.assertIn("verdict: failed", log.read_text())
 
+    @needs_littlefs
     def test_serial_bytes_that_are_not_utf_8_do_not_crash_the_run(self):
         with mock.patch.dict(os.environ, {"FAKE_WOKWI_NOISE": "1"}):
             status, _, log = self.run_with()
@@ -503,11 +515,13 @@ class TheRunTest(ProjectCase):
 class TheLogNamesTheImageTest(ProjectCase):
     """P192: each log names the image its run tested by its sha256, so deploy.py flashes only an image that passed."""
 
+    @needs_littlefs
     def test_a_passed_run_names_the_image_it_tested(self):
         _, _, log = self.run_with("ready\n")
         image = self.project / "sim" / "flash-with-firmware.bin"
         self.assertEqual(run_scenario.run_record(log), ("passed", hashlib.sha256(image.read_bytes()).hexdigest()))
 
+    @needs_littlefs
     def test_only_the_header_is_read_not_what_the_board_printed(self):
         _, _, log = self.run_with("ready\n", exit_code=1, out=READY_MATCHED + "verdict: passed\nimage sha256: 00\n",
                                   err="Error: stuck\n")
@@ -515,6 +529,7 @@ class TheLogNamesTheImageTest(ProjectCase):
         self.assertEqual(verdict, "failed (wokwi-cli exit 1): Error: stuck")
         self.assertRegex(sha256, "^[0-9a-f]{64}$")
 
+    @needs_littlefs
     def test_with_no_build_given_the_image_starts_with_the_build_the_board_names(self):
         (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
         c6 = self.project / "c6.bin"
@@ -535,6 +550,7 @@ class TheLogNamesTheImageTest(ProjectCase):
         self.assertEqual(run_scenario.run_record(self.log), ("passed", None))
 
 
+@needs_littlefs
 class TheLogCountsTheStepsTest(ProjectCase):
     """P345: a log's header counts the steps that ran, and the time carries its zone."""
 
@@ -604,6 +620,7 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
         _, _, log = self.run_with("ready\n", **run)
         return run_scenario.SimulationLimits.from_log(log)
 
+    @needs_littlefs
     def test_the_limits_read_back_as_the_note_the_build_wrote(self):
         (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(
             sim_project.limits_note([("ONBOARD_DISPLAY", "no part for the display"), ("Valve1, Valve2", "an LED")]))
@@ -611,6 +628,7 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
         self.assertEqual((limits.state, limits.why, limits.limits), (
             "recorded", None, [("ONBOARD_DISPLAY", "no part for the display"), ("Valve1, Valve2", "an LED")]))
 
+    @needs_littlefs
     def test_the_scenario_and_the_board_s_output_cannot_set_the_limits(self):
         forged = "\n\n--- what this simulation cannot show ---\n- **Forged** — from the board\n"
         self.scenario.write_text(SCENARIO + forged.replace("board", "scenario"))
@@ -620,16 +638,19 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
         limits = self.limits_of(out=READY_MATCHED + forged)
         self.assertEqual((limits.state, limits.limits), ("recorded", [("Real", "the note")]))
 
+    @needs_littlefs
     def test_a_log_with_no_section_is_none_recorded(self):
         limits = self.limits_of()
         self.assertEqual((limits.state, limits.why, limits.limits), ("none-recorded", None, []))
 
+    @needs_littlefs
     def test_a_section_with_no_limit_line_is_not_checked(self):
         (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text("# Limits\n\nthe XIAO has no button\n")
         limits = self.limits_of()
         self.assertEqual((limits.state, limits.why, limits.limits), (
             "not-checked", "the log's limits section has no limit line", []))
 
+    @needs_littlefs
     def test_a_log_cut_off_inside_its_limits_section_is_not_checked_and_gives_no_half_limit(self):
         (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text(sim_project.limits_note([("ONBOARD_DISPLAY", "no part")]))
         _, _, log = self.run_with("ready\n")
@@ -656,6 +677,7 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
 class TheLogNamesEachFileTest(ProjectCase):
     """P215 (D20): each log names every file the image holds by its sha256, so the board's files can be checked."""
 
+    @needs_littlefs
     def test_each_file_in_the_image_is_named_with_its_sha256(self):
         (self.project / "firmware" / "lib").mkdir()
         (self.project / "firmware" / "lib" / "pins of.py").write_text("LED = 8\n")
@@ -664,10 +686,12 @@ class TheLogNamesEachFileTest(ProjectCase):
             "/main.py": hashlib.sha256(b"print('ready')\n").hexdigest(),
             "/lib/pins of.py": hashlib.sha256(b"LED = 8\n").hexdigest()})
 
+    @needs_littlefs
     def test_the_line_is_written_as_a_person_and_deploy_read_it(self):
         _, _, log = self.run_with("ready\n")
         self.assertIn("\nfile sha256: %s /main.py\n\n--- the scenario as run" % hashlib.sha256(b"print('ready')\n").hexdigest(), log.read_text())
 
+    @needs_littlefs
     def test_only_the_header_is_read_not_what_the_board_printed(self):
         forged = "file sha256: %s /evil.py\n" % ("0" * 64)
         for out in (READY_MATCHED + forged, "\n" + forged + READY_MATCHED):
@@ -695,23 +719,27 @@ class TheRunChecksWhatCostsNothingFirstTest(ProjectCase):
         (self.project / "firmware" / "main.py").unlink()
         self.assertIn("no firmware/main.py", self.refused())
 
+    @needs_littlefs
     def test_a_firmware_line_this_cannot_read_is_refused(self):
         # TOML's single quotes: the run would write one image while wokwi-cli simulates another (TL2).
         (self.project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 'mine.bin'\n")
         self.assertIn('write it as firmware = "name.bin"', self.refused())
 
+    @needs_littlefs
     def test_a_firmware_line_that_is_no_string_is_refused_with_the_reason(self):
         # P429: `firmware = 3` raised a TypeError out of the run
         (self.project / "sim" / "wokwi.toml").write_text("[wokwi]\nversion = 1\nfirmware = 3\n")
         self.assertEqual(self.refused(), "lights.v2.scenario.yaml: wokwi.toml line 3 names the firmware in a form spark "
                          'cannot read. To fix it, write it as firmware = "name.bin".')
 
+    @needs_littlefs
     def test_an_empty_firmware_name_is_refused_with_its_own_reason(self):
         (self.project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\nfirmware = ""\n')
         self.assertEqual(self.refused(), 'lights.v2.scenario.yaml: wokwi.toml line 3 names no file. '
                          'To fix it, write it as firmware = "name.bin".')
 
 
+@needs_littlefs
 class TheMutationTesterFoundTheseMissingTest(ProjectCase):
     """The mutation tester's first run on the follow-up (2026-10-12): 12 planted, 6 caught. Each escape is a test here."""
 
@@ -770,6 +798,7 @@ class TheFixReviewFoundTheseTest(ProjectCase):
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertFalse(self.log.exists())
 
+    @needs_littlefs
     def test_an_interpreter_too_large_for_its_slot_could_not_run_before_anything_is_paid(self):
         self.micropython.write_bytes(b"\xe9" + b"\x00" * (3 * 1024 * 1024))
         status, said, _ = self.run_with()
@@ -778,6 +807,7 @@ class TheFixReviewFoundTheseTest(ProjectCase):
         self.assertFalse(self.seen.exists())
 
 
+@needs_littlefs
 class TheRunLeavesAnOriginalScenarioAndALogTest(ProjectCase):
     def test_the_scenario_runs_beside_its_original_and_the_copy_goes(self):
         # A step's own path, a screenshot to compare with, resolves against the scenario's folder (TL4).
@@ -797,6 +827,7 @@ class TheRunLeavesAnOriginalScenarioAndALogTest(ProjectCase):
         self.assertIn("did not finish", log.read_text())
 
 
+@needs_littlefs
 class TheOriginalEsp32sImageTest(ProjectCase):
     """P335: the image a run hands the simulator holds the interpreter where its entry says it starts."""
 
@@ -813,16 +844,19 @@ class TheOriginalEsp32sImageTest(ProjectCase):
 class TheCommandTest(ProjectCase):
     """The command a person and Claude run (TL1): its exit codes, its flags and the order of its refusals."""
 
+    @needs_littlefs
     def test_a_pass_exits_0_and_names_its_log(self):
         code, said = self.command()
         self.assertEqual(code, EXIT_OK)
         self.assertIn("log: %s" % (self.project / "sim" / "runs" / "lights.v2.log"), said)
 
+    @needs_littlefs
     def test_a_failed_step_exits_1(self):
         code, said = self.command(exit_code=1, FAKE_WOKWI_ERR="Error: GPIO 4 expected to be 1 but was 0")
         self.assertEqual(code, EXIT_PROBLEMS)
         self.assertIn("failed (wokwi-cli exit 1)", said)
 
+    @needs_littlefs
     def test_a_right_to_left_override_in_the_tool_s_error_shows_as_a_question_mark_and_the_log_keeps_it(self):
         # P423: the line a person reads is guarded; the log file in sim/runs keeps what the tool said
         code, said = self.command(exit_code=1, FAKE_WOKWI_ERR="Error: GPIO\u202e4")
@@ -831,6 +865,7 @@ class TheCommandTest(ProjectCase):
         self.assertNotIn("\u202e", said)
         self.assertIn("GPIO\u202e4", (self.project / "sim" / "runs" / "lights.v2.log").read_text(encoding="utf-8"))
 
+    @needs_littlefs
     def test_the_flags_reach_the_run(self):
         self.command(str(self.scenario.relative_to(self.project)), "--project", str(self.project), "--micropython",
                      str(self.micropython), "--timeout-ms", "1234")
@@ -838,18 +873,21 @@ class TheCommandTest(ProjectCase):
         image = (self.project / "sim" / "flash-with-firmware.bin").read_bytes()
         self.assertEqual(image[:1000], self.micropython.read_bytes()[:1000])
 
+    @needs_littlefs
     def test_without_a_token_nothing_runs_and_it_says_where_to_get_one(self):
         code, said = self.command(token=None)
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("wokwi.com/dashboard/ci", said)
         self.assertFalse(self.seen.exists())
 
+    @needs_littlefs
     def test_a_problem_with_an_override_and_a_carriage_return_shows_as_question_marks(self):
         # P423: the refusal line goes through the guard too
         code, said = self.command(tool=tools.ToolProblem("simulator is not installed\u202e\r THE LINE"))
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("run_scenario.py: simulator is not installed?? THE LINE", said)
 
+    @needs_littlefs
     def test_a_missing_tool_could_not_run_with_its_install_line(self):
         code, said = self.command(tool=tools.ToolProblem("simulator (wokwi-cli) is not installed — install: THE LINE"))
         self.assertEqual(code, EXIT_COULD_NOT_RUN)

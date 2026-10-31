@@ -11,6 +11,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import needs_littlefs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -63,6 +64,7 @@ class ServiceCase(GateCase):
 
 
 class TheFlashTest(ServiceCase):
+    @needs_littlefs
     def test_deploy_shows_each_command_before_it_runs_and_returns_the_plan_it_ran(self):
         report = self.look()
         planned = self.service().deploy(report, report.token(), FakeConsent(True), self.lines.append)
@@ -70,12 +72,14 @@ class TheFlashTest(ServiceCase):
         self.assertEqual(self.lines, ["  running: %s" % shlex.join(command) for command in self.commands])
         self.assertEqual(len(self.commands), 2)
 
+    @needs_littlefs
     def test_the_gate_question_starts_with_the_caveats_of_the_passed_run(self):
         report = self.look()
         consent = FakeConsent(True)
         self.service().deploy(report, report.token(), consent, self.lines.append)
         self.assertTrue(consent.asked[0].startswith("the passed run's scenario has no set-control step"), consent.asked[0])
 
+    @needs_littlefs
     def test_the_gate_question_counts_the_unnamed_must_lines_once_after_the_look_s_caveats(self):
         (self.project / ".spark").mkdir()
         (self.project / ".spark" / "project.json").write_text('{"must": ["a", "b"]}')
@@ -85,6 +89,7 @@ class TheFlashTest(ServiceCase):
         self.assertEqual(consent.asked[0].count("2 must lines were not named by any scenario (see the look)"), 1)
         self.assertTrue(consent.asked[0].startswith("the passed run's scenario has no set-control step"), consent.asked[0])
 
+    @needs_littlefs
     def test_a_failed_flash_is_a_deploy_error_with_the_sentence_and_the_hint(self):
         report = self.look()
         self.fails = True
@@ -95,6 +100,7 @@ class TheFlashTest(ServiceCase):
         self.assertEqual(len(self.lines), 2)  # the erase and its one retry were shown; the write never started
         self.assertEqual((self.lines[1].startswith("  retry in 5 s: "), self.slept, len(self.commands)), (True, [5], 2))
 
+    @needs_littlefs
     def test_a_token_that_is_not_the_looks_is_refused_before_any_command(self):
         report = self.look()
         with self.assertRaises(deploy_gate.GateClosedError):
@@ -111,6 +117,7 @@ class TheFlashTest(ServiceCase):
         self.assertEqual(self.commands, [])
 
 
+@needs_littlefs
 class TheNoSimulationServiceTest(ServiceCase):
     def service(self, **kwargs):
         return deploy_service.DeployService(self.project, firmware_platform.FirmwarePlatform.micropython(self.project),
@@ -151,6 +158,7 @@ class TheNoSimulationServiceTest(ServiceCase):
         self.assertEqual(self.commands, [])
 
 
+@needs_littlefs
 class TheVerifyTest(ServiceCase):
     def test_a_fault_reading_the_passed_log_after_the_flash_is_not_turned_into_a_sentence(self):
         report = self.look()
@@ -197,6 +205,7 @@ class TheVerifyTest(ServiceCase):
 
 
 class ThePlanTest(ServiceCase):
+    @needs_littlefs
     def test_plan_checks_the_image_before_the_tools(self):
         (self.project / "sim" / "runs" / "s.log").unlink()
         with mock.patch.object(tools, "find", side_effect=AssertionError("tools asked first")):
@@ -209,6 +218,7 @@ class ThePlanTest(ServiceCase):
             with self.assertRaises(project_image.DeployError):
                 self.service().plan()
 
+    @needs_littlefs
     def test_plan_asks_for_the_flasher_before_the_shell(self):
         asked = []
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: asked.append(name) or find(name)):

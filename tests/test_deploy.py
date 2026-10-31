@@ -13,6 +13,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import needs_littlefs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -89,6 +90,7 @@ class ProjectCase(unittest.TestCase):
         return code, out.getvalue(), err.getvalue(), ran
 
 
+@needs_littlefs
 class TheDryRunTest(ProjectCase):
     def test_the_dry_run_prints_the_two_flash_lines_and_how_to_see_it_start(self):
         self.run_the_scenario()
@@ -121,6 +123,7 @@ class TheDryRunTest(ProjectCase):
         self.assertTrue((sim / "images" / "flash.bin").is_file())
 
 
+@needs_littlefs
 class TheNoSimulationDryRunTest(ProjectCase):
     """P337 B: --no-simulation plans an image of firmware/ that no run tested."""
 
@@ -198,12 +201,14 @@ class OnlyAnImageThatPassedTest(ProjectCase):
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
         self.assertIn("run a scenario first", problems)
 
+    @needs_littlefs
     def test_an_image_whose_run_failed_is_refused(self):
         self.run_the_scenario(exit_code=1)
         code, _, problems, _ = self.deploy("--dry-run")
         self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
         self.assertIn("s.log did not pass on this image", problems)
 
+    @needs_littlefs
     def test_an_image_changed_after_its_run_passed_is_refused(self):
         self.run_the_scenario()
         self.image.write_bytes(self.image.read_bytes() + b"\x00")
@@ -211,6 +216,7 @@ class OnlyAnImageThatPassedTest(ProjectCase):
         self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
         self.assertIn("no run in sim/runs/ tested flash-with-firmware.bin as it is now", problems)
 
+    @needs_littlefs
     def test_one_failed_scenario_on_the_same_image_refuses_it_though_another_passed(self):
         self.run_the_scenario()
         passed = self.project / "sim" / "runs" / "s.log"
@@ -220,6 +226,7 @@ class OnlyAnImageThatPassedTest(ProjectCase):
         self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
         self.assertIn("other.log did not pass on this image", problems)
 
+    @needs_littlefs
     def test_a_log_from_an_older_spark_names_no_image_and_is_refused(self):
         self.run_the_scenario()
         log = self.project / "sim" / "runs" / "s.log"
@@ -230,6 +237,7 @@ class OnlyAnImageThatPassedTest(ProjectCase):
         self.assertIn("names no image", problems)
 
 
+@needs_littlefs
 class ALogThatTestedAnotherImageTest(ProjectCase):
     """A scenario that last ran on another image never tested this one, so it refuses the flash by default (the PO,
     2026-10-12). --ignore-older-runs flashes anyway and names it in a note."""
@@ -306,6 +314,7 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
         self.assertEqual((code, said.count("note:")), (deploy.EXIT_OK, 1))
 
 
+@needs_littlefs
 class WhatDeployNeedsTest(ProjectCase):
     def test_a_missing_flasher_names_what_installs_it_and_runs_nothing(self):
         self.run_the_scenario()
@@ -370,6 +379,7 @@ class TheGuardedPrintTest(ProjectCase):
         deploy.show_line("c", stream)
         self.assertEqual((stream.flushed, stream.getvalue()), (2, "a\nb\nc\n"))
 
+    @needs_littlefs
     def test_the_dry_run_on_stdout_shows_a_right_to_left_override_in_the_port_as_a_question_mark(self):
         self.run_the_scenario()
         code, said, problems, _ = self.deploy("--port", "/dev/cu.usb\u202emodem", "--dry-run")

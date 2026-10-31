@@ -9,6 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import needs_littlefs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -48,6 +49,7 @@ class TheImageTest(unittest.TestCase):
         (self.root / "fw" / "lib" / "rtc.py").write_text("x = 1\n")
         (self.root / "micropython.bin").write_bytes(b"\xe9" + b"\x00" * 999)
 
+    @needs_littlefs
     def test_the_interpreter_sits_at_zero_and_the_files_at_the_filesystem_offset(self):
         from littlefs import LittleFS
         files = flash_image.files_under(self.root / "fw")
@@ -67,6 +69,7 @@ class TheImageTest(unittest.TestCase):
         with fs.open("/config.json", "rb") as handle:
             self.assertEqual(json.loads(handle.read()), {"T": 40})
 
+    @needs_littlefs
     def test_the_original_esp32_s_interpreter_sits_at_0x1000_with_0xff_before_it(self):
         interpreter = (self.root / "micropython.bin").read_bytes()
         flash = flash_image.image(interpreter, flash_image.files_under(self.root / "fw"), offset=ESP32_INTERPRETER_OFFSET)
@@ -76,6 +79,7 @@ class TheImageTest(unittest.TestCase):
         with mounted(flash).open("/main.py", "rb") as handle:
             self.assertEqual(handle.read(), b"print('hi')\n")
 
+    @needs_littlefs
     def test_an_interpreter_that_ends_where_the_filesystem_starts_fits_and_one_byte_more_is_refused(self):
         fits = b"\xe9" * (MICROPYTHON_VFS_OFFSET - ESP32_INTERPRETER_OFFSET)
         self.assertEqual(len(flash_image.image(fits, [], offset=ESP32_INTERPRETER_OFFSET)), MICROPYTHON_FLASH_SIZE)
@@ -83,6 +87,7 @@ class TheImageTest(unittest.TestCase):
             flash_image.image(fits + b"\x00", [], offset=ESP32_INTERPRETER_OFFSET)
         self.assertIn("MicroPython at 0x1000 is %d bytes and would pass 0x200000" % (len(fits) + 1), str(refused.exception))
 
+    @needs_littlefs
     def test_the_chosen_interpreter_builds_its_image_at_its_offset(self):
         chosen = flash_image.Interpreter(self.root / "micropython.bin", ESP32_INTERPRETER_OFFSET)
         flash = chosen.image(flash_image.files_under(self.root / "fw"), {"T": 40})
@@ -94,6 +99,7 @@ class TheImageTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             flash_image.image(b"\x00" * (MICROPYTHON_VFS_OFFSET + 1), [])
 
+    @needs_littlefs
     def test_the_command_writes_the_image_and_names_what_went_in(self):
         import contextlib
         import io
@@ -105,6 +111,7 @@ class TheImageTest(unittest.TestCase):
         self.assertEqual((self.root / "flash.bin").stat().st_size, MICROPYTHON_FLASH_SIZE)
         self.assertIn("/main.py", out.getvalue())
 
+    @needs_littlefs
     def test_a_missing_interpreter_is_could_not_run_with_where_to_get_one(self):
         import contextlib
         import io
@@ -243,10 +250,12 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
             os.chdir(here)
         return code, (self.root / "out.bin").read_bytes()[:3]
 
+    @needs_littlefs
     def test_the_command_takes_the_build_of_the_project_it_is_given(self):
         project = self.project_on("xiao-esp32-c6")
         self.assertEqual(self.image_from_main(project, ["--project", str(project)]), (0, b"\xe9C6"))
 
+    @needs_littlefs
     def test_the_command_finds_its_project_from_a_folder_inside_it(self):
         project = self.project_on("xiao-esp32-c6")
         (project / "boards").mkdir()
@@ -323,6 +332,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
                     flash_image.offset_of({"kind": "download", "flash_offset": broken})
                 self.assertIn("flash_offset", str(said.exception))
 
+    @needs_littlefs
     def test_the_command_says_could_not_run_for_a_broken_flash_offset(self):
         import contextlib
         import io
@@ -338,6 +348,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(code, flash_image.EXIT_COULD_NOT_RUN)
         self.assertIn("flash_offset", err.getvalue())
 
+    @needs_littlefs
     def test_the_command_says_where_the_interpreter_starts_and_ends(self):
         import contextlib
         import io
@@ -351,6 +362,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
                 self.assertEqual(code, flash_image.EXIT_OK)
                 self.assertIn(span + ", filesystem at 0x200000", out.getvalue())
 
+    @needs_littlefs
     def test_the_command_writes_the_original_esp32_s_interpreter_at_0x1000(self):
         import contextlib
         import io
@@ -387,11 +399,13 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(code, flash_image.EXIT_COULD_NOT_RUN)
         self.assertIn("pip install --user littlefs-python", said)
 
+    @needs_littlefs
     def test_no_build_given_and_none_downloaded_says_how_to_get_it(self):
         code, said = self.run_main([], failing="firmware-image")
         self.assertEqual(code, flash_image.EXIT_COULD_NOT_RUN)
         self.assertIn("/spark:setup add micropython-esp32s3", said)
 
+    @needs_littlefs
     def test_with_no_build_given_the_download_goes_into_the_image(self):
         import tools
         found = tools.Tool("micropython-esp32s3", "firmware-image", {}, [str(self.root / "micropython.bin")])
