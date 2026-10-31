@@ -997,13 +997,13 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
 
     # --- MVP --- (P438)
     def test_a_requirements_file_of_the_wrong_kind_stops_at_the_requirements_stage(self):
-        for parts, signals, field in (
+        for listed, signals, field in (
                 (["tactile-button"], 5, "signals is a number"),
                 (["tactile-button"], [{"name": "X", "pin": ["D0"]}], "signals[0].pin is a list"),
                 (5, None, "parts is a number"), ("led-red-5mm", None, "parts is text")):
             with self.subTest(field=field):
                 path = Path(tempfile.mkdtemp()) / "bin.json"
-                path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": parts, "signals": signals}))
+                path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": listed, "signals": signals}))
                 code, out = self._main([str(path)], tempfile.mkdtemp())
                 self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
                 self.assertIn("[????] requirements", out)
