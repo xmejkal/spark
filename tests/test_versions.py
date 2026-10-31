@@ -15,7 +15,7 @@ import versions  # noqa: E402
 class ReleaseTupleTest(unittest.TestCase):
     def test_a_pre_release_is_its_release_and_trailing_zeros_drop(self):
         for version, expected in (("4.12.0", (4, 12)), ("5.0", (5,)), ("5.0.0", (5,)), ("5.0.0b1", (5,)),
-                                  ("5.0.dev0", (5,)), ("5.0.post1", (5,)), ("5.5.0", (5, 5)), ("10.0", (10,)),
+                                  ("5.0.dev0", (5,)), ("5.0.post1", (5,)), ("5.0rc1.2", (5,)), ("5.5.0", (5, 5)), ("10.0", (10,)),
                                   ("5.1b2", (5, 1)), ("", None), (None, None), ("abc", None)):
             with self.subTest(version):
                 self.assertEqual(versions.release_tuple(version), expected)

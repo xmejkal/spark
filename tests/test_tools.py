@@ -766,9 +766,9 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
         """Patch the version that pt's distribution reports (None: no metadata); any other distribution has none."""
         def reported(distribution):
             if distribution != "pt" or version is None:
-                raise tools.importlib.metadata.PackageNotFoundError(distribution)
+                raise tools.versions.importlib.metadata.PackageNotFoundError(distribution)
             return version
-        return mock.patch.object(tools.importlib.metadata, "version", side_effect=reported)
+        return mock.patch.object(tools.versions.importlib.metadata, "version", side_effect=reported)
 
     def row(self, label):
         return next(text for state, named, text in tools.status() if named == label)
@@ -869,11 +869,12 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
     def test_pin_refuses_a_version_below_the_floor_and_writes_nothing(self):
         self.floor()
         before = self.personal.read_text()
-        out = io.StringIO()
-        with contextlib.redirect_stderr(out):
-            code = tools.main(["--pin", "pt=4.12.0"])
-        self.assertEqual((code, self.personal.read_text()), (tools.EXIT_COULD_NOT_RUN, before))
-        self.assertEqual(out.getvalue(), "tools.py: pt: 4.12.0 is older than 5.0, the oldest spark runs — nothing written\n")
+        for target, value in (("pt", "4.12.0"), ("pt.version", "4.12.0"), ("pt", "v4.12.0")):
+            out = io.StringIO()
+            with self.subTest(target + "=" + value), contextlib.redirect_stderr(out):
+                code = tools.main(["--pin", "%s=%s" % (target, value)])
+            self.assertEqual((code, self.personal.read_text()), (tools.EXIT_COULD_NOT_RUN, before))
+            self.assertEqual(out.getvalue(), "tools.py: pt: %s is not 5.0 or newer, the oldest spark runs — nothing written\n" % value)
 
     def test_pin_keeps_a_version_at_the_floor_and_a_pin_of_another_field(self):
         self.floor()

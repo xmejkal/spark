@@ -170,8 +170,8 @@
  {
   "file": "scripts/tools.py",
   "name": "find no longer refuses a tool below its oldest version",
-  "find": "    if versions.is_older(here, entry.get(\"oldest_version\")):",
-  "replace": "    if False:"
+  "find": "    here = versions.too_old(entry)",
+  "replace": "    here = None"
  },
  {
   "file": "scripts/versions.py",

@@ -22,7 +22,6 @@ A choice is written to the person's file, or to the project's with --project (--
 """
 
 import argparse
-import importlib.metadata
 import importlib.util
 import json
 import os
@@ -489,12 +488,13 @@ def choose(field_path, value, where):
 
 
 def pin(target, value, project, where):
-    """Write a pin: `NAME` or `NAME.FIELD`. A version below the entry's `oldest_version` is refused. -> (name, field, file)."""
+    """Write a pin: `NAME` or `NAME.FIELD`. A version below the entry's `oldest_version`, or one with no digits, is refused. -> (name, field, file)."""
     name, _, field = target.partition(".")
+    field = field or "version"
     oldest = merged(project)["tools"].get(name, {}).get("oldest_version")
-    if not field and versions.is_older(value, oldest):
-        raise ToolProblem("%s: %s is older than %s, the oldest spark runs — nothing written", name, value, oldest)
-    return name, field or "version", choose([name, field or "version"], value, where)
+    if field == "version" and oldest and (versions.release_tuple(value) is None or versions.is_older(value, oldest)):
+        raise ToolProblem("%s: %s is not %s or newer, the oldest spark runs — nothing written", name, value, oldest)
+    return name, field, choose([name, field], value, where)
 
 
 def use(role, tool_name, project=None, personal=None):
