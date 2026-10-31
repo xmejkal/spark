@@ -812,67 +812,49 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
             code = tools.main(["--install", "pt", "--dry-run"], run=lambda argv, **kw: self.fail("a dry run ran %s" % argv))
         self.assertEqual((code, out.getvalue()), (tools.EXIT_OK, "  would run: python3 -m pip install --user pt==5.5.0\n"))
 
+    def floor(self, oldest="5.0"):
+        self.personal.write_text(json.dumps({"pt": {"oldest_version": oldest}}))
 
-class APythonToolHasAFloorTest(unittest.TestCase):
-    """P471 (#642): a Python tool's `oldest_version` is the oldest release spark runs; find refuses an older one."""
-
-    def setUp(self):
-        defaults = dict(DEFAULTS, **{
-            "roles": {"flasher": "pt"},
-            "pt": {"kind": "python", "module": "pt", "version": "5.5.0", "oldest_version": "5.0",
-                   "install": {"pip": "python3 -m pip install --user pt=={version}"}},
-        })
-        self.personal = Path(tempfile.mkdtemp()) / "absent.json"
-        for name, value in (("DEFAULTS", layer(defaults)), ("PERSONAL", self.personal)):
-            patcher = mock.patch.object(tools, name, value)
-            patcher.start()
-            self.addCleanup(patcher.stop)
-        patcher = mock.patch.object(tools.importlib.util, "find_spec", return_value=object())
-        patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def installed(self, version):
-        def reported(distribution):
-            if version is None:
-                raise tools.importlib.metadata.PackageNotFoundError(distribution)
-            return version
-        return mock.patch.object(tools.importlib.metadata, "version", side_effect=reported)
-
-    def test_an_older_release_is_refused_with_the_install_line(self):
-        with self.installed("4.12.0"), self.assertRaises(tools.ToolProblem) as told:
+    def test_an_older_release_than_the_floor_is_refused_with_the_install_line(self):
+        self.floor()
+        with self.patch_installed_version("4.12.0"), self.assertRaises(tools.ToolProblem) as told:
             tools.find("flasher")
         self.assertEqual(str(told.exception), "pt 4.12.0 is too old: spark needs 5.0 or newer. "
                          "Install: python3 -m pip install --user pt==5.5.0")
 
     def test_the_floor_and_newer_are_kept(self):
+        self.floor()
         for version in ("5.0.0", "5.5.0"):
-            with self.subTest(version), self.installed(version):
+            with self.subTest(version), self.patch_installed_version(version):
                 self.assertEqual(tools.find("flasher").name, "pt")
 
     def test_a_version_nobody_can_read_is_kept(self):
-        with self.installed(None):
+        self.floor()
+        with self.patch_installed_version(None):
             self.assertEqual(tools.find("flasher").name, "pt")
 
-    def test_a_person_s_override_with_no_pin_still_has_the_floor(self):
-        self.personal.write_text(json.dumps({"pt": {"version": ""}}))
-        with self.installed("4.12.0"), self.assertRaises(tools.ToolProblem):
+    def test_the_floor_holds_for_an_entry_with_no_pin(self):
+        self.personal.write_text(json.dumps({"pt": {"oldest_version": "5.0", "version": ""}}))
+        with self.patch_installed_version("4.12.0"), self.assertRaises(tools.ToolProblem):
             tools.find("flasher")
 
     def test_a_pre_release_counts_as_its_release(self):
+        self.floor()
         for version in ("5.0.dev0", "5.0.post1", "5.0.0b1"):
-            with self.subTest(version), self.installed(version):
+            with self.subTest(version), self.patch_installed_version(version):
                 self.assertEqual(tools.find("flasher").name, "pt")
-        with self.installed("4.9.dev0"), self.assertRaises(tools.ToolProblem):
+        with self.patch_installed_version("4.9.dev0"), self.assertRaises(tools.ToolProblem):
             tools.find("flasher")
 
     def test_a_floor_with_no_digits_refuses_nothing(self):
-        self.personal.write_text(json.dumps({"pt": {"oldest_version": "dev"}}))
-        with self.installed("4.12.0"):
+        self.floor("dev")
+        with self.patch_installed_version("4.12.0"):
             self.assertEqual(tools.find("flasher").name, "pt")
 
     def test_the_status_row_says_it_is_too_old_with_the_install_line(self):
-        with self.installed("4.12.0"):
-            state, label, text = next(row for row in tools.status() if row[1] == "flasher")
+        self.floor()
+        with self.patch_installed_version("4.12.0"):
+            state, text = next((state, text) for state, label, text in tools.status() if label == "flasher")
         self.assertEqual(state, "missing")
         self.assertIn("too old", text)
         self.assertIn("Install: python3 -m pip install --user pt==5.5.0", text)

@@ -170,13 +170,13 @@
  {
   "file": "scripts/tools.py",
   "name": "find no longer refuses a tool below its oldest version",
-  "find": "    _refuse_too_old(tool_name, entry)\n",
-  "replace": "    pass\n"
+  "find": "    if versions.is_older(here, entry.get(\"oldest_version\")):",
+  "replace": "    if False:"
  },
  {
-  "file": "scripts/tools.py",
+  "file": "scripts/versions.py",
   "name": "the floor compare is flipped, so a newer release is refused",
-  "find": "_version_key(here) < _version_key(oldest)",
-  "replace": "_version_key(here) > _version_key(oldest)"
+  "find": "key(here) < key(oldest)",
+  "replace": "key(here) > key(oldest)"
  }
 ]
