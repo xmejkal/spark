@@ -106,29 +106,29 @@ def read(path):
     """The requirements file as a dict, or a DesignError saying what is wrong with it."""
     path = Path(path)
     if not path.is_file():
-        raise DesignError("no requirements at %s" % path)
+        raise DesignError("no requirements at %s", path)
     try:
         wanted = json.loads(path.read_text())
     except ValueError as broken:
-        raise DesignError("%s is not JSON: %s" % (path, broken)) from broken
+        raise DesignError("%s is not JSON: %s", path, broken) from broken
     except OSError as broken:
-        raise DesignError("%s could not be read: %s" % (path, broken)) from broken
+        raise DesignError("%s could not be read: %s", path, broken) from broken
     if not isinstance(wanted, dict):
-        raise DesignError("%s holds a %s; a requirements file is an object with `parts`"
-                          % (path, type(wanted).__name__))
+        raise DesignError("%s holds a %s; a requirements file is an object with `parts`",
+                          path, type(wanted).__name__)
     for index, signal in enumerate(wanted.get("signals") or []):
         # A signal with no name was a KeyError through both mains and "the chain is broken"
         # through the spine (close audit C7). Checked where the file is read, like `parts`.
         if not isinstance(signal, dict) or not isinstance(signal.get("name"), str) or not signal["name"]:
-            raise DesignError("%s: signals[%d] needs a `name`; a signal is {name, needs, pin?, bus?}"
-                              % (path, index))
+            raise DesignError("%s: signals[%d] needs a `name`; a signal is {name, needs, pin?, bus?}",
+                              path, index)
         needs = signal.get("needs", [])
         if not isinstance(needs, list) or not all(isinstance(need, str) for need in needs):
-            raise DesignError("%s: signals[%d].needs must be a list of what the pin must do"
-                              % (path, index))
+            raise DesignError("%s: signals[%d].needs must be a list of what the pin must do",
+                              path, index)
         if not re.fullmatch(parts_library.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
             raise DesignError("%s: signals[%d] is named %r, but a signal is a name — letters, digits and _ (LED_STATUS): the "
-                              "pin map and the board name it, and firmware is written against it" % (path, index, signal["name"]))
+                              "pin map and the board name it, and firmware is written against it", path, index, signal["name"])
     clash = names_that_are_one(wanted)
     if clash:
         # P163: OpenLid and Openlid are one signal to the build, so the generator traced two GPIOs to one pad with exit 0.
@@ -137,7 +137,7 @@ def read(path):
         part = (wanted["parts"][second].get("part") if isinstance(wanted["parts"][second], dict) else None) or "…"
         rule = ONE_NAME_RULE if first_name != second_name else SAME_NAME_RULE  # BtnLeft twice is not about capitals
         raise DesignError('%s: parts[%d] is called %s and parts[%d] %s — %s; give one of them a name of its own, '
-                          '{"part": "%s", "name": …}' % (path, first, first_name, second, second_name, rule, part))
+                          '{"part": "%s", "name": …}', path, first, first_name, second, second_name, rule, part)
     return wanted
 
 
@@ -156,7 +156,7 @@ def project_for(path, project=None):
             # Unchecked, a typo here resolved to a path nobody looked at: the board and the
             # parts came from the library, the project's rules were dropped, exit 0, stderr
             # empty — A2's defect one character away (close audit C5).
-            raise DesignError("no directory at %s — `--project` names a project directory" % chosen)
+            raise DesignError("no directory at %s — `--project` names a project directory", chosen)
         return chosen.resolve()
     return boards.project_or_library(Path(path).resolve().parent)
 
@@ -184,18 +184,18 @@ def requested_parts(wanted):
     for index, entry in enumerate(wanted.get("parts") or []):
         if isinstance(entry, dict):
             if not entry.get("part"):
-                raise DesignError("parts[%d] names no `part`: %s" % (index, json.dumps(entry)))
+                raise DesignError("parts[%d] names no `part`: %s", index, json.dumps(entry))
             name = entry.get("name")
             if name is not None and not (isinstance(name, str) and re.fullmatch(parts_library.SELECTOR_SAFE, name)):
                 # P87's attribute half: the instance's name is the component the board is written with, `<chip name="…">`
                 raise DesignError("parts[%d] calls its instance %r, but an instance's name is a name — letters, digits and _ "
-                                  "(BtnOpen): the board is written with it as code" % (index, name))
+                                  "(BtnOpen): the board is written with it as code", index, name)
             entries.append((entry["part"], name))
         elif isinstance(entry, str):
             entries.append((entry, None))
         else:
-            raise DesignError("parts[%d] is a %s; an entry is a part id or {part, name}"
-                              % (index, type(entry).__name__))
+            raise DesignError("parts[%d] is a %s; an entry is a part id or {part, name}",
+                              index, type(entry).__name__)
     return entries
 
 
@@ -215,12 +215,12 @@ def rails_requested(wanted):
             rails = entry["rails"]
             if not isinstance(rails, dict) or not all(
                     isinstance(pin, str) and isinstance(rail, str) and rail for pin, rail in rails.items()):
-                raise DesignError("parts[%d].rails must map pin names to rail names: %s"
-                                  % (index, json.dumps(rails)))
+                raise DesignError("parts[%d].rails must map pin names to rail names: %s",
+                                  index, json.dumps(rails))
             for pin, rail in rails.items():
                 if not re.fullmatch(parts_library.SELECTOR_SAFE, rail):  # P87's attribute half: the rail is the net written
                     raise DesignError("parts[%d].rails puts %s on %r, but a rail is a name — letters, digits and _ (traction, "
-                                      "motor): the board is written with it as code" % (index, pin, rail))
+                                      "motor): the board is written with it as code", index, pin, rail)
             overrides[(entry.get("part"), entry.get("name"))] = rails
     return overrides
 
@@ -234,10 +234,9 @@ def on_rails(part, rails):
     """
     for pin in rails:
         if not any(supply.get("pin") == pin for supply in part.get("power") or []):
-            raise DesignError("%s has no power pin %r to put on rail %r; its power pins are %s"
-                              % (part.get("id"), pin, rails[pin],
-                                 ", ".join(s.get("pin", "?") for s in part.get("power") or [])
-                                 or "none"))
+            powers = ", ".join(s.get("pin", "?") for s in part.get("power") or []) or "none"
+            raise DesignError("%s has no power pin %r to put on rail %r; its power pins are %s",
+                              part.get("id"), pin, rails[pin], powers)
     return dict(part, power=[dict(supply, rail=rails[supply["pin"]])
                              if supply.get("pin") in rails else supply
                              for supply in part.get("power") or []])
@@ -255,11 +254,11 @@ def record(part_id, project):
     try:
         return parts_library.load(part_id, project)
     except parts_library.PartError as broken:
-        raise DesignError(str(broken)) from broken
+        raise DesignError.of_error(broken) from broken
     except ValueError as broken:
-        raise DesignError("the record for %r is not JSON: %s" % (part_id, broken)) from broken
+        raise DesignError("the record for %r is not JSON: %s", part_id, broken) from broken
     except OSError as broken:
-        raise DesignError("the record for %r could not be read: %s" % (part_id, broken)) from broken
+        raise DesignError("the record for %r could not be read: %s", part_id, broken) from broken
 
 
 def parts_of(wanted, project, board=None):
@@ -334,8 +333,10 @@ def signals_of(part_list, wanted, project):
     for part in part_list:
         try:
             asked = parts_library.signals_for([part["id"]], project)
-        except (parts_library.PartError, ValueError, OSError) as broken:
-            raise DesignError(str(broken)) from broken
+        except parts_library.PartError as broken:
+            raise DesignError.of_error(broken) from broken
+        except (ValueError, OSError) as broken:
+            raise DesignError("%s", broken) from broken
         for signal in asked:
             # Signals are per INSTANCE, not per part. Five buttons asking for `BUTTON` produced
             # five signals of one name, which `assign_pins` placed on five pins and every
@@ -354,8 +355,8 @@ def signals_of(part_list, wanted, project):
     for source, signal in zip(sources, signals):
         if signal["name"] in placed:
             raise DesignError("%s and %s are both %s — one signal, which the pin assigner would place twice and the "
-                              "generator trace to one pad from two pins; give one of them a name of its own"
-                              % (placed[signal["name"]], source, signal["name"]))
+                              "generator trace to one pad from two pins; give one of them a name of its own",
+                              placed[signal["name"]], source, signal["name"])
         placed[signal["name"]] = source
     return signals
 
@@ -373,7 +374,7 @@ def rules_in(project):
     try:
         return fab.read_rules(path)  # --- MVP --- (P434): also refuses a `fabrication` value that is no finite number
     except fab.RulesError as refused:
-        raise DesignError(str(refused)) from refused
+        raise DesignError("%s", refused) from refused
 
 
 def load(path, project=None, board_id=None):
@@ -383,7 +384,7 @@ def load(path, project=None, board_id=None):
     try:
         board = boards.load(root, board_id or wanted.get("board"))
     except boards.BoardError as broken:
-        raise DesignError(str(broken)) from broken
+        raise DesignError.of_error(broken) from broken
     part_list = parts_of(wanted, root, board)
     return Design(Path(path), root, wanted, board, part_list, signals_of(part_list, wanted, root),
                   rules_in(root))

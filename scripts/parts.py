@@ -221,10 +221,10 @@ from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK
 from brief import Brief  # noqa: E402
 import provenance  # noqa: E402
 import store  # noqa: E402
-from spark.core.text_guards import guard_lines, printable  # noqa: E402
+from spark.core.text_guards import ValueMessageError, guard_lines, printable  # noqa: E402
 
 
-class PartError(Exception):
+class PartError(ValueMessageError):
     """A part definition that cannot be used, with the reason."""
 
 
@@ -261,8 +261,7 @@ def definition_path(part_id: str, project: Path = None) -> Path:
     found = store.records("parts", LIBRARY, project).get(part_id)
     if found:
         return found[1]
-    raise PartError("no part called %r.\n  available: %s"
-                    % (part_id, ", ".join(available(project)) or "(none)"))
+    raise PartError("no part called %r.\n  available: %s", part_id, ", ".join(available(project)) or "(none)")
 
 
 def load(part_id: str, project: Path = None) -> dict:
@@ -270,8 +269,7 @@ def load(part_id: str, project: Path = None) -> dict:
     part = json.loads(path.read_text())
     problems = validate(part, path)
     if problems:
-        raise PartError("%s does not meet the part contract:\n%s"
-                        % (path, "\n".join("  - " + problem for problem in problems)))
+        raise PartError.of_lines(["%s does not meet the part contract:" % path] + ["  - " + problem for problem in problems])
     return part
 
 
@@ -1301,7 +1299,7 @@ def fetch_documents(part_id, project=None, fetch=None):
     """
     home = record_home(part_id, project)
     if home is None:
-        raise PartError("no record called %r to fetch for" % part_id)
+        raise PartError("no record called %r to fetch for", part_id)
     path = home / (part_id + DEFINITION_SUFFIX)
     record = json.loads(path.read_text())
     documents = dict(record.get("documents") or {})
@@ -1341,11 +1339,11 @@ def promote(part_id, project, to=None, dry_run=False):
     import shutil
     home = record_home(part_id, project)
     if home is None:
-        raise PartError("no record called %r to promote" % part_id)
+        raise PartError("no record called %r to promote", part_id)
     to = Path(to) if to else (Path(project) / "parts" if home in (store.place("catalog"), store.place("shelf")) else LIBRARY)
     target = to / (part_id + DEFINITION_SUFFIX)
     if target.exists():
-        raise PartError("%s exists; a promotion never overwrites" % target)
+        raise PartError("%s exists; a promotion never overwrites", target)
     if dry_run:
         return target
     to.mkdir(parents=True, exist_ok=True)
@@ -1763,7 +1761,7 @@ def _op_fetch(args, project):
     if args.dry_run:
         home = record_home(args.fetch, project)
         if home is None:
-            raise PartError("no record called %r to fetch for" % args.fetch)
+            raise PartError("no record called %r to fetch for", args.fetch)
         wanted = [url for url, _ in fetch_plan(json.loads((home / (args.fetch + DEFINITION_SUFFIX)).read_text()))]
         return Answer({"documents": None, "would_fetch": wanted}, ["  would fetch %s" % url for url in wanted]
                       or ["  %s cites no datasheet or image URL to keep" % args.fetch])
@@ -1967,7 +1965,7 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
     """
     path, source = _record_path(part_id, project)
     if path is None:
-        raise PartError("no part record called %r — `parts.py --need` finds what exists" % part_id)
+        raise PartError("no part record called %r — `parts.py --need` finds what exists", part_id)
     if path.parent.resolve() == LIBRARY.resolve():
         return Answer(problems=[_problem(part_id, "%s is in spark's own library, which is changed in spark's repository, "
                                                   "not by parts.py" % part_id)])

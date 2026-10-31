@@ -40,6 +40,7 @@ import assign_pins  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 
 def in_store(home):
@@ -1111,6 +1112,17 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                 parts.promote("x-part", project, to=project / "parts")
             self.assertEqual(parts.promote("x-part", project, to=library), library / "x-part.json")
             self.assertTrue((library / "x-part" / "chip" / "x.chip.json").is_file())
+
+    def test_a_newline_in_the_target_gives_one_line_in_a_promotion_that_never_overwrites(self):
+        home = self._home(); catalog = home / "catalog"; project = Path(tempfile.mkdtemp()) / NASTY
+        (project / ".spark").mkdir(parents=True)
+        self._catalog_record(catalog, "x-part")
+        (project / "parts").mkdir()
+        (project / "parts" / "x-part.json").write_text("{}")
+        with in_store(home):
+            with self.assertRaises(parts.PartError) as caught:
+                parts.promote("x-part", project, to=project / "parts")
+        assert_flat(self, caught.exception, project / "parts" / "x-part.json")
 
     def test_cited_urls_reads_a_dict_of_sources_and_a_url_inside_prose(self):
         # Both P62 lenses: four library records keep `sources` as a dict, and `--sources` saw none.

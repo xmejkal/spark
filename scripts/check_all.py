@@ -331,7 +331,7 @@ class CheckedFolder:
         folder = Path(folder)
         if not folder.is_dir():
             # a folder that is not there walked up to a project nobody named
-            raise design.DesignError("no directory at %s — `--project` names a project directory" % folder)
+            raise design.DesignError("no directory at %s — `--project` names a project directory", folder)
         project = boards.project_or_library(folder.resolve())
         return cls(folder, folder if project == folder.resolve() else project)  # the folder as given, when it is one
 
