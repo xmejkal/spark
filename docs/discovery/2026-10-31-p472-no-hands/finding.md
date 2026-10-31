@@ -3,7 +3,7 @@
 Date 2026-10-31 (Europe/Prague). Bench: the PO's FireBeetle 2 ESP32-S3 on `/dev/cu.usbmodem1101`.
 It ran MicroPython v1.29.0 ESP32_GENERIC_S3. The tools were esptool 5.5.0 and mpremote 1.29.0. The full log is `bench.log` in this folder, tries 1 to 10.
 
-> TLDR: On the S3 with MicroPython's own USB port, a call to `machine.bootloader()` through mpremote enters
+> On the S3 with MicroPython's own USB port, a call to `machine.bootloader()` through mpremote enters
 > download mode with no hands. Then esptool `--after hard-reset` or `--after watchdog-reset` starts MicroPython again.
 > Both worked on the bench at 23:29. The button press was needed because the PO entered download mode with BOOT.
 > BOOT holds the boot pin low, and the USB reset cannot clear it. The C6 and the bridge boards are untried.
@@ -75,21 +75,23 @@ The PO must press RESET on the FireBeetle 2. Nothing was written or erased on th
 Do not use `--before usb-reset` on a running MicroPython until someone finds out why.
 The suspect: the USB-JTAG sequence hits MicroPython's DTR/RTS bootloader rule while `machine.bootloader()` is already due.
 
-## What spark does (facts only)
+## What spark can do (proposals for P462, P469, P465)
 
-The order for the look and for deploy, by the board record fact `chip` and the port's USB id (from `mpremote connect list`):
+Spark does none of this today. Its deploy and look use the esptool default reset (`scripts/flasher.py`, `scripts/board_look.py`).
+These steps are proposals. The order for the look and for deploy would follow the board record fact `chip` and the port's USB id (from `mpremote connect list`):
 
-1. Read the port's USB id. Id 0x4001, or any non-Espressif id on an S3, means a running MicroPython (or a bridge).
+1. Read the port's USB id. Id 0x4001 on an S3 means a running MicroPython, or a bridge.
    Id 0x1001 means the chip's own port (ROM download, or a C6 running firmware).
-2. On an S3, S2 or C3 where MicroPython answers, send `machine.bootloader()` through mpremote. Expect the mpremote error
-   (the port drops). Wait until the port returns with id 0x1001. Then run esptool with `--before no-reset`.
-3. On a C6 or a classic ESP32 (no `machine.bootloader()`), run esptool with its default `--before`. On the C6 the USB-JTAG
-   sequence works with the firmware running (from source). On a bridge board DTR/RTS works. Both untried.
-4. After the read or the write, use `--after hard-reset`. On the S3 use `--after watchdog-reset`, which samples the
-   boot pin again and so also covers a button entry. Then wait for the port and read `ready` (P462).
-5. If the port stays silent after step 4, report `could-not-run`, never a pass. Name RESET as the hand step.
-6. The look needs download mode for flash-id, so a look restarts the board (about 6 s back). A look that must not
-   restart can only use mpremote on the running MicroPython (P469).
+2. On an S3, S2 or C3 where MicroPython answers, spark would send `machine.bootloader()` through mpremote.
+   It would expect the mpremote error, because the port drops. It would wait until the port returns with id 0x1001.
+   Then it would run esptool with `--before no-reset`.
+3. On a C6 or a classic ESP32 (no `machine.bootloader()`), spark would run esptool with its default `--before`.
+   On the C6 the USB-JTAG sequence probably works with the firmware running (from source). On a bridge board DTR/RTS works. Both untried.
+4. After the read or the write, spark would use `--after hard-reset`. On the S3 it would use `--after watchdog-reset`.
+   That samples the boot pin again, so it also covers a button entry. Then spark would wait for the port and read `ready` (P462).
+5. If the port stays silent after step 4, spark would report `could-not-run`, never a pass, and name RESET as the hand step.
+6. The look needs download mode for flash-id, so an esptool look restarts the board (about 6 s back).
+   A look that must not restart can only use mpremote on the running MicroPython (P469).
 
 ## Cards that change
 

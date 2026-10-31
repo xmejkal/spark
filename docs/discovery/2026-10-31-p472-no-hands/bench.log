@@ -3,7 +3,7 @@
 /dev/cu.BoseQC35II None 0000:0000 None None
 /dev/cu.FreeLoop1_R None 0000:0000 None None
 /dev/cu.debug-console None 0000:0000 None None
-/dev/cu.usbmodem1101 34851842e4100000 303a:4001 Espressif Systems Espressif Device
+/dev/cu.usbmodem1101 348518xxxxxxxxxx 303a:4001 Espressif Systems Espressif Device
 /dev/cu.wlan-debug None 0000:0000 None None
 === exec
 (name='micropython', version=(1, 29, 0, ''), _machine='Generic ESP32S3 module with ESP32-S3', _mpy=11014, _build='ESP32_GENERIC_S3', _thread='GIL') 3.4.0; MicroPython v1.29.0 on 2026-08-24
@@ -63,14 +63,14 @@ Chip type:          ESP32-S3 (QFN56) (revision v0.1)
 Features:           Wi-Fi, BT 5 (LE), Dual Core + LP Core, 240MHz, Embedded PSRAM 8MB (AP_3v3)
 Crystal frequency:  40MHz
 USB mode:           USB-Serial/JTAG
-MAC:                34:85:18:42:e4:10
+MAC:                34:85:18:xx:xx:xx
 
 Uploading stub flasher...
 Running stub flasher...
 Stub flasher running.
 
 WARNING: ESP32-S3 has no chip ID. Reading MAC address instead.
-MAC:                34:85:18:42:e4:10
+MAC:                34:85:18:xx:xx:xx
 
 Staying in bootloader.
 exit 0
@@ -85,7 +85,7 @@ Chip type:          ESP32-S3 (QFN56) (revision v0.1)
 Features:           Wi-Fi, BT 5 (LE), Dual Core + LP Core, 240MHz, Embedded PSRAM 8MB (AP_3v3)
 Crystal frequency:  40MHz
 USB mode:           USB-Serial/JTAG
-MAC:                34:85:18:42:e4:10
+MAC:                34:85:18:xx:xx:xx
 
 Stub flasher is already running. No upload is necessary.
 
@@ -104,7 +104,7 @@ exit 0
 /dev/cu.BoseQC35II None 0000:0000 None None
 /dev/cu.FreeLoop1_R None 0000:0000 None None
 /dev/cu.debug-console None 0000:0000 None None
-/dev/cu.usbmodem1101 34851842e4100000 303a:4001 Espressif Systems Espressif Device
+/dev/cu.usbmodem1101 348518xxxxxxxxxx 303a:4001 Espressif Systems Espressif Device
 /dev/cu.wlan-debug None 0000:0000 None None
 exit 0
 === 2026-10-31 23:29:23 CET try3-exec: mpremote connect /dev/cu.usbmodem1101 exec import sys;print(sys.implementation._build)
@@ -164,7 +164,7 @@ Chip type:          ESP32-S3 (QFN56) (revision v0.1)
 Features:           Wi-Fi, BT 5 (LE), Dual Core + LP Core, 240MHz, Embedded PSRAM 8MB (AP_3v3)
 Crystal frequency:  40MHz
 USB mode:           USB-Serial/JTAG
-MAC:                34:85:18:42:e4:10
+MAC:                34:85:18:xx:xx:xx
 
 Uploading stub flasher...
 Running stub flasher...
@@ -185,7 +185,7 @@ exit 0
 /dev/cu.BoseQC35II None 0000:0000 None None
 /dev/cu.FreeLoop1_R None 0000:0000 None None
 /dev/cu.debug-console None 0000:0000 None None
-/dev/cu.usbmodem1101 34851842e4100000 303a:4001 Espressif Systems Espressif Device
+/dev/cu.usbmodem1101 348518xxxxxxxxxx 303a:4001 Espressif Systems Espressif Device
 /dev/cu.wlan-debug None 0000:0000 None None
 exit 0
 === 2026-10-31 23:29:41 CET try4-exec: mpremote connect /dev/cu.usbmodem1101 exec print(1)
@@ -204,7 +204,7 @@ exit 2
 /dev/cu.BoseQC35II None 0000:0000 None None
 /dev/cu.FreeLoop1_R None 0000:0000 None None
 /dev/cu.debug-console None 0000:0000 None None
-/dev/cu.usbmodem1101 34851842e4100000 303a:4001 Espressif Systems Espressif Device
+/dev/cu.usbmodem1101 348518xxxxxxxxxx 303a:4001 Espressif Systems Espressif Device
 /dev/cu.wlan-debug None 0000:0000 None None
 exit 0
 === 2026-10-31 23:30:14 CET try6-flashid-usbreset-from-running: python3 -m esptool --port /dev/cu.usbmodem1101 --before usb-reset --after watchdog-reset flash-id
@@ -220,7 +220,7 @@ exit 2
 /dev/cu.BoseQC35II None 0000:0000 None None
 /dev/cu.FreeLoop1_R None 0000:0000 None None
 /dev/cu.debug-console None 0000:0000 None None
-/dev/cu.usbmodem1101 34851842e4100000 303a:4001 Espressif Systems Espressif Device
+/dev/cu.usbmodem1101 348518xxxxxxxxxx 303a:4001 Espressif Systems Espressif Device
 /dev/cu.wlan-debug None 0000:0000 None None
 exit 0
 === 2026-10-31 23:30:28 CET try6-exec: mpremote connect /dev/cu.usbmodem1101 exec print(2)
@@ -280,7 +280,7 @@ exit 1
 /dev/cu.BoseQC35II None 0000:0000 None None
 /dev/cu.FreeLoop1_R None 0000:0000 None None
 /dev/cu.debug-console None 0000:0000 None None
-/dev/cu.usbmodem1101 34851842e4100000 303a:4001 Espressif Systems Espressif Device
+/dev/cu.usbmodem1101 348518xxxxxxxxxx 303a:4001 Espressif Systems Espressif Device
 /dev/cu.wlan-debug None 0000:0000 None None
 exit 0
 === raw probe 2026-10-31 23:31:39
@@ -300,7 +300,7 @@ exit 2
 /dev/cu.BoseQC35II None 0000:0000 None None
 /dev/cu.FreeLoop1_R None 0000:0000 None None
 /dev/cu.debug-console None 0000:0000 None None
-/dev/cu.usbmodem1101 34851842e4100000 303a:4001 Espressif Systems Espressif Device
+/dev/cu.usbmodem1101 348518xxxxxxxxxx 303a:4001 Espressif Systems Espressif Device
 /dev/cu.wlan-debug None 0000:0000 None None
 exit 0
 === 2026-10-31 23:32:23 CET try9-exec: mpremote connect /dev/cu.usbmodem1101 exec print(5)
