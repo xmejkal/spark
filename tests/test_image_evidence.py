@@ -505,6 +505,13 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         (self.project / "requirements.json").write_text("{not json")
         self.assertIn("requirements.json cannot be read, so its board's MicroPython build is not known", self.why())
 
+    def test_an_unknown_board_id_keeps_the_available_list_on_its_own_line(self):
+        (self.project / "requirements.json").write_text('{"board": "nosuch-board"}')
+        said = self.why().split("\n")
+        self.assertEqual(said[0], "cannot check flash-with-firmware.bin against firmware/: the board nosuch-board names no "
+                         "MicroPython build that can be read: no board definition for 'nosuch-board'.")
+        self.assertTrue(said[1].startswith("  available: "), said)
+
     def test_an_unreadable_interpreter_is_a_sentence(self):
         self.interpreter.unlink()  # OSError, not a missing tool: it stays a sentence, evidence_refuses
         self.assertIn("cannot check", self.why())

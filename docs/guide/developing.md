@@ -485,7 +485,7 @@ the lines of another error, so a nested error keeps its line breaks.
 
 What V1 does not see, so a reviewer looks for it: a class under another name (`import ToolProblem as SP`, `P = ToolProblem`),
 the lines that `X.of_lines(...)` and `X.of_error(...)` take (safe by construction), and a message built before the raise
-(`msg = ...; raise E(msg)`, or a sentence a function returns, such as `tools.off_sentence` and `tools.entry_problem`, which
+(a sentence a function returns, such as `tools.off_sentence` and `tools.entry_problem`, which
 use `flat_line` by hand).
 
 ### One responsibility, one name

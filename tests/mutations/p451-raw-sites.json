@@ -16,5 +16,6 @@
  {"file": "scripts/tools.py", "name": "P451: the off row puts a tool name raw", "find": "return flat_line(\"%s is turned off in %s — turn it on: /spark:setup add %s\", tool_name, setter, tool_name)", "replace": "return \"%s is turned off in %s — turn it on: /spark:setup add %s\" % (tool_name, setter, tool_name)"},
  {"file": "scripts/tools.py", "name": "P451: an install problem puts a key raw", "find": "return flat_line(\"its %s install line names {%s}; only {version} and {core} are filled\", manager, unknown[0])", "replace": "return \"its %s install line names {%s}; only {version} and {core} are filled\" % (manager, unknown[0])"},
  {"file": "tools/measure.py", "name": "P451: the net sees no raw value message", "find": "seen[name] += 1", "replace": "pass"},
- {"file": "scripts/spark/core/text_guards.py", "name": "P451: an error made from an error loses its line breaks", "find": "return cls.of_lines(str(error).split(\"\\n\"))", "replace": "return cls(\"%s\", error)"}
+ {"file": "scripts/spark/core/text_guards.py", "name": "P451: an error made from an error loses its line breaks", "find": "return cls.of_lines(str(error).split(\"\\n\"))", "replace": "return cls(\"%s\", error)"},
+ {"file": "scripts/image_evidence.py", "name": "P451: the image check words flatten the lines of the cause", "find": "    lines = str(cause).split(\"\\n\")", "replace": "    lines = [str(cause)]"}
 ]
