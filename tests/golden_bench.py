@@ -111,6 +111,15 @@ def build_project(folder):
     return project
 
 
+def child_env(store, flash_id_file, devs_file):
+    """The environment of a child: the parent's without SPARK_* (ACCEPT_VARIABLE too), then the fakes first on PYTHONPATH,
+    `store` as SPARK_HOME, and the canned flash id and device list."""
+    env = {name: value for name, value in os.environ.items() if not name.startswith("SPARK_")}
+    env.update(PYTHONPATH=str(FAKE_MODULES), SPARK_HOME=str(store), TZ="UTC", PYTHONDONTWRITEBYTECODE="1",
+               FAKE_ESPTOOL_FLASH_ID_FILE=str(CANNED / flash_id_file), FAKE_MPREMOTE_DEVS_FILE=str(CANNED / devs_file))
+    return env
+
+
 def run_script(case, project, store, token=None):
     """(exit code, stdout) of `case`'s script run as a child in `project`, with `store` as its SPARK_HOME. stdin is
     closed and stdout is a pipe, so the script sees no terminal. `token` replaces LOOK_TOKEN in the arguments."""
@@ -118,10 +127,7 @@ def run_script(case, project, store, token=None):
     for place, text in case.plant:
         (Path(store) / place).parent.mkdir(parents=True, exist_ok=True)
         (Path(store) / place).write_text(text)
-    env = {name: value for name, value in os.environ.items() if not name.startswith("SPARK_")}  # ACCEPT_VARIABLE too
-    env.update(PYTHONPATH=str(FAKE_MODULES), SPARK_HOME=str(store), TZ="UTC", PYTHONDONTWRITEBYTECODE="1",
-               FAKE_ESPTOOL_FLASH_ID_FILE=str(CANNED / case.flash_id_file),
-               FAKE_MPREMOTE_DEVS_FILE=str(CANNED / case.devs_file))
+    env = child_env(store, case.flash_id_file, case.devs_file)
     done = subprocess.run([sys.executable, str(ROOT / "scripts" / case.script), "--project", str(project), *argv],
                           cwd=str(project), env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
                           timeout=RUN_TIMEOUT_S)
