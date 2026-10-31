@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import flash_image  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
-from micropython_fakes import fake_interpreter, table_bytes  # noqa: E402
+from micropython_fakes import MICROPYTHON_TABLE, fake_interpreter, table_bytes  # noqa: E402
 
 #: MicroPython v1.29.0's own numbers for ESP32_GENERIC_S3, which the image has to match. Literals
 #: from its source, never read back from `flash_image`: the test used the module's constants to
@@ -102,7 +102,7 @@ class TheImageTest(unittest.TestCase):
 
     @needs_littlefs
     def test_the_original_esp32_s_interpreter_sits_at_0x1000_with_0xff_before_it(self):
-        interpreter = (self.root / "micropython.bin").read_bytes()
+        interpreter = fake_interpreter(offset=ESP32_INTERPRETER_OFFSET)
         flash = flash_image.image(interpreter, flash_image.files_under(self.root / "fw"), offset=ESP32_INTERPRETER_OFFSET)
         self.assertEqual(len(flash), MICROPYTHON_FLASH_SIZE)
         self.assertEqual(flash[:ESP32_INTERPRETER_OFFSET], b"\xff" * ESP32_INTERPRETER_OFFSET)
@@ -121,6 +121,7 @@ class TheImageTest(unittest.TestCase):
 
     @needs_littlefs
     def test_the_chosen_interpreter_builds_its_image_at_its_offset(self):
+        (self.root / "micropython.bin").write_bytes(fake_interpreter(offset=ESP32_INTERPRETER_OFFSET))
         chosen = flash_image.Interpreter(self.root / "micropython.bin", ESP32_INTERPRETER_OFFSET)
         flash = chosen.image(flash_image.files_under(self.root / "fw"), {"T": 40})
         self.assertEqual(flash[ESP32_INTERPRETER_OFFSET:ESP32_INTERPRETER_OFFSET + 1], b"\xe9")
@@ -475,6 +476,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         esp32 = ("ESP32_GENERIC", ("micropython-esp32", self.with_the_esp32()["tools"]["micropython-esp32"]))
         for held, span in ((esp32, "MicroPython at 0x1000-0xa000"), (("ESP32_GENERIC_C3", None), "MicroPython at 0x0-0x9000")):
             out = io.StringIO()
+            (self.root / "micropython.bin").write_bytes(fake_interpreter(offset=0x1000 if held[1] else 0))
             with self.subTest(build=held[0]), mock.patch.object(flash_image, "build_entry", return_value=held), \
                     contextlib.redirect_stdout(out):
                 code = flash_image.main(["--micropython", str(self.root / "micropython.bin"), "--project", str(self.root),
@@ -487,6 +489,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         import contextlib
         import io
         esp32 = ("ESP32_GENERIC", ("micropython-esp32", self.with_the_esp32()["tools"]["micropython-esp32"]))
+        (self.root / "micropython.bin").write_bytes(fake_interpreter(offset=ESP32_INTERPRETER_OFFSET))
         with mock.patch.object(flash_image, "build_entry", return_value=esp32), contextlib.redirect_stdout(io.StringIO()):
             code = flash_image.main(["--micropython", str(self.root / "micropython.bin"), "--project", str(self.root),
                                      "--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
