@@ -38,9 +38,10 @@ class EsptoolFlasher(Flasher):
 
     #: Where the image goes: it is the whole flash from its first byte, as the simulator loaded it.
     IMAGE_OFFSET = "0x0"
-    #: esptool's commands with underscores: esptool 3 and 4 know only these, and 5.x still accepts them with a deprecation
-    #: line (esptool 5.5.0's cli_util.py, read 2026-10-12). The tools list finds any installed esptool, not only its pin.
-    ERASE, WRITE = "erase_flash", "write_flash"
+    #: esptool's commands with hyphens: esptool 5.0 is the first that knows them (esptool/__init__.py of esptool-5.0.0, sha256
+    #: cee2259c868a91c99962b557b463398d024c3610ff721ac1058cb13144686ead), and 5.5.0 prints a deprecation line for the
+    #: underscore names. The esptool entry's `oldest_version` makes the tools list refuse an older one.
+    ERASE, WRITE = "erase-flash", "write-flash"
     #: What to try when esptool cannot reach the board, with `%(boot)s`, `%(reset)s` and `%(orientation)s` from the
     #: ButtonPlaces. The sentence has no period: `orientation` brings its own, or nothing.
     BOOT_HINT_TEMPLATE = ("if esptool could not connect, hold the board's %(boot)s, press and release %(reset)s, "

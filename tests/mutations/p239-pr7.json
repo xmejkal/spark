@@ -31,9 +31,9 @@
  },
  {
   "file": "scripts/flasher.py",
-  "name": "the erase uses the dashed name",
-  "find": "ERASE, WRITE = \"erase_flash\", \"write_flash\"",
-  "replace": "ERASE, WRITE = \"erase-flash\", \"write_flash\""
+  "name": "the erase uses the old underscore name",
+  "find": "ERASE, WRITE = \"erase-flash\", \"write-flash\"",
+  "replace": "ERASE, WRITE = \"erase_flash\", \"write-flash\""
  },
  {
   "file": "scripts/flasher.py",
@@ -68,8 +68,8 @@
  {
   "file": "scripts/board_look.py",
   "name": "the reader leaves the port out of its line",
-  "find": "flasher.build_esptool_prefix(self.flasher_tool, port) + [\"flash_id\"]",
-  "replace": "flasher.build_esptool_prefix(self.flasher_tool) + [\"flash_id\"]"
+  "find": "flasher.build_esptool_prefix(self.flasher_tool, port) + [\"flash-id\"]",
+  "replace": "flasher.build_esptool_prefix(self.flasher_tool) + [\"flash-id\"]"
  },
  {
   "file": "scripts/deploy_service.py",
@@ -166,5 +166,17 @@
   "name": "look hint is the base class hint",
   "find": "BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT",
   "replace": "BOOT_HINT = flasher.Flasher.BOOT_HINT"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "find no longer refuses a tool below its oldest version",
+  "find": "    _refuse_too_old(tool_name, entry)\n",
+  "replace": "    pass\n"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "the floor compare is flipped, so a newer release is refused",
+  "find": "_version_key(here) < _version_key(oldest)",
+  "replace": "_version_key(here) > _version_key(oldest)"
  }
 ]

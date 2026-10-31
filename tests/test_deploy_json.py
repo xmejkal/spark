@@ -173,7 +173,7 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual(data["yes"]["kind"], "typed")
         self.assertEqual(data["ready"]["verdict"], "ready seen")
         self.assertEqual(data["look"]["verdict"], "match")
-        self.assertEqual(data["commands"][0][-1], "erase_flash")
+        self.assertEqual(data["commands"][0][-1], "erase-flash")
         self.assertTrue(Path(data["board_log"]).is_file())
         self.assertTrue(data["facts_line"].startswith("facts file spark.json sha256: "))
         self.assertEqual(data["image_sha256"], hashlib.sha256(self.image.read_bytes()).hexdigest())  # P213

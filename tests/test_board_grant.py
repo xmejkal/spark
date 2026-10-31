@@ -81,7 +81,7 @@ class DoctorTest(GrantCase):
         self.ran.append(argv)
         if "devs" in argv:
             return done(self.devs)
-        if "flash_id" in argv:
+        if "flash-id" in argv:
             return subprocess.CompletedProcess(argv, 2, "Connecting......\n", "ERROR: A fatal error occurred: Failed "
                                                "to connect to Espressif device: No serial data received.\nFor "
                                                "troubleshooting steps visit: https://docs.espressif.com\n")
@@ -194,7 +194,7 @@ class IssueTest(GrantCase):
         self.assertIn("2 boards on USB", err)
         code, _, _ = self.grant("--minutes", "30", "--port", "/dev/cu.usbmodem101", consent=FakeConsent(True))
         self.assertEqual(code, 0)
-        self.assertEqual(self.ran[-1][-3:], ["--port", "/dev/cu.usbmodem101", "flash_id"])
+        self.assertEqual(self.ran[-1][-3:], ["--port", "/dev/cu.usbmodem101", "flash-id"])
 
     def test_a_port_mpremote_does_not_list_is_refused(self):
         code, _, err = self.grant("--minutes", "30", "--port", "/dev/cu.nothing", consent=FakeConsent(True))

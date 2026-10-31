@@ -98,8 +98,8 @@ class TheDryRunTest(ProjectCase):
         code, said, problems, ran = self.deploy("--port", PORT, "--dry-run")
         self.assertEqual((code, problems, ran), (deploy.EXIT_OK, "", []))
         self.assertEqual(said.splitlines(), [
-            "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s erase_flash" % PORT,
-            "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s write_flash 0x0 %s" % (PORT, shlex.quote(str(self.image))),
+            "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s erase-flash" % PORT,
+            "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s write-flash 0x0 %s" % (PORT, shlex.quote(str(self.image))),
             "  board: not looked at: run look.py",
             "  then, to see it start: /opt/python3 -m mpremote connect %s repl, press Ctrl-C, then Ctrl-D: "
             "the firmware prints `ready`. Then leave mpremote's console with Ctrl-X: an open console holds the port, "
@@ -139,7 +139,7 @@ class TheNoSimulationDryRunTest(ProjectCase):
     def test_the_flag_plans_the_flash_lines_with_no_run_log(self):
         code, said, problems, ran = self.deploy("--port", PORT, "--dry-run", "--no-simulation")
         self.assertEqual((code, problems, ran), (deploy.EXIT_OK, "", []))
-        self.assertIn("would run: /opt/python3 -m esptool --chip esp32s3 --port %s erase_flash" % PORT, said)
+        self.assertIn("would run: /opt/python3 -m esptool --chip esp32s3 --port %s erase-flash" % PORT, said)
         self.assertNotIn("changed after this image was made", said)
 
     def test_without_the_flag_it_is_refused_as_today(self):
@@ -385,7 +385,7 @@ class TheGuardedPrintTest(ProjectCase):
         self.run_the_scenario()
         code, said, problems, _ = self.deploy("--port", "/dev/cu.usb\u202emodem", "--dry-run")
         self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
-        self.assertIn("--port '/dev/cu.usb?modem' erase_flash", said)
+        self.assertIn("--port '/dev/cu.usb?modem' erase-flash", said)
 
     def test_a_refusal_on_stderr_shows_it_and_the_json_keeps_it_raw(self):
         bad = str(self.project.with_name("a\u202eb"))

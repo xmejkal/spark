@@ -161,7 +161,7 @@ class PortFinderTest(LookCase):
         for part in (C6_PORT, "8c:bf:ea:xx:xx:xx", "/dev/cu.usbserial-1410", "look.py --port", "unplug one",
                      "Espressif USB JTAG/serial debug unit", "USB Serial"):
             self.assertIn(part, said)
-        self.assertFalse([a for a in self.ran if "flash_id" in a])
+        self.assertFalse([a for a in self.ran if "flash-id" in a])
 
     def test_two_boards_with_a_port_reads_that_one_without_listing(self):
         report = self.look(devs="mpremote-devs-two.txt", port="/dev/cu.usbserial-1410")
@@ -290,10 +290,10 @@ class EsptoolReaderTest(unittest.TestCase):
             reading = board_look.EsptoolReader(FOUND["flasher"], lambda argv, **kw: done(text)).read(C6_PORT)
             self.assertEqual(reading.chip, "esp32s3", first)
 
-    def test_it_runs_flash_id_with_the_underscore_on_the_port(self):
+    def test_it_runs_flash_id_with_the_hyphen_on_the_port(self):
         ran = []
         board_look.EsptoolReader(FOUND["flasher"], lambda argv, **kw: ran.append(argv) or done(data("c6-flash-id.txt"))).read(C6_PORT)
-        self.assertEqual(ran, [["/opt/python3", "-m", "esptool", "--port", C6_PORT, "flash_id"]])
+        self.assertEqual(ran, [["/opt/python3", "-m", "esptool", "--port", C6_PORT, "flash-id"]])
 
     def test_another_flasher_than_esptool_is_not_read(self):
         other = tools.Tool("probe-rs", "flasher", {"kind": "binary"}, ["/opt/probe-rs"])

@@ -6,7 +6,7 @@ deploy.py calls `looker` and `report_lines` too. It reads the image checks from 
 The seams are the readers: `BoardReader` is how a board is read, and `EsptoolReader` is the one reader today.
 
     PortFinder     the boards on USB, from mpremote's list. It never opens a port.
-    EsptoolReader  one board's chip, flash size and MAC, from `esptool flash_id`.
+    EsptoolReader  one board's chip, flash size and MAC, from `esptool flash-id`.
     compare        each field of the reading against the record: same, differs or unknown.
     LookService    the project's record, the port, the reading, the LookReport.
     LookReport     the verdict (match, warning or stop), the exit status and the token, as a dict too.
@@ -183,7 +183,7 @@ class BoardReader:
 
 
 class EsptoolReader(BoardReader):
-    """esptool 5.5.0's `flash_id` output, parsed with anchored lines. A field that does not parse is None."""
+    """esptool 5.5.0's `flash-id` output, parsed with anchored lines. A field that does not parse is None."""
 
     def __init__(self, flasher_tool, run=subprocess.run, boot_hint=flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY)):
         self.flasher_tool, self.run, self.boot_hint = flasher_tool, run, boot_hint
@@ -192,7 +192,7 @@ class EsptoolReader(BoardReader):
         if self.flasher_tool.name != "esptool":
             raise LookStop("could not read: the look reads only esptool, and the flasher is %s", self.flasher_tool.name,
                            reason=board_codes.FLASHER_NOT_ESPTOOL)
-        command = flasher.build_esptool_prefix(self.flasher_tool, port) + ["flash_id"]
+        command = flasher.build_esptool_prefix(self.flasher_tool, port) + ["flash-id"]
         try:
             done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT_S)
         except OSError as cannot:
