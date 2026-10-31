@@ -162,7 +162,7 @@ def _deploy(path):
         code = deploy.main(["--project", str(project), "--dry-run"])
     if code != 0:
         return err.getvalue().strip() or "deploy.py exited %d" % code
-    return None if "write_flash 0x0 %s" % shlex.quote(str(path)) in out.getvalue() else "its dry run does not write this image"
+    return None if "write-flash 0x0 %s" % shlex.quote(str(path)) in out.getvalue() else "its dry run does not write this image"
 
 
 def _gerbers(path):

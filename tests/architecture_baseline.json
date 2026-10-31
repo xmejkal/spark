@@ -53,7 +53,7 @@
 "R1:scripts/parts.py:validate": 226,
 "R1:scripts/reach.py:main": 39,
 "R1:scripts/run_scenario.py:main": 28,
-"R1:scripts/tools.py:<module>": 677,
+"R1:scripts/tools.py:<module>": 670,
 "R1:scripts/tools.py:main": 81,
 "R1:scripts/tools.py:plan": 68,
 "R2:scripts/assign_pins.py:main": 4,

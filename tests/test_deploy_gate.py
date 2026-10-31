@@ -103,7 +103,7 @@ class GateCase(LookCase):
                 return self.fs(command)
             if "devs" in command:
                 return done(devs_text or data(devs))
-            if "flash_id" in command:
+            if "flash-id" in command:
                 return done(text or data(esptool), 2 if look_fails else 0)
             if "exec" in command:
                 return self.on_board(command)
@@ -137,7 +137,7 @@ class GateCase(LookCase):
         return EndsDuringTheWait(True)
 
     def flashed(self):
-        return [command[-1] for command in self.ran if "erase_flash" in command or "write_flash" in command]
+        return [command[-1] for command in self.ran if "erase-flash" in command or "write-flash" in command]
 
 
 #: GateCase's scenario only waits for text, so its passed run pressed nothing and read no pin (P345).
@@ -158,8 +158,8 @@ class TheGateTest(GateCase):
         consent = FakeConsent(True)
         code, said, _ = self.deploy("--token", self.token(), consent=consent)
         self.assertEqual(code, 0)
-        self.assertEqual(self.flashed(), ["erase_flash", str(self.image)])
-        self.assertTrue(all("/dev/cu.usbmodem101" in c for c in self.ran if "erase_flash" in c or "write_flash" in c))
+        self.assertEqual(self.flashed(), ["erase-flash", str(self.image)])
+        self.assertTrue(all("/dev/cu.usbmodem101" in c for c in self.ran if "erase-flash" in c or "write-flash" in c))
         self.assertIn("erase ALL of this board's flash", consent.asked[0])
         self.assertIn("ready seen: the firmware printed 'ready' and the board's 1 files match the image", said)
 
@@ -202,7 +202,7 @@ class TheGateTest(GateCase):
         moved = data("mpremote-devs-one.txt").replace("/dev/cu.usbmodem101", "/dev/cu.usbmodem2101")
         code, _, _ = self.deploy("--token", token, devs_text=moved, consent=FakeConsent(True))
         self.assertEqual(code, 0)
-        self.assertTrue(all("/dev/cu.usbmodem2101" in c for c in self.ran if "erase_flash" in c))
+        self.assertTrue(all("/dev/cu.usbmodem2101" in c for c in self.ran if "erase-flash" in c))
 
     def test_another_chip_stops_before_the_question(self):
         self.run_the_scenario()
@@ -281,7 +281,7 @@ class TheGateTest(GateCase):
     def test_a_failed_erase_writes_nothing_and_says_what_to_try(self):
         self.run_the_scenario()
         code, said, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=2)
-        self.assertEqual((code, self.flashed()), (2, ["erase_flash", "erase_flash"]))
+        self.assertEqual((code, self.flashed()), (2, ["erase-flash", "erase-flash"]))
         self.assertEqual((said.count("retry in 5 s:"), self.slept), (1, [5]))
         self.assertIn("hold the board's BOOT button", problems)
         line = problems.strip().splitlines()[-1]
@@ -303,29 +303,29 @@ class TheGateTest(GateCase):
     def test_an_erase_that_fails_once_is_retried_after_5_s_and_the_deploy_goes_on(self):
         self.run_the_scenario()
         code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
-        self.assertEqual((code, self.flashed(), self.slept), (0, ["erase_flash", "erase_flash", str(self.image)], [5]))
+        self.assertEqual((code, self.flashed(), self.slept), (0, ["erase-flash", "erase-flash", str(self.image)], [5]))
         self.assertIn("  retry in 5 s: ", said)
-        self.assertIn("erase_flash stopped with exit 2 (esptool's exit for any stop, a failed connect among them)", said)
+        self.assertIn("erase-flash stopped with exit 2 (esptool's exit for any stop, a failed connect among them)", said)
 
     def test_an_erase_that_fails_with_another_code_is_not_retried(self):
         self.run_the_scenario()
         code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=1)
-        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash"], []))
+        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase-flash"], []))
 
     def test_a_failed_write_is_not_retried(self):
         self.run_the_scenario()
         code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), write_fails=True)
-        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash", str(self.image)], []))
+        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase-flash", str(self.image)], []))
 
     def test_an_erase_that_cannot_start_is_not_retried(self):
         self.run_the_scenario()
         code, _, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1, fail_code=OSError("no such file"))
-        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash"], []))
+        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase-flash"], []))
 
     def test_a_consent_that_ends_during_the_wait_stops_the_retry_and_says_the_board_may_be_erased(self):
         self.run_the_scenario()
         code, _, problems = self.deploy("--token", self.token(), consent=self.ends_during_the_wait(), fails=1)
-        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase_flash"], [5]))
+        self.assertEqual((code, self.flashed(), self.slept), (2, ["erase-flash"], [5]))
         self.assertIn("and its retry did not run: the deploy grant ended", problems)
 
     def test_a_flash_too_small_for_the_image_stops_before_the_question(self):
@@ -904,7 +904,7 @@ class TheStandingYesTest(GateCase):
     def test_a_deploy_grant_erases_with_no_terminal_and_the_record_names_the_standing_yes(self):
         self.give()
         code, said, _ = self.flash()
-        self.assertEqual((code, self.flashed()), (0, ["erase_flash", str(self.image)]))
+        self.assertEqual((code, self.flashed()), (0, ["erase-flash", str(self.image)]))
         who = "standing yes typed by ada at 2026-10-17T11:00:00+02:00, until 2026-10-17T11:30:00+02:00"
         self.assertIn("  yes: %s" % who, said.splitlines())
         self.assertEqual(self.record(), who)
@@ -1124,7 +1124,7 @@ class TheNoSimulationDeployTest(GateCase):
     def test_a_project_with_no_run_log_deploys_and_every_record_says_none(self):
         consent = FakeConsent(True)
         code, said, _ = self.flash(consent=consent)
-        self.assertEqual((code, self.flashed()), (0, ["erase_flash", str(self.image)]))
+        self.assertEqual((code, self.flashed()), (0, ["erase-flash", str(self.image)]))
         self.assertFalse(list((self.project / "sim" / "runs").glob("*.log")))
         self.assertEqual(json.loads(self.copied["spark.json"])["simulation"], "none")
         self.assertIn("simulation: none", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())

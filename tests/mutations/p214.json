@@ -1,8 +1,8 @@
 [
- {"file": "scripts/tools.py", "name": "P214: a Python tool is never compared with its pin", "find": "    if entry.get(\"kind\") == \"python\":\n        return _python_versions(entry)\n", "replace": ""},
- {"file": "scripts/tools.py", "name": "P214: a Python tool with no pin is read anyway", "find": "    if not entry.get(\"version\"):\n        return {}\n", "replace": ""},
+ {"file": "scripts/tools.py", "name": "P214: a Python tool is never compared with its pin", "find": "    if entry.get(\"kind\") == \"python\":  # the distribution is named like its module, as esptool and mpremote are\n        return {\"version\": versions.installed_release(entry)} if entry.get(\"version\") else {}\n", "replace": ""},
+ {"file": "scripts/tools.py", "name": "P214: a Python tool with no pin is read anyway", "find": " if entry.get(\"version\") else {}", "replace": ""},
  {"file": "scripts/tools.py", "name": "P214: a version nobody can read prints as None", "find": "% (field, here or \"unknown\", pinned)", "replace": "% (field, here, pinned)"},
- {"file": "scripts/tools.py", "name": "P214: a module with no metadata counts as the pinned version", "find": "        return {\"version\": None}", "replace": "        return {}"},
- {"file": "scripts/tools.py", "name": "P214: the distribution looked up is not the module", "find": "importlib.metadata.version(entry[\"module\"])", "replace": "importlib.metadata.version(\"x\")"},
- {"file": "scripts/tools.py", "name": "P214: a pin of 5.5 never matches the 5.5.0 installed", "find": "_release(here) != _release(entry.get(field))", "replace": "here != entry.get(field)"}
+ {"file": "scripts/versions.py", "name": "P214: a module with no metadata counts as the pinned version", "find": "    except importlib.metadata.PackageNotFoundError:\n        return None", "replace": "    except importlib.metadata.PackageNotFoundError:\n        return entry.get(\"version\")"},
+ {"file": "scripts/versions.py", "name": "P214: the distribution looked up is not the module", "find": "importlib.metadata.version(entry[\"module\"])", "replace": "importlib.metadata.version(\"x\")"},
+ {"file": "scripts/tools.py", "name": "P214: a pin of 5.5 never matches the 5.5.0 installed", "find": "versions.release(here) != versions.release(entry.get(field))", "replace": "here != entry.get(field)"}
 ]

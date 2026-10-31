@@ -7,5 +7,4 @@ Fixtures for tests/test_board_look.py.
 - esp32-classic-flash-id.txt, s3-flash-id-*.txt, c6-flash-id-kb.txt: hand-written in esptool's format. No classic ESP32
   or FireBeetle S3 was on the bench.
 - A failed connect ("Failed to connect") has no fixture: the test for it feeds any non-zero exit and reads no output.
-- The C6 fixtures come from `flash-id` (hyphen) on the bench, and the code runs `flash_id` (underscore, which esptool
-  5.5.0 still accepts). P219 step 3's recorded run on the PO's XIAO settles whether the output is the same.
+- The C6 fixtures come from `flash-id` (hyphen) on the bench, and the code runs `flash-id` too. P219 step 3's recorded run on the PO's XIAO settles whether the output is the same.

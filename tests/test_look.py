@@ -428,7 +428,7 @@ class WhatStopsTheLookTest(LookScriptCase):
             "  /dev/cu.usbmodem101  8c:bf:ea:xx:xx:xx  Espressif USB JTAG/serial debug unit",
             "  /dev/cu.usbserial-1410  None  USB Serial",
             "look.py --port /dev/cu.usbmodem101  (unplug one to tell them apart)"])
-        self.assertFalse([each for each in self.ran if "flash_id" in each])  # none was read: each read restarts a board
+        self.assertFalse([each for each in self.ran if "flash-id" in each])  # none was read: each read restarts a board
 
     @needs_littlefs
     def test_two_boards_with_a_port_reads_that_one(self):

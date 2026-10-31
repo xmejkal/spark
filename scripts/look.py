@@ -9,7 +9,7 @@ from spark.bench import build_project_outside_world
 from spark.bench.look_at_board import LookAtBoard
 from spark.core.cli import HelpText, run_cli
 
-EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash_id`. It writes nothing,
+EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash-id`. It writes nothing,
 erases nothing and changes no flash. The board restarts while esptool reads it: a running program stops and starts again.
 Nothing else on the board is touched. The board's record is the one requirements.json names. The look compares the chip
 and the flash size, and prints each as same, differs or unknown. It also prints the board's MAC.

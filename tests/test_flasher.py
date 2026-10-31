@@ -34,17 +34,17 @@ class SecondFlasher(flasher.Flasher):
 class TheEsptoolFlasherTest(unittest.TestCase):
     def test_it_erases_then_writes_the_image_at_zero_on_the_port(self):
         commands = flasher.EsptoolFlasher(ESPTOOL, "esp32s3").build_commands("/p/my image.bin", PORT)
-        self.assertEqual(commands, [BASE + ["--chip", "esp32s3", "--port", PORT, "erase_flash"],
-                                    BASE + ["--chip", "esp32s3", "--port", PORT, "write_flash", "0x0", "/p/my image.bin"]])
+        self.assertEqual(commands, [BASE + ["--chip", "esp32s3", "--port", PORT, "erase-flash"],
+                                    BASE + ["--chip", "esp32s3", "--port", PORT, "write-flash", "0x0", "/p/my image.bin"]])
 
     def test_without_a_port_esptool_finds_the_board(self):
         commands = flasher.EsptoolFlasher(ESPTOOL, "esp32c6").build_commands("/p/i.bin")
-        self.assertEqual(commands, [BASE + ["--chip", "esp32c6", "erase_flash"],
-                                    BASE + ["--chip", "esp32c6", "write_flash", "0x0", "/p/i.bin"]])
+        self.assertEqual(commands, [BASE + ["--chip", "esp32c6", "erase-flash"],
+                                    BASE + ["--chip", "esp32c6", "write-flash", "0x0", "/p/i.bin"]])
 
     def test_its_names_are_the_ones_esptool_3_and_4_know(self):
         self.assertEqual((flasher.EsptoolFlasher.ERASE, flasher.EsptoolFlasher.WRITE, flasher.EsptoolFlasher.IMAGE_OFFSET),
-                         ("erase_flash", "write_flash", "0x0"))
+                         ("erase-flash", "write-flash", "0x0"))
 
     def test_it_retries_its_erase_on_exit_2_after_5_s_and_the_base_flasher_never_retries(self):
         self.assertEqual((flasher.EsptoolFlasher.RETRY_EXIT_CODE, flasher.EsptoolFlasher.RETRY_WAIT_S), (2, 5))
@@ -104,7 +104,7 @@ class TheBaseTest(unittest.TestCase):
 
 class DeployHoldsNoEsptoolWordTest(unittest.TestCase):
     #: String constants esptool defines. Exact equality: prose that mentions a word is the person's text.
-    WORDS = {"erase_flash", "write_flash", "flash_id", "--chip", "0x0"}
+    WORDS = {"erase-flash", "write-flash", "flash-id", "--chip", "0x0"}
     #: Module-level names whose value is text for the person.
     PROSE = {"EPILOG", "WATCH"}
 
