@@ -176,7 +176,31 @@
  {
   "file": "scripts/versions.py",
   "name": "the floor compare is flipped, so a newer release is refused",
-  "find": "key(here) < key(oldest)",
-  "replace": "key(here) > key(oldest)"
+  "find": "release_tuple(here) < release_tuple(oldest)",
+  "replace": "release_tuple(here) > release_tuple(oldest)"
+ },
+ {
+  "file": "scripts/versions.py",
+  "name": "a part with letters after its digits goes on to the next part",
+  "find": "        if digits != part:\n            break\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/versions.py",
+  "name": "trailing zeros stay, so 5.0 is newer than 5",
+  "find": "    while parts and parts[-1] == 0:\n        parts.pop()\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "to_install leaves out a tool below its floor",
+  "find": " or versions.too_old(want):",
+  "replace": ":"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "--pin writes a version below the floor",
+  "find": "    if not field and versions.is_older(value, oldest):",
+  "replace": "    if False:"
  }
 ]

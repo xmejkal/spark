@@ -2,8 +2,24 @@
 Version numbers compared: a pin against the release installed (P214), and an installed release against the oldest one
 spark runs (P471, #642).
 
-A pure helper, no I/O. A pre-release counts as its release, as `tools.py` counts a pin.
+Reads only the metadata of an installed module. In the floor compare (`release_tuple`) a pre-release counts as its release; `release` keeps it.
 """
+
+import importlib.metadata
+
+
+def installed_release(entry):
+    """A Python tool's module version as installed for this interpreter, or None without metadata."""
+    try:
+        return importlib.metadata.version(entry["module"])
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
+def too_old(entry):
+    """The installed release of a Python tool that is older than its `oldest_version`, else None."""
+    here = installed_release(entry) if entry.get("kind") == "python" else None
+    return here if is_older(here, entry.get("oldest_version")) else None
 
 
 def release(version):
@@ -14,7 +30,7 @@ def release(version):
     return ".".join(parts)
 
 
-def key(version):
+def release_tuple(version):
     """A version as a tuple to compare: the leading digits of each dotted part, up to the first part that is not all
     digits, and no trailing zeros. So 5.0, 5.0.0, 5.0.0b1, 5.0.dev0 and 5.0.post1 are all (5,). None for no digits."""
     parts = []
@@ -34,4 +50,4 @@ def is_older(here, oldest):
     """True when `here` is below `oldest`. False when either is missing or has no digits: that refuses nothing."""
     if not here or not oldest:
         return False
-    return None not in (key(here), key(oldest)) and key(here) < key(oldest)
+    return None not in (release_tuple(here), release_tuple(oldest)) and release_tuple(here) < release_tuple(oldest)

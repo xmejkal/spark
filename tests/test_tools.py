@@ -835,8 +835,9 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
 
     def test_the_floor_holds_for_an_entry_with_no_pin(self):
         self.personal.write_text(json.dumps({"pt": {"oldest_version": "5.0", "version": ""}}))
-        with self.patch_installed_version("4.12.0"), self.assertRaises(tools.ToolProblem):
+        with self.patch_installed_version("4.12.0"), self.assertRaises(tools.ToolProblem) as told:
             tools.find("flasher")
+        self.assertIn("pt 4.12.0 is too old: spark needs 5.0 or newer.", str(told.exception))
 
     def test_a_pre_release_counts_as_its_release(self):
         self.floor()
@@ -858,6 +859,27 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
         self.assertEqual(state, "missing")
         self.assertIn("too old", text)
         self.assertIn("Install: python3 -m pip install --user pt==5.5.0", text)
+
+    def test_a_tool_below_its_floor_is_one_to_install_and_the_floor_or_newer_is_not(self):
+        self.floor()
+        for version, named in (("4.12.0", ["pt"]), ("5.0.0", [])):
+            with self.subTest(version), self.patch_installed_version(version):
+                self.assertEqual(tools.to_install(), named)
+
+    def test_pin_refuses_a_version_below_the_floor_and_writes_nothing(self):
+        self.floor()
+        before = self.personal.read_text()
+        out = io.StringIO()
+        with contextlib.redirect_stderr(out):
+            code = tools.main(["--pin", "pt=4.12.0"])
+        self.assertEqual((code, self.personal.read_text()), (tools.EXIT_COULD_NOT_RUN, before))
+        self.assertEqual(out.getvalue(), "tools.py: pt: 4.12.0 is older than 5.0, the oldest spark runs — nothing written\n")
+
+    def test_pin_keeps_a_version_at_the_floor_and_a_pin_of_another_field(self):
+        self.floor()
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(tools.main(["--pin", "pt=5.0.1"]), tools.EXIT_OK)
+            self.assertEqual(tools.main(["--pin", "pt.core=1"]), tools.EXIT_OK)
 
 
 class AnNpmInstallNeedsThePackageJsonTest(unittest.TestCase):

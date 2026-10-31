@@ -19,7 +19,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --status --project .
 
 `[ok  ]` is found, `[????]` is missing (with the line that installs it), `[off ]` is an integration that
 is off, `[!   ]` is something only the person can do — an account, a token, an instrument to plug in.
-The last line names what is missing: `N to install: <names>`. `[ok  ]` on an MCP row (chip-docs, parts-search)
+The last line names what is missing, or a Python tool older than its `oldest_version`: `N to install: <names>`. `[ok  ]` on an MCP row (chip-docs, parts-search)
 means only that spark declares the server and Node is on the PATH. Nothing checks that Claude Code has the server
 registered or that it answers ([P112](https://github.com/xmejkal/spark/issues/46)), or the Node version;
 espressif-docs needs Node 20 or newer ([docs/mcp.md](../docs/mcp.md)).
@@ -67,6 +67,7 @@ above.
 | `add sigrok` | `tools.py --on sigrok` | `{"sigrok": {"on": true}}`; installs it, and registers an MCP server with Claude Code |
 | `remove sigrok` | `tools.py --off sigrok` | `{"sigrok": {"on": false}}`; unregisters the server |
 | `use simulator=my-sim` | `tools.py --use simulator=my-sim` | `{"roles": {"simulator": "my-sim"}}` — refused unless my-sim meets the job's contract |
+| `pin esptool=4.12.0` | `tools.py --pin esptool=4.12.0` | refused when the version is below the entry's `oldest_version`; nothing is written |
 | `pin tscircuit core=0.0.2700` | `tools.py --pin tscircuit.core=0.0.2700 --project .` | `{"tscircuit": {"core": "0.0.2700"}}` — the core decides the build; `tscircuit=<v>` pins the CLI (`@tscircuit/cli`, versions like 0.1.2113). Then `--install tscircuit --project .` puts the pinned one in |
 | `new` | `tools.py --new 'NAME={…}'` | the person's own entry — ask its name, what it is for, how spark finds it (`kind` and `exe`, `module` (a Python tool may add `oldest_version`, the oldest release that works; an older one is refused), `file`/`url`/`sha256`, or `mcp.command`), how it installs, and which contract it `meets` |
 

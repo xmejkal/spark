@@ -199,16 +199,8 @@ def locate(entry, project):
 def installed_versions(entry, command):
     """{field: version} of an npm or a pinned Python tool as installed here; None for a version nobody can read."""
     if entry.get("kind") == "python":  # the distribution is named like its module, as esptool and mpremote are
-        return {"version": _installed_release(entry)} if entry.get("version") else {}
+        return {"version": versions.installed_release(entry)} if entry.get("version") else {}
     return _npm_versions(entry, command)
-
-
-def _installed_release(entry):
-    """A Python tool's module version as installed for this interpreter, or None without metadata."""
-    try:
-        return importlib.metadata.version(entry["module"])
-    except importlib.metadata.PackageNotFoundError:
-        return None
 
 
 def _npm_versions(entry, command):
@@ -295,8 +287,8 @@ def find(name, project=None, personal=None, _seen=()):
     if command is None:
         raise ToolProblem("%s (%s) is not installed — install: %s",
                           role or tool_name, tool_name, install_hint(entry) or "see its entry in %s" % DEFAULTS)
-    here = _installed_release(entry) if entry.get("kind") == "python" else None
-    if versions.is_older(here, entry.get("oldest_version")):
+    here = versions.too_old(entry)
+    if here:
         raise ToolProblem("%s %s is too old: spark needs %s or newer. Install: %s", tool_name, here,
                           entry["oldest_version"], install_hint(entry) or "see its entry in %s" % DEFAULTS)
     return Tool(tool_name, role, entry, command)
@@ -352,7 +344,7 @@ def to_install(project=None, personal=None):
             want = lists["tools"].get(wanted)
             if want is None or entry_problem(want) or wanted in names:
                 continue  # a broken entry is a row in the picture, not something to install
-            if locate(want, project) is None:
+            if locate(want, project) is None or versions.too_old(want):
                 names.append(wanted)
     return names
 
@@ -494,6 +486,15 @@ def choose(field_path, value, where):
     where.parent.mkdir(parents=True, exist_ok=True)
     where.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
     return where
+
+
+def pin(target, value, project, where):
+    """Write a pin: `NAME` or `NAME.FIELD`. A version below the entry's `oldest_version` is refused. -> (name, field, file)."""
+    name, _, field = target.partition(".")
+    oldest = merged(project)["tools"].get(name, {}).get("oldest_version")
+    if not field and versions.is_older(value, oldest):
+        raise ToolProblem("%s: %s is older than %s, the oldest spark runs — nothing written", name, value, oldest)
+    return name, field or "version", choose([name, field or "version"], value, where)
 
 
 def use(role, tool_name, project=None, personal=None):
@@ -653,10 +654,9 @@ def main(argv=None, run=None):
             print(flat_line("  %s written (%s); point a job at it: /spark:setup use <role>=%s", name, choose([name], entry, where), name))
         elif args.pin:
             target, _, value = args.pin.partition("=")
-            name, _, field = target.partition(".")
-            written = choose([name, field or "version"], value, where)
+            name, field, written = pin(target, value, project, where)
             print(flat_line("  %s %s pinned to %s (%s); to install it: tools.py --install %s%s",
-                            name, field or "version", value, written, name, " --project %s" % project if project else ""))
+                            name, field, value, written, name, " --project %s" % project if project else ""))
     except ToolProblem as problem:
         print("tools.py: %s" % problem, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
