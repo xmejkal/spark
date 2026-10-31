@@ -55,7 +55,7 @@ Facts for all steps. The sheet draws 63 columns and no rails. The board record h
 5. **The pin map has no polarity for the onboard LED** (D: `ONBOARD_LED = 21` with the note "Its polarity is not in
    the board record"). The walk's own LED is external, so this does not stop it. If the PO uses the board's
    LED instead, the firmware guesses. A small fix exists: one bench press, then a record line (the walk 2 pattern, P388).
-6. **A download-mode hint has no button place** (R: the record has no `physical.buttons`; the XIAO's has). On a
+6. **A download-mode hint has no button place** (R: the record has no `physical.buttons`, and the XIAO's has). On a
    first flash the PO can need to find BOOT and RESET alone. A small fix is a `buttons` entry in the record.
 7. **`check_all` ends at exit 2 until init runs twice** (D: step 10). The first run has no rails. The second
    (`--force`) fixes it. It reads as a failure to the PO. A small fix is for the build to say so.
