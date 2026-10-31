@@ -482,7 +482,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
                 code = flash_image.main(["--micropython", str(self.root / "micropython.bin"), "--project", str(self.root),
                                          "--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
                 self.assertEqual(code, flash_image.EXIT_OK)
-                self.assertIn(span + ", filesystem at 0x200000", out.getvalue())
+                self.assertIn(span + ', filesystem at 0x200000, the "vfs" partition of its table)', out.getvalue())
 
     @needs_littlefs
     def test_the_command_writes_the_original_esp32_s_interpreter_at_0x1000(self):

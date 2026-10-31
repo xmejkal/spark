@@ -8,9 +8,10 @@ A flash image with MicroPython AND the project's files, for a headless simulatio
 
 Wokwi's CLI simulates a flash image, and MicroPython's download is only the interpreter. On real
 hardware you copy your .py files over USB afterwards; a headless simulator has no afterwards, so
-the files have to be in the image. MicroPython's ESP32 partition table ends after `factory` and
-the rest of a 4 MB flash is the user filesystem, from 0x200000: this writes a littlefs image of
-the files there and puts the interpreter where its tools list entry says it starts (`flash_offset`:
+the files have to be in the image. MicroPython's ESP32 partition table ends after `factory`, and
+the file system is whatever follows it: this adds a 2 MB "vfs" entry at 0x200000 to the interpreter's table
+(P461), so every flash size mounts the same 2 MB, and writes a littlefs image of the files there. It puts the
+interpreter where its tools list entry says it starts (`flash_offset`:
 0x1000 on the original ESP32, 0x0 when the entry says nothing, P335), 0xff between. The littlefs parameters are the ESP32 port's own; if
 they are wrong the simulated board boots to a bare REPL with no main.py, which is the symptom.
 
@@ -260,7 +261,7 @@ def main(argv=None):
     args.output.write_bytes(flash)
     for destination, content in files:
         print("  %-28s %6d bytes" % (destination, len(content)))
-    print("wrote %s: %d KB (MicroPython at %#x-%#x, filesystem at %#x)"
+    print("wrote %s: %d KB (MicroPython at %#x-%#x, filesystem at %#x, the \"vfs\" partition of its table)"
           % (args.output, len(flash) // 1024, interpreter.offset, interpreter.offset + len(micropython), FILESYSTEM_OFFSET))
     return EXIT_OK
 

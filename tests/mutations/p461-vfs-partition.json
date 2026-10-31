@@ -1,0 +1,86 @@
+[
+ {
+  "file": "scripts/flash_image.py",
+  "name": "the vfs entry starts elsewhere",
+  "find": "0x01, 0x81, FILESYSTEM_OFFSET, FLASH_SIZE",
+  "replace": "0x01, 0x81, 0x300000, FLASH_SIZE"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "the vfs entry is smaller than the file system",
+  "find": "FILESYSTEM_OFFSET, FLASH_SIZE - FILESYSTEM_OFFSET, 0)",
+  "replace": "FILESYSTEM_OFFSET, 0x100000, 0)"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "the vfs entry is not fat",
+  "find": "(\"vfs\", 0x01, 0x81,",
+  "replace": "(\"vfs\", 0x01, 0x82,"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "the vfs entry has another label",
+  "find": "FILESYSTEM = (\"vfs\", 0x01",
+  "replace": "FILESYSTEM = (\"vfx\", 0x01"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "the new MD5 covers something else",
+  "find": "hashlib.md5(body).digest()",
+  "replace": "hashlib.md5(body + b\"x\").digest()"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "a broken MD5 in the interpreter is not noticed",
+  "find": "chunk[:16] == cls.MD5_MAGIC and chunk[16:] != hashlib.md5(table[:position]).digest()",
+  "replace": "False"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "the vfs already in the table is added a second time",
+  "find": "tuple(entry for entry in self.entries if entry != self.FILESYSTEM) + (self.FILESYSTEM,)",
+  "replace": "self.entries + (self.FILESYSTEM,)"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "an offset one byte past the table is not refused",
+  "find": "if start < 0:",
+  "replace": "if start < -1:"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "an interpreter that ends exactly at the table's end is refused",
+  "find": "if len(table) < cls.SIZE:",
+  "replace": "if len(table) <= cls.SIZE:"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "an interpreter one byte short of the table is accepted",
+  "find": "if len(table) < cls.SIZE:",
+  "replace": "if len(table) < cls.SIZE - 1:"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "no table at all is not refused",
+  "find": "if not entries:",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "a partition that ends exactly where the file system starts is refused",
+  "find": "label != \"vfs\" and where + size > FILESYSTEM_OFFSET",
+  "replace": "label != \"vfs\" and where + size >= FILESYSTEM_OFFSET"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "a partition past where the file system starts is accepted",
+  "find": "label != \"vfs\" and where + size > FILESYSTEM_OFFSET",
+  "replace": "False"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "an ffat entry is accepted",
+  "find": "label in (\"vfs\", \"ffat\") and entry",
+  "replace": "label == \"vfs\" and entry"
+ }
+]

@@ -436,12 +436,13 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.build()
         self.assertIsNone(self.why())
         self.build(offset=0)
-        self.assertIn("does not hold firmware/ as it is now", self.why())
+        self.assertIn("does not match a build of firmware/ as it is now", self.why())
 
     def test_a_file_changed_after_the_image_refuses_and_names_the_build_command(self):
         (self.firmware / "main.py").write_text("print('ready')\nprint(2)\n")
-        self.assertEqual(self.why(), "flash-with-firmware.bin does not hold firmware/ as it is now: build it with "
-                         "flash_image.py --project %s --files firmware -o %s" % (self.project.resolve(), self.image.path))
+        self.assertEqual(self.why(), "flash-with-firmware.bin does not match a build of firmware/ as it is now (firmware/ changed, "
+                         "or spark builds images another way since): build it with flash_image.py --project %s --files firmware -o %s"
+                         % (self.project.resolve(), self.image.path))
 
     def test_a_file_that_does_not_compile_refuses_with_its_file_and_line(self):
         (self.firmware / "lib").mkdir()

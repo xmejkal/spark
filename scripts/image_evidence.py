@@ -414,8 +414,9 @@ class NoSimulationEvidence(ImageEvidence):
                 raise
             return "firmware/ does not fit the image's file system: %s" % cannot
         if held != built:
-            return ("%s does not hold firmware/ as it is now: build it with flash_image.py --project %s --files "
-                    "firmware -o %s" % (image.path.name, self.project.resolve(), image.path))
+            return ("%s does not match a build of firmware/ as it is now (firmware/ changed, or spark builds images another "
+                    "way since): build it with flash_image.py --project %s --files firmware -o %s"
+                    % (image.path.name, self.project.resolve(), image.path))
         return None
     # --- end MVP ---
 
