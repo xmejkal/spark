@@ -18,6 +18,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
+from suite_runs import needs_littlefs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -144,6 +145,7 @@ CAVEAT_OF_A_RUN_THAT_PRESSED_NOTHING = ("the passed run's scenario has no set-co
                                         "button or sets a sensor) and no expect-pin step (the step that reads a pin)")
 
 
+@needs_littlefs
 class TheGateTest(GateCase):
     def test_no_token_says_to_run_the_look_first_and_erases_nothing(self):
         self.run_the_scenario()
@@ -347,6 +349,7 @@ class TheGateTest(GateCase):
         self.assertIn("  board: not looked at: run look.py", said.splitlines())
 
 
+@needs_littlefs
 class TheBusyPortTest(GateCase):
     """P354: a console left open holds the port, so esptool's look fails. The doctor says so, as look.py's does."""
 
@@ -402,6 +405,7 @@ class TheBusyPortTest(GateCase):
         self.assertNotIn("next ", problems)
 
 
+@needs_littlefs
 class TheBoardAfterTheFlashTest(GateCase):
     """P215 step 2 (D33): after the flash, ready is seen only when the board's files match and the firmware says it."""
 
@@ -509,6 +513,7 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.assertIn("the image changed after your yes: run look.py again. not flashed.", problems)
 
 
+@needs_littlefs
 class TheBoardInDownloadModeTest(GateCase):
     """P243 (#252): a board silent after the flash because it waits in download mode gets a press of R, then the
     ready check runs again."""
@@ -609,6 +614,7 @@ class TheFactsAfterTheFlashTest(GateCase):
         self.run_the_scenario()
         return self.deploy("--token", self.token(), consent=consent or FakeConsent(True))
 
+    @needs_littlefs
     def test_the_facts_file_is_on_the_board_and_the_board_log_names_its_sha256(self):
         code, said, _ = self.flash()
         facts = json.loads(self.copied["spark.json"])
@@ -625,6 +631,7 @@ class TheFactsAfterTheFlashTest(GateCase):
         deployed = "  image sha256: %s, yes: a test" % hashlib.sha256(self.image.read_bytes()).hexdigest()
         self.assertEqual(lines.index(deployed), lines.index("  " + line) + 1)
 
+    @needs_littlefs
     def test_the_store_keeps_one_record_per_mac_and_adds_each_deploy(self):
         _, said, _ = self.flash()
         record = Path(said.split("store record: ")[1].strip())
@@ -636,11 +643,13 @@ class TheFactsAfterTheFlashTest(GateCase):
                          (json.loads(self.copied["spark.json"])["mac"], "xiao-esp32-c6", before + 1))
         self.assertEqual(kept["deploys"][-1]["verdict"], "ready seen")
 
+    @needs_littlefs
     def test_the_record_keeps_whose_yes_the_consent_says(self):
         _, said, _ = self.flash(FakeConsent(True))
         record = Path(said.split("store record: ")[1].strip())
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "a test")
 
+    @needs_littlefs
     def test_a_yes_typed_in_a_terminal_is_recorded_as_typed_in_a_terminal(self):
         terminal = deploy_gate.TerminalConsentStrategy("x", stdin=Stream("yes\n"), stdout=Stream())
         with mock.patch.object(getpass, "getuser", return_value="ada"):
@@ -648,6 +657,7 @@ class TheFactsAfterTheFlashTest(GateCase):
         record = Path(said.split("store record: ")[1].strip())
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "typed in a terminal by ada")
 
+    @needs_littlefs
     def test_one_moment_names_the_facts_the_log_and_its_file(self):
         moment, calls = datetime.datetime(2026, 10, 17, 9, 8, 7, tzinfo=PRAGUE_SUMMER), []
         self.run_the_scenario()
@@ -657,12 +667,14 @@ class TheFactsAfterTheFlashTest(GateCase):
                          (1, "2026-10-17T09:08:07+02:00", "2026-10-17T09-08-07.log"))
         self.assertTrue(log.read_text().startswith("# deploy 2026-10-17T09:08:07+02:00 on /dev/cu.usbmodem101\n"))
 
+    @needs_littlefs
     def test_with_no_clock_given_the_deploy_time_has_its_zone(self):
         self.run_the_scenario()
         self.deploy("--token", self.token(), consent=FakeConsent(True))
         deployed = datetime.datetime.fromisoformat(json.loads(self.copied["spark.json"])["deployed"])
         self.assertIsNotNone(deployed.tzinfo)
 
+    @needs_littlefs
     def test_the_facts_carry_the_moment_given_and_no_clock(self):
         moment = datetime.datetime(2026, 1, 2, 3, 4, 5)
         self.run_the_scenario()
@@ -674,12 +686,14 @@ class TheFactsAfterTheFlashTest(GateCase):
         path = deploy_record_store.DeployRecordStore().write_deploy(said, "ready seen", "a test")
         self.assertEqual(json.loads(path.read_text())["deploys"][-1]["yes"], "a test")
 
+    @needs_littlefs
     def test_the_facts_go_to_the_look_s_port_and_name_the_look_s_mac(self):
         self.flash()
         copy = next(command for command in self.ran if "cp" in command)
         self.assertEqual(copy[copy.index("connect"):copy.index("connect") + 2], ["connect", "/dev/cu.usbmodem101"])
         self.assertEqual(json.loads(self.copied["spark.json"])["mac"], self.look().reading.mac)
 
+    @needs_littlefs
     def test_the_record_is_named_by_the_mac_private_and_keeps_the_verdict(self):
         self.files_on_board = {"/main.py": b"print('old')\n"}
         _, said, _ = self.flash()
@@ -691,6 +705,7 @@ class TheFactsAfterTheFlashTest(GateCase):
     def test_the_same_facts_are_the_same_bytes(self):
         self.assertEqual(board_facts.facts_text({"b": 1, "a": 2}), board_facts.facts_text({"a": 2, "b": 1}))
 
+    @needs_littlefs
     def test_a_copy_that_fails_is_said_and_the_ready_check_still_runs(self):
         self.uncopied = subprocess.CalledProcessError(1, ["mpremote"])
         code, said, _ = self.flash()
@@ -698,6 +713,7 @@ class TheFactsAfterTheFlashTest(GateCase):
         self.assertIn("facts file: not written: mpremote could not copy it", said)
         self.assertIn("ready seen", said)
 
+    @needs_littlefs
     def test_a_facts_copy_the_board_refused_right_after_the_reset_is_written_on_a_retry(self):
         self.uncopied = [subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote: could not enter raw repl\n")]
         code, said, _ = self.flash()
@@ -707,11 +723,13 @@ class TheFactsAfterTheFlashTest(GateCase):
         self.assertIn(2, self.slept)
         self.assertIn("ready seen", said)
 
+    @needs_littlefs
     def test_a_facts_file_that_reads_back_different_is_not_written(self):
         self.garbled = "x"
         _, said, _ = self.flash()
         self.assertIn("facts file: not written: it read back different from what was copied", said)
 
+    @needs_littlefs
     def test_a_board_record_that_is_not_one_is_left_as_it_is_and_the_verdict_stands(self):
         _, said, _ = self.flash()
         record = Path(said.split("store record: ")[1].strip())
@@ -724,6 +742,7 @@ class TheFactsAfterTheFlashTest(GateCase):
             self.assertIn("store record: not written: %s is not a board record, so it was left as it is" % record, said)
             self.assertEqual(record.read_text(), bad)
 
+    @needs_littlefs
     def test_a_store_that_cannot_be_written_is_a_sentence(self):
         with mock.patch.object(store, "write_json", side_effect=store.StoreProblem("no room")):
             code, said, _ = self.flash()
@@ -831,6 +850,7 @@ class TheConsentTest(unittest.TestCase):
             self.assertEqual(terminal.who, "typed in a terminal by ada")
 
 
+@needs_littlefs
 class TheDefaultConsentTest(GateCase):
     """deploy.main with no consent given asks in this terminal. Under the tests stdout is no terminal, as in Claude's shell."""
 
@@ -880,6 +900,7 @@ class TheStandingYesTest(GateCase):
     def record(self):
         return json.loads((store.place("boards") / "8c-bf-ea-xx-xx-xx.json").read_text())["deploys"][-1]["yes"]
 
+    @needs_littlefs
     def test_a_deploy_grant_erases_with_no_terminal_and_the_record_names_the_standing_yes(self):
         self.give()
         code, said, _ = self.flash()
@@ -890,6 +911,7 @@ class TheStandingYesTest(GateCase):
         sha256 = hashlib.sha256(self.image.read_bytes()).hexdigest()
         self.assertIn("  image sha256: %s, yes: %s" % (sha256, who), said.splitlines())  # P213, card A
 
+    @needs_littlefs
     def test_the_standing_yes_line_shows_an_override_and_a_carriage_return_as_question_marks(self):
         # P423: the sentence of a refusal reaches the terminal through the guard
         self.give()
@@ -898,6 +920,7 @@ class TheStandingYesTest(GateCase):
             _, said, _ = self.flash()
         self.assertIn("  standing yes: not used: ended??the grant", said.splitlines())
 
+    @needs_littlefs
     def test_a_consent_given_to_main_wins_over_a_valid_grant(self):
         self.give()
         consent = FakeConsent(False)
@@ -917,9 +940,11 @@ class TheStandingYesTest(GateCase):
             self.assertNotIn("standing yes", said)
             self.assertIn("grant.py --scope deploy --minutes N", problems)
 
+    @needs_littlefs
     def test_no_deploy_grant_asks_in_the_terminal(self):
         self.assertAsksInTheTerminal(None)
 
+    @needs_littlefs
     def test_an_ended_deploy_grant_asks_in_the_terminal_and_names_the_grant_line_by_its_whole_path(self):
         self.give()
         self.clock.advance(minutes=30)
@@ -927,20 +952,24 @@ class TheStandingYesTest(GateCase):
         self.assertAsksInTheTerminal("the deploy grant for this board ended: the person runs %s --scope deploy "
                                      "--minutes N again" % grant_py)
 
+    @needs_littlefs
     def test_only_a_live_grant_asks_in_the_terminal(self):
         self.give("live")
         self.assertAsksInTheTerminal(None)
 
+    @needs_littlefs
     def test_a_deploy_grant_of_another_board_asks_in_the_terminal(self):
         self.give(mac="aa:bb:cc:dd:ee:ff")
         self.assertAsksInTheTerminal(None)
 
+    @needs_littlefs
     def test_a_deploy_file_whose_scope_differs_asks_in_the_terminal(self):
         self.give()
         (store.place("grants") / "8c-bf-ea-xx-xx-xx-deploy.json").write_text(
             json.dumps(board_grant.GrantStore().find(self.MAC, "deploy")._replace(scope="live")._asdict()))
         self.assertAsksInTheTerminal("the store's deploy grant file for this board is not a deploy grant")
 
+    @needs_littlefs
     def test_a_look_with_a_warning_or_an_unknown_field_asks_in_the_terminal(self):
         for board, esptool, mac in (("firebeetle2-esp32s3", "s3-flash-id-8mb.txt", "dc:da:0c:xx:xx:xx"),
                                     ("xiao-esp32-c6", "c6-flash-id-garbled.txt", self.MAC)):
@@ -953,6 +982,7 @@ class TheStandingYesTest(GateCase):
                 self.assertIn("the look is not a match", said)
                 self.assertIn("no terminal to ask you in", problems)
 
+    @needs_littlefs
     def test_a_last_deploy_that_cannot_be_read_is_not_covered_by_a_deploy_grant(self):
         self.give()
         record = store.place("boards") / (store.slug(self.MAC) + ".json")
@@ -964,6 +994,7 @@ class TheStandingYesTest(GateCase):
         self.assertIn("no terminal to ask you in", problems)
         self.assertNotIn("run this once", said + problems)
 
+    @needs_littlefs
     def test_a_look_with_a_stop_refuses_whatever_the_grant(self):
         self.give()
         self.board("firebeetle2-esp32s3")
@@ -971,6 +1002,7 @@ class TheStandingYesTest(GateCase):
         self.assertEqual((code, self.flashed()), (1, []))
         self.assertIn("not flashed.", problems)
 
+    @needs_littlefs
     def test_ignore_older_runs_asks_even_with_a_valid_grant(self):
         self.give()
         code, said, problems = self.flash("--ignore-older-runs")
@@ -992,6 +1024,7 @@ class TheStandingYesTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertNotIn("standing yes", said)
 
+    @needs_littlefs
     def test_a_grant_that_ends_after_the_yes_and_before_the_erase_stops_it(self):
         self.give()
         token, real = self.token(), self.grants.consent_for_deploy
@@ -1011,12 +1044,14 @@ class TheStandingYesTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("the deploy grant ended before the erase", problems)
 
+    @needs_littlefs
     def test_the_token_still_has_to_match(self):
         self.give()
         code, _, problems = self.deploy("--token", "0000-1111", grant_service=self.grants)
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("changed since the look", problems)
 
+    @needs_littlefs
     def test_an_image_that_changes_during_the_run_is_still_refused(self):
         self.give()
         token, real = self.token(), self.grants.consent_for_deploy
@@ -1035,6 +1070,7 @@ class TheStandingYesTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("no run in sim/runs/ tested flash-with-firmware.bin as it is now", problems)
 
+    @needs_littlefs
     def test_a_grant_that_ends_between_the_choice_and_the_erase_stops_it(self):
         self.give()
         grants, token = self.grants, self.token()
@@ -1049,6 +1085,7 @@ class TheStandingYesTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("the deploy grant ended before the erase", problems)
 
+    @needs_littlefs
     def test_the_no_terminal_line_adds_the_deploy_grant_line_for_a_clean_look_only(self):
         _, _, problems = self.flash()
         grant_line = shlex.join([str(Path(board_grant.__file__).with_name("grant.py").resolve()), "--scope", "deploy",
@@ -1060,6 +1097,7 @@ class TheStandingYesTest(GateCase):
         self.assertNotIn("--scope deploy", problems)
 
 
+@needs_littlefs
 class TheNoSimulationDeployTest(GateCase):
     """P337 B: --no-simulation puts firmware/ on the board with no run log, and every record says so."""
 
@@ -1174,6 +1212,7 @@ class TheRerunLineTest(unittest.TestCase):
 
 
 class TheCaveatTest(GateCase):
+    @needs_littlefs
     def test_the_caveats_come_first_in_the_question_in_order(self):
         self.run_the_scenario()
         report = self.look()
@@ -1187,6 +1226,7 @@ class TheCaveatTest(GateCase):
         deploy_gate.require_open_gate(report, report.token(), consent, "x.bin", [])
         self.assertEqual(consent.asked, ["erase ALL of this board's flash (%s) and write x.bin?" % NONE_RECORDED])
 
+    @needs_littlefs
     def test_the_caveats_come_after_what_the_person_accepts(self):
         self.run_the_scenario()
         report = self.look(esptool="c6-flash-id-garbled.txt")
@@ -1195,6 +1235,7 @@ class TheCaveatTest(GateCase):
         self.assertEqual(consent.asked, ["a caveat. you accept: flash unknown (the board did not say). erase ALL of this "
                                          "board's flash (%s) and write x.bin?" % NONE_RECORDED])
 
+    @needs_littlefs
     def test_the_erase_sentence_names_the_last_deploy_after_the_caveats_and_what_the_person_accepts(self):
         self.run_the_scenario()
         self.record_a_deploy()
@@ -1213,6 +1254,7 @@ class TheCaveatTest(GateCase):
             deploy_gate.require_open_gate(report, "aaaa-bbbb", consent, "x.bin", [])
         self.assertEqual(consent.asked, [])
 
+    @needs_littlefs
     def test_the_gate_asks_the_question_the_look_carries(self):
         self.run_the_scenario()
         report = self.look()
@@ -1266,6 +1308,7 @@ class TheGateReasonTest(GateCase):
         self.board("firebeetle2-esp32s3")
         self.assertEqual(self.refusal(self.look(), "aaaa-bbbb"), ("chip_differs", 1))
 
+    @needs_littlefs
     def test_with_two_stops_the_first_one_s_code_is_the_reason(self):
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
@@ -1274,6 +1317,7 @@ class TheGateReasonTest(GateCase):
         report.stops.insert(0, board_look.Stop("chip_differs", "another chip"))
         self.assertEqual(self.refusal(report, "aaaa-bbbb"), ("chip_differs", 1))
 
+    @needs_littlefs
     def test_no_token_given_a_look_with_no_token_a_stale_token_and_a_no(self):
         self.assertEqual(self.refusal(self.look(), "aaaa-bbbb"), ("no_image", 2))  # no scenario run: the look has no image, so no token
         self.run_the_scenario()
