@@ -14,8 +14,8 @@
  {
   "file": "scripts/deploy_gate.py",
   "name": "join-not-quote",
-  "find": "return shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments])",
-  "replace": "return \" \".join([str(Path(script).resolve())] + [str(argument) for argument in arguments])"
+  "find": "return store.prefix_home(shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))",
+  "replace": "return store.prefix_home(\" \".join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))"
  },
  {
   "file": "scripts/grant.py",

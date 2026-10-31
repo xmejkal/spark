@@ -1,0 +1,56 @@
+[
+ {
+  "file": "scripts/store.py",
+  "name": "prefix-dropped",
+  "find": "    return \"SPARK_HOME=%s %s\" % (shlex.quote(str(Path(given).resolve())), line) if given else line",
+  "replace": "    return line"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "store-not-quoted",
+  "find": "(shlex.quote(str(Path(given).resolve())), line)",
+  "replace": "(str(Path(given).resolve()), line)"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "store-not-resolved",
+  "find": "shlex.quote(str(Path(given).resolve()))",
+  "replace": "shlex.quote(str(Path(given)))"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "no-image-hint-dropped",
+  "find": "+ NO_SIMULATION_HINT % (build + \", then \"), reason",
+  "replace": "+ \"run a scenario\", reason"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "untested-hint-dropped",
+  "find": "% self.path.name + NO_SIMULATION_HINT % \"\")",
+  "replace": "% self.path.name + \"\")"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "own-build-hint-dropped",
+  "find": "\"; or \" + own if own else \"\"))",
+  "replace": "\"\"))"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "entry-name-lost",
+  "find": "OWN_BUILD_HINT % (where, name or \"<name>\", tie, where, name or \"<name>\")",
+  "replace": "OWN_BUILD_HINT % (where, \"<name>\", tie, where, \"<name>\")"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "fields-that-tie-dropped",
+  "find": "tie = \"\" if name else ', \"micropython_port\"",
+  "replace": "tie = \"\" if True else ', \"micropython_port\""
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "no-entry-refusal-hint-dropped",
+  "find": "own_build_hint_for(project, build, None))",
+  "replace": "\"\")"
+ }
+]
