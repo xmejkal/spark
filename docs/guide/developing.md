@@ -508,6 +508,14 @@ to the rules we set". New code follows them now. Today's names change in the nam
 The role table above still applies. Its role words end a name, and `Fake` starts one. A Service, a Store or an
 Adapter from that table is a helper with its role word, and an Operation calls it.
 
+Words for a rules file (P454, #615): a *rule* is one `fabrication` entry of a project's `.spark/rules.json`.
+
+| Word | Means | Where |
+|---|---|---|
+| `lowest` | the table of limits, one per process key | `data/fabrication.json`, `fab.DATA["lowest"]` |
+| `above`, `at_least` | the two kinds of limit: the value must be greater, or may equal it | the entries of `lowest` |
+| `TOO_LOW`, `NOT_A_NUMBER`, `NOT_AN_OBJECT` | the reason `fab.fabrication_problem` returns beside the field | `scripts/fab.py` |
+
 These rules name a class, a function or a constant:
 
 - Name a thing for what it is to someone who has never seen spark.

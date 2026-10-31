@@ -22,6 +22,7 @@ import json
 import sys
 from pathlib import Path
 
+import fab  # noqa: E402
 import netlist  # noqa: E402
 from spark.core.outcomes import EXIT_FOR, OK, COULD_NOT_RUN, status_of  # noqa: E402
 
@@ -247,8 +248,11 @@ def compare(circuit_path, rules_path):
                 "things no netlist format records")
 
     try:
+        rules = fab.read_rules(rules_path)  # --- MVP --- (P455): the one reader, so a refused file is a sentence naming it
+    except fab.RulesError as refused:
+        return could_not_run(str(refused))
+    try:
         circuit = json.loads(circuit_path.read_text())
-        rules = json.loads(rules_path.read_text())
     except ValueError as broken:
         return could_not_run("not valid JSON: %s" % broken)
 
@@ -281,7 +285,7 @@ def main(argv=None):
         prog="compare_design.py",
         description="Compare written rules against the design that was built.")
     parser.add_argument("circuit", help="the built netlist, usually dist/board/circuit.json")
-    parser.add_argument("--rules", help="JSON naming what to check (default: .spark/rules.json)")
+    parser.add_argument("--rules", help="JSON naming what to check (default: .spark/rules.json); a file that is refused (no finite number, below its lowest) exits 2")
     parser.add_argument("--json", action="store_true",
                         help="the result as data, for a caller that is not a person")
     args = parser.parse_args(argv)

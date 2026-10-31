@@ -33,6 +33,20 @@
     "min_trace_width_mm": 0.15
   },
 
+  "//lowest": "The least a project's `fabrication` rule may state, one limit per process key (fab.read_rules refuses a value below it). `above` means the value must be greater, `at_least` that it may equal. Each follows from how the code uses the key: a divisor, a thickness, a size a check compares against. The margin is the one that may be 0. No fab house number is invented here.",
+  "lowest": {
+    "min_annular_ring_mm": {"above": 0},
+    "recommended_annular_ring_mm": {"above": 0},
+    "annular_ring_margin_mm": {"at_least": 0},
+    "min_via_hole_mm": {"above": 0},
+    "min_via_pad_mm": {"above": 0},
+    "board_thickness_mm": {"above": 0},
+    "plating_thickness_mm": {"above": 0},
+    "drill_step_mm": {"above": 0},
+    "copper_thickness_mm": {"above": 0},
+    "min_trace_width_mm": {"above": 0}
+  },
+
   "//parts": "What a physical part IS. Not a project's to change - an 0603 dissipates what an 0603 dissipates - but shared, because more than one script asks.",
   "parts": {
     "//package_power_w": "What a chip resistor of each size can dissipate, in watts. Conservative, standard values. This was two separate copies, in check_footprints.py and check_physics.py, so a package added to one was missing from the other and nothing said so.",

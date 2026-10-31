@@ -89,6 +89,9 @@ class Check:
                     "reason": "not given %s" % ", ".join(missing)}
         try:
             return dict({"check": self.name, "what": self.what}, **self.call(inputs))
+        except fab.RulesError as refused:  # --- MVP --- (P455): one refusal of a rules file for every check that reads it
+            return {"check": self.name, "status": COULD_NOT_RUN, "what": self.what,
+                    "problems": [], "unchecked": [str(refused)]}
         except (Exception, SystemExit) as broken:  # noqa: BLE001
             # SystemExit is a BaseException, so `except Exception` let it straight past: one
             # check's missing file killed the other six and exited 1, which reads as "problems
@@ -129,7 +132,7 @@ class RulesVsNetlist(Check):
         # The subject is the finding: "connects to nothing" four times over named nothing a
         # person could act on (irrigation diary I10).
         # P204: a pin the board's internal pull-up holds is the firmware's to set, and no netlist shows it.
-        pulled = json.loads(Path(inputs["rules"]).read_text()).get("pulled_by_firmware") or []
+        pulled = fab.read_rules(inputs["rules"]).get("pulled_by_firmware") or []  # --- MVP --- (P455): unreachable on a bad file, compare ran first
         return answer(problems=["[%s] %s: %s" % (p["rule"], p["subject"], p["detail"]) for p in result.get("problems", [])],
                       unmeasured=["%s: held up by the board's internal pull-up, which the firmware sets and no netlist "
                                   "shows" % ".".join(pin) for pin in pulled])
@@ -141,7 +144,7 @@ class Physics(Check):
         from check_physics import PROBLEM, NEEDS_MEASUREMENT
         circuit = circuit_of(inputs)
         loads, notes = rail_loads_in(inputs.get("project"), circuit)
-        findings = check_physics.run(circuit, json.loads(Path(inputs["rules"]).read_text()), loads)
+        findings = check_physics.run(circuit, fab.read_rules(inputs["rules"]), loads)  # --- MVP --- (P455)
 
         def of(severity):
             return ["%s: %s" % (f.subject, f.detail)
@@ -230,10 +233,7 @@ class Buildability(Check):
         # defaults, which is the right answer and not a skip. Declaring `rules` among this
         # check's inputs made a project that has none skip buildability altogether.
         stated = inputs.get("rules")
-        try:
-            rules = fab.read_rules(stated) if stated else None  # --- MVP --- (P434): a value of the wrong kind is refused, naming the file
-        except fab.RulesError as refused:
-            return answer(unchecked=[str(refused)])
+        rules = fab.read_rules(stated) if stated else None  # --- MVP --- (P434): refused, naming the file, by `Check.run` (P455)
         findings = check_footprints.run(circuit_of(inputs), placeholders, rules=rules)
 
         def of(severity):

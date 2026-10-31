@@ -437,8 +437,46 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
                 (root / "rules.json").write_text(json.dumps({"fabrication": {"plating_thickness_mm": value}}))
                 result = check.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(root / "rules.json")})
                 self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
-                self.assertIn("fabrication.plating_thickness_mm is not a finite number", json.dumps(result))
-                self.assertIn("rules.json", json.dumps(result))
+                self.assertEqual(result["unchecked"], ["%s: fabrication.plating_thickness_mm is not a finite number; write a number, "
+                                                       "or remove the key to use the default" % (root / "rules.json")])
+
+
+# --- MVP ---
+class ARulesFileThatIsRefusedIsOneSentenceTest(unittest.TestCase):
+    """P454, P455: Physics, RulesVsNetlist and Buildability refuse a rules file in the same words, with no type-name prefix."""
+    CIRCUIT = [{"type": "source_component", "source_component_id": "c", "name": "PackIn"},
+               {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
+
+    def run_check(self, name, text, unreadable=False):
+        import os
+        root = Path(tempfile.mkdtemp())
+        (root / "circuit.json").write_text(json.dumps(self.CIRCUIT))
+        rules = root / "rules.json"
+        rules.write_text(text)
+        if unreadable:
+            if os.geteuid() == 0:
+                self.skipTest("root reads any file")
+            rules.chmod(0)
+        self.addCleanup(rules.chmod, 0o644)
+        check = next(c for c in check_all.CHECKS if c.name == name)
+        return rules, check.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(rules)})
+
+    def test_each_of_the_three_says_the_sentence_and_nothing_else(self):
+        for name in ("physics", "rules-vs-netlist", "buildability"):
+            for text, sentence in (("[]", "%s: (top level) is not an object"),
+                                   ('{"fabrication": {"drill_step_mm": 0}}',
+                                    "%s: fabrication.drill_step_mm must be above 0; write a larger number, or remove the key to use the default")):
+                with self.subTest(check=name, text=text):
+                    rules, result = self.run_check(name, text)
+                    self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
+                    self.assertEqual((result["unchecked"], result["problems"]), ([sentence % rules], []))
+
+    def test_a_file_nobody_can_read_starts_with_the_path(self):
+        for name in ("physics", "rules-vs-netlist", "buildability"):
+            with self.subTest(check=name):
+                rules, result = self.run_check(name, "{}", unreadable=True)
+                self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
+                self.assertTrue(result["unchecked"][0].startswith("%s could not be read" % rules), result)
 
 
 class AnAdvisoryIsSaidAndDoesNotFailTest(unittest.TestCase):

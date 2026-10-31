@@ -436,7 +436,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `check_all.py` | `project` (with `--project`), `resolved`, `results`, `status`, `tool`, `unmeasured` |
 | `check_physics.py` | `design`, `findings`, `status`, `tool` |
 | `check_footprints.py` | `findings`, `status`, `tool` |
-| `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a rules file naming no rule gives `fix` and `reason` instead of `problems` |
+| `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a rules file naming no rule gives `fix` and `reason` instead of `problems`; a rules file that cannot be read or is refused gives `reason` (its old "not valid JSON" sentence for a broken rules file is now "could not be read") |
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, one entry per board file. A compared board: `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. A could-not-run: `board`, `status` and `reason`. A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose header held no pins; a live run refused before or during the fetch has none. `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
@@ -688,7 +688,7 @@ count.
 2. **A crash exits 1, which this table reads as `problems`, except `look.py`, which prints a `crash` envelope (with `--json`; the crash line, the fix and the traceback on stderr either way) and exits 2.** Run on its own, a script can crash on an input it cannot
    read: exit 1, a traceback on stderr, nothing on stdout ([P131](https://github.com/xmejkal/spark/issues/65)). The
    inputs:
-   - a circuit or rules file that is not JSON (`check_footprints.py`, `check_physics.py`);
+   - a circuit file that is not JSON (`check_footprints.py`, `check_physics.py`);
    - a board file that is not JSON or not there (`check_vendor_pins.py`);
    - a fab package with no `bom.csv` or that is not a zip, or a `--circuit` that is missing or not JSON
      (`check_bom.py`);
@@ -798,8 +798,8 @@ Today's output also carries `"unmeasured": 0`, after `status`.
 
    **`fabrication: {}`** in rules.json means the plugin's default two-layer process, as the file's own `//fabrication`
    comment says. So buildability is measured against spark's defaults, not the person's board house; tell them. A `fabrication` value that is
-   not a finite number (text, `true`, `NaN`, a huge integer) is refused when the file is read (by `emit_footprint.py`, `check_footprints.py --rules`, `check_all.py` buildability and the build), with the rules path and the
-   field (`fabrication.drill_step_mm`): `emit_footprint.py` and `check_footprints.py --rules` exit 2, and the build stops.
+   not a finite number (text, `true`, `NaN`, a huge integer), or below its lowest (`drill_step_mm: 0`; `data/fabrication.json` holds one limit per key, and only `annular_ring_margin_mm` may be 0), is refused when the file is read (by `emit_footprint.py`, `check_footprints.py --rules`, `check_physics.py --rules`, `compare_design.py --rules`, `check_all.py` and the build), with the rules path and the
+   field (`fabrication.drill_step_mm`): the four scripts exit 2, and the build stops. `check_all.py` gives the same refusal on three lines (buildability, physics, rules-vs-netlist), also for a top level that is no object or a file nobody can read.
    Remove the key to use the default.
 
    **What clears a `!` line.** In the journey's run, physics was could-not-run for these reasons:

@@ -697,6 +697,39 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
         self.assertEqual(json_module.loads(out.getvalue())["status"], "could-not-run")
         self.assertEqual(code, check_physics.EXIT_COULD_NOT_RUN)
 
+    # --- MVP ---
+    def test_a_rules_file_that_is_refused_exits_could_not_run_with_the_sentence_not_a_traceback(self):
+        # P455: the raw read was a traceback (exit 1) for a list top level and for a file nobody can read; P454 adds a rule below its lowest
+        import contextlib
+        import io
+        import json as json_module
+        import os
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        (root / "circuit.json").write_text("[]")
+        rules = root / "rules.json"
+        for text, sentence in (("[]", "%s: (top level) is not an object" % rules),
+                               ('{"fabrication": {"drill_step_mm": 0}}',
+                                "%s: fabrication.drill_step_mm must be above 0; write a larger number, or remove the key to use the default" % rules),
+                               ("{broken", None), ("chmod", None)):
+            with self.subTest(text=text):
+                rules.chmod(0o644) if rules.exists() else None
+                rules.write_text("{}" if text == "chmod" else text)
+                if text == "chmod":
+                    if os.geteuid() == 0:
+                        continue
+                    rules.chmod(0)
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    code = check_physics.main([str(root / "circuit.json"), "--rules", str(rules), "--json"])
+                said = json_module.loads(out.getvalue())
+                self.assertEqual((code, said["status"]), (check_physics.EXIT_COULD_NOT_RUN, "could-not-run"))
+                if sentence:
+                    self.assertEqual(said["reason"], sentence)
+                else:
+                    self.assertTrue(said["reason"].startswith("%s could not be read" % rules), said["reason"])
+        rules.chmod(0o644)
+
     def test_check_all_lists_a_misspelt_finding_as_unchecked(self):
         import json as json_module
         import tempfile
