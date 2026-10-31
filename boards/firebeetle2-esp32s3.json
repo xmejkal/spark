@@ -242,13 +242,15 @@
       "gpio": [
         21
       ],
-      "note": "the on-board user LED, silkscreened D13. Usable, but it will blink whatever you put on it."
+      "active_level": 1,
+      "note": "the on-board user LED, silkscreened D13, lit by a 1: measured on the PO's bench on 2026-10-31 (walk 3 rehearsal, P470 #639), the LED lit while the firmware wrote 1. Usable, but it will blink whatever you put on it."
     },
     "onboard_button": {
       "gpio": [
         47
       ],
-      "note": "the on-board user button, silkscreened D14. Already has a button on it, and cannot wake the chip from deep sleep."
+      "active_level": 0,
+      "note": "the on-board user button, silkscreened D14, reads 0 when pressed: measured on the PO's bench on 2026-10-31 (walk 3 rehearsal, P470 #639), it idled at 1 and read 0 while held, with the internal pull-up. Already has a button on it, and cannot wake the chip from deep sleep."
     },
     "not_wake_capable": {
       "gpio": [
