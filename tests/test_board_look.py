@@ -818,9 +818,9 @@ class TheLookCodesTheImageRefusalTest(LookCase):
 
     def test_an_image_the_evidence_refuses_with_a_sentence_stays_evidence_refuses(self):
         self.run_the_scenario()
-        report = self.look(evidence=self.RefusingEvidence(sentence="flash-with-firmware.bin does not hold firmware/ as it is now"))
+        report = self.look(evidence=self.RefusingEvidence(sentence="flash-with-firmware.bin does not match a build of firmware/ as it is now"))
         self.assertEqual((report.no_token_reason().code, report.token(), report.image_code), ("evidence_refuses", None, "evidence_refuses"))
-        self.assertEqual(report.image_why, "flash-with-firmware.bin does not hold firmware/ as it is now")
+        self.assertEqual(report.image_why, "flash-with-firmware.bin does not match a build of firmware/ as it is now")
 
 
 class ReportLinesTest(LookCase):

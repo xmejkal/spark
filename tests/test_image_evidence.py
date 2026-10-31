@@ -13,6 +13,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 from suite_runs import needs_littlefs  # noqa: E402
+from micropython_fakes import fake_interpreter  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -394,8 +395,6 @@ class PassedRunEvidenceTest(unittest.TestCase):
 
 @needs_littlefs
 class NoSimulationEvidenceTest(unittest.TestCase):
-    INTERPRETER = b"\xe9" + b"\x00" * 99
-
     def setUp(self):
         self.project = project_with_image()
         self.firmware = self.project / "firmware"
@@ -406,7 +405,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.addCleanup(patcher.stop)
         self.offset = 0
         self.interpreter = self.project / "micropython.bin"
-        self.interpreter.write_bytes(self.INTERPRETER)
+        self.interpreter.write_bytes(fake_interpreter())
         self.build()
 
     raising = None  # P436: a test sets what the interpreter's lookup raises, so it needs no patch of its own
@@ -417,9 +416,9 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         return flash_image.Interpreter(self.interpreter, self.offset)
 
     def build(self, offset=None):
+        offset = self.offset if offset is None else offset
         (self.project / "sim" / "flash-with-firmware.bin").write_bytes(
-            flash_image.image(self.INTERPRETER, flash_image.files_under(self.firmware),
-                              offset=self.offset if offset is None else offset))
+            flash_image.image(fake_interpreter(offset=offset), flash_image.files_under(self.firmware), offset=offset))
         self.image = ProjectImage(self.project)
 
     def why(self):
@@ -433,15 +432,17 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     def test_an_image_with_the_esp32_s_offset_is_ready_and_one_built_at_0_is_not(self):
         self.offset = 0x1000  # the original ESP32's build starts there (P335)
+        self.interpreter.write_bytes(fake_interpreter(offset=self.offset))
         self.build()
         self.assertIsNone(self.why())
         self.build(offset=0)
-        self.assertIn("does not hold firmware/ as it is now", self.why())
+        self.assertIn("does not match a build of firmware/ as it is now", self.why())
 
     def test_a_file_changed_after_the_image_refuses_and_names_the_build_command(self):
         (self.firmware / "main.py").write_text("print('ready')\nprint(2)\n")
-        self.assertEqual(self.why(), "flash-with-firmware.bin does not hold firmware/ as it is now: build it with "
-                         "flash_image.py --project %s --files firmware -o %s" % (self.project.resolve(), self.image.path))
+        self.assertEqual(self.why(), "flash-with-firmware.bin does not match a build of firmware/ as it is now (firmware/, the board's MicroPython "
+                         "or how spark builds images changed since): build it with flash_image.py --project %s --files firmware -o %s"
+                         % (self.project.resolve(), self.image.path))
 
     def test_a_file_that_does_not_compile_refuses_with_its_file_and_line(self):
         (self.firmware / "lib").mkdir()
