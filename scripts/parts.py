@@ -216,7 +216,7 @@ NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, di
 #: It lives in the lower module on purpose. A capability is a claim a PART makes, so the file
 #: that validates parts owns the vocabulary and the file that consumes it follows.
 CAPABILITIES = ("wake", "adc", "pwm")
-
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page, step as next_step  # noqa: E402, F401
 from brief import Brief  # noqa: E402
 import provenance  # noqa: E402

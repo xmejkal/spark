@@ -25,6 +25,7 @@ import sys
 from collections import namedtuple
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 import boards
 import tools

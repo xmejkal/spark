@@ -2,7 +2,9 @@
 """Read the board on USB without changing it, compare it with the project's board record, and print a token (P219)."""
 
 import sys
+from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.bench import build_project_outside_world
 from spark.bench.look_at_board import LookAtBoard
 from spark.core.cli import HelpText, run_cli
