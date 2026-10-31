@@ -118,5 +118,11 @@
   "name": "a table with no room for the end slot is accepted",
   "find": "* self.ENTRY_FORMAT.size >= self.TABLE_SIZE",
   "replace": "* self.ENTRY_FORMAT.size > self.TABLE_SIZE"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "a label that is not text is read with replacement characters",
+  "find": "label.rstrip(b\"\\x00\").decode()",
+  "replace": "label.rstrip(b\"\\x00\").decode(errors=\"replace\")"
  }
 ]

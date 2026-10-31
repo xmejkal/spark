@@ -34,7 +34,7 @@ MICROPYTHON_LITTLEFS = dict(               # how MicroPython itself mounts that 
 #: "Then deploy the firmware to the board, starting at address 0x1000", read on 2026-10-26.
 ESP32_INTERPRETER_OFFSET = 0x1000
 #: P461: the partition table MicroPython finds its file system by. The format is ESP-IDF's, read at tag v5.5.2 (the
-#: version string in the three v1.29.0 interpreters; ports/esp32/README.md:55 of MicroPython recommends it) on 2026-10-31.
+#: version string in the four v1.29.0 interpreters in the store; ports/esp32/README.md:55 of MicroPython recommends it) on 2026-10-31.
 BOOTLOADER_TABLE_OFFSET = 0x8000           # components/partition_table/Kconfig.projbuild:153-155 PARTITION_TABLE_OFFSET, default 0x8000
 TABLE_SIZE = 0xC00                         # components/partition_table/gen_esp32part.py:22 MAX_PARTITION_LENGTH; esp_flash_partitions.h:63
 ENTRY_SIZE = 32                            # gen_esp32part.py:607 STRUCT_FORMAT b'<2sBBLL16sL' (2+1+1+4+4+16+4)
@@ -44,7 +44,7 @@ DATA_TYPE = 0x01                           # gen_esp32part.py:38 DATA_TYPE; esp_
 FAT_SUBTYPE = 0x81                         # gen_esp32part.py:87 'fat'; esp_partition.h:112 ESP_PARTITION_SUBTYPE_DATA_FAT
 VFS_LABEL = b"vfs"                         # MicroPython ports/esp32/modules/flashbdev.py:4 Partition.find(TYPE_DATA, label="vfs")
 #: The first 128 bytes of the table in ESP32_GENERIC_S3-20260824-v1.29.0.bin (sha256 1dd9dcd27ba2d6a1cb7f7b49a063f46d3d807d68b0151161233920228285e300),
-#: read from flash offset 0x8000 on 2026-10-31: nvs, phy_init, factory, then the MD5 entry. The other two v1.29.0 builds hold the same bytes.
+#: read from flash offset 0x8000 on 2026-10-31: nvs, phy_init, factory, then the MD5 entry. The other three v1.29.0 builds in the store hold the same bytes.
 S3_TABLE = bytes.fromhex("aa50010200900000006000006e76730000000000000000000000000000000000aa50010100f00000001000007068795f696e6974000000000000000000000000aa5000000000010000001f00666163746f727900000000000000000000000000ebebffffffffffffffffffffffffffff8405a9bb5ce0b84c4f2ca5de9a76b050")
 VFS_SIZE = 0x200000                        # the 2 MB spark's littlefs fills: 512 blocks of 4096
 WRONG_BLOCK_COUNT = 3584                   # what MicroPython registers itself on a 16 MB flash: 14 MB / 4096 (main.c:255-275)
@@ -252,9 +252,9 @@ class TheImageHoldsAVfsPartitionTest(unittest.TestCase):
         self.assertIn('"ffat" entry', self.refused(fake_interpreter(table=table_bytes(MICROPYTHON_TABLE + (ffat,)))))
 
     def test_a_label_that_is_not_text_is_refused_with_what_to_do(self):
-        table = bytearray(table_bytes())
+        table = bytearray(table_bytes(md5=False))  # no MD5 entry, so only the label can refuse it
         table[2 * ENTRY_SIZE + 12] = 0xff  # the first byte of the factory's label (entry offset 12)
-        self.assertIn("micropython.org/download", self.refused(fake_interpreter(table=bytes(table))))
+        self.assertIn("is not text", self.refused(fake_interpreter(table=bytes(table))))
 
     def test_a_table_with_no_room_for_the_end_slot_is_refused_and_one_with_room_is_not(self):
         def table_of_(count):  # the table holds `count` entries before the vfs, all data partitions below 0x200000

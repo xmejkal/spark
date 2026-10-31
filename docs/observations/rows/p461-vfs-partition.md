@@ -1,6 +1,6 @@
 # P461: the image fits the flash of the board it goes on
 
-Findings of P461 (#629), 2026-10-31, Prague, built on main 4226627a. Rows 1-10 are the build, rows 11-24 the review (Sonnet reviewer and Opus refuter) and its fix round.
+Findings of P461 (#629), 2026-10-31, Prague, built on main 4226627a. Rows 1-10 are the build, rows 11-22 the review (Sonnet reviewer and Opus refuter) and its fix round, rows 23-27 the fix-commit refuter (Opus) and the mutation runs.
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
@@ -26,3 +26,8 @@ Findings of P461 (#629), 2026-10-31, Prague, built on main 4226627a. Rows 1-10 a
 | 20 | `read` stops at the MD5 entry, the bootloader reads on: an entry after the MD5 is dropped without a word | refuter | raised (LATER) | no build has one today |
 | 21 | Flags are written as 0 and read flags are kept only in the tuple; `<= 0`, and a last slot never read, escaped the refuter's planted set | refuter | raised (LATER) | no build has these today |
 | 22 | Wokwi with the new table stays unchecked | plan | closed | as row 9 |
+| 23 | The non-text label test passes for the wrong reason: the flipped byte also breaks the MD5, whose sentence also names micropython.org/download | fix-commit refuter | verified, acted | the test builds its table with no MD5 entry and asserts "is not text"; new mutation row `.decode(errors="replace")`, caught |
+| 24 | The PR body named two causes in the look's sentence, three interpreters, and the hook count of the old head | fix-commit refuter | acted | PR body corrected: three causes, four interpreters in the store, the hook on db55b827 |
+| 25 | `micropython_fakes.py` claimed a pattern that never repeats within a table, but `% 251` repeats every 251 bytes | fix-commit refuter | acted | the docstring says a copy shifted by anything but a multiple of 251 shows; the refuter measured the real shifts at 138 and 58 mod 251 |
+| 26 | The test comments counted three v1.29.0 builds, the store holds four with the same table | fix-commit refuter | acted | `tests/test_flash_image.py:36,47`, `tests/micropython_fakes.py:12` |
+| 27 | Mutation runs: 20 planted, 20 caught (1,227 s) on db55b827; the decode row after it, 1 planted, 1 caught (481 s) | mutation-tester, lead | verified | `python3 tools/mutate.py tests/mutations/p461-vfs-partition.json --copy`; the decode row alone from a one-row copy of the table |
