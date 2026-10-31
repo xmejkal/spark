@@ -716,8 +716,9 @@ count.
    A fault in the requirements file (an unknown need, two parts of one name, pins that
    cannot be placed) is said first, under `schematic`. `emit_board.py` alone refuses that board with the same sentence,
    in the same order, exit 2 ([P407](https://github.com/xmejkal/spark/issues/532)).
-   A requirements file whose `signals` is no list, or whose `pin` is no non-empty string, and a `.spark/rules.json` that is a
-   folder, are refused the same way, naming the file and the field (`car.json: signals[0].pin is list; write a pin name …`, [P438](https://github.com/xmejkal/spark/issues/583)).
+   A requirements file whose `signals` or `parts` is no list, or whose `pin` is no non-empty string, is refused the same way,
+   under `requirements`, naming the file and the field (`car.json: signals[0].pin is a list; write a pin name …`,
+   [P438](https://github.com/xmejkal/spark/issues/583)). A `.spark/rules.json` that is a folder is refused under `schematic`.
 3. A bad command line (an unknown flag, or `CLAUDE_PLUGIN_ROOT` unset) exits 2 with nothing on stdout, except that
    `parts.py --json` answers an argument it cannot run with in its envelope (`status` is `could-not-run`). With
    `CLAUDE_PLUGIN_ROOT` unset, Python never starts the script, so even that prints nothing. A bad command line is not a

@@ -3,5 +3,6 @@
  {"file": "scripts/design.py", "name": "P438: any pin passes", "find": "if pin is not None and not isinstance(pin, str):", "replace": "if False:"},
  {"file": "scripts/design.py", "name": "P438: an empty pin passes", "find": "if pin == \"\":", "replace": "if False:"},
  {"file": "scripts/design.py", "name": "P438: a rules folder is no rules", "find": "if not path.exists():", "replace": "if not path.is_file():"},
- {"file": "scripts/design.py", "name": "P438: a null signals is refused", "find": "if signals is not None and", "replace": "if"}
+ {"file": "scripts/design.py", "name": "P438: a null signals is refused", "find": "if signals is not None and", "replace": "if"},
+ {"file": "scripts/design.py", "name": "P438: any parts passes", "find": "if parts is not None and not isinstance(parts, list):", "replace": "if False:"}
 ]

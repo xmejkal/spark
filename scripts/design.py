@@ -102,6 +102,15 @@ def names_that_are_one(wanted):
     return None
 
 
+JSON_WORDS = {str: "text", dict: "an object", list: "a list", int: "a number", float: "a number", bool: "true or false",
+              type(None): "null"}  # --- MVP --- (P438): the kind of a value in the words of the file's own format
+
+
+def json_word(value):
+    """What a person who writes JSON calls this value's kind; an exact type lookup, so a bool is not a number."""
+    return JSON_WORDS.get(type(value), type(value).__name__)
+
+
 def read(path):
     """The requirements file as a dict, or a DesignError saying what is wrong with it."""
     path = Path(path)
@@ -119,7 +128,10 @@ def read(path):
     signals = wanted.get("signals")  # --- MVP --- (P438): a null stays the default; any other kind but a list is refused
     if signals is not None and not isinstance(signals, list):
         raise DesignError('%s: signals is %s; write a list of signals, each {"name", "needs", "pin" or "bus"}',
-                          path, type(signals).__name__)
+                          path, json_word(signals))
+    parts = wanted.get("parts")  # --- MVP --- (P438): the same for `parts`, before any entry is walked
+    if parts is not None and not isinstance(parts, list):
+        raise DesignError('%s: parts is %s; write a list of part ids or {"part", "name"}', path, json_word(parts))
     for index, signal in enumerate(signals or []):
         # A signal with no name was a KeyError through both mains and "the chain is broken"
         # through the spine (close audit C7). Checked where the file is read, like `parts`.
@@ -133,7 +145,7 @@ def read(path):
         pin = signal.get("pin")
         if pin is not None and not isinstance(pin, str):
             raise DesignError('%s: signals[%d].pin is %s; write a pin name from the board such as "D0"',
-                              path, index, type(pin).__name__)
+                              path, index, json_word(pin))
         if pin == "":
             raise DesignError('%s: signals[%d].pin is an empty name; write a pin name from the board such as "D0"',
                               path, index)

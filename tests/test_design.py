@@ -147,25 +147,33 @@ class ReadingTheRequirementsTest(unittest.TestCase):
 class ARequirementsFileOfTheWrongKindIsRefusedTest(unittest.TestCase):
     """`signals` that is no list and a `pin` that is no pin name were a traceback, or a wrong sentence, or silently no pin."""
 
-    def refused(self, signals):
+    def refused(self, signals, parts=()):
         path = Path(tempfile.mkdtemp()) / "car.requirements.json"
-        path.write_text(json.dumps({"board": "xiao-esp32-c6", "parts": [], "signals": signals}))
+        path.write_text(json.dumps({"board": "xiao-esp32-c6", "parts": list(parts) if isinstance(parts, tuple) else parts,
+                                    "signals": signals}))
         with self.assertRaises(design.DesignError) as caught:
             design.read(path)
         self.assertIn(str(path), str(caught.exception))
         return str(caught.exception)
 
     def test_signals_that_is_no_list_is_refused_naming_its_kind(self):
-        for value, kind in ((5, "int"), ("abc", "str"), ({}, "dict"), (0, "int"), (False, "bool")):
+        for value, kind in ((5, "a number"), ("abc", "text"), ({}, "an object"), (0, "a number"), (False, "true or false")):
             with self.subTest(value=value):
                 said = self.refused(value)
                 self.assertIn("signals is %s; write a list of signals" % kind, said)
 
     def test_a_pin_that_is_no_name_is_refused_naming_its_kind(self):
-        for value, kind in ((["D0"], "list"), ({"a": 1}, "dict"), (4, "int"), (0, "int"), (True, "bool"), (False, "bool")):
+        for value, kind in ((["D0"], "a list"), ({"a": 1}, "an object"), (4, "a number"), (0, "a number"), (True, "true or false"),
+                            (False, "true or false")):
             with self.subTest(value=value):
                 said = self.refused([{"name": "X", "needs": [], "pin": value}])
                 self.assertIn("signals[0].pin is %s; write a pin name from the board" % kind, said)
+
+    def test_parts_that_is_no_list_is_refused_naming_its_kind(self):
+        for value, kind in ((5, "a number"), ("led-red-5mm", "text"), ({}, "an object"), (True, "true or false")):
+            with self.subTest(value=value):
+                said = self.refused(None, parts=value)
+                self.assertIn('parts is %s; write a list of part ids or {"part", "name"}' % kind, said)
 
     def test_an_empty_pin_is_refused(self):
         self.assertIn("signals[0].pin is an empty name", self.refused([{"name": "X", "pin": ""}]))

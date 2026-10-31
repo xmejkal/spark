@@ -1042,7 +1042,7 @@ class ReadInputsTest(unittest.TestCase):
 
     # --- MVP --- (P438)
     def test_a_requirements_file_of_the_wrong_kind_is_refused_with_the_field_and_no_traceback(self):
-        for signals, field in ((5, "signals is int"), ([{"name": "X", "pin": ["D0"]}], "signals[0].pin is list")):
+        for signals, field in ((5, "signals is a number"), ([{"name": "X", "pin": ["D0"]}], "signals[0].pin is a list")):
             with self.subTest(field=field):
                 code, err = self.main_on_a_loose_file({"board": "xiao-esp32-c6", "parts": [], "signals": signals})
                 self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
