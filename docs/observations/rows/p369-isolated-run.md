@@ -14,3 +14,6 @@ Findings of P369 (#471), 2026-10-31, Prague, built on main b9156270 (includes P4
 | 8 | Plan missed two fixtures | build | acted | `test_look` pins the set of look.py imports (now holds `pathlib`); `test_suite_temp` needs every test module to import `suite_temp` first |
 | 9 | A check for libraries that run `__main__` code | plan | raised (LATER) | the 41 libraries have no guard; nothing checks that they stay so |
 | 10 | Two spellings of the idiom (`SCRIPTS = ...; sys.path.insert(0, str(SCRIPTS))` and the one-liner) | plan | raised (LATER) | unify in one spelling |
+| 11 | developing.md said a child started with `python3 -I` imports `spark.core` | refuter | acted | untrue: the two `-I` children (`import_child.py`, `image_evidence`'s `-c` compile child) add no path line on purpose; the sentence says so again |
+| 12 | The test's exemption reason for `import_child.py` named only its argument | refuter | acted | it now says why: its folder stays off `sys.path` so a firmware cannot import that file (P443) |
+| 13 | developing.md said every entry script uses the exact one-liner | refuter | acted | 7 of 24 use a `SCRIPTS` constant; the rule names both spellings (row 10 stays the Later card to unify them) |

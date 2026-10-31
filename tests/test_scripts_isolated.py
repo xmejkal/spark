@@ -19,7 +19,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 
 #: Exempt entry scripts, with the reason.
-EXEMPT = {"import_child.py": "its first argument is a module (P443)"}
+EXEMPT = {"import_child.py": "it keeps its own folder off sys.path, so a firmware cannot import that file (P443); its first argument is a module"}
 #: `--help` of these exits with a code other than 0: cost.py prints its own usage and exits 2.
 HELP_EXIT = {"cost.py": 2}
 
