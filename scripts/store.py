@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import sys
 import tempfile
@@ -52,6 +53,15 @@ def home():
     if os.environ.get("XDG_DATA_HOME"):
         return Path(os.environ["XDG_DATA_HOME"]) / "spark"
     return Path.home() / ".local" / "share" / "spark"
+
+
+def prefix_home(line):
+    """`line` for a person to run later, led by SPARK_HOME=<this store> when this run had one (P463): the line then
+    sees the same downloads and grants. Only the value is quoted, so the shell reads an assignment; a relative one is
+    made whole, since the line runs from any folder (P283)."""
+    if not os.environ.get("SPARK_HOME"):
+        return line
+    return "SPARK_HOME=%s %s" % (shlex.quote(str(Path(os.environ["SPARK_HOME"]).resolve())), line)
 
 
 #: What lives under the home (§5.1); every path into the store is one of these.

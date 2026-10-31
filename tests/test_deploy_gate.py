@@ -866,8 +866,8 @@ class TheDefaultConsentTest(GateCase):
         code, said, problems = self.deploy("--token", token)
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("  chip   same      esp32c6", said.splitlines())
-        line = shlex.join([str(Path(deploy.__file__).resolve()), "--project", str(self.project.resolve()), "--token", token,
-                           "--port", "/dev/cu.usbmodem101"])
+        line = store.prefix_home(shlex.join([str(Path(deploy.__file__).resolve()), "--project", str(self.project.resolve()),
+                                             "--token", token, "--port", "/dev/cu.usbmodem101"]))
         self.assertIn("no terminal to ask you in", problems)
         self.assertIn("\n  %s\n" % line, problems)
 
@@ -948,7 +948,7 @@ class TheStandingYesTest(GateCase):
     def test_an_ended_deploy_grant_asks_in_the_terminal_and_names_the_grant_line_by_its_whole_path(self):
         self.give()
         self.clock.advance(minutes=30)
-        grant_py = str(Path(board_grant.__file__).with_name("grant.py").resolve())
+        grant_py = store.prefix_home(str(Path(board_grant.__file__).with_name("grant.py").resolve()))
         self.assertAsksInTheTerminal("the deploy grant for this board ended: the person runs %s --scope deploy "
                                      "--minutes N again" % grant_py)
 
@@ -1088,9 +1088,9 @@ class TheStandingYesTest(GateCase):
     @needs_littlefs
     def test_the_no_terminal_line_adds_the_deploy_grant_line_for_a_clean_look_only(self):
         _, _, problems = self.flash()
-        grant_line = shlex.join([str(Path(board_grant.__file__).with_name("grant.py").resolve()), "--scope", "deploy",
-                                 "--minutes", "N", "--project", str(self.project.resolve()), "--port",
-                                 "/dev/cu.usbmodem101"])
+        grant_line = store.prefix_home(shlex.join([str(Path(board_grant.__file__).with_name("grant.py").resolve()), "--scope",
+                                                   "deploy", "--minutes", "N", "--project", str(self.project.resolve()),
+                                                   "--port", "/dev/cu.usbmodem101"]))
         self.assertIn("\n  %s\n" % grant_line, problems + "\n")
         self.assertIn("erase of ALL of the flash", problems)
         _, _, problems = self.flash("--ignore-older-runs")
@@ -1199,8 +1199,20 @@ class TheRerunLineTest(unittest.TestCase):
     """P283: the line a person runs in their own terminal names the script by its whole path, from any folder."""
 
     def test_a_relative_script_becomes_its_absolute_path(self):
-        line = deploy_gate.format_rerun_line("scripts/grant.py", ["--minutes", 30])
+        with mock.patch.dict(os.environ):
+            os.environ.pop("SPARK_HOME")
+            line = deploy_gate.format_rerun_line("scripts/grant.py", ["--minutes", 30])
         self.assertEqual(line, shlex.join([str(Path("scripts/grant.py").resolve()), "--minutes", "30"]))
+
+    def test_the_line_starts_with_the_store_the_run_used(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": "/my store"}):
+            line = deploy_gate.format_rerun_line("/s/grant.py", [])
+        self.assertEqual(line, "SPARK_HOME='/my store' /s/grant.py")
+
+    def test_a_relative_store_comes_out_absolute(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": "rel-store"}):
+            line = deploy_gate.format_rerun_line("/s/grant.py", [])
+        self.assertEqual(line, "SPARK_HOME=%s /s/grant.py" % Path("rel-store").resolve())
 
     def test_deploy_keeps_ignore_older_runs_in_its_line(self):
         import argparse
@@ -1208,7 +1220,9 @@ class TheRerunLineTest(unittest.TestCase):
         self.assertTrue(deploy.rerun_line(args, "/dev/cu.usbmodem101", image_evidence.PassedRunEvidence(True)).endswith(" --ignore-older-runs"))
 
     def test_a_path_with_a_space_is_quoted(self):
-        self.assertEqual(deploy_gate.format_rerun_line("/my spark/grant.py", []), "'/my spark/grant.py'")
+        with mock.patch.dict(os.environ):
+            os.environ.pop("SPARK_HOME")
+            self.assertEqual(deploy_gate.format_rerun_line("/my spark/grant.py", []), "'/my spark/grant.py'")
 
 
 class TheCaveatTest(GateCase):

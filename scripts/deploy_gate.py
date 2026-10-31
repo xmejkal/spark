@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 import board_codes
+import store
 from spark.core import outcomes
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 from spark.core.text_guards import guard_lines, printable
@@ -26,8 +27,8 @@ NO_TERMINAL = "no terminal to ask you in. Run this line in your own terminal win
 
 def format_rerun_line(script, arguments):
     """The line a person runs in their own terminal: `script` by its whole path, so it runs from any folder (P283),
-    then `arguments`, each quoted where the shell needs it."""
-    return shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments])
+    then `arguments`, each quoted where the shell needs it, led by the store this run used (P463)."""
+    return store.prefix_home(shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))
 
 
 #: What an agent does next (P213), for a GateClosedError: `deploy.py`'s `--json` turns it into a step.
