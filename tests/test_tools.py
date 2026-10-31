@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import tools  # noqa: E402
-from flat_message import NASTY, assert_flat  # noqa: E402
+from flat_message import NASTY  # noqa: E402
 
 DEFAULTS = {
     "roles": {"pdf-text": "pdftotext"},
