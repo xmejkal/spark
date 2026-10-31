@@ -1076,7 +1076,7 @@ def keep_in_store(payload, name, dry_run=False):
         return store.keep(payload, name)
     problem = store.file_name_problem(name)
     if problem:
-        raise store.StoreProblem(problem)
+        raise store.StoreProblem("%s", problem)
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -1285,7 +1285,7 @@ def fetch_plan(record):
     for url, name in plan:
         problem = store.file_name_problem(name)
         if problem:
-            raise store.StoreProblem("%s: %s — nothing was fetched" % (url, problem))
+            raise store.StoreProblem("%s: %s — nothing was fetched", url, problem)
     return plan
 
 

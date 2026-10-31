@@ -29,6 +29,7 @@ import emit_board  # noqa: E402
 import needs  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 
 def run(argv):
@@ -52,6 +53,14 @@ class TheNeedsFileTest(unittest.TestCase):
 
     def saved(self):
         return json.loads((self.project / ".spark" / "needs.json").read_text())
+
+    def test_a_newline_in_the_project_path_gives_one_line_in_a_needs_file_that_is_no_json(self):
+        project = self.project.parent / NASTY
+        (project / ".spark").mkdir(parents=True)
+        (project / ".spark" / "needs.json").write_text("{not json")
+        with self.assertRaises(store.StoreProblem) as caught:
+            needs.read(project)
+        assert_flat(self, caught.exception)
 
     def test_a_retried_needs_set_is_carried_out_with_nothing_to_change(self):
         given = a_file([{"id": "soil", "does": "sense", "what": "soil-moisture"}])

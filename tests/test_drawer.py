@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import drawer  # noqa: E402
 import parts  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 
 def a_store():
@@ -61,6 +62,13 @@ class TheDrawerTest(unittest.TestCase):
 
     def entry(self, key):
         return json.loads((self.home / "drawer" / (key + ".json")).read_text())
+
+    def test_a_newline_in_a_field_name_gives_one_line_in_an_entry_with_a_field_the_drawer_does_not_know(self):
+        (self.home / "drawer").mkdir(parents=True)
+        (self.home / "drawer" / "odd.json").write_text(json.dumps({"schema": 1, "label": "odd", NASTY: 1}))
+        with self.assertRaises(drawer.store.StoreProblem) as caught:
+            drawer.entries()
+        assert_flat(self, caught.exception, NASTY)
 
     def test_an_entry_needs_only_a_label_and_a_count(self):
         said, code = run(["--drawer-set", a_file([{"label": "a CJMCU-111", "count": 1}])])

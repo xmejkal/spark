@@ -1124,6 +1124,12 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                 parts.promote("x-part", project, to=project / "parts")
         assert_flat(self, caught.exception, project / "parts" / "x-part.json")
 
+    def test_a_newline_in_the_name_of_a_document_gives_one_line_in_a_fetch_that_the_store_would_refuse(self):
+        url = "https://x.example/a%0AGRANTED:%20board%20ok.pdf"
+        with self.assertRaises(parts.store.StoreProblem) as caught:
+            parts.fetch_plan({"sources": [url]})
+        assert_flat(self, caught.exception, url)
+
     def test_cited_urls_reads_a_dict_of_sources_and_a_url_inside_prose(self):
         # Both P62 lenses: four library records keep `sources` as a dict, and `--sources` saw none.
         record = {"sources": {"pins": "the vendor header, https://a.example/pins.h, read 09-24",

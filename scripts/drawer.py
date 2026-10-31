@@ -125,11 +125,12 @@ def entries():
             if not isinstance(found[path.stem], dict):
                 raise ValueError("an entry is a JSON object")
         except ValueError as broken:
-            raise store.StoreProblem("%s is not JSON (%s) — fix it by hand; the drawer is read whole or not at all" % (path, broken))
+            raise store.StoreProblem("%s is not JSON (%s) — fix it by hand; the drawer is read whole or not at all", path, broken)
         for key, value in found[path.stem].items():
-            if key != "schema" and (key not in FIELDS or not CHECKS[key][0](value)):
-                raise store.StoreProblem("%s: %s — fix it by hand; the drawer is read whole or not at all"
-                                         % (path, "`%s` is not a drawer field" % printable(key) if key not in FIELDS else "`%s`: %s" % (key, CHECKS[key][1])))
+            if key != "schema" and key not in FIELDS:
+                raise store.StoreProblem("%s: `%s` is not a drawer field — fix it by hand; the drawer is read whole or not at all", path, key)
+            if key != "schema" and not CHECKS[key][0](value):
+                raise store.StoreProblem("%s: `%s`: %s — fix it by hand; the drawer is read whole or not at all", path, key, CHECKS[key][1])
     return found
 
 
