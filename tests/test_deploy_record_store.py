@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import deploy_record_store  # noqa: E402
 import store  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 STORE = deploy_record_store.DeployRecordStore()
 MAC = "8c:bf:ea:cc:97:70"
@@ -86,6 +87,15 @@ class ReadLastDeployTest(LastDeployCase):
     def test_the_state_words_are_outcomes_and_the_store_keeps_none(self):
         for name in ("RECORDED", "NONE_RECORDED", "NOT_CHECKED"):
             self.assertFalse(hasattr(deploy_record_store, name), name)
+
+    def test_a_newline_in_the_record_path_gives_one_line_in_a_record_that_is_no_board_record(self):
+        home = Path(suite_temp.ROOT) / ("home-%d" % id(self)) / NASTY
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            self.addCleanup(shutil.rmtree, home, True)
+            self.write("[1]")
+            with self.assertRaises(store.StoreProblem) as caught:
+                STORE.write_deploy(said(), "ready seen", "yes")
+        assert_flat(self, caught.exception, caught.exception.values[0])
 
     def test_a_round_trip_gives_the_project_verdict_and_time_that_write_deploy_wrote(self):
         STORE.write_deploy(said(), "ready seen", "a test")

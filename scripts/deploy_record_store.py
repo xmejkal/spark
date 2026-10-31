@@ -95,7 +95,7 @@ class DeployRecordStore:
             except ValueError:
                 record = None
             if not isinstance(record, dict) or not isinstance(record.get("deploys"), list):
-                raise store.StoreProblem("%s is not a board record, so it was left as it is" % path)
+                raise store.StoreProblem("%s is not a board record, so it was left as it is", path)
             record["board"] = facts["board"]
             record["deploys"].append(deploy)
             store.write_json("boards", self._key(facts["mac"]), record)

@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
 import store  # noqa: E402
+from flat_message import NASTY, assert_flat  # noqa: E402
 
 LIBRARY_BOARD = "firebeetle2-esp32s3"
 
@@ -131,6 +132,35 @@ BUTTONS = {"seen_from": "the shield facing you, USB-C at the top",
 
 def with_buttons(buttons):
     return {"physical": {"buttons": buttons}}
+
+
+class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
+    def test_a_newline_in_a_path_gives_one_line_in_a_board_file_that_is_no_json(self):
+        folder = Path(tempfile.mkdtemp()) / NASTY
+        folder.mkdir()
+        (folder / "bad.json").write_text("{not json")
+        with self.assertRaises(boards.BoardError) as caught:
+            boards._read_json(folder / "bad.json", "board definition")
+        assert_flat(self, caught.exception, folder / "bad.json")
+        with self.assertRaises(boards.BoardError) as caught:
+            boards._read_json(folder / "nope.json", NASTY)
+        assert_flat(self, caught.exception, NASTY)
+
+    def test_a_contract_with_problems_keeps_its_lines_and_a_path_with_a_newline_gives_one_line(self):
+        root = Path(tempfile.mkdtemp()) / NASTY
+        (root / "boards").mkdir(parents=True)
+        (root / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "bad"}))
+        (root / "boards" / "bad.json").write_text(json.dumps({"id": "bad"}))
+        with self.assertRaises(boards.BoardError) as caught:
+            boards.load(root)
+        assert_flat(self, caught.exception)
+        self.assertGreater(len(str(caught.exception).split("\n")), 2, "the problem lines stay lines")
+
+    def test_an_id_with_a_newline_is_shown_escaped_with_the_available_boards_on_a_line_of_their_own(self):
+        with self.assertRaises(boards.BoardError) as caught:
+            boards.definition_path(project(), NASTY)
+        assert_flat(self, caught.exception, NASTY)
+        self.assertEqual(len(str(caught.exception).split("\n")), 2)
 
 
 class ButtonPlacesTest(unittest.TestCase):
