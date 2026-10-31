@@ -1040,6 +1040,24 @@ class ReadInputsTest(unittest.TestCase):
         self.assertTrue(err.startswith("cannot emit a board: "), err)
         self.assertNotIn("no project up from the requirements file", err)
 
+    # --- MVP --- (P438)
+    def test_a_requirements_file_of_the_wrong_kind_is_refused_with_the_field_and_no_traceback(self):
+        for signals, field in ((5, "signals is int"), ([{"name": "X", "pin": ["D0"]}], "signals[0].pin is list")):
+            with self.subTest(field=field):
+                code, err = self.main_on_a_loose_file({"board": "xiao-esp32-c6", "parts": [], "signals": signals})
+                self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
+                self.assertIn("loose.json: " + field, err)
+                self.assertNotIn("Traceback", err)
+
+    def test_a_rules_folder_is_refused_through_main(self):
+        root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]})
+        (root / ".spark" / "rules.json").mkdir()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            code = emit_board.main([str(root / "requirements.json")])
+        self.assertEqual(code, emit_board.EXIT_COULD_NOT_RUN)
+        self.assertIn("rules.json could not be read", err.getvalue())
+        self.assertNotIn("Traceback", err.getvalue())
+
     def test_it_prints_nothing(self):
         root = self.project({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]})
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:

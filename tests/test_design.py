@@ -143,6 +143,41 @@ class ReadingTheRequirementsTest(unittest.TestCase):
             [("l9110s-module", None), ("tactile-button", "BtnForward")])
 
 
+# --- MVP --- (P438, #583)
+class ARequirementsFileOfTheWrongKindIsRefusedTest(unittest.TestCase):
+    """`signals` that is no list and a `pin` that is no pin name were a traceback, or a wrong sentence, or silently no pin."""
+
+    def refused(self, signals):
+        path = Path(tempfile.mkdtemp()) / "car.requirements.json"
+        path.write_text(json.dumps({"board": "xiao-esp32-c6", "parts": [], "signals": signals}))
+        with self.assertRaises(design.DesignError) as caught:
+            design.read(path)
+        self.assertIn(str(path), str(caught.exception))
+        return str(caught.exception)
+
+    def test_signals_that_is_no_list_is_refused_naming_its_kind(self):
+        for value, kind in ((5, "int"), ("abc", "str"), ({}, "dict"), (0, "int"), (False, "bool")):
+            with self.subTest(value=value):
+                said = self.refused(value)
+                self.assertIn("signals is %s; write a list of signals" % kind, said)
+
+    def test_a_pin_that_is_no_name_is_refused_naming_its_kind(self):
+        for value, kind in ((["D0"], "list"), ({"a": 1}, "dict"), (4, "int"), (0, "int"), (True, "bool"), (False, "bool")):
+            with self.subTest(value=value):
+                said = self.refused([{"name": "X", "needs": [], "pin": value}])
+                self.assertIn("signals[0].pin is %s; write a pin name from the board" % kind, said)
+
+    def test_an_empty_pin_is_refused(self):
+        self.assertIn("signals[0].pin is an empty name", self.refused([{"name": "X", "pin": ""}]))
+
+    def test_the_kinds_that_were_fine_still_read(self):
+        for signals in (None, [], [{"name": "X", "pin": "D0"}], [{"name": "X", "pin": None}], [{"name": "X"}]):
+            with self.subTest(signals=signals):
+                path = Path(tempfile.mkdtemp()) / "car.requirements.json"
+                path.write_text(json.dumps({"board": "xiao-esp32-c6", "parts": [], "signals": signals}))
+                self.assertEqual(design.read(path)["signals"], signals)
+
+
 class TheProjectIsTheFilesTest(unittest.TestCase):
     def test_the_flag_wins(self):
         root, path = project()
@@ -214,6 +249,15 @@ class LoadingTest(unittest.TestCase):
         with self.assertRaises(design.DesignError) as caught:
             design.rules_in(root)
         self.assertIn(".spark/rules.json: fabrication.drill_step_mm must be above 0", str(caught.exception))
+
+    # --- MVP --- (P438)
+    def test_a_rules_path_that_is_a_folder_is_an_error_not_no_rules(self):
+        root, path = project()
+        (root / ".spark" / "rules.json").mkdir()
+        with self.assertRaises(design.DesignError) as caught:
+            design.rules_in(root)
+        self.assertTrue(str(caught.exception).startswith(str(root / ".spark" / "rules.json")), str(caught.exception))
+        self.assertIn("could not be read", str(caught.exception))
 
     def test_a_rules_file_that_is_fine_is_read(self):
         root, path = project(rules={"fabrication": {"drill_step_mm": 0.3}})

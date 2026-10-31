@@ -116,7 +116,11 @@ def read(path):
     if not isinstance(wanted, dict):
         raise DesignError("%s holds a %s; a requirements file is an object with `parts`",
                           path, type(wanted).__name__)
-    for index, signal in enumerate(wanted.get("signals") or []):
+    signals = wanted.get("signals")  # --- MVP --- (P438): a null stays the default; any other kind but a list is refused
+    if signals is not None and not isinstance(signals, list):
+        raise DesignError('%s: signals is %s; write a list of signals, each {"name", "needs", "pin" or "bus"}',
+                          path, type(signals).__name__)
+    for index, signal in enumerate(signals or []):
         # A signal with no name was a KeyError through both mains and "the chain is broken"
         # through the spine (close audit C7). Checked where the file is read, like `parts`.
         if not isinstance(signal, dict) or not isinstance(signal.get("name"), str) or not signal["name"]:
@@ -125,6 +129,13 @@ def read(path):
         needs = signal.get("needs", [])
         if not isinstance(needs, list) or not all(isinstance(need, str) for need in needs):
             raise DesignError("%s: signals[%d].needs must be a list of what the pin must do",
+                              path, index)
+        pin = signal.get("pin")
+        if pin is not None and not isinstance(pin, str):
+            raise DesignError('%s: signals[%d].pin is %s; write a pin name from the board such as "D0"',
+                              path, index, type(pin).__name__)
+        if pin == "":
+            raise DesignError('%s: signals[%d].pin is an empty name; write a pin name from the board such as "D0"',
                               path, index)
         if not re.fullmatch(parts_library.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
             raise DesignError("%s: signals[%d] is named %r, but a signal is a name — letters, digits and _ (LED_STATUS): the "
@@ -369,7 +380,7 @@ def rules_in(project):
     while the file that justifies them sits right there.
     """
     path = Path(project) / RULES_PATH
-    if not path.is_file():
+    if not path.exists():
         return {}
     try:
         return fab.read_rules(path)  # --- MVP --- (P434): also refuses a `fabrication` value that is no finite number

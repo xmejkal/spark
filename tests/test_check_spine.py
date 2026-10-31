@@ -995,6 +995,19 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         for stage_run in ("] board", "] schematic", "] build"):
             self.assertNotIn(stage_run, out, "nothing ran, nothing was emitted")
 
+    # --- MVP --- (P438)
+    def test_a_requirements_file_of_the_wrong_kind_stops_at_the_requirements_stage(self):
+        for signals, field in ((5, "signals is int"), ([{"name": "X", "pin": ["D0"]}], "signals[0].pin is list")):
+            with self.subTest(field=field):
+                path = Path(tempfile.mkdtemp()) / "bin.json"
+                path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "signals": signals}))
+                code, out = self._main([str(path)], tempfile.mkdtemp())
+                self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
+                self.assertIn("[????] requirements", out)
+                self.assertIn("bin.json: " + field, out)
+                for stage_run in ("] board", "] schematic", "] build"):
+                    self.assertNotIn(stage_run, out, "nothing ran")
+
     def test_a_hand_written_signal_under_an_instances_signal_name_stops_at_the_requirements_stage(self):
         # P163's other route: with `signals` holding OPENLID_BUTTON beside an instance called OpenLid, the generator traced
         # D3 and A5 to one pad, `tsci build` passed and the spine said "the chain runs end to end", exit 0. Refused where
@@ -1627,11 +1640,11 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
                 self.assertEqual(stages[-1].detail, str(refused.exception) + after)
 
     def test_a_crash_in_reading_the_input_is_a_stage_and_keeps_the_stages_before_it(self):
-        # P432: emit_board ran in a child, so an exception it did not foresee was a stage and not a lost run. A pin written
-        # as a list is one (the input type checks are P438, #583).
+        # P432: emit_board ran in a child, so an exception it did not foresee was a stage and not a lost run. A bus written
+        # as a list is one (a pin as a list is refused where the file is read, P438).
         project, wanted = self.project_without("physical.header.drill_mm", requirements={
             "board": "xiao-esp32-c6", "parts": ["tactile-button", "led-red-5mm"],
-            "signals": [{"name": "X", "needs": ["adc"], "pin": ["D0"]}]})
+            "signals": [{"name": "X", "needs": ["adc"], "bus": ["i2c"]}]})
         stages = self.run_spine(project, wanted)
         self.assertEqual([(s.name, s.status) for s in stages], [("board", "ok"), ("schematic", check_spine.COULD_NOT_RUN)])
         self.assertEqual(stages[-1].detail, "emit_board.py crashed: TypeError: unhashable type: 'list'")
