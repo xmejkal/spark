@@ -175,6 +175,13 @@ class LoadingTest(unittest.TestCase):
         self.assertIn(".spark/rules.json: fabrication.drill_step_mm is not a finite number", str(caught.exception))
         self.assertIsInstance(caught.exception.__cause__, design.fab.RulesError)
 
+    def test_a_rule_below_its_lowest_is_an_error_naming_the_file_and_the_field(self):
+        # P454: a drill step of 0 was a ZeroDivisionError in the footprint generator
+        root, path = project(rules={"fabrication": {"drill_step_mm": 0}})
+        with self.assertRaises(design.DesignError) as caught:
+            design.rules_in(root)
+        self.assertIn(".spark/rules.json: fabrication.drill_step_mm must be above 0", str(caught.exception))
+
     def test_a_rules_file_that_is_fine_is_read(self):
         root, path = project(rules={"fabrication": {"drill_step_mm": 0.3}})
         self.assertEqual(design.rules_in(root), {"fabrication": {"drill_step_mm": 0.3}})

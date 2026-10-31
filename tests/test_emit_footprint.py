@@ -334,6 +334,22 @@ class TheCommandLineTest(unittest.TestCase):
         self.assertEqual((code, said["status"]), (emit_footprint.EXIT_COULD_NOT_RUN, "could-not-run"))
         self.assertIn("%s: fabrication.drill_step_mm is not a finite number" % rules, said["message"])
 
+    # --- MVP ---
+    def test_a_drill_step_of_zero_exits_could_not_run_with_the_sentence_not_a_traceback(self):
+        # P454: `needed / step` was a ZeroDivisionError
+        import contextlib
+        import io
+        from board_library import library_without
+        library = library_without("physical.header.drill_mm")
+        rules = library.parent / ".spark" / "rules.json"
+        rules.parent.mkdir(exist_ok=True)
+        rules.write_text(json.dumps({"fabrication": {"drill_step_mm": 0}}))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(library.parent)])
+        self.assertEqual(code, emit_footprint.EXIT_COULD_NOT_RUN)
+        self.assertIn("%s: fabrication.drill_step_mm must be above 0" % rules, err.getvalue())
+
     def test_a_missing_board_exits_could_not_run(self):
         self.assertEqual(emit_footprint.main(["--board", "no-such-board", "--json"]),
                          emit_footprint.EXIT_COULD_NOT_RUN)

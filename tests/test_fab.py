@@ -163,19 +163,64 @@ class ARulesFileOfTheWrongKindIsRefusedTest(unittest.TestCase):
                 self.assertIs(fab.is_finite_number(value), said)
 
     def test_the_problem_is_the_first_field_stated_with_no_finite_number(self):
-        for rules, said in (({"fabrication": {"drill_step_mm": "0.1"}}, "fabrication.drill_step_mm"),
-                            ({"fabrication": {"drill_step_mm": True}}, "fabrication.drill_step_mm"),
-                            ({"fabrication": {"drill_step_mm": float("nan")}}, "fabrication.drill_step_mm"),
-                            ({"fabrication": {"drill_step_mm": float("inf")}}, "fabrication.drill_step_mm"),
-                            ({"fabrication": {"plating_thickness_mm": 10 ** 400}}, "fabrication.plating_thickness_mm"),
-                            ({"fabrication": {"drill_step_mm": None, "plating_thickness_mm": [1]}}, "fabrication.plating_thickness_mm"),
+        # P454: the codes are literal strings, never fab.TOO_LOW (a test that reads the constant confirms itself)
+        text, low, whole = "not-a-number", "too-low", "not-an-object"
+        for rules, said in (({"fabrication": {"drill_step_mm": "0.1"}}, ("fabrication.drill_step_mm", text)),
+                            ({"fabrication": {"drill_step_mm": "0"}}, ("fabrication.drill_step_mm", text)),
+                            ({"fabrication": {"drill_step_mm": True}}, ("fabrication.drill_step_mm", text)),
+                            ({"fabrication": {"drill_step_mm": float("nan")}}, ("fabrication.drill_step_mm", text)),
+                            ({"fabrication": {"drill_step_mm": float("inf")}}, ("fabrication.drill_step_mm", text)),
+                            ({"fabrication": {"plating_thickness_mm": 10 ** 400}}, ("fabrication.plating_thickness_mm", text)),
+                            ({"fabrication": {"drill_step_mm": None, "plating_thickness_mm": [1]}}, ("fabrication.plating_thickness_mm", text)),
                             ({"fabrication": {"drill_step_mm": 0.1, "unknown": "text", "// note": "text"}}, None),
                             ({"fabrication": {"drill_step_mm": None}}, None), ({"fabrication": None}, None), ({}, None), ({"fabrication": {}}, None),
-                            ({"fabrication": 5}, "fabrication"), ({"fabrication": "x"}, "fabrication"),
-                            ({"fabrication": []}, "fabrication"), ({"fabrication": 0}, "fabrication"),
-                            ([], "(top level)"), (None, "(top level)"), (5, "(top level)"), ("x", "(top level)")):
+                            ({"fabrication": 5}, ("fabrication", whole)), ({"fabrication": "x"}, ("fabrication", whole)),
+                            ({"fabrication": []}, ("fabrication", whole)), ({"fabrication": 0}, ("fabrication", whole)),
+                            ([], ("(top level)", whole)), (None, ("(top level)", whole)), (5, ("(top level)", whole)), ("x", ("(top level)", whole)),
+                            # P454: a value below its lowest
+                            ({"fabrication": {"drill_step_mm": 0}}, ("fabrication.drill_step_mm", low)),
+                            ({"fabrication": {"drill_step_mm": -0.1}}, ("fabrication.drill_step_mm", low)),
+                            ({"fabrication": {"drill_step_mm": -0.0}}, ("fabrication.drill_step_mm", low)),
+                            ({"fabrication": {"drill_step_mm": 1e-9}}, None),
+                            ({"fabrication": {"plating_thickness_mm": 0}}, ("fabrication.plating_thickness_mm", low)),
+                            ({"fabrication": {"plating_thickness_mm": -0.5}}, ("fabrication.plating_thickness_mm", low)),
+                            ({"fabrication": {"annular_ring_margin_mm": 0}}, None),
+                            ({"fabrication": {"annular_ring_margin_mm": -0.0}}, None),
+                            ({"fabrication": {"annular_ring_margin_mm": -1}}, ("fabrication.annular_ring_margin_mm", low)),
+                            ({"fabrication": {"min_annular_ring_mm": 0}}, ("fabrication.min_annular_ring_mm", low)),
+                            ({"fabrication": {"recommended_annular_ring_mm": -1}}, ("fabrication.recommended_annular_ring_mm", low)),
+                            ({"fabrication": {"min_via_hole_mm": 0}}, ("fabrication.min_via_hole_mm", low)),
+                            ({"fabrication": {"min_via_pad_mm": 0}}, ("fabrication.min_via_pad_mm", low)),
+                            ({"fabrication": {"board_thickness_mm": 0}}, ("fabrication.board_thickness_mm", low)),
+                            ({"fabrication": {"copper_thickness_mm": 0}}, ("fabrication.copper_thickness_mm", low)),
+                            ({"fabrication": {"min_trace_width_mm": -1}}, ("fabrication.min_trace_width_mm", low)),
+                            # two bad keys: the first in the order of the process table
+                            ({"fabrication": {"plating_thickness_mm": 0, "min_annular_ring_mm": 0}}, ("fabrication.min_annular_ring_mm", low))):
             with self.subTest(rules=repr(rules)[:50]):
                 self.assertEqual(fab.fabrication_problem(rules), said)
+
+    def test_every_process_key_has_a_lowest(self):
+        self.assertEqual(set(fab.DATA["lowest"]), set(fab.DATA["process"]))
+        for key, limit in fab.DATA["lowest"].items():
+            with self.subTest(key=key):
+                self.assertIn(tuple(limit), (("above",), ("at_least",)))
+
+    def test_a_limit_is_said_in_words(self):
+        self.assertEqual(fab.lowest_words("drill_step_mm"), "above 0")
+        self.assertEqual(fab.lowest_words("annular_ring_margin_mm"), "at least 0")
+
+    def test_a_value_below_its_lowest_names_the_file_and_the_key(self):
+        for key, words in (("drill_step_mm", "above 0"), ("annular_ring_margin_mm", "at least 0")):
+            path = self.rules_file({"fabrication": {key: -1}})
+            with self.subTest(key=key):
+                with self.assertRaises(fab.RulesError) as caught:
+                    fab.read_rules(path)
+                self.assertEqual(str(caught.exception), "%s: fabrication.%s must be %s; write a larger number, "
+                                                        "or remove the key to use the default" % (path, key, words))
+
+    def test_a_value_at_a_lowest_that_allows_it_is_read(self):
+        rules = {"fabrication": {"annular_ring_margin_mm": 0, "drill_step_mm": 1e-9}}
+        self.assertEqual(fab.read_rules(self.rules_file(rules)), rules)
 
     def test_a_rules_file_that_is_fine_is_read(self):
         rules = {"fabrication": {"drill_step_mm": 0.3}, "other": "text"}

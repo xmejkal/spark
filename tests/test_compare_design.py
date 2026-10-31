@@ -216,6 +216,48 @@ if __name__ == "__main__":
     unittest.main()
 
 
+# --- MVP ---
+class ARulesFileThatIsRefusedIsCouldNotRunTest(unittest.TestCase):
+    """P455: the raw read was an AttributeError for a list top level and an OSError for a file nobody can read; P454 adds a rule below its lowest."""
+
+    def refused(self, text, unreadable=False):
+        import os
+        root = Path(tempfile.mkdtemp())
+        (root / "circuit.json").write_text(json.dumps(circuit({"Btn": ["A", "B"]})))
+        rules = root / "rules.json"
+        rules.write_text(text)
+        if unreadable:
+            if os.geteuid() == 0:
+                self.skipTest("root reads any file")
+            rules.chmod(0)
+        self.addCleanup(rules.chmod, 0o644)
+        return root / "circuit.json", rules
+
+    def test_a_list_top_level_and_a_rule_below_its_lowest_say_why(self):
+        for text, sentence in (("[]", "%s: (top level) is not an object"),
+                               ('{"fabrication": {"drill_step_mm": 0}}',
+                                "%s: fabrication.drill_step_mm must be above 0; write a larger number, or remove the key to use the default")):
+            with self.subTest(text=text):
+                circuit_path, rules = self.refused(text)
+                result = compare_design.compare(circuit_path, rules)
+                self.assertEqual((result["status"], result["reason"]), ("could-not-run", sentence % rules))
+
+    def test_a_file_nobody_can_read_names_the_file(self):
+        circuit_path, rules = self.refused("{}", unreadable=True)
+        result = compare_design.compare(circuit_path, rules)
+        self.assertEqual(result["status"], "could-not-run")
+        self.assertTrue(result["reason"].startswith("%s could not be read" % rules), result)
+
+    def test_main_exits_2_with_the_reason_as_data(self):
+        import contextlib
+        import io
+        circuit_path, rules = self.refused("[]")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = compare_design.main([str(circuit_path), "--rules", str(rules), "--json"])
+        self.assertEqual((code, json.loads(out.getvalue())["reason"]), (compare_design.EXIT_FOR["could-not-run"], "%s: (top level) is not an object" % rules))
+
+
 class APinTheFirmwarePullsUpTest(unittest.TestCase):
     """P204: the board's internal pull-up holds the button, set by the firmware. A netlist can show only that it is wired."""
 
