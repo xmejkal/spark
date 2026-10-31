@@ -302,7 +302,6 @@ def find(name, project=None, personal=None, _seen=()):
     return Tool(tool_name, role, entry, command)
 
 
-
 def status(project=None, personal=None):
     """(state, role or name, what to say) for every role and every MCP entry — the picture /spark:setup shows.
 
