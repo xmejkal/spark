@@ -17,3 +17,4 @@ What the P468 plan, its two council rounds and the build found. Card: #636. The 
 | 11 | The plan named the field `serial_without_wires`, since the code says serial (`serial_wired`, `serial_heard`) | lead | acted | used as named |
 | 12 | The plan's mutation anchor count: 119 refused on main | brief | verified | 120 refused on main, counted with this table present and again with it stashed; the same 120 with the change |
 | 13 | The warning's comment names the record fact | brief | rejected | `tests/mutations/p190-serial.json` anchors that comment line verbatim; changing it makes a new refused anchor. The fact is named in `serial_heard`'s docstring |
+| 14 | Main refuses one more mutation row than before (120, not 119) | lead | acted | P487 (#675) changed the tally hint in `parts.py:2282`, and the `p97-cost` row "an unbuilt project is not said to be" lost its anchor; the row follows the text |
