@@ -31,7 +31,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BASELINE = "tests/architecture_baseline.json"
-#: The role words of `docs/guide/developing.md`, "Patterns and names in spark's core".
+#: The role words of `docs/guide/patterns-and-names.md`.
 ROLES = ("Service", "Strategy", "Adapter", "Result", "Error", "Value", "Store",
          "Decorator", "Renderer", "Platform", "Fake", "Operation")
 THIN_MAIN = 40       # lines: a main() this long or shorter only parses and prints
@@ -267,7 +267,7 @@ RULES = {
           % (FUNCTION_LINES["spark"], FUNCTION_LINES["old"], MODULE_LINES, MAIN_LINES),
     "R2": "nesting is at most %d deep, and an elif is no level" % NESTING,
     "R3": "a function takes at most %d parameters, without self" % PARAMETERS,
-    "R6": "a class docstring starts with a role word of docs/guide/developing.md",
+    "R6": "a class docstring starts with a role word of docs/guide/patterns-and-names.md",
     "T1": "only an Adapter runs a program, reads the clock or the environment, calls the network or writes a file",
     "T2": "a test file never adds a mock.patch (mock.patch.dict on os.environ is the exception)",
     "T4": "code never branches on what is imported, as in `\"unittest\" in sys.modules`",
