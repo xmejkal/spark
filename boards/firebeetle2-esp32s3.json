@@ -105,7 +105,7 @@
       "SS": "A4"
     }
   },
-  "//wokwi_part_type": "Wokwi has no FireBeetle 2 S3 part (wokwi/wokwi-boards lists no such board), so the simulation stands in the generic S3 devkit. This is honest rather than approximate: it is the same silicon, it exposes GPIO 0-21 and 35-48 - a superset of every pin this board brings out - and it names its pins by raw GPIO number, which is what the diagram generator emits anyway. What is lost is the silkscreen labels in the simulator picture, and nothing else.",
+  "//wokwi_part_type": "Wokwi has no FireBeetle 2 S3 part (wokwi/wokwi-boards lists no such board), so the simulation stands in the generic S3 devkit. This is honest rather than approximate: it is the same silicon, it exposes GPIO 0-21 and 35-48 - a superset of every pin this board brings out - and it names its pins by raw GPIO number, which is what the diagram generator emits anyway. What is lost is the silkscreen labels in the simulator picture, and the board's own LED (GPIO 21) and button (GPIO 47), which are bare header pins on the devkit (P483).",
   "wokwi_part_type": "board-esp32-s3-devkitc-1",
   "//wokwi_pin_naming": "Wokwi's stand-in part (the generic S3 devkit) names its pins by raw GPIO number - \"12\", \"13\" - not by this board's silkscreen. Its power pins are suffixed: 3V3.1, GND.1.",
   "wokwi_pin_naming": "gpio",
@@ -359,6 +359,15 @@
       "title": null,
       "version": null,
       "//url": "The same document from LCSC: identical text, 11 pages, a different save of the file, so a fetch from this URL will not match the sha256. ETA's own site serves no copy (2026-10-04)."
+    },
+    "wokwi-board": {
+      "url": "https://github.com/wokwi/wokwi-boards/blob/962b19d5636756537a93bb5337ac99abd775eae0/boards/esp32-s3-devkitc-1/board.json",
+      "sha256": "8a0630d34dfce9f9f6f82a735c9348b1fbcce5f6137c55f10fc8c628badeb50d",
+      "file": "wokwi-esp32-s3-devkitc-1.board.json",
+      "retrieved": "2026-11-01",
+      "title": "ESP32-S3-DevKitC-1 (Wokwi stand-in for the FireBeetle 2 ESP32-S3)",
+      "version": "commit 962b19d5",
+      "//": "A stand-in: wokwi_is_stand_in, P409 #535."
     }
   },
   "//power": "What DFRobot document, and what only the component datasheets say. DFRobot publish no current rating for either rail and no quiescent figure at all.",

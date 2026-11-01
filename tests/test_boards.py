@@ -1161,6 +1161,61 @@ class TheBoardsOwnLimitsTest(unittest.TestCase):
         self.assertEqual(sorted(shared), ["absent", "kept"])
 
 
+class TheFireBeetleCitesItsStandInsDefinitionTest(unittest.TestCase):
+    """P483: the FireBeetle's record cites the S3 devkit's Wokwi file as a stand-in, so its LED and button pins are header pins."""
+
+    STAND_IN = "the Wokwi part of firebeetle2-esp32s3 is a stand-in, where GPIO%d is a bare header pin with no onboard LED or button"
+    TAIL = ", so spark knows no way for a scenario to %s it. Test it on the board."
+    DEVKIT = '{"pins": {"21": {"target": "GPIO21"}, "47": {"target": "GPIO47"}, "GND": {"target": "GND"}}}'
+
+    def firebeetle(self, text=DEVKIT):
+        """The shipped FireBeetle record, with a hand-made definition kept in the scratch store under its entry."""
+        board = boards.load(ROOT, "firebeetle2-esp32s3")
+        entry = board["documents"]["wokwi-board"]
+        board["documents"]["wokwi-board"] = dict(entry, sha256=store.keep(text.encode(), entry["file"]))
+        return board
+
+    def test_the_record_cites_the_devkits_file_with_a_64_hex_sha256(self):
+        entry = boards.load(ROOT, "firebeetle2-esp32s3")["documents"]["wokwi-board"]
+        self.assertRegex(entry["sha256"], "^[0-9a-f]{64}$")
+        self.assertEqual(entry["file"], "wokwi-esp32-s3-devkitc-1.board.json")
+
+    def test_a_kept_definition_is_read_with_both_pins_and_the_stand_in_mark(self):
+        part = boards.read_simulated_part(self.firebeetle())
+        self.assertEqual((part.state, part.gpios, part.is_stand_in), ("recorded", frozenset({21, 47}), True))
+
+    def test_each_onboard_gpio_the_stand_in_reaches_still_gets_one_limit_with_the_stand_in_sentence(self):
+        self.assertEqual(boards.onboard_limits(self.firebeetle()),
+                         [("ONBOARD_LED (GPIO21)", self.STAND_IN % 21 + self.TAIL % "read"),
+                          ("ONBOARD_BUTTON (GPIO47)", self.STAND_IN % 47 + self.TAIL % "press")])
+
+    def test_an_empty_store_says_spark_lacks_it_and_never_that_no_definition_is_named(self):
+        board = boards.load(ROOT, "firebeetle2-esp32s3")
+        board["documents"]["wokwi-board"]["sha256"] = "0" * 64
+        self.assertEqual(boards.onboard_limits(board),
+                         [("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board "
+                                            "record names, its sha256 differs, or it does not parse")])
+
+    def test_a_definition_without_gpio47_says_it_has_no_pin_there(self):
+        said = dict(boards.onboard_limits(self.firebeetle('{"pins": {"21": {"target": "GPIO21"}}}')))
+        self.assertTrue(said["ONBOARD_BUTTON (GPIO47)"].startswith("the Wokwi definition of firebeetle2-esp32s3 has no pin on GPIO47"))
+
+    def test_a_board_that_is_no_stand_in_gets_no_stand_in_sentence(self):
+        board = kept_definition_board()
+        self.assertFalse(boards.read_simulated_part(board).is_stand_in)
+        self.assertIsNone(boards.read_simulated_part(board).why_not_simulated(15))
+
+    def test_a_part_that_is_no_stand_in_keeps_its_old_texts(self):
+        part = boards.read_simulated_part(kept_definition_board())
+        self.assertEqual(part.why_not_simulated(21), "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO21")
+        self.assertIsNone(part.why_not_simulated(0))
+
+    def test_only_true_marks_a_stand_in(self):
+        board = self.firebeetle()
+        board["wokwi_is_stand_in"] = "yes"
+        self.assertFalse(boards.read_simulated_part(board).is_stand_in)
+
+
 # --- end MVP ---
 
 
