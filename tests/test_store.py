@@ -80,6 +80,20 @@ class TheHomeTest(unittest.TestCase):
             self.assertEqual(store.place("tools"), Path(second) / "tools.json")
 
 
+class AStorePathThatIsAFileTest(unittest.TestCase):
+    """P496 (#678): a SPARK_HOME that names a file is a StoreProblem with the way out, never a traceback."""
+
+    def test_listing_a_project_is_refused_with_the_way_out(self):
+        scratch = Path(tempfile.mkdtemp())
+        (scratch / "afile").write_text("")
+        before = os.environ.get("SPARK_HOME")
+        self.addCleanup(lambda: os.environ.pop("SPARK_HOME", None) if before is None else os.environ.update(SPARK_HOME=before))
+        os.environ["SPARK_HOME"] = str(scratch / "afile")
+        with self.assertRaises(store.StoreProblem) as refused:
+            store.add_project(scratch)
+        self.assertIn("point SPARK_HOME at a folder", str(refused.exception))
+
+
 class ThePrefixedLineTest(unittest.TestCase):
     """P463: a line a person runs later carries the store this run used, so the line sees the same build and grant."""
 

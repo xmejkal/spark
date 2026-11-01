@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/store.py",
+  "name": "a store path that is a file raises a bare OSError again",
+  "find": "    except OSError as cannot:  # P496: a SPARK_HOME that names a file, or a folder spark may not write\n        raise StoreProblem(",
+  "replace": "    except KeyError as cannot:  # P496: a SPARK_HOME that names a file, or a folder spark may not write\n        raise StoreProblem("
+ }
+]
