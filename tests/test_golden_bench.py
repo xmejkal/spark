@@ -2,6 +2,11 @@
 
 import hashlib
 import json
+import os
+import shlex
+import shutil
+import site
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -12,6 +17,9 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 from suite_runs import needs_littlefs  # noqa: E402
 
 import golden_bench  # noqa: E402
+import boards  # noqa: E402
+import tools  # noqa: E402
+from micropython_fakes import fake_interpreter  # noqa: E402
 import board_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
 
@@ -58,6 +66,103 @@ class BenchGoldenTest(unittest.TestCase):
         # The goldens print the image half as <image>, so this pins it: the first 4 hex of the image's sha256.
         image = next(self.project.glob("sim/*.bin"))
         self.assertTrue(self.token.endswith("-" + hashlib.sha256(image.read_bytes()).hexdigest()[:4]), self.token)
+
+
+@needs_littlefs
+class ThePrintedDeployLineTest(unittest.TestCase):
+    """P463: with no simulation, the line deploy.py prints, run in a new shell with no SPARK_HOME, reaches the same
+    gate. The store's MicroPython build is all it needs, and only the line's own SPARK_HOME gives it."""
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp())
+        self.project = golden_bench.build_project(self.folder)
+        self.store = self.folder / "the store"
+        (self.store / "downloads").mkdir(parents=True)
+        lists = tools.merged(self.project)["tools"]
+        build = boards.get(self.project, "micropython_port", golden_bench.BOARD_ID)
+        entry = next(entry for entry in lists.values() if entry.get("micropython_port") == build)
+        (self.store / "downloads" / entry["file"]).write_bytes(fake_interpreter())
+        for image in self.project.glob("sim/*.bin"):
+            image.unlink()
+
+    def child(self, script, *argv, env=None):
+        env = env or golden_bench.child_env(self.store, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        return subprocess.run([sys.executable, str(golden_bench.ROOT / "scripts" / script), *argv], cwd=str(self.project),
+                              env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=golden_bench.RUN_TIMEOUT_S)
+
+    def printed_line(self):
+        self.assertEqual(self.child("flash_image.py", "--project", str(self.project), "--files", "firmware", "-o",
+                                    "sim/flash-with-firmware.bin").returncode, 0)
+        looked = self.child("look.py", "--project", str(self.project), "--no-simulation", "--json")
+        token = json.loads(looked.stdout)["data"]["token"]
+        self.assertTrue(token, looked.stdout)
+        deployed = self.child("deploy.py", "--project", str(self.project), "--no-simulation", "--json", "--token", token)
+        self.assertEqual(deployed.returncode, 2, deployed.stdout)
+        return json.loads(deployed.stdout)["data"]["run_in_terminal"]
+
+    def prefix(self):
+        return "SPARK_HOME=%s " % shlex.quote(str(self.store.resolve()))
+
+    def run_in_a_new_shell(self, line):
+        """(exit code, stderr) of `line` in sh with no SPARK_HOME and an empty home, as a person's new terminal window has."""
+        env = golden_bench.child_env(self.store, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
+        del env["SPARK_HOME"]
+        env["HOME"] = tempfile.mkdtemp(dir=self.folder)
+        env["PYTHONUSERBASE"] = site.getuserbase()  # pip --user packages live under the real home, which this shell has not
+        env["PATH"] = os.pathsep.join([str(Path(sys.executable).parent), env.get("PATH", "")])
+        done = subprocess.run(["sh", "-c", line], cwd=self.folder, env=env, stdin=subprocess.DEVNULL, capture_output=True,
+                              text=True, timeout=golden_bench.RUN_TIMEOUT_S)
+        return done.returncode, done.stderr
+
+    def test_the_line_starts_with_the_store_and_reaches_the_gate_in_a_new_shell(self):
+        line = self.printed_line()
+        self.assertTrue(line.startswith(self.prefix()), line)
+        code, said = self.run_in_a_new_shell(line)
+        self.assertEqual(code, 2, said)
+        self.assertIn("no terminal to ask you in", said)
+
+    def test_the_same_line_without_its_store_stops_at_the_missing_build(self):
+        line = self.printed_line()
+        code, said = self.run_in_a_new_shell(line[len(self.prefix()):])
+        self.assertEqual(code, 2, said)
+        self.assertIn("not installed", said)
+        self.assertNotIn("no terminal to ask you in", said)
+
+
+    def no_token_reason(self):
+        """Why `look.py --no-simulation` gives no token now: its `no_token_reason` sentence."""
+        looked = self.child("look.py", "--project", str(self.project), "--no-simulation", "--json")
+        reason = json.loads(looked.stdout)["data"]["no_token_reason"]
+        self.assertTrue(reason, looked.stdout)
+        return reason
+
+    def assertTokenAfter(self, line):
+        """`line` runs in a new shell and succeeds, and the look then gives a token."""
+        code, said = self.run_in_a_new_shell(line)
+        self.assertEqual(code, 0, said)
+        looked = self.child("look.py", "--project", str(self.project), "--no-simulation", "--json")
+        self.assertTrue(json.loads(looked.stdout)["data"]["token"], looked.stdout)
+
+    def test_the_build_line_of_the_no_image_sentence_runs_in_a_new_shell_and_the_look_gives_a_token(self):
+        # P463: the sentence names the whole-path command, led by the store, so it works from any folder
+        line = self.no_token_reason().split("build it with ", 1)[1].split(", then run look.py --no-simulation", 1)[0]
+        self.assertTrue(line.startswith(self.prefix()), line)
+        self.assertTokenAfter(line)
+
+    @unittest.skipUnless(shutil.which("curl"), "curl is not installed, and the printed install line runs it")
+    def test_the_lines_for_your_own_build_run_in_a_new_shell_and_the_look_then_gives_a_token(self):
+        own = self.folder / "my-micropython.bin"
+        own.write_bytes(fake_interpreter(size=0xA000))
+        self.assertEqual(self.child("flash_image.py", "--project", str(self.project), "--micropython", str(own), "--files",
+                                    "firmware", "-o", "sim/flash-with-firmware.bin").returncode, 0)
+        hint = self.no_token_reason().split("name it in this project's tools list: ", 1)[1]
+        new, install, build = (line.replace("<file>", own.name).replace("<url>", own.as_uri())
+                               .replace("<sha256>", hashlib.sha256(own.read_bytes()).hexdigest()) for line in hint.split(", then "))
+        for line in (new, install):
+            self.assertTrue(line.startswith(self.prefix()), line)
+            self.assertEqual(self.run_in_a_new_shell(line)[0], 0, line)
+        self.assertTrue((self.store / "downloads" / own.name).is_file(), "the install did not land in the run's store")
+        self.assertTokenAfter(build)
 
 
 for _case in golden_bench.CASES:

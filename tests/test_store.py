@@ -80,6 +80,23 @@ class TheHomeTest(unittest.TestCase):
             self.assertEqual(store.place("tools"), Path(second) / "tools.json")
 
 
+class ThePrefixedLineTest(unittest.TestCase):
+    """P463: a line a person runs later carries the store this run used, so the line sees the same build and grant."""
+
+    def test_a_store_is_named_in_front_of_the_line(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": "/my store"}):
+            self.assertEqual(store.prefix_home("deploy.py --token T"), "SPARK_HOME='/my store' deploy.py --token T")
+
+    def test_no_store_leaves_the_line_alone(self):
+        with mock.patch.dict(os.environ):
+            os.environ.pop("SPARK_HOME")
+            self.assertEqual(store.prefix_home("deploy.py"), "deploy.py")
+
+    def test_a_relative_store_comes_out_whole(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": "rel-store"}):
+            self.assertEqual(store.prefix_home("x"), "SPARK_HOME=%s x" % (Path("rel-store").resolve()))
+
+
 class TheSuiteStaysOutOfThePersonsStoreTest(unittest.TestCase):
     def test_the_suite_runs_on_a_scratch_store(self):
         self.assertNotEqual(store.home(), PERSONS)

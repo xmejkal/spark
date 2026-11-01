@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import sys
 import tempfile
@@ -45,13 +46,32 @@ if "unittest" in sys.modules:
     os.environ["CLAUDE_CODE_SESSION_ID"] = "spark-suite"  # P97: a test's steps never name the person's own session
 
 
+def _spark_home():
+    """The SPARK_HOME of the environment, or None."""
+    return os.environ.get("SPARK_HOME")
+
+
 def home():
     """The store's folder, read from the environment on every call (§6.1)."""
-    if os.environ.get("SPARK_HOME"):
-        return Path(os.environ["SPARK_HOME"])
+    if _spark_home():
+        return Path(_spark_home())
     if os.environ.get("XDG_DATA_HOME"):
         return Path(os.environ["XDG_DATA_HOME"]) / "spark"
     return Path.home() / ".local" / "share" / "spark"
+
+
+def prefix_home(line):
+    """`line` for a person to run later, led by SPARK_HOME=<this store> when this run had one (P463): the line then
+    sees the same downloads and grants. Only the value is quoted, so the shell reads an assignment; a relative one is
+    made whole, since the line runs from any folder (P283)."""
+    given = _spark_home()
+    return "SPARK_HOME=%s %s" % (shlex.quote(str(Path(given).resolve())), line) if given else line
+
+
+def format_rerun_line(script, arguments):
+    """The line a person runs in their own terminal: `script` by its whole path, so it runs from any folder (P283),
+    then `arguments`, each quoted where the shell needs it, led by the store this run used (P463)."""
+    return prefix_home(shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))
 
 
 #: What lives under the home (§5.1); every path into the store is one of these.

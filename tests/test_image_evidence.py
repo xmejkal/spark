@@ -1,11 +1,15 @@
 """P337: PassedRunEvidence is the evidence that a passed run in sim/runs/ names the image (A). NoSimulationEvidence is
 firmware/ in place of a run (B)."""
 
+import contextlib
 import hashlib
+import io
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -20,6 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import image_evidence  # noqa: E402
 import sim_project  # noqa: E402
+import store  # noqa: E402
 import flash_image  # noqa: E402
 import tools  # noqa: E402
 from image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
@@ -441,8 +446,9 @@ class NoSimulationEvidenceTest(unittest.TestCase):
     def test_a_file_changed_after_the_image_refuses_and_names_the_build_command(self):
         (self.firmware / "main.py").write_text("print('ready')\nprint(2)\n")
         self.assertEqual(self.why(), "flash-with-firmware.bin does not match a build of firmware/ as it is now (firmware/, the board's MicroPython "
-                         "or how spark builds images changed since): build it with flash_image.py --project %s --files firmware -o %s"
-                         % (self.project.resolve(), self.image.path))
+                         "or how spark builds images changed since): build it with %s"
+                         % store.format_rerun_line(ROOT / "scripts" / "flash_image.py", ["--project", self.project.resolve(), "--files",
+                                                   self.project.resolve() / "firmware", "-o", self.image.path.resolve()]))
 
     def test_a_file_that_does_not_compile_refuses_with_its_file_and_line(self):
         (self.firmware / "lib").mkdir()
@@ -594,6 +600,43 @@ class NoSimulationEvidenceTest(unittest.TestCase):
                          ("none", ["no simulation tested this image"], ["--no-simulation"], []))
         self.assertEqual(evidence.grant_refusal, "no simulation")
         self.assertEqual(evidence.way_out(self.image), "")
+
+
+@needs_littlefs
+class TheOwnBuildHintTest(unittest.TestCase):
+    """P463: the refusal for an image built with another MicroPython names the tools-list entry that fixes it, and the
+    two commands it prints work as printed. No interpreter lookup is patched; the downloads folder is a temp one."""
+
+    NAME = "micropython-esp32s3"
+
+    def setUp(self):
+        self.project = project_with_image()
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3"}))
+        self.firmware = self.project / "firmware"
+        self.firmware.mkdir()
+        (self.firmware / "main.py").write_text("print('ready')\n")
+        self.downloads = tools.DOWNLOADS  # the suite's scratch store, so the folder goes with the test
+        self.downloads.mkdir(parents=True, exist_ok=True)
+        self.addCleanup(shutil.rmtree, self.downloads, True)
+        (self.downloads / tools.merged(self.project)["tools"][self.NAME]["file"]).write_bytes(fake_interpreter())
+        self.own = Path(tempfile.mkdtemp()) / "my-micropython.bin"
+        self.own.write_bytes(fake_interpreter(size=0xA000))
+        with contextlib.redirect_stdout(io.StringIO()):
+            flash_image.main(["--project", str(self.project), "--micropython", str(self.own), "--files", str(self.firmware),
+                              "-o", str(self.project / "sim" / "flash-with-firmware.bin")])
+
+    def why(self):
+        return NoSimulationEvidence(self.project).why_not_ready(ProjectImage(self.project))
+
+    def test_the_refusal_names_the_entry_of_the_boards_build_and_the_lines_to_run(self):
+        # the merge keeps the other fields of the default entry, so the new one holds only the file, the url and the checksum
+        entry = {"kind": "download", "file": "<file>", "url": "<url>", "sha256": "<sha256>"}
+        project = self.project.resolve()
+        self.assertIn("; or to use another MicroPython build, name it in this project's tools list: %s, then %s, then %s" % (
+            store.format_rerun_line(ROOT / "scripts" / "tools.py", ["--project", project, "--new", "%s=%s" % (self.NAME, json.dumps(entry))]),
+            store.format_rerun_line(ROOT / "scripts" / "tools.py", ["--project", project, "--install", self.NAME]),
+            store.format_rerun_line(ROOT / "scripts" / "flash_image.py", ["--project", project, "--files", project / "firmware", "-o",
+                                                                          (project / "sim" / "flash-with-firmware.bin").resolve()])), self.why())
 
 
 class CompileCheckTest(unittest.TestCase):

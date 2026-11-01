@@ -1,0 +1,92 @@
+[
+ {
+  "file": "scripts/store.py",
+  "name": "prefix-dropped",
+  "find": "    return \"SPARK_HOME=%s %s\" % (shlex.quote(str(Path(given).resolve())), line) if given else line",
+  "replace": "    return line"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "store-not-quoted",
+  "find": "(shlex.quote(str(Path(given).resolve())), line)",
+  "replace": "(str(Path(given).resolve()), line)"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "store-not-resolved",
+  "find": "shlex.quote(str(Path(given).resolve()))",
+  "replace": "shlex.quote(str(Path(given)))"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "no-image-hint-dropped",
+  "find": "+ NO_SIMULATION_HINT % (build + \", then \"), reason",
+  "replace": "+ \"run a scenario\", reason"
+ },
+ {
+  "file": "scripts/project_image.py",
+  "name": "untested-hint-dropped",
+  "find": "% self.path.name + NO_SIMULATION_HINT % \"\")",
+  "replace": "% self.path.name + \"\")"
+ },
+ {
+  "file": "scripts/image_evidence.py",
+  "name": "own-build-hint-dropped",
+  "find": "\"; or \" + own if own else \"\"))",
+  "replace": "\"\"))"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "no-entry-refusal-hint-dropped",
+  "find": "own_build_hint_for(project, build, None))",
+  "replace": "\"\")"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "rerun-line-prefix-dropped",
+  "find": "return prefix_home(shlex.join([str(Path(script).resolve())]",
+  "replace": "return (shlex.join([str(Path(script).resolve())]"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "entry-name-lost",
+  "find": "[\"--project\", Path(project).resolve()], name or \"<name>\"",
+  "replace": "[\"--project\", Path(project).resolve()], \"<name>\""
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "fields-that-tie-dropped",
+  "find": "    if not name:\n        entry.update(",
+  "replace": "    if False:\n        entry.update("
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "install-line-bare",
+  "find": "store.format_rerun_line(tools_py, where + [\"--install\", name])",
+  "replace": "\" \".join([\"tools.py\"] + [str(part) for part in where] + [\"--install\", name])"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "new-line-bare",
+  "find": "store.format_rerun_line(tools_py, where + [\"--new\", \"%s=%s\" % (name, json.dumps(entry))])",
+  "replace": "\" \".join([\"tools.py\"] + [str(part) for part in where] + [\"--new\", \"%s=%s\" % (name, json.dumps(entry))])"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "build-again-dropped",
+  "find": "build_command(project, image) if image else BUILD_AGAIN",
+  "replace": "BUILD_AGAIN"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "build-line-not-whole-path",
+  "find": "store.format_rerun_line(Path(__file__), [\"--project\", project, \"--files\", project / \"firmware\"",
+  "replace": "store.format_rerun_line(Path(\"flash_image.py\"), [\"--project\", project, \"--files\", project / \"firmware\""
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "build-line-firmware-relative",
+  "find": "\"--files\", project / \"firmware\"",
+  "replace": "\"--files\", \"firmware\""
+ }
+]

@@ -31,6 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 import boards
+import store
 import tools
 
 FLASH_SIZE = 4 * 1024 * 1024
@@ -212,6 +213,36 @@ def build_entry(project):
     return build, None
 
 
+#: P463: how a person names their own MicroPython build in the project's tools list: the two tools.py lines, then the build again.
+OWN_BUILD_HINT = "to use another MicroPython build, name it in this project's tools list: %s, then %s, then %s"
+BUILD_AGAIN = "build the image again"
+
+
+def build_command(project, image):
+    """The line that builds the image of the project's firmware/ (P463): whole paths, quoted, led by the store, so it runs
+    from any folder in a new terminal window."""
+    project = Path(project).resolve()
+    return store.format_rerun_line(Path(__file__), ["--project", project, "--files", project / "firmware", "-o", Path(image).resolve()])
+
+
+def own_build_hint_for(project, build, name, image=None):
+    """
+    How to name another MicroPython build for the board whose build is `build`, as a sentence; "" with no build. The
+    lines are tools.py's, as a person runs them, then `image`'s build command (else the words to build again).
+    `name` is the tools list's entry that holds the build: the new entry takes the same name, and the merge keeps its
+    other fields. With no such entry (None), the new one is `<name>` and carries the build and the contract.
+    """
+    if not build:
+        return ""
+    entry = {"kind": "download", "file": "<file>", "url": "<url>", "sha256": "<sha256>"}
+    if not name:
+        entry.update(micropython_port=build, meets=["micropython-esp32-bin"])
+    tools_py, where, name = Path(tools.__file__), ["--project", Path(project).resolve()], name or "<name>"
+    return OWN_BUILD_HINT % (store.format_rerun_line(tools_py, where + ["--new", "%s=%s" % (name, json.dumps(entry))]),
+                             store.format_rerun_line(tools_py, where + ["--install", name]),
+                             build_command(project, image) if image else BUILD_AGAIN)
+
+
 def interpreter_for(given, project=None, find_tool=None):
     """
     The MicroPython build and its offset: the file given, at the offset of the board's build (0 when no entry
@@ -228,17 +259,23 @@ def interpreter_for(given, project=None, find_tool=None):
         return Interpreter(Path(find_tool(name).command[0]), offset_of(entry))
     if build:
         raise tools.ToolProblem("no tool on the tools list holds the MicroPython build %s that the board names; add "
-                                "one from https://micropython.org/download/%s/", build, build)
+                                "one from https://micropython.org/download/%s/; or %s", build, build,
+                                own_build_hint_for(project, build, None))
     found = find_tool("firmware-image")
     return Interpreter(Path(found.command[0]), offset_of(found.entry))
 
 
+#: What --micropython says in --help.
+MICROPYTHON_HELP = ("the interpreter .bin from micropython.org for the board's chip; omitted, the tools list's download for "
+                    "the build the project's board names. It starts where that build's entry says (flash_offset, 0x1000 on "
+                    "the original ESP32), else at 0x0. A board whose record names no build stops a given file too, since its "
+                    "start is not known. look.py --no-simulation rebuilds the image with the build in the tools list, not "
+                    "with this file, so to use your own build, name it there")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="flash_image.py", description=__doc__.split("\n\n")[0])
-    parser.add_argument("--micropython", type=Path, help="the interpreter .bin from micropython.org for the board's chip; "
-                        "omitted, the tools list's download for the build the project's board names. It starts where "
-                        "that build's entry says (flash_offset, 0x1000 on the original ESP32), else at 0x0. A board whose record "
-                        "names no build stops a given file too, since its start is not known")
+    parser.add_argument("--micropython", type=Path, help=MICROPYTHON_HELP)
     parser.add_argument("--project", type=Path,
                         help="the project whose requirements.json names the board (default: the nearest folder up from "
                         "here with boards/active.json or .spark/, else here); with no board, the tools list's "

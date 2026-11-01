@@ -25,15 +25,17 @@ GRANT_SCRIPT = str(ROOT / "scripts" / "grant.py")
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_grant  # noqa: E402
+import store  # noqa: E402
 import board_look  # noqa: E402
 import boards  # noqa: E402
 import deploy_gate  # noqa: E402
 import grant  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent, FakeLocalClock, pin_time_zone  # noqa: E402
+from fakes import FakeConsent, FakeLocalClock, line_made_at_import, pin_time_zone  # noqa: E402
 from test_board_look import data, done  # noqa: E402
 from test_deploy import found  # noqa: E402
+
 
 UTC = datetime.timezone.utc
 #: The moment the fake clock starts, and the MAC of P228's bench C6 as the fixtures write it.
@@ -133,7 +135,7 @@ class IssueTest(GrantCase):
             code, _, err = self.grant("--minutes", "30")
         self.assertEqual(code, 2)
         # P283: the bare `grant.py` was "command not found" in the PO's terminal; the line names the script's whole path.
-        self.assertIn("\n  %s\n" % shlex.join([GRANT_SCRIPT, "--minutes", "30", "--project", str(Path(".").resolve())]),
+        self.assertIn("\n  %s\n" % store.prefix_home(shlex.join([GRANT_SCRIPT, "--minutes", "30", "--project", str(Path(".").resolve())])),
                       err + "\n")
         self.assertFalse((self.home / "grants").exists())
         self.assertEqual([argv[-1] for argv in self.ran], ["devs"], "the board restarted for nothing")
@@ -225,16 +227,16 @@ class CheckTest(GrantCase):
         (self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").unlink()
         code, out, _ = self.grant("--check")
         self.assertEqual(code, 1)
-        self.assertIn("no grant for this board: the person runs %s --minutes N in their own terminal" % GRANT_SCRIPT, out)
+        self.assertIn("no grant for this board: the person runs %s --minutes N in their own terminal" % line_made_at_import(GRANT_SCRIPT), out)
 
     def test_an_ended_or_untrusted_grant_names_grant_py_by_its_whole_path(self):
         # P283: the ended and no-zone sentences ask for the grant again, as the no-grant one does.
         self.now = START + datetime.timedelta(hours=1)
-        self.assertIn("ended: the person runs %s --minutes N again" % GRANT_SCRIPT, self.grant("--check")[1])
+        self.assertIn("ended: the person runs %s --minutes N again" % line_made_at_import(GRANT_SCRIPT), self.grant("--check")[1])
         self.now = START
         path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"
         path.write_text(json.dumps(dict(self.kept(), expires_at="2099-01-01T00:00:00")))
-        self.assertIn("not trusted: the person runs %s --minutes N again" % GRANT_SCRIPT, self.grant("--check")[1])
+        self.assertIn("not trusted: the person runs %s --minutes N again" % line_made_at_import(GRANT_SCRIPT), self.grant("--check")[1])
 
     def test_a_time_with_no_zone_is_not_trusted(self):
         path = self.home / "grants" / "8c-bf-ea-xx-xx-xx.json"
@@ -364,7 +366,7 @@ class DeployGrantTest(GrantCase):
 
         with mock.patch.object(sys, "stdin", Pipe()):
             _, _, err = self.grant("--scope", "deploy", "--minutes", "30")
-        line = shlex.join([GRANT_SCRIPT, "--scope", "deploy", "--minutes", "30", "--project", str(Path(".").resolve())])
+        line = store.prefix_home(shlex.join([GRANT_SCRIPT, "--scope", "deploy", "--minutes", "30", "--project", str(Path(".").resolve())]))
         self.assertIn("\n  %s\n" % line, err + "\n")
 
 

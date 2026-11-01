@@ -9,9 +9,18 @@ import functools
 import hashlib
 
 import board_codes
+import flash_image
 from spark.core import outcomes
 import run_scenario
 import sim_project
+
+
+#: The flag that deploys an image from firmware/ with no simulation.
+NO_SIMULATION_FLAG = "--no-simulation"
+#: P463: the way to an image when no simulation is run. %s of the first is the build command; %s of the second leads with
+#: "build it with <that>, then " when the image is not built yet, else with nothing.
+BUILD_IMAGE_HINT = "build it with %s"
+NO_SIMULATION_HINT = "or, with no simulation, the board is the test: %srun look.py " + NO_SIMULATION_FLAG
 
 
 # --- MVP ---
@@ -45,8 +54,9 @@ class ProjectImage:
         if outside:
             raise DeployError(outside, reason=board_codes.FIRMWARE_LINE_BAD)
         if not self.path.is_file():
-            raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it"
-                              % self.path, reason=board_codes.NO_IMAGE)
+            build = BUILD_IMAGE_HINT % flash_image.build_command(project, self.path)
+            raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it, "
+                              % self.path + NO_SIMULATION_HINT % (build + ", then "), reason=board_codes.NO_IMAGE)
         self.project = project
         #: run_scenario.py writes every log here, in whichever sub-folder of sim/ the image is
         self.runs = project / "sim" / "runs"
@@ -83,7 +93,7 @@ class ProjectImage:
                     % (failed[0][0].name, failed[0][1]))
         if not named:
             return ("no run in sim/runs/ tested %s as it is now, and a log from an older spark names no image: "
-                    "run its scenario again with run_scenario.py" % self.path.name)
+                    "run its scenario again with run_scenario.py, " % self.path.name + NO_SIMULATION_HINT % "")
         return None
 
     # --- MVP ---

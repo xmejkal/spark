@@ -2,7 +2,22 @@
 
 import datetime
 import os
+import sys
 import time
+from pathlib import Path
+from unittest import mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import store  # noqa: E402
+
+#: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
+IMPORT_HOME = os.environ["SPARK_HOME"]
+
+
+def line_made_at_import(line):
+    """`line` led by the store of the import, as board_grant's constants are."""
+    with mock.patch.dict(os.environ, {"SPARK_HOME": IMPORT_HOME}):
+        return store.prefix_home(line)
 
 
 class FakeBoardConnection:

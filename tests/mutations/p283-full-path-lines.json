@@ -1,21 +1,21 @@
 [
  {
-  "file": "scripts/deploy_gate.py",
+  "file": "scripts/store.py",
   "name": "no-resolve",
   "find": "shlex.join([str(Path(script).resolve())]",
   "replace": "shlex.join([str(Path(script))]"
  },
  {
-  "file": "scripts/deploy_gate.py",
+  "file": "scripts/store.py",
   "name": "drop-args",
   "find": "+ [str(argument) for argument in arguments])",
   "replace": ")"
  },
  {
-  "file": "scripts/deploy_gate.py",
+  "file": "scripts/store.py",
   "name": "join-not-quote",
-  "find": "return shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments])",
-  "replace": "return \" \".join([str(Path(script).resolve())] + [str(argument) for argument in arguments])"
+  "find": "return prefix_home(shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))",
+  "replace": "return prefix_home(\" \".join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))"
  },
  {
   "file": "scripts/grant.py",
@@ -58,12 +58,6 @@
   "name": "deploy-drop-ignore",
   "find": "return [IGNORE_OLDER_RUNS_FLAG] if self.ignore_older_runs else []",
   "replace": "[]"
- },
- {
-  "file": "scripts/deploy.py",
-  "name": "deploy-no-token",
-  "find": "\"--token\", args.token or \"\"",
-  "replace": "\"--token\", \"\""
  },
  {
   "file": "scripts/deploy.py",
