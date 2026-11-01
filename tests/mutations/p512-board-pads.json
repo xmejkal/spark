@@ -1,0 +1,80 @@
+[
+ {
+  "file": "scripts/emit_board.py",
+  "name": "the trace names the pin, not its pad (the P512 defect)",
+  "find": "% (pads.pad_of(entry[\"pin\"]), target",
+  "replace": "% (entry[\"pin\"], target"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "emit passes empty pads",
+  "find": "signal_lines(part_list, assignments, board_pads.BoardPads.from_record(board))",
+  "replace": "signal_lines(part_list, assignments, board_pads.BoardPads({}))"
+ },
+ {
+  "file": "scripts/emit_board.py",
+  "name": "a second raw read of the alias key",
+  "find": "import board_pads  # noqa: E402",
+  "replace": "import board_pads  # noqa: E402\nPAD_KEY = \"pad_aliases\""
+ },
+ {
+  "file": "scripts/board_pads.py",
+  "name": "the aliases are ignored",
+  "find": "        return self.aliases.get(label, label)",
+  "replace": "        return label"
+ },
+ {
+  "file": "scripts/board_pads.py",
+  "name": "an unaliased label has no pad",
+  "find": "        return self.aliases.get(label, label)",
+  "replace": "        return self.aliases.get(label)"
+ },
+ {
+  "file": "scripts/board_pads.py",
+  "name": "the record's key is misspelt",
+  "find": "physical.get(\"pad_aliases\")",
+  "replace": "physical.get(\"pad_alias\")"
+ },
+ {
+  "file": "scripts/board_pads.py",
+  "name": "the alias pads are empty",
+  "find": "frozenset(self.aliases.values())",
+  "replace": "frozenset()"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "a printed label skips the alias",
+  "find": "(pads.pad_of(hint) for hint in hints if hint in known)",
+  "replace": "(hint for hint in hints if hint in known)"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "the alias pads are not known labels",
+  "find": "| pads.alias_pads()",
+  "replace": "| set()"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "an unwired signal is said by its pin",
+  "find": "pads.pad_of(a[\"pin\"])",
+  "replace": "a[\"pin\"]"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the verdict leaves the selectors out",
+  "find": "\"; \".join(first)))]",
+  "replace": "\"\"))]"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the verdict names every error",
+  "find": "for error in errors[:2]]",
+  "replace": "for error in errors]"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "an error with no selector says nothing",
+  "find": " or error.get(\"message\", \"\") for error",
+  "replace": " for error"
+ }
+]

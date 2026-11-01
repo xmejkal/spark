@@ -2,7 +2,7 @@
 
 Step 4 of 8 in [the journey](../journey.md). Next: [Checks](checks.md).
 
-**Partly.** On 2026-11-01 walk 4 ([P510, the walk 4 council](https://github.com/xmejkal/spark/issues/705)) built an LED and button project, but not an SPI or I2C part on the FireBeetle 2 or the XIAO ESP32-C6. The emitter ignores the board's pad aliases. Two commands come before the first build, in this order:
+**Works.** On 2026-11-01 an SPI and an I2C part built with 0 errors on the FireBeetle 2 and the XIAO ESP32-C6 ([P512](https://github.com/xmejkal/spark/issues/708)). A display on the XIAO still stops at the simulation, because the display has no Wokwi part. Two commands come before the first build, in this order:
 
 1. [`/spark:init`](../../../commands/init.md) writes the project's files, guessing nothing, including the `package.json`
    that tscircuit installs into.
