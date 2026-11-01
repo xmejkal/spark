@@ -4,7 +4,7 @@ spark takes a gadget from an idea in words to the parts and how to wire them on 
 imports, and a Wokwi simulation to run that firmware in; a board that builds and is checked, and its 3D model (`npx --no tsci export board.tsx -f glb`, not run
 here), come on request. The chain starts from a [requirements file](../../GLOSSARY.md#the-requirements-file): yours, or the one
 `parts.py --requirements` writes from your picks ([P97](https://github.com/xmejkal/spark/issues/18)). Each step reports
-what it could not look at; [what never to assume](agents.md#what-never-to-assume) lists where that does not hold yet.
+what it could not look at; [what never to assume](agents/never-assume.md) lists where that does not hold yet.
 
 These pages walk each step on real runs: what was typed, what spark printed, what it wrote, and where the step stops
 today. Each step has a page of its own. On Miro, [the journey frame](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687016851094) shows the same eight steps.

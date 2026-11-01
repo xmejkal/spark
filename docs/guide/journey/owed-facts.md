@@ -1,4 +1,6 @@
-### Owed facts and gaps
+# Owed facts and gaps
+
+The steps of [the journey](../journey.md) share this page.
 
 A record **owes** a fact when one the chain reads is missing from it: `footprint`, `pin_order`, `pin_order_proof`,
 `body_mm` (its outline) or `simulation`. `--match` shows what each candidate owes, and `parts.py --audit` lists every

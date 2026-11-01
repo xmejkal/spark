@@ -1,4 +1,6 @@
-## Idea
+# Idea
+
+Step 2 of 8 in [the journey](../journey.md). Next: [Research](research.md).
 
 **Partly.** [`/spark:idea`](../../../commands/idea.md) turns a goal in your words into needs, then matches each need
 against your drawer and spark's records. It marks each need: have, have-unknown, know or gap. Then a part is picked per

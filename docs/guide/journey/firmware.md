@@ -1,4 +1,6 @@
-## Firmware
+# Firmware
+
+Step 6 of 8 in [the journey](../journey.md). Next: [Simulate](simulate.md).
 
 **Partly.** spark does not write your firmware; you or Claude do. It gives the firmware its pins. The build writes
 them to `firmware/pins.py`, and this command writes the same file on its own:

@@ -1,4 +1,6 @@
-### A recorded run: a button and an LED
+# A recorded run: a button and an LED
+
+The steps of [the journey](../journey.md) share this page.
 
 A smaller project, `button-light` — a button and a light on a board — went through every step `/spark:idea` walks,
 with `/spark:build` before the tally. It ran on 2026-10-08 in the same scratch store as the runs above, so the drawer

@@ -1,4 +1,6 @@
-## From draft to order
+# From draft to order
+
+The steps of [the journey](../journey.md) share this page.
 
 Ordering a board of modules is an optional step of the journey, after the firmware works: a later version
 ([VISION.md's *Versions*](../../../scrum/VISION.md#versions)), not designed yet. The generated board is a draft, and the header of

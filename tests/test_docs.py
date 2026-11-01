@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import check_docs  # noqa: E402
 
 #: The most lines the journey guide's index may hold: its short version, the flow, the status words and a line a page.
-INDEX_LINES = 62
+INDEX_LINES = 45
 
 
 def page(root, name, text):
@@ -113,6 +113,12 @@ class TheChecksTest(unittest.TestCase):
     def test_the_journey_guide_keeps_the_budget_of_an_index(self):
         # P501 made journey.md an index of one page per step. A budget over the index's size lets the long page grow back.
         self.assertLessEqual(check_docs.BUDGETS["docs/guide/journey.md"], INDEX_LINES)
+
+    def test_every_journey_page_links_back_to_the_index(self):
+        # P501: a reader who lands on a step's page or a shared page finds the whole journey from it.
+        pages = sorted((ROOT / "docs" / "guide" / "journey").glob("*.md"))
+        self.assertTrue(pages)
+        self.assertEqual([page.name for page in pages if "](../journey.md)" not in page.read_text()], [])
 
     def test_a_table_cell_of_301_characters_fails_and_300_passes(self):
         with tempfile.TemporaryDirectory() as root:

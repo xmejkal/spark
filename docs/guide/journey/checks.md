@@ -1,4 +1,6 @@
-## Checks
+# Checks
+
+Step 5 of 8 in [the journey](../journey.md). Next: [Firmware](firmware.md).
 
 **One board per project.** Since 2026-10-19 ([P223](https://github.com/xmejkal/spark/issues/205)) a folder with two
 built designs, such as `dist/car/` and `dist/remote/`, gets a reason instead of a silent stop: spark handles one board
@@ -104,7 +106,7 @@ lines the answer rests on.
    remain, the L9110S's pull-downs. Nothing clears them, because MOTOR6V states no voltage: its `nominal_volts` is
    `null`. State `6.0` there and they clear (6² / 10k = 3.6 mW), with no current stated.
 
-What clears each, and its shape, is in [what never to assume](../agents.md#what-never-to-assume)
+What clears each, and its shape, is in [what never to assume](../agents/never-assume.md)
 ([P118](https://github.com/xmejkal/spark/issues/52)).
 
 Of the 12 rail values init left null, three show: GND's and MOTOR6V's `max_current_a` as `?` lines, and MOTOR6V's

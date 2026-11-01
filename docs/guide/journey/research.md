@@ -1,4 +1,6 @@
-## Research
+# Research
+
+Step 3 of 8 in [the journey](../journey.md). Next: [Build](build.md).
 
 **Partly.** The library comes first:
 

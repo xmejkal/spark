@@ -1,4 +1,6 @@
-## Build
+# Build
+
+Step 4 of 8 in [the journey](../journey.md). Next: [Checks](checks.md).
 
 **Works.** Two commands come before the first build, in this order:
 
@@ -54,7 +56,7 @@ reports it as unverifiable rather than passing it:
   project.json  sellers
 ```
 
-init's last sentence claims more than physics does today; see [what never to assume](../agents.md#what-never-to-assume).
+init's last sentence claims more than physics does today; see [what never to assume](../agents/never-assume.md).
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/tools.py" --status --project .

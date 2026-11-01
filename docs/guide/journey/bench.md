@@ -1,4 +1,6 @@
-## Bench
+# Bench
+
+Step 8 of 8 in [the journey](../journey.md). Previous: [Simulate](simulate.md).
 
 **Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). With `--no-simulation` it also flashes an image of `firmware/` that no simulation tested, but only on a typed yes that starts with "no simulation tested this image" ([P337](https://github.com/xmejkal/spark/issues/431)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../../commands/deploy.md), P213).
 
@@ -185,7 +187,8 @@ board spark generated.
   [P290](https://github.com/xmejkal/spark/issues/347), `deploy.py` makes one retry of an erase that stops with exit 2, after 5 s, and prints
   `retry in 5 s: ...`. Later that day, 3 deploys of 3 with a grant went through on the first call, each with
   `ready seen`, and none needed the retry.
-- On 2026-10-19 two more deploys with a standing yes passed the scenario.
+- On 2026-10-19 two more deploys with a standing yes passed the scenario
+  ([P213](https://github.com/xmejkal/spark/issues/192)).
 - On 2026-10-17 the live try passed one bench run on the XIAO ESP32-C6
   ([the log](../../observations/2026-10-17-p282-p247-bench.md)).
 

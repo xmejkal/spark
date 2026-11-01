@@ -1,5 +1,7 @@
 # How these runs were made
 
+The steps of [the journey](../journey.md) share this page.
+
 - When: [Drawer](drawer.md#drawer), [Idea](idea.md#idea), the two `--need` lists in [Research](research.md#research) and the library's list in
   [Build](build.md#build) on 2026-10-08, with spark 0.7.0; the Idea section's build used tscircuit 0.0.2621, an existing
   install on the PATH. The rest on 2026-10-05, and the exports on 2026-10-06, with spark 0.6.0 and tscircuit 0.0.2600,
@@ -24,4 +26,5 @@ There are three example projects:
 - `button-light`, a button and an LED, goes on from its needs to a board that builds, and the tally:
   [a recorded run](recorded-run.md#a-recorded-run-a-button-and-an-led).
 - `my-gadget` holds the rest. It uses the requirements file that `/spark:build`'s page documents: a DFRobot
-  FireBeetle 2 ESP32-S3, an L9110S motor driver, a power inlet and two buttons.
+  FireBeetle 2 ESP32-S3, an L9110S motor driver, a power inlet and two buttons. Its [checks](checks.md) found a
+  conflict between two parts and an advisory, and [its pin map](firmware.md) gives a reason for every pin.

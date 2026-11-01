@@ -1,4 +1,6 @@
-## Drawer
+# Drawer
+
+Step 1 of 8 in [the journey](../journey.md). Next: [Idea](idea.md).
 
 **Partly.** [`/spark:drawer`](../../../commands/drawer.md) keeps what you own in your own store, never in a repository.
 

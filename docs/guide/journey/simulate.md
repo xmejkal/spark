@@ -1,4 +1,6 @@
-## Simulate
+# Simulate
+
+Step 7 of 8 in [the journey](../journey.md). Next: [Bench](bench.md).
 
 **Works.** The build's simulation stage generates the Wokwi diagram and stages the chips: hand-written models of
 modules Wokwi has no part for, kept beside a part's record and compiled with `wokwi-cli` only when the binary is
