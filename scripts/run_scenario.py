@@ -22,6 +22,9 @@ The log goes to sim/runs/<name>.log: the date with its zone, the verdict, the st
 the image it tested and of each file in that image, what the simulation cannot show, the scenario as run, and what
 wokwi-cli printed, which is the board's serial output among the scenario's
 progress. deploy.py reads the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
+
+A pass whose scenario has no set-control step prints the look's caveat on its own line, for example "passed, but its scenario
+has no set-control step (...)" (P485). The log's verdict stays `passed`.
 """
 
 import argparse
@@ -74,6 +77,17 @@ STEP_COUNTS_LINE = "step counts: "
 #: that it tests the text it carries; the look compares the names with the brief's must lines. No marker means a log from before names.
 STEP_NAMES_LINE = "step names: "
 STEP_NAME_LINE = "step name: "
+# --- MVP ---
+#: P345 (moved here by P485): what a passed run's scenario did not do, for the look and for the run's own printed line. Each takes a
+#: subject: the look says ONE_RUN_MESSAGE or names its logs, the printed line says THIS_RUN_MESSAGE.
+NO_CONTROL_CAVEAT = "%s no set-control step (the step that presses a button or sets a sensor)"
+NO_CONTROL_NO_PIN_CAVEAT = ("%s no set-control step (the step that presses a button or sets a sensor) and no expect-pin "
+                            "step (the step that reads a pin)")
+ONE_RUN_MESSAGE = "the passed run's scenario has"
+THIS_RUN_MESSAGE = "its scenario has"
+#: What a pass prints when its scenario did less than a person expects (P485): the log's verdict stays `passed`.
+PASSED_WITH_CAVEAT = "passed, but %s"
+# --- end MVP ---
 #: What the line says when the steps are not RECORDED: a step has no key, so a kind would be a guess, or the log gave none.
 STEPS_NOT_READ = "not read"
 #: Why ScenarioSteps is outcomes.NOT_CHECKED (the reader rule is in outcomes.py), one sentence each.
@@ -340,6 +354,21 @@ class ScenarioSteps:
         return self.counts.get(kind, 0)
 
     # --- MVP ---
+    def control_caveat(self, subject):
+        """The P345 sentence for steps that set no control, with this subject, or None: counted steps with a set-control step."""
+        if self.state != outcomes.RECORDED or self.count(SET_CONTROL):
+            return None
+        return (NO_CONTROL_CAVEAT if self.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT) % subject
+
+    def passed_sentence(self):
+        """What a pass with these steps prints (P485): `passed`, or with the control caveat, or with why the steps were not counted."""
+        if self.state == outcomes.NOT_CHECKED:
+            return PASSED_WITH_CAVEAT % (outcomes.NOT_CHECKED_MESSAGE % self.why)
+        caveat = self.control_caveat(THIS_RUN_MESSAGE)
+        return PASSED_WITH_CAVEAT % caveat if caveat else "passed"
+    # --- end MVP ---
+
+    # --- MVP ---
     @classmethod
     def merge(cls, steps):
         """
@@ -506,7 +535,8 @@ class ScenarioRun:
                 as_run.unlink(missing_ok=True)
             serial = serial_log.read_text(errors="replace") if serial_log.is_file() else ""
         status, sentence = verdict(done.returncode, serial, done.stdout, done.stderr, self.timeout_ms)
-        return status, sentence, self.write_log(sentence, done.stdout + done.stderr)
+        log = self.write_log(sentence, done.stdout + done.stderr)  # the log's verdict stays `passed`: deploy reads it
+        return status, ScenarioSteps.from_text(self.steps).passed_sentence() if status == OK else sentence, log
 
     def write_log(self, sentence, said):
         """

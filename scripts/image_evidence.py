@@ -19,7 +19,7 @@ from project_image import BUILD_IMAGE_HINT, NO_SIMULATION_FLAG
 from spark.core import outcomes
 from spark.core import text_guards
 import tools
-from run_scenario import (EXPECT_PIN, NO_MAIN, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps, SimulationLimits,
+from run_scenario import (NO_MAIN, ONE_RUN_MESSAGE, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps, SimulationLimits,
                           file_hashes)
 
 #: Why no must line can be compared with the names of the steps: every passed log is older than step names (an outcomes reason).
@@ -36,13 +36,8 @@ NO_SIMULATION_CAVEAT = "no simulation tested this image"
 #: (outcomes.NONE_RECORDED) is not "not checked": nothing was recorded in it, and it says so.
 UNCOUNTED_ADVICE = "run its scenario again to count them"
 OLDER_LOG_CAVEAT = "the passed run's log is older than step counting: run its scenario again to count its steps"
-#: The two no-control sentences take a subject: one run says "the passed run's scenario has", several name their logs.
-NO_CONTROL_CAVEAT = "%s no set-control step (the step that presses a button or sets a sensor)"
-NO_CONTROL_NO_PIN_CAVEAT = ("%s no set-control step (the step that presses a button or sets a sensor) and no expect-pin "
-                            "step (the step that reads a pin)")
 #: What a passed run's limits section that cannot be read tells the person to do (the sentence starts with why it was not checked).
 LIMITS_HINT = "fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"
-ONE_RUN_MESSAGE = "the passed run's scenario has"
 MANY_RUNS_MESSAGE = "the passed runs (%s) have"
 #: P436: the words of the image check that could not run, as a sentence and as a tools.ToolProblem.
 CANNOT_CHECK_MESSAGE = "cannot check %s against firmware/: %s"
@@ -307,7 +302,7 @@ class PassedRunEvidence(ImageEvidence):
         if uncounted:
             return uncounted
         subject = MANY_RUNS_MESSAGE % ", ".join(log.name for log in logs) if len(logs) > 1 else ONE_RUN_MESSAGE
-        return [(NO_CONTROL_CAVEAT if merged.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT) % subject]
+        return [merged.control_caveat(subject)]  # merged is RECORDED here: the uncounted logs returned above
 
     @staticmethod
     def _limits_caveats(logs, said_unreadable):

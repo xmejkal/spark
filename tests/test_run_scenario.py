@@ -24,6 +24,8 @@ import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
 import flash_image  # noqa: E402
 import tools  # noqa: E402
+import image_evidence  # noqa: E402
+from spark.core import outcomes  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, OK, PROBLEMS  # noqa: E402
 
 #: wokwi-cli as the tests run it: tests/fake_wokwi_cli.py, which spends nothing.
@@ -410,6 +412,7 @@ class ProjectCase(unittest.TestCase):
         with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(tools, "find", side_effect=find), \
                 redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
             code = run_scenario.main(argv)
+        self.stdout = out.getvalue()
         return code, out.getvalue() + err.getvalue()
 
 
@@ -549,6 +552,45 @@ class TheLogNamesTheImageTest(ProjectCase):
         self.log.write_text("# lights.v2.scenario.yaml, run 2026-10-11T10:00:00, timeout 60000 ms\nverdict: passed\n\n"
                             "--- the scenario as run ---\n")
         self.assertEqual(run_scenario.run_record(self.log), ("passed", None))
+
+
+@needs_littlefs
+class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
+    """P485: a pass prints the look's no-control caveat on its own line, and the log's verdict stays `passed`."""
+
+    NO_CONTROL = 'name: it starts\nversion: 1\nsteps:\n  - wait-serial: "hello"\n'
+    PIN_ONLY = NO_CONTROL + "  - expect-pin: { part-id: led1, pin: A, value: 1 }\n"
+    NO_KIND = NO_CONTROL + "  - name: a step with no kind\n"
+
+    def printed(self, scenario):
+        self.scenario.write_text(scenario)
+        code, said = self.command()
+        self.assertEqual(code, 0)
+        self.assertEqual(run_scenario.run_record(self.log)[0], "passed")
+        return said
+
+    def test_no_control_and_no_pin_read_prints_both_on_stdout(self):
+        said = self.printed(self.NO_CONTROL)
+        self.assertEqual(self.stdout, said)
+        self.assertEqual(said.splitlines()[0], "lights.v2.scenario.yaml: passed, but its scenario has no set-control step (the step "
+                         "that presses a button or sets a sensor) and no expect-pin step (the step that reads a pin)")
+
+    def test_a_pin_read_with_no_control_prints_only_the_control_caveat(self):
+        self.assertEqual(self.printed(self.PIN_ONLY).splitlines()[0], "lights.v2.scenario.yaml: passed, but its scenario has "
+                         "no set-control step (the step that presses a button or sets a sensor)")
+
+    def test_a_step_with_no_kind_prints_why_its_steps_were_not_counted(self):
+        self.scenario.write_text(self.NO_KIND)
+        status, said, _ = self.run_with()
+        self.assertEqual((status, said), (OK, "passed, but " + outcomes.NOT_CHECKED_MESSAGE % run_scenario.WHY_NO_KEY))
+
+    def test_a_set_control_step_prints_passed_alone(self):
+        self.assertEqual(self.run_with()[1], "passed")
+
+    def test_the_look_and_the_printed_line_share_the_rule_and_the_words(self):
+        steps = run_scenario.ScenarioSteps({run_scenario.WAIT_SERIAL: 1})
+        self.assertEqual(steps.control_caveat("X has"), run_scenario.NO_CONTROL_NO_PIN_CAVEAT % "X has")
+        self.assertIs(image_evidence.ONE_RUN_MESSAGE, run_scenario.ONE_RUN_MESSAGE)
 
 
 @needs_littlefs
