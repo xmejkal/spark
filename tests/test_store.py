@@ -93,6 +93,19 @@ class AStorePathThatIsAFileTest(unittest.TestCase):
             store.add_project(scratch)
         self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
 
+    def test_a_folder_spark_may_not_write_is_refused_the_same_way(self):
+        # P499: the P496 reviewer's second case; the chmod sits inside the same try
+        scratch = Path(tempfile.mkdtemp())
+        locked = scratch / "locked"
+        locked.mkdir(mode=0o500)
+        self.addCleanup(os.chmod, locked, 0o700)
+        before = os.environ.get("SPARK_HOME")
+        self.addCleanup(lambda: os.environ.pop("SPARK_HOME", None) if before is None else os.environ.update(SPARK_HOME=before))
+        os.environ["SPARK_HOME"] = str(locked / "store")
+        with self.assertRaises(store.StoreProblem) as refused:
+            store.add_project(scratch)
+        self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
+
 
 class ThePrefixedLineTest(unittest.TestCase):
     """P463: a line a person runs later carries the store this run used, so the line sees the same build and grant."""
