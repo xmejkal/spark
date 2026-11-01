@@ -554,7 +554,7 @@ class TheLogNamesTheImageTest(ProjectCase):
 
 @needs_littlefs
 class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
-    """P485: a pass prints the look's no-control caveat on its own line, and the log's verdict stays `passed`."""
+    """P485: a pass prints the look's no-control caveat after `passed` on the scenario's line, and the log's verdict stays `passed`."""
 
     NO_CONTROL = 'name: it starts\nversion: 1\nsteps:\n  - wait-serial: "hello"\n'
     PIN_ONLY = NO_CONTROL + "  - expect-pin: { part-id: led1, pin: A, value: 1 }\n"
@@ -570,17 +570,17 @@ class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
     def test_no_control_and_no_pin_read_prints_both_on_stdout(self):
         said = self.printed(self.NO_CONTROL)
         self.assertEqual(self.stdout, said)
-        self.assertEqual(said.splitlines()[0], "lights.v2.scenario.yaml: passed, but its scenario has no set-control step (the step "
+        self.assertEqual(said.splitlines()[0], "lights.v2.scenario.yaml: passed, but it has no set-control step (the step "
                          "that presses a button or sets a sensor) and no expect-pin step (the step that reads a pin)")
 
     def test_a_pin_read_with_no_control_prints_only_the_control_caveat(self):
-        self.assertEqual(self.printed(self.PIN_ONLY).splitlines()[0], "lights.v2.scenario.yaml: passed, but its scenario has "
+        self.assertEqual(self.printed(self.PIN_ONLY).splitlines()[0], "lights.v2.scenario.yaml: passed, but it has "
                          "no set-control step (the step that presses a button or sets a sensor)")
 
     def test_a_step_with_no_kind_prints_why_its_steps_were_not_counted(self):
         self.scenario.write_text(self.NO_KIND)
         status, said, _ = self.run_with()
-        self.assertEqual((status, said), (OK, "passed, but not checked: a step of the scenario has no kind"))
+        self.assertEqual((status, said), (OK, "passed, but its steps were not counted: a step of the scenario has no kind"))
 
     def test_a_set_control_step_prints_passed_alone(self):
         self.assertEqual(self.run_with()[1], "passed")
@@ -590,6 +590,7 @@ class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
         self.assertEqual(steps.control_caveat("the passed runs (a, b) have"), "the passed runs (a, b) have no set-control step "
                          "(the step that presses a button or sets a sensor)")
         self.assertIsNone(run_scenario.ScenarioSteps({"set-control": 1}).control_caveat("X has"))
+        self.assertIsNone(run_scenario.ScenarioSteps({}, "not-checked", "x").control_caveat("X has"))
 
 
 @needs_littlefs

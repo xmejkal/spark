@@ -23,8 +23,8 @@ the image it tested and of each file in that image, what the simulation cannot s
 wokwi-cli printed, which is the board's serial output among the scenario's
 progress. deploy.py reads the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
 
-A pass whose scenario has no set-control step prints the look's rule in its own words, "passed, but its scenario has no
-set-control step (...)", and one whose steps cannot be counted prints "passed, but not checked: <why>" (P485). The log's
+A pass whose scenario has no set-control step prints the look's rule in its own words, "passed, but it has no set-control
+step (...)", and one whose steps cannot be counted prints "passed, but its steps were not counted: <why>" (P485). The log's
 verdict stays `passed`.
 """
 
@@ -85,7 +85,9 @@ NO_CONTROL_CAVEAT = "%s no set-control step (the step that presses a button or s
 NO_CONTROL_NO_PIN_CAVEAT = ("%s no set-control step (the step that presses a button or sets a sensor) and no expect-pin "
                             "step (the step that reads a pin)")
 ONE_RUN_MESSAGE = "the passed run's scenario has"
-THIS_RUN_MESSAGE = "its scenario has"
+THIS_RUN_MESSAGE = "it has"
+#: What a pass prints when its steps could not be counted: %s is why (ScenarioSteps.why).
+UNCOUNTED_MESSAGE = "its steps were not counted: %s"
 #: The verdict of a pass, in the log's header and on the printed line; deploy finds a passed run by it.
 PASSED = "passed"
 #: What a pass prints when its scenario did less than a person expects (P485): the log's verdict stays PASSED.
@@ -358,7 +360,7 @@ class ScenarioSteps:
     def passed_sentence(self):
         """What a pass with these steps prints (P485): `passed`, or with the control caveat, or with why the steps were not counted."""
         if self.state == outcomes.NOT_CHECKED:
-            return PASSED_WITH_CAVEAT % (outcomes.NOT_CHECKED_MESSAGE % self.why)
+            return PASSED_WITH_CAVEAT % (UNCOUNTED_MESSAGE % self.why)
         caveat = self.control_caveat(THIS_RUN_MESSAGE)
         return PASSED_WITH_CAVEAT % caveat if caveat else PASSED
     # --- end MVP ---
