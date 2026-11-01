@@ -2,6 +2,9 @@
 
 The gaps of spark walk 3 (epic #467), on 2026-11-01 in Prague, from 06:57 to 08:39 CET. The diary is `walk3-diary.md` in the same folder. Each claim is the first sentence of the diary's gap. The P480 council checked rows 1 to 37 against the code at `53c1cbb8` and added rows 38 to 54. The second round and the final check added rows 55 to 72. `verified` means the claim holds, `rejected` that the refuter or the synthesis refuted it, and `raised` that nobody checked it. The last column names the evidence and the home: a new card N1 to N11 of `docs/observations/2026-11-01-p480-walk3-council/plan.md` (filing text in `cards.md`), an open card, or "row only". N9 joined P466 (#634) as its slice 2 in the final plan.
 
+
+Filed on 2026-11-01 after the PO's OK: N1 is P482 (#661), N2 is P483 (#662), N3 is P484 (#663), N4 is P485 (#664), N5 is P486 (#665), N6 is P487 (#666), N7 is P488 (#667), N8 is P489 (#668), N10 is P490 (#669), N11 is P491 (#670), C1 is P492 (#671). N9 went into P466 (#634).
+
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
 | 1 | The goal names "the board that is connected". No spark page tells a new user how to find out which board that is before init. | diary G1, step 1 | verified | refuter 33, technology G1: no USB step in `commands/init.md` or `idea.md`. P466 (#634) slice 2, ex-N9 (row 58) |
