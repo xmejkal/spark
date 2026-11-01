@@ -437,6 +437,7 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual(code, 0)
         self.assertEqual(said["data"]["repl_command"][-3:], ["connect", "/dev/cu.usbmodem2101", "repl"])
+        self.assertIsNone(said["data"]["person_action"])  # a restart that counted asks nothing of the person
 
     @needs_littlefs
     def test_a_store_record_that_was_not_written_is_said_beside_the_null(self):
