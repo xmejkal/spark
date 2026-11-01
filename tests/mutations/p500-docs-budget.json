@@ -1,0 +1,20 @@
+[
+ {
+  "file": "tools/check_docs.py",
+  "name": "the guide is read one folder deep only",
+  "find": "(root / \"docs\" / \"guide\").rglob(\"*.md\")",
+  "replace": "(root / \"docs\" / \"guide\").glob(\"*.md\")"
+ },
+ {
+  "file": "tools/check_docs.py",
+  "name": "a page over its budget passes and a smaller one fails",
+  "find": "if budget is not None and lines > budget:",
+  "replace": "if budget is not None and lines < budget:"
+ },
+ {
+  "file": "tools/check_docs.py",
+  "name": "the default cell limit is raised",
+  "find": "CELL_LIMIT = 300",
+  "replace": "CELL_LIMIT = 3000"
+ }
+]

@@ -2,7 +2,7 @@
 """
 The docs name only what is there (P104; docs/2026-10-05-readme-design.md §5).
 
-    check_docs.py        # every problem in README.md, AGENTS.md and docs/guide/*.md; exit 1 if any
+    check_docs.py        # every problem in README.md, AGENTS.md and docs/guide/**/*.md; exit 1 if any
                          # and every docs page that scripts/, data/, commands/, skills/ or agents/ cite and is gone
 
 Each check takes text (and the repository root) and returns the sentences it fails on, so the tests feed it literal
@@ -29,14 +29,59 @@ CITING_FOLDERS = ("scripts", "data", "commands", "skills", "agents")
 PROJECT_FILES = {"pins.py": "the build and assign_pins.py --emit-pins write it into the project",
                  "main.py": "the project's own boot file, which import_firmware.py leaves unrun",
                  "boot.py": "MicroPython's other boot file, which import_firmware.py leaves unrun too"}
+#: Lines each page may hold. These numbers only go down: a page over its budget is cut or split, never given a bigger one.
+#: A guide page with no entry gets DEFAULT_BUDGET. A budget for a page that is gone fails, so a split removes its entry.
+BUDGETS = {
+    "README.md": 181,
+    "docs/guide/journey.md": 1582,  # P501 splits it
+    "docs/guide/agents.md": 1036,  # P502 splits it
+    "docs/guide/developing.md": 650,  # P504 shrinks it
+    "docs/guide/commands.md": 284,
+    "docs/guide/how-it-works.md": 277,
+}
+DEFAULT_BUDGET = 400
+#: Characters a table cell may hold. Like BUDGETS, these only go down.
+CELL_LIMIT = 300
+CELL_LIMITS = {"docs/guide/agents.md": 2276}  # P502 moves the four long rows out, then this entry goes
 #: Seconds a runnable example or a --help may take; a longer one is not light (the spec, §4).
 RUN_TIMEOUT = 60
 
 
 def doc_files(root=ROOT):
     """README.md, AGENTS.md and every guide — the documents this check reads."""
-    files = [root / "README.md", root / "AGENTS.md"] + sorted((root / "docs" / "guide").glob("*.md"))
+    files = [root / "README.md", root / "AGENTS.md"] + sorted((root / "docs" / "guide").rglob("*.md"))
     return [path for path in files if path.is_file()]
+
+
+def _name(path, root=ROOT):
+    """A page named by its path from the root, in every message."""
+    try:
+        return Path(path).relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def over_budget(root=ROOT, budgets=BUDGETS):
+    """A page over its line budget, and a budget for a page that is gone. A smaller page passes."""
+    said = []
+    for path in doc_files(root):
+        name = _name(path, root)
+        budget = budgets.get(name, DEFAULT_BUDGET if name.startswith("docs/guide/") else None)
+        lines = len(path.read_text().splitlines())
+        if budget is not None and lines > budget:
+            said.append("%s has %d lines, over its budget of %d. Move text out or split the page, never raise the budget."
+                        % (name, lines, budget))
+    return said + ["%s has a budget but is not there. Remove its entry from BUDGETS." % name
+                   for name in budgets if not (root / name).is_file()]
+
+
+def long_cells(path, text, root=ROOT, limits=CELL_LIMITS):
+    """A table cell, outside a fenced block, over the page's limit."""
+    name = _name(path, root)
+    limit = limits.get(name, CELL_LIMIT)
+    return ["%s has a table cell of %d characters, over %d." % (name, len(cell.strip()), limit)
+            for line in FENCE.sub("", text).splitlines() if line.startswith("|")
+            for cell in line.strip("|").split("|") if len(cell.strip()) > limit]
 
 
 def missing_names(text, root=ROOT):
@@ -139,16 +184,16 @@ def slug(heading):
     return re.sub(r"[^\w\- ]", "", heading.strip().lower()).replace(" ", "-")
 
 
-def broken_links(path, text):
+def broken_links(path, text, root=ROOT):
     """A relative link to a file, or to a heading anchor, that does not exist."""
-    said = []
+    said, name = [], _name(path, root)
     for target, anchor in re.findall(r"\]\((?!https?:|mailto:)([^)#\s]*)(?:#([^)\s]+))?\)", text):
         dest = (path.parent / target) if target else path
         if not dest.exists():
-            said.append("%s links %s, which does not exist" % (path.name, target))
+            said.append("%s links %s, which does not exist" % (name, target))
         elif anchor and dest.is_file() and dest.suffix == ".md":
             if anchor not in {slug(h) for h in re.findall(r"^#+ (.+)$", FENCE.sub("", dest.read_text()), re.M)}:
-                said.append("%s links %s#%s, which has no such heading" % (path.name, target or path.name, anchor))
+                said.append("%s links %s#%s, which has no such heading" % (name, target or path.name, anchor))
     return said
 
 
@@ -197,9 +242,9 @@ def version_mismatch(readme, root=ROOT):
     return [] if "v%s" % version in readme else ["README.md does not say v%s, the version plugin.json ships" % version]
 
 
-def personal_paths(path, text):
+def personal_paths(path, text, root=ROOT):
     """A line naming someone's home, a temp directory or another checkout — the docs are public."""
-    return ["%s line %d names a personal path or checkout: %s" % (path.name, number + 1, found.group(0))
+    return ["%s line %d names a personal path or checkout: %s" % (_name(path, root), number + 1, found.group(0))
             for number, line in enumerate(text.splitlines()) for found in [PERSONAL.search(line)] if found]
 
 
@@ -209,10 +254,11 @@ def problems(root=ROOT):
     said, helps = [], {}
     for path in doc_files(root):
         text = path.read_text()
-        said += ["%s: %s" % (path.name, sentence) for sentence in
+        said += ["%s: %s" % (_name(path, root), sentence) for sentence in
                  missing_names(text, root) + missing_flags(text, root, helps) + undated_outputs(text)
                  + failed_examples(text, root)]
-        said += broken_links(path, text) + personal_paths(path, text)
+        said += broken_links(path, text, root) + personal_paths(path, text, root) + long_cells(path, text, root)
+    said += over_budget(root)
     commands = root / "docs" / "guide" / "commands.md"
     said += stale_doc_paths(root)
     said += unlisted(root) + unknown_in_tables(commands.read_text() if commands.is_file() else "", root)
