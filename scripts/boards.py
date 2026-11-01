@@ -421,10 +421,11 @@ _GPIO = re.compile(r"GPIO([0-9]+)")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
-#: The component of a limit about the board's own GPIOs as a whole, and the two sentences for a definition spark could
-#: not compare: the record names none, or the store does not hold it (one sentence for three causes, P397 row).
+#: The component of a limit about the board's own GPIOs as a whole, and the sentences for a definition spark could not
+#: compare (the record names none, or the store lacks it: one sentence for three causes, P397) or a stand-in (P483).
 ONBOARD_GPIOS = "onboard GPIOs"
 NO_DEFINITION_NAMED = outcomes.NOT_CHECKED_MESSAGE % "the board record names no Wokwi definition"
+STAND_IN = "the Wokwi part of %s is a stand-in, where GPIO%d is a bare header pin with no onboard LED or button"
 WHY_NOT_KEPT = ("spark's store lacks the Wokwi definition that the board record names, its sha256 differs, or it does "
                 "not parse")
 
@@ -432,15 +433,16 @@ WHY_NOT_KEPT = ("spark's store lacks the Wokwi definition that the board record 
 @dataclass(frozen=True)
 class SimulatedPart:
     """
-    Value: what a simulator models of one part type, a board included: the GPIOs that its pins target (P396). `state` is
-    one of the three words of `outcomes` (the reader rule, OC4): `gpios` holds the pins only when it is RECORDED, and
-    `why` says what stopped the reader only when it is NOT_CHECKED.
+    Value: what a simulator models of a part type: the GPIOs its pins target (P396). `state` is a word of `outcomes` (OC4):
+    `gpios` holds the pins only when RECORDED, `why` says what stopped the reader only when NOT_CHECKED. `is_stand_in` is
+    the record's `wokwi_is_stand_in`: its sentence holds while no part is wired to that GPIO; P484 (#663) rewords it.
     """
 
     state: str
     board_id: str
     gpios: frozenset = frozenset()
     why: Optional[str] = None
+    is_stand_in: bool = False
 
     def why_not_read(self):
         """The sentence for a definition spark could not compare with the GPIOs, or None when it was read (RECORDED)."""
@@ -451,12 +453,10 @@ class SimulatedPart:
         return None
 
     def why_not_simulated(self, gpio):
-        """
-        Why a scenario cannot reach this GPIO, or None when a pin of the definition targets it. When spark could not
-        look, that is the answer, never a claim that the definition has no pin.
-        """
-        return self.why_not_read() or (None if gpio in self.gpios else
-                                           "the Wokwi definition of %s has no pin on GPIO%d" % (self.board_id, gpio))
+        """Why a scenario cannot reach this GPIO, or None: not looked at, no pin of the definition, or a stand-in's header pin."""
+        if gpio in self.gpios:
+            return STAND_IN % (self.board_id, gpio) if self.is_stand_in else None
+        return self.why_not_read() or "the Wokwi definition of %s has no pin on GPIO%d" % (self.board_id, gpio)
 
 
 def _names_a_kept_file(entry):
@@ -508,7 +508,7 @@ def read_simulated_part(board):
     except (KeyError, TypeError, ValueError, RecursionError, OSError):
         # no file, a digit run too long for int(), what else the JSON or the path holds that raises
         return not_kept
-    return SimulatedPart(outcomes.RECORDED, board_id, gpios)
+    return SimulatedPart(outcomes.RECORDED, board_id, gpios, is_stand_in=board.get("wokwi_is_stand_in") is True)
 
 
 #: The sentence that ends a limit about a part the build did not look at, or a part no scenario reaches (P396, P397).

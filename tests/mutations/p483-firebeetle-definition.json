@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/boards.py",
+  "name": "a stand-in's reached GPIO gets no limit",
+  "find": "        if gpio in self.gpios:\n            return STAND_IN % (self.board_id, gpio) if self.is_stand_in else None",
+  "replace": "        if gpio in self.gpios:\n            return None"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "a board is a stand-in whatever its record says",
+  "find": "is_stand_in=board.get(\"wokwi_is_stand_in\") is True)",
+  "replace": "is_stand_in=True)"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "a truthy string marks a stand-in",
+  "find": "is_stand_in=board.get(\"wokwi_is_stand_in\") is True)",
+  "replace": "is_stand_in=bool(board.get(\"wokwi_is_stand_in\")))"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "a GPIO with no pin gets the stand-in sentence",
+  "find": "return self.why_not_read() or \"the Wokwi definition of %s has no pin on GPIO%d\" % (self.board_id, gpio)",
+  "replace": "return self.why_not_read() or STAND_IN % (self.board_id, gpio)"
+ }
+]
