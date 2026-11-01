@@ -1283,8 +1283,7 @@ On 2026-10-15 the PO flashed the button-and-LED project on the same XIAO
 ([P215](https://github.com/xmejkal/spark/issues/196), [the bench log](../observations/2026-10-15-p215-bench-rerun.md)).
 The first three runs flashed and booted, but ended in `ready unknown` with mpremote's "could not enter raw repl". The
 firmware's loop never read the board's console, and the board ignored Ctrl-C, so mpremote did not stop it. The
-conversation added three lines to the loop: it reads the console without waiting and drops what it reads, as the
-blink does. The scenario passed again in Wokwi, the look gave a new token, and the fourth run printed `ready seen`.
+conversation added three lines to the loop: it reads the console without waiting and drops what it reads. The scenario passed again in Wokwi, the look gave a new token, and the fourth run printed `ready seen`.
 
 <!-- output: run 2026-10-15, spark 0.9.0 -->
 ```text

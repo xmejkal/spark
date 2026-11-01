@@ -285,17 +285,10 @@ waits for such text before its first input is left as it is. A firmware that nev
 firmware never printed 'ready': print it once setup is done (the ready contract, commands/build.md)*. The firmware also
 prints a line for each change that a scenario waits on.
 
-**The console lines.** A firmware that never reads its console ignores Ctrl-C, so mpremote cannot stop it and a deploy ends in
-`ready unknown`. Put these lines in the loop. They read the console without waiting and drop what they read:
-
-```python
-import select, sys
-console = select.poll()                  # before the loop
-console.register(sys.stdin, select.POLLIN)
-...
-while console.poll(0):                   # inside the loop; 0 means do not wait
-    sys.stdin.read(1)
-```
+**The console read.** On walk 2, a firmware whose loop never read its console ended three deploys in `ready unknown`,
+with mpremote's "could not enter raw repl". After the conversation added a read that does not wait, the next deploy
+printed `ready seen` (`docs/guide/journey.md`, walk 2). MicroPython's `select.poll` polls `sys.stdin` without waiting
+(https://docs.micropython.org/en/latest/library/select.html). The conversation writes the loop, and spark ships no code for it.
 
 The scenario holds only behaviour. Claude writes it from the person's words, and spark ships none, because the pin map
 holds pins, not behaviour. A scenario's `set-control` lines press a button or move a chip's slider (a probe's

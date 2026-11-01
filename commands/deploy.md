@@ -64,7 +64,7 @@ yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line 
 `SPARK_HOME=<the store>` when the run had one, so a new terminal window uses the same MicroPython build and grants. On macOS the board
 shows as `/dev/cu.usbmodem…`.
 
-If Claude Code itself refuses the run (its auto mode did on walk 3) before deploy.py prints anything, the person has no deploy.py line. Say so, and give
+If Claude Code itself refuses the run before deploy.py prints anything, the person has no deploy.py line. Say so, and give
 the person the look's `next` step as the line to run in their own terminal, with `SPARK_HOME=<the store>` in front when the run had one.
 Do not run the line by another route.
 
