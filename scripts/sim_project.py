@@ -144,7 +144,7 @@ def limits_in(note_text):
     return [limit for limit in found if limit.sentence]
 
 
-#: Why a run log's reader found nothing: the file cannot be read (ScenarioSteps and SimulationLimits, moved here by P485).
+#: Why a run log's reader (ScenarioSteps, SimulationLimits) found nothing: the file cannot be read.
 WHY_LOG_UNREADABLE = "the log cannot be read"
 #: Why SimulationLimits is outcomes.NOT_CHECKED when the log has the section: it holds no limit line.
 WHY_NO_LIMIT_LINE = "the log's limits section has no limit line"
@@ -156,7 +156,6 @@ LIMITS_SECTION = "--- what this simulation cannot show ---"
 SCENARIO_SECTION = "--- the scenario as run ---"
 
 
-# --- MVP ---
 class SimulationLimits:
     """
     Value: what no simulation can show of the project, from the log of a run (P345). `limits` is a list of sim_project.Limit.
@@ -187,7 +186,6 @@ class SimulationLimits:
             return cls([], outcomes.NOT_CHECKED, WHY_LIMITS_CUT_OFF)
         limits = limits_in(section)
         return cls(limits) if limits else cls([], outcomes.NOT_CHECKED, WHY_NO_LIMIT_LINE)
-# --- end MVP ---
 
 
 def _limit_of(text):

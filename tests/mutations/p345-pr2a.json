@@ -2,8 +2,8 @@
  {
   "file": "scripts/project_image.py",
   "name": "find_passed_logs lists a log that tested another image",
-  "find": "if sha256 == self.sha256 and verdict == \"passed\"]",
-  "replace": "if verdict == \"passed\"]"
+  "find": "if sha256 == self.sha256 and verdict == run_scenario.PASSED]",
+  "replace": "if verdict == run_scenario.PASSED]"
  },
  {
   "file": "scripts/image_evidence.py",

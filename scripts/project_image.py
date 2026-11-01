@@ -87,7 +87,7 @@ class ProjectImage:
         Else why not.
         """
         named = [(log, verdict) for log, verdict, sha256 in self.read_run_logs() if sha256 == self.sha256]
-        failed = [(log, verdict) for log, verdict in named if verdict != "passed"]
+        failed = [(log, verdict) for log, verdict in named if verdict != run_scenario.PASSED]
         if failed:
             return ("%s did not pass on this image (verdict: %s): deploy.py flashes only an image that passed"
                     % (failed[0][0].name, failed[0][1]))
@@ -99,7 +99,7 @@ class ProjectImage:
     # --- MVP ---
     def find_passed_logs(self):
         """Every log in the runs folder that passed on this image's sha256, in name order. DeployError when a log cannot be read."""
-        return [log for log, verdict, sha256 in self.read_run_logs() if sha256 == self.sha256 and verdict == "passed"]
+        return [log for log, verdict, sha256 in self.read_run_logs() if sha256 == self.sha256 and verdict == run_scenario.PASSED]
     # --- end MVP ---
 
     def find_passed_log(self):

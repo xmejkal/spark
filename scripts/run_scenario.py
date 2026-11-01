@@ -23,8 +23,9 @@ the image it tested and of each file in that image, what the simulation cannot s
 wokwi-cli printed, which is the board's serial output among the scenario's
 progress. deploy.py reads the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
 
-A pass whose scenario has no set-control step prints the look's caveat on its own line, for example "passed, but its scenario
-has no set-control step (...)" (P485). The log's verdict stays `passed`.
+A pass whose scenario has no set-control step prints the look's rule in its own words, "passed, but its scenario has no
+set-control step (...)", and one whose steps cannot be counted prints "passed, but not checked: <why>" (P485). The log's
+verdict stays `passed`.
 """
 
 import argparse
@@ -85,8 +86,10 @@ NO_CONTROL_NO_PIN_CAVEAT = ("%s no set-control step (the step that presses a but
                             "step (the step that reads a pin)")
 ONE_RUN_MESSAGE = "the passed run's scenario has"
 THIS_RUN_MESSAGE = "its scenario has"
-#: What a pass prints when its scenario did less than a person expects (P485): the log's verdict stays `passed`.
-PASSED_WITH_CAVEAT = "passed, but %s"
+#: The verdict of a pass, in the log's header and on the printed line; deploy finds a passed run by it.
+PASSED = "passed"
+#: What a pass prints when its scenario did less than a person expects (P485): the log's verdict stays PASSED.
+PASSED_WITH_CAVEAT = PASSED + ", but %s"
 # --- end MVP ---
 #: What the line says when the steps are not RECORDED: a step has no key, so a kind would be a guess, or the log gave none.
 STEPS_NOT_READ = "not read"
@@ -357,7 +360,7 @@ class ScenarioSteps:
         if self.state == outcomes.NOT_CHECKED:
             return PASSED_WITH_CAVEAT % (outcomes.NOT_CHECKED_MESSAGE % self.why)
         caveat = self.control_caveat(THIS_RUN_MESSAGE)
-        return PASSED_WITH_CAVEAT % caveat if caveat else "passed"
+        return PASSED_WITH_CAVEAT % caveat if caveat else PASSED
     # --- end MVP ---
 
     # --- MVP ---
@@ -417,7 +420,7 @@ def verdict(code, serial, out, err, timeout_ms):
     output line by line, among the scenario's progress) and its stderr (wokwi-cli's own errors).
     """
     if code == 0:
-        return OK, "passed"
+        return OK, PASSED
     errors = err.strip().splitlines()
     why = next((line for line in errors if ERROR_WORD in line), errors[-1] if errors else "no reason given")
     if API_ERROR in why:
