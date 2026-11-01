@@ -247,8 +247,7 @@ SERIAL_MONITOR = "$serialMonitor"
 
 
 def wires_in(diagram):
-    """How many connections the emitted diagram makes between parts: the serial monitor's two are not counted, so a
-    diagram where every net failed still counts 0."""
+    """Connections between parts; the serial monitor's two are not counted, so all nets failed still counts 0."""
     return sum(1 for connection in diagram.get("connections") or []
                if not any(str(end).startswith(SERIAL_MONITOR) for end in connection[:2]))
 
@@ -257,6 +256,11 @@ def serial_wired(diagram):
     """Whether the board's serial port reaches Wokwi's serial monitor, so a scenario hears what the firmware prints."""
     return any(str(end).startswith(SERIAL_MONITOR) for connection in diagram.get("connections") or []
                for end in connection[:2])
+
+
+def serial_heard(diagram, board):
+    """P468: wired, or the board's record says its serial needs no wires (`serial_without_wires`, True only)."""
+    return serial_wired(diagram) or (board or {}).get("serial_without_wires") is True
 
 
 def count_in(circuit):
@@ -537,7 +541,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     compiled = sum(1 for how in staged.values() if how == "compiled")
     # What the simulation cannot show, in the records' own words, said and kept beside the diagram (P37).
     limits = sim_project.write_limits(sim_dir, loaded, board)
-    return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)) + notes)]
+    return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes)]
 
 
 def convert(project, own, source, sim_dir, workdir):
@@ -569,35 +573,29 @@ def board_alone(board, workdir, firmware=None, project=None):
     skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", emit_board.SCHEMATIC_STAGE, emit_board.FOOTPRINT_STAGE, "build")]
     if not board.get("wokwi_part_type"):
         return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type")]
-    sim_dir, wired, project = workdir / "sim", onboard_parts.OnboardPartReader(board).parts(), project or SCRIPTS.parent
-    diagram = {"version": 1, "author": "spark", "editor": "wokwi", "connections": [],
-               "parts": [{"type": board["wokwi_part_type"], "id": "mcu", "top": 0, "left": 0, "attrs": {}}]}
-    files = {"diagram.json": diagram}
-    if wired:
-        own, (files, why) = find_converter(project), onboard_parts.make_converter_input(board, wired, project)
-        stopped = converter_stage_problem(project, own) or (Stage("simulation", COULD_NOT_RUN, why) if why else None)
-        if stopped:
-            return skipped + [stopped]
-    sim_dir.mkdir(exist_ok=True)
-    (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml((), firmware))
-    for name, data in dict(files, **{"board.json": board}).items():
-        (sim_dir / name).write_text(json.dumps(data, indent=2) + "\n")
-    diagram, stopped, notes = convert(project, own, ["--netlist", str(sim_dir / onboard_parts.NETLIST)], sim_dir, workdir) if wired else (diagram, None, "")
+    sim_dir, project = workdir / "sim", project or SCRIPTS.parent
+    given, own = onboard_parts.read_board_alone(board, project), find_converter(project)
+    stopped = given.wired and (converter_stage_problem(project, own) or (Stage("simulation", COULD_NOT_RUN, given.why) if given.why else None))
     if stopped:
         return skipped + [stopped]
-    limits = sim_project.write_limits(sim_dir, None, board, onboard_parts.say_wired_gpios(wired))
-    said = "the board and its own %s, " % " and ".join(part["_instance"] for part in wired) if wired else "the board alone, "
-    return skipped + [Stage("simulation", OK, said + simulation_detail(wires_in(diagram), {}, 0, limits, serial_wired(diagram)) + notes)]
+    sim_dir.mkdir(exist_ok=True)
+    (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml((), firmware))
+    for name, data in dict(given.files, **{"board.json": board}).items():
+        (sim_dir / name).write_text(json.dumps(data, indent=2) + "\n")
+    diagram, stopped, notes = (convert(project, own, ["--netlist", str(sim_dir / onboard_parts.NETLIST)], sim_dir, workdir) if given.wired
+                               else (given.files["diagram.json"], None, ""))
+    if stopped:
+        return skipped + [stopped]
+    limits = sim_project.write_limits(sim_dir, None, board, onboard_parts.say_wired_gpios(given.wired))
+    return skipped + [Stage("simulation", OK, given.lead + simulation_detail(wires_in(diagram), {}, 0, limits, serial_heard(diagram, board)) + notes)]
 
 
 def simulation_detail(wires, staged, compiled, limits, serial=True):
     """
     What the simulation stage says, including what it cannot show.
 
-    Separated from `run` so it can be tested at all: no test on this machine reaches run's
-    simulation stage, which needs a toolchain and a converter, so everything written inside it was
-    guarded by nobody — the verification lens's finding, and two of P37's own mutations escaped on
-    exactly that.
+    Separated from `run` so a test can reach it: run's simulation stage needs a toolchain and a converter, so what was
+    written inside it was guarded by nobody (two of P37's own mutations escaped on that).
     """
     detail = "%d wire(s) in the diagram%s" % (
         wires, ", %d chip(s): %d compiled, %d reused"

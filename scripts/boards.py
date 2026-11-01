@@ -518,16 +518,14 @@ BENCH = "Test it on the board."
 def gpio_limits(part, checked, wired=None):
     """
     The GPIOs of the `checked` (spec, entry) pairs that `part`, a definition already read, gives no pin, as (component,
-    sentence) limits; a GPIO in `wired`, {gpio: sentence}, has its own sentence (P484). A definition not read gives its
-    one "not checked" line.
+    sentence) limits. A definition not read gives its one "not checked" line first. A GPIO in `wired`, {gpio: sentence},
+    gives its own sentence whether the definition was read or not (P484).
     """
-    if part.state != outcomes.RECORDED:
-        return [(ONBOARD_GPIOS, part.why_not_read())]
-    said = []
+    said = [] if part.state == outcomes.RECORDED else [(ONBOARD_GPIOS, part.why_not_read())]
     for spec, entry in checked:
         gpios = entry.get("gpio") if isinstance(entry.get("gpio"), list) else []
         for gpio in (gpio for gpio in gpios if isinstance(gpio, int) and not isinstance(gpio, bool)):
-            why = part.why_not_simulated(gpio)
+            why = part.state == outcomes.RECORDED and part.why_not_simulated(gpio)
             if gpio in (wired or {}):
                 said.append(("%s (GPIO%d)" % (spec.constant, gpio), wired[gpio]))
             elif why:

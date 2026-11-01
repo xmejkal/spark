@@ -108,5 +108,5 @@
  {"file": "scripts/needs.py", "name": "every record is said to come from the project's own layer", "find": "known, ids, problems, picked = {row[:2]: row[2] for row in rows}", "replace": "known, ids, problems, picked = {row[:2]: \"project\" for row in rows}"},
  {"file": "scripts/parts.py", "name": "nothing is ever built", "find": "    built = any(event.get(\"event\") == \"built\" and event.get(\"project\") == name for event in history)", "replace": "    built = False"},
  {"file": "scripts/parts.py", "name": "another project's build is this one's", "find": "event.get(\"event\") == \"built\" and event.get(\"project\") == name", "replace": "event.get(\"event\") == \"built\""},
- {"file": "scripts/parts.py", "name": "an unbuilt project is not said to be", "find": "([] if built else [\"  not built yet — check_spine records it when the chain runs end to end\"])", "replace": "[]"}
+ {"file": "scripts/parts.py", "name": "an unbuilt project is not said to be", "find": "([] if built else [\"  not built yet — check_spine records it when the chain runs end to end, and a board-only build records none\"])", "replace": "[]"}
 ]

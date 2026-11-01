@@ -2277,6 +2277,7 @@ var require_build_commonjs = __commonJS(function(exports) {
 
 // cli.ts
 import { readFile, writeFile } from "node:fs/promises";
+import { basename } from "node:path";
 
 // lib/geometry.ts
 import { readdirSync, readFileSync as readFileSync2 } from "node:fs";
@@ -21846,7 +21847,8 @@ async function main() {
     console.log(`mapping from the part records: ${spokenFor} component(s)`);
   }
   const { netlist, problems: designProblems } = options.netlist ? { netlist: readNetlist(JSON.parse(await readFile(options.netlist, "utf8"))), problems: [] } : buildNetlist(JSON.parse(await readFile(options.circuit, "utf8")));
-  const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips });
+  const author = options.netlist ? `generated from ${basename(options.netlist)}` : undefined;
+  const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips, author });
   const existing = await readExisting(options.out);
   const { diagram, summary } = mergeWithExisting(emitted.diagram, existing);
   const validation = validate({ ...emitted, diagram }, netlist.components.length);

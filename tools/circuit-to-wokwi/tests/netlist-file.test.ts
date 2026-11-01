@@ -49,6 +49,7 @@ describe("a netlist given as JSON (--netlist)", () => {
                          "--mapping", join(folder, "mapping.json"), "--chips", join(folder, "chips"));
     expect(done.exitCode).toBe(0);
     const diagram = JSON.parse(readFileSync(join(folder, "diagram.json"), "utf8"));
+    expect(diagram.author).toBe("generated from netlist.json");
     expect(diagram.connections.map((connection: string[]) => connection.slice(0, 2))).toEqual([
       ["mcu:21", "onboard_led:A"], ["mcu:47", "onboard_button:1.l"], ["mcu:GND.1", "onboard_led:C"],
       ["mcu:GND.1", "onboard_button:2.l"], ["mcu:TX", "$serialMonitor:RX"], ["mcu:RX", "$serialMonitor:TX"],

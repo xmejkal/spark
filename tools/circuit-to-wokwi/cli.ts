@@ -16,6 +16,7 @@
 // node:fs, not Bun.file — the shipped bundle runs on Node (B10, P82). And no `#!/usr/bin/env bun`
 // line: with it, bun 1.4.2 bundled lib/mapping.ts twice for Node, and the records reached neither copy the emitter read.
 import { readFile, writeFile } from "node:fs/promises";
+import { basename } from "node:path";
 import { emitWokwiDiagram } from "./lib/emitters/wokwi";
 import { loadMappingFile } from "./lib/mapping";
 import { mergeWithExisting } from "./lib/merge";
@@ -92,7 +93,9 @@ async function main() {
   const { netlist, problems: designProblems } = options.netlist
     ? { netlist: readNetlist(JSON.parse(await readFile(options.netlist, "utf8"))), problems: [] }
     : buildNetlist(JSON.parse(await readFile(options.circuit!, "utf8")));
-  const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips });
+  // The emitter's own author names board.tsx, which a netlist written as JSON has none of (P484).
+  const author = options.netlist ? `generated from ${basename(options.netlist)}` : undefined;
+  const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips, author });
   const existing = await readExisting(options.out);
   const { diagram, summary } = mergeWithExisting(emitted.diagram, existing);
   const validation = validate({ ...emitted, diagram }, netlist.components.length);

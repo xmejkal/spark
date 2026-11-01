@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
+import breadboard  # noqa: E402
 import check_spine  # noqa: E402
 import onboard_parts  # noqa: E402
 import store  # noqa: E402
@@ -28,7 +29,10 @@ from onboard_parts import OnboardPartReader  # noqa: E402
 LED = {"id": "led-red-5mm", "onboard": "firebeetle2-esp32s3", "_instance": "onboard_led", "gpio": 21, "pin": "D13"}
 BUTTON = {"id": "tactile-button", "onboard": "firebeetle2-esp32s3", "_instance": "onboard_button", "gpio": 47, "pin": "D14"}
 WIRED_LED = ("the Wokwi stand-in has no LED on GPIO21, so spark wires Wokwi's LED to GPIO21 in its place: a passed run "
-             "shows the firmware drove GPIO21, not that the board's own LED lights. Test it on the board.")
+             "shows the level a scenario read on GPIO21, not a PWM duty or a brightness, nor that the board's own LED "
+             "lights. Test it on the board.")
+NOT_CHECKED = ("not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 differs, or it "
+               "does not parse")
 WIRED_BUTTON = ("the Wokwi stand-in has no button on GPIO47, so spark wires Wokwi's pushbutton to GPIO47 in its place: a "
                 "scenario presses that part, not the board's own button. Test it on the board.")
 UNWIRED_BUTTON = ("the Wokwi part of firebeetle2-esp32s3 is a stand-in, where GPIO47 is a bare header pin with no onboard "
@@ -71,6 +75,12 @@ class TheReaderPicksTheRowsSparkCanWireTest(unittest.TestCase):
         self.assertEqual(OnboardPartReader(dict(firebeetle(), wokwi_power_pins={"3V3": "3V3.1"})).parts(), [])
         self.assertEqual(OnboardPartReader(None).parts(), [])
 
+    def test_the_board_s_component_name_is_the_one_the_converter_matches(self):
+        mapping = (ROOT / "tools" / "circuit-to-wokwi" / "lib" / "mapping.ts").read_text()
+        self.assertIn('export const BOARD: PartMapping = {', mapping)
+        board_block = mapping.split("export const BOARD: PartMapping = {", 1)[1].split("};", 1)[0]
+        self.assertIn('match: "%s",' % breadboard.BOARD_COMPONENT, board_block)
+
     def test_every_wired_role_is_one_a_scenario_reaches(self):
         self.assertEqual(sorted(onboard_parts.ONBOARD_PARTS), sorted(role for role, spec in boards.ONBOARD_ROLES.items() if spec.scenario_verb))
 
@@ -87,6 +97,13 @@ class AWiredGpioHasItsOwnLimitTest(unittest.TestCase):
         said = boards.onboard_limits(board, onboard_parts.say_wired_gpios(OnboardPartReader(board).parts()))
         self.assertEqual(said, [("ONBOARD_LED (GPIO21)", WIRED_LED), ("ONBOARD_BUTTON (GPIO47)", WIRED_BUTTON)])
 
+    def test_a_definition_not_in_the_store_says_not_checked_and_still_words_each_wired_gpio(self):
+        board = firebeetle()  # the suite's scratch store holds no Wokwi definition
+        said = boards.onboard_limits(board, onboard_parts.say_wired_gpios(OnboardPartReader(board).parts()))
+        self.assertEqual(said, [("onboard GPIOs", NOT_CHECKED), ("ONBOARD_LED (GPIO21)", WIRED_LED),
+                                ("ONBOARD_BUTTON (GPIO47)", WIRED_BUTTON)])
+        self.assertEqual(boards.onboard_limits(board), [("onboard GPIOs", NOT_CHECKED)])
+
     def test_a_gpio_left_unwired_keeps_the_bare_header_pin_sentence(self):
         board = self.kept(firebeetle(onboard_button={"active_level": 1}))
         said = boards.onboard_limits(board, onboard_parts.say_wired_gpios(OnboardPartReader(board).parts()))
@@ -95,7 +112,7 @@ class AWiredGpioHasItsOwnLimitTest(unittest.TestCase):
 
 class TheConverterInputComesFromThePartRecordsTest(unittest.TestCase):
     def test_the_netlist_wires_each_signal_pin_to_its_gpio_and_each_ground_pin_to_ground(self):
-        files, why = onboard_parts.make_converter_input(firebeetle(), [LED, BUTTON], ROOT)
+        files, why = onboard_parts.make_converter_input([LED, BUTTON], "GND1", ROOT)
         self.assertIsNone(why)
         self.assertEqual(files["wokwi-mapping.json"], {
             "onboard_led": {"wokwiType": "wokwi-led", "pins": {"A": "A", "K": "C"}, "attrs": {"color": "red"}},
@@ -112,9 +129,9 @@ class TheConverterInputComesFromThePartRecordsTest(unittest.TestCase):
         record = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
         record["power"][0]["rail"] = "supply"
         (project / "parts" / "led-red-5mm.json").write_text(json.dumps(record))
-        self.assertEqual(onboard_parts.make_converter_input(firebeetle(), [LED], project),
+        self.assertEqual(onboard_parts.make_converter_input([LED], "GND1", project),
                          (None, "the record for 'led-red-5mm' names no signal pin, ground pin or Wokwi part, so spark cannot wire onboard_led"))
-        files, why = onboard_parts.make_converter_input(firebeetle(), [dict(LED, id="no-such-part")], project)
+        files, why = onboard_parts.make_converter_input([dict(LED, id="no-such-part")], "GND1", project)
         self.assertIsNone(files)
         self.assertTrue(why.startswith("no part called 'no-such-part'"), why)
 
@@ -135,6 +152,7 @@ class ABoardOnlyBuildWiresThemTest(unittest.TestCase):
         self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.OK), stages[-1].detail)
         self.assertTrue(stages[-1].detail.startswith("the board and its own onboard_led and onboard_button, 4 wire(s) in the diagram"))
         diagram = json.loads((workdir / "sim" / "diagram.json").read_text())
+        self.assertEqual(diagram["author"], "generated from netlist.json")
         self.assertEqual([(part["id"], part["type"]) for part in diagram["parts"]],
                          [("mcu", "board-esp32-s3-devkitc-1"), ("onboard_led", "wokwi-led"), ("onboard_button", "wokwi-pushbutton")])
         self.assertEqual([connection[:2] for connection in diagram["connections"]],

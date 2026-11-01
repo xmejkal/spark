@@ -26,8 +26,8 @@
  {
   "file": "scripts/onboard_parts.py",
   "name": "a part's ground pin is the signal pin again",
-  "find": "        ground[\"members\"].append({\"componentId\": role, \"pinName\": returns})",
-  "replace": "        ground[\"members\"].append({\"componentId\": role, \"pinName\": signal})"
+  "find": "        grounds.append({\"componentId\": role, \"pinName\": returns})",
+  "replace": "        grounds.append({\"componentId\": role, \"pinName\": signal})"
  },
  {
   "file": "scripts/boards.py",
@@ -46,5 +46,17 @@
   "name": "--netlist is ignored and the circuit is read",
   "find": "  const { netlist, problems: designProblems } = options.netlist\n",
   "replace": "  const { netlist, problems: designProblems } = false\n"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "a definition not in the store hides each wired GPIO's sentence",
+  "find": "    said = [] if part.state == outcomes.RECORDED else [(ONBOARD_GPIOS, part.why_not_read())]",
+  "replace": "    if part.state != outcomes.RECORDED:\n        return [(ONBOARD_GPIOS, part.why_not_read())]\n    said = []"
+ },
+ {
+  "file": "tools/circuit-to-wokwi/cli.ts",
+  "name": "a board-only diagram says it came from board.tsx",
+  "find": "  const author = options.netlist ? `generated from ${basename(options.netlist)}` : undefined;",
+  "replace": "  const author = undefined;"
  }
 ]
