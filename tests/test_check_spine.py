@@ -38,6 +38,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
 import check_spine  # noqa: E402
+from suite_runs import slow  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import missing_facts  # noqa: E402
@@ -1197,6 +1198,37 @@ class ABrokenTraceIsNamedTest(unittest.TestCase):
             self.assertIn("3 error(s): pcb_trace_error, source_trace_not_connected_error; first: .Mcu > .MOSI; a trace "
                           "crosses another", words)
             self.assertNotIn(".SCK", words)
+
+
+# --- MVP --- (P512, #708) Done when: an SPI and an I2C part build with 0 errors on both shipped boards
+@slow("three tscircuit builds, about 5 s each, 14.1 s on 2026-11-01")
+@unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
+    """
+    P512: the emitter traced `.Mcu > .MOSI` where the pad is MO (FireBeetle 2) and `.Mcu > .SDA` where it is D4 (XIAO
+    C6), so these builds ended with 2 to 4 errors. The display's record is a fixture copied into a temp project's
+    parts/; the store is never read. The build step is asserted, not the whole chain: the XIAO display run still
+    stops at the simulation (the display has no Wokwi part).
+    """
+
+    def build_stage(self, board, part):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / "parts").mkdir()
+        shutil.copy(ROOT / "tests" / "data" / "parts" / "dfr0664-tft-2in.json", project / "parts")
+        (project / "requirements.json").write_text(json.dumps({"board": board, "parts": [part]}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(project / "requirements.json"), "--json"])
+        return next(stage for stage in json.loads(out.getvalue())["stages"] if stage["name"] == "build")
+
+    def test_each_build_ends_with_0_errors(self):
+        for board, part in (("firebeetle2-esp32s3", "dfr0664-tft-2in"), ("xiao-esp32-c6", "dfr0664-tft-2in"),
+                            ("xiao-esp32-c6", "vl6180x-breakout")):
+            with self.subTest(board=board, part=part):
+                build = self.build_stage(board, part)
+                self.assertEqual(build["status"], check_spine.OK, build["detail"])
+                self.assertIn(", 0 errors", build["detail"])
 
 
 class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):
