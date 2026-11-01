@@ -17,6 +17,9 @@ as the project's folder is chosen (S's item 3; the questions before it are not c
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
 ```
 
+`--step` writes a line to the person's history in the store, and lists the project in `projects.json` when it is not listed. Run it with
+`--dry-run` first: that prints `would start step S of <project>` and, for an unlisted project, `would list <name> on your projects`, and writes nothing.
+
 ## S — the goal becomes needs
 
 0. Read the brief first. If the person's project folder holds `.spark/project.json` (`/spark:init` writes it), read
@@ -125,7 +128,7 @@ and without `--dry-run`. Each need it names gets exactly those picks, and what t
 the project, one piece per pick, and one board however many needs pick it. A pick another project holds is **refused, naming the holder** ("1 owned, held by
 …"): say so; the person frees it — `--drawer-set` with a file setting that entry's `used_in` without the holder, after a
 dry run — or picks another. A refused write marks each change line `not written:`, and the lines that say "refused" are the problems. Refused with no holder, more were picked than are owned: pick fewer, or correct the count.
-A `board <key> for <need>: ...` note is the same sentence, and it names the other choice: the first part the person owns
+A `board <key> for <need>: ...` note is the same sentence. Only a note that names a pin limit also names the other choice: the first part the person owns
 with free stock that matches the need and has a Wokwi model, on a header pad. Say it to the person as it is.
 Say "to get" (known, not owned), "maybe owned — check the drawer first", "count unknown", "a board needs a board
 file" and "board <key>: stops at the footprint stage (P121): its board file lacks physical.header" (the pick stands,

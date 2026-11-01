@@ -64,6 +64,10 @@ yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line 
 `SPARK_HOME=<the store>` when the run had one, so a new terminal window uses the same MicroPython build and grants. On macOS the board
 shows as `/dev/cu.usbmodem…`.
 
+If Claude Code itself refuses the run (its auto mode did on walk 3) before deploy.py prints anything, the person has no deploy.py line. Say so, and give
+the person the look's `next` step as the line to run in their own terminal, with `SPARK_HOME=<the store>` in front when the run had one.
+Do not run the line by another route.
+
 deploy.py flashes only an image that passed, unless the person chose `--no-simulation` (below). The image is the one the `firmware = ` line of `sim/wokwi.toml` names. A build writes that line as a comment, so until the first scenario run writes it, the image is `sim/flash-with-firmware.bin`. A log in `sim/runs/` must name
 its sha256 with `verdict: passed`, and no log may name it with another verdict. A log from an older spark names no image,
 so run the scenario again. If a file in `firmware/` changed after the run, deploy.py says so: the board gets the image

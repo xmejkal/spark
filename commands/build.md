@@ -146,7 +146,8 @@ A rebuild keeps the flash image that `sim/wokwi.toml` already names, unless `--f
 
 When the chain runs end to end for a project on your list, your store's history records `built`: the board and the parts
 that were built, each with a digest of some of the facts the build read from it (the pins, power and footprint; not a
-part's size or simulation stand-in, nor the board's pin roles).
+part's size or simulation stand-in, nor the board's pin roles). A board-only build skips the parts, schematic, footprint and build stages, so it
+writes no `built`, and the tally says `not built yet`.
 
 ```
   idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
@@ -283,6 +284,18 @@ the scenario's first step, because a step sent earlier reaches a board that is s
 waits for such text before its first input is left as it is. A firmware that never prints it fails with: *the
 firmware never printed 'ready': print it once setup is done (the ready contract, commands/build.md)*. The firmware also
 prints a line for each change that a scenario waits on.
+
+**The console lines.** A firmware that never reads its console ignores Ctrl-C, so mpremote cannot stop it and a deploy ends in
+`ready unknown`. Put these lines in the loop. They read the console without waiting and drop what they read:
+
+```python
+import select, sys
+console = select.poll()                  # before the loop
+console.register(sys.stdin, select.POLLIN)
+...
+while console.poll(0):                   # inside the loop; 0 means do not wait
+    sys.stdin.read(1)
+```
 
 The scenario holds only behaviour. Claude writes it from the person's words, and spark ships none, because the pin map
 holds pins, not behaviour. A scenario's `set-control` lines press a button or move a chip's slider (a probe's

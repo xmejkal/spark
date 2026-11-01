@@ -48,6 +48,9 @@ rails from the built design if there is one. Existing files are left alone unles
 init derives into rules.json and keeps your answers; it rewrites project.json only if that file has no answers, and
 never rewrites package.json ([P114](https://github.com/xmejkal/spark/issues/48)).
 
+It also writes one line outside the project: it lists the project in the person's store, in `projects.json`, and prints
+`on your projects list as <name>`. If the store refuses, it prints `not on your projects list: <why>` and still writes the files.
+
 It also writes the files that AI tools read ([P216](https://github.com/xmejkal/spark/issues/197)), and one note for
 each:
 
