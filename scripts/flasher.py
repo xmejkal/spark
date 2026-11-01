@@ -42,6 +42,12 @@ class EsptoolFlasher(Flasher):
     #: cee2259c868a91c99962b557b463398d024c3610ff721ac1058cb13144686ead), and 5.5.0 prints a deprecation line for the
     #: underscore names. The esptool entry's `oldest_version` makes the tools list refuse an older one.
     ERASE, WRITE = "erase-flash", "write-flash"
+    #: How esptool restarts the chip after the write (P462). Its default, hard-reset, leaves a chip that was entered with the
+    #: BOOT button in download mode (esptool troubleshooting, "Leaving Download Mode in USB-Serial/JTAG Mode"), as the
+    #: FireBeetle 2 stayed in boot:0x23. The watchdog resets the whole system and samples the boot pin again on the S3
+    #: (esptool-5.5.0 targets/esp32s3.py:337-345); the other chips fall back to a hard reset (loader.py:2218-2223), as
+    #: before. The S3 started MicroPython after it on the bench (P472 bench.log 23:29:16, 23:29:34, entered by software).
+    AFTER = ["--after", "watchdog-reset"]
     #: What to try when esptool cannot reach the board, with `%(boot)s`, `%(reset)s` and `%(orientation)s` from the
     #: ButtonPlaces. The sentence has no period: `orientation` brings its own, or nothing.
     BOOT_HINT_TEMPLATE = ("if esptool could not connect, hold the board's %(boot)s, press and release %(reset)s, "
@@ -64,4 +70,4 @@ class EsptoolFlasher(Flasher):
 
     def build_commands(self, image, port=None):
         base = build_esptool_prefix(self.tool, port, self.chip)
-        return [base + [self.ERASE], base + [self.WRITE, self.IMAGE_OFFSET, str(image)]]
+        return [base + [self.ERASE], base + self.AFTER + [self.WRITE, self.IMAGE_OFFSET, str(image)]]

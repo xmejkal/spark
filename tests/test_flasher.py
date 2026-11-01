@@ -35,12 +35,18 @@ class TheEsptoolFlasherTest(unittest.TestCase):
     def test_it_erases_then_writes_the_image_at_zero_on_the_port(self):
         commands = flasher.EsptoolFlasher(ESPTOOL, "esp32s3").build_commands("/p/my image.bin", PORT)
         self.assertEqual(commands, [BASE + ["--chip", "esp32s3", "--port", PORT, "erase-flash"],
-                                    BASE + ["--chip", "esp32s3", "--port", PORT, "write-flash", "0x0", "/p/my image.bin"]])
+                                    BASE + ["--chip", "esp32s3", "--port", PORT, "--after", "watchdog-reset", "write-flash", "0x0", "/p/my image.bin"]])
 
     def test_without_a_port_esptool_finds_the_board(self):
         commands = flasher.EsptoolFlasher(ESPTOOL, "esp32c6").build_commands("/p/i.bin")
         self.assertEqual(commands, [BASE + ["--chip", "esp32c6", "erase-flash"],
-                                    BASE + ["--chip", "esp32c6", "write-flash", "0x0", "/p/i.bin"]])
+                                    BASE + ["--chip", "esp32c6", "--after", "watchdog-reset", "write-flash", "0x0", "/p/i.bin"]])
+
+    def test_only_the_write_restarts_with_the_watchdog_and_the_erase_has_no_after(self):
+        erase, write = flasher.EsptoolFlasher(ESPTOOL, "esp32s3").build_commands("/p/i.bin", PORT)
+        self.assertNotIn("--after", erase)
+        self.assertLess(write.index("--after"), write.index("write-flash"))  # a global option comes before the command
+        self.assertEqual(write[write.index("--after") + 1], "watchdog-reset")
 
     def test_its_names_are_the_ones_esptool_3_and_4_know(self):
         self.assertEqual((flasher.EsptoolFlasher.ERASE, flasher.EsptoolFlasher.WRITE, flasher.EsptoolFlasher.IMAGE_OFFSET),
