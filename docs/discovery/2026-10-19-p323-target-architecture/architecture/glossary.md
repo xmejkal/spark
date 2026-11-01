@@ -92,7 +92,7 @@ Back to [the architecture](README.md).
 | step | next action, wiring `Step` (`breadboard_steps.py:34`) | `NextStep`, `WiringStep` (proposed, breadboard move). |
 | record | fact file, `WiringRecord` (`breadboard_changes.py:103`) | `WiringLog` (proposed). A simulation log is a `RunLog` (proposed). |
 | facts | record fields, `FactsFile` that holds a reading (`board_facts.py`) | `ReadingFile` (proposed, bench move, S11). |
-| clock | `SystemClock` (monotonic, sleep), `board_grant.read_local_time` (the wall time), `FakeClock`, `FakeLocalClock` | `SystemClock` is the one clock with `now`, `monotonic`, `sleep`. One `FakeClock` (S7a). |
+| clock | `SystemClock` (`now`, `monotonic`, `sleep`) and `FakeClock` | `SystemClock` is the one clock. `board_grant.read_local_time` and `FakeLocalClock` are gone (P475, S7a). |
 | Operation | a class with `run()` (this page, the standard), a Value holding a function (`core.md`, v1) | a class with `run()`, one module each, `OPERATIONS` in the area's `__init__.py`. |
 | board | dev board, `Board` circuit class (`check_physics.py:114`) | `CircuitBoard` (proposed, checks move). Script names stay. |
 | Layers | design.md 2.3's folder Value, and architecture layers | `RecordFolders`. |

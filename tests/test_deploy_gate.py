@@ -36,7 +36,8 @@ import flasher  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import (FakeClock, FakeConsent, FakeConsoleProbe, FakeProbePlatform,  # noqa: E402
+from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform,  # noqa: E402
+                   FakeProbePlatform,
                    line_made_at_import, pin_time_zone)
 from firmware_platform import MicroPythonPlatform  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
@@ -394,6 +395,16 @@ class TheBusyPortTest(GateCase):
         _, _, problems = self.deploy("--token", "aaaa-bbbb", "--port", "/dev/cu.usb\u202emodem", consent=FakeConsent(True),
                                      look_fails=True, probe=FakeConsoleProbe(""))
         self.assertTrue(problems.startswith("deploy.py: could not read the board on /dev/cu.usb?modem"), problems)
+
+    def test_a_stop_the_doctor_gives_no_result_for_prints_its_own_line_with_the_port_as_a_question_mark(self):
+        port = "/dev/cu.usb\u202emodem"
+        stop = board_look.LookStop("could not read the board on %s.", port, reason="board_not_read")  # no port: no doctor
+        real = MicroPythonPlatform(self.project, lambda role: found(role))
+        platform = FakeFirmwarePlatform(self.project, flasher=real.make_flasher(), shell_command=real.make_shell_command(), port_finder=object(),
+                                        board_reader=FakeBoardReader(stop))
+        self.run_the_scenario()
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", "--port", port, consent=FakeConsent(True), platform=platform)
+        self.assertEqual((code, problems.strip()), (2, "deploy.py: could not read the board on /dev/cu.usb?modem."))
 
     def test_the_real_doctor_finds_the_lock_and_names_ctrl_x(self):
         self.run_the_scenario()
@@ -814,7 +825,8 @@ class TheFactsAfterTheFlashTest(GateCase):
         deploy_record_store.DeployRecordStore().find_path(self.look().reading.mac).mkdir(parents=True)  # a folder where the record goes
         code, said, _ = self.flash()
         self.assertEqual(code, 0)
-        self.assertIn("store record: not written: ", said)
+        place = deploy_record_store.DeployRecordStore().find_path(self.look().reading.mac)
+        self.assertIn("store record: not written: [Errno 21] Is a directory: '%s.part' -> '%s'" % (place, place), said)
 
 
 class SayLastDeployInQuestionTest(unittest.TestCase):

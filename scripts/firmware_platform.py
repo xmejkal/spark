@@ -33,6 +33,7 @@ def record_of(project):
         raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot), reason=board_codes.CHIP_UNKNOWN)
 
 
+# --- MVP --- the platform seam (P475): every board tool and the doctor's tool lookup come from one object
 class FirmwarePlatform:
     """Strategy: the factories for a project's board tools. A subclass supplies each `make_` method, and `find_tool` for the
     role-to-Tool lookup the board doctor reads. Not a Value: its parts act."""
@@ -111,3 +112,4 @@ class MicroPythonPlatform(FirmwarePlatform):
 
     def make_console_probe(self, port, run):
         return board_console.ConsoleProbe.for_tool(self.find_tool("board-shell"), port, run)
+# --- end MVP ---

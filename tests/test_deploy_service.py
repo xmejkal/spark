@@ -27,7 +27,7 @@ import ready_check  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeClock, FakeConsent, FakeDeployRecordStore  # noqa: E402
+from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeDeployRecordStore, FakeFirmwarePlatform  # noqa: E402
 from test_board_look import FOUND, found  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 
@@ -116,6 +116,18 @@ class TheFlashTest(ServiceCase):
         with self.assertRaises(project_image.DeployError):
             self.service().deploy(report, report.token(), Ended(True), self.lines.append)
         self.assertEqual(self.commands, [])
+
+
+class TheLookTest(ServiceCase):
+    @needs_littlefs
+    def test_the_look_reads_the_board_with_the_reader_of_the_platform_the_service_was_given(self):
+        reading = self.look().reading
+        reader = FakeBoardReader(reading)
+        platform = FakeFirmwarePlatform(self.project, port_finder=object(), board_reader=reader)
+        service = deploy_service.DeployService(self.project, platform, image_evidence.PassedRunEvidence(), run=self.fake_run,
+                                               clock=self.clock)
+        report = service.look(PORT)
+        self.assertEqual((report.reading, reader.read_ports), (reading, [PORT]))
 
 
 class TheRecordTest(ServiceCase):

@@ -170,7 +170,8 @@ class FakeBoardReader:
 
 class FakeFirmwarePlatform(FirmwarePlatform):
     """A fake FirmwarePlatform: each part is the object a test gives, or the exception it raises when the code asks for
-    it. A part left out raises AssertionError when asked for. `hints` keeps the hint of each `make_board_reader`."""
+    it. A part left out raises AssertionError when asked for. `hints` keeps the hint of each `make_board_reader`, and
+    `roles` the role of each `find_tool`."""
 
     def __init__(self, project=Path("."), flasher=None, shell_command=None, port_finder=None, board_reader=None,
                  connection=None, ready_check=None, console_probe=None, tool=None):
@@ -178,7 +179,7 @@ class FakeFirmwarePlatform(FirmwarePlatform):
         self.parts = {"flasher": flasher, "shell_command": shell_command, "port_finder": port_finder,
                       "board_reader": board_reader, "connection": connection, "ready_check": ready_check,
                       "console_probe": console_probe, "tool": tool}
-        self.hints = []
+        self.hints, self.roles = [], []
 
     def _part(self, name):
         part = self.parts[name]
@@ -188,6 +189,7 @@ class FakeFirmwarePlatform(FirmwarePlatform):
         return part
 
     def find_tool(self, role):
+        self.roles.append(role)
         return self._part("tool")
 
     def make_flasher(self):
