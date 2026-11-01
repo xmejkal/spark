@@ -87,7 +87,7 @@ class TheChecksTest(unittest.TestCase):
     def test_a_page_over_its_budget_names_itself_and_its_budget(self):
         with tempfile.TemporaryDirectory() as root:
             page(root, "docs/guide/a.md", "x\n" * 401)
-            self.assertEqual(check_docs.over_budget(Path(root))[:1],
+            self.assertEqual(check_docs.over_budget(Path(root), cell_limits={})[:1],
                              ["docs/guide/a.md has 401 lines, over its budget of 400. "
                               "Move text out or split the page, never raise the budget."])
 
@@ -95,16 +95,16 @@ class TheChecksTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             budgets = {"docs/guide/a.md": 3}
             page(root, "docs/guide/a.md", "x\n" * 3)
-            self.assertEqual(check_docs.over_budget(Path(root), budgets), [])
+            self.assertEqual(check_docs.over_budget(Path(root), budgets, {}), [])
             page(root, "docs/guide/a.md", "x\n" * 4)
-            self.assertEqual(check_docs.over_budget(Path(root), budgets),
+            self.assertEqual(check_docs.over_budget(Path(root), budgets, {}),
                              ["docs/guide/a.md has 4 lines, over its budget of 3. "
                               "Move text out or split the page, never raise the budget."])
 
     def test_a_budget_for_a_page_that_is_gone_fails_and_a_smaller_page_passes(self):
         with tempfile.TemporaryDirectory() as root:
             page(root, "docs/guide/a.md", "x\n" * 2)
-            self.assertEqual(check_docs.over_budget(Path(root), {"docs/guide/a.md": 50, "docs/guide/gone.md": 9}),
+            self.assertEqual(check_docs.over_budget(Path(root), {"docs/guide/a.md": 50, "docs/guide/gone.md": 9}, {}),
                              ["docs/guide/gone.md has a budget but is not there. Remove its entry from BUDGETS."])
 
     def test_a_table_cell_of_301_characters_fails_and_300_passes(self):
@@ -112,7 +112,25 @@ class TheChecksTest(unittest.TestCase):
             guide = page(root, "docs/guide/a.md", "")
             self.assertEqual(check_docs.long_cells(guide, "| a | %s |\n" % ("x" * 300), Path(root)), [])
             self.assertEqual(check_docs.long_cells(guide, "| a | %s |\n" % ("x" * 301), Path(root)),
-                             ["docs/guide/a.md has a table cell of 301 characters, over 300."])
+                             ["docs/guide/a.md line 1 has a table cell of 301 characters, over 300. Shorten it or move the text below the table."])
+
+    def test_a_long_cell_is_named_by_its_line_after_a_fenced_block(self):
+        text = "x\n```text\n| %s |\n```\n| a | %s |\n" % ("y" * 400, "x" * 301)
+        self.assertEqual(check_docs.long_cells(Path("a.md"), text),
+                         ["a.md line 5 has a table cell of 301 characters, over 300. Shorten it or move the text below the table."])
+
+    def test_an_escaped_pipe_stays_inside_its_cell(self):
+        text = "| %s \\| %s |\n" % ("a" * 200, "b" * 200)
+        self.assertEqual(len(check_docs.long_cells(Path("a.md"), text)), 1)
+
+    def test_an_indented_table_row_is_counted(self):
+        self.assertEqual(len(check_docs.long_cells(Path("a.md"), "  | %s |\n" % ("x" * 301))), 1)
+
+    def test_a_cell_limit_for_a_page_that_is_gone_fails(self):
+        with tempfile.TemporaryDirectory() as root:
+            page(root, "docs/guide/a.md", "x\n")
+            self.assertEqual(check_docs.over_budget(Path(root), {"docs/guide/a.md": 50}, {"docs/guide/gone.md": 900}),
+                             ["docs/guide/gone.md has a cell limit but is not there. Remove its entry from CELL_LIMITS."])
 
     def test_a_table_cell_in_a_fenced_block_is_not_counted(self):
         text = "```text\n| %s |\n```\n" % ("x" * 400)
@@ -124,7 +142,7 @@ class TheChecksTest(unittest.TestCase):
             limits = {"docs/guide/a.md": 400}
             self.assertEqual(check_docs.long_cells(guide, "| %s |\n" % ("x" * 400), Path(root), limits), [])
             self.assertEqual(check_docs.long_cells(guide, "| %s |\n" % ("x" * 401), Path(root), limits),
-                             ["docs/guide/a.md has a table cell of 401 characters, over 400."])
+                             ["docs/guide/a.md line 1 has a table cell of 401 characters, over 400. Shorten it or move the text below the table."])
 
     def test_an_anchor_follows_github_s_slug(self):
         self.assertEqual(check_docs.slug("`/spark:build` — one command"), "sparkbuild--one-command")

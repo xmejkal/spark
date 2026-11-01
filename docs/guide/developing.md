@@ -590,10 +590,11 @@ as `tests/test_docs.py`. It fails when the docs:
 - carry a personal path;
 - are cited by a file in `scripts/`, `data/`, `commands/`, `skills/` or `agents/` under a `docs/….md` path that is not a file;
 - leave out of README.md the version that `.claude-plugin/plugin.json` ships;
-- run over a page's line budget (`BUDGETS`) or a table cell's limit (`CELL_LIMITS`). These only go down: cut or split the
-  page, never raise a number, and remove a split page's entry ([P500](https://github.com/xmejkal/spark/issues/689)).
+- run over a page's line budget (`BUDGETS`, 400 by default) or a table cell's limit (`CELL_LIMITS`, 300 by default). These
+  only go down, kept by review: cut or split the page, never raise a number, remove a split page's entry ([P500](https://github.com/xmejkal/spark/issues/689)).
 
 A ` ```sh ` block marked `<!-- runs: exit N -->` is run in an empty project, with a store of its own, and must exit `N`.
+
 Nothing mechanical checks a skill or agent named in prose, an absolute link, or a second, wrong version; the council
 reads those. Nor can it tell whether a step's status is still current. So when a step of the [journey](journey.md)
 changes what it does, the change updates the journey guide and the README's *What works today*: item 8 of the

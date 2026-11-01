@@ -20,3 +20,10 @@ What the plan claimed, and what its two council rounds changed. Card: #689.
 | 14 | Mutation table: rglob back to glob; the comparison flipped; the cell limit raised | plan | acted | `tests/mutations/p500-docs-budget.json`; 3 planted, 3 caught; `--anchors` at 119 refused |
 | 15 | A five-line paragraph in developing.md would have raised its 650-line budget | build | acted | the rule is one two-line bullet in the check list; one blank line saved in the section |
 | 16 | T2 forbids `mock.patch.dict` on module tables | build | acted | `over_budget` and `long_cells` take the table as an argument |
+| 17 | The cell message lets a reader find the cell | PR reviewer 1 | rejected | it named only the page; it now names the line and the fix ("Shorten it or move the text below the table"); a test with a fenced block before it |
+| 18 | A cell limit for a page that is gone is flagged | PR reviewer 2 | acted | over_budget now also names a CELL_LIMITS entry for a missing page; test |
+| 19 | An escaped pipe or an indented row is handled | PR reviewer 4, PR refuter 3 | acted | split on unescaped pipes, rows found after leading spaces; tests |
+| 20 | Every reader of the guides sees sub-folders | PR refuter 2 | acted | tests/test_orphans.py (3 lines) and tests/test_routes.py (1 line) now rglob, before P501 splits journey.md |
+| 21 | "These only go down" is enforced | PR refuter 5 | rejected | kept by review, as tests/test_architecture.py keeps its baseline; the comment and developing.md say so |
+| 22 | developing.md keeps its old shape | PR refuter 4 | acted | the blank line before "Nothing mechanical" is back and the bullet names both defaults; its budget is its size after this PR (651), set in the same PR that brings the budgets |
+| 23 | The names over_budget and long_cells are verb plus object | PR reviewer 3 | rejected | they match the older checks in the file (broken_links, missing_names); a rename of all of them is a later prune |
