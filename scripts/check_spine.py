@@ -76,7 +76,7 @@ import emit_footprint  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, NOT_CHECKED, OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
 from spark.core.result import envelope_item  # noqa: E402
-from spark.core.text_guards import guard_lines  # noqa: E402
+from spark.core.text_guards import clean, guard_lines  # noqa: E402
 
 #: The design the chain is proven against when nobody names one. A motor driver, a sensor on a
 #: bus, and the power inlet that supplies the rail the modules only consume — the smallest set
@@ -492,12 +492,12 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                "joined to nothing — the parts around it are wired to nets it is "
                                "simply not on" % "; ".join(islands))]
     if errors:
-        first = [", ".join(error.get("selectors_not_found") or []) or error.get("message", "") for error in errors[:2]]
+        first = [error.get("selectors_not_found") or error.get("message", "") for error in errors[:2]]
+        first = clean("; ".join(", ".join(map(str, one)) if isinstance(one, list) else str(one) for one in first), 300)
         return stages + [Stage("build", PROBLEMS, "%d error(s): %s; first: %s" % (  # --- MVP --- (P512) names the trace
-            len(errors), ", ".join(sorted({element["type"] for element in errors})), "; ".join(first)))]
+            len(errors), ", ".join(sorted({element["type"] for element in errors})), first))]
     if traces == 0:
-        # The failure this file was written for. Everything is placed, nothing is connected, and
-        # no exception was raised anywhere.
+        # The failure this file was written for: everything is placed, nothing is connected, and nothing raised.
         return stages + [Stage("build", PROBLEMS,
                                "built with 0 pcb_traces — every component is placed and no "
                                "copper joins any of them. tscircuit skips routing entirely when "

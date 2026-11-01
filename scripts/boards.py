@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from typing import Optional
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import board_pads
 import provenance
 import store
 
@@ -691,7 +692,7 @@ def _pad_problems(board):
             if key.startswith("//"):
                 continue
             pads |= set(labels)
-        aliases = physical.get("pad_aliases") or {}
+        aliases = board_pads.BoardPads.from_record(board).aliases
         for name in sorted(board.get("pins") or {}):
             if name not in pads and aliases.get(name) not in pads:
                 problems.append(
@@ -836,9 +837,8 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
             problems.append(f"power_pads.{pad} rail is {supply['rail']!r}, but a rail is a name — letters, digits and _ "
                             f"(ground, logic, motor): the board is written with it as code")
 
-    # P87's attribute half: board.tsx is written with `.Mcu > .<pad>` for each pin's pad (P512) and each power pad,
-    # `import { <export> }` and `<export name="Mcu">`, so each is a name — the pin's own rule, whole — refused here even when the file carries it
-    # consistently; and the id, which names files and is written into the footprint generated from it, is a plain key.
+    # P87's attribute half: board.tsx is written with them, so each pins and power_pads key and the export is a name.
+    # The id names files and is written into the generated footprint, so it is a plain key.
     for label in pins if isinstance(pins, dict) else {}:
         if not re.fullmatch(parts.SELECTOR_SAFE, label):
             problems.append(f"pins key {label!r} is not a name — letters, digits and _ (D3, SDA, A0): the board is written "

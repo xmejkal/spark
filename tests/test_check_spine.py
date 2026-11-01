@@ -1178,13 +1178,15 @@ class ABrokenTraceIsNamedTest(unittest.TestCase):
     build is a real one (button-light's kept circuit) with 3 errors added, by a fake tsci the project's node_modules holds.
     """
     FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
-    ERRORS = [{"type": "source_trace_not_connected_error", "message": "Could not find port", "selectors_not_found": [".Mcu > .MOSI"]},
+    ERRORS = [{"type": "source_trace_not_connected_error", "message": "Could not find port",
+               "selectors_not_found": [".Mcu > .MOSI", ".Mcu > .MISO"]},
               {"type": "pcb_trace_error", "message": "a trace crosses another"},
               {"type": "source_trace_not_connected_error", "selectors_not_found": [".Mcu > .SCK"]}]
 
-    def test_the_text_and_the_json_name_the_first_two(self):
+    def said(self, errors):
+        """The build stage's detail in --json, and the text run's output, for button-light's circuit plus `errors`."""
         root = Path(tempfile.mkdtemp())
-        circuit = json.loads((self.FIXTURE / "dist" / "board" / "circuit.json").read_text()) + self.ERRORS
+        circuit = json.loads((self.FIXTURE / "dist" / "board" / "circuit.json").read_text()) + errors
         fake_tsci(root, "true", circuit, binary=root / "node_modules" / ".bin" / "tsci")
         shutil.copy(self.FIXTURE / "requirements.json", root / "requirements.json")
         said = {}
@@ -1193,11 +1195,19 @@ class ABrokenTraceIsNamedTest(unittest.TestCase):
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
                 check_spine.main([str(root / "requirements.json")] + flags)
             said[bool(flags)] = out.getvalue()
-        build = next(stage for stage in json.loads(said[True])["stages"] if stage["name"] == "build")
-        for words in (build["detail"], said[False]):
-            self.assertIn("3 error(s): pcb_trace_error, source_trace_not_connected_error; first: .Mcu > .MOSI; a trace "
-                          "crosses another", words)
+        return next(stage for stage in json.loads(said[True])["stages"] if stage["name"] == "build")["detail"], said[False]
+
+    def test_the_text_and_the_json_name_the_first_two(self):
+        for words in self.said(self.ERRORS):
+            self.assertIn("3 error(s): pcb_trace_error, source_trace_not_connected_error; first: .Mcu > .MOSI, .Mcu > .MISO; "
+                          "a trace crosses another", words)
             self.assertNotIn(".SCK", words)
+
+    def test_an_odd_field_is_said_as_text_and_a_long_one_is_capped(self):
+        detail, _ = self.said([{"type": "source_trace_not_connected_error", "selectors_not_found": ".Mcu > .MOSI"}])
+        self.assertIn("first: .Mcu > .MOSI", detail)
+        detail, _ = self.said([{"type": "source_trace_not_connected_error", "message": "x" * 2000}])
+        self.assertLess(len(detail), 400)
 
 
 # --- MVP --- (P512, #708) Done when: an SPI and an I2C part build with 0 errors on both shipped boards

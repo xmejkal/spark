@@ -149,7 +149,7 @@ def printed_label(board, port):
     physical = board.get("physical") or {}
     rows = [label for row in (physical.get("header_order") or {}).values() if isinstance(row, list) for label in row]
     pads = board_pads.BoardPads.from_record(board)  # --- MVP --- (P512)
-    known = set(rows) | set(board.get("pins") or {}) | set(board.get("power_pads") or {}) | pads.alias_pads()
+    known = set(rows) | set(board.get("pins") or {}) | set(board.get("power_pads") or {}) | pads.alias_pads() | set(pads.aliases)
     hints = port.get("port_hints") or []
     label = next((pads.pad_of(hint) for hint in hints if hint in known), None) or next(
         (hint for hint in hints if not re.fullmatch(r"pin\d+|\d+", hint)), port.get("name"))

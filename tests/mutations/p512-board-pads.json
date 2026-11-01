@@ -62,8 +62,8 @@
  {
   "file": "scripts/check_spine.py",
   "name": "the verdict leaves the selectors out",
-  "find": "\"; \".join(first)))]",
-  "replace": "\"\"))]"
+  "find": "for element in errors})), first))]",
+  "replace": "for element in errors})), \"\"))]"
  },
  {
   "file": "scripts/check_spine.py",
@@ -76,5 +76,35 @@
   "name": "an error with no selector says nothing",
   "find": " or error.get(\"message\", \"\") for error",
   "replace": " for error"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "a printed label forgets an alias that is no pin (the XIAO's TX)",
+  "find": " | set(pads.aliases)",
+  "replace": ""
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the verdict names only an error's first selector",
+  "find": "\", \".join(map(str, one))",
+  "replace": "str(one[0])"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a field that is no list is spelt out letter by letter",
+  "find": "if isinstance(one, list) else str(one)",
+  "replace": "if True else str(one)"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the verdict is not capped",
+  "find": "for one in first), 300)",
+  "replace": "for one in first), 30000)"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "the validator reads no aliases",
+  "find": "        aliases = board_pads.BoardPads.from_record(board).aliases",
+  "replace": "        aliases = {}"
  }
 ]

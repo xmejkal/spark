@@ -228,7 +228,9 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
     # --- MVP --- (P512, #708) the alias is read, not answered by the fallback
     def test_a_pin_label_is_named_by_its_printed_pad(self):
         xiao = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
-        for hints, label in ((["SDA"], "D4"), (["pin22", "SDA", "22"], "D4"), (["D4"], "D4")):
+        # TX and RX are aliases only: no pins key and no header label (review, refuter 1)
+        for hints, label in ((["SDA"], "D4"), (["pin22", "SDA", "22"], "D4"), (["D4"], "D4"), (["TX"], "D6"),
+                             (["pin16", "TX"], "D6"), (["RX"], "D7")):
             with self.subTest(hints=hints):
                 self.assertEqual(breadboard.printed_label(xiao, {"name": hints[0], "port_hints": hints}), label)
         bare = {"pins": {"MOSI": 15}, "physical": {"pad_aliases": {"MOSI": "MO"}}}  # no header rows: the alias says MO
