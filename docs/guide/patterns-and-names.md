@@ -3,7 +3,8 @@
 New code in `scripts/` is small classes with one job each, in library modules, and `main()` only parses and prints
 (AGENTS.md). Each class plays one of these roles, and its name or its docstring says which. The PO set this rule on
 2026-10-14 ([P239](https://github.com/xmejkal/spark/issues/238), from the council's synthesis in
-[PR #239](https://github.com/xmejkal/spark/pull/239)).
+[PR #239](https://github.com/xmejkal/spark/pull/239)). The tests, the commit gate, the docs rules and the process are in
+[developing.md](developing.md).
 
 Some words first. A base class defines what a family of classes can do, and each subclass is one member of the family
 that fills it in. A docstring is the text in quotes at the top of a class or a function, which says what it does. A
