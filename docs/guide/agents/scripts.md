@@ -305,4 +305,4 @@ These write:
 
 **To build someone else's project,** build a copy. Copy everything but `node_modules`
 (`rsync -a --exclude node_modules SRC/ COPY/`), then link the original's `node_modules` into the copy by its absolute
-path. A copy with no `node_modules` turns a bare `npx tsci` into a download; see [rule 5 of what never to assume](never-assume.md).
+path. A copy with no `node_modules` turns a bare `npx tsci` into a download; see [rule 5 of what never to assume](never-assume.md#5-an-existing-boardtsx-is-never-overwritten-edited-or-not-delete-it-to-have-it-generated-again).

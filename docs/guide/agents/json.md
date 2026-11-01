@@ -15,8 +15,18 @@ come from the project that the build reads, which is the nearest folder up that 
 `boards/active.json` ([P319](https://github.com/xmejkal/spark/issues/403)). The answer's `project` key names that
 project as a whole path. It is `null` when no folder up is a project: then the parts and boards come from the plugin's
 library, and there are no rules. The first resolved line names a project that is not the folder, or says that there
-is none. A `--project` that is not a directory is `could-not-run` with a `reason`, and the answer has no `project` key.
+is none. A `--project` that is not a directory has no `project` key ([what exit 0 means](#what-exit-0-means)).
 The sample below is older than P319, so it has no `project` key.
+
+### What exit 0 means
+
+No check that ran found a problem or failed to look; skipped checks do not count.
+
+- A `--project` that names no folder is `could-not-run`, exit 2, with the reason `no directory at <path>`. Other paths
+  can still miss ([P117](https://github.com/xmejkal/spark/issues/51)). Before you report, confirm in `resolved`, or
+  in the flags you passed, that check_all found the circuit and the rules.
+- When every check is skipped, check_all answers could-not-run, exit 2.
+- Exit 0 with `unmeasured` above 0 is an ok on those `?` lines.
 
 This is its answer for the project in the journey guide. It came after a build and
 `init_project.py --project . --board firebeetle2-esp32s3 --force`, which names the rails from the built board:
@@ -128,7 +138,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `emit_footprint.py` | `check`, `message`, `status` |
 | `import_firmware.py` | `modules`, `problems`, `status`, `tool`, `unchecked` ([more](#import_firmwarepy)) |
 | `check_spine.py` | `check`, `stages`, `status`, and `kept`, `missing_facts` and `unserved` when they apply ([its keys](#check_spinepy)) |
-| `look.py`, `deploy.py` | the envelope, as `parts.py`'s: see below. A crash in `look.py` is an envelope too, code `crash`, exit 2 |
+| `look.py`, `deploy.py` | the envelope, as `parts.py`'s ([their envelope](#lookpy-and-deploypys-envelope)) |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 
 ### check_spine.py
@@ -157,6 +167,28 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   and the board's record lacks `serial_without_wires: true` ([P468](https://github.com/xmejkal/spark/issues/636)).
   spark's XIAO ESP32-C6 and FireBeetle 2 records carry it, so they get no warning. Read the warning as a possible silent
   `wait-serial`, not a failure.
+- Refusals and crashes. Each stage that could not run shows as `[????] <stage>` with its sentence, then
+  `the chain was NOT exercised — this is not a pass`, exit 2.
+  - `emit_board.py`'s refusal of a board that states no `power.io_volts` shows as `[????] schematic` with that sentence
+    ([P121](https://github.com/xmejkal/spark/issues/55)).
+  - An `emit_board.py` that crashes inside `check_spine.py` is could-not-run too: the `schematic` stage's detail is
+    `emit_board.py crashed: ` and the traceback's last line.
+  - A crash in the spine's own read of the input or in the footprint drawing reads `<script> crashed: <Type>: <message>`,
+    such as `emit_footprint.py crashed: RuntimeError: boom`. Such a detail is a crash, not a defect in the design.
+  - A board whose file cannot give a footprint stops at `[????] footprint`, before the schematic. The detail names each
+    missing fact (the gaps `emit_footprint.py` names), then says what the build still gives: with `--keep`, the kept
+    lines say whether `firmware/pins.py` was written.
+  - A board whose header and pad order disagree, or hold a value of the wrong kind (a pitch written as text), stops at
+    `[????] footprint` too, in the sentence `the board definition disagrees with itself: …` (P411). A value of the wrong
+    kind is named by its field, as `physical.header.pitch_mm is not a finite number` (a 400-digit number is one too).
+    `emit_board.py` and the build stop at the footprint stage for it, before the schematic.
+  - A fault in the requirements file (an unknown need, two parts of one name, pins that cannot be placed) is said first,
+    under `schematic`. `emit_board.py` alone refuses that board with the same sentence, in the same order, exit 2
+    ([P407](https://github.com/xmejkal/spark/issues/532)).
+  - A requirements file whose `signals` or `parts` is no list, or whose `pin` is no non-empty string, is refused the same
+    way, under `requirements`, naming the file and the field (`car.json: signals[0].pin is a list; write a pin name …`,
+    [P438](https://github.com/xmejkal/spark/issues/583)). A `.spark/rules.json` that is a folder is refused under
+    `schematic`.
 
 ### import_firmware.py
 

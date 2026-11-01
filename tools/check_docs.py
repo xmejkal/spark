@@ -34,9 +34,9 @@ PROJECT_FILES = {"pins.py": "the build and assign_pins.py --emit-pins write it i
 BUDGETS = {
     "README.md": 180,
     "docs/guide/journey.md": 1582,  # P501 splits it
-    "docs/guide/agents.md": 197,
-    "docs/guide/agents/json.md": 395,
-    "docs/guide/agents/never-assume.md": 207,
+    "docs/guide/agents.md": 185,
+    "docs/guide/agents/json.md": 427,
+    "docs/guide/agents/never-assume.md": 227,
     "docs/guide/agents/scripts.md": 308,
     "docs/guide/developing.md": 651,  # P504 shrinks it
     "docs/guide/commands.md": 284,
