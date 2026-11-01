@@ -66,6 +66,7 @@ import emit_board  # noqa: E402
 import init_project  # noqa: E402
 import needs  # noqa: E402
 import netlist  # noqa: E402
+import onboard_parts  # noqa: E402
 import parts  # noqa: E402
 import sim_project  # noqa: E402
 import store  # noqa: E402
@@ -188,19 +189,9 @@ def tsci_version(toolchain):
         return tools.UNKNOWN_VERSION
 
 
-#: Where the circuit.json -> Wokwi diagram.json converter might be. It is not part of this
-#: plugin yet: it lives in the project that proved it, and moving ~1800 lines of TypeScript into
-#: a Python plugin is a structural decision nobody has made. Until then this stage is honest
-#: about not having run rather than absent, because "the spine reaches simulation" is the whole
-#: product goal and a chain that quietly stops at `build` misrepresents it.
-#: A project may carry its own converter; otherwise the plugin's is used. The second entry used to
-#: be `../smartbin-local/tools/circuit-to-wokwi/cli.ts` — one person's checkout, beside which the
-#: chain's last stage was the only place it worked. The same requirements file reached
-#: `[ok] simulation` in a bare directory and `[????] no converter found` after running the
-#: documented `/spark:init`, because the search then walked up from the plugin and found that
-#: repository. v1's last word was true on one machine (backlog P32a).
+#: Where a project may carry its own converter, for its developer; otherwise the tools list's diagram-converter, the
+#: plugin's bundle, runs (B10, P82). Searched up from the project, never from the current folder (backlog P32a).
 CONVERTER_PATHS = ("tools/circuit-to-wokwi/cli.ts",)
-
 
 
 def find_converter(start):
@@ -385,7 +376,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     if requirements.get(needs.BOARD_ONLY) is True:
         if requirements.get("parts"):
             return stages + [Stage("parts", COULD_NOT_RUN, "the requirements say board_only and name parts: say one")]
-        return stages + board_alone(board, workdir, firmware)
+        return stages + board_alone(board, workdir, firmware, project)
     if not requirements.get("parts"):
         return stages + [Stage("parts", COULD_NOT_RUN,
                                "the requirements name no parts, so there is nothing to build; a "
@@ -526,31 +517,16 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         return stages + [Stage("simulation", COULD_NOT_RUN, sim_project.unmapped_detail(unmapped))]
     sim_dir = workdir / "sim"
     sim_dir.mkdir(exist_ok=True)
-    (sim_dir / "wokwi-mapping.json").write_text(json.dumps(mapping, indent=2) + "\n")
+    (sim_dir / sim_project.MAPPING_FILE).write_text(json.dumps(mapping, indent=2) + "\n")
     (sim_dir / "board.json").write_text(json.dumps(board, indent=2) + "\n")
     staged, chip_problems = sim_project.stage_chips(chips, sim_dir)
     if chip_problems:
         return stages + [Stage("simulation", COULD_NOT_RUN, "\n".join(chip_problems))]
     (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, firmware))
 
-    diagram_path = sim_dir / "diagram.json"
-    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)  # P482: the converter merges into it
-    made = subprocess.run(
-        converter_command(project, own) + [
-            "--circuit", str(circuit_path), "--out", str(diagram_path),
-            "--mapping", str(sim_dir / "wokwi-mapping.json"), "--chips", str(sim_dir / "chips")],
-        cwd=str(own.parent if own else sim_dir), capture_output=True, text=True, timeout=BUILD_TIMEOUT_S,
-        env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
-    if made.returncode or not diagram_path.is_file():
-        said = (made.stderr or made.stdout)[-800:]
-        if simulation_could_not_look(said):
-            return stages + [Stage("simulation", COULD_NOT_RUN,
-                                   "the converter has no Wokwi part for a component on this board "
-                                   "— a mapping to add to its lib/mapping.ts, not a defect in the "
-                                   "design, which built\n" + said)]
-        return stages + [Stage("simulation", PROBLEMS, "no diagram was produced\n" + said)]
-
-    diagram = json.loads(diagram_path.read_text())
+    diagram, stopped, notes = convert(project, own, ["--circuit", str(circuit_path)], sim_dir, workdir)
+    if stopped:
+        return stages + [stopped]
     wires = wires_in(diagram)
     if wires == 0:
         # The same failure shape as a board with no copper: every part placed, nothing joined.
@@ -559,35 +535,59 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                "wired, which is what an unmapped component looks like once the "
                                "converter has given up on it")]
     compiled = sum(1 for how in staged.values() if how == "compiled")
-    # What the simulation cannot show, in the records' own words. Every stand-in record is
-    # required to carry this sentence and no command printed one, so a green scenario read exactly
-    # like a bench result (backlog P37). It goes beside the diagram as well, because the terminal
-    # gets closed and the sim directory is what somebody opens a week later.
+    # What the simulation cannot show, in the records' own words, said and kept beside the diagram (P37).
     limits = sim_project.write_limits(sim_dir, loaded, board)
-    notes = "".join("\n           " + note for note in (bad_kept, sim_project.kept_note(made.stdout)) if note)
     return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)) + notes)]
 
 
-def board_alone(board, workdir, firmware=None):
+def convert(project, own, source, sim_dir, workdir):
     """
-    The stages after `board` for a project that runs on the board alone (P236): nothing to wire, so the parts,
-    schematic, footprint and build stages are SKIPPED, never ok, and the simulation holds the board's Wokwi part only.
+    The converter run on `source` (["--circuit", path] or ["--netlist", path]) and what `sim_dir` holds, merging into the
+    person's kept diagram (P482): (the diagram, None, the merge notes), or (None, the Stage that stopped it, "").
+    """
+    diagram_path = sim_dir / "diagram.json"
+    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)
+    made = subprocess.run(converter_command(project, own) + source + ["--out", str(diagram_path), "--mapping", str(sim_dir / sim_project.MAPPING_FILE),
+                                                                      "--chips", str(sim_dir / "chips")], cwd=str(own.parent if own else sim_dir),
+                          capture_output=True, text=True, timeout=BUILD_TIMEOUT_S, env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
+    if made.returncode or not diagram_path.is_file():
+        said = (made.stderr or made.stdout)[-800:]
+        if simulation_could_not_look(said):
+            return None, Stage("simulation", COULD_NOT_RUN, "the converter has no Wokwi part for a component on this board — a mapping "
+                               "to add to its lib/mapping.ts, not a defect in the design, which built\n" + said), ""
+        return None, Stage("simulation", PROBLEMS, "no diagram was produced\n" + said), ""
+    notes = "".join("\n           " + note for note in (bad_kept, sim_project.kept_note(made.stdout)) if note)
+    return json.loads(diagram_path.read_text()), None, notes
+
+
+def board_alone(board, workdir, firmware=None, project=None):
+    """
+    The stages after `board` for a project that runs on the board alone (P236): parts, schematic, footprint and build are
+    SKIPPED, never ok. The converter wires the board's own LED and button that `onboard_parts` gives (P484), as `run` does;
+    with none, the diagram holds the board's part alone. A limit "not checked" stays a limit in an ok stage (P396, P37).
     """
     skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", emit_board.SCHEMATIC_STAGE, emit_board.FOOTPRINT_STAGE, "build")]
     if not board.get("wokwi_part_type"):
         return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type")]
-    sim_dir = workdir / "sim"
+    sim_dir, wired, project = workdir / "sim", onboard_parts.OnboardPartReader(board).parts(), project or SCRIPTS.parent
+    diagram = {"version": 1, "author": "spark", "editor": "wokwi", "connections": [],
+               "parts": [{"type": board["wokwi_part_type"], "id": "mcu", "top": 0, "left": 0, "attrs": {}}]}
+    files = {"diagram.json": diagram}
+    if wired:
+        own, (files, why) = find_converter(project), onboard_parts.make_converter_input(board, wired, project)
+        stopped = converter_stage_problem(project, own) or (Stage("simulation", COULD_NOT_RUN, why) if why else None)
+        if stopped:
+            return skipped + [stopped]
     sim_dir.mkdir(exist_ok=True)
-    (sim_dir / "board.json").write_text(json.dumps(board, indent=2) + "\n")
     (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml((), firmware))
-    diagram = {"version": 1, "author": "spark", "editor": "wokwi",
-               "parts": [{"type": board["wokwi_part_type"], "id": "mcu", "top": 0, "left": 0, "attrs": {}}],
-               "connections": []}
-    (sim_dir / "diagram.json").write_text(json.dumps(diagram, indent=2) + "\n")
-    # P396: the board's own LED and button that its Wokwi definition gives no pin. A "not checked" among them stays a
-    # limit in an ok stage, as every limit does (P37), and never a could-not-run: the board alone did simulate.
-    limits = sim_project.write_limits(sim_dir, None, board)
-    return skipped + [Stage("simulation", OK, "the board alone, " + simulation_detail(0, {}, 0, limits, serial_wired(diagram)))]
+    for name, data in dict(files, **{"board.json": board}).items():
+        (sim_dir / name).write_text(json.dumps(data, indent=2) + "\n")
+    diagram, stopped, notes = convert(project, own, ["--netlist", str(sim_dir / onboard_parts.NETLIST)], sim_dir, workdir) if wired else (diagram, None, "")
+    if stopped:
+        return skipped + [stopped]
+    limits = sim_project.write_limits(sim_dir, None, board, onboard_parts.say_wired_gpios(wired))
+    said = "the board and its own %s, " % " and ".join(part["_instance"] for part in wired) if wired else "the board alone, "
+    return skipped + [Stage("simulation", OK, said + simulation_detail(wires_in(diagram), {}, 0, limits, serial_wired(diagram)) + notes)]
 
 
 def simulation_detail(wires, staged, compiled, limits, serial=True):

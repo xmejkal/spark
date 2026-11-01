@@ -71,6 +71,7 @@ MAY_READ = {
     "boards.ONBOARD_BATTERY_SENSE": "a role's NAME, used to build a fixture — vocabulary, not a value",
     "boards.ONBOARD_ROLES": "the table of onboard roles, checked against the vocabulary of roles a board may declare",
     "boards.WOKWI_DEFINITION": "a documents key's NAME, used to build a fixture — vocabulary, not a value",
+    "onboard_parts.ONBOARD_PARTS": "the table of roles spark wires (P484), checked against the roles a scenario reaches",
     "check_all.CHECKS": STRUCTURE, "boards.LIBRARY": STRUCTURE, "parts.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE,
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
     "check_spine.CONVERTER_PATHS": STRUCTURE,

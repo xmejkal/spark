@@ -435,7 +435,7 @@ class SimulatedPart:
     """
     Value: what a simulator models of a part type: the GPIOs its pins target (P396). `state` is a word of `outcomes` (OC4):
     `gpios` holds the pins only when RECORDED, `why` says what stopped the reader only when NOT_CHECKED. `is_stand_in` is
-    the record's `wokwi_is_stand_in`: its sentence holds while no part is wired to that GPIO; P484 (#663) rewords it.
+    the record's `wokwi_is_stand_in`: its sentence holds while no part is wired to that GPIO (P484 words a wired one).
     """
 
     state: str
@@ -515,8 +515,12 @@ def read_simulated_part(board):
 BENCH = "Test it on the board."
 
 
-def _gpio_limits(part, checked):
-    """gpio_limits for a definition already read: the GPIOs of the `checked` (spec, entry) pairs that `part` gives no pin."""
+def gpio_limits(part, checked, wired=None):
+    """
+    The GPIOs of the `checked` (spec, entry) pairs that `part`, a definition already read, gives no pin, as (component,
+    sentence) limits; a GPIO in `wired`, {gpio: sentence}, has its own sentence (P484). A definition not read gives its
+    one "not checked" line.
+    """
     if part.state != outcomes.RECORDED:
         return [(ONBOARD_GPIOS, part.why_not_read())]
     said = []
@@ -524,31 +528,27 @@ def _gpio_limits(part, checked):
         gpios = entry.get("gpio") if isinstance(entry.get("gpio"), list) else []
         for gpio in (gpio for gpio in gpios if isinstance(gpio, int) and not isinstance(gpio, bool)):
             why = part.why_not_simulated(gpio)
-            if why:
+            if gpio in (wired or {}):
+                said.append(("%s (GPIO%d)" % (spec.constant, gpio), wired[gpio]))
+            elif why:
                 said.append(("%s (GPIO%d)" % (spec.constant, gpio),
                              "%s, so spark knows no way for a scenario to %s it. %s" % (why, spec.scenario_verb, BENCH)))
     return said
 
 
-def gpio_limits(board, checked):
-    """
-    The GPIOs of the `checked` entries, (spec, entry) pairs, that the board's Wokwi definition gives no pin, as
-    (component, sentence) limits. No pair gives []. A record that cannot be compared gives its one "not checked" line.
-    """
-    return _gpio_limits(read_simulated_part(board), checked) if checked else []
-
-
-def onboard_limits(board):
+def onboard_limits(board, wired=None):
     """
     What a passed run does not test of the board's own parts, as (component, sentence) pairs (P396, P389). An LED or
-    button that its Wokwi definition gives no pin: spark knows no way for a scenario to reach it. A record that cannot be
+    button that its Wokwi definition gives no pin: spark knows no way for a scenario to reach it. One that spark wired in
+    the diagram, a GPIO in `wired` ({gpio: sentence}, from `onboard_parts`, P484), gives that sentence. A record that cannot be
     compared says "not checked", in the list and never as a failure: it is what the build did not look at, as a
     stand-in's sentence is what the simulation cannot show (P37). A part no scenario reaches (the display, the
     battery-level pin) gives its `not_in_diagram` sentence whatever the definition holds, after the GPIO lines. A board with
     no such part gives [].
     """
     entries = onboard_entries(board)
-    said = gpio_limits(board, [(spec, entry) for _, spec, entry in entries if spec.scenario_verb])
+    checked = [(spec, entry) for _, spec, entry in entries if spec.scenario_verb]
+    said = gpio_limits(read_simulated_part(board), checked, wired) if checked else []
     return said + [(spec.constant, spec.not_in_diagram) for _, spec, _ in entries if spec.not_in_diagram]
 
 
@@ -569,7 +569,7 @@ def role_limits(board, roles, definitions=None, key=None):
         if spec.scenario_verb:
             if key not in definitions:
                 definitions[key] = read_simulated_part(board)
-            said[role] = _gpio_limits(definitions[key], [(spec, entry)])
+            said[role] = gpio_limits(definitions[key], [(spec, entry)])
         else:
             said[role] = [(spec.constant, spec.not_in_diagram)]
     return said
