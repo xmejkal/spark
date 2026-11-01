@@ -690,7 +690,7 @@ def main(argv=None):
 
     # The input is read before anything runs, and read AS input: a malformed file is a stage that could not run, not a
     # traceback with exit 1 (which says "the chain is broken"). The project is the file's, up from its own directory, so a
-    # design belongs to its parts wherever the command is typed; a file in no project is built from the plugin's library.
+    # design belongs to its parts wherever it is typed; a file in no project is built from the plugin's library.
     source = Path(args.requirements).resolve() if args.requirements else None
     try:
         requirements = design.read(source) if source else dict(REFERENCE)
@@ -713,7 +713,8 @@ def main(argv=None):
 
     # A rebuild runs the flash image the kept wokwi.toml already names, unless --firmware names another.
     simulation = simulation_dir(args)
-    if simulation: os.symlink(simulation.resolve(), workdir / "kept-sim")  # P482: run() reads the kept diagram through it
+    if simulation:  # P482: run() reads the kept diagram through this link
+        os.symlink(simulation.resolve(), workdir / "kept-sim")
     firmware, kept = args.firmware, None
     if not firmware and simulation:
         kept = sim_project.firmware_in(simulation / "wokwi.toml")

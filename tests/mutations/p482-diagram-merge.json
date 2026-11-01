@@ -26,7 +26,7 @@
  {
   "file": "scripts/check_spine.py",
   "name": "the kept diagram is linked only for --keep, so --sim-dir is overwritten",
-  "find": "    if simulation: os.symlink(",
-  "replace": "    if simulation and args.keep: os.symlink("
+  "find": "        os.symlink(simulation.resolve(), workdir / \"kept-sim\")",
+  "replace": "        args.keep and os.symlink(simulation.resolve(), workdir / \"kept-sim\")"
  }
 ]
