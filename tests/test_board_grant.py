@@ -127,6 +127,16 @@ class IssueTest(GrantCase):
         self.assertIn("If it then waits in download mode, press its RESET", out)
         self.assertEqual(stat.S_IMODE((self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").stat().st_mode), 0o600)
 
+    def test_a_store_that_refuses_the_grant_is_a_line_with_the_way_out_not_a_traceback(self):
+        # P499 (#684): a SPARK_HOME that names a file; the patched environment is restored with the case
+        (self.home / "afile").write_text("")
+        os.environ["SPARK_HOME"] = str(self.home / "afile")
+        code, _, err = self.grant("--minutes", "30", consent=FakeConsent(True))
+        self.assertEqual(code, 2)
+        self.assertIn("grant.py: cannot make", err)
+        self.assertIn("point SPARK_HOME at a folder you can write", err)
+        self.assertNotIn("Traceback", err)
+
     def test_the_grant_names_who_typed_the_yes_by_the_user_name_it_is_given(self):
         finder = mock.Mock()
         finder.require_one_board.return_value = mock.Mock(device="/dev/cu.usbmodem101", serial=MAC)

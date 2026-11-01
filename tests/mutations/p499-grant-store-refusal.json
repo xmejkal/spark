@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/grant.py",
+  "name": "a store that refuses the grant gives a traceback again",
+  "find": "    except (tools.ToolProblem, board_look.LookStop, store.StoreProblem) as cannot:",
+  "replace": "    except (tools.ToolProblem, board_look.LookStop) as cannot:"
+ }
+]
