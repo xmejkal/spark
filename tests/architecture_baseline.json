@@ -62,7 +62,6 @@
 "R2:scripts/boards.py:validate": 4,
 "R2:scripts/breadboard_keep.py:EarlierDiagram.parse": 4,
 "R2:scripts/check_physics.py:Board.narrowest_by_net": 4,
-"R2:scripts/deploy_service.py:DeployService.verify": 4,
 "R2:scripts/design.py:rails_requested": 4,
 "R2:scripts/emit_board.py:host_part_lines": 4,
 "R2:scripts/netlist.py:Netlist.__init__": 4,

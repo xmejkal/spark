@@ -409,15 +409,35 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual(said["next"][0]["argv"], said["data"]["repl_command"])
 
     @needs_littlefs
-    def test_an_r_press_that_did_not_come_names_the_person_action(self):
+    def test_a_board_that_stays_in_download_mode_names_the_code_and_the_person_action(self):
         self.unread = self.uncopied = subprocess.CalledProcessError(1, "mpremote")
-        code, said, _ = self.ready(probe=FakeConsoleProbe("waiting for download\n", reset=False))
+        code, said, _ = self.ready(probe=FakeConsoleProbe("waiting for download\n"))
         said = self.one(code, said, "deploy", "deploy")
-        self.assertEqual(code, 2)
-        self.assertIn("press the board's RESET (R, top left, beside the USB-C) once", said["data"]["person_action"])
+        self.assertEqual((code, said["unchecked"][0]["code"]), (2, "download_mode_stayed"))
+        self.assertIn("press its RESET (R, top left, beside the USB-C)", said["data"]["person_action"])
         self.assertEqual(said["next"][0]["op"], "watch")
         self.assertIs(said["next"][0]["needs_person"], True)
-        self.assertIn("First the person presses the board's RESET (R, top left, beside the USB-C)", said["next"][0]["why"])
+        self.assertIn("First the person does what data.person_action says", said["next"][0]["why"])
+
+    @needs_littlefs
+    def test_a_port_that_is_gone_names_port_gone(self):
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, "mpremote")
+        code, said, _ = self.ready(probe=FakeConsoleProbe("waiting for download\n"), devs_text=[self.LISTED] * 3 + [self.GONE])
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual((code, said["unchecked"][0]["code"]), (2, "port_gone"))
+        self.assertIn("unplug the board and plug it in", said["data"]["person_action"])
+        self.assertIsNone(said["data"]["repl_command"])  # mpremote would choose a board of its own
+        self.assertEqual(said["next"], [])
+
+    @needs_littlefs
+    def test_a_moved_port_is_the_port_of_the_repl(self):
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, "mpremote")
+        self.answers_after_devs = 5
+        code, said, _ = self.ready(probe=FakeConsoleProbe("waiting for download\n"), devs_text=[self.LISTED] * 3 + [self.GONE, self.MOVED])
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual(code, 0)
+        self.assertEqual(said["data"]["repl_command"][-3:], ["connect", "/dev/cu.usbmodem2101", "repl"])
+        self.assertIsNone(said["data"]["person_action"])  # a restart that counted asks nothing of the person
 
     @needs_littlefs
     def test_a_store_record_that_was_not_written_is_said_beside_the_null(self):

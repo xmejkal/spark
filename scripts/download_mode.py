@@ -16,9 +16,14 @@ DOWNLOAD_MODE = "waiting for download"
 PRESS_RESET = "the board waits in download mode: press the board's %(reset)s once%(orientation)s"
 #: How long the person has to press R, in seconds.
 RESET_WAIT_S = 60
-#: What deploy.py says when no reset came, formatted by no_reset. The wait looks for the same port name only.
-NO_RESET = ("the board waits in download mode, and its port did not go and come back in %(wait)d s: press its %(reset)s%(orientation)s. "
-            "If the port came back under another name, `python3 -m mpremote devs` lists the ports")
+#: What deploy.py says when no start came, formatted by no_reset (P462: the wait finds the port by the board's MAC).
+NO_RESET = "the board still waits in download mode after %(wait)d s: press its %(reset)s%(orientation)s"
+#: What deploy.py says when the port went and came back, and mpremote did not answer: a restart that left download
+#: mode on (esptool's own did on the 2026-10-31 bench), formatted by not_counted.
+NOT_COUNTED = "the board restarted and still waits in download mode: press its %(reset)s once%(orientation)s"
+#: What deploy.py says when the board's port is gone, formatted by port_gone.
+PORT_GONE = ("the board's port is gone: press its %(reset)s once%(orientation)s. If the port stays gone, unplug the board and "
+             "plug it in, then run `python3 -m mpremote devs` to see its port")
 #: What the board log adds when the console heard the firmware's `ready`, and deploy.py read the board again (P245).
 READ_AGAIN = "read again"
 
@@ -31,6 +36,16 @@ def press_reset(places=boards.ButtonPlaces.EMPTY):
 def no_reset(places=boards.ButtonPlaces.EMPTY):
     """NO_RESET with the wait and the RESET button's place from `places`."""
     return NO_RESET % {"wait": RESET_WAIT_S, "reset": places.reset, "orientation": places.orientation}
+
+
+def not_counted(places=boards.ButtonPlaces.EMPTY):
+    """NOT_COUNTED with the RESET button's place from `places`."""
+    return NOT_COUNTED % {"reset": places.reset, "orientation": places.orientation}
+
+
+def port_gone(places=boards.ButtonPlaces.EMPTY):
+    """PORT_GONE with the RESET button's place from `places`."""
+    return PORT_GONE % {"reset": places.reset, "orientation": places.orientation}
 
 
 def booted(console):

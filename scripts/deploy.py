@@ -35,7 +35,6 @@ import board_doctor
 import board_envelope
 import board_grant
 import board_look
-import boards
 import deploy_gate
 import download_mode
 import ready_check
@@ -93,11 +92,16 @@ and the store's boards/<MAC>.json adds this deploy with its verdict, its simulat
 the board: ready seen means the board's files match the evidence's sha256s and the firmware printed `ready` within %d s.
 The board's log goes to sim/runs/board/. A firmware that stops with an error is not seen. If mpremote cannot reach the
 board, for example because its port changed after the flash, or the passed run's log is from before P215 and names no
-files, ready is unknown, never seen. If ready is unknown and the passed log names files, deploy.py reads the port with
-DTR and RTS off. If it reads `waiting for download`, the board waits in its download mode: deploy.py asks you to press
-the board's RESET once (with its place when the board record has it), waits %d s for the port to go and come back under
-the same name, and reads the board again. If it reads the firmware's `ready`, the board finished its restart late, and
-deploy.py reads it again at once. What the port printed, `nothing`, or why it could not be read goes in the board log.
+files, ready is unknown, never seen. The write restarts the chip with esptool's `--after watchdog-reset` (esptool's troubleshooting
+page says the ESP32-S3 then leaves download mode; not yet run on a board that was entered with BOOT; the C6 and the classic ESP32 fall
+back to a hard reset), and deploy.py finds the board's port again by its MAC,
+for the port can change its name and its USB id. If ready is unknown and the passed log names files, deploy.py reads the
+look's port with DTR and RTS off, unless that is 303a:4001 (MicroPython's own USB). If it reads `waiting for download`, the board waits in its download mode: deploy.py asks you to
+press the board's RESET once (with its place when the board record has it) and waits %d s. A restart counts only when
+mpremote answers after it: a restart that left the board in download mode is said and not counted. At the end of the wait
+ready is unknown with the code `download_mode_stayed`, or `port_gone` when the port was not listed or did not come back
+(then there is no REPL line). If it reads the firmware's `ready`, the board finished its restart late, and deploy.py reads
+it again at once. What the port printed, `nothing`, or why it could not be read goes in the board log.
 
 --json prints one envelope on stdout (docs/guide/agents.md): the token, the look, the stage the run reached, the yes, the
 board log and the store record in `data`, and in `next` the step that waits for the person (`needs_yes`). Every line above
@@ -265,10 +269,9 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
     reached["stage"] = board_envelope.STAGE_VERIFY
     result = reached["result"] = service.verify(report, planned, lambda line: show_line(line, out))
     ready = result.ready
-    reached["person_action"] = download_mode.press_reset(boards.ButtonPlaces.of_project(args.project))
     if ready.verdict != ready_check.SEEN:
-        reached.update(refusal=ready.sentence, reason=board_codes.READY_UNKNOWN if ready.verdict == ready_check.UNKNOWN
-                       else board_codes.READY_NOT_SEEN)
+        reached.update(refusal=ready.sentence, reason=(result.start and result.start.code) or board_codes.READY_UNKNOWN
+                       if ready.verdict == ready_check.UNKNOWN else board_codes.READY_NOT_SEEN)
     who = reached["who"]
     say("  %s\n  %s\n  %s: %s\n  board log: %s" % (result.facts_line, DEPLOYED_LINE % (result.image_sha256, who),
                                                 ready.verdict, ready.sentence, result.log_path))
@@ -280,7 +283,8 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
         reached["notes"] = ["the store record was not written: %s" % cannot]
         say("  store record: not written: %s" % cannot)
     if ready.verdict == ready_check.UNKNOWN:
-        say("  " + WATCH % shlex.join(result.repl_command))
+        if result.start is None or result.start.port:  # P462: with the port gone there is nothing to watch
+            say("  " + WATCH % shlex.join(result.repl_command))
         return EXIT_COULD_NOT_RUN
     return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS
 

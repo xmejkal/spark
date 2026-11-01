@@ -99,7 +99,7 @@ class TheDryRunTest(ProjectCase):
         self.assertEqual((code, problems, ran), (deploy.EXIT_OK, "", []))
         self.assertEqual(said.splitlines(), [
             "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s erase-flash" % PORT,
-            "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s write-flash 0x0 %s" % (PORT, shlex.quote(str(self.image))),
+            "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s --after watchdog-reset write-flash 0x0 %s" % (PORT, shlex.quote(str(self.image))),
             "  board: not looked at: run look.py",
             "  then, to see it start: /opt/python3 -m mpremote connect %s repl, press Ctrl-C, then Ctrl-D: "
             "the firmware prints `ready`. Then leave mpremote's console with Ctrl-X: an open console holds the port, "

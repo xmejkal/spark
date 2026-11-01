@@ -16,7 +16,9 @@ import board_codes
 import board_facts
 import boards
 import board_grant
+import board_console
 import board_look
+import board_start
 import deploy_gate
 import deploy_record_store
 import download_mode
@@ -28,8 +30,9 @@ from project_image import DeployError, ProjectImage
 DeployPlan = collections.namedtuple("DeployPlan", "flasher commands mpremote notes")
 #: Result: what `verify` returns. `facts` are the board's facts, `ready` is a ReadyResult, `log_path` the board log's file.
 #: `repl_command` is the argv that opens the board's REPL.
-#: `reset_seen` is None when the person was never asked to press R, else whether the port came back.
-DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command reset_seen image_sha256",
+#: `start` is None when no wait for a start came (the board answered), else a board_start.BoardStartResult: its `code` is
+#: None when mpremote answered after a restart, else download_mode_stayed or port_gone (P462).
+DeployResult = collections.namedtuple("DeployResult", "facts facts_line ready log_path repl_command start image_sha256",
                                       defaults=(None, None))
 
 
@@ -65,6 +68,8 @@ class DeployService:
 
     #: How the service waits before its flasher's retry. A test replaces it.
     sleep = staticmethod(time.sleep)
+    #: The clock of the wait for the board's start (monotonic and sleep). A test replaces it.
+    start_clock = board_console.SystemClock()
 
     def __init__(self, project, platform, evidence, run=subprocess.run, clock=None, probe=None, echo_to=None):
         self.project, self.platform, self.evidence = project, platform, evidence
@@ -135,38 +140,59 @@ class DeployService:
 
     def verify(self, report, planned, show_line):
         """
-        Read the board after the flash: copy the facts file, check each file's sha256 and wait for `ready`, with the
-        recovery for a board in download mode (P243 to P245). Writes the board log. Raises DeployError when the passed run's log cannot be read, and
-        tools.ToolProblem when a tool is missing: after the flash they are not turned into a sentence. `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
+        Read the board after the flash: find its port by the MAC, copy the facts file, check each file's sha256 and wait for
+        `ready`, with the recovery for a board in download mode (P243 to P245, P462). Writes the board log. Raises DeployError
+        when the passed run's log cannot be read, and tools.ToolProblem when a tool is missing: after the flash they are not
+        turned into a sentence. `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
         """
         image = ProjectImage(self.project)  # fresh: the flash and the person's wait are behind us
         expected = self.evidence.expected_files(image)
-        connection = self.platform.make_connection(planned.mpremote, report.port, self.run)
         moment = (self.clock or board_grant.read_local_time)()  # once: the facts file and the board log share it
-        facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)
-        heard, reset_seen = "", None
-        if ready.verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode
-            probe = self.probe or self.platform.make_console_probe(report.port, self.run)
-            if probe:  # P244: what the console said goes in the log, download mode or not
-                waits, console = probe.waits_in_download_mode()
-                heard = "console with DTR and RTS off: %s\n" % (console.strip() or "nothing")
-                if waits:
-                    places = boards.ButtonPlaces.of_project(self.project)
-                    show_line("  %s" % download_mode.press_reset(places))
-                    reset = reset_seen = probe.wait_for_reset()
-                    if reset:
-                        facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)
-                    else:
-                        ready = ready._replace(sentence=download_mode.no_reset(places))
-                    heard += "reset seen\n" if reset else "no reset\n"
-                elif download_mode.booted(console):  # P245: mpremote asked while the board still restarted
-                    facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)
-                    heard += download_mode.READ_AGAIN + "\n"
+        starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), report.reading.mac, self.start_clock,
+                                                boards.ButtonPlaces.of_project(self.project))
+        row = starter.find_port(report.port)
+        port = row and row.device
+
+        def read(on):
+            return self._read_board(image, report, on and self.platform.make_connection(planned.mpremote, on, self.run), expected, moment)
+
+        board, start = read(port), None
+        if port is None:
+            start = starter.gone_result()
+        elif (board[2].verdict == ready_check.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
+              and board_start.console_may_be_read(row, report.port)):
+            board, start = self._after_silence(starter, row, board, read, show_line)
+        facts, facts_line, ready = board
+        if start and start.code:
+            ready = ready._replace(sentence=start.sentence)
         image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
         log_path = write_board_log(self.project, BoardLog(moment, report.port, image_sha256,
-                                                          facts_line, ready.verdict, ready.sentence, heard + ready.log,
-                                                          self.evidence.simulation))
-        return DeployResult(facts, facts_line, ready, log_path, connection.repl_command(), reset_seen, image_sha256)
+                                                          facts_line, ready.verdict, ready.sentence,
+                                                          "".join(starter.heard) + ready.log, self.evidence.simulation))
+        shown_on = start.port if start else port  # the REPL names the port the board answered on, or none when it is gone
+        repl = self.platform.make_connection(planned.mpremote, shown_on, self.run).repl_command()
+        return DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)
+
+    def _after_silence(self, starter, row, board, read, show_line):
+        """(the board read last, a BoardStartResult or None) for a board that stayed silent on the Port `row` after the flash: the
+        console tells download mode from a late start. In download mode the person presses RESET and the wait counts only a
+        restart that mpremote answers after (`read(port)` reads the board again)."""
+        port = row.device
+        probe = self.probe or self.platform.make_console_probe(port, self.run)
+        if not probe:
+            return board, None
+        waits, console = probe.waits_in_download_mode()
+        starter.note("console with DTR and RTS off: %s\n" % (console.strip() or "nothing"))
+        if waits:
+            show_line("  %s" % download_mode.press_reset(starter.places))
+            latest = [board]
+            start = starter.wait_for_start(port, lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_check.UNKNOWN,
+                                           show_line, usb=row.usb)
+            return latest[-1], start
+        if download_mode.booted(console):  # P245: mpremote asked while the board still restarted
+            starter.note(download_mode.READ_AGAIN + "\n")
+            return read(port), None
+        return board, None
 
     @staticmethod
     def record(result, consent):
@@ -175,14 +201,22 @@ class DeployService:
         return deploy_record_store.DeployRecordStore().write_deploy(result.facts, result.ready.verdict, consent.who)
 
     def _read_board(self, image, report, connection, expected, moment):
-        """(the facts, the facts line, a ReadyResult) after a flash: the facts, then ready."""
+        """(the facts, the facts line, a ReadyResult) of the board on `connection` after a flash: the facts, then ready. With
+        none (the port is gone) nothing is read, because mpremote would choose a board of its own: the facts are made and not written."""
+        if connection is None:
+            return (self._facts_of(image, report, expected, moment), "facts file: not written: the board's port is gone",
+                    ready_check.ReadyResult(ready_check.UNKNOWN, "", ""))
         facts, facts_line = self._put_facts(image, report, connection, expected, moment)
         return facts, facts_line, self.platform.make_ready_check(connection).check(expected)
 
+    def _facts_of(self, image, report, expected, moment):
+        """The facts that spark puts on the board (D22)."""
+        return board_facts.facts(self.project, self.platform.board_of(), report.reading.mac, image.path, expected, moment,
+                                 self.evidence.simulation)
+
     def _put_facts(self, image, report, connection, expected, moment):
         """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
-        said = board_facts.facts(self.project, self.platform.board_of(), report.reading.mac, image.path, expected, moment,
-                                 self.evidence.simulation)
+        said = self._facts_of(image, report, expected, moment)
         facts_file = board_facts.FactsFile(connection, self.sleep)
         why = facts_file.write(said)
         if why:

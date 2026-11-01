@@ -20,37 +20,31 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "branch-dropped",
-  "find": "elif download_mode.booted(console):  # P245",
-  "replace": "elif False:  # P245"
- },
- {
-  "file": "scripts/deploy_service.py",
-  "name": "branch-also-when-waits",
-  "find": "elif download_mode.booted(console):  # P245",
-  "replace": "if download_mode.booted(console):  # P245"
+  "find": "if download_mode.booted(console):  # P245",
+  "replace": "if False:  # P245"
  },
  {
   "file": "scripts/deploy_service.py",
   "name": "reread-not-kept",
-  "find": "facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)\n                    heard += download_mode.READ_AGAIN",
-  "replace": "_ = self._read_board(image, report, connection, expected, moment)\n                    heard += download_mode.READ_AGAIN"
+  "find": "return read(port), None",
+  "replace": "read(port)\n            return board, None"
  },
  {
   "file": "scripts/deploy_service.py",
   "name": "logged-without-reread",
-  "find": "facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)\n                    heard += download_mode.READ_AGAIN",
-  "replace": "pass\n                    heard += download_mode.READ_AGAIN"
+  "find": "return read(port), None",
+  "replace": "return board, None"
  },
  {
   "file": "scripts/deploy_service.py",
   "name": "not-logged",
-  "find": "heard += download_mode.READ_AGAIN + \"\\n\"",
-  "replace": "heard += \"\""
+  "find": "starter.note(download_mode.READ_AGAIN + \"\\n\")",
+  "replace": "pass"
  },
  {
   "file": "scripts/deploy_service.py",
   "name": "facts-stale",
-  "find": "facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)\n                    heard += download_mode.READ_AGAIN",
-  "replace": "_f, _l, ready = self._read_board(image, report, connection, expected, moment)\n                    heard += download_mode.READ_AGAIN"
+  "find": "return read(port), None",
+  "replace": "return (board[0], board[1], read(port)[2]), None"
  }
 ]

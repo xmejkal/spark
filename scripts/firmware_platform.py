@@ -10,6 +10,7 @@ import subprocess
 
 import board_connection
 import board_console
+import board_look
 import boards
 import flasher
 import ready_check
@@ -67,6 +68,10 @@ class FirmwarePlatform:
     def make_shell_command(self):
         """The board shell's command, as an argv list. tools.ToolProblem says why it is not installed."""
         return self._make_shell_command()
+
+    def make_port_finder(self, run):
+        """The board_look.PortFinder over the board shell: it lists the boards on USB and opens no port."""
+        return board_look.PortFinder(tools.find("board-shell", self.project), run)
 
     def make_connection(self, command, port, run=subprocess.run):
         """The connection to the board on `port`, through the shell's `command`."""

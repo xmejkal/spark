@@ -38,6 +38,8 @@ EVIDENCE_REFUSES, IMAGE_CHANGED = "evidence_refuses", "image_changed"
 #: What deploy.py reports on its own: the flash and the board's start.
 FLASH_FAILED = "flash_failed"
 READY_NOT_SEEN, READY_UNKNOWN = "ready_not_seen", "ready_unknown"
+#: Why the board did not start after the write (P462): it still waits in download mode, or its port is gone.
+DOWNLOAD_MODE_STAYED, PORT_GONE = "download_mode_stayed", "port_gone"
 #: Not in the look or deploy envelope: the reasons of grant.py's refusals (board_grant.CODE_FOR_WHY).
 NOT_A_GRANT, BAD_MINUTES, BAD_SCOPE, SERIAL_NOT_MAC = "not_a_grant", "bad_minutes", "bad_scope", "serial_not_mac"
 
@@ -76,6 +78,8 @@ CODES = {
     FLASH_FAILED: "a flash command failed, so the board may be erased and not written",
     READY_NOT_SEEN: "the board's files differ from the image, the firmware stopped with an error, or it printed no ready",
     READY_UNKNOWN: "the board could not be read after the flash, or the passed run's log names no files",
+    DOWNLOAD_MODE_STAYED: "the board still waits in download mode after the flash, and the person's RESET press did not start it",
+    PORT_GONE: "the board's port was not listed after the flash, or went and did not come back",
     NOT_A_GRANT: "the store's grant file for the board is not a grant for it",
     BAD_MINUTES: "--minutes is not a whole number from 1 to 1440",
     BAD_SCOPE: "--scope is not a scope a grant has",

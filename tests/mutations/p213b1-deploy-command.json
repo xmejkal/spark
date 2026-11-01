@@ -1,5 +1,5 @@
 [
- {"file": "scripts/deploy_service.py", "name": "the result names no image", "find": "connection.repl_command(), reset_seen, image_sha256)", "replace": "connection.repl_command(), reset_seen)"},
+ {"file": "scripts/deploy_service.py", "name": "the result names no image", "find": "log_path, repl, start, image_sha256)", "replace": "log_path, repl, start)"},
  {"file": "scripts/deploy.py", "name": "the line names the facts file again", "find": "DEPLOYED_LINE % (result.image_sha256, who)", "replace": "DEPLOYED_LINE % (result.facts_line, who)"},
  {"file": "scripts/deploy.py", "name": "the line drops whose yes", "find": "DEPLOYED_LINE % (result.image_sha256, who)", "replace": "DEPLOYED_LINE % (result.image_sha256, '')"},
  {"file": "scripts/deploy.py", "name": "the line comes after ready", "find": "    say(\"  %s\\n  %s\\n  %s: %s\\n  board log: %s\" % (result.facts_line, DEPLOYED_LINE % (result.image_sha256, who),\n                                                ready.verdict, ready.sentence, result.log_path))", "replace": "    say(\"  %s\\n  %s: %s\\n  %s\\n  board log: %s\" % (result.facts_line, ready.verdict, ready.sentence,\n                                                DEPLOYED_LINE % (result.image_sha256, who), result.log_path))"},

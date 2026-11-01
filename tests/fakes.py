@@ -86,6 +86,20 @@ class FakeClock:
         self.now += seconds
 
 
+class FakePortFinder:
+    """A fake board_look.PortFinder: each `nodes` call gives the next of `looks`, a list of Ports (or a LookStop to raise),
+    and the last one for good."""
+
+    def __init__(self, *looks):
+        self.looks = list(looks)
+
+    def nodes(self):
+        look = self.looks.pop(0) if len(self.looks) > 1 else self.looks[0]
+        if isinstance(look, Exception):
+            raise look
+        return look
+
+
 def pin_time_zone(case, zone="Europe/Prague"):
     """Run `case` in one time zone, so a time said in the machine's zone reads the same on every machine (P291)."""
     before = os.environ.get("TZ")
@@ -116,12 +130,11 @@ class FakeLocalClock:
 
 
 class FakeConsoleProbe:
-    """A fake ConsoleProbe: the console prints `printed`, and wait_for_reset answers `reset` after it calls
-    `on_reset` (a test's way to make the board answer again), and the console read calls `on_console`. cure() calls
-    `on_cure` and gives `cured`, a board_console.Cure. Keeps how often each was asked."""
+    """A fake ConsoleProbe: the console prints `printed`, and the console read calls `on_console` (a test's way to make
+    the board answer again). cure() calls `on_cure` and gives `cured`, a board_console.Cure. Keeps how often each was asked."""
 
-    def __init__(self, printed="", reset=True, on_reset=None, on_console=None, cured=None, on_cure=None):
-        self.printed, self.reset, self.on_reset, self.asked = printed, reset, on_reset, []
+    def __init__(self, printed="", on_console=None, cured=None, on_cure=None):
+        self.printed, self.asked = printed, []
         self.on_console, self.cured, self.on_cure = on_console, cured, on_cure
 
     def console(self):
@@ -136,12 +149,6 @@ class FakeConsoleProbe:
             self.on_console()
         from download_mode import DOWNLOAD_MODE  # scripts/ is on the path once a test imports spark
         return DOWNLOAD_MODE in self.printed, self.printed
-
-    def wait_for_reset(self):
-        self.asked.append("reset")
-        if self.on_reset:
-            self.on_reset()
-        return self.reset
 
     def cure(self):
         self.asked.append("cure")
