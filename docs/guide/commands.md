@@ -63,7 +63,7 @@ rewrites project.json only if that file has no answers, and it never rewrites pa
 
 It leaves every value it cannot know as `null` and lists them. After `--force` the list still names fields you
 answered ([P114](https://github.com/xmejkal/spark/issues/48)). Not every check reports a null yet; see
-[what never to assume](agents.md#what-never-to-assume). Page: [`commands/init.md`](../../commands/init.md).
+[what never to assume](agents/never-assume.md). Page: [`commands/init.md`](../../commands/init.md).
 
 ### `/spark:setup`
 

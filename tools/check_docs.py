@@ -34,7 +34,10 @@ PROJECT_FILES = {"pins.py": "the build and assign_pins.py --emit-pins write it i
 BUDGETS = {
     "README.md": 181,
     "docs/guide/journey.md": 1582,  # P501 splits it
-    "docs/guide/agents.md": 1036,  # P502 splits it
+    "docs/guide/agents.md": 195,
+    "docs/guide/agents/json.md": 346,
+    "docs/guide/agents/never-assume.md": 206,
+    "docs/guide/agents/scripts.md": 308,
     "docs/guide/developing.md": 651,  # P504 shrinks it
     "docs/guide/commands.md": 284,
     "docs/guide/how-it-works.md": 277,
@@ -42,7 +45,7 @@ BUDGETS = {
 DEFAULT_BUDGET = 400
 #: Characters a table cell may hold. Like BUDGETS, these only go down, kept by review.
 CELL_LIMIT = 300
-CELL_LIMITS = {"docs/guide/agents.md": 2276}  # P502 moves the four long rows out, then this entry goes
+CELL_LIMITS = {"docs/guide/agents/json.md": 2276}  # P502 moves the four long rows out, then this entry goes
 #: Seconds a runnable example or a --help may take; a longer one is not light (the spec, §4).
 RUN_TIMEOUT = 60
 

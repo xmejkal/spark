@@ -66,7 +66,7 @@ The converter's own [ARCHITECTURE.md](../../tools/circuit-to-wokwi/ARCHITECTURE.
 ## The scripts
 
 Each one is described in its own words, the first line of its docstring. Most checks and chain scripts take `--json`.
-[The guide for AI agents](agents.md) lists which do and which do not; `check_bom.py`, `emit_board.py` and `flash_image.py` do
+[The JSON guide for AI agents](agents/json.md) lists which do and which do not; `check_bom.py`, `emit_board.py` and `flash_image.py` do
 not.
 
 ### The one command for checks

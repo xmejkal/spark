@@ -69,7 +69,7 @@ module such as the DFRobot FireBeetle 2 ESP32-S3. spark is not for chip-down boa
 
 Where a fact is missing, spark refuses, or it goes on with a [stand-in](GLOSSARY.md#stand-in-placeholder) that it names
 in `board.tsx`. A check that was [**unable to look**](docs/guide/agents.md#the-outcomes-and-their-exit-codes) never reads
-as a pass. [What never to assume](docs/guide/agents.md#what-never-to-assume) lists where that does not hold yet.
+as a pass. [What never to assume](docs/guide/agents/never-assume.md) lists where that does not hold yet.
 
 ## Install
 

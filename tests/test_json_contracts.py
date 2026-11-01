@@ -275,7 +275,8 @@ class TheBenchCodesTableTest(unittest.TestCase):
         self.assertEqual(sorted(raised - set(board_codes.CODES)), [])
 
     def test_agents_md_names_every_code(self):
-        text = (ROOT / "docs" / "guide" / "agents.md").read_text()
+        guide = ROOT / "docs" / "guide"
+        text = "".join(page.read_text() for page in [guide / "agents.md"] + sorted((guide / "agents").glob("*.md")))
         self.assertEqual([code for code in list(board_codes.CODES) + list(codes.CODES) if "`%s`" % code not in text], [])
 
     def test_every_why_a_site_raises_a_grant_refusal_with_has_a_code(self):
