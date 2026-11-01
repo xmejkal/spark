@@ -76,6 +76,6 @@ What it means that simulation comes back now: C1b stays after the MVP, but only 
 
 - No gap was re-run in code. The 37 claims are taken from the diary and the council's technology lens checks them.
 - The size of C2 slice 1 is a product guess. The architecture lens judges where the code lives.
-- Walk 2's G1 and G8 owners (G6, G11) were not looked up. They may already ride an open card.
+- Walk 2's G1 and G8 owners (G6, G11) were not looked up. Some already ride an open card, unchecked.
 - The list of open cards was read by title, not by body, except the ones named here.
 - Ready's current order was not read on the board. The three Ready cards are taken from the brief.

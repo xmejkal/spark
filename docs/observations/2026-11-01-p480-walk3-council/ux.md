@@ -46,7 +46,7 @@ Evidence: `walk3-diary.md` (Stalls, Gaps) and the code in this worktree at `53c1
 
 **P-C5a. Which board is on USB, before init.** Where: `scripts/look.py --board-only` (no project needed), called from `commands/init.md` and `commands/idea.md` as step 0. Same board reader as today, so no new code path.
 
-- Output: `on USB: ESP32-S3, 16 MB flash, MAC 34:85:18:42:e4:10. Known: FireBeetle 2 ESP32-S3 (library board firebeetle2-esp32s3, drawer entry dfrobot-dfr0975, store record 34-85-18-42-e4-10, last deploy 06:23 by "bench", store record, not read from the board). Name it in init with --board firebeetle2-esp32s3.`
+- Output: `on USB: ESP32-S3, 16 MB flash, MAC 34:85:18:42:xx:xx. Known: FireBeetle 2 ESP32-S3 (library board firebeetle2-esp32s3, drawer entry dfrobot-dfr0975, store record 34-85-18-42-xx-xx, last deploy 06:23 by "bench", store record, not read from the board). Name it in init with --board firebeetle2-esp32s3.`
 - Not known: `on USB: ESP32-S3, MAC aa:bb:... Spark has no record of this MAC. Pick a board from boards.py --list.`
 - Not read: `on USB: not read. A board is on port /dev/cu.usbmodem1101, but the chip did not answer. Hold BOOT, press RESET, release BOOT, run it again.`
 - Page text for init and idea: `If the person says "the connected board" and names none, run look.py --board-only first. Never ask them to name it.`

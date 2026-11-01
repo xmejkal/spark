@@ -44,7 +44,7 @@
 
 - The change: a `bench` line in the store's history for a must line. Only a typed command in the person's terminal writes it, with the gate that `deploy.py` already uses. The line holds the must text, the word "seen", the person, the time with its zone and the image sha256.
 - The look reads it only when the sha256 matches the image. It shows `bench_seen` beside `unnamed_must`. It never changes `simulation`, `caveats` or `unnamed_must`.
-- The look prints "seen by the person on the bench, not by spark". Claude may relay it and may not write it.
+- The look prints "seen by the person on the bench, not by spark". Claude relays it and never writes it.
 - A passed run that names no must line says "passed: starts only" in its verdict.
 - Done when: a test shows that an agent call without the person's typed yes writes nothing, that a changed image hides the line, and that `unnamed_must` stays the same after a bench line.
 

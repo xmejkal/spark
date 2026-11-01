@@ -11,18 +11,18 @@ Walk 1 is p326 and p330 (T-Display). The photo walk is p366. Rehearsal is `2026-
 
 | # | gap | rows by walk | card each time | card now |
 |---|---|---|---|---|
-| A | The board's own LED and button are not parts | W1 2, 3, 10, 19 (P330 30); W2 G7, G23; R 1, 3; W3 G13, G20, G28, G29 | P332 (#426), P355 (#453), P389 (#504), P396, P397, P467 (#635), P447 (#599), N2, N3 | P332, P467, P447 open. P355, P389, P396, P397 closed. N2, N3 not filed |
-| B | The simulation cannot press or see them, and "passed" says too little | W1 6; W2 G23; R 3; W3 G24, G28, G31, G32 | P396, P397, P345 (#440), N4, C1 | P396, P397, P345 closed. N4, C1 not filed |
-| C | A serial-monitor warning that the run disproves | W1 6; W2 G18; R 4; W3 G26, 41 | P213 note, then none ("cause stays open"), P468 (#636), P468 rewritten | P468 open, the rewrite is not filed |
+| A | The board's own LED and button are not parts | W1 2, 3, 10, 19 (P330 30); W2 G7, G23; R 1, 3; W3 G13, G20, G28, G29 | P332 (#426), P355 (#453), P389 (#504), P396, P397, P467 (#635), P447 (#599), N2, N3 | P332, P467, P447 open. P355, P389, P396, P397 closed. filed as P483 (#662), P484 (#663) |
+| B | The simulation cannot press or see them, and "passed" says too little | W1 6; W2 G23; R 3; W3 G24, G28, G31, G32 | P396, P397, P345 (#440), N4, C1 | P396, P397, P345 closed. filed as P485 (#664), P492 (#671) |
+| C | A serial-monitor warning that the run disproves | W1 6; W2 G18; R 4; W3 G26, 41 | P213 note, then none ("cause stays open"), P468 (#636), P468 rewritten | P468 open, the rewrite is made |
 | D | "not asked for" on skipped checks | W2 G1, G22; W3 G6 | P118 (#52) both times | open, never done in three walks |
-| E | A command writes the store and says nothing | W2 G2, G4, G5, G25; W3 G5, G8, G17, G25, G27 | P137 (#71), P118, N2 of P400 (P402 #519), N6, N7 | P137 open. P402 closed. N6, N7 not filed |
+| E | A command writes the store and says nothing | W2 G2, G4, G5, G25; W3 G5, G8, G17, G25, G27 | P137 (#71), P118, N2 of P400 (P402 #519), N6, N7 | P137 open. P402 closed. filed as P487 (#666), P488 (#667) |
 | F | The look restarts the board, or needs two button presses | W1 P330 26; R 10, 28; W3 G19, G34 | P469 (#637), P462 (#630), P472 (#643) | P469 open. P462, P472 closed |
-| G | The look's status and `next` mislead | W1 P330 17, 22; W2 G27; W3 G3, G18, G36 | none for W1, P401 (#518) for erase only, N8 | N8 not filed. P401 closed |
-| H | Which unit or board is on USB | W1 P330 21, 31; W2 G10; R 9; W3 G1, G7, G15 | P333 (#427), P403 (#520), P466 (#634), N9 | P466 open. P333, P403 closed. N9 later |
+| G | The look's status and `next` mislead | W1 P330 17, 22; W2 G27; W3 G3, G18, G36 | none for W1, P401 (#518) for erase only, N8 | filed as P489 (#668). P401 closed |
+| H | Which unit or board is on USB | W1 P330 21, 31; W2 G10; R 9; W3 G1, G7, G15 | P333 (#427), P403 (#520), P466 (#634), N9 | P466 open. P333, P403 closed. N9 joined P466 |
 | I | `--match` and `--offer` show old or noisy output | W2 G8, G9; W3 G11, G12 | P314 (#388), P390 (#505), P406 (#531) | all three open |
-| J | The example firmware lacks console lines that read without waiting | W2 G24; W3 G30 | P77 (#13), then N6 | P77 open. N6 not filed |
+| J | The example firmware lacks console lines that read without waiting | W2 G24; W3 G30 | P77 (#13), then N6 | P77 open. filed as P487 (#666) |
 | K | The firmware build or image for the chip is wrong or unknown | W1 11, 17; W2 G16; R 16, 17, 18 | P335 (#429), P349 (#445) | P335 closed. P349 open, three walks |
-| L | A board's Wokwi definition is not kept | W2 row 66; R 3; W3 G13, G29 | P391 stage 4, P447, N2 | P447 open. N2 not filed |
+| L | A board's Wokwi definition is not kept | W2 row 66; R 3; W3 G13, G29 | P391 stage 4, P447, N2 | P447 open. filed as P483 (#662) |
 
 Never filed or only a row: the unlist command (W3 G10, plan drops it), the doubled `does` words (G12), the hand-edit rule (G33, now N1).
 

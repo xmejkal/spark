@@ -1,18 +1,12 @@
-# P480 cards: ready to file after the PO's OK
+# P480 cards: filed after the PO's OK
 
 > Ten new cards and one spike (section 1), ten edits to open cards (section 2), one question on G27 (section 3).
-> Nothing here is filed. Each new card is a sub-issue of P100 (#6), except C1, which goes under P365 (#467).
+> All are filed, and their numbers are in `plan.md`, "The PO's decisions". Each new card is a sub-issue of P100 (#6), except C1, which goes under P365 (#467).
 > The order and the reasons are in `plan.md`. The PO's words are verbatim from P480 (#658).
-
-## The PO's decisions, 2026-11-01
-
-The PO said "ok, let's do it" to the whole list. The cards are filed: N1 is P482 (#661), N2 is P483 (#662), N3 is P484 (#663), N4 is P485 (#664), N5 is P486 (#665), N6 is P487 (#666), N7 is P488 (#667), N8 is P489 (#668), N10 is P490 (#669), N11 is P491 (#670), C1 is P492 (#671). N9 went into P466 (#634). The ten edits to open cards and the comment on P332 (#426) are made.
-
-Ready, in the PO's order: P485 (#664), P487 (#666), P483 (#662), P468 (#636), P482 (#661). P469 (#637), P473 (#647) and P476 (#652) wait at the top of Idea, because Ready holds five. G27: option A, so `built` stays as AT151 decided until P491 (#670) draws the sheet. P481 (#660) is planned together with P488 (#667).
 
 ## 1. New cards
 
-### N1: P? — every `/spark:build` overwrites the person's `sim/diagram.json` → the converter merges into the kept diagram
+### N1, filed as P482 (#661): every `/spark:build` overwrites the person's `sim/diagram.json` → the converter merges into the kept diagram
 
 Label: bug. Slice: v0.10 The basic journey. Size S.
 
@@ -29,7 +23,7 @@ build with no old diagram is unchanged.
 
 **Value proven by.** The next walk edits the diagram by hand, builds again, and keeps the edit.
 
-### N2: P? — the FireBeetle's record names no Wokwi definition, so no limit says which GPIOs a scenario reaches → the record cites the S3 devkit's `board.json`, and the store keeps it
+### N2, filed as P483 (#662): the FireBeetle's record names no Wokwi definition, so no limit says which GPIOs a scenario reaches → the record cites the S3 devkit's `board.json`, and the store keeps it
 
 Label: task. Slice: v0.10 The basic journey. Size XS.
 
@@ -45,7 +39,7 @@ GPIO 21 and 47 as reachable. A test pins both.
 
 **Value proven by.** P468 and N3 read the kept definition with no new fetch.
 
-### N3: P? — a board-only diagram holds the board alone → the board's own LED and button are parts with `onboard`, wired by the converter
+### N3, filed as P484 (#663): a board-only diagram holds the board alone → the board's own LED and button are parts with `onboard`, wired by the converter
 
 Label: story. Slice: v0.10 The basic journey. Size M, two PRs. After N1 and N2.
 
@@ -64,7 +58,7 @@ and a test reads both. The FireBeetle's limits still name what the stand-in lack
 
 **Value proven by.** A free scenario on walk 3's project presses the button and reads the LED.
 
-### N4: P? — a passed run that tested no must line says only "passed" → the verdict says "passed: the firmware starts, no must line tested"
+### N4, filed as P485 (#664): a passed run that tested no must line says only "passed" → the verdict says "passed: the firmware starts, no must line tested"
 
 Label: story. Slice: v0.10 The basic journey. Size XS.
 
@@ -78,7 +72,7 @@ with an `expect-pin` step keeps "passed".
 
 **Value proven by.** Claude reports walk 3's run as "the firmware starts", not as a test of the must lines.
 
-### N5: P? — `parts.py <op> walk3` made `walk3/walk3` → one finder takes a listed name or an existing folder, says which, and makes nothing else
+### N5, filed as P486 (#665): `parts.py <op> walk3` made `walk3/walk3` → one finder takes a listed name or an existing folder, says which, and makes nothing else
 
 Label: bug. Slice: v0.10 The basic journey. Size S.
 
@@ -93,7 +87,7 @@ made when it is new", `needs.py:114`), and the PR says so in the rule's text.
 
 **Value proven by.** No walk makes a nested project folder again.
 
-### N6: P? — six pages told Claude wrong or nothing → each page says what its command writes and does
+### N6, filed as P487 (#666): six pages told Claude wrong or nothing → each page says what its command writes and does
 
 Label: chore. Slice: v0.10 The basic journey. Size XS.
 
@@ -109,7 +103,7 @@ that read the console without waiting (G30).
 
 **Value proven by.** The next walk's Claude reads these pages and says nothing wrong about the store.
 
-### N7: P? — no `--help` names the store place a command writes → each write in `effects` names its `place` and `path`, and the build has a dry run
+### N7, filed as P488 (#667): no `--help` names the store place a command writes → each write in `effects` names its `place` and `path`, and the build has a dry run
 
 Label: story. Slice: v0.10 The basic journey. Size M. After N6.
 
@@ -125,7 +119,7 @@ point to the declaration.
 
 **Value proven by.** An agent asks `--describe --json` before a write, and its answer matches what the run writes.
 
-### N8: P? — the look says "could-not-run" for "read, no token yet" and for "not read", with an empty `next` → a `board_read` field, a `NO_REQUIREMENTS` code and a full `next`
+### N8, filed as P489 (#668): the look says "could-not-run" for "read, no token yet" and for "not read", with an empty `next` → a `board_read` field, a `NO_REQUIREMENTS` code and a full `next`
 
 Label: story. Slice: v0.10 The basic journey. Size S. After P469 (#637).
 
@@ -142,7 +136,7 @@ buttons it carries "press RESET once" (`board_doctor.py:46-47`).
 
 **Value proven by.** The next walk's first look gives a next step that the person runs as printed.
 
-### N10: P? — spark has no place for a must line seen working on the bench → `seen_on_bench`, written only on the person's typed yes
+### N10, filed as P490 (#669): spark has no place for a must line seen working on the bench → `seen_on_bench`, written only on the person's typed yes
 
 Label: story. Slice: parked after v0.10. After W4-2.
 
@@ -156,7 +150,7 @@ yes writes it.
 
 **Value proven by.** A walk's diary names a must line as tested on the bench from spark's own output.
 
-### N11: P? — a board's own parts reach the diagram only → the breadboard sheet, the schematic and the page show them, and the `board_only` fork goes
+### N11, filed as P491 (#670): a board's own parts reach the diagram only → the breadboard sheet, the schematic and the page show them, and the `board_only` fork goes
 
 Label: story. Slice: parked after v0.10. After N3 and P446 (#597, part shapes).
 
@@ -169,7 +163,7 @@ onboard". G20.
 
 **Value proven by.** A board-only walk gets the same outputs as a walk with one added part.
 
-### C1: P? — Spike: spark uses few of Wokwi's free tools and has no own emulator → a finding on the best use of Wokwi and what an own emulator on free software costs and proves
+### C1, filed as P492 (#671): Spike: spark uses few of Wokwi's free tools and has no own emulator → a finding on the best use of Wokwi and what an own emulator on free software costs and proves
 
 Label: spike. Slice: parked after v0.10. Sub-issue of P365 (#467).
 
@@ -193,18 +187,20 @@ A board or module that Wokwi lacks is P409 (#535), and this spike links it. G21,
 | P468 #636 | title | "P468: the 'no serial monitor' warning fires for boards that print over USB → it reads the Wokwi definition's `serialInterface`" |
 | P468 #636 | body, replace the body above "Needed by" | "Walk 3's diagram had no connections, and its run matched `ready` (log line 40). Walk 2 heard the XIAO with no wires too (P400 row 18). The warning at `check_spine.py:605-607` tests `serial_wired(diagram)`, not a board fact. The kept XIAO definition sets `serialInterface: USB_SERIAL_JTAG`, and Wokwi's ESP32 guide says to remove `$serialMonitor` wires then (docs.wokwi.com/guides/esp32, read 2026-11-01). Outcome: the warning reads `serialInterface` from the kept definition, after N2 keeps the S3 devkit's. If that definition does not set it, walk 3's run is the evidence, and the PR says so. Done when: walk 3's build prints no serial warning, and a board on a UART console with no wires keeps it." |
 | P469 #637 | body, add before "Needed by" | "The P472 finding (#643, PR #645): there are two looks. mpremote on the running MicroPython does not restart the board. esptool `flash-id` restarts it. The look uses mpremote first, and esptool only when mpremote cannot reach the board. Download mode with no hands is `machine.bootloader()` through mpremote, then esptool `--before no-reset`. Walk 3 needed the buttons twice (G34). Done when also: the look says which look read the board. N8 follows this card." |
-| P466 #634 | body, add before "Needed by" | "Slice 1 also takes walk 3's G15: the doctor prints the USB serial `34851842e4100000`, which holds the MAC (`board_doctor.py:103`). Slice 2 (walk 3's G1, G4, G7, ex-N9): the look reads a board before init and names its chip, MAC and store record. Done when also: an empty folder's look names the chip, the MAC and the store record." |
+| P466 #634 | body, add before "Needed by" | "Slice 1 also takes walk 3's G15: the doctor prints the USB serial `34851842xxxxxxxx`, which holds the MAC (`board_doctor.py:103`). Slice 2 (walk 3's G1, G4, G7, ex-N9): the look reads a board before init and names its chip, MAC and store record. Done when also: an empty folder's look names the chip, the MAC and the store record." |
 | P406 #531 | Done when, add | "The offer does not print the same `does` words twice (walk 3 G12: 'compute microcontroller' twice)." |
 | P118 #52 | Value proven by, add | "The 'not asked for' line names its cause when nothing is built yet (`check_all.py:466`, walk 2 G1, walk 3 G6)." |
 | P399 #515 | The change, add after PR 1 | "After N3, a board-alone diagram holds the board's own LED and button. The id check then knows their ids, and a test presses one and reads the other." |
 | P476 #652 | body, add before "Needed by" | "Waits for W4-2 (deploy on the core). The why goes on the event that W4-2 reports (decision on #94, P478 #656), so deploy's lines change once." |
 | P473 #647 | Done when, add | "The store rides `NextStep` (`spark/core/result.py:18`), so W4-2 builds deploy's `next` on it." |
-| P409 #535 | body, add | "Walk 3's spike C1 (P?) links here for a board or module that Wokwi lacks. N2 and N3 answer it for the FireBeetle's LED and button." |
+| P409 #535 | body, add | "Walk 3's spike P492 (#671) links here for a board or module that Wokwi lacks. N2 and N3 answer it for the FireBeetle's LED and button." |
 
 No open card closes. P332 (#426) keeps the assigner side: one comment, "N3 draws the board's own parts. This card keeps
 the pins they hold out of the assigner."
 
 ## 3. The question for the PO on G27
+
+Answered on 2026-11-01: option A.
 
 Walk 3's board-only build passed every stage it ran. It skipped the breadboard sheet and the schematic, so by your
 decision AT151 it wrote no `built` line, and the tally shows walk3 as not built.

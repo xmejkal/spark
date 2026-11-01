@@ -13,7 +13,7 @@ fixes those first, keeps the PO's emulator spike after the MVP, and lets every n
 
 The PO said "ok, let's do it" to the whole list. The cards are filed: N1 is P482 (#661), N2 is P483 (#662), N3 is P484 (#663), N4 is P485 (#664), N5 is P486 (#665), N6 is P487 (#666), N7 is P488 (#667), N8 is P489 (#668), N10 is P490 (#669), N11 is P491 (#670), C1 is P492 (#671). N9 went into P466 (#634). The ten edits to open cards and the comment on P332 (#426) are made.
 
-Ready, in the PO's order: P485 (#664), P487 (#666), P483 (#662), P468 (#636), P482 (#661). P469 (#637), P473 (#647) and P476 (#652) wait at the top of Idea, because Ready holds five. G27: option A, so `built` stays as AT151 decided until P491 (#670) draws the sheet. P481 (#660) is planned together with P488 (#667).
+Ready, in the PO's order: P485 (#664), P487 (#666), P483 (#662), P468 (#636), P482 (#661). P469 (#637), P473 (#647) and P476 (#652) wait at the top of Idea, because Ready holds five. P476 then waits for W4-2 (plan below). G27: option A, so `built` stays as AT151 decided until P491 (#670) draws the sheet. P481 (#660) is planned together with P488 (#667).
 
 ## Second round
 
@@ -144,7 +144,3 @@ flowchart LR
   W42 --> N10[N10 seen on the bench, later]
 ```
 
-## Waits on the PO
-
-The OK to file the cards in `cards.md` (N1 to N8, N10, N11, C1) and its edits to open cards, the Ready order above,
-and one answer on G27 (AT151), asked in `cards.md`.
