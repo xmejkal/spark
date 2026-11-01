@@ -32,9 +32,12 @@ PROJECT_FILES = {"pins.py": "the build and assign_pins.py --emit-pins write it i
 #: Lines each page may hold. These numbers only go down: a page over its budget is cut or split, never given a bigger one.
 #: A guide page with no entry gets DEFAULT_BUDGET. A budget for a page that is gone fails, so a split removes its entry.
 BUDGETS = {
-    "README.md": 181,
+    "README.md": 180,
     "docs/guide/journey.md": 1582,  # P501 splits it
-    "docs/guide/agents.md": 1036,  # P502 splits it
+    "docs/guide/agents.md": 185,
+    "docs/guide/agents/json.md": 427,
+    "docs/guide/agents/never-assume.md": 227,
+    "docs/guide/agents/scripts.md": 308,
     "docs/guide/developing.md": 651,  # P504 shrinks it
     "docs/guide/commands.md": 284,
     "docs/guide/how-it-works.md": 277,
@@ -42,7 +45,7 @@ BUDGETS = {
 DEFAULT_BUDGET = 400
 #: Characters a table cell may hold. Like BUDGETS, these only go down, kept by review.
 CELL_LIMIT = 300
-CELL_LIMITS = {"docs/guide/agents.md": 2276}  # P502 moves the four long rows out, then this entry goes
+CELL_LIMITS = {}
 #: Seconds a runnable example or a --help may take; a longer one is not light (the spec, §4).
 RUN_TIMEOUT = 60
 

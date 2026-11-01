@@ -290,7 +290,7 @@ project, says which one and the record's digest (`based_on`). Parts only; a boar
 `true` means **the vendor's own words at a cited URL**. Anything read off a photo, inferred, or
 computed is `false`, with `where` saying how it was arrived at. A null is not a gap in the output;
 it *is* the output, and a check reading one should report it as unverifiable rather than pass it. Not
-every check does yet ([what never to assume](docs/guide/agents.md#what-never-to-assume), P107).
+every check does yet ([what never to assume](docs/guide/agents/never-assume.md), P107).
 
 ### Stand-in, placeholder
 

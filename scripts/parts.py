@@ -1625,7 +1625,7 @@ OPTIONS = (
     ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
     ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
     ("json", {"action": "store_true"}, "answer in one envelope: problems, unchecked, notes, assumptions, next "
-     "(docs/guide/agents.md, \"parts.py's envelope\")"),
+     "(docs/guide/agents/json.md, \"parts.py's envelope\")"),
 )
 
 

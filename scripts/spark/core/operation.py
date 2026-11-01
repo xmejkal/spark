@@ -23,7 +23,7 @@ COMMON_ARGUMENTS = {
     "project": Argument(("--project",), "project", Path, "the project folder with requirements.json and sim/ (default: here)", Path(".")),
     "port": Argument(("--port",), "port", str, "the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
                      "(one board on two nodes named by its serial counts once)"),
-    JSON_DEST: Argument((JSON_FLAG,), JSON_DEST, bool, "print one envelope on stdout (docs/guide/agents.md)"),
+    JSON_DEST: Argument((JSON_FLAG,), JSON_DEST, bool, "print one envelope on stdout (docs/guide/agents/json.md)"),
 }
 
 
