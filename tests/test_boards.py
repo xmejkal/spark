@@ -385,6 +385,16 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
             with self.subTest(level=level):
                 self.assertEqual(self._problems({"onboard_led": {"gpio": [15], "note": "x", "active_level": level}}), [])
 
+    def test_an_active_level_as_a_fact_passes_and_one_without_a_source_or_with_value_2_is_refused(self):
+        # P464: a level written by --fact-set carries its origin
+        def led(level):
+            return self._problems({"onboard_led": {"gpio": [15], "note": "x", "active_level": level}})
+
+        self.assertEqual(led({"value": 0, "verified": True, "source": "the bench"}), [])
+        self.assertEqual(led({"value": None, "verified": False, "source": "unknown"}), [])
+        self.assertTrue(any("source" in p for p in led({"value": 0, "verified": True})), led({"value": 0, "verified": True}))
+        self.assertTrue(any("must be 0 or 1" in p for p in led({"value": 2, "verified": True, "source": "the bench"})))
+
     def test_any_other_active_level_is_refused(self):
         for level in (2, True, "0"):
             with self.subTest(level=level):

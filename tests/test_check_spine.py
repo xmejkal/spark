@@ -39,6 +39,7 @@ import boards  # noqa: E402
 import check_spine  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
+import missing_facts  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
 import tabbed_page  # noqa: E402
@@ -1347,6 +1348,47 @@ class TheBoardAloneTest(unittest.TestCase):
         simulation = json.loads(done.stdout)["stages"][-1]
         self.assertEqual(simulation["status"], "ok")
         self.assertIn("onboard GPIOs: not checked: spark's store lacks the Wokwi definition", simulation["detail"])
+    # --- end MVP ---
+
+    # --- MVP ---
+    def test_a_board_without_the_onboard_levels_builds_ok_and_says_what_is_missing_until_the_person_tells_it(self):
+        # P464 (#632): the firmware used to guess the LED and button levels; now the build names the gap and `--fact-set` fills it
+        from spark.core.result import OperationResult, envelope_item
+        from test_missing_facts import levelless
+        project = Path(tempfile.mkdtemp()) / "project"
+        (project / "boards").mkdir(parents=True)
+        (project / ".spark").mkdir()
+        board = levelless()
+        board["id"] = "levelless-board"
+        (project / "boards" / "levelless-board.json").write_text(json.dumps(board))
+        (project / "requirements.json").write_text(json.dumps({"board": "levelless-board", "parts": [], "board_only": True}))
+        into = project / "kept"
+
+        def build():
+            with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+                code = check_spine.main([str(project / "requirements.json"), "--keep", str(into), "--json"])
+            return code, json.loads(out.getvalue()), err.getvalue()
+
+        code, said, err = build()
+        pins = next(entry for entry in said["kept"] if entry["file"].endswith("pins.py"))
+        expected = [envelope_item(each) for each in missing_facts.list_missing_facts(board)]
+        self.assertEqual((code, said["status"], pins["did"], len(expected)), (0, "ok", "wrote", 2))
+        self.assertEqual(pins["missing_facts"], expected)
+        self.assertEqual(pins["missing_facts"], OperationResult(None, missing_facts.list_missing_facts(board)).to_envelope("t", "t")["unchecked"])
+        self.assertIn("missing fact: %s. %s" % (expected[0]["sentence"], expected[0]["fix"]), err)
+        text = (into / "firmware" / "pins.py").read_text()
+        self.assertNotIn("ONBOARD_LED_ON", text)
+        levels = project / "levels.json"
+        levels.write_text(json.dumps({"pin_roles": {role: {"active_level": {"value": 0, "verified": True, "source": "the bench"}}
+                                                    for role in ("onboard_led", "onboard_button")}}))
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(parts.main(["--fact-set", "levelless-board", str(levels), "--project", str(project), "--json"]), 0)
+        code, said, _ = build()
+        self.assertEqual(code, 0)
+        self.assertNotIn("missing_facts", next(entry for entry in said["kept"] if entry["file"].endswith("pins.py")))
+        names = {}
+        exec((into / "firmware" / "pins.py").read_text(), names)
+        self.assertEqual((names["ONBOARD_LED_ON"], names["ONBOARD_BUTTON_ON"]), (0, 0))
     # --- end MVP ---
 
     def test_the_verdict_says_the_board_alone_ran(self):
