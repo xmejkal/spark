@@ -33,7 +33,19 @@ PROJECT_FILES = {"pins.py": "the build and assign_pins.py --emit-pins write it i
 #: A guide page with no entry gets DEFAULT_BUDGET. A budget for a page that is gone fails, so a split removes its entry.
 BUDGETS = {
     "README.md": 180,
-    "docs/guide/journey.md": 1582,  # P501 splits it
+    "docs/guide/journey.md": 45,
+    "docs/guide/journey/drawer.md": 50,
+    "docs/guide/journey/idea.md": 87,
+    "docs/guide/journey/research.md": 40,
+    "docs/guide/journey/build.md": 209,
+    "docs/guide/journey/checks.md": 175,
+    "docs/guide/journey/firmware.md": 63,
+    "docs/guide/journey/simulate.md": 49,
+    "docs/guide/journey/bench.md": 198,
+    "docs/guide/journey/recorded-run.md": 366,
+    "docs/guide/journey/owed-facts.md": 162,
+    "docs/guide/journey/from-draft-to-order.md": 115,
+    "docs/guide/journey/how-the-runs-were-made.md": 30,
     "docs/guide/agents.md": 185,
     "docs/guide/agents/json.md": 427,
     "docs/guide/agents/never-assume.md": 227,

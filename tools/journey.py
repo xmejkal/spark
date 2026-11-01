@@ -16,6 +16,9 @@ from xml.sax.saxutils import escape
 
 ROOT = Path(__file__).resolve().parent.parent
 PICTURE = "docs/guide/journey.svg"
+#: A row of "What works today": the step, linked to its own page of the journey guide, and its status. The page's name
+#: is the step's name in lower case. A row that links another step's page gives no status.
+STATUS_ROW = re.compile(r"^\| \[(\w+)\]\(docs/guide/journey/([\w-]+)\.md\) \| \*\*(works|partly|not yet)\*\*", re.M)
 #: The strip at the bottom: where we are, and what is next. Each line holds at most STRIP characters.
 WHERE = "the button-and-LED firmware read ready seen on a XIAO ESP32-C6 on 2026-10-15."
 NEXT = "wire its breadboard and press the button."
@@ -59,9 +62,7 @@ def section(readme):
 
 def statuses(readme):
     """Each step's status in the "What works today" table: {"Drawer": "partly", ...}."""
-    rows = re.findall(r"^\| \[(\w+)\]\(docs/guide/journey\.md#[\w-]+\) \| \*\*(works|partly|not yet)\*\*",
-                      section(readme), re.M)
-    return dict(rows)
+    return {step: status for step, page, status in STATUS_ROW.findall(section(readme)) if page == step.lower()}
 
 
 def runs_up_to(readme):
