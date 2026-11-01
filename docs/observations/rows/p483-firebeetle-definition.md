@@ -17,3 +17,7 @@ What the P483 build, the plan council and the refuter found. Card: #662.
 | 11 | "a header pin and not this part" is clear | PR refuter 6 | rejected | "part" meant two things, and `--match` shows no label; the sentence now says "a bare header pin with no onboard LED or button" |
 | 12 | A stand-in costs only the silkscreen labels | PR refuter 7 | rejected | it also lacks the board's LED and button; boards/README.md and the record's note say so |
 | 13 | A scenario has no way to read the LED on the stand-in | PR refuter 8 | raised | an `expect-pin` on the devkit's pin 21 may read GPIO21's level; only a Wokwi run settles it. P484 (#663) wires real parts |
+| 14 | The `wokwi-board` url is a GitHub blob page, so a fetch of it gives HTML, not the hashed file | PR reviewer 1 | raised | the XIAO's entry has the same form; both move to raw.githubusercontent.com URLs together in a later card |
+| 15 | STAND_IN says "no onboard LED or button" for every reached GPIO | PR reviewer 2 | raised | true while LED and button are the only roles with a scenario verb; boards.py is at its line budget, so the note goes with the next change there |
+| 16 | The SimulatedPart docstring names P484, which will go stale | PR reviewer 3 | raised | P484 (#663) rewords it when it wires the parts |
+| 17 | The record's note says the devkit exposes GPIO 0-21 and 35-48 with no source | PR reviewer 4 | raised | older text; the PR refuter read the kept file and found GPIO 0-21 and 35-48; cite `documents["wokwi-board"]` in the next record edit |
