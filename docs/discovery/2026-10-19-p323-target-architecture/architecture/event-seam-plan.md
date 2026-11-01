@@ -1,149 +1,183 @@
 # The event seam: how an Operation tells a reader what happens now (P479, #657)
 
 Card [P479 #657](https://github.com/xmejkal/spark/issues/657), epic P158 [#94](https://github.com/xmejkal/spark/issues/94).
-Written on 2026-11-01 by Fable 5.1 for the PO's approval, with no code. Measured on `origin/main` 5ecdf48a. Line numbers
-are that commit's. It refines the PO's decision on #94 (2026-11-01). W4-2 builds `OutsideWorld.report(event)`, the seam
-only. The council rounds run on this file before the PO reads it.
+Written on 2026-11-01 by Fable 5.1 for the PO's approval, with no code. It refines the PO's decision on #94
+(2026-11-01). Measured on the branch after it merged `origin/main` at d375c017 (P482 and P468 are in). Line numbers are
+that commit's.
 
-> The short version. An Operation gets one more callable in its `OutsideWorld`: `report(event)`. An Event is a small Value of facts:
-> what kind of thing happened, which step, a sentence, and a count. The CLI's `TerminalReporter` prints a line event as
-> deploy prints its lines today, so every golden stays byte-equal. `--json` keeps one envelope on stdout. A colored
-> terminal (P478), JSON lines, MCP progress and SSE each come later as one more Reporter, and no Operation changes.
-> First a probe on the look, the one Operation on the core. Then deploy in W4-2. Then each output place as it moves.
+> **The short version.** An Operation gets one more callable in its `OutsideWorld`: `report(event)`. An Event is a
+> small Value of three facts: its kind (`LINE` or `BEGIN`), the code of the phase it is about, and for a `LINE` the
+> sentence. The CLI's `TerminalReporter` prints a `LINE` at once and prints nothing for a `BEGIN`. So every golden stays
+> byte-equal, and a person sees no change until the colored terminal (P478 #656) draws the `BEGIN`s. `--json` keeps one
+> envelope on stdout and plain text on stderr. First a probe on the look (E1), then deploy inside W4-2 (E2), then each
+> other output place with its wave.
 
-Summary. Today 29 of 69 scripts print, and only deploy prints while a step runs, through a `show_line` callable that the
-Service gets. The seam replaces that callable with one Event Value and one Reporter method in `OutsideWorld`. So the
-Operation and its Services never see a stream. The result at the end stays an `OperationResult` for the two Renderers.
-The events during the run go through the Reporter that the frontend picks.
+> **You decide.** Each line is a question, the council's recommendation, and your yes or no.
+>
+> 1. One word, `report`, for the seam: `outside.report(event)`. W4-2 renames deploy's `LookReport` variable `report` to
+>    `look` where the two meet. **Recommend: yes.**
+> 2. E1, the probe on the look, runs as its own PR right after P480 (the walk 3 notes) and before W4-2. **Recommend: yes.**
+> 3. Under `--json`, stderr stays plain text for a person. JSON lines on stderr wait until the spike P477 #653 shows an
+>    agent that reads them. **Recommend: yes.**
+> 4. E1 and E2 change nothing a person sees. The first visible gain is P478's colored terminal. **Recommend: yes, the
+>    seam comes first.**
+>
+> **Approve this** = E1 starts as its own PR after P480. E2 rides in W4-2's PR. Each edit of section 3 lands in the PR
+> of the slice that makes it true. The council decided the other open questions, in
+> `docs/observations/rows/p479-event-seam.md`.
 
-## 1. The map: where spark prints, asks and streams today
+Summary. Today only deploy prints while a step runs, through a `show_line` callable that two Service methods and one
+helper take. The seam replaces that callable with one Event Value and one `report` method in `OutsideWorld`. So the
+Operation and its Services never see a stream. The result at the end stays one `OperationResult` for the two Renderers.
+The events during the run go through the Reporter that the frontend picks. The map of every output place is the appendix.
 
-| What | Count | Main anchors |
-|---|---|---|
-| scripts in `scripts/*.py` | 69, 25 with a `main()` | `ls scripts/*.py` |
-| scripts that print or write stderr | 29 (28 with `print(`, 155 calls) | `emit_board.py` 25 calls, `tools.py` 19, `init_project.py` 11, `boards.py` 11, `grant.py` 10, `deploy.py` 7 |
-| scripts on `run_cli` | 1 | `scripts/look.py:54` |
-| prints inside `scripts/spark/` | 3 in `run_cli`, 1 in the baseline | `scripts/spark/core/cli.py:106`, `:112`, `:114`. `outcomes.py:138` (`X2` baseline) |
-| places that ask a person | 1 | `deploy_gate.py:79-82` (`TerminalConsentStrategy.ask`: `stdout.write`, `stdin.readline`), the tty test at `:75`. `parts.py`'s `input(` hits are `_read_json_input`, a file reader |
-| lines shown while a step runs | deploy only, 7 sites | `deploy.py:156-158` is `show_line`. `deploy.py:243` flushes the look's lines before the gate. `deploy_service.py:102` the yes. `:108` running. `:126` the retry. `:182` press RESET. `board_start.py:106` a restart not counted |
-| waits a person sits through | 4 | the erase and the write, `deploy_service.py:108-121`, with esptool's own output through `echo_to` at `:120`. The retry sleep at `:128`. The start wait poll loop, `board_start.py:95-108`, every `POLL_S`. The look's esptool read, `board_look.py:46` and `:431` |
-| a tool's own output passed through | 1 | `deploy.py:225` gives esptool fd 2 under `--json`, so the envelope stays alone on stdout |
-| prints all at the end, though steps are slow | 4 | `check_spine.py:361` collects stages, `:638-650` renders them, `:1021` prints. `run_scenario.py:488` one child with `capture_output`, `:581-585` prints. `flash_image.py:308-309`. `tools/mutate.py:411` loops, `:537-543` prints |
-| tools in `tools/*.py` that print | 10 of 12 | `tools/mutate.py`, `tools/measure.py` and the rest. They are the team's, not spark's product |
+Council. Round 1 (architecture, UX and AI-UX, tech lead, PO assistant, refuter) ran on 2026-11-01. It renamed the
+Event's fields and cut `PROGRESS` and the counts. It moved the child output change to E2 and added the four rules of the
+seam. It fixed the builder path that E1's test takes. It added two deploy goldens before E2 and corrected three counts.
+Record: `docs/observations/2026-11-01-p479-event-seam-council/round1.md`.
 
-The counts come from `ls` and `/usr/bin/grep -c` on 5ecdf48a. The sizes in section 4 are estimates.
+## 1. The design
 
-What the map says. One seam exists today, `show_line`. It is a bare callable that two Service methods take
-(`deploy_service.py:93`, `:136`) and one helper (`board_start.py:90`). Everything else prints at the end. So the seam is
-new for 68 scripts and replaces one for deploy. The build chain and the simulation run are the places where a person
-waits longest with nothing on the screen.
-
-## 2. The design
-
-The smallest design that works end to end: one Value, one method, one real Adapter, one Fake.
+The smallest design that works end to end: one Value, one method, one real Reporter, one Fake.
 
 ### The Event Value
 
-`Event`, a namedtuple in `spark/core/events.py`: `kind`, `step`, `text`, `done`, `total`. Every field is a fact.
+`Event`, a namedtuple in `spark/core/events.py` with three fields. Its docstring says Value.
 
-| Field | What it holds | Facts only |
-|---|---|---|
-| `kind` | one of three constants: `LINE` (a sentence the person reads now), `STEP` (a named step begins now), `PROGRESS` (a step's count moved) | the constants live in `events.py` as `LINE, STEP, PROGRESS = "line", "step", "progress"` |
-| `step` | the snake_case word of the step this event is about, from the area's `codes.py`, such as `read_board`, `erase`, `write`, `start_wait` | a code, never a sentence. A Reporter decides on it (rule R7) |
-| `text` | the sentence, for `LINE` only. It is today's line, without its two-space indent | the words spark prints today. P481 later gives each step one description as data, and `LINE` shrinks |
-| `done`, `total` | the count of a `PROGRESS`, such as seconds waited of `RESET_WAIT_S` | numbers. None for the other kinds |
+| Field | What it holds |
+|---|---|
+| `kind` | `LINE` (a sentence the person reads now) or `BEGIN` (a phase begins now). The constants: `LINE, BEGIN = "line", "begin"` |
+| `code` | the snake_case code of the phase the event is about. Deploy's phases are `board_envelope.STAGE_*` (`board_envelope.py:26`). They are public already, as the envelope's `stage`. S11 renames them `DeployPhase`. A build's codes are its stage names. Never a sentence |
+| `text` | for a `LINE`, the words printed today, without their two-space indent. None for a `BEGIN` |
 
-No colour, no stream, no time stamp. If a reader wants a time stamp (SSE), its Reporter adds one from the frontend's
-clock. Three constructors keep call sites short: `Event.line(step, text)`, `Event.step(step)`, `Event.progress(step,
-done, total)`. A `STEP` has no end event. The next `STEP` or the result ends it.
+Two constructors keep call sites short: `Event.line(code, text)` and `Event.begin(code)`. A `BEGIN` has no end event: the
+next `BEGIN` or the result ends it. No count, colour, stream, time stamp or severity. When a Reporter needs one of them,
+that field enters (records grow by need). A unit test builds one event of each kind and reads every field.
+
+Why `code` and `begin`. The draft had a field `step` and a constructor `Event.step`: one word for two things, and "step"
+already names wiring steps and scenario steps. `code` means what it means in a `Finding`: a snake_case constant that a
+reader decides on.
 
 ### The Reporter
 
-`Reporter` is a Strategy base in `spark/core/events.py` with one method, `report(event)`. It returns nothing and never
-raises on a kind it does not know. Two cases fill rule T3. `TerminalReporter(stream)` is an Adapter in
-`spark/core/outside.py`. It prints `event.text` for a `LINE` through `guard_lines`, with a flush. It prints nothing for
-`STEP` and `PROGRESS`. `FakeReporter` in `tests/fakes.py` keeps every event in `events`. A `ReporterContract` test in
-`tests/test_core.py` sends one event of each kind and expects no exception. `TerminalReporter` joins rule X2's list of the
-places that print in `scripts/spark/`, beside the Renderers and the terminal consent.
+- `Reporter`, a Strategy base in `events.py` with one method, `report(event)`. It returns nothing and never raises on a
+  kind it does not know. A Reporter decides on `kind` and `code`, never on `text`.
+- `TerminalReporter(stream)`, in `events.py`, a Strategy case like `TerminalConsentStrategy`. It prints `"  " + text`
+  for a `LINE` through `guard_lines`, with a flush, and nothing for a `BEGIN`. The indent is presentation, so the terminal
+  adds it, and every line keeps today's bytes. `TerminalReporter.for_json(as_json)` picks the stream: stdout, or stderr
+  with `--json`. The class joins X2's `TERMINAL_CLASSES` (`tools/measure.py:251`), so the stream choice sits in an X2
+  class and outside `run_cli`'s R1 budget.
+- `FakeReporter` in `tests/fakes.py` keeps every event in `events`. `FakeOutsideWorld` (`fakes.py:272`) makes one by
+  default as `outside.reporter`, and its `report` is the Fake's.
+- `ReporterContract` in `tests/test_core.py`: each Reporter takes one event of each kind, and one of an unknown kind,
+  with no exception.
 
-### Where it sits
+Names. `docs/guide/developing.md`'s table gains a `Reporter` role row: "takes the events of a run and shows them in one
+form. It decides on kind and code, never on text. The name ends in `Reporter`." `Event` is a Value and needs no new row.
 
-`OutsideWorld` gains the field `report`, the bound `report` method of the Reporter, as `run` holds `ProgramRunner.run`
-today (`outside.py:18`). `build_outside_world(effects, find_tool, reporter)` fills it. Reporting is not an effect: every
-Operation has it, and nothing gates it. The Operation, or a Service the Operation hands `outside` to, calls
-`outside.report(Event.step(codes.READ_BOARD))`.
+### Where it sits, and the builder change
 
-The two Renderers stay as they are. `JsonEnvelope` and `TextReport` render the one `OperationResult` once, at the end.
-The Reporter takes the events during the run. Both belong to the frontend, and `run_cli` picks both from `--json`:
+`OutsideWorld` (`outside.py:18`) gains the field `report`, as `run` holds `ProgramRunner.run` today.
+`build_outside_world(effects, reporter, find_tool=None)` fills it with `reporter.report`. Reporting is not an effect:
+every Operation has it, and nothing gates it.
 
-- without `--json`: `TerminalReporter(sys.stdout)` and `TextReport`. A line event prints at once, as deploy's does today.
-- with `--json`: `TerminalReporter(sys.stderr)` and `JsonEnvelope`. The lines go to stderr, as deploy's do today
-  (`deploy.py:197`), and stdout holds the one envelope. The goldens compare stdout only (`golden_bench.py:134`).
+`run_cli` picks the Reporter before it builds the world. At `cli.py:108` it pops `as_json`. One new line follows:
+`reporter = TerminalReporter.for_json(as_json)`. The builder call at `:109` gains `reporter`. So every builder takes three parameters: `build_project_outside_world` (`bench/__init__.py:14-17`, which
+`look.py:55` passes on unchanged), and the test builders at `test_core.py:187` and `:265`. A test that gives `outside`
+keeps its own reporter, so E1's stream test goes through a builder, as `test_core.py:185-193` does. The two calls of
+`build_outside_world` at `test_core.py:280` and `:286` gain the reporter. The mutation row at
+`tests/mutations/p442-core-look.json:4` finds `build_outside_world`'s return line, so E1 updates its find and replace.
 
-A child program's output follows the same rule. Today `deploy.py:225` gives esptool fd 2 under `--json`. The plan moves
-that choice into the frontend: `build_outside_world` builds `ProgramRunner(echo_to)`, and its `run` sends a child's stdout
-to the reporter's stream unless the caller captures it. `DeployService.echo_to` goes. The mutation row "the echo goes
-to stdout under `--json`" stays and targets `ProgramRunner`.
+### The four rules of the seam
 
-`--json` stays one envelope now. Later, `JsonLinesReporter` writes one JSON object per event on stderr under `--json`,
-such as `{"event": "step", "step": "erase"}`. An agent then reads progress line by line, and stdout still holds the one
-envelope. The Reporter enters after the spike P477 #653 shows an agent that reads it. The envelope and `envelope: 1`
-never change for it.
+1. **One line, one place.** An event line is a line that the person reads before the run ends: before the gate asks,
+   or while a slow phase runs. Every other line is a result line in `OperationResult.lines`, which `TextReport` prints
+   once at the end. No line is both, and E2's test checks that no event text is in the result's lines. Deploy has seven
+   event lines, listed in the appendix. The dry run's lines and the closing lines are result lines.
+2. **The order on the streams.** Without `--json`: the event lines on stdout as they happen, then `TextReport`'s lines
+   on stdout, then the diagnostics on stderr. With `--json`: the event lines on stderr as they happen, then the envelope
+   alone on stdout, then the diagnostics on stderr. E1's toy test pins both orders.
+3. **Diagnostics stay out of the Reporter.** A line that goes to stderr in both modes is a diagnostic in
+   `OperationResult.diagnostics`, never a `LINE`: the build's kept lines (`check_spine.py:1023`), its notes at `:737` and
+   `:745`, a refusal such as `deploy.py: <why>`, a crash's traceback. So no Event needs a stream field, and no later move
+   puts a stderr line on stdout.
+4. **The stderr contract.** Under `--json`, stderr holds text for a person: the event lines, a tool's own output, the
+   diagnostics and a crash's traceback. An agent reads the envelope on stdout and never parses stderr. E1 adds this
+   sentence to `docs/guide/agents.md` beside `:555-558`. JSON lines on stderr are a later Reporter (decision 3).
 
-The later Reporters plug in without touching an Operation:
+Facts only. An Operation reports codes and the sentences spark prints today. No threshold, timing or colour enters an
+Event. P481 #660 later describes each phase once, as data, and a `LINE` then names fewer words.
 
-| Reporter | Frontend | What it does with the three kinds | Card |
+### A child's output, in E2
+
+`deploy.py:225` gives esptool fd 2 under `--json`, through `DeployService.echo_to` (`deploy_service.py:68-72`, `:120`).
+Only deploy uses it, so it moves in E2, not E1. When the caller does not capture a child's stdout, the `ProgramRunner`
+that `build_outside_world` builds sends it to the reporter's stream. `subprocess.run` refuses `stdout` beside
+`capture_output`. So when the caller gives either, the runner sets no `stdout`. The mutation row "the echo goes to stdout
+under `--json`" stays and targets `ProgramRunner`.
+
+### The later Reporters
+
+Each plugs in without touching an Operation, and each enters with its frontend.
+
+| Reporter | Frontend | What it does | Card |
 |---|---|---|---|
-| `StyledTerminalReporter` | the CLI, on a tty with `NO_COLOR` unset | colours a `LINE` by its `step`, draws a live line for a `PROGRESS`, says a `STEP` in grey | P478 #656 |
-| `JsonLinesReporter` | the CLI under `--json`, on stderr | one JSON object per event | after P477 |
-| `McpProgressReporter` | the MCP server in `scripts/spark/frontends/` | `PROGRESS` as a `notifications/progress`, `LINE` as a log message, `STEP` as both | P417 #545 |
+| `StyledTerminalReporter` | the CLI, on a tty with `NO_COLOR` unset | colours a `LINE` by its `code`, says a `BEGIN` in grey | P478 #656 |
+| `JsonLinesReporter` | the CLI under `--json`, on stderr | one JSON object per event, such as `{"event": "begin", "code": "flash"}` | after P477 #653 |
+| `McpProgressReporter` | the MCP server in `scripts/spark/frontends/` | a `BEGIN` as a progress notification, a `LINE` as a log message | P417 #545 |
 | `SseReporter` | a web frontend, none exists | `event: <kind>` and `data: <json>` per event | none yet |
 
 ```mermaid
 classDiagram
-  class Event { <<Value>> kind step text done total line(step, text)$ step(step)$ progress(step, done, total)$ }
+  class Event { <<Value>> kind code text line(code, text)$ begin(code)$ }
   class Reporter { <<Strategy>> report(event) }
-  Reporter <|-- TerminalReporter : Adapter, prints a LINE
+  class TerminalReporter { <<Strategy>> for_json(as_json)$ report(event) }
+  Reporter <|-- TerminalReporter : prints a LINE, X2 class
   Reporter <|-- FakeReporter : tests, keeps events
   Reporter <|-- StyledTerminalReporter : P478, later
-  Reporter <|-- JsonLinesReporter : later
-  Reporter <|-- McpProgressReporter : later
+  Reporter <|-- JsonLinesReporter : after P477
+  Reporter <|-- McpProgressReporter : P417, later
   class OutsideWorld { <<Value>> run find_tool report }
   class Operation { <<Operation>> run(**values, outside) OperationResult }
   class OperationResult { <<Result>> data findings next lines diagnostics notes }
   class JsonEnvelope { <<Renderer>> render(result, tool, op) }
   class TextReport { <<Renderer>> render(result) }
-  class run_cli { picks the Reporter and the Renderer from --json }
+  class run_cli { picks the Reporter, then builds the world }
   OutsideWorld --> Reporter : report is its method
+  Operation ..> Event : makes
   Operation ..> OutsideWorld : report(Event) during the run
   Operation ..> OperationResult : once, at the end
-  run_cli ..> OutsideWorld : builds, with the Reporter
+  run_cli ..> TerminalReporter : for_json(as_json)
+  run_cli ..> OutsideWorld : outside_builder(project, effects, reporter)
   run_cli ..> JsonEnvelope
   run_cli ..> TextReport
 ```
 
-The look, the probe. One `STEP` before the esptool read. The terminal prints nothing for it, so no golden changes, and
-the Fake sees it.
+The look, E1. One `BEGIN` before the esptool read. The terminal prints nothing for it, so no golden changes, and the Fake
+sees it.
 
 ```mermaid
 sequenceDiagram
   actor P as Person
   participant CLI as run_cli
   participant R as TerminalReporter
+  participant B as build_project_outside_world
   participant O as LookAtBoard
   participant S as LookService
-  CLI->>R: TerminalReporter(stdout, or stderr with --json)
+  CLI->>R: for_json(as_json): stdout, or stderr with --json
+  CLI->>B: (project, effects, reporter)
+  B-->>CLI: OutsideWorld(run, find_tool, report)
   CLI->>O: run(project, port, ..., outside)
-  O->>R: outside.report(Event.step(read_board))
-  Note over R: a STEP prints nothing in this slice
+  O->>R: outside.report(Event.begin("look"))
+  Note over R: a BEGIN prints nothing until P478
   O->>S: run(project, port, evidence)
   S-->>O: LookReport
   O-->>CLI: OperationResult(data, findings, next, lines)
-  CLI->>P: TextReport, or JsonEnvelope on stdout
+  CLI->>P: TextReport, or JsonEnvelope alone on stdout
 ```
 
-Deploy, in W4-2. The lines of `deploy_service.py:102-128` and `board_start.py:106` become `LINE` events with a step
-code. Each phase becomes a `STEP`. The start wait reports a `PROGRESS` per poll. The person sees the same bytes.
+Deploy, E2 inside W4-2. Each phase reports a `BEGIN` where `reached["stage"]` is set today. The event lines of rule 1
+become `LINE`s with their phase code. The person sees the same bytes.
 
 ```mermaid
 sequenceDiagram
@@ -154,99 +188,107 @@ sequenceDiagram
   participant DS as DeployService
   participant OW as OutsideWorld
   CLI->>O: run(project, port, token, dry_run, outside, backends)
-  O->>DS: plan(port), look(port)
-  O->>R: report(Event.line(look, each report line))
-  R->>P: the line, flushed
+  O->>R: report(begin "plan"), then DS.plan(port)
+  O->>R: report(begin "look"), then DS.look(port)
+  O->>R: report(line "look", each look line)
+  R->>P: "  " + the line, flushed
+  O->>R: report(begin "gate")
   O->>OW: consent(rerun line)
   O->>DS: deploy(look, token, consent)
-  DS->>R: report(Event.step(erase)), report(Event.line(erase, "running: esptool ..."))
-  DS->>OW: run(esptool erase), a child's stdout follows the reporter's stream
-  DS->>R: report(Event.step(write)), report(Event.line(write, "running: ..."))
+  DS->>R: report(line "gate", "yes: ...")
+  DS->>R: report(begin "flash"), report(line "flash", "running: esptool ...")
+  DS->>OW: run(esptool), a child's stdout follows the reporter's stream
+  O->>R: report(begin "verify")
   O->>DS: verify(look, planned)
-  DS->>R: report(Event.progress(start_wait, seconds, RESET_WAIT_S)) per poll
-  Note over R: a PROGRESS prints nothing in W4-2, P478 draws it
+  DS->>R: report(line "verify", "press RESET ...") when the board stays silent
   O->>DS: record(result, consent)
-  O-->>CLI: OperationResult
+  O-->>CLI: OperationResult(lines: the result lines only)
   CLI->>P: TextReport or JsonEnvelope, exit code
 ```
 
-## 3. What changes in the target architecture and the wave plans
+## 2. The order
 
-No file is edited by this card. Each edit lands in the PR of the slice that makes it true.
-
-`README.md` (level 1):
-
-- "The one interface contract": one row, `events`: `Event(kind, step, text, done, total)` through `OutsideWorld.report`.
-  The terminal prints a line event. `--json` keeps one envelope on stdout.
-- "One Operation, two frontends": one arrow, `O->>RC: outside.report(Event)`, and `RC-->>P: the line, now`.
-
-`refactor-plan.md`:
-
-- "Level 3, the classes of one flow: deploy": `deploy(look, token, consent)` and `verify(look, planned)`, the
-  `show_line` parameter gone, and `DeployService` holds `outside`.
-- "Level 4, the methods of one class: `DeployService`": the two `show_line` arrows become `DS->>OW: report(Event)`. The
-  paragraph after it says `OutsideWorld.report`, not `show_line`.
-- "4. The core contract for other interfaces", rule 2: "No Operation asks or prints. It asks only through
-  `outside.consent` and tells only through `outside.report`." The X2 test's list gains the Reporter adapters.
-- "Wave 4: the bench on the core", S7b: "the lines a person sees while esptool runs are `LINE` events, each phase a `STEP`".
-- "Wave 6: the other areas", the `build` move: "`BuildService` reports a `STEP` per stage, so the person sees each stage
-  as it ends", and the `firmware` move: "`ScenarioRun.run` reports a `STEP` before wokwi-cli starts".
-- "What we will not do": "No Reporter beyond `TerminalReporter` and the Fake until its frontend exists."
-- "Appendix: what moves where": the row `deploy.show_line` becomes `OutsideWorld.report` with `TerminalReporter`.
-
-`wave4-plan.md`:
-
-- "Council", round 1, the refuter's bullet on `OutsideWorld`: `show_line` becomes `report`, built in P479's probe.
-- "W4-2, deploy on the core (S7b)", Classes: "`OutsideWorld` gains `clock` and `consent(line)`" (`report` exists after
-  the probe). `LineWriter` goes, and `TerminalReporter` from the probe takes its place. The Files line for `run_cli`,
-  `outside_builder(project, effects, out)`, says `reporter`. `deploy_service.py:63-120`: `show_line` and `echo_to` go. New mutation rows: a `STEP` prints a line, a `LINE` under `--json` reaches stdout, the start wait
-  reports no `PROGRESS`.
-- "W4-3, grant, live and reach on the core (S9)": the three Operations report nothing new. One sentence says so.
-- "W4-4": no change.
-- "The bench after wave 4": the class diagram's `OutsideWorld { run find_tool clock consent report }`, and the sequence
-  gains `DS->>OW: report(step erase)` before the erase.
-- "The four checks that close the wave": a fifth, "every line deploy shows while a step runs is an Event in a test".
-
-`areas/core.md`: the `core/outside.py` and `OutsideWorld` rows name `report`, and a row for `core/events.py`.
-`areas/bench.md`: the two `show_line` parameters at lines 127, 128, 173 and 182 go. `glossary.md`: rows for Event,
-Reporter and the clash "report" (section 5). `notes.md`: a decision row, "N33 `OutsideWorld.report(event)` over a
-line callable: one seam for every reader". `docs/guide/developing.md`: a `Reporter` row in "Patterns and names in
-spark's core", `report` in "The core contract" and its class diagram.
-
-## 4. The order
-
-Each slice is one PR, tested, with no golden changed. The PO ordered the probe after walk 3 (#657).
+E1 sits in wave 4, before W4-2, and W4-2 builds on it. Each slice is one PR, tested, with no golden changed.
 
 | Slice | What it builds | Done when | Size |
 |---|---|---|---|
-| E1, the probe on the look | `events.py` (`Event`, the three kinds, `Reporter`), `TerminalReporter`, `OutsideWorld.report`, `build_outside_world(effects, find_tool, reporter)`, `run_cli` picks the stream from `--json`, `ProgramRunner(echo_to)`. `LookAtBoard.run` reports `Event.step(READ_BOARD)` before `looker(...).run`. `FakeOutsideWorld` and `FakeReporter` keep events. `ReporterContract`. The toy Operation in `test_core` reports a `LINE` and a `STEP` | the 16 golden files are byte-equal. `test_look` sees `[Event(STEP, "read_board", None, None, None)]`. The toy's `LINE` is on stdout without `--json` and on stderr with it, and the `STEP` prints nothing. The `X2` baseline gains no entry. Mutation: a `STEP` that prints, a `LINE` on stdout under `--json`, the event not sent, each caught | estimate: 70 product lines, 60 test lines, 20 doc lines |
-| E2, deploy in W4-2 | as wave4-plan says, with the edits of section 3. The seven line sites become `LINE` events with their step code. The five `STAGE_*` phases become `STEP`s. The start wait's poll loop reports a `PROGRESS` per poll | the three deploy goldens are byte-equal. `test_deploy_gate` holds the full event list of one deploy that reaches ready. W4-2's other four checks hold | estimate: W4-2's size plus 40 lines |
-| E3, the colored terminal, P478 | `StyledTerminalReporter`. On a tty with `NO_COLOR` unset, `run_cli` picks it | the PO sees colour and a live line on his bench. `deploy.py --json` and a piped `deploy.py` print bytes equal to before | P478's card |
-| E4, the other output places | each with its area's move in wave 6. `BuildService` reports a `STEP` per stage (`check_spine.py:361`), and the `kept` lines at `:1023` become `LINE` events. `ScenarioRun.run` reports a `STEP` before wokwi-cli. `flash_image`'s per-file lines (`:308`) become `LINE` events. `tools/mutate.py` stays a team tool and gets no Reporter unless it moves onto the core | each move's goldens are byte-equal, and the person sees a stage as it ends | inside each move |
-| E5, the other readers | `JsonLinesReporter` after P477 says an agent reads it. `McpProgressReporter` with the spike P417. `SseReporter` with the first web frontend | one Reporter each, no Operation touched | later |
+| E1, the probe on the look | `events.py` with the Event, its two kinds, the Reporter base and `TerminalReporter`. `OutsideWorld.report` and `build_outside_world`'s new parameter. `run_cli`'s reporter line and the three builders. `LookAtBoard.run` reports `Event.begin(STAGE_LOOK)` before `looker(...).run` (`look_at_board.py:50`). `FakeReporter` and `FakeOutsideWorld`'s default. X2's list. The agents.md sentence of rule 4. The p442 mutation row retargeted | the 16 golden files are byte-equal. `test_look` sees `[Event("begin", "look", None)]`. The toy, run through a builder: its `LINE` is on stdout before the report without `--json`, and on stderr with it while stdout holds the envelope alone. A `BEGIN` prints nothing. The Event test reads every field. `ReporterContract` passes. The X2 baseline gains no entry. Mutation: a `BEGIN` that prints, a `LINE` on stdout under `--json`, a `LINE` without its indent, the event not sent, each caught | estimate: 50 product lines, 60 test lines, 10 doc lines |
+| E2, deploy in W4-2 | First commit, before W4-2's code, measured on main: two goldens. `deploy-could-not-run-no-terminal.txt` (no `--json`, reaches the gate, the look's lines on stdout), and the stderr bytes of the `--json` case. The golden runner keeps stderr for a case that names a stderr file (`golden_bench.py:134` returns stdout only today). Then W4-2 with the edits of section 3: the event lines of rule 1 become `LINE`s, each phase a `BEGIN`, `echo_to` moves into `ProgramRunner`, `show_line` goes | every deploy golden, the two new ones too, is byte-equal. `test_deploy_gate` holds the event list of one deploy that reaches ready. No event text is in the result's lines. In `tests/architecture_baseline.json`, `R1:scripts/deploy.py:_deploy` (72), `R3:...:_deploy` (9) and `R3:...:DeployService.__init__` (7) drop or go. W4-2's other checks hold | W4-2's size plus 60 lines |
+| E3, the colored terminal (P478 #656) | `StyledTerminalReporter`. On a tty with `NO_COLOR` unset, `run_cli` picks it | the PO sees colour on his bench. `deploy.py --json` and a piped `deploy.py` print the bytes of before | P478's card |
+| E4, the other output places | each with its area's move in wave 6, as the appendix lists | each move's goldens are byte-equal, and the person sees a stage as it begins | inside each move |
+| E5, the other readers | one Reporter each, with its frontend (the table above) | no Operation touched | later |
 
-Review size. E1 holds logic: one reviewer and the refuter on the strongest model, one mutation run. E2 keeps W4-2's
+Review size. E1 holds logic: one reviewer, the refuter on the strongest model, one mutation run. E2 keeps W4-2's
 review. This plan takes two council rounds before the PO reads it, as #657 says.
 
-## 5. Risks and open questions for the PO
+## 3. What changes in the plans
 
-1. The word `report`. `DeployService.deploy(report, token, consent, show_line)` already names its `LookReport` parameter
-   `report` (`deploy_service.py:93`), and `deploy.py:242` does too. `OutsideWorld.report(event)` makes one word two
-   things. Recommendation: keep `report(event)`, the PO's word, and rename the LookReport variable to `look` where the
-   two meet, in W4-2. The glossary gets the row.
-2. A time stamp in the Event. SSE and a log want one. Recommendation: no. The Reporter stamps it from the frontend's
-   clock, and the Event stays facts the Operation knows.
-3. Events under `--json`. One JSON object per event on stderr changes what an agent reads there today (the lines).
-   Recommendation: not before P477 shows an agent that reads them, and never on stdout.
-4. A child's output follows the reporter's stream, inside `ProgramRunner`. It drops `DeployService.echo_to`, and a caller
-   that captures keeps its capture. Risk: `subprocess.run` refuses `stdout` beside `capture_output`. If a caller gives
-   either, the runner sets no `stdout`. Recommendation: do it in E1, where the toy test proves it.
-5. A `Reporter` base class with one real Adapter. Rule T3 takes the Fake as the second case, and P478 brings the second
-   real one. Recommendation: the base now, because the contract test names what every later Reporter owes.
-6. What a colored terminal colours. P477 found that finished strings tell a renderer nothing. The Event's `step` code is
-   the fact it decides on. If P478 needs a severity, the Event grows one field then (records grow by need).
-   Recommendation: no severity field now.
-7. The build chain prints at the end, and a `STEP` per stage shows text earlier. The bytes stay, the timing changes.
-   Recommendation: fine, and the first build golden (S3's) compares bytes, not timing.
-8. The probe's size. E1 touches `cli.py`, `outside.py`, `look_at_board.py`, the Fakes and three test files, before W4-2.
-   Recommendation: run it as its own PR right after walk 3's notes, so W4-2 starts on it.
+No file is edited by this card. Each edit lands in the PR of the slice that makes it true. After E2's PR,
+`/usr/bin/grep -rn show_line docs/discovery/2026-10-19-p323-target-architecture scripts` finds nothing outside this file.
+
+| File | Section | The change | Slice |
+|---|---|---|---|
+| `README.md` (level 1) | "The one interface contract" | a row `events`: `Event(kind, code, text)` through `OutsideWorld.report`, the four rules | E1 |
+| `README.md` | "One Operation, two frontends" | an arrow `O->>RC: outside.report(Event)` and `RC-->>P: the line, now` | E1 |
+| `refactor-plan.md` | "Level 3" class diagram (`:127-128`) | `deploy(look, token, consent)`, `verify(look, planned)`, `DeployService` holds `outside` | E2 |
+| `refactor-plan.md` | "Level 4" sequence (`:188`, `:194`) and the paragraph at `:201-202` | `DS->>OW: report(Event)`, and `OutsideWorld.report`, not `show_line` | E2 |
+| `refactor-plan.md` | "4. The core contract", rule 2 | "No Operation asks or prints. It asks only through `outside.consent` and tells only through `outside.report`." X2's list gains `TerminalReporter` | E1 |
+| `refactor-plan.md` | "Wave 4", S7b | the lines a person sees while esptool runs are `LINE` events, each phase a `BEGIN` | E2 |
+| `refactor-plan.md` | "Wave 6" | the build move reports a `BEGIN` per stage, and the kept lines stay diagnostics. The firmware move reports a `BEGIN` before wokwi-cli | E4 |
+| `refactor-plan.md` | "What we will not do" | no Reporter beyond `TerminalReporter` and the Fake until its frontend exists | E1 |
+| `refactor-plan.md` | "Appendix: what moves where" (`:627`) | `deploy.show_line` becomes `OutsideWorld.report` with `TerminalReporter` | E2 |
+| `wave4-plan.md` | "Council", round 1 (`:25`) | `show_line` becomes `report`, built in E1 | E2 |
+| `wave4-plan.md` | "W4-2", Classes (`:95-97`) | `OutsideWorld` gains `clock` and `consent(line)` (`report` exists). `LineWriter` goes: `TerminalReporter` and `ProgramRunner` take its two jobs | E2 |
+| `wave4-plan.md` | "W4-2", Files (`:103`) | `outside_builder(project, effects, reporter)`. `deploy_service.py`: `show_line` and `echo_to` go. New mutation rows: a `BEGIN` prints, a `LINE` under `--json` reaches stdout, an event line is also a result line | E2 |
+| `wave4-plan.md` | "W4-3" | one sentence: grant, live and reach report nothing new | E2 |
+| `wave4-plan.md` | "The bench after wave 4" (`:154`, `:191-195`) | `OutsideWorld { run find_tool clock consent report }`, and the sequence gains `DS->>R: report(begin "flash")` | E2 |
+| `wave4-plan.md` | "The four checks" | a fifth: every line deploy shows while a phase runs is an Event in a test | E2 |
+| `areas/core.md` | the `core/outside.py` and `OutsideWorld` rows | name `report`, and a row for `core/events.py` | E1 |
+| `areas/bench.md` | `:127-128`, `:173`, `:182` | the `show_line` parameters go | E2 |
+| `glossary.md` | rows | Event, Reporter, and the clash "report" (decision 1) | E1 |
+| `notes.md` | a decision row | "N33 `OutsideWorld.report(event)` over a line callable: one seam for every reader" | E1 |
+| `docs/guide/developing.md` | "Patterns and names", "The core contract" and its class diagram | the `Reporter` row, `report` in the contract | E1 |
+| `docs/guide/agents.md` | beside `:555-558` | the stderr contract of rule 4 | E1 |
+
+## 4. Risks
+
+1. **A child's output and a capture (E2).** `subprocess.run` refuses `stdout` beside `capture_output`. When the caller
+   gives either, the runner sets no `stdout`. E2's test runs both.
+2. **A base class with one real case.** Rule T3 takes the Fake as the second case, and P478 brings the second real one.
+   The base comes now, because the contract test names what every later Reporter owes.
+3. **The indent.** Every line deploy and look print today starts with two spaces. The seven event lines of the appendix
+   show it, and so does the golden `look-ok.txt`. The Event holds the text without
+   them, and a line that has no indent today stays a result line. E2's new text golden catches a byte that moves.
+4. **The build's timing (E4).** A `BEGIN` per stage shows text earlier. The bytes stay, the timing changes, and the build
+   golden (S3) compares bytes.
+5. **The probe's size.** E1 touches `cli.py`, `outside.py`, the new `events.py`, `look_at_board.py`, `bench/__init__.py`,
+   `tools/measure.py`, the Fakes, two test files, one mutation file and agents.md. The child output change moved to E2
+   to keep it small.
+
+## Appendix: the map, where spark prints, asks and streams today
+
+| What | Count | Main anchors |
+|---|---|---|
+| scripts in `scripts/*.py` | 69, 25 with a `main()` | `ls scripts/*.py` |
+| scripts that print or write stderr | 29 (28 with `print(`, 155 calls) | `tools.py` 19, `emit_board.py` 16, `init_project.py` 11, `boards.py` 11, `assign_pins.py` 9, `grant.py` 8, `deploy.py` 3 (it prints through its helper `shown`, `deploy.py:117`) |
+| scripts on `run_cli` | 1 | `scripts/look.py:54` |
+| prints inside `scripts/spark/` | 3, all in `run_cli` | `scripts/spark/core/cli.py:106`, `:112`, `:114` |
+| places that ask a person | 1 | `deploy_gate.py:78-82` (`TerminalConsentStrategy.ask`), the tty test at `:75` |
+| lines shown while a step runs | deploy only, 7 sites | `deploy.py:243` the look's lines. `deploy.py:152` the standing yes not used. `deploy_service.py:102` the yes. `:108` running. `:126` the retry. `:182` press RESET. `board_start.py:106` the restart not counted |
+| waits a person sits through | 4 | `deploy_service.py:108-121` the erase and the write. `:120` esptool's output through `echo_to`. The retry sleep. `board_start.py:95-108` the start wait poll loop. The look's esptool read |
+| a tool's own output passed through | 1 | `deploy.py:225` gives esptool fd 2 under `--json` |
+| prints all at the end, though steps are slow | 4 | `check_spine.py:375` collects stages, `:638` renders, `:1019-1023` prints. `run_scenario.py:488` runs one child, `:581-585` prints. `flash_image.py:308-309`. `tools/mutate.py` |
+| tools in `tools/*.py` that print | 10 of 12 | the team's tools, not spark's product |
+
+The other output places and the wave that moves them (E4):
+
+| Place | Today | After its move | Wave |
+|---|---|---|---|
+| the build, `check_spine.py` | stages at the end, the kept lines on stderr | a `BEGIN` per stage, the kept lines as diagnostics (rule 3) | wave 6, the build move |
+| the simulation run, `run_scenario.py` | one line at the end | a `BEGIN` before wokwi-cli starts | wave 6, the firmware move |
+| the image, `flash_image.py` | per-file lines at the end | result lines, as today | wave 6, the firmware move |
+| `tools/mutate.py` | lines at the end | no Reporter, a team tool | none |
+
+What the map says. One seam exists today, `show_line`, a bare callable that `DeployService.deploy` and `.verify`
+(`deploy_service.py:93`, `:136`) and `wait_for_start` (`board_start.py:90`) take. Everything else prints at the end.
+The build and the simulation run are where a person waits longest with nothing on the screen.
