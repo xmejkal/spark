@@ -103,7 +103,7 @@ ready is unknown with the code `download_mode_stayed`, or `port_gone` when the p
 (then there is no REPL line). If it reads the firmware's `ready`, the board finished its restart late, and deploy.py reads
 it again at once. What the port printed, `nothing`, or why it could not be read goes in the board log.
 
---json prints one envelope on stdout (docs/guide/agents.md): the token, the look, the stage the run reached, the yes, the
+--json prints one envelope on stdout (docs/guide/agents/json.md): the token, the look, the stage the run reached, the yes, the
 board log and the store record in `data`, and in `next` the step that waits for the person (`needs_yes`). Every line above
 then goes to stderr, and so does the flash tool's own output. Exit codes do not change; the envelope's status is the exit
 code's. Every `problems` and `unchecked` item has a `code` (scripts/board_codes.py). A bad flag with --json prints an envelope
@@ -182,7 +182,7 @@ def main(argv=None, run=None, consent=None, platform=None, clock=None, grant_ser
                        "what the image holds. Needs look.py --no-simulation. The person's typed yes names the caveat")
     parser.add_argument("--dry-run", action="store_true", help="print each command and run nothing")
     parser.add_argument("--json", action="store_true", help="print one envelope on stdout, the lines a person reads on "
-                        "stderr (docs/guide/agents.md)")
+                        "stderr (docs/guide/agents/json.md)")
     argv = sys.argv[1:] if argv is None else list(argv)
     try:
         args = parser.parse_args(argv)

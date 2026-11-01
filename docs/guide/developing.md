@@ -562,7 +562,7 @@ The fake of a part that a caller can swap lives in `tests/fakes.py` and starts w
 The PO's bench tools for live work on a board sit beside the deploy area. `scripts/reach.py` runs one line on the
 board on USB and cures it once when its USB output died at power-on (P251,
 [#264](https://github.com/xmejkal/spark/issues/264)). Its flags are `--project`, `--port`, `--json` (one line for the
-bench log) and `--cure-first` (the bench's cold arm). It is not in [agents.md](agents.md) until P247 puts it behind
+bench log) and `--cure-first` (the bench's cold arm). It is not in [the scripts guide for AI agents](agents/scripts.md) until P247 puts it behind
 the PO's grant.
 
 ## One board per project
