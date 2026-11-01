@@ -14,7 +14,8 @@ simulation runs unless you run one. [What works today](README.md#what-works-toda
   `null` is not a value to fill in.
 
 The rules under what never to assume apply to any work in this repository. To change spark itself, read
-[`docs/guide/developing.md`](docs/guide/developing.md).
+[`docs/guide/developing.md`](docs/guide/developing.md). Its patterns, names table and role words are in
+[`docs/guide/patterns-and-names.md`](docs/guide/patterns-and-names.md).
 
 ## Principles for changing spark
 

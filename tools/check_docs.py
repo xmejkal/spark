@@ -50,7 +50,8 @@ BUDGETS = {
     "docs/guide/agents/json.md": 427,
     "docs/guide/agents/never-assume.md": 227,
     "docs/guide/agents/scripts.md": 308,
-    "docs/guide/developing.md": 651,  # P504 shrinks it
+    "docs/guide/developing.md": 379,
+    "docs/guide/patterns-and-names.md": 279,
     "docs/guide/commands.md": 284,
     "docs/guide/how-it-works.md": 277,
 }
