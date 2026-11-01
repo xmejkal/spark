@@ -93,8 +93,22 @@ class AStorePathThatIsAFileTest(unittest.TestCase):
             store.add_project(scratch)
         self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
 
+    def test_a_folder_spark_may_not_tighten_is_refused_the_same_way(self):
+        # P499: the chmod of a private place sits inside the same try as the mkdir
+        def refuse(path, mode):
+            raise PermissionError(1, "Operation not permitted", str(path))
+        scratch = Path(tempfile.mkdtemp())
+        before, chmod = os.environ.get("SPARK_HOME"), store.os.chmod
+        self.addCleanup(lambda: os.environ.pop("SPARK_HOME", None) if before is None else os.environ.update(SPARK_HOME=before))
+        self.addCleanup(setattr, store.os, "chmod", chmod)
+        os.environ["SPARK_HOME"] = str(scratch / "store")
+        store.os.chmod = refuse
+        with self.assertRaises(store.StoreProblem) as refused:
+            store.add_project(scratch)
+        self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
+
     def test_a_folder_spark_may_not_write_is_refused_the_same_way(self):
-        # P499: the P496 reviewer's second case; the chmod sits inside the same try
+        # P499: the P496 reviewer's second case, a folder spark may not write into (the mkdir fails)
         scratch = Path(tempfile.mkdtemp())
         locked = scratch / "locked"
         locked.mkdir(mode=0o500)
