@@ -6,7 +6,7 @@
 {"file":"scripts/matching.py","name":"offer-json-leaks-the-role","find":"return [{\"does\": clean(f.get(\"does\")), \"what\": clean(f.get(\"what\"))} for f in self.functions]","replace":"return [dict(f, does=clean(f.get(\"does\")), what=clean(f.get(\"what\"))) for f in self.functions]"},
 {"file":"scripts/boards.py","name":"gpio-limits-one-line-dropped","find":"        return [(ONBOARD_GPIOS, part.why_not_read())]","replace":"        return []"},
 {"file":"scripts/boards.py","name":"value-error-escapes-the-reader","find":"except (KeyError, TypeError, ValueError, RecursionError, OSError):","replace":"except (KeyError, TypeError, RecursionError, OSError):"},
-{"file":"scripts/boards.py","name":"not-looked-at-says-no-pin","find":"        return self.why_not_read() or (None if gpio in self.gpios else","replace":"        return (None if gpio in self.gpios else"},
+{"file":"scripts/boards.py","name":"not-looked-at-says-no-pin","find":"        return self.why_not_read() or \"the Wokwi definition of %s has no pin on GPIO%d\" % (self.board_id, gpio)","replace":"        return \"the Wokwi definition of %s has no pin on GPIO%d\" % (self.board_id, gpio)"},
 {"file":"scripts/parts.py","name":"role-less-copy-shadows-the-boards-own-dict","find":"    return [own.get((function[\"does\"], function[\"what\"]), function) for function in said] + [","replace":"    return [function for function in said] + ["},
 {"file":"scripts/boards.py","name":"record-that-is-no-table-raises","find":"    if not isinstance(board, dict):\n        return SimulatedPart(outcomes.NONE_RECORDED, \"\")\n","replace":""},
 {"file":"scripts/boards.py","name":"definition-entry-not-checked-for-a-kept-file","find":"    if not _names_a_kept_file(entry):\n        return not_kept\n","replace":""},
