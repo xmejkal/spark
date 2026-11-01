@@ -1245,7 +1245,7 @@ board's own LED, `ONBOARD_LED = 15`, from the board record. The firmware, writte
 Since [P353](https://github.com/xmejkal/spark/issues/451), the XIAO's `pins.py` also names `ONBOARD_LED_ON = 0`, the
 level that lights the LED, and `ONBOARD_BUTTON = 9`, the BOOT button. Since [P388](https://github.com/xmejkal/spark/issues/498),
 it also names `ONBOARD_BUTTON_ON = 0`, the level the pressed button reads (the Seeed schematic, sheet 04). Each comes from
-the board record with its source. Since [P389](https://github.com/xmejkal/spark/issues/504), `--match` also offers a board
+the board record with its source. Since [P464](https://github.com/xmejkal/spark/issues/632), a board record that lacks either level does not make the build guess it: the build says what is missing, and `parts.py --fact-set` writes the level the person tells. Since [P389](https://github.com/xmejkal/spark/issues/504), `--match` also offers a board
 for a need that its own LED, buttons or display serve, and `pins.py` names a display's pins and size when the record holds them.
 The board's `power` block can also name its charger, its voltage regulator and its battery input, and `--match` offers the
 board for a need of `power` / `charger`, `power` / `voltage regulator` or `connect` / `battery input`. A pin that reads the

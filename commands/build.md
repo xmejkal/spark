@@ -1,6 +1,6 @@
 ---
 description: From a requirements file — a board and a list of parts — to a board that builds, with a Wokwi diagram and a breadboard sheet (the parts and how to wire them) generated from it, or the stage that stopped it. Deterministic, seconds, no agents.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check_spine.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/breadboard.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/emit_footprint.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --list *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --show *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/boards.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/look.py *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py *)
 ---
 
 # spark:build
@@ -54,6 +54,17 @@ when the record holds it (`active_level`). A part on many pins has one name per 
 `ONBOARD_BATTERY_SENSE_DIVIDER`. A fact such as the display's size is `ONBOARD_DISPLAY_WIDTH`, with its source in
 the comment and "not verified" when nobody verified it (P389). An empty `parts`
 list without `board_only` still stops at the parts stage.
+
+When the board record lacks the level of its onboard LED or button, the build stays `ok` and says so: each kept line for
+`firmware/pins.py` has `missing fact: <sentence>. <fix>`, and with `--json` the entry has `missing_facts` (code
+`missing_fact`). `pins.py` then has no `ONBOARD_LED_ON` or `ONBOARD_BUTTON_ON`, and you never guess one. Say in one
+sentence what is missing, and ask one concrete question: "Do you know which level lights the LED, 1 or 0? If not, I can
+look on the seller's and maker's pages, or you watch it while I set the pin." Write the answer the person's way:
+their word is `verified: false` with a `why_it_matters`; a page `/spark:research` found is written as research writes
+it; a bench result is `verified: true` with who, when and how. Write it to the project's own board
+(`{"pin_roles": {"onboard_led": {"active_level": {"value": 0, "verified": false, "source": "<…>", "why_it_matters": "<…>"}}}}`):
+run `parts.py --fact-set <board> FILE --project . --dry-run` first, then the write, then build again. A board of
+spark's library is refused: copy it into the project's `boards/` first.
 
 The simulation stage also reads the board's Wokwi definition: the JSON file of the Wokwi part type, which spark keeps in
 its store under the sha256 that the board record names (P396). Each on-board LED or button whose GPIO has no pin in it is
