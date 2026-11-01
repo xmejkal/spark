@@ -322,20 +322,20 @@ class TheKeptDiagramIsCopiedInTest(unittest.TestCase):
         return kept, sim
 
     def test_a_kept_diagram_is_copied_into_sim(self):
-        kept, sim = self.folders('{"parts": [{"id": "mcu"}]}')
-        self.assertEqual(sim_project.copy_kept_diagram(kept, sim), "")
-        self.assertEqual((sim / "diagram.json").read_text(), '{"parts": [{"id": "mcu"}]}')
+        kept, sim = self.folders('{"parts": [{"id": "mcu"}], "connections": []}')
+        self.assertEqual(sim_project.copy_kept_diagram(kept / "diagram.json", sim), "")
+        self.assertEqual((sim / "diagram.json").read_text(), '{"parts": [{"id": "mcu"}], "connections": []}')
 
     def test_no_kept_diagram_copies_nothing_and_says_nothing(self):
         kept, sim = self.folders()
-        self.assertEqual(sim_project.copy_kept_diagram(kept, sim), "")
+        self.assertEqual(sim_project.copy_kept_diagram(kept / "diagram.json", sim), "")
         self.assertFalse((sim / "diagram.json").exists())
 
     def test_a_diagram_that_is_not_one_is_not_copied_and_is_said(self):
-        for text in ("{not json", "{}", "[]", '{"parts": 3}'):
+        for text in ("{not json", "{}", "[]", '{"parts": 3}', '{"parts": []}', '{"parts": [null], "connections": []}'):
             kept, sim = self.folders(text)
             sim.mkdir()
-            self.assertIn("built fresh", sim_project.copy_kept_diagram(kept, sim), text)
+            self.assertIn("built fresh", sim_project.copy_kept_diagram(kept / "diagram.json", sim), text)
             self.assertFalse((sim / "diagram.json").exists(), text)
 
     def test_the_converters_summary_becomes_one_clause(self):

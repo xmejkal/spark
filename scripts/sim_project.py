@@ -328,21 +328,27 @@ def firmware_in(toml):
 
 
 # --- MVP ---
-def copy_kept_diagram(simulation, sim):
+#: The copy of the person's kept `sim/diagram.json` that `check_spine.main` puts in the build's work folder (P482).
+KEPT_DIAGRAM = "kept-diagram.json"
+
+
+def copy_kept_diagram(kept, sim):
     """
-    Copy the person's kept `simulation/diagram.json` into the build's `sim/`, so the converter merges into it (P482, #661)
-    instead of overwriting it. Returns "" when it copied or there is none, else a short note: it exists but is not a
-    Wokwi diagram (a JSON object with a `parts` list), so the build starts fresh.
+    Copy `kept`, the copy of the person's `sim/diagram.json`, into the build's `sim/`, so the converter merges into it
+    (P482, #661) instead of overwriting it. Returns "" when it copied or there is none, else a short note: it is not a
+    Wokwi diagram (a JSON object with a `parts` list of objects and a `connections` list), so the build starts fresh.
     """
-    kept = Path(simulation) / "diagram.json"
+    kept = Path(kept)
     if not kept.is_file():
         return ""
     try:
         diagram = json.loads(kept.read_text())
     except (OSError, ValueError):
         diagram = None
-    if not isinstance(diagram, dict) or not isinstance(diagram.get("parts"), list):
-        return "your diagram.json is not a Wokwi diagram (valid JSON with a parts list), so it was built fresh"
+    parts = diagram.get("parts") if isinstance(diagram, dict) else None
+    if not isinstance(parts, list) or not all(isinstance(part, dict) for part in parts) \
+            or not isinstance(diagram.get("connections"), list):
+        return "your diagram.json is not a Wokwi diagram (valid JSON with parts and connections lists), so it was built fresh"
     Path(sim).mkdir(exist_ok=True)
     shutil.copy(kept, Path(sim) / "diagram.json")
     return ""

@@ -2231,9 +2231,7 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         requirements = json.loads((self.FIXTURE / "requirements.json").read_text())
         workdir = Path(tempfile.mkdtemp())
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        kept = Path(tempfile.mkdtemp())
-        (kept / "diagram.json").write_text('{"parts": []}')
-        os.symlink(kept, workdir / "kept-sim")
+        (workdir / "kept-diagram.json").write_text('{"parts": [], "connections": []}')
         broken = subprocess.CompletedProcess([], 1, "", "converter exploded")
         real = subprocess.run
         self.addCleanup(setattr, check_spine.subprocess, "run", real)

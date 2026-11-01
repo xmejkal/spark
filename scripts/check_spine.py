@@ -534,7 +534,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, firmware))
 
     diagram_path = sim_dir / "diagram.json"
-    bad_kept = sim_project.copy_kept_diagram(workdir / "kept-sim", sim_dir)  # P482: the converter merges into the person's diagram
+    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)  # P482: the converter merges into it
     made = subprocess.run(
         converter_command(project, own) + [
             "--circuit", str(circuit_path), "--out", str(diagram_path),
@@ -713,8 +713,8 @@ def main(argv=None):
 
     # A rebuild runs the flash image the kept wokwi.toml already names, unless --firmware names another.
     simulation = simulation_dir(args)
-    if simulation:  # P482: run() reads the kept diagram through this link
-        os.symlink(simulation.resolve(), workdir / "kept-sim")
+    if simulation and (simulation / "diagram.json").is_file():  # P482: run() merges into a copy, never the person's file
+        shutil.copy(simulation / "diagram.json", workdir / sim_project.KEPT_DIAGRAM)
     firmware, kept = args.firmware, None
     if not firmware and simulation:
         kept = sim_project.firmware_in(simulation / "wokwi.toml")
