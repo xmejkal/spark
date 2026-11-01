@@ -1164,7 +1164,7 @@ class TheBoardsOwnLimitsTest(unittest.TestCase):
 class TheFireBeetleCitesItsStandInsDefinitionTest(unittest.TestCase):
     """P483: the FireBeetle's record cites the S3 devkit's Wokwi file as a stand-in, so its LED and button pins are header pins."""
 
-    STAND_IN = "the Wokwi part of firebeetle2-esp32s3 is a stand-in, where GPIO%d is a header pin and not this part"
+    STAND_IN = "the Wokwi part of firebeetle2-esp32s3 is a stand-in, where GPIO%d is a bare header pin with no onboard LED or button"
     TAIL = ", so spark knows no way for a scenario to %s it. Test it on the board."
     DEVKIT = '{"pins": {"21": {"target": "GPIO21"}, "47": {"target": "GPIO47"}, "GND": {"target": "GND"}}}'
 

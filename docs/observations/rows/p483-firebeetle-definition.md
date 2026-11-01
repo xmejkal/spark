@@ -13,3 +13,7 @@ What the P483 build, the plan council and the refuter found. Card: #662.
 | 7 | The stand-in sentence is wrong once P484 (#663) wires a real part to GPIO21 or GPIO47 | plan | raised | P484 rewords it |
 | 8 | `tools/mutate.py --anchors` refuses 120 rows on main, not 119 | build | verified | 120 without the P483 table, 120 with it: the table adds none |
 | 9 | No command fetches a board document; the store step is a curl then `--keep` | planner fact 7 | raised | a `--keep-source URL` command is a later row |
+| 10 | `no_pin` means only "no pin in the definition" | PR refuter 5 | acted | a stand-in's header pin also sets it (`needs.py:208`), so `--pick` offers the other choice; docstring and agents.md:193 say so. No test pins the `--pick` path yet: later row |
+| 11 | "a header pin and not this part" is clear | PR refuter 6 | rejected | "part" meant two things, and `--match` shows no label; the sentence now says "a bare header pin with no onboard LED or button" |
+| 12 | A stand-in costs only the silkscreen labels | PR refuter 7 | rejected | it also lacks the board's LED and button; boards/README.md and the record's note say so |
+| 13 | A scenario has no way to read the LED on the stand-in | PR refuter 8 | raised | an `expect-pin` on the devkit's pin 21 may read GPIO21's level; only a Wokwi run settles it. P484 (#663) wires real parts |

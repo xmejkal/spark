@@ -425,7 +425,7 @@ _SHA256 = re.compile(r"[0-9a-f]{64}")
 #: compare (the record names none, or the store lacks it: one sentence for three causes, P397) or a stand-in (P483).
 ONBOARD_GPIOS = "onboard GPIOs"
 NO_DEFINITION_NAMED = outcomes.NOT_CHECKED_MESSAGE % "the board record names no Wokwi definition"
-STAND_IN = "the Wokwi part of %s is a stand-in, where GPIO%d is a header pin and not this part"
+STAND_IN = "the Wokwi part of %s is a stand-in, where GPIO%d is a bare header pin with no onboard LED or button"
 WHY_NOT_KEPT = ("spark's store lacks the Wokwi definition that the board record names, its sha256 differs, or it does "
                 "not parse")
 
