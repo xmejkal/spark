@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import project_image  # noqa: E402
 import run_scenario  # noqa: E402
+import store  # noqa: E402
 from project_image import DeployError, ProjectImage  # noqa: E402
 
 IMAGE = b"image"
@@ -62,8 +63,9 @@ class TheImageTest(unittest.TestCase):
         with self.assertRaises(DeployError) as said:
             ProjectImage(project)
         self.assertTrue(str(said.exception).endswith(
-            ", or, with no simulation, the board is the test: build it with flash_image.py --project %s --files firmware -o %s, "
-            "then run look.py --no-simulation" % (project.resolve(), (project / "sim" / "flash-with-firmware.bin").resolve())),
+            ", or, with no simulation, the board is the test: build it with %s, then run look.py --no-simulation"
+            % store.format_rerun_line(ROOT / "scripts" / "flash_image.py", ["--project", project.resolve(), "--files",
+                                      project.resolve() / "firmware", "-o", (project / "sim" / "flash-with-firmware.bin").resolve()])),
             str(said.exception))
 
     def test_a_path_with_a_space_in_the_build_command_is_quoted(self):
@@ -71,7 +73,7 @@ class TheImageTest(unittest.TestCase):
         (project / "sim" / "flash-with-firmware.bin").unlink()
         with self.assertRaises(DeployError) as said:
             ProjectImage(project)
-        self.assertIn("--project '%s' --files" % project.resolve(), str(said.exception))
+        self.assertIn("--project '%s' --files '%s'" % (project.resolve(), project.resolve() / "firmware"), str(said.exception))
 
     def test_a_firmware_line_that_is_no_string_is_a_deploy_error_with_one_sentence(self):
         # P429: `firmware = 3` raised a TypeError

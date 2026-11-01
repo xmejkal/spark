@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import shlex
+import shutil
 import site
 import subprocess
 import sys
@@ -126,6 +127,42 @@ class ThePrintedDeployLineTest(unittest.TestCase):
         self.assertEqual(code, 2, said)
         self.assertIn("not installed", said)
         self.assertNotIn("no terminal to ask you in", said)
+
+
+    def no_token_reason(self):
+        """Why `look.py --no-simulation` gives no token now: its `no_token_reason` sentence."""
+        looked = self.child("look.py", "--project", str(self.project), "--no-simulation", "--json")
+        reason = json.loads(looked.stdout)["data"]["no_token_reason"]
+        self.assertTrue(reason, looked.stdout)
+        return reason
+
+    def assertTokenAfter(self, line):
+        """`line` runs in a new shell and succeeds, and the look then gives a token."""
+        code, said = self.run_in_a_new_shell(line)
+        self.assertEqual(code, 0, said)
+        looked = self.child("look.py", "--project", str(self.project), "--no-simulation", "--json")
+        self.assertTrue(json.loads(looked.stdout)["data"]["token"], looked.stdout)
+
+    def test_the_build_line_of_the_no_image_sentence_runs_in_a_new_shell_and_the_look_gives_a_token(self):
+        # P463: the sentence names the whole-path command, led by the store, so it works from any folder
+        line = self.no_token_reason().split("build it with ", 1)[1].split(", then run look.py --no-simulation", 1)[0]
+        self.assertTrue(line.startswith(self.prefix()), line)
+        self.assertTokenAfter(line)
+
+    @unittest.skipUnless(shutil.which("curl"), "curl is not installed, and the printed install line runs it")
+    def test_the_lines_for_your_own_build_run_in_a_new_shell_and_the_look_then_gives_a_token(self):
+        own = self.folder / "my-micropython.bin"
+        own.write_bytes(fake_interpreter(size=0xA000))
+        self.assertEqual(self.child("flash_image.py", "--project", str(self.project), "--micropython", str(own), "--files",
+                                    "firmware", "-o", "sim/flash-with-firmware.bin").returncode, 0)
+        hint = self.no_token_reason().split("name it in this project's tools list: ", 1)[1]
+        new, install, build = (line.replace("<file>", own.name).replace("<url>", own.as_uri())
+                               .replace("<sha256>", hashlib.sha256(own.read_bytes()).hexdigest()) for line in hint.split(", then "))
+        for line in (new, install):
+            self.assertTrue(line.startswith(self.prefix()), line)
+            self.assertEqual(self.run_in_a_new_shell(line)[0], 0, line)
+        self.assertTrue((self.store / "downloads" / own.name).is_file(), "the install did not land in the run's store")
+        self.assertTokenAfter(build)
 
 
 for _case in golden_bench.CASES:

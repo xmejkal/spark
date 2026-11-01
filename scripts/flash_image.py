@@ -23,7 +23,6 @@ list's entry with that build is the interpreter (P229).
 import argparse
 import hashlib
 import json
-import shlex
 import struct
 import sys
 from collections import namedtuple
@@ -32,6 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 import boards
+import store
 import tools
 
 FLASH_SIZE = 4 * 1024 * 1024
@@ -213,24 +213,34 @@ def build_entry(project):
     return build, None
 
 
-#: P463: how a person names their own MicroPython build in the project's tools list. %s: the project, the entry's name,
-#: the fields that tie a new entry to the board's build (none when the entry exists), the project, the name.
-OWN_BUILD_HINT = ("to use another MicroPython build, name it in this project's tools list: tools.py --project %s --new "
-                  "%s='{\"kind\": \"download\", \"file\": \"<file>\", \"url\": \"<url>\", \"sha256\": \"<sha256>\"%s}', "
-                  "then tools.py --project %s --install %s")
+#: P463: how a person names their own MicroPython build in the project's tools list: the two tools.py lines, then the build again.
+OWN_BUILD_HINT = "to use another MicroPython build, name it in this project's tools list: %s, then %s, then %s"
+BUILD_AGAIN = "build the image again"
 
 
-def own_build_hint_for(project, build, name):
+def build_command(project, image):
+    """The line that builds the image of the project's firmware/ (P463): whole paths, quoted, led by the store, so it runs
+    from any folder in a new terminal window."""
+    project = Path(project).resolve()
+    return store.format_rerun_line(Path(__file__), ["--project", project, "--files", project / "firmware", "-o", Path(image).resolve()])
+
+
+def own_build_hint_for(project, build, name, image=None):
     """
-    How to name another MicroPython build for the board whose build is `build`, as a sentence; "" with no build.
+    How to name another MicroPython build for the board whose build is `build`, as a sentence; "" with no build. The
+    lines are tools.py's, as a person runs them, then `image`'s build command (else the words to build again).
     `name` is the tools list's entry that holds the build: the new entry takes the same name, and the merge keeps its
     other fields. With no such entry (None), the new one is `<name>` and carries the build and the contract.
     """
     if not build:
         return ""
-    tie = "" if name else ', "micropython_port": "%s", "meets": ["micropython-esp32-bin"]' % build
-    where = shlex.quote(str(Path(project).resolve()))
-    return OWN_BUILD_HINT % (where, name or "<name>", tie, where, name or "<name>")
+    entry = {"kind": "download", "file": "<file>", "url": "<url>", "sha256": "<sha256>"}
+    if not name:
+        entry.update(micropython_port=build, meets=["micropython-esp32-bin"])
+    tools_py, where, name = Path(tools.__file__), ["--project", Path(project).resolve()], name or "<name>"
+    return OWN_BUILD_HINT % (store.format_rerun_line(tools_py, where + ["--new", "%s=%s" % (name, json.dumps(entry))]),
+                             store.format_rerun_line(tools_py, where + ["--install", name]),
+                             build_command(project, image) if image else BUILD_AGAIN)
 
 
 def interpreter_for(given, project=None, find_tool=None):

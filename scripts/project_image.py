@@ -7,9 +7,9 @@ sim/runs/ that name an image's sha256, and says why an image is not yet one to p
 
 import functools
 import hashlib
-import shlex
 
 import board_codes
+import flash_image
 from spark.core import outcomes
 import run_scenario
 import sim_project
@@ -17,9 +17,9 @@ import sim_project
 
 #: The flag that deploys an image from firmware/ with no simulation.
 NO_SIMULATION_FLAG = "--no-simulation"
-#: P463: the ways to an image when no simulation is run. %s of the first are the project and the image (quoted for a
-#: shell); the second leads with the build command and ", then " when the image is not built yet, else with nothing.
-BUILD_IMAGE_HINT = "build it with flash_image.py --project %s --files firmware -o %s"
+#: P463: the way to an image when no simulation is run. %s of the first is the build command; %s of the second leads with
+#: "build it with <that>, then " when the image is not built yet, else with nothing.
+BUILD_IMAGE_HINT = "build it with %s"
 NO_SIMULATION_HINT = "or, with no simulation, the board is the test: %srun look.py " + NO_SIMULATION_FLAG
 
 
@@ -54,7 +54,7 @@ class ProjectImage:
         if outside:
             raise DeployError(outside, reason=board_codes.FIRMWARE_LINE_BAD)
         if not self.path.is_file():
-            build = BUILD_IMAGE_HINT % (shlex.quote(str(project.resolve())), shlex.quote(str(self.path.resolve())))
+            build = BUILD_IMAGE_HINT % flash_image.build_command(project, self.path)
             raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it, "
                               % self.path + NO_SIMULATION_HINT % (build + ", then "), reason=board_codes.NO_IMAGE)
         self.project = project

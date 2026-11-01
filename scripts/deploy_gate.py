@@ -10,12 +10,10 @@ yes (an MCP or web yes, D19) is another ConsentStrategy.
 
 import abc
 import getpass
-import shlex
 import sys
-from pathlib import Path
 
 import board_codes
-import store
+from store import format_rerun_line  # noqa: F401  (board_grant, grant and deploy take it from here)
 from spark.core import outcomes
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 from spark.core.text_guards import guard_lines, printable
@@ -23,13 +21,6 @@ from spark.core.text_guards import guard_lines, printable
 #: How the store's record says a yes was given in a terminal: %s is the person's login name.
 TYPED_BY = "typed in a terminal by %s"
 NO_TERMINAL = "no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):\n  %s"
-
-
-def format_rerun_line(script, arguments):
-    """The line a person runs in their own terminal: `script` by its whole path, so it runs from any folder (P283),
-    then `arguments`, each quoted where the shell needs it, led by the store this run used (P463)."""
-    return store.prefix_home(shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))
-
 
 #: What an agent does next (P213), for a GateClosedError: `deploy.py`'s `--json` turns it into a step.
 NEXT_DEPLOY, NEXT_LOOK = "deploy", "look"

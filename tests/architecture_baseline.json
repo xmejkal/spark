@@ -185,7 +185,7 @@
 "T1:scripts/sim_project.py:file-write": 1,
 "T1:scripts/sim_project.py:subprocess": 1,
 "T1:scripts/store.py:file-write": 4,
-"T1:scripts/store.py:os.environ": 4,
+"T1:scripts/store.py:os.environ": 5,
 "T1:scripts/store.py:urllib": 2,
 "T1:scripts/tools.py:file-write": 1,
 "T1:scripts/tools.py:os.environ": 1,

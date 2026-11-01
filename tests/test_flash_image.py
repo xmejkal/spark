@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import flash_image  # noqa: E402
+import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 from micropython_fakes import MICROPYTHON_TABLE, fake_interpreter, table_bytes  # noqa: E402
 
@@ -351,16 +352,21 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         (project / ".spark" / "tools.json").write_text(json.dumps({"micropython-esp32s3": {"micropython_port": "ELSEWHERE"}}))
         with self.assertRaises(tools.ToolProblem) as said:
             flash_image.interpreter_for(None, project)
-        self.assertIn("name it in this project's tools list: tools.py --project %s --new <name>='{\"kind\": \"download\", "
-                      "\"file\": \"<file>\", \"url\": \"<url>\", \"sha256\": \"<sha256>\", \"micropython_port\": "
-                      "\"ESP32_GENERIC_S3\", \"meets\": [\"micropython-esp32-bin\"]}', then tools.py --project %s --install <name>"
-                      % (project.resolve(), project.resolve()), str(said.exception))
+        entry = {"kind": "download", "file": "<file>", "url": "<url>", "sha256": "<sha256>",
+                 "micropython_port": "ESP32_GENERIC_S3", "meets": ["micropython-esp32-bin"]}
+        tools_py = ROOT / "scripts" / "tools.py"
+        self.assertIn("name it in this project's tools list: %s, then %s, then build the image again" % (
+            store.format_rerun_line(tools_py, ["--project", project.resolve(), "--new", "<name>=" + json.dumps(entry)]),
+            store.format_rerun_line(tools_py, ["--project", project.resolve(), "--install", "<name>"])), str(said.exception))
 
     def test_the_hint_names_the_entry_that_holds_the_build_and_leaves_its_fields_to_the_merge(self):
-        hint = flash_image.own_build_hint_for("/my project", "SEEED_XIAO_ESP32C6", "micropython-xiao-esp32c6")
-        self.assertIn("--new micropython-xiao-esp32c6='{\"kind\": \"download\", \"file\": \"<file>\", \"url\": \"<url>\", "
-                      "\"sha256\": \"<sha256>\"}', then tools.py --project '/my project' --install micropython-xiao-esp32c6", hint)
+        hint = flash_image.own_build_hint_for("/my project", "SEEED_XIAO_ESP32C6", "micropython-xiao-esp32c6", "/my project/sim/x.bin")
+        entry = {"kind": "download", "file": "<file>", "url": "<url>", "sha256": "<sha256>"}
+        self.assertIn(store.format_rerun_line(ROOT / "scripts" / "tools.py", ["--project", "/my project", "--new",
+                                              "micropython-xiao-esp32c6=" + json.dumps(entry)]), hint)
         self.assertNotIn("micropython_port", hint)
+        self.assertTrue(hint.endswith(", then " + store.format_rerun_line(ROOT / "scripts" / "flash_image.py", [
+            "--project", "/my project", "--files", "/my project/firmware", "-o", "/my project/sim/x.bin"])), hint)
 
     def test_a_project_with_no_build_gets_no_hint(self):
         self.assertEqual(flash_image.own_build_hint_for("/p", None, None), "")

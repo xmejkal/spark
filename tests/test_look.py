@@ -259,7 +259,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(3)\n")
         code, said, _ = self.go("--no-simulation")
         self.assertEqual(code, 2)
-        self.assertRegex(said[-1], r"^  no token: .*flash_image\.py --project .* --files firmware -o ")
+        self.assertRegex(said[-1], r"^  no token: .*flash_image\.py --project .* --files .*/firmware'? -o ")
 
     def test_no_simulation_with_a_finder_that_lacks_littlefs_gives_no_token_and_the_install_line(self):
         # P442: the image check asks the finder the look was given, not tools.find, so the fake decides what is installed

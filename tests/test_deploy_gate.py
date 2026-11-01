@@ -38,17 +38,7 @@ import flasher  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-
-
-#: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
-IMPORT_HOME = os.environ["SPARK_HOME"]
-
-
-def line_made_at_import(line):
-    """`line` led by the store of the import, as board_grant's constants are."""
-    with mock.patch.dict(os.environ, {"SPARK_HOME": IMPORT_HOME}):
-        return store.prefix_home(line)
-from fakes import FakeConsent, FakeConsoleProbe, FakeLocalClock, pin_time_zone  # noqa: E402
+from fakes import FakeConsent, FakeConsoleProbe, FakeLocalClock, line_made_at_import, pin_time_zone  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
 #: The words the erase sentence has for a board the store holds no deploy of (P401).
@@ -1180,8 +1170,9 @@ class TheNoSimulationDeployTest(GateCase):
         (self.project / "firmware" / "main.py").write_text("print('ready')\nprint(2)\n")
         code, _, problems = self.deploy("--no-simulation", "--token", token, consent=FakeConsent(True))
         self.assertEqual((code, self.flashed()), (2, []))
-        self.assertIn("flash_image.py --project %s --files firmware -o %s" % (shlex.quote(str(self.project.resolve())),
-                                                                                shlex.quote(str(self.image.resolve()))), problems)
+        self.assertIn(store.format_rerun_line(ROOT / "scripts" / "flash_image.py", ["--project", self.project.resolve(), "--files",
+                                                                      self.project.resolve() / "firmware", "-o", self.image.resolve()]),
+                      problems)
 
     def test_without_the_flag_a_project_with_no_run_log_is_refused_as_before(self):
         code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True))

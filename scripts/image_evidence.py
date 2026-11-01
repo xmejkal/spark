@@ -8,7 +8,6 @@ today's evidence, a run in sim/runs/ that passed on the image's sha256. It write
 import abc
 import hashlib
 import json
-import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -414,11 +413,11 @@ class NoSimulationEvidence(ImageEvidence):
                 raise
             return "firmware/ does not fit the image's file system: %s" % cannot
         if held != built:
-            build, held = flash_image.build_entry(self.project)
-            own = flash_image.own_build_hint_for(self.project, build, held and held[0])
+            build, entry = flash_image.build_entry(self.project)
+            own = flash_image.own_build_hint_for(self.project, build, entry and entry[0], image.path)
             return ("%s does not match a build of firmware/ as it is now (firmware/, the board's MicroPython or how spark "
                     "builds images changed since): %s%s"
-                    % (image.path.name, BUILD_IMAGE_HINT % (shlex.quote(str(self.project.resolve())), shlex.quote(str(image.path.resolve()))),
+                    % (image.path.name, BUILD_IMAGE_HINT % flash_image.build_command(self.project, image.path),
                        "; or " + own if own else ""))
         return None
     # --- end MVP ---

@@ -6,7 +6,6 @@ import hashlib
 import io
 import json
 import os
-import shlex
 import shutil
 import subprocess
 import sys
@@ -25,6 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import image_evidence  # noqa: E402
 import sim_project  # noqa: E402
+import store  # noqa: E402
 import flash_image  # noqa: E402
 import tools  # noqa: E402
 from image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
@@ -446,8 +446,9 @@ class NoSimulationEvidenceTest(unittest.TestCase):
     def test_a_file_changed_after_the_image_refuses_and_names_the_build_command(self):
         (self.firmware / "main.py").write_text("print('ready')\nprint(2)\n")
         self.assertEqual(self.why(), "flash-with-firmware.bin does not match a build of firmware/ as it is now (firmware/, the board's MicroPython "
-                         "or how spark builds images changed since): build it with flash_image.py --project %s --files firmware -o %s"
-                         % (self.project.resolve(), self.image.path.resolve()))
+                         "or how spark builds images changed since): build it with %s"
+                         % store.format_rerun_line(ROOT / "scripts" / "flash_image.py", ["--project", self.project.resolve(), "--files",
+                                                   self.project.resolve() / "firmware", "-o", self.image.path.resolve()]))
 
     def test_a_file_that_does_not_compile_refuses_with_its_file_and_line(self):
         (self.firmware / "lib").mkdir()
@@ -627,22 +628,15 @@ class TheOwnBuildHintTest(unittest.TestCase):
     def why(self):
         return NoSimulationEvidence(self.project).why_not_ready(ProjectImage(self.project))
 
-    def test_the_refusal_names_the_entry_of_the_boards_build(self):
-        why = self.why()
-        self.assertIn("; or to use another MicroPython build, name it in this project's tools list: tools.py --project %s --new %s="
-                      % (self.project.resolve(), self.NAME), why)
-        self.assertNotIn("micropython_port", why)  # the merge keeps that field of the default entry
-
-    @unittest.skipUnless(shutil.which("curl"), "curl is not installed, and the printed install command runs it")
-    def test_the_two_printed_commands_make_the_refusal_go_away(self):
-        hint = self.why().split("name it in this project's tools list: ", 1)[1]
-        new, install = (command.replace("<file>", self.own.name).replace("<url>", self.own.as_uri())
-                        .replace("<sha256>", hashlib.sha256(self.own.read_bytes()).hexdigest()) for command in hint.split(", then "))
-        for command in (new, install):
-            self.assertEqual(shlex.split(command)[0], "tools.py")
-            with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(tools.main(shlex.split(command)[1:]), 0, command)
-        self.assertIsNone(self.why())
+    def test_the_refusal_names_the_entry_of_the_boards_build_and_the_lines_to_run(self):
+        # the merge keeps the other fields of the default entry, so the new one holds only the file, the url and the checksum
+        entry = {"kind": "download", "file": "<file>", "url": "<url>", "sha256": "<sha256>"}
+        project = self.project.resolve()
+        self.assertIn("; or to use another MicroPython build, name it in this project's tools list: %s, then %s, then %s" % (
+            store.format_rerun_line(ROOT / "scripts" / "tools.py", ["--project", project, "--new", "%s=%s" % (self.NAME, json.dumps(entry))]),
+            store.format_rerun_line(ROOT / "scripts" / "tools.py", ["--project", project, "--install", self.NAME]),
+            store.format_rerun_line(ROOT / "scripts" / "flash_image.py", ["--project", project, "--files", project / "firmware", "-o",
+                                                                          (project / "sim" / "flash-with-firmware.bin").resolve()])), self.why())
 
 
 class CompileCheckTest(unittest.TestCase):

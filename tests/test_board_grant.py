@@ -32,18 +32,10 @@ import deploy_gate  # noqa: E402
 import grant  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent, FakeLocalClock, pin_time_zone  # noqa: E402
+from fakes import FakeConsent, FakeLocalClock, line_made_at_import, pin_time_zone  # noqa: E402
 from test_board_look import data, done  # noqa: E402
 from test_deploy import found  # noqa: E402
 
-#: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
-IMPORT_HOME = os.environ["SPARK_HOME"]
-
-
-def line_made_at_import(line):
-    """`line` led by the store of the import, as board_grant's constants are."""
-    with mock.patch.dict(os.environ, {"SPARK_HOME": IMPORT_HOME}):
-        return store.prefix_home(line)
 
 UTC = datetime.timezone.utc
 #: The moment the fake clock starts, and the MAC of P228's bench C6 as the fixtures write it.
