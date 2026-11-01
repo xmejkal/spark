@@ -17,8 +17,8 @@ Each stage is a pure function in its own file, and the stage boundaries are wher
 points are.
 
 ```
-circuit.json
-     │  lib/netlist.ts          extract what is logically true
+circuit.json                    or a netlist already written as JSON (--netlist)
+     │  lib/netlist.ts          extract what is logically true (buildNetlist), or check the file's two lists (readNetlist)
      ▼
   Netlist  ◄── the intermediate representation: every future emitter reads this, and only this
      │
@@ -119,6 +119,12 @@ making you fix them one at a time.
 | a new output (docs, wiring list, KiCad hand-off) | `lib/emitters/<name>.ts` reading `Netlist` | nothing else |
 | better layout | implement `Placer` | `lib/placement.ts` |
 | another source (a KiCad netlist, say) | a reader producing `Netlist` | nothing else |
+
+The second source exists: `--netlist <file>` takes a `Netlist` written as JSON in place of `--circuit` (exactly one of
+the two), through `readNetlist` in `lib/netlist.ts`, which checks only its `components` and `nets` lists. The spark
+spine writes one for a board-only build, which has no circuit.json: the board as `Mcu` and its own LED and button,
+each wired to its GPIO's pin and to ground ([P484](https://github.com/xmejkal/spark/issues/663)). The emitter, the
+merge and the validation treat it as they treat a netlist read from a circuit.
 
 ## Deliberate non-goals
 

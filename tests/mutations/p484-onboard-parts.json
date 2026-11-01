@@ -1,0 +1,62 @@
+[
+ {
+  "file": "scripts/onboard_parts.py",
+  "name": "a board that is no stand-in gets its LED and button wired",
+  "find": "        if self.board.get(\"wokwi_is_stand_in\") is not True or not self.ground():",
+  "replace": "        if not self.ground():"
+ },
+ {
+  "file": "scripts/onboard_parts.py",
+  "name": "the active level is ignored, so a part is wired at a level its record does not give",
+  "find": "            if pin and type(level) is int and level == part.level:",
+  "replace": "            if pin:"
+ },
+ {
+  "file": "scripts/onboard_parts.py",
+  "name": "a row on two GPIOs is wired on its first",
+  "find": "            if not part or not isinstance(gpios, list) or len(gpios) != 1:",
+  "replace": "            if not part or not isinstance(gpios, list) or not gpios:"
+ },
+ {
+  "file": "scripts/onboard_parts.py",
+  "name": "onboard is the role, not the board's id",
+  "find": "\"onboard\": self.board.get(\"id\"), \"_instance\": role,",
+  "replace": "\"onboard\": role, \"_instance\": role,"
+ },
+ {
+  "file": "scripts/onboard_parts.py",
+  "name": "a part's ground pin is the signal pin again",
+  "find": "        grounds.append({\"componentId\": role, \"pinName\": returns})",
+  "replace": "        grounds.append({\"componentId\": role, \"pinName\": signal})"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "a wired GPIO keeps the bare header pin sentence",
+  "find": "            if gpio in (wired or {}):",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a board-only build drops the person's kept diagram",
+  "find": "    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)\n    made = subprocess.run(converter_command(project, own) + source",
+  "replace": "    bad_kept = \"\" if \"--netlist\" in source else sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)\n    made = subprocess.run(converter_command(project, own) + source"
+ },
+ {
+  "file": "tools/circuit-to-wokwi/cli.ts",
+  "name": "--netlist is ignored and the circuit is read",
+  "find": "  const { netlist, problems: designProblems } = options.netlist\n",
+  "replace": "  const { netlist, problems: designProblems } = false\n"
+ },
+ {
+  "file": "scripts/boards.py",
+  "name": "a definition not in the store hides each wired GPIO's sentence",
+  "find": "    said = [] if part.state == outcomes.RECORDED else [(ONBOARD_GPIOS, part.why_not_read())]",
+  "replace": "    if part.state != outcomes.RECORDED:\n        return [(ONBOARD_GPIOS, part.why_not_read())]\n    said = []"
+ },
+ {
+  "file": "tools/circuit-to-wokwi/cli.ts",
+  "name": "a board-only diagram says it came from board.tsx",
+  "find": "  const author = options.netlist ? `generated from ${basename(options.netlist)}` : undefined;",
+  "replace": "  const author = undefined;"
+ }
+]

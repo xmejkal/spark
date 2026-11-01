@@ -111,7 +111,7 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_console.SystemCl
         print(guard_sentence("grant.py: %s" % closed, shlex.quote(str(args.project.resolve())), shlex.quote(args.port) if args.port else None),
               file=sys.stderr)
         return closed.code
-    except (tools.ToolProblem, board_look.LookStop) as cannot:
+    except (tools.ToolProblem, board_look.LookStop, store.StoreProblem) as cannot:  # P499: a store that refuses
         if args.json:
             print(to_json(board_grant.GrantCheckResult(False, None, board_grant.WHY_COULD_NOT_RUN)))
         if isinstance(cannot, board_look.LookStop):

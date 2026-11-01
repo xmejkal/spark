@@ -47,7 +47,28 @@ written with it as code`.
 
 A project that runs on the board alone, such as a blink of the board's own LED, says `"board_only": true` with an empty
 `parts` list. `parts.py --requirements` writes it when the board serves every need, and removes it when a part comes. The parts, schematic, footprint and build stages are then `skipped`, never `ok`, and the simulation holds
-the board alone. `firmware/pins.py` names `ONBOARD_LED` when the board record names one on-board LED, and `ONBOARD_BUTTON` for one
+the board's Wokwi part. When that part is a stand-in (`wokwi_is_stand_in`, as the S3 devkit is for the FireBeetle 2 ESP32-S3),
+the build wires Wokwi's LED as `onboard_led` and Wokwi's pushbutton as `onboard_button` in place of the board's own, each to its
+pin and to ground, through the converter, and merges into your kept `sim/diagram.json` as a full build does
+([P484](https://github.com/xmejkal/spark/issues/663)). It wires a part only when the record names it on one header pin, and only
+an LED that a 1 lights and a button that reads 0 when pressed. When only one of them qualifies, only that one is wired. That
+build needs Node, as a full build does. Any other board-only build, such as the XIAO ESP32-C6's (its Wokwi part is the board
+itself), holds the board alone and needs no converter.
+
+A scenario presses `onboard_button` and waits for the line the firmware prints, then releases it:
+
+```yaml
+steps:
+  - wait-serial: "ready"
+  - set-control: { part-id: onboard_button, name: pressed, value: 1 }
+  - wait-serial: "effect heartbeat"   # the firmware's own line for a press
+  - set-control: { part-id: onboard_button, name: pressed, value: 0 }
+```
+
+Wait for the line right after the press. A firmware that acts on the press prints it at once, and a `wait-serial` that starts
+after a delay misses it and times out. `expect-pin` on `onboard_led` reads a level, not a PWM duty or a brightness.
+
+`firmware/pins.py` names `ONBOARD_LED` when the board record names one on-board LED, and `ONBOARD_BUTTON` for one
 on-board button. `ONBOARD_LED_ON` gives the level that lights the LED, and `ONBOARD_BUTTON_ON` the level a pressed button reads,
 when the record holds it (`active_level`). A part on many pins has one name per label: `ONBOARD_BUTTON_S1`, and
 `ONBOARD_DISPLAY_MOSI` for a display. The pin that reads the battery is `ONBOARD_BATTERY_SENSE`, and its divider is
