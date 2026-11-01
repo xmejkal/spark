@@ -1,8 +1,6 @@
 ## Bench
 
-**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). With `--no-simulation` it also flashes an image of `firmware/` that no simulation tested, but only on a typed yes that starts with "no simulation tested this image" ([P337](https://github.com/xmejkal/spark/issues/431)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../../commands/deploy.md), P213). spark's own hardware step is
-[P79](https://github.com/xmejkal/spark/issues/16). Its first walk is the button-and-LED project, flashed and wired from its
-sheet ([v0.10](../../../scrum/VISION.md#versions)).
+**Partly.** `look.py` reads the board on USB and compares it with its record, and has run on a real board (below). `deploy.py` puts the flash image that passed the simulation onto the board ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board again and erases only after a yes: the person types it in their own terminal, or gave a deploy grant once ([P219](https://github.com/xmejkal/spark/issues/201)). With `--no-simulation` it also flashes an image of `firmware/` that no simulation tested, but only on a typed yes that starts with "no simulation tested this image" ([P337](https://github.com/xmejkal/spark/issues/431)). Its dry run prints the esptool commands and runs nothing. It ran on a real board on 2026-10-14 ([the first flash](#the-first-flash-a-blink-on-the-board-alone)). The steps are on `/spark:deploy`'s page ([`commands/deploy.md`](../../../commands/deploy.md), P213).
 
 ### Look at the board
 
@@ -59,21 +57,14 @@ The PO ran that line in his own terminal window, answered `no` at the question, 
 
 On 2026-10-14 the PO flashed a project with no parts on the same XIAO
 ([P236](https://github.com/xmejkal/spark/issues/233)). Its `requirements.json` says `"board_only": true`, written by
-hand then. Since [P387](https://github.com/xmejkal/spark/issues/497), `parts.py --requirements` writes it when no part is
-listed and no need is left unserved, for example when every need picks the board. With the key, the build
-skips the parts, schematic, footprint and build stages and simulates the board alone. `firmware/pins.py` names the
-board's own LED, `ONBOARD_LED = 15`, from the board record. The firmware, written in the conversation, blinks that LED.
+hand then. [Idea](idea.md) says when `parts.py --requirements` writes it now, and [Build](build.md) what the build
+does with it. `firmware/pins.py` names the board's own LED, `ONBOARD_LED = 15`, from the board record. The firmware, written in the conversation, blinks that LED.
 Since [P353](https://github.com/xmejkal/spark/issues/451), the XIAO's `pins.py` also names `ONBOARD_LED_ON = 0`, the
 level that lights the LED, and `ONBOARD_BUTTON = 9`, the BOOT button. Since [P388](https://github.com/xmejkal/spark/issues/498),
 it also names `ONBOARD_BUTTON_ON = 0`, the level the pressed button reads (the Seeed schematic, sheet 04). Each comes from
-the board record with its source. Since [P464](https://github.com/xmejkal/spark/issues/632), a board record that lacks either level does not make the build guess it: the build says what is missing, and `parts.py --fact-set` writes the level the person tells. Since [P389](https://github.com/xmejkal/spark/issues/504), `--match` also offers a board
-for a need that its own LED, buttons or display serve, and `pins.py` names a display's pins and size when the record holds them.
-The board's `power` block can also name its charger, its voltage regulator and its battery input, and `--match` offers the
-board for a need of `power` / `charger`, `power` / `voltage regulator` or `connect` / `battery input`. A pin that reads the
-battery is `ONBOARD_BATTERY_SENSE` in `pins.py`, with its divider, and `--match` offers it for `sense` / `battery level`.
-Since [P397](https://github.com/xmejkal/spark/issues/513), `--match` prints under such a board what a passed run does not test of
-that part, and `--pick` puts the same sentences in a note: the XIAO's BOOT button has no pin in its Wokwi definition, so a scenario
-cannot press it. The note names the bench as the test, and a part you own that has a Wokwi model as the other choice.
+the board record with its source. Since [P464](https://github.com/xmejkal/spark/issues/632), a board record that lacks either level does not make the build guess it: the build says what is missing, and `parts.py --fact-set` writes the level the person tells. Since [P389](https://github.com/xmejkal/spark/issues/504),
+`pins.py` names a display's pins and size when the record holds them. A pin that reads the battery is
+`ONBOARD_BATTERY_SENSE` in `pins.py`, with its divider.
 A number typed in the board's console sets the period in milliseconds, and `steady`, `heartbeat` or `random` picks the
 pattern. Its scenario passed in Wokwi. The PO ran deploy.py in his own terminal and typed yes. The esptool lines are cut
 here.
@@ -194,12 +185,11 @@ board spark generated.
   [P290](https://github.com/xmejkal/spark/issues/347), `deploy.py` makes one retry of an erase that stops with exit 2, after 5 s, and prints
   `retry in 5 s: ...`. Later that day, 3 deploys of 3 with a grant went through on the first call, each with
   `ready seen`, and none needed the retry.
-- On 2026-10-19 two more deploys with a standing yes passed the scenario. A hint that tells you to press BOOT or RESET
-  now says where the button is on the XIAO ESP32-C6 ([P213](https://github.com/xmejkal/spark/issues/192)).
+- On 2026-10-19 two more deploys with a standing yes passed the scenario.
 - On 2026-10-17 the live try passed one bench run on the XIAO ESP32-C6
   ([the log](../../observations/2026-10-17-p282-p247-bench.md)).
 
 `look.py --json` and `deploy.py --json` print one envelope for Claude. It holds the token, the stops, the stage, the
-yes and the next step for you ([P213](https://github.com/xmejkal/spark/issues/192)). The button-and-LED firmware ran on a XIAO on 2026-10-15, but no
-breadboard wired from its sheet has run on a bench yet. The first such bench is the button-and-LED project, flashed and
-wired from its sheet ([the plan for v0.10](../../../scrum/VISION.md#versions)).
+yes and the next step for you ([P213](https://github.com/xmejkal/spark/issues/192)). No breadboard wired from its
+sheet has run on a bench yet. spark's own hardware step is [P79](https://github.com/xmejkal/spark/issues/16). Its first
+walk is the button-and-LED project, flashed and wired from its sheet ([the plan for v0.10](../../../scrum/VISION.md#versions)).

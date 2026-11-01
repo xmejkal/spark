@@ -1,7 +1,7 @@
 # spark
 
 **spark is a Claude Code plugin for gadgets built from an ESP32 dev board and off-the-shelf modules. It turns your idea
-into a breadboard you can wire and firmware you can test**.
+into a breadboard you can wire and firmware you can test.**
 
 From a list of parts, spark builds and checks the design. It writes a *breadboard sheet*: the parts and the wires, one
 step each. It writes a *pin map*: a file that tells your firmware which board pin each part uses. It also makes a
@@ -59,8 +59,7 @@ module such as the DFRobot FireBeetle 2 ESP32-S3. spark is not for chip-down boa
 - You describe the gadget. spark turns it into needs and matches them against the parts you own and the parts it
   knows.
 - It researches a missing part from the vendor's own documents. It writes the part as a
-  [record](GLOSSARY.md#record--and-the-four-places-one-lives): its facts, each with a source and whether anyone checked
-  it.
+  [record](GLOSSARY.md#record--and-the-four-places-one-lives): each fact with a source and whether anyone checked it.
 - [The chain](GLOSSARY.md#the-spine-or-the-chain--scriptscheck_spinepy) starts from a
   [requirements file](GLOSSARY.md#the-requirements-file). Every pin gets a reason, and the connections come from the
   parts' records.
@@ -127,10 +126,12 @@ before its goal, or part of it was not run here. **not yet**: nothing does it ye
 
 ## Commands, skills and agents
 
-**Commands**, typed in Claude Code: `/spark:init` sets up a project and `/spark:setup` the tools. `/spark:drawer` keeps
-what you own. `/spark:idea` turns a goal into needs, a part for each need and a requirements file. `/spark:research`
-finds a missing part, and `/spark:identify` a module from a photo. `/spark:build` makes a board from a requirements
-file, and `/spark:deploy` puts the firmware onto the board.
+**Commands**, typed in Claude Code:
+
+- `/spark:init` sets up a project, `/spark:setup` the tools, and `/spark:drawer` keeps what you own.
+- `/spark:idea` turns a goal into needs, a part for each need and a requirements file.
+- `/spark:research` finds a missing part, and `/spark:identify` a module from a photo.
+- `/spark:build` makes a board from a requirements file, and `/spark:deploy` puts the firmware onto the board.
 
 **Skills**, which Claude picks up from your words: `spark-design` designs a board, `spark-review` reviews it and gates it
 before you order it, and `spark-reverse-engineer` reads a board from its photo.
@@ -170,8 +171,7 @@ run that skipped most checks. So read [the guide for AI agents](docs/guide/agent
 ## More
 
 - [The glossary](GLOSSARY.md): the words this repository uses its own way, each with the failure that produced it.
-- [The journey guide](docs/guide/journey.md): each step on real runs. It also shows what the larger example (a motor
-  driver, a power inlet and two buttons) found: a conflict between two parts, an advisory and a reason for every pin.
+- [The journey guide](docs/guide/journey.md): each step on real runs, with a page for each step.
 - [Developing spark](docs/guide/developing.md): the tests, the commit gate, and where the work is planned.
 - **Found a problem?** [Open an issue](https://github.com/xmejkal/spark/issues/new) with the command you ran, its
   output and spark's version (in `.claude-plugin/plugin.json`).

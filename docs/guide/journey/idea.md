@@ -6,11 +6,12 @@ need (`parts.py --pick`), what you own is reserved, and the picks become a requi
 (`parts.py --requirements`) ([P97](https://github.com/xmejkal/spark/issues/18)). Those steps ran for this page, in
 [a recorded run](recorded-run.md#a-recorded-run-a-button-and-an-led) below; the conversation did not.
 
-**Today, in full.** If the board serves every need, the requirements file says `board_only`
-([P387](https://github.com/xmejkal/spark/issues/497)). A board offers its own LED, buttons, display, charger, regulator, battery input and battery-level pin
-for a need ([P389](https://github.com/xmejkal/spark/issues/504)). If a simulation cannot press or show that part, the pick says so. It names the bench as
-the test. If you own another choice, it names that too ([P397](https://github.com/xmejkal/spark/issues/513)). The recorded run went on from the requirements file to a board that builds and
-to the tally. With no Claude Code transcript there, the tally did not count the cost.
+**Today, in full.** `--match` offers a board for a need that its own LED, buttons, display, charger, voltage regulator,
+battery input or battery-level pin serve ([P389](https://github.com/xmejkal/spark/issues/504)). Under such a board,
+`--match` prints what a passed run does not test of that part, and `--pick` puts the same sentences in a note
+([P397](https://github.com/xmejkal/spark/issues/513)). The note names the bench as the test, and a part you own that has
+a Wokwi model as the other choice. When no part is listed and no need is left unserved, `parts.py --requirements`
+writes `"board_only": true` ([P387](https://github.com/xmejkal/spark/issues/497)).
 
 In Claude Code, Claude asks at most three questions, one at a time, then writes the needs to a file:
 
@@ -28,8 +29,7 @@ For *"tell me when my plant is thirsty"*:
 ]
 ```
 
-The conversation was not run for this page. These needs were written by hand from `/spark:idea`'s own example; the
-commands below are real runs.
+These needs were written by hand from `/spark:idea`'s own example. The commands below are real runs.
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --needs-set . ../needs.json

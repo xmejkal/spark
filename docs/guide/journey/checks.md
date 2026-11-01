@@ -160,15 +160,13 @@ L9110S dual motor driver module — motor-driver
   fix for l9110s-module.AIB: record the module's input_low_threshold_v, the level it reads as low, then run --show again: held only under the input-high threshold, the level is undefined
 ```
 
-The next steps are the [firmware](firmware.md#firmware), which imports `pins.py`, and the [simulation](simulate.md#simulate). Before a board is
-ordered, the `spark-review` skill runs `check_all`, then reviewer agents, then the fabrication gate. It was not run here; [is it ready?](../agents.md#is-it-ready) says what each part covers.
+The next steps are the [firmware](firmware.md#firmware), which imports `pins.py`, and the [simulation](simulate.md#simulate).
 
-**Today, in full.** `check_all.py` runs spark's deterministic checks in one command, five in the journey's run. Three
-found nothing, physics was unable to look, and the-order was
-[skipped](../../../GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. A fresh
+**Today, in full.** `check_all.py` runs spark's deterministic checks in one command, five in the run above. A fresh
 button-and-LED project exits 0 and counts its `?` lines ([P197](https://github.com/xmejkal/spark/issues/156)). `check_all.py` does not run the
-generator's CONFLICT test or the gate's two commands. The `spark-review` skill runs it and then the reviewer agents,
-which were not run here.
+generator's CONFLICT test or the gate's two commands. Before a board is ordered, the `spark-review` skill runs
+`check_all`, then the reviewer agents, then the fabrication gate. It was not run here.
+[Is it ready?](../agents.md#is-it-ready) says what each part covers.
 
 **A board you wrote by hand** in tscircuit is read the same way: `npx --no tsci build board.tsx`, then `/spark:init` so
 that it names the rails, then `check_all.py --project .`. This was not run here. A project's own

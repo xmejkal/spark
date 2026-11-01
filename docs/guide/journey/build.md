@@ -7,8 +7,8 @@
 2. [`/spark:setup`](../../../commands/setup.md) says which tools spark needs, and installs what is missing in one go once
    you have seen the commands and said yes.
 
-**The plugin's name.** Claude Code can show the plugin as `spark@<marketplace>`. The marketplace name is the one in
-spark's `.claude-plugin/marketplace.json`.
+**The plugin's name.** Claude Code can show the plugin as `spark@<marketplace>`. The marketplace name is the `name` field
+of spark's `.claude-plugin/marketplace.json`.
 
 **Before you start.** You need Claude Code for the commands, Python 3.9 or newer, and Node 20 or newer. On macOS,
 spark's install lines get Node and pdftotext from Homebrew (`data/tools.json`). `/spark:setup` then installs the rest
@@ -173,8 +173,8 @@ wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
 
 19 routed traces carry the 22 written connections: a group of N connected pins needs N−1 traces.
 
-`--keep .` writes the board into the project: `board.tsx`, the board's footprint, `dist/`, where every check
-looks, and `breadboard.md`, the parts and how to wire them ([an example](recorded-run.md#a-recorded-run-a-button-and-an-led)). An existing `board.tsx` is left alone, edited or not, and `dist/` is then built from the requirements file, not
+`--keep .` writes the board into the project: `board.tsx`, the board's footprint and `dist/`, where every
+check looks. An existing `board.tsx` is left alone, edited or not, and `dist/` is then built from the requirements file, not
 from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). It also writes `firmware/pins.py`, the pins
 that the firmware imports ([P196](https://github.com/xmejkal/spark/issues/155)). Without `--keep`, the chain builds in a temporary
 folder and deletes it.
@@ -186,7 +186,7 @@ keeps them in DIR ([P116](https://github.com/xmejkal/spark/issues/50)). It does 
 stage that stopped it. `--board`, and a requirements file's `board`, name the dev board. With `--keep`, the build also
 writes:
 
-- a breadboard sheet: the parts and how to wire them
+- a breadboard sheet, `breadboard.md`: the parts and how to wire them ([an example](recorded-run.md#a-recorded-run-a-button-and-an-led))
 - for a XIAO ESP32-C6, the same wiring drawn on a Wokwi breadboard ([P267](https://github.com/xmejkal/spark/issues/300)) and as a picture that the sheet shows
   ([P268](https://github.com/xmejkal/spark/issues/302))
 - for a FireBeetle 2 ESP32-S3, a picture alone, drawn from its record ([P412](https://github.com/xmejkal/spark/issues/538))
@@ -195,9 +195,8 @@ writes:
 A rebuild keeps the parts, jumpers and resistors you moved in `breadboard.json`. It names those it cannot keep
 ([P273](https://github.com/xmejkal/spark/issues/309), [P287](https://github.com/xmejkal/spark/issues/340)). A rebuild lists what to change on the bench, by each jumper's ends and color
 ([P300](https://github.com/xmejkal/spark/issues/366)). The build names an end that the drawing joins differently from the circuit ([P279](https://github.com/xmejkal/spark/issues/317)). With
-`"board_only": true`, the build makes the board alone, for firmware that uses only the board's own LED
-([P236](https://github.com/xmejkal/spark/issues/233)). On a FireBeetle 2 ESP32-S3 the board's own LED and button are then wired parts of the Wokwi diagram
-([P484](https://github.com/xmejkal/spark/issues/663)). Where a fact is missing, the build names its stand-in in `board.tsx`: a placeholder outline in its
+`"board_only": true`, the build skips the parts, schematic, footprint and build stages and simulates the board alone,
+for firmware that uses only the board's own LED and button ([P236](https://github.com/xmejkal/spark/issues/233)). Where a fact is missing, the build names its stand-in in `board.tsx`: a placeholder outline in its
 header, or the router's default trace width under a power trace it was unable to size.
 
 **The XIAO ESP32-C6, then and now.** On 2026-10-08 the library defined two dev boards and held 8 parts
