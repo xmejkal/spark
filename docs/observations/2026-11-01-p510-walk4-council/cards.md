@@ -75,9 +75,9 @@ printed no entry key for `--drawer-set` (G7). UX finding 10.
 
 **The change.** A refused pick names the holding project and three fixes in order: drop the holding need (N3's
 command), pick another part, or, only if the person owns another piece, the `--drawer-set` line with the entry key.
-`--json` carries them in the envelope's `next` as `NextStep`s (`spark/core/result.py:18`), with no new key. The item's
-`fix` stays a sentence (`json.md:234`). The count is a fact about the person's drawer, so its step has `needs_yes: true`:
-Claude asks and never runs it on its own (`commands/drawer.md:39-40`). `--drawer` prints each entry's key.
+`--json` carries them in the envelope's `next` as `NextStep`s (`scripts/spark/core/result.py:18`), with no new key. The item's
+`fix` stays text or null (`json.md:234`). The count is a fact about the person's drawer, so its step has `needs_yes: true`:
+Claude asks and never runs it on its own (`commands/drawer.md:27-29`). `--drawer` prints each entry's key.
 
 **Done when.** A test refuses a held pick and reads the three steps in the text and in `next`, the drawer step with
 `needs_yes: true`. `--drawer --json` has `key` for each entry. `json.md:256`, which says that no operation fills `next`,
@@ -104,7 +104,7 @@ Label: story. Slice: v0.10 The basic journey. Size XS. After N1 (the same verdic
 
 Walk 4 step 7: a new person did not know that firmware comes next (G11, stall S3).
 
-**The change.** `check_spine --json` gains one key, `next`, with one `NextStep` (`spark/core/result.py:18`): `look.py`,
+**The change.** `check_spine --json` gains one key, `next`, with one `NextStep` (`scripts/spark/core/result.py:18`): `look.py`,
 whose `why` says "first write `firmware/main.py` from `pins.py`". The text prints the same line. The conversation
 writes the firmware, so spark names the step only.
 
@@ -269,7 +269,7 @@ Each edit is a new section "### From walk 4 (P510, #705, 2026-11-01)" at the end
   "plug type" becomes the connector's `kind`. The build card is filed after this finding. It also reads a need's
   condition `plugs into` (G19) and leaves `ONBOARD_LED` out of `pins.py` while a connector claims GPIO21 (G31). G20, G23, G24."
 - **P466 (#634), the MAC names its unit.** Add: "Walk 4's G4: the refusal did not say which of the 2 owned boards is on
-  USB, because a hold counts pieces (`drawer.py:327`). Done when also: a hold names its board by MAC."
+  USB, because `used_in` counts pieces per project (diary step 3), and `drawer.py:327` lists holders by name. Done when also: a hold names its board by MAC."
 - **P469 (#637), the look without a restart.** Add two slices. Slice 1, the held plan: the look reads through mpremote.
   Slice 2, after W4-2 (deploy on the core, `wave4-plan.md`), with one Done-when line: "Deploy enters download mode by
   `machine.bootloader()` through mpremote, then esptool `--before no-reset`, on an S3 that runs MicroPython, with no key

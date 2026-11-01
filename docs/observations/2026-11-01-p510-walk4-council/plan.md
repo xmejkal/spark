@@ -73,6 +73,10 @@ P506 (#700, its Done when is the PO's decision) and P503 (#692, no journey stage
 
 ## Decisions for the PO
 
+Taken in auto mode on 2026-11-02 at about 00:20 CET. The PO wrote "lets enter fully automatic mode, no approving
+necessary", so each decision takes its recommendation, the safer default. The PO can change any of them, and the card
+that carries it (N6b, P469, P118, P390) changes with it.
+
 1. **Does a deploy grant cover an image that no simulation tested?** Today it never does (`board_grant.py:107`,
    `image_evidence.py:353`), and walk 4 ran `--no-simulation` from step 20, so the grant did not help there (row 52).
    Recommended: "never" stays the default. N6b adds one opt-in line to the grant's question, "also images that no
@@ -98,9 +102,9 @@ Taken:
   has no `outside`. Deploy reports through the seam only in E2, inside W4-2 (`event-seam-plan.md:226`). #702 is the look only.
 - **N6 splits.** N6b changes `grant.py` and the grant file, which W4-3 moves (`wave4-plan.md`, W4-3 files `grant.py:68-128`,
   19 grant mutation rows). N6a, a page only, ships the PO's I3 now. Row 69's "N6 is a `--json` key" no longer holds.
-- **No new key for "what to do next".** N4 puts its commands in `next` as `NextStep`s (`spark/core/result.py:18`). An
-  item's `fix` stays a sentence (`json.md:234`). N5b adds `next` to `check_spine --json` and updates `json.md:140`.
-- **N4's count step is the person's.** The drawer page writes a count only from the person's answer (`commands/drawer.md:39-40`).
+- **No new key for "what to do next".** N4 puts its commands in `next` as `NextStep`s (`scripts/spark/core/result.py:18`). An
+  item's `fix` stays text or null (`json.md:234`). N5b adds `next` to `check_spine --json` and updates `json.md:140`.
+- **N4's count step is the person's.** The drawer page writes a count only from the person's answer (`commands/drawer.md:27-29`).
   The step carries the existing `needs_yes: true`, not a new mark.
 - **N1's grep test:** the validator `boards.py:694` reads `pad_aliases` too, so no file outside `boards.py` reads it.
   **N2's cite** is `design.py:376-382`, P163's guard (`tests/mutations/p163-case-names.json`), kept for an entry with no `pin`.
