@@ -207,6 +207,28 @@ class ButtonPlacesTest(unittest.TestCase):
         self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")
 
 
+# --- MVP --- (P512, #708) the one reader of physical.pad_aliases
+class BoardPadsTest(unittest.TestCase):
+    """P512: a pin label's footprint pad. The FireBeetle 2 prints MOSI as MO; most labels are their own pad."""
+
+    def test_an_aliased_label_gives_its_printed_pad(self):
+        pads = boards.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO", "SDA": "D4"}}})
+        self.assertEqual((pads.pad_of("MOSI"), pads.pad_of("SDA")), ("MO", "D4"))
+
+    def test_a_label_with_no_alias_is_its_own_pad(self):
+        self.assertEqual(boards.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO"}}}).pad_of("D3"), "D3")
+
+    def test_the_alias_pads_are_the_printed_names(self):
+        pads = boards.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO", "MISO": "MI"}}})
+        self.assertEqual(pads.alias_pads(), frozenset({"MO", "MI"}))
+
+    def test_a_record_with_no_aliases_maps_nothing(self):
+        for record in ({}, {"physical": None}, {"physical": {}}, {"physical": {"pad_aliases": None}}):
+            with self.subTest(record=record):
+                pads = boards.BoardPads.from_record(record)
+                self.assertEqual((pads.pad_of("MOSI"), pads.alias_pads()), ("MOSI", frozenset()))
+
+
 class ResolvingTest(unittest.TestCase):
     def test_resolve_writes_the_board_to_one_known_path(self):
         root = project()
