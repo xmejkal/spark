@@ -1,6 +1,6 @@
 # Walk 4: gap rows (P510 council)
 
-The gaps of spark walk 4 (card P509 #704, epic #467), on 2026-11-01 in Prague, from 19:16 to 21:58 CET. The diary is `~/Development/spark-walks/walk4/walk4-diary.md`, and it is whole in the first comment of P510 (#705). Spark was main at `8595309b`. Each claim is the first sentence or two of the diary's gap. Status `raised` means that nobody checked it after the walk. The column "where it went" names a proposed card below (C1 to C11), or "row only". No card is filed: a council replans them, as P480 did for walk 3.
+The gaps of spark walk 4 (card P509 #704, epic #467), on 2026-11-01 in Prague, from 19:16 to 21:58 CET. The diary is `~/Development/spark-walks/walk4/walk4-diary.md`, and it is whole in the first comment of P510 (#705). Spark was main at `8595309b`. Each claim is the first sentence or two of the diary's gap. The P510 council checked rows 1 to 46 against the code at `8595309b` and added rows 47 to 70 for the lens and refuter claims that a decision rests on. `verified` means the claim holds, `rejected` that the refuter or the synthesis refuted it, `acted` that the plan took it, and `raised` that nobody checked it (most are page text or bench facts). The last column names the evidence and the home: a new card N1 to N12 of `docs/observations/2026-11-01-p510-walk4-council/plan.md` (filing text in `cards.md`), an open card, a PO decision of that plan, or "row only". The proposed cards C1 to C11 below are the walk's, before the council. No card is filed yet.
 
 ## Short version
 
@@ -12,52 +12,76 @@ The top card is C1, a build defect: no SPI part can be built on the FireBeetle 2
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
-| 1 | The idea page reads the brief from `.spark/project.json`, which `/spark:init` writes, in step S, but it runs `/spark:init` only in step L. | diary G1, step 1 | raised | C5 |
-| 2 | The `--needs-set` dry run names each field it sets, but not the file it writes or whether it lists the project. | diary G2, step 1 | raised | C5 |
-| 3 | Walk 3 ended, but its hold on a FireBeetle 2 stays. When a project ends, no spark step frees its holds. | diary G3, step 2 | raised | C4 |
-| 4 | The refusal does not say which of the 2 owned boards is on USB. A hold counts pieces, not boards by MAC. | diary G4, step 2 | raised | C4 |
-| 5 | `--match` lists `xiao-esp32-c6-fresh (button-light)` for all 3 needs with no word on what it is. | diary G5, step 2, open since walk 2 G8 | raised | row only |
-| 6 | The refused pick offers 2 fixes, free a hold or pick another part, but not the third, raise the owned count. | diary G6, step 3 | raised | C4 |
-| 7 | `parts.py --drawer` prints labels, counts and holds, but not the entry keys that `--drawer-set` needs. | diary G7, step 3 | raised | C4 |
-| 8 | `check_all.py` still calls the 4 skipped checks `not asked for`. The real cause is that nothing is built yet. | diary G8, step 5, open since walk 2 G1 | raised | row only |
-| 9 | The goal that the person gave at the start did not reach the brief. | diary G9, step 5 | raised | C5 |
-| 10 | The stages disagree about the Wokwi run: `--match` and `--pick` said that no scenario can press the button, and the build wired a stand-in that a scenario pressed. | diary G10, step 6 | raised | C7 |
-| 11 | The build's verdict ends with no next step, so a new user does not know that the firmware comes next. | diary G11, step 7 | raised | C5 |
-| 12 | `run_scenario.py` has no dry run of its free checks. | diary G12, step 8 | raised | C9 |
-| 13 | Spark has no command that presses a button or reads the LED on the Mac. | diary G13, step 8, open since walk 3 G31 | raised | C9 |
-| 14 | The editor flags MicroPython's names as unknown in every firmware file. | diary G14, step 8, near walk 3 G21 | raised | C9 |
-| 15 | The look still cannot read this board without the person's hands on BOOT and RESET. | diary G15, step 10 | raised | C6 |
-| 16 | The doctor's 2 s of console silence does not tell a running firmware from a board that does not answer. | diary G16, step 10, open since walk 3 G16 | raised | C6 |
-| 17 | The look lists a must line about the order of the work as untested. Spark cannot mark a must line that no scenario can test. | diary G17, step 11 | raised | C7 |
-| 18 | The person's bench result lives only in the conversation and the diary. | diary G18, step 14, open since walk 3 G37 | raised | C7 |
-| 19 | The need's condition `plugs into the board's GDI connector` changed nothing in `--match`. | diary G19, step 15 | raised | C2 |
-| 20 | Spark knows nothing about the FireBeetle 2's GDI connector. The board record and the `parts/` library never name GDI. | diary G20, step 15 | raised | C2 |
-| 21 | The 4 owned displays are drawer entries with labels only, so adding a module starts with `/spark:research` and the web. | diary G21, step 15 | raised | row only |
-| 22 | On this board, the GDI backlight pin and the onboard LED are the same GPIO21, and no record said so. | diary G22, step 17 | raised | C2 |
-| 23 | Spark has no way to say that a module plugs into a fixed connector. | diary G23, step 17 | raised | C2 |
-| 24 | The library board record does not name its GDI connector P2 or its camera connector P1. | diary G24, step 17 | raised | C2 |
-| 25 | Wokwi has no part for the display's ST7789 at 240x320, so the display is tested only on the board. | diary G25, step 17 | raised | C7 |
-| 26 | Spark cannot drop a part from a project: `--pick . light=` is refused, and no flag removes a need. | diary G26, step 18 | raised | C3 |
-| 27 | Spark's pin map for the display disagrees with the GDI cable on 5 of 8 signals, and `requirements.json` cannot pin a part's signals. | diary G27, step 18 | raised | C2 |
-| 28 | The pick and the requirements said nothing about the display's `simulation` skip. | diary G28, step 18 | raised | C7 |
-| 29 | The first build of a SPI part on the FireBeetle 2 breaks: `board.tsx` traces to `MOSI` and `MISO`, and the footprint names those pads `MO` and `MI` from `pad_aliases`. | diary G29, step 19 | raised | C1 |
-| 30 | The build's verdict and its `--json` say `source_trace_not_connected_error` with no trace named. | diary G30, step 19 | raised | C1 |
-| 31 | After the light need left, `pins.py` still names `ONBOARD_LED`, so the old LED firmware still imports. | diary G31, step 20 | raised | C3 |
-| 32 | Spark's `framebuf` stand-in sits in `scripts/stand_in/fallback/`, apart from `machine`. | diary G32, step 20 | raised | C9 |
-| 33 | With `--no-simulation`, the look listed no limits and no unnamed must lines, though nothing tested the display's must line. | diary G33, step 21 | raised | C7 |
-| 34 | The board record knows GPIO0 as the BOOT pin only in a strapping note, so `pins.py` has no name for the second button. | diary G34, step 23 | raised | C10 |
-| 35 | After a deploy, spark keeps only the console lines of its short read. No spark step records a later line. | diary G35, step 31 | raised | C6 |
-| 36 | A look can leave the board out of download mode, so deploy.py's own look fails. | diary G36, step 37 | raised | C6 |
-| 37 | The N16R8's 8 MB of PSRAM stays off, because the record names one `micropython_port` for both SKUs. | diary G37, step 39 | raised | C8 |
-| 38 | `flash_image.py --micropython` takes an outside interpreter silently, and only the look's refusal names spark's own way, the project's tools list. | diary G38, step 40 | raised | C8 |
-| 39 | The look does not say which MicroPython build the image holds. | diary G39, step 42 | raised | C8 |
-| 40 | With the PSRAM build, deploy.py ended in `ready unknown` 3 times, because the port came back late. | diary G40, step 43 | raised | C6 |
-| 41 | P472 found how to enter download mode with no hands. The look and deploy.py still ask for BOOT and RESET, 11 presses in this walk. | diary G41, step 54 | raised | C6 |
-| 42 | `flash_image.py` refuses an image whose partition table declares its own `vfs` (s3lcd's 14 MB), so spark cannot carry a native driver build. | diary G42, step 57 | raised | C8 |
-| 43 | Spark's Mac stand-ins know no C driver module, so `import s3lcd` must sit inside a function. | diary G43, step 57 | raised | C9 |
-| 44 | The s3lcd build reports a fixed USB serial, not the MAC, and spark finds the board by its MAC. | diary G44, step 58 | raised | C8 |
-| 45 | With the s3lcd build, the USB port goes away at the driver's start. Then spark cannot read the board back. | diary G45, step 59 | raised | C8 |
-| 46 | The s3lcd image went on the board outside spark, so the store record does not know what runs on the board. | diary G46, step 62 | raised | C8 |
+| 1 | The idea page reads the brief from `.spark/project.json`, which `/spark:init` writes, in step S, but it runs `/spark:init` only in step L. | diary G1, step 1 | raised | the page text was not checked in code (technology). UX 15: Claude wrote the goal by hand. N5 |
+| 2 | The `--needs-set` dry run names each field it sets, but not the file it writes or whether it lists the project. | diary G2, step 1 | raised | not checked. P488 (#667), which names each write's place and path |
+| 3 | Walk 3 ended, but its hold on a FireBeetle 2 stays. When a project ends, no spark step frees its holds. | diary G3, step 2 | raised | holds come from the picks per project (`needs.py:430-453`, architecture A5), and no step ends a project. N4 names the holder and N3's drop |
+| 4 | The refusal does not say which of the 2 owned boards is on USB. A hold counts pieces, not boards by MAC. | diary G4, step 2 | verified | technology: `store.holders_of` counts pieces (`drawer.py:327`). P466 (#634) |
+| 5 | `--match` lists `xiao-esp32-c6-fresh (button-light)` for all 3 needs with no word on what it is. | diary G5, step 2, open since walk 2 G8 | raised | not checked in walk 4. Walk 3's refuter 30 reproduced it. Third walk: PO decision 4 in `plan.md`, P390 (#505) |
+| 6 | The refused pick offers 2 fixes, free a hold or pick another part, but not the third, raise the owned count. | diary G6, step 3 | verified | technology: `parts.py:2117` `_op_pick` and `needs.plan_pick` give no third fix. N4 |
+| 7 | `parts.py --drawer` prints labels, counts and holds, but not the entry keys that `--drawer-set` needs. | diary G7, step 3 | raised | not run. N4 |
+| 8 | `check_all.py` still calls the 4 skipped checks `not asked for`. The real cause is that nothing is built yet. | diary G8, step 5, open since walk 2 G1 | verified | technology and refuter: `check_all.py:466`. Third walk: P118 (#52), PO decision 4 |
+| 9 | The goal that the person gave at the start did not reach the brief. | diary G9, step 5 | raised | diary step 5, UX 15, not checked in code. N5 |
+| 10 | The stages disagree about the Wokwi run: `--match` and `--pick` said that no scenario can press the button, and the build wired a stand-in that a scenario pressed. | diary G10, step 6 | raised | not checked in code. N8 |
+| 11 | The build's verdict ends with no next step, so a new user does not know that the firmware comes next. | diary G11, step 7 | raised | not checked in code. N5 |
+| 12 | `run_scenario.py` has no dry run of its free checks. | diary G12, step 8 | verified | technology: `run_scenario.py` has no dry text. P399 (#515) PR 2 (refuter, merges) |
+| 13 | Spark has no command that presses a button or reads the LED on the Mac. | diary G13, step 8, open since walk 3 G31 | verified | technology: the only press is the `set-control` step (`run_scenario.py:54`). Third walk: PO decision 4, P492 (#671) |
+| 14 | The editor flags MicroPython's names as unknown in every firmware file. | diary G14, step 8, near walk 3 G21 | raised | editor stubs not checked. N11 |
+| 15 | The look still cannot read this board without the person's hands on BOOT and RESET. | diary G15, step 10 | verified | technology 7, refuter R7: no `machine.bootloader()` call in `scripts/`. P469 (#637) |
+| 16 | The doctor's 2 s of console silence does not tell a running firmware from a board that does not answer. | diary G16, step 10, open since walk 3 G16 | raised | the 2 s value not checked (`board_doctor.py:15`). N7 |
+| 17 | The look lists a must line about the order of the work as untested. Spark cannot mark a must line that no scenario can test. | diary G17, step 11 | raised | not checked (`look.py:28`). P490 (#669), a `bench only` mark |
+| 18 | The person's bench result lives only in the conversation and the diary. | diary G18, step 14, open since walk 3 G37 | verified | P490 (#669) is open and its change is not built (`gh issue view 669`). Second walk. P490 |
+| 19 | The need's condition `plugs into the board's GDI connector` changed nothing in `--match`. | diary G19, step 15 | verified | technology: `condition` is words only (`needs.py:33`, `parts.py:2053,2073`), no matcher reads it. P460 (#628), the connector card after it |
+| 20 | Spark knows nothing about the FireBeetle 2's GDI connector. The board record and the `parts/` library never name GDI. | diary G20, step 15 | verified | technology: no file in `boards/` or `parts/` names GDI. P460 (#628) |
+| 21 | The 4 owned displays are drawer entries with labels only, so adding a module starts with `/spark:research` and the web. | diary G21, step 15 | raised | by design: research writes the record. row only |
+| 22 | On this board, the GDI backlight pin and the onboard LED are the same GPIO21, and no record said so. | diary G22, step 17 | verified | refuter R10: GDI BL is GPIO21 = D13, and `pin_roles.onboard_led.gpio` is [21] (architecture A3). P460 (#628) |
+| 23 | Spark has no way to say that a module plugs into a fixed connector. | diary G23, step 17 | verified | technology: no connector field anywhere. P460 (#628) |
+| 24 | The library board record does not name its GDI connector P2 or its camera connector P1. | diary G24, step 17 | verified | technology: grep. P460 (#628) |
+| 25 | Wokwi has no part for the display's ST7789 at 240x320, so the display is tested only on the board. | diary G25, step 17 | raised | not checked. P409 (#535) |
+| 26 | Spark cannot drop a part from a project: `--pick . light=` is refused, and no flag removes a need. | diary G26, step 18 | verified | technology: `needs.plan_pick` refuses an empty id (`needs.py:406`). The synthesis read `parts.py` OPERATIONS (`:1539-1603`): no drop. N3 |
+| 27 | Spark's pin map for the display disagrees with the GDI cable on 5 of 8 signals, and `requirements.json` cannot pin a part's signals. | diary G27, step 18 | verified | refuter R11 ran it: "both TFT_BL", `design.py:128-150`. N2 |
+| 28 | The pick and the requirements said nothing about the display's `simulation` skip. | diary G28, step 18 | raised | not checked. N8 |
+| 29 | The first build of a SPI part on the FireBeetle 2 breaks: `board.tsx` traces to `MOSI` and `MISO`, and the footprint names those pads `MO` and `MI` from `pad_aliases`. | diary G29, step 19 | verified | technology and refuter R1 ran `check_spine.py`: `.Mcu > .MOSI` and `.MISO` fail (`emit_board.py:812-813`). Also the XIAO C6 (row 47). N1 |
+| 30 | The build's verdict and its `--json` say `source_trace_not_connected_error` with no trace named. | diary G30, step 19 | verified | technology 5: `check_spine.py:496` prints the error types only. N1 |
+| 31 | After the light need left, `pins.py` still names `ONBOARD_LED`, so the old LED firmware still imports. | diary G31, step 20 | verified | by design: every onboard role is written (`assign_pins.py:427-428`, architecture A4, row 68). P460's connector card |
+| 32 | Spark's `framebuf` stand-in sits in `scripts/stand_in/fallback/`, apart from `machine`. | diary G32, step 20 | verified | technology: `scripts/stand_in/fallback/framebuf.py`. N11 |
+| 33 | With `--no-simulation`, the look listed no limits and no unnamed must lines, though nothing tested the display's must line. | diary G33, step 21 | raised | the `--no-simulation` path not run. N8 |
+| 34 | The board record knows GPIO0 as the BOOT pin only in a strapping note, so `pins.py` has no name for the second button. | diary G34, step 23 | verified | technology: GPIO0 only in the strapping note. Refuter: GPIO0 is also header pin D9. N12 |
+| 35 | After a deploy, spark keeps only the console lines of its short read. No spark step records a later line. | diary G35, step 31 | raised | technology found no log writer in `board_console.py`, not run. N7 |
+| 36 | A look can leave the board out of download mode, so deploy.py's own look fails. | diary G36, step 37 | raised | bench, not checked. P469 (#637) |
+| 37 | The N16R8's 8 MB of PSRAM stays off, because the record names one `micropython_port` for both SKUs. | diary G37, step 39 | verified | technology: one `micropython_port` (`boards/firebeetle2-esp32s3.json:7`), SKU note line 9. P349 (#445) |
+| 38 | `flash_image.py --micropython` takes an outside interpreter silently, and only the look's refusal names spark's own way, the project's tools list. | diary G38, step 40 | verified | technology and refuter: `flash_image.py:255-256` takes a path with no check. N10 |
+| 39 | The look does not say which MicroPython build the image holds. | diary G39, step 42 | raised | the look's read path not checked. N10 |
+| 40 | With the PSRAM build, deploy.py ended in `ready unknown` 3 times, because the port came back late. | diary G40, step 43 | raised | bench. `deploy.py:95-102` knows `ready unknown`, no wait loop found. N7 |
+| 41 | P472 found how to enter download mode with no hands. The look and deploy.py still ask for BOOT and RESET, 11 presses in this walk. | diary G41, step 54 | verified | no `machine.bootloader()` in `scripts/` (technology 7). P469 (#637) |
+| 42 | `flash_image.py` refuses an image whose partition table declares its own `vfs` (s3lcd's 14 MB), so spark cannot carry a native driver build. | diary G42, step 57 | verified | `flash_image.py:37-38,82,121-126`, read by technology, refuter R9 and the synthesis. N9 |
+| 43 | Spark's Mac stand-ins know no C driver module, so `import s3lcd` must sit inside a function. | diary G43, step 57 | verified | technology: no C module stand-in in `scripts/stand_in/`. N11 |
+| 44 | The s3lcd build reports a fixed USB serial, not the MAC, and spark finds the board by its MAC. | diary G44, step 58 | raised | bench. Refuter R8: a grant needs the serial to be the MAC. P336 (#430), after P511 (#706) |
+| 45 | With the s3lcd build, the USB port goes away at the driver's start. Then spark cannot read the board back. | diary G45, step 59 | raised | bench. P336 (#430), after P511 (#706), its USB console goal |
+| 46 | The s3lcd image went on the board outside spark, so the store record does not know what runs on the board. | diary G46, step 62 | raised | not checked. N10 |
+| 47 | C1 breaks the XIAO C6 too: SPI, I2C and A0, since P278 (2026-10-18). | refuter R2, technology 3 | verified | refuter ran XIAO + `dfr0664-tft-2in` (4 errors) and XIAO + `vl6180x-breakout` (3 errors). Its `pad_aliases` came in `2b868965`. N1 names three builds |
+| 48 | The pad lookup sits in 4 Python places, `boards.py:694` one of them, so one reader and a grep test cover all. | architecture A1 | rejected | refuter R3: `boards.py:694` is the record validator. The converter's TypeScript copies (`lib/board.ts:102,112`, `lib/mapping.ts:94`) are out of reach. N1 covers the three Python trace readers |
+| 49 | Three lines in `signal_lines` make walk 4's project build end to end. | technology 2 | verified | technology ran it in a scratch copy: 12 traces, 0 errors, the chain ran end to end. Refuter R1 reproduced the defect. N1 |
+| 50 | C6's standing yes clashes with plan decision 6, a relayed yes never makes a deploy grant. | architecture A9 | rejected | refuter R4: the deploy grant, typed in the person's terminal, exists since P242 (`board_grant.py:14-15,85,172`). N6 |
+| 51 | A deploy grant for N minutes exists, so C6's standing yes is not new. | UX 1 | verified | refuter R4, `board_grant.py:85,172`, `grant.py` epilog. N6 offers and narrows it |
+| 52 | A deploy grant never covers `--no-simulation`, so it did not help walk 4 from step 20 on. | UX 3 | verified | the synthesis read `board_grant.py:107` (`WHY_NO_SIMULATION`). Diary step 20. PO decision 1 |
+| 53 | A grant needs the USB serial to be the MAC, so the s3lcd image can never get one. | refuter R8 | verified | `board_grant.py` `WHY_SERIAL_NOT_MAC`, `grant.py` epilog (read by the synthesis). G44. N6 words, P336 (#430) |
+| 54 | C6 needs "start the firmware with `--after watchdog-reset`". | rows C6, technology 6 | rejected | done: `flasher.py:51` (read by the synthesis, refuter R5). Technology's `deploy.py:95` is `--help` text. Cut from C6 |
+| 55 | P469's plan pins `--after hard-reset` for the look, and C6 uses `watchdog-reset`. | UX 7, refuter R6 | verified | refuter: P469 plan lines 12 and 28, `flasher.py:45-50`. P469 (#637) edit drops "hard-reset pinned" |
+| 56 | P469's body does not name `machine.bootloader()`. | rows comparison | rejected | refuter R7: its "From walk 3" section names it (`gh issue view 637`). Only its Done when lacks it. P469 edit adds one line |
+| 57 | `machine.bootloader()` runs code on the board, so the read-only yes of P469 does not cover it. | UX 6 | verified | P472 finding (`finding.md:6,21,85`): it restarts the chip into download mode. PO decision 2 |
+| 58 | The grant file is a plain file that Claude can write. | UX 5 | verified | `grant.py` epilog: "anything that can write your store can write it" (read by the synthesis). Claude Code's deny rule for the path not checked. PO decision 3 |
+| 59 | `FlashLayout` takes the flash size from the record's `flash_mb`. | architecture A6 | rejected | refuter R9, read by the synthesis: `flash_mb` is `[16, 4]`, one per SKU (`boards/firebeetle2-esp32s3.json:15`). N9 takes the look's measured size |
+| 60 | The GDI GPIOs are no header labels, so connector pins join `candidates()`. | architecture A2 | rejected | refuter R10: BL 21 = D13, DC 3 = D2, RST 38 = D3, CS 18 = D6, and the rest. No assigner change. The class diagram in `plan.md` |
+| 61 | `requirements.json` cannot pin a part's signal. | refuter R11 | verified | refuter ran it: "both TFT_BL". `design.py:128-150`. N2 |
+| 62 | Ready holds 6 against a limit of 5. | product 1 | rejected | refuter R12 and the synthesis (`gh project item-list 2`): Ready is P473, P503, P506, P507, P508. P510 and P469 are in Build |
+| 63 | P507 (#702) and P508 (#703) lack "### Needed by". | product 2 | rejected | both bodies hold it (`gh issue view 702`, `703`). No edit |
+| 64 | C10 merges into P467 (#635), or adds one `ONBOARD_ROLES` row. | product 7, architecture C10 | rejected | refuter R13: P467's Done when is a ranking test. `onboard_lines` already writes `<NAME>_<LABEL>` (`assign_pins.py:432-440`). N12 |
+| 65 | G42 belongs in P336's driver records. | product C8, rows C8 | rejected | refuter, merges: a flash layout defect in `flash_image.py`, not a driver record. N9 |
+| 66 | G16 falls between cards, so it joins C6's watch step. | product 3 | acted | walk 3 rejected P465 (#633) as its home (P480 row 44). N7 |
+| 67 | A drop needs no hold code, because holds come from the picks on each plan. | architecture A5 | raised | refuter: `needs.py:448-452` rebuilds `used_in` per project, plausible, not run. N3's Done when tests it |
+| 68 | `ONBOARD_LED` in `pins.py` after the light left is by design, a defect only while a connector claims GPIO21. | architecture A4 | verified | the synthesis read `assign_pins.py:427-428`: every onboard role of the record is written. N3 drops the "mark unused" half. P460's connector card |
+| 69 | C6 waits for W4-2 and for E1. | architecture A10, A11 | rejected | only the watch step needs the Reporter (`event-seam-plan.md`). N6 is a `--json` key and grant fields. N7 waits for P507, N6 for P508's goldens |
+| 70 | G5, G8 and G13 are each in three walks. | product 3 | verified | rows 5 and 8 cite walk 2's G8 and G1, row 13 walk 3's G31, which P480 row 31 traces to walk 2's G23. PO decision 4 |
 
 ## Ideas and asks
 
