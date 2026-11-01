@@ -2252,6 +2252,25 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         self.assertIn("hand-added: mine", second)
 
     @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+    def test_a_hand_added_led_passes_and_an_unwired_one_is_a_warning(self):
+        # P497: the linter knows wokwi-led's attributes, not the handAdded mark, and warns on a part in no wire
+        into = Path(tempfile.mkdtemp()) / "project"
+        self.build(into)
+        path = into / "sim" / "diagram.json"
+        diagram = json.loads(path.read_text())
+        for name, top in (("wired", 5), ("lone", 6)):
+            diagram["parts"].append({"type": "wokwi-led", "id": name, "top": top, "left": 6, "attrs": {"handAdded": "true"}})
+        diagram["connections"] += [["wired:A", "mcu:4", "green", []], ["wired:C", "mcu:GND.3", "black", []]]
+        path.write_text(json.dumps(diagram))
+        second = self.build(into)
+        again = json.loads(path.read_text())
+        self.assertEqual([part["id"] for part in again["parts"] if part["id"] in ("wired", "lone")], ["wired", "lone"])
+        self.assertIn("hand-added: wired, lone", second)
+        self.assertIn("lone is hand-added and has no wire yet: it stays in the diagram, and the build passed.", second)
+        self.assertNotIn("wired is hand-added and has no wire yet", second)
+        self.assertNotIn("no diagram was produced", second)
+
+    @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
     def test_a_full_build_on_a_board_heard_without_wires_gives_no_serial_warning(self):
         # P468: the XIAO's Wokwi part has no TX and RX, so its diagram gets no $serialMonitor wires, and its record says a
         # run heard it without them

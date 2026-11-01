@@ -1,0 +1,20 @@
+[
+ {
+  "file": "tools/circuit-to-wokwi/lib/validate.ts",
+  "name": "the handAdded mark is reported as an unknown attribute again",
+  "find": "    if (issue.rule === \"invalid-attribute\" && (issue as any).context?.attrName === HAND_ADDED_ATTR) continue;\n",
+  "replace": ""
+ },
+ {
+  "file": "tools/circuit-to-wokwi/lib/validate.ts",
+  "name": "every unwired part is downgraded to a warning, a generated one too",
+  "find": "issue.rule === \"redundant-parts\" && handAddedIds.includes(partId)",
+  "replace": "issue.rule === \"redundant-parts\""
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "the converter's warning for an unwired hand-added part is not in the build output",
+  "find": "    return HAND_ADDED_WARNING.findall(stdout or \"\")",
+  "replace": "    return []"
+ }
+]

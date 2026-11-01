@@ -21759,8 +21759,9 @@ function carryOverDesignWarnings(circuitJson, problems) {
 }
 
 // lib/validate.ts
-function validate(emitted, componentCount) {
-  const lintProblems = lint(emitted);
+var HAND_ADDED_ATTR2 = "handAdded";
+function validate(emitted, componentCount, handAddedIds = []) {
+  const { problems: lintProblems, warnings } = lint(emitted, handAddedIds);
   const coverageProblems = [
     ...checkNetCoverage(emitted),
     ...checkNothingVanished(emitted, componentCount)
@@ -21769,15 +21770,27 @@ function validate(emitted, componentCount) {
     problems: [...lintProblems, ...coverageProblems],
     checkedNets: emitted.netOutcomes.length,
     wiredNets: emitted.netOutcomes.filter((outcome) => outcome.wires > 0).length,
-    lintIssues: lintProblems.length
+    lintIssues: lintProblems.length,
+    warnings
   };
 }
-function lint(emitted) {
+function lint(emitted, handAddedIds) {
   const result = new DiagramLinter().lint(emitted.diagram);
-  return result.issues.filter((issue) => issue.severity !== "info").map((issue) => ({
-    message: `${issue.rule}: ${issue.message}`,
-    context: { component: issue.partId }
-  }));
+  const problems = [];
+  const warnings = [];
+  for (const issue of result.issues) {
+    if (issue.severity === "info")
+      continue;
+    const partId = issue.partId;
+    if (issue.rule === "invalid-attribute" && issue.context?.attrName === HAND_ADDED_ATTR2)
+      continue;
+    if (issue.rule === "redundant-parts" && handAddedIds.includes(partId)) {
+      warnings.push(`${partId} is hand-added and has no wire yet: it stays in the diagram, and the build passed. ` + "Wire it in Wokwi if it should do something.");
+      continue;
+    }
+    problems.push({ message: `${issue.rule}: ${issue.message}`, context: { component: partId } });
+  }
+  return { problems, warnings };
 }
 function checkNothingVanished(emitted, componentCount) {
   if (componentCount === undefined)
@@ -21851,7 +21864,7 @@ async function main() {
   const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips, author });
   const existing = await readExisting(options.out);
   const { diagram, summary } = mergeWithExisting(emitted.diagram, existing);
-  const validation = validate({ ...emitted, diagram }, netlist.components.length);
+  const validation = validate({ ...emitted, diagram }, netlist.components.length, summary.keptHandAddedParts);
   report({ netlist, emitted, summary, validation, designProblems });
   const blocking = [...emitted.problems, ...validation.problems];
   if (blocking.length)
@@ -21897,6 +21910,9 @@ not simulated, on purpose:`);
     console.log(`
 kept from the existing diagram: ${summary.keptPositions} positions, ` + `${summary.keptRoutes} wire routes` + (summary.keptHandAddedParts.length ? `, hand-added parts: ${summary.keptHandAddedParts.join(", ")}` : ""));
   }
+  for (const warning of validation.warnings)
+    console.log(`
+warning: ${warning}`);
   if (designProblems.length) {
     console.log(`
 the board design itself reports:`);

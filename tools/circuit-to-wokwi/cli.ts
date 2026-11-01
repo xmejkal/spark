@@ -98,7 +98,7 @@ async function main() {
   const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips, author });
   const existing = await readExisting(options.out);
   const { diagram, summary } = mergeWithExisting(emitted.diagram, existing);
-  const validation = validate({ ...emitted, diagram }, netlist.components.length);
+  const validation = validate({ ...emitted, diagram }, netlist.components.length, summary.keptHandAddedParts);
 
   report({ netlist, emitted, summary, validation, designProblems });
 
@@ -157,6 +157,8 @@ function report({ netlist, emitted, summary, validation, designProblems }: any) 
           : ""),
     );
   }
+
+  for (const warning of validation.warnings) console.log(`\nwarning: ${warning}`);
 
   if (designProblems.length) {
     console.log("\nthe board design itself reports:");

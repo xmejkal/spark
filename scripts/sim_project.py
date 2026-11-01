@@ -369,6 +369,13 @@ def kept_note(stdout):
         return ""
     positions, routes, added = found.groups()
     return "kept from your diagram: %s part positions, %s wire routes%s" % (positions, routes, ", hand-added: " + added.strip() if added else "")
+
+HAND_ADDED_WARNING = re.compile(r"^warning: (\S+ is hand-added and has no wire yet.*)$", re.MULTILINE)
+
+
+def hand_added_warnings(stdout):
+    """The converter's warning lines for a hand-added part with no wire (P497), without the "warning: " lead."""
+    return HAND_ADDED_WARNING.findall(stdout or "")
 # --- end MVP ---
 
 

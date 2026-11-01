@@ -346,6 +346,16 @@ class TheKeptDiagramIsCopiedInTest(unittest.TestCase):
         text = "\nkept from the existing diagram: 2 positions, 0 wire routes\n"
         self.assertEqual(sim_project.kept_note(text), "kept from your diagram: 2 part positions, 0 wire routes")
 
+    def test_a_hand_added_warning_line_is_picked_out_of_the_output(self):
+        text = ("\nkept from the existing diagram: 4 positions, 3 wire routes, hand-added parts: mine, lone\n"
+                "\nwarning: lone is hand-added and has no wire yet: it stays in the diagram, and the build passed. "
+                "Wire it in Wokwi if it should do something.\n\nwrote x\n")
+        self.assertEqual(sim_project.hand_added_warnings(text),
+                         ["lone is hand-added and has no wire yet: it stays in the diagram, and the build passed. "
+                          "Wire it in Wokwi if it should do something."])
+        self.assertEqual(sim_project.hand_added_warnings("nothing here"), [])
+        self.assertEqual(sim_project.hand_added_warnings(None), [])
+
     def test_no_summary_is_no_note(self):
         self.assertEqual(sim_project.kept_note(""), "")
         self.assertEqual(sim_project.kept_note(None), "")
