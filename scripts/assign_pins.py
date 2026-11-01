@@ -35,6 +35,7 @@ was never actually satisfiable.
 import argparse
 import json
 import sys
+from collections import namedtuple
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -42,7 +43,9 @@ sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
 import design as design_library  # noqa: E402
+import missing_facts  # noqa: E402
 import parts as parts_library  # noqa: E402
+import provenance  # noqa: E402
 from spark.core.text_guards import one_line  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_IMPOSSIBLE  # noqa: E402
@@ -442,7 +445,7 @@ def onboard_lines(written, role, name, record):
         return []
     labels = boards.pin_labels(record)
     facts = record["facts"] if isinstance(record.get("facts"), dict) else {}
-    level = record.get("active_level")
+    level = provenance.read_value(record, "active_level")
     note = one_line("%s: %s" % (role, str(record.get("note", "")).rstrip(".")))
     named = []
     if boards.names_pins(record):
@@ -452,10 +455,13 @@ def onboard_lines(written, role, name, record):
                     said = note if not named else "%s: the note is on the first line of this part" % role
                     named.append(("%s_%s" % (name, label), "%d  # %s" % (number, said)))
         else:
-            polarity = ". Its polarity is not in the board record" if role == boards.ONBOARD_LED and level is None else ""
-            named.append((name, "%d  # %s%s" % (gpio[0], note, polarity)))
+            gap = ". Its active level is not in the board record" if role in missing_facts.ACTIVE_LEVEL_MEANING and level is None else ""
+            named.append((name, "%d  # %s%s" % (gpio[0], note, gap)))
     if level is not None and named:
-        named.append((name + "_ON", "%d  # the active level in the board record, the source is on the line above" % level))
+        held = record["active_level"]
+        origin = ("source: %s%s" % (one_line(str(held.get("source"))), "" if held.get("verified") is True else "; not verified")
+                  if isinstance(held, dict) else "the source is on the line above")
+        named.append((name + "_ON", "%d  # the active level in the board record, %s" % (level, origin)))
     for fact, said in facts.items():
         value = said.get("value") if isinstance(said, dict) else None
         if boards.is_fact_value(value):
@@ -476,14 +482,20 @@ PULL_SUFFIX = "_PULL"
 PIN_MODULE_HEADER = "# The pin map: written by spark's assign_pins.py"
 
 
+#: Result: the pin module's text, and the Findings (`missing_facts`) of the facts the board record lacks, which it names in a comment (P464).
+PinModuleResult = namedtuple("PinModuleResult", "module missing_facts")
+
+
 def pin_module_for(requirements):
     """
-    The pin module `--emit-pins` writes for a requirements file, with the project and board resolved as the command
-    resolves them (P196: the build keeps it beside the board). Raises DesignError or Impossible, each saying why.
+    A PinModuleResult: the pin module `--emit-pins` writes for a requirements file, with the project and board resolved
+    as the command resolves them (P196: the build keeps it beside the board), and what the board record lacks that a stage
+    needs (P464). Raises DesignError or Impossible, each saying why.
     """
     loaded = design_library.load(requirements, None, None)
     assignments, _ = assign(loaded.board, loaded.signals)
-    return pin_module(loaded.board, assignments, Path(requirements).name, pulled_up(loaded.parts))
+    return PinModuleResult(pin_module(loaded.board, assignments, Path(requirements).name, pulled_up(loaded.parts)),
+                           missing_facts.list_missing_facts(loaded.board))
 
 
 def pulled_up(part_list):

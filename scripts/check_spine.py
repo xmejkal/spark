@@ -73,10 +73,9 @@ import tabbed_page  # noqa: E402
 import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 
-from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, NOT_CHECKED  # noqa: E402
+from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, NOT_CHECKED, OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
+from spark.core.result import envelope_item  # noqa: E402
 from spark.core.text_guards import guard_lines  # noqa: E402
-
-from spark.core.outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
 
 #: The design the chain is proven against when nobody names one. A motor driver, a sensor on a
 #: bus, and the power inlet that supplies the rail the modules only consume — the smallest set
@@ -681,7 +680,7 @@ def main(argv=None):
                              "breadboard.svg, that drawing as a picture, "
                              "a rebuild also lists what to change on the bench (one `changed` entry for each line), page.html, the breadboard, schematic and PCB "
                              "in three tabs to open in a browser or to publish as an Artifact, and "
-                             "firmware/pins.py, the pins the firmware imports. The simulation project goes to DIR/sim")
+                             "firmware/pins.py, the pins the firmware imports, with one `missing_facts` item for each fact the board record lacks. The simulation project goes to DIR/sim")
     parser.add_argument("--sim-dir", type=Path, metavar="DIR",
                         help="keep the simulation project here instead of DIR/sim: diagram.json, wokwi.toml, the chips")
     parser.add_argument("--firmware", metavar="IMAGE",
@@ -948,9 +947,10 @@ def keep_pins(requirements, destination):
                     "line": "no pin map: %s; removed %s, which described an earlier design" % (stopped, target)}
         return {"file": str(target), "did": "not written", "why": str(stopped), "line": "no pin map: %s" % stopped}
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(module)
-    why = "the pins the firmware imports"
-    return {"file": str(target), "did": "wrote", "why": why, "line": "wrote %s — %s" % (target, why)}
+    target.write_text(module.module)
+    why, missing = "the pins the firmware imports", [envelope_item(each) for each in module.missing_facts]
+    return dict({"file": str(target), "did": "wrote", "why": why, "line": "wrote %s — %s%s" % (target, why, "".join(
+        "\n  missing fact: %s. %s" % (item["sentence"], item["fix"]) for item in missing))}, **{"missing_facts": missing} if missing else {})
 
 
 def _kept_pins(requirements, destination):
