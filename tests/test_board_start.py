@@ -14,12 +14,12 @@ import board_start  # noqa: E402
 import boards  # noqa: E402
 from fakes import FakeClock, FakePortFinder  # noqa: E402
 
-MAC = "8c:bf:ea:12:34:56"
+MAC = "8c:bf:ea:00:00:03"
 #: The port as the ROM lists it (the serial is the MAC), as MicroPython lists it (hex of 8 bytes, the MAC first), and a bridge's.
 ROM = board_look.Port("/dev/cu.usbmodem1101", MAC, "303a:1001", "ESP32-S3")
-MICROPYTHON = board_look.Port("/dev/cu.usbmodem2101", "8CBFEA12345600FF", "303a:4001", "MicroPython")
+MICROPYTHON = board_look.Port("/dev/cu.usbmodem2101", "8CBFEA00000300FF", "303a:4001", "MicroPython")
 BRIDGE = board_look.Port("/dev/cu.usbserial-1410", "01A2B3C4", "10c4:ea60", "CP2102")
-OTHER = board_look.Port("/dev/cu.usbmodem3301", "8c:bf:ea:11:22:33", "303a:1001", "ESP32-S3")
+OTHER = board_look.Port("/dev/cu.usbmodem3301", "8c:bf:ea:00:00:04", "303a:1001", "ESP32-S3")
 
 
 def name(row):
@@ -47,7 +47,7 @@ class BoardStartTest(unittest.TestCase):
         self.assertEqual(name(service.find_port(ROM.device)), MICROPYTHON.device)
 
     def test_another_board_on_the_old_name_does_not_hide_the_board_on_a_new_one(self):
-        other_here = board_look.Port(ROM.device, "8c:bf:ea:11:22:33", "303a:1001", "ESP32-S3")
+        other_here = board_look.Port(ROM.device, "8c:bf:ea:00:00:04", "303a:1001", "ESP32-S3")
         self.assertEqual(name(self.service([other_here, MICROPYTHON]).find_port(ROM.device)), MICROPYTHON.device)
 
     def test_a_micropython_serial_of_8_bytes_matches_a_mac_with_colons(self):
