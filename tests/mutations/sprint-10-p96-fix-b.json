@@ -1,6 +1,6 @@
 [
  {"file": "scripts/parts.py", "name": "the library is written",
-  "find": "    if path.parent.resolve() == LIBRARY.resolve():\n", "replace": "    if False:\n"},
+  "find": "    if path.parent.resolve() in (LIBRARY.resolve(), boards.LIBRARY.resolve()):\n", "replace": "    if False:\n"},
  {"file": "scripts/parts.py", "name": "the answer hides the file",
   "find": "{\"part\": part_id, \"path\": str(path), \"was\"", "replace": "{\"part\": part_id, \"path\": None, \"was\""},
  {"file": "scripts/parts.py", "name": "function-set: written means bytes changed",

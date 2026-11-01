@@ -40,6 +40,8 @@ FLASH_FAILED = "flash_failed"
 READY_NOT_SEEN, READY_UNKNOWN = "ready_not_seen", "ready_unknown"
 #: Why the board did not start after the write (P462): it still waits in download mode, or its port is gone.
 DOWNLOAD_MODE_STAYED, PORT_GONE = "download_mode_stayed", "port_gone"
+#: A stage needs a fact the record lacks (P464): the item of `missing_facts`, in the build's `kept` pin-map entry.
+MISSING_FACT = "missing_fact"
 #: Not in the look or deploy envelope: the reasons of grant.py's refusals (board_grant.CODE_FOR_WHY).
 NOT_A_GRANT, BAD_MINUTES, BAD_SCOPE, SERIAL_NOT_MAC = "not_a_grant", "bad_minutes", "bad_scope", "serial_not_mac"
 
@@ -80,6 +82,7 @@ CODES = {
     READY_UNKNOWN: "the board could not be read after the flash, or the passed run's log names no files",
     DOWNLOAD_MODE_STAYED: "the board still waits in download mode after the flash, and the person's RESET press did not start it",
     PORT_GONE: "the board's port was not listed after the flash, or went and did not come back",
+    MISSING_FACT: "a stage needs a fact the record lacks, so it stopped short of guessing it",
     NOT_A_GRANT: "the store's grant file for the board is not a grant for it",
     BAD_MINUTES: "--minutes is not a whole number from 1 to 1440",
     BAD_SCOPE: "--scope is not a scope a grant has",
