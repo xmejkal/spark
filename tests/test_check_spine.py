@@ -875,6 +875,20 @@ class ReachingSimulationTest(unittest.TestCase):
         self.assertIn("no serial monitor is wired", said)
         self.assertNotIn("serial", check_spine.simulation_detail(3, {}, 0, [], serial=True))
 
+    def test_serial_heard_is_wired_or_the_boards_record_says_true(self):
+        # P468: a record's `serial_without_wires` counts only as the value true, never "yes", 1 or a missing record
+        bare = {"connections": []}
+        wired = {"connections": [["mcu:TX", "$serialMonitor:RX", "", []]]}
+        self.assertTrue(check_spine.serial_heard(bare, {"serial_without_wires": True}))
+        self.assertFalse(check_spine.serial_heard(bare, {}))
+        self.assertFalse(check_spine.serial_heard(bare, None))
+        self.assertFalse(check_spine.serial_heard(bare, {"serial_without_wires": "yes"}))
+        self.assertTrue(check_spine.serial_heard(wired, {}))
+
+    def test_the_shipped_xiao_and_firebeetle_records_say_their_serial_needs_no_wires(self):
+        self.assertIs(boards.load(ROOT, "xiao-esp32-c6")["serial_without_wires"], True)
+        self.assertIs(boards.load(ROOT, "firebeetle2-esp32s3")["serial_without_wires"], True)
+
     def test_a_diagram_missing_the_key_entirely_counts_zero_rather_than_raising(self):
         self.assertEqual(check_spine.wires_in({}), 0)
 
@@ -1338,6 +1352,16 @@ class TheBoardAloneTest(unittest.TestCase):
         self.assertIn("ONBOARD_BUTTON (GPIO9): the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9", stages[-1].detail)
         self.assertIn("ONBOARD_BUTTON (GPIO9)", (workdir / "sim" / "WHAT-THIS-CANNOT-SHOW.md").read_text())
         self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_OK)
+
+    def test_the_board_alone_warns_of_no_serial_monitor_unless_the_record_says_it_needs_no_wires(self):
+        # P468: the XIAO's USB serial needs no wires, so only a record without the fact keeps the warning
+        for fact, warned in ((True, False), (None, True)):
+            board = boards.load(ROOT, "xiao-esp32-c6")
+            board.pop("serial_without_wires", None)
+            if fact:
+                board["serial_without_wires"] = fact
+            stages = check_spine.board_alone(board, Path(tempfile.mkdtemp()))
+            self.assertEqual("no serial monitor is wired in the diagram" in stages[-1].detail, warned)
 
     def test_a_definition_not_checked_is_said_in_json_and_still_exits_0(self):
         # The suite's scratch store holds no Wokwi definition, so the library XIAO's line is "not checked".
@@ -2226,6 +2250,20 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         self.assertIn(["mine:GND", "mcu:GND.3", "red", []], again["connections"])
         self.assertIn("kept from your diagram: ", second)
         self.assertIn("hand-added: mine", second)
+
+    @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+    def test_a_full_build_on_a_board_heard_without_wires_gives_no_serial_warning(self):
+        # P468: the XIAO's Wokwi part has no TX and RX, so its diagram gets no $serialMonitor wires, and its record says a
+        # run heard it without them
+        folder = Path(tempfile.mkdtemp())
+        (folder / "requirements.json").write_text('{"board": "xiao-esp32-c6", "parts": ["tactile-button", "led-red-5mm"]}')
+        into, out = folder / "project", io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(folder / "requirements.json"), "--keep", str(into)])
+        said = out.getvalue()
+        wires = json.loads((into / "sim" / "diagram.json").read_text())["connections"]
+        self.assertFalse([wire for wire in wires if any(str(end).startswith("$serialMonitor") for end in wire[:2])])
+        self.assertNotIn("no serial monitor", said)
 
     def test_a_converter_that_fails_beside_a_copied_diagram_fails_the_stage(self):
         requirements = json.loads((self.FIXTURE / "requirements.json").read_text())
