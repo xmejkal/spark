@@ -49,7 +49,7 @@ exit 1
 /dev/cu.BoseQC35II None 0000:0000 None None
 /dev/cu.FreeLoop1_R None 0000:0000 None None
 /dev/cu.debug-console None 0000:0000 None None
-/dev/cu.usbmodem1101 34:85:18:42:E4:10 303a:1001 Espressif USB JTAG/serial debug unit
+/dev/cu.usbmodem1101 34:85:18:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit
 /dev/cu.wlan-debug None 0000:0000 None None
 exit 0
 === 2026-10-31 23:29:10 CET try2-chipid-noreset: python3 -m esptool --port /dev/cu.usbmodem1101 --before no-reset --after no-reset chip-id
