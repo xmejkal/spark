@@ -77,8 +77,8 @@ stop (another chip, a flash too small for the image) or a token that is not this
 asks in your terminal, naming every warning: type yes to accept them and erase. Only a real terminal can answer.
 A pipe, a script or Claude Code's ! is none, so deploy.py prints the line to run in your own terminal window. It
 starts with SPARK_HOME=<your store> when this run had one, so the new window finds the same MicroPython build and
-grants. "Go
-ahead" in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
+grants. "Go ahead"
+in a chat is not the yes, and the token is not the yes. --dry-run never touches USB: it does not look.
 
 The one other yes is a deploy grant: you ran `grant.py --scope deploy --minutes N` once in your own terminal, for this
 board's MAC. While it lasts, deploy.py takes it as the yes, prints `yes: standing yes typed by ...` and erases with no

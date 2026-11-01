@@ -37,20 +37,56 @@
  },
  {
   "file": "scripts/flash_image.py",
+  "name": "no-entry-refusal-hint-dropped",
+  "find": "own_build_hint_for(project, build, None))",
+  "replace": "\"\")"
+ },
+ {
+  "file": "scripts/store.py",
+  "name": "rerun-line-prefix-dropped",
+  "find": "return prefix_home(shlex.join([str(Path(script).resolve())]",
+  "replace": "return (shlex.join([str(Path(script).resolve())]"
+ },
+ {
+  "file": "scripts/flash_image.py",
   "name": "entry-name-lost",
-  "find": "OWN_BUILD_HINT % (where, name or \"<name>\", tie, where, name or \"<name>\")",
-  "replace": "OWN_BUILD_HINT % (where, \"<name>\", tie, where, \"<name>\")"
+  "find": "[\"--project\", Path(project).resolve()], name or \"<name>\"",
+  "replace": "[\"--project\", Path(project).resolve()], \"<name>\""
  },
  {
   "file": "scripts/flash_image.py",
   "name": "fields-that-tie-dropped",
-  "find": "tie = \"\" if name else ', \"micropython_port\"",
-  "replace": "tie = \"\" if True else ', \"micropython_port\""
+  "find": "    if not name:\n        entry.update(",
+  "replace": "    if False:\n        entry.update("
  },
  {
   "file": "scripts/flash_image.py",
-  "name": "no-entry-refusal-hint-dropped",
-  "find": "own_build_hint_for(project, build, None))",
-  "replace": "\"\")"
+  "name": "install-line-bare",
+  "find": "store.format_rerun_line(tools_py, where + [\"--install\", name])",
+  "replace": "\" \".join([\"tools.py\"] + [str(part) for part in where] + [\"--install\", name])"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "new-line-bare",
+  "find": "store.format_rerun_line(tools_py, where + [\"--new\", \"%s=%s\" % (name, json.dumps(entry))])",
+  "replace": "\" \".join([\"tools.py\"] + [str(part) for part in where] + [\"--new\", \"%s=%s\" % (name, json.dumps(entry))])"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "build-again-dropped",
+  "find": "build_command(project, image) if image else BUILD_AGAIN",
+  "replace": "BUILD_AGAIN"
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "build-line-not-whole-path",
+  "find": "store.format_rerun_line(Path(__file__), [\"--project\", project, \"--files\", project / \"firmware\"",
+  "replace": "store.format_rerun_line(Path(\"flash_image.py\"), [\"--project\", project, \"--files\", project / \"firmware\""
+ },
+ {
+  "file": "scripts/flash_image.py",
+  "name": "build-line-firmware-relative",
+  "find": "\"--files\", project / \"firmware\"",
+  "replace": "\"--files\", \"firmware\""
  }
 ]
