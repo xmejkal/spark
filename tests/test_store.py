@@ -91,7 +91,7 @@ class AStorePathThatIsAFileTest(unittest.TestCase):
         os.environ["SPARK_HOME"] = str(scratch / "afile")
         with self.assertRaises(store.StoreProblem) as refused:
             store.add_project(scratch)
-        self.assertIn("point SPARK_HOME at a folder", str(refused.exception))
+        self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
 
 
 class ThePrefixedLineTest(unittest.TestCase):

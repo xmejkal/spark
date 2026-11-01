@@ -21,4 +21,4 @@ What the P487 build (card #666) checked in the code before it wrote each sentenc
 | 15 | The select.poll docs say it polls `sys.stdin` without waiting | refuter 2 | rejected | the docs say only a stream and a timeout in ms; the page says that |
 | 16 | A note that names a pin limit always names the other choice | refuter 3 | rejected | `needs.py:351-356` gives ALL_HELD or nothing; the idea page says so, as agents.md:193-195 does |
 | 17 | The look's `next` step is a line to run | refuter 4 | rejected | it is `{op, argv}` without the script, and only `--json` prints it; the page says `deploy.py` plus its argv |
-| 18 | init writes its files when the store refuses | refuter 5 | raised | `init_project.py:429-432` catches only StoreProblem; SPARK_HOME on a file raises FileExistsError and writes nothing. Older code: a bug card |
+| 18 | init writes its files when the store refuses | refuter 5 | acted | `init_project.py:429-432` catches only StoreProblem; SPARK_HOME on a file raises FileExistsError and writes nothing. Older code: a bug card; fixed by P496 (#678, PR #683) |
