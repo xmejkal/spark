@@ -65,7 +65,7 @@ yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line 
 shows as `/dev/cu.usbmodem…`.
 
 If Claude Code itself refuses the run before deploy.py prints anything, the person has no deploy.py line. Say so, and give
-the person the look's `next` step as the line to run in their own terminal, with `SPARK_HOME=<the store>` in front when the run had one.
+the person `deploy.py` followed by the `argv` of the `next` step that `look.py --json` printed, quoted for the shell, as the line to run in their own terminal, with `SPARK_HOME=<the store>` in front when the run had one.
 Do not run the line by another route.
 
 deploy.py flashes only an image that passed, unless the person chose `--no-simulation` (below). The image is the one the `firmware = ` line of `sim/wokwi.toml` names. A build writes that line as a comment, so until the first scenario run writes it, the image is `sim/flash-with-firmware.bin`. A log in `sim/runs/` must name
