@@ -44,20 +44,20 @@
  {
   "file": "scripts/board_start.py",
   "name": "reset when the port only goes",
-  "find": "            if now is None:\n                gone = True",
-  "replace": "            if now is None:\n                return BoardStartResult(None, port, \"\")"
+  "find": "            if row is None:\n                gone = True",
+  "replace": "            if row is None:\n                return BoardStartResult(None, port, \"\")"
  },
  {
   "file": "scripts/deploy_service.py",
   "name": "probe without expected files",
-  "find": "elif board[2].verdict == ready_check.UNKNOWN and expected:",
-  "replace": "elif board[2].verdict == ready_check.UNKNOWN:"
+  "find": "board[2].verdict == ready_check.UNKNOWN and expected",
+  "replace": "board[2].verdict == ready_check.UNKNOWN"
  },
  {
   "file": "scripts/deploy_service.py",
   "name": "probe whatever the verdict",
-  "find": "elif board[2].verdict == ready_check.UNKNOWN and expected:",
-  "replace": "elif expected:"
+  "find": "board[2].verdict == ready_check.UNKNOWN and expected",
+  "replace": "expected"
  },
  {
   "file": "scripts/deploy_service.py",
@@ -68,13 +68,13 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "console line left out of the board log",
-  "find": "starter.heard.append(\"console with DTR and RTS off: %s\\n\" % (console.strip() or \"nothing\"))",
+  "find": "starter.note(\"console with DTR and RTS off: %s\\n\" % (console.strip() or \"nothing\"))",
   "replace": "pass"
  },
  {
   "file": "scripts/board_start.py",
   "name": "the log does not say that the restart counted",
-  "find": "self.heard.append(COUNTED)",
+  "find": "self.note(COUNTED)",
   "replace": "pass"
  }
 ]

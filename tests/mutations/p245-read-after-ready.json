@@ -38,7 +38,7 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "not-logged",
-  "find": "starter.heard.append(download_mode.READ_AGAIN + \"\\n\")",
+  "find": "starter.note(download_mode.READ_AGAIN + \"\\n\")",
   "replace": "pass"
  },
  {
