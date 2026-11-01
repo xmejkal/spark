@@ -180,7 +180,7 @@ board spark generated.
   ([P461](https://github.com/xmejkal/spark/issues/629)).
 - On 2026-11-01 the same board ran `deploy.py --no-simulation` again. esptool restarted it with
   `--after watchdog-reset`. deploy asked for no RESET press and printed `ready seen`. Then the board's own D14 button
-  lit its own D13 LED ([P462](https://github.com/xmejkal/spark/issues/630#issuecomment-6553931461)).
+  lit its own D13 LED ([P462](https://github.com/xmejkal/spark/issues/630#issuecomment-6553931461)). Walk 4 repeated that on 2026-11-01: each press moved the LED to the next effect ([P510](https://github.com/xmejkal/spark/issues/705)). Then `deploy.py` put a display with Python games on the board. The faster C driver image went on outside spark.
   [P337](https://github.com/xmejkal/spark/issues/431) was the first card for a deploy with no simulation.
 - On 2026-10-18 a deploy grant ran on the XIAO ESP32-C6 with the blink project. The first run did not connect for the
   erase right after its own look. The second went through, and the store record names the grant as the yes. Since

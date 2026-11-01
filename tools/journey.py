@@ -20,8 +20,8 @@ PICTURE = "docs/guide/journey.svg"
 #: is the step's name in lower case. A row that links another step's page gives no status.
 STATUS_ROW = re.compile(r"^\| \[(\w+)\]\(docs/guide/journey/([\w-]+)\.md\) \| \*\*(works|partly|not yet)\*\*", re.M)
 #: The strip at the bottom: where we are, and what is next. Each line holds at most STRIP characters.
-WHERE = "the button-and-LED firmware read ready seen on a XIAO ESP32-C6 on 2026-10-15."
-NEXT = "wire its breadboard and press the button."
+WHERE = "the FireBeetle 2 button changed its LED in Wokwi and on the bench on 2026-11-01."
+NEXT = "build an SPI or I2C part on the FireBeetle 2 (P510 walk 4 council)."
 STRIP = 100
 #: Each step: its name in the README's table, its command, what you do, what you get, a note on how far it works, and
 #: the status that note was written for. A step whose status changes in the table needs a new note here.
@@ -35,15 +35,15 @@ STEPS = [
      "The library search runs. Research by agents was not run.", "partly"),
     ("Build", "/spark:build", "Run it on the requirements file.",
      "A board that builds, a Wokwi diagram, a sheet, a page of tabs.",
-     "Ran end to end on 2026-10-11. Drawn on a half breadboard for the XIAO C6 (a Wokwi diagram). A picture alone for the FireBeetle 2 S3, from its record, 2026-10-29. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18. The library's XIAO record builds button + LED, 2026-10-18.", "works"),
+     "Ran end to end on 2026-10-11. Drawn on a half breadboard for the XIAO C6 (a Wokwi diagram). A picture alone for the FireBeetle 2 S3, from its record, 2026-10-29. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18. The library's XIAO record builds button + LED, 2026-10-18. Walk 4, 2026-11-01: an SPI or I2C part does not build on the FireBeetle 2 or the XIAO C6, because the emitter ignores the board's pad aliases (P510).", "partly"),
     ("Checks", "check_all.py", "Run the checks on the project.", "What holds, and what a check could not look at.",
      "A fresh button-and-LED project passes.", "works"),
     ("Firmware", "import_firmware.py", "Write the firmware with Claude.", "A pin map that the firmware imports.",
      "The import passes on a Mac. No check yet that it drives every signal.", "partly"),
     ("Simulate", "run_scenario.py", "Say in words what must happen.",
-     "The firmware running in Wokwi, with a dated log.", "The button-and-LED project passed on 2026-10-12. A board-only FireBeetle 2 S3 build wires its own LED and button, 2026-11-01.", "works"),
+     "The firmware running in Wokwi, with a dated log.", "The button-and-LED project passed on 2026-10-12. A board-only FireBeetle 2 S3 build wires its own LED and button, 2026-11-01. There its button changed its LED's effect (walk 4).", "works"),
     ("Bench", "look.py, deploy.py, live.py", "Wire the breadboard and flash the board.", "The tested firmware on the real board.",
-     "look.py reads the board on USB and checks it. deploy.py asks your yes first, or uses a deploy grant you gave once. With --no-simulation it flashes firmware/ that no simulation tested, on a typed yes only. It flashed a XIAO ESP32-C6 and read ready. On 2026-11-01 it flashed a FireBeetle 2 ESP32-S3, deploy needed no reset press after the flash, and its button lit its LED. live.py runs Claude's code inside your grant. No wired breadboard yet.", "partly"),
+     "look.py reads the board on USB and checks it. deploy.py asks your yes first, or uses a deploy grant you gave once. With --no-simulation it flashes firmware/ that no simulation tested, on a typed yes only. It flashed a XIAO ESP32-C6 and read ready. On 2026-11-01 it flashed a FireBeetle 2 ESP32-S3, deploy needed no reset press after the flash, and its button lit its LED. Walk 4 repeated that, and deploy.py put a display with Python games on it. The faster C driver image went on outside spark. live.py runs Claude's code inside your grant. No wired breadboard yet.", "partly"),
 ]
 #: Each status: the stop's fill, the label's fill, the label's text color, and its line in the legend.
 COLORS = {"works": ("#2dc75c", "#adf0c7", "#067429", "works: it ran end to end for the docs"),

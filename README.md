@@ -118,11 +118,11 @@ before its goal, or part of it was not run here. **not yet**: nothing does it ye
 | [Drawer](docs/guide/journey/drawer.md) | **partly**: the scripts that list and write what you own ran, but the conversation and the DFRobot import did not | `/spark:drawer` |
 | [Idea](docs/guide/journey/idea.md) | **partly**: the scripts ran from a goal's needs to a requirements file, but the conversation did not | `/spark:idea` |
 | [Research](docs/guide/journey/research.md) | **partly**: the library search runs, but the research agents did not run here | `/spark:research`, `/spark:identify` |
-| [Build](docs/guide/journey/build.md) | **works**: a requirements file becomes a board that builds, with a breadboard sheet, a pin map and a Wokwi diagram, or the stage that stopped it | `/spark:build` |
+| [Build](docs/guide/journey/build.md) | **partly**: an LED and button project builds, with a breadboard sheet, a pin map and a Wokwi diagram. An SPI or I2C part does not build on the FireBeetle 2 or the XIAO ESP32-C6, because the emitter ignores the board's pad aliases (walk 4, P510 council) | `/spark:build` |
 | [Checks](docs/guide/journey/checks.md) | **works**: `check_all.py` runs spark's five deterministic checks in one command | `check_all.py`, after `/spark:init` again |
 | [Firmware](docs/guide/journey/firmware.md) | **partly**: an import check proves the firmware's names, not that it drives every signal | `/spark:build`, `assign_pins.py --emit-pins`, `import_firmware.py` |
-| [Simulate](docs/guide/journey/simulate.md) | **works**: `run_scenario.py` runs your firmware in Wokwi on the built diagram and keeps a dated log | `/spark:build --keep .`, then `run_scenario.py` |
-| [Bench](docs/guide/journey/bench.md) | **partly**: `deploy.py` flashes the firmware onto the board after your yes, but no breadboard wired from a sheet has run yet | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
+| [Simulate](docs/guide/journey/simulate.md) | **works**: `run_scenario.py` runs your firmware in Wokwi on the built diagram and keeps a dated log. On 2026-11-01 the FireBeetle 2's button changed its LED's effect there (walk 4) | `/spark:build --keep .`, then `run_scenario.py` |
+| [Bench](docs/guide/journey/bench.md) | **partly**: `deploy.py` flashes the firmware onto the board after your yes, but no breadboard wired from a sheet has run yet. On 2026-11-01 it put a button-and-LED program and Python games on a FireBeetle 2. A C driver image went on outside spark (walk 4) | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
 
 ## Commands, skills and agents
 

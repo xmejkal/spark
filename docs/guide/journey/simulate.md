@@ -46,4 +46,4 @@ has no pin for. spark knows no way for a scenario to reach such a part. So you t
 `ONBOARD_BUTTON (GPIO9)` on the XIAO ESP32-C6 ([P396](https://github.com/xmejkal/spark/issues/512)). Without the definition, the build says
 `onboard GPIOs: not checked`. A board-only FireBeetle 2 ESP32-S3 build wires Wokwi's LED and pushbutton to GPIO21 and
 GPIO47 in place of the board's own. It says so in its limits. On 2026-11-01 a free scenario on walk 3's project
-pressed that button and passed ([P484](https://github.com/xmejkal/spark/issues/663)).
+pressed that button and passed ([P484](https://github.com/xmejkal/spark/issues/663)). Walk 4 did the same on 2026-11-01: the FireBeetle 2's button changed its LED's effect in Wokwi ([P510](https://github.com/xmejkal/spark/issues/705)).
