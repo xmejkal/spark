@@ -586,6 +586,15 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertIn("ready seen", said)
         self.assertIn(["connect", "/dev/cu.usbmodem2101"], [c[c.index("connect"):c.index("connect") + 2] for c in self.ran if "connect" in c][-1:])
 
+    def test_a_port_whose_usb_id_changed_with_no_gap_is_a_restart_and_is_read(self):
+        # the ROM's 303a:1001 became MicroPython's 303a:4001 between two listings, under the same name (P472 bench.log)
+        # it changed before the wait's first listing, so only the id the port had tells the change
+        self.uncopied, self.answers_after_devs = self.unread, 3
+        micropython = "/dev/cu.usbmodem101 8CBFEAXXXXXX00FF 303a:4001 MicroPython"
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED] * 2 + [micropython])
+        self.assertEqual(code, 0)
+        self.assertIn("ready seen", said)
+
     def test_a_board_found_on_a_moved_port_is_not_probed_for_download_mode(self):
         # the MAC match found it on another name: the console is not read there (P462, P472's try 6)
         probe = FakeConsoleProbe("waiting for download\n")

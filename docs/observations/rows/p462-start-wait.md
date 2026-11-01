@@ -1,6 +1,6 @@
 # P462: deploy waits for a real start and finds MicroPython's port
 
-Findings of P462 (#630), 2026-11-01, Prague, built on main 67c37600 in auto mode. Rows 1-6 are the plan, by an Opus planner with two council rounds. Rows 7-13 are the build. Rows 14-26 are the review (Sonnet reviewer and Opus refuter) and its fix round. Rows 27-31 are the fix-commit refuter (Opus) and the second fix round. Row 32 is the mutation run.
+Findings of P462 (#630), 2026-11-01, Prague, built on main 67c37600 in auto mode. Rows 1-6 are the plan, by an Opus planner with two council rounds. Rows 7-13 are the build. Rows 14-26 are the review (Sonnet reviewer and Opus refuter) and its fix round. Rows 27-31 are the fix-commit refuter (Opus) and the second fix round. Rows 32-33 are the mutation runs.
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
@@ -36,3 +36,4 @@ Findings of P462 (#630), 2026-11-01, Prague, built on main 67c37600 in auto mode
 | 30 | The EPILOG, deploy.md and agents.md say the console is read whenever ready is unknown | fix-commit refuter | verified, acted | they say: on the look's port, unless it is 303a:4001 |
 | 31 | The EPILOG credits esptool's source for leaving download mode | fix-commit refuter | verified, acted | the source only sets the watchdog. The troubleshooting page says it |
 | 32 | Mutation run on d01d4713: 102 planted, 101 caught, 4 refused | mutation-tester | acted | 2,479 s over six whole tables. The escape: no test checked `person_action` after a restart that counted. The moved-port json test asserts it is None. The 4 refusals were older rows. The escape and the second round's rows ran again on the head |
+| 33 | Re-run of the escape and the second round's 3 rows on the head: 4 planted, 3 caught | mutation-tester (lead) | acted | 670 s. "the wait is not told the port's USB id" escaped: the wait took its first listing as the baseline. A gate test changes the id before the wait's first listing. It passes, and it fails with the mutant planted by hand |
