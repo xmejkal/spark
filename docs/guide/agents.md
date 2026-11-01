@@ -41,7 +41,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep bu
 
 Read it in this order. `status` is `ok`, and every stage is `ok`. The simulation stage did not check the board's own
 GPIOs, so say so. `breadboard.json` was not written, and `expected: true` says that is by design, so do not retry.
-This build has no `missing_facts` key, so the board record has every fact the firmware needs.
+This build has no `missing_facts` key, so the board record names the active level of its onboard LED and button.
 
 This page is for an AI working with spark:
 
@@ -153,7 +153,8 @@ A scratch store hides three things, so tell the person:
 `parts.py --describe --json` lists every `parts.py` operation with its effects, including which ones write and which
 use the network; read it before calling `parts.py`.
 
-Run each `parts.py` write with `--dry-run` first. For example,
+Run each `parts.py` write with `--dry-run` first. For example, in a project whose needs are set
+(`parts.py --needs-set`) and with the FireBeetle in the person's drawer,
 `parts.py --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3 --dry-run --json` answers in one
 envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`.
 

@@ -140,7 +140,7 @@ class GrantRefusedError(GateClosedError):
 
 class GrantStore:
     """Reads and writes the store's grants place: one JSON file per board and scope, named by its MAC with dashes, for
-    example grants/8c-bf-ea-cc-97-70.json (live) and grants/8c-bf-ea-cc-97-70-deploy.json (deploy). A new grant replaces
+    example grants/8c-bf-ea-xx-xx-xx.json (live) and grants/8c-bf-ea-xx-xx-xx-deploy.json (deploy). A new grant replaces
     the old one of its scope. Deleting the file ends the grant."""
 
     @staticmethod

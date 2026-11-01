@@ -1,8 +1,11 @@
 # spark
 
-**spark is a Claude Code plugin that turns your idea for an ESP32 gadget into a breadboard you can wire and firmware
-you can test. From a list of parts, it builds and checks the design. It writes the breadboard sheet and the pin map, and
-makes a Wokwi simulation.**
+**spark is a Claude Code plugin for gadgets built from an ESP32 dev board and off-the-shelf modules. It turns your idea
+into a breadboard you can wire and firmware you can test**.
+
+From a list of parts, spark builds and checks the design. It writes a *breadboard sheet*: the parts and the wires, one
+step each. It writes a *pin map*: a file that tells your firmware which board pin each part uses. It also makes a
+*simulation* for [Wokwi](https://wokwi.com), an online ESP32 simulator that runs your firmware before you flash it.
 
 ## spark in 60 seconds
 
@@ -12,10 +15,11 @@ Name the dev board and the parts in `requirements.json`:
 {"board": "firebeetle2-esp32s3", "parts": ["tactile-button", "led-red-5mm"]}
 ```
 
-In Claude Code, type `/spark:build`. In a terminal, run the same chain yourself:
+In Claude Code, type `/spark:build`. In a terminal, clone spark and run the same chain from the clone:
 
 ```sh
-python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep build
+git clone https://github.com/xmejkal/spark
+python3 spark/scripts/check_spine.py requirements.json --keep build
 ```
 
 spark builds the board, checks it, and keeps what it made in `build/`. This run took 7 seconds:
@@ -76,8 +80,7 @@ You need Claude Code, Python 3.9 or newer and Node 20 or newer. The runs for the
 /plugin install spark
 ```
 
-The marketplace is named `petr-local`, so Claude Code can show the plugin as `spark@petr-local`. Then, in a project
-folder, type `/spark:init` to write the project's files. Type `/spark:setup` to install the tools spark needs. It
+Then, in a project folder, type `/spark:init` to write the project's files. Type `/spark:setup` to install the tools spark needs. It
 installs them after you see the commands and say yes. [Build](docs/guide/journey.md#build) in the journey guide gives the details for
 Linux and says what an update replaces.
 
@@ -94,7 +97,7 @@ and `parts.py --list` print their ids. Then type `/spark:build`.
 [`/spark:build`'s page](commands/build.md#the-requirements-file) says what else the file takes.
 
 After either road, type `/spark:init` again. It names the rails from the built board, and its last step runs
-`check_all.py --project .`. An AI agent adds `--json` to each script and reads `status` and `stages`.
+`check_all.py --project .`. An AI agent adds `--json` and follows [the contract](docs/guide/agents.md#the-contract-first).
 
 ## What works today
 
@@ -117,23 +120,17 @@ before its goal, or part of it was not run here. **not yet**: nothing does it ye
 | [Idea](docs/guide/journey.md#idea) | **partly**: the scripts ran from a goal's needs to a requirements file, but the conversation did not | `/spark:idea` |
 | [Research](docs/guide/journey.md#research) | **partly**: the library search runs, but the research agents did not run here | `/spark:research`, `/spark:identify` |
 | [Build](docs/guide/journey.md#build) | **works**: a requirements file becomes a board that builds, with a breadboard sheet, a pin map and a Wokwi diagram, or the stage that stopped it | `/spark:build` |
-| [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's five deterministic checks in one command, and a fresh button-and-LED project exits 0 | `check_all.py`, after `/spark:init` again |
-| [Firmware](docs/guide/journey.md#firmware) | **partly**: the firmware imports the pin map on a Mac, but no check yet proves that it drives every signal | `/spark:build`, `assign_pins.py --emit-pins`, `import_firmware.py` |
-| [Simulate](docs/guide/journey.md#simulate) | **works**: the button-and-LED project passed in Wokwi on 2026-10-12, and a board-only FireBeetle 2 ESP32-S3 scenario passed on 2026-11-01 | `/spark:build --keep .`, then `run_scenario.py` |
-| [Bench](docs/guide/journey.md#bench) | **partly**: `deploy.py` flashed two boards, and the FireBeetle's own button lit its LED, but no wired breadboard has run yet | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
+| [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's five deterministic checks in one command | `check_all.py`, after `/spark:init` again |
+| [Firmware](docs/guide/journey.md#firmware) | **partly**: an import check proves the firmware's names, not that it drives every signal | `/spark:build`, `assign_pins.py --emit-pins`, `import_firmware.py` |
+| [Simulate](docs/guide/journey.md#simulate) | **works**: `run_scenario.py` runs your firmware in Wokwi on the built diagram and keeps a dated log | `/spark:build --keep .`, then `run_scenario.py` |
+| [Bench](docs/guide/journey.md#bench) | **partly**: `deploy.py` flashes the firmware onto the board after your yes, but no breadboard wired from a sheet has run yet | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
 
 ## Commands, skills and agents
 
-**Commands**, typed in Claude Code:
-
-- `/spark:init`: a project.
-- `/spark:setup`: the tools.
-- `/spark:drawer`: what you own.
-- `/spark:idea`: a goal to needs, a part for each need, and a requirements file.
-- `/spark:research`: a missing part.
-- `/spark:identify`: a module from a photo.
-- `/spark:build`: a requirements file to a board.
-- `/spark:deploy`: the tested image onto the board.
+**Commands**, typed in Claude Code: `/spark:init` sets up a project and `/spark:setup` the tools. `/spark:drawer` keeps
+what you own. `/spark:idea` turns a goal into needs, a part for each need and a requirements file. `/spark:research`
+finds a missing part, and `/spark:identify` a module from a photo. `/spark:build` makes a board from a requirements
+file, and `/spark:deploy` puts the firmware onto the board.
 
 **Skills**, which Claude picks up from your words: `spark-design` designs a board, `spark-review` reviews it and gates it
 before you order it, and `spark-reverse-engineer` reads a board from its photo.
@@ -147,7 +144,7 @@ and 2 `could-not-run`, and most answer in JSON with `--json`. A crash also exits
 run that skipped most checks. So read [the guide for AI agents](docs/guide/agents.md) before you trust an exit code.
 [`AGENTS.md`](AGENTS.md) points to the same guide.
 
-**Underneath**, [tscircuit](https://tscircuit.com) builds the board and [Wokwi](https://wokwi.com) simulates it on
+**Underneath**, [tscircuit](https://tscircuit.com) builds the board and Wokwi simulates it on
 [MicroPython](https://micropython.org). Your store, `~/.local/share/spark`, keeps what you own outside every repository.
 [How spark works underneath](docs/guide/how-it-works.md#the-tools-spark-calls) lists each tool.
 
@@ -173,6 +170,8 @@ run that skipped most checks. So read [the guide for AI agents](docs/guide/agent
 ## More
 
 - [The glossary](GLOSSARY.md): the words this repository uses its own way, each with the failure that produced it.
+- [The journey guide](docs/guide/journey.md): each step on real runs. It also shows what the larger example (a motor
+  driver, a power inlet and two buttons) found: a conflict between two parts, an advisory and a reason for every pin.
 - [Developing spark](docs/guide/developing.md): the tests, the commit gate, and where the work is planned.
 - **Found a problem?** [Open an issue](https://github.com/xmejkal/spark/issues/new) with the command you ran, its
   output and spark's version (in `.claude-plugin/plugin.json`).

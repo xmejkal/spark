@@ -9,6 +9,10 @@ what it could not look at; [what never to assume](agents.md#what-never-to-assume
 This page walks each step on real runs: what was typed, what spark printed, what it wrote, and where the step stops
 today. On Miro, [the journey frame](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687016851094) shows the same eight steps.
 
+**Contents:** [Drawer](#drawer) · [Idea](#idea) ([a recorded run](#a-recorded-run-a-button-and-an-led)) ·
+[Research](#research) · [Build](#build) · [Checks](#checks) · [Firmware](#firmware) · [Simulate](#simulate) ·
+[Bench](#bench) · [From draft to order](#from-draft-to-order)
+
 ```mermaid
 flowchart LR
     drawer["Drawer — partly"] --> idea["Idea — partly"] --> research["Research — partly"]
@@ -770,6 +774,9 @@ A module you already own can start from a photo instead: [`/spark:identify`](../
    that tscircuit installs into.
 2. [`/spark:setup`](../../commands/setup.md) says which tools spark needs, and installs what is missing in one go once
    you have seen the commands and said yes.
+
+**The plugin's name.** Claude Code can show the plugin as `spark@<marketplace>`. The marketplace name is the one in
+spark's `.claude-plugin/marketplace.json`.
 
 **Before you start.** You need Claude Code for the commands, Python 3.9 or newer, and Node 20 or newer. On macOS,
 spark's install lines get Node and pdftotext from Homebrew (`data/tools.json`). `/spark:setup` then installs the rest
