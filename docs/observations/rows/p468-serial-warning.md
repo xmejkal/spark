@@ -15,5 +15,5 @@ What the P468 plan, its two council rounds and the build found. Card: #636. The 
 | 9 | The FireBeetle's `serial_without_wires` (walk 3 matched `ready` with no connections, on 0.27.1) | refuter, lead | raised | waits for a run on wokwi-cli 0.28.0 and the PO's yes (it changes his installed tool) |
 | 10 | `run_scenario.py:432-433` still asks about `$serialMonitor` wires when a run hears nothing, even for a board whose record says it needs none | lead | raised | wording to reconsider with the 0.28.0 run |
 | 11 | The plan named the field `serial_without_wires`, since the code says serial (`serial_wired`, `serial_heard`) | lead | acted | used as named |
-| 12 | The plan's mutation anchor count: 119 refused on main | brief | corrected | 120 refused on main, counted with this table present and again with it stashed; the same 120 with the change |
+| 12 | The plan's mutation anchor count: 119 refused on main | brief | verified | 120 refused on main, counted with this table present and again with it stashed; the same 120 with the change |
 | 13 | The warning's comment names the record fact | brief | rejected | `tests/mutations/p190-serial.json` anchors that comment line verbatim; changing it makes a new refused anchor. The fact is named in `serial_heard`'s docstring |
