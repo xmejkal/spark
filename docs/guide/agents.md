@@ -890,7 +890,7 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    If the board waits in its download mode, deploy.py prints "press the board's RESET ... once" (the place in brackets when the board record has it) and waits 60 s
    for the port to go and come back. The write restarts the chip with `--after watchdog-reset`, and deploy.py finds the port again by the board's MAC (the port's name and USB id can change). A restart counts only when mpremote answers after it: a restart that left the board in download mode is printed and not counted, and the wait goes on. It ends as `download_mode_stayed` or `port_gone`. Relay that line to the person at once, because only a hand on the board can do it
    ([P243](https://github.com/xmejkal/spark/issues/252)). The board log keeps what the port printed, `nothing`, or why it could not be read
-   ([P244](https://github.com/xmejkal/spark/issues/255)). If the port printed the firmware's `ready`, the board
+   ([P244](https://github.com/xmejkal/spark/issues/255)). If the look's port (not 303a:4001, MicroPython's own USB) printed the firmware's `ready`, the board
    finished its restart late, and deploy.py reads it again at once ([P245](https://github.com/xmejkal/spark/issues/257)).
    A firmware that never reads its console leaves `ready unknown` with "could not enter raw repl": the board ignores
    Ctrl-C, so mpremote cannot stop it. The conversation's firmware reads the console without waiting ([P215](https://github.com/xmejkal/spark/issues/196)).

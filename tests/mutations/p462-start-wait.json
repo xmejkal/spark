@@ -18,5 +18,8 @@
  {"file": "scripts/board_start.py", "name": "the console is read on a moved port", "find": "row.device == looked_port and row.usb", "replace": "True and row.usb"},
  {"file": "scripts/board_envelope.py", "name": "a gone port still gets a watch step", "find": "following = [] if gone else [", "replace": "following = ["},
  {"file": "scripts/board_envelope.py", "name": "a gone port still has a repl command", "find": "if result and not (result.start and result.start.port is None) else None,", "replace": "if result else None,"},
- {"file": "scripts/board_start.py", "name": "a failed list at the deadline is port_gone with no second ask", "find": "        if row is None and self.failed:", "replace": "        if False:"}
+ {"file": "scripts/board_start.py", "name": "a failed list at the deadline is port_gone with no second ask", "find": "        if row is None and self.failed:", "replace": "        if False:"},
+ {"file": "scripts/board_start.py", "name": "a failed list is a gone port", "find": "gone = gone or not self.failed", "replace": "gone = True"},
+ {"file": "scripts/board_start.py", "name": "a changed USB id is no restart", "find": "elif gone or (usb and row.usb != usb):", "replace": "elif gone:"},
+ {"file": "scripts/deploy_service.py", "name": "the wait is not told the port's USB id", "find": "show_line, usb=row.usb)", "replace": "show_line)"}
 ]

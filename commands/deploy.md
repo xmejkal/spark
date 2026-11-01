@@ -96,7 +96,7 @@ printed `ready`. `ready not seen` (exit 1) names the file that differs, or says 
 firmware stopped with an error. `ready unknown` (exit 2) means mpremote could not reach the board, or the passed run's
 log is from an older spark and names no files, so run the scenario again. Unknown is not a pass. The line ends with mpremote's
 own words, and the board's log keeps all it printed. The board's log goes to `sim/runs/board/`. After the facts line, deploy.py prints `image sha256: <hex>, yes: <whose yes>`, and `--json` has the same in `data.image_sha256` and `data.yes` (P213).
-If ready is unknown and the passed run's log names files, deploy.py reads the port with DTR and RTS off. If the port says `waiting for download`, the
+If ready is unknown and the passed run's log names files, deploy.py reads the look's port with DTR and RTS off, unless that is 303a:4001 (MicroPython's own USB). If the port says `waiting for download`, the
 board waits in its download mode. deploy.py then asks you to press the board's RESET once, with its place when the board record has it, waits 60 s for
 the port to go and come back, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)). A restart counts only when mpremote
 answers after it ([P462](https://github.com/xmejkal/spark/issues/630)); one that leaves the board in download mode is printed and not counted.

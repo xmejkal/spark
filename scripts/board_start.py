@@ -87,22 +87,24 @@ class BoardStartService:
         """The result for a board that is not listed."""
         return BoardStartResult(board_codes.PORT_GONE, None, download_mode.port_gone(self.places))
 
-    def wait_for_start(self, port, read, show_line, timeout_s=download_mode.RESET_WAIT_S):
+    def wait_for_start(self, port, read, show_line, timeout_s=download_mode.RESET_WAIT_S, usb=None):
         """Wait at most `timeout_s` for the port to go and come back, and call `read(port)` each time it does: it says
         whether mpremote answered. A restart after which it does not answer is shown to the person (`show_line`) and the
-        wait goes on. A BoardStartResult."""
+        wait goes on. A row whose USB id is not `usb` (the id the port had) counts as a restart too, for a poll can miss
+        the gap. A failed list is never a gone port. A BoardStartResult."""
         end, gone = self.clock.monotonic() + timeout_s, False
         while self.clock.monotonic() < end:
             row = self._listed(port)
             if row is None:
-                gone = True
-            elif gone:
+                gone = gone or not self.failed
+            elif gone or (usb and row.usb != usb):
                 gone, port = False, row.device
                 if read(port):
                     self.note(COUNTED)
                     return BoardStartResult(None, port, "")
                 self.note(NOT_COUNTED_LOG)
                 show_line("  " + download_mode.not_counted(self.places))
+            usb = row.usb if row else usb
             self.clock.sleep(POLL_S)
         row = self._listed(port)
         if row is None and self.failed:  # a failed list is not a gone port: ask once more

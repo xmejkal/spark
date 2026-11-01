@@ -161,7 +161,7 @@ class DeployService:
             start = starter.gone_result()
         elif (board[2].verdict == ready_check.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
               and board_start.console_may_be_read(row, report.port)):
-            board, start = self._after_silence(starter, port, board, read, show_line)
+            board, start = self._after_silence(starter, row, board, read, show_line)
         facts, facts_line, ready = board
         if start and start.code:
             ready = ready._replace(sentence=start.sentence)
@@ -173,10 +173,11 @@ class DeployService:
         repl = self.platform.make_connection(planned.mpremote, shown_on, self.run).repl_command()
         return DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)
 
-    def _after_silence(self, starter, port, board, read, show_line):
-        """(the board read last, a BoardStartResult or None) for a board that stayed silent on `port` after the flash: the
+    def _after_silence(self, starter, row, board, read, show_line):
+        """(the board read last, a BoardStartResult or None) for a board that stayed silent on the Port `row` after the flash: the
         console tells download mode from a late start. In download mode the person presses RESET and the wait counts only a
         restart that mpremote answers after (`read(port)` reads the board again)."""
+        port = row.device
         probe = self.probe or self.platform.make_console_probe(port, self.run)
         if not probe:
             return board, None
@@ -186,7 +187,7 @@ class DeployService:
             show_line("  %s" % download_mode.press_reset(starter.places))
             latest = [board]
             start = starter.wait_for_start(port, lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_check.UNKNOWN,
-                                           show_line)
+                                           show_line, usb=row.usb)
             return latest[-1], start
         if download_mode.booted(console):  # P245: mpremote asked while the board still restarted
             starter.note(download_mode.READ_AGAIN + "\n")
