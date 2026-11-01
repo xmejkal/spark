@@ -89,7 +89,7 @@ emitter.
 Better still, `lib/merge.ts` means the machine does not have the last word: positions already in
 the target file are preserved, so you drag the parts around once in the Wokwi editor and
 regeneration keeps your layout. The generator owns *what is connected*; you own *what it looks
-like*.
+like*. `/spark:build` copies the project's kept `sim/diagram.json` in before it runs the converter, so this merge sees it. What stays: part positions by id, wire routes whose two ends are still generated, and parts marked `handAdded` with the wires that touch them. What does not: a hand-drawn wire between two generated parts, a generated part the person deleted (it comes back), and a position whose generated id changed. Today the converter's own lint fails a hand-added part of a type whose attributes Wokwi knows (an LED: `Unknown attribute "handAdded"`) and a hand-added part with no wire yet, so such a rebuild stops ([P497](https://github.com/xmejkal/spark/issues/681)).
 
 ## How it proves itself
 

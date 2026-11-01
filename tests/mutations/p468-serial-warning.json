@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/check_spine.py",
+  "name": "serial_heard ignores the diagram's wires",
+  "find": "return serial_wired(diagram) or (board or {})",
+  "replace": "return (board or {})"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "any truthy value in the record counts as serial without wires",
+  "find": ".get(\"serial_without_wires\") is True",
+  "replace": ".get(\"serial_without_wires\")"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the record's fact is ignored",
+  "find": "return serial_wired(diagram) or (board or {}).get(\"serial_without_wires\") is True",
+  "replace": "return serial_wired(diagram)"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the warning is always silent",
+  "find": "return serial_wired(diagram) or (board or {}).get(\"serial_without_wires\") is True",
+  "replace": "return True"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a missing record raises instead of keeping the warning",
+  "find": "or (board or {}).get(\"serial_without_wires\")",
+  "replace": "or board.get(\"serial_without_wires\")"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a full build reads only the diagram's wires again, so the XIAO gets the serial warning",
+  "find": "simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes)]",
+  "replace": "simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)) + notes)]"
+ }
+]

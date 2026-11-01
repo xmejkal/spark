@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the build never copies the kept diagram in, so the converter overwrites it",
+  "find": "    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)",
+  "replace": "    bad_kept = \"\""
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a converter that exits non-zero beside a copied diagram passes the stage",
+  "find": "    if made.returncode or not diagram_path.is_file():",
+  "replace": "    if not diagram_path.is_file():"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "a diagram with no connections list is copied in, and the converter crashes on it",
+  "find": "            or not isinstance(diagram.get(\"connections\"), list):",
+  "replace": "            or False:"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "the verdict never says what the merge kept",
+  "find": "    if not found:\n        return \"\"\n    positions",
+  "replace": "    if True:\n        return \"\"\n    positions"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "main never copies the person's diagram into the work folder",
+  "find": "        shutil.copy(simulation / \"diagram.json\", workdir / sim_project.KEPT_DIAGRAM)",
+  "replace": "        pass"
+ }
+]

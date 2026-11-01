@@ -141,7 +141,7 @@ does not need a finished build ([P196](https://github.com/xmejkal/spark/issues/1
 `pins.py` that spark did not write is there, the build leaves it alone and names it. If the pins cannot be placed, the
 build removes the `pins.py` that it wrote earlier, because that file describes another design. If spark refuses the
 requirements file, the build removes the earlier sheet, drawings, `page.html` and the `pins.py` that it wrote, and
-says why. If the requirements file is missing, it removes nothing. The one command also keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR.
+says why. If the requirements file is missing, it removes nothing. The one command also keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR. A rebuild merges into the kept `sim/diagram.json` (P482): the part positions by id, the wire routes whose two ends are still generated, and the parts marked `"handAdded": "true"` in `attrs` with the wires that touch them stay. Today the converter's own lint fails a hand-added part of a type whose attributes Wokwi knows (an LED: `Unknown attribute "handAdded"`) and a hand-added part with no wire yet, so such a rebuild stops ([P497](https://github.com/xmejkal/spark/issues/681)). A hand-drawn wire between two generated parts does not stay, a generated part that the person deleted comes back, and a position whose generated id changed is lost. The verdict's simulation stage says `kept from your diagram: ...` when it kept anything.
 A rebuild keeps the flash image that `sim/wokwi.toml` already names, unless `--firmware` names another. Spark reads that line only as `firmware = "name.bin"` (a JSON string); a line in another form (indented, `firmware="x.bin"`, a number, an empty name) is not kept, and the build says so on stderr: the rebuild then names no image.
 
 When the chain runs end to end for a project on your list, your store's history records `built`: the board and the parts
@@ -241,7 +241,7 @@ It rebuilds whenever `board.tsx` changes, so it is the window to keep open while
 worked on. Its interface loads from a CDN, so it needs a network; the server itself is local.
 
 **The simulation, watched rather than asserted** — the Wokwi for VS Code extension opens the files
-the last stage writes into `sim/`, which the one command keeps: `wokwi.toml`, `diagram.json`, the chips.
+the last stage writes into `sim/`, which the one command keeps: `wokwi.toml`, `diagram.json`, the chips. A rebuild merges into your `diagram.json`, so parts you moved stay (see the build step above for what does not).
 It needs the flash image too, so make both first: `check_spine.py requirements.json --keep . --firmware
 flash-with-firmware.bin`, then `flash_image.py --files firmware -o sim/flash-with-firmware.bin`; without them
 the extension has no firmware to run. It runs the flash image live: press the board's buttons, drag a sensor's slider, read its serial port. Open the
@@ -319,7 +319,11 @@ whose notes call `control:` a deprecated alias. `wait-serial` reads the MCU's se
 reaches it. The generated `diagram.json` wires the board's TX and RX to `$serialMonitor`: Wokwi stopped doing that
 by default (CLI 0.28.0, API 2026-10-09), and without it `wait-serial` hears nothing, not even the boot line
 ([P190](https://github.com/xmejkal/spark/issues/142)). A board whose Wokwi part has no pins named TX and RX gets no
-such wires, and the build's simulation line says so. Two facts about the simulator that
+such wires, and the build's simulation line says so, unless the board's record carries `serial_without_wires: true`
+with its origin ([P468](https://github.com/xmejkal/spark/issues/636)), as the XIAO ESP32-C6's and the FireBeetle 2's do,
+because a run heard their serial with no wires.
+
+Two facts about the simulator that
 a firmware meets here and not on a bench: its ADC is referenced to 5 V whatever the chip, so a
 raw reading must be converted with a 5 V full scale. Say so in `firmware/config.json`
 (`{"ADC_REFERENCE_V": 5.0}`), which goes into the image as `/config.json`. And a chip's control ids are letters and digits only.

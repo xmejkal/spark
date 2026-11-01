@@ -310,6 +310,47 @@ class WhatTheSimulationCannotShowTest(unittest.TestCase):
 
 
 
+class TheKeptDiagramIsCopiedInTest(unittest.TestCase):
+    """P482 (#661): the converter merges into the person's diagram only if the build copies it in first."""
+    SUMMARY = ("diagram: 4 parts, 7 wires, 7/7 nets wired\n\nkept from the existing diagram: 4 positions, 3 wire routes"
+               ", hand-added parts: mine, other\n")
+
+    def folders(self, text=None):
+        kept, sim = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "sim"
+        if text is not None:
+            (kept / "diagram.json").write_text(text)
+        return kept, sim
+
+    def test_a_kept_diagram_is_copied_into_sim(self):
+        kept, sim = self.folders('{"parts": [{"id": "mcu"}], "connections": []}')
+        self.assertEqual(sim_project.copy_kept_diagram(kept / "diagram.json", sim), "")
+        self.assertEqual((sim / "diagram.json").read_text(), '{"parts": [{"id": "mcu"}], "connections": []}')
+
+    def test_no_kept_diagram_copies_nothing_and_says_nothing(self):
+        kept, sim = self.folders()
+        self.assertEqual(sim_project.copy_kept_diagram(kept / "diagram.json", sim), "")
+        self.assertFalse((sim / "diagram.json").exists())
+
+    def test_a_diagram_that_is_not_one_is_not_copied_and_is_said(self):
+        for text in ("{not json", "{}", "[]", '{"parts": 3}', '{"parts": []}', '{"parts": [null], "connections": []}'):
+            kept, sim = self.folders(text)
+            sim.mkdir()
+            self.assertIn("built fresh", sim_project.copy_kept_diagram(kept / "diagram.json", sim), text)
+            self.assertFalse((sim / "diagram.json").exists(), text)
+
+    def test_the_converters_summary_becomes_one_clause(self):
+        self.assertEqual(sim_project.kept_note(self.SUMMARY),
+                         "kept from your diagram: 4 part positions, 3 wire routes, hand-added: mine, other")
+
+    def test_a_summary_without_hand_added_parts_says_none(self):
+        text = "\nkept from the existing diagram: 2 positions, 0 wire routes\n"
+        self.assertEqual(sim_project.kept_note(text), "kept from your diagram: 2 part positions, 0 wire routes")
+
+    def test_no_summary_is_no_note(self):
+        self.assertEqual(sim_project.kept_note(""), "")
+        self.assertEqual(sim_project.kept_note(None), "")
+
+
 class WokwiCliComesFromTheToolsListTest(unittest.TestCase):
     def test_wokwi_cli_is_found_through_the_simulator_role(self):
         import tools
