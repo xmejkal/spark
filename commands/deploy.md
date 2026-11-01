@@ -19,7 +19,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/look.py --json
 Say first that the board restarts while it is read: a running program stops and starts again. The look writes nothing and
 changes no flash. It compares the board's chip and flash size with the board in `requirements.json` and prints each as
 `same`, `differs` or `unknown`, with the board's MAC, the last deploy that spark's store record names for it, and a token. With two boards on USB, it lists them and needs
-`--port <the board's serial port>`. One board that shows on two nodes with one USB serial (a CP2104 does) is one board: the look names the other nodes in `also_on`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents.md`, "look.py and deploy.py's envelope") and relay it in words. Each item of `problems` and `unchecked` has a `code` (the table is in the same section): decide on the code, and relay the sentence. Without `--json` the same facts are lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
+`--port <the board's serial port>`. One board that shows on two nodes with one USB serial (a CP2104 does) is one board: the look names the other nodes in `also_on`. Without two boards, leave `--port` out, so the look makes sure that only one board is on USB. Read the envelope (`status`, `problems`, `unchecked`, `data`, `next`: `docs/guide/agents/json.md`, "look.py and deploy.py's envelope") and relay it in words. Each item of `problems` and `unchecked` has a `code` (the table is in the same section): decide on the code, and relay the sentence. Without `--json` the same facts are lines. A stop (another chip, a flash too small for the image) means deploy.py will refuse, so do
 not propose the flash. `unknown` is not a pass. The token is not the person's yes. `look.py` is in this command's
 `allowed-tools`, and so is `deploy.py` (P242): Claude Code does not ask before it runs deploy.py. The gate is inside
 deploy.py. With no deploy grant, it asks for a yes in a real terminal, Claude's shell has none, and deploy.py exits 2
@@ -111,5 +111,5 @@ prints, which opens mpremote's REPL, and press Ctrl-C, then Ctrl-D. Leave the RE
 holds the port, and the next deploy cannot read the board. deploy.py then runs the board doctor, which says another
 program holds the port and to leave mpremote's console with Ctrl-X ([P354](https://github.com/xmejkal/spark/issues/452)).
 
-It first ran on a real board, a XIAO ESP32-C6, on 2026-10-14 ([the first flash](../docs/guide/journey.md#the-first-flash-a-blink-on-the-board-alone)).
+It first ran on a real board, a XIAO ESP32-C6, on 2026-10-14 ([the first flash](../docs/guide/journey/bench.md#the-first-flash-a-blink-on-the-board-alone)).
 

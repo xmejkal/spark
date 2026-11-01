@@ -67,7 +67,7 @@ is guessed, because a guessed rail current would poison the one check that does 
 a check should report a null as unverifiable rather than pass it, which is the correct
 answer until somebody measures it. Not every check does yet: a null rail voltage skips the capacitor check without a
 word (it blocks the resistor bound under a `!` line), and a null bus capacitance stops check_physics ([P107](https://github.com/xmejkal/spark/issues/41));
-[what never to assume](../docs/guide/agents.md#what-never-to-assume) lists each field.
+[what never to assume](../docs/guide/agents/never-assume.md) lists each field.
 
 Go through the list with the user. After `--force` it still names fields they answered
 ([P114](https://github.com/xmejkal/spark/issues/48)), so read the values in the files. Two kinds of field:

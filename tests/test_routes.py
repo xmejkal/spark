@@ -256,7 +256,7 @@ class NoDocumentPointsAtSomebodysMachineTest(unittest.TestCase):
                 texts[str(path.relative_to(ROOT))] = path.read_text()
         for name in ("README.md", "GLOSSARY.md"):
             texts[name] = (ROOT / name).read_text()
-        for path in sorted((ROOT / "docs" / "guide").glob("*.md")) + [ROOT / "AGENTS.md"]:
+        for path in sorted((ROOT / "docs" / "guide").rglob("*.md")) + [ROOT / "AGENTS.md"]:
             if path.is_file():
                 texts[str(path.relative_to(ROOT))] = path.read_text()
         return texts

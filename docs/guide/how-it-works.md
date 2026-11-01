@@ -8,7 +8,7 @@ spark is three things:
 - pages that tell Claude when to run which script.
 
 The [commands](commands.md) and skills are those pages. The scripts do the work, and each one runs on its own. This
-page is the map.
+page is the map. On Miro, [the code architecture frame](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687681319899) draws the modules and classes.
 
 ## From a requirements file to a built board, then the checks
 
@@ -43,7 +43,7 @@ Two more names can appear, each as could-not-run: `requirements`, for a file tha
 for an error the script did not expect.
 
 `/spark:build` stops after the simulation stage. You run [`check_all.py`](../../scripts/check_all.py) next; it runs
-the five checks on what was built. The [journey guide](journey.md#build) shows a real run.
+the five checks on what was built. The [journey guide](journey/build.md) shows a real run.
 
 The files that join the steps:
 
@@ -66,7 +66,7 @@ The converter's own [ARCHITECTURE.md](../../tools/circuit-to-wokwi/ARCHITECTURE.
 ## The scripts
 
 Each one is described in its own words, the first line of its docstring. Most checks and chain scripts take `--json`.
-[The guide for AI agents](agents.md) lists which do and which do not; `check_bom.py`, `emit_board.py` and `flash_image.py` do
+[The JSON guide for AI agents](agents/json.md#which-scripts-take---json) lists which do and which do not; `check_bom.py`, `emit_board.py` and `flash_image.py` do
 not.
 
 ### The one command for checks
@@ -238,7 +238,7 @@ spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, 
 ## The tools spark calls
 
 `/spark:setup` lists them, one job per line, with what fills each job on this machine:
-`tools.py --status --project .` ([a real run](journey.md#build)).
+`tools.py --status --project .` ([a real run](journey/build.md)).
 
 `[ok  ]` on an MCP row (chip-docs, parts-search) means only that spark declares the server and Node is on the PATH.
 Nothing checks that Claude Code has the server registered or that it answers

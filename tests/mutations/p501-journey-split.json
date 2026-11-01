@@ -1,0 +1,20 @@
+[
+ {
+  "file": "tools/journey.py",
+  "name": "the status rows are read in the old single-page anchor form",
+  "find": "docs/guide/journey/([\\w-]+)\\.md\\)",
+  "replace": "docs/guide/journey\\.md#([\\w-]+)\\)"
+ },
+ {
+  "file": "tools/journey.py",
+  "name": "a row that links another step's page gives a status",
+  "find": "STATUS_ROW.findall(section(readme)) if page == step.lower()}",
+  "replace": "STATUS_ROW.findall(section(readme))}"
+ },
+ {
+  "file": "tools/check_docs.py",
+  "name": "the journey index's budget is raised back to the old page's size",
+  "find": "\"docs/guide/journey.md\": 45,",
+  "replace": "\"docs/guide/journey.md\": 1582,"
+ }
+]

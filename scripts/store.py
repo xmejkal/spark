@@ -230,10 +230,13 @@ def _make_ready(name, target):
     if private and inside_git(target):
         raise StoreProblem("%s would be inside the git work tree at %s — what you own stays out of every repository; "
                            "point SPARK_HOME at a folder outside it", target, inside_git(target))
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if private:
-        for folder in {home(), target.parent}:
-            os.chmod(folder, 0o700)
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if private:
+            for folder in (home(), target.parent):
+                os.chmod(folder, 0o700)
+    except OSError as cannot:  # P496: a SPARK_HOME that names a file, or a folder spark may not write
+        raise StoreProblem("cannot make %s for spark's store (%s): point SPARK_HOME at a folder you can write", target.parent, cannot)
 
 
 def copy_folder(name, source, key):

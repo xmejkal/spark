@@ -13,6 +13,7 @@
 import { DiagramLinter } from "@wokwi/diagram-lint";
 
 import type { EmitResult } from "./emitters/wokwi";
+import { HAND_ADDED_ATTR } from "./merge";
 import type { Problem } from "./types";
 
 export interface ValidationResult {
@@ -20,10 +21,20 @@ export interface ValidationResult {
   checkedNets: number;
   wiredNets: number;
   lintIssues: number;
+  /** Not blocking: a hand-added part with no wire yet (P497). */
+  warnings: Warning[];
 }
 
-export function validate(emitted: EmitResult, componentCount?: number): ValidationResult {
-  const lintProblems = lint(emitted);
+/** A warning does not block. The code is what a caller matches on, never the sentence. */
+export interface Warning {
+  code: string;
+  message: string;
+}
+
+export const HAND_ADDED_UNWIRED = "hand-added-unwired";
+
+export function validate(emitted: EmitResult, componentCount?: number, handAddedIds: string[] = []): ValidationResult {
+  const { problems: lintProblems, warnings } = lint(emitted, handAddedIds);
   const coverageProblems = [
     ...checkNetCoverage(emitted),
     ...checkNothingVanished(emitted, componentCount),
@@ -34,17 +45,35 @@ export function validate(emitted: EmitResult, componentCount?: number): Validati
     checkedNets: emitted.netOutcomes.length,
     wiredNets: emitted.netOutcomes.filter((outcome) => outcome.wires > 0).length,
     lintIssues: lintProblems.length,
+    warnings,
   };
 }
 
-function lint(emitted: EmitResult): Problem[] {
+/**
+ * Wokwi's own lint, less two things that are the person's hand-added parts (P497): the mark itself is not an attribute
+ * of the part (`invalid-attribute` with attrName handAdded), and a part with no wire yet is a warning, not a stop. The
+ * ids come from the merge summary, so a generated part that shares an id and the mark is still held to every rule.
+ */
+function lint(emitted: EmitResult, handAddedIds: string[]): { problems: Problem[]; warnings: Warning[] } {
   const result = new DiagramLinter().lint(emitted.diagram as any);
-  return result.issues
-    .filter((issue) => issue.severity !== "info")
-    .map((issue) => ({
-      message: `${issue.rule}: ${issue.message}`,
-      context: { component: (issue as any).partId },
-    }));
+  const problems: Problem[] = [];
+  const warnings: Warning[] = [];
+  for (const issue of result.issues) {
+    if (issue.severity === "info") continue;
+    const partId = (issue as any).partId;
+    if (issue.rule === "invalid-attribute" && (issue as any).context?.attrName === HAND_ADDED_ATTR) continue;
+    if (issue.rule === "redundant-parts" && handAddedIds.includes(partId)) {
+      warnings.push({
+        code: HAND_ADDED_UNWIRED,
+        message:
+          `${partId} was added by hand and has no wire yet. It stays in the diagram. ` +
+          "Wire it in Wokwi if it should do something.",
+      });
+      continue;
+    }
+    problems.push({ message: `${issue.rule}: ${issue.message}`, context: { component: partId } });
+  }
+  return { problems, warnings };
 }
 
 /**

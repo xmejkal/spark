@@ -22,6 +22,10 @@ from spark.core import outcomes
 import parts as parts_library
 import tools
 
+#: The converter's mapping from each component name to its Wokwi part, in the simulation project (`mapping_for`, P31).
+MAPPING_FILE = "wokwi-mapping.json"
+
+
 def find_wokwi_cli(project=None):
     """wokwi-cli, wherever the tools list says to look (PATH, ~/.local/bin, spark's downloads), else None."""
     try:
@@ -216,13 +220,14 @@ def limits_note(limits):
     return "\n".join(lines) + "\n"
 
 
-def write_limits(sim_dir, design, board):
+def write_limits(sim_dir, design, board, wired=None):
     """
     Put the note beside the diagram and hand back what it said, or [] when there is nothing. The design's records and the
-    board's own GPIOs both count (P396), and a board-only build passes no design. `board` has no default: no test reaches
-    the full build's simulation stage (`check_spine.simulation_detail`), so a call that drops it fails at once.
+    board's own GPIOs both count (P396). A board-only build passes no design, and its wired GPIOs as `wired` (P484,
+    `onboard_parts.say_wired_gpios`). `board` has no default: no test reaches the full build's simulation stage
+    (`check_spine.simulation_detail`), so a call that drops it fails at once.
     """
-    limits = (limits_of(design) if design is not None else []) + boards.onboard_limits(board)
+    limits = (limits_of(design) if design is not None else []) + boards.onboard_limits(board, wired)
     if limits:
         (Path(sim_dir) / LIMITS_NOTE).write_text(limits_note(limits))
     return limits
@@ -364,6 +369,14 @@ def kept_note(stdout):
         return ""
     positions, routes, added = found.groups()
     return "kept from your diagram: %s part positions, %s wire routes%s" % (positions, routes, ", hand-added: " + added.strip() if added else "")
+
+
+CONVERTER_WARNING = re.compile(r"^warning\[[a-z-]+\]: (.+)$", re.MULTILINE)
+
+
+def converter_warnings(stdout):
+    """The converter's tagged warning lines (cli.ts prints `warning[code]: sentence`, P497), the sentence only."""
+    return CONVERTER_WARNING.findall(stdout or "")
 # --- end MVP ---
 
 

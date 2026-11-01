@@ -17,8 +17,8 @@ Each stage is a pure function in its own file, and the stage boundaries are wher
 points are.
 
 ```
-circuit.json
-     │  lib/netlist.ts          extract what is logically true
+circuit.json                    or a netlist already written as JSON (--netlist)
+     │  lib/netlist.ts          extract what is logically true (buildNetlist), or check the file's two lists (readNetlist)
      ▼
   Netlist  ◄── the intermediate representation: every future emitter reads this, and only this
      │
@@ -89,7 +89,7 @@ emitter.
 Better still, `lib/merge.ts` means the machine does not have the last word: positions already in
 the target file are preserved, so you drag the parts around once in the Wokwi editor and
 regeneration keeps your layout. The generator owns *what is connected*; you own *what it looks
-like*. `/spark:build` copies the project's kept `sim/diagram.json` in before it runs the converter, so this merge sees it. What stays: part positions by id, wire routes whose two ends are still generated, and parts marked `handAdded` with the wires that touch them. What does not: a hand-drawn wire between two generated parts, a generated part the person deleted (it comes back), and a position whose generated id changed. Today the converter's own lint fails a hand-added part of a type whose attributes Wokwi knows (an LED: `Unknown attribute "handAdded"`) and a hand-added part with no wire yet, so such a rebuild stops ([P497](https://github.com/xmejkal/spark/issues/681)).
+like*. `/spark:build` copies the project's kept `sim/diagram.json` in before it runs the converter, so this merge sees it. What stays: part positions by id, wire routes whose two ends are still generated, and parts marked `handAdded` with the wires that touch them. What does not: a hand-drawn wire between two generated parts, a generated part the person deleted (it comes back), and a position whose generated id changed. A hand-added part of a type Wokwi knows passes the converter's lint, and one with no wire yet is a warning in the build output, not a stop; a part type the converter does not know still stops (`unknown-part-type`) ([P497](https://github.com/xmejkal/spark/issues/681)).
 
 ## How it proves itself
 
@@ -119,6 +119,12 @@ making you fix them one at a time.
 | a new output (docs, wiring list, KiCad hand-off) | `lib/emitters/<name>.ts` reading `Netlist` | nothing else |
 | better layout | implement `Placer` | `lib/placement.ts` |
 | another source (a KiCad netlist, say) | a reader producing `Netlist` | nothing else |
+
+The second source exists: `--netlist <file>` takes a `Netlist` written as JSON in place of `--circuit` (exactly one of
+the two), through `readNetlist` in `lib/netlist.ts`, which checks only its `components` and `nets` lists. The spark
+spine writes one for a board-only build, which has no circuit.json: the board as `Mcu` and its own LED and button,
+each wired to its GPIO's pin and to ground ([P484](https://github.com/xmejkal/spark/issues/663)). The emitter, the
+merge and the validation treat it as they treat a netlist read from a circuit.
 
 ## Deliberate non-goals
 

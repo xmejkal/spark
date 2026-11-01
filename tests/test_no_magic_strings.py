@@ -44,7 +44,7 @@ class NoMagicStringsTest(unittest.TestCase):
     def test_no_script_decides_on_a_literal_sentence(self):
         found = [one for script in sorted(SCRIPTS.rglob("*.py"))
                  for one in magic_strings(script.read_text(), script.relative_to(SCRIPTS).as_posix())]
-        self.assertEqual(found, [], "name each as a constant beside its source (developing.md, P260)")
+        self.assertEqual(found, [], "name each as a constant beside its source (patterns-and-names.md, P260)")
 
     def test_the_guard_sees_each_shape(self):
         source = ('a == "x y"\n"x y" in a\na in ("b", "x y")\na.startswith("x y")\nre.search("x y", a)\n'

@@ -4,7 +4,7 @@
 {"file":"scripts/boards.py","name":"not-checked-says-no-why","find":"SimulatedPart(outcomes.NOT_CHECKED, board_id, why=WHY_NOT_KEPT)","replace":"SimulatedPart(outcomes.NOT_CHECKED, board_id)"},
 {"file":"scripts/boards.py","name":"onboard-function-drops-its-role","find":"\"what\": spec.what, \"role\": role} for role, spec","replace":"\"what\": spec.what} for role, spec"},
 {"file":"scripts/matching.py","name":"offer-json-leaks-the-role","find":"return [{\"does\": clean(f.get(\"does\")), \"what\": clean(f.get(\"what\"))} for f in self.functions]","replace":"return [dict(f, does=clean(f.get(\"does\")), what=clean(f.get(\"what\"))) for f in self.functions]"},
-{"file":"scripts/boards.py","name":"gpio-limits-one-line-dropped","find":"        return [(ONBOARD_GPIOS, part.why_not_read())]","replace":"        return []"},
+{"file":"scripts/boards.py","name":"gpio-limits-one-line-dropped","find":"    said = [] if part.state == outcomes.RECORDED else [(ONBOARD_GPIOS, part.why_not_read())]","replace":"    said = []"},
 {"file":"scripts/boards.py","name":"value-error-escapes-the-reader","find":"except (KeyError, TypeError, ValueError, RecursionError, OSError):","replace":"except (KeyError, TypeError, RecursionError, OSError):"},
 {"file":"scripts/boards.py","name":"not-looked-at-says-no-pin","find":"        return self.why_not_read() or \"the Wokwi definition of %s has no pin on GPIO%d\" % (self.board_id, gpio)","replace":"        return \"the Wokwi definition of %s has no pin on GPIO%d\" % (self.board_id, gpio)"},
 {"file":"scripts/parts.py","name":"role-less-copy-shadows-the-boards-own-dict","find":"    return [own.get((function[\"does\"], function[\"what\"]), function) for function in said] + [","replace":"    return [function for function in said] + ["},

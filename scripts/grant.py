@@ -27,7 +27,7 @@ RESTART = ("the board restarts while it is read: a running program stops and sta
 EPILOG = """grant.py --minutes N reads the board on USB once with esptool (the board restarts), and asks you in your own
 terminal to let Claude run code on that board for N minutes from your yes (1 to 1440, one day). A pipe, a heredoc or
 Claude Code's ! is no terminal, so grant.py gives no grant there. Your yes is kept in your store as a file named by the
-MAC with dashes, for example grants/8c-bf-ea-cc-97-70.json, with the MAC, the board's token (the first half of look.py's
+MAC with dashes, for example grants/8c-bf-ea-xx-xx-xx.json, with the MAC, the board's token (the first half of look.py's
 token), who said yes and when it ends. A new grant replaces the old one. To end a grant early, delete that file. The
 file is a plain file in your store: anything that can write your store can write it.
 
@@ -111,7 +111,7 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_console.SystemCl
         print(guard_sentence("grant.py: %s" % closed, shlex.quote(str(args.project.resolve())), shlex.quote(args.port) if args.port else None),
               file=sys.stderr)
         return closed.code
-    except (tools.ToolProblem, board_look.LookStop) as cannot:
+    except (tools.ToolProblem, board_look.LookStop, store.StoreProblem) as cannot:  # P499: a store that refuses
         if args.json:
             print(to_json(board_grant.GrantCheckResult(False, None, board_grant.WHY_COULD_NOT_RUN)))
         if isinstance(cannot, board_look.LookStop):

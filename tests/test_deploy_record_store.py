@@ -20,7 +20,7 @@ import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 STORE = deploy_record_store.DeployRecordStore()
-MAC = "8c:bf:ea:cc:97:70"
+MAC = "8c:bf:ea:00:00:01"
 CANNOT_READ = "spark's record of it cannot be read"
 
 

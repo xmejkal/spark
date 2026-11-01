@@ -12,8 +12,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import journey  # noqa: E402
 
-TABLE = "| [Drawer](docs/guide/journey.md#drawer) | **partly**: what you own, run on 2026-10-08 |\n" \
-        "| [Build](docs/guide/journey.md#build) | **works**: a board, run on 2026-10-11 |\n"
+TABLE = "| [Drawer](docs/guide/journey/drawer.md) | **partly**: what you own, run on 2026-10-08 |\n" \
+        "| [Build](docs/guide/journey/build.md) | **works**: a board, run on 2026-10-11 |\n"
 
 
 def readme(table, before="", after=""):
@@ -25,9 +25,17 @@ class TheJourneyPictureTest(unittest.TestCase):
         self.status = {step[0]: step[5] for step in journey.STEPS}
 
     def test_each_step_takes_its_status_from_the_what_works_today_table_only(self):
-        elsewhere = "| [Build](docs/guide/journey.md#build) | **partly**: an old row |\n"
+        elsewhere = "| [Build](docs/guide/journey/build.md) | **partly**: an old row |\n"
         self.assertEqual(journey.statuses(readme(TABLE, before=elsewhere, after=elsewhere)),
                          {"Drawer": "partly", "Build": "works"})
+
+    def test_a_row_that_links_the_old_single_page_gives_no_status(self):
+        old = "| [Build](docs/guide/journey.md#build) | **works**: a board, run on 2026-10-11 |\n"
+        self.assertEqual(journey.statuses(readme(old)), {})
+
+    def test_a_row_that_links_another_steps_page_gives_no_status(self):
+        wrong = "| [Build](docs/guide/journey/drawer.md) | **works**: a board, run on 2026-10-11 |\n"
+        self.assertEqual(journey.statuses(readme(wrong)), {})
 
     def test_the_picture_is_dated_by_the_newest_run_in_that_section(self):
         self.assertEqual(journey.runs_up_to(readme(TABLE, after="2027-01-01")), "2026-10-11")

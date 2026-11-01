@@ -20,7 +20,7 @@ Card legend: C1 Wokwi and own emulator spike, C2 board's own parts, C3 project n
 | G8 | Holds. The idea page shows `--step` and does not say it writes history. | `commands/idea.md:14-18` and `scripts/parts.py:2239-2253`. | C4 | One sentence on the idea page and in `--help`. | medium |
 | G9 | Holds. `add_project` resolves any path and never checks it exists. `needs.write` creates parents. | `scripts/store.py:272-297`, `scripts/needs.py:116`. | C3 | Refuse a folder that is not there. | high |
 | G10 | Holds. No remove or forget op exists. | `/usr/bin/grep -n "remove\|forget" scripts/store.py scripts/parts.py` finds none for projects. | C3 | A `--unlist PROJECT` with a dry run. | low |
-| G11 | Not fully checked. The name sits in the store record. | `~/.local/share/spark/boards/8c-bf-ea-cc-97-70.json` holds it. I did not run `--match`. | walk 2 row | Not checked. | low |
+| G11 | Not fully checked. The name sits in the store record. | `~/.local/share/spark/boards/8c-bf-ea-xx-xx-xx.json` holds it. I did not run `--match`. | walk 2 row | Not checked. | low |
 | G12 | Holds. I ran `parts.py --offer firebeetle2-esp32s3`. | Output shows "compute microcontroller" twice and a long power JSON line. The LED line has no GPIO. | walk 2 row | Dedupe `does`. Add the role pins to the line. | low |
 | G13 | Holds. The board file has no `wokwi-board` document. The XIAO file has one. | `boards/firebeetle2-esp32s3.json:325`, `boards/xiao-esp32-c6.json:396`, `scripts/boards.py:427`. | C2 | Keep the S3 devkit definition as a document of the record. | high |
 | G14 | Not checked. The page says what it says. | `commands/idea.md:128-129`. I did not run a pick. | none | Not checked. | low |

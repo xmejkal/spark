@@ -197,7 +197,8 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
 
 class TheGuideNamesEveryCodeTest(unittest.TestCase):
     def test_agents_md_names_every_code_and_the_kept_fields(self):
-        text = (ROOT / "docs" / "guide" / "agents.md").read_text()
+        guide = ROOT / "docs" / "guide"
+        text = "".join(page.read_text() for page in [guide / "agents.md"] + sorted((guide / "agents").glob("*.md")))
         self.assertEqual([code for code in breadboard_drawing.CODES if "`%s`" % code not in text], [])
         for field in ("code", "subject", "expected", "drawn_from"):
             self.assertIn("`%s`" % field, text)

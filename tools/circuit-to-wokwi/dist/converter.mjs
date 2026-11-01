@@ -2277,6 +2277,7 @@ var require_build_commonjs = __commonJS(function(exports) {
 
 // cli.ts
 import { readFile, writeFile } from "node:fs/promises";
+import { basename } from "node:path";
 
 // lib/geometry.ts
 import { readdirSync, readFileSync as readFileSync2 } from "node:fs";
@@ -21655,6 +21656,27 @@ var getSourcePortConnectivityMapFromCircuitJson = (circuitJson) => {
   return new ConnectivityMap(netMap);
 };
 
+// lib/types.ts
+class ConversionFailed extends Error {
+  problems;
+  constructor(problems) {
+    super(`${problems.length} problem(s) converting the board:
+` + problems.map((problem) => `  - ${describe(problem)}`).join(`
+`));
+    this.problems = problems;
+    this.name = "ConversionFailed";
+  }
+}
+function describe(problem) {
+  const context = problem.context ?? {};
+  const parts = [
+    context.component && `component ${context.component}`,
+    context.pin && `pin ${context.pin}`,
+    context.net && `net ${context.net}`
+  ].filter(Boolean);
+  return parts.length ? `${problem.message} (${parts.join(", ")})` : problem.message;
+}
+
 // lib/netlist.ts
 function buildNetlist(circuitJson) {
   const problems = [];
@@ -21664,6 +21686,12 @@ function buildNetlist(circuitJson) {
   const nets = readNets(circuitJson, portOwner, db, problems);
   carryOverDesignWarnings(circuitJson, problems);
   return { netlist: { components, nets }, problems };
+}
+function readNetlist(json) {
+  if (!Array.isArray(json?.components) || !Array.isArray(json?.nets)) {
+    throw new ConversionFailed([{ message: "the netlist file needs a components list and a nets list" }]);
+  }
+  return { components: json.components, nets: json.nets };
 }
 function readComponents(db, problems) {
   return db.source_component.list().map((sourceComponent) => {
@@ -21730,30 +21758,10 @@ function carryOverDesignWarnings(circuitJson, problems) {
   }
 }
 
-// lib/types.ts
-class ConversionFailed extends Error {
-  problems;
-  constructor(problems) {
-    super(`${problems.length} problem(s) converting the board:
-` + problems.map((problem) => `  - ${describe(problem)}`).join(`
-`));
-    this.problems = problems;
-    this.name = "ConversionFailed";
-  }
-}
-function describe(problem) {
-  const context = problem.context ?? {};
-  const parts = [
-    context.component && `component ${context.component}`,
-    context.pin && `pin ${context.pin}`,
-    context.net && `net ${context.net}`
-  ].filter(Boolean);
-  return parts.length ? `${problem.message} (${parts.join(", ")})` : problem.message;
-}
-
 // lib/validate.ts
-function validate(emitted, componentCount) {
-  const lintProblems = lint(emitted);
+var HAND_ADDED_UNWIRED = "hand-added-unwired";
+function validate(emitted, componentCount, handAddedIds = []) {
+  const { problems: lintProblems, warnings } = lint(emitted, handAddedIds);
   const coverageProblems = [
     ...checkNetCoverage(emitted),
     ...checkNothingVanished(emitted, componentCount)
@@ -21762,15 +21770,30 @@ function validate(emitted, componentCount) {
     problems: [...lintProblems, ...coverageProblems],
     checkedNets: emitted.netOutcomes.length,
     wiredNets: emitted.netOutcomes.filter((outcome) => outcome.wires > 0).length,
-    lintIssues: lintProblems.length
+    lintIssues: lintProblems.length,
+    warnings
   };
 }
-function lint(emitted) {
+function lint(emitted, handAddedIds) {
   const result = new DiagramLinter().lint(emitted.diagram);
-  return result.issues.filter((issue) => issue.severity !== "info").map((issue) => ({
-    message: `${issue.rule}: ${issue.message}`,
-    context: { component: issue.partId }
-  }));
+  const problems = [];
+  const warnings = [];
+  for (const issue of result.issues) {
+    if (issue.severity === "info")
+      continue;
+    const partId = issue.partId;
+    if (issue.rule === "invalid-attribute" && issue.context?.attrName === HAND_ADDED_ATTR)
+      continue;
+    if (issue.rule === "redundant-parts" && handAddedIds.includes(partId)) {
+      warnings.push({
+        code: HAND_ADDED_UNWIRED,
+        message: `${partId} was added by hand and has no wire yet. It stays in the diagram. ` + "Wire it in Wokwi if it should do something."
+      });
+      continue;
+    }
+    problems.push({ message: `${issue.rule}: ${issue.message}`, context: { component: partId } });
+  }
+  return { problems, warnings };
 }
 function checkNothingVanished(emitted, componentCount) {
   if (componentCount === undefined)
@@ -21800,6 +21823,8 @@ function parseArguments(argv) {
       options.check = true;
     else if (argument === "--circuit")
       options.circuit = argv[++index] ?? options.circuit;
+    else if (argument === "--netlist")
+      options.netlist = argv[++index] ?? options.netlist;
     else if (argument === "--out")
       options.out = argv[++index] ?? options.out;
     else if (argument === "--mapping")
@@ -21811,7 +21836,7 @@ function parseArguments(argv) {
       process.exit(0);
     }
   }
-  const missing = ["circuit", "out", "chips"].filter((name) => !options[name]);
+  const missing = ["out", "chips"].filter((name) => !options[name]);
   if (missing.length) {
     throw new ConversionFailed([
       {
@@ -21819,29 +21844,37 @@ function parseArguments(argv) {
       }
     ]);
   }
+  if (!options.circuit === !options.netlist) {
+    throw new ConversionFailed([
+      { message: "exactly one of --circuit and --netlist is required: the design to convert, as a circuit.json or as a netlist" }
+    ]);
+  }
   return options;
 }
 function __doc__() {
-  return `Usage: bun run cli.ts --circuit <circuit.json> --out <diagram.json> --chips <dir> [--mapping <wokwi-mapping.json>] [--check]
+  return `Usage: bun run cli.ts (--circuit <circuit.json> | --netlist <netlist.json>) --out <diagram.json> --chips <dir> [--mapping <wokwi-mapping.json>] [--check]
 
-All three paths are required, and SPARK_BOARD_JSON must name the design's board file.`;
+Exactly one of --circuit and --netlist, and --out and --chips, are required, and SPARK_BOARD_JSON must name the design's board file.`;
 }
 async function main() {
   const options = parseArguments(process.argv.slice(2));
-  const circuitJson = JSON.parse(await readFile(options.circuit, "utf8"));
   if (options.mapping) {
     const spokenFor = loadMappingFile(options.mapping);
     console.log(`mapping from the part records: ${spokenFor} component(s)`);
   }
-  const { netlist, problems: designProblems } = buildNetlist(circuitJson);
-  const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips });
+  const { netlist, problems: designProblems } = options.netlist ? { netlist: readNetlist(JSON.parse(await readFile(options.netlist, "utf8"))), problems: [] } : buildNetlist(JSON.parse(await readFile(options.circuit, "utf8")));
+  const author = options.netlist ? `generated from ${basename(options.netlist)}` : undefined;
+  const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips, author });
   const existing = await readExisting(options.out);
   const { diagram, summary } = mergeWithExisting(emitted.diagram, existing);
-  const validation = validate({ ...emitted, diagram }, netlist.components.length);
+  const validation = validate({ ...emitted, diagram }, netlist.components.length, summary.keptHandAddedParts);
   report({ netlist, emitted, summary, validation, designProblems });
   const blocking = [...emitted.problems, ...validation.problems];
   if (blocking.length)
     throw new ConversionFailed(blocking);
+  for (const { code, message } of validation.warnings)
+    console.log(`
+warning[${code}]: ${message}`);
   const serialised = JSON.stringify(diagram, null, 2) + `
 `;
   if (options.check) {

@@ -80,6 +80,47 @@ class TheHomeTest(unittest.TestCase):
             self.assertEqual(store.place("tools"), Path(second) / "tools.json")
 
 
+class AStorePathThatIsAFileTest(unittest.TestCase):
+    """P496 (#678): a SPARK_HOME that names a file is a StoreProblem with the way out, never a traceback."""
+
+    def test_listing_a_project_is_refused_with_the_way_out(self):
+        scratch = Path(tempfile.mkdtemp())
+        (scratch / "afile").write_text("")
+        before = os.environ.get("SPARK_HOME")
+        self.addCleanup(lambda: os.environ.pop("SPARK_HOME", None) if before is None else os.environ.update(SPARK_HOME=before))
+        os.environ["SPARK_HOME"] = str(scratch / "afile")
+        with self.assertRaises(store.StoreProblem) as refused:
+            store.add_project(scratch)
+        self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
+
+    def test_a_folder_spark_may_not_tighten_is_refused_the_same_way(self):
+        # P499: the chmod of a private place sits inside the same try as the mkdir
+        def refuse(path, mode):
+            raise PermissionError(1, "Operation not permitted", str(path))
+        scratch = Path(tempfile.mkdtemp())
+        before, chmod = os.environ.get("SPARK_HOME"), store.os.chmod
+        self.addCleanup(lambda: os.environ.pop("SPARK_HOME", None) if before is None else os.environ.update(SPARK_HOME=before))
+        self.addCleanup(setattr, store.os, "chmod", chmod)
+        os.environ["SPARK_HOME"] = str(scratch / "store")
+        store.os.chmod = refuse
+        with self.assertRaises(store.StoreProblem) as refused:
+            store.add_project(scratch)
+        self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
+
+    def test_a_folder_spark_may_not_write_is_refused_the_same_way(self):
+        # P499: the P496 reviewer's second case, a folder spark may not write into (the mkdir fails)
+        scratch = Path(tempfile.mkdtemp())
+        locked = scratch / "locked"
+        locked.mkdir(mode=0o500)
+        self.addCleanup(os.chmod, locked, 0o700)
+        before = os.environ.get("SPARK_HOME")
+        self.addCleanup(lambda: os.environ.pop("SPARK_HOME", None) if before is None else os.environ.update(SPARK_HOME=before))
+        os.environ["SPARK_HOME"] = str(locked / "store")
+        with self.assertRaises(store.StoreProblem) as refused:
+            store.add_project(scratch)
+        self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
+
+
 class ThePrefixedLineTest(unittest.TestCase):
     """P463: a line a person runs later carries the store this run used, so the line sees the same build and grant."""
 

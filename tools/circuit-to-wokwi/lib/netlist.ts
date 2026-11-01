@@ -10,7 +10,7 @@
 import { cju } from "@tscircuit/circuit-json-util";
 import { getSourcePortConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map";
 
-import type { Component, Net, Netlist, Pin, Problem } from "./types";
+import { ConversionFailed, type Component, type Net, type Netlist, type Pin, type Problem } from "./types";
 
 export interface NetlistResult {
   netlist: Netlist;
@@ -29,6 +29,18 @@ export function buildNetlist(circuitJson: any[]): NetlistResult {
   carryOverDesignWarnings(circuitJson, problems);
 
   return { netlist: { components, nets }, problems };
+}
+
+/**
+ * A netlist already written as JSON (P484), in place of one read from a circuit.json: the spark spine writes one for a
+ * board-only build, the board and its own LED and button, which has no circuit. Only its two lists are checked here;
+ * the emitter and the validator judge the rest, as they do a netlist from a circuit.
+ */
+export function readNetlist(json: any): Netlist {
+  if (!Array.isArray(json?.components) || !Array.isArray(json?.nets)) {
+    throw new ConversionFailed([{ message: "the netlist file needs a components list and a nets list" }]);
+  }
+  return { components: json.components, nets: json.nets };
 }
 
 function readComponents(db: any, problems: Problem[]): Component[] {

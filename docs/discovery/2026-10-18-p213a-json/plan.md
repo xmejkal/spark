@@ -31,7 +31,7 @@ sonnet) are recorded here with what each changed.
 look, matching board, token:
 ```
 {"tool":"look","op":"look","status":"ok","data":{"port":"/dev/cu.usbmodem101","chip":"ESP32-C6","flash_mb":4,
- "mac":"8c:bf:ea:cc:97:70","board":"xiao-esp32-c6","fields":{"chip":"same","flash":"same"},"stops":[],"warnings":[],
+ "mac":"8c:bf:ea:xx:xx:xx","board":"xiao-esp32-c6","fields":{"chip":"same","flash":"same"},"stops":[],"warnings":[],
  "unknown":{},"verdict":"match","token":"3f9a-0c1e","no_token_reason":null},"problems":[],"unchecked":[],
  "next":[{"op":"deploy","argv":["--project","/p","--token","3f9a-0c1e","--port","/dev/cu.usbmodem101"],
  "why":"erases ALL of the flash, then writes the passed image","effects":["deletes","writes"],"needs_yes":true}]}

@@ -47,7 +47,28 @@ written with it as code`.
 
 A project that runs on the board alone, such as a blink of the board's own LED, says `"board_only": true` with an empty
 `parts` list. `parts.py --requirements` writes it when the board serves every need, and removes it when a part comes. The parts, schematic, footprint and build stages are then `skipped`, never `ok`, and the simulation holds
-the board alone. `firmware/pins.py` names `ONBOARD_LED` when the board record names one on-board LED, and `ONBOARD_BUTTON` for one
+the board's Wokwi part. When that part is a stand-in (`wokwi_is_stand_in`, as the S3 devkit is for the FireBeetle 2 ESP32-S3),
+the build wires Wokwi's LED as `onboard_led` and Wokwi's pushbutton as `onboard_button` in place of the board's own, each to its
+pin and to ground, through the converter, and merges into your kept `sim/diagram.json` as a full build does
+([P484](https://github.com/xmejkal/spark/issues/663)). It wires a part only when the record names it on one header pin, and only
+an LED that a 1 lights and a button that reads 0 when pressed. When only one of them qualifies, only that one is wired. That
+build needs Node, as a full build does. Any other board-only build, such as the XIAO ESP32-C6's (its Wokwi part is the board
+itself), holds the board alone and needs no converter.
+
+A scenario presses `onboard_button` and waits for the line the firmware prints, then releases it:
+
+```yaml
+steps:
+  - wait-serial: "ready"
+  - set-control: { part-id: onboard_button, name: pressed, value: 1 }
+  - wait-serial: "effect heartbeat"   # the firmware's own line for a press
+  - set-control: { part-id: onboard_button, name: pressed, value: 0 }
+```
+
+Wait for the line right after the press. A firmware that acts on the press prints it at once, and a `wait-serial` that starts
+after a delay misses it and times out. `expect-pin` on `onboard_led` reads a level, not a PWM duty or a brightness.
+
+`firmware/pins.py` names `ONBOARD_LED` when the board record names one on-board LED, and `ONBOARD_BUTTON` for one
 on-board button. `ONBOARD_LED_ON` gives the level that lights the LED, and `ONBOARD_BUTTON_ON` the level a pressed button reads,
 when the record holds it (`active_level`). A part on many pins has one name per label: `ONBOARD_BUTTON_S1`, and
 `ONBOARD_DISPLAY_MOSI` for a display. The pin that reads the battery is `ONBOARD_BATTERY_SENSE`, and its divider is
@@ -141,7 +162,7 @@ does not need a finished build ([P196](https://github.com/xmejkal/spark/issues/1
 `pins.py` that spark did not write is there, the build leaves it alone and names it. If the pins cannot be placed, the
 build removes the `pins.py` that it wrote earlier, because that file describes another design. If spark refuses the
 requirements file, the build removes the earlier sheet, drawings, `page.html` and the `pins.py` that it wrote, and
-says why. If the requirements file is missing, it removes nothing. The one command also keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR. A rebuild merges into the kept `sim/diagram.json` (P482): the part positions by id, the wire routes whose two ends are still generated, and the parts marked `"handAdded": "true"` in `attrs` with the wires that touch them stay. Today the converter's own lint fails a hand-added part of a type whose attributes Wokwi knows (an LED: `Unknown attribute "handAdded"`) and a hand-added part with no wire yet, so such a rebuild stops ([P497](https://github.com/xmejkal/spark/issues/681)). A hand-drawn wire between two generated parts does not stay, a generated part that the person deleted comes back, and a position whose generated id changed is lost. The verdict's simulation stage says `kept from your diagram: ...` when it kept anything.
+says why. If the requirements file is missing, it removes nothing. The one command also keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR. A rebuild merges into the kept `sim/diagram.json` (P482): the part positions by id, the wire routes whose two ends are still generated, and the parts marked `"handAdded": "true"` in `attrs` with the wires that touch them stay. A hand-added part of a type Wokwi knows passes the converter's lint, and one with no wire yet is a warning in the build output, not a stop; a part type the converter does not know still stops (`unknown-part-type`) ([P497](https://github.com/xmejkal/spark/issues/681)). A hand-drawn wire between two generated parts does not stay, a generated part that the person deleted comes back, and a position whose generated id changed is lost. The verdict's simulation stage says `kept from your diagram: ...` when it kept anything.
 A rebuild keeps the flash image that `sim/wokwi.toml` already names, unless `--firmware` names another. Spark reads that line only as `firmware = "name.bin"` (a JSON string); a line in another form (indented, `firmware="x.bin"`, a number, an empty name) is not kept, and the build says so on stderr: the rebuild then names no image.
 
 When the chain runs end to end for a project on your list, your store's history records `built`: the board and the parts
@@ -287,7 +308,7 @@ prints a line for each change that a scenario waits on.
 
 **The console read.** On the P215 bench re-run (2026-10-15), a firmware whose loop never read its console ended three
 deploys in `ready unknown`, with mpremote's "could not enter raw repl". After the conversation added a read that does
-not wait, the next deploy printed `ready seen` (`docs/guide/journey.md`, "The button-and-LED firmware on the board").
+not wait, the next deploy printed `ready seen` (`docs/guide/journey/bench.md`, "The button-and-LED firmware on the board").
 MicroPython's `select.poll` polls a stream with a timeout in milliseconds
 (https://docs.micropython.org/en/latest/library/select.html). The conversation writes the loop, and spark ships no code for it.
 
@@ -349,5 +370,5 @@ skill is the full gate before anything is fabricated, and the fab package (the z
 board house takes) comes after the gate: the `spark-design` skill makes no Gerbers while anything load-bearing is unverified. When the
 time comes, `npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip` makes one; `check_all` finds `*-gerbers.zip`
 or `fab/*.zip` and reads the `bom.csv` inside it
-([run on the example](../docs/guide/journey.md#from-draft-to-order)). The generated placement is a column that does not overlap — a draft, and
+([run on the example](../docs/guide/journey/from-draft-to-order.md)). The generated placement is a column that does not overlap — a draft, and
 the file's own header says so.

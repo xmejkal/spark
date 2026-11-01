@@ -19,7 +19,7 @@ from board_look import LookStop, Port  # noqa: E402
 from fakes import FakeConsoleProbe, FakeFirmwarePlatform, FakePortFinder  # noqa: E402
 
 PORT = "/dev/cu.usbmodem1101"
-C6 = Port(PORT, "8C:BF:EA:CC:97:70", "303a:1001", "Espressif USB JTAG/serial debug unit")
+C6 = Port(PORT, "8C:BF:EA:00:00:02", "303a:1001", "Espressif USB JTAG/serial debug unit")
 DEFAULTS = json.loads((ROOT / "data" / "tools.json").read_text())
 ESPTOOL = tools.Tool("esptool", "flasher", DEFAULTS["esptool"], ["/opt/python3", "-m", "esptool"])
 MPREMOTE = tools.Tool("mpremote", "board-shell", DEFAULTS["mpremote"], ["/opt/python3", "-m", "mpremote"])
@@ -58,7 +58,7 @@ class StepTest(unittest.TestCase):
         result, probe = examine(ConsoleReadResult("read", "", None))
         self.assertEqual((result.next_step, result.if_not_helped, result.tool_said), ("hold_boot", None, SAID))
         self.assertEqual([check.name for check in result.checks], ["port-listed", "console"])
-        self.assertIn("USB serial 8C:BF:EA:CC:97:70", result.checks[0].fact)
+        self.assertIn("USB serial 8C:BF:EA:00:00:02", result.checks[0].fact)
         self.assertEqual(probe.reads, 1)
 
     def test_a_silent_board_after_mpremote_is_press_reset_then_replug(self):
@@ -150,7 +150,7 @@ class OutputTest(unittest.TestCase):
         result, _ = examine(ConsoleReadResult("read", "", None), tool=MPREMOTE, said="could not enter raw repl")
         self.assertEqual(board_doctor.describe(result), [
             "said    could not enter raw repl",
-            "check   port-listed: mpremote devs lists /dev/cu.usbmodem1101, USB serial 8C:BF:EA:CC:97:70",
+            "check   port-listed: mpremote devs lists /dev/cu.usbmodem1101, USB serial 8C:BF:EA:00:00:02",
             "check   console: the console was silent for 2 s",
             "next    press the board's RESET once and run it again",
             "if not  unplug the board, plug it in again, and run it again"])

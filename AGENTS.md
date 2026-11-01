@@ -6,14 +6,16 @@ generates a board that builds, with a breadboard sheet, the pin map the firmware
 requirements file from the parts picked for a goal's needs ([P97](https://github.com/xmejkal/spark/issues/18)), and no
 simulation runs unless you run one. [What works today](README.md#what-works-today) gives each step's status.
 
-**If you are an AI agent using spark, read [`docs/guide/agents.md`](docs/guide/agents.md) first.** It covers:
+**If you are an AI agent using spark, read [`docs/guide/agents.md`](docs/guide/agents.md) first.** It holds the contract, the commands in Claude Code and the exit codes. Three pages beside it hold the rest:
 
-- the commands in Claude Code, and the scripts anywhere else;
-- their JSON and exit codes;
-- what never to assume. A `could-not-run` or a `skipped` is not a pass, and a `null` is not a value to fill in.
+- [The scripts](docs/guide/agents/scripts.md): how to run spark anywhere else.
+- [Their JSON](docs/guide/agents/json.md): the keys of each script's answer.
+- [What never to assume](docs/guide/agents/never-assume.md). A `could-not-run` or a `skipped` is not a pass, and a
+  `null` is not a value to fill in.
 
 The rules under what never to assume apply to any work in this repository. To change spark itself, read
-[`docs/guide/developing.md`](docs/guide/developing.md).
+[`docs/guide/developing.md`](docs/guide/developing.md). Its patterns, names table and role words are in
+[`docs/guide/patterns-and-names.md`](docs/guide/patterns-and-names.md).
 
 ## Principles for changing spark
 

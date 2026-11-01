@@ -28,8 +28,8 @@ import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
 from test_boards import DEFINITION, kept_definition_board  # noqa: E402
 
-MAC = "8c:bf:ea:cc:97:70"
-GOOD_RECORD = ('{"mac": "8c:bf:ea:cc:97:70", "deploys": [{"project": "blink", "verdict": "ready seen", '
+MAC = "8c:bf:ea:00:00:01"
+GOOD_RECORD = ('{"mac": "8c:bf:ea:00:00:01", "deploys": [{"project": "blink", "verdict": "ready seen", '
                '"deployed": "2026-10-19T09:24:50+02:00"}]}')
 LOG_HEADER = "# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n"
 
