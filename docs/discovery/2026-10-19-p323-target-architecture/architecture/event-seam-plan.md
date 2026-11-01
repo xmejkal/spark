@@ -107,7 +107,7 @@ keeps its own reporter, so E1's stream test goes through a builder, as `test_cor
    puts a stderr line on stdout.
 4. **The stderr contract.** Under `--json`, stderr holds text for a person: the event lines, a tool's own output, the
    diagnostics and a crash's traceback. An agent reads the envelope on stdout and never parses stderr. E1 adds this
-   sentence to `docs/guide/agents.md` beside `:555-558`. JSON lines on stderr are a later Reporter (decision 3).
+   sentence to `docs/guide/agents.md` beside its "A crash exits 1" section. JSON lines on stderr are a later Reporter (decision 3).
 5. **The world's report is the only path.** An Operation prints nothing, and `run_cli` never prints an event itself.
    Test builders take the reporter. A caller-supplied `outside` carries its own report, so a test that gives one reads
    that Fake's events.
@@ -259,7 +259,7 @@ No file is edited by this card. Each edit lands in the PR of the slice that make
 | `glossary.md` | rows | Event, Reporter, and "report" with its three meanings: the method `outside.report`, the `LookReport` value, the `TextReport` output. Also "event line" and "result line" | E1 |
 | `notes.md` | a decision row | "N33 `OutsideWorld.report(event)` over a line callable: one seam for every reader" | E1 |
 | `docs/guide/developing.md` | "The core contract" and its class diagram, the Strategy row's examples | `report` in the contract, `Reporter` among the examples. No new role row | E1 |
-| `docs/guide/agents.md` | beside `:555-558` | the stderr contract of rule 4 | E1 |
+| `docs/guide/agents.md` | beside "A crash exits 1" | the stderr contract of rule 4 | E1 |
 
 ## 4. Risks
 
