@@ -22,6 +22,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import stat
 import sys
 import tempfile
@@ -37,6 +38,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
+import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
@@ -2307,10 +2309,33 @@ class ALevelIsWrittenToABoardTest(unittest.TestCase):
         said, code = self.write(home, here, values, part_id="only-in-b")
         self.assertEqual(code, 1)
         self.assertIn("not a board of this project", said["problems"][0]["sentence"])
+        self.assertIn("pass --project <the folder", said["problems"][0]["sentence"])
         with in_store(home):
             self.assertEqual(run_json(["--fact-set", "only-in-b", self.given(values)])[1], 1)
+        with in_store(home):
+            said = run_json(["--fact-set", "only-in-b", self.given(values)])[0]
+        self.assertIn("a project (no --project was given)", said["problems"][0]["sentence"])
+        self.assertNotIn("None", said["problems"][0]["sentence"])
         self.assertEqual(self.stored_as(project, "only-in-b"), board)
         self.assertEqual(self.write(home, project, values, part_id="only-in-b")[1], 0)
+
+    def test_the_fix_command_run_as_written_from_the_project_folder_writes_the_level(self):
+        # P464: the fix names --project ., so a person in the project's folder gets no refusal
+        home, project, board = self.a_project()
+        (project / "boards" / "xiao-esp32-c6.json").rename(project / "boards" / "only-in-b.json")
+        board = dict(self.stored_as(project, "only-in-b"), id="only-in-b")
+        (project / "boards" / "only-in-b.json").write_text(json.dumps(board))
+        fix = missing_facts.list_missing_facts(board)[0].fix
+        command = re.search(r"`parts\.py ([^`]+)`", fix).group(1).replace("FILE", self.given({"pin_roles": {"onboard_led": {"active_level": self.BENCH}}}))
+        here = os.getcwd()
+        os.chdir(project)
+        try:
+            with in_store(home):
+                said, code = run_json(command.split())
+        finally:
+            os.chdir(here)
+        self.assertEqual((code, said["data"]["written"]), (0, True))
+        self.assertEqual(self.stored_as(project, "only-in-b")["pin_roles"]["onboard_led"]["active_level"], self.BENCH)
 
     def stored_as(self, project, name):
         return json.loads((project / "boards" / (name + ".json")).read_text())

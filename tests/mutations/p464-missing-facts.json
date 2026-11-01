@@ -100,5 +100,17 @@
   "name": "a write empties a level",
   "find": "entry[LEVEL_FACT].get(\"value\") is None:",
   "replace": "entry[LEVEL_FACT].get(\"value\") is None and False:"
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "the fix command leaves out --project",
+  "find": "FILE --project .` from",
+  "replace": "FILE` from"
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "the refusal prints None for a missing project",
+  "find": "if project else \"a project (no --project was given)\")",
+  "replace": "if True else \"a project (no --project was given)\")"
  }
 ]

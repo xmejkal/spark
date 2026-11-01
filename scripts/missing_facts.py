@@ -19,7 +19,7 @@ ACTIVE_LEVEL_MEANING = {
 }
 LEVEL_FACT = "active_level"
 SENTENCE = "%s has no %s in the board record (%s), so the firmware would guess it"
-FIX = ("Tell it: write it with `parts.py --fact-set %s FILE` as {value, verified, source}. Find it: run /spark:research. "
+FIX = ("Tell it: write it with `parts.py --fact-set %s FILE --project .` from the project's folder, as {value, verified, source}. Find it: run /spark:research. "
        "Or measure it on the bench.")
 
 
@@ -73,6 +73,7 @@ def board_write_problems(record, after, path, values, project):
     `after` that `record` did not have.
     """
     if project is None or path.parent.resolve() != (project / "boards").resolve():
-        return ["%s is not a board of this project (%s): copy it into this project's boards/ first, or run from its own project" % (path.stem, project)]
+        return ["%s is not a board of %s: pass --project <the folder of the project that owns it>, or copy it into this project's boards/ first"
+                % (path.stem, "this project (%s)" % project if project else "a project (no --project was given)")]
     return level_write_problems(values) or sorted(set(boards.validate(after, path)) - set(boards.validate(record, path)))
 # --- end MVP ---

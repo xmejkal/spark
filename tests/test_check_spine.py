@@ -1392,6 +1392,19 @@ class TheBoardAloneTest(unittest.TestCase):
         exec((into / "firmware" / "pins.py").read_text(), names)
         self.assertEqual((names["ONBOARD_LED_ON"], names["ONBOARD_BUTTON_ON"]), (0, 0))
 
+    def test_a_build_without_keep_gives_no_missing_facts_yet(self):
+        # P464 rows 1 and 2: the docs say the key comes with --keep, so this pins the absence the docs name
+        from test_missing_facts import levelless
+        project = Path(tempfile.mkdtemp()) / "project"
+        (project / "boards").mkdir(parents=True)
+        (project / ".spark").mkdir()
+        (project / "boards" / "levelless-board.json").write_text(json.dumps(dict(levelless(), id="levelless-board")))
+        (project / "requirements.json").write_text(json.dumps({"board": "levelless-board", "parts": [], "board_only": True}))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            code = check_spine.main([str(project / "requirements.json"), "--json"])
+        self.assertEqual(code, 0)
+        self.assertNotIn("missing_facts", json.loads(out.getvalue()))
+
     def test_the_text_mode_says_each_missing_fact_on_stderr_and_keeps_stdout_to_the_verdict(self):
         # P464: no --json, so the person reads the gap from the kept line
         from test_missing_facts import levelless

@@ -57,7 +57,7 @@ list without `board_only` still stops at the parts stage.
 
 When the board record lacks the level of its onboard LED or button, the build stays `ok` and says so: each kept line for
 `firmware/pins.py` has `missing fact: <sentence>. <fix>`, and with `--json` the entry has `missing_facts` (code
-`missing_fact`). `pins.py` then has no `ONBOARD_LED_ON` or `ONBOARD_BUTTON_ON`, and you never guess one. Say in one
+`missing_fact`; the top-level `missing_facts` too). Only a build with `--keep` that writes `pins.py` says it. `pins.py` then has no `ONBOARD_LED_ON` or `ONBOARD_BUTTON_ON`, and you never guess one. Say in one
 sentence what is missing, and ask one concrete question: "Do you know which level lights the LED, 1 or 0? If not, I can
 look on the seller's and maker's pages, or you watch it while I set the pin." Write the answer the person's way:
 their word is `verified: false` with a `why_it_matters`; a page `/spark:research` found is written as research writes

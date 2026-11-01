@@ -24,3 +24,5 @@ What the P464 build (PR #655), its review and its refuter found, and what the pl
 | 18 | Wrong plan claim: `_record_path(kinds=("part",))`; a tuple would force a 6th parameter on `_set_in_home` (R3), so it is `kind=` | plan | verified | `_record_path` |
 | 19 | Wrong plan claim: a `boards/levelless-board.json` in the repo; the test builds one in a temp project from the XIAO | plan | verified | tests/test_missing_facts.py |
 | 20 | An unchecked item with a `subject` was claimed for `missing_fact`; the items are never in `unchecked` | agents.md text | acted | the sentence is removed |
+| 21 | Refuter, second round: `missing_facts` shows only with `--keep` (it is built from the kept entries), while the docs said "always" | refuter | acted | docs say "with `--keep`, when spark writes pins.py"; rows 1 and 2 name the gap; a test pins the absence without `--keep` |
+| 22 | Refuter, second round: run from the project folder without `--project`, the refusal said "(None)" | refuter | acted | the refusal says "pass --project <the folder of the project that owns it>"; the `fix` command carries `--project .`; tests run it as written |
