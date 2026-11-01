@@ -1,7 +1,7 @@
 # spark
 
 **spark is a Claude Code plugin for gadgets built from an ESP32 dev board and off-the-shelf modules. It turns your idea
-into a breadboard you can wire and firmware you can test**.
+into a breadboard you can wire and firmware you can test.**
 
 From a list of parts, spark builds and checks the design. It writes a *breadboard sheet*: the parts and the wires, one
 step each. It writes a *pin map*: a file that tells your firmware which board pin each part uses. It also makes a
@@ -59,8 +59,7 @@ module such as the DFRobot FireBeetle 2 ESP32-S3. spark is not for chip-down boa
 - You describe the gadget. spark turns it into needs and matches them against the parts you own and the parts it
   knows.
 - It researches a missing part from the vendor's own documents. It writes the part as a
-  [record](GLOSSARY.md#record--and-the-four-places-one-lives): its facts, each with a source and whether anyone checked
-  it.
+  [record](GLOSSARY.md#record--and-the-four-places-one-lives): each fact with a source and whether anyone checked it.
 - [The chain](GLOSSARY.md#the-spine-or-the-chain--scriptscheck_spinepy) starts from a
   [requirements file](GLOSSARY.md#the-requirements-file). Every pin gets a reason, and the connections come from the
   parts' records.
@@ -81,7 +80,7 @@ You need Claude Code, Python 3.9 or newer and Node 20 or newer. The runs for the
 ```
 
 Then, in a project folder, type `/spark:init` to write the project's files. Type `/spark:setup` to install the tools spark needs. It
-installs them after you see the commands and say yes. [Build](docs/guide/journey.md#build) in the journey guide gives the details for
+installs them after you see the commands and say yes. [Build](docs/guide/journey/build.md) in the journey guide gives the details for
 Linux and says what an update replaces.
 
 ## Two roads to a board
@@ -90,7 +89,7 @@ Linux and says what an update replaces.
 LEDs*). Then type `/spark:idea` and say what you want to make (*a button that lights an LED*). Claude turns your words
 into needs and matches them against your drawer and spark's records. You pick a part for each need, and spark reserves
 what you own. The picks become a requirements file. `/spark:build` builds the board, and the tally ends the run with one
-cost line. [A recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led) shows each script and its output.
+cost line. [A recorded run](docs/guide/journey/recorded-run.md) shows each script and its output.
 
 **From a requirements file you write.** Name the dev board and the parts as in the example above. `boards.py --list`
 and `parts.py --list` print their ids. Then type `/spark:build`.
@@ -116,21 +115,23 @@ before its goal, or part of it was not run here. **not yet**: nothing does it ye
 
 | step | today | with |
 | --- | --- | --- |
-| [Drawer](docs/guide/journey.md#drawer) | **partly**: the scripts that list and write what you own ran, but the conversation and the DFRobot import did not | `/spark:drawer` |
-| [Idea](docs/guide/journey.md#idea) | **partly**: the scripts ran from a goal's needs to a requirements file, but the conversation did not | `/spark:idea` |
-| [Research](docs/guide/journey.md#research) | **partly**: the library search runs, but the research agents did not run here | `/spark:research`, `/spark:identify` |
-| [Build](docs/guide/journey.md#build) | **works**: a requirements file becomes a board that builds, with a breadboard sheet, a pin map and a Wokwi diagram, or the stage that stopped it | `/spark:build` |
-| [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's five deterministic checks in one command | `check_all.py`, after `/spark:init` again |
-| [Firmware](docs/guide/journey.md#firmware) | **partly**: an import check proves the firmware's names, not that it drives every signal | `/spark:build`, `assign_pins.py --emit-pins`, `import_firmware.py` |
-| [Simulate](docs/guide/journey.md#simulate) | **works**: `run_scenario.py` runs your firmware in Wokwi on the built diagram and keeps a dated log | `/spark:build --keep .`, then `run_scenario.py` |
-| [Bench](docs/guide/journey.md#bench) | **partly**: `deploy.py` flashes the firmware onto the board after your yes, but no breadboard wired from a sheet has run yet | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
+| [Drawer](docs/guide/journey/drawer.md) | **partly**: the scripts that list and write what you own ran, but the conversation and the DFRobot import did not | `/spark:drawer` |
+| [Idea](docs/guide/journey/idea.md) | **partly**: the scripts ran from a goal's needs to a requirements file, but the conversation did not | `/spark:idea` |
+| [Research](docs/guide/journey/research.md) | **partly**: the library search runs, but the research agents did not run here | `/spark:research`, `/spark:identify` |
+| [Build](docs/guide/journey/build.md) | **works**: a requirements file becomes a board that builds, with a breadboard sheet, a pin map and a Wokwi diagram, or the stage that stopped it | `/spark:build` |
+| [Checks](docs/guide/journey/checks.md) | **works**: `check_all.py` runs spark's five deterministic checks in one command | `check_all.py`, after `/spark:init` again |
+| [Firmware](docs/guide/journey/firmware.md) | **partly**: an import check proves the firmware's names, not that it drives every signal | `/spark:build`, `assign_pins.py --emit-pins`, `import_firmware.py` |
+| [Simulate](docs/guide/journey/simulate.md) | **works**: `run_scenario.py` runs your firmware in Wokwi on the built diagram and keeps a dated log | `/spark:build --keep .`, then `run_scenario.py` |
+| [Bench](docs/guide/journey/bench.md) | **partly**: `deploy.py` flashes the firmware onto the board after your yes, but no breadboard wired from a sheet has run yet | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
 
 ## Commands, skills and agents
 
-**Commands**, typed in Claude Code: `/spark:init` sets up a project and `/spark:setup` the tools. `/spark:drawer` keeps
-what you own. `/spark:idea` turns a goal into needs, a part for each need and a requirements file. `/spark:research`
-finds a missing part, and `/spark:identify` a module from a photo. `/spark:build` makes a board from a requirements
-file, and `/spark:deploy` puts the firmware onto the board.
+**Commands**, typed in Claude Code:
+
+- `/spark:init` sets up a project, `/spark:setup` the tools, and `/spark:drawer` keeps what you own.
+- `/spark:idea` turns a goal into needs, a part for each need and a requirements file.
+- `/spark:research` finds a missing part, and `/spark:identify` a module from a photo.
+- `/spark:build` makes a board from a requirements file, and `/spark:deploy` puts the firmware onto the board.
 
 **Skills**, which Claude picks up from your words: `spark-design` designs a board, `spark-review` reviews it and gates it
 before you order it, and `spark-reverse-engineer` reads a board from its photo.
@@ -150,7 +151,7 @@ button, a connector), `parts-researcher` for a module, and `design-reviewer`, on
 ## Honest limits
 
 - **The generated board is a draft.** No check here is a design-rule check, and tscircuit's autorouter can make
-  shorts. [From draft to order](docs/guide/journey.md#from-draft-to-order) gives the steps before you order a board.
+  shorts. [From draft to order](docs/guide/journey/from-draft-to-order.md) gives the steps before you order a board.
 - **The reviewer agents in `spark-review` are less proven than the checks.** The only measurements were a few eval
   runs, one to three per arm, against a baseline with no plugin
   ([tabled in the 2026-09-24 audit](docs/archive/audit-2026-09-24/autonomous-agent-readiness.md#on-the-eval-and-the-reprioritisation-it-drove)).
@@ -169,8 +170,7 @@ button, a connector), `parts-researcher` for a module, and `design-reviewer`, on
 ## More
 
 - [The glossary](GLOSSARY.md): the words this repository uses its own way, each with the failure that produced it.
-- [The journey guide](docs/guide/journey.md): each step on real runs. It also shows what the larger example (a motor
-  driver, a power inlet and two buttons) found: a conflict between two parts, an advisory and a reason for every pin.
+- [The journey guide](docs/guide/journey.md): each step on real runs, with a page for each step.
 - [Developing spark](docs/guide/developing.md): the tests, the commit gate, and where the work is planned.
 - **Found a problem?** [Open an issue](https://github.com/xmejkal/spark/issues/new) with the command you ran, its
   output and spark's version (in `.claude-plugin/plugin.json`).

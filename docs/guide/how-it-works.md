@@ -43,7 +43,7 @@ Two more names can appear, each as could-not-run: `requirements`, for a file tha
 for an error the script did not expect.
 
 `/spark:build` stops after the simulation stage. You run [`check_all.py`](../../scripts/check_all.py) next; it runs
-the five checks on what was built. The [journey guide](journey.md#build) shows a real run.
+the five checks on what was built. The [journey guide](journey/build.md) shows a real run.
 
 The files that join the steps:
 
@@ -238,7 +238,7 @@ spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, 
 ## The tools spark calls
 
 `/spark:setup` lists them, one job per line, with what fills each job on this machine:
-`tools.py --status --project .` ([a real run](journey.md#build)).
+`tools.py --status --project .` ([a real run](journey/build.md)).
 
 `[ok  ]` on an MCP row (chip-docs, parts-search) means only that spark declares the server and Node is on the PATH.
 Nothing checks that Claude Code has the server registered or that it answers

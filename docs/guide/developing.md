@@ -601,7 +601,7 @@ changes what it does, the change updates the journey guide and the README's *Wha
 [Definition of Done](../../scrum/README.md#definition-of-done).
 
 **Who changes the README.** The README changes only through the documentation council or a story's own status line in
-*What works today*. A status line is one sentence. Its detail goes to the step's section in the
+*What works today*. A status line is one sentence. Its detail goes to the step's page in the
 [journey guide](journey.md). The council runs at the end of each epic and when the PO asks
 ([P498](https://github.com/xmejkal/spark/issues/682)).
 
