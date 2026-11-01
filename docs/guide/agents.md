@@ -15,15 +15,17 @@ Read these rules before you run a script. Four pages give them in full; open the
    adds `skipped`. A crash also exits 1, so read the JSON, not only the code
    ([the outcomes](#the-outcomes-and-their-exit-codes)).
 2. **These are not a pass:** `could-not-run`, `skipped`, `unknown`, a `null` and a `?` line. Never fill in a `null`
-   ([what never to assume](#what-never-to-assume)).
+   ([what never to assume](agents/never-assume.md)).
 3. **`check_all.py` exit 0 means less than it says.** No check that ran found a problem. Read `resolved` to see that
-   it found the circuit and the rules.
+   it found the circuit and the rules ([check_all's answer](agents/json.md#check_alls-answer)).
 4. **Relay a "passed, but ..." answer whole.** `run_scenario.py` prints it after a pass with no set-control step. A
-   bare `passed` clears no caveat.
+   bare `passed` clears no caveat ([rule 8](agents/never-assume.md)).
 5. **Ask `parts.py --describe --json` first.** It says which `parts.py` operations write and which reach the
-   network. Run each write with `--dry-run` first. A network operation needs the person's yes.
+   network. Run each write with `--dry-run` first. A network operation needs the person's yes
+   ([what reads and what writes](agents/scripts.md#what-reads-and-what-writes)).
 6. **Build with `--keep <folder>`, then read `missing_facts`.** `status` can be `ok` while the board record lacks a fact
-   the firmware needs. Never guess that fact. Ask the person.
+   the firmware needs. Never guess that fact. Ask the person
+   ([`missing_facts`](agents/json.md#check_spinepy)).
 7. **Check someone else's project in a scratch store** (`SPARK_HOME`). Never put the person's drawer, history or
    projects list into a URL, a prompt or a commit.
 

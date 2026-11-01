@@ -1,7 +1,7 @@
 """
 The codes the core writes in an envelope item for every Operation (P442, W3-3). A leaf: it imports nothing. An area's own
 codes stay in its table (`board_codes.py` for the bench); these are the ones `run_operation` and `run_cli` give whatever
-the Operation. `CODES` says each in one sentence, as `board_codes.CODES` does, and `docs/guide/agents.md` names each.
+the Operation. `CODES` says each in one sentence, as `board_codes.CODES` does, and `docs/guide/agents/json.md` names each.
 """
 
 # --- MVP ---

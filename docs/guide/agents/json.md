@@ -2,7 +2,7 @@
 
 Part of the [guide for AI agents](../agents.md).
 
-### check_all's answer
+## check_all's answer
 
 To check a project, run one command that answers once:
 
@@ -113,7 +113,7 @@ could-not-run, both in `status` and in the exit code, so read every `unchecked` 
 The requirements files, which buildability and physics also read, are not listed in `resolved`. vendor-truth checks
 every board definition available, including the library's.
 
-### The other scripts' JSON
+## The other scripts' JSON
 
 Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the test fails when a shape changes):
 
@@ -124,12 +124,57 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `check_footprints.py` | `findings`, `status`, `tool` |
 | `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a rules file naming no rule gives `fix` and `reason` instead of `problems`; a rules file that cannot be read or is refused gives `reason` (its old "not valid JSON" sentence for a broken rules file is now "could not be read") |
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
-| `check_vendor_pins.py` | **a bare list**, one entry per board file. A compared board: `board`, `compared`, `not_recorded`, `problems`, `source`, `status`. A could-not-run: `board`, `status` and `reason`. A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose header held no pins; a live run refused before or during the fetch has none. `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`. The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)) |
+| `check_vendor_pins.py` | **a bare list**, one entry per board file ([its keys](#check_vendor_pinspy)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
-| `import_firmware.py` | `modules`, `problems`, `status`, `tool`, `unchecked`. Each of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`. A project with no `firmware/` folder is `could-not-run`. One with nothing to import but `main.py`, `boot.py` and `pins.py` is `problems`. Its firmware cannot be imported without running `main.py` |
-| `check_spine.py` | `check`, `stages`, `status`, `missing_facts` with `--keep`, when spark writes `firmware/pins.py` and the board record lacks a fact a stage needs (see the `missing_fact` code), and `unserved` when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board (`tests/test_check_spine.py` pins it). `stages` names the one that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`. `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed. With `--keep` or `--sim-dir`, `kept` lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`, `removed`, `not written` or `not kept`) and `why`. A `not written` entry of a drawing has `code` (`null` for an older refusal), `subject` and `expected` (`true` means by design, so do not retry). A `wrote` entry for `breadboard.svg` may have `drawn_from` (`record`). The simulation line warns "no serial monitor is wired in the diagram" when the diagram has no `$serialMonitor` wires and the board's record lacks `serial_without_wires: true` ([P468](https://github.com/xmejkal/spark/issues/636)). spark's XIAO ESP32-C6 and FireBeetle 2 records carry it, so they get no warning. Read the warning as a possible silent `wait-serial`, not a failure. `check_spine.py --json` has a top-level `missing_facts` beside `unserved`, only with `--keep`, when spark writes `firmware/pins.py` and there are items (a build without `--keep`, or a `pins.py` spark left alone, gives none yet), and the `wrote` entry for `firmware/pins.py` has the same list, when the board record lacks the level of its onboard LED or button ([P464](https://github.com/xmejkal/spark/issues/632)): items `{subject, code, sentence, fix}` with the code `missing_fact` and a subject such as `pin_roles.onboard_led.active_level`. A `missing_fact` item never changes `status` and is never in `unchecked`: after `status`, read top-level `missing_facts` when you built with `--keep`, because `ok` does not mean the firmware has every fact. Never guess the level. Ask the person (see `/spark:build`), write the answer with `parts.py --fact-set <board> FILE --project <the project's folder>`, and build again |
+| `import_firmware.py` | `modules`, `problems`, `status`, `tool`, `unchecked` ([more](#import_firmwarepy)) |
+| `check_spine.py` | `check`, `stages`, `status`, and `kept`, `missing_facts` and `unserved` when they apply ([its keys](#check_spinepy)) |
 | `look.py`, `deploy.py` | the envelope, as `parts.py`'s: see below. A crash in `look.py` is an envelope too, code `crash`, exit 2 |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
+
+### check_spine.py
+
+- `stages` names the stage that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`.
+  `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it
+  when a part is listed.
+- `kept`, with `--keep` or `--sim-dir`, lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`,
+  `removed`, `not written` or `not kept`) and `why`. A `not written` entry of a drawing has `code` (`null` for an older
+  refusal), `subject` and `expected` (`true` means by design, so do not retry). A `wrote` entry for `breadboard.svg` may
+  have `drawn_from` (`record`).
+- `unserved` is there when the requirements file carries the note `parts.py --requirements` writes for the needs it
+  leaves off the board (`tests/test_check_spine.py` pins it).
+- `missing_facts` is a top-level list, with `--keep` only, when spark writes `firmware/pins.py` and the board record
+  lacks the level of its onboard LED or button ([P464](https://github.com/xmejkal/spark/issues/632)). The `wrote` entry
+  for `firmware/pins.py` in `kept` has the same list. A build without `--keep`, or a `pins.py` spark left alone, gives
+  no missing-fact signal yet ([rows](../../observations/rows/p464-missing-facts.md) 1 and 2).
+  - Each item is `{subject, code, sentence, fix}`, with the code `missing_fact` and a subject such as
+    `pin_roles.onboard_led.active_level`.
+  - An item never changes `status` and is never in `unchecked`. So after `status`, read `missing_facts` when you built
+    with `--keep`: `ok` does not mean the firmware has every fact.
+  - Never guess the level. Ask the person (see `/spark:build`), or use `/spark:research` or a bench measure. Write the
+    answer with `parts.py --fact-set <board> FILE --project <the project's folder>` (a board of another project is
+    refused), and build again.
+- The simulation line warns "no serial monitor is wired in the diagram" when the diagram has no `$serialMonitor` wires
+  and the board's record lacks `serial_without_wires: true` ([P468](https://github.com/xmejkal/spark/issues/636)).
+  spark's XIAO ESP32-C6 and FireBeetle 2 records carry it, so they get no warning. Read the warning as a possible silent
+  `wait-serial`, not a failure.
+
+### import_firmware.py
+
+- Each item of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`.
+- A project with no `firmware/` folder is `could-not-run`.
+- A project with nothing to import but `main.py`, `boot.py` and `pins.py` is `problems`. Its firmware cannot be imported
+  without running `main.py`.
+
+### check_vendor_pins.py
+
+- The answer is a bare list, one entry per board file.
+- A compared board has `board`, `compared`, `not_recorded`, `problems`, `source` and `status`.
+- A could-not-run has `board`, `status` and `reason`.
+- A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose
+  header held no pins. A live run refused before or during the fetch has none.
+- `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or
+  `spark's cache (<name>)` with `--offline`.
+- The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)).
 
 Checking a shipped board's pin map, as an agent does, without the network:
 
@@ -152,7 +197,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
 ]
 ```
 
-**`parts.py`'s envelope:**
+### parts.py's envelope
 
 - `problems` and `unchecked` hold items `{subject, sentence, fix}`; an `unchecked` item has no `subject`. `fix` says
   what to do, and may be null.
@@ -221,23 +266,27 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 }
 ```
 
-**Which scripts take `--json`:** `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
+### Which scripts take --json
+
+These take it: `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
 `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py`, `look.py` and `parts.py`. These do not take
 it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
-**What the text output shows (P423, P430).** The text output of `parts.py`, `look.py`, `deploy.py`, `check_spine.py`, `run_scenario.py`, `grant.py`, `live.py` and `reach.py`:
+### What the text output shows
+
+P423 and P430 set these rules for the text output of `parts.py`, `look.py`, `deploy.py`, `check_spine.py`, `run_scenario.py`, `grant.py`, `live.py` and `reach.py`:
 
 - Guarded: a character that a terminal does not print, such as a control character or a right-to-left override, shows as `?`. A text's own line breaks stay. A value that can hold a line break of its own (a port, a project path, a button word of a board record) is put on one line first, so it cannot fake a line. This holds for the question that `deploy.py` asks you to type yes to, and for the sentence `grant.py` gives when it has no terminal to ask in (it holds the line to run, with your project path and port). A tools file is refused when a tool's name, or a name in its `needs`, holds a character that `str.isprintable` rejects: a control character or a bidi mark, and also a tab, a zero-width joiner (U+200D) or a no-break space (U+00A0), which an older spark let through. The `rm` path that `grant.py` prints after a deploy grant may show `?`: copy it from the store, not from the screen.
 - Flat messages (P444, P445): a value that an error message holds (a store path, a record's name, a URL) is put on one line by the error class that builds the message (`ValueMessageError`), so a newline in it cannot fake a line of spark's own, in the text and in `--json` alike. This holds for every raise of every class that inherits `ValueMessageError`, and for the scripts that print their errors (`look.py`, `grant.py`, `live.py`, `reach.py`, `deploy.py`) and the lines `tools.py` prints about a folder. The V1 baseline is empty. An error class that does not inherit from `ValueMessageError` is outside this. The `reason` or `code` of a stop names why; key on it and never on the sentence. The raw values stay on the exception for a later field. A lone surrogate character in a text is cleaned to a space, and in a key it is refused, with or without `--dry-run`.
 - Raw: `--json` carries the raw text of the other fields, so decide on the JSON and not on the screen (`check_spine.py --json` holds the raw text of a crash). `run_scenario.py` has no `--json`, and its log file in `sim/runs/` keeps the raw text. Two paths print raw text: the flash tool that `deploy.py` runs writes its own output to the terminal, and `emit_footprint.py` prints its own messages.
 - Exact reply: in the text of `live.py` a tab in the board's reply shows as `?`, so read `output` from `--json` for the exact reply.
 
-### look.py and deploy.py's envelope
+## look.py and deploy.py's envelope
 
 `look.py --json` and `deploy.py --json` ([P213](https://github.com/xmejkal/spark/issues/192)) print one `outcomes.envelope` (`envelope`,
 `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated`, and `notes` for deploy) on stdout. The status is
-the exit code's: `ok` 0, `problems` 1, `could-not-run` 2. With `--json`, deploy.py prints every line a person reads, and
+the exit code's ([the outcomes](../agents.md#the-outcomes-and-their-exit-codes)). With `--json`, deploy.py prints every line a person reads, and
 the flash tool's own output, on **stderr**, so stdout holds the envelope alone. A bad flag prints an envelope with `--json` (below).
 A raise after the flash (a traceback) prints no envelope; read the exit code and stderr. A crash in `look.py` prints an envelope with
 one `unchecked` item, code `crash`, and exits 2; stderr gets `look: crashed, <class>`, the fix and the traceback, never the envelope.
@@ -263,7 +312,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `chip_differs`, `flash_too_small` | `problems`, subject `stop` | the chip is not the record's, or the flash is smaller than the image. deploy.py will refuse | stop, tell the person | yes |
 | `flash_differs` | `problems`, subject `flash` | the flash size is not one the record lists | relay it; deploy.py asks the person to accept it | yes |
 | `field_unknown` | `unchecked` | the board or the record did not say a field | relay it; deploy.py asks the person to accept it | yes |
-| `missing_fact` | top-level `missing_facts` of `check_spine.py --json` with `--keep` and only when spark writes `firmware/pins.py` (also on the `firmware/pins.py` entry of `kept`; a build without `--keep`, or a `pins.py` spark left alone, gives no missing-fact signal yet: [rows](../../observations/rows/p464-missing-facts.md) 1 and 2), items `{subject, code, sentence, fix}` and never in `unchecked` | a stage needs a fact the board record lacks, such as the active level of the onboard LED or button. The build stays `ok`. The `fix` names the three ways | ask the person for the level, or `/spark:research`, or a bench measure; write it with `parts.py --fact-set <board> FILE --project <the project's folder>` (a board of another project is refused), then build again. Never guess it | yes |
+| `missing_fact` | top-level `missing_facts` of `check_spine.py --json` ([its keys](#check_spinepy)), never in `unchecked` | a stage needs a fact the board record lacks, such as the active level of the onboard LED or button. The build stays `ok`. The `fix` names the three ways | ask the person, or `/spark:research`, or a bench measure; write it, then build again ([how](#check_spinepy)). Never guess it | yes |
 | `stop_found` | `unchecked` | the look found a stop, so it gave no token. The stop is its own item | as for the stop | yes |
 | `no_mac` | `unchecked`, deploy stage `gate` | the board's MAC could not be read, so the look gave no token. `grant.py` refuses with it too | reconnect the board, run look.py again | yes |
 | `evidence_refuses` | `unchecked` of a look, deploy stage `plan` | the evidence refuses the image: no passed run names it, a run tested another image, or another check failed. The sentence names the way out, or the no-simulation way | run a scenario, or what the sentence names (or the no-simulation way it names), then look.py again | no |
@@ -330,7 +379,7 @@ the sentence if you must tell which. The check is the word `--json` in the argum
   console with Ctrl-X, because a console left open holds the port ([P354](https://github.com/xmejkal/spark/issues/452)).
 - A missing or stale token gives a `look` step. `--dry-run` never looks: its `next` is the `look` step.
 
-### Deploy without a simulation
+## Deploy without a simulation
 
 For firmware that no simulation can test (P337). Three steps, then the person's yes:
 

@@ -139,9 +139,8 @@ before you order it, and `spark-reverse-engineer` reads a board from its photo.
 button, a connector), `parts-researcher` for a module, and `design-reviewer`, one for each review dimension.
 [The commands guide](docs/guide/commands.md) gives each one: its use, what it writes and what it refuses.
 
-**Without Claude Code**, spark's scripts run in any terminal, for you or another AI. They exit 0 `ok`, 1 `problems`
-and 2 `could-not-run`, and most answer in JSON with `--json`. A crash also exits 1. `check_all.py` exits 0 also for a
-run that skipped most checks. So read [the guide for AI agents](docs/guide/agents.md) before you trust an exit code.
+**Without Claude Code**, spark's scripts run in any terminal, for you or another AI, and most answer in JSON with
+`--json`. Read [the outcomes and their exit codes](docs/guide/agents.md#the-outcomes-and-their-exit-codes) before you trust an exit code.
 [`AGENTS.md`](AGENTS.md) points to the same guide.
 
 **Underneath**, [tscircuit](https://tscircuit.com) builds the board and Wokwi simulates it on

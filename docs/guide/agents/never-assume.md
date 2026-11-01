@@ -31,7 +31,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project . --json
 
 Today's output also carries `"unmeasured": 0`, after `status`.
 
-   One exception to "read `unchecked`": `check_spine.py --json` can answer `ok` with a top-level `missing_facts` list, with `--keep` when spark writes `pins.py` (a build without `--keep` gives none yet), (code `missing_fact`, [P464](https://github.com/xmejkal/spark/issues/632)). Those items are never in `unchecked` and never change `status`: when you built with `--keep`, read `missing_facts` after `status`; say what is missing, and never guess it.
+   One exception to "read `unchecked`": `check_spine.py --json` can answer `ok` with a top-level `missing_facts` list,
+   which is never in `unchecked` ([when and how](json.md#check_spinepy)). Say what is missing, and never guess it.
 
 2. **A `null` is unknown, never a value to fill in.** `/spark:init` leaves every value it cannot know as `null` and
    lists them. Ask the person, or leave it.
