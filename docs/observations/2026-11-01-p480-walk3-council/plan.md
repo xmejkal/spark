@@ -1,150 +1,144 @@
-# P480 plan: walk 3's cards, replanned
+# P480 plan: walk 3's cards, replanned (final)
 
 > First the honest pass and the wrong pages (N4, N6), then the simulation back on: the FireBeetle's stand-in definition (N2),
-> the diagram bug fixed (N1, reproduced), the false serial warning (P468 rewritten) and the board's own LED and button in the diagram (N3).
-> C7 becomes the bug N1. G27 is a decision (AT151), not a bug. Eleven new cards, three of them later. Every row has a home.
+> the false serial warning (P468 rewritten), the diagram bug (N1, reproduced) and the board's own LED and button in the diagram (N3).
+> Then the look without a restart (P469) and the store in `next` (P473). Ten new cards and one spike, three of them later. N9 joins P466.
+> G27 is a decision (AT151), not a bug: one question for the PO. The filing text is in `cards.md`.
 
 Walk 3 reached a lit LED on the PO's board, so the basic journey works. Its gaps now sit in three places: a pass that
 says too little, a simulation that cannot see the board's own parts, and pages that told Claude wrong things. The plan
 fixes those first, keeps the PO's emulator spike after the MVP, and lets every new message use names that exist today.
 
+## Second round
+
+Two reports ran after the synthesis: `walks-compared.md` (walks 1 to 3 side by side) and `between-cards.md` (one agent in
+four roles on Sonnet 5.5). A final check on Opus 5.5 reproduced each load-bearing claim in the code and the cards. Rows 55 to 72.
+
+Taken:
+
+- **P476 (#652) and P478 (#656) wait for W4-2** (deploy on the core). P478's body says "Needs: W4-2 merged". P476's why
+  belongs on the event that P478 records as decided (#94 comment), and its own proof keeps `--json` bytes. Rejected reason:
+  "34 mutation rows retargeted twice". W4-2 retargets them for its own code move (`wave4-plan.md:110`). P476 only adds rows.
+- **N9 joins P466 (#634) as slice 2.** Both read a board with no project and name its unit. One card fewer.
+- **P468 moves above N1, after N2.** Four walks raised it, and it is XS. It reads the definition N2 keeps.
+- **P469 (#637) enters the top at rank 7.** The PO's open pain (#643). P473 (#647) is rank 8: its store field rides
+  `NextStep` (`spark/core/result.py:18`) before W4-2 builds deploy's `next` on it (`wave4-plan.md:101-102`).
+- **Edits to open cards:** P406 (#531) gets the doubled `does` words (G12). P118 (#52) gets the "not asked for" line (G6, two
+  walks). P399 (#515) and P467 (#635) follow N3. P409 (#535) takes C1's question 3, the same question (row 53).
+
+Rejected:
+
+- **N8 into P469.** P469's Done-when needs the bench. N8 is code only (`board_look.py:470-474`, `board_envelope.py:38`).
+  N8 stays its own S card, right after P469, and its `board_read` names which of P469's two looks read the board.
+- **"P468 needs the FireBeetle record's `usb` fact."** The record lacks it (true), but `pin_roles.usb` names the reserved
+  USB pins (`boards/xiao-esp32-c6.json:181`). The XIAO and the FireBeetle both heard `ready` with no wires. The fact is
+  the Wokwi definition's `serialInterface` (P400 rows 18, 65, 68, and the kept XIAO definition sets `USB_SERIAL_JTAG`).
+- **"P399 is needed by N3."** N3 works without an id check. P399's PR 1 waits on pins "because a board-alone diagram wires
+  no pin", so N3 serves P399, not the reverse.
+- **"The core's effects are `READS RUNS BOARD DELETES WRITES` (`operation.py:17`)."** That line defines three. Deletes and
+  writes enter with W4-2 (`wave4-plan.md:92`).
+- **"`OnboardParts` lives in `records/board_records.py` beside `onboard_entries`."** No `scripts/records/` exists.
+  `onboard_entries` is `boards.py:373`. That module is the target in `refactor-plan.md:354`. N3 writes into `boards.py`.
+- **G19 into P465 (#633), P118 at rank 2, N7 above N8.** G19 keeps one home, N8 (the look's `next`). P118 is a story on
+  `!` lines, not XS words. N7 is M and N8 follows P469 on the same file.
+
+## Names
+
+| thing | chosen | why |
+|---|---|---|
+| a part that sits on a board or module | field `onboard`, the id of the record that carries it | The PO's word ("just onboard", 07:27, "these onboard things", 08:05) and the code's (`onboard_entries`, `OnboardRole`, `ONBOARD_LED`, `boards.py:122,330,373`). `carried` is nowhere. `host` is taken (`host_parts`, `parts.py:313`). |
+| the class that turns `pin_roles` rows into parts | `OnboardPartReader` | Rule 5 of `developing.md`: a class that only reads ends in Reader, Finder or Probe. "Board parts" reads as the board in the bill of parts. |
+| N5's resolver | `ProjectFinder` | Rule 5 and the helper row (`PortFinder`). It wraps `store.find_listed_name` (`store.py:266`). |
+| N10's outcome | "seen on the bench", key `seen_on_bench` beside `unnamed_must` | "Bench result" already means a part fact that `--fact-set` writes (P374, `parts.py:1574`, `agents.md:298`). "Record" means a store file. "Seen" matches deploy's "ready seen" (`ready_check.py:36`). |
+| N7's place of a write | `effects` stays, each write adds `place` and `path` | The store's word is `place` (`store.place`, `store.PLACES`, `store.py:85-91`). `where` means a record's layer (`drawer.Link`, `drawer.py:36`). `place` is a `PLACES` key or `project`. |
+
+`board_read`, `NO_REQUIREMENTS` and "verdict" stay. The look with no project never takes the flag `board_only` (`needs.py:514`).
+
 ## The repro: every build overwrites a hand-edited `sim/diagram.json`
 
-Confirmed. A copy of `tests/data/breadboard/led-only-xiao` (board set to `xiao-esp32-c6`), an empty scratch store, no
-Wokwi run, deploy or grant. (1) `check_spine.py requirements.json --keep <proj>`: exit 0, `ledred5mm` at top 0, left 182.4.
-(2) Moved it to top 250, left 400, and added a part `probe` with `"handAdded": "true"`. (3) The same build: exit 0, the
-move undone, `probe` gone, and `diff -q` against the first build prints nothing. The converter writes into a new
-`mkdtemp` (`check_spine.py:705`), `cli.ts:85` finds no old diagram, and `copytree` (`:985`) copies over the project's file.
+Confirmed. A copy of `tests/data/breadboard/led-only-xiao` (board `xiao-esp32-c6`), an empty scratch store, no Wokwi
+run. (1) `check_spine.py requirements.json --keep <proj>`: exit 0, `ledred5mm` at top 0, left 182.4. (2) Moved it, and
+added a part `probe` with `"handAdded": "true"`. (3) The same build: the move undone, `probe` gone, `diff -q` silent.
+The converter writes into a new `mkdtemp` (`check_spine.py:705`), `cli.ts:85` finds no old diagram, and `copytree`
+(`:985`) copies over the project's file.
 
 ## Settled conflicts
 
-1. **C6 first (product) against "messages wait for the event seam P479 #657" (architecture).** Neither wins whole. C6a,
-   one verdict line in `run_scenario.py`, goes now: `wave4-plan.md` names no `run_scenario.py`, `check_spine.py` or
-   `parts.py` (refuter 18). It is not rank 1, because deploy does not take an untested pass as tested (refuter 6,
-   `board_look.py:57-58`). C6b, the bench record, writes through deploy's gate, so it waits for W4-2 (deploy on the core).
-2. **One name for the list of writes: `effects`,** declared per operation (`parts.py:1599`) and in envelopes (`board_envelope.py:59,98`).
-   N7 adds a place (store or project) and a file to each. No `writes`, `store_writes` or `StoreWrite` (refuter 20).
-3. **`NO_REQUIREMENTS`: yes, with two changes.** A missing file and a file with no `board` key are two causes
-   (`board_look.py:470-474`), as `NO_SIM_TOML` is its own code. "Not built" reuses `NO_SIM_TOML`, so no `NOT_BUILT`.
-   The look with no project gets a flag apart from `board_only` (`needs.py:514`), named at N9's refinement.
-4. **G27 is by design.** `vouches_for_a_build` refuses `built` when a stage is skipped (`check_spine.py:621-624`,
-   commit `183b6a93`, row AT151). The false lines are `commands/build.md:147` and the tally hint `parts.py:2282`. N6
-   fixes them. Whether a board-only build starts to write `built` is the PO's question, asked on N3.
+1. **C6a, one verdict line, goes now.** `wave4-plan.md` names no `run_scenario.py` (refuter 18). It is not urgent as a
+   false green, because deploy lists unnamed must lines (`board_look.py:57-58`). C6b, now N10, waits for W4-2.
+2. **`effects` is the one name for what an operation touches** (`parts.py:1599`, `board_envelope.py:59,98`, `NextStep`).
+   N7 adds `place` and `path` to each write. No `writes`, `store_writes` or `StoreWrite` (refuter 20).
+3. **`NO_REQUIREMENTS` for a missing file**, `NO_BOARD_NAMED` for a file with no `board` key (`board_look.py:470-474`).
+   "Not built" reuses `NO_SIM_TOML`.
+4. **G27 is by design.** `vouches_for_a_build` refuses `built` when a stage is skipped (`check_spine.py:621-624`, AT151).
+   N6 fixes `commands/build.md:147` and the tally hint `parts.py:2282`. The PO answers the question in `cards.md`.
 
 ## C1 to C8
 
-- **C1, spike on Wokwi tools and an own emulator: keep, after the MVP.** The PO's words. Its finding links the P295
-  own-simulator finding (G23). Question 3 overlaps the open spike P409 (#535). The refuter did not check P409, so the
-  PO decides the merge at filing. "Simulation back on now" merges into P413 (#539, minute count) and P399 (#515, id
-  check), which the refuter confirmed (refuter 17). P410 (#536, one setting) stays for refinement with the PO.
-- **C2, a board's own part is a real part: split.** N2 (the stand-in's definition), N3 (carried parts in the diagram),
-  N11 later (sheet, schematic, page, and the end of the `board_only` fork). The P396 GPIO check stays (refuter 27).
-  G27 leaves the card. P467 (#635) and P332 (#426) stay open beside it.
-- **C3, a project by name or folder: keep as N5.** It names the rule it changes, §8 S rule 5 (`needs.py:114`). The
-  unlist command (G10) leaves: the PO's cleanup is done, and row 7 of the diary has the cause.
-- **C4, every store write said: rewrite and split.** N6 fixes the pages now, docs only. N7 extends `effects` and adds a
-  build dry run. The diary's claim that a board-only build writes `built` is false (refuter 4).
-- **C5, which board is on USB: split.** N8 is the look's status and `next` (G3, G18, G19, G36). G34 goes to P469
-  (#637) with the P472 finding (refuter 11, 12). G15 goes to P466 (#634, refuter 16). G1, G4, G7 go to N9, later.
-- **C6, bench result: split.** N4 now (the verdict line). N10 after W4-2 (the bench record). The AI lens's "a name is
-  not a test" stays a row: it is documented (`agents.md:939`) and walk 3 named no step (refuter 5).
-- **C7, hand edits: drop as a card.** Its real gap is the bug N1, whose PR corrects the converter's `ARCHITECTURE.md:89-91`.
-  I3 (every generated file merges) stays a row, as the PO said "get into it later".
-- **C8, free tests on the Mac: split.** The console lines (G30) ride N6. The press-and-read command, the moving clock
-  and the stubs (G21, G24, G31, I2) are P295's option B, so they wait for C1.
+- **C1, Wokwi and own-emulator spike: keep, after the MVP.** Questions 1, 2, 4 stay. Question 3 points to P409 (#535).
+- **C2, a board's own part: split.** N2 (definition), N3 (parts with `onboard` in the diagram), N11 later (sheet,
+  schematic, no `board_only` fork). The P396 GPIO check stays (refuter 27). P332 (#426) keeps the assigner side.
+- **C3, a project by name or folder: keep as N5.** It changes §8 S rule 5 (`needs.py:114`). The unlist command (G10) is a row.
+- **C4, every store write said: split.** N6 fixes the pages now. N7 adds `place` and a build dry run.
+- **C5, which board is on USB: split.** N8 (status and `next`), P469 (G34, the P472 finding), P466 (G15, and G1, G4, G7 as slice 2).
+- **C6, bench result: split.** N4 now. N10 after W4-2. "A name is not a test" stays a row (`agents.md:939`).
+- **C7, hand edits: drop.** Its gap is the bug N1. I3 (every generated file merges) stays a row.
+- **C8, free tests on the Mac: split.** G30 rides N6. G21, G24, G31, I2 wait for C1 (P295 option B).
 
-## New cards
+## New cards (filing text in `cards.md`)
 
-**N1: P? — every `/spark:build` overwrites the person's `sim/diagram.json` → the converter merges into the kept diagram.** Bug.
-Serves "one changes the schema manually ... collect notes now" (08:17) and the base for N3. The change: copy the
-project's `sim/diagram.json` into the temp `sim/` before the converter runs, on both paths. Print the merge summary in
-the build's verdict. Done when: a test builds twice with a moved part and a `handAdded` part, and both stay. Files:
-`scripts/check_spine.py`, a test, `tools/circuit-to-wokwi/ARCHITECTURE.md`. Size S.
-
-**N2: P? — the FireBeetle's record names no Wokwi definition, so no limit says which GPIOs a scenario reaches → the record cites the S3 devkit's `board.json` by URL and sha256, and the store keeps it.**
-Serves "some basic simulations and schemas should work" (07:41). Closes G13, G29. The change: one `documents` entry,
-as the XIAO record has. Spark commits no Wokwi file. Done when: `--match` no longer says "names no Wokwi definition",
-and the P396 check lists GPIO 21 and 47 as reachable. Files: `boards/firebeetle2-esp32s3.json`, a test. Size XS.
-
-**N3: P? — a board-only diagram holds the board alone → the board's own LED and button are parts with `carried_by`, wired by the converter.**
-Serves "really do show up in the schema as parts, they just know they are on the board" (08:05). Closes G20 in part,
-G26, G28. The change: a reader `BoardParts` turns `pin_roles` rows into parts with `carried_by`. `design.parts_of`
-appends them. `board_alone`'s hand-written diagram goes. Done when: walk 3's requirements build a diagram with an LED
-on GPIO21 and a button on GPIO47, and P399's id check accepts a scenario that presses one and reads the other. No paid
-run. Files: `scripts/records/board_records.py`, `scripts/design.py`, `scripts/check_spine.py`, tests. Size M. After N1, N2.
-
-**N4: P? — a passed run that tested no must line says only "passed" → the verdict says "passed: the firmware starts, no must line tested".**
-Serves "know what's actually working and what not" (07:41). G32. The change: the verdict line reads the step counts
-the log already has. Done when: a test with zero `expect-pin` and `set-control` steps gets the new line in the
-verdict and the JSON. Files: `scripts/run_scenario.py`, a test. Size XS.
-
-**N5: P? — `parts.py <op> walk3` made `walk3/walk3` → one resolver takes a listed name or an existing folder, says which, and makes nothing else.**
-Serves "noted and debugged how it happened" (07:19). G9, G17. Done when: `--step walk3` from inside `walk3` uses the
-listed project and says so, and a name nobody listed gives `could-not-run` with no folder made. Files: `scripts/store.py`,
-`scripts/parts.py`, `scripts/needs.py`, tests. Size S.
-
-**N6: P? — six pages told Claude wrong or nothing → each page says what its command writes and does.** Docs only.
-Serves "good point to note down and analyze and fix later" (07:59). The init page names `projects.json` (G5). The
-idea page says `--step` writes history and shows its dry run first (G8, G17), and fixes the other-choice note (G14,
-`needs.py:377`). The build page and tally hint say a board-only build writes no `built` (G27). The deploy page says
-what to do when the host refuses the run (G35). The firmware step shows the console-reading lines (G30). Done when:
-each sentence is in its page, and the hint test pins the tally line. Size XS.
-
-**N7: P? — no `--help` names the store a command writes → each effect names its place and file, and the build has a dry run.**
-Serves the same words. G25. Done when: `--describe --json` and `--help` read one declaration, and a test fails for an
-operation that writes the store without it. Files: `scripts/parts.py`, `scripts/check_spine.py`, `docs/guide/agents.md`. Size M.
-
-**N8: P? — the look says "could-not-run" for "read, no token yet" and for "not read", with an empty `next` → a `board_read` field, a `NO_REQUIREMENTS` code and a full `next`.**
-Serves the stalls S1, S4, S6. G3, G18, G19, G36. Done when: a look with no `requirements.json` gives `NO_REQUIREMENTS`
-and the next command, a look that read every field gives `board_read: true`, and `next` drops `--port` for one board.
-Files: `scripts/board_look.py`, `scripts/board_codes.py`, `scripts/board_envelope.py`, tests. Size S.
-
-Later, one sentence each. **N9**: the look reads any board on USB before init, done when an empty folder's look names the
-chip, the MAC and the store record (G1, G4, G7). **N10**: a bench result for a must line, written only by the person's typed
-yes, done when the next look shows it beside `unnamed_must` (G37, after W4-2). **N11**: carried parts in the sheet, the
-schematic and the page, and no `board_only` fork, done when walk 3 gets a breadboard sheet (G20, after N3).
-
-**P468 (#636), rewrite:** the "no serial monitor" warning fires for boards that print over USB → it reads a board fact. Walk 3
-heard "ready" with no wires (log line 40), and the repro's XIAO build warned too. Done when: walk 3's build has no serial warning, and a board without a USB console keeps it. XS.
+- **N1** bug, S: every `/spark:build` overwrites `sim/diagram.json` → the converter merges into the kept diagram.
+- **N2** task, XS: the FireBeetle names no Wokwi definition → the record cites the S3 devkit's `board.json`, the store keeps it.
+- **N3** story, M, two PRs: a board-only diagram holds the board alone → `OnboardPartReader` gives parts with `onboard`,
+  and the converter wires them. Files `scripts/boards.py`, `scripts/design.py`, `scripts/check_spine.py`. After N1, N2.
+- **N4** story, XS: a pass that tested no must line says "passed" → the verdict says what it tested.
+- **N5** bug, S: `parts.py <op> walk3` made `walk3/walk3` → `ProjectFinder` takes a listed name or a folder, makes nothing.
+- **N6** chore, XS: six pages told Claude wrong or nothing → each says what its command writes and does.
+- **N7** story, M: no `--help` names the store place a command writes → each write names its `place`, the build has a dry run.
+- **N8** story, S: one status for "read" and "not read", `--port` in `next` → `board_read`, `NO_REQUIREMENTS`, a full `next`.
+- **N10** story, later: no place for a must line seen on the bench → `seen_on_bench`, written only on the person's typed yes.
+- **N11** story, later: carried parts reach the diagram only → the sheet, the schematic and the page show them.
+- **C1** spike, later: the best use of Wokwi's free tools, and an own emulator on free software.
 
 ## The order for the top of Ready
 
 | rank | card | reason against P100 #6, a basic project to a breadboard with working firmware |
 |---|---|---|
-| 1 | N4, the verdict names no must line tested | XS. Every run on the free minutes then says what it proved. |
-| 2 | N6, six page fixes | XS docs. Claude told the person wrong things in walk 3 from these pages. |
-| 3 | N2, the stand-in's definition | XS data. N3's GPIO check and every board-only limit need it. |
-| 4 | N1, the diagram bug | S. It destroys the person's edits, and N3 sends board-only builds through the same path. |
-| 5 | P468 rewritten, the false serial warning | XS. The warning sends Claude after wires that a run does not need. |
-| 6 | N3, the board's own LED and button | M. The PO's "reenable simulation": a scenario then tests both must lines. |
-| 7 | P413 (#539), the minute count | Guards the 50 free CI minutes the PO accepted, once runs test something. |
-| 8 | N5, a project by name or folder | S. A store entry made by mistake. N6's page fix lowers the risk first. |
-| 9 | P469 (#637), the look without a restart | Two button presses per walk (G34), with the P472 finding as its way. |
-| 10 | N8, the look's status and `next` | S. The first minutes of a new project, after the person names the board. |
-| 11 | P473 (#647), `next` carries the store | The AI path in a fresh shell. Walk 3 set the store inline, so it did not stall. |
-| 12 | N7, `effects` names the place | M. The lasting form of N6, for every interface. |
-| 13 | P476 (#652), a why for each deploy step | Teaching. It changes deploy's lines, which W4-2 keeps byte-equal (`wave4-plan.md:88`). |
-| after the MVP | C1 spike, N9, N10, N11 | The PO's words for C1. N10 after W4-2. N11 after N3. |
+| 1 | N4, the verdict names what it tested | XS. Every free run then says what it proved: "know what's actually working". |
+| 2 | N6, six page fixes | XS docs. Claude told the person wrong things from these pages in walk 3. |
+| 3 | N2, the stand-in's definition | XS data. P468 and N3 read it, and so does every board-only limit. |
+| 4 | P468 (#636) rewritten, the false serial warning | XS. Four walks. It sends Claude after wires a run does not need. |
+| 5 | N1, the diagram bug | S. A build destroys the person's edits, and N3 sends board-only builds through it. |
+| 6 | N3, the board's own LED and button | M. The PO's "reenable simulation": a scenario can then press and read them. |
+| 7 | P469 (#637), the look without a restart | Two button presses per walk (G34), three walks. Needs its plan and the PO's bench. |
+| 8 | P473 (#647), `next` carries the store | XS. Any caller that follows `next` in a fresh shell, before W4-2 reshapes `next`. |
+
+After rank 8, in this order: N8 (after P469), P399 (#515, after N3), P467 (#635, after N3), P118 (#52, with G6), P413
+(#539), N5, N7, P314 (#388) with P390 (#505), P466 (#634, with ex-N9). Behind W4-2: P476 (#652), P478 (#656), N10.
+After the MVP: C1, N11. P349 (#445), open for three walks, goes to the next between-cards council.
 
 ```mermaid
 flowchart LR
-  %% dotted arrows: the proposed order. Solid arrows: a card needs the one before it.
-  N4[1 N4 verdict line] -.-> N6[2 N6 page fixes] -.-> N2[3 N2 stand-in definition] -.-> N1[4 N1 diagram bug]
-  N1 -.-> P468[5 P468 serial warning] -.-> N3[6 N3 carried LED and button] -.-> P413[7 P413 minute count]
-  P413 -.-> N5[8 N5 project resolver] -.-> P469[9 P469 look without restart] -.-> N8[10 N8 look status]
-  N8 -.-> P473[11 P473 next carries the store] -.-> N7[12 N7 effects with a place] -.-> P476[13 P476 why per step]
+  %% dotted: the proposed order. Solid: a card needs the one before it.
+  N4[1 N4 verdict] -.-> N6[2 N6 pages] -.-> N2[3 N2 definition] -.-> P468[4 P468 serial warning]
+  P468 -.-> N1[5 N1 diagram bug] -.-> N3[6 N3 onboard LED and button] -.-> P469[7 P469 look without restart]
+  P469 -.-> P473[8 P473 next carries the store] -.-> N8[N8 look status]
+  N2 --> P468
   N2 --> N3
   N1 --> N3
-  N3 --> N11[N11 sheet and schematic]
-  N3 --> C1[C1 spike, after the MVP]
-  N6 --> N7
-  N8 --> N9[N9 look before init]
+  P469 --> N8
+  N3 --> P399[P399 id check]
+  N3 --> P467[P467 match ranking]
+  N3 --> N11[N11 sheet and schematic, later]
+  N6 --> N7[N7 effects with a place]
+  P473 --> W42
   P479[P479 event seam] --> W42[W4-2 deploy on the core]
-  W42 --> N10[N10 bench record]
-  W42 --> P476
+  W42 --> P476[P476 why per step]
+  W42 --> P478[P478 terminal reporter]
+  W42 --> N10[N10 seen on the bench, later]
 ```
 
 ## Waits on the PO
 
-The OK for N1 to N8 and the P468 rewrite, the Ready order, and one answer: does a board-only build write `built` once N3
-makes it a full chain (G27, AT151)?
+The OK to file the cards in `cards.md` (N1 to N8, N10, N11, C1) and its edits to open cards, the Ready order above,
+and one answer on G27 (AT151), asked in `cards.md`.
