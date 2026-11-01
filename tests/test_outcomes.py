@@ -105,7 +105,7 @@ def read_limits(text):
     log = Path(tempfile.mkdtemp()) / "a.log"
     if text is not None:
         log.write_text(text)
-    return run_scenario.SimulationLimits.from_log(log)
+    return sim_project.SimulationLimits.from_log(log)
 
 
 def read_firmware(case):

@@ -24,8 +24,6 @@ import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
 import flash_image  # noqa: E402
 import tools  # noqa: E402
-import image_evidence  # noqa: E402
-from spark.core import outcomes  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, OK, PROBLEMS  # noqa: E402
 
 #: wokwi-cli as the tests run it: tests/fake_wokwi_cli.py, which spends nothing.
@@ -582,15 +580,16 @@ class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
     def test_a_step_with_no_kind_prints_why_its_steps_were_not_counted(self):
         self.scenario.write_text(self.NO_KIND)
         status, said, _ = self.run_with()
-        self.assertEqual((status, said), (OK, "passed, but " + outcomes.NOT_CHECKED_MESSAGE % run_scenario.WHY_NO_KEY))
+        self.assertEqual((status, said), (OK, "passed, but not checked: a step of the scenario has no kind"))
 
     def test_a_set_control_step_prints_passed_alone(self):
         self.assertEqual(self.run_with()[1], "passed")
 
     def test_the_look_and_the_printed_line_share_the_rule_and_the_words(self):
-        steps = run_scenario.ScenarioSteps({run_scenario.WAIT_SERIAL: 1})
-        self.assertEqual(steps.control_caveat("X has"), run_scenario.NO_CONTROL_NO_PIN_CAVEAT % "X has")
-        self.assertIs(image_evidence.ONE_RUN_MESSAGE, run_scenario.ONE_RUN_MESSAGE)
+        steps = run_scenario.ScenarioSteps({"wait-serial": 1, "expect-pin": 1})
+        self.assertEqual(steps.control_caveat("the passed runs (a, b) have"), "the passed runs (a, b) have no set-control step "
+                         "(the step that presses a button or sets a sensor)")
+        self.assertIsNone(run_scenario.ScenarioSteps({"set-control": 1}).control_caveat("X has"))
 
 
 @needs_littlefs
@@ -661,7 +660,7 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
 
     def limits_of(self, **run):
         _, _, log = self.run_with("ready\n", **run)
-        return run_scenario.SimulationLimits.from_log(log)
+        return sim_project.SimulationLimits.from_log(log)
 
     @needs_littlefs
     def test_the_limits_read_back_as_the_note_the_build_wrote(self):
@@ -699,7 +698,7 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
         _, _, log = self.run_with("ready\n")
         text = log.read_text()
         log.write_text(text[:text.index("- **ONBOARD_DISPLAY**") + len("- **ONBOA")])
-        limits = run_scenario.SimulationLimits.from_log(log)
+        limits = sim_project.SimulationLimits.from_log(log)
         self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log's limits section is cut off", []))
 
     def test_a_log_cut_off_inside_the_heading_line_is_not_checked_too(self):
@@ -707,13 +706,13 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
         for cut in ("--- what this simulation", "--- what this simulation cannot show ---", "-"):
             log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\n" + cut)
             with self.subTest(cut=cut):
-                limits = run_scenario.SimulationLimits.from_log(log)
+                limits = sim_project.SimulationLimits.from_log(log)
                 self.assertEqual((limits.state, limits.why), ("not-checked", "the log's limits section is cut off"))
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\n")  # cut right after the header: nothing said
-        self.assertEqual(run_scenario.SimulationLimits.from_log(log).state, "none-recorded")
+        self.assertEqual(sim_project.SimulationLimits.from_log(log).state, "none-recorded")
 
     def test_an_unreadable_log_is_not_checked(self):
-        limits = run_scenario.SimulationLimits.from_log(self.project / "sim" / "runs" / "none.log")
+        limits = sim_project.SimulationLimits.from_log(self.project / "sim" / "runs" / "none.log")
         self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log cannot be read", []))
 
 

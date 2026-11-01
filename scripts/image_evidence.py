@@ -19,8 +19,8 @@ from project_image import BUILD_IMAGE_HINT, NO_SIMULATION_FLAG
 from spark.core import outcomes
 from spark.core import text_guards
 import tools
-from run_scenario import (NO_MAIN, ONE_RUN_MESSAGE, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps, SimulationLimits,
-                          file_hashes)
+from run_scenario import NO_MAIN, ONE_RUN_MESSAGE, READY, SET_CONTROL, ScenarioSteps, file_hashes
+from sim_project import WHY_LOG_UNREADABLE, SimulationLimits
 
 #: Why no must line can be compared with the names of the steps: every passed log is older than step names (an outcomes reason).
 WHY_NO_NAMES = "the passed run's log is older than step names"

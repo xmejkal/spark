@@ -36,13 +36,13 @@
   "replace": "if False else ONE_RUN_MESSAGE"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/sim_project.py",
   "name": "SimulationLimits reads the whole log, not up to the scenario section",
   "find": "section, ended, _ = body[len(LIMITS_SECTION):].partition(SCENARIO_SECTION)",
   "replace": "section, ended, _ = body[len(LIMITS_SECTION):], SCENARIO_SECTION, \"\""
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/sim_project.py",
   "name": "a limits section with no limit line is RECORDED with no limits",
   "find": "return cls(limits) if limits else cls([], outcomes.NOT_CHECKED, WHY_NO_LIMIT_LINE)",
   "replace": "return cls(limits)"
@@ -78,7 +78,7 @@
   "replace": "if each.state == outcomes.NOT_CHECKED]"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/sim_project.py",
   "name": "a log cut off inside its limits section is RECORDED",
   "find": "        if not ended:",
   "replace": "        if False:"
@@ -114,7 +114,7 @@
   "replace": "            pass"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/sim_project.py",
   "name": "a log cut off inside the limits heading reads as NONE_RECORDED",
   "find": "            if body and (LIMITS_SECTION + \"\\n\").startswith(body):",
   "replace": "            if False:"

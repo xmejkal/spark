@@ -144,6 +144,52 @@ def limits_in(note_text):
     return [limit for limit in found if limit.sentence]
 
 
+#: Why a run log's reader found nothing: the file cannot be read (ScenarioSteps and SimulationLimits, moved here by P485).
+WHY_LOG_UNREADABLE = "the log cannot be read"
+#: Why SimulationLimits is outcomes.NOT_CHECKED when the log has the section: it holds no limit line.
+WHY_NO_LIMIT_LINE = "the log's limits section has no limit line"
+#: Why SimulationLimits is outcomes.NOT_CHECKED when the section never reaches the scenario's section: the log is cut off.
+WHY_LIMITS_CUT_OFF = "the log's limits section is cut off"
+#: The log's section that holds the simulation's limits note, when the project has one (P396).
+LIMITS_SECTION = "--- what this simulation cannot show ---"
+#: The log's section that holds the scenario as run: it ends the limits section above it.
+SCENARIO_SECTION = "--- the scenario as run ---"
+
+
+# --- MVP ---
+class SimulationLimits:
+    """
+    Value: what no simulation can show of the project, from the log of a run (P345). `limits` is a list of sim_project.Limit.
+    `state` is an outcomes word: RECORDED (the log's limits section holds at least one limit), NONE_RECORDED (the log has no
+    section: a project with no note, or a log older than P396) or NOT_CHECKED (the log cannot be read, or its section has no
+    limit line, and `why` says which). `from_log` only cuts the section out of the log, and limits_in reads its text.
+    """
+
+    def __init__(self, limits, state=outcomes.RECORDED, why=None):
+        self.limits, self.state, self.why = list(limits), state, why
+
+    @classmethod
+    def from_log(cls, log):
+        """
+        The SimulationLimits of a log; it never raises. The section counts only where `write_log` puts it: right after the
+        header, so the scenario or the board's output, which come later, cannot forge a limit. It ends at the scenario's section.
+        """
+        try:
+            _, _, body = Path(log).read_text(errors="replace").partition("\n\n")
+        except OSError:
+            return cls([], outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
+        if not body.startswith(LIMITS_SECTION + "\n"):
+            if body and (LIMITS_SECTION + "\n").startswith(body):  # a log cut off inside the heading line
+                return cls([], outcomes.NOT_CHECKED, WHY_LIMITS_CUT_OFF)
+            return cls([], outcomes.NONE_RECORDED)
+        section, ended, _ = body[len(LIMITS_SECTION):].partition(SCENARIO_SECTION)
+        if not ended:
+            return cls([], outcomes.NOT_CHECKED, WHY_LIMITS_CUT_OFF)
+        limits = limits_in(section)
+        return cls(limits) if limits else cls([], outcomes.NOT_CHECKED, WHY_NO_LIMIT_LINE)
+# --- end MVP ---
+
+
 def _limit_of(text):
     """The Limit of one limit line, after its prefix."""
     end = text.find(LIMIT_MARK, len(LIMIT_MARK))
