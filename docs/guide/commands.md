@@ -58,7 +58,7 @@ It also adds the project to your projects list in your store. It leaves a file t
 add.
 
 If there is a built design, it names the rails from it, so it runs again after the first build, with `--force`
-([journey: Checks](journey.md#checks)). `--force` merges what init derives into rules.json and keeps your answers. It
+([journey: Checks](journey/checks.md)). `--force` merges what init derives into rules.json and keeps your answers. It
 rewrites project.json only if that file has no answers, and it never rewrites package.json.
 
 It leaves every value it cannot know as `null` and lists them. After `--force` the list still names fields you
@@ -111,12 +111,12 @@ How the import works:
 - The import never stores an order number.
 - It refuses an import when the number of order lines it read differs from the number the shop's pages state.
 
-See [journey: Drawer](journey.md#drawer). Page: [`commands/drawer.md`](../../commands/drawer.md).
+See [journey: Drawer](journey/drawer.md). Page: [`commands/drawer.md`](../../commands/drawer.md).
 
 ### `/spark:idea`
 
 Turns a goal in your words into needs, asking at most three questions, one at a time. It then matches each need
-against your drawer and spark's records, owned parts first ([journey: Idea](journey.md#idea)). The needs are written
+against your drawer and spark's records, owned parts first ([journey: Idea](journey/idea.md)). The needs are written
 to the project's `.spark/needs.json`.
 
 Then it picks a part per need and reserves what you own of it, and the picks become a requirements file
@@ -131,8 +131,8 @@ as the code defines them:
 
 `--tally` reads the Claude Code transcripts of the sessions the steps ran in, for tool names and counts only. With no
 transcript the line ends `its cost was not counted` and the command exits 2, could-not-run: a missing cost is never a
-cost of 0. [A recorded run](journey.md#a-recorded-run-a-button-and-an-led) shows every step with the output it printed,
-and [owed facts and gaps](journey.md#owed-facts-and-gaps) says what a record can owe and what follows a gap.
+cost of 0. [A recorded run](journey/recorded-run.md) shows every step with the output it printed,
+and [owed facts and gaps](journey/owed-facts.md) says what a record can owe and what follows a gap.
 
 Page: [`commands/idea.md`](../../commands/idea.md).
 
@@ -189,7 +189,7 @@ out of the bag. Page: [`commands/identify.md`](../../commands/identify.md).
 ### `/spark:build`
 
 A requirements file becomes a board that builds, with a Wokwi diagram generated from it, or it names the stage that
-stopped it. It runs no simulation. It runs in seconds, with no agents ([journey: Build](journey.md#build)).
+stopped it. It runs no simulation. It runs in seconds, with no agents ([journey: Build](journey/build.md)).
 
 With `--keep .` it writes `board.tsx`, its footprint, `dist/`, `breadboard.md` (the parts and how to wire them), `breadboard.json` (the same wiring on a Wokwi breadboard, for the
 XIAO ESP32-C6 today),
@@ -219,7 +219,7 @@ Page: [`commands/build.md`](../../commands/build.md).
 
 ### `/spark:deploy`
 
-Puts the flash image that passed the simulation on the board on USB ([journey: Bench](journey.md#bench)). It runs
+Puts the flash image that passed the simulation on the board on USB ([journey: Bench](journey/bench.md)). It runs
 `look.py` first, which reads the board and changes nothing, and gives a token. `deploy.py --token` erases and writes only
 after the person's yes, typed in their own terminal, or their deploy grant. After the flash it names the image's
 sha256 and whose yes it was, then reads the board back and waits for the firmware's `ready`. The steps are in

@@ -81,7 +81,7 @@ You need Claude Code, Python 3.9 or newer and Node 20 or newer. The runs for the
 ```
 
 Then, in a project folder, type `/spark:init` to write the project's files. Type `/spark:setup` to install the tools spark needs. It
-installs them after you see the commands and say yes. [Build](docs/guide/journey.md#build) in the journey guide gives the details for
+installs them after you see the commands and say yes. [Build](docs/guide/journey/build.md) in the journey guide gives the details for
 Linux and says what an update replaces.
 
 ## Two roads to a board
@@ -90,7 +90,7 @@ Linux and says what an update replaces.
 LEDs*). Then type `/spark:idea` and say what you want to make (*a button that lights an LED*). Claude turns your words
 into needs and matches them against your drawer and spark's records. You pick a part for each need, and spark reserves
 what you own. The picks become a requirements file. `/spark:build` builds the board, and the tally ends the run with one
-cost line. [A recorded run](docs/guide/journey.md#a-recorded-run-a-button-and-an-led) shows each script and its output.
+cost line. [A recorded run](docs/guide/journey/recorded-run.md) shows each script and its output.
 
 **From a requirements file you write.** Name the dev board and the parts as in the example above. `boards.py --list`
 and `parts.py --list` print their ids. Then type `/spark:build`.
@@ -116,14 +116,14 @@ before its goal, or part of it was not run here. **not yet**: nothing does it ye
 
 | step | today | with |
 | --- | --- | --- |
-| [Drawer](docs/guide/journey.md#drawer) | **partly**: the scripts that list and write what you own ran, but the conversation and the DFRobot import did not | `/spark:drawer` |
-| [Idea](docs/guide/journey.md#idea) | **partly**: the scripts ran from a goal's needs to a requirements file, but the conversation did not | `/spark:idea` |
-| [Research](docs/guide/journey.md#research) | **partly**: the library search runs, but the research agents did not run here | `/spark:research`, `/spark:identify` |
-| [Build](docs/guide/journey.md#build) | **works**: a requirements file becomes a board that builds, with a breadboard sheet, a pin map and a Wokwi diagram, or the stage that stopped it | `/spark:build` |
-| [Checks](docs/guide/journey.md#checks) | **works**: `check_all.py` runs spark's five deterministic checks in one command | `check_all.py`, after `/spark:init` again |
-| [Firmware](docs/guide/journey.md#firmware) | **partly**: an import check proves the firmware's names, not that it drives every signal | `/spark:build`, `assign_pins.py --emit-pins`, `import_firmware.py` |
-| [Simulate](docs/guide/journey.md#simulate) | **works**: `run_scenario.py` runs your firmware in Wokwi on the built diagram and keeps a dated log | `/spark:build --keep .`, then `run_scenario.py` |
-| [Bench](docs/guide/journey.md#bench) | **partly**: `deploy.py` flashes the firmware onto the board after your yes, but no breadboard wired from a sheet has run yet | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
+| [Drawer](docs/guide/journey/drawer.md) | **partly**: the scripts that list and write what you own ran, but the conversation and the DFRobot import did not | `/spark:drawer` |
+| [Idea](docs/guide/journey/idea.md) | **partly**: the scripts ran from a goal's needs to a requirements file, but the conversation did not | `/spark:idea` |
+| [Research](docs/guide/journey/research.md) | **partly**: the library search runs, but the research agents did not run here | `/spark:research`, `/spark:identify` |
+| [Build](docs/guide/journey/build.md) | **works**: a requirements file becomes a board that builds, with a breadboard sheet, a pin map and a Wokwi diagram, or the stage that stopped it | `/spark:build` |
+| [Checks](docs/guide/journey/checks.md) | **works**: `check_all.py` runs spark's five deterministic checks in one command | `check_all.py`, after `/spark:init` again |
+| [Firmware](docs/guide/journey/firmware.md) | **partly**: an import check proves the firmware's names, not that it drives every signal | `/spark:build`, `assign_pins.py --emit-pins`, `import_firmware.py` |
+| [Simulate](docs/guide/journey/simulate.md) | **works**: `run_scenario.py` runs your firmware in Wokwi on the built diagram and keeps a dated log | `/spark:build --keep .`, then `run_scenario.py` |
+| [Bench](docs/guide/journey/bench.md) | **partly**: `deploy.py` flashes the firmware onto the board after your yes, but no breadboard wired from a sheet has run yet | `/spark:deploy`: `look.py`, `deploy.py`, `grant.py`, `live.py` |
 
 ## Commands, skills and agents
 
@@ -151,7 +151,7 @@ run that skipped most checks. So read [the guide for AI agents](docs/guide/agent
 ## Honest limits
 
 - **The generated board is a draft.** No check here is a design-rule check, and tscircuit's autorouter can make
-  shorts. [From draft to order](docs/guide/journey.md#from-draft-to-order) gives the steps before you order a board.
+  shorts. [From draft to order](docs/guide/journey/from-draft-to-order.md) gives the steps before you order a board.
 - **The reviewer agents in `spark-review` are less proven than the checks.** The only measurements were a few eval
   runs, one to three per arm, against a baseline with no plugin
   ([tabled in the 2026-09-24 audit](docs/archive/audit-2026-09-24/autonomous-agent-readiness.md#on-the-eval-and-the-reprioritisation-it-drove)).

@@ -1015,7 +1015,7 @@ skill: its design-reviewer agents, then its last step, the fabrication gate.
   - Neither lists the dev board's own unverified figures: `boards.py --get power --project .` shows them, such as the
     FireBeetle's `regulator_3v3_a` and `deep_sleep_ua` ([P126](https://github.com/xmejkal/spark/issues/60)).
 - **The design-reviewer agents run only in Claude Code.** Outside it, say they were not run.
-- **The rest of the journey's [from draft to order](journey.md#from-draft-to-order):**
+- **The rest of the journey's [from draft to order](journey/from-draft-to-order.md):**
   - regenerate after the currents are stated;
   - build the person's own `board.tsx`;
   - a design-rule check, then a person's look at the layout. The check:

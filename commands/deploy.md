@@ -111,5 +111,5 @@ prints, which opens mpremote's REPL, and press Ctrl-C, then Ctrl-D. Leave the RE
 holds the port, and the next deploy cannot read the board. deploy.py then runs the board doctor, which says another
 program holds the port and to leave mpremote's console with Ctrl-X ([P354](https://github.com/xmejkal/spark/issues/452)).
 
-It first ran on a real board, a XIAO ESP32-C6, on 2026-10-14 ([the first flash](../docs/guide/journey.md#the-first-flash-a-blink-on-the-board-alone)).
+It first ran on a real board, a XIAO ESP32-C6, on 2026-10-14 ([the first flash](../docs/guide/journey/bench.md#the-first-flash-a-blink-on-the-board-alone)).
 

@@ -308,7 +308,7 @@ prints a line for each change that a scenario waits on.
 
 **The console read.** On the P215 bench re-run (2026-10-15), a firmware whose loop never read its console ended three
 deploys in `ready unknown`, with mpremote's "could not enter raw repl". After the conversation added a read that does
-not wait, the next deploy printed `ready seen` (`docs/guide/journey.md`, "The button-and-LED firmware on the board").
+not wait, the next deploy printed `ready seen` (`docs/guide/journey/bench.md`, "The button-and-LED firmware on the board").
 MicroPython's `select.poll` polls a stream with a timeout in milliseconds
 (https://docs.micropython.org/en/latest/library/select.html). The conversation writes the loop, and spark ships no code for it.
 
@@ -370,5 +370,5 @@ skill is the full gate before anything is fabricated, and the fab package (the z
 board house takes) comes after the gate: the `spark-design` skill makes no Gerbers while anything load-bearing is unverified. When the
 time comes, `npx --no tsci export board.tsx -f gerbers -o board-gerbers.zip` makes one; `check_all` finds `*-gerbers.zip`
 or `fab/*.zip` and reads the `bom.csv` inside it
-([run on the example](../docs/guide/journey.md#from-draft-to-order)). The generated placement is a column that does not overlap — a draft, and
+([run on the example](../docs/guide/journey/from-draft-to-order.md)). The generated placement is a column that does not overlap — a draft, and
 the file's own header says so.
