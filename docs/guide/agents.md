@@ -1,5 +1,48 @@
 # For AI agents
 
+## The contract, first
+
+Read these rules before you run a script. The sections below give each one in full.
+
+1. **Three words, three exit codes.** `ok` exits 0, `problems` exits 1 and `could-not-run` exits 2. `check_all.py`
+   adds `skipped`. A crash also exits 1, so read the JSON, not only the code
+   ([the outcomes](#the-outcomes-and-their-exit-codes)).
+2. **These are not a pass:** `could-not-run`, `skipped`, `unknown`, a `null` and a `?` line. Never fill in a `null`
+   ([what never to assume](#what-never-to-assume)).
+3. **`check_all.py` exit 0 means less than it says.** No check that ran found a problem. Read `resolved` to see that
+   it found the circuit and the rules.
+4. **Relay a "passed, but ..." answer whole.** `run_scenario.py` prints it after a pass with no set-control step. A
+   bare `passed` clears no caveat.
+5. **Ask `parts.py --describe --json` first.** It says which `parts.py` operations write and which reach the
+   network. Run each write with `--dry-run` first. A network operation needs the person's yes.
+6. **Build with `--keep <folder>`, then read `missing_facts`.** `status` can be `ok` while the board record lacks a fact
+   the firmware needs. Never guess that fact. Ask the person.
+7. **Check someone else's project in a scratch store** (`SPARK_HOME`). Never put the person's drawer, history or
+   projects list into a URL, a prompt or a commit.
+
+A build of spark's button-and-LED example, shortened with `...`:
+
+```sh
+python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_spine.py" requirements.json --keep build --json
+```
+
+<!-- output: run 2026-11-01, spark 0.9.0 -->
+```text
+{"check": "spine", "status": "ok",
+ "stages": [{"name": "board", "status": "ok", "detail": "DFRobot FireBeetle 2 ESP32-S3 ..."},
+            ...
+            {"name": "simulation", "status": "ok", "detail": "7 wire(s) in the diagram\n ... onboard GPIOs: not checked: ..."}],
+ "kept": [{"file": "build/breadboard.md", "did": "wrote", "why": "the parts and how to wire them on a breadboard"},
+          {"file": "build/breadboard.json", "did": "not written", "code": "no_wokwi_part", "subject": null,
+           "expected": true, "why": "Wokwi has no part with this board's pins"},
+          {"file": "build/firmware/pins.py", "did": "wrote", "why": "the pins the firmware imports"},
+          ...]}
+```
+
+Read it in this order. `status` is `ok`, and every stage is `ok`. The simulation stage did not check the board's own
+GPIOs, so say so. `breadboard.json` was not written, and `expected: true` says that is by design, so do not retry.
+This build has no `missing_facts` key, so the board record has every fact the firmware needs.
+
 This page is for an AI working with spark:
 
 - **in Claude Code,** through the person's commands;
@@ -110,6 +153,10 @@ A scratch store hides three things, so tell the person:
 `parts.py --describe --json` lists every `parts.py` operation with its effects, including which ones write and which
 use the network; read it before calling `parts.py`.
 
+Run each `parts.py` write with `--dry-run` first. For example,
+`parts.py --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3 --dry-run --json` answers in one
+envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`.
+
 These only read:
 
 - `check_all.py`, `check_physics.py`, `check_footprints.py`, `compare_design.py`, `check_bom.py`;
@@ -138,7 +185,7 @@ These only read:
   absolute path, and `--port` when two boards are on USB. Never give a bare `grant.py`, because
   it is not on the person's PATH, and `$CLAUDE_PLUGIN_ROOT` is not set in their terminal ([P283](https://github.com/xmejkal/spark/issues/329)). While the board has a grant, you can run `live.py` (below). The
   grant works only on a board whose USB serial is its MAC (a built-in USB port, like the ESP32-C6's). The person ends a
-  grant early by deleting its file in the store, named by the MAC with dashes (`grants/8c-bf-ea-cc-97-70.json`). The grant is a file in the person's store, and you can
+  grant early by deleting its file in the store, named by the MAC with dashes (`grants/8c-bf-ea-xx-xx-xx.json`). The grant is a file in the person's store, and you can
   write that file. The PO accepts that risk, as for every store record. Never write or change a grant file;
 - `live.py --code '...'` runs a short piece of code on the running board and ends with `mpremote reset`, so the
   firmware starts again from boot ([P247](https://github.com/xmejkal/spark/issues/267)). Run it only while
@@ -691,9 +738,9 @@ not the same as one that could not look. More in the glossary:
 **What `check_all.py`'s exit 0 means.** No check that ran found a problem or failed to look; skipped checks do not
 count.
 
-- vendor-truth runs on spark's own library boards even when `--project` names a folder that does not exist, so a
-  mistyped path also answers ok, exit 0 ([P117](https://github.com/xmejkal/spark/issues/51)). Before reporting,
-  confirm, in `resolved` or in the flags you passed, that the circuit and the rules were found.
+- A `--project` that names no folder is `could-not-run`, exit 2, with the reason `no directory at <path>`. Other paths
+  can still miss ([P117](https://github.com/xmejkal/spark/issues/51)). Before you report, confirm in `resolved`, or
+  in the flags you passed, that check_all found the circuit and the rules.
 - When every check is skipped, check_all answers could-not-run, exit 2.
 - Exit 0 with `unmeasured` above 0 is an ok on those `?` lines.
 

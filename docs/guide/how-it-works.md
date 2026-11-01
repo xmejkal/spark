@@ -8,7 +8,7 @@ spark is three things:
 - pages that tell Claude when to run which script.
 
 The [commands](commands.md) and skills are those pages. The scripts do the work, and each one runs on its own. This
-page is the map.
+page is the map. On Miro, [the code architecture frame](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687681319899) draws the modules and classes.
 
 ## From a requirements file to a built board, then the checks
 
