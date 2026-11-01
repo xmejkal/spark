@@ -403,7 +403,7 @@ class WhatTheTallySaysOfTheBuildTest(AScratchStore):
     def test_a_project_the_chain_has_not_run_for_is_not_built_yet_and_says_so(self):
         self.history()
         self.assertFalse(run(["--tally", str(self.project)])[0]["data"]["built"])
-        self.assertIn("not built yet — check_spine records it when the chain runs end to end", self.text())
+        self.assertIn("not built yet — check_spine records it when the chain runs end to end, and a board-only build records none", self.text())
 
     def test_another_project_s_build_is_not_this_one_s(self):
         self.history(dict(self.BUILT, project="rc-car"))

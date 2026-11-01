@@ -80,8 +80,8 @@
  {
   "file": "scripts/image_evidence.py",
   "name": "failed-run-ignored",
-  "find": "if sha256 == image.sha256 and verdict != \"passed\":",
-  "replace": "if sha256 == image.sha256 and verdict == \"passed\" and False:"
+  "find": "if sha256 == image.sha256 and verdict != PASSED:",
+  "replace": "if sha256 == image.sha256 and verdict == PASSED and False:"
  },
  {
   "file": "scripts/board_envelope.py",

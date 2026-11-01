@@ -2279,7 +2279,7 @@ def _op_tally(args, project):
                    "needs": len(listed), "needs_picked": len(listed) - len(unpicked)},
                   ["  " + said, "  " + needs_said] + ["  " + glossed for glossed in cost.gloss(counted)]
                   + ["  " + item["sentence"] for item in unchecked] + (["  " + unreadable] if unreadable else [])
-                  + ([] if built else ["  not built yet — check_spine records it when the chain runs end to end"]),
+                  + ([] if built else ["  not built yet — check_spine records it when the chain runs end to end, and a board-only build records none"]),
                   unchecked=unchecked)
 
 
