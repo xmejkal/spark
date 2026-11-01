@@ -9,6 +9,7 @@ simulation stage calls it; nothing here knows about tscircuit.
 """
 
 import json
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -323,6 +324,40 @@ def firmware_in(toml):
             return FirmwareLine(outcomes.NOT_CHECKED, why="line %d names no file." % number)
         return FirmwareLine(outcomes.NOT_CHECKED, why="line %d names the firmware in a form spark cannot read." % number)
     return FirmwareLine(outcomes.NONE_RECORDED)
+# --- end MVP ---
+
+
+# --- MVP ---
+def copy_kept_diagram(simulation, sim):
+    """
+    Copy the person's kept `simulation/diagram.json` into the build's `sim/`, so the converter merges into it (P482, #661)
+    instead of overwriting it. Returns "" when it copied or there is none, else a short note: it exists but is not a
+    Wokwi diagram (a JSON object with a `parts` list), so the build starts fresh.
+    """
+    kept = Path(simulation) / "diagram.json"
+    if not kept.is_file():
+        return ""
+    try:
+        diagram = json.loads(kept.read_text())
+    except (OSError, ValueError):
+        diagram = None
+    if not isinstance(diagram, dict) or not isinstance(diagram.get("parts"), list):
+        return "your diagram.json is not a Wokwi diagram (valid JSON with a parts list), so it was built fresh"
+    Path(sim).mkdir(exist_ok=True)
+    shutil.copy(kept, Path(sim) / "diagram.json")
+    return ""
+
+
+KEPT_SUMMARY = re.compile(r"kept from the existing diagram: (\d+) positions, (\d+) wire routes(?:, hand-added parts: (.+))?")
+
+
+def kept_note(stdout):
+    """The converter's own merge summary (tools/circuit-to-wokwi/cli.ts) as one clause, or "" when it printed none."""
+    found = KEPT_SUMMARY.search(stdout or "")
+    if not found:
+        return ""
+    positions, routes, added = found.groups()
+    return "kept from your diagram: %s part positions, %s wire routes%s" % (positions, routes, ", hand-added: " + added.strip() if added else "")
 # --- end MVP ---
 
 

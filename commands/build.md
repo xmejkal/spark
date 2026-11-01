@@ -141,7 +141,7 @@ does not need a finished build ([P196](https://github.com/xmejkal/spark/issues/1
 `pins.py` that spark did not write is there, the build leaves it alone and names it. If the pins cannot be placed, the
 build removes the `pins.py` that it wrote earlier, because that file describes another design. If spark refuses the
 requirements file, the build removes the earlier sheet, drawings, `page.html` and the `pins.py` that it wrote, and
-says why. If the requirements file is missing, it removes nothing. The one command also keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR.
+says why. If the requirements file is missing, it removes nothing. The one command also keeps the simulation project in `sim/`: `diagram.json`, `wokwi.toml` and the chips. `--sim-dir DIR` keeps it in DIR. A rebuild merges into the kept `sim/diagram.json` (P482): the part positions by id, the wire routes whose two ends are still generated, and the parts marked `"handAdded": "true"` in `attrs` with the wires that touch them stay. A hand-drawn wire between two generated parts does not stay, a generated part that the person deleted comes back, and a position whose generated id changed is lost. The verdict's simulation stage says `kept from your diagram: ...` when it kept anything.
 A rebuild keeps the flash image that `sim/wokwi.toml` already names, unless `--firmware` names another. Spark reads that line only as `firmware = "name.bin"` (a JSON string); a line in another form (indented, `firmware="x.bin"`, a number, an empty name) is not kept, and the build says so on stderr: the rebuild then names no image.
 
 When the chain runs end to end for a project on your list, your store's history records `built`: the board and the parts
@@ -241,7 +241,7 @@ It rebuilds whenever `board.tsx` changes, so it is the window to keep open while
 worked on. Its interface loads from a CDN, so it needs a network; the server itself is local.
 
 **The simulation, watched rather than asserted** — the Wokwi for VS Code extension opens the files
-the last stage writes into `sim/`, which the one command keeps: `wokwi.toml`, `diagram.json`, the chips.
+the last stage writes into `sim/`, which the one command keeps: `wokwi.toml`, `diagram.json`, the chips. A rebuild merges into your `diagram.json`, so parts you moved stay (see the build step above for what does not).
 It needs the flash image too, so make both first: `check_spine.py requirements.json --keep . --firmware
 flash-with-firmware.bin`, then `flash_image.py --files firmware -o sim/flash-with-firmware.bin`; without them
 the extension has no firmware to run. It runs the flash image live: press the board's buttons, drag a sensor's slider, read its serial port. Open the

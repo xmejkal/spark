@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the build never copies the kept diagram in, so the converter overwrites it",
+  "find": "    bad_kept = sim_project.copy_kept_diagram(workdir / \"kept-sim\", sim_dir)",
+  "replace": "    bad_kept = \"\""
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "a converter that exits non-zero beside a copied diagram passes the stage",
+  "find": "    if made.returncode or not diagram_path.is_file():",
+  "replace": "    if not diagram_path.is_file():"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "a diagram with no parts list is copied in as if it were one",
+  "find": "    if not isinstance(diagram, dict) or not isinstance(diagram.get(\"parts\"), list):",
+  "replace": "    if not isinstance(diagram, dict):"
+ },
+ {
+  "file": "scripts/sim_project.py",
+  "name": "the verdict never says what the merge kept",
+  "find": "    if not found:\n        return \"\"\n    positions",
+  "replace": "    if True:\n        return \"\"\n    positions"
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the kept diagram is linked only for --keep, so --sim-dir is overwritten",
+  "find": "    if simulation: os.symlink(",
+  "replace": "    if simulation and args.keep: os.symlink("
+ }
+]
