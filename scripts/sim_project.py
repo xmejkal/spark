@@ -369,6 +369,14 @@ def kept_note(stdout):
         return ""
     positions, routes, added = found.groups()
     return "kept from your diagram: %s part positions, %s wire routes%s" % (positions, routes, ", hand-added: " + added.strip() if added else "")
+
+
+CONVERTER_WARNING = re.compile(r"^warning\[[a-z-]+\]: (.+)$", re.MULTILINE)
+
+
+def converter_warnings(stdout):
+    """The converter's tagged warning lines (cli.ts prints `warning[code]: sentence`, P497), the sentence only."""
+    return CONVERTER_WARNING.findall(stdout or "")
 # --- end MVP ---
 
 

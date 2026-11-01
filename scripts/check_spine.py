@@ -560,7 +560,7 @@ def convert(project, own, source, sim_dir, workdir):
             return None, Stage("simulation", COULD_NOT_RUN, "the converter has no Wokwi part for a component on this board — a mapping "
                                "to add to its lib/mapping.ts, not a defect in the design, which built\n" + said), ""
         return None, Stage("simulation", PROBLEMS, "no diagram was produced\n" + said), ""
-    notes = "".join("\n           " + note for note in (bad_kept, sim_project.kept_note(made.stdout)) if note)
+    notes = "".join("\n           " + note for note in (bad_kept, sim_project.kept_note(made.stdout), *sim_project.converter_warnings(made.stdout)) if note)
     return json.loads(diagram_path.read_text()), None, notes
 
 

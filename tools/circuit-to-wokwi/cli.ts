@@ -98,12 +98,13 @@ async function main() {
   const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips, author });
   const existing = await readExisting(options.out);
   const { diagram, summary } = mergeWithExisting(emitted.diagram, existing);
-  const validation = validate({ ...emitted, diagram }, netlist.components.length);
+  const validation = validate({ ...emitted, diagram }, netlist.components.length, summary.keptHandAddedParts);
 
   report({ netlist, emitted, summary, validation, designProblems });
 
   const blocking = [...emitted.problems, ...validation.problems];
   if (blocking.length) throw new ConversionFailed(blocking);
+  for (const { code, message } of validation.warnings) console.log(`\nwarning[${code}]: ${message}`);
 
   const serialised = JSON.stringify(diagram, null, 2) + "\n";
 
