@@ -2,7 +2,7 @@
 
 The gaps of spark walk 3 (epic #467), on 2026-11-01 in Prague, from 06:57 to 08:39 CET. The diary is `walk3-diary.md` in the same folder. Each claim is the first sentence of the diary's gap. Status `raised` means that nobody checked it after the walk. The column "where it went" names the proposed card in the diary (C1 to C8), or "row only".
 
-| # | claim | source | status | where it went |
+| # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
 | 1 | The goal names "the board that is connected". No spark page tells a new user how to find out which board that is before init. | diary G1, step 1 | raised | proposed C5 |
 | 2 | The plugin cache holds spark 0.4.0 from 2026-09-23, with 4 skills and no `commands/`. | diary G2, step 1 | raised | row only |
