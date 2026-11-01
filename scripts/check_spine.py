@@ -380,9 +380,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         " — from the plugin's library; no project up from the requirements file, so no rules"
         if from_library else "")))
 
-    # Nothing to build is not a pass. An empty parts list came out `ok` end to end — two traces
-    # (the processor's own ground and 3.3 V) and two wires — which proves nothing about the chain
-    # and reads as though it did. Intake row M3 had it as `problems` on 09-25; both were wrong.
+    # Nothing to build is not a pass. An empty parts list came out `ok` end to end (two traces, two wires), which proves
+    # nothing about the chain and reads as though it did. Intake row M3 had it as `problems` on 09-25; both were wrong.
     if requirements.get(needs.BOARD_ONLY) is True:
         if requirements.get("parts"):
             return stages + [Stage("parts", COULD_NOT_RUN, "the requirements say board_only and name parts: say one")]
@@ -393,9 +392,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                "board holding only the microcontroller proves nothing. A project that runs "
                                'on the board alone says "%s": true' % needs.BOARD_ONLY)]
 
-    # The design's own part records, so the build stage below can ask whether the circuit
-    # honoured what they state. `emit_board` reads the same records in its subprocess; if that
-    # succeeded, this cannot fail for a reason the reader has not already been told.
+    # The design's own part records, so the build stage below can ask whether the circuit honoured what they state.
+    # `emit_board` reads the same records; if that succeeded, this cannot fail for a reason not already told.
     try:
         part_list = design.parts_of(requirements, project)
     except design.DesignError as broken:
@@ -536,13 +534,14 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, firmware))
 
     diagram_path = sim_dir / "diagram.json"
+    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)  # P482: the converter merges into it
     made = subprocess.run(
         converter_command(project, own) + [
             "--circuit", str(circuit_path), "--out", str(diagram_path),
             "--mapping", str(sim_dir / "wokwi-mapping.json"), "--chips", str(sim_dir / "chips")],
         cwd=str(own.parent if own else sim_dir), capture_output=True, text=True, timeout=BUILD_TIMEOUT_S,
         env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
-    if not diagram_path.is_file():
+    if made.returncode or not diagram_path.is_file():
         said = (made.stderr or made.stdout)[-800:]
         if simulation_could_not_look(said):
             return stages + [Stage("simulation", COULD_NOT_RUN,
@@ -565,7 +564,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # like a bench result (backlog P37). It goes beside the diagram as well, because the terminal
     # gets closed and the sim directory is what somebody opens a week later.
     limits = sim_project.write_limits(sim_dir, loaded, board)
-    return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)))]
+    notes = "".join("\n           " + note for note in (bad_kept, sim_project.kept_note(made.stdout)) if note)
+    return stages + [Stage("simulation", OK, simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)) + notes)]
 
 
 def board_alone(board, workdir, firmware=None):
@@ -688,11 +688,9 @@ def main(argv=None):
                              "without it, the image a kept wokwi.toml names is kept")
     args = parser.parse_args(argv)
 
-    # The input is read before anything runs, and read AS input: a malformed file is a stage
-    # that could not run, not a traceback with exit 1 — which is "the chain is broken" to anyone
-    # reading the code. The project is the file's, up from its own directory, so a design
-    # belongs to its parts wherever the command is typed; a file inside no project at all is
-    # built from the plugin's library, like the reference design.
+    # The input is read before anything runs, and read AS input: a malformed file is a stage that could not run, not a
+    # traceback with exit 1 (which says "the chain is broken"). The project is the file's, up from its own directory, so a
+    # design belongs to its parts wherever it is typed; a file in no project is built from the plugin's library.
     source = Path(args.requirements).resolve() if args.requirements else None
     try:
         requirements = design.read(source) if source else dict(REFERENCE)
@@ -715,6 +713,8 @@ def main(argv=None):
 
     # A rebuild runs the flash image the kept wokwi.toml already names, unless --firmware names another.
     simulation = simulation_dir(args)
+    if simulation and (simulation / "diagram.json").is_file():  # P482: run() merges into a copy, never the person's file
+        shutil.copy(simulation / "diagram.json", workdir / sim_project.KEPT_DIAGRAM)
     firmware, kept = args.firmware, None
     if not firmware and simulation:
         kept = sim_project.firmware_in(simulation / "wokwi.toml")

@@ -43,6 +43,7 @@ import missing_facts  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
 import tabbed_page  # noqa: E402
+import test_converter  # noqa: E402
 from fakes import FakeTscircuitExport  # noqa: E402
 
 
@@ -2195,6 +2196,49 @@ class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
                 code, said = self.answer(requirements)
                 self.assertTrue(said.endswith("\n  the chain runs end to end\n"), said)
                 self.assertNotIn("unserved", json.loads(self.answer(requirements, "--json")[1]))
+
+
+class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
+    """P482 (#661): the build copies the kept sim/diagram.json in before the converter, whose merge keeps the person's edits."""
+    FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
+
+    def build(self, into):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(self.FIXTURE / "requirements.json"), "--keep", str(into)])
+        return out.getvalue()
+
+    @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+    def test_a_second_build_keeps_a_moved_part_a_hand_added_part_and_its_wire(self):
+        into = Path(tempfile.mkdtemp()) / "project"
+        first = self.build(into)
+        self.assertNotIn("kept from your diagram", first)
+        path = into / "sim" / "diagram.json"
+        diagram = json.loads(path.read_text())
+        diagram["parts"][1]["left"] = 999
+        diagram["parts"].append({"type": "wokwi-gnd", "id": "mine", "top": 5, "left": 6, "attrs": {"handAdded": "true"}})
+        diagram["connections"].append(["mine:GND", "mcu:GND.3", "red", []])
+        path.write_text(json.dumps(diagram))
+        second = self.build(into)
+        again = json.loads(path.read_text())
+        self.assertEqual({part["id"]: part["left"] for part in again["parts"]}["tactilebutton"], 999)
+        self.assertIn("mine", [part["id"] for part in again["parts"]])
+        self.assertIn(["mine:GND", "mcu:GND.3", "red", []], again["connections"])
+        self.assertIn("kept from your diagram: ", second)
+        self.assertIn("hand-added: mine", second)
+
+    def test_a_converter_that_fails_beside_a_copied_diagram_fails_the_stage(self):
+        requirements = json.loads((self.FIXTURE / "requirements.json").read_text())
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "requirements.json").write_text(json.dumps(requirements))
+        (workdir / "kept-diagram.json").write_text('{"parts": [], "connections": []}')
+        broken = subprocess.CompletedProcess([], 1, "", "converter exploded")
+        real = subprocess.run
+        self.addCleanup(setattr, check_spine.subprocess, "run", real)
+        check_spine.subprocess.run = lambda command, *rest, **named: broken if "--circuit" in command else real(command, *rest, **named)
+        stages = check_spine.run(requirements, workdir, toolchain=check_spine.find_toolchain(ROOT), project=ROOT)
+        self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.PROBLEMS))
+        self.assertIn("no diagram was produced", stages[-1].detail)
 
 
 if __name__ == "__main__":
