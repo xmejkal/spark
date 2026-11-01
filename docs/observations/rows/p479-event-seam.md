@@ -1,6 +1,6 @@
 # P479 event seam: rows
 
-What plan council round 1 on the event seam plan found, and what the synthesis did. Card: #657. The record is
+What plan council rounds 1 and 2 on the event seam plan found, and what the synthesis did. Rows 37 and up are round 2 (record: `round2.md`, same folder). Card: #657. The round 1 record is
 `docs/observations/2026-11-01-p479-event-seam-council/round1.md`. The synthesis checked each claim at d375c017.
 
 | # | claim | source | status | evidence / where it went |
@@ -23,7 +23,7 @@ What plan council round 1 on the event seam plan found, and what the synthesis d
 | 16 | A unit test reads every Event field | tech lead | acted | E1 Done when |
 | 17 | Add a subprocess test on the toy for both streams in E1 | tech lead | rejected | E1 has no child and no fd write. The in-process builder test runs the real `run_cli` and `TerminalReporter`. E2's child goldens prove the fds |
 | 18 | `FakeOutsideWorld` makes a `FakeReporter` by default | tech lead | acted | `fakes.py:272`, plan "The Reporter" |
-| 19 | List the test builders that change | tech lead | acted | `test_core.py:187`, `:265`, and the `build_outside_world` calls at `:280`, `:286` |
+| 19 | List the test builders that change | tech lead | acted | `test_core.py:187`, `:265`, and the `build_outside_world` calls at `:276`, `:286` |
 | 20 | R1 and R3 of deploy drop in E2 | tech lead | acted | `tests/architecture_baseline.json`: `_deploy` R1 72 and R3 9, `DeployService.__init__` R3 7. E2 Done when |
 | 21 | The names table gets rows for Event and Reporter, and the Adapter label fits badly | tech lead | acted | a `Reporter` role row. Event is a Value, no row. `TerminalReporter` is a Strategy case, not an Adapter |
 | 22 | A "You decide" box with three or four yes or no questions, and the rest as council rows | PO assistant | acted | four questions under the short version. Rows 32 to 35 hold the rest |
@@ -41,3 +41,16 @@ What plan council round 1 on the event seam plan found, and what the synthesis d
 | 34 | A `Reporter` base with one real case | draft question | acted | council: the base now, the Fake is T3's second case |
 | 35 | A `BEGIN` per build stage changes the timing | draft question | closed | council: bytes stay, the build golden compares bytes |
 | 36 | Deploy's phase codes need a new list | synthesis | rejected | `board_envelope.STAGE_*` is the list, `DeployPhase` after S11 |
+| 37 | Each "You decide" item is a question ending in "?", and the `LookReport` rename is not in item 1 | PO assistant, tech lead | acted | the box has four questions. The rename is a section 3 row for W4-2 |
+| 38 | No `Reporter` row in developing.md's table | PO assistant, tech lead, refuter | acted | the Strategy row (`:302`) lets a plain noun stand. `tools/measure.py:35` `ROLES` stays. Section 3 and E1's Done when say so |
+| 39 | "report" means three things and "line" is overloaded | PO assistant, tech lead | acted | "result lines" in rule 2. The glossary row lists the meanings and the two kinds of line |
+| 40 | Split E2a (two goldens, stderr support) from E2 | PO assistant, tech lead | acted | E2a is its own small PR before W4-2 with its own Done when |
+| 41 | The indent: `deploy.py:243` and `board_look.py:390` add no two spaces, yet `test_deploy_json.py:196` expects them | senior architecture | verified | read in the code. The source per site is not clear, so E2a's PR text names it, and risk 3 says so |
+| 42 | One event per line | senior architecture | acted | `guard_lines` splits on newline (`text_guards.py:93`). The `text` field holds one line, and `deploy.py:243`, `:259` send one event per line |
+| 43 | The world's report is the only path, test builders take the reporter | senior architecture | acted | rule 5. The plan now says "five rules" |
+| 44 | Severity and phase order, `McpProgressReporter` progress and total, no stdout Reporter for MCP stdio | senior architecture | acted | one paragraph under the later Reporters. Nothing is built |
+| 45 | Cite `test_core.py:276`, not `:280` | refuter | acted | plan and row 19 |
+| 46 | Risk 3 claims too much: E2's goldens stop at the gate | refuter | acted | risk 3 lists the lines in no golden. E2's exact-text event test guards them |
+| 47 | A Reporter role row needs `Reporter` in `ROLES` | refuter | closed | resolved by row 38: no row |
+| 48 | `FakeOutsideWorld` makes its own reporter, so it needs a `reporter=` parameter. E2 breaks `test_core.py:288` and `test_deploy_json.py:455` | refuter | acted | the parameter is in "Where it sits". E2's Done when lists the tests. `assertIs` sits at `:287-288` |
+| 49 | `for_json` breaks X2 because `measure.py:362` skips `TERMINAL_CLASSES` bodies | refuter | rejected | that skip is why the class is exempt: `_may_print` (`measure.py:363`) lets a `TERMINAL_CLASSES` name print. Counts and edit lists hold |

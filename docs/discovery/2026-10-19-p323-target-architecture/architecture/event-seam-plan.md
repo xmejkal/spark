@@ -14,15 +14,15 @@ that commit's.
 
 > **You decide.** Each line is a question, the council's recommendation, and your yes or no.
 >
-> 1. One word, `report`, for the seam: `outside.report(event)`. W4-2 renames deploy's `LookReport` variable `report` to
->    `look` where the two meet. **Recommend: yes.**
-> 2. E1, the probe on the look, runs as its own PR right after P480 (the walk 3 notes) and before W4-2. **Recommend: yes.**
-> 3. Under `--json`, stderr stays plain text for a person. JSON lines on stderr wait until the spike P477 #653 shows an
->    agent that reads them. **Recommend: yes.**
-> 4. E1 and E2 change nothing a person sees. The first visible gain is P478's colored terminal. **Recommend: yes, the
->    seam comes first.**
+> 1. Is `report` the one word for the seam: `outside.report(event)`? **Recommend: yes.**
+> 2. Does E1, the probe on the look, run as its own PR right after P480 (the walk 3 notes), and E2a (two new deploy
+>    goldens) as its own small PR before W4-2? **Recommend: yes.**
+> 3. Under `--json`, does stderr stay plain text for a person, with JSON lines on stderr waiting until the spike P477
+>    #653 shows an agent that reads them? **Recommend: yes.**
+> 4. Do E1, E2a and E2 change nothing a person sees, so that the first visible gain is P478's colored terminal?
+>    **Recommend: yes, the seam comes first.**
 >
-> **Approve this** = E1 starts as its own PR after P480. E2 rides in W4-2's PR. Each edit of section 3 lands in the PR
+> **Approve this** = E1 starts as its own PR after P480. E2a follows it. E2 rides in W4-2's PR. Each edit of section 3 lands in the PR
 > of the slice that makes it true. The council decided the other open questions, in
 > `docs/observations/rows/p479-event-seam.md`.
 
@@ -32,9 +32,11 @@ Operation and its Services never see a stream. The result at the end stays one `
 The events during the run go through the Reporter that the frontend picks. The map of every output place is the appendix.
 
 Council. Round 1 (architecture, UX and AI-UX, tech lead, PO assistant, refuter) ran on 2026-11-01. It renamed the
-Event's fields and cut `PROGRESS` and the counts. It moved the child output change to E2 and added the four rules of the
-seam. It fixed the builder path that E1's test takes. It added two deploy goldens before E2 and corrected three counts.
-Record: `docs/observations/2026-11-01-p479-event-seam-council/round1.md`.
+Event's fields and cut `PROGRESS` and the counts. It moved the child output change to E2 and added the rules of the seam. It fixed the
+builder path that E1's test takes. It added two deploy goldens before E2 and corrected three counts. Round 2 (PO
+assistant and tech lead, senior architecture, refuter) ran on the same day. It split E2a from E2, dropped the Reporter
+role row, added rule 5 and the one-event-per-line rule, and cut risk 3's claim to what the goldens reach. Records:
+`docs/observations/2026-11-01-p479-event-seam-council/round1.md` and `round2.md`.
 
 ## 1. The design
 
@@ -48,9 +50,9 @@ The smallest design that works end to end: one Value, one method, one real Repor
 |---|---|
 | `kind` | `LINE` (a sentence the person reads now) or `BEGIN` (a phase begins now). The constants: `LINE, BEGIN = "line", "begin"` |
 | `code` | the snake_case code of the phase the event is about. Deploy's phases are `board_envelope.STAGE_*` (`board_envelope.py:26`). They are public already, as the envelope's `stage`. S11 renames them `DeployPhase`. A build's codes are its stage names. Never a sentence |
-| `text` | for a `LINE`, the words printed today, without their two-space indent. None for a `BEGIN` |
+| `text` | for a `LINE`, one line of the words printed today, with no newline and no indent. None for a `BEGIN` |
 
-Two constructors keep call sites short: `Event.line(code, text)` and `Event.begin(code)`. A `BEGIN` has no end event: the
+A caller that has a joined block (`deploy.py:243`, `:259`) sends one event per line. Two constructors keep call sites short: `Event.line(code, text)` and `Event.begin(code)`. A `BEGIN` has no end event: the
 next `BEGIN` or the result ends it. No count, colour, stream, time stamp or severity. When a Reporter needs one of them,
 that field enters (records grow by need). A unit test builds one event of each kind and reads every field.
 
@@ -72,8 +74,9 @@ reader decides on.
 - `ReporterContract` in `tests/test_core.py`: each Reporter takes one event of each kind, and one of an unknown kind,
   with no exception.
 
-Names. `docs/guide/developing.md`'s table gains a `Reporter` role row: "takes the events of a run and shows them in one
-form. It decides on kind and code, never on text. The name ends in `Reporter`." `Event` is a Value and needs no new row.
+Names. `Reporter` is a Strategy and `Event` is a Value. Neither gets a new row in `docs/guide/developing.md`'s table: its
+Strategy row (`:302`) already lets a plain noun stand when the docstring says Strategy, as `BoardReader` does. The
+docstring of `Reporter` says Strategy, and `tools/measure.py:35` `ROLES` stays as it is.
 
 ### Where it sits, and the builder change
 
@@ -84,17 +87,18 @@ every Operation has it, and nothing gates it.
 `run_cli` picks the Reporter before it builds the world. At `cli.py:108` it pops `as_json`. One new line follows:
 `reporter = TerminalReporter.for_json(as_json)`. The builder call at `:109` gains `reporter`. So every builder takes three parameters: `build_project_outside_world` (`bench/__init__.py:14-17`, which
 `look.py:55` passes on unchanged), and the test builders at `test_core.py:187` and `:265`. A test that gives `outside`
-keeps its own reporter, so E1's stream test goes through a builder, as `test_core.py:185-193` does. The two calls of
-`build_outside_world` at `test_core.py:280` and `:286` gain the reporter. The mutation row at
+keeps its own reporter, so E1's stream test goes through a builder, as `test_core.py:185-193` does.
+`FakeOutsideWorld` makes its own `FakeReporter`, so it takes a `reporter=` parameter (`fakes.py:277`) beside `run` and
+`find_tool`. The two calls of `build_outside_world` at `test_core.py:276` and `:286` gain the reporter. The mutation row at
 `tests/mutations/p442-core-look.json:4` finds `build_outside_world`'s return line, so E1 updates its find and replace.
 
-### The four rules of the seam
+### The five rules of the seam
 
 1. **One line, one place.** An event line is a line that the person reads before the run ends: before the gate asks,
    or while a slow phase runs. Every other line is a result line in `OperationResult.lines`, which `TextReport` prints
    once at the end. No line is both, and E2's test checks that no event text is in the result's lines. Deploy has seven
    event lines, listed in the appendix. The dry run's lines and the closing lines are result lines.
-2. **The order on the streams.** Without `--json`: the event lines on stdout as they happen, then `TextReport`'s lines
+2. **The order on the streams.** Without `--json`: the event lines on stdout as they happen, then `TextReport`'s result lines
    on stdout, then the diagnostics on stderr. With `--json`: the event lines on stderr as they happen, then the envelope
    alone on stdout, then the diagnostics on stderr. E1's toy test pins both orders.
 3. **Diagnostics stay out of the Reporter.** A line that goes to stderr in both modes is a diagnostic in
@@ -104,6 +108,9 @@ keeps its own reporter, so E1's stream test goes through a builder, as `test_cor
 4. **The stderr contract.** Under `--json`, stderr holds text for a person: the event lines, a tool's own output, the
    diagnostics and a crash's traceback. An agent reads the envelope on stdout and never parses stderr. E1 adds this
    sentence to `docs/guide/agents.md` beside `:555-558`. JSON lines on stderr are a later Reporter (decision 3).
+5. **The world's report is the only path.** An Operation prints nothing, and `run_cli` never prints an event itself.
+   Test builders take the reporter. A caller-supplied `outside` carries its own report, so a test that gives one reads
+   that Fake's events.
 
 Facts only. An Operation reports codes and the sentences spark prints today. No threshold, timing or colour enters an
 Event. P481 #660 later describes each phase once, as data, and a `LINE` then names fewer words.
@@ -118,7 +125,9 @@ under `--json`" stays and targets `ProgramRunner`.
 
 ### The later Reporters
 
-Each plugs in without touching an Operation, and each enters with its frontend.
+Each plugs in without touching an Operation, and each enters with its frontend. A severity and a phase order enter with
+P478 and the MCP Reporter, not before. `McpProgressReporter` needs a progress and a total, and P481's phases as data can
+give the total. MCP stdio never gets a stdout `TerminalReporter`: the MCP frontend builds its own world.
 
 | Reporter | Frontend | What it does | Card |
 |---|---|---|---|
@@ -212,14 +221,15 @@ E1 sits in wave 4, before W4-2, and W4-2 builds on it. Each slice is one PR, tes
 
 | Slice | What it builds | Done when | Size |
 |---|---|---|---|
-| E1, the probe on the look | `events.py` with the Event, its two kinds, the Reporter base and `TerminalReporter`. `OutsideWorld.report` and `build_outside_world`'s new parameter. `run_cli`'s reporter line and the three builders. `LookAtBoard.run` reports `Event.begin(STAGE_LOOK)` before `looker(...).run` (`look_at_board.py:50`). `FakeReporter` and `FakeOutsideWorld`'s default. X2's list. The agents.md sentence of rule 4. The p442 mutation row retargeted | the 16 golden files are byte-equal. `test_look` sees `[Event("begin", "look", None)]`. The toy, run through a builder: its `LINE` is on stdout before the report without `--json`, and on stderr with it while stdout holds the envelope alone. A `BEGIN` prints nothing. The Event test reads every field. `ReporterContract` passes. The X2 baseline gains no entry. Mutation: a `BEGIN` that prints, a `LINE` on stdout under `--json`, a `LINE` without its indent, the event not sent, each caught | estimate: 50 product lines, 60 test lines, 10 doc lines |
-| E2, deploy in W4-2 | First commit, before W4-2's code, measured on main: two goldens. `deploy-could-not-run-no-terminal.txt` (no `--json`, reaches the gate, the look's lines on stdout), and the stderr bytes of the `--json` case. The golden runner keeps stderr for a case that names a stderr file (`golden_bench.py:134` returns stdout only today). Then W4-2 with the edits of section 3: the event lines of rule 1 become `LINE`s, each phase a `BEGIN`, `echo_to` moves into `ProgramRunner`, `show_line` goes | every deploy golden, the two new ones too, is byte-equal. `test_deploy_gate` holds the event list of one deploy that reaches ready. No event text is in the result's lines. In `tests/architecture_baseline.json`, `R1:scripts/deploy.py:_deploy` (72), `R3:...:_deploy` (9) and `R3:...:DeployService.__init__` (7) drop or go. W4-2's other checks hold | W4-2's size plus 60 lines |
+| E1, the probe on the look | `events.py` with the Event, its two kinds, the Reporter base and `TerminalReporter`. `OutsideWorld.report` and `build_outside_world`'s new parameter. `run_cli`'s reporter line and the three builders. `LookAtBoard.run` reports `Event.begin(STAGE_LOOK)` before `looker(...).run` (`look_at_board.py:50`). `FakeReporter` and `FakeOutsideWorld`'s default. X2's list. The agents.md sentence of rule 4. The p442 mutation row retargeted. `Reporter` stays a plain noun whose docstring says Strategy | the 16 golden files are byte-equal. `test_look` sees `[Event("begin", "look", None)]`. The toy, run through a builder: its `LINE` is on stdout before the report without `--json`, and on stderr with it while stdout holds the envelope alone. A `BEGIN` prints nothing. The Event test reads every field. `ReporterContract` passes. The X2 baseline gains no entry, and `ROLES` is unchanged. Mutation: a `BEGIN` that prints, a `LINE` on stdout under `--json`, a `LINE` without its indent, the event not sent, each caught | estimate: 50 product lines, 60 test lines, 10 doc lines |
+| E2a, two goldens before W4-2 | Measured on main, with no product code changed: `deploy-could-not-run-no-terminal.txt` (no `--json`, reaches the gate, the look's lines on stdout) and the stderr bytes of the `--json` case. The golden runner returns stderr for a case that names a stderr file (`golden_bench.py:134` returns stdout only today) | both goldens pass on main. The 16 older goldens are byte-equal. The PR text says where the two leading spaces of the look's lines come from at each site (risk 3) | 60 test lines |
+| E2, deploy inside W4-2 | W4-2's code with the edits of section 3: the event lines of rule 1 become `LINE`s, each phase a `BEGIN`, `echo_to` moves into `ProgramRunner`, `show_line` goes | every deploy golden, the two of E2a too, is byte-equal. `test_deploy_gate` holds the exact event texts of one deploy that reaches ready, prints them once through `TerminalReporter`, and compares them with today's strings. No event text is in the result's lines. `test_core.py:287-288` (`assertIs` of `run` and `ProgramRunner.run` to `subprocess.run`) and the `echo_to` test at `test_deploy_json.py:455` change with `ProgramRunner`. In `tests/architecture_baseline.json`, `R1:scripts/deploy.py:_deploy` (72), `R3:...:_deploy` (9) and `R3:...:DeployService.__init__` (7) drop or go. W4-2's other checks hold | the seam edits, about 60 lines |
 | E3, the colored terminal (P478 #656) | `StyledTerminalReporter`. On a tty with `NO_COLOR` unset, `run_cli` picks it | the PO sees colour on his bench. `deploy.py --json` and a piped `deploy.py` print the bytes of before | P478's card |
 | E4, the other output places | each with its area's move in wave 6, as the appendix lists | each move's goldens are byte-equal, and the person sees a stage as it begins | inside each move |
 | E5, the other readers | one Reporter each, with its frontend (the table above) | no Operation touched | later |
 
-Review size. E1 holds logic: one reviewer, the refuter on the strongest model, one mutation run. E2 keeps W4-2's
-review. This plan takes two council rounds before the PO reads it, as #657 says.
+Review size. E1 holds logic: one reviewer, the refuter on the strongest model, one mutation run. E2a is tests only: one
+reviewer. E2 keeps W4-2's review. This plan takes two council rounds before the PO reads it, as #657 says.
 
 ## 3. What changes in the plans
 
@@ -228,7 +238,7 @@ No file is edited by this card. Each edit lands in the PR of the slice that make
 
 | File | Section | The change | Slice |
 |---|---|---|---|
-| `README.md` (level 1) | "The one interface contract" | a row `events`: `Event(kind, code, text)` through `OutsideWorld.report`, the four rules | E1 |
+| `README.md` (level 1) | "The one interface contract" | a row `events`: `Event(kind, code, text)` through `OutsideWorld.report`, the five rules | E1 |
 | `README.md` | "One Operation, two frontends" | an arrow `O->>RC: outside.report(Event)` and `RC-->>P: the line, now` | E1 |
 | `refactor-plan.md` | "Level 3" class diagram (`:127-128`) | `deploy(look, token, consent)`, `verify(look, planned)`, `DeployService` holds `outside` | E2 |
 | `refactor-plan.md` | "Level 4" sequence (`:188`, `:194`) and the paragraph at `:201-202` | `DS->>OW: report(Event)`, and `OutsideWorld.report`, not `show_line` | E2 |
@@ -240,14 +250,15 @@ No file is edited by this card. Each edit lands in the PR of the slice that make
 | `wave4-plan.md` | "Council", round 1 (`:25`) | `show_line` becomes `report`, built in E1 | E2 |
 | `wave4-plan.md` | "W4-2", Classes (`:95-97`) | `OutsideWorld` gains `clock` and `consent(line)` (`report` exists). `LineWriter` goes: `TerminalReporter` and `ProgramRunner` take its two jobs | E2 |
 | `wave4-plan.md` | "W4-2", Files (`:103`) | `outside_builder(project, effects, reporter)`. `deploy_service.py`: `show_line` and `echo_to` go. New mutation rows: a `BEGIN` prints, a `LINE` under `--json` reaches stdout, an event line is also a result line | E2 |
+| `wave4-plan.md` | "W4-2", the rename | its own row: deploy's `LookReport` variable `report` becomes `look` where it meets `outside.report` | E2 |
 | `wave4-plan.md` | "W4-3" | one sentence: grant, live and reach report nothing new | E2 |
 | `wave4-plan.md` | "The bench after wave 4" (`:154`, `:191-195`) | `OutsideWorld { run find_tool clock consent report }`, and the sequence gains `DS->>R: report(begin "flash")` | E2 |
 | `wave4-plan.md` | "The four checks" | a fifth: every line deploy shows while a phase runs is an Event in a test | E2 |
 | `areas/core.md` | the `core/outside.py` and `OutsideWorld` rows | name `report`, and a row for `core/events.py` | E1 |
 | `areas/bench.md` | `:127-128`, `:173`, `:182` | the `show_line` parameters go | E2 |
-| `glossary.md` | rows | Event, Reporter, and the clash "report" (decision 1) | E1 |
+| `glossary.md` | rows | Event, Reporter, and "report" with its three meanings: the method `outside.report`, the `LookReport` value, the `TextReport` output. Also "event line" and "result line" | E1 |
 | `notes.md` | a decision row | "N33 `OutsideWorld.report(event)` over a line callable: one seam for every reader" | E1 |
-| `docs/guide/developing.md` | "Patterns and names", "The core contract" and its class diagram | the `Reporter` row, `report` in the contract | E1 |
+| `docs/guide/developing.md` | "The core contract" and its class diagram, the Strategy row's examples | `report` in the contract, `Reporter` among the examples. No new role row | E1 |
 | `docs/guide/agents.md` | beside `:555-558` | the stderr contract of rule 4 | E1 |
 
 ## 4. Risks
@@ -256,14 +267,14 @@ No file is edited by this card. Each edit lands in the PR of the slice that make
    gives either, the runner sets no `stdout`. E2's test runs both.
 2. **A base class with one real case.** Rule T3 takes the Fake as the second case, and P478 brings the second real one.
    The base comes now, because the contract test names what every later Reporter owes.
-3. **The indent.** Every line deploy and look print today starts with two spaces. The seven event lines of the appendix
-   show it, and so does the golden `look-ok.txt`. The Event holds the text without
-   them, and a line that has no indent today stays a result line. E2's new text golden catches a byte that moves.
+3. **The indent.** `deploy.py:243` prints `report_lines` with no indent, and `board_look.py:390` builds `"port   %s"`
+   with none, yet `test_deploy_json.py:196` expects `"  port   ..."`. So the source of the two spaces is not clear at each
+   site, and E2a writes it down per site. The Event holds the text without them, and the terminal adds them. E2's goldens
+   stop at the gate, so they reach only the look's lines. The `yes:`, `running:`, retry, press RESET and not-counted lines
+   and `deploy.py:152` are in no golden. E2's exact-text event test is what guards them.
 4. **The build's timing (E4).** A `BEGIN` per stage shows text earlier. The bytes stay, the timing changes, and the build
    golden (S3) compares bytes.
-5. **The probe's size.** E1 touches `cli.py`, `outside.py`, the new `events.py`, `look_at_board.py`, `bench/__init__.py`,
-   `tools/measure.py`, the Fakes, two test files, one mutation file and agents.md. The child output change moved to E2
-   to keep it small.
+5. **The probe's size.** E1 touches ten files, listed in its row. The child output change moved to E2 to keep it small.
 
 ## Appendix: the map, where spark prints, asks and streams today
 
@@ -288,7 +299,3 @@ The other output places and the wave that moves them (E4):
 | the simulation run, `run_scenario.py` | one line at the end | a `BEGIN` before wokwi-cli starts | wave 6, the firmware move |
 | the image, `flash_image.py` | per-file lines at the end | result lines, as today | wave 6, the firmware move |
 | `tools/mutate.py` | lines at the end | no Reporter, a team tool | none |
-
-What the map says. One seam exists today, `show_line`, a bare callable that `DeployService.deploy` and `.verify`
-(`deploy_service.py:93`, `:136`) and `wait_for_start` (`board_start.py:90`) take. Everything else prints at the end.
-The build and the simulation run are where a person waits longest with nothing on the screen.
