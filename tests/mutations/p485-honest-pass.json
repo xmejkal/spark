@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "uncounted steps get a control caveat as if counted",
+  "find": "        if self.state != outcomes.RECORDED or self.count(SET_CONTROL):",
+  "replace": "        if self.count(SET_CONTROL):"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a scenario with a set-control step gets the caveat and one without does not",
+  "find": "        if self.state != outcomes.RECORDED or self.count(SET_CONTROL):",
+  "replace": "        if self.state != outcomes.RECORDED or not self.count(SET_CONTROL):"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the two caveats are swapped",
+  "find": "        return (NO_CONTROL_CAVEAT if self.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT) % subject",
+  "replace": "        return (NO_CONTROL_NO_PIN_CAVEAT if self.count(EXPECT_PIN) else NO_CONTROL_CAVEAT) % subject"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the caveat ignores its subject, so the look's several-run subject is lost",
+  "find": "        return (NO_CONTROL_CAVEAT if self.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT) % subject",
+  "replace": "        return (NO_CONTROL_CAVEAT if self.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT) % ONE_RUN_MESSAGE"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "uncounted steps print a bare passed",
+  "find": "        if self.state == outcomes.NOT_CHECKED:\n            return PASSED_WITH_CAVEAT",
+  "replace": "        if False:\n            return PASSED_WITH_CAVEAT"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "the log's verdict takes the printed sentence, so deploy finds no passed run",
+  "find": "        log = self.write_log(sentence, done.stdout + done.stderr)",
+  "replace": "        log = self.write_log(ScenarioSteps.from_text(self.steps).passed_sentence() if status == OK else sentence, done.stdout + done.stderr)"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a pass prints a bare passed again",
+  "find": "        return status, ScenarioSteps.from_text(self.steps).passed_sentence() if status == OK else sentence, log",
+  "replace": "        return status, sentence, log"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a pass with a caveat goes to stderr",
+  "find": "          file=sys.stdout if status == OK else sys.stderr)",
+  "replace": "          file=sys.stdout if sentence == \"passed\" else sys.stderr)"
+ }
+]

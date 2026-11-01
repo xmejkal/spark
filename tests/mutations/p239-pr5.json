@@ -2,13 +2,13 @@
  {
   "file": "scripts/project_image.py",
   "name": "find_passed_logs ignores the verdict",
-  "find": "if sha256 == self.sha256 and verdict == \"passed\"]",
+  "find": "if sha256 == self.sha256 and verdict == run_scenario.PASSED]",
   "replace": "if sha256 == self.sha256]"
  },
  {
   "file": "scripts/project_image.py",
   "name": "why_untested accepts a failed run",
-  "find": "failed = [(log, verdict) for log, verdict in named if verdict != \"passed\"]",
+  "find": "failed = [(log, verdict) for log, verdict in named if verdict != run_scenario.PASSED]",
   "replace": "failed = []"
  },
  {

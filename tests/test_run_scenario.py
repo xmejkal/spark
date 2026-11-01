@@ -410,6 +410,7 @@ class ProjectCase(unittest.TestCase):
         with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(tools, "find", side_effect=find), \
                 redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
             code = run_scenario.main(argv)
+        self.stdout = out.getvalue()
         return code, out.getvalue() + err.getvalue()
 
 
@@ -552,6 +553,47 @@ class TheLogNamesTheImageTest(ProjectCase):
 
 
 @needs_littlefs
+class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
+    """P485: a pass prints the look's no-control caveat after `passed` on the scenario's line, and the log's verdict stays `passed`."""
+
+    NO_CONTROL = 'name: it starts\nversion: 1\nsteps:\n  - wait-serial: "hello"\n'
+    PIN_ONLY = NO_CONTROL + "  - expect-pin: { part-id: led1, pin: A, value: 1 }\n"
+    NO_KIND = NO_CONTROL + "  - name: a step with no kind\n"
+
+    def printed(self, scenario):
+        self.scenario.write_text(scenario)
+        code, said = self.command()
+        self.assertEqual(code, 0)
+        self.assertEqual(run_scenario.run_record(self.log)[0], "passed")
+        return said
+
+    def test_no_control_and_no_pin_read_prints_both_on_stdout(self):
+        said = self.printed(self.NO_CONTROL)
+        self.assertEqual(self.stdout, said)
+        self.assertEqual(said.splitlines()[0], "lights.v2.scenario.yaml: passed, but it has no set-control step (the step "
+                         "that presses a button or sets a sensor) and no expect-pin step (the step that reads a pin)")
+
+    def test_a_pin_read_with_no_control_prints_only_the_control_caveat(self):
+        self.assertEqual(self.printed(self.PIN_ONLY).splitlines()[0], "lights.v2.scenario.yaml: passed, but it has "
+                         "no set-control step (the step that presses a button or sets a sensor)")
+
+    def test_a_step_with_no_kind_prints_why_its_steps_were_not_counted(self):
+        self.scenario.write_text(self.NO_KIND)
+        status, said, _ = self.run_with()
+        self.assertEqual((status, said), (OK, "passed, but its steps were not counted: a step of the scenario has no kind"))
+
+    def test_a_set_control_step_prints_passed_alone(self):
+        self.assertEqual(self.run_with()[1], "passed")
+
+    def test_the_look_and_the_printed_line_share_the_rule_and_the_words(self):
+        steps = run_scenario.ScenarioSteps({"wait-serial": 1, "expect-pin": 1})
+        self.assertEqual(steps.control_caveat("the passed runs (a, b) have"), "the passed runs (a, b) have no set-control step "
+                         "(the step that presses a button or sets a sensor)")
+        self.assertIsNone(run_scenario.ScenarioSteps({"set-control": 1}).control_caveat("X has"))
+        self.assertIsNone(run_scenario.ScenarioSteps({}, "not-checked", "x").control_caveat("X has"))
+
+
+@needs_littlefs
 class TheLogCountsTheStepsTest(ProjectCase):
     """P345: a log's header counts the steps that ran, and the time carries its zone."""
 
@@ -619,7 +661,7 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
 
     def limits_of(self, **run):
         _, _, log = self.run_with("ready\n", **run)
-        return run_scenario.SimulationLimits.from_log(log)
+        return sim_project.SimulationLimits.from_log(log)
 
     @needs_littlefs
     def test_the_limits_read_back_as_the_note_the_build_wrote(self):
@@ -657,7 +699,7 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
         _, _, log = self.run_with("ready\n")
         text = log.read_text()
         log.write_text(text[:text.index("- **ONBOARD_DISPLAY**") + len("- **ONBOA")])
-        limits = run_scenario.SimulationLimits.from_log(log)
+        limits = sim_project.SimulationLimits.from_log(log)
         self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log's limits section is cut off", []))
 
     def test_a_log_cut_off_inside_the_heading_line_is_not_checked_too(self):
@@ -665,13 +707,13 @@ class TheLogHoldsTheLimitsTest(ProjectCase):
         for cut in ("--- what this simulation", "--- what this simulation cannot show ---", "-"):
             log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\n" + cut)
             with self.subTest(cut=cut):
-                limits = run_scenario.SimulationLimits.from_log(log)
+                limits = sim_project.SimulationLimits.from_log(log)
                 self.assertEqual((limits.state, limits.why), ("not-checked", "the log's limits section is cut off"))
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\n")  # cut right after the header: nothing said
-        self.assertEqual(run_scenario.SimulationLimits.from_log(log).state, "none-recorded")
+        self.assertEqual(sim_project.SimulationLimits.from_log(log).state, "none-recorded")
 
     def test_an_unreadable_log_is_not_checked(self):
-        limits = run_scenario.SimulationLimits.from_log(self.project / "sim" / "runs" / "none.log")
+        limits = sim_project.SimulationLimits.from_log(self.project / "sim" / "runs" / "none.log")
         self.assertEqual((limits.state, limits.why, limits.limits), ("not-checked", "the log cannot be read", []))
 
 

@@ -22,6 +22,10 @@ The log goes to sim/runs/<name>.log: the date with its zone, the verdict, the st
 the image it tested and of each file in that image, what the simulation cannot show, the scenario as run, and what
 wokwi-cli printed, which is the board's serial output among the scenario's
 progress. deploy.py reads the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
+
+A pass whose scenario has no set-control step prints the look's rule in its own words, "passed, but it has no set-control
+step (...)", and one whose steps cannot be counted prints "passed, but its steps were not counted: <why>" (P485). The log's
+verdict stays `passed`.
 """
 
 import argparse
@@ -74,25 +78,31 @@ STEP_COUNTS_LINE = "step counts: "
 #: that it tests the text it carries; the look compares the names with the brief's must lines. No marker means a log from before names.
 STEP_NAMES_LINE = "step names: "
 STEP_NAME_LINE = "step name: "
+# --- MVP ---
+#: P345 (moved here by P485): what a passed run's scenario did not do, for the look and for the run's own printed line. Each takes a
+#: subject: the look says ONE_RUN_MESSAGE or names its logs, the printed line says THIS_RUN_MESSAGE.
+NO_CONTROL_CAVEAT = "%s no set-control step (the step that presses a button or sets a sensor)"
+NO_CONTROL_NO_PIN_CAVEAT = ("%s no set-control step (the step that presses a button or sets a sensor) and no expect-pin "
+                            "step (the step that reads a pin)")
+ONE_RUN_MESSAGE = "the passed run's scenario has"
+THIS_RUN_MESSAGE = "it has"
+#: What a pass prints when its steps could not be counted: %s is why (ScenarioSteps.why).
+UNCOUNTED_MESSAGE = "its steps were not counted: %s"
+#: The verdict of a pass, in the log's header and on the printed line; deploy finds a passed run by it.
+PASSED = "passed"
+#: What a pass prints when its scenario did less than a person expects (P485): the log's verdict stays PASSED.
+PASSED_WITH_CAVEAT = PASSED + ", but %s"
+# --- end MVP ---
 #: What the line says when the steps are not RECORDED: a step has no key, so a kind would be a guess, or the log gave none.
 STEPS_NOT_READ = "not read"
 #: Why ScenarioSteps is outcomes.NOT_CHECKED (the reader rule is in outcomes.py), one sentence each.
 WHY_NO_KEY = "a step of the scenario has no kind"
 WHY_NOT_COUNTED = "the log says its steps were not counted"
 WHY_BAD_COUNTS = "the log's step counts line is malformed"
-WHY_LOG_UNREADABLE = "the log cannot be read"
 WHY_BAD_NAMES = "the log's step names do not match its step names count"
 WHY_NAMES_NOT_READ = "the log says its step names were not read"
 #: Why the names of a scenario's steps are outcomes.NOT_CHECKED: a name is a block scalar or runs on over more than one line.
 WHY_NAME_NOT_READ = "a step name is a block scalar or runs over more than one line"
-#: Why SimulationLimits is outcomes.NOT_CHECKED when the log has the section: it holds no limit line.
-WHY_NO_LIMIT_LINE = "the log's limits section has no limit line"
-#: Why SimulationLimits is outcomes.NOT_CHECKED when the section never reaches the scenario's section: the log is cut off.
-WHY_LIMITS_CUT_OFF = "the log's limits section is cut off"
-#: The log's section that holds the simulation's limits note, when the project has one (P396).
-LIMITS_SECTION = "--- what this simulation cannot show ---"
-#: The log's section that holds the scenario as run: it ends the limits section above it.
-SCENARIO_SECTION = "--- the scenario as run ---"
 #: What --help says beyond the arguments: the cost, the token, the contract and the exit codes.
 EPILOG = """A run spends Wokwi CI minutes: ask the person before each run, whatever your permissions allow.
 It needs a Wokwi CI token (wokwi.com/dashboard/ci) in WOKWI_CLI_TOKEN: export WOKWI_CLI_TOKEN=...
@@ -300,7 +310,8 @@ class ScenarioSteps:
         try:
             header = _header(log)
         except OSError:
-            return cls({}, outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE, StepNames((), outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE))
+            why = sim_project.WHY_LOG_UNREADABLE
+            return cls({}, outcomes.NOT_CHECKED, why, StepNames((), outcomes.NOT_CHECKED, why))
         counts = cls._counts_in(header)
         return cls(counts.counts, counts.state, counts.why, cls._names_in(header))
 
@@ -338,6 +349,21 @@ class ScenarioSteps:
     def count(self, kind):
         """How many steps have this kind."""
         return self.counts.get(kind, 0)
+
+    # --- MVP ---
+    def control_caveat(self, subject):
+        """The P345 sentence for steps that set no control, with this subject, or None: counted steps with a set-control step."""
+        if self.state != outcomes.RECORDED or self.count(SET_CONTROL):
+            return None
+        return (NO_CONTROL_CAVEAT if self.count(EXPECT_PIN) else NO_CONTROL_NO_PIN_CAVEAT) % subject
+
+    def passed_sentence(self):
+        """What a pass with these steps prints (P485): `passed`, or with the control caveat, or with why the steps were not counted."""
+        if self.state == outcomes.NOT_CHECKED:
+            return PASSED_WITH_CAVEAT % (UNCOUNTED_MESSAGE % self.why)
+        caveat = self.control_caveat(THIS_RUN_MESSAGE)
+        return PASSED_WITH_CAVEAT % caveat if caveat else PASSED
+    # --- end MVP ---
 
     # --- MVP ---
     @classmethod
@@ -379,40 +405,6 @@ class ScenarioSteps:
     # --- end MVP ---
 
 
-# --- MVP ---
-class SimulationLimits:
-    """
-    Value: what no simulation can show of the project, from the log of a run (P345). `limits` is a list of sim_project.Limit.
-    `state` is an outcomes word: RECORDED (the log's limits section holds at least one limit), NONE_RECORDED (the log has no
-    section: a project with no note, or a log older than P396) or NOT_CHECKED (the log cannot be read, or its section has no
-    limit line, and `why` says which). `from_log` only cuts the section out of the log, and sim_project.limits_in reads its text.
-    """
-
-    def __init__(self, limits, state=outcomes.RECORDED, why=None):
-        self.limits, self.state, self.why = list(limits), state, why
-
-    @classmethod
-    def from_log(cls, log):
-        """
-        The SimulationLimits of a log; it never raises. The section counts only where `write_log` puts it: right after the
-        header, so the scenario or the board's output, which come later, cannot forge a limit. It ends at the scenario's section.
-        """
-        try:
-            _, _, body = Path(log).read_text(errors="replace").partition("\n\n")
-        except OSError:
-            return cls([], outcomes.NOT_CHECKED, WHY_LOG_UNREADABLE)
-        if not body.startswith(LIMITS_SECTION + "\n"):
-            if body and (LIMITS_SECTION + "\n").startswith(body):  # a log cut off inside the heading line
-                return cls([], outcomes.NOT_CHECKED, WHY_LIMITS_CUT_OFF)
-            return cls([], outcomes.NONE_RECORDED)
-        section, ended, _ = body[len(LIMITS_SECTION):].partition(SCENARIO_SECTION)
-        if not ended:
-            return cls([], outcomes.NOT_CHECKED, WHY_LIMITS_CUT_OFF)
-        limits = sim_project.limits_in(section)
-        return cls(limits) if limits else cls([], outcomes.NOT_CHECKED, WHY_NO_LIMIT_LINE)
-# --- end MVP ---
-
-
 def image_in(toml):
     """The flash image wokwi.toml names. When the build named none, this names DEFAULT_IMAGE there first."""
     text = toml.read_text()
@@ -430,7 +422,7 @@ def verdict(code, serial, out, err, timeout_ms):
     output line by line, among the scenario's progress) and its stderr (wokwi-cli's own errors).
     """
     if code == 0:
-        return OK, "passed"
+        return OK, PASSED
     errors = err.strip().splitlines()
     why = next((line for line in errors if ERROR_WORD in line), errors[-1] if errors else "no reason given")
     if API_ERROR in why:
@@ -506,7 +498,8 @@ class ScenarioRun:
                 as_run.unlink(missing_ok=True)
             serial = serial_log.read_text(errors="replace") if serial_log.is_file() else ""
         status, sentence = verdict(done.returncode, serial, done.stdout, done.stderr, self.timeout_ms)
-        return status, sentence, self.write_log(sentence, done.stdout + done.stderr)
+        log = self.write_log(sentence, done.stdout + done.stderr)  # the log's verdict stays `passed`: deploy reads it
+        return status, ScenarioSteps.from_text(self.steps).passed_sentence() if status == OK else sentence, log
 
     def write_log(self, sentence, said):
         """
@@ -519,14 +512,14 @@ class ScenarioRun:
         files = "".join("%s%s %s\n" % (FILE_LINE, hashlib.sha256(data).hexdigest(), name) for name, data in self.files)
         limits = self.sim / sim_project.LIMITS_NOTE
         try:
-            shown = "%s\n%s\n\n" % (LIMITS_SECTION, limits.read_text(errors="replace").rstrip("\n")) if limits.is_file() else ""
+            shown = "%s\n%s\n\n" % (sim_project.LIMITS_SECTION, limits.read_text(errors="replace").rstrip("\n")) if limits.is_file() else ""
         except OSError:
             shown = ""
         self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s\n%s%s\n%s\n%s%s\n%s\n"
                             "--- wokwi-cli printed ---\n%s\n"
                             % (self.scenario.name, datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
                                self.timeout_ms, sentence, ScenarioSteps.from_text(self.steps).log_lines(), IMAGE_LINE,
-                               hashlib.sha256(self.flash).hexdigest(), files, shown, SCENARIO_SECTION, self.steps, said.strip()))
+                               hashlib.sha256(self.flash).hexdigest(), files, shown, sim_project.SCENARIO_SECTION, self.steps, said.strip()))
         return self.log
 
 

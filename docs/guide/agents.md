@@ -907,7 +907,7 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    `data.caveats`. Relay each caveat to the person, also under a deploy grant, because deploy.py prints them in the look
    and starts its question with them. `run_scenario.py` adds one `wait-serial` step itself, for the ready contract. A
    log from before P345 has no counts, and a log that cannot be counted for any reason gets a caveat that contains `not checked:`, names the reason and says to run the scenario again. A step's `name:` key is its label, never its kind. The header also holds `step names: <n>` and one `step name: <text>` line for each name (a step's own `name:`, never the `name:` inside `set-control`); no marker line means a log from before names (P345). A caveat is a fact about the
-   run, never a verdict on the firmware. With several passed runs on one image, a control in any of them clears the
+   run, never a verdict on the firmware. `run_scenario.py` prints the same rule in its own words after a pass, on stdout with exit 0: "passed, but it has no set-control step (...)", or "passed, but its steps were not counted: <why>" when a step has no kind ([P485](https://github.com/xmejkal/spark/issues/664)). Relay that line whole. The log's `verdict:` stays `passed`, and a bare `passed` never clears `data.caveats`. With several passed runs on one image, a control in any of them clears the
    no-control caveat, and a passed log that cannot be counted gets its own caveat, named by its file, with no claim about a
    control, unless a counted run sets a control. The log also holds `sim/WHAT-THIS-CANNOT-SHOW.md` after its header (item 9),
    and the time of the run carries its zone.
