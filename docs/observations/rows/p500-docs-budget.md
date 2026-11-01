@@ -17,4 +17,6 @@ What the plan claimed, and what its two council rounds changed. Card: #689.
 | 11 | Pages with no entry get a default of 400, over-budget only | council | acted | `DEFAULT_BUDGET` |
 | 12 | The gone-page message was not worded in the plan | build | raised | "has a budget but is not there. Remove its entry from BUDGETS." |
 | 13 | Council targets (README 150, index 60, step 200) are not set here | council | raised | they arrive with P501, P502 and P504 |
-| 14 | Mutation table: rglob back to glob; the comparison flipped; the cell limit raised | plan | acted | `tests/mutations/p500-docs-budget.json`; `--anchors` still at 119 refused |
+| 14 | Mutation table: rglob back to glob; the comparison flipped; the cell limit raised | plan | acted | `tests/mutations/p500-docs-budget.json`; 3 planted, 3 caught; `--anchors` at 119 refused |
+| 15 | A five-line paragraph in developing.md would have raised its 650-line budget | build | acted | the rule is one two-line bullet in the check list; one blank line saved in the section |
+| 16 | T2 forbids `mock.patch.dict` on module tables | build | acted | `over_budget` and `long_cells` take the table as an argument |
