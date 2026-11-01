@@ -993,7 +993,7 @@ def keep_simulation(workdir, destination, stages):
 def report(stages, args, workdir=None, requirements=None, exporter=None):
     """
     The verdict, rendered the way it was asked for — with the needs the requirements file leaves off the board, when it says
-    any (`left_off`; with --json its own note, under `unserved`) — and the working directory kept or removed. What
+    any (`left_off`; with --json its own note, under `unserved`), and the facts the board record lacks (`missing_facts`, P464) — and the working directory kept or removed. What
     --keep wrote and left alone is said on stderr and, with --json, carried under `kept` (P124). With no workdir, a
     requirements file that is there but refused still removes what an earlier build left (P280); a missing one, which
     may be a typo, removes nothing.
@@ -1011,9 +1011,9 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
     if simulation is not None:
         kept = (kept or []) + [simulation]
     if args.json:
-        said = {"check": "spine", "status": STATUS_FOR[code],
-                "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages]}
-        said.update({"unserved": requirements["unserved"]} if left_off(requirements) else {})
+        said = {"check": "spine", "status": STATUS_FOR[code], "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages],
+                **({"unserved": requirements["unserved"]} if left_off(requirements) else {}),
+                **({"missing_facts": held} if (held := [item for entry in kept or [] for item in entry.get("missing_facts", [])]) else {})}
         if kept is not None:
             said["kept"] = [{key: value for key, value in entry.items() if key != "line"} for entry in kept]
         print(json.dumps(said))

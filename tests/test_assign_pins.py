@@ -583,7 +583,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
     def test_a_led_with_no_level_in_the_record_keeps_today_s_note(self):
         lit = board(pin_roles={"onboard_led": {"gpio": [15], "note": "the LED"}})
         text = assign_pins.pin_module(lit, [], "r.json")
-        self.assertIn("Its active level is not in the board record", text)
+        self.assertIn("Its active level is missing", text)
         self.assertNotIn("ONBOARD_LED_ON", text)
 
     def test_the_active_level_as_a_fact_is_named_with_its_source_and_whether_it_is_verified(self):
@@ -602,7 +602,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
 
     def test_a_button_with_no_level_says_so_in_its_comment(self):
         pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the BOOT button"}})
-        self.assertIn("Its active level is not in the board record", assign_pins.pin_module(pressed, [], "r.json"))
+        self.assertIn("Its active level is missing", assign_pins.pin_module(pressed, [], "r.json"))
 
     def test_the_board_s_own_button_is_named_with_its_source(self):
         pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the BOOT button (wiki)"}})
@@ -621,7 +621,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
     def test_a_button_line_without_a_level_is_its_number_and_its_note(self):
         pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the BOOT button"}})
         lines = assign_pins.pin_module(pressed, [], "r.json").splitlines()
-        self.assertIn("ONBOARD_BUTTON = 9  # onboard_button: the BOOT button. Its active level is not in the board record", lines)
+        self.assertIn("ONBOARD_BUTTON = 9  # onboard_button: the BOOT button. Its active level is missing", lines)
         self.assertFalse(any(text_line.startswith("ONBOARD_BUTTON_ON") for text_line in lines))
 
     def test_a_role_on_two_gpios_names_no_single_pin(self):

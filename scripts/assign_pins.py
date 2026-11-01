@@ -455,7 +455,7 @@ def onboard_lines(written, role, name, record):
                     said = note if not named else "%s: the note is on the first line of this part" % role
                     named.append(("%s_%s" % (name, label), "%d  # %s" % (number, said)))
         else:
-            gap = ". Its active level is not in the board record" if role in missing_facts.ACTIVE_LEVEL_MEANING and level is None else ""
+            gap = ". Its active level is missing" if role in missing_facts.ACTIVE_LEVEL_MEANING and level is None else ""
             named.append((name, "%d  # %s%s" % (gpio[0], note, gap)))
     if level is not None and named:
         held = record["active_level"]

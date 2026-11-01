@@ -2013,7 +2013,7 @@ def _op_fact_set(args, project):
     wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])] + drawer.list_provenance_key_problems(facts)
     if wrong:
         return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
-    return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: missing_facts.board_write_problems(record, after, path, facts) if "pin_roles" in facts else (
+    return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: missing_facts.board_write_problems(record, after, path, facts, project) if "pin_roles" in facts else (
         ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
         + sorted(set(provenance.list_entry_problems(facts.get("facts"), record.get("facts"))) | set(broken_problems(after, path)) - set(broken_problems(record, path)))))
 

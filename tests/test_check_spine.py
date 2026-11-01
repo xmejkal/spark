@@ -1374,6 +1374,7 @@ class TheBoardAloneTest(unittest.TestCase):
         expected = [envelope_item(each) for each in missing_facts.list_missing_facts(board)]
         self.assertEqual((code, said["status"], pins["did"], len(expected)), (0, "ok", "wrote", 2))
         self.assertEqual(pins["missing_facts"], expected)
+        self.assertEqual(said["missing_facts"], expected)  # P464: beside `unserved`, so a caller reads it after `status`
         self.assertEqual(pins["missing_facts"], OperationResult(None, missing_facts.list_missing_facts(board)).to_envelope("t", "t")["unchecked"])
         self.assertIn("missing fact: %s. %s" % (expected[0]["sentence"], expected[0]["fix"]), err)
         text = (into / "firmware" / "pins.py").read_text()
@@ -1386,9 +1387,29 @@ class TheBoardAloneTest(unittest.TestCase):
         code, said, _ = build()
         self.assertEqual(code, 0)
         self.assertNotIn("missing_facts", next(entry for entry in said["kept"] if entry["file"].endswith("pins.py")))
+        self.assertNotIn("missing_facts", said)
         names = {}
         exec((into / "firmware" / "pins.py").read_text(), names)
         self.assertEqual((names["ONBOARD_LED_ON"], names["ONBOARD_BUTTON_ON"]), (0, 0))
+
+    def test_the_text_mode_says_each_missing_fact_on_stderr_and_keeps_stdout_to_the_verdict(self):
+        # P464: no --json, so the person reads the gap from the kept line
+        from test_missing_facts import levelless
+        project = Path(tempfile.mkdtemp()) / "project"
+        (project / "boards").mkdir(parents=True)
+        (project / ".spark").mkdir()
+        board = levelless()
+        board["id"] = "levelless-board"
+        (project / "boards" / "levelless-board.json").write_text(json.dumps(board))
+        (project / "requirements.json").write_text(json.dumps({"board": "levelless-board", "parts": [], "board_only": True}))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = check_spine.main([str(project / "requirements.json"), "--keep", str(project / "kept")])
+        self.assertEqual(code, 0)
+        found = missing_facts.list_missing_facts(board)
+        self.assertEqual(len(found), 2)
+        for each in found:
+            self.assertIn("\n  missing fact: %s. %s" % (each.sentence, each.fix), err.getvalue())
+        self.assertNotIn("missing fact", out.getvalue())
     # --- end MVP ---
 
     def test_the_verdict_says_the_board_alone_ran(self):
