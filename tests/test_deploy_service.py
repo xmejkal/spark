@@ -24,9 +24,10 @@ import flash_image  # noqa: E402
 import flasher  # noqa: E402
 import project_image  # noqa: E402
 import ready_check  # noqa: E402
+import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent  # noqa: E402
+from fakes import FakeClock, FakeConsent, FakeDeployRecordStore  # noqa: E402
 from test_board_look import FOUND, found  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 
@@ -44,11 +45,11 @@ class ServiceCase(GateCase):
         super().setUp()
         self.run_the_scenario()
         self.lines, self.commands = [], []
-        self.slept = []
-        for patch in (mock.patch.object(tools, "find", side_effect=find),
-                      mock.patch.object(deploy_service.DeployService, "sleep", side_effect=self.slept.append)):
-            patch.start()
-            self.addCleanup(patch.stop)
+        self.clock = FakeClock()
+        self.slept = self.clock.slept
+        patch = mock.patch.object(tools, "find", side_effect=find)
+        patch.start()
+        self.addCleanup(patch.stop)
 
     def fake_run(self, command, **kwargs):
         self.commands.append(command)
@@ -59,8 +60,8 @@ class ServiceCase(GateCase):
     fails = False
 
     def service(self, **kwargs):
-        return deploy_service.DeployService(self.project, firmware_platform.FirmwarePlatform.micropython(self.project),
-                                            image_evidence.PassedRunEvidence(), run=self.fake_run, **kwargs)
+        return deploy_service.DeployService(self.project, firmware_platform.MicroPythonPlatform(self.project),
+                                            image_evidence.PassedRunEvidence(), run=self.fake_run, clock=self.clock, **kwargs)
 
 
 class TheFlashTest(ServiceCase):
@@ -117,11 +118,25 @@ class TheFlashTest(ServiceCase):
         self.assertEqual(self.commands, [])
 
 
+class TheRecordTest(ServiceCase):
+    def test_the_deploy_is_kept_in_the_records_the_service_is_given_with_whose_yes_it_was(self):
+        records = FakeDeployRecordStore(Path("kept.json"))
+        result = deploy_service.DeployResult({"mac": "aa:bb"}, "", ready_check.ReadyResult("ready seen", "ready", ""), None, [])
+        kept = self.service(records=records).record(result, FakeConsent(True))
+        self.assertEqual((kept, records.written), (Path("kept.json"), [({"mac": "aa:bb"}, "ready seen", "a test")]))
+
+    def test_a_store_that_cannot_be_written_raises_what_the_records_raise(self):
+        records = FakeDeployRecordStore(raises=store.StoreProblem("no room"))
+        result = deploy_service.DeployResult({"mac": "aa:bb"}, "", ready_check.ReadyResult("ready seen", "ready", ""), None, [])
+        with self.assertRaises(store.StoreProblem):
+            self.service(records=records).record(result, FakeConsent(True))
+
+
 @needs_littlefs
 class TheNoSimulationServiceTest(ServiceCase):
     def service(self, **kwargs):
-        return deploy_service.DeployService(self.project, firmware_platform.FirmwarePlatform.micropython(self.project),
-                                            image_evidence.NoSimulationEvidence(self.project), run=self.fake_run, **kwargs)
+        return deploy_service.DeployService(self.project, firmware_platform.MicroPythonPlatform(self.project),
+                                            image_evidence.NoSimulationEvidence(self.project), run=self.fake_run, clock=self.clock, **kwargs)
 
     def build(self):
         patcher = mock.patch.object(flash_image, "interpreter_for",
@@ -228,19 +243,19 @@ class ThePlanTest(ServiceCase):
 
 class TheFirmwarePlatformTest(ServiceCase):
     def test_the_micropython_platform_makes_esptool_and_mpremote_parts(self):
-        platform = firmware_platform.FirmwarePlatform.micropython(self.project)
+        platform = firmware_platform.MicroPythonPlatform(self.project)
         self.assertIsInstance(platform.make_flasher(), flasher.EsptoolFlasher)
         self.assertEqual(platform.make_flasher().chip, "esp32c6")
         command = platform.make_shell_command()
-        connection = platform.make_connection(command, PORT)
+        connection = platform.make_connection(command, PORT, subprocess.run)
         self.assertIsInstance(connection, board_connection.BoardConnection)
         self.assertEqual(connection.repl_command(), command + ["connect", PORT, "repl"])
         self.assertIsInstance(platform.make_ready_check(connection), ready_check.ReadyCheck)
-        self.assertIsNone(platform.make_console_probe(None))
+        self.assertIsNone(platform.make_console_probe(None, subprocess.run))
         self.assertEqual(platform.board_of(), "xiao-esp32-c6")
 
     def test_the_flasher_carries_the_places_of_the_projects_record(self):
-        hint = firmware_platform.FirmwarePlatform.micropython(self.project).make_flasher().boot_hint
+        hint = firmware_platform.MicroPythonPlatform(self.project).make_flasher().boot_hint
         self.assertIn("BOOT button (B, top right, beside the USB-C)", hint)
         self.assertIn("RESET (R, top left, beside the USB-C)", hint)
         self.assertEqual(firmware_platform.record_of(self.project)["chip"], "esp32c6")
@@ -250,7 +265,7 @@ class TheFirmwarePlatformTest(ServiceCase):
         asked = []
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: asked.append(name) or find(name)):
             with self.assertRaises(project_image.DeployError):
-                firmware_platform.FirmwarePlatform.micropython(self.project).make_flasher()
+                firmware_platform.MicroPythonPlatform(self.project).make_flasher()
         self.assertEqual(asked, [])
 
 

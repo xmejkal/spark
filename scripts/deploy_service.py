@@ -10,7 +10,6 @@ import collections
 import hashlib
 import shlex
 import subprocess
-import time
 
 import board_codes
 import board_facts
@@ -61,19 +60,15 @@ def write_board_log(project, log):
 
 
 class DeployService:
-    """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `run` runs a command, `clock` reads the
-    time (default: board_grant.read_local_time, called once), `probe` finds a board in download mode (default: the platform's).
-    `evidence` (an ImageEvidence) holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
+    """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `run` runs a command, `clock` has `now`,
+    `monotonic` and `sleep` (default: board_console.SystemClock), `records` keeps the deploy (default: the store's
+    DeployRecordStore). `evidence` (an ImageEvidence) holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
     `deploy_gate.GateClosedError` to say why a step cannot go on; they never print and never exit."""
 
-    #: How the service waits before its flasher's retry. A test replaces it.
-    sleep = staticmethod(time.sleep)
-    #: The clock of the wait for the board's start (monotonic and sleep). A test replaces it.
-    start_clock = board_console.SystemClock()
-
-    def __init__(self, project, platform, evidence, run=subprocess.run, clock=None, probe=None, echo_to=None):
+    def __init__(self, project, platform, evidence, run=subprocess.run, clock=None, echo_to=None, records=None):
         self.project, self.platform, self.evidence = project, platform, evidence
-        self.run, self.clock, self.probe = run, clock, probe
+        self.run, self.clock = run, clock or board_console.SystemClock()
+        self.records = records or deploy_record_store.DeployRecordStore()
         self.echo_to = echo_to  # a file descriptor for the flash tool's own output (2 under --json), or None: as it is
 
     def plan(self, port=None):
@@ -93,7 +88,7 @@ class DeployService:
 
     def look(self, port=None):
         """The LookReport of the board on USB. Raises LookStop to say why not."""
-        return board_look.looker(self.project, self.run).run(self.project, port, self.evidence)
+        return board_look.looker(self.platform, self.run).run(self.project, port, self.evidence)
 
     def deploy(self, report, token, consent, show_line):
         """
@@ -130,7 +125,7 @@ class DeployService:
                 raise
             show_line("  " + flasher.RETRY_LINE % {"wait": flasher.RETRY_WAIT_S, "command": shlex.join(command),
                                                    "code": failed.returncode})
-            self.sleep(flasher.RETRY_WAIT_S)
+            self.clock.sleep(flasher.RETRY_WAIT_S)
             try:
                 consent.require_ready()
             except deploy_gate.GateClosedError as shut:  # the first try ran: the board may be erased
@@ -147,8 +142,8 @@ class DeployService:
         """
         image = ProjectImage(self.project)  # fresh: the flash and the person's wait are behind us
         expected = self.evidence.expected_files(image)
-        moment = (self.clock or board_grant.read_local_time)()  # once: the facts file and the board log share it
-        starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), report.reading.mac, self.start_clock,
+        moment = self.clock.now()  # once: the facts file and the board log share it
+        starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), report.reading.mac, self.clock,
                                                 boards.ButtonPlaces.of_project(self.project))
         row = starter.find_port(report.port)
         port = row and row.device
@@ -178,7 +173,7 @@ class DeployService:
         console tells download mode from a late start. In download mode the person presses RESET and the wait counts only a
         restart that mpremote answers after (`read(port)` reads the board again)."""
         port = row.device
-        probe = self.probe or self.platform.make_console_probe(port, self.run)
+        probe = self.platform.make_console_probe(port, self.run)
         if not probe:
             return board, None
         waits, console = probe.waits_in_download_mode()
@@ -194,11 +189,10 @@ class DeployService:
             return read(port), None
         return board, None
 
-    @staticmethod
-    def record(result, consent):
+    def record(self, result, consent):
         """Keep this deploy in the store's record of the board and return its path. OSError and store.StoreProblem say
         why it was not written. Whose yes it was is read here, as the old main read it."""
-        return deploy_record_store.DeployRecordStore().write_deploy(result.facts, result.ready.verdict, consent.who)
+        return self.records.write_deploy(result.facts, result.ready.verdict, consent.who)
 
     def _read_board(self, image, report, connection, expected, moment):
         """(the facts, the facts line, a ReadyResult) of the board on `connection` after a flash: the facts, then ready. With
@@ -217,7 +211,7 @@ class DeployService:
     def _put_facts(self, image, report, connection, expected, moment):
         """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
         said = self._facts_of(image, report, expected, moment)
-        facts_file = board_facts.FactsFile(connection, self.sleep)
+        facts_file = board_facts.FactsFile(connection, self.clock.sleep)
         why = facts_file.write(said)
         if why:
             return said, "facts file: not written: %s" % why

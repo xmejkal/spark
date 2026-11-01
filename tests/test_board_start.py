@@ -66,7 +66,7 @@ class BoardStartTest(unittest.TestCase):
     def test_a_port_that_is_not_listed_in_the_wait_is_none_after_it(self):
         service = self.service([])
         self.assertIsNone(name(service.find_port(ROM.device)))
-        self.assertGreaterEqual(self.clock.now, 7)
+        self.assertGreaterEqual(self.clock.elapsed, 7)
 
     def test_a_port_that_comes_back_in_the_wait_is_found_and_the_log_says_when(self):
         service = self.service([], [], [ROM])

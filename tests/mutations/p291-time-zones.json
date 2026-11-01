@@ -1,12 +1,12 @@
 [
  {
-  "file": "scripts/board_grant.py",
+  "file": "scripts/board_console.py",
   "name": "naive now",
   "find": "datetime.datetime.now().astimezone()",
   "replace": "datetime.datetime.now()"
  },
  {
-  "file": "scripts/board_grant.py",
+  "file": "scripts/board_console.py",
   "name": "now in UTC again",
   "find": "datetime.datetime.now().astimezone()",
   "replace": "datetime.datetime.now(datetime.timezone.utc)"
@@ -50,8 +50,8 @@
  {
   "file": "scripts/board_grant.py",
   "name": "issue stores granted_at as expiry",
-  "find": "getpass.getuser(), stamp(now), stamp(",
-  "replace": "getpass.getuser(), stamp(now + datetime.timedelta(minutes=minutes)), stamp("
+  "find": "self.user_name(), stamp(now), stamp(",
+  "replace": "self.user_name(), stamp(now + datetime.timedelta(minutes=minutes)), stamp("
  },
  {
   "file": "scripts/grant.py",
@@ -62,7 +62,7 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "deploy clock naive datetime.now",
-  "find": "(self.clock or board_grant.read_local_time)()",
-  "replace": "(self.clock or __import__('datetime').datetime.now)()"
+  "find": "moment = self.clock.now()",
+  "replace": "moment = __import__('datetime').datetime.now()"
  }
 ]

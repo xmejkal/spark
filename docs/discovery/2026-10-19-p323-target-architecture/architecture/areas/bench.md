@@ -74,14 +74,16 @@ flowchart TB
 
 | Seam | Real adapter | Fake |
 |---|---|---|
-| `FirmwarePlatform`: makes every board tool below | `MicroPythonPlatform` | `FakeFirmwarePlatform` built from the Fakes below |
-| `Flasher`: `build_commands` | `EsptoolFlasher` (`flasher.py:35`) | the contract test with a recording `run` |
-| `BoardReader`: `read(port)` | `EsptoolReader` (`board_look.py`) | `FakeBoardReader` |
-| port finder: `ports()`, `require_one_port` | `PortFinder` over `mpremote devs` (`board_look.py`) | `FakePortFinder`, from `test_board_doctor.py:28` |
-| board connection | `BoardConnection`, `RetryingBoardConnection` (`board_connection.py:50`, `:106`) | `FakeBoardConnection` (`tests/fakes.py:8`) |
-| console probe | `ConsoleProbe` (`board_console.py`) | `FakeConsoleProbe` (`tests/fakes.py:102`) |
-| `ConsentStrategy`: `ask`, `who` | `TerminalConsentStrategy`, `StandingConsentStrategy`, `DeferringConsentStrategy` (proposed, for a graph: its `require_ready` raises `GateClosedError` with the next step, so `ask` is never reached) | `FakeConsent` (`tests/fakes.py:41`) |
-| clock: `now`, `monotonic`, `sleep` | `SystemClock` (`board_console.py`), the one clock. `board_grant.read_local_time` becomes `clock.now()` | one `FakeClock`, merged from `tests/fakes.py:59` and `:88` |
+| `FirmwarePlatform`: makes every board tool below (`make_flasher`, `make_shell_command`, `make_port_finder`, `make_board_reader`, `make_connection`, `make_ready_check`, `make_console_probe`; `find_tool` for the doctor) (P475, done) | `MicroPythonPlatform` (`firmware_platform.py`) | `FakeFirmwarePlatform` (each part is a Fake or an exception to raise) and `FakeProbePlatform` (real finder and reader over a fake `run`), both in `tests/fakes.py` |
+| `Flasher`: `build_commands` | `EsptoolFlasher` (`flasher.py`) | the contract test with a recording `run` |
+| `BoardReader`: `read(port)` | `EsptoolReader` (`board_look.py`) | `FakeBoardReader` (`tests/fakes.py`, P475) |
+| port finder: `ports()`, `require_one_port` | `PortFinder` over `mpremote devs` (`board_look.py`) | `FakePortFinder` (`tests/fakes.py`) |
+| board connection | `BoardConnection`, `RetryingBoardConnection` (`board_connection.py`) | `FakeBoardConnection` (`tests/fakes.py`) |
+| console probe | `ConsoleProbe` (`board_console.py`) | `FakeConsoleProbe` (`tests/fakes.py`) |
+| `ConsentStrategy`: `ask`, `who` | `TerminalConsentStrategy`, `StandingConsentStrategy`, `DeferringConsentStrategy` (proposed, for a graph: its `require_ready` raises `GateClosedError` with the next step, so `ask` is never reached) | `FakeConsent` (`tests/fakes.py`) |
+| clock: `now`, `monotonic`, `sleep` | `SystemClock` (`board_console.py`), the one clock, with `now` in the machine's zone (P475, done: `board_grant.read_local_time` is gone) | one `FakeClock` (`tests/fakes.py`) with `now`, `monotonic`, `sleep` and `advance`; `FakeLocalClock` is gone |
+| `records`: `write_deploy` | `DeployRecordStore` (`deploy_record_store.py`), given to `DeployService(records=)` (P475) | `FakeDeployRecordStore` (`tests/fakes.py`) |
+| `user_name`: who typed the yes | `getpass.getuser`, given to `TerminalConsentStrategy` and `GrantService` as `user_name=` (P475) | a `lambda: "ada"` |
 
 The Operation modules pick the platform from `PLATFORMS` by `backends.platform.name`, or `DEFAULT_PLATFORM`
 (`micropython`) when the requirements name none. They are the only place that names an Adapter (rule X1). Bench

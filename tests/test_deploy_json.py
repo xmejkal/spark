@@ -451,7 +451,7 @@ class DeployJsonTest(JsonCase, GateCase):
     def test_the_flash_tool_writes_to_the_descriptor_it_is_given(self):
         self.run_the_scenario()
         seen = []
-        platform = firmware_platform.FirmwarePlatform.micropython(self.project)
+        platform = firmware_platform.MicroPythonPlatform(self.project)
         for echo_to, expected in ((2, {"stdout": 2}), (None, {})):
             seen.clear()
             service = deploy_service.DeployService(self.project, platform, image_evidence.PassedRunEvidence(), echo_to=echo_to,

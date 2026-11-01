@@ -23,7 +23,7 @@ import board_look  # noqa: E402
 import live  # noqa: E402
 import tools  # noqa: E402
 from board_console import Cure  # noqa: E402
-from fakes import FakeConsoleProbe  # noqa: E402
+from fakes import FakeConsoleProbe, FakeProbePlatform  # noqa: E402
 from test_board_look import C6_PORT, data, done  # noqa: E402
 from test_deploy import found  # noqa: E402
 
@@ -61,9 +61,9 @@ class LiveScriptTest(unittest.TestCase):
 
         out, err = io.StringIO(), io.StringIO()
         argv = ["--project", str(self.project)] + list(argv)
-        with mock.patch.object(tools, "find", side_effect=found), contextlib.redirect_stdout(out), \
-                contextlib.redirect_stderr(err):
-            code = live.main(argv, run=run, probe=probe or FakeConsoleProbe(cured=RESTART),
+        platform = FakeProbePlatform(self.project, probe or FakeConsoleProbe(cured=RESTART), lambda role: found(role))
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = live.main(argv, run=run, platform=platform,
                              now=lambda: NOW + datetime.timedelta(minutes=minutes_later))
         return code, out.getvalue(), err.getvalue(), ran
 

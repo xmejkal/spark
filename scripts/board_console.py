@@ -7,6 +7,7 @@ restart, P462). P251 moved it here from download_mode.py and uses the same open 
 restarted a board whose USB output died at power-on (docs/observations/2026-10-15-p235-reach-test.md, AT187).
 """
 
+import datetime
 import os
 import re
 import subprocess
@@ -81,9 +82,14 @@ def shows_boot(console):
 
 
 class SystemClock:
-    """Adapter: the computer's own clock."""
+    """Adapter: the computer's own clock. `now` is the time in the machine's zone, with the zone (P291): the zone a person
+    reads, and a stored time carries it."""
 
     monotonic, sleep = staticmethod(time.monotonic), staticmethod(time.sleep)
+
+    @staticmethod
+    def now():
+        return datetime.datetime.now().astimezone()
 
 
 class ConsoleProbe:

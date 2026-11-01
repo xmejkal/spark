@@ -3,7 +3,6 @@ and the person types yes in their own terminal."""
 
 import contextlib
 import datetime
-import getpass
 import hashlib
 import io
 import json
@@ -31,14 +30,15 @@ import deploy_record_store  # noqa: E402
 import deploy  # noqa: E402
 import deploy_service  # noqa: E402
 import board_grant  # noqa: E402
-import boards  # noqa: E402
 import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
 import flasher  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeClock, FakeConsent, FakeConsoleProbe, FakeLocalClock, line_made_at_import, pin_time_zone  # noqa: E402
+from fakes import (FakeClock, FakeConsent, FakeConsoleProbe, FakeProbePlatform,  # noqa: E402
+                   line_made_at_import, pin_time_zone)
+from firmware_platform import MicroPythonPlatform  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
 #: The words the erase sentence has for a board the store holds no deploy of (P401).
@@ -96,15 +96,14 @@ class GateCase(LookCase):
         files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
-    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False):
+    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False, platform=None):
         """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command. The first flash command
         exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait.
         `devs_text` may be a list: the listing of each `mpremote devs` call (the look's first), then the last for good."""
         self.copied = getattr(self, "copied", {})
-        self.slept, flash, self.devs_calls, self.start_clock = [], [], 0, FakeClock()
+        flash, self.devs_calls, self.deploy_clock = [], 0, clock or FakeClock()
+        self.slept = self.deploy_clock.slept  # every wait: the flasher's retry, the facts file's and the start wait's polls
         devs_text = list(devs_text) if isinstance(devs_text, list) else devs_text
-        self.addCleanup(setattr, deploy_service.DeployService, "start_clock", deploy_service.DeployService.start_clock)
-        deploy_service.DeployService.start_clock = self.start_clock  # no mock.patch: T2 counts them
 
         def run(command, **kw):
             self.ran.append(command)
@@ -129,14 +128,19 @@ class GateCase(LookCase):
 
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)), \
-                mock.patch.object(deploy_service.DeployService, "sleep", side_effect=self.slept.append), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = deploy.main(["--project", str(self.project), *argv], run=run, consent=consent, probe=probe, clock=clock,
-                               grant_service=grant_service)
+            code = deploy.main(["--project", str(self.project), *argv], run=run, consent=consent, clock=self.deploy_clock,
+                               platform=platform or (probe and FakeProbePlatform(self.project, probe)), grant_service=grant_service)
         return code, out.getvalue(), err.getvalue()
 
     def token(self, **kw):
         return self.look(**kw).token()
+
+    def own_record(self, **changes):
+        """The project's own copy of its board's record, with `changes`: the project's own record wins over the library's."""
+        record = json.loads((ROOT / "boards" / (json.loads((self.project / "requirements.json").read_text())["board"] + ".json")).read_text())
+        (self.project / "boards").mkdir(exist_ok=True)
+        (self.project / "boards" / (record["id"] + ".json")).write_text(json.dumps(dict(record, **changes)))
 
     def ends_during_the_wait(self):
         """A yes that ends while the service waits for its retry, as a deploy grant can."""
@@ -231,10 +235,9 @@ class TheGateTest(GateCase):
         # P423: the gate's refusal is the stops of the look, which carry the record's text
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
-        real = boards.load
-        with mock.patch.object(boards, "load", side_effect=lambda project, name: dict(real(project, name), chip="esp32s3\u202e\rx")):
-            token = self.token()
-            code, _, problems = self.deploy("--token", token, consent=FakeConsent(True))
+        self.own_record(chip="esp32s3\u202e\rx")
+        token = self.token()
+        code, _, problems = self.deploy("--token", token, consent=FakeConsent(True))
         self.assertEqual(code, 1)
         self.assertIn("deploy.py: this board is an esp32c6, the project is for an esp32s3??x. not flashed.", problems)
 
@@ -251,16 +254,11 @@ class TheGateTest(GateCase):
         # P423: the warning carries the record's text, and the question is where the person types yes
         self.run_the_scenario()
         self.board("firebeetle2-esp32s3")
-        real = boards.load
-
-        def loaded(project, name):
-            return dict(real(project, name), flash_mb="8\u202e\r FAKE")
-
+        self.own_record(flash_mb="8\u202e\r FAKE")
         shown = Stream()
-        with mock.patch.object(boards, "load", side_effect=loaded):
-            token = self.token(esptool="s3-flash-id-8mb.txt")
-            consent = deploy_gate.TerminalConsentStrategy("x", Stream("no\n"), shown)
-            code, _, problems = self.deploy("--token", token, esptool="s3-flash-id-8mb.txt", consent=consent)
+        token = self.token(esptool="s3-flash-id-8mb.txt")
+        consent = deploy_gate.TerminalConsentStrategy("x", Stream("no\n"), shown)
+        code, _, problems = self.deploy("--token", token, esptool="s3-flash-id-8mb.txt", consent=consent)
         self.assertEqual(code, 2, problems)
         self.assertIn("you accept: the flash differs: 8 MB, the record says 8?? FAKE. erase ALL of this board's flash ", shown.getvalue())
         self.assertNotIn("\u202e", shown.getvalue())
@@ -306,10 +304,12 @@ class TheGateTest(GateCase):
         self.run_the_scenario()
         silent = flasher.Flasher()
         silent.build_commands = lambda image, port=None: [["probe", "write"]]
-        real = deploy_service.DeployService.plan
-        with mock.patch.object(deploy_service.DeployService, "plan", autospec=True, side_effect=lambda *a, **k: real(*a, **k)._replace(
-                flasher=silent, commands=silent.build_commands(None))):
-            code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1)
+
+        class SilentPlatform(MicroPythonPlatform):
+            def make_flasher(self):
+                return silent
+        code, _, problems = self.deploy("--token", self.token(), consent=FakeConsent(True), fails=1,
+                                        platform=SilentPlatform(self.project))
         self.assertEqual((code, self.slept), (2, []))
         self.assertNotIn("retry", problems)
         self.assertTrue(problems.strip().splitlines()[-1].endswith(")"), problems)
@@ -367,14 +367,22 @@ class TheGateTest(GateCase):
 class TheBusyPortTest(GateCase):
     """P354: a console left open holds the port, so esptool's look fails. The doctor says so, as look.py's does."""
 
+    #: The doctor's result for a port that another program holds (test_deploy_json builds its envelope from it).
     BUSY = board_doctor.BoardDoctorResult(
         (board_doctor.CheckResult("console", False, "another program holds the port: locked", "close_other"),),
         None, "close_other", None)
 
+    def busy(self):
+        """The platform whose console probe finds the port held by another program: the console script exits as it does
+        when the port's lock is taken."""
+        def run(command, **kw):
+            raise subprocess.CalledProcessError(3, command, "",  # READ_CONSOLE's exit on EAGAIN
+                                                "serial.SerialException: Could not exclusively lock port")
+        return FakeProbePlatform(self.project, board_console.ConsoleProbe(["/opt/python3"], "/dev/cu.usbmodem101", run))
+
     def test_a_busy_port_names_the_console_and_ctrl_x_and_flashes_nothing(self):
         self.run_the_scenario()
-        with mock.patch.object(board_doctor, "after_esptool", return_value=self.BUSY):
-            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True, platform=self.busy())
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("deploy.py: could not read the board on", problems)
         self.assertIn("next    another program holds the port, often mpremote's console: leave mpremote's console "
@@ -383,31 +391,20 @@ class TheBusyPortTest(GateCase):
     def test_a_port_with_an_override_shows_as_a_question_mark_in_the_failed_read_on_stderr(self):
         # P423
         self.run_the_scenario()
-        with mock.patch.object(board_doctor, "after_esptool", return_value=None):
-            _, _, problems = self.deploy("--token", "aaaa-bbbb", "--port", "/dev/cu.usb\u202emodem", consent=FakeConsent(True),
-                                         look_fails=True)
-        self.assertTrue(problems.startswith("deploy.py: could not read the board on /dev/cu.usb?modem."), problems)
+        _, _, problems = self.deploy("--token", "aaaa-bbbb", "--port", "/dev/cu.usb\u202emodem", consent=FakeConsent(True),
+                                     look_fails=True, probe=FakeConsoleProbe(""))
+        self.assertTrue(problems.startswith("deploy.py: could not read the board on /dev/cu.usb?modem"), problems)
 
     def test_the_real_doctor_finds_the_lock_and_names_ctrl_x(self):
-        real_console = board_console.ConsoleProbe.console
-
-        def held(probe):  # the console script exits as it does when another program holds the port's lock
-            def run(command, **kw):
-                raise subprocess.CalledProcessError(3, command, "",  # READ_CONSOLE's exit on EAGAIN
-                                                    "serial.SerialException: Could not exclusively lock port")
-            probe.run = run
-            return real_console(probe)
-
         self.run_the_scenario()
-        with mock.patch.object(board_console.ConsoleProbe, "console", held):
-            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True, platform=self.busy())
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertEqual(problems.strip().splitlines()[-1].strip(), "next    " + board_doctor.step_sentence("close_other"))
 
     def test_with_no_doctor_the_stop_says_why_and_keeps_its_own_words(self):
         self.run_the_scenario()
-        with mock.patch.object(board_doctor, "after_esptool", side_effect=tools.ToolProblem("no mpremote")):
-            code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
+        code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True,
+                                        probe=tools.ToolProblem("no mpremote"))
         self.assertEqual(code, 2)
         self.assertIn("(no doctor: no mpremote)", problems)
 
@@ -615,7 +612,7 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertIn("ready unknown: the board's port is gone", said)
         self.assertIn("facts file: not written: the board's port is gone", said)
         self.assertEqual([c for c in self.ran if "fs" in c or "exec" in c], [])
-        self.assertGreaterEqual(self.start_clock.now, 7)
+        self.assertGreaterEqual(self.deploy_clock.elapsed, 7)
 
     def test_a_silent_board_not_in_download_mode_stays_unknown_and_asks_nothing(self):
         probe = FakeConsoleProbe("")
@@ -720,17 +717,18 @@ class TheFactsAfterTheFlashTest(GateCase):
 
     @needs_littlefs
     def test_a_yes_typed_in_a_terminal_is_recorded_as_typed_in_a_terminal(self):
-        terminal = deploy_gate.TerminalConsentStrategy("x", stdin=Stream("yes\n"), stdout=Stream())
-        with mock.patch.object(getpass, "getuser", return_value="ada"):
-            _, said, _ = self.flash(terminal)
+        terminal = deploy_gate.TerminalConsentStrategy("x", stdin=Stream("yes\n"), stdout=Stream(), user_name=lambda: "ada")
+        _, said, _ = self.flash(terminal)
         record = Path(said.split("store record: ")[1].strip())
         self.assertEqual(json.loads(record.read_text())["deploys"][-1]["yes"], "typed in a terminal by ada")
 
     @needs_littlefs
     def test_one_moment_names_the_facts_the_log_and_its_file(self):
         moment, calls = datetime.datetime(2026, 10, 17, 9, 8, 7, tzinfo=PRAGUE_SUMMER), []
+        clock = FakeClock(moment)
+        clock.now = lambda: calls.append(1) or moment
         self.run_the_scenario()
-        self.deploy("--token", self.token(), consent=FakeConsent(True), clock=lambda: calls.append(1) or moment)
+        self.deploy("--token", self.token(), consent=FakeConsent(True), clock=clock)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log"))
         self.assertEqual((len(calls), json.loads(self.copied["spark.json"])["deployed"], log.name),
                          (1, "2026-10-17T09:08:07+02:00", "2026-10-17T09-08-07.log"))
@@ -813,10 +811,10 @@ class TheFactsAfterTheFlashTest(GateCase):
 
     @needs_littlefs
     def test_a_store_that_cannot_be_written_is_a_sentence(self):
-        with mock.patch.object(store, "write_json", side_effect=store.StoreProblem("no room")):
-            code, said, _ = self.flash()
+        deploy_record_store.DeployRecordStore().find_path(self.look().reading.mac).mkdir(parents=True)  # a folder where the record goes
+        code, said, _ = self.flash()
         self.assertEqual(code, 0)
-        self.assertIn("store record: not written: no room", said)
+        self.assertIn("store record: not written: ", said)
 
 
 class SayLastDeployInQuestionTest(unittest.TestCase):
@@ -914,9 +912,8 @@ class TheConsentTest(unittest.TestCase):
             Silent()
 
     def test_the_terminal_says_who_typed_the_yes(self):
-        terminal = deploy_gate.TerminalConsentStrategy("x")
-        with mock.patch.object(getpass, "getuser", return_value="ada"):
-            self.assertEqual(terminal.who, "typed in a terminal by ada")
+        terminal = deploy_gate.TerminalConsentStrategy("x", user_name=lambda: "ada")
+        self.assertEqual(terminal.who, "typed in a terminal by ada")
 
 
 @needs_littlefs
@@ -953,8 +950,8 @@ class TheStandingYesTest(GateCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         pin_time_zone(self)
-        self.clock = FakeLocalClock(self.START)
-        self.grants = board_grant.GrantService(now=self.clock)
+        self.clock = FakeClock(self.START)
+        self.grants = board_grant.GrantService(now=self.clock.now)
         self.run_the_scenario()
 
     def give(self, scope="deploy", minutes=30, mac=None):
@@ -1253,13 +1250,13 @@ class TheNoSimulationDeployTest(GateCase):
             self.deploy("--no-simulation", "--ignore-older-runs")
 
     def test_a_deploy_grant_is_not_used_and_no_grant_is_offered(self):
-        clock = FakeLocalClock(datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc))
+        clock = FakeClock(datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc))
         pin_time_zone(self)
         mac = "8c:bf:ea:xx:xx:xx"
         board_grant.GrantStore().save(board_grant.Grant(
-            mac, board_grant.board_look.board_token(mac), "ada", clock.now.isoformat(),
-            (clock.now + datetime.timedelta(minutes=30)).isoformat(), "deploy"))
-        code, said, problems = self.flash(grant_service=board_grant.GrantService(now=clock))
+            mac, board_grant.board_look.board_token(mac), "ada", clock.now().isoformat(),
+            (clock.now() + datetime.timedelta(minutes=30)).isoformat(), "deploy"))
+        code, said, problems = self.flash(grant_service=board_grant.GrantService(now=clock.now))
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("--no-simulation is never covered by a deploy grant", said)
         self.assertIn("no terminal to ask you in", problems)
