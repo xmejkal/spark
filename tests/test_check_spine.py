@@ -2266,8 +2266,8 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         again = json.loads(path.read_text())
         self.assertEqual([part["id"] for part in again["parts"] if part["id"] in ("wired", "lone")], ["wired", "lone"])
         self.assertIn("hand-added: wired, lone", second)
-        self.assertIn("lone is hand-added and has no wire yet: it stays in the diagram, and the build passed.", second)
-        self.assertNotIn("wired is hand-added and has no wire yet", second)
+        self.assertIn("lone was added by hand and has no wire yet. It stays in the diagram.", second)
+        self.assertNotIn("wired was added by hand and has no wire yet", second)
         self.assertNotIn("no diagram was produced", second)
 
     @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")

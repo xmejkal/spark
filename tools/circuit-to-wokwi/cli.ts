@@ -104,6 +104,7 @@ async function main() {
 
   const blocking = [...emitted.problems, ...validation.problems];
   if (blocking.length) throw new ConversionFailed(blocking);
+  for (const { code, message } of validation.warnings) console.log(`\nwarning[${code}]: ${message}`);
 
   const serialised = JSON.stringify(diagram, null, 2) + "\n";
 
@@ -157,8 +158,6 @@ function report({ netlist, emitted, summary, validation, designProblems }: any) 
           : ""),
     );
   }
-
-  for (const warning of validation.warnings) console.log(`\nwarning: ${warning}`);
 
   if (designProblems.length) {
     console.log("\nthe board design itself reports:");

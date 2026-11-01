@@ -21759,7 +21759,7 @@ function carryOverDesignWarnings(circuitJson, problems) {
 }
 
 // lib/validate.ts
-var HAND_ADDED_ATTR2 = "handAdded";
+var HAND_ADDED_UNWIRED = "hand-added-unwired";
 function validate(emitted, componentCount, handAddedIds = []) {
   const { problems: lintProblems, warnings } = lint(emitted, handAddedIds);
   const coverageProblems = [
@@ -21782,10 +21782,13 @@ function lint(emitted, handAddedIds) {
     if (issue.severity === "info")
       continue;
     const partId = issue.partId;
-    if (issue.rule === "invalid-attribute" && issue.context?.attrName === HAND_ADDED_ATTR2)
+    if (issue.rule === "invalid-attribute" && issue.context?.attrName === HAND_ADDED_ATTR)
       continue;
     if (issue.rule === "redundant-parts" && handAddedIds.includes(partId)) {
-      warnings.push(`${partId} is hand-added and has no wire yet: it stays in the diagram, and the build passed. ` + "Wire it in Wokwi if it should do something.");
+      warnings.push({
+        code: HAND_ADDED_UNWIRED,
+        message: `${partId} was added by hand and has no wire yet. It stays in the diagram. ` + "Wire it in Wokwi if it should do something."
+      });
       continue;
     }
     problems.push({ message: `${issue.rule}: ${issue.message}`, context: { component: partId } });
@@ -21869,6 +21872,9 @@ async function main() {
   const blocking = [...emitted.problems, ...validation.problems];
   if (blocking.length)
     throw new ConversionFailed(blocking);
+  for (const { code, message } of validation.warnings)
+    console.log(`
+warning[${code}]: ${message}`);
   const serialised = JSON.stringify(diagram, null, 2) + `
 `;
   if (options.check) {
@@ -21910,9 +21916,6 @@ not simulated, on purpose:`);
     console.log(`
 kept from the existing diagram: ${summary.keptPositions} positions, ` + `${summary.keptRoutes} wire routes` + (summary.keptHandAddedParts.length ? `, hand-added parts: ${summary.keptHandAddedParts.join(", ")}` : ""));
   }
-  for (const warning of validation.warnings)
-    console.log(`
-warning: ${warning}`);
   if (designProblems.length) {
     console.log(`
 the board design itself reports:`);

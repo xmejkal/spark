@@ -39,7 +39,10 @@ describe("a hand-added part of a known type", () => {
     const { result } = check([{ type: "wokwi-led", id: "lone", top: 1, left: 1, attrs: mark() }]);
     expect(result.problems).toEqual([]);
     expect(result.warnings).toEqual([
-      "lone is hand-added and has no wire yet: it stays in the diagram, and the build passed. Wire it in Wokwi if it should do something.",
+      {
+        code: "hand-added-unwired",
+        message: "lone was added by hand and has no wire yet. It stays in the diagram. Wire it in Wokwi if it should do something.",
+      },
     ]);
   });
 
@@ -50,7 +53,7 @@ describe("a hand-added part of a known type", () => {
 
   test("the diagram keeps the mark", () => {
     const { diagram } = check([{ type: "wokwi-led", id: "mine", top: 1, left: 1, attrs: mark() }], wired);
-    expect(diagram.parts.find((part: any) => part.id === "mine").attrs.handAdded).toBe("true");
+    expect(diagram.parts.find((part: any) => part.id === "mine")!.attrs!.handAdded).toBe("true");
   });
 
   test("a generated unwired part still blocks", () => {
