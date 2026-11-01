@@ -1,6 +1,8 @@
 # Developing spark
 
-How spark's own code is tested and gated, and where the work is planned.
+How spark's own code is tested and gated, and where the work is planned. On Miro,
+[the roadmap](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764688467218869) shows the plan and [the code architecture](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687681319899) shows the
+modules.
 
 ## The tests
 
@@ -596,6 +598,11 @@ Nothing mechanical checks a skill or agent named in prose, an absolute link, or 
 reads those. Nor can it tell whether a step's status is still current. So when a step of the [journey](journey.md)
 changes what it does, the change updates the journey guide and the README's *What works today*: item 8 of the
 [Definition of Done](../../scrum/README.md#definition-of-done).
+
+**Who changes the README.** The README changes only through the documentation council or a story's own status line in
+*What works today*. A status line is one sentence. Its detail goes to the step's section in the
+[journey guide](journey.md). The council runs at the end of each epic and when the PO asks
+([P498](https://github.com/xmejkal/spark/issues/682)).
 
 ## Findings rows
 

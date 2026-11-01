@@ -7,7 +7,11 @@ here), come on request. The chain starts from a [requirements file](../../GLOSSA
 what it could not look at; [what never to assume](agents.md#what-never-to-assume) lists where that does not hold yet.
 
 This page walks each step on real runs: what was typed, what spark printed, what it wrote, and where the step stops
-today.
+today. On Miro, [the journey frame](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687016851094) shows the same eight steps.
+
+**Contents:** [Drawer](#drawer) · [Idea](#idea) ([a recorded run](#a-recorded-run-a-button-and-an-led)) ·
+[Research](#research) · [Build](#build) · [Checks](#checks) · [Firmware](#firmware) · [Simulate](#simulate) ·
+[Bench](#bench) · [From draft to order](#from-draft-to-order)
 
 ```mermaid
 flowchart LR
@@ -118,6 +122,12 @@ against your drawer and spark's records. It marks each need: have, have-unknown,
 need (`parts.py --pick`), what you own is reserved, and the picks become a requirements file
 (`parts.py --requirements`) ([P97](https://github.com/xmejkal/spark/issues/18)). Those steps ran for this page, in
 [a recorded run](#a-recorded-run-a-button-and-an-led) below; the conversation did not.
+
+**Today, in full.** If the board serves every need, the requirements file says `board_only`
+([P387](https://github.com/xmejkal/spark/issues/497)). A board offers its own LED, buttons, display, charger, regulator, battery input and battery-level pin
+for a need ([P389](https://github.com/xmejkal/spark/issues/504)). If a simulation cannot press or show that part, the pick says so. It names the bench as
+the test. If you own another choice, it names that too ([P397](https://github.com/xmejkal/spark/issues/513)). The recorded run went on from the requirements file to a board that builds and
+to the tally. With no Claude Code transcript there, the tally did not count the cost.
 
 In Claude Code, Claude asks at most three questions, one at a time, then writes the needs to a file:
 
@@ -253,6 +263,11 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --match .
       owned 1    firebeetle2-esp32s3 (library)                  microcontroller  free 1
                  xiao-esp32-c6 (library)                        microcontroller  stops at the footprint stage (P121)
 ```
+
+This output is from 2026-10-08. On 2026-11-01 the same match lists the XIAO ESP32-C6 as a `microcontroller`
+with no stop. It builds since [P278](https://github.com/xmejkal/spark/issues/314). That run
+also offers each board's own button and LED for the press and light needs
+([P389](https://github.com/xmejkal/spark/issues/504)).
 
 The LED pack is owned but has no record: picked as it is, spark reserves it and cannot place it on the board.
 `/spark:idea`'s M step asks whether the pack is `led-red-5mm`. On the person's word, `--drawer-set` with
@@ -567,6 +582,9 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --audit
   xiao-esp32-c6 (library) stops at the footprint stage (P121) — no header geometry in its board file
 ```
 
+On 2026-11-01 the same audit printed only the first line: the XIAO ESP32-C6 builds since
+[P278](https://github.com/xmejkal/spark/issues/314). The other 2026-10-08 outputs on this page keep its old line.
+
 In a scratch store of its own, a catalog record was written by hand to `<store>/catalog/soil-probe.json`:
 
 ```json
@@ -757,6 +775,29 @@ A module you already own can start from a photo instead: [`/spark:identify`](../
 2. [`/spark:setup`](../../commands/setup.md) says which tools spark needs, and installs what is missing in one go once
    you have seen the commands and said yes.
 
+**The plugin's name.** Claude Code can show the plugin as `spark@<marketplace>`. The marketplace name is the one in
+spark's `.claude-plugin/marketplace.json`.
+
+**Before you start.** You need Claude Code for the commands, Python 3.9 or newer, and Node 20 or newer. On macOS,
+spark's install lines get Node and pdftotext from Homebrew (`data/tools.json`). `/spark:setup` then installs the rest
+in one go, after you see the commands and say yes: bun, tscircuit (into the project), `wokwi-cli`, MicroPython and
+`littlefs-python`. The runs here were on macOS. Every build for these docs used an existing tscircuit install, not one
+that `/spark:setup` made.
+
+**On Linux,** `data/tools.json` has apt lines only for pdftotext and `sigrok-cli`, so you install Node yourself.
+If Node's global folder is yours, as with nvm, `/spark:setup` then installs bun with `npm install -g bun`. With a Node
+from apt, root owns that folder. Then that line fails, `tools.py` says so and exits 2, and you install bun yourself too.
+None of this was run on Linux here. `data/tools.json` has no lines for Windows.
+
+**An update replaces the plugin, not your files.** Your store and a project's own `boards/`, `parts/` and `.spark/` are
+outside it ([how it works](how-it-works.md#your-store)). Three things write inside the plugin, and an update replaces
+what they wrote:
+
+- `parts.py --promote` copies a record into spark's library. To keep the record, copy it out first.
+- `check_vendor_pins.py` run without `--offline` on a board spark ships refreshes the vendor's pin header that spark
+  keeps for that board.
+- `/spark:build` can compile a library part's simulation chip beside its record.
+
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/init_project.py" --project . --board firebeetle2-esp32s3
 ```
@@ -908,6 +949,31 @@ folder and deletes it.
 
 The simulation stage generates the Wokwi diagram and stages the chips. `--keep .` keeps them in `sim/`, and `--sim-dir DIR`
 keeps them in DIR ([P116](https://github.com/xmejkal/spark/issues/50)). It does not run a simulation; see [Simulate](#simulate).
+
+**Today, in full.** A requirements file becomes a board that builds, with a Wokwi diagram generated from it, or the
+stage that stopped it. `--board`, and a requirements file's `board`, name the dev board. With `--keep`, the build also
+writes:
+
+- a breadboard sheet: the parts and how to wire them
+- for a XIAO ESP32-C6, the same wiring drawn on a Wokwi breadboard ([P267](https://github.com/xmejkal/spark/issues/300)) and as a picture that the sheet shows
+  ([P268](https://github.com/xmejkal/spark/issues/302))
+- for a FireBeetle 2 ESP32-S3, a picture alone, drawn from its record ([P412](https://github.com/xmejkal/spark/issues/538))
+- a page with the breadboard, schematic and PCB in three tabs ([P271](https://github.com/xmejkal/spark/issues/307))
+
+A rebuild keeps the parts, jumpers and resistors you moved in `breadboard.json`. It names those it cannot keep
+([P273](https://github.com/xmejkal/spark/issues/309), [P287](https://github.com/xmejkal/spark/issues/340)). A rebuild lists what to change on the bench, by each jumper's ends and color
+([P300](https://github.com/xmejkal/spark/issues/366)). The build names an end that the drawing joins differently from the circuit ([P279](https://github.com/xmejkal/spark/issues/317)). With
+`"board_only": true`, the build makes the board alone, for firmware that uses only the board's own LED
+([P236](https://github.com/xmejkal/spark/issues/233)). On a FireBeetle 2 ESP32-S3 the board's own LED and button are then wired parts of the Wokwi diagram
+([P484](https://github.com/xmejkal/spark/issues/663)). Where a fact is missing, the build names its stand-in in `board.tsx`: a placeholder outline in its
+header, or the router's default trace width under a power trace it was unable to size.
+
+**The XIAO ESP32-C6, then and now.** On 2026-10-08 the library defined two dev boards and held 8 parts
+(`boards.py --list`, `parts.py --list`). Only the FireBeetle 2 ESP32-S3 built then. The Seeed XIAO ESP32-C6 was defined
+for the pin map only. Its file recorded no header geometry and no `power.io_volts`. So `/spark:build` stopped at the
+schematic stage ([P121](https://github.com/xmejkal/spark/issues/55)). Since 2026-10-18 its file holds the facts of the record that was checked at the
+bench, with their cites. Button + LED on `"board": "xiao-esp32-c6"` builds with `--keep` ([P278](https://github.com/xmejkal/spark/issues/314)). A
+board file with no header geometry still stops at the footprint stage.
 
 ## Checks
 
@@ -1074,6 +1140,17 @@ L9110S dual motor driver module — motor-driver
 The next steps are the [firmware](#firmware), which imports `pins.py`, and the [simulation](#simulate). Before a board is
 ordered, the `spark-review` skill runs `check_all`, then reviewer agents, then the fabrication gate. It was not run here; [is it ready?](agents.md#is-it-ready) says what each part covers.
 
+**Today, in full.** `check_all.py` runs spark's deterministic checks in one command, five in the journey's run. Three
+found nothing, physics was unable to look, and the-order was
+[skipped](../../GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it), with no fab package yet. A fresh
+button-and-LED project exits 0 and counts its `?` lines ([P197](https://github.com/xmejkal/spark/issues/156)). `check_all.py` does not run the
+generator's CONFLICT test or the gate's two commands. The `spark-review` skill runs it and then the reviewer agents,
+which were not run here.
+
+**A board you wrote by hand** in tscircuit is read the same way: `npx --no tsci build board.tsx`, then `/spark:init` so
+that it names the rails, then `check_all.py --project .`. This was not run here. A project's own
+[`make check`](../../GLOSSARY.md#make-check--a-projects-own-gate) can run the checks one by one.
+
 ## Firmware
 
 **Partly.** spark does not write your firmware; you or Claude do. It gives the firmware its pins. The build writes
@@ -1176,6 +1253,13 @@ step names that line. The log's header keeps the names (`step names: 2`, then on
 
 A run spends Wokwi CI minutes. Watching it live in VS Code needs a Wokwi licence that includes VS Code, Hobby+ or above
 per wokwi.com/pricing (read 2026-10-01).
+
+**Today, in full.** If spark keeps the board's Wokwi definition, the build names each on-board LED or button that it
+has no pin for. spark knows no way for a scenario to reach such a part. So you test it on the board, such as
+`ONBOARD_BUTTON (GPIO9)` on the XIAO ESP32-C6 ([P396](https://github.com/xmejkal/spark/issues/512)). Without the definition, the build says
+`onboard GPIOs: not checked`. A board-only FireBeetle 2 ESP32-S3 build wires Wokwi's LED and pushbutton to GPIO21 and
+GPIO47 in place of the board's own. It says so in its limits. On 2026-11-01 a free scenario on walk 3's project
+pressed that button and passed ([P484](https://github.com/xmejkal/spark/issues/663)).
 
 ## Bench
 
@@ -1312,7 +1396,7 @@ that Claude prints. The line below shows its form, and `<spark>` and `<project>`
 
 It reads the board once with esptool, so the board restarts. Then it asks you to let Claude run code on that board
 for 30 minutes from your yes (one day at most). Type `yes`. Your store keeps the grant in a file named by the MAC with
-dashes, for example `grants/8c-bf-ea-cc-97-70.json`. To end it early, delete that file. `grant.py --check` tells Claude whether the board on USB has a grant now, without touching the board.
+dashes, for example `grants/8c-bf-ea-xx-xx-xx.json`. To end it early, delete that file. `grant.py --check` tells Claude whether the board on USB has a grant now, without touching the board.
 The grant works on a board with a built-in USB port, like the XIAO ESP32-C6's.
 
 ### Let Claude deploy: the deploy grant
@@ -1326,7 +1410,7 @@ without that yes each time, give a deploy grant ([P242](https://github.com/xmejk
 
 Its question says that it lets Claude erase ALL of that board's flash and write any passed image of any project,
 for 60 minutes from your yes (one day at most). Type `yes`. The grant is a file in your store,
-`grants/8c-bf-ea-cc-97-70-deploy.json`, beside the live grant's file, and the two never open each other. Delete it to end it.
+`grants/8c-bf-ea-xx-xx-xx-deploy.json`, beside the live grant's file, and the two never open each other. Delete it to end it.
 While it lasts, Claude runs `deploy.py --token T` and deploy.py prints `yes: standing yes typed by ...` instead of asking. It still
 looks at the board, checks the token and refuses an image that changed. It covers only a look that matched the board
 record (no warning, no unknown field, no stop) and never `--ignore-older-runs` or `--no-simulation`: for those deploy.py asks in your
@@ -1360,8 +1444,28 @@ bring-up, [B14](https://github.com/xmejkal/sisuo-brain-transplant/issues/8).
 The `spark-reverse-engineer` skill writes a bench protocol, but for a board reverse-engineered from photos, not for a
 board spark generated.
 
-Apart from the blink above, every green result in this guide is a build, a generated diagram, a check or a simulation
-(button-and-LED passed in Wokwi on 2026-10-12, P130). The button-and-LED project is not yet wired and flashed.
+**Today, in full.** These bench runs are not in the sections above:
+
+- On 2026-10-31 `deploy.py --no-simulation` flashed a 16 MB FireBeetle 2 ESP32-S3 and printed `ready seen`
+  ([P461](https://github.com/xmejkal/spark/issues/629)).
+- On 2026-11-01 the same board ran `deploy.py --no-simulation` again. esptool restarted it with
+  `--after watchdog-reset`. deploy asked for no RESET press and printed `ready seen`. Then the board's own D14 button
+  lit its own D13 LED ([P462](https://github.com/xmejkal/spark/issues/630#issuecomment-6553931461)).
+  [P337](https://github.com/xmejkal/spark/issues/431) was the first card for a deploy with no simulation.
+- On 2026-10-18 a deploy grant ran on the XIAO ESP32-C6 with the blink project. The first run did not connect for the
+  erase right after its own look. The second went through, and the store record names the grant as the yes. Since
+  [P290](https://github.com/xmejkal/spark/issues/347), `deploy.py` makes one retry of an erase that stops with exit 2, after 5 s, and prints
+  `retry in 5 s: ...`. Later that day, 3 deploys of 3 with a grant went through on the first call, each with
+  `ready seen`, and none needed the retry.
+- On 2026-10-19 two more deploys with a standing yes passed the scenario. A hint that tells you to press BOOT or RESET
+  now says where the button is on the XIAO ESP32-C6 ([P213](https://github.com/xmejkal/spark/issues/192)).
+- On 2026-10-17 the live try passed one bench run on the XIAO ESP32-C6
+  ([the log](../observations/2026-10-17-p282-p247-bench.md)).
+
+`look.py --json` and `deploy.py --json` print one envelope for Claude. It holds the token, the stops, the stage, the
+yes and the next step for you ([P213](https://github.com/xmejkal/spark/issues/192)). The button-and-LED firmware ran on a XIAO on 2026-10-15, but no
+breadboard wired from its sheet has run on a bench yet. The first such bench is the button-and-LED project, flashed and
+wired from its sheet ([the plan for v0.10](../../scrum/VISION.md#versions)).
 
 ## From draft to order
 
