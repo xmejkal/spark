@@ -113,7 +113,7 @@ class ItRefusesToGuessTest(unittest.TestCase):
     def test_no_paths_given_is_refused_with_a_sentence(self):
         said = self.run_cli([])
         self.assertNotEqual(said.returncode, 0, "it ran with no design to convert")
-        self.assertIn("required", said.stderr + said.stdout)
+        self.assertIn("--out, --chips are required", said.stderr + said.stdout)
 
     def test_the_search_names_no_other_repository(self):
         # It named `../smartbin-local/tools/circuit-to-wokwi/cli.ts` — one person's checkout,

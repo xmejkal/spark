@@ -4,6 +4,8 @@
  *   bun run cli.ts                       write the diagram, reporting what it did
  *   bun run cli.ts --check               fail if the committed diagram is out of date (CI)
  *   bun run cli.ts --circuit x --out y   somewhere other than the defaults
+ *   bun run cli.ts --netlist n --out y   a netlist already written as JSON, in place of a circuit.json (P484: the
+ *                                        spine's board-only build, the board and its own LED and button)
  *   bun run cli.ts --mapping m.json --chips dir   the spark spine's mapping from the part records,
  *                                        and the chips it staged (SPARK_BOARD_JSON names the board)
  *
@@ -14,10 +16,11 @@
 // node:fs, not Bun.file — the shipped bundle runs on Node (B10, P82). And no `#!/usr/bin/env bun`
 // line: with it, bun 1.4.2 bundled lib/mapping.ts twice for Node, and the records reached neither copy the emitter read.
 import { readFile, writeFile } from "node:fs/promises";
+import { basename } from "node:path";
 import { emitWokwiDiagram } from "./lib/emitters/wokwi";
 import { loadMappingFile } from "./lib/mapping";
 import { mergeWithExisting } from "./lib/merge";
-import { buildNetlist } from "./lib/netlist";
+import { buildNetlist, readNetlist } from "./lib/netlist";
 import { ConversionFailed } from "./lib/types";
 import { validate } from "./lib/validate";
 
@@ -31,7 +34,9 @@ import { validate } from "./lib/validate";
  */
 
 interface Options {
-  circuit: string;
+  /** Exactly one of `circuit` and `netlist` is given. */
+  circuit?: string;
+  netlist?: string;
   out: string;
   check: boolean;
   /** A mapping from the part records, written by the spark spine; the hand table is the fallback. */
@@ -46,6 +51,7 @@ function parseArguments(argv: string[]): Options {
     const argument = argv[index];
     if (argument === "--check") options.check = true;
     else if (argument === "--circuit") options.circuit = argv[++index] ?? options.circuit;
+    else if (argument === "--netlist") options.netlist = argv[++index] ?? options.netlist;
     else if (argument === "--out") options.out = argv[++index] ?? options.out;
     else if (argument === "--mapping") options.mapping = argv[++index];
     else if (argument === "--chips") options.chips = argv[++index] ?? options.chips;
@@ -54,7 +60,7 @@ function parseArguments(argv: string[]): Options {
       process.exit(0);
     }
   }
-  const missing = (["circuit", "out", "chips"] as const).filter((name) => !options[name]);
+  const missing = (["out", "chips"] as const).filter((name) => !options[name]);
   if (missing.length) {
     throw new ConversionFailed([
       {
@@ -65,23 +71,31 @@ function parseArguments(argv: string[]): Options {
       },
     ]);
   }
+  if (!options.circuit === !options.netlist) {
+    throw new ConversionFailed([
+      { message: "exactly one of --circuit and --netlist is required: the design to convert, as a circuit.json or as a netlist" },
+    ]);
+  }
   return options as Options;
 }
 
 function __doc__() {
-  return `Usage: bun run cli.ts --circuit <circuit.json> --out <diagram.json> --chips <dir> [--mapping <wokwi-mapping.json>] [--check]\n\nAll three paths are required, and SPARK_BOARD_JSON must name the design's board file.`;
+  return `Usage: bun run cli.ts (--circuit <circuit.json> | --netlist <netlist.json>) --out <diagram.json> --chips <dir> [--mapping <wokwi-mapping.json>] [--check]\n\nExactly one of --circuit and --netlist, and --out and --chips, are required, and SPARK_BOARD_JSON must name the design's board file.`;
 }
 
 async function main() {
   const options = parseArguments(process.argv.slice(2));
 
-  const circuitJson = JSON.parse(await readFile(options.circuit, "utf8"));
   if (options.mapping) {
     const spokenFor = loadMappingFile(options.mapping);
     console.log(`mapping from the part records: ${spokenFor} component(s)`);
   }
-  const { netlist, problems: designProblems } = buildNetlist(circuitJson);
-  const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips });
+  const { netlist, problems: designProblems } = options.netlist
+    ? { netlist: readNetlist(JSON.parse(await readFile(options.netlist, "utf8"))), problems: [] }
+    : buildNetlist(JSON.parse(await readFile(options.circuit!, "utf8")));
+  // The emitter's own author names board.tsx, which a netlist written as JSON has none of (P484).
+  const author = options.netlist ? `generated from ${basename(options.netlist)}` : undefined;
+  const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips, author });
   const existing = await readExisting(options.out);
   const { diagram, summary } = mergeWithExisting(emitted.diagram, existing);
   const validation = validate({ ...emitted, diagram }, netlist.components.length);

@@ -275,9 +275,22 @@ These write:
   and each kept entry gives the refusal as its `why` (P280). A missing requirements file removes nothing.
   `check_spine.py` also writes `firmware/pins.py` (when the board record names its own LED, buttons, display or battery-level pin: `ONBOARD_LED`, `ONBOARD_BUTTON` or `ONBOARD_BATTERY_SENSE` for a part on one pin, `ONBOARD_<PART>_<LABEL>` per `labels` entry such as `ONBOARD_BUTTON_S1`, `ONBOARD_<PART>_<FACT>` per fact such as `ONBOARD_DISPLAY_WIDTH` with "not verified" in its comment when nobody verified it, and `ONBOARD_LED_ON` or `ONBOARD_BUTTON_ON` when it holds their `active_level`, a number or a fact `{value, verified, source}` whose pin-map comment names the source and "not verified"), but leaves alone one that it did not write, and merges the simulation project into `sim/`. A rebuild merges into the kept `sim/diagram.json` (P482, #661): the part positions by id, the wire routes whose two ends are still generated, and the parts marked `"handAdded": "true"` in `attrs` with the wires that touch them stay. Today the converter's own lint fails a hand-added part of a type whose attributes Wokwi knows (an LED: `Unknown attribute "handAdded"`) and a hand-added part with no wire yet, so such a rebuild stops ([P497](https://github.com/xmejkal/spark/issues/681)). A hand-drawn wire between two generated parts does not stay, a generated part that the person deleted comes back, and a position whose generated id changed is lost. The verdict's simulation stage says `kept from your diagram: ...` when it kept anything. Relay that note as printed. A rebuild whose simulation stage finishes replaces `sim/WHAT-THIS-CANNOT-SHOW.md`, or removes it when the board has no limits, so a hand-edited note does not survive it; any other outcome of that stage leaves the note. It may also compile a
   chip beside its record, which for a library part is inside the plugin. When the chain runs end to end for a project on your list, it adds a `built` line to your store's
-  history. A board-only build skips four stages, so it adds none. The simulation stage's `detail` and `sim/WHAT-THIS-CANNOT-SHOW.md` list what the simulation cannot show,
+  history. A board-only build skips four stages, so it adds none. Its closing line, "nothing to wire, so no board was built", is about the PCB only.
+  A board-only build of a stand-in board (the FireBeetle 2 ESP32-S3) wires the board's own LED and button
+  as the diagram parts `onboard_led` (Wokwi's LED) and `onboard_button` (Wokwi's pushbutton) to their GPIO and ground, through the converter, when each is on one header
+  pin, an LED that a 1 lights and a button that reads 0 when pressed ([P484](https://github.com/xmejkal/spark/issues/663)). When only one qualifies, only that one is wired.
+  Its simulation detail then starts `the board and its own onboard_led and onboard_button`, and it needs Node. A scenario uses those two ids, and waits for the firmware's
+  line right after `set-control` presses the button, not after a delay. A board-only build of any other board holds the board alone and needs no converter.
+  The simulation stage's `detail` and `sim/WHAT-THIS-CANNOT-SHOW.md` list what the simulation cannot show,
   also each on-board LED or button whose GPIO has no pin in the board's Wokwi definition (P396), such as
   `ONBOARD_BUTTON (GPIO9)` on the XIAO ESP32-C6. Such a line names a test for the bench: a passed run never covers it.
+  A wired one says what its part stands in for: `ONBOARD_LED (GPIO21): the Wokwi stand-in has no LED on GPIO21, so spark wires
+  Wokwi's LED to GPIO21 in its place: a passed run shows the level a scenario read on GPIO21, not a PWM duty or a brightness, nor
+  that the board's own LED lights. Test it on the board.`, and for the button `... a scenario presses that part, not the board's own
+  button. Test it on the board.` Relay both: a passed run shows the level the scenario read, not a PWM duty or a brightness, and
+  nothing of the board's own LED or button. Without the board's Wokwi definition in the store, these lines still come, after
+  `onboard GPIOs: not checked`. An unwired GPIO of a stand-in keeps
+  `... is a bare header pin with no onboard LED or button, so spark knows no way for a scenario to ... it` (P483).
   `onboard GPIOs: not checked` means that spark did not compare at all: say it to the person, and never read it as a pass.
   A board that names its own display adds `ONBOARD_DISPLAY`: spark adds no part to the diagram for it, so a passed run
   does not test what the screen shows (P389). Say that the screen needs a test on the board. A board that names its
