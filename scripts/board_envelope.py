@@ -97,10 +97,11 @@ def deploy_envelope(reached, code):
                                            "the person runs it once in their own terminal; it lets Claude erase ALL of the flash for N minutes (1 to 1440, 60 here)",
                                            effects=["writes"], needs_yes=True))
     elif result and result.ready.verdict == ready_check.UNKNOWN:
+        stopped = bool(result.start and result.start.code)  # P462: the person has a step first
         again = "read the board again with the REPL (data.repl_command): the firmware prints `ready`. Never deploy again for this"
         following = [outcomes.step("watch", list(result.repl_command),
-                                   again + (". First the person presses the board's %s" % boards.ButtonPlaces.of_project(project).reset if result.reset_seen is False else ""),
-                                   needs_person=True if result.reset_seen is False else None)]
+                                   again + (". First the person does what data.person_action says" if stopped else ""),
+                                   needs_person=True if stopped else None)]
     data = {
         "stage": stage, "simulation": report.simulation if report else None, "dry_run": bool(reached.get("dry_run")), "token": reached.get("token"),
         "commands": [list(command) for command in plan.commands] if plan else None,
@@ -113,7 +114,7 @@ def deploy_envelope(reached, code):
         "repl_command": list(result.repl_command) if result else None,
         "store_record": reached.get("store_record"), "store_record_error": reached.get("store_record_error"),
         "board_state": MAY_BE_ERASED if stage == STAGE_FLASH else None,
-        "person_action": reached.get("person_action") if result and result.reset_seen is False else None,
+        "person_action": result.start.sentence if result and result.start and result.start.code else None,
         "run_in_terminal": reached.get("run_in_terminal"),
     }
     if doctor:  # P354: a look that esptool could not read, as look.py's envelope carries it

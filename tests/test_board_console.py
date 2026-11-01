@@ -123,28 +123,6 @@ class TheConsoleTest(unittest.TestCase):
         self.assertIsNone(board_console.ConsoleProbe.for_tool(python, None))
 
 
-class TheResetTest(unittest.TestCase):
-    def probe(self, *here):
-        """A probe whose port is there or not at each look, in turn, then there for good."""
-        looks = list(here)
-        self.clock = FakeClock()
-        return board_console.ConsoleProbe(["/opt/python3"], PORT, clock=self.clock,
-                                               port_exists=lambda port: looks.pop(0) if looks else True)
-
-    def test_a_port_that_goes_and_comes_back_is_the_reset(self):
-        self.assertTrue(self.probe(True, True, False, False, True).wait_for_reset())
-        self.assertEqual(len(self.clock.slept), 4)
-
-    def test_a_port_that_never_goes_is_no_reset_after_the_wait(self):
-        self.assertFalse(self.probe().wait_for_reset(timeout_s=1))
-        self.assertGreaterEqual(self.clock.now, 1)
-
-    def test_a_port_that_goes_and_never_comes_back_is_no_reset(self):
-        probe = self.probe()
-        probe.port_exists = lambda port: False
-        self.assertFalse(probe.wait_for_reset(timeout_s=1))
-
-
 class TheCureTest(unittest.TestCase):
     """P251: the open with DTR and RTS off is the cure. It keeps what the restart printed, then waits for the port."""
 
@@ -235,7 +213,9 @@ class ResetSentenceTest(unittest.TestCase):
 
     def test_a_board_with_no_places_gets_the_plain_words(self):
         self.assertEqual(download_mode.press_reset(), "the board waits in download mode: press the board's RESET once")
-        self.assertIn("in 60 s: press its RESET. If", download_mode.no_reset())
+        self.assertTrue(download_mode.no_reset().endswith("in 60 s: press its RESET"))
+        self.assertEqual(download_mode.not_counted(), "the board restarted and still waits in download mode: press its RESET once")
+        self.assertTrue(download_mode.port_gone().startswith("the board's port is gone: press its RESET once. If the port stays gone, unplug the board"))
 
     def test_a_board_with_places_names_where_reset_is(self):
         record = {"physical": {"buttons": {"seen_from": "USB-C at the top", "boot": {"silkscreen": "B", "place": "top right"},
@@ -243,8 +223,9 @@ class ResetSentenceTest(unittest.TestCase):
         places = download_mode.boards.ButtonPlaces.from_record(record)
         self.assertEqual(download_mode.press_reset(places), "the board waits in download mode: press the board's RESET (R, top left) once. Left and right as seen "
                          "with USB-C at the top")
-        self.assertIn("press its RESET (R, top left). Left and right as seen with USB-C at the top. If",
-                      download_mode.no_reset(places))
+        self.assertTrue(download_mode.no_reset(places).endswith("press its RESET (R, top left). Left and right as seen with USB-C at the top"))
+        self.assertIn("press its RESET (R, top left) once. Left and right as seen with USB-C at the top", download_mode.not_counted(places))
+        self.assertIn("press its RESET (R, top left) once. Left and right as seen with USB-C at the top. If the port stays gone", download_mode.port_gone(places))
 
 if __name__ == "__main__":
     unittest.main()

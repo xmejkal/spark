@@ -38,7 +38,7 @@ import flasher  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent, FakeConsoleProbe, FakeLocalClock, line_made_at_import, pin_time_zone  # noqa: E402
+from fakes import FakeClock, FakeConsent, FakeConsoleProbe, FakeLocalClock, line_made_at_import, pin_time_zone  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
 #: The words the erase sentence has for a board the store holds no deploy of (P401).
@@ -69,6 +69,11 @@ class GateCase(LookCase):
     #: The exception mpremote raises when it copies the facts file (a list: one per call, then none), or None; what
     #: `fs cat` adds to the copy.
     uncopied, garbled = None, ""
+    #: The call of `mpremote devs` (the look is the first) after which the fake board answers: unread and uncopied end. None: never.
+    answers_after_devs = None
+    #: The listing with the board on its port, a listing with nothing, and the board on another port under MicroPython's serial.
+    LISTED, GONE = data("mpremote-devs-one.txt"), ""
+    MOVED = "/dev/cu.usbmodem2101 8CBFEAXXXXXX00FF 303a:4001 MicroPython"
 
     def fs(self, command):
         """mpremote fs cp and fs cat on the fake board, which keeps the copied files in self.copied."""
@@ -93,16 +98,25 @@ class GateCase(LookCase):
 
     def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False):
         """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command. The first flash command
-        exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait."""
+        exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait.
+        `devs_text` may be a list: the listing of each `mpremote devs` call (the look's first), then the last for good."""
         self.copied = getattr(self, "copied", {})
-        self.slept, flash = [], []
+        self.slept, flash, self.devs_calls, self.start_clock = [], [], 0, FakeClock()
+        devs_text = list(devs_text) if isinstance(devs_text, list) else devs_text
+        self.addCleanup(setattr, deploy_service.DeployService, "start_clock", deploy_service.DeployService.start_clock)
+        deploy_service.DeployService.start_clock = self.start_clock  # no mock.patch: T2 counts them
 
         def run(command, **kw):
             self.ran.append(command)
             if "fs" in command:
                 return self.fs(command)
             if "devs" in command:
-                return done(devs_text or data(devs))
+                self.devs_calls += 1
+                if self.devs_calls == self.answers_after_devs:
+                    self.unread = self.uncopied = None
+                if not isinstance(devs_text, list):
+                    return done(devs_text or data(devs))
+                return done(devs_text.pop(0) if len(devs_text) > 1 else devs_text[0])
             if "flash-id" in command:
                 return done(text or data(esptool), 2 if look_fails else 0)
             if "exec" in command:
@@ -520,33 +534,72 @@ class TheBoardInDownloadModeTest(GateCase):
 
     unread = subprocess.CalledProcessError(1, ["mpremote"], "", "mpremote.transport.TransportError: could not enter raw repl\n")
 
-    def flash(self, probe):
+    def flash(self, probe, devs_text=None):
         self.run_the_scenario()
-        return self.deploy("--token", self.token(), consent=FakeConsent(True), probe=probe)
+        return self.deploy("--token", self.token(), consent=FakeConsent(True), probe=probe, devs_text=devs_text)
 
     def answers(self):
         self.unread = self.uncopied = None
         self.ran.append("reset")
 
     def test_a_press_of_r_after_download_mode_runs_the_ready_check_again(self):
-        self.uncopied = self.unread
-        probe = FakeConsoleProbe("boot:0x4 (DOWNLOAD)\nwaiting for download\n", on_reset=self.answers)
-        code, said, _ = self.flash(probe)
-        self.assertEqual((code, probe.asked), (0, ["console", "reset"]))
+        # the calls of mpremote devs: the look, the port after the flash, then the wait: here, gone, back
+        self.uncopied, self.answers_after_devs = self.unread, 5
+        probe = FakeConsoleProbe("boot:0x4 (DOWNLOAD)\nwaiting for download\n")
+        code, said, _ = self.flash(probe, [self.LISTED] * 3 + [self.GONE, self.LISTED])
+        self.assertEqual((code, probe.asked), (0, ["console"]))
         self.assertIn("press the board's RESET (R, top left, beside the USB-C) once", said)
         self.assertIn("ready seen", said)
         self.assertIn("facts file spark.json sha256", said)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
-        self.assertIn("console with DTR and RTS off: boot:0x4 (DOWNLOAD)\nwaiting for download\nreset seen", log)
-        after = self.ran[self.ran.index("reset") + 1:]
+        self.assertIn("port back on /dev/cu.usbmodem101 after 0 s\nconsole with DTR and RTS off: boot:0x4 (DOWNLOAD)\n"
+                      "waiting for download\nreset seen: the firmware answered\n", log)
+        after = self.ran[self.last_devs() + 1:]
         self.assertEqual([c[c.index("fs") + 1] if "fs" in c else c[-1][:6] for c in after], ["cp", "cat", "import", "import"])
 
+    def last_devs(self):
+        return max(index for index, command in enumerate(self.ran) if "devs" in command)
+
+    def test_a_restart_that_left_download_mode_is_not_counted_and_the_wait_goes_on(self):
+        # P472 bench: the port went and came back and the ROM still waited, so the deploy reads the board and finds it silent
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED] * 3 + [self.GONE, self.LISTED])
+        self.assertEqual(code, 2)
+        self.assertEqual(said.count("the board restarted and still waits in download mode: press its RESET (R, top left, beside the USB-C) once"), 1)
+        self.assertIn("ready unknown: the board waits in download mode, and its port did not go and come back in 60 s: "
+                      "press its RESET (R, top left, beside the USB-C).", said)
+        log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
+        self.assertIn("waiting for download\na restart in download mode, not counted\n", log)
+        self.assertNotIn("reset seen", log)
+
     def test_no_press_in_time_is_unknown_and_says_to_press_r(self):
-        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n", reset=False))
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"))
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the board waits in download mode, and its port did not go and come back in 60 s: "
                       "press its RESET (R, top left, beside the USB-C).", said)
-        self.assertIn("waiting for download\nno reset", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+        self.assertNotIn("restarted", said)
+        self.assertIn("waiting for download\n", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
+
+    def test_a_port_that_came_back_under_another_name_is_read_by_the_mac(self):
+        self.uncopied, self.answers_after_devs = self.unread, 5
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED] * 3 + [self.GONE, self.MOVED])
+        self.assertEqual(code, 0)
+        self.assertIn("ready seen", said)
+        self.assertIn(["connect", "/dev/cu.usbmodem2101"], [c[c.index("connect"):c.index("connect") + 2] for c in self.ran if "connect" in c][-1:])
+
+    def test_a_port_that_never_comes_back_is_port_gone_and_there_is_nothing_to_watch(self):
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED] * 3 + [self.GONE])
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: the board's port is gone: press its RESET (R, top left, beside the USB-C) once", said)
+        self.assertIn("unplug the board and plug it in", said)
+        self.assertNotIn("then, to see it start", said)  # nothing to watch
+
+    def test_a_port_not_listed_after_the_flash_is_port_gone_and_nothing_is_read(self):
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED, self.GONE])
+        self.assertEqual(code, 2)
+        self.assertIn("ready unknown: the board's port is gone", said)
+        self.assertIn("facts file: not written: the board's port is gone", said)
+        self.assertEqual([c for c in self.ran if "fs" in c or "exec" in c], [])
+        self.assertGreaterEqual(self.start_clock.now, 7)
 
     def test_a_silent_board_not_in_download_mode_stays_unknown_and_asks_nothing(self):
         probe = FakeConsoleProbe("")
@@ -570,7 +623,7 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertIn("console with DTR and RTS off: mode:DIO, clock div:2\nentry 0x4086b910\nready\nread again\n", log)
 
     def test_download_mode_with_ready_after_it_still_asks_for_r_and_never_reads_again(self):
-        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\nready\n", reset=False))
+        code, said, _ = self.flash(FakeConsoleProbe("waiting for download\nready\n"))
         self.assertEqual(code, 2)
         self.assertIn("the board waits in download mode, and its port did not go and come back", said)
         self.assertNotIn("read again", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())

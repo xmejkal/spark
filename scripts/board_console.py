@@ -2,8 +2,8 @@
 One board's console, read with the port opened so that the open does not choose the boot mode (P243, P251).
 
 A library. `ConsoleProbe` reads what the board prints with DTR and RTS off, through the Python that mpremote runs on,
-which has pyserial. deploy.py uses it to find a board that waits in download mode and to see the press of its R
-button (P243). P251 moved it here from download_mode.py and uses the same open as a cure: on the XIAO C6 that open
+which has pyserial. deploy.py uses it to find a board that waits in download mode (P243; board_start.py waits for its
+restart, P462). P251 moved it here from download_mode.py and uses the same open as a cure: on the XIAO C6 that open
 restarted a board whose USB output died at power-on (docs/observations/2026-10-15-p235-reach-test.md, AT187).
 """
 
@@ -13,7 +13,7 @@ import subprocess
 import time
 from collections import namedtuple
 
-from download_mode import DOWNLOAD_MODE, RESET_WAIT_S
+from download_mode import DOWNLOAD_MODE
 from run_scenario import printed_text
 
 #: How long the console is read, and how often the port is looked at, in seconds.
@@ -135,14 +135,3 @@ class ConsoleProbe:
         if read.kind != KIND_READ:
             return False, UNREAD % read.why
         return DOWNLOAD_MODE in read.printed, read.printed
-
-    def wait_for_reset(self, timeout_s=RESET_WAIT_S):
-        """True when the port went away and came back within `timeout_s`, as it does when the board restarts."""
-        end, gone = self.clock.monotonic() + timeout_s, False
-        while self.clock.monotonic() < end:
-            if not self.port_exists(self.port):
-                gone = True
-            elif gone:
-                return True
-            self.clock.sleep(POLL_S)
-        return False
