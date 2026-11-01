@@ -155,7 +155,7 @@ Also developing.md's "Patterns and names in spark's core" and the git history of
 ## 5. The upstream draft
 
 - Public-safe: no home path, no token, no MAC, no port path. "Darwin 24.6.0" and "mpremote 1.29.0" are fine. The bench
-  log, not the draft, holds the MAC 8C:BF:EA:CC:97:70 and /dev/cu.usbmodem1101. The draft does not need them.
+  log, not the draft, holds the MAC 8C:BF:EA:XX:XX:XX and /dev/cu.usbmodem1101. The draft does not need them.
 - "1, 3, 6 and 1 silent boots": the 3 are mpremote failures, not shown silences.
 - "with the try 10 s after the port appears": true of half 2 and rounds A and B. Round C replugged until silent.
 - "To reproduce: ... run `mpremote connect <port> exec`": only half 2 used mpremote. Rounds A to C used a custom probe

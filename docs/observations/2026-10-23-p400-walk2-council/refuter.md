@@ -48,7 +48,7 @@
 |---|---|---|---|
 | A1 | `passed` is the value for any wokwi-cli exit 0 | HOLDS | `run_scenario.py:103-104` |
 | A2 | it reaches `data.simulation`, the board log, `spark.json` and the store | HOLDS | through a second constant, `image_evidence.py:18`: `board_envelope.py:76`, `deploy_service.py:43`, `board_facts.py:23-28`, the store's walk2 entry |
-| A3 | 17 deploys: 12 blink-c6, 4 button-light, 1 walk2 | HOLDS | my count of `boards/8c-bf-ea-cc-97-70.json` |
+| A3 | 17 deploys: 12 blink-c6, 4 button-light, 1 walk2 | HOLDS | my count of `boards/8c-bf-ea-xx-xx-xx.json` |
 | A4 | Claude said "replaces reaction-game's firmware" twice, at 06:45 and 06:53 | PARTLY | Three times. The first is at 21:33 on 10-22 (`19:33:26Z`), "overwrite whatever reaction-game put on the board", in the question that asked the PO to go on. |
 | A5 | G18: CLI v0.27.1 against 0.28.0, and a board-only build skips the converter | PARTLY | Log `:21`, `data/tools.json:51` and `check_spine.py:554-558` hold. But `build.md:276` dates the change "CLI 0.28.0, API 2026-10-09", and log `:22` shows API `1.0.0-20261022`. The cause stays open. |
 | A6 | the part is 1,506 bytes, the diagram 219 bytes | HOLDS | `wc -c`, `ls -la walk2/sim` |
