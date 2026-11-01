@@ -595,6 +595,8 @@ The column "needs the person" says whether the next step waits on the person's h
 | `flash_failed` | deploy, stage `flash` | a flash command failed. `data.board_state` is `may_be_erased` | relay the sentence (it names the BOOT and RESET places) | yes |
 | `ready_not_seen` | deploy, stage `verify` | the board's files differ from the image, the firmware stopped with an error, or it printed no `ready`. The sentence tells which | fix the firmware, then look.py and a new yes | yes |
 | `ready_unknown` | deploy, stage `verify` | the board could not be read after the flash, or the passed run's log names no files. The sentence tells which | run the `watch` step; if it has `needs_person`, tell the person first | if `needs_person` |
+| `download_mode_stayed` | deploy, stage `verify` | the board still waits in download mode after the flash: the wait for its start ran out, though the port may have gone and come back. A restart counts only when mpremote answers after it ([P462](https://github.com/xmejkal/spark/issues/630)) | relay `data.person_action` (press RESET once) to the person, then run the `watch` step. Never deploy again for this | yes |
+| `port_gone` | deploy, stage `verify` | the board's port was not listed after the flash, or went and did not come back. No mpremote call was made on a dead port, so `data.repl_command` has no port | relay `data.person_action` (press RESET, then unplug and plug in, then `python3 -m mpremote devs` lists the ports). Never deploy again for this | yes |
 | `bad_argument` | both scripts | an argument that the script cannot run with (below) | fix the flag, run again | no |
 | `crash` | `look.py` | the look crashed: a defect in spark, never in the project. The sentence names the exception class; the traceback is on stderr | report it to the spark maintainers with the stderr traceback; running the look again for it is no use | yes |
 | `undeclared_effect` | no script today: the look declares `runs`. An Operation whose `effects` miss what it reaches | the operation ran a program its effects do not declare: a defect in spark | report it, as for `crash` | yes |
@@ -626,15 +628,15 @@ the sentence if you must tell which. The check is the word `--json` in the argum
   When mpremote could not enter the raw REPL for the facts copy (seen right after the reset), the copy and its read-back make one
   retry after 2 s, for each read of the board, and `facts_line` ends with `(written on a retry after: ...)`, or names the first try
   when the retry failed too ([P420](https://github.com/xmejkal/spark/issues/550)). No other copy failure is retried.
-- `needs_person: true` on a `next` step means the person must use their hands first. Today it is the `watch` step that follows a RESET
-  press the board never got ([P433](https://github.com/xmejkal/spark/issues/575)). The key is on a step only when it is true.
+- `needs_person: true` on a `next` step means the person must use their hands first. Today it is the `watch` step that follows a start the board never made
+  (`download_mode_stayed` or `port_gone`) ([P433](https://github.com/xmejkal/spark/issues/575)). The key is on a step only when it is true.
   The board doctor's `fix` and `data.person_action` are text for the person, not steps, so they carry no flag.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
   and "go ahead" in a chat is not the yes. With no terminal (the exit is 2), `next` holds the `deploy` step to relay and
   `data.run_in_terminal` is the line to give the person word for word (it and the `grant` line start with `SPARK_HOME=<store>` when the run had one, so the new terminal window finds the same MicroPython build and grants); a `grant` step is added when a deploy grant could
   cover it. Never run either one yourself.
-- `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must press the
-  board's RESET, `data.person_action` says so, with its place when the board record has it, but only after the wait for the press ran out. So tell the person before you run
+- `ready unknown` gives a `watch` step (its `argv` is the REPL command), never a second `deploy`: read the board again. When the person must use their hands
+  (`download_mode_stayed`, `port_gone`), `data.person_action` says so, with the RESET place when the board record has it, but only after the wait ran out. So tell the person before you run
   `deploy.py` that an R press may be asked: the run waits for it and its text goes to stderr. A `look.py` that could not read the
   board gives the board doctor's result in `data.doctor` and its next step for the person's hands as the `fix`. A `deploy.py`
   whose look could not read the board does the same. For `close_other`, the step tells the person to leave mpremote's
@@ -886,7 +888,7 @@ python3 -c "import json,collections,glob; print(collections.Counter(e['type'] fo
    the board's files match the passed run's sha256s and the firmware printed `ready`. `ready unknown` (exit 2) is not
    a pass: mpremote could not reach the board, or the passed log names no files and the scenario must run again ([P215](https://github.com/xmejkal/spark/issues/196)).
    If the board waits in its download mode, deploy.py prints "press the board's RESET ... once" (the place in brackets when the board record has it) and waits 60 s
-   for the port to go and come back under the same name. Relay that line to the person at once, because only a hand on the board can do it
+   for the port to go and come back. The write restarts the chip with `--after watchdog-reset`, and deploy.py finds the port again by the board's MAC (the port's name and USB id can change). A restart counts only when mpremote answers after it: a restart that left the board in download mode is printed and not counted, and the wait goes on. It ends as `download_mode_stayed` or `port_gone`. Relay that line to the person at once, because only a hand on the board can do it
    ([P243](https://github.com/xmejkal/spark/issues/252)). The board log keeps what the port printed, `nothing`, or why it could not be read
    ([P244](https://github.com/xmejkal/spark/issues/255)). If the port printed the firmware's `ready`, the board
    finished its restart late, and deploy.py reads it again at once ([P245](https://github.com/xmejkal/spark/issues/257)).

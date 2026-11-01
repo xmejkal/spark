@@ -57,7 +57,7 @@ order: the look, its token, then the person's yes.
    deploy.py asks in the terminal for those. Delete the file `grants/<MAC with dashes>-deploy.json` to end it.
 4. When deploy.py prints "press the board's RESET ... once", relay that line to the person at once: only a hand
    on the board can do it. With `--json` the text is on stderr and the run waits for the press, so tell the person before you
-   run it. A step with `needs_person: true` waits for the person's hands (the RESET press): relay it first. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line.
+   run it. A step with `needs_person: true` waits for the person's hands (`data.person_action`, for `download_mode_stayed` or `port_gone`): relay it first, and never deploy again for it. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line.
 
 If deploy.py refuses, relay its sentence word for word. The token is not the yes, and "go ahead" in a chat is not the
 yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. The line starts with
@@ -98,9 +98,11 @@ log is from an older spark and names no files, so run the scenario again. Unknow
 own words, and the board's log keeps all it printed. The board's log goes to `sim/runs/board/`. After the facts line, deploy.py prints `image sha256: <hex>, yes: <whose yes>`, and `--json` has the same in `data.image_sha256` and `data.yes` (P213).
 If ready is unknown and the passed run's log names files, deploy.py reads the port with DTR and RTS off. If the port says `waiting for download`, the
 board waits in its download mode. deploy.py then asks you to press the board's RESET once, with its place when the board record has it, waits 60 s for
-the port to go and come back under the same name, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)).
-The board's port name can change after the flash, because MicroPython can bring its own USB serial port, and then the
-read is unknown. `python3 -m mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py
+the port to go and come back, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)). A restart counts only when mpremote
+answers after it ([P462](https://github.com/xmejkal/spark/issues/630)); one that leaves the board in download mode is printed and not counted.
+The write restarts the chip with `--after watchdog-reset`, and deploy.py finds the board's port again by its MAC, because the port's name and USB
+id can change after the flash (MicroPython brings its own USB serial port). A port that is not listed or does not come back is `port_gone`: no REPL line, and
+`python3 -m mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py
 prints, which opens mpremote's REPL, and press Ctrl-C, then Ctrl-D. Leave the REPL with Ctrl-X. While it is open, it
 holds the port, and the next deploy cannot read the board. deploy.py then runs the board doctor, which says another
 program holds the port and to leave mpremote's console with Ctrl-X ([P354](https://github.com/xmejkal/spark/issues/452)).
