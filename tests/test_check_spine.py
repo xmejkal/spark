@@ -1206,6 +1206,8 @@ class ABrokenTraceIsNamedTest(unittest.TestCase):
     def test_an_odd_field_is_said_as_text_and_a_long_one_is_capped(self):
         detail, _ = self.said([{"type": "source_trace_not_connected_error", "selectors_not_found": ".Mcu > .MOSI"}])
         self.assertIn("first: .Mcu > .MOSI", detail)
+        detail, _ = self.said([{"type": "source_trace_not_connected_error", "selectors_not_found": [1, ".Mcu > .SCK"]}])
+        self.assertIn("first: 1, .Mcu > .SCK", detail)
         detail, _ = self.said([{"type": "source_trace_not_connected_error", "message": "x" * 2000}])
         self.assertLess(len(detail), 400)
 

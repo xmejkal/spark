@@ -231,6 +231,21 @@ class BoardPadsTest(unittest.TestCase):
                 self.assertEqual((pads.pad_of("MOSI"), pads.alias_pads()), ("MOSI", frozenset()))
 
 
+class AnAliasIsWrittenAsCodeTest(unittest.TestCase):
+    """P512 fix-commit refuter: board.tsx traces `.Mcu > .<pad>`, so an alias value that is no name is refused."""
+
+    def test_an_alias_that_would_end_the_selector_is_refused(self):
+        path = ROOT / "boards" / "firebeetle2-esp32s3.json"
+        board = json.loads(path.read_text())
+        crafted = 'MI" />'
+        board["physical"]["pad_aliases"]["MISO"] = crafted
+        for key, row in board["physical"]["header_order"].items():
+            if isinstance(row, list):
+                board["physical"]["header_order"][key] = [crafted if label == "MI" else label for label in row]
+        said = boards.validate(board, path)
+        self.assertTrue([problem for problem in said if "alias pad %r is not a name" % (crafted,) in problem], said)
+
+
 class OnlyBoardPadsReadsThePadAliasesTest(unittest.TestCase):
     """
     P512: the alias lookup was written in four places and missing in the fifth, the emitter. Python files under
