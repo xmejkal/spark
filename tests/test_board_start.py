@@ -19,7 +19,11 @@ MAC = "8c:bf:ea:12:34:56"
 ROM = board_look.Port("/dev/cu.usbmodem1101", MAC, "303a:1001", "ESP32-S3")
 MICROPYTHON = board_look.Port("/dev/cu.usbmodem2101", "8CBFEA12345600FF", "303a:4001", "MicroPython")
 BRIDGE = board_look.Port("/dev/cu.usbserial-1410", "01A2B3C4", "10c4:ea60", "CP2102")
-OTHER = board_look.Port("/dev/cu.usbmodem3301", "11:22:33:44:55:66", "303a:1001", "ESP32-S3")
+OTHER = board_look.Port("/dev/cu.usbmodem3301", "8c:bf:ea:11:22:33", "303a:1001", "ESP32-S3")
+
+
+def name(row):
+    return row and row.device
 
 
 class BoardStartTest(unittest.TestCase):
@@ -40,29 +44,33 @@ class BoardStartTest(unittest.TestCase):
 
     def test_the_port_is_found_by_the_mac_when_the_name_changed(self):
         service = self.service([OTHER], [MICROPYTHON])
-        self.assertEqual(service.find_port(ROM.device), MICROPYTHON.device)
+        self.assertEqual(name(service.find_port(ROM.device)), MICROPYTHON.device)
+
+    def test_another_board_on_the_old_name_does_not_hide_the_board_on_a_new_one(self):
+        other_here = board_look.Port(ROM.device, "8c:bf:ea:11:22:33", "303a:1001", "ESP32-S3")
+        self.assertEqual(name(self.service([other_here, MICROPYTHON]).find_port(ROM.device)), MICROPYTHON.device)
 
     def test_a_micropython_serial_of_8_bytes_matches_a_mac_with_colons(self):
-        self.assertEqual(self.service([MICROPYTHON]).find_port("/dev/none"), MICROPYTHON.device)
+        self.assertEqual(name(self.service([MICROPYTHON]).find_port("/dev/none")), MICROPYTHON.device)
 
     def test_a_redacted_serial_matches_by_lower_case_and_no_colons(self):
         redacted = board_look.Port("/dev/cu.usbmodem101", "8C:BF:EA:xx:xx:xx", "303a:1001", "x")
-        self.assertEqual(self.service([redacted], mac="8c:bf:ea:xx:xx:xx").find_port("/dev/none"), redacted.device)
+        self.assertEqual(name(self.service([redacted], mac="8c:bf:ea:xx:xx:xx").find_port("/dev/none")), redacted.device)
 
     def test_a_bridge_serial_is_no_mac_so_the_look_s_port_name_stays(self):
-        self.assertEqual(self.service([BRIDGE]).find_port(BRIDGE.device), BRIDGE.device)
+        self.assertEqual(name(self.service([BRIDGE]).find_port(BRIDGE.device)), BRIDGE.device)
 
     def test_no_mac_means_the_port_name_alone(self):
-        self.assertEqual(self.service([ROM, OTHER], mac=None).find_port(OTHER.device), OTHER.device)
+        self.assertEqual(name(self.service([ROM, OTHER], mac=None).find_port(OTHER.device)), OTHER.device)
 
     def test_a_port_that_is_not_listed_in_the_wait_is_none_after_it(self):
         service = self.service([])
-        self.assertIsNone(service.find_port(ROM.device))
+        self.assertIsNone(name(service.find_port(ROM.device)))
         self.assertGreaterEqual(self.clock.now, 7)
 
     def test_a_port_that_comes_back_in_the_wait_is_found_and_the_log_says_when(self):
         service = self.service([], [], [ROM])
-        self.assertEqual(service.find_port(ROM.device), ROM.device)
+        self.assertEqual(name(service.find_port(ROM.device)), ROM.device)
         self.assertIn("port back on %s after 1 s" % ROM.device, "".join(service.heard))
 
     def test_a_tool_restart_that_left_download_mode_is_not_counted(self):
@@ -102,6 +110,17 @@ class BoardStartTest(unittest.TestCase):
         service = self.service([ROM], board_look.LookStop("could not list", reason="list_failed"), [ROM])
         start = service.wait_for_start(ROM.device, self.answers_after(0), self.lines.append, timeout_s=10)
         self.assertEqual((start.code, start.port), (None, ROM.device))
+
+    def test_a_list_that_failed_at_the_deadline_is_asked_once_more_before_port_gone(self):
+        failed = board_look.LookStop("could not list", reason="list_failed")
+        service = self.service([ROM], [ROM], failed, [ROM])
+        start = service.wait_for_start(ROM.device, self.answers_after(0), self.lines.append, timeout_s=1)
+        self.assertEqual((start.code, start.port), ("download_mode_stayed", ROM.device))
+
+    def test_the_console_is_read_only_on_the_looked_port_and_not_on_micropython_s(self):
+        self.assertTrue(board_start.console_may_be_read(ROM, ROM.device))
+        self.assertFalse(board_start.console_may_be_read(MICROPYTHON, MICROPYTHON.device))  # 303a:4001
+        self.assertFalse(board_start.console_may_be_read(ROM, "/dev/cu.other"))
 
     def test_the_port_that_the_wait_gave_up_on_is_the_one_listed_by_the_mac(self):
         service = self.service([MICROPYTHON])

@@ -596,7 +596,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `ready_not_seen` | deploy, stage `verify` | the board's files differ from the image, the firmware stopped with an error, or it printed no `ready`. The sentence tells which | fix the firmware, then look.py and a new yes | yes |
 | `ready_unknown` | deploy, stage `verify` | the board could not be read after the flash, or the passed run's log names no files. The sentence tells which | run the `watch` step; if it has `needs_person`, tell the person first | if `needs_person` |
 | `download_mode_stayed` | deploy, stage `verify` | the board still waits in download mode after the flash: the wait for its start ran out, though the port may have gone and come back. A restart counts only when mpremote answers after it ([P462](https://github.com/xmejkal/spark/issues/630)) | relay `data.person_action` (press RESET once) to the person, then run the `watch` step. Never deploy again for this | yes |
-| `port_gone` | deploy, stage `verify` | the board's port was not listed after the flash, or went and did not come back. No mpremote call was made on a dead port, so `data.repl_command` has no port | relay `data.person_action` (press RESET, then unplug and plug in, then `python3 -m mpremote devs` lists the ports). Never deploy again for this | yes |
+| `port_gone` | deploy, stage `verify` | the board's port was not listed after the flash, or went and did not come back. No mpremote call was made on a dead port, so `data.repl_command` is null and `next` has no `watch` step (mpremote would choose a board of its own) | relay `data.person_action` (press RESET, then unplug and plug in, then `python3 -m mpremote devs` lists the ports). Never deploy again for this | yes |
 | `bad_argument` | both scripts | an argument that the script cannot run with (below) | fix the flag, run again | no |
 | `crash` | `look.py` | the look crashed: a defect in spark, never in the project. The sentence names the exception class; the traceback is on stderr | report it to the spark maintainers with the stderr traceback; running the look again for it is no use | yes |
 | `undeclared_effect` | no script today: the look declares `runs`. An Operation whose `effects` miss what it reaches | the operation ran a program its effects do not declare: a defect in spark | report it, as for `crash` | yes |
@@ -629,7 +629,7 @@ the sentence if you must tell which. The check is the word `--json` in the argum
   retry after 2 s, for each read of the board, and `facts_line` ends with `(written on a retry after: ...)`, or names the first try
   when the retry failed too ([P420](https://github.com/xmejkal/spark/issues/550)). No other copy failure is retried.
 - `needs_person: true` on a `next` step means the person must use their hands first. Today it is the `watch` step that follows a start the board never made
-  (`download_mode_stayed` or `port_gone`) ([P433](https://github.com/xmejkal/spark/issues/575)). The key is on a step only when it is true.
+  (`download_mode_stayed`; `port_gone` gives no `watch` step) ([P433](https://github.com/xmejkal/spark/issues/575)). The key is on a step only when it is true.
   The board doctor's `fix` and `data.person_action` are text for the person, not steps, so they carry no flag.
 - `needs_yes: true` on a `next` step means the person must say yes. **Claude never supplies it.** The token is not the yes,
   and "go ahead" in a chat is not the yes. With no terminal (the exit is 2), `next` holds the `deploy` step to relay and

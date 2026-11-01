@@ -150,15 +150,17 @@ class DeployService:
         moment = (self.clock or board_grant.read_local_time)()  # once: the facts file and the board log share it
         starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), report.reading.mac, self.start_clock,
                                                 boards.ButtonPlaces.of_project(self.project))
-        port = starter.find_port(report.port)
+        row = starter.find_port(report.port)
+        port = row and row.device
 
         def read(on):
             return self._read_board(image, report, on and self.platform.make_connection(planned.mpremote, on, self.run), expected, moment)
 
         board, start = read(port), None
         if port is None:
-            start = starter.port_gone()
-        elif board[2].verdict == ready_check.UNKNOWN and expected:  # P243: silent after the flash, maybe in download mode
+            start = starter.gone_result()
+        elif (board[2].verdict == ready_check.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
+              and board_start.console_may_be_read(row, report.port)):
             board, start = self._after_silence(starter, port, board, read, show_line)
         facts, facts_line, ready = board
         if start and start.code:
@@ -179,7 +181,7 @@ class DeployService:
         if not probe:
             return board, None
         waits, console = probe.waits_in_download_mode()
-        starter.heard.append("console with DTR and RTS off: %s\n" % (console.strip() or "nothing"))
+        starter.note("console with DTR and RTS off: %s\n" % (console.strip() or "nothing"))
         if waits:
             show_line("  %s" % download_mode.press_reset(starter.places))
             latest = [board]
@@ -187,7 +189,7 @@ class DeployService:
                                            show_line)
             return latest[-1], start
         if download_mode.booted(console):  # P245: mpremote asked while the board still restarted
-            starter.heard.append(download_mode.READ_AGAIN + "\n")
+            starter.note(download_mode.READ_AGAIN + "\n")
             return read(port), None
         return board, None
 

@@ -426,8 +426,17 @@ class DeployJsonTest(JsonCase, GateCase):
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["unchecked"][0]["code"]), (2, "port_gone"))
         self.assertIn("unplug the board and plug it in", said["data"]["person_action"])
-        self.assertNotIn("connect", said["data"]["repl_command"])
-        self.assertIs(said["next"][0]["needs_person"], True)
+        self.assertIsNone(said["data"]["repl_command"])  # mpremote would choose a board of its own
+        self.assertEqual(said["next"], [])
+
+    @needs_littlefs
+    def test_a_moved_port_is_the_port_of_the_repl(self):
+        self.unread = self.uncopied = subprocess.CalledProcessError(1, "mpremote")
+        self.answers_after_devs = 5
+        code, said, _ = self.ready(probe=FakeConsoleProbe("waiting for download\n"), devs_text=[self.LISTED] * 3 + [self.GONE, self.MOVED])
+        said = self.one(code, said, "deploy", "deploy")
+        self.assertEqual(code, 0)
+        self.assertEqual(said["data"]["repl_command"][-3:], ["connect", "/dev/cu.usbmodem2101", "repl"])
 
     @needs_littlefs
     def test_a_store_record_that_was_not_written_is_said_beside_the_null(self):

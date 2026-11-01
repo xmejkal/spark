@@ -98,8 +98,9 @@ def deploy_envelope(reached, code):
                                            effects=["writes"], needs_yes=True))
     elif result and result.ready.verdict == ready_check.UNKNOWN:
         stopped = bool(result.start and result.start.code)  # P462: the person has a step first
+        gone = stopped and result.start.port is None  # no port to open: mpremote would choose a board of its own
         again = "read the board again with the REPL (data.repl_command): the firmware prints `ready`. Never deploy again for this"
-        following = [outcomes.step("watch", list(result.repl_command),
+        following = [] if gone else [outcomes.step("watch", list(result.repl_command),
                                    again + (". First the person does what data.person_action says" if stopped else ""),
                                    needs_person=True if stopped else None)]
     data = {
@@ -111,7 +112,7 @@ def deploy_envelope(reached, code):
         "facts_line": result.facts_line if result else None,
         "image_sha256": result.image_sha256 if result else None,
         "board_log": str(result.log_path) if result else None,
-        "repl_command": list(result.repl_command) if result else None,
+        "repl_command": list(result.repl_command) if result and not (result.start and result.start.port is None) else None,
         "store_record": reached.get("store_record"), "store_record_error": reached.get("store_record_error"),
         "board_state": MAY_BE_ERASED if stage == STAGE_FLASH else None,
         "person_action": result.start.sentence if result and result.start and result.start.code else None,

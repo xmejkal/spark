@@ -17,7 +17,7 @@ PRESS_RESET = "the board waits in download mode: press the board's %(reset)s onc
 #: How long the person has to press R, in seconds.
 RESET_WAIT_S = 60
 #: What deploy.py says when no start came, formatted by no_reset (P462: the wait finds the port by the board's MAC).
-NO_RESET = ("the board waits in download mode, and its port did not go and come back in %(wait)d s: press its %(reset)s%(orientation)s")
+NO_RESET = "the board still waits in download mode after %(wait)d s: press its %(reset)s%(orientation)s"
 #: What deploy.py says when the port went and came back, and mpremote did not answer: a restart that left download
 #: mode on (esptool's own did on the 2026-10-31 bench), formatted by not_counted.
 NOT_COUNTED = "the board restarted and still waits in download mode: press its %(reset)s once%(orientation)s"

@@ -213,7 +213,7 @@ class ResetSentenceTest(unittest.TestCase):
 
     def test_a_board_with_no_places_gets_the_plain_words(self):
         self.assertEqual(download_mode.press_reset(), "the board waits in download mode: press the board's RESET once")
-        self.assertTrue(download_mode.no_reset().endswith("in 60 s: press its RESET"))
+        self.assertTrue(download_mode.no_reset().endswith("after 60 s: press its RESET"))
         self.assertEqual(download_mode.not_counted(), "the board restarted and still waits in download mode: press its RESET once")
         self.assertTrue(download_mode.port_gone().startswith("the board's port is gone: press its RESET once. If the port stays gone, unplug the board"))
 

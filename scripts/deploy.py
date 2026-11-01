@@ -92,8 +92,9 @@ and the store's boards/<MAC>.json adds this deploy with its verdict, its simulat
 the board: ready seen means the board's files match the evidence's sha256s and the firmware printed `ready` within %d s.
 The board's log goes to sim/runs/board/. A firmware that stops with an error is not seen. If mpremote cannot reach the
 board, for example because its port changed after the flash, or the passed run's log is from before P215 and names no
-files, ready is unknown, never seen. The write restarts the chip with esptool's `--after watchdog-reset` (on the ESP32-S3
-that leaves download mode; the other chips fall back to a hard reset), and deploy.py finds the board's port again by its MAC,
+files, ready is unknown, never seen. The write restarts the chip with esptool's `--after watchdog-reset` (esptool's source says
+the ESP32-S3 then leaves download mode; not yet run on a board that was entered with BOOT; the C6 and the classic ESP32 fall
+back to a hard reset), and deploy.py finds the board's port again by its MAC,
 for the port can change its name and its USB id. If ready is unknown and the passed log names files, deploy.py reads the
 port with DTR and RTS off. If it reads `waiting for download`, the board waits in its download mode: deploy.py asks you to
 press the board's RESET once (with its place when the board record has it) and waits %d s. A restart counts only when

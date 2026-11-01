@@ -14,11 +14,16 @@ import board_codes
 import board_look
 import download_mode
 
-#: How long the port may take to be listed after the write, in seconds, and how often it is looked at. One bench
-#: observation: after esptool's restart command started, the FireBeetle 2 was listed again after at most 7 s, in both
-#: tries (bench.log 23:29:16 to 23:29:23, and 23:29:34 to 23:29:41). It counts from esptool's exit; the board log keeps
-#: the seconds that one deploy took.
-PORT_WAIT_S, POLL_S = 7, 0.5
+#: How long the port may take to be listed after the write, in seconds. One bench observation: after esptool's restart
+#: command started, the FireBeetle 2 was listed again after at most 7 s, in both tries (bench.log 23:29:16 to 23:29:23,
+#: and 23:29:34 to 23:29:41). It counts from esptool's exit; the board log keeps the seconds that one deploy took.
+PORT_WAIT_S = 7
+#: How often the list is asked for, in seconds: spark's own pace (one `mpremote devs` takes about half a second), no board fact.
+POLL_S = 0.5
+#: The USB id MicroPython's own port has (the P472 bench: 303a:4001 for the S3 under MicroPython). A console read there
+#: is not done: esptool's DTR/RTS reset of that port left the board silent in P472's try 6, and a TinyUSB DTR/RTS pattern
+#: starts the bootloader (micropython v1.29.0 shared/tinyusb/mp_usbd_cdc.c:173-206).
+MICROPYTHON_USB = "303a:4001"
 #: What the board log keeps of a restart: the firmware answered after it, or the board still waited in download mode.
 COUNTED = "reset seen: the firmware answered\n"
 NOT_COUNTED_LOG = "a restart in download mode, not counted\n"
@@ -28,6 +33,11 @@ PORT_BACK = "port back on %s after %d s\n"
 #: code (DOWNLOAD_MODE_STAYED or PORT_GONE); `port` is the port that answered or is listed, None when it is gone;
 #: `sentence` says what the person does, empty when `code` is None.
 BoardStartResult = collections.namedtuple("BoardStartResult", "code port sentence")
+
+
+def console_may_be_read(row, looked_port):
+    """True when the console of the Port `row` may be read: it is on the port the look used, and not MicroPython's own."""
+    return row.device == looked_port and row.usb != MICROPYTHON_USB
 
 
 def _key(text):
@@ -45,18 +55,20 @@ class BoardStartService:
         self.heard = []
 
     def _listed(self, hint):
-        """The name of the port the board is listed on now: the row whose serial starts with the MAC (MicroPython's serial
-        is the MAC and two more bytes, micropython v1.29.0 ports/esp32/usb.c:67-73), else the row named `hint` (a bridge
-        chip's serial is not the MAC). None when neither is listed, or when the list failed this time."""
+        """The Port row the board is listed on now: the row whose serial starts with the MAC (MicroPython's serial is the MAC
+        and two more bytes, micropython v1.29.0 ports/esp32/usb.c:67-73), else the row named `hint` (a bridge chip's serial
+        is not the MAC). None when neither is listed, or when the list failed this time (`failed` says which)."""
+        self.failed = False
         try:
             rows = self.finder.nodes()
         except board_look.LookStop:
+            self.failed = True
             return None
-        by_mac = [row.device for row in rows if self.mac and _key(row.serial).startswith(self.mac)]
-        return (by_mac or [row.device for row in rows if row.device == hint] or [None])[0]
+        by_mac = [row for row in rows if self.mac and _key(row.serial).startswith(self.mac)]
+        return (by_mac or [row for row in rows if row.device == hint] or [None])[0]
 
     def find_port(self, hint):
-        """The port the board is listed on, waiting at most PORT_WAIT_S for it. None when it is not listed in that time."""
+        """The Port row the board is listed on, waiting at most PORT_WAIT_S for it. None when it is not listed in that time."""
         begin = self.clock.monotonic()
         while True:
             found = self._listed(hint)
@@ -64,10 +76,14 @@ class BoardStartService:
                 break
             self.clock.sleep(POLL_S)
         if found:
-            self.heard.append(PORT_BACK % (found, self.clock.monotonic() - begin))
+            self.note(PORT_BACK % (found.device, self.clock.monotonic() - begin))
         return found
 
-    def port_gone(self):
+    def note(self, text):
+        """Keep a line for the board log."""
+        self.heard.append(text)
+
+    def gone_result(self):
         """The result for a board that is not listed."""
         return BoardStartResult(board_codes.PORT_GONE, None, download_mode.port_gone(self.places))
 
@@ -77,18 +93,20 @@ class BoardStartService:
         wait goes on. A BoardStartResult."""
         end, gone = self.clock.monotonic() + timeout_s, False
         while self.clock.monotonic() < end:
-            now = self._listed(port)
-            if now is None:
+            row = self._listed(port)
+            if row is None:
                 gone = True
             elif gone:
-                gone, port = False, now
+                gone, port = False, row.device
                 if read(port):
-                    self.heard.append(COUNTED)
+                    self.note(COUNTED)
                     return BoardStartResult(None, port, "")
-                self.heard.append(NOT_COUNTED_LOG)
+                self.note(NOT_COUNTED_LOG)
                 show_line("  " + download_mode.not_counted(self.places))
             self.clock.sleep(POLL_S)
-        now = self._listed(port)
-        if now is None:
-            return self.port_gone()
-        return BoardStartResult(board_codes.DOWNLOAD_MODE_STAYED, now, download_mode.no_reset(self.places))
+        row = self._listed(port)
+        if row is None and self.failed:  # a failed list is not a gone port: ask once more
+            row = self._listed(port)
+        if row is None:
+            return self.gone_result()
+        return BoardStartResult(board_codes.DOWNLOAD_MODE_STAYED, row.device, download_mode.no_reset(self.places))

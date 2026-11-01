@@ -101,7 +101,7 @@ board waits in its download mode. deploy.py then asks you to press the board's R
 the port to go and come back, and reads the board again ([P243](https://github.com/xmejkal/spark/issues/252)). A restart counts only when mpremote
 answers after it ([P462](https://github.com/xmejkal/spark/issues/630)); one that leaves the board in download mode is printed and not counted.
 The write restarts the chip with `--after watchdog-reset`, and deploy.py finds the board's port again by its MAC, because the port's name and USB
-id can change after the flash (MicroPython brings its own USB serial port). A port that is not listed or does not come back is `port_gone`: no REPL line, and
+id can change after the flash (MicroPython brings its own USB serial port). A port that is not listed or does not come back is `port_gone`: no REPL line, no `watch` step, and
 `python3 -m mpremote devs` lists the ports. To see the firmware start by hand, run the line deploy.py
 prints, which opens mpremote's REPL, and press Ctrl-C, then Ctrl-D. Leave the REPL with Ctrl-X. While it is open, it
 holds the port, and the next deploy cannot read the board. deploy.py then runs the board doctor, which says another

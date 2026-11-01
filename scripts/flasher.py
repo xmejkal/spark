@@ -45,8 +45,9 @@ class EsptoolFlasher(Flasher):
     #: How esptool restarts the chip after the write (P462). Its default, hard-reset, leaves a chip that was entered with the
     #: BOOT button in download mode (esptool troubleshooting, "Leaving Download Mode in USB-Serial/JTAG Mode"), as the
     #: FireBeetle 2 stayed in boot:0x23. The watchdog resets the whole system and samples the boot pin again on the S3
-    #: (esptool-5.5.0 targets/esp32s3.py:337-345); the other chips fall back to a hard reset (loader.py:2218-2223), as
-    #: before. The S3 started MicroPython after it on the bench (P472 bench.log 23:29:16, 23:29:34, entered by software).
+    #: (esptool-5.5.0 targets/esp32s3.py:337-345). The C6 and the classic ESP32 have no watchdog reset of their own and fall
+    #: back to a hard reset (loader.py:2218-2223), as before. Run on the S3 only after a software entry, not after a BOOT
+    #: entry: the bench started MicroPython after a watchdog reset at 23:29:16 (P472 bench.log).
     AFTER = ["--after", "watchdog-reset"]
     #: What to try when esptool cannot reach the board, with `%(boot)s`, `%(reset)s` and `%(orientation)s` from the
     #: ButtonPlaces. The sentence has no period: `orientation` brings its own, or nothing.

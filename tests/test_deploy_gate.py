@@ -565,7 +565,7 @@ class TheBoardInDownloadModeTest(GateCase):
         code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED] * 3 + [self.GONE, self.LISTED])
         self.assertEqual(code, 2)
         self.assertEqual(said.count("the board restarted and still waits in download mode: press its RESET (R, top left, beside the USB-C) once"), 1)
-        self.assertIn("ready unknown: the board waits in download mode, and its port did not go and come back in 60 s: "
+        self.assertIn("ready unknown: the board still waits in download mode after 60 s: "
                       "press its RESET (R, top left, beside the USB-C).", said)
         log = next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text()
         self.assertIn("waiting for download\na restart in download mode, not counted\n", log)
@@ -574,7 +574,7 @@ class TheBoardInDownloadModeTest(GateCase):
     def test_no_press_in_time_is_unknown_and_says_to_press_r(self):
         code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"))
         self.assertEqual(code, 2)
-        self.assertIn("ready unknown: the board waits in download mode, and its port did not go and come back in 60 s: "
+        self.assertIn("ready unknown: the board still waits in download mode after 60 s: "
                       "press its RESET (R, top left, beside the USB-C).", said)
         self.assertNotIn("restarted", said)
         self.assertIn("waiting for download\n", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
@@ -585,6 +585,13 @@ class TheBoardInDownloadModeTest(GateCase):
         self.assertEqual(code, 0)
         self.assertIn("ready seen", said)
         self.assertIn(["connect", "/dev/cu.usbmodem2101"], [c[c.index("connect"):c.index("connect") + 2] for c in self.ran if "connect" in c][-1:])
+
+    def test_a_board_found_on_a_moved_port_is_not_probed_for_download_mode(self):
+        # the MAC match found it on another name: the console is not read there (P462, P472's try 6)
+        probe = FakeConsoleProbe("waiting for download\n")
+        code, said, _ = self.flash(probe, [self.LISTED, self.MOVED])
+        self.assertEqual((code, probe.asked), (2, []))
+        self.assertNotIn("press the board's RESET", said)
 
     def test_a_port_that_never_comes_back_is_port_gone_and_there_is_nothing_to_watch(self):
         code, said, _ = self.flash(FakeConsoleProbe("waiting for download\n"), [self.LISTED] * 3 + [self.GONE])
@@ -625,7 +632,7 @@ class TheBoardInDownloadModeTest(GateCase):
     def test_download_mode_with_ready_after_it_still_asks_for_r_and_never_reads_again(self):
         code, said, _ = self.flash(FakeConsoleProbe("waiting for download\nready\n"))
         self.assertEqual(code, 2)
-        self.assertIn("the board waits in download mode, and its port did not go and come back", said)
+        self.assertIn("the board still waits in download mode after 60 s", said)
         self.assertNotIn("read again", next((self.project / "sim" / "runs" / "board").glob("*.log")).read_text())
 
     def test_a_ready_inside_another_word_is_not_a_boot(self):
