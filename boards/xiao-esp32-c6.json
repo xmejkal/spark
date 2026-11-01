@@ -7,6 +7,8 @@
   "flash_mb": 4,
   "//micropython_port": "The MicroPython build this board runs: Seeed's own, https://micropython.org/download/SEEED_XIAO_ESP32C6/ (v1.29.0, 2026-08-24, read 2026-10-13). The PO chose it over ESP32_GENERIC_C6 on 2026-10-13 (P229).",
   "micropython_port": "SEEED_XIAO_ESP32C6",
+  "//serial_without_wires": "The board's serial reaches a scenario with no $serialMonitor wires in the diagram. Wokwi's kept definition sets mcuAttrs.serialInterface to \"USB_SERIAL_JTAG\" (the wokwi-board entry, sha256 e5200e012416f096bcc188f9cb4fe8f292cd9d973dc0249513624bf5768856a8), and Wokwi's ESP32 guide says to remove the $serialMonitor wires then (https://docs.wokwi.com/guides/esp32, read 2026-11-01). Walk 2 heard the board with no wires on wokwi-cli 0.27.1 (docs/observations/rows/p400-walk2-council.md row 18). Read by check_spine.serial_heard.",
+  "serial_without_wires": true,
   "//": "Everything the rest of the project needs to know about which board this is. The firmware, the PCB design, the simulator project and the consistency checks all derive from this file, so changing board starts here. See boards/README.md.",
   "wokwi_part_type": "board-xiao-esp32-c6",
   "//wokwi_pin_naming": "Wokwi's XIAO part names its pins by silkscreen - D0..D10, 3V3, 5V, GND - and rejects GPIO numbers.",
