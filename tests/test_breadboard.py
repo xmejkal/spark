@@ -225,6 +225,25 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
             said = breadboard._unwired(built.board, built)
         self.assertEqual(said, ["- STATUS_LED: board A5, nothing wired to it yet (the requirements add this signal)"])
 
+    # --- MVP --- (P512, #708) the alias is read, not answered by the fallback
+    def test_a_pin_label_is_named_by_its_printed_pad(self):
+        xiao = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
+        for hints, label in ((["SDA"], "D4"), (["pin22", "SDA", "22"], "D4"), (["D4"], "D4")):
+            with self.subTest(hints=hints):
+                self.assertEqual(breadboard.printed_label(xiao, {"name": hints[0], "port_hints": hints}), label)
+        bare = {"pins": {"MOSI": 15}, "physical": {"pad_aliases": {"MOSI": "MO"}}}  # no header rows: the alias says MO
+        self.assertEqual(breadboard.printed_label(bare, {"name": "IO15", "port_hints": ["IO15", "MO"]}), "MO")
+
+    def test_a_signal_the_requirements_put_on_an_aliased_pin_is_said_with_its_pad(self):
+        folder = Path(tempfile.mkdtemp())
+        (folder / "requirements.json").write_text(json.dumps(
+            {"board": "firebeetle2-esp32s3", "parts": ["tactile-button"],
+             "signals": [{"name": "STATUS_LED", "pin": "MOSI", "needs": []}]}))
+        with in_store(Path(tempfile.mkdtemp())):
+            built = breadboard.design.load(folder / "requirements.json")
+            said = breadboard._unwired(built.board, built)
+        self.assertEqual(said, ["- STATUS_LED: board MO, nothing wired to it yet (the requirements add this signal)"])
+
     def test_a_board_pin_s_jumper_takes_a_hole_so_four_other_ends_need_a_rail(self):
         # Five holes a row; the jumper from the board pin takes one, so four others and the jumper fill it, five overfill.
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())

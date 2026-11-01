@@ -17,6 +17,7 @@ a file instead of re-implementing a lookup.
 """
 
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -228,6 +229,20 @@ class BoardPadsTest(unittest.TestCase):
             with self.subTest(record=record):
                 pads = board_pads.BoardPads.from_record(record)
                 self.assertEqual((pads.pad_of("MOSI"), pads.alias_pads()), ("MOSI", frozenset()))
+
+
+class OnlyBoardPadsReadsThePadAliasesTest(unittest.TestCase):
+    """
+    P512: the alias lookup was written in four places and missing in the fifth, the emitter. Python files under
+    scripts/ and tools/ may read the key only in board_pads.py and in the record validator in boards.py. tests/ are
+    outside this test, and the converter's TypeScript copies (tools/circuit-to-wokwi/lib/*.ts) are not guarded.
+    """
+
+    def test_no_other_python_file_reads_the_key(self):
+        allowed = {ROOT / "scripts" / "board_pads.py", ROOT / "scripts" / "boards.py"}
+        readers = [str(source.relative_to(ROOT)) for folder in ("scripts", "tools") for source in (ROOT / folder).rglob("*.py")
+                   if source not in allowed and re.search(r"[\"']pad_aliases[\"']", source.read_text())]
+        self.assertEqual(readers, [])
 
 
 class ResolvingTest(unittest.TestCase):
