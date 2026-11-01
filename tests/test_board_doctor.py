@@ -133,10 +133,10 @@ class EsptoolStopTest(unittest.TestCase):
 
     def test_the_doctor_asks_the_platform_for_the_flasher_and_reads_the_port_with_its_probe(self):
         stop = LookStop("could not read the board on %s", PORT, port=PORT, tool_said=SAID, reason="board_not_read")
-        platform = FakeFirmwarePlatform(port_finder=FakePortFinder([C6]), console_probe=FakeConsoleProbe(""),
-                                        tool=MPREMOTE)
+        probe = FakeConsoleProbe("")
+        platform = FakeFirmwarePlatform(port_finder=FakePortFinder([C6]), console_probe=probe, tool=MPREMOTE)
         board_doctor.after_esptool(stop, platform, None)
-        self.assertEqual(platform.roles, ["flasher"])
+        self.assertEqual((platform.roles, probe.asked), (["flasher"], ["console"]))
 
     def test_a_tools_list_it_cannot_use_keeps_the_stop_and_says_no_doctor(self):
         stop = LookStop("could not read the board on %s", PORT, port=PORT, tool_said=SAID, reason="board_not_read")

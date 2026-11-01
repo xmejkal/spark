@@ -119,7 +119,6 @@ class TheFlashTest(ServiceCase):
 
 
 class TheLookTest(ServiceCase):
-    @needs_littlefs
     def test_the_look_reads_the_board_with_the_reader_of_the_platform_the_service_was_given(self):
         reading = self.look().reading
         reader = FakeBoardReader(reading)

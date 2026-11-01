@@ -2,8 +2,8 @@
 One board's console, read with the port opened so that the open does not choose the boot mode (P243, P251).
 
 A library. `ConsoleProbe` reads what the board prints with DTR and RTS off, through the Python that mpremote runs on,
-which has pyserial. deploy_service.py uses it (from `platform.make_console_probe`) to find a board that waits in download mode (P243; board_start.py waits for its
-restart, P462). P251 moved it here from download_mode.py and uses the same open as a cure: on the XIAO C6 that open
+which has pyserial. deploy_service.py uses it (from `platform.make_console_probe`) to find a board that waits in
+download mode (P243; board_start.py waits for its restart, P462). P251 moved it here from download_mode.py and uses the same open as a cure: on the XIAO C6 that open
 restarted a board whose USB output died at power-on (docs/observations/2026-10-15-p235-reach-test.md, AT187).
 """
 
