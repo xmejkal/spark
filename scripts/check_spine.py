@@ -492,9 +492,9 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                "joined to nothing — the parts around it are wired to nets it is "
                                "simply not on" % "; ".join(islands))]
     if errors:
-        kinds = sorted({element["type"] for element in errors})
-        return stages + [Stage("build", PROBLEMS, "%d error(s): %s" % (len(errors),
-                                                                      ", ".join(kinds)))]
+        first = [", ".join(error.get("selectors_not_found") or []) or error.get("message", "") for error in errors[:2]]
+        return stages + [Stage("build", PROBLEMS, "%d error(s): %s; first: %s" % (  # --- MVP --- (P512) names the trace
+            len(errors), ", ".join(sorted({element["type"] for element in errors})), "; ".join(first)))]
     if traces == 0:
         # The failure this file was written for. Everything is placed, nothing is connected, and
         # no exception was raised anywhere.

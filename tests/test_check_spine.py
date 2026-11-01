@@ -20,6 +20,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -1150,20 +1151,52 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
 
 
-def fake_tsci(root, builds_when):
+def fake_tsci(root, builds_when, circuit=(), binary=None):
     """
-    A `tsci` that answers `--version` and builds — writes a circuit.json — only when
-    `builds_when` (a shell test on the working directory) holds. Instant, so the build stage can
-    be driven without tscircuit installed.
+    A `tsci` (at `binary`, or root/fake-tsci) that answers `--version` and builds — writes a circuit.json holding the
+    elements of `circuit` — only when `builds_when` (a shell test on the working directory) holds. Instant, so the
+    build stage can be driven without tscircuit installed.
     """
-    binary = root / "fake-tsci"
+    binary = binary or root / "fake-tsci"
+    binary.parent.mkdir(parents=True, exist_ok=True)
+    (root / "canned-circuit.json").write_text(json.dumps(list(circuit)))
     binary.write_text("#!/bin/sh\n"
                       "[ \"$1\" = \"--version\" ] && { echo 0.0.0-fake; exit 0; }\n"
-                      "if %s; then mkdir -p dist/board; echo '[]' > dist/board/circuit.json; exit 0; fi\n"
+                      "if %s; then mkdir -p dist/board; cp '%s' dist/board/circuit.json; exit 0; fi\n"
                       "echo \"Cannot find package 'react'\" >&2\n"
-                      "exit 1\n" % builds_when)
+                      "exit 1\n" % (builds_when, root / "canned-circuit.json"))
     binary.chmod(0o755)
     return binary
+
+
+# --- MVP --- (P512, #708) a broken trace is named in the verdict, in the text and in --json
+class ABrokenTraceIsNamedTest(unittest.TestCase):
+    """
+    P512: the verdict said "2 error(s): source_trace_not_connected_error" and not which trace. It names the selectors
+    of the first 2 errors from their `selectors_not_found` field, and an error's message only when it has none. The
+    build is a real one (button-light's kept circuit) with 3 errors added, by a fake tsci the project's node_modules holds.
+    """
+    FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
+    ERRORS = [{"type": "source_trace_not_connected_error", "message": "Could not find port", "selectors_not_found": [".Mcu > .MOSI"]},
+              {"type": "pcb_trace_error", "message": "a trace crosses another"},
+              {"type": "source_trace_not_connected_error", "selectors_not_found": [".Mcu > .SCK"]}]
+
+    def test_the_text_and_the_json_name_the_first_two(self):
+        root = Path(tempfile.mkdtemp())
+        circuit = json.loads((self.FIXTURE / "dist" / "board" / "circuit.json").read_text()) + self.ERRORS
+        fake_tsci(root, "true", circuit, binary=root / "node_modules" / ".bin" / "tsci")
+        shutil.copy(self.FIXTURE / "requirements.json", root / "requirements.json")
+        said = {}
+        for flags in ([], ["--json"]):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                check_spine.main([str(root / "requirements.json")] + flags)
+            said[bool(flags)] = out.getvalue()
+        build = next(stage for stage in json.loads(said[True])["stages"] if stage["name"] == "build")
+        for words in (build["detail"], said[False]):
+            self.assertIn("3 error(s): pcb_trace_error, source_trace_not_connected_error; first: .Mcu > .MOSI; a trace "
+                          "crosses another", words)
+            self.assertNotIn(".SCK", words)
 
 
 class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):
