@@ -53,4 +53,4 @@ What plan council rounds 1 and 2 on the event seam plan found, and what the synt
 | 46 | Risk 3 claims too much: E2's goldens stop at the gate | refuter | acted | risk 3 lists the lines in no golden. E2's exact-text event test guards them |
 | 47 | A Reporter role row needs `Reporter` in `ROLES` | refuter | closed | resolved by row 38: no row |
 | 48 | `FakeOutsideWorld` makes its own reporter, so it needs a `reporter=` parameter. E2 breaks `test_core.py:288` and `test_deploy_json.py:455` | refuter | acted | the parameter is in "Where it sits". E2's Done when lists the tests. `assertIs` sits at `:287-288` |
-| 49 | `for_json` breaks X2 because `measure.py:362` skips `TERMINAL_CLASSES` bodies | refuter | rejected | that skip is why the class is exempt: `_may_print` (`measure.py:363`) lets a `TERMINAL_CLASSES` name print. Counts and edit lists hold |
+| 49 | `for_json` breaks X2 because `measure.py:362` skips `TERMINAL_CLASSES` bodies | refuter | rejected | that skip is why the class is exempt: `_may_print` (`measure.py:361`) lets a `TERMINAL_CLASSES` name print. Counts and edit lists hold |
