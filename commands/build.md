@@ -320,7 +320,10 @@ reaches it. The generated `diagram.json` wires the board's TX and RX to `$serial
 by default (CLI 0.28.0, API 2026-10-09), and without it `wait-serial` hears nothing, not even the boot line
 ([P190](https://github.com/xmejkal/spark/issues/142)). A board whose Wokwi part has no pins named TX and RX gets no
 such wires, and the build's simulation line says so, unless the board's record carries `serial_without_wires: true`
-with its origin ([P468](https://github.com/xmejkal/spark/issues/636)): a board whose USB serial a run heard with no wires (the XIAO ESP32-C6). Two facts about the simulator that
+with its origin ([P468](https://github.com/xmejkal/spark/issues/636)), as the XIAO ESP32-C6's and the FireBeetle 2's do,
+because a run heard their serial with no wires.
+
+Two facts about the simulator that
 a firmware meets here and not on a bench: its ADC is referenced to 5 V whatever the chip, so a
 raw reading must be converted with a 5 V full scale. Say so in `firmware/config.json`
 (`{"ADC_REFERENCE_V": 5.0}`), which goes into the image as `/config.json`. And a chip's control ids are letters and digits only.

@@ -95,7 +95,7 @@ took the wake-capable pin count from 3 usable to 22, which changed every assignm
 `serial_without_wires: true` says a scenario hears the board's serial with no `$serialMonitor` wires in the diagram.
 It is an observation or a definition fact, never behaviour: write its `//serial_without_wires` origin beside it (the
 XIAO's: the kept Wokwi definition sets `mcuAttrs.serialInterface` to `USB_SERIAL_JTAG`, and walk 2 heard the board
-with no wires). `check_spine.py` reads it only as the value `true`, to leave out its "no serial monitor" warning. A
+with no wires; the FireBeetle 2's: walk 3's scenario heard it with no wires on wokwi-cli 0.27.1 and 0.28.0). `check_spine.py` reads it only as the value `true`, to leave out its "no serial monitor" warning. A
 board without it keeps the warning.
 
 ## Flash size

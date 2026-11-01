@@ -884,8 +884,9 @@ class ReachingSimulationTest(unittest.TestCase):
         self.assertFalse(check_spine.serial_heard(bare, {"serial_without_wires": "yes"}))
         self.assertTrue(check_spine.serial_heard(wired, {}))
 
-    def test_the_shipped_xiao_record_says_its_serial_needs_no_wires(self):
+    def test_the_shipped_xiao_and_firebeetle_records_say_their_serial_needs_no_wires(self):
         self.assertIs(boards.load(ROOT, "xiao-esp32-c6")["serial_without_wires"], True)
+        self.assertIs(boards.load(ROOT, "firebeetle2-esp32s3")["serial_without_wires"], True)
 
     def test_a_diagram_missing_the_key_entirely_counts_zero_rather_than_raising(self):
         self.assertEqual(check_spine.wires_in({}), 0)
