@@ -1,5 +1,7 @@
 # Walk 4: gap rows (P510 council)
 
+Filed on 2026-11-02 in auto mode: N1 is P512 (#708), N2 is P513 (#709), N3 is P514 (#710), N4 is P515 (#711), N5a is P516 (#712), N5b is P517 (#713), N6a is P518 (#714), N6b is P519 (#715), N7 is P520 (#716), N8 is P521 (#717), N9 is P522 (#718), N10 is P523 (#719), N11 is P524 (#720), N12 is P525 (#721).
+
 The gaps of spark walk 4 (card P509 #704, epic #467), on 2026-11-01 in Prague, from 19:16 to 21:58 CET. The diary is `~/Development/spark-walks/walk4/walk4-diary.md`, and it is whole in the first comment of P510 (#705). Spark was main at `8595309b`. Each claim is the first sentence or two of the diary's gap. The P510 council checked rows 1 to 46 against the code at `8595309b` and added rows 47 to 70 for the lens and refuter claims that a decision rests on. Rows 71 to 94 are the second round: the between-cards claims, each reproduced by the final check. `verified` means the claim holds, `rejected` that the refuter or the synthesis refuted it, `acted` that the plan took it, and `raised` that nobody checked it (most are page text or bench facts). The last column names the evidence and the home: a new card N1 to N12 (N5 and N6 split in round 2) of `docs/observations/2026-11-01-p510-walk4-council/plan.md` (filing text in `cards.md`), an open card, a PO decision of that plan, or "row only". The proposed cards C1 to C11 below are the walk's, before the council. No card is filed yet.
 
 ## Short version

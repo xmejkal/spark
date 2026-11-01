@@ -1,5 +1,7 @@
 # P510 plan: walk 4's cards, replanned (final)
 
+Filed on 2026-11-02 in auto mode: N1 is P512 (#708), N2 is P513 (#709), N3 is P514 (#710), N4 is P515 (#711), N5a is P516 (#712), N5b is P517 (#713), N6a is P518 (#714), N6b is P519 (#715), N7 is P520 (#716), N8 is P521 (#717), N9 is P522 (#718), N10 is P523 (#719), N11 is P524 (#720), N12 is P525 (#721).
+
 > First N1: no SPI or I2C part builds on the FireBeetle 2 or the XIAO C6 today. Then E1 (P507), E2a (P508), N2 (pin a
 > part's signal) and N6a (offer the deploy grant once, a page only). Fourteen new cards, N5 and N6 split. N6b and N7
 > wait for W4-2 and W4-3, which move deploy and the grant. Four PO questions on consent and rules. Filing text: `cards.md`.

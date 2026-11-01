@@ -1,7 +1,9 @@
 # P510 cards: filing text for the PO's OK
 
+Filed on 2026-11-02 in auto mode: N1 is P512 (#708), N2 is P513 (#709), N3 is P514 (#710), N4 is P515 (#711), N5a is P516 (#712), N5b is P517 (#713), N6a is P518 (#714), N6b is P519 (#715), N7 is P520 (#716), N8 is P521 (#717), N9 is P522 (#718), N10 is P523 (#719), N11 is P524 (#720), N12 is P525 (#721).
+
 > Fourteen new cards (section 1, N5 and N6 each split in two), edits to eleven open cards and one comment on the walks
-> epic (section 2). Nothing is filed yet. Each new card is a sub-issue of P100 (#6), slice v0.10 The basic journey. The
+> epic (section 2). Filed. Each new card is a sub-issue of P100 (#6), slice v0.10 The basic journey. The
 > order and the reasons are in `plan.md` (final, with its second round). The PO's words are verbatim from walk 4's diary
 > and the rows file's "Ideas and asks". A gap code G1 to G46 is walk 4's. Walk 3's council also had N codes, so until a
 > card has its P number, a row writes "walk 4 N3 (drop a need)".
