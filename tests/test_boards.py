@@ -29,6 +29,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_pads  # noqa: E402
 import boards  # noqa: E402
 import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
@@ -212,20 +213,20 @@ class BoardPadsTest(unittest.TestCase):
     """P512: a pin label's footprint pad. The FireBeetle 2 prints MOSI as MO; most labels are their own pad."""
 
     def test_an_aliased_label_gives_its_printed_pad(self):
-        pads = boards.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO", "SDA": "D4"}}})
+        pads = board_pads.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO", "SDA": "D4"}}})
         self.assertEqual((pads.pad_of("MOSI"), pads.pad_of("SDA")), ("MO", "D4"))
 
     def test_a_label_with_no_alias_is_its_own_pad(self):
-        self.assertEqual(boards.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO"}}}).pad_of("D3"), "D3")
+        self.assertEqual(board_pads.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO"}}}).pad_of("D3"), "D3")
 
     def test_the_alias_pads_are_the_printed_names(self):
-        pads = boards.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO", "MISO": "MI"}}})
+        pads = board_pads.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO", "MISO": "MI"}}})
         self.assertEqual(pads.alias_pads(), frozenset({"MO", "MI"}))
 
     def test_a_record_with_no_aliases_maps_nothing(self):
         for record in ({}, {"physical": None}, {"physical": {}}, {"physical": {"pad_aliases": None}}):
             with self.subTest(record=record):
-                pads = boards.BoardPads.from_record(record)
+                pads = board_pads.BoardPads.from_record(record)
                 self.assertEqual((pads.pad_of("MOSI"), pads.alias_pads()), ("MOSI", frozenset()))
 
 
