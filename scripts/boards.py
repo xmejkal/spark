@@ -793,9 +793,9 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
             # "held low at reset it enters the bootloader" decides whether a button can go there.
             problems.append(f"{where} has an empty note; say what the caveat is")
         problems.extend(role_entry_problems(where, role))
-        if "active_level" in role and (type(role["active_level"]) is not int or role["active_level"] not in (0, 1)):
-            # P353: the level that lights an LED or that a pressed button reads, which firmware writes as a number.
-            problems.append(f"{where}.active_level is {role['active_level']!r}; it must be 0 or 1")
+        level = provenance.read_value(role, "active_level")  # P353, P464: the level an LED lights at or a button reads pressed, bare or a fact
+        problems += provenance.fact_problems(f"{where}.active_level", role["active_level"]) if isinstance(role.get("active_level"), dict) else []
+        problems += [f"{where}.active_level is {level!r}; it must be 0 or 1"] if level is not None and (type(level) is not int or level not in (0, 1)) else []
 
     problems += power_problems(board)
 

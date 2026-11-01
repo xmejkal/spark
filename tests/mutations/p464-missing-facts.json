@@ -1,0 +1,116 @@
+[
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "the button is dropped from the table of levels a stage needs",
+  "find": "    boards.ONBOARD_BUTTON: \"the level it reads when pressed\",\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "a level the record holds is the one reported missing",
+  "find": "provenance.read_value(entry, LEVEL_FACT) is None]",
+  "replace": "provenance.read_value(entry, LEVEL_FACT) is not None]"
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "the merge replaces the role and loses its gpio and note",
+  "find": "(dict(before, **entry), {key",
+  "replace": "(dict(entry), {key"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "spark's library board is not refused",
+  "find": "in (LIBRARY.resolve(), boards.LIBRARY.resolve()):",
+  "replace": "in (LIBRARY.resolve(),):"
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "a bare number is accepted as a level",
+  "find": "problems += provenance.fact_problems(\"pin_roles[%r].%s\"",
+  "replace": "problems += [] and provenance.fact_problems(\"pin_roles[%r].%s\""
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the missing_facts key is left off the pin map entry",
+  "find": ", **{\"missing_facts\": missing} if missing else {})",
+  "replace": ")"
+ },
+ {
+  "file": "scripts/spark/core/result.py",
+  "name": "an unchecked item loses its subject",
+  "find": "if finding.subject is not None or finding.severity",
+  "replace": "if finding.severity"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "a board write is looked up as a part record",
+  "find": "\"board\" if \"pin_roles\" in values else \"part\"",
+  "replace": "\"part\""
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "the problems of the record before the write are held against the write",
+  "find": " - set(boards.validate(record, path)))",
+  "replace": " - set())"
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "the merged result is not validated",
+  "find": "sorted(set(boards.validate(after, path))",
+  "replace": "sorted(set(boards.validate(record, path))"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "a level of a fact is written without saying it is not verified",
+  "find": "\"\" if held.get(\"verified\") is True else \"; not verified\")\n                  if isinstance(held, dict)",
+  "replace": "\"\")\n                  if isinstance(held, dict)"
+ },
+ {
+  "file": "scripts/assign_pins.py",
+  "name": "a level of a fact is written without its source",
+  "find": "\"source: %s%s\" % (one_line(str(held.get(\"source\"))),",
+  "replace": "\"source: %s%s\" % (\"\","
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the stderr line does not say a fact is missing",
+  "find": "\"\\n  missing fact: %s. %s\"",
+  "replace": "\"\\n  %s. %s\""
+ },
+ {
+  "file": "scripts/check_spine.py",
+  "name": "the top-level missing_facts key is never written",
+  "find": "entry.get(\"missing_facts\", [])]) else {})}",
+  "replace": "entry.get(\"missing_facts\", [])]) and False else {})}"
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "a board of another project is written",
+  "find": "if project is None or path.parent.resolve() != (project / \"boards\").resolve():",
+  "replace": "if False:"
+ },
+ {
+  "file": "scripts/drawer.py",
+  "name": "the text and keys of pin_roles are written raw",
+  "find": "\"pin_order_proof\", \"pin_roles\")",
+  "replace": "\"pin_order_proof\")"
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "a write empties a level",
+  "find": "entry[LEVEL_FACT].get(\"value\") is None:",
+  "replace": "entry[LEVEL_FACT].get(\"value\") is None and False:"
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "the fix command leaves out --project",
+  "find": "FILE --project .` from",
+  "replace": "FILE` from"
+ },
+ {
+  "file": "scripts/missing_facts.py",
+  "name": "the refusal prints None for a missing project",
+  "find": "if project else \"a project (no --project was given)\")",
+  "replace": "if True else \"a project (no --project was given)\")"
+ }
+]

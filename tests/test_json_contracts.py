@@ -211,6 +211,21 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
             self._check("check_spine", lambda: check_spine.main([self.requirements, "--json"]),
                         ["check", "stages", "status"])
 
+    def test_check_spine_adds_missing_facts_beside_status_only_when_the_record_lacks_a_level(self):
+        # P464: the verdict stays ok, and the facts are a top-level key like `unserved`
+        from test_missing_facts import levelless
+        project = Path(tempfile.mkdtemp())
+        (project / "boards").mkdir()
+        (project / ".spark").mkdir()
+        board = dict(levelless(), id="levelless-board")
+        (project / "boards" / "levelless-board.json").write_text(json.dumps(board))
+        requirements = project / "requirements.json"
+        requirements.write_text(json.dumps({"board": "levelless-board", "parts": [], "board_only": True}))
+        payload = self._check("check_spine", lambda: check_spine.main([str(requirements), "--keep", str(project / "kept"), "--json"]),
+                              ["check", "kept", "missing_facts", "stages", "status"])
+        self.assertEqual([item["code"] for item in payload["missing_facts"]], ["missing_fact"] * 2)
+        self.assertEqual(sorted(payload["missing_facts"][0]), ["code", "fix", "sentence", "subject"])
+
     def test_grant_check(self):
         """P253: grant.py --check --json, here for a board with no grant. No status word: granted is the answer."""
         devs = "/dev/cu.usbmodem101 8c:bf:ea:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit\n"

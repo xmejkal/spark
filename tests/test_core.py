@@ -18,7 +18,7 @@ from spark.core.cli import HelpText, JsonEnvelope, TextReport, run_cli, run_oper
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, Argument, Operation  # noqa: E402
 from spark.core.outside import ProgramRunner, build_outside_world  # noqa: E402
-from spark.core.result import Finding, NextStep, OperationResult  # noqa: E402
+from spark.core.result import Finding, NextStep, OperationResult, envelope_item  # noqa: E402
 
 PROBLEM = Finding(outcomes.PROBLEMS, "flash", "flash_differs", "the flash differs", "accept it")
 UNCHECKED = Finding(outcomes.COULD_NOT_RUN, None, "field_unknown", "flash unknown", "unknown is not a pass")
@@ -47,6 +47,14 @@ class OperationResultTest(unittest.TestCase):
         self.assertEqual((result.status(), envelope["status"]), (outcomes.COULD_NOT_RUN, outcomes.COULD_NOT_RUN))
         self.assertEqual(envelope["unchecked"], [{"code": "field_unknown", "sentence": "flash unknown", "fix": "unknown is not a pass"}])
         self.assertEqual(list(envelope["unchecked"][0]), ["code", "sentence", "fix"])
+
+    def test_an_unchecked_item_has_a_subject_only_when_one_is_set(self):
+        # P464: a missing fact says what it lacks; the unchecked Findings of today pass None, so the goldens keep their bytes
+        named = UNCHECKED._replace(subject="pin_roles.onboard_led.active_level")
+        self.assertEqual(list(envelope_item(named)), ["subject", "code", "sentence", "fix"])
+        self.assertEqual(list(envelope_item(UNCHECKED)), ["code", "sentence", "fix"])
+        self.assertEqual(OperationResult(None, [named]).to_envelope("look", "look")["unchecked"], [envelope_item(named)])
+        self.assertEqual(envelope_item(PROBLEM._replace(subject=None))["subject"], None)
 
     def test_an_unchecked_finding_never_gives_ok(self):
         self.assertEqual(OperationResult(None, [PROBLEM, UNCHECKED]).status(), outcomes.PROBLEMS)

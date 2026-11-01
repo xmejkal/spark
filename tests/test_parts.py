@@ -22,6 +22,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import stat
 import sys
 import tempfile
@@ -37,6 +38,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
+import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
@@ -2234,6 +2236,137 @@ class WhatAPartDoesTest(unittest.TestCase):
                 self.assertEqual((said["status"], code), ("problems", 1))
                 self.assertIn("non-empty list", said["problems"][0]["sentence"])
             self.assertEqual(json.loads((home / "catalog" / "x-soil.json").read_text()), record)
+
+
+class ALevelIsWrittenToABoardTest(unittest.TestCase):
+    """P464 (#632): `--fact-set` writes the active level of a board's onboard LED or button, as a fact, to the project's own board."""
+
+    BENCH = {"value": 0, "verified": True, "source": "the PO's bench, 2026-11-01"}
+
+    def a_project(self):
+        """(the scratch store, a project whose own board lacks both levels)."""
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "project"
+        (project / "boards").mkdir(parents=True)
+        board = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
+        for role in ("onboard_led", "onboard_button"):
+            del board["pin_roles"][role]["active_level"]
+        (project / "boards" / "xiao-esp32-c6.json").write_text(json.dumps(board, indent=2))
+        return home, project, board
+
+    def given(self, values):
+        path = Path(tempfile.mkdtemp()) / "levels.json"
+        path.write_text(json.dumps(values))
+        return str(path)
+
+    def write(self, home, project, values, *more, part_id="xiao-esp32-c6", flag="--fact-set"):
+        with in_store(home):
+            return run_json([flag, part_id, self.given(values), "--project", str(project)] + list(more))
+
+    def stored(self, project):
+        return json.loads((project / "boards" / "xiao-esp32-c6.json").read_text())
+
+    def test_the_write_merges_role_by_role_and_keeps_gpio_and_note(self):
+        home, project, board = self.a_project()
+        said, code = self.write(home, project, {"pin_roles": {"onboard_led": {"active_level": self.BENCH}}})
+        self.assertEqual((code, said["data"]["written"]), (0, True))
+        roles = self.stored(project)["pin_roles"]
+        self.assertEqual(roles["onboard_led"], dict(board["pin_roles"]["onboard_led"], active_level=self.BENCH))
+        self.assertEqual(roles["onboard_button"], board["pin_roles"]["onboard_button"])
+        self.assertEqual(said["data"]["was"]["pin_roles"], {"onboard_led": {"active_level": None}})
+
+    def test_a_dry_run_writes_nothing(self):
+        home, project, board = self.a_project()
+        said, code = self.write(home, project, {"pin_roles": {"onboard_led": {"active_level": self.BENCH}}}, "--dry-run")
+        self.assertEqual((code, said["data"]["written"]), (0, False))
+        self.assertEqual(self.stored(project), board)
+
+    def test_what_is_not_a_fact_for_a_known_role_is_refused_and_nothing_is_written(self):
+        home, project, board = self.a_project()
+        for values in ({"pin_roles": {"onboard_led": {"active_level": 0}}},
+                       {"pin_roles": {"onboard_led": {"active_level": dict(self.BENCH, value=2)}}},
+                       {"pin_roles": {"onboard_led": {"active_level": self.BENCH, "note": "mine"}}},
+                       {"pin_roles": {"onboard_display": {"active_level": self.BENCH}}},
+                       {"pin_roles": {"onboard_led": {"active_level": self.BENCH}}, "about": "x"}):
+            with self.subTest(values=values):
+                self.assertEqual(self.write(home, project, values)[1], 1)
+                self.assertEqual(self.stored(project), board)
+
+    def test_a_board_of_spark_s_library_is_refused(self):
+        # a dry run, so that a guard that failed would show as "would set" and not write into the library
+        said, code = self.write(Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()), {"pin_roles": {"onboard_led": {"active_level": self.BENCH}}}, "--dry-run")
+        self.assertEqual(code, 1)
+        self.assertIn("spark's own library", said["problems"][0]["sentence"])
+
+    def test_a_board_of_another_listed_project_or_of_no_project_is_refused(self):
+        # P464: a board is written from its own project only
+        home, project, board = self.a_project()
+        (project / "boards" / "xiao-esp32-c6.json").rename(project / "boards" / "only-in-b.json")
+        board = self.stored_as(project, "only-in-b")
+        here = Path(tempfile.mkdtemp()) / "here"
+        here.mkdir()
+        (home / "projects.json").write_text(json.dumps({"proj-b": str(project)}))
+        values = {"pin_roles": {"onboard_led": {"active_level": self.BENCH}}}
+        said, code = self.write(home, here, values, part_id="only-in-b")
+        self.assertEqual(code, 1)
+        self.assertIn("not a board of this project", said["problems"][0]["sentence"])
+        self.assertIn("pass --project <the folder", said["problems"][0]["sentence"])
+        with in_store(home):
+            self.assertEqual(run_json(["--fact-set", "only-in-b", self.given(values)])[1], 1)
+        with in_store(home):
+            said = run_json(["--fact-set", "only-in-b", self.given(values)])[0]
+        self.assertIn("a project (no --project was given)", said["problems"][0]["sentence"])
+        self.assertNotIn("None", said["problems"][0]["sentence"])
+        self.assertEqual(self.stored_as(project, "only-in-b"), board)
+        self.assertEqual(self.write(home, project, values, part_id="only-in-b")[1], 0)
+
+    def test_the_fix_command_run_as_written_from_the_project_folder_writes_the_level(self):
+        # P464: the fix names --project ., so a person in the project's folder gets no refusal
+        home, project, board = self.a_project()
+        (project / "boards" / "xiao-esp32-c6.json").rename(project / "boards" / "only-in-b.json")
+        board = dict(self.stored_as(project, "only-in-b"), id="only-in-b")
+        (project / "boards" / "only-in-b.json").write_text(json.dumps(board))
+        fix = missing_facts.list_missing_facts(board)[0].fix
+        command = re.search(r"`parts\.py ([^`]+)`", fix).group(1).replace("FILE", self.given({"pin_roles": {"onboard_led": {"active_level": self.BENCH}}}))
+        here = os.getcwd()
+        os.chdir(project)
+        try:
+            with in_store(home):
+                said, code = run_json(command.split())
+        finally:
+            os.chdir(here)
+        self.assertEqual((code, said["data"]["written"]), (0, True))
+        self.assertEqual(self.stored_as(project, "only-in-b")["pin_roles"]["onboard_led"]["active_level"], self.BENCH)
+
+    def stored_as(self, project, name):
+        return json.loads((project / "boards" / (name + ".json")).read_text())
+
+    def test_the_text_of_a_level_is_cleaned_and_cut_and_a_key_with_a_control_character_is_refused(self):
+        home, project, board = self.a_project()
+        dirty = dict(self.BENCH, source="bench\x07\x1b[31m\nX" + "y" * 5000)
+        said, code = self.write(home, project, {"pin_roles": {"onboard_led": {"active_level": dirty}}})
+        self.assertEqual(code, 0)
+        source = self.stored(project)["pin_roles"]["onboard_led"]["active_level"]["source"]
+        self.assertEqual((len(source) <= 1000, any(ord(each) < 32 for each in source)), (True, False))
+        home, project, board = self.a_project()
+        said, code = self.write(home, project, {"pin_roles": {"onboard_led": {"active_level": dict(self.BENCH, **{"\u0000k": 1})}}})
+        self.assertEqual(code, 1)
+        self.assertEqual(self.stored(project), board)
+
+    def test_a_write_never_empties_a_level(self):
+        home, project, board = self.a_project()
+        self.write(home, project, {"pin_roles": {"onboard_led": {"active_level": self.BENCH}}})
+        held = self.stored(project)
+        said, code = self.write(home, project, {"pin_roles": {"onboard_led": {"active_level": {"value": None, "verified": False, "source": "x"}}}})
+        self.assertEqual(code, 1)
+        self.assertIn("never empties", said["problems"][0]["sentence"])
+        self.assertEqual(self.stored(project), held)
+
+    def test_function_set_never_reaches_a_board(self):
+        home, project, board = self.a_project()
+        said, code = self.write(home, project, [{"does": "indicate", "what": "led"}], flag="--function-set")
+        self.assertEqual(code, 1)
+        self.assertIn("no record called 'xiao-esp32-c6'", said["problems"][0]["sentence"] if said["problems"] else said["unchecked"][0]["sentence"])
+        self.assertEqual(self.stored(project), board)
 
 
 class OwedFactsFilledInTheirHomeTest(unittest.TestCase):

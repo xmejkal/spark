@@ -8,7 +8,7 @@
   "replace": "[]"},
  {"file": "scripts/parts.py", "name": "a fact may break the record",
   "find": " | set(broken_problems(after, path)) - set(broken_problems(record, path))", "replace": ""},
- {"file": "scripts/parts.py", "name": "any key is a fact", "find": "set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + (\"facts\",))", "replace": "True"},
+ {"file": "scripts/parts.py", "name": "any key is a fact", "find": "set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + (\"facts\", \"pin_roles\"))", "replace": "True"},
  {"file": "scripts/parts.py", "name": "a record that is no object is read as one",
   "find": "    if not isinstance(record, dict):\n        return Answer(problems=[_problem(part_id, \"%s is not a JSON object (%s) — repair the file by hand first\" % (part_id, path))])\n",
   "replace": ""},

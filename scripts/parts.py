@@ -85,7 +85,6 @@ def function_of(record, board=False):
         said = [{"does": kind_function[0], "what": kind_function[1]}] if kind_function else []
     if not board:
         return said
-    import boards
     onboard = boards.onboard_functions(record)
     own = {(function["does"], function["what"]): function for function in onboard}
     named = {(function["does"], function["what"]) for function in said}
@@ -147,7 +146,6 @@ def audit(project=None):
     of what they do (spark's layers and this project only); which entries point at nothing; which boards stop the chain at
     the footprint stage, their files lacking what the footprint is drawn from (C-7, P121).
     """
-    import boards
     import drawer
     import emit_footprint
     walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", LIBRARY, project, drafts=True).items()]
@@ -219,6 +217,8 @@ CAPABILITIES = ("wake", "adc", "pwm")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page, step as next_step  # noqa: E402, F401
 from brief import Brief  # noqa: E402
+import boards  # noqa: E402
+import missing_facts  # noqa: E402
 import provenance  # noqa: E402
 import store  # noqa: E402
 from spark.core.text_guards import ValueMessageError, guard_lines, printable  # noqa: E402
@@ -1190,7 +1190,6 @@ def keep_local(path, url=None, dry_run=False):
 
 def records_with_documents(project=None):
     """(owner id, record) for every record that can point at a document: parts, catalog, boards."""
-    import boards
     paths = [path for _, path in store.records("parts", LIBRARY, project, drafts=True).values()]
     paths += [path for _, path in boards.records(project).values()]
     for path in paths:
@@ -1572,7 +1571,7 @@ OPERATIONS = (
      "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("fact-set", {"nargs": 2, "metavar": ("PART", "FILE")},
-     "fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how; a text in it has its control characters turned into a space and is cut at 1000 characters, and a key with a control character is refused), or its about, description and tags, in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
+     "fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how; a text in it has its control characters turned into a space and is cut at 1000 characters, and a key with a control character is refused), or its about, description and tags, or a board's onboard LED or button level, `pin_roles` {onboard_led|onboard_button: {active_level: {value, verified, source}}} (a board of the project's own, merged role by role), in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
      ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
     ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
      (), ("layers", "owed", "broken", "no_function", "dangling", "stops_at_footprint")),
@@ -1902,15 +1901,15 @@ def _shelved_from(path):
     return named if isinstance(named, str) else None
 
 
-def _record_path(part_id, project):
+def _record_path(part_id, project, kind="part"):
     """
     A part record's own file, and the project whose shelf copy follows it (§5.4, §5.5): the nearest layer that has it, the
     catalog included, else a project on the person's list — except that a shelf copy of a listed project's record is not a
     home: that project's record is. A record found in the project given names that project too, when the shelf holds a copy
-    of it shelved from there: the copy follows its record, however the record was reached.
+    of it shelved from there: the copy follows its record, however the record was reached. `kind` is "board" for a board's record (P464).
     """
     import drawer
-    path, where = next(((path, where) for kind, found, where, path in drawer.linkable(project) if (kind, found) == ("part", part_id)),
+    path, where = next(((path, where) for found_kind, found, where, path in drawer.linkable(project) if (found_kind, found) == (kind, part_id)),
                        (None, None))
     if path is not None and path.parent == store.place("shelf"):
         named = _shelved_from(path)
@@ -1950,6 +1949,8 @@ def _write_record(path, record):
 def _set_by_name(record, values):
     """`record` with `values` set, and the values it had: `facts` takes the written names over the held ones, the other names stay (P374)."""
     after, was = dict(record, **values), {key: record.get(key) for key in values}
+    if isinstance(values.get("pin_roles"), dict):  # P464: role by role, so a role keeps its gpio and note
+        after["pin_roles"], was["pin_roles"] = missing_facts.merged_roles(record, values)
     if isinstance(values.get("facts"), dict):
         held = record.get("facts") if isinstance(record.get("facts"), dict) else {}
         after["facts"], was["facts"] = dict(held, **values["facts"]), {name: held.get(name) for name in values["facts"]}
@@ -1963,10 +1964,10 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
     current whether or not this write changed anything (`_refresh_shelf_copy`), and the answer says what became of it.
     `refuse(record, after, path)` says what is wrong with the result, and anything it says refuses the write.
     """
-    path, source = _record_path(part_id, project)
+    path, source = _record_path(part_id, project, "board" if "pin_roles" in values else "part")  # P464: only a level in pin_roles reaches a board
     if path is None:
-        raise PartError("no part record called %r — `parts.py --need` finds what exists", part_id)
-    if path.parent.resolve() == LIBRARY.resolve():
+        raise PartError("no record called %r — `parts.py --need` finds what exists", part_id)
+    if path.parent.resolve() in (LIBRARY.resolve(), boards.LIBRARY.resolve()):
         return Answer(problems=[_problem(part_id, "%s is in spark's own library, which is changed in spark's repository, "
                                                   "not by parts.py" % part_id)])
     record = json.loads(path.read_text(encoding="utf-8"))
@@ -2005,14 +2006,14 @@ def _op_fact_set(args, project):
     facts, unreadable = _read_json_input(name)
     if unreadable:
         return Answer(unchecked=[_cannot(unreadable)])
-    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + ("facts",))):
+    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + ("facts", "pin_roles"))):
         return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s, or `facts` entries by name; or of what a "
                                                   "record says of itself: %s" % (", ".join(CHAIN_FACTS), ", ".join(drawer.DESCRIBING)))])
     facts = {key: drawer.scrub(key, value) if key in drawer.DESCRIBING + drawer.PROVENANCE_KEYS else value for key, value in facts.items()}
     wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])] + drawer.list_provenance_key_problems(facts)
     if wrong:
         return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
-    return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: (
+    return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: missing_facts.board_write_problems(record, after, path, facts, project) if "pin_roles" in facts else (
         ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
         + sorted(set(provenance.list_entry_problems(facts.get("facts"), record.get("facts"))) | set(broken_problems(after, path)) - set(broken_problems(record, path)))))
 
@@ -2190,7 +2191,6 @@ def _released(changes, name):
 
 
 def _op_requirements(args, project):
-    import boards
     import needs
     content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver = needs.requirements(
         args.requirements)
