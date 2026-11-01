@@ -173,6 +173,7 @@ battery input`. A need of `power` / `battery` means the cell, and no board part 
 `wokwi_part_type` names the part the generated Wokwi diagram uses. If Wokwi has no model of the
 exact board, a same-silicon devkit stands in and `wokwi_is_stand_in` says so — the diagram
 addresses pins by GPIO number, so a stand-in costs only the silkscreen labels in the picture.
+A stand-in's `documents["wokwi-board"]` entry cites the stand-in's own file, so a GPIO it reaches is a header pin and the limits say so.
 
 Wokwi custom boards exist but are a browser-only feature (F1 → "Load custom board file"):
 `wokwi.toml` has no board key, and the simulator loads boards from a bundle Wokwi hosts. Getting

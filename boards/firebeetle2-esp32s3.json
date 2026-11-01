@@ -359,6 +359,15 @@
       "title": null,
       "version": null,
       "//url": "The same document from LCSC: identical text, 11 pages, a different save of the file, so a fetch from this URL will not match the sha256. ETA's own site serves no copy (2026-10-04)."
+    },
+    "wokwi-board": {
+      "url": "https://github.com/wokwi/wokwi-boards/blob/962b19d5636756537a93bb5337ac99abd775eae0/boards/esp32-s3-devkitc-1/board.json",
+      "sha256": "8a0630d34dfce9f9f6f82a735c9348b1fbcce5f6137c55f10fc8c628badeb50d",
+      "file": "wokwi-esp32-s3-devkitc-1.board.json",
+      "retrieved": "2026-11-01",
+      "title": "ESP32-S3-DevKitC-1 (Wokwi stand-in for the FireBeetle 2 ESP32-S3)",
+      "version": "commit 962b19d5",
+      "//": "A stand-in: wokwi_is_stand_in, P409 #535."
     }
   },
   "//power": "What DFRobot document, and what only the component datasheets say. DFRobot publish no current rating for either rail and no quiescent figure at all.",

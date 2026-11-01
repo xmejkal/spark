@@ -187,7 +187,7 @@ These only read:
   Each `--match --json` candidate has `limits` (P397): a list of plain sentences (the look's `data.limits` are objects), filled only for a board that serves the
   need through its own LED, button, display or battery-level pin, and `[]` for any other candidate, and for a board that
   the need's verb admitted by other words. A sentence says what a passed run does not test of that part: the simulation
-  has no pin on the part's GPIO, spark did not look at the board's Wokwi definition ("not checked: ...", then the bench),
+  has no pin on the part's GPIO or only a header pin of a stand-in board, spark did not look at the board's Wokwi definition ("not checked: ...", then the bench),
   or spark adds no part to the diagram for it. Relay each sentence as printed; none of them is a failure. `--pick`
   puts the same sentences in a `notes` entry, `board <key> for <need>: ...`, after the footprint note. When a pin is
   missing, the note ends with the other choice: the first part the person owns with free stock whose words match the
