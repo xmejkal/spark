@@ -24,6 +24,8 @@ ROOT = Path(__file__).resolve().parent.parent
 GRANT_SCRIPT = str(ROOT / "scripts" / "grant.py")
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_console  # noqa: E402
+import board_doctor  # noqa: E402
 import board_grant  # noqa: E402
 import store  # noqa: E402
 import board_look  # noqa: E402
@@ -32,7 +34,7 @@ import deploy_gate  # noqa: E402
 import grant  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent, FakeLocalClock, line_made_at_import, pin_time_zone  # noqa: E402
+from fakes import FakeClock, FakeConsent, FakeProbePlatform, line_made_at_import, pin_time_zone  # noqa: E402
 from test_board_look import data, done  # noqa: E402
 from test_deploy import found  # noqa: E402
 
@@ -60,12 +62,12 @@ class GrantCase(unittest.TestCase):
         self.ran.append(argv)
         return done(self.devs if "devs" in argv else self.esptool)
 
-    def grant(self, *argv, consent=None):
+    def grant(self, *argv, consent=None, platform=None):
         """(exit code, stdout, stderr) of grant.py with the fakes."""
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.object(tools, "find", side_effect=found), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = grant.main(list(argv), run=self.run_tool, consent=consent, now=lambda: self.now)
+            code = grant.main(list(argv), run=self.run_tool, consent=consent, now=lambda: self.now, platform=platform)
         return code, out.getvalue(), err.getvalue()
 
     def kept(self):
@@ -88,6 +90,15 @@ class DoctorTest(GrantCase):
                                                "to connect to Espressif device: No serial data received.\nFor "
                                                "troubleshooting steps visit: https://docs.espressif.com\n")
         return done("")  # the doctor's console read: silent
+
+    def test_the_doctor_reads_the_console_with_the_probe_of_the_platform_grant_was_given(self):
+        def locked(command, **kw):  # the console script exits as it does when another program holds the port's lock
+            raise subprocess.CalledProcessError(3, command, "", "serial.SerialException: Could not exclusively lock port")
+        probe = board_console.ConsoleProbe(["/opt/python3"], "/dev/cu.usbmodem101", locked)
+        platform = FakeProbePlatform(Path("."), probe, lambda role: found(role))
+        code, _, err = self.grant("--minutes", "30", consent=FakeConsent(True), platform=platform)
+        self.assertEqual(code, 2)
+        self.assertEqual(err.strip().splitlines()[-1].strip(), "next    " + board_doctor.step_sentence("close_other"))
 
     def test_a_silent_board_names_esptool_s_words_the_port_and_hold_boot_last(self):
         code, _, err = self.grant("--minutes", "30", consent=FakeConsent(True))
@@ -115,6 +126,14 @@ class IssueTest(GrantCase):
         self.assertIn("the board restarts while it is read", out)
         self.assertIn("If it then waits in download mode, press its RESET", out)
         self.assertEqual(stat.S_IMODE((self.home / "grants" / "8c-bf-ea-xx-xx-xx.json").stat().st_mode), 0o600)
+
+    def test_the_grant_names_who_typed_the_yes_by_the_user_name_it_is_given(self):
+        finder = mock.Mock()
+        finder.require_one_board.return_value = mock.Mock(device="/dev/cu.usbmodem101", serial=MAC)
+        reader = mock.Mock()
+        reader.read.return_value = mock.Mock(mac=MAC)
+        service = board_grant.GrantService(finder, reader, mock.Mock(), now=lambda: START, user_name=lambda: "grace")
+        self.assertEqual(service.issue(None, 30, FakeConsent(True)).granted_by, "grace")
 
     def test_the_token_is_the_first_half_of_the_looks_token(self):
         self.grant("--minutes", "5", consent=FakeConsent(True))
@@ -352,7 +371,7 @@ class DeployGrantTest(GrantCase):
         self.assertNotIn("rm ", out)
 
     def test_an_unknown_scope_given_to_the_service_is_refused_and_saves_nothing(self):
-        service = board_grant.GrantService(mock.Mock(), mock.Mock(), now=FakeLocalClock(START))
+        service = board_grant.GrantService(mock.Mock(), mock.Mock(), now=FakeClock(START).now)
         with self.assertRaises(board_grant.GrantRefusedError) as refused:
             service.issue(None, 5, FakeConsent(True), scope="bogus")
         self.assertEqual(refused.exception.why, "bad scope")
@@ -413,7 +432,7 @@ class GrantScopeTest(unittest.TestCase):
         self.grants.save(a_grant("deploy"))
         self.assertIsNone(self.grants.find(MAC))
         finder = mock.Mock(require_one_board=lambda *a: board_look.Port("/dev/x", MAC, "303a:1001", "p"))
-        service = board_grant.GrantService(finder, now=FakeLocalClock(START))
+        service = board_grant.GrantService(finder, now=FakeClock(START).now)
         self.assertEqual(service.check().why, "no grant")
 
     def test_a_live_grant_alone_opens_no_deploy_grant(self):
@@ -451,8 +470,8 @@ class ConsentForDeployTest(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         pin_time_zone(self)
-        self.clock, self.terminal = FakeLocalClock(START), FakeConsent(False)
-        self.service = board_grant.GrantService(now=self.clock)
+        self.clock, self.terminal = FakeClock(START), FakeConsent(False)
+        self.service = board_grant.GrantService(now=self.clock.now)
 
     def choose(self, report=None, ignore_older_runs=False, evidence=None):
         return self.service.consent_for_deploy(report or a_report(), evidence or image_evidence.PassedRunEvidence(ignore_older_runs), self.terminal)
@@ -553,7 +572,7 @@ class ConsentForDeployTest(unittest.TestCase):
             self.assertEqual(shut.exception.code, 2)
 
     def test_the_standing_yes_works_with_the_real_clock(self):
-        board_grant.GrantStore().save(a_grant(since=board_grant.read_local_time().replace(microsecond=0)))
+        board_grant.GrantStore().save(a_grant(since=board_console.SystemClock().now().replace(microsecond=0)))
         chosen = board_grant.GrantService().consent_for_deploy(a_report(), image_evidence.PassedRunEvidence(), self.terminal)
         self.assertIsNone(chosen.why)
         self.assertTrue(chosen.consent.ask("x"))
@@ -566,7 +585,7 @@ class LocalTimeTest(unittest.TestCase):
         pin_time_zone(self)
 
     def test_now_has_the_machines_zone(self):
-        self.assertIn(board_grant.read_local_time().utcoffset(),
+        self.assertIn(board_console.SystemClock().now().utcoffset(),
                       (datetime.timedelta(hours=1), datetime.timedelta(hours=2)))  # Prague: winter or summer
 
     def test_a_kept_time_has_no_fraction_of_a_second(self):
@@ -577,13 +596,13 @@ class LocalTimeTest(unittest.TestCase):
         self.assertEqual(board_grant.say_in_local_zone("2026-10-18T04:30:19+00:00"), "2026-10-18T06:30:19+02:00")
 
     def test_a_grant_over_the_change_to_winter_time_ends_in_winter_time(self):
-        clock = FakeLocalClock(datetime.datetime(2026, 10, 25, 0, 30, tzinfo=UTC))
+        clock = FakeClock(datetime.datetime(2026, 10, 25, 0, 30, tzinfo=UTC))
         finder = mock.Mock()
         finder.require_one_board.return_value = mock.Mock(device="/dev/cu.usbmodem101", serial=MAC)
         reader = mock.Mock()
         reader.read.return_value = mock.Mock(mac=MAC)
         grants = mock.Mock()
-        grant = board_grant.GrantService(finder, reader, grants, now=clock).issue(
+        grant = board_grant.GrantService(finder, reader, grants, now=clock.now).issue(
             None, 60, FakeConsent(True), scope="deploy")
         self.assertEqual((grant.granted_at, grant.expires_at), ("2026-10-25T02:30:00+02:00", "2026-10-25T02:30:00+01:00"))
 

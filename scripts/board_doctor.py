@@ -20,8 +20,8 @@ from collections import namedtuple
 
 import boards
 import tools
-from board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, ConsoleProbe, shows_boot
-from board_look import LookStop, PortFinder
+from board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
+from board_look import LookStop
 from download_mode import DOWNLOAD_MODE
 
 #: The next steps, one code each. The sources are in MESSAGE_FOR's comments.
@@ -154,16 +154,13 @@ class BoardDoctorService:
         return BoardDoctorResult(tuple(results), tool_said, step, IF_NOT_HELPED.get(step))
 
 
-def after_esptool(stop, project, run, find_tool=None):
+def after_esptool(stop, platform, run):
     """The BoardDoctorResult for a board_look.LookStop from esptool's read, or None when the stop names no port (it
-    was no failed read). The tools come from `find_tool` (a name -> tools.Tool), the project's tools list when None.
-    tools.ToolProblem and UnknownStepError pass up."""
+    was no failed read). The tools come from the FirmwarePlatform `platform`. tools.ToolProblem and UnknownStepError pass up."""
     if stop.port is None:
         return None
-    find_tool = find_tool or (lambda name: tools.find(name, project))
-    shell = find_tool("board-shell")
-    doctor = BoardDoctorService.for_board(PortFinder(shell, run), ConsoleProbe.for_tool(shell, stop.port, run))
-    return doctor.examine(stop.port, find_tool("flasher"), stop.tool_said)
+    doctor = BoardDoctorService.for_board(platform.make_port_finder(run), platform.make_console_probe(stop.port, run))
+    return doctor.examine(stop.port, platform.find_tool("flasher"), stop.tool_said)
 
 
 def step_sentence(code, places=boards.ButtonPlaces.EMPTY):
@@ -171,22 +168,22 @@ def step_sentence(code, places=boards.ButtonPlaces.EMPTY):
     return MESSAGE_FOR[code] % {"boot": places.boot, "reset": places.reset, "orientation": places.orientation}
 
 
-def stop_answer(script, stop, project, run, find_tool=None):
+def stop_answer(script, stop, platform, run):
     """(the lines a script prints, the BoardDoctorResult or None) when esptool's look stopped with `stop`. After a failed
-    read, the board doctor's facts and next step follow, and the next step is the last line. `find_tool` as `after_esptool`."""
+    read, the board doctor's facts and next step follow, and the next step is the last line. `platform` as `after_esptool`."""
     try:
-        result = after_esptool(stop, project, run, find_tool)
+        result = after_esptool(stop, platform, run)
     except (tools.ToolProblem, UnknownStepError) as cannot:
         return ["%s: %s (no doctor: %s)" % (script, stop, cannot)], None
     if result is None:
         return ["%s: %s" % (script, stop)], None
     return ["%s: could not read the board on %s" % (script, stop.port)] + [
-        "  " + line for line in describe(result, boards.ButtonPlaces.of_project(project))], result
+        "  " + line for line in describe(result, boards.ButtonPlaces.of_project(platform.project))], result
 
 
-def stop_lines(script, stop, project, run, find_tool=None):
+def stop_lines(script, stop, platform, run):
     """The lines of `stop_answer`."""
-    return stop_answer(script, stop, project, run, find_tool)[0]
+    return stop_answer(script, stop, platform, run)[0]
 
 
 def describe(result, places=boards.ButtonPlaces.EMPTY):

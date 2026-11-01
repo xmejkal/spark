@@ -79,7 +79,7 @@ class ProjectCase(unittest.TestCase):
         """The DeployPlan of a DeployService over this project's MicroPython platform. tools.find must be patched."""
         evidence = image_evidence.PassedRunEvidence(ignore_older_runs)  # the default is the refusal
         return deploy_service.DeployService(
-            self.project, firmware_platform.FirmwarePlatform.micropython(self.project), evidence).plan(port)
+            self.project, firmware_platform.MicroPythonPlatform(self.project), evidence).plan(port)
 
     def deploy(self, *argv, find=found, run=None):
         """(exit code, stdout, stderr, the commands run) of deploy.py in this project."""

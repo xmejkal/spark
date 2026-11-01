@@ -10,6 +10,7 @@ import board_doctor
 import board_envelope
 import board_look
 import boards
+from firmware_platform import MicroPythonPlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from spark.core import outcomes
 from spark.core.operation import BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
@@ -44,10 +45,11 @@ class LookAtBoard(Operation):
 
     def run(self, project, port, ignore_older_runs, no_simulation, *, outside):
         evidence = evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)
+        platform = MicroPythonPlatform(project, outside.find_tool)
         try:
-            report = board_look.looker(project, outside.run, outside.find_tool).run(project, port, evidence)
+            report = board_look.looker(platform, outside.run).run(project, port, evidence)
         except board_look.LookStop as stop:
-            return self._stopped(stop, project, port, outside)
+            return self._stopped(stop, platform, port, outside)
         return self._found(report, project.resolve(), evidence)
 
     @staticmethod
@@ -71,10 +73,10 @@ class LookAtBoard(Operation):
         return OperationResult(report.to_dict(), findings, following, board_look.report_lines(report))
 
     @staticmethod
-    def _stopped(stop, project, port, outside):
+    def _stopped(stop, platform, port, outside):
         """The result of a LookStop: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
-        lines, doctor = board_doctor.stop_answer(SCRIPT, stop, project, outside.run, outside.find_tool)
-        places = boards.ButtonPlaces.of_project(project)
+        lines, doctor = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
+        places = boards.ButtonPlaces.of_project(platform.project)
         # the port and the button words, each on one line (P430); a tool problem's path is flat already (P444)
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
         return OperationResult({"doctor": board_doctor.as_dict(doctor)} if doctor else None,

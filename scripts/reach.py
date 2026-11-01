@@ -14,8 +14,7 @@ import boards
 import board_look
 import board_reach
 import tools
-from board_connection import BoardConnection
-from board_console import ConsoleProbe
+from firmware_platform import MicroPythonPlatform
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK
 from spark.core.text_guards import guard_lines, guard_sentence, printable
 
@@ -65,9 +64,9 @@ def to_json(port, result, cure_first, doctor=None):
     return json.dumps(dict(fields, port=port, cure_first=cure_first, at=time.strftime("%Y-%m-%dT%H:%M:%S%z")))
 
 
-def main(argv=None, run=subprocess.run, probe=None):
-    """Run the reach. `run` is how a command runs, `probe` the console probe (default: ConsoleProbe for mpremote's
-    Python). Returns the exit code."""
+def main(argv=None, run=subprocess.run, platform=None):
+    """Run the reach. `run` is how a command runs, `platform` the FirmwarePlatform with the board tools (default:
+    MicroPythonPlatform). Returns the exit code."""
     parser = argparse.ArgumentParser(prog="reach.py", description=__doc__.strip(), epilog=EPILOG,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", type=Path, default=Path("."),
@@ -79,21 +78,21 @@ def main(argv=None, run=subprocess.run, probe=None):
                         help="open the port with DTR and RTS off before the only try (the bench's cold arm)")
     args = parser.parse_args(argv)
     try:
-        shell = tools.find("board-shell", args.project)
-        finder = board_look.PortFinder(shell, run)
+        platform = platform or MicroPythonPlatform(args.project)
+        finder = platform.make_port_finder(run)
         port = args.port or finder.require_one_port("reach.py")
+        probe = platform.make_console_probe(port, run)
     except (tools.ToolProblem, board_look.LookStop) as cannot:
         # --- MVP --- data: device names, a tool's words and the project path as typed (P430)
         print(guard_sentence("reach.py: %s" % cannot, args.project), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    probe = probe or ConsoleProbe.for_tool(shell, port, run)
     if args.cure_first and probe is None:
         print("reach.py: %s" % board_reach.NO_PROBE_MESSAGE, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    result = board_reach.reach(BoardConnection(tools.command_for(shell), port, run), probe, cure_first=args.cure_first)
+    result = board_reach.reach(platform.make_connection(platform.make_shell_command(), port, run), probe, cure_first=args.cure_first)
     try:
         doctor = (None if result.entered else
-                  board_doctor.BoardDoctorService.for_board(finder, probe).examine(port, shell, result.why))
+                  board_doctor.BoardDoctorService.for_board(finder, probe).examine(port, platform.find_tool("board-shell"), result.why))
     except board_doctor.UnknownStepError as cannot:
         print(guard_lines("reach.py: no doctor: %s" % cannot), file=sys.stderr)  # --- MVP --- the tools list's words (P430)
         doctor = None

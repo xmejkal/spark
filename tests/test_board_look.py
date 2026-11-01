@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import deploy_record_store  # noqa: E402
-from fakes import pin_time_zone  # noqa: E402
+from fakes import FakeFirmwarePlatform, pin_time_zone  # noqa: E402
+from firmware_platform import MicroPythonPlatform  # noqa: E402
 import board_look  # noqa: E402
 import project_image  # noqa: E402
 import sim_project  # noqa: E402
@@ -83,7 +84,7 @@ class LookCase(ProjectCase):
 
         flasher = flasher or FOUND["flasher"]
         with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: flasher if name == "flasher" else found(name)):
-            return board_look.looker(self.project, run).run(self.project, port, evidence or image_evidence.PassedRunEvidence(ignore_older_runs))
+            return board_look.looker(MicroPythonPlatform(self.project), run).run(self.project, port, evidence or image_evidence.PassedRunEvidence(ignore_older_runs))
 
 
 class PortFinderTest(LookCase):
@@ -489,9 +490,9 @@ class LookTest(LookCase):
         self.assertEqual(stop.exception.reason, "no_board_record")
 
     def test_a_tool_that_cannot_be_used_stops_the_look_with_its_sentence(self):
-        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("mpremote is not installed")), \
-                self.assertRaises(board_look.LookStop) as stop:
-            board_look.looker(self.project)
+        platform = FakeFirmwarePlatform(self.project, port_finder=tools.ToolProblem("mpremote is not installed"))
+        with self.assertRaises(board_look.LookStop) as stop:
+            board_look.looker(platform)
         self.assertEqual((str(stop.exception), stop.exception.reason), ("mpremote is not installed", "tool_missing"))
 
     def test_another_flasher_stops_the_look(self):

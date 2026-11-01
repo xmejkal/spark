@@ -1,7 +1,7 @@
 """
 Read the board on USB without changing it, and compare it with the project's board record (P219, #201).
 
-A library: look.py only parses arguments, calls `looker(project).run(project, port, evidence)` and prints `report_lines(report)`.
+A library: look.py only parses arguments, calls `looker(platform).run(project, port, evidence)` and prints `report_lines(report)`.
 deploy.py calls `looker` and `report_lines` too. It reads the image checks from project_image.py and never imports deploy.py.
 The seams are the readers: `BoardReader` is how a board is read, and `EsptoolReader` is the one reader today.
 
@@ -478,12 +478,11 @@ class LookService:
             raise LookStop("no board record for %s: P230 will research one.", name, reason=board_codes.NO_BOARD_RECORD)
 
 
-def looker(project, run=subprocess.run, find_tool=None):
-    """A LookService with mpremote and esptool as `find_tool` (a name -> tools.Tool; the project's tools list when None)
-    finds them. tools.ToolProblem becomes a LookStop."""
-    find_tool = find_tool or (lambda name: tools.find(name, project))
+def looker(platform, run=subprocess.run):
+    """A LookService with the platform's port finder and board reader, whose hint names the project's buttons.
+    tools.ToolProblem becomes a LookStop."""
     try:
-        hint = flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.of_project(project))
-        return LookService(PortFinder(find_tool("board-shell"), run), EsptoolReader(find_tool("flasher"), run, hint))
+        hint = flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.of_project(platform.project))
+        return LookService(platform.make_port_finder(run), platform.make_board_reader(run, hint))
     except tools.ToolProblem as cannot:
         raise LookStop("%s", cannot, reason=board_codes.TOOL_MISSING)

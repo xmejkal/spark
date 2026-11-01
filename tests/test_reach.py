@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import reach  # noqa: E402
 import tools  # noqa: E402
 from board_console import Cure  # noqa: E402
-from fakes import FakeConsoleProbe  # noqa: E402
+from fakes import FakeConsoleProbe, FakeProbePlatform  # noqa: E402
 from test_board_look import C6_PORT, data, done, found  # noqa: E402
 
 REFUSED = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
@@ -41,9 +41,9 @@ class ReachScriptTest(unittest.TestCase):
             return done(answer)
 
         out, err = io.StringIO(), io.StringIO()
-        with mock.patch.object(tools, "find", side_effect=found), contextlib.redirect_stdout(out), \
-                contextlib.redirect_stderr(err):
-            code = reach.main(list(argv), run=run, probe=FakeConsoleProbe(cured=RESTART) if probe is None else probe)
+        platform = FakeProbePlatform(Path("."), FakeConsoleProbe(cured=RESTART) if probe is None else probe, lambda role: found(role))
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = reach.main(list(argv), run=run, platform=platform)
         return code, out.getvalue(), err.getvalue(), ran
 
     def test_a_board_that_answers_exits_0_and_says_the_firmware_is_stopped(self):

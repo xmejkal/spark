@@ -16,6 +16,7 @@ import boards  # noqa: E402
 import tools  # noqa: E402
 from board_console import ConsoleReadResult  # noqa: E402
 from board_look import LookStop, Port  # noqa: E402
+from fakes import FakeConsoleProbe, FakeFirmwarePlatform, FakePortFinder  # noqa: E402
 
 PORT = "/dev/cu.usbmodem1101"
 C6 = Port(PORT, "8C:BF:EA:CC:97:70", "303a:1001", "Espressif USB JTAG/serial debug unit")
@@ -127,14 +128,20 @@ class ConfigurationTest(unittest.TestCase):
 
 class EsptoolStopTest(unittest.TestCase):
     def test_a_stop_with_no_port_prints_only_the_stop(self):
-        self.assertEqual(board_doctor.stop_lines("look.py", LookStop("requirements.json names no board", reason="no_board_named"), ".", None),
+        self.assertEqual(board_doctor.stop_lines("look.py", LookStop("requirements.json names no board", reason="no_board_named"), FakeFirmwarePlatform(), None),
                          ["look.py: requirements.json names no board"])
 
-    def test_a_tools_list_it_cannot_use_keeps_the_stop_and_says_no_doctor(self):
-        from unittest import mock
+    def test_the_doctor_asks_the_platform_for_the_flasher_and_reads_the_port_with_its_probe(self):
         stop = LookStop("could not read the board on %s", PORT, port=PORT, tool_said=SAID, reason="board_not_read")
-        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("mpremote is not installed")):
-            lines = board_doctor.stop_lines("grant.py", stop, ".", None)
+        probe = FakeConsoleProbe("")
+        platform = FakeFirmwarePlatform(port_finder=FakePortFinder([C6]), console_probe=probe, tool=MPREMOTE)
+        board_doctor.after_esptool(stop, platform, None)
+        self.assertEqual((platform.roles, probe.asked), (["flasher"], ["console"]))
+
+    def test_a_tools_list_it_cannot_use_keeps_the_stop_and_says_no_doctor(self):
+        stop = LookStop("could not read the board on %s", PORT, port=PORT, tool_said=SAID, reason="board_not_read")
+        platform = FakeFirmwarePlatform(port_finder=tools.ToolProblem("mpremote is not installed"))
+        lines = board_doctor.stop_lines("grant.py", stop, platform, None)
         self.assertEqual(lines, ["grant.py: could not read the board on %s (no doctor: mpremote is not installed)" % PORT])
 
 

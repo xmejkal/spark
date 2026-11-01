@@ -42,7 +42,7 @@ import store
 import tools
 from board_console import LEAVE_CONSOLE
 from deploy_service import DeployService, FlashError
-from firmware_platform import FirmwarePlatform
+from firmware_platform import MicroPythonPlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, AnsweringParser, BadArgument
@@ -158,11 +158,11 @@ def show_line(line, out=None):
     shown(line, out, flush=True)
 
 
-def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_service=None):
+def main(argv=None, run=None, consent=None, platform=None, clock=None, grant_service=None):
     """
     Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `run` is how a command runs,
-    `consent` how the person says yes (default: in this terminal), `probe` how a board in download mode is found
-    (default: board_console.ConsoleProbe), `clock` how the time is read (default: board_grant.read_local_time, called once),
+    `consent` how the person says yes (default: in this terminal), `platform` the FirmwarePlatform with the board tools
+    (default: MicroPythonPlatform), `clock` the time and the waits (default: board_console.SystemClock),
     `grant_service` the board_grant.GrantService that finds a deploy grant (default: the store's). A `consent` given always
     wins: the grant is read only when none is given. Returns the exit code.
     """
@@ -194,7 +194,7 @@ def main(argv=None, run=None, consent=None, probe=None, clock=None, grant_servic
     evidence = evidence_for(args.project, args.no_simulation, args.ignore_older_runs)
     reached = {"project": args.project.resolve(), "token": args.token, "port": args.port, "stage": board_envelope.STAGE_PLAN,
             "evidence": evidence, "dry_run": args.dry_run}
-    code = _deploy(args, evidence, run or subprocess.run, consent, probe, clock, grant_service, sys.stderr if args.json else None, reached)
+    code = _deploy(args, evidence, run or subprocess.run, consent, platform, clock, grant_service, sys.stderr if args.json else None, reached)
     if args.json:
         print(board_envelope.dumps(board_envelope.deploy_envelope(reached, code)))
     return code
@@ -215,14 +215,14 @@ def who_said_yes(consent):
         return "not known (%s)" % cannot
 
 
-def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reached):
+def _deploy(args, evidence, run, consent, platform, clock, grant_service, out, reached):
     """The deploy main parses for. Every line a person reads goes to `out` (None: stdout). What `--json` reports it puts in
     `reached`. Returns the exit code."""
     def say(line):
         shown(line, out)
 
-    service = DeployService(args.project, FirmwarePlatform.micropython(args.project), evidence, run,
-                            clock, probe, echo_to=None if out is None else 2)
+    service = DeployService(args.project, platform or MicroPythonPlatform(args.project), evidence, run, clock,
+                            echo_to=None if out is None else 2)
     try:
         planned = service.plan(args.port)
     except (DeployError, tools.ToolProblem) as cannot:
@@ -235,7 +235,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
     if args.dry_run:
         say("\n".join("  would run: %s" % shlex.join(command) for command in planned.commands))
         say("  board: not looked at: run look.py")
-        say("  " + WATCH % shlex.join(service.platform.make_connection(planned.mpremote, args.port).repl_command()))
+        say("  " + WATCH % shlex.join(service.platform.make_connection(planned.mpremote, args.port, run).repl_command()))
         return EXIT_OK
     try:
         reached["stage"] = board_envelope.STAGE_LOOK
@@ -255,7 +255,7 @@ def _deploy(args, evidence, run, consent, probe, clock, grant_service, out, reac
         reached.update(refusal=str(cannot), reason=reason_of(cannot))
         lines = ["deploy.py: %s" % cannot]
         if isinstance(cannot, board_look.LookStop):  # P354: a failed read gets the doctor, a busy port its step
-            lines, reached["doctor"] = board_doctor.stop_answer("deploy.py", cannot, args.project, run)
+            lines, reached["doctor"] = board_doctor.stop_answer("deploy.py", cannot, service.platform, run)
         shown("\n".join(lines), sys.stderr)
         return EXIT_COULD_NOT_RUN
     except deploy_gate.GateClosedError as shut:

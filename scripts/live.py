@@ -13,9 +13,9 @@ import board_grant
 import board_live
 import board_look
 import boards
+import board_console
 import tools
-from board_connection import BoardConnection
-from board_console import ConsoleProbe
+from firmware_platform import MicroPythonPlatform
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN
 from restricted_pins import BrokenRecordError
 from spark.core.text_guards import guard_sentence, printable
@@ -71,9 +71,9 @@ def to_json(port, result):
     return json.dumps(dict(fields, port=port))
 
 
-def main(argv=None, run=subprocess.run, probe=None, now=board_grant.read_local_time):
-    """Run one live try. `run` is how a command runs, `probe` the console probe (default: ConsoleProbe for mpremote's
-    Python), `now` the clock. Returns the exit code."""
+def main(argv=None, run=subprocess.run, platform=None, now=board_console.SystemClock.now):
+    """Run one live try. `run` is how a command runs, `platform` the FirmwarePlatform with the board tools (default:
+    MicroPythonPlatform), `now` the clock. Returns the exit code."""
     parser = argparse.ArgumentParser(prog="live.py", description=__doc__.strip(), epilog=EPILOG,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--code", required=True, help="the code to run on the board, e.g. 'print(1)'")
@@ -85,14 +85,14 @@ def main(argv=None, run=subprocess.run, probe=None, now=board_grant.read_local_t
     args = parser.parse_args(argv)
     port = args.port
     try:
-        shell = tools.find("board-shell", args.project)
-        finder = board_look.PortFinder(shell, run)
+        platform = platform or MicroPythonPlatform(args.project)
+        finder = platform.make_port_finder(run)
         port = port or finder.require_one_port("live.py")
-        probe = probe or ConsoleProbe.for_tool(shell, port, run)
+        probe = platform.make_console_probe(port, run)
         doctor = board_doctor.BoardDoctorService.for_board(finder, probe)
         service = board_live.LiveTryService(board_grant.GrantService(finder, now=now),
-                                            BoardConnection(tools.command_for(shell), port, run), probe,
-                                            boards.load(args.project), doctor, shell)
+                                            platform.make_connection(platform.make_shell_command(), port, run),
+                                            probe, boards.load(args.project), doctor, platform.find_tool("board-shell"))
         result = service.run(args.code, port)
     except (tools.ToolProblem, board_look.LookStop, boards.BoardError, BrokenRecordError) as cannot:
         if args.json:

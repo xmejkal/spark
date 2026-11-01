@@ -307,7 +307,7 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Store | reads and writes one place in the person's store, as JSON files | the noun of what it keeps, then `Store` | `GrantStore` keeps one grant file per board in `grants/` |
 | Decorator | wraps an object of another class, has the same methods, and adds one behaviour around them | what it adds, then the whole name of what it wraps | `RetryingBoardConnection` cures the board once and runs the code again |
 | Renderer | turns one value into lines of a sheet or the text of a file, and decides nothing again | what it draws, then its form | `NumberedList` and `MermaidDiagram` render the steps (`WIRING_VIEWS`); `WokwiBreadboardDiagram` and `SvgBreadboardDiagram` render the layout (`DRAWING_RENDERERS`), with `FILE_NAME`, `NOUN`, `PURPOSE_MESSAGE` and `SHEET_MESSAGE` |
-| Platform | a bundle of factories for the parts that depend on the firmware's language: each `make_` method builds one | a plain noun; the docstring says what varies | `FirmwarePlatform` builds the flasher, the board connection, the ready check and the console probe for MicroPython |
+| Platform | a Strategy that builds every board tool the bench uses, for one firmware language: each `make_` method builds one, and `find_tool` gives the doctor a tool. The bench CLIs and `DeployService` take a platform, and a test gives a Fake | the language, then `Platform`; the docstring starts with Strategy | `FirmwarePlatform` is the base, `MicroPythonPlatform` builds esptool's flasher and reader and mpremote's finder, connection and probe; `FakeFirmwarePlatform` and `FakeProbePlatform` stand in |
 | Fake | stands in for a real part in the tests, in `tests/fakes.py` | `Fake`, then the whole name of the part | `FakeBoardConnection`, `FakeConsoleProbe`, `FakeOutsideWorld` |
 | Operation | one job, with one public method, `run()`: a class with `name`, `arguments` and `effects`, which a frontend runs through the core (see [The core contract](#the-core-contract)) | a verb, then its object | `LookAtBoard` |
 
@@ -320,7 +320,7 @@ gave `ReadyResult`, `DeployPlan` and `BoardLog`. PR 5 gave `ProjectImage`, `Depl
 sentence an `EsptoolFlasher` holds, `boot_hint_for(places)` builds it, and `boards.ButtonPlaces` (a Value) names the
 buttons from the record's `physical.buttons`. `board_doctor.step_sentence` does the same for the doctor's steps.
 PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `deploy_service.DeployResult` and
-`firmware_platform.FirmwarePlatform`. `deploy.py` only parses, prints and maps the exit code.
+`firmware_platform.FirmwarePlatform`. P475 made that class the base of `MicroPythonPlatform`, gave it the board reader and the port finder, and made `board_console.SystemClock` the one clock (`now`, `monotonic`, `sleep`). `deploy.py` only parses, prints and maps the exit code.
 
 ### The package
 

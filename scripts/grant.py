@@ -12,10 +12,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import board_doctor
 import board_grant
 import board_look
+import board_console
 import boards
 import flasher
 import store
 import tools
+from firmware_platform import MicroPythonPlatform
 from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 from spark.core.text_guards import guard_lines, guard_sentence, printable
@@ -65,9 +67,9 @@ def to_json(result):
     return json.dumps({"granted": result.granted, "why": result.why, "grant": grant})
 
 
-def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local_time):
-    """Issue or check a grant. `run` is how a command runs, `consent` how the person says yes (default: a real
-    terminal), `now` the clock. Returns the exit code."""
+def main(argv=None, run=subprocess.run, consent=None, now=board_console.SystemClock.now, platform=None):
+    """Issue or check a grant. `run` runs a command, `consent` is the yes (default: a real terminal), `now` the clock,
+    `platform` the FirmwarePlatform with the board tools (default: MicroPythonPlatform). Returns the exit code."""
     parser = argparse.ArgumentParser(prog="grant.py", description=__doc__.strip(), epilog=EPILOG,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -87,15 +89,15 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
         parser.error("--json goes with --check only")
     if args.check and args.scope != board_grant.SCOPE_LIVE:
         parser.error("--scope goes with --minutes only: --check looks for a live grant")
+    platform = platform or MicroPythonPlatform(args.project)
     try:
-        finder = board_look.PortFinder(tools.find("board-shell", args.project), run)
+        finder = platform.make_port_finder(run)
         if args.check:
             result = board_grant.GrantService(finder, now=now).check(args.port)
             print(to_json(result) if args.json else guard_lines(describe(result)))  # --- MVP --- the MAC is data (P430)
             return EXIT_OK if result.granted else EXIT_PROBLEMS
         places = boards.ButtonPlaces.of_project(args.project)
-        hint = flasher.EsptoolFlasher.boot_hint_for(places)
-        reader = board_look.EsptoolReader(tools.find("flasher", args.project), run, hint)
+        reader = platform.make_board_reader(run, flasher.EsptoolFlasher.boot_hint_for(places))
         line = format_rerun_line(__file__, (["--scope", args.scope] if args.scope != board_grant.SCOPE_LIVE else [])
                                  + ["--minutes", args.minutes, "--project", args.project.resolve()]
                                  + (["--port", args.port] if args.port else []))
@@ -115,7 +117,7 @@ def main(argv=None, run=subprocess.run, consent=None, now=board_grant.read_local
         if isinstance(cannot, board_look.LookStop):
             # --- MVP --- the stop holds the port and the board record's button words, each on one line (P430)
             shown = boards.ButtonPlaces.of_project(args.project)
-            print(guard_sentence("\n".join(board_doctor.stop_lines("grant.py", cannot, args.project, run)), args.port,
+            print(guard_sentence("\n".join(board_doctor.stop_lines("grant.py", cannot, platform, run)), args.port,
                                  shown.boot, shown.reset, shown.orientation), file=sys.stderr)
         else:
             print(guard_sentence("grant.py: %s" % cannot, args.project), file=sys.stderr)

@@ -26,6 +26,7 @@ from collections import namedtuple
 from pathlib import Path
 
 import board_codes
+import board_console
 import board_look
 import store
 from spark.core.zone_time import say_in_local_zone, stamp  # the grant's times (P401 moved them out, to break an import cycle)
@@ -127,12 +128,6 @@ def mac_key(mac):
     return (mac or "").strip().lower()
 
 
-def read_local_time():
-    """Now, in the machine's zone, with the zone (P291): the zone a person reads, and a stored time carries it."""
-    return datetime.datetime.now().astimezone()
-
-
-
 class GrantRefusedError(GateClosedError):
     """Error: no grant, for one of the WHY_ codes. Its exit code is 1, a refusal, as the deploy gate's stops are, or 2
     for a code in COULD_NOT_RUN_WHYS."""
@@ -179,7 +174,7 @@ class StandingConsentStrategy(ConsentStrategy):
     the deploy's question without asking, while the grant holds at `now()` (a time with its zone); once it ended, it raises
     GateClosedError, so the erase never runs on a stale yes."""
 
-    def __init__(self, grant, now=read_local_time):
+    def __init__(self, grant, now=board_console.SystemClock.now):
         self.grant, self.now = grant, now
 
     @property
@@ -206,12 +201,13 @@ def grant_may_cover(report, evidence):
 
 class GrantService:
     """Service: issues a grant after one look and the person's yes, and checks the grant of the board on USB.
-    `finder` is a board_look.PortFinder, `reader` a board_look.BoardReader, `now` returns the time with its zone. A service that
+    `finder` is a board_look.PortFinder, `reader` a board_look.BoardReader, `now` returns the time with its zone, `user_name` the name of who typed the yes. A service that
     only builds the deploy consent (`consent_for_deploy`) needs neither finder nor reader, and `issue` and `check` need
     them."""
 
-    def __init__(self, finder=None, reader=None, grants=None, now=read_local_time):
+    def __init__(self, finder=None, reader=None, grants=None, now=board_console.SystemClock.now, user_name=getpass.getuser):
         self.finder, self.reader, self.grants, self.now = finder, reader, grants or GrantStore(), now
+        self.user_name = user_name  # who typed the yes: a test gives a name
 
     def issue(self, port, minutes, consent, before_look=lambda: None, script="grant.py", scope=SCOPE_LIVE):
         """The Grant of `scope` kept for the board on USB (or on `port`) for `minutes` from the yes, after one look and
@@ -234,7 +230,7 @@ class GrantService:
         if not consent.ask(question):
             raise GrantRefusedError(WHY_ANSWERED_NO)
         now = self.now()
-        grant = Grant(mac, token, getpass.getuser(), stamp(now), stamp(now + datetime.timedelta(minutes=minutes)), scope)
+        grant = Grant(mac, token, self.user_name(), stamp(now), stamp(now + datetime.timedelta(minutes=minutes)), scope)
         self.grants.save(grant)
         return grant
 

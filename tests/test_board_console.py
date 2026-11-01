@@ -162,8 +162,8 @@ class TheCureTest(unittest.TestCase):
         probe.port_exists = lambda port: False
         cure = probe.cure()
         self.assertFalse(cure.port_back)
-        self.assertGreaterEqual(self.clock.now, 10)
-        self.assertLess(self.clock.now, 11)
+        self.assertGreaterEqual(self.clock.elapsed, 10)
+        self.assertLess(self.clock.elapsed, 11)
         self.assertNotIn(2, self.clock.slept)
 
     def test_a_restart_is_the_rom_s_rst_line_and_not_a_word_that_ends_in_rst(self):

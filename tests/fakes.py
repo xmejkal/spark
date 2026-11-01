@@ -9,6 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import store  # noqa: E402
+from firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
 
 #: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
 IMPORT_HOME = os.environ["SPARK_HOME"]
@@ -73,17 +74,26 @@ class FakeConsent:
 
 
 class FakeClock:
-    """A fake clock: `sleep` moves `now` on at once and keeps each sleep."""
+    """A fake clock, one for all of the code's clocks: `now` gives a time with its zone, `monotonic` gives `elapsed`, and
+    `sleep` keeps each wait and moves both on at once. `advance` moves them on without a wait."""
 
-    def __init__(self, now=0.0):
-        self.now, self.slept = now, []
+    def __init__(self, now=datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc), elapsed=0.0):
+        self.moment, self.elapsed, self.slept = now, elapsed, []
+
+    def now(self):
+        return self.moment
 
     def monotonic(self):
-        return self.now
+        return self.elapsed
+
+    def advance(self, **kw):
+        """Move the clock on by a datetime.timedelta's keyword arguments, for example minutes=30."""
+        step = datetime.timedelta(**kw)
+        self.moment, self.elapsed = self.moment + step, self.elapsed + step.total_seconds()
 
     def sleep(self, seconds):
         self.slept.append(seconds)
-        self.now += seconds
+        self.advance(seconds=seconds)
 
 
 class FakePortFinder:
@@ -115,20 +125,6 @@ def pin_time_zone(case, zone="Europe/Prague"):
     case.addCleanup(restore)
 
 
-class FakeLocalClock:
-    """A fake clock for board_grant: calling it gives `now` (a time with its zone), and `advance` moves it on."""
-
-    def __init__(self, now):
-        self.now = now
-
-    def __call__(self):
-        return self.now
-
-    def advance(self, **kw):
-        """Move the clock on by a datetime.timedelta's keyword arguments, for example minutes=30."""
-        self.now += datetime.timedelta(**kw)
-
-
 class FakeConsoleProbe:
     """A fake ConsoleProbe: the console prints `printed`, and the console read calls `on_console` (a test's way to make
     the board answer again). cure() calls `on_cure` and gives `cured`, a board_console.Cure. Keeps how often each was asked."""
@@ -155,6 +151,97 @@ class FakeConsoleProbe:
         if self.on_cure:
             self.on_cure()
         return self.cured
+
+
+class FakeBoardReader:
+    """A fake board_look.BoardReader: each `read` gives the next of `readings` (a BoardReading, or a LookStop to raise), and
+    the last one for good. Keeps each port it was asked for in `read_ports`."""
+
+    def __init__(self, *readings):
+        self.readings, self.read_ports = list(readings), []
+
+    def read(self, port):
+        self.read_ports.append(port)
+        reading = self.readings.pop(0) if len(self.readings) > 1 else self.readings[0]
+        if isinstance(reading, Exception):
+            raise reading
+        return reading
+
+
+class FakeFirmwarePlatform(FirmwarePlatform):
+    """A fake FirmwarePlatform: each part is the object a test gives, or the exception it raises when the code asks for
+    it. A part left out raises AssertionError when asked for. `hints` keeps the hint of each `make_board_reader`, and
+    `roles` the role of each `find_tool`."""
+
+    def __init__(self, project=Path("."), flasher=None, shell_command=None, port_finder=None, board_reader=None,
+                 connection=None, ready_check=None, console_probe=None, tool=None):
+        super().__init__(project)
+        self.parts = {"flasher": flasher, "shell_command": shell_command, "port_finder": port_finder,
+                      "board_reader": board_reader, "connection": connection, "ready_check": ready_check,
+                      "console_probe": console_probe, "tool": tool}
+        self.hints, self.roles = [], []
+
+    def _part(self, name):
+        part = self.parts[name]
+        assert part is not None, "the test gave no %s, and the code asked for it" % name
+        if isinstance(part, Exception):
+            raise part
+        return part
+
+    def find_tool(self, role):
+        self.roles.append(role)
+        return self._part("tool")
+
+    def make_flasher(self):
+        return self._part("flasher")
+
+    def make_shell_command(self):
+        return self._part("shell_command")
+
+    def make_port_finder(self, run):
+        return self._part("port_finder")
+
+    def make_board_reader(self, run, hint):
+        self.hints.append(hint)
+        return self._part("board_reader")
+
+    def make_connection(self, command, port, run):
+        return self._part("connection")
+
+    def make_ready_check(self, connection):
+        return self._part("ready_check")
+
+    def make_console_probe(self, port, run):
+        return self._part("console_probe")
+
+
+class FakeProbePlatform(MicroPythonPlatform):
+    """A fake MicroPythonPlatform for a test that runs the real finder, reader and flasher over a fake `run`: the console
+    probe is `probe` (or raised, when it is an exception), and the tools come from `find_tool` (a role -> tools.Tool; the
+    project's tools list when None)."""
+
+    def __init__(self, project, probe, find_tool=None):
+        super().__init__(project, find_tool)
+        self.probe = probe
+
+    def make_console_probe(self, port, run):
+        if isinstance(self.probe, Exception):
+            raise self.probe
+        return self.probe
+
+
+class FakeDeployRecordStore:
+    """A fake deploy_record_store.DeployRecordStore: `write_deploy` keeps each call in `written` and gives `path`, or raises
+    `raises` (for example store.StoreProblem)."""
+
+    def __init__(self, path=Path("record.json"), raises=None):
+        self.path, self.raises, self.written = path, raises, []
+
+    def write_deploy(self, facts, verdict, who):
+        if self.raises:
+            raise self.raises
+        self.written.append((facts, verdict, who))
+        return self.path
 
 
 class FakePartPictures:

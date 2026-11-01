@@ -63,12 +63,13 @@ class TerminalConsentStrategy(ConsentStrategy):
     """Strategy: `yes` typed in a real terminal. With no terminal, GateClosedError gives `line`, the command to run
     in one."""
 
-    def __init__(self, line, stdin=None, stdout=None):
+    def __init__(self, line, stdin=None, stdout=None, user_name=getpass.getuser):
         self.line, self.stdin, self.stdout = line, stdin or sys.stdin, stdout or sys.stdout
+        self.user_name = user_name  # who types the yes: a test gives a name
 
     @property
     def who(self):
-        return TYPED_BY % getpass.getuser()
+        return TYPED_BY % self.user_name()
 
     def require_ready(self):
         if not (self.stdin.isatty() and self.stdout.isatty()):

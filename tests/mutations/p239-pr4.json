@@ -38,7 +38,7 @@
  {
   "file": "scripts/deploy_gate.py",
   "name": "the terminal's who is fixed",
-  "find": "return TYPED_BY % getpass.getuser()",
+  "find": "return TYPED_BY % self.user_name()",
   "replace": "return \"typed in a terminal\""
  }
 ]

@@ -255,7 +255,7 @@
   "file": "scripts/board_grant.py",
   "name": "standing-uses-no-clock",
   "find": "if self.grant.why_not_valid(self.now()):\n            raise GateClosedError(",
-  "replace": "if self.grant.why_not_valid(read_local_time()):\n            raise GateClosedError("
+  "replace": "if self.grant.why_not_valid(board_console.SystemClock.now()):\n            raise GateClosedError("
  },
  {
   "file": "scripts/board_grant.py",
