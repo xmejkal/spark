@@ -1,5 +1,7 @@
 # Platform lens: what changes to serve Arduino, PlatformIO, ESP-IDF (P221 #203, epic P286 #336)
 
+Replaced on 2026-11-02 by [the P528 notes](../2026-11-02-p528-platforms/notes.md). The line cites below are from 2026-10-17.
+
 Summary: the board facts, the pin numbers, the diagram and the scenario YAML stay. The firmware's language (pins.py), the file tree, the
 image build, the REPL tools and the "import it on the Mac" test all assume MicroPython and change. Wokwi itself is not the blocker.
 
