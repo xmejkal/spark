@@ -1,0 +1,9 @@
+[
+ {"file": "scripts/deploy.py", "name": "the flash tool's output no longer goes to fd 2 under --json", "find": "echo_to=None if out is None else 2)", "replace": "echo_to=None)"},
+ {"file": "scripts/deploy.py", "name": "the look's lines go to stdout under --json", "find": "shown(\"\\n\".join(board_look.report_lines(report, token=False)), out, flush=True)", "replace": "shown(\"\\n\".join(board_look.report_lines(report, token=False)), None, flush=True)"},
+ {"file": "scripts/deploy.py", "name": "a stop's diagnostic goes to stdout", "find": "        shown(\"\\n\".join(lines), sys.stderr)\n        return EXIT_COULD_NOT_RUN\n    except deploy_gate", "replace": "        shown(\"\\n\".join(lines), None)\n        return EXIT_COULD_NOT_RUN\n    except deploy_gate"},
+ {"file": "scripts/deploy_service.py", "name": "the yes line loses its indent", "find": "show_line(\"  yes: %s\" % consent.who)", "replace": "show_line(\"yes: %s\" % consent.who)"},
+ {"file": "scripts/deploy_service.py", "name": "the running line says another word", "find": "show_line(\"  running: %s\" % shlex.join(command))", "replace": "show_line(\"  runs: %s\" % shlex.join(command))"},
+ {"file": "scripts/flasher.py", "name": "the retry line loses its wait", "find": "RETRY_LINE = \"retry in %(wait)d s: %(command)s stopped", "replace": "RETRY_LINE = \"retry: %(command)s stopped"},
+ {"file": "scripts/deploy.py", "name": "the gate's stderr line gets an indent and a blank line", "find": "shown(\"deploy.py: %s\" % shut, sys.stderr)", "replace": "shown(\"\\n  deploy.py: %s\" % shut, sys.stderr)"}
+]

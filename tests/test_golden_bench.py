@@ -33,16 +33,19 @@ class BenchGoldenTest(unittest.TestCase):
         cls.folder = Path(tempfile.mkdtemp())
         cls.project = golden_bench.build_project(cls.folder)
         look_ok = next(case for case in golden_bench.CASES if case.golden == "look-ok.json")
-        code, out = golden_bench.run_script(look_ok, cls.project, Path(tempfile.mkdtemp(dir=cls.folder)))
+        code, out, _ = golden_bench.run_script(look_ok, cls.project, Path(tempfile.mkdtemp(dir=cls.folder)))
         cls.token = (json.loads(out)["data"] or {}).get("token") if code == 0 else None
         assert cls.token, "look-ok gave no token, so no deploy Case can run: %s" % out
 
     def run_case(self, case):
         store = Path(tempfile.mkdtemp(dir=self.folder))  # each Case its own store, so that no grant leaks
-        code, out = golden_bench.run_script(case, self.project, store, self.token)
-        self.assertEqual(code, case.exit_code, out)
-        why = golden_bench.check_golden(case, golden_bench.scrub(out, golden_bench.replacements_of(self.project, store)))
-        self.assertIsNone(why, why)
+        code, out, err = golden_bench.run_script(case, self.project, store, self.token)
+        self.assertEqual(code, case.exit_code, out + err)
+        places = golden_bench.replacements_of(self.project, store)
+        reasons = [golden_bench.check_golden(case, golden_bench.scrub(out, places))]
+        if case.stderr_golden:  # both are checked before one assert, so that one accept run writes both goldens
+            reasons.append(golden_bench.check_golden(case, golden_bench.scrub(err, places), case.stderr_golden))
+        self.assertEqual([why for why in reasons if why], [])
 
     def test_no_golden_holds_a_path_of_this_machine(self):
         for golden in sorted(golden_bench.GOLDEN_DIR.iterdir()):
@@ -52,7 +55,7 @@ class BenchGoldenTest(unittest.TestCase):
 
     def test_every_golden_has_its_case(self):
         written = {golden.name for golden in golden_bench.GOLDEN_DIR.iterdir()}
-        self.assertEqual(written, {case.golden for case in golden_bench.CASES})
+        self.assertEqual(written, {name for case in golden_bench.CASES for name in (case.golden, case.stderr_golden) if name})
 
     def test_every_item_in_every_golden_has_a_listed_code(self):
         # P433: look.py and deploy.py write a code in each problem and each unchecked item (look-ok and the dry run have none)

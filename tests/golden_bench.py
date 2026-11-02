@@ -8,6 +8,7 @@ with its golden file. `SPARK_ACCEPT=look python3 -m unittest tests.test_golden_b
 today's output and fails, so that a person reads `git diff tests/golden` before the next run passes.
 """
 
+import datetime
 import hashlib
 import json
 import os
@@ -22,6 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tests"))
 
+import board_look  # noqa: E402
 import boards  # noqa: E402
 import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
@@ -40,11 +42,30 @@ LOOK_TOKEN = "{look-token}"
 BOARD_ID = "firebeetle2-esp32s3"
 
 #: Value. One golden: its name (`<op>-<status>[-<scenario>]`, the extension says which output), the script, its
-#: arguments after --project, the files of the canned flash id and device list, the exit code it must end with, and
-#: `plant`: (path under the store, text) pairs written into the run's store first.
-Case = namedtuple("Case", "golden script argv flash_id_file devs_file exit_code plant", defaults=((),))
+#: arguments after --project, the files of the canned flash id and device list, the exit code it must end with,
+#: `plant`: (path under the store, text) pairs written into the run's store first (a text may be a callable that gives
+#: it at run time, for a time that moves), and `stderr_golden`: the name of the golden of the run's stderr, or None.
+Case = namedtuple("Case", "golden script argv flash_id_file devs_file exit_code plant stderr_golden",
+                  defaults=((), None))
 #: A store record of the canned board's last deploy that cannot be read (P416).
 UNREADABLE_LAST_DEPLOY = (("boards/dc-da-0c-xx-xx-xx.json", "{not json"),)
+#: The canned board's address, masked as every tracked file holds one (P505).
+BOARD_MAC = "dc:da:0c:xx:xx:xx"
+GRANT_MINUTES = 60
+
+
+def deploy_grant_text():
+    """The text of a deploy grant for the canned board, given one minute ago, valid for GRANT_MINUTES: it takes
+    deploy.py past the gate with a standing yes. Made at run time, because a grant holds only for a time that moves."""
+    now = datetime.datetime.now().astimezone().replace(microsecond=0)
+    return json.dumps({"mac": BOARD_MAC, "board_token": board_look.board_token(BOARD_MAC), "granted_by": "tester",
+                       "granted_at": (now - datetime.timedelta(minutes=1)).isoformat(),
+                       "expires_at": (now + datetime.timedelta(minutes=GRANT_MINUTES)).isoformat(), "scope": "deploy"})
+
+
+#: A deploy grant in the store: deploy.py passes the gate, runs the erase, which the fake esptool fails with its retry
+#: exit code, waits 5 s (the flasher's real wait), and ends with the flash failure.
+DEPLOY_GRANT = (("grants/dc-da-0c-xx-xx-xx-deploy.json", deploy_grant_text),)
 CASES = [
     Case("look-ok.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("look-ok.txt", "look.py", [], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
@@ -62,7 +83,12 @@ CASES = [
          "mpremote-devs-one.txt", 0),
     Case("deploy-ok-dry-run.txt", "deploy.py", ["--dry-run"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("deploy-could-not-run-no-terminal.json", "deploy.py", ["--json", "--token", LOOK_TOKEN],
-         "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 2),
+         "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 2, (), "deploy-could-not-run-no-terminal.json.stderr"),
+    Case("deploy-could-not-run-flash-failed-grant.json", "deploy.py", ["--json", "--token", LOOK_TOKEN],
+         "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 2, DEPLOY_GRANT,
+         "deploy-could-not-run-flash-failed-grant.json.stderr"),
+    Case("deploy-could-not-run-flash-failed-grant.txt", "deploy.py", ["--token", LOOK_TOKEN], "s3-flash-id-16mb.txt",
+         "mpremote-devs-one.txt", 2, DEPLOY_GRANT, "deploy-could-not-run-flash-failed-grant.txt.stderr"),
     Case("grant-problems-no-grant.json", "grant.py", ["--check", "--json"], "s3-flash-id-16mb.txt",
          "mpremote-devs-one.txt", 1),
     Case("grant-could-not-run-two-boards.json", "grant.py", ["--check", "--json"], "s3-flash-id-16mb.txt",
@@ -121,17 +147,17 @@ def child_env(store, flash_id_file, devs_file):
 
 
 def run_script(case, project, store, token=None):
-    """(exit code, stdout) of `case`'s script run as a child in `project`, with `store` as its SPARK_HOME. stdin is
+    """(exit code, stdout, stderr) of `case`'s script run as a child in `project`, with `store` as its SPARK_HOME. stdin is
     closed and stdout is a pipe, so the script sees no terminal. `token` replaces LOOK_TOKEN in the arguments."""
     argv = [token if arg == LOOK_TOKEN else arg for arg in case.argv]
     for place, text in case.plant:
         (Path(store) / place).parent.mkdir(parents=True, exist_ok=True)
-        (Path(store) / place).write_text(text)
+        (Path(store) / place).write_text(text() if callable(text) else text)
     env = child_env(store, case.flash_id_file, case.devs_file)
     done = subprocess.run([sys.executable, str(ROOT / "scripts" / case.script), "--project", str(project), *argv],
                           cwd=str(project), env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
                           timeout=RUN_TIMEOUT_S)
-    return done.returncode, done.stdout
+    return done.returncode, done.stdout, done.stderr
 
 
 def replacements_of(project, store):
@@ -152,6 +178,10 @@ def replacements_of(project, store):
 #: changed value in `at` still fails its golden.
 MOMENT = re.compile(r'"at": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d{4}"')
 
+#: A clock time with its zone and a colon in the offset, as a grant's `yes:` line and the envelope's `who` print it
+#: (P508). The grant is made at run time, so only the shape can match, and a changed shape still fails.
+CLOCK = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d")
+
 
 #: A word in a script's shell quotes that starts with a placeholder. A script quotes a path only when it holds a space,
 #: so the quotes go, and a golden reads the same on a machine whose paths have none.
@@ -160,18 +190,20 @@ QUOTED_PLACE = re.compile(r"'(<(?:project|store|repo|python)>[^'\s]*(?: [^'\s]+)
 
 def scrub(text, places):
     """`text` with each key of `places` replaced by its placeholder, longest first, the quotes around a placed path
-    dropped, and reach's moment replaced by `<at>`."""
+    dropped, reach's moment replaced by `<at>` and a grant's clock times by `<time>`."""
     pattern = re.compile("|".join(re.escape(place) for place in places))
     placed = QUOTED_PLACE.sub(r"\1", pattern.sub(lambda found: places[found.group(0)], text))
-    return MOMENT.sub('"at": "<at>"', placed)
+    return CLOCK.sub("<time>", MOMENT.sub('"at": "<at>"', placed))
 
 
-def check_golden(case, text):
-    """None when `text` equals `case`'s golden, else the reason it does not. When ACCEPT_VARIABLE names the case's op,
-    the golden is written from `text` and the reason says so, so the run still fails."""
-    golden = GOLDEN_DIR / case.golden
+def check_golden(case, text, name=None):
+    """None when `text` equals `case`'s golden (the file `name` names, for its stderr), else the reason it does not.
+    When ACCEPT_VARIABLE names the case's op, the golden is written from `text` and the reason says so, so the run
+    still fails."""
+    name = name or case.golden
+    golden = GOLDEN_DIR / name
     if not text.strip():
-        return "%s printed nothing on stdout, and an empty golden guards nothing" % case.golden
+        return "%s printed nothing, and an empty golden guards nothing" % name
     if os.environ.get(ACCEPT_VARIABLE) == op_of(case):
         GOLDEN_DIR.mkdir(exist_ok=True)
         golden.write_text(text)
