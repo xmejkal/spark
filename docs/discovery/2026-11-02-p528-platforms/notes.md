@@ -1,6 +1,6 @@
 # Platform notes (P528 #730, epic P286 #336), refreshed 2026-11-02
 
-These notes replace the 2026-10-17 map in [p218-finish/platforms.md](../2026-10-17-p218-finish/platforms.md). The spikes P529 #731 (Arduino), P530 #732 (ESP-IDF) and P531 #733 (Rust) read them and add what they find.
+These notes measure today's code against [the four-platform plan](../2026-10-20-p221-arduino/plan.md) that the PO approved on 2026-10-20 (epic P356 #457). Where the two differ, the plan's names and decisions hold. The notes add the Rust column that the plan lacks (P531 #733). They replace the 2026-10-17 map in [p218-finish/platforms.md](../2026-10-17-p218-finish/platforms.md).
 
 Summary: One seam now exists, `FirmwarePlatform` (with `Flasher` under it), and it covers the board tools: flash, port list, board read, connection, ready check, console probe. Everything on the build side is still MicroPython-only and has no seam: the pin-map writer, the firmware tree, the image build, the Mac import check, the pin guard, the Wokwi image lines and the breadboard wording. The easiest second platform is Arduino (arduino-cli), because its merged image fits the existing esptool flash path and the existing Wokwi lines. Nothing here is built.
 
@@ -18,7 +18,7 @@ Summary: One seam now exists, `FirmwarePlatform` (with `Flasher` under it), and 
 | Wokwi project | sim_project.py:403 wokwi_toml, :394 UNNAMED_FIRMWARE, :280 FIRMWARE_LINE | No | same keys, .bin | `.pio/build/..` | merged .bin or flasher_args.json | `firmware` and `elf` = target ELF |
 | Scenario run | run_scenario.py:67 DEFAULT_IMAGE, :408 image_in, :463 main.py precheck | No | mostly stays | stays | stays | stays |
 | Flash image onto board | flasher.py:18 Flasher, :35 EsptoolFlasher (IMAGE_OFFSET :40) | Yes | merged image at 0x0 fits | same | merged fits | `espflash` or merged fits |
-| Board tools | firmware_platform.py:37 FirmwarePlatform, :82 MicroPythonPlatform | Yes | new subclass | new subclass | new subclass | new subclass |
+| Board tools | firmware_platform.py:37 FirmwarePlatform, :82 MicroPythonPlatform | Yes | an `arduino` entry in `PLATFORMS` | a build tool, not a platform | an `esp-idf` entry | a `rust` entry |
 | Deploy steps | deploy_service.py:62 DeployService, deploy.py:161 main (take `platform`) | Yes (over the platform) | stays | stays | stays | stays |
 | Port list / board read | board_look.py:101 PortFinder (mpremote), :185 EsptoolReader (esptool) | Yes (made by platform) | PortFinder via pyserial (new) | same | same | same |
 | Ready proof | ready_check.py:43 ReadyCheck over board_connection.py:50 BoardConnection (mpremote raw REPL) | Yes, but REPL-shaped | needs a serial-only check | same | same | same |
@@ -36,13 +36,12 @@ Stays everywhere: board records minus one key, parts, needs, pin assignment, dia
 classDiagram
   class FirmwarePlatform { board tools: exists }
   FirmwarePlatform <|-- MicroPythonPlatform
-  FirmwarePlatform <|-- ArduinoPlatform : missing
   FirmwarePlatform --> Flasher
   FirmwarePlatform --> PortFinder
   FirmwarePlatform --> BoardConnection
   class PinMapRenderer { build side: missing }
   class FirmwareLayout { build side: missing }
-  class FirmwareBuilder { build side: missing }
+  class ImageBuilder { build side: missing }
   class FirmwareCheck { build side: missing }
 ```
 - `FirmwarePlatform` (firmware_platform.py:37): a factory for the project's board tools. One job: give deploy, look, doctor, live and reach their tools.
@@ -55,7 +54,9 @@ classDiagram
 - `ImageEvidence` (image_evidence.py:178): why an image can go on a board (passed run, or no-simulation checks). Not yet platform-aware.
 - `BoardCheckStrategy` (board_doctor.py:76): one doctor check per step.
 - Test double: `FakeFirmwarePlatform` (tests/fakes.py:172).
-Missing seams (old names still fit): FirmwareLayout, PinMapRenderer, FirmwareBuilder, FirmwareCheck (Mac check), a serial-only ready check, a per-platform ImageEvidence.
+Missing roles, by the plan's names: `FirmwareLayout`, `PinMapRenderer`, `FirmwareCheck`, `ImageBuilder`, the split of `ReadyCheck` into `ReplReadyCheck` and `ConsoleReadyCheck`, and `PlatformContract` with the skip rule.
+
+One difference from the plan: the plan says one class built by a function, with no subclass per platform. Today's code has a subclass, `MicroPythonPlatform` (firmware_platform.py:82). Slice 0 (R1) settles it.
 
 ## Confirmed facts (see sources)
 - Wokwi runs Rust: the project config page says a Rust project's `firmware` and `elf` both point at the ELF (target/<triple>/debug/<name>). The esp-rs template ships a wokwi.toml like that. A Wokwi project "[esp32c6" is a no_std esp-hal template on `esp32-c6-devkitc-1`. NOT confirmed: that it is an official Wokwi example (origin unknown). wokwi.com/rust says online Rust compile is gone. Use Wokwi for VS Code or the CLI locally.
@@ -63,30 +64,20 @@ Missing seams (old names still fit): FirmwareLayout, PinMapRenderer, FirmwareBui
 - arduino-cli merged .bin: NOT confirmed. `--export-binaries` (-e) exports parts (app, bootloader, partitions), and builds merge them with `esptool merge_bin` (offsets unsourced here). Plan on our own merge.
 - Wokwi takes .bin, .elf or .uf2. A merged .bin with bootloader, partitions and app is the advised form. Unnamed offset defaults to 0x10000.
 
-## Smallest steps for Arduino, in order (each testable alone)
-1. Name the platform in the project record (`requirements.json`), default `micropython`. Test: old projects read the same.
-2. `PinMapRenderer`: one class per language. Today's `pin_module` becomes the Python one. Test: a golden for pins.py unchanged.
-3. Add the C++ renderer for `pins.h` from the same assign result. Test: same name/gpio set as pins.py, and a sketch including it compiles for the C6.
-4. Board record: `firmware_images` map in place of `micropython_port` (read both while moving). Test: old records still resolve.
-5. `FirmwareLayout`: where the files go and which one boots. Make the main.py prechecks (run_scenario.py:463, image_evidence.py:370) ask it. Test: MicroPython unchanged, and Arduino names the .ino.
-6. `compiler` tool role in tools.json (arduino-cli, esp32 core 3.x pinned). Test: `tools.py` status shows it missing, then installed.
-7. `FirmwareBuilder` for Arduino: compile, export, `esptool merge_bin` into the one image. Test: image offsets match the C6 map, with no board needed.
-8. Wokwi lines accept the new image path (sim_project.py:403). Test: wokwi-cli runs the blink scenario and sees `ready` (pass line 1).
-9. `ArduinoPlatform` subclass: same `EsptoolFlasher`, a serial-only ready check, no console probe. Test: FakeFirmwarePlatform-style deploy golden has the same JSON shape.
-10. Arduino `ImageEvidence` (a C++ compile in place of the Python compile). Test: gate refuses an image that did not compile.
-11. Breadboard and init wording per platform (`INPUT_PULLUP`). Test: text golden.
+## Where the plan's slices stand (2026-11-02)
 
-## Open questions a spike must answer
-Arduino (keep the old three):
-- Wokwi runs the C6 build from the existing diagram.json and scenario. Pass: wokwi-cli exits 0 on the blink scenario with the merged image and `ready` seen.
-- One pins.h and one pins.py from the same facts. Pass: both render from one assign result, a test shows the same name/gpio set, and a sketch using pins.h compiles for the C6.
-- Deploy proves an Arduino flash without a REPL. Pass: esptool writes the merged image on a real C6, serial shows `ready` in the wait, exit code and JSON match MicroPython's shape.
-- (new) Does the core's build dir hold a merged .bin, or must spark merge? Pass: the file list of one compile on the C6 is written down.
-PlatformIO:
-- Does pioarduino build the C6 and does Wokwi take its firmware.bin? Pass: `pio run` image runs the blink scenario. Also: is the fork risk acceptable (PO call).
-ESP-IDF:
-- Can a user get idf.py without a heavy install (against the "installs nothing heavy" rule)? Pass: one install path under 10 minutes and under 2 GB, or a no.
-- Does Wokwi run the idf.py merged image on the C6? Pass: scenario run with `ready` seen.
+The steps for Arduino, ESP-IDF and PlatformIO are the plan's slices. All five cards are open, and none started:
+
+- A0, a hand-made Arduino blink on the FireBeetle 2 ESP32-S3: P361 #462.
+- Slice 0, the seams with MicroPython only (R1 to R7): P357 #458.
+- Slice 1, Arduino by arduino-cli: P358 #459.
+- Slice 2, ESP-IDF: P359 #460. The ESP-IDF install cost measured in P511 #706 is a comment there.
+- Slice 3, PlatformIO as a second build tool: P360 #461.
+
+## Open questions for Rust (P531 #733)
+
+The plan's spikes A0, E0 and P0 hold the questions for the other three platforms. The MVP board for compiled platforms is the FireBeetle 2 ESP32-S3, and the C6 is Later.
+
 Rust:
 - Does Wokwi run an esp-hal C6 ELF from wokwi.toml with `firmware` and `elf`? Pass: wokwi-cli exits 0 on a blink with the `ready` text.
 - Can deploy flash it? Pass: `espflash save-image --merge` (unsourced) output goes through EsptoolFlasher on a real C6 and serial shows `ready`.
