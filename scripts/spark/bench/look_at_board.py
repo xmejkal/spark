@@ -13,6 +13,7 @@ import boards
 from firmware_platform import MicroPythonPlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from spark.core import outcomes
+from spark.core.events import Event
 from spark.core.operation import BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, NextStep, OperationResult
 from spark.core.text_guards import guard_sentence
@@ -30,7 +31,8 @@ class LookAtBoard(Operation):
     Operation: the look. It builds the evidence (image_evidence), the LookService (board_look.looker) and runs it, and
     returns the LookReport as an OperationResult: its stops and warnings are problems, its unknown fields, a missing token
     and a last deploy it could not check are unchecked, and a token brings the deploy step. A LookStop is one unchecked
-    Finding with the stop's reason, and the board doctor's lines are the diagnostics. It writes nothing on the board.
+    Finding with the stop's reason, and the board doctor's lines are the diagnostics. It writes nothing on the board. It
+    reports one BEGIN of the look, before the read (P507).
     """
 
     name = "look"
@@ -46,6 +48,8 @@ class LookAtBoard(Operation):
     def run(self, project, port, ignore_older_runs, no_simulation, *, outside):
         evidence = evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)
         platform = MicroPythonPlatform(project, outside.find_tool)
+        # P507: after the evidence and the platform, which touch no board, and right before the esptool read
+        outside.report(Event.begin(board_envelope.STAGE_LOOK))
         try:
             report = board_look.looker(platform, outside.run).run(project, port, evidence)
         except board_look.LookStop as stop:
