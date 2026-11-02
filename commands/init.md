@@ -24,6 +24,9 @@ say so before they choose.
 If their board is not listed, `boards/README.md` in this plugin has the schema — its steps are the smart bin's, so follow
 the ones in the plugin's `docs/guide/how-it-works.md`, "Your own dev board" — and a project's own `boards/<id>.json` beats the library.
 
+Called from `/spark:idea` step S, run it with no `--board` (`init_project.py --project .`): the board comes at step L,
+and this run writes the brief and lists the project ([P516](https://github.com/xmejkal/spark/issues/712)).
+
 ## 2. Initialise
 
 ```
