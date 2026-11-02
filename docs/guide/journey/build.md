@@ -138,7 +138,8 @@ What else a requirements file takes ([`/spark:build`'s page](../../../commands/b
   one name, and the requirements stage refuses the file, naming both, before anything is emitted;
 - a part's `rails`, which puts one of its power pins on a rail you name without copying its record;
 - `signals`, entries of `{name, needs}`, which add a pin no part claims (an LED, a limit switch), or
-  `{"name": "TFT_BL", "pin": "D13"}` under a part's signal name, which pins that signal (a bus line needs no pin).
+  `{"name": "TFT_BL", "pin": "D13"}` under a part's signal name, which pins that signal (a bus line needs no pin; the
+  GDI display's DC cannot take the cable's D2 until P527 (#726), so this is no full GDI recipe yet).
 
 Then [`/spark:build`](../../../commands/build.md) runs the whole chain on it:
 

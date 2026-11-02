@@ -42,9 +42,10 @@ somewhere quiet. An optional `"signals":
 [{"name": "LED_STATUS", "needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
 *assigned, and connected to nothing*, for you to wire by hand, and the spine flags that. An entry with a part's signal
 name and a `pin`, such as `{"name": "TFT_BL", "pin": "D13"}` beside `dfr0664-tft-2in`, sets its pin and adds no
-second signal: use it when a cable or a connector fixes the pin. It holds only `name` and `pin`, because the part's
-record says the rest. A bus line needs no pin, because it lands on the board's own bus pins. A label the board lacks, or a
-strapping pin (close audit C4), is refused by name. An instance's `name`, a rail in
+second signal: use it when a cable or a connector fixes the pin. It is no full GDI recipe yet: the display's DC
+cannot take the cable's D2 until P527 (#726). It holds only `name` and `pin`, because the part's
+record says the rest. A pin on a bus line is refused: the line lands on the board's own bus pins. A label the board
+lacks, or a strapping pin (close audit C4), is refused by name. An instance's `name`, a rail in
 `rails` and a signal's `name` are names — letters, digits and `_` — and the chain refuses the file otherwise, as
 `parts[0] calls its instance 'Btn Open', but an instance's name is a name — letters, digits and _ (BtnOpen): the board is
 written with it as code`.

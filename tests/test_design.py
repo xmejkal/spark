@@ -564,6 +564,26 @@ class APartSignalIsPinnedByNameTest(unittest.TestCase):
                                                  "that pins a part's signal holds only `name` and `pin`, and the part's "
                                                  "record says the rest")
 
+    def test_a_pinning_entry_that_gives_a_bus_is_refused_too(self):
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D13", "bus": "spi"}]))
+        self.assertIn("signals[0] pins dfr0664-tft-2in's TFT_BL and also gives bus;", str(caught.exception))
+
+    def test_a_pin_on_a_bus_line_is_refused_by_name(self):
+        # Review of #727: MOSI pinned to D13 landed on GPIO21, and a second SPI part then took GPIO15 — a split bus, exit 0.
+        for parts in (["dfr0664-tft-2in"], ["dfr0664-tft-2in", {"part": "dfr0664-tft-2in", "name": "Two"}]):
+            with self.subTest(parts=len(parts)), self.assertRaises(design.DesignError) as caught:
+                design.load(self.load(parts, [{"name": "MOSI", "pin": "D13"}]))
+            self.assertEqual(str(caught.exception), "signals[0] pins dfr0664-tft-2in's MOSI, a bus line: it lands on the "
+                                                     "board's own SPI pins, so drop `pin`")
+
+    def test_a_pinning_entry_that_differs_from_a_part_signal_only_in_capitals_is_refused(self):
+        # Review of #727: `tft_bl` added a stray signal on GPIO21 and left TFT_BL unpinned; the names compare is exact.
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(self.load(["dfr0664-tft-2in"], [{"name": "tft_bl", "pin": "D13"}]))
+        self.assertEqual(str(caught.exception), "signals[0] pins tft_bl, and no part has a signal of that name; did you "
+                                                 "mean TFT_BL, dfr0664-tft-2in's TFT_BL? A signal's name is exact")
+
     def test_a_pin_the_board_lacks_is_refused_by_name(self):
         loaded = design.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D99"}]))
         with self.assertRaises(assign_pins.Impossible) as caught:

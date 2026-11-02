@@ -54,7 +54,8 @@ a rule checklist in the loop. Follow it.
    copying the record. Extra pins no part claims go in
    `"signals": [{"name": "LED_STATUS", "needs": []}]`; the file lists each as assigned and
    connected to nothing, for you to wire by hand. `{"name": "TFT_BL", "pin": "D13"}` with a part's signal name sets
-   that signal's pin (a cable or a connector fixes it). A bus line needs no pin.
+   that signal's pin (a cable or a connector fixes it). A bus line needs no pin. It is no full GDI recipe yet: the
+   display's DC cannot take the cable's D2 until P527 (#726).
 
    Then, in this order — each says what it decided and why:
    - `${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json` — a pin per signal, scarce

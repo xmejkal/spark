@@ -349,15 +349,25 @@ def pin_part_signals(signals, sources, own):
 
     An entry with a `pin` whose name is a part signal's sets that signal's pin, once: it IS that signal, so it adds no
     second one. The part's record says the rest (needs, bus, from), so an entry that also gives another key is refused,
-    never dropped. An entry with no `pin`, or a second pin for one signal, is left for P163's compare, which names both.
+    never dropped. A bus line is refused: the assigner puts it on the board's own bus pins, and a pin split the bus from a
+    second part on it (review of #727). So is a name that is a part signal's only when capitals are ignored. An entry
+    with no `pin`, or a second pin for one signal, is left for P163's compare, which names both.
     """
     at = {signal["name"]: index for index, signal in enumerate(signals)}
+    folded = {name.casefold(): index for name, index in at.items()}
     pinned, unused, signals = set(), [], list(signals)  # pinned: the names an entry already gave a pin
     for index, entry in enumerate(own):
         name = entry["name"]
+        if entry.get("pin") and name not in at and name.casefold() in folded:
+            raise DesignError("signals[%d] pins %s, and no part has a signal of that name; did you mean %s, %s? A "
+                              "signal's name is exact", index, name, signals[folded[name.casefold()]]["name"],
+                              sources[folded[name.casefold()]])
         if not entry.get("pin") or name not in at or name in pinned:
             unused.append((index, entry))
             continue
+        if signals[at[name]].get("bus"):
+            raise DesignError("signals[%d] pins %s, a bus line: it lands on the board's own %s pins, so drop `pin`",
+                              index, sources[at[name]], signals[at[name]]["bus"].upper())
         extra = sorted(set(entry) - {"name", "pin"})
         if extra:
             raise DesignError("signals[%d] pins %s and also gives %s; an entry that pins a part's signal holds only "

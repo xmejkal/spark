@@ -36,6 +36,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import assign_pins  # noqa: E402
 import boards  # noqa: E402
 import check_spine  # noqa: E402
 from suite_runs import slow  # noqa: E402
@@ -1229,6 +1230,7 @@ class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
         (project / "parts").mkdir()
         shutil.copy(ROOT / "tests" / "data" / "parts" / "dfr0664-tft-2in.json", project / "parts")
         (project / "requirements.json").write_text(json.dumps({"board": board, "parts": [part], "signals": list(signals)}))
+        self.requirements = project / "requirements.json"
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(project / "requirements.json"), "--json"])
@@ -1249,6 +1251,8 @@ class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
         build = self.build_stage("firebeetle2-esp32s3", "dfr0664-tft-2in", gdi)
         self.assertEqual(build["status"], check_spine.OK, build["detail"])
         self.assertIn(", 0 errors", build["detail"])
+        # DC is not pinned (D2 is a strap pin, P527 #726), so it lands on A5, GPIO11 — not the GDI cable's GPIO3.
+        self.assertRegex(assign_pins.pin_module_for(self.requirements).module, r"(?m)^TFT_DC = 11\b")
 
 
 class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):
