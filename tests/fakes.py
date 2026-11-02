@@ -10,6 +10,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import store  # noqa: E402
 from firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
+from spark.core.events import Reporter  # noqa: E402
 
 #: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
 IMPORT_HOME = os.environ["SPARK_HOME"]
@@ -267,6 +268,16 @@ class FakeTscircuitExport:
         self.asked.append((str(circuit_path), form))
         return self.results.get(form, tabbed_page.SvgExportResult(
             '<svg xmlns="http://www.w3.org/2000/svg"><title>fake %s</title></svg>' % form, None))
+
+
+class FakeReporter(Reporter):
+    """Fake Reporter (spark.core.events): keeps every event it is given in `events`, in order, and shows nothing."""
+
+    def __init__(self):
+        self.events = []
+
+    def report(self, event):
+        self.events.append(event)
 
 
 class FakeOutsideWorld:

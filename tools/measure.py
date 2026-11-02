@@ -247,8 +247,8 @@ PARAMETERS = 5                              # R3, without self or cls
 LEAVES = ("board_codes", "outcomes", "provenance", "text_guards", "zone_time")
 #: U1: the names OC8 (P418) moved into `text_guards`, by the module that held them. No script reads them from there again.
 MOVED_GUARDS = {"drawer": {"clean", "CONTROL", "LABEL_MAX", "TEXT_MAX", "TAGS_MAX"}, "parts": {"one_line", "COMMENT_UNSAFE"}}
-#: X2: a class that may print, read and exit in `scripts/spark/`: the Renderers (by role word) and the terminal consent.
-TERMINAL_CLASSES = ("TerminalConsentStrategy",)
+#: X2: a class that may print, read and exit in `scripts/spark/`: the Renderers (by role word), the terminal consent and the terminal reporter (P507).
+TERMINAL_CLASSES = ("TerminalConsentStrategy", "TerminalReporter")
 #: X2: the one function that prints in `scripts/spark/`, by file and top-level name: the CLI frontend, which prints what a
 #: Renderer rendered (P442). A nested def or a method of that name elsewhere is counted.
 TERMINAL_FUNCTIONS = (("scripts/spark/core/cli.py", "run_cli"),)
@@ -271,7 +271,7 @@ RULES = {
     "T1": "only an Adapter runs a program, reads the clock or the environment, calls the network or writes a file",
     "T2": "a test file never adds a mock.patch (mock.patch.dict on os.environ is the exception)",
     "T4": "code never branches on what is imported, as in `\"unittest\" in sys.modules`",
-    "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr or exit outside a Renderer, the terminal consent and run_cli",
+    "X2": "scripts/spark/ holds no main, print, input, stdin, stdout, stderr or exit outside a Renderer, the terminal consent, the terminal reporter and run_cli",
     "U1": "a leaf imports nothing of spark, matching imports no drawer, and no script reads a moved guard from its old module",
     "C1": "a file name under scripts/ is unique, and an exception name ends in Error",
     "C3": "an exit code has no second name (no EXIT_ alias)",
@@ -492,7 +492,7 @@ def branch_on_imports(source, known):
 
 
 def output_in_spark(source, known):
-    """X2: main, print, input, sys.stdin, sys.stdout, sys.stderr, sys.exit, readline or SystemExit in scripts/spark/, outside the Renderers, the terminal consent and `run_cli`."""
+    """X2: main, print, input, sys.stdin, sys.stdout, sys.stderr, sys.exit, readline or SystemExit in scripts/spark/, outside the Renderers, the terminal consent, the terminal reporter and `run_cli`."""
     if not source.file.startswith("scripts/spark/"):
         return []
     aliases, seen, exempt = aliases_of(source.tree), collections.Counter(), _terminal_functions(source)
