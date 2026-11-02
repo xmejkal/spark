@@ -50,9 +50,10 @@ order: the look, its token, then the person's yes.
    A flash made outside spark leaves no trace, and a flash that failed after the erase writes no record. `none in its store record` is not an empty board.
    `not checked` means spark did not read its record: the MAC was not read, or the record cannot be read. It never
    means that no deploy happened. The look then exits 2 (`could-not-run`) and names what to repair.
-3. At the first stop for a typed yes in a session, offer the deploy grant line that deploy.py printed, once (P518).
+3. At the first stop for a typed yes where deploy.py printed the deploy grant line, offer that line, once a session (P518).
    deploy.py prints it only where a grant can cover the deploy. With `--json`, it is a `grant` step in `next`, with
-   `needs_yes`. The line is `grant.py --scope deploy --minutes N`. Say first what it allows. For N minutes (1 to 1440),
+   `needs_yes`. The line is `grant.py --scope deploy --minutes N`. In `--json`, its argv says 60: put in the person's N.
+   Say first what it allows. For N minutes (1 to 1440),
    you can erase ALL of the board's flash and write any passed image of any project. If the person says no, do not
    offer it again in that session.
    Never run it yourself, and never write a grant file: it is the person's yes in their own terminal.
