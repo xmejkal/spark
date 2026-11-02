@@ -1,7 +1,7 @@
 """
 The outside an Operation reaches (P442, W3-3). `OutsideWorld` holds it as callables, so a test gives a Fake, a frontend
-gives the real one, and no Operation imports subprocess or the tools list itself. Only what `look` uses is here; the other
-fields (`write`, `fetch`, `environ`, `clock`, `consent`) enter with their first Operation.
+gives the real one, and no Operation imports subprocess or the tools list itself, or prints (P507: it reports an Event).
+Only what `look` uses is here; the other fields (`write`, `fetch`, `environ`, `clock`, `consent`) enter with their first Operation.
 """
 
 import subprocess
@@ -13,9 +13,10 @@ from spark.core.operation import RUNS
 
 # --- MVP ---
 #: Value: `run` runs a program as `subprocess.run` does, and `find_tool` gives the `tools.Tool` for a role or a tool's
-#: name, or raises `tools.ToolProblem`; `find_tool(name, project=None)` asks the shared tools lists without the project's.
+#: name, or raises `tools.ToolProblem`; `find_tool(name, project=None)` asks the shared tools lists without the project's;
+#: `report(event)` gives an `events.Event` to the Reporter the frontend picked (P507), and is not an effect: every Operation has it.
 #: Each is the real thing, a Fake or a refusing stub, as `build_outside_world` chose.
-OutsideWorld = namedtuple("OutsideWorld", "run find_tool")
+OutsideWorld = namedtuple("OutsideWorld", "run find_tool report")
 
 
 class ProgramRunner:
@@ -30,7 +31,8 @@ def refuse_run(command, **options):
                      fix="a defect in spark: report it, with the command")
 
 
-def build_outside_world(effects, find_tool=None):
-    """The OutsideWorld for these effects: `run` is the real one with RUNS and `refuse_run` without; `find_tool` the given one."""
-    return OutsideWorld(ProgramRunner.run if RUNS in effects else refuse_run, find_tool)
+def build_outside_world(effects, reporter, find_tool=None):
+    """The OutsideWorld for these effects: `run` is the real one with RUNS and `refuse_run` without; `find_tool` the given one;
+    `report` the given Reporter's."""
+    return OutsideWorld(ProgramRunner.run if RUNS in effects else refuse_run, find_tool, reporter.report)
 # --- end MVP ---

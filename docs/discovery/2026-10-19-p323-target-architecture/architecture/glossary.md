@@ -32,7 +32,12 @@ Back to [the architecture](README.md).
 | lines | The report a person reads: stdout without `--json`. `OperationResult.lines` (P442). |
 | diagnostics | Lines for the person beside the answer, such as the board doctor's or a crash's traceback: stderr in a CLI, a log in a server. `OperationResult.diagnostics` (P442). |
 | effect | What an Operation does outside: `reads`, `writes`, `runs` (a tool), `network`, `board`, `deletes`. `runs` is proposed. The code and the goldens say `deletes`. |
-| OutsideWorld | The Value that holds the callables for every effect: `run` and `find_tool` exist (P442); write, fetch, clock, consent and the `environ` variables the Operation reads come with their first user. |
+| Event | One fact of a run, told while it goes on: its kind (`LINE` or `BEGIN`), the code of its phase, and for a `LINE` the sentence (P507). |
+| Reporter | The Strategy that shows the events to a reader: `TerminalReporter` in the CLI, `FakeReporter` in tests (P507). |
+| report | Three meanings, kept apart by their context: the method `outside.report(event)`, the `LookReport` value, and the `TextReport` output. |
+| event line | A line the person reads before the run ends, sent as a `LINE`. Never a result line too. |
+| result line | A line of `OperationResult.lines`, printed once at the end by `TextReport`. |
+| OutsideWorld | The Value that holds the callables for every effect: `run` and `find_tool` exist (P442), and `report` (P507); write, fetch, clock, consent and the `environ` variables the Operation reads come with their first user. |
 | probe | A read-only look at a board or a port: `ConsoleProbe`, `ReadyProbe`, `DoctorProbe`. It changes nothing on the board. A class that changes the port, such as today's `ConsoleProbe.cure`, is no probe: the names pass (P382) splits it. |
 | backend | A swappable outside thing: a tool, the firmware platform, the store or the simulator. |
 | Backends | The Value that holds every backend choice of one run, built once. Proposed. |

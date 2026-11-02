@@ -106,6 +106,7 @@ Every Operation returns an `OperationResult` (proposed). Every frontend renders 
 | result | `data`, `findings`, `next`, `lines`. `status` comes from `outcomes.status_of`, never declared. |
 | envelope | v1 keys stay: `envelope`, `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated` (`outcomes.envelope`). It only gains keys. |
 | Finding | `severity`, `subject`, `code`, `sentence`, `fix` (a string, as today). Severity picks the list: `problems`, `unchecked` or `unmeasured`. |
+| events | `Event(kind, code, text)` through `OutsideWorld.report` while the run goes on: a `LINE` the person reads now, a `BEGIN` a phase begins. The rules are in `event-seam-plan.md`, section 1: one line one place, the order on the streams, diagnostics stay out, stderr is for a person, the world's report is the only path (P507). |
 | effects | `reads`, `writes`, `runs` (a tool, proposed), `network`, `board`, `deletes`. An Operation gets only the outside callables its effects declare. |
 | status words | `ok`, `problems`, `could-not-run`. A check or stage also has `skipped` (`outcomes.SKIPPED`). Nothing else under `status`. |
 | exit codes | 0 ok, 1 problems, 2 could-not-run, only from `EXIT_FOR`. A crash is `could-not-run`, code `crash`, exit 2. |
@@ -159,6 +160,8 @@ sequenceDiagram
   RC->>RC: parse, build OutsideWorld and Backends
   RC->>RO: run_operation(LookAtBoard, values, outside, backends)
   RO->>O: run(project, port, ...)
+  O->>RC: outside.report(Event), through the Reporter run_cli picked
+  RC-->>P: the line, now (a BEGIN shows nothing yet)
   O->>S: run(project, port, evidence)
   S-->>O: LookReport
   O-->>RO: OperationResult(data, findings, next, lines)

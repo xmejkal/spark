@@ -54,13 +54,9 @@ Read it in this order. `status` is `ok`, and every stage is `ok`. The simulation
 GPIOs, so say so. `breadboard.json` was not written, and `expected: true` says that is by design, so do not retry.
 This build has no `missing_facts` key, so the board record names the active level of its onboard LED and button.
 
-This page is for an AI working with spark:
-
-- **in Claude Code,** through the person's commands;
-- **anywhere else,** through spark's scripts.
-
-Act on what the scripts answer, the JSON and the exit code, not on what their source seems to say. (spark's own
-agents, `part-finder` and the others, are in the [commands guide](commands.md#agents).)
+This page is for an AI working with spark: **in Claude Code,** through the person's commands, and **anywhere else,**
+through spark's scripts. Act on what the scripts answer, the JSON and the exit code, not on what their source seems to
+say. (spark's own agents, `part-finder` and the others, are in the [commands guide](commands.md#agents).)
 
 ## In Claude Code
 
@@ -74,10 +70,8 @@ A command page's `allowed-tools` lists the operations Claude Code lets you run w
 on no command's or skill's list, so Claude Code asks the person before any of them runs, and their answer is the yes.
 Their own settings can answer first: an allow rule of theirs, or auto mode, can let it run without asking, which is a
 yes given in advance, and auto mode can also refuse it. You do not work around either. `parts.py --describe --json`
-marks the network operations of `parts.py`.
-
-A new project starts with `/spark:init`, then `/spark:setup`. The [journey guide](journey.md) shows each step on real
-runs.
+marks the network operations of `parts.py`. A new project starts with `/spark:init`, then `/spark:setup`. The
+[journey guide](journey.md) shows each step on real runs.
 
 Outside Claude Code, the command pages and skills are plain Markdown, but their agents are Claude Code agent
 definitions (`agents/*.md`: a model and a tool list). The scripts their steps call run anywhere; following a command
@@ -120,6 +114,12 @@ gives each case.
    1 is also what a crash returns, so check stdout for the nothing-to-do line before reading exit 1 that way.
 5. `parts.py` given an id it does not know ("no part called …") exits 1, and so does `--show` of a record with a
    CONFLICT on verified facts (`data.record` is set then, `null` for an unknown id).
+
+### Under --json, stderr is for a person
+
+For `look.py` and `deploy.py` under `--json`, stdout holds the envelope alone. Progress lines, a tool's own output and
+the diagnostics go to stderr, as text for a person. Decide on stdout only: read stderr just to report a crash
+([a crash](#a-crash-exits-1), [their envelope](agents/json.md#lookpy-and-deploypys-envelope)).
 
 ### A crash exits 1
 

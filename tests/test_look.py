@@ -25,8 +25,9 @@ from spark.bench import look_at_board  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 import sim_project  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeConsent, FakeOutsideWorld  # noqa: E402
+from fakes import FakeConsent, FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import outcomes  # noqa: E402
+from spark.core.events import Event  # noqa: E402
 from suite_runs import needs_littlefs  # noqa: E402
 from test_board_look import LookCase, data, done, found  # noqa: E402
 
@@ -475,6 +476,26 @@ class WhatStopsTheLookTest(LookScriptCase):
 
 class TheOperationTest(LookScriptCase):
     """P442: the look runs without a CLI: run_operation over LookAtBoard gives the result, and nothing is printed."""
+
+    def test_the_look_reports_one_begin_before_the_read(self):
+        # P507: the setup of the test without littlefs above, so the test runs on every machine; the terminal adds no line
+        self.image.write_bytes(b"x")
+        def without_littlefs(name, **where):
+            return found(name) if name != "littlefs" else found("not-installed")
+        ran_at_the_begin = []
+
+        class Watching(FakeReporter):
+            """Fake Reporter that also keeps what the outside had run when each event came."""
+
+            def report(self, event):
+                super().report(event)
+                ran_at_the_begin.append(list(outside.ran))
+        outside = FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
+                                   else done(data("c6-flash-id.txt")), find_tool=without_littlefs, reporter=Watching())
+        self.go_with(outside, "--no-simulation", "--json")
+        self.assertEqual(outside.reporter.events, [Event.begin("look")])
+        self.assertEqual(ran_at_the_begin, [[]], "the BEGIN comes before the look runs anything")
+        self.assertTrue(outside.ran, "the look ran its read after the BEGIN")
 
     @needs_littlefs
     def test_run_operation_gives_the_lines_the_findings_and_the_deploy_step_with_no_stdout(self):
