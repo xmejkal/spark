@@ -574,8 +574,8 @@ class APartSignalIsPinnedByNameTest(unittest.TestCase):
         for parts in (["dfr0664-tft-2in"], ["dfr0664-tft-2in", {"part": "dfr0664-tft-2in", "name": "Two"}]):
             with self.subTest(parts=len(parts)), self.assertRaises(design.DesignError) as caught:
                 design.load(self.load(parts, [{"name": "MOSI", "pin": "D13"}]))
-            self.assertEqual(str(caught.exception), "signals[0] pins dfr0664-tft-2in's MOSI, a bus line: it lands on the "
-                                                     "board's own SPI pins, so drop `pin`")
+            self.assertEqual(str(caught.exception), "signals[0] pins dfr0664-tft-2in's MOSI, an SPI bus line: the "
+                                                     "assigner places the bus, so drop `pin`")
 
     def test_a_pinning_entry_that_differs_from_a_part_signal_only_in_capitals_is_refused(self):
         # Review of #727: `tft_bl` added a stray signal on GPIO21 and left TFT_BL unpinned; the names compare is exact.

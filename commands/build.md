@@ -44,7 +44,7 @@ somewhere quiet. An optional `"signals":
 name and a `pin`, such as `{"name": "TFT_BL", "pin": "D13"}` beside `dfr0664-tft-2in`, sets its pin and adds no
 second signal: use it when a cable or a connector fixes the pin. It is no full GDI recipe yet: the display's DC
 cannot take the cable's D2 until P527 (#726). It holds only `name` and `pin`, because the part's
-record says the rest. A pin on a bus line is refused: the line lands on the board's own bus pins. A label the board
+record says the rest. A pin on a bus line is refused: the assigner places the bus. A label the board
 lacks, or a strapping pin (close audit C4), is refused by name. An instance's `name`, a rail in
 `rails` and a signal's `name` are names — letters, digits and `_` — and the chain refuses the file otherwise, as
 `parts[0] calls its instance 'Btn Open', but an instance's name is a name — letters, digits and _ (BtnOpen): the board is

@@ -349,7 +349,7 @@ def pin_part_signals(signals, sources, own):
 
     An entry with a `pin` whose name is a part signal's sets that signal's pin, once: it IS that signal, so it adds no
     second one. The part's record says the rest (needs, bus, from), so an entry that also gives another key is refused,
-    never dropped. A bus line is refused: the assigner puts it on the board's own bus pins, and a pin split the bus from a
+    never dropped. A bus line is refused: the assigner places the bus, and a pin split the bus from a
     second part on it (review of #727). So is a name that is a part signal's only when capitals are ignored. An entry
     with no `pin`, or a second pin for one signal, is left for P163's compare, which names both.
     """
@@ -366,7 +366,7 @@ def pin_part_signals(signals, sources, own):
             unused.append((index, entry))
             continue
         if signals[at[name]].get("bus"):
-            raise DesignError("signals[%d] pins %s, a bus line: it lands on the board's own %s pins, so drop `pin`",
+            raise DesignError("signals[%d] pins %s, an %s bus line: the assigner places the bus, so drop `pin`",
                               index, sources[at[name]], signals[at[name]]["bus"].upper())
         extra = sorted(set(entry) - {"name", "pin"})
         if extra:
