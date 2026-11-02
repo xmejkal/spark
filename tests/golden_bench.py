@@ -45,7 +45,8 @@ BOARD_ID = "firebeetle2-esp32s3"
 #: arguments after --project, the files of the canned flash id and device list, the exit code it must end with,
 #: `plant`: (path under the store, text) pairs written into the run's store first (a text may be a callable that gives
 #: it at run time, for a time that moves), and `stderr_golden`: the name of the golden of the run's stderr, or None.
-Case = namedtuple("Case", "golden script argv flash_id_file devs_file exit_code plant stderr_golden", defaults=((), None))
+Case = namedtuple("Case", "golden script argv flash_id_file devs_file exit_code plant stderr_golden",
+                  defaults=((), None))
 #: A store record of the canned board's last deploy that cannot be read (P416).
 UNREADABLE_LAST_DEPLOY = (("boards/dc-da-0c-xx-xx-xx.json", "{not json"),)
 #: The canned board's address, masked as every tracked file holds one (P505).
@@ -54,16 +55,16 @@ GRANT_MINUTES = 60
 
 
 def deploy_grant_text():
-    """The text of a deploy grant for the canned board, given one minute ago, valid for GRANT_MINUTES: it takes deploy.py
-    past the gate with a standing yes. Made at run time, because a grant holds only for a time that moves."""
+    """The text of a deploy grant for the canned board, given one minute ago, valid for GRANT_MINUTES: it takes
+    deploy.py past the gate with a standing yes. Made at run time, because a grant holds only for a time that moves."""
     now = datetime.datetime.now().astimezone().replace(microsecond=0)
     return json.dumps({"mac": BOARD_MAC, "board_token": board_look.board_token(BOARD_MAC), "granted_by": "tester",
                        "granted_at": (now - datetime.timedelta(minutes=1)).isoformat(),
                        "expires_at": (now + datetime.timedelta(minutes=GRANT_MINUTES)).isoformat(), "scope": "deploy"})
 
 
-#: A deploy grant in the store: deploy.py passes the gate, runs the erase, which the fake esptool fails with its retry exit
-#: code, waits 5 s (the flasher's real wait), and ends with the flash failure.
+#: A deploy grant in the store: deploy.py passes the gate, runs the erase, which the fake esptool fails with its retry
+#: exit code, waits 5 s (the flasher's real wait), and ends with the flash failure.
 DEPLOY_GRANT = (("grants/dc-da-0c-xx-xx-xx-deploy.json", deploy_grant_text),)
 CASES = [
     Case("look-ok.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
@@ -82,9 +83,10 @@ CASES = [
          "mpremote-devs-one.txt", 0),
     Case("deploy-ok-dry-run.txt", "deploy.py", ["--dry-run"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("deploy-could-not-run-no-terminal.json", "deploy.py", ["--json", "--token", LOOK_TOKEN],
-         "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 2),
+         "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 2, (), "deploy-could-not-run-no-terminal.json.stderr"),
     Case("deploy-could-not-run-flash-failed-grant.json", "deploy.py", ["--json", "--token", LOOK_TOKEN],
-         "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 2, DEPLOY_GRANT, "deploy-could-not-run-flash-failed-grant.json.stderr"),
+         "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 2, DEPLOY_GRANT,
+         "deploy-could-not-run-flash-failed-grant.json.stderr"),
     Case("deploy-could-not-run-flash-failed-grant.txt", "deploy.py", ["--token", LOOK_TOKEN], "s3-flash-id-16mb.txt",
          "mpremote-devs-one.txt", 2, DEPLOY_GRANT, "deploy-could-not-run-flash-failed-grant.txt.stderr"),
     Case("grant-problems-no-grant.json", "grant.py", ["--check", "--json"], "s3-flash-id-16mb.txt",
@@ -195,8 +197,9 @@ def scrub(text, places):
 
 
 def check_golden(case, text, name=None):
-    """None when `text` equals `case`'s golden (the file `name` names, for its stderr), else the reason it does not. When ACCEPT_VARIABLE names the case's op,
-    the golden is written from `text` and the reason says so, so the run still fails."""
+    """None when `text` equals `case`'s golden (the file `name` names, for its stderr), else the reason it does not.
+    When ACCEPT_VARIABLE names the case's op, the golden is written from `text` and the reason says so, so the run
+    still fails."""
     name = name or case.golden
     golden = GOLDEN_DIR / name
     if not text.strip():
