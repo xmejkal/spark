@@ -110,8 +110,8 @@
  {
   "file": "scripts/boards.py",
   "name": "an alias pad that is no name passes the validator",
-  "find": "\n                        + [(\"alias pad\", pad) for pad in sorted(board_pads.BoardPads.from_record(board).alias_pads())]):",
-  "replace": "):"
+  "find": "+ [(\"alias pad\", pad) for pad in sorted(board_pads.BoardPads.from_record(board).alias_pads())]",
+  "replace": "+ []"
  },
  {
   "file": "scripts/check_spine.py",
