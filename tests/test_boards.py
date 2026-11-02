@@ -245,6 +245,13 @@ class AnAliasIsWrittenAsCodeTest(unittest.TestCase):
         said = boards.validate(board, path)
         self.assertTrue([problem for problem in said if "alias pad %r is not a name" % (crafted,) in problem], said)
 
+    def test_an_alias_that_is_no_text_is_refused_not_raised(self):
+        path = ROOT / "boards" / "firebeetle2-esp32s3.json"
+        board = json.loads(path.read_text())
+        board["physical"]["pad_aliases"]["MISO"] = 7
+        said = boards.validate(board, path)
+        self.assertTrue([problem for problem in said if "maps MISO to 7" in problem], said)  # refused, not a TypeError
+
 
 class OnlyBoardPadsReadsThePadAliasesTest(unittest.TestCase):
     """

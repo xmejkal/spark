@@ -839,7 +839,7 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
 
     # P87's attribute half: board.tsx holds each pins key, alias pad, power_pads key, export (names) and id (a key).
     for kind, label in ([("pins key", key) for key in (pins if isinstance(pins, dict) else {})]  # --- MVP --- (P512)
-                        + [("alias pad", pad) for pad in sorted(board_pads.BoardPads.from_record(board).alias_pads())]):
+                        + [("alias pad", pad) for pad in sorted(board_pads.BoardPads.from_record(board).alias_pads(), key=str)]):
         if not re.fullmatch(parts.SELECTOR_SAFE, str(label)):  # an alias pad too: `.Mcu > .<pad>` takes it
             problems.append(f"{kind} {label!r} is not a name — letters, digits and _ (D3, SDA, A0): the board is written "
                             f"with it as code")
