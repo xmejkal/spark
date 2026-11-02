@@ -110,7 +110,7 @@
  {
   "file": "scripts/boards.py",
   "name": "an alias pad that is no name passes the validator",
-  "find": "+ [(\"alias pad\", pad) for pad in sorted(board_pads.BoardPads.from_record(board).alias_pads())]",
+  "find": "+ [(\"alias pad\", pad) for pad in sorted(board_pads.BoardPads.from_record(board).alias_pads(), key=str)]",
   "replace": "+ []"
  },
  {
