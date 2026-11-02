@@ -66,6 +66,10 @@ CAPABILITIES = parts_library.CAPABILITIES
 #: holding that button during a reset drops the board into the bootloader instead of running.
 UNAVAILABLE_ROLES = ("strapping",)
 
+#: A signal that names a pin with one of those roles (close audit C4), and the way out. --- MVP --- (P513)
+NAMED_STRAP_REFUSAL = ("%s asks for %s by name, and GPIO%d is %s — a pin this never offers, because the chip reads it "
+                       "at reset; drop `pin` and spark picks another, or see P527 (#726) for a pin a connector fixes")
+
 #: Roles that do not disqualify a pin but make it a worse choice, and by how much.
 #:
 #: Reporting a role is not enough. The first version of this only noted them, and cheerfully put
@@ -258,9 +262,7 @@ def assign(board, signals):
         roles = roles_of(board, gpio)
         blocked = [role for role in roles if role in UNAVAILABLE_ROLES]
         if blocked:
-            raise Impossible("%s asks for %s by name, and GPIO%d is %s — a pin this never offers, "
-                             "because the chip reads it at reset"
-                             % (signal["name"], label, gpio, ", ".join(blocked)))
+            raise Impossible(NAMED_STRAP_REFUSAL % (signal["name"], label, gpio, ", ".join(blocked)))
         cannot = needs - capability_of(board, gpio)
         if cannot:
             raise Impossible("%s asks for %s by name and needs %s, which GPIO%d cannot do"
