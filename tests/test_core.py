@@ -306,6 +306,13 @@ class FakeOutsideWorldTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             FakeOutsideWorld().run(["ls"])
 
+    def test_it_reports_to_its_own_fake_reporter_or_the_one_given(self):
+        world = FakeOutsideWorld()
+        world.report(Event.begin("toy"))
+        self.assertEqual(world.reporter.events, [Event.begin("toy")])
+        given = FakeReporter()
+        self.assertIs(FakeOutsideWorld(reporter=given).reporter, given)
+
 
 class Reporting(Toy):
     """Operation: the toy that reports a BEGIN and a LINE while it runs, then answers as the toy does."""

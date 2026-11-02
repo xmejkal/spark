@@ -283,10 +283,13 @@ class FakeReporter(Reporter):
 class FakeOutsideWorld:
     """Fake OutsideWorld (spark.core.outside): `run` answers a command as `subprocess.run` would, with the callable a test
     gives, and keeps each command in `ran`; `find_tool` gives a tools.Tool by its name with the callable given (a dict's
-    `get`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program."""
+    `get`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program.
+    `report` is its `reporter`'s, a FakeReporter of its own unless the test gives one (P507)."""
 
-    def __init__(self, run=None, find_tool=None):
+    def __init__(self, run=None, find_tool=None, reporter=None):
         self.ran, self._run, self._find_tool = [], run, find_tool
+        self.reporter = reporter or FakeReporter()
+        self.report = self.reporter.report
 
     def run(self, command, **options):
         self.ran.append(command)
