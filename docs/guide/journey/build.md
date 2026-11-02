@@ -118,9 +118,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --list
   vl6180x-breakout             rangefinder    library   VL6180X time-of-flight rangefinder breakout
 ```
 
-`parts.py --audit` names what each record still owes.
-
-Save the requirements file as `requirements.json` in the project:
+`parts.py --audit` names what each record still owes. Save the requirements file as `requirements.json` in the project:
 
 ```json
 {
@@ -139,7 +137,9 @@ What else a requirements file takes ([`/spark:build`'s page](../../../commands/b
 - each part as an id, or as `{part, name}` when the same part appears twice — names that differ only in capitals are
   one name, and the requirements stage refuses the file, naming both, before anything is emitted;
 - a part's `rails`, which puts one of its power pins on a rail you name without copying its record;
-- `signals`, entries of `{name, needs}`, which add a pin no part claims (an LED, a limit switch).
+- `signals`, entries of `{name, needs}`, which add a pin no part claims (an LED, a limit switch), or
+  `{"name": "TFT_BL", "pin": "D13"}` under a part's signal name, which pins that signal (a bus line needs no pin; the
+  GDI display's DC cannot take the cable's D2 until P527 (#726), so this is no full GDI recipe yet).
 
 Then [`/spark:build`](../../../commands/build.md) runs the whole chain on it:
 

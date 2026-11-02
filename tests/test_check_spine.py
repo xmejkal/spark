@@ -36,6 +36,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import assign_pins  # noqa: E402
 import boards  # noqa: E402
 import check_spine  # noqa: E402
 from suite_runs import slow  # noqa: E402
@@ -1213,7 +1214,7 @@ class ABrokenTraceIsNamedTest(unittest.TestCase):
 
 
 # --- MVP --- (P512, #708) Done when: an SPI and an I2C part build with 0 errors on both shipped boards
-@slow("three tscircuit builds, about 5 s each, 14.1 s on 2026-11-01")
+@slow("four tscircuit builds, about 5 s each, 19.0 s on 2026-11-02")
 @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
 class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
     """
@@ -1223,12 +1224,13 @@ class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
     stops at the simulation (the display has no Wokwi part).
     """
 
-    def build_stage(self, board, part):
+    def build_stage(self, board, part, signals=()):
         project = Path(tempfile.mkdtemp())
         (project / ".spark").mkdir()
         (project / "parts").mkdir()
         shutil.copy(ROOT / "tests" / "data" / "parts" / "dfr0664-tft-2in.json", project / "parts")
-        (project / "requirements.json").write_text(json.dumps({"board": board, "parts": [part]}))
+        (project / "requirements.json").write_text(json.dumps({"board": board, "parts": [part], "signals": list(signals)}))
+        self.requirements = project / "requirements.json"
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(project / "requirements.json"), "--json"])
@@ -1241,6 +1243,16 @@ class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
                 build = self.build_stage(board, part)
                 self.assertEqual(build["status"], check_spine.OK, build["detail"])
                 self.assertIn(", 0 errors", build["detail"])
+
+    def test_the_display_builds_with_its_four_gdi_pins_pinned(self):
+        # --- MVP --- (P513, #709) Done when: the 4 GDI signals that are no bus line, on the cable's labels, build.
+        gdi = [{"name": name, "pin": pin} for name, pin in (("TFT_BL", "D13"), ("TFT_CS", "D6"), ("TFT_RST", "D3"),
+                                                              ("SD_CS", "D7"))]
+        build = self.build_stage("firebeetle2-esp32s3", "dfr0664-tft-2in", gdi)
+        self.assertEqual(build["status"], check_spine.OK, build["detail"])
+        self.assertIn(", 0 errors", build["detail"])
+        # DC is not pinned (D2 is a strap pin, P527 #726), so it lands on A5, GPIO11 — not the GDI cable's GPIO3.
+        self.assertRegex(assign_pins.pin_module_for(self.requirements).module, r"(?m)^TFT_DC = 11\b")
 
 
 class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):

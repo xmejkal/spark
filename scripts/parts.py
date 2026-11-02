@@ -856,8 +856,6 @@ def signals_for(part_ids, project: Path = None) -> list:
         part = load(part_id, project)
         for need in part.get("needs") or []:
             entry = {"name": need["signal"], "needs": need.get("needs", [])}
-            if need.get("pin_on_host"):
-                entry["pin"] = need["pin_on_host"]
             if need.get("bus"):
                 # A bus signal means dedicated hardware: the board's pin for that line of that
                 # bus, found by `assign_pins.bus_line`. `line` is the part's own name for the

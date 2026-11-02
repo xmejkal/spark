@@ -24,6 +24,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import assign_pins  # noqa: E402
 import design  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -513,6 +514,102 @@ class CapitalsDoNotMakeTwoNamesTest(unittest.TestCase):
         path.write_text(json.dumps({"board": "firebeetle2-esp32s3",
                                     "parts": ["tactile-button", {"part": "tactile-button"}, {"name": 7}, 42]}))
         self.assertEqual(len(design.read(path)["parts"]), 4)
+
+
+# --- MVP --- (P513, #709) a requirements signal with a part's signal name and a `pin` sets that signal's pin
+class APartSignalIsPinnedByNameTest(unittest.TestCase):
+    """
+    Walk 4 (G27): the GDI cable fixes the display's pins, and `signals: [{"name": "TFT_BL", "pin": "D13"}]` beside the
+    display was refused as "both TFT_BL". Now the entry is the part signal's pin, and P163's refusal stays for an entry
+    with no `pin`. The display's record is the fixture P512 added; the store is never read.
+    """
+
+    GDI_PINS = {"TFT_BL": "D13", "TFT_CS": "D6", "TFT_RST": "D3", "SD_CS": "D7"}  # the cable's labels, no bus line
+
+    @staticmethod
+    def load(parts, signals):
+        root, path = project(requirements={"board": "firebeetle2-esp32s3", "parts": parts, "signals": signals})
+        (root / "parts").mkdir()
+        (root / "parts" / "dfr0664-tft-2in.json").write_bytes((ROOT / "tests" / "data" / "parts" /
+                                                                "dfr0664-tft-2in.json").read_bytes())
+        return path
+
+    def named(self, path, name):
+        found = [signal for signal in design.load(path).signals if signal["name"] == name]
+        self.assertEqual(len(found), 1, found)
+        return found[0]
+
+    def test_the_entry_sets_the_part_signals_pin_and_adds_no_second_signal(self):
+        bl = self.named(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D13"}]), "TFT_BL")
+        self.assertEqual((bl["pin"], bl["from"], bl["needs"]), ("D13", "dfr0664-tft-2in", ["pwm"]))
+
+    def test_an_instances_signal_is_pinned_by_its_instance_name(self):
+        path = self.load([{"part": "dfr0664-tft-2in", "name": "Screen"}], [{"name": "SCREEN_TFT_BL", "pin": "D13"}])
+        self.assertEqual(self.named(path, "SCREEN_TFT_BL")["pin"], "D13")
+
+    def test_an_entry_with_no_pin_is_still_refused_as_one_signal_twice(self):
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "needs": []}]))
+        self.assertIn("dfr0664-tft-2in's TFT_BL and signals[0] are both TFT_BL", str(caught.exception))
+
+    def test_a_second_pin_for_one_signal_is_refused_naming_its_own_entry(self):
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D13"}, {"name": "TFT_BL", "pin": "D6"}]))
+        self.assertIn("dfr0664-tft-2in's TFT_BL and signals[1] are both TFT_BL", str(caught.exception))
+
+    def test_a_pinning_entry_with_another_key_is_refused_by_name(self):
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D13", "needs": []}]))
+        self.assertEqual(str(caught.exception), "signals[0] pins dfr0664-tft-2in's TFT_BL and also gives needs; an entry "
+                                                 "that pins a part's signal holds only `name` and `pin`, and the part's "
+                                                 "record says the rest")
+
+    def test_a_pinning_entry_that_gives_a_bus_is_refused_too(self):
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D13", "bus": "spi"}]))
+        self.assertIn("signals[0] pins dfr0664-tft-2in's TFT_BL and also gives bus;", str(caught.exception))
+
+    def test_a_pin_on_a_bus_line_is_refused_by_name(self):
+        # Review of #727: MOSI pinned to D13 landed on GPIO21, and a second SPI part then took GPIO15 — a split bus, exit 0.
+        for parts in (["dfr0664-tft-2in"], ["dfr0664-tft-2in", {"part": "dfr0664-tft-2in", "name": "Two"}]):
+            with self.subTest(parts=len(parts)), self.assertRaises(design.DesignError) as caught:
+                design.load(self.load(parts, [{"name": "MOSI", "pin": "D13"}]))
+            self.assertEqual(str(caught.exception), "signals[0] pins dfr0664-tft-2in's MOSI, an SPI bus line: the "
+                                                     "assigner places the bus, so drop `pin`")
+
+    def test_a_pinning_entry_that_differs_from_a_part_signal_only_in_capitals_is_refused(self):
+        # Review of #727: `tft_bl` added a stray signal on GPIO21 and left TFT_BL unpinned; the names compare is exact.
+        with self.assertRaises(design.DesignError) as caught:
+            design.load(self.load(["dfr0664-tft-2in"], [{"name": "tft_bl", "pin": "D13"}]))
+        self.assertEqual(str(caught.exception), "signals[0] pins tft_bl, and no part has a signal of that name; did you "
+                                                 "mean TFT_BL, dfr0664-tft-2in's TFT_BL? A signal's name is exact")
+
+    def test_a_pin_the_board_lacks_is_refused_by_name(self):
+        loaded = design.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D99"}]))
+        with self.assertRaises(assign_pins.Impossible) as caught:
+            assign_pins.assign(loaded.board, loaded.signals)
+        self.assertEqual(str(caught.exception), "TFT_BL asks for pin 'D99', which this board does not bring out")
+
+    def test_the_four_gdi_pins_place_and_the_pin_map_names_them(self):
+        # Done when (P513): the 4 GDI signals that are no bus line on the cable's labels. The SPI lines need no pin and
+        # land on the cable's GPIO 17, 15 and 16. DC is not pinned, so it lands on A5 (GPIO11), NOT the cable's GPIO3:
+        # the GDI display does not work through spark until P527 (#726).
+        path = self.load(["dfr0664-tft-2in"], [{"name": name, "pin": pin} for name, pin in self.GDI_PINS.items()])
+        module = assign_pins.pin_module_for(path).module
+        for name, gpio in (("TFT_BL", 21), ("TFT_CS", 18), ("TFT_RST", 38), ("SD_CS", 9), ("SCLK", 17), ("MOSI", 15),
+                           ("MISO", 16), ("TFT_DC", 11)):
+            with self.subTest(signal=name):
+                self.assertRegex(module, r"(?m)^%s = %d\b" % (name, gpio))
+
+    def test_dc_on_the_cables_strap_pin_is_refused_with_the_way_out(self):
+        # Close audit C4 stays (the PO, 2026-11-02): D2 is GPIO3, read at reset. The refusal says what to do.
+        signals = [{"name": name, "pin": pin} for name, pin in dict(self.GDI_PINS, TFT_DC="D2").items()]
+        with self.assertRaises(assign_pins.Impossible) as caught:
+            assign_pins.pin_module_for(self.load(["dfr0664-tft-2in"], signals))
+        self.assertEqual(str(caught.exception),
+                         "TFT_DC asks for D2 by name, and GPIO3 is strapping — a pin this never offers, because the chip "
+                         "reads it at reset; drop `pin` and spark picks another, or see P527 (#726) for a pin a connector "
+                         "fixes")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,13 @@
+[
+ {"file": "scripts/design.py", "name": "P513: the merge never happens, so a pinning entry is refused as both", "find": "        if not entry.get(\"pin\") or name not in at or name in pinned:\n", "replace": "        if True:\n"},
+ {"file": "scripts/design.py", "name": "P513: the merged pin is the part's own, not the entry's", "find": "dict(signals[at[name]], pin=entry[\"pin\"])", "replace": "dict(signals[at[name]], pin=signals[at[name]].get(\"pin\"))"},
+ {"file": "scripts/design.py", "name": "P513: the pin test is dropped, so an entry with no pin merges", "find": "        if not entry.get(\"pin\") or name not in at or name in pinned:\n", "replace": "        if name not in at or name in pinned:\n"},
+ {"file": "scripts/design.py", "name": "P513: the pinned set is dropped, so a second pin wins without a word", "find": "        pinned.add(name)\n", "replace": "        pass\n"},
+ {"file": "scripts/design.py", "name": "P513: sources index the filtered list, so a refusal names the merged entry", "find": "    sources += [\"signals[%d]\" % index for index, _ in unused]", "replace": "    sources += [\"signals[%d]\" % index for index in range(len(unused))]"},
+ {"file": "scripts/design.py", "name": "P513: the merge rebuilds the signal from the entry, so from and needs are lost", "find": "dict(signals[at[name]], pin=entry[\"pin\"])", "replace": "dict(entry)"},
+ {"file": "scripts/design.py", "name": "P513: another key in a pinning entry is dropped without a word", "find": "        if extra:\n", "replace": "        if False:\n"},
+ {"file": "scripts/assign_pins.py", "name": "P513: the C4 refusal of a strap pin by name loses its way out", "find": "\"at reset; drop `pin` and spark picks another, or see P527 (#726) for a pin a connector fixes\")", "replace": "\"at reset\")"},
+ {"file": "scripts/design.py", "name": "P513: a pin on a bus line is accepted, so a second SPI part splits the bus", "find": "        if signals[at[name]].get(\"bus\"):\n", "replace": "        if False:\n"},
+ {"file": "scripts/design.py", "name": "P513: the extra-key refusal lets bus and from through", "find": "        extra = sorted(set(entry) - {\"name\", \"pin\"})\n", "replace": "        extra = sorted(set(entry) - {\"name\", \"pin\", \"bus\", \"from\"})\n"},
+ {"file": "scripts/design.py", "name": "P513: tft_bl beside TFT_BL is a stray signal again, and TFT_BL stays unpinned", "find": "        if entry.get(\"pin\") and name not in at and name.casefold() in folded:\n", "replace": "        if False:\n"}
+]

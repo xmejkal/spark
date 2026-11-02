@@ -342,6 +342,42 @@ def signal_name(part, need):
     return need["signal"]
 
 
+# --- MVP --- (P513, #709): a part's signal pinned from the requirements file, as a cable or a connector fixes it
+def pin_part_signals(signals, sources, own):
+    """
+    The part signals with the pins the requirements give them, and the (index, entry) pairs of `own` not used for that.
+
+    An entry with a `pin` whose name is a part signal's sets that signal's pin, once: it IS that signal, so it adds no
+    second one. The part's record says the rest (needs, bus, from), so an entry that also gives another key is refused,
+    never dropped. A bus line is refused: the assigner places the bus, and a pin split the bus from a
+    second part on it (review of #727). So is a name that is a part signal's only when capitals are ignored. An entry
+    with no `pin`, or a second pin for one signal, is left for P163's compare, which names both.
+    """
+    at = {signal["name"]: index for index, signal in enumerate(signals)}
+    folded = {name.casefold(): index for name, index in at.items()}
+    pinned, unused, signals = set(), [], list(signals)  # pinned: the names an entry already gave a pin
+    for index, entry in enumerate(own):
+        name = entry["name"]
+        if entry.get("pin") and name not in at and name.casefold() in folded:
+            raise DesignError("signals[%d] pins %s, and no part has a signal of that name; did you mean %s, %s? A "
+                              "signal's name is exact", index, name, signals[folded[name.casefold()]]["name"],
+                              sources[folded[name.casefold()]])
+        if not entry.get("pin") or name not in at or name in pinned:
+            unused.append((index, entry))
+            continue
+        if signals[at[name]].get("bus"):
+            raise DesignError("signals[%d] pins %s, an %s bus line: the assigner places the bus, so drop `pin`",
+                              index, sources[at[name]], signals[at[name]]["bus"].upper())
+        extra = sorted(set(entry) - {"name", "pin"})
+        if extra:
+            raise DesignError("signals[%d] pins %s and also gives %s; an entry that pins a part's signal holds only "
+                              "`name` and `pin`, and the part's record says the rest", index, sources[at[name]],
+                              ", ".join(extra))
+        signals[at[name]] = dict(signals[at[name]], pin=entry["pin"])
+        pinned.add(name)
+    return signals, unused
+
+
 def signals_of(part_list, wanted, project):
     """
     Every signal this design asks the host for, ready for `assign_pins`: each instance's, named
@@ -350,7 +386,8 @@ def signals_of(part_list, wanted, project):
     Derived HERE, once. `emit_board.main` derived them and `assign_pins.main` handed the raw
     `parts` entries to the library instead, so the first step every document names crashed on
     the `{part, name}` form every document shows (audit B1), and the two mains could have
-    disagreed about which signals a design has.
+    disagreed about which signals a design has. A requirements entry that pins a part's signal is that signal's pin,
+    not a second signal (P513, `pin_part_signals`).
     """
     signals, sources = [], []  # sources[i] says where signals[i] came from, for the refusal below
     for part in part_list:
@@ -366,9 +403,9 @@ def signals_of(part_list, wanted, project):
             # downstream lookup keyed by name then collapsed to whichever came last.
             signals.append(dict(signal, name=signal_name(part, {"signal": signal["name"]})))
             sources.append("%s's %s" % (part.get("_instance") or part["id"], signal["name"]))
-    own = list(wanted.get("signals") or [])
-    signals += own
-    sources += ["signals[%d]" % index for index in range(len(own))]
+    signals, unused = pin_part_signals(signals, sources, list(wanted.get("signals") or []))  # --- MVP --- (P513)
+    signals += [entry for _, entry in unused]
+    sources += ["signals[%d]" % index for index, _ in unused]  # its index in the file, so a refusal names the right one
     # P163 (#100), the route the names compare above does not see: a `signals` entry written as OPENLID_BUTTON beside
     # an instance called OpenLid — or two unnamed parts asking for BUTTON — is ONE signal to the assigner and the
     # generator, which look a signal up by its exact name. The assigner placed it twice, the generator traced both
