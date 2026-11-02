@@ -17,6 +17,7 @@ a file instead of re-implementing a lookup.
 """
 
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -29,6 +30,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import board_pads  # noqa: E402
 import boards  # noqa: E402
 import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
@@ -205,6 +207,64 @@ class ButtonPlacesTest(unittest.TestCase):
         self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")
         (root / "requirements.json").write_text(json.dumps({}))
         self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")
+
+
+# --- MVP --- (P512, #708) the one reader of physical.pad_aliases
+class BoardPadsTest(unittest.TestCase):
+    """P512: a pin label's footprint pad. The FireBeetle 2 prints MOSI as MO; most labels are their own pad."""
+
+    def test_an_aliased_label_gives_its_printed_pad(self):
+        pads = board_pads.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO", "SDA": "D4"}}})
+        self.assertEqual((pads.pad_of("MOSI"), pads.pad_of("SDA")), ("MO", "D4"))
+
+    def test_a_label_with_no_alias_is_its_own_pad(self):
+        self.assertEqual(board_pads.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO"}}}).pad_of("D3"), "D3")
+
+    def test_the_alias_pads_are_the_printed_names(self):
+        pads = board_pads.BoardPads.from_record({"physical": {"pad_aliases": {"MOSI": "MO", "MISO": "MI"}}})
+        self.assertEqual(pads.alias_pads(), frozenset({"MO", "MI"}))
+
+    def test_a_record_with_no_aliases_maps_nothing(self):
+        for record in ({}, {"physical": None}, {"physical": {}}, {"physical": {"pad_aliases": None}}):
+            with self.subTest(record=record):
+                pads = board_pads.BoardPads.from_record(record)
+                self.assertEqual((pads.pad_of("MOSI"), pads.alias_pads()), ("MOSI", frozenset()))
+
+
+class AnAliasIsWrittenAsCodeTest(unittest.TestCase):
+    """P512 fix-commit refuter: board.tsx traces `.Mcu > .<pad>`, so an alias value that is no name is refused."""
+
+    def test_an_alias_that_would_end_the_selector_is_refused(self):
+        path = ROOT / "boards" / "firebeetle2-esp32s3.json"
+        board = json.loads(path.read_text())
+        crafted = 'MI" />'
+        board["physical"]["pad_aliases"]["MISO"] = crafted
+        for key, row in board["physical"]["header_order"].items():
+            if isinstance(row, list):
+                board["physical"]["header_order"][key] = [crafted if label == "MI" else label for label in row]
+        said = boards.validate(board, path)
+        self.assertTrue([problem for problem in said if "alias pad %r is not a name" % (crafted,) in problem], said)
+
+    def test_an_alias_that_is_no_text_is_refused_not_raised(self):
+        path = ROOT / "boards" / "firebeetle2-esp32s3.json"
+        board = json.loads(path.read_text())
+        board["physical"]["pad_aliases"]["MISO"] = 7
+        said = boards.validate(board, path)
+        self.assertTrue([problem for problem in said if "maps MISO to 7" in problem], said)  # refused, not a TypeError
+
+
+class OnlyBoardPadsReadsThePadAliasesTest(unittest.TestCase):
+    """
+    P512: the alias lookup was written in four places and missing in the fifth, the emitter. Python files under
+    scripts/ and tools/ may read the key only in board_pads.py. tests/ are outside this test, and the converter's
+    TypeScript copies (tools/circuit-to-wokwi/lib/*.ts) are not guarded.
+    """
+
+    def test_no_other_python_file_reads_the_key(self):
+        allowed = {ROOT / "scripts" / "board_pads.py"}
+        readers = [str(source.relative_to(ROOT)) for folder in ("scripts", "tools") for source in (ROOT / folder).rglob("*.py")
+                   if source not in allowed and re.search(r"[\"']pad_aliases[\"']", source.read_text())]
+        self.assertEqual(readers, [])
 
 
 class ResolvingTest(unittest.TestCase):

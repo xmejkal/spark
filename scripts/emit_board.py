@@ -37,6 +37,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import assign_pins  # noqa: E402
+import board_pads  # noqa: E402
 import fab  # noqa: E402
 import copper  # noqa: E402
 import design as design_library  # noqa: E402
@@ -785,7 +786,7 @@ def component_lines(part_list, placements):
     return lines
 
 
-def signal_lines(part_list, assignments):
+def signal_lines(part_list, assignments, pads):  # --- MVP --- (P512, #708) `pads` turns MOSI into the pad MO
     """
     Every signal the assigner placed, and an account of each one.
 
@@ -806,11 +807,10 @@ def signal_lines(part_list, assignments):
         if not target:
             unclaimed.append(entry)
             continue
-        # The signal's own name, not just the module pin it lands on. Without it the file says
-        # `.Mcu > .D3 -> .L9110sModule > .AIA` and nothing connects that back to MOTOR_IA or to
-        # the reason the assigner chose D3.
+        # The signal's own name, not just the module pin it lands on. Without it the file says `.Mcu > .D3 ->
+        # .L9110sModule > .AIA` and nothing connects that back to MOTOR_IA or to the reason the assigner chose D3.
         lines.append('    <trace from=".Mcu > .%s" to=".%s > .%s" />  {/* %s */}'
-                     % (entry["pin"], target[0], target[1], inert("%s: %s" % (entry["signal"], entry["why"]))))
+                     % (pads.pad_of(entry["pin"]), target[0], target[1], inert("%s: %s" % (entry["signal"], entry["why"]))))
 
     if unclaimed:
         lines += ["",
@@ -1045,7 +1045,7 @@ def emit(board, part_list, assignments, placements, width, height, rules=None):
     lines = (header_lines(board, part_list, placements, width, height)
              + component_lines(part_list, placements)
              + host_part_lines(part_list, placements, board)
-             + signal_lines(part_list, assignments)
+             + signal_lines(part_list, assignments, board_pads.BoardPads.from_record(board))
              + power_lines(board, part_list, rules)
              + stand_in_lines(part_list)
              + host_requirement_lines(part_list)

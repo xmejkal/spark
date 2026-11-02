@@ -21,7 +21,7 @@ PICTURE = "docs/guide/journey.svg"
 STATUS_ROW = re.compile(r"^\| \[(\w+)\]\(docs/guide/journey/([\w-]+)\.md\) \| \*\*(works|partly|not yet)\*\*", re.M)
 #: The strip at the bottom: where we are, and what is next. Each line holds at most STRIP characters.
 WHERE = "the FireBeetle 2 button changed its LED in Wokwi and on the bench on 2026-11-01."
-NEXT = "build an SPI or I2C part on the FireBeetle 2 (P510 walk 4 council)."
+NEXT = "wire an SPI display to the FireBeetle 2 and run its firmware."
 STRIP = 100
 #: Each step: its name in the README's table, its command, what you do, what you get, a note on how far it works, and
 #: the status that note was written for. A step whose status changes in the table needs a new note here.
@@ -35,7 +35,7 @@ STEPS = [
      "The library search runs. Research by agents was not run.", "partly"),
     ("Build", "/spark:build", "Run it on the requirements file.",
      "A board that builds, a Wokwi diagram, a sheet, a page of tabs.",
-     "Ran end to end on 2026-10-11. Drawn on a half breadboard for the XIAO C6 (a Wokwi diagram). A picture alone for the FireBeetle 2 S3, from its record, 2026-10-29. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18. The library's XIAO record builds button + LED, 2026-10-18. Walk 4, 2026-11-01: an SPI or I2C part does not build on the FireBeetle 2 or the XIAO C6, because the emitter ignores the board's pad aliases (P510).", "partly"),
+     "Ran end to end on 2026-10-11. Drawn on a half breadboard for the XIAO C6 (a Wokwi diagram). A picture alone for the FireBeetle 2 S3, from its record, 2026-10-29. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18. The library's XIAO record builds button + LED, 2026-10-18. An SPI and an I2C part build with 0 errors on the FireBeetle 2 and the XIAO C6, 2026-11-01 (P512). A display on the XIAO still stops at the simulation: it has no Wokwi part.", "works"),
     ("Checks", "check_all.py", "Run the checks on the project.", "What holds, and what a check could not look at.",
      "A fresh button-and-LED project passes.", "works"),
     ("Firmware", "import_firmware.py", "Write the firmware with Claude.", "A pin map that the firmware imports.",

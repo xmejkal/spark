@@ -31,7 +31,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import assign_pins  # noqa: E402
 import copper  # noqa: E402
 import design  # noqa: E402
+import board_pads  # noqa: E402
 import emit_board  # noqa: E402
+import emit_footprint  # noqa: E402
 import parts  # noqa: E402
 
 PARTS = ["l9110s-module", "vl6180x-breakout", "dfr0534-module"]
@@ -44,6 +46,34 @@ def generated():
     assignments, _ = assign_pins.assign(board, signals)
     placements, width, height = emit_board.place(board, part_list)
     return emit_board.emit(board, part_list, assignments, placements, width, height)
+
+
+# --- MVP --- (P512, #708) a trace names the pad the footprint has, on every shipped board
+class EveryTraceReachesAFootprintPadTest(unittest.TestCase):
+    """
+    P512: the emitter wrote `.Mcu > .MOSI` while the FireBeetle 2's pad is MO, and `.Mcu > .SDA` while the XIAO C6's is
+    D4, so no SPI or I2C part built on either. Driven through `emit`, so the board's pads must reach the traces.
+    """
+
+    def test_a_trace_names_the_aliased_pad(self):
+        part = parts.load("tactile-button")
+        line = emit_board.signal_lines([part], [{"signal": "BUTTON", "pin": "MOSI", "gpio": 15, "why": "w"}],
+                                       board_pads.BoardPads({"MOSI": "MO"}))
+        self.assertIn('<trace from=".Mcu > .MO" ', "\n".join(line))
+
+    def test_every_pin_label_of_every_shipped_board_traces_to_a_footprint_pad(self):
+        part_list = [parts.load("tactile-button")]
+        for path in sorted((ROOT / "boards").glob("*.json")):
+            board = json.loads(path.read_text())
+            pads = {label for label, _, _ in emit_footprint.pads(board)}
+            placements, width, height = emit_board.place(board, part_list)
+            for label, gpio in sorted(board["pins"].items()):
+                with self.subTest(board=path.stem, label=label):
+                    tsx = emit_board.emit(board, part_list, [{"signal": "BUTTON", "pin": label, "gpio": gpio, "why": "w"}],
+                                          placements, width, height)
+                    traced = re.findall(r'<trace from="\.Mcu > \.([^"]+)"', tsx)
+                    self.assertTrue(traced, tsx)
+                    self.assertLessEqual(set(traced), pads)
 
 
 class WhatItEmitsTest(unittest.TestCase):
@@ -1089,7 +1119,7 @@ class EachSectionStandsAloneTest(unittest.TestCase):
         sections = (emit_board.header_lines(board, part_list, placements, width, height)
                     + emit_board.component_lines(part_list, placements)
                     + emit_board.host_part_lines(part_list, placements)
-                    + emit_board.signal_lines(part_list, assignments)
+                    + emit_board.signal_lines(part_list, assignments, board_pads.BoardPads.from_record(board))
                     + emit_board.power_lines(board, part_list, {})
                     + emit_board.stand_in_lines(part_list)
                     + emit_board.host_requirement_lines(part_list)

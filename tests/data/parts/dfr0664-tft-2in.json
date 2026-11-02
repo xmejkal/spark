@@ -1,0 +1,304 @@
+{
+  "schema": 1,
+  "id": "dfr0664-tft-2in",
+  "name": "DFRobot Fermion 2.0\" 320x240 IPS TFT LCD display with MicroSD (ST7789), breakout",
+  "kind": "display",
+  "//": "True of SKU DFR0664, schematic V0.1 (2020-02-17), pin header AND 18-pin GDI FPC. The person owns it and has used it on the FireBeetle 2 ESP32-S3 over the GDI cable. Records the 10-pin header as the pad list; the GDI route is in facts.gdi_* . DFRobot's wiki calls the chip 'T7789V' once and 'ST7789' in its table; the bundled datasheet is Sitronix ST7789V2.",
+  "vendor": "dfrobot",
+  "sku": "DFR0664",
+  "sources": [
+    "https://wiki.dfrobot.com/DFR0664",
+    "https://dfimg.dfrobot.com/wiki/21137/DFR0664_st7789-240-320-ips-lcd-display-module_schematics_v1.pdf",
+    "https://dfimg.dfrobot.com/wiki/21137/DFR0664_st7789-240-320-ips-lcd-display-module_dimension_v1.pdf",
+    "https://dfimg.dfrobot.com/wiki/21137/DFR0664_st7789-240-320-ips-lcd-display-module_datasheet_v1.pdf",
+    "https://wiki.dfrobot.com/SKU_DFR0975_FireBeetle_2_Board_ESP32_S3"
+  ],
+  "needs": [
+    {
+      "signal": "SCLK",
+      "pin": "SCLK",
+      "direction": "out",
+      "bus": "spi"
+    },
+    {
+      "signal": "MOSI",
+      "pin": "MOSI",
+      "direction": "out",
+      "bus": "spi"
+    },
+    {
+      "signal": "MISO",
+      "pin": "MISO",
+      "direction": "in",
+      "bus": "spi",
+      "optional": true,
+      "note": "MISO is shared with the SD card; an ST7789 itself is write-only here"
+    },
+    {
+      "signal": "TFT_CS",
+      "pin": "CS",
+      "direction": "out"
+    },
+    {
+      "signal": "TFT_DC",
+      "pin": "DC",
+      "direction": "out"
+    },
+    {
+      "signal": "TFT_RST",
+      "pin": "RES",
+      "direction": "out"
+    },
+    {
+      "signal": "TFT_BL",
+      "pin": "BL",
+      "direction": "out",
+      "needs": [
+        "pwm"
+      ],
+      "optional": true,
+      "note": "the module backlights itself with BL open; drive it for dimming or off"
+    },
+    {
+      "signal": "SD_CS",
+      "pin": "SDCS",
+      "direction": "out",
+      "optional": true,
+      "note": "only for the MicroSD slot; on the SPI bus with the display"
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "draws": "peak_current_ma",
+      "note": "3.3-5 V; an on-board LDO makes the 3 V the display runs at"
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    }
+  ],
+  "pin_order": [
+    "VCC",
+    "GND",
+    "SCLK",
+    "MOSI",
+    "MISO",
+    "CS",
+    "RES",
+    "DC",
+    "BL",
+    "SDCS"
+  ],
+  "pin_order_proof": {
+    "verified": false,
+    "source": "wiki table numbers VCC=1 ... SDCS=10 (text, verified); the module's schematic header P1 numbers it the other way, SDCS=1 ... VCC=10, and the dimension drawing's silkscreen reads SDCS..VCC left to right with the FPC at the bottom. The order of the pads is the same line either way; which end is pad 1 conflicts.",
+    "why_it_matters": "a footprint numbered from the wrong end reverses the supply; check the names against the silkscreen on the board in hand before wiring",
+    "cites": {
+      "document": "dfr0664-dimension-v1",
+      "at": "page 1, silkscreen row"
+    }
+  },
+  "legs": {
+    "VCC": "the pad at the end of the row opposite the SDCS label; silkscreen VCC",
+    "SDCS": "the pad at the end of the row nearest the MicroSD side; silkscreen SDCS"
+  },
+  "footprint": "pinrow10",
+  "body_mm": {
+    "width": 35.7,
+    "height": 60.0,
+    "verified": true,
+    "source": "DFRobot dimension drawing (35.70 x 60.00 mm; header row pitch 31.70 mm span; 2 mm holes)",
+    "cites": {
+      "document": "dfr0664-dimension-v1",
+      "at": "page 1"
+    }
+  },
+  "facts": {
+    "supply_range_v": {
+      "value": [
+        3.3,
+        5.0
+      ],
+      "source": "wiki specification table: operating voltage 3.3V~5V",
+      "verified": true
+    },
+    "full_screen_current_ma": {
+      "value": 29,
+      "source": "wiki: full-screen power consumption about 29 mA (3.3 V) / 29 mA (5 V) typ",
+      "verified": true
+    },
+    "peak_current_ma": {
+      "value": null,
+      "source": "no figure published for the backlight at full brightness, nor the SD card in write",
+      "verified": false,
+      "why_it_matters": "the rail sum cannot count the display's peak; measure on the bench with BL high and a card writing"
+    },
+    "input_high_v": {
+      "value": null,
+      "source": "not published: the signal inputs go through a 6-channel buffer U3 (type not named in the schematic, powered from the 3 V LDO)",
+      "verified": false,
+      "why_it_matters": "whether 3.3 V from the host is a safe high is assumed; the buffer powered at 3 V implies a 3.3 V host works"
+    },
+    "input_low_v": {
+      "value": null,
+      "source": "not published, as input_high_v",
+      "verified": false,
+      "why_it_matters": "the low threshold is unknown; a 3.3 V ESP32 drives 0 V, which any 3 V part reads low"
+    },
+    "bus": {
+      "value": "spi",
+      "source": "wiki: connection port SPI; schematic shows 4-wire SPI (SCLK, MOSI, DC, CS) to the LCD, MISO and SDCS to the SD card",
+      "verified": true
+    },
+    "driver_chip": {
+      "value": "ST7789",
+      "source": "wiki table 'Driver Chip: ST7789'; wiki body text says T7789V; datasheet in the bundle is Sitronix ST7789V2",
+      "verified": true
+    },
+    "resolution_px": {
+      "value": [
+        240,
+        320
+      ],
+      "source": "wiki: Pixels 240 x 320, RGB565",
+      "verified": true
+    },
+    "on_board_pulls": {
+      "value": {
+        "RES": "10k to VCC (R4)",
+        "CS": "100k to VCC (R11)",
+        "SDCS": "100k to 3 V (R10 via D2)",
+        "BL": "10k to VCC (R2): backlight on when BL is open"
+      },
+      "source": "module schematic R4, R11, R10, R2, read from the drawing image",
+      "verified": false,
+      "why_it_matters": "CS and RES idle high without the host; BL open means the backlight is on",
+      "cites": {
+        "document": "dfr0664-schematics-v01",
+        "at": "page 1, P2 and P1"
+      }
+    },
+    "series_resistors_ohm": {
+      "value": 390,
+      "source": "schematic R5-R9 390 R in the signal lines between U3 and the LCD/SD",
+      "verified": false,
+      "why_it_matters": "slows edges; a high SPI clock may need testing",
+      "cites": {
+        "document": "dfr0664-schematics-v01",
+        "at": "page 1, P2 and P1"
+      }
+    },
+    "gdi_connector_pin_order": {
+      "value": [
+        "VCC",
+        "BLK",
+        "GND",
+        "SCLK",
+        "MOSI",
+        "MISO",
+        "DC",
+        "RES",
+        "CS",
+        "SDCS",
+        "FCS",
+        "TCS",
+        "SCL",
+        "SDA",
+        "INT",
+        "BUSY/TE",
+        "GPIO1",
+        "GPIO2"
+      ],
+      "source": "module schematic P2, pins 1..18, read from the drawing image; DFRobot's own wiki gives no table for the module's FPC",
+      "verified": false,
+      "why_it_matters": "the FPC cable is 'reverse direction': module pin n meets the board's pin 19-n, so the board's GDI pin 18=VCC meets module pin 1=VCC; trust the cable, not a hand-wired copy",
+      "cites": {
+        "document": "dfr0664-schematics-v01",
+        "at": "page 1, P2 and P1"
+      }
+    },
+    "gdi_used_signals": {
+      "value": [
+        "VCC",
+        "BLK",
+        "GND",
+        "SCLK",
+        "MOSI",
+        "MISO",
+        "DC",
+        "RES",
+        "CS",
+        "SDCS"
+      ],
+      "source": "module schematic P2 pins 1-10 carry the display and card; FCS, TCS, SCL, SDA, INT, BUSY/TE, GPIO1, GPIO2 (11-18) have no net on this module",
+      "verified": false,
+      "why_it_matters": "those eight are used only by DFRobot's other GDI screens (font chip, touch)",
+      "cites": {
+        "document": "dfr0664-schematics-v01",
+        "at": "page 1, P2 and P1"
+      }
+    },
+    "gdi_on_firebeetle2_s3_gpio": {
+      "value": {
+        "BL": 21,
+        "SCLK": 17,
+        "MOSI": 15,
+        "MISO": 16,
+        "DC": 3,
+        "RES": 38,
+        "CS": 18,
+        "SDCS": 9
+      },
+      "source": "board schematic V1.3 page 1, P2 (GDI): BLK=IO21, SCLK=IO17, MOSI=IO15, MISO=IO16, DC=IO3, RST=IO38, LCS=IO18, SDCS=IO9; VCC is 3V3",
+      "verified": false,
+      "why_it_matters": "read off the board's schematic image; the wiki's GDI table disagrees on FCS/BUSY labels, so confirm on the bench by running the library's test"
+    },
+    "gdi_backlight_gpio_on_firebeetle2_s3": {
+      "value": 21,
+      "verified": true,
+      "source": "bench, the PO, 2026-11-01: with the display on DFRobot's GDI cable and walk 4's LED effects firmware driving GPIO21 by PWM, the display's backlight glowed in the same rhythm as the onboard LED",
+      "why_it_matters": "the GDI backlight and the FireBeetle 2's onboard LED are one pin, so a firmware cannot drive them apart"
+    }
+  },
+  "host_requirements": [
+    "On the FireBeetle 2 ESP32-S3 the GDI cable puts the display on IO17 SCK, IO15 MOSI, IO16 MISO, IO3 DC, IO38 RST, IO18 CS, IO9 SD CS, IO21 backlight (board schematic V1.3, read from the drawing): these pins are taken, do not give them to another part.",
+    "The module is powered from the GDI's VCC, which is the board's 3V3 rail: the pin header takes 3.3-5 V, but a 5 V supply into a 3.3 V host's SPI pins is the host's own risk (the logic threshold is not published).",
+    "Chip selects share MISO/MOSI/SCLK with the MicroSD: hold both CS pins high when not talking to that device.",
+    "The pin-header's pad numbering is contradicted between DFRobot's wiki and schematic; read the silkscreen labels before wiring.",
+    "Peak (backlight on, card writing) current is not published; do not run it from a rail with no margin."
+  ],
+  "simulation": {
+    "skip": "Wokwi has no ST7789V part for a 240x320 panel (its parts are wokwi-ili9341, an ILI9341 with other init commands and no ST7789 colour inversion and offsets, and an unmerged 240x240 ST7789 custom chip in a PR); a stand-in would pass firmware that fails on the real glass"
+  },
+  "documents": {
+    "dfr0664-schematics-v01": {
+      "url": "https://dfimg.dfrobot.com/wiki/21137/DFR0664_st7789-240-320-ips-lcd-display-module_schematics_v1.pdf",
+      "sha256": "4e83f8c1926437fba8243951715b349c8806270f032e13d2ca4c706ada3994a1",
+      "file": "schematics.pdf",
+      "title": "DFR0664 2.0\" 320x240 SPI LCD schematic",
+      "version": "V0.1, 2020-02-17"
+    },
+    "dfr0664-dimension-v1": {
+      "url": "https://dfimg.dfrobot.com/wiki/21137/DFR0664_st7789-240-320-ips-lcd-display-module_dimension_v1.pdf",
+      "sha256": "9d425fa33dc9cbcacd46ac8b558446e76a5047a73ccd62fafc178000550d2323",
+      "file": "dimension.pdf",
+      "title": "DFR0664 PCB dimension",
+      "version": "DFR0664(V0.1) 2020-02-17"
+    },
+    "dfr0664-st7789v2-datasheet": {
+      "url": "https://dfimg.dfrobot.com/wiki/21137/DFR0664_st7789-240-320-ips-lcd-display-module_datasheet_v1.pdf",
+      "sha256": "8937678475e20598c8deb17c3cdd41403da6317a3b6518f86144b8a609de9f46",
+      "file": "datasheet.pdf",
+      "title": "Sitronix ST7789V2 datasheet",
+      "version": "Version 1.0, 2016/11"
+    }
+  },
+  "based_on": {
+    "project": "walk4",
+    "digest": "e76b7db920469888dea64f5b42c500629bf06c151f3cacec973aebaf11fd38d9"
+  }
+}

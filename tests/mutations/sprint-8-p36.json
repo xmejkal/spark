@@ -14,7 +14,7 @@
  {
   "file": "scripts/assign_pins.py",
   "name": "the pad is the board's key, not its silkscreen",
-  "find": "        pad = ((board.get(\"physical\") or {}).get(\"pad_aliases\") or {}).get(entry[\"pin\"], entry[\"pin\"])",
+  "find": "        pad = board_pads.BoardPads.from_record(board).pad_of(entry[\"pin\"])",
   "replace": "        pad = entry[\"pin\"]"
  },
  {

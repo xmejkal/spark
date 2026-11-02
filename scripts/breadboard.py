@@ -51,6 +51,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assign_pins  # noqa: E402
+import board_pads  # noqa: E402
 import breadboard_catalog  # noqa: E402
 import breadboard_changes  # noqa: E402
 import breadboard_drawing  # noqa: E402
@@ -147,10 +148,10 @@ def printed_label(board, port):
     """
     physical = board.get("physical") or {}
     rows = [label for row in (physical.get("header_order") or {}).values() if isinstance(row, list) for label in row]
-    aliases = physical.get("pad_aliases") or {}
-    known = set(rows) | set(board.get("pins") or {}) | set(board.get("power_pads") or {}) | set(aliases.values())
+    pads = board_pads.BoardPads.from_record(board)  # --- MVP --- (P512)
+    known = set(rows) | set(board.get("pins") or {}) | set(board.get("power_pads") or {}) | pads.alias_pads() | set(pads.aliases)
     hints = port.get("port_hints") or []
-    label = next((aliases.get(hint, hint) for hint in hints if hint in known or hint in aliases), None) or next(
+    label = next((pads.pad_of(hint) for hint in hints if hint in known), None) or next(
         (hint for hint in hints if not re.fullmatch(r"pin\d+|\d+", hint)), port.get("name"))
     return "GND" if re.fullmatch(r"GND\d*", label) else label
 
@@ -312,9 +313,9 @@ def _unwired(board, design):
     if not own:
         return []
     assignments, _ = assign_pins.assign(design.board, design.signals)
-    aliases = (board.get("physical") or {}).get("pad_aliases") or {}
+    pads = board_pads.BoardPads.from_record(board)  # --- MVP --- (P512)
     return ["- %s: board %s, nothing wired to it yet (the requirements add this signal)"
-            % (a["signal"], aliases.get(a["pin"], a["pin"])) for a in assignments if a["signal"] in {s["name"] for s in own}]
+            % (a["signal"], pads.pad_of(a["pin"])) for a in assignments if a["signal"] in {s["name"] for s in own}]
 
 
 def _before_power(design_parts, supplies):

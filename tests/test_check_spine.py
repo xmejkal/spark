@@ -20,6 +20,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,6 +38,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
 import check_spine  # noqa: E402
+from suite_runs import slow  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import missing_facts  # noqa: E402
@@ -1150,20 +1152,95 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
 
 
-def fake_tsci(root, builds_when):
+def fake_tsci(root, builds_when, circuit=(), binary=None):
     """
-    A `tsci` that answers `--version` and builds — writes a circuit.json — only when
-    `builds_when` (a shell test on the working directory) holds. Instant, so the build stage can
-    be driven without tscircuit installed.
+    A `tsci` (at `binary`, or root/fake-tsci) that answers `--version` and builds — writes a circuit.json holding the
+    elements of `circuit` — only when `builds_when` (a shell test on the working directory) holds. Instant, so the
+    build stage can be driven without tscircuit installed.
     """
-    binary = root / "fake-tsci"
+    binary = binary or root / "fake-tsci"
+    binary.parent.mkdir(parents=True, exist_ok=True)
+    (root / "canned-circuit.json").write_text(json.dumps(list(circuit)))
     binary.write_text("#!/bin/sh\n"
                       "[ \"$1\" = \"--version\" ] && { echo 0.0.0-fake; exit 0; }\n"
-                      "if %s; then mkdir -p dist/board; echo '[]' > dist/board/circuit.json; exit 0; fi\n"
+                      "if %s; then mkdir -p dist/board; cp '%s' dist/board/circuit.json; exit 0; fi\n"
                       "echo \"Cannot find package 'react'\" >&2\n"
-                      "exit 1\n" % builds_when)
+                      "exit 1\n" % (builds_when, root / "canned-circuit.json"))
     binary.chmod(0o755)
     return binary
+
+
+# --- MVP --- (P512, #708) a broken trace is named in the verdict, in the text and in --json
+class ABrokenTraceIsNamedTest(unittest.TestCase):
+    """
+    P512: the verdict said "2 error(s): source_trace_not_connected_error" and not which trace. It names the selectors
+    of the first 2 errors from their `selectors_not_found` field, and an error's message only when it has none. The
+    build is a real one (button-light's kept circuit) with 3 errors added, by a fake tsci the project's node_modules holds.
+    """
+    FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
+    ERRORS = [{"type": "source_trace_not_connected_error", "message": "Could not find port",
+               "selectors_not_found": [".Mcu > .MOSI", ".Mcu > .MISO"]},
+              {"type": "pcb_trace_error", "message": "a trace crosses another"},
+              {"type": "source_trace_not_connected_error", "selectors_not_found": [".Mcu > .SCK"]}]
+
+    def said(self, errors):
+        """The build stage's detail in --json, and the text run's output, for button-light's circuit plus `errors`."""
+        root = Path(tempfile.mkdtemp())
+        circuit = json.loads((self.FIXTURE / "dist" / "board" / "circuit.json").read_text()) + errors
+        fake_tsci(root, "true", circuit, binary=root / "node_modules" / ".bin" / "tsci")
+        shutil.copy(self.FIXTURE / "requirements.json", root / "requirements.json")
+        said = {}
+        for flags in ([], ["--json"]):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                check_spine.main([str(root / "requirements.json")] + flags)
+            said[bool(flags)] = out.getvalue()
+        return next(stage for stage in json.loads(said[True])["stages"] if stage["name"] == "build")["detail"], said[False]
+
+    def test_the_text_and_the_json_name_the_first_two(self):
+        for words in self.said(self.ERRORS):
+            self.assertIn("3 error(s): pcb_trace_error, source_trace_not_connected_error; first: .Mcu > .MOSI, .Mcu > .MISO; "
+                          "a trace crosses another", words)
+            self.assertNotIn(".SCK", words)
+
+    def test_an_odd_field_is_said_as_text_and_a_long_one_is_capped(self):
+        detail, _ = self.said([{"type": "source_trace_not_connected_error", "selectors_not_found": ".Mcu > .MOSI"}])
+        self.assertIn("first: .Mcu > .MOSI", detail)
+        detail, _ = self.said([{"type": "source_trace_not_connected_error", "selectors_not_found": [1, ".Mcu > .SCK"]}])
+        self.assertIn("first: 1, .Mcu > .SCK", detail)
+        detail, _ = self.said([{"type": "source_trace_not_connected_error", "message": "x" * 2000}])
+        self.assertLess(len(detail), 400)
+
+
+# --- MVP --- (P512, #708) Done when: an SPI and an I2C part build with 0 errors on both shipped boards
+@slow("three tscircuit builds, about 5 s each, 14.1 s on 2026-11-01")
+@unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
+    """
+    P512: the emitter traced `.Mcu > .MOSI` where the pad is MO (FireBeetle 2) and `.Mcu > .SDA` where it is D4 (XIAO
+    C6), so these builds ended with 2 to 4 errors. The display's record is a fixture copied into a temp project's
+    parts/; the store is never read. The build step is asserted, not the whole chain: the XIAO display run still
+    stops at the simulation (the display has no Wokwi part).
+    """
+
+    def build_stage(self, board, part):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / "parts").mkdir()
+        shutil.copy(ROOT / "tests" / "data" / "parts" / "dfr0664-tft-2in.json", project / "parts")
+        (project / "requirements.json").write_text(json.dumps({"board": board, "parts": [part]}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            check_spine.main([str(project / "requirements.json"), "--json"])
+        return next(stage for stage in json.loads(out.getvalue())["stages"] if stage["name"] == "build")
+
+    def test_each_build_ends_with_0_errors(self):
+        for board, part in (("firebeetle2-esp32s3", "dfr0664-tft-2in"), ("xiao-esp32-c6", "dfr0664-tft-2in"),
+                            ("xiao-esp32-c6", "vl6180x-breakout")):
+            with self.subTest(board=board, part=part):
+                build = self.build_stage(board, part)
+                self.assertEqual(build["status"], check_spine.OK, build["detail"])
+                self.assertIn(", 0 errors", build["detail"])
 
 
 class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):

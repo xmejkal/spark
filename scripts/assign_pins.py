@@ -41,6 +41,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
+import board_pads  # noqa: E402
 import boards  # noqa: E402
 import design as design_library  # noqa: E402
 import missing_facts  # noqa: E402
@@ -415,7 +416,7 @@ def pin_module(board, assignments, source, pulled_up=()):
         if not entry["signal"].isidentifier():
             raise Impossible("signal %r is not a Python name, so no firmware could import it"
                              % entry["signal"])
-        pad = ((board.get("physical") or {}).get("pad_aliases") or {}).get(entry["pin"], entry["pin"])
+        pad = board_pads.BoardPads.from_record(board).pad_of(entry["pin"])  # --- MVP --- (P512)
         said = ["pad %s" % pad, entry["why"]] + [role_note(board, role)
                                                           for role in entry["roles"]]
         lines.append("%s = %d  # %s" % (entry["signal"], entry["gpio"], one_line("; ".join(said))))

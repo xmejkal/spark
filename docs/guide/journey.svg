@@ -60,7 +60,7 @@
 <text x="832" y="766" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The library search runs.</text>
 <text x="832" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Research by agents was not</text>
 <text x="832" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">run.</text>
-<circle cx="1373" cy="276" r="36" fill="#ffdc4a"/>
+<circle cx="1373" cy="276" r="36" fill="#2dc75c"/>
 <text x="1373" y="287" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">4</text>
 <text x="1373" y="358" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Build</text>
 <text x="1373" y="390" font-size="22" font-weight="normal" fill="#595959" text-anchor="middle">/spark:build</text>
@@ -72,8 +72,8 @@
 <text x="1214" y="598" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">A board that builds, a</text>
 <text x="1214" y="632" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Wokwi diagram, a sheet, a</text>
 <text x="1214" y="666" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">page of tabs.</text>
-<rect x="1214" y="696" width="96" height="36" rx="18" fill="#fff6b6"/>
-<text x="1262" y="721" font-size="20" font-weight="bold" fill="#af7e04" text-anchor="middle">partly</text>
+<rect x="1214" y="696" width="96" height="36" rx="18" fill="#adf0c7"/>
+<text x="1262" y="721" font-size="20" font-weight="bold" fill="#067429" text-anchor="middle">works</text>
 <text x="1214" y="766" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">Ran end to end on</text>
 <text x="1214" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-11. Drawn on a half</text>
 <text x="1214" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">breadboard for the XIAO C6</text>
@@ -86,13 +86,14 @@
 <text x="1214" y="1072" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">jumper or resistor is kept,</text>
 <text x="1214" y="1106" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-10-18. The library's</text>
 <text x="1214" y="1140" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">XIAO record builds button +</text>
-<text x="1214" y="1174" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">LED, 2026-10-18. Walk 4,</text>
-<text x="1214" y="1208" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-11-01: an SPI or I2C</text>
-<text x="1214" y="1242" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">part does not build on the</text>
-<text x="1214" y="1276" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">FireBeetle 2 or the XIAO</text>
-<text x="1214" y="1310" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">C6, because the emitter</text>
-<text x="1214" y="1344" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">ignores the board's pad</text>
-<text x="1214" y="1378" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">aliases (P510).</text>
+<text x="1214" y="1174" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">LED, 2026-10-18. An SPI and</text>
+<text x="1214" y="1208" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">an I2C part build with 0</text>
+<text x="1214" y="1242" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">errors on the FireBeetle 2</text>
+<text x="1214" y="1276" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">and the XIAO C6, 2026-11-01</text>
+<text x="1214" y="1310" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">(P512). A display on the</text>
+<text x="1214" y="1344" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">XIAO still stops at the</text>
+<text x="1214" y="1378" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">simulation: it has no Wokwi</text>
+<text x="1214" y="1412" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">part.</text>
 <line x1="227" y1="1658" x2="1373" y2="1658" stroke="#b0b0b0" stroke-width="4"/>
 <circle cx="227" cy="1658" r="36" fill="#2dc75c"/>
 <text x="227" y="1669" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">5</text>
@@ -184,5 +185,5 @@
 <text x="1214" y="2930" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">yet.</text>
 <rect x="48" y="2992" width="1504" height="92" rx="12" fill="#1a1a1a"/>
 <text x="72" y="3030" font-size="24" fill="#ffffff"><tspan font-weight="bold">Where we are:</tspan> the FireBeetle 2 button changed its LED in Wokwi and on the bench on 2026-11-01.</text>
-<text x="72" y="3064" font-size="24" fill="#ffffff"><tspan font-weight="bold">Next:</tspan> build an SPI or I2C part on the FireBeetle 2 (P510 walk 4 council).</text>
+<text x="72" y="3064" font-size="24" fill="#ffffff"><tspan font-weight="bold">Next:</tspan> wire an SPI display to the FireBeetle 2 and run its firmware.</text>
 </svg>
