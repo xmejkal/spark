@@ -40,7 +40,11 @@ two I2C sensors both land on SDA/SCL — and a bus line named the vendor's way (
 on the board's MOSI, SCK, SS; a line the bus does not have is refused by name, never placed
 somewhere quiet. An optional `"signals":
 [{"name": "LED_STATUS", "needs": []}]` adds a pin no part record claims (an LED, a limit switch); the file lists it as
-*assigned, and connected to nothing*, for you to wire by hand, and the spine flags that. An instance's `name`, a rail in
+*assigned, and connected to nothing*, for you to wire by hand, and the spine flags that. An entry with a part's signal
+name and a `pin`, such as `{"name": "TFT_BL", "pin": "D13"}` beside `dfr0664-tft-2in`, sets its pin and adds no
+second signal: use it when a cable or a connector fixes the pin. It holds only `name` and `pin`, because the part's
+record says the rest. A bus line needs no pin, because it lands on the board's own bus pins. A label the board lacks, or a
+strapping pin (close audit C4), is refused by name. An instance's `name`, a rail in
 `rails` and a signal's `name` are names — letters, digits and `_` — and the chain refuses the file otherwise, as
 `parts[0] calls its instance 'Btn Open', but an instance's name is a name — letters, digits and _ (BtnOpen): the board is
 written with it as code`.
@@ -235,7 +239,7 @@ The generator refuses rather than guess, and each refusal says what to record:
 | a board file whose header and pad order disagree: `header_order` lists a different number of pads than `physical.header.pins`, or a value is of the wrong kind (a pitch written as text) | spark cannot tell which of the two is right, so the footprint stage says `the board definition disagrees with itself: …` and what differs (a value of the wrong kind is named by its field: `physical.header.pitch_mm is not a finite number`), rather than draw pads that shift ([P411](https://github.com/xmejkal/spark/issues/537)) |
 | no `pin_order` recorded | pads would be numbered from the order pins appear in a file, which is not a fact about the module |
 | no outline recorded | every placement would be arranged around an invented size; `--assume-missing-sizes` proceeds with the guess declared in the file. The one command always passes `--assume-missing-sizes`, so `/spark:build` goes ahead and declares the guess only in the header of `board.tsx` ([P115](https://github.com/xmejkal/spark/issues/49)) |
-| two components of one name | a name written twice: tscircuit keeps one and wires every other instance's pins to it. Two spellings differing only in capitals (`OpenLid`, `Openlid`): spark's naming makes them one signal, placed twice and traced to one pad — so the requirements stage refuses the file, naming both, before anything is emitted. A `signals` entry written under an instance's signal name (`OPENLID_BUTTON` beside `OpenLid`) is one signal the same way, and the schematic stage refuses it, naming both |
+| two components of one name | a name written twice: tscircuit keeps one and wires every other instance's pins to it. Two spellings differing only in capitals (`OpenLid`, `Openlid`): spark's naming makes them one signal, placed twice and traced to one pad — so the requirements stage refuses the file, naming both, before anything is emitted. A `signals` entry written under an instance's signal name (`OPENLID_BUTTON` beside `OpenLid`) is one signal the same way, and the schematic stage refuses it, naming both. An entry that also gives a `pin` is that signal's pin, not a second signal |
 | a series resistor it cannot size — a part asks for a current (`for_current_ma`) and the board file states no `power.io_volts` | the resistor's value comes from the board's I/O voltage; the schematic stage refuses (`cannot emit a board: … — nothing to compute it from`, exit 2) rather than guess one. Both library boards state it (the XIAO since P278) |
 | a part that is not in the library | `parts.py --need <words>` says what exists; `/spark:research` writes the record from the vendor's own pages, vendor by vendor in the project's order — never a pinout from memory |
 

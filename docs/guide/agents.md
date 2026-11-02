@@ -26,8 +26,8 @@ Read these rules before you run a script:
    network. Run each write with `--dry-run` first. A network operation needs the person's yes
    ([what reads and what writes](agents/scripts.md#what-reads-and-what-writes)).
 6. **Build with `--keep <folder>`, then read `missing_facts`.** `status` can be `ok` while the board record lacks a fact
-   the firmware needs. Never guess that fact. Ask the person
-   ([`missing_facts`](agents/json.md#check_spinepy)).
+   the firmware needs. Never guess that fact. Ask the person ([`missing_facts`](agents/json.md#check_spinepy)). A part's
+   signal takes a `pin` under `signals` ([the requirements file](../../commands/build.md#the-requirements-file)).
 7. **Check someone else's project in a scratch store** (`SPARK_HOME`). Never put the person's drawer, history or
    projects list into a URL, a prompt or a commit.
 

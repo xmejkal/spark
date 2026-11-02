@@ -53,7 +53,8 @@ a rule checklist in the loop. Follow it.
    design's: `{"part": "l9110s-module", "rails": {"VCC": "traction"}}` re-points one pin without
    copying the record. Extra pins no part claims go in
    `"signals": [{"name": "LED_STATUS", "needs": []}]`; the file lists each as assigned and
-   connected to nothing, for you to wire by hand.
+   connected to nothing, for you to wire by hand. `{"name": "TFT_BL", "pin": "D13"}` with a part's signal name sets
+   that signal's pin (a cable or a connector fixes it). A bus line needs no pin.
 
    Then, in this order — each says what it decided and why:
    - `${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json` — a pin per signal, scarce
