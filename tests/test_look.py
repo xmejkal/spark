@@ -18,7 +18,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import deploy_gate  # noqa: E402
-import board_envelope  # noqa: E402
 import boards  # noqa: E402
 import flash_image  # noqa: E402
 import look  # noqa: E402
@@ -494,7 +493,7 @@ class TheOperationTest(LookScriptCase):
         outside = FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
                                    else done(data("c6-flash-id.txt")), find_tool=without_littlefs, reporter=Watching())
         self.go_with(outside, "--no-simulation", "--json")
-        self.assertEqual(outside.reporter.events, [Event.begin(board_envelope.STAGE_LOOK)])
+        self.assertEqual(outside.reporter.events, [Event.begin("look")])
         self.assertEqual(ran_at_the_begin, [[]], "the BEGIN comes before the look runs anything")
         self.assertTrue(outside.ran, "the look ran its read after the BEGIN")
 
