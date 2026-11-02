@@ -24,6 +24,9 @@ class Event(namedtuple("Event", "kind code text")):
 
     @staticmethod
     def line(code, text):
+        """A LINE of `text`; a text that is not a string is a defect of the caller, refused here, never at the Reporter."""
+        if not isinstance(text, str):
+            raise TypeError("a LINE needs its text as a string, not %s" % type(text).__name__)
         return Event(LINE, code, text)
 
     @staticmethod
@@ -40,7 +43,7 @@ class Reporter:
 
 
 class TerminalReporter(Reporter):
-    """Strategy: the CLI's Reporter. It prints a LINE at once, indented and guarded, and nothing for a BEGIN, so every line
+    """Strategy: the CLI's Reporter. It prints a LINE at once, guarded and each of its lines indented, and nothing for a BEGIN, so every line
     keeps the bytes it had before the seam. Under --json it prints on stderr, so stdout holds the envelope alone."""
 
     def __init__(self, stream):
@@ -53,5 +56,5 @@ class TerminalReporter(Reporter):
 
     def report(self, event):
         if event.kind == LINE:
-            print(guard_lines(INDENT + event.text), file=self.stream, flush=True)
+            print("\n".join(INDENT + line for line in guard_lines(event.text).split("\n")), file=self.stream, flush=True)
 # --- end MVP ---

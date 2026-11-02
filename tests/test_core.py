@@ -362,6 +362,10 @@ class EventTest(unittest.TestCase):
         self.assertEqual((begun.kind, begun.code, begun.text), (BEGIN, "toy", None))
         self.assertEqual((LINE, BEGIN), ("line", "begin"))
 
+    def test_a_line_without_a_string_is_refused(self):
+        with self.assertRaises(TypeError):
+            Event.line("toy", None)
+
 
 class ReporterContract:
     """P507: what every Reporter owes: it takes a LINE, a BEGIN and a kind it does not know, and raises on none."""
@@ -388,6 +392,12 @@ class TerminalReporterTest(ReporterContract, unittest.TestCase):
         self.assertEqual(stream.getvalue(), "")
         reporter.report(Event.line("toy", "said \x1b[2J now"))
         self.assertEqual(stream.getvalue(), "  said ?[2J now\n")
+
+    def test_each_line_of_a_text_with_a_newline_keeps_its_indent(self):
+        import io
+        stream = io.StringIO()
+        TerminalReporter(stream).report(Event.line("toy", "one\ntwo"))
+        self.assertEqual(stream.getvalue(), "  one\n  two\n")
 
     def test_for_json_picks_stderr_and_stdout_without(self):
         import contextlib

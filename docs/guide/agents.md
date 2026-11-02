@@ -70,10 +70,8 @@ A command page's `allowed-tools` lists the operations Claude Code lets you run w
 on no command's or skill's list, so Claude Code asks the person before any of them runs, and their answer is the yes.
 Their own settings can answer first: an allow rule of theirs, or auto mode, can let it run without asking, which is a
 yes given in advance, and auto mode can also refuse it. You do not work around either. `parts.py --describe --json`
-marks the network operations of `parts.py`.
-
-A new project starts with `/spark:init`, then `/spark:setup`. The [journey guide](journey.md) shows each step on real
-runs.
+marks the network operations of `parts.py`. A new project starts with `/spark:init`, then `/spark:setup`. The
+[journey guide](journey.md) shows each step on real runs.
 
 Outside Claude Code, the command pages and skills are plain Markdown, but their agents are Claude Code agent
 definitions (`agents/*.md`: a model and a tool list). The scripts their steps call run anywhere; following a command
@@ -119,7 +117,9 @@ gives each case.
 
 ### Under --json, stderr is for a person
 
-Under `--json`, stderr is for a person: progress lines, a tool's output, diagnostics, a traceback. Parse stdout only.
+For `look.py` and `deploy.py` under `--json`, stdout holds the envelope alone. Progress lines, a tool's own output and
+the diagnostics go to stderr, as text for a person. Decide on stdout only: read stderr just to report a crash or an
+exit-1 refusal ([a crash](#a-crash-exits-1), [their envelope](agents/json.md#lookpy-and-deploypys-envelope)).
 
 ### A crash exits 1
 

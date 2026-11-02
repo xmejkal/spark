@@ -75,14 +75,16 @@ crashing: a `ValueMessageError` with `code`, `fix` and `status`.
 
 `spark.core.cli` holds the frontends. `run_operation(operation, values, outside)` runs for any frontend and turns a
 `SparkError` into one Finding of its status, and any other exception into one unchecked Finding with code `crash`: the
-sentence names the exception class only, because a message can carry a home path, and `diagnostics` gets the op and
-the class, the fix, and the traceback, its last line through `printable`. `run_cli(text, operation, argv, *, outside_builder, outside=None)` is the CLI: it parses the Operation's
-arguments with `outcomes.AnsweringParser` (a bad flag is a `bad_argument` envelope under `--json`, the usage without),
-runs, renders with `JsonEnvelope` or `TextReport` (the two Renderers, which decide nothing again), prints the diagnostics
-on stderr through `guard_lines` and returns `EXIT_FOR[status]`. Rule X2 names it by file and name as the function that
-prints in `scripts/spark/`, beside the Renderers, the terminal consent and `TerminalReporter`; `outcomes.AnsweringParser.exit_with_usage`
-prints the usage too and stands in the baseline. A script's `main(argv=None, outside=None)` is one call
-of `run_cli`; `scripts/look.py` is the first, over `LookAtBoard`. The core's own codes are in `spark.core.codes`.
+sentence names the exception class only, because a message can carry a home path, and `diagnostics` gets the op and the
+class, the fix, and the traceback, its last line through `printable`. `run_cli(text, operation, argv, *,
+outside_builder, outside=None)` is the CLI: it parses the Operation's arguments with `outcomes.AnsweringParser` (a bad
+flag is a `bad_argument` envelope under `--json`, the usage without), runs, renders with `JsonEnvelope` or `TextReport`
+(the two Renderers, which decide nothing again), prints the diagnostics on stderr through `guard_lines` and returns
+`EXIT_FOR[status]`. Rule X2 names it by file and name as the function that prints in `scripts/spark/`, beside the
+Renderers, the terminal consent and `TerminalReporter`, which prints the text of a `LINE` (an `Event` holds `kind`,
+`code` and `text`); `outcomes.AnsweringParser.exit_with_usage` prints the usage too and stands in the baseline. A
+script's `main(argv=None, outside=None)` is one call of `run_cli`; `scripts/look.py` is the first, over `LookAtBoard`.
+The core's own codes are in `spark.core.codes`.
 
 ```mermaid
 classDiagram
