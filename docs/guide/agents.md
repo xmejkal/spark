@@ -118,8 +118,8 @@ gives each case.
 ### Under --json, stderr is for a person
 
 For `look.py` and `deploy.py` under `--json`, stdout holds the envelope alone. Progress lines, a tool's own output and
-the diagnostics go to stderr, as text for a person. Decide on stdout only: read stderr just to report a crash or an
-exit-1 refusal ([a crash](#a-crash-exits-1), [their envelope](agents/json.md#lookpy-and-deploypys-envelope)).
+the diagnostics go to stderr, as text for a person. Decide on stdout only: read stderr just to report a crash
+([a crash](#a-crash-exits-1), [their envelope](agents/json.md#lookpy-and-deploypys-envelope)).
 
 ### A crash exits 1
 
