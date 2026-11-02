@@ -22,13 +22,15 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
 
 ## S — the goal becomes needs
 
-0. Read the brief first. If the person's project folder holds `.spark/project.json` (`/spark:init` writes it), read
-   its `goal` and its `must` list with the Read tool ([P402](https://github.com/xmejkal/spark/issues/519)). A `goal`
+0. Read the brief first. If the person's project folder holds no `.spark/project.json`, run `/spark:init` in it with
+   no board first ([P516](https://github.com/xmejkal/spark/issues/712)). It writes the brief with `goal: null` and lists
+   the project. The board comes at step L, whose init keeps the brief. Then read the brief's `goal` and its `must`
+   list with the Read tool ([P402](https://github.com/xmejkal/spark/issues/519)). A `goal`
    that is set is the goal: say it back in one line, and do not ask for it again. Each `must` line is a promise that
    the needs must keep. If a need serves one, name the line. If the goal is `null`, ask for it. If the list is empty,
    ask for the must lines. Each of these questions counts as one of the three in item 2. Write each answer into
    `project.json` with the Write tool, and keep its other fields as they are. That folder is the project's folder in
-   item 3, so no new one is made, and S is marked now. With no `project.json`, start from the person's words as before.
+   item 3, so no new one is made, and S is marked now. The goal the person gave at the start is the first answer.
 1. A need is a verb and a few words: `does` one of sense, input, indicate, sound, move, drive, power, keep-time, store,
    compute, communicate, connect, mount (`drive` is the driver, `move` the thing driven), and `what` (soil-moisture,
    alarm, microcontroller). Add a `condition` only when it decides a part ("indoor pot, short probe; low power").
