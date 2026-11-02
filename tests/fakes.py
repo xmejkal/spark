@@ -10,6 +10,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import store  # noqa: E402
 from firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
+from spark.core.events import Reporter  # noqa: E402
 
 #: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
 IMPORT_HOME = os.environ["SPARK_HOME"]
@@ -269,13 +270,26 @@ class FakeTscircuitExport:
             '<svg xmlns="http://www.w3.org/2000/svg"><title>fake %s</title></svg>' % form, None))
 
 
+class FakeReporter(Reporter):
+    """Fake Reporter (spark.core.events): keeps every event it is given in `events`, in order, and shows nothing."""
+
+    def __init__(self):
+        self.events = []
+
+    def report(self, event):
+        self.events.append(event)
+
+
 class FakeOutsideWorld:
     """Fake OutsideWorld (spark.core.outside): `run` answers a command as `subprocess.run` would, with the callable a test
     gives, and keeps each command in `ran`; `find_tool` gives a tools.Tool by its name with the callable given (a dict's
-    `get`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program."""
+    `get`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program.
+    `report` is its `reporter`'s, a FakeReporter of its own unless the test gives one (P507)."""
 
-    def __init__(self, run=None, find_tool=None):
+    def __init__(self, run=None, find_tool=None, reporter=None):
         self.ran, self._run, self._find_tool = [], run, find_tool
+        self.reporter = reporter or FakeReporter()
+        self.report = self.reporter.report
 
     def run(self, command, **options):
         self.ran.append(command)

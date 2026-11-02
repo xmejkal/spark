@@ -11,6 +11,7 @@ from collections import namedtuple
 
 from spark.core import codes, outcomes
 from spark.core.errors import SparkError
+from spark.core.events import TerminalReporter
 from spark.core.operation import JSON_DEST, JSON_FLAG
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines, printable
@@ -90,7 +91,8 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     """
     The exit code of `operation` run as a CLI. It parses `argv` (sys.argv without the script when None) from the
     Operation's arguments and answers a bad flag with a `bad_argument` envelope under --json, or the usage on stderr
-    without (P433). It builds the outside with `outside_builder(project, effects)` unless a test gave `outside`, runs,
+    without (P433). It builds the outside with `outside_builder(project, effects, reporter)` unless a test gave `outside`, the
+    reporter `TerminalReporter.for_json(as_json)` (P507: the events on stdout, on stderr with --json), runs,
     prints the rendering on stdout as it is (--json keeps every value raw, and the report's lines guard themselves) and
     the diagnostics on stderr through `guard_lines`, and returns the exit code of the result's status. The one place in
     the core that prints (rule X2).
@@ -106,7 +108,8 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
         print(JsonEnvelope.render(refused, operation.name, operation.name))
         return outcomes.EXIT_COULD_NOT_RUN
     as_json = values.pop(JSON_DEST)
-    result = run_operation(operation, values, outside, lambda: outside_builder(values.get("project"), operation.effects))
+    reporter = TerminalReporter.for_json(as_json)
+    result = run_operation(operation, values, outside, lambda: outside_builder(values.get("project"), operation.effects, reporter))
     said = JsonEnvelope.render(result, operation.name, operation.name) if as_json else TextReport.render(result)
     if said:
         print(said)

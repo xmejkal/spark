@@ -11,8 +11,8 @@ from spark.core.outside import build_outside_world
 OPERATIONS = {LookAtBoard.name: LookAtBoard}
 
 
-def build_project_outside_world(project, effects):
+def build_project_outside_world(project, effects, reporter):
     """Core's OutsideWorld for an Operation on `project`: `find_tool` finds a role or a tool as the project's tools list says,
-    and as the shared lists alone say with `project=None`."""
-    return build_outside_world(effects, find_tool=lambda name, project=project: tools.find(name, project))
+    and as the shared lists alone say with `project=None`; `report` is the given Reporter's (P507)."""
+    return build_outside_world(effects, reporter, find_tool=lambda name, project=project: tools.find(name, project))
 # --- end MVP ---

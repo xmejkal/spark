@@ -12,10 +12,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import tools  # noqa: E402
-from fakes import FakeOutsideWorld  # noqa: E402
+from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
 from spark.core.cli import HelpText, JsonEnvelope, TextReport, run_cli, run_operation  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
+from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, Argument, Operation  # noqa: E402
 from spark.core.outside import ProgramRunner, build_outside_world  # noqa: E402
 from spark.core.result import Finding, NextStep, OperationResult, envelope_item  # noqa: E402
@@ -183,14 +184,14 @@ class RunCliTest(unittest.TestCase):
     def test_the_builder_gets_the_project_and_the_effects_when_no_outside_is_given(self):
         asked = []
 
-        def builder(project, effects):
-            asked.append((project, effects))
+        def builder(project, effects, reporter):
+            asked.append((project, effects, type(reporter)))
             return FakeOutsideWorld(find_tool={"flasher": TOOL}.get)
         import contextlib
         import io
         with contextlib.redirect_stdout(io.StringIO()):
             code = run_cli(TEXT, Toy(), ["--project", "here", "--what", "ok"], outside_builder=builder)
-        self.assertEqual((code, asked), (0, [(Path("here"), (READS,))]))
+        self.assertEqual((code, asked), (0, [(Path("here"), (READS,), TerminalReporter)]))
 
 
 class RunOperationTest(unittest.TestCase):
@@ -262,7 +263,7 @@ class RunOperationTest(unittest.TestCase):
                 self.assertEqual(lines.count("Traceback (most recent call last):"), 2 if what == "context" else 1)  # a cause raised by `from` has no frames
 
     def test_a_builder_that_crashes_is_a_crash_envelope_too(self):
-        def builder(project, effects):
+        def builder(project, effects, reporter):
             raise OSError("no tools file")
         import contextlib
         import io
@@ -273,7 +274,7 @@ class RunOperationTest(unittest.TestCase):
         self.assertIn("OSError", json.loads(out.getvalue())["unchecked"][0]["sentence"])
 
     def test_an_undeclared_run_is_refused(self):
-        outside = build_outside_world((READS,), find_tool={"flasher": TOOL}.get)
+        outside = build_outside_world((READS,), FakeReporter(), find_tool={"flasher": TOOL}.get)
         with self.assertRaises(SparkError) as refused:
             outside.run(["ls"])
         self.assertEqual((refused.exception.code, refused.exception.status), ("undeclared_effect", outcomes.COULD_NOT_RUN))
@@ -283,7 +284,7 @@ class RunOperationTest(unittest.TestCase):
 
     def test_a_declared_run_is_subprocess_run_and_the_finder_is_the_given_one(self):
         import subprocess
-        outside = build_outside_world((READS, RUNS), find_tool={"flasher": TOOL}.get)
+        outside = build_outside_world((READS, RUNS), FakeReporter(), find_tool={"flasher": TOOL}.get)
         self.assertIs(outside.run, subprocess.run)
         self.assertIs(ProgramRunner.run, subprocess.run)
         self.assertEqual((outside.find_tool("flasher"), outside.find_tool("x")), (TOOL, None))
@@ -304,6 +305,106 @@ class FakeOutsideWorldTest(unittest.TestCase):
             world.find_tool("flasher")
         with self.assertRaises(AssertionError):
             FakeOutsideWorld().run(["ls"])
+
+    def test_it_reports_to_its_own_fake_reporter_or_the_one_given(self):
+        world = FakeOutsideWorld()
+        world.report(Event.begin("toy"))
+        self.assertEqual(world.reporter.events, [Event.begin("toy")])
+        given = FakeReporter()
+        self.assertIs(FakeOutsideWorld(reporter=given).reporter, given)
+
+
+class Reporting(Toy):
+    """Operation: the toy that reports a BEGIN and a LINE while it runs, then answers as the toy does."""
+
+    def run(self, project, what, left, right, *, outside):
+        outside.report(Event.begin("toy"))
+        outside.report(Event.line("toy", "said now"))
+        return super().run(project, what, left, right, outside=outside)
+
+
+class TheWorldReportsTest(unittest.TestCase):
+    """P507: an event goes from the Operation through the world's `report` to the Reporter run_cli picked (rules 2 and 5)."""
+
+    @staticmethod
+    def through_a_builder(*argv):
+        """(exit code, stdout, stderr) of the reporting toy, its world built by build_outside_world with run_cli's reporter."""
+        import contextlib
+        import io
+        out, err = io.StringIO(), io.StringIO()
+
+        def builder(project, effects, reporter):
+            return build_outside_world(effects, reporter, find_tool={"flasher": TOOL}.get)
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = run_cli(TEXT, Reporting(), list(argv), outside_builder=builder)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_a_line_is_on_stdout_before_the_report_and_a_begin_prints_nothing(self):
+        self.assertEqual(self.through_a_builder(), (0, "  said now\n  what   ok\n  left   False\n", ""))
+
+    def test_with_json_the_line_is_on_stderr_and_stdout_holds_the_envelope_alone(self):
+        code, out, err = self.through_a_builder("--json")
+        result = Toy().run(None, "ok", False, False, outside=FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
+        self.assertEqual((code, out, err), (0, JsonEnvelope.render(result, "toy", "toy") + "\n", "  said now\n"))
+
+    def test_a_bare_world_reports_to_the_reporter_it_was_built_with(self):
+        reporter = FakeReporter()
+        build_outside_world((READS,), reporter).report(Event.begin("toy"))
+        self.assertEqual(reporter.events, [Event.begin("toy")])
+
+
+class EventTest(unittest.TestCase):
+    """P507: an Event is a Value of three facts, and a LINE alone holds a sentence."""
+
+    def test_each_kind_holds_its_fields(self):
+        said, begun = Event.line("toy", "said"), Event.begin("toy")
+        self.assertEqual((said.kind, said.code, said.text), (LINE, "toy", "said"))
+        self.assertEqual((begun.kind, begun.code, begun.text), (BEGIN, "toy", None))
+        self.assertEqual((LINE, BEGIN), ("line", "begin"))
+
+
+class ReporterContract:
+    """P507: what every Reporter owes: it takes a LINE, a BEGIN and a kind it does not know, and raises on none."""
+
+    def reporter(self):
+        raise NotImplementedError
+
+    def test_it_takes_each_kind_and_an_unknown_one(self):
+        reporter = self.reporter()
+        for event in (Event.line("toy", "said"), Event.begin("toy"), Event("other", "toy", None)):
+            self.assertIsNone(reporter.report(event))
+
+
+class TerminalReporterTest(ReporterContract, unittest.TestCase):
+    def reporter(self):
+        import io
+        return TerminalReporter(io.StringIO())
+
+    def test_a_line_is_printed_with_its_indent_and_a_begin_prints_nothing(self):
+        import io
+        stream = io.StringIO()
+        reporter = TerminalReporter(stream)
+        reporter.report(Event.begin("toy"))
+        self.assertEqual(stream.getvalue(), "")
+        reporter.report(Event.line("toy", "said \x1b[2J now"))
+        self.assertEqual(stream.getvalue(), "  said ?[2J now\n")
+
+    def test_for_json_picks_stderr_and_stdout_without(self):
+        import contextlib
+        import io
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.assertEqual((TerminalReporter.for_json(True).stream, TerminalReporter.for_json(False).stream), (err, out))
+
+
+class FakeReporterTest(ReporterContract, unittest.TestCase):
+    def reporter(self):
+        return FakeReporter()
+
+    def test_it_keeps_each_event(self):
+        reporter = FakeReporter()
+        reporter.report(Event.begin("toy"))
+        self.assertEqual(reporter.events, [Event("begin", "toy", None)])
 
 
 if __name__ == "__main__":

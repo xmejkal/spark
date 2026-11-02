@@ -1,0 +1,6 @@
+[
+ {"file": "scripts/spark/core/events.py", "name": "a BEGIN that prints", "find": "if event.kind == LINE:\n            print(guard_lines(INDENT + event.text)", "replace": "if True:\n            print(guard_lines(INDENT + str(event.text))"},
+ {"file": "scripts/spark/core/events.py", "name": "a LINE on stdout under --json", "find": "return cls(sys.stderr if as_json else sys.stdout)", "replace": "return cls(sys.stdout)"},
+ {"file": "scripts/spark/core/events.py", "name": "a LINE without its indent", "find": "print(guard_lines(INDENT + event.text)", "replace": "print(guard_lines(event.text)"},
+ {"file": "scripts/spark/bench/look_at_board.py", "name": "the event not sent", "find": "outside.report(Event.begin(board_envelope.STAGE_LOOK))", "replace": "pass"}
+]

@@ -241,9 +241,9 @@ rules are added to it, each checked by one test in `tests/test_core.py`:
 1. `Operation.schema()` returns a JSON Schema for the arguments and one for the result, built from the `Argument`s
    and the envelope keys. An MCP tool, a LangChain tool and a LangGraph state field are generated from an area's
    `OPERATIONS`, never written by hand. The test: every `Argument.dest` is a property of the schema.
-2. No Operation asks or prints. It asks only through `outside.consent`, a `ConsentStrategy`. The test: rule X2 of S3
-   finds no `print`, `input`, `sys.stdin`, `sys.stdout` or `readline` in `spark/` outside the Renderers and the
-   terminal consent.
+2. No Operation asks or prints. It asks only through `outside.consent`, a `ConsentStrategy`, and tells only through
+   `outside.report` (P507). The test: rule X2 of S3 finds no `print`, `input`, `sys.stdin`, `sys.stdout` or
+   `readline` in `spark/` outside the Renderers, the terminal consent and `TerminalReporter`.
 3. `run_operation(operation, values, outside, backends, trace=None)` has one hook. `trace` is a callable that gets the
    Operation's name, the values, the result and the seconds, once per run, after `Privacy` masked them. A tracer that
    raises is caught and said on stderr, and the run's result stands. Langfuse plugs in there. The core imports no
@@ -611,7 +611,7 @@ class until two frontends share code. No new clock class: `SystemClock` is the o
 contract test is its second case. No `platform` key in `requirements.json` until a second platform exists. No public
 rename. No change to the demo projects. Three lines are added. No vector store, LangChain or Langfuse import anywhere
 but `scripts/spark/frontends/`. No `Retriever` class before the sourcing move. No `Tracer` class, because the hook is
-one callable.
+one callable. No Reporter beyond `TerminalReporter` and the Fake until its frontend exists (P507).
 
 ## Appendix: what moves where, by name
 
