@@ -13,7 +13,7 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Role | What it is | Its name | Example |
 |---|---|---|---|
 | Service | runs the steps of one flow over objects it was given | ends in `Service` | `LookService`, `DeployService` |
-| Strategy | a base class that a caller can swap for another | ends in `Strategy` when the noun alone does not say it does something | `ConsentStrategy`; `BoardReader` and `Flasher` stay plain, and their docstrings say Strategy |
+| Strategy | a base class that a caller can swap for another | ends in `Strategy` when the noun alone does not say it does something | `ConsentStrategy`; `BoardReader`, `Flasher` and `Reporter` stay plain, and their docstrings say Strategy |
 | Adapter | wraps an outside program behind spark's own interface | a plain noun; the docstring says Adapter | `BoardConnection` wraps mpremote, the tool that talks to MicroPython on a board |
 | Result | what a method returns, as a namedtuple | ends in `Result` | `ReadyResult`, `DeployResult` |
 | Error | an exception | ends in `Error` (the deploy area only, for now) | `GateClosedError`, `DeployError` |
@@ -62,15 +62,16 @@ class with `name` (the `op` the envelope prints), `arguments` (its `Argument`s, 
 (`spark.core.result`): `data`, `findings` (a `Finding` per thing found, with its severity, subject, code, sentence and
 fix), `next` (a `NextStep` per step an agent may take), `lines` (the report a person reads), `diagnostics` (lines for
 the person beside the answer: the board doctor's, a crash's traceback) and `notes`. `status()` is `outcomes.status_of`
-over the findings, so `ok` stays unreachable while anything is unchecked, and `to_envelope(tool, op)` is the envelope
-in today's key order. An Operation runs a program and finds a tool only through `outside`, an `OutsideWorld`
-(`spark.core.outside`): `run` runs a program and `find_tool` gives a tool by its name. The rest of the outside (the
-project's files, the store, and the child Python that `image_evidence.CompileCheck` starts) still goes direct, and
-moves behind the outside with its own card. `build_outside_world(effects,
-find_tool)` gives the real `run` only when the effects hold `runs`, and a stub that raises `SparkError` with code
-`undeclared_effect` otherwise; an area's builder, `spark.bench.build_project_outside_world(project, effects)`, adds the
-project's tool finder. A test gives a `FakeOutsideWorld`. `SparkError` (`spark.core.errors`) is the one error an
-Operation raises to answer instead of crashing: a `ValueMessageError` with `code`, `fix` and `status`.
+over the findings, so `ok` stays unreachable while anything is unchecked, and `to_envelope(tool, op)` is the envelope in
+today's key order. An Operation reaches the outside only through `outside`, an `OutsideWorld` (`spark.core.outside`):
+`run` runs a program, `find_tool` gives a tool by its name, and `report(event)` tells the person what happens now (an
+`Event` of `spark.core.events`, to the frontend's `Reporter`). The rest of the outside (the project's files, the store,
+and the child Python that `image_evidence.CompileCheck` starts) still goes direct, and moves behind the outside with its
+own card. `build_outside_world(effects, reporter, find_tool)` gives the real `run` only when the effects hold `runs`,
+and a stub that raises `SparkError` with code `undeclared_effect` otherwise; an area's builder,
+`spark.bench.build_project_outside_world(project, effects, reporter)`, adds the project's tool finder. A test gives a
+`FakeOutsideWorld`. `SparkError` (`spark.core.errors`) is the one error an Operation raises to answer instead of
+crashing: a `ValueMessageError` with `code`, `fix` and `status`.
 
 `spark.core.cli` holds the frontends. `run_operation(operation, values, outside)` runs for any frontend and turns a
 `SparkError` into one Finding of its status, and any other exception into one unchecked Finding with code `crash`: the
@@ -79,7 +80,7 @@ the class, the fix, and the traceback, its last line through `printable`. `run_c
 arguments with `outcomes.AnsweringParser` (a bad flag is a `bad_argument` envelope under `--json`, the usage without),
 runs, renders with `JsonEnvelope` or `TextReport` (the two Renderers, which decide nothing again), prints the diagnostics
 on stderr through `guard_lines` and returns `EXIT_FOR[status]`. Rule X2 names it by file and name as the function that
-prints in `scripts/spark/`, beside the Renderers and the terminal consent; `outcomes.AnsweringParser.exit_with_usage`
+prints in `scripts/spark/`, beside the Renderers, the terminal consent and `TerminalReporter`; `outcomes.AnsweringParser.exit_with_usage`
 prints the usage too and stands in the baseline. A script's `main(argv=None, outside=None)` is one call
 of `run_cli`; `scripts/look.py` is the first, over `LookAtBoard`. The core's own codes are in `spark.core.codes`.
 
@@ -91,10 +92,6 @@ classDiagram
     arguments
     effects
     run(**values, outside) OperationResult
-  }
-  class LookAtBoard {
-    <<Operation>>
-    run(project, port, ignore_older_runs, no_simulation, outside)
   }
   class OperationResult {
     <<Result>>
@@ -137,6 +134,7 @@ classDiagram
     <<Value>>
     run
     find_tool
+    report
   }
   class SparkError {
     <<Error>>

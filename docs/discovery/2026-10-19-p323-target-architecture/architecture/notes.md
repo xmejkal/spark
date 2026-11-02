@@ -48,6 +48,7 @@ five stages (rows 232 to 255). Version 2 of the plan (P385, 2026-10-25) has six 
 | N30 | One module per Operation, and the area's `OPERATIONS` in its `__init__.py`. | The standard names the module after the class, and no file is called `operations.py` nine times (rule C1). |
 | N31 | `Privacy` runs inside `run_operation`, before `trace`. | A frontend that skips `run_cli`, and the tracer, see only masked values. |
 | N32 | The plan's units are waves. | "stage" is a build stage (glossary), and the word had four meanings. |
+| N33 | `OutsideWorld.report(event)` over a line callable. | One seam for every reader: the terminal now, colour, JSON lines and MCP progress later (P479, P507). |
 
 ## Conflicts between the papers, and how they were settled
 

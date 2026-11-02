@@ -54,13 +54,9 @@ Read it in this order. `status` is `ok`, and every stage is `ok`. The simulation
 GPIOs, so say so. `breadboard.json` was not written, and `expected: true` says that is by design, so do not retry.
 This build has no `missing_facts` key, so the board record names the active level of its onboard LED and button.
 
-This page is for an AI working with spark:
-
-- **in Claude Code,** through the person's commands;
-- **anywhere else,** through spark's scripts.
-
-Act on what the scripts answer, the JSON and the exit code, not on what their source seems to say. (spark's own
-agents, `part-finder` and the others, are in the [commands guide](commands.md#agents).)
+This page is for an AI working with spark: **in Claude Code,** through the person's commands, and **anywhere else,**
+through spark's scripts. Act on what the scripts answer, the JSON and the exit code, not on what their source seems to
+say. (spark's own agents, `part-finder` and the others, are in the [commands guide](commands.md#agents).)
 
 ## In Claude Code
 
@@ -120,6 +116,10 @@ gives each case.
    1 is also what a crash returns, so check stdout for the nothing-to-do line before reading exit 1 that way.
 5. `parts.py` given an id it does not know ("no part called …") exits 1, and so does `--show` of a record with a
    CONFLICT on verified facts (`data.record` is set then, `null` for an unknown id).
+
+### Under --json, stderr is for a person
+
+Under `--json`, stderr is for a person: progress lines, a tool's output, diagnostics, a traceback. Parse stdout only.
 
 ### A crash exits 1
 
