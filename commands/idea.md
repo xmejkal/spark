@@ -11,7 +11,7 @@ A goal — "tell me when my plant is thirsty" — becomes needs; each need is ma
 spark's records before anything is researched.
 
 Mark each step below — S, M, C and L — so the cost line can count what it took: M, C and L at their start, and S as soon
-as the project's folder is chosen (S's item 3; the questions before it are not counted):
+as the project's folder is chosen (S's item 0; the questions before it are not counted):
 
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
@@ -22,13 +22,16 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
 
 ## S — the goal becomes needs
 
-0. Read the brief first. If the person's project folder holds `.spark/project.json` (`/spark:init` writes it), read
-   its `goal` and its `must` list with the Read tool ([P402](https://github.com/xmejkal/spark/issues/519)). A `goal`
+0. Read the brief first. Pick the project's folder with the person: their project's folder, or a new one. S is
+   marked now. If the folder holds no `.spark/project.json`, run `/spark:init` in it with no board first
+   ([P516](https://github.com/xmejkal/spark/issues/712)). It writes the brief with `goal: null` and lists the project.
+   The board comes at step L, whose init keeps the brief. Then read the brief's `goal` and its `must` list with the
+   Read tool ([P402](https://github.com/xmejkal/spark/issues/519)). A `goal`
    that is set is the goal: say it back in one line, and do not ask for it again. Each `must` line is a promise that
    the needs must keep. If a need serves one, name the line. If the goal is `null`, ask for it. If the list is empty,
    ask for the must lines. Each of these questions counts as one of the three in item 2. Write each answer into
-   `project.json` with the Write tool, and keep its other fields as they are. That folder is the project's folder in
-   item 3, so no new one is made, and S is marked now. With no `project.json`, start from the person's words as before.
+   `project.json` with the Write tool, and keep its other fields as they are. The goal the person gave at the start is
+   the first answer.
 1. A need is a verb and a few words: `does` one of sense, input, indicate, sound, move, drive, power, keep-time, store,
    compute, communicate, connect, mount (`drive` is the driver, `move` the thing driven), and `what` (soil-moisture,
    alarm, microcontroller). Add a `condition` only when it decides a part ("indoor pot, short probe; low power").
@@ -42,7 +45,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    regulator` match a board's own regulator.
 2. Ask **at most three questions, one at a time**, each naming the need it could change ("How should it tell you? —
    that decides the alarm need"). The board is a need too (compute / microcontroller).
-3. Pick the project's folder with the person (a new one is made), write the needs as a JSON list to a file outside any
+3. In the project's folder from item 0, write the needs as a JSON list to a file outside any
    repository **with the Write tool** — a word the person said never goes on a command line — and:
 
    ```
