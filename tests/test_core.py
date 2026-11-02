@@ -184,14 +184,14 @@ class RunCliTest(unittest.TestCase):
     def test_the_builder_gets_the_project_and_the_effects_when_no_outside_is_given(self):
         asked = []
 
-        def builder(project, effects):
-            asked.append((project, effects))
+        def builder(project, effects, reporter):
+            asked.append((project, effects, type(reporter)))
             return FakeOutsideWorld(find_tool={"flasher": TOOL}.get)
         import contextlib
         import io
         with contextlib.redirect_stdout(io.StringIO()):
             code = run_cli(TEXT, Toy(), ["--project", "here", "--what", "ok"], outside_builder=builder)
-        self.assertEqual((code, asked), (0, [(Path("here"), (READS,))]))
+        self.assertEqual((code, asked), (0, [(Path("here"), (READS,), TerminalReporter)]))
 
 
 class RunOperationTest(unittest.TestCase):
@@ -263,7 +263,7 @@ class RunOperationTest(unittest.TestCase):
                 self.assertEqual(lines.count("Traceback (most recent call last):"), 2 if what == "context" else 1)  # a cause raised by `from` has no frames
 
     def test_a_builder_that_crashes_is_a_crash_envelope_too(self):
-        def builder(project, effects):
+        def builder(project, effects, reporter):
             raise OSError("no tools file")
         import contextlib
         import io
@@ -274,7 +274,7 @@ class RunOperationTest(unittest.TestCase):
         self.assertIn("OSError", json.loads(out.getvalue())["unchecked"][0]["sentence"])
 
     def test_an_undeclared_run_is_refused(self):
-        outside = build_outside_world((READS,), find_tool={"flasher": TOOL}.get)
+        outside = build_outside_world((READS,), FakeReporter(), find_tool={"flasher": TOOL}.get)
         with self.assertRaises(SparkError) as refused:
             outside.run(["ls"])
         self.assertEqual((refused.exception.code, refused.exception.status), ("undeclared_effect", outcomes.COULD_NOT_RUN))
@@ -284,7 +284,7 @@ class RunOperationTest(unittest.TestCase):
 
     def test_a_declared_run_is_subprocess_run_and_the_finder_is_the_given_one(self):
         import subprocess
-        outside = build_outside_world((READS, RUNS), find_tool={"flasher": TOOL}.get)
+        outside = build_outside_world((READS, RUNS), FakeReporter(), find_tool={"flasher": TOOL}.get)
         self.assertIs(outside.run, subprocess.run)
         self.assertIs(ProgramRunner.run, subprocess.run)
         self.assertEqual((outside.find_tool("flasher"), outside.find_tool("x")), (TOOL, None))
@@ -305,6 +305,45 @@ class FakeOutsideWorldTest(unittest.TestCase):
             world.find_tool("flasher")
         with self.assertRaises(AssertionError):
             FakeOutsideWorld().run(["ls"])
+
+
+class Reporting(Toy):
+    """Operation: the toy that reports a BEGIN and a LINE while it runs, then answers as the toy does."""
+
+    def run(self, project, what, left, right, *, outside):
+        outside.report(Event.begin("toy"))
+        outside.report(Event.line("toy", "said now"))
+        return super().run(project, what, left, right, outside=outside)
+
+
+class TheWorldReportsTest(unittest.TestCase):
+    """P507: an event goes from the Operation through the world's `report` to the Reporter run_cli picked (rules 2 and 5)."""
+
+    @staticmethod
+    def through_a_builder(*argv):
+        """(exit code, stdout, stderr) of the reporting toy, its world built by build_outside_world with run_cli's reporter."""
+        import contextlib
+        import io
+        out, err = io.StringIO(), io.StringIO()
+
+        def builder(project, effects, reporter):
+            return build_outside_world(effects, reporter, find_tool={"flasher": TOOL}.get)
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = run_cli(TEXT, Reporting(), list(argv), outside_builder=builder)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_a_line_is_on_stdout_before_the_report_and_a_begin_prints_nothing(self):
+        self.assertEqual(self.through_a_builder(), (0, "  said now\n  what   ok\n  left   False\n", ""))
+
+    def test_with_json_the_line_is_on_stderr_and_stdout_holds_the_envelope_alone(self):
+        code, out, err = self.through_a_builder("--json")
+        result = Toy().run(None, "ok", False, False, outside=FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
+        self.assertEqual((code, out, err), (0, JsonEnvelope.render(result, "toy", "toy") + "\n", "  said now\n"))
+
+    def test_a_bare_world_reports_to_the_reporter_it_was_built_with(self):
+        reporter = FakeReporter()
+        build_outside_world((READS,), reporter).report(Event.begin("toy"))
+        self.assertEqual(reporter.events, [Event.begin("toy")])
 
 
 class EventTest(unittest.TestCase):
