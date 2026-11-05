@@ -58,6 +58,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import assign_pins  # noqa: E402
+import board_envelope  # noqa: E402
 import boards  # noqa: E402
 import breadboard  # noqa: E402
 import breadboard_drawing  # noqa: E402
@@ -666,7 +667,7 @@ def main(argv=None):
     parser.add_argument("requirements", nargs="?",
                         help="a requirements.json; omit for the reference design. \"board_only\": true with no parts builds the board alone")
     parser.add_argument("--json", action="store_true",
-                        help="the verdict as one JSON object: check, status, stages, and kept with --keep or --sim-dir")
+                        help="the verdict as one JSON object: check, status, stages, next (the firmware step, when ok in a project), and kept with --keep or --sim-dir")
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are "
@@ -998,25 +999,24 @@ def report(stages, args, workdir=None, requirements=None, exporter=None):
     """
     code = verdict(stages)
     requirements_file = getattr(args, "requirements", None)
+    following = board_envelope.firmware_next_steps(code == EXIT_OK, requirements_file)  # P517: write the firmware next
     keeps = args.keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
     kept = (_kept(workdir, args.keep) if workdir is not None else []) if keeps else None
     if kept is not None and requirements_file:
-        kept += keep_breadboard(Path(args.requirements), Path(args.keep), stages)
-        kept += drop_an_older_build(Path(args.keep), stages)
+        kept += keep_breadboard(Path(args.requirements), Path(args.keep), stages) + drop_an_older_build(Path(args.keep), stages)
         kept.append(_kept_pins(Path(args.requirements), Path(args.keep)))
         kept.append(keep_tabbed_page(Path(args.keep), stages, kept, exporter or tabbed_page.TscircuitExport(None)))
     simulation = keep_simulation(workdir, simulation_dir(args), stages) if workdir is not None and simulation_dir(args) else None
-    if simulation is not None:
-        kept = (kept or []) + [simulation]
+    kept = (kept or []) + [simulation] if simulation is not None else kept
     if args.json:
         said = {"check": "spine", "status": STATUS_FOR[code], "stages": [{"name": s.name, "status": s.status, "detail": s.detail} for s in stages],
-                **({"unserved": requirements["unserved"]} if left_off(requirements) else {}),
+                **({"unserved": requirements["unserved"]} if left_off(requirements) else {}), **({"next": following} if following else {}),
                 **({"missing_facts": held} if (held := [item for entry in kept or [] for item in entry.get("missing_facts", [])]) else {})}
         if kept is not None:
             said["kept"] = [{key: value for key, value in entry.items() if key != "line"} for entry in kept]
         print(json.dumps(said))
     else:
-        sys.stdout.write(guard_lines(render(stages, code, left_off(requirements))))
+        sys.stdout.write(guard_lines(render(stages, code, left_off(requirements)) + board_envelope.next_text(following)))
     for entry in kept or []:
         print(guard_lines("  %s" % entry["line"]), file=sys.stderr)
     if workdir is not None:

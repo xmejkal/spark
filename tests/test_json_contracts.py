@@ -222,7 +222,7 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         requirements = project / "requirements.json"
         requirements.write_text(json.dumps({"board": "levelless-board", "parts": [], "board_only": True}))
         payload = self._check("check_spine", lambda: check_spine.main([str(requirements), "--keep", str(project / "kept"), "--json"]),
-                              ["check", "kept", "missing_facts", "stages", "status"])
+                              ["check", "kept", "missing_facts", "next", "stages", "status"])
         self.assertEqual([item["code"] for item in payload["missing_facts"]], ["missing_fact"] * 2)
         self.assertEqual(sorted(payload["missing_facts"][0]), ["code", "fix", "sentence", "subject"])
 

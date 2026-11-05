@@ -20,6 +20,7 @@ import io
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -2309,6 +2310,59 @@ class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
                 code, said = self.answer(requirements)
                 self.assertTrue(said.endswith("\n  the chain runs end to end\n"), said)
                 self.assertNotIn("unserved", json.loads(self.answer(requirements, "--json")[1]))
+
+
+class TheVerdictNamesTheFirmwareStepTest(unittest.TestCase):
+    """P517 (#713): a build that reaches ok in a project names the step that comes next: write the firmware from the pin map."""
+
+    WHY = "first write firmware/main.py from pins.py"
+
+    def answer(self, stages, json_out=False, library=False, folder="lamp"):
+        project = (Path(tempfile.mkdtemp()) / folder).resolve()
+        project.mkdir()
+        if not library:
+            (project / ".spark").mkdir()
+        args = argparse.Namespace(keep=None, json=json_out, requirements=str(project / "requirements.json"), sim_dir=None)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = check_spine.report(stages, args)
+        return code, out.getvalue(), project
+
+    def ok(self):
+        return [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+
+    def test_with_json_next_is_a_look_step_for_the_project(self):
+        code, said, project = self.answer(self.ok(), True)
+        step = json.loads(said)["next"]
+        self.assertEqual(code, 0)
+        self.assertEqual([(each["op"], each["why"]) for each in step], [("look", self.WHY)])
+        self.assertEqual(Path(step[0]["argv"][1]).resolve(), project)
+        self.assertEqual(step[0]["argv"][0], "--project")
+
+    def test_the_text_ends_with_the_same_step(self):
+        _, said, project = self.answer(self.ok())
+        last = said.rstrip("\n").split("\n")[-1]
+        self.assertTrue(last.startswith("  next: "), last)
+        self.assertTrue(last.endswith("look.py --project %s — %s" % (project, self.WHY)), last)
+
+    def test_the_step_carries_the_store_and_the_line_quotes_a_space(self):
+        home = Path(tempfile.mkdtemp(), "home store").resolve()
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            step = json.loads(self.answer(self.ok(), True, folder="my lamp")[1])["next"][0]
+            _, said, project = self.answer(self.ok(), folder="my lamp")
+        self.assertEqual(step["env"], {"SPARK_HOME": str(home)})
+        last = said.rstrip("\n").split("\n")[-1]
+        self.assertTrue(last.startswith("  next: SPARK_HOME=%s " % shlex.quote(str(home))), last)
+        self.assertIn("--project %s — " % shlex.quote(str(project)), last)
+
+    def test_a_problem_a_could_not_run_and_a_library_run_name_no_step(self):
+        for label, stages, library in (("problem", [stage("build", check_spine.PROBLEMS)], False),
+                                       ("could not run", [stage("build", check_spine.COULD_NOT_RUN)], False),
+                                       ("library", self.ok(), True)):
+            with self.subTest(label):
+                _, said, _ = self.answer(stages, True, library)
+                self.assertNotIn("next", json.loads(said))
+                self.assertNotIn("  next: ", self.answer(stages, library=library)[1])
 
 
 class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):

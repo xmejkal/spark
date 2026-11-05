@@ -137,7 +137,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | `check_vendor_pins.py` | **a bare list**, one entry per board file ([its keys](#check_vendor_pinspy)) |
 | `emit_footprint.py` | `check`, `message`, `status` |
 | `import_firmware.py` | `modules`, `problems`, `status`, `tool`, `unchecked` ([more](#import_firmwarepy)) |
-| `check_spine.py` | `check`, `stages`, `status`, and `kept`, `missing_facts` and `unserved` when they apply ([its keys](#check_spinepy)) |
+| `check_spine.py` | `check`, `stages`, `status`, and `kept`, `missing_facts`, `next` and `unserved` when they apply ([its keys](#check_spinepy)) |
 | `look.py`, `deploy.py` | the envelope, as `parts.py`'s ([their envelope](#lookpy-and-deploypys-envelope)) |
 | `parts.py` | the envelope: `assumptions`, `data`, `envelope`, `next`, `notes`, `op`, `problems`, `status`, `tool`, `truncated`, `unchecked` |
 
@@ -150,8 +150,8 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   `removed`, `not written` or `not kept`) and `why`. A `not written` entry of a drawing has `code` (`null` for an older
   refusal), `subject` and `expected` (`true` means by design, so do not retry). A `wrote` entry for `breadboard.svg` may
   have `drawn_from` (`record`).
-- `unserved` is there when the requirements file carries the note `parts.py --requirements` writes for the needs it
-  leaves off the board (`tests/test_check_spine.py` pins it).
+- `next`: one look step, only for `ok` in a project; its `why` is `first write firmware/main.py from pins.py` (P517), the pin map that `--keep` writes.
+- `unserved` is there when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board.
 - `missing_facts` is a top-level list, with `--keep` only, when spark writes `firmware/pins.py` and the board record
   lacks the level of its onboard LED or button ([P464](https://github.com/xmejkal/spark/issues/632)). The `wrote` entry
   for `firmware/pins.py` in `kept` has the same list. A build without `--keep`, or a `pins.py` spark left alone, gives
