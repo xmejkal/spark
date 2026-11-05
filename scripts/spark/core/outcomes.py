@@ -110,13 +110,16 @@ def dumps(envelope):
     return json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
 
 
-def step(op, argv, why, effects=(), needs_yes=False, needs_person=None):
+def step(op, argv, why, effects=(), needs_yes=False, needs_person=None, env=None):
     """A step an agent may take next (§6.4.2): ids only in `argv` — a label or a reason travels in a file. `needs_person`
     is a key only for a step that passes it: True when the person must use their hands first (press a button) and the
-    step is no use before that (P433)."""
+    step is no use before that (P433). `env` is a key only for a step that passes it: the variables to set when running
+    the step, such as the store (P473)."""
     said = {"op": op, "argv": list(argv), "why": why, "effects": list(effects), "needs_yes": needs_yes}
     if needs_person is not None:
         said["needs_person"] = needs_person
+    if env is not None:
+        said["env"] = dict(env)
     return said
 
 
