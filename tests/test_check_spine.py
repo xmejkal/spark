@@ -2345,8 +2345,8 @@ class TheVerdictNamesTheFirmwareStepTest(unittest.TestCase):
     def test_the_text_ends_with_the_same_step(self):
         _, said, project = self.answer(self.ok())
         last = said.rstrip("\n").split("\n")[-1]
-        self.assertTrue(last.startswith("  next: ") and last.endswith(" look.py --project %s -- %s" % (project, self.WHY))
-                        or ("look.py --project %s -- %s" % (project, self.WHY)) in last, last)
+        self.assertTrue(last.startswith("  next: "), last)
+        self.assertTrue(last.endswith("look.py --project %s -- %s" % (project, self.WHY)), last)
 
     def test_a_problem_a_could_not_run_and_a_library_run_name_no_step(self):
         for label, stages, library in (("problem", [stage("build", check_spine.PROBLEMS)], False),
