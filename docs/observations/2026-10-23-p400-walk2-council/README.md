@@ -14,7 +14,7 @@ The cards, read with `gh issue view <n> -R xmejkal/spark --comments`:
 - P345 (#440) and its comment with idea I5
 - P389 (#504), the epic P100 (#6), P391 (#506) and P395 (#511)
 
-Walk 2 is in `/Users/petr/Development/spark-walks/walk2`. Its diary `walk2-diary.md` has the steps, the stalls S1 to
+Walk 2 is in `~/Development/spark-walks/walk2`. Its diary `walk2-diary.md` has the steps, the stalls S1 to
 S4, the gaps G1 to G29, the observations O1 to O14, "The button question" and "Improvement ideas". The folder also
 holds the project: `requirements.json`, `firmware/` and `sim/`.
 
@@ -28,7 +28,7 @@ The direction:
 - the rows `docs/observations/rows/p323-target-architecture.md` and `p391-boards-as-modules.md`
 - the naming table in `docs/guide/developing.md`
 
-The code is in this worktree, `/Users/petr/Development/spark/.worktrees/p400-walk2-council`, on the branch
+The code is in this worktree, `~/Development/spark/.worktrees/p400-walk2-council`, on the branch
 `p400-walk2-council` from main at `b54207b`. The person's store is `~/.local/share/spark`. Wokwi's part definition of
 the XIAO ESP32-C6 is kept there, in the `sources/e5200e01…` folder, as `wokwi-xiao-esp32-c6.board.json`.
 

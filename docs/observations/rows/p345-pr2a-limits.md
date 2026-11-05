@@ -1,6 +1,6 @@
 # P345 PR 2a: the limits before the flash, findings rows
 
-Findings of P345 (#440, what a passed run left out), PR 2a, 2026-10-28, Prague. From the plan (two council rounds, `/Users/petr/.claude/plans/p345-pr2a.md`) and the build on main 161dec01, which checked each claim of the plan in the code. PR 2b (`Brief` and the named must lines) follows. The review of PR #588 (two lenses and a refuter) added rows 15 to 30, a second refuter on the fix round added rows 31 to 36, and a third added rows 37 to 41.
+Findings of P345 (#440, what a passed run left out), PR 2a, 2026-10-28, Prague. From the plan (two council rounds, `~/.claude/plans/p345-pr2a.md`) and the build on main 161dec01, which checked each claim of the plan in the code. PR 2b (`Brief` and the named must lines) follows. The review of PR #588 (two lenses and a refuter) added rows 15 to 30, a second refuter on the fix round added rows 31 to 36, and a third added rows 37 to 41.
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|

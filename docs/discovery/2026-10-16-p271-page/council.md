@@ -21,6 +21,6 @@ The plan in [plan.md](plan.md) is the version after both rounds. Each finding be
   holes. Acted: the PO chose "One source now, check later" (D17), and the check is P279 (#317).
 - The tech lead: export and sheet must read the same circuit. Acted: both read the kept `circuit.json`, behind one gate.
 - The senior engineer: no mutation table, the temporary file was unspecified, and step 1 named no real path. Acted:
-  `tests/mutations/p271-page.json`, a `TemporaryDirectory` with an empty-output check, and `/Users/petr/Development/button-light`.
+  `tests/mutations/p271-page.json`, a `TemporaryDirectory` with an empty-output check, and `~/Development/button-light`.
 - The PO assistant: no list of what waits on the PO, and `tabs.html` is not his word. Acted: "Waits on the PO" and
   `page.html`.

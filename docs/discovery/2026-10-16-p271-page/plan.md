@@ -129,7 +129,7 @@ sequenceDiagram
 0. File the card for the layout check first, in Idea, a sub-issue of P269 (#304), with the PO's words (D17). Move
    #307 to Build and comment on it.
 1. Measure on a full build, before any code. The test fixture's `circuit.json` keeps only `source_*` elements, so it
-   exports blank pictures (round 1). Copy `/Users/petr/Development/button-light` into the scratchpad. In the copy,
+   exports blank pictures (round 1). Copy `~/Development/button-light` into the scratchpad. In the copy,
    with `SPARK_HOME=~/.local/share/spark` inline on every command, run `tsci export` with an absolute path to
    `dist/board/circuit.json` for `schematic-svg` and `pcb-svg`. Record the seconds per export, the SVG sizes, and
    whether two exports give the same bytes. Show both pictures to the PO. This settles A6. If he finds either
@@ -164,7 +164,7 @@ sequenceDiagram
 - `python3 -m pytest tests/test_tabbed_page.py tests/test_check_spine.py -q`, then the whole suite through the push
   hook.
 - End to end: in the scratchpad copy of button-light, run `SPARK_HOME=~/.local/share/spark python3
-  /Users/petr/Development/spark/scripts/check_spine.py requirements.json --keep .`. Open `page.html` in Chrome, click
+  ~/Development/spark/scripts/check_spine.py requirements.json --keep .`. Open `page.html` in Chrome, click
   the three tabs, and put a screenshot of each in the PR. Done when all three tabs show (#307). A6 is already
   settled at step 1.
 - Review sized to the change (logic, about 300 lines with tests): the lenses on the everyday model, the refuter on

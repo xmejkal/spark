@@ -65,7 +65,7 @@ as Build for its child P102a.
 | id | proposal | type | slice | parent | repo | status | waiting | reason | evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | B1 | keep | chore | 2 First copper | — | bin | Idea | the PO (a look in the drawer; the backlog gives no date, last touched 2026-10-04) | Four things wait on which audio module is in the drawer. | backlog lines 1654–1664 |
-| P58 | keep | bug | 2 First copper | — | bin | Idea | — | Still true: the bin's firmware README names the XIAO's pins (D1, D6, D4/D5) and `04_mp3.py`, against `config.py`. Its fix lives in the bin's repository, so the PO may want it in `bin`. | `/usr/bin/grep -n "OPEN btn D1\|04_mp3\|DFR0534 on D9" /Users/petr/Development/smartbin-local/firmware/micropython/README.md` finds lines 67 and 69; backlog line 1275 |
+| P58 | keep | bug | 2 First copper | — | bin | Idea | — | Still true: the bin's firmware README names the XIAO's pins (D1, D6, D4/D5) and `04_mp3.py`, against `config.py`. Its fix lives in the bin's repository, so the PO may want it in `bin`. | `/usr/bin/grep -n "OPEN btn D1\|04_mp3\|DFR0534 on D9" ~/Development/smartbin-local/firmware/micropython/README.md` finds lines 67 and 69; backlog line 1275 |
 | P73 | keep | story | 2 First copper | — | bin | Idea | — | The bench has never run, so no verdict log exists; the command that lists verdicts can be built before the bench. Logs are kept in the bin, so the PO may want it in `bin`. | backlog line 1166; bin CLAUDE.md "Nothing has ever touched hardware" |
 | B8 | keep | bug | 2 First copper | — | bin | Idea | — | One failure in 36 runs, test name never kept; the bin's gate is only trusted while it never fails for nothing. | backlog line 1756 |
 | B5 | keep | chore | 2 First copper | — | bin | Idea | — | Still true: every gated commit dirties `board-gerbers.zip` (creation dates only). | backlog line 1765 |
@@ -74,7 +74,7 @@ as Build for its child P102a.
 
 | id | proposal | type | slice | parent | repo | status | waiting | reason | evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P59 | keep | bug | 3 Firmware on a Mac | — | spark | Idea | — | Still true: irrigation's `main.py` ends with `main()` at module scope, so it cannot be imported. | `tail -5 /Users/petr/Development/irrigation/firmware/main.py` ends `main()`; backlog line 1288 |
+| P59 | keep | bug | 3 Firmware on a Mac | — | spark | Idea | — | Still true: irrigation's `main.py` ends with `main()` at module scope, so it cannot be imported. | `tail -5 ~/Development/irrigation/firmware/main.py` ends `main()`; backlog line 1288 |
 | P74 | keep | story | 3 Firmware on a Mac | — | spark | Idea | — | No check of firmware against `pins.py` exists in `scripts/` (no file, no "never driven" string in `scripts` or `tests`); it waits for P59's importable firmware. | `/usr/bin/grep -rln "never driven" scripts tests` finds nothing; backlog line 1173 |
 
 ### Slice 4 — v1 on two named projects
