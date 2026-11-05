@@ -215,7 +215,7 @@ NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, di
 #: that validates parts owns the vocabulary and the file that consumes it follows.
 CAPABILITIES = ("wake", "adc", "pwm")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope, page, step as next_step  # noqa: E402, F401
+from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, add_env, envelope, step as next_step  # noqa: E402, F401
 from brief import Brief  # noqa: E402
 import boards  # noqa: E402
 import missing_facts  # noqa: E402
@@ -1643,7 +1643,7 @@ def _op_list(args, project):
     for part_id, (layer, path) in store.records("parts", LIBRARY, project).items():
         record = load(part_id, project)
         listing.append({"id": part_id, "kind": record["kind"], "name": record["name"], "layer": layer, "from": str(path.parent)})
-    shown, truncated = page(listing, args.start, "list", ["--list"] + _with_project(project), env=store.read_given_env())
+    shown, truncated = store.page_with_store(listing, args.start, "list", ["--list"] + _with_project(project))
     lines = [_row(p["id"], p["kind"], "%-9s %s" % (p["layer"], p["name"])) for p in listing]
     return Answer({"parts": shown}, lines, truncated=truncated)
 
@@ -1670,7 +1670,7 @@ def _op_validate(args, project):
         except json.JSONDecodeError as bad:
             return Answer(unchecked=[_cannot("--validate: %s is not JSON: %s" % (path, bad))])
         checked.append({"part": part_id, "path": str(path), "problems": validate(record, path)})
-    shown, truncated = page(checked, args.start, "validate", ["--validate"] + _with_project(project), env=store.read_given_env())
+    shown, truncated = store.page_with_store(checked, args.start, "validate", ["--validate"] + _with_project(project))
     lines = []
     for one in checked:
         lines.append("  %-28s %s" % (one["part"], "ok" if not one["problems"] else "%d problem(s)" % len(one["problems"])))
@@ -1695,7 +1695,7 @@ def _op_unverified(args, project):
     assumptions = [{"fact": "%s.%s" % (q["part"], q["fact"]), "basis": "unverified", "assumed": q["assumed"],
                     "sentence": q["why_it_matters"], "source": q["source"], "write": q["write"]} for q in questions]
     owners = [q["part"] for q in questions if q["write"]]  # a row with no `write` cannot go back by --fact-set
-    follow = [next_step("fact-set", ["--fact-set", owners[0], "<file>"], WRITE_BACK_HINT, ["writes"], env=store.read_given_env())] if owners else []
+    follow = [add_env(next_step("fact-set", ["--fact-set", owners[0], "<file>"], WRITE_BACK_HINT, ["writes"]), store.read_given_env())] if owners else []
     return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions, next=follow)
 
 
@@ -1860,7 +1860,7 @@ def _drawer_answer(changes, questions, problems, dry_run):
 def _op_drawer(args, project):
     import drawer
     entries = drawer.listing()
-    shown, truncated = page(entries, args.start, "drawer", ["--drawer"], env=store.read_given_env())
+    shown, truncated = store.page_with_store(entries, args.start, "drawer", ["--drawer"])
     lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], "?" if e["count"] is None else e["count"],
                                          "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
                                          "  ".join(filter(None, ["maybe owned — check the drawer" if e["unsure"] else ("skip: %s" % e["skip"] if e["skip"] else ""),
@@ -2019,7 +2019,7 @@ def _op_fact_set(args, project):
 def _op_catalog(args, project):
     records, broken = catalog_records()
     listing = [{"id": part_id, "kind": record["kind"], "name": record["name"]} for part_id, record in records.items()]
-    shown, truncated = page(listing, args.start, "catalog", ["--catalog"], env=store.read_given_env())
+    shown, truncated = store.page_with_store(listing, args.start, "catalog", ["--catalog"])
     lines = [_row(r["id"], r["kind"], r["name"]) for r in listing]
     lines += [_row(name, "BROKEN", "does not parse, or names no schema/id/name/kind") for name in broken]
     lines.append("  %d record(s), %d broken" % (len(records), len(broken)))
@@ -2029,7 +2029,7 @@ def _op_catalog(args, project):
 
 def _op_audit(args, project):
     counts, owed, broken, silent, dangling, stops = audit(project)
-    shown, truncated = page(owed, args.start, "audit", ["--audit"] + _with_project(project), env=store.read_given_env())
+    shown, truncated = store.page_with_store(owed, args.start, "audit", ["--audit"] + _with_project(project))
     lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
              for layer, row in counts.items()]
     lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"])) for b in broken]  # each, once
@@ -2085,7 +2085,7 @@ def _op_match(args, project):
         lines += ["      … %d more, %s" % (need["more"], hidden)] if need["more"] else []
         lines += ["      nothing in the store does this — a gap"] if not need["candidates"] else []
     lines += ["  %s: %s" % (p["subject"], p["sentence"]) for p in problems]
-    shown, truncated = page(matched, args.start, "match", ["--match", args.match] + (["--matcher", args.matcher] if args.matcher else []), env=store.read_given_env())
+    shown, truncated = store.page_with_store(matched, args.start, "match", ["--match", args.match] + (["--matcher", args.matcher] if args.matcher else []))
     return Answer({"needs": shown}, lines, problems=problems, truncated=truncated)
 
 

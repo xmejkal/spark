@@ -110,14 +110,19 @@ def dumps(envelope):
     return json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
 
 
-def step(op, argv, why, effects=(), needs_yes=False, needs_person=None, env=None):
+def step(op, argv, why, effects=(), needs_yes=False, needs_person=None):
     """A step an agent may take next (§6.4.2): ids only in `argv` — a label or a reason travels in a file. `needs_person`
     is a key only for a step that passes it: True when the person must use their hands first (press a button) and the
-    step is no use before that (P433). `env` is a key only for a step that passes it: the variables to set when running
-    the step, such as the store (P473)."""
+    step is no use before that (P433)."""
     said = {"op": op, "argv": list(argv), "why": why, "effects": list(effects), "needs_yes": needs_yes}
     if needs_person is not None:
         said["needs_person"] = needs_person
+    return said
+
+
+def add_env(said, env):
+    """The step `said` with `env`, the variables to set when running it, such as the store (P473): a key only when env
+    is not None, so a run on the default store prints none. Returns the same dict."""
     if env is not None:
         said["env"] = dict(env)
     return said
@@ -143,11 +148,10 @@ class AnsweringParser(argparse.ArgumentParser):
 # --- end MVP ---
 
 
-def page(items, start, op, argv, limit=20, budget=3400, env=None):
+def page(items, start, op, argv, limit=20, budget=3400):
     """
     At most `limit` items and about `budget` bytes of them from `start` (§6.4.4: an agent's answer stays under
-    4 KB by default), and the `truncated` note that says how to ask for the rest — None when all were shown. `env` goes
-    on the next step (P473).
+    4 KB by default), and the `truncated` note that says how to ask for the rest — None when all were shown.
     Measured as ASCII-escaped JSON, which is never shorter than the UTF-8 the envelope prints.
     """
     shown, size = [], 0
@@ -159,6 +163,6 @@ def page(items, start, op, argv, limit=20, budget=3400, env=None):
     end = start + len(shown)
     if start == 0 and end == len(items):
         return shown, None
-    following = (step(op, list(argv) + ["--from", str(end), "--json"], "the next of %d" % len(items), env=env)
+    following = (step(op, list(argv) + ["--from", str(end), "--json"], "the next of %d" % len(items))
                  if end < len(items) else None)
     return shown, {"shown": len(shown), "total": len(items), "next": following}
