@@ -8,7 +8,7 @@ Everything below was run, not inferred.
 
 ## The headline: the documented review command returns "clean" while checking a third of what it claims
 
-I ran the command literally as `skills/spark-review/SKILL.md:31-37` writes it, in `/Users/petr/Development/smartbin-local`:
+I ran the command literally as `skills/spark-review/SKILL.md:31-37` writes it, in `~/Development/smartbin-local`:
 
 ```
 check_all.py --circuit dist/board/circuit.json --rules .spark/rules.json \
