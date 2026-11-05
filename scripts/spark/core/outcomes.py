@@ -143,10 +143,11 @@ class AnsweringParser(argparse.ArgumentParser):
 # --- end MVP ---
 
 
-def page(items, start, op, argv, limit=20, budget=3400):
+def page(items, start, op, argv, limit=20, budget=3400, env=None):
     """
     At most `limit` items and about `budget` bytes of them from `start` (§6.4.4: an agent's answer stays under
-    4 KB by default), and the `truncated` note that says how to ask for the rest — None when all were shown.
+    4 KB by default), and the `truncated` note that says how to ask for the rest — None when all were shown. `env` goes
+    on the next step (P473).
     Measured as ASCII-escaped JSON, which is never shorter than the UTF-8 the envelope prints.
     """
     shown, size = [], 0
@@ -158,6 +159,6 @@ def page(items, start, op, argv, limit=20, budget=3400):
     end = start + len(shown)
     if start == 0 and end == len(items):
         return shown, None
-    following = (step(op, list(argv) + ["--from", str(end), "--json"], "the next of %d" % len(items))
+    following = (step(op, list(argv) + ["--from", str(end), "--json"], "the next of %d" % len(items), env=env)
                  if end < len(items) else None)
     return shown, {"shown": len(shown), "total": len(items), "next": following}
