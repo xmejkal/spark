@@ -41,7 +41,7 @@ class OperationResult(namedtuple("OperationResult", "data findings next lines di
         """The `outcomes.envelope` of this result, each item made by `envelope_item`."""
         problems = [envelope_item(found) for found in self._of(outcomes.PROBLEMS)]
         unchecked = [envelope_item(found) for found in self._of(outcomes.COULD_NOT_RUN)]
-        return outcomes.envelope(tool, op, self.data, problems, unchecked, [outcomes.add_env(outcomes.step(*step[:-1]), step.env) for step in self.next], notes=self.notes)
+        return outcomes.envelope(tool, op, self.data, problems, unchecked, [outcomes.add_env(outcomes.step(s.op, s.argv, s.why, s.effects, s.needs_yes, s.needs_person), s.env) for s in self.next], notes=self.notes)
 
     def _of(self, severity):
         return [found for found in self.findings if found.severity == severity]

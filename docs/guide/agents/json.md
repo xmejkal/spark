@@ -254,7 +254,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
 - `notes` are said and never fail, each `{subject, sentence}`. `subject` is null when a note names nothing. A pick's
   notes are here.
 - `next` holds the steps an agent may take, each `{op, argv, why, effects, needs_yes}` with `needs_person` and `env` only when they apply. `truncated.next` is the step for the rest of a long answer.
-- `env` on a `next` step is an object of variables to set when you run it, there only when the run had a store of its own ([P473](https://github.com/xmejkal/spark/issues/647)). Today it is `{"SPARK_HOME": "<whole path>"}`, so a fresh environment (Claude Code's Bash, an MCP or LangGraph caller) sees the same drawer, downloads and grants. The `look`, `deploy` and `grant` steps and the steps of `parts.py` carry it. `watch` has none, because mpremote reads no store.
+- `env` on a `next` step is an object of variables to set when you run it, there only when the run had `SPARK_HOME` set (a store found through `XDG_DATA_HOME` gives none, so set `SPARK_HOME` to pass it on) ([P473](https://github.com/xmejkal/spark/issues/647)). Today it is `{"SPARK_HOME": "<whole path>"}`, so a fresh environment (Claude Code's Bash, an MCP or LangGraph caller) sees the same drawer, downloads and grants. The `look`, `deploy` and `grant` steps and the steps of `parts.py` carry it. `watch` has none, because mpremote reads no store.
 - Run every write with `--dry-run` first.
 - In text, every item's fix and every next step is printed under the answer's lines, and a CONFLICT on unverified facts
   starts with `?`.
