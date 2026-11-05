@@ -69,7 +69,7 @@ def firmware_next_steps(code_ok, requirements_file):
 
 def next_text(steps):
     """The line that says the same steps to a person (nothing for none), built from their own arguments."""
-    return "".join("  next: %s -- %s\n" % (store.format_rerun_line(Path(__file__).with_name("%s.py" % each["op"]), each["argv"]), each["why"])
+    return "".join("  next: %s — %s\n" % (store.format_rerun_line(Path(__file__).with_name("%s.py" % each["op"]), each["argv"]), each["why"])
                    for each in steps)
 
 

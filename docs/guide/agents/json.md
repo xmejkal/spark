@@ -150,7 +150,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   `removed`, `not written` or `not kept`) and `why`. A `not written` entry of a drawing has `code` (`null` for an older
   refusal), `subject` and `expected` (`true` means by design, so do not retry). A `wrote` entry for `breadboard.svg` may
   have `drawn_from` (`record`).
-- `next`: one look step, only for `ok` in a project; its `why` is `first write firmware/main.py from pins.py` (P517).
+- `next`: one look step, only for `ok` in a project; its `why` is `first write firmware/main.py from pins.py` (P517), the pin map that `--keep` writes.
 - `unserved` is there when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board.
 - `missing_facts` is a top-level list, with `--keep` only, when spark writes `firmware/pins.py` and the board record
   lacks the level of its onboard LED or button ([P464](https://github.com/xmejkal/spark/issues/632)). The `wrote` entry

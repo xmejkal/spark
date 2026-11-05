@@ -20,6 +20,7 @@ import io
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -2316,8 +2317,9 @@ class TheVerdictNamesTheFirmwareStepTest(unittest.TestCase):
 
     WHY = "first write firmware/main.py from pins.py"
 
-    def answer(self, stages, json_out=False, library=False):
-        project = Path(tempfile.mkdtemp()).resolve()
+    def answer(self, stages, json_out=False, library=False, folder="lamp"):
+        project = (Path(tempfile.mkdtemp()) / folder).resolve()
+        project.mkdir()
         if not library:
             (project / ".spark").mkdir()
         args = argparse.Namespace(keep=None, json=json_out, requirements=str(project / "requirements.json"), sim_dir=None)
@@ -2341,7 +2343,17 @@ class TheVerdictNamesTheFirmwareStepTest(unittest.TestCase):
         _, said, project = self.answer(self.ok())
         last = said.rstrip("\n").split("\n")[-1]
         self.assertTrue(last.startswith("  next: "), last)
-        self.assertTrue(last.endswith("look.py --project %s -- %s" % (project, self.WHY)), last)
+        self.assertTrue(last.endswith("look.py --project %s — %s" % (project, self.WHY)), last)
+
+    def test_the_step_carries_the_store_and_the_line_quotes_a_space(self):
+        home = Path(tempfile.mkdtemp(), "home store").resolve()
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
+            step = json.loads(self.answer(self.ok(), True, folder="my lamp")[1])["next"][0]
+            _, said, project = self.answer(self.ok(), folder="my lamp")
+        self.assertEqual(step["env"], {"SPARK_HOME": str(home)})
+        last = said.rstrip("\n").split("\n")[-1]
+        self.assertTrue(last.startswith("  next: SPARK_HOME=%s " % shlex.quote(str(home))), last)
+        self.assertIn("--project %s — " % shlex.quote(str(project)), last)
 
     def test_a_problem_a_could_not_run_and_a_library_run_name_no_step(self):
         for label, stages, library in (("problem", [stage("build", check_spine.PROBLEMS)], False),
