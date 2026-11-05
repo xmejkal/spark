@@ -63,6 +63,13 @@ class OperationResultTest(unittest.TestCase):
         for severity in (outcomes.PROBLEMS, outcomes.COULD_NOT_RUN):
             self.assertNotEqual(OperationResult(None, [PROBLEM._replace(severity=severity)]).status(), outcomes.OK)
 
+    def test_a_next_step_prints_env_only_when_given(self):
+        env = {"SPARK_HOME": "/my store"}
+        envelope = OperationResult(None, [], [STEP, STEP._replace(env=env)]).to_envelope("look", "look")
+        self.assertNotIn("env", envelope["next"][0])
+        self.assertEqual(envelope["next"][1]["env"], env)
+        self.assertEqual(list(envelope["next"][1])[-1], "env")
+
     def test_a_next_step_prints_as_outcomes_step_does_with_needs_person_only_when_given(self):
         envelope = OperationResult(None, [], [STEP, STEP._replace(needs_person=True)]).to_envelope("look", "look")
         self.assertEqual(envelope["next"][0], outcomes.step("deploy", ["--project", "p", "--token", "t"], "erases the flash", ["deletes", "writes"], True))

@@ -25,6 +25,7 @@ import threading
 import urllib.parse
 from pathlib import Path
 
+from spark.core import outcomes
 from spark.core.text_guards import CONTROL, ValueMessageError
 
 try:
@@ -60,12 +61,27 @@ def home():
     return Path.home() / ".local" / "share" / "spark"
 
 
+def read_given_env():
+    """The environment a caller sets to reach this store: `{"SPARK_HOME": <whole path>}` when this run had a SPARK_HOME,
+    else None (P473). A relative one is made whole, since the caller runs from any folder (P283)."""
+    given = _spark_home()
+    return {"SPARK_HOME": str(Path(given).resolve())} if given else None
+
+
+def page_with_store(items, start, op, argv):
+    """outcomes.page, with this store on the next step's env, so a caller in a fresh environment pages the same drawer
+    (P473)."""
+    shown, truncated = outcomes.page(items, start, op, argv)
+    if truncated and truncated["next"]:
+        outcomes.add_env(truncated["next"], read_given_env())
+    return shown, truncated
+
+
 def prefix_home(line):
     """`line` for a person to run later, led by SPARK_HOME=<this store> when this run had one (P463): the line then
-    sees the same downloads and grants. Only the value is quoted, so the shell reads an assignment; a relative one is
-    made whole, since the line runs from any folder (P283)."""
-    given = _spark_home()
-    return "SPARK_HOME=%s %s" % (shlex.quote(str(Path(given).resolve())), line) if given else line
+    sees the same downloads and grants. Only the value is quoted, so the shell reads an assignment."""
+    given = read_given_env()
+    return "SPARK_HOME=%s %s" % (shlex.quote(given["SPARK_HOME"]), line) if given else line
 
 
 def format_rerun_line(script, arguments):

@@ -29,7 +29,7 @@ Read these rules before you run a script:
    the firmware needs. Never guess that fact. Ask the person ([`missing_facts`](agents/json.md#check_spinepy)). A part's
    signal takes a `pin` under `signals` ([the requirements file](../../commands/build.md#the-requirements-file)).
 7. **Check someone else's project in a scratch store** (`SPARK_HOME`). Never put the person's drawer, history or
-   projects list into a URL, a prompt or a commit.
+   projects list into a URL, a prompt or a commit. Run a `next` step with its `env` set ([`env`](agents/json.md)).
 
 A build of spark's button-and-LED example, shortened with `...`:
 

@@ -14,8 +14,8 @@ from spark.core import outcomes
 #: unchecked items, which the envelope prints without one, and a name for one that says what it lacks (P464). `code` is the word an agent decides on, `fix` what to do.
 Finding = namedtuple("Finding", "severity subject code sentence fix")
 #: Value: a step an agent may take next, with the fields of `outcomes.step`, which prints it. `needs_person` is None
-#: unless the person's hands come first.
-NextStep = namedtuple("NextStep", "op argv why effects needs_yes needs_person", defaults=((), False, None))
+#: unless the person's hands come first. `env` is None unless the step needs variables set, such as the store (P473).
+NextStep = namedtuple("NextStep", "op argv why effects needs_yes needs_person env", defaults=((), False, None, None))
 
 
 def envelope_item(finding):
@@ -41,7 +41,7 @@ class OperationResult(namedtuple("OperationResult", "data findings next lines di
         """The `outcomes.envelope` of this result, each item made by `envelope_item`."""
         problems = [envelope_item(found) for found in self._of(outcomes.PROBLEMS)]
         unchecked = [envelope_item(found) for found in self._of(outcomes.COULD_NOT_RUN)]
-        return outcomes.envelope(tool, op, self.data, problems, unchecked, [outcomes.step(*step) for step in self.next], notes=self.notes)
+        return outcomes.envelope(tool, op, self.data, problems, unchecked, [outcomes.add_env(outcomes.step(s.op, s.argv, s.why, s.effects, s.needs_yes, s.needs_person), s.env) for s in self.next], notes=self.notes)
 
     def _of(self, severity):
         return [found for found in self.findings if found.severity == severity]

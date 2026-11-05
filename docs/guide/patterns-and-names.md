@@ -122,6 +122,7 @@ classDiagram
     effects
     needs_yes
     needs_person
+    env
   }
   class Argument {
     <<Value>>
@@ -245,8 +246,7 @@ These rules name a class, a function or a constant:
 - A subclass is what varies, then the base's whole name: `TerminalConsentStrategy`, `EsptoolBoardReader`.
 - A function starts with a verb. A function that returns a reason or None starts with `why_`. A function that raises
   in place of returning False says so: `require_open_gate`.
-- A constant that holds a number carries its unit (`_S`, `_MB`). A constant that holds a sentence ends in `_HINT` or
-  `_MESSAGE`.
+- A constant that holds a number carries its unit (`_S`, `_MB`). A constant that holds a sentence ends in `_HINT` or `_MESSAGE`.
 - Code decides on a named constant, never on a sentence ([P260](https://github.com/xmejkal/spark/issues/282)). A
   message is the text a person reads, and a phrase is an outside tool's words. The code that writes a value and the
   code that reads it import the same name, for example `needs.WHY_NO_RECORD`. An outside tool's phrase lives in one

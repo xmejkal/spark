@@ -13,6 +13,7 @@ import board_doctor
 import boards
 from spark.core import codes, outcomes
 import ready_check
+import store
 from deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 
 #: What the person must do first, said in a step's `why`.
@@ -50,13 +51,13 @@ def dumps(envelope):
 
 def look_step(project, port, evidence, why="read the board first: the board restarts while it is read"):
     """The step that runs look.py. It writes nothing."""
-    return outcomes.step("look", look_argv(project, port, evidence), why)
+    return outcomes.add_env(outcomes.step("look", look_argv(project, port, evidence), why), store.read_given_env())
 
 
 def deploy_step(project, token, port, evidence, why):
     """The step that runs deploy.py: it erases ALL of the flash, so it needs the person's yes."""
-    return outcomes.step("deploy", deploy_argv(project, token, port, evidence), why,
-                         effects=["deletes", "writes"], needs_yes=True)
+    return outcomes.add_env(outcomes.step("deploy", deploy_argv(project, token, port, evidence), why,
+                                          effects=["deletes", "writes"], needs_yes=True), store.read_given_env())
 
 
 def bad_argument_envelope(tool, bad):
@@ -93,9 +94,9 @@ def deploy_envelope(reached, code):
         following = [deploy_step(project, reached.get("token"), port, evidence,
                                  "the person runs data.run_in_terminal in their own terminal: " + yes_rule(evidence))]
         if reached.get("grant_argv"):
-            following.append(outcomes.step("grant", reached["grant_argv"],
+            following.append(outcomes.add_env(outcomes.step("grant", reached["grant_argv"],
                                            "the person runs it once in their own terminal; it lets Claude erase ALL of the flash for N minutes (1 to 1440, 60 here)",
-                                           effects=["writes"], needs_yes=True))
+                                           effects=["writes"], needs_yes=True), store.read_given_env()))
     elif result and result.ready.verdict == ready_check.UNKNOWN:
         stopped = bool(result.start and result.start.code)  # P462: the person has a step first
         gone = stopped and result.start.port is None  # no port to open: mpremote would choose a board of its own

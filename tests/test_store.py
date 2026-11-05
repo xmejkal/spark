@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -136,6 +137,64 @@ class ThePrefixedLineTest(unittest.TestCase):
     def test_a_relative_store_comes_out_whole(self):
         with mock.patch.dict(os.environ, {"SPARK_HOME": "rel-store"}):
             self.assertEqual(store.prefix_home("x"), "SPARK_HOME=%s x" % (Path("rel-store").resolve()))
+
+
+class TheGivenEnvTest(unittest.TestCase):
+    """P473: the environment a caller sets to reach this run's store."""
+
+    def test_a_store_comes_out_as_one_variable(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": "/my store"}):
+            self.assertEqual(store.read_given_env(), {"SPARK_HOME": "/my store"})
+
+    def test_no_store_is_none(self):
+        with mock.patch.dict(os.environ):
+            os.environ.pop("SPARK_HOME")
+            self.assertIsNone(store.read_given_env())
+
+    def test_an_empty_store_is_none(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": ""}):
+            self.assertIsNone(store.read_given_env())
+
+    def test_a_relative_store_comes_out_whole(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": "rel-store"}):
+            self.assertEqual(store.read_given_env(), {"SPARK_HOME": str(Path("rel-store").resolve())})
+
+
+class AStepCarriesItsStoreTest(unittest.TestCase):
+    """P473: a caller that follows a `next` step in a fresh environment reaches the store of the run that gave it."""
+
+    def setUp(self):
+        import golden_bench
+        self.folder = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.folder, True)
+        self.project = golden_bench.build_project(self.folder)
+        self.empty_home = Path(self.folder) / "empty-home"
+        self.empty_home.mkdir()
+
+    def clean_env(self, **more):
+        """A caller's fresh environment: no store variable, and HOME in an empty folder."""
+        env = {name: value for name, value in os.environ.items() if not name.startswith(("SPARK_", "XDG_"))}
+        env.update(HOME=str(self.empty_home), **more)
+        return env
+
+    def first_step(self, env):
+        """The first `next` step of `deploy.py --dry-run --json` run with `env`. The exit code depends on whether esptool is installed, so it is not read."""
+        done = subprocess.run([sys.executable, "-B", str(SCRIPTS / "deploy.py"), "--project", str(self.project), "--dry-run", "--json"],
+                              cwd=self.folder, env=env, capture_output=True, text=True, timeout=60)
+        step = json.loads(done.stdout)["next"][0]
+        self.assertEqual(step["op"], "look")
+        return step
+
+    def test_the_step_env_reaches_the_same_store_in_a_fresh_environment(self):
+        given = Path(self.folder) / "the store"
+        step = self.first_step(self.clean_env(SPARK_HOME=str(given)))
+        self.assertEqual(step["env"], {"SPARK_HOME": str(given.resolve())})
+        followed = home_in(self.clean_env(**step["env"]))
+        self.assertEqual(followed.resolve(), given.resolve())
+        self.assertNotEqual(home_in(self.clean_env()).resolve(), given.resolve(), "the control: without env the fresh run uses the default store")
+
+    def test_no_store_given_leaves_env_out(self):
+        self.assertNotIn("env", self.first_step(self.clean_env()))
 
 
 class TheSuiteStaysOutOfThePersonsStoreTest(unittest.TestCase):

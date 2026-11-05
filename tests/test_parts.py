@@ -347,6 +347,7 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
         self.assertEqual([row["write"] for row in said["assumptions"][7:]], ["facts.fact_7", "pin_order_proof", "body_mm"])
         self.assertEqual([(step["op"], step["argv"], step["effects"]) for step in said["next"]],
                          [("fact-set", ["--fact-set", "x-joy", "<file>"], ["writes"])])
+        self.assertEqual(said["next"][0]["env"], {"SPARK_HOME": str(home.resolve())})  # the run's store rides the step (P473)
         with in_store(home), contextlib.redirect_stdout(io.StringIO()) as out:
             parts.main(["--unverified", "x-joy"])
         self.assertTrue(out.getvalue().rstrip().splitlines()[-1].startswith("  next: parts.py --fact-set x-joy <file> — "), out.getvalue())
@@ -1811,6 +1812,7 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         self.assertEqual([r["id"] for r in first["data"]["records"] + rest["data"]["records"]],
                          ["x-%02d" % number for number in range(30)])
         self.assertIsNone(rest["truncated"]["next"])
+        self.assertEqual(first["truncated"]["next"]["env"], {"SPARK_HOME": str(home.resolve())})  # the page's store (P473)
 
 
 def run_text(argv):

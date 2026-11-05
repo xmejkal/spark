@@ -120,6 +120,14 @@ def step(op, argv, why, effects=(), needs_yes=False, needs_person=None):
     return said
 
 
+def add_env(said, env):
+    """The step `said` with `env`, the variables to set when running it, such as the store (P473): a key only when env
+    is not None, so a run on the default store prints none. Returns the same dict."""
+    if env is not None:
+        said["env"] = dict(env)
+    return said
+
+
 # --- MVP ---
 class BadArgument(Exception):
     """An argument a script cannot run with: could-not-run, and with --json an envelope like any other answer."""
