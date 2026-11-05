@@ -2316,26 +2316,21 @@ class TheVerdictNamesTheFirmwareStepTest(unittest.TestCase):
 
     WHY = "first write firmware/main.py from pins.py"
 
-    def answer(self, stages, *flags, library=False):
+    def answer(self, stages, json_out=False, library=False):
         project = Path(tempfile.mkdtemp()).resolve()
-        (project / ".spark").mkdir()
-        path = project / "requirements.json"
-        path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
+        if not library:
+            (project / ".spark").mkdir()
+        args = argparse.Namespace(keep=None, json=json_out, requirements=str(project / "requirements.json"), sim_dir=None)
         out = io.StringIO()
-        with mock.patch.object(check_spine, "run", return_value=stages), contextlib.redirect_stdout(out), \
-                contextlib.redirect_stderr(io.StringIO()):
-            if library:
-                with mock.patch.object(check_spine.design, "is_library", return_value=True):
-                    code = check_spine.main([str(path)] + list(flags))
-            else:
-                code = check_spine.main([str(path)] + list(flags))
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = check_spine.report(stages, args)
         return code, out.getvalue(), project
 
     def ok(self):
         return [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
 
     def test_with_json_next_is_a_look_step_for_the_project(self):
-        code, said, project = self.answer(self.ok(), "--json")
+        code, said, project = self.answer(self.ok(), True)
         step = json.loads(said)["next"]
         self.assertEqual(code, 0)
         self.assertEqual([(each["op"], each["why"]) for each in step], [("look", self.WHY)])
@@ -2353,7 +2348,7 @@ class TheVerdictNamesTheFirmwareStepTest(unittest.TestCase):
                                        ("could not run", [stage("build", check_spine.COULD_NOT_RUN)], False),
                                        ("library", self.ok(), True)):
             with self.subTest(label):
-                _, said, _ = self.answer(stages, "--json", library=library)
+                _, said, _ = self.answer(stages, True, library)
                 self.assertNotIn("next", json.loads(said))
                 self.assertNotIn("  next: ", self.answer(stages, library=library)[1])
 
