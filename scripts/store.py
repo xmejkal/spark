@@ -60,12 +60,18 @@ def home():
     return Path.home() / ".local" / "share" / "spark"
 
 
+def read_given_env():
+    """The environment a caller sets to reach this store: `{"SPARK_HOME": <whole path>}` when this run had a SPARK_HOME,
+    else None (P473). A relative one is made whole, since the caller runs from any folder (P283)."""
+    given = _spark_home()
+    return {"SPARK_HOME": str(Path(given).resolve())} if given else None
+
+
 def prefix_home(line):
     """`line` for a person to run later, led by SPARK_HOME=<this store> when this run had one (P463): the line then
-    sees the same downloads and grants. Only the value is quoted, so the shell reads an assignment; a relative one is
-    made whole, since the line runs from any folder (P283)."""
-    given = _spark_home()
-    return "SPARK_HOME=%s %s" % (shlex.quote(str(Path(given).resolve())), line) if given else line
+    sees the same downloads and grants. Only the value is quoted, so the shell reads an assignment."""
+    given = read_given_env()
+    return "SPARK_HOME=%s %s" % (shlex.quote(given["SPARK_HOME"]), line) if given else line
 
 
 def format_rerun_line(script, arguments):

@@ -138,6 +138,27 @@ class ThePrefixedLineTest(unittest.TestCase):
             self.assertEqual(store.prefix_home("x"), "SPARK_HOME=%s x" % (Path("rel-store").resolve()))
 
 
+class TheGivenEnvTest(unittest.TestCase):
+    """P473: the environment a caller sets to reach this run's store."""
+
+    def test_a_store_comes_out_as_one_variable(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": "/my store"}):
+            self.assertEqual(store.read_given_env(), {"SPARK_HOME": "/my store"})
+
+    def test_no_store_is_none(self):
+        with mock.patch.dict(os.environ):
+            os.environ.pop("SPARK_HOME")
+            self.assertIsNone(store.read_given_env())
+
+    def test_an_empty_store_is_none(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": ""}):
+            self.assertIsNone(store.read_given_env())
+
+    def test_a_relative_store_comes_out_whole(self):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": "rel-store"}):
+            self.assertEqual(store.read_given_env(), {"SPARK_HOME": str(Path("rel-store").resolve())})
+
+
 class TheSuiteStaysOutOfThePersonsStoreTest(unittest.TestCase):
     def test_the_suite_runs_on_a_scratch_store(self):
         self.assertNotEqual(store.home(), PERSONS)
