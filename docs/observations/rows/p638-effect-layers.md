@@ -1,7 +1,7 @@
 # P638 ordered effect layers, a discovery: rows
 
 What the writers, the refuter, the review and the discovery check found. Card: [P638 #853](https://github.com/xmejkal/spark/issues/853).
-PR: https://github.com/xmejkal/pixel-games/pull/39. Rows PR: (this PR).
+PR: https://github.com/xmejkal/pixel-games/pull/39. Rows PR: https://github.com/xmejkal/spark/pull/857.
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
