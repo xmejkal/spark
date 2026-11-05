@@ -2311,6 +2311,53 @@ class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
                 self.assertNotIn("unserved", json.loads(self.answer(requirements, "--json")[1]))
 
 
+class TheVerdictNamesTheFirmwareStepTest(unittest.TestCase):
+    """P517 (#713): a build that reaches ok in a project names the step that comes next: write the firmware from the pin map."""
+
+    WHY = "first write firmware/main.py from pins.py"
+
+    def answer(self, stages, *flags, library=False):
+        project = Path(tempfile.mkdtemp()).resolve()
+        (project / ".spark").mkdir()
+        path = project / "requirements.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
+        out = io.StringIO()
+        with mock.patch.object(check_spine, "run", return_value=stages), contextlib.redirect_stdout(out), \
+                contextlib.redirect_stderr(io.StringIO()):
+            if library:
+                with mock.patch.object(check_spine.design, "is_library", return_value=True):
+                    code = check_spine.main([str(path)] + list(flags))
+            else:
+                code = check_spine.main([str(path)] + list(flags))
+        return code, out.getvalue(), project
+
+    def ok(self):
+        return [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+
+    def test_with_json_next_is_a_look_step_for_the_project(self):
+        code, said, project = self.answer(self.ok(), "--json")
+        step = json.loads(said)["next"]
+        self.assertEqual(code, 0)
+        self.assertEqual([(each["op"], each["why"]) for each in step], [("look", self.WHY)])
+        self.assertEqual(Path(step[0]["argv"][1]).resolve(), project)
+        self.assertEqual(step[0]["argv"][0], "--project")
+
+    def test_the_text_ends_with_the_same_step(self):
+        _, said, project = self.answer(self.ok())
+        last = said.rstrip("\n").split("\n")[-1]
+        self.assertTrue(last.startswith("  next: ") and last.endswith(" look.py --project %s -- %s" % (project, self.WHY))
+                        or ("look.py --project %s -- %s" % (project, self.WHY)) in last, last)
+
+    def test_a_problem_a_could_not_run_and_a_library_run_name_no_step(self):
+        for label, stages, library in (("problem", [stage("build", check_spine.PROBLEMS)], False),
+                                       ("could not run", [stage("build", check_spine.COULD_NOT_RUN)], False),
+                                       ("library", self.ok(), True)):
+            with self.subTest(label):
+                _, said, _ = self.answer(stages, "--json", library=library)
+                self.assertNotIn("next", json.loads(said))
+                self.assertNotIn("  next: ", self.answer(stages, library=library)[1])
+
+
 class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
     """P482 (#661): the build copies the kept sim/diagram.json in before the converter, whose merge keeps the person's edits."""
     FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
