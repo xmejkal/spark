@@ -187,6 +187,8 @@ writes no `built`, and the tally says `not built yet`.
   the chain runs end to end
 ```
 
+In a project, the verdict then ends with `next:` and the look step: first write `firmware/main.py` from `pins.py`.
+
 15 routed traces carry the 18 written connections: a group of N connected pins needs N−1 traces.
 
 The last line can say more. A requirements file that `parts.py --requirements` wrote carries a note, `unserved`, for a need

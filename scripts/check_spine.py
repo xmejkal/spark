@@ -667,7 +667,7 @@ def main(argv=None):
     parser.add_argument("requirements", nargs="?",
                         help="a requirements.json; omit for the reference design. \"board_only\": true with no parts builds the board alone")
     parser.add_argument("--json", action="store_true",
-                        help="the verdict as one JSON object: check, status, stages, and kept with --keep or --sim-dir")
+                        help="the verdict as one JSON object: check, status, stages, next (the firmware step, when ok in a project), and kept with --keep or --sim-dir")
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are "
