@@ -107,8 +107,10 @@ The log is the team's memory; an outside audit reads it to find what nobody wrot
 **Every change reaches `main` by a pull request that closes its card** (P146, the process design's §3). It is how the
 team has worked since 2026-10-05: since then, every commit on the first-parent line of either repository's `main` is a
 pull request's merge. It replaces the PO's rule of 2026-10-04 — big items by pull request, small fixes and scrum
-updates straight to `main`. The pull request says `Closes #N` (W19), the council runs on it before the merge, and the
-PO merges on Claude's "ready to merge" ([the flow](README.md#the-flow--an-items-stages), Review).
+updates straight to `main`. The pull request says `Closes #N` (W19), the council runs on it before the merge, and
+Claude merges it once every gate passed (the PO, 2026-11-05: "Always, when gates pass"). A change to these
+agreements or to the rules, a release, a tag and anything that needs the bench stay the PO's merge, on Claude's "ready
+to merge" ([the flow](README.md#the-flow--an-items-stages), Review).
 
 **Branch protection** on the `main` of both repositories is decision 1 (a), the PO's of 2026-10-06. It has been
 set since 2026-10-09, on his answer *"Ruleset + auto-delete (Recommended)"*
@@ -121,7 +123,7 @@ set since 2026-10-09, on his answer *"Ruleset + auto-delete (Recommended)"*
 - **A direct push to `main` is refused.** On spark, the same day, an empty probe commit pushed to `main` got
   `GH013: Repository rule violations found for refs/heads/main` and *"Changes must be made through a pull
   request"*, and `main` did not change. So every change to `main` goes through a branch and a pull request. The
-  ruleset asks for no approval, so it does not decide who merges: that the PO merges is this agreement, not a
+  ruleset asks for no approval, so it does not decide who merges: who merges is this agreement, not a
   setting.
 - **GitHub deletes a merged pull request's branch** on both repositories ("automatically delete head branches").
   Nobody has to push a deletion (`git push origin --delete`), which would run the pre-push gate's quick run for
