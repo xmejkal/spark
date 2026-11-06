@@ -30,7 +30,7 @@ import board_console
 import board_look
 import store
 from spark.core.zone_time import say_in_local_zone, stamp  # the grant's times (P401 moved them out, to break an import cycle)
-from deploy_gate import ConsentStrategy, GateClosedError, format_rerun_line
+from deploy_gate import GRANT, ConsentStrategy, GateClosedError, format_rerun_line
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 
 #: What a grant allows. A file with no `scope` (written before P242) is a live grant.
@@ -173,6 +173,8 @@ class StandingConsentStrategy(ConsentStrategy):
     """Strategy: the yes the person gave once in their own terminal, kept as a valid deploy `grant`. It answers yes to
     the deploy's question without asking, while the grant holds at `now()` (a time with its zone); once it ended, it raises
     GateClosedError, so the erase never runs on a stale yes."""
+
+    yes_kind = GRANT
 
     def __init__(self, grant, now=board_console.SystemClock.now):
         self.grant, self.now = grant, now

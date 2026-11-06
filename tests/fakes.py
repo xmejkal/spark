@@ -62,7 +62,7 @@ class FakeConsent:
 
     #: Who said yes, as the store's record keeps it.
     who = "a test"
-    #: The kind of yes the envelope says: a typed one, as deploy_gate.TYPED.
+    #: The kind of yes the envelope says: a typed one (deploy_gate.TYPED).
     yes_kind = "typed"
 
     def __init__(self, answer):

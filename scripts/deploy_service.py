@@ -98,7 +98,7 @@ class DeployService:
         """
         image_path = ProjectImage(self.project).path.relative_to(self.project)
         deploy_gate.require_open_gate(report, token, consent, image_path, report.question_caveats())
-        if isinstance(consent, board_grant.StandingConsentStrategy):
+        if consent.yes_kind == deploy_gate.GRANT:
             show_line("  yes: %s" % consent.who)
         planned = self.plan(report.port)
         if report.token() != token:  # AT116: the image changed while the person answered

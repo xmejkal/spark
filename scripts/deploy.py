@@ -243,7 +243,7 @@ def _deploy(args, evidence, run, consent, platform, clock, grant_service, out, r
         shown("\n".join(board_look.report_lines(report, token=False)), out, flush=True)
         reached["port"] = report.port
         consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService(), evidence, out)
-        yes_kind = "grant" if isinstance(consent, board_grant.StandingConsentStrategy) else "typed"
+        yes_kind = consent.yes_kind
         reached["stage"] = board_envelope.STAGE_GATE
         planned = service.deploy(report, args.token, consent, lambda line: show_line(line, out))
         # the gate is passed: only now is there a yes to report
