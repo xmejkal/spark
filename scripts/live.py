@@ -1,24 +1,15 @@
 #!/usr/bin/env python3
 """Run a short piece of code on the running board inside a grant, say whether the board ran it, and reset it (P247)."""
 
-import argparse
-import json
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import board_doctor
 import board_grant
-import board_live
-import board_look
-import boards
-import board_console
-import tools
-from firmware_platform import MicroPythonPlatform
-from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN
-from restricted_pins import BrokenRecordError
-from spark.core.text_guards import guard_sentence, printable
+from spark.bench import build_project_outside_world
+from spark.bench.run_live_code import RunLiveCode
+from spark.core.cli import HelpText, run_cli
+from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS  # noqa: F401  (the tests read live's exit codes here)
 
 EPILOG = """live.py --code 'print(1)' runs the code on the board on USB with mpremote's exec, after two checks that do not
 touch the board. First, the board must have a grant now: the person runs %s in their own terminal,
@@ -47,62 +38,11 @@ Exit codes: 0 the board ran the code, 1 refused or the code raised, 2 the board 
 live.py could not run, and the last line says why. With two or more boards on USB, --port is needed.""" % board_grant.GRANT_COMMAND
 
 
-def describe(result, places=boards.ButtonPlaces.EMPTY):
-    """The lines a person reads, for a LiveTryResult. `places` names the buttons the doctor's steps mention."""
-    out = ["answer  %s" % result.answer]
-    out += ["why     %s" % result.why] if result.why else []
-    out += ["output  %s" % line for line in result.output.splitlines()]
-    out += ["reset   %s" % result.reset] if result.reset else []
-    out += ["pins    %s" % board_live.NO_RESTRICTED_PINS_MESSAGE] if not result.pins_checked else []
-    if result.gpio_numbers_in_code:
-        out.append("gpio    the code writes %s, each a GPIO of this board"
-                   % ", ".join(str(gpio) for gpio in result.gpio_numbers_in_code))
-    if result.doctor:
-        out += board_doctor.describe(result.doctor, places)
-    # --- MVP --- the board's reply and the doctor's lines are data, one line each, shown guarded (P430)
-    return "\n".join("  " + printable(line) for line in out)
-
-
-def to_json(port, result):
-    """One line of JSON for a LiveTryResult, with the port."""
-    fields = result._asdict()
-    fields["cure"] = result.cure._asdict() if result.cure is not None else None
-    fields["doctor"] = board_doctor.as_dict(result.doctor) if result.doctor is not None else None
-    return json.dumps(dict(fields, port=port))
-
-
-def main(argv=None, run=subprocess.run, platform=None, now=board_console.SystemClock.now):
-    """Run one live try. `run` is how a command runs, `platform` the FirmwarePlatform with the board tools (default:
-    MicroPythonPlatform), `now` the clock. Returns the exit code."""
-    parser = argparse.ArgumentParser(prog="live.py", description=__doc__.strip(), epilog=EPILOG,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--code", required=True, help="the code to run on the board, e.g. 'print(1)'")
-    parser.add_argument("--project", type=Path, default=Path("."),
-                        help="the project folder whose boards/active.json names the board and whose tools list names mpremote (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
-                        "(one board on two nodes named by its serial counts once)")
-    parser.add_argument("--json", action="store_true", help="print one line of JSON")
-    args = parser.parse_args(argv)
-    port = args.port
-    try:
-        platform = platform or MicroPythonPlatform(args.project)
-        finder = platform.make_port_finder(run)
-        port = port or finder.require_one_port("live.py")
-        probe = platform.make_console_probe(port, run)
-        doctor = board_doctor.BoardDoctorService.for_board(finder, probe)
-        service = board_live.LiveTryService(board_grant.GrantService(finder, now=now),
-                                            platform.make_connection(platform.make_shell_command(), port, run),
-                                            probe, boards.load(args.project), doctor, platform.find_tool("board-shell"))
-        result = service.run(args.code, port)
-    except (tools.ToolProblem, board_look.LookStop, boards.BoardError, BrokenRecordError) as cannot:
-        if args.json:
-            empty = dict.fromkeys(board_live.LiveTryResult._fields)
-            print(json.dumps(dict(empty, answer=COULD_NOT_RUN, why=str(cannot), port=port)))
-        # --- MVP --- the sentence can hold the port and the project path as typed: put on one line, then guarded; --json above keeps it raw (P430)
-        print(guard_sentence("live.py: %s" % cannot, port, args.project), file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    print(to_json(port, result) if args.json else describe(result, boards.ButtonPlaces.of_project(args.project)))
-    return board_live.exit_code(result)
+def main(argv=None, outside=None, operation=None):
+    """Run one live try and print its lines, or with --json its one line. `outside` is the OutsideWorld a test gives (a run
+    builds the project's), `operation` the RunLiveCode a test gives with its Fakes. Returns the exit code."""
+    return run_cli(HelpText("live.py", __doc__.strip(), EPILOG), operation or RunLiveCode(), argv,
+                   outside_builder=build_project_outside_world, outside=outside)
 
 
 if __name__ == "__main__":

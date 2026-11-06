@@ -53,6 +53,8 @@ import parts  # noqa: E402
 import test_deploy_gate  # noqa: E402
 import tools  # noqa: E402
 from suite_runs import slow  # noqa: E402
+from fakes import FakeOutsideWorld  # noqa: E402
+from test_deploy import found  # noqa: E402
 
 BOARD = "firebeetle2-esp32s3"
 
@@ -229,9 +231,9 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
     def test_grant_check(self):
         """P253: grant.py --check --json, here for a board with no grant. No status word: granted is the answer."""
         devs = "/dev/cu.usbmodem101 8c:bf:ea:xx:xx:xx 303a:1001 Espressif USB JTAG/serial debug unit\n"
-        run = lambda argv, **kw: subprocess.CompletedProcess(argv, 0, devs, "")  # noqa: E731
-        with mock.patch.object(tools, "find"), mock.patch.dict("os.environ", {"SPARK_HOME": tempfile.mkdtemp()}):
-            self._check("grant", lambda: grant.main(["--check", "--json"], run=run), ["granted", "grant", "why"],
+        outside = FakeOutsideWorld(run=lambda argv, **kw: subprocess.CompletedProcess(argv, 0, devs, ""), find_tool=found)
+        with mock.patch.dict("os.environ", {"SPARK_HOME": tempfile.mkdtemp()}):
+            self._check("grant", lambda: grant.main(["--check", "--json"], outside=outside), ["granted", "grant", "why"],
                         status_expected=False)
 
     def test_the_flag_is_honoured_wherever_it_is_offered(self):

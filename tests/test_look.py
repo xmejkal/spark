@@ -576,7 +576,9 @@ class ACrashTest(LookScriptCase):
 
     def test_the_bench_lists_the_look_for_the_frontends(self):
         from spark import bench
-        self.assertEqual(bench.OPERATIONS, {"look": bench.look_at_board.LookAtBoard, "deploy": bench.deploy_image.DeployImage})
+        self.assertEqual(sorted(bench.OPERATIONS), ["check_grant", "deploy", "issue_grant", "live", "look", "reach"])
+        self.assertIs(bench.OPERATIONS["look"], bench.look_at_board.LookAtBoard)
+        self.assertIs(bench.OPERATIONS["deploy"], bench.deploy_image.DeployImage)
 
     def test_look_imports_no_area_module_but_spark_bench(self):
         tree = ast.parse(Path(look.__file__).read_text())
