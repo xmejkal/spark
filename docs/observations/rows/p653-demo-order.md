@@ -22,3 +22,6 @@ Also covers the paused P649 discovery (draft https://github.com/xmejkal/pixel-ga
 | 14 | Sound synthesis in C with the S3's strengths, and ESP-NOW multiplayer | the PO, 2026-11-06 | acted | stage 2 of the order. comments on #875 |
 | 15 | P649: the two water cards read no velocity field, so a fluid layer serves gases, not water | the P649 lens (Sonnet) | raised | paused discovery, draft pixel-games #46. resume steps on #871 |
 | 16 | The lens brief said the panel is "320x170-ish". it is 240 x 320 with a 160 x 120 field | the P649 lens | acted | a slip in Claude's prompt. the brief's Found on the way |
+| 17 | "Lean flow and the tech lead also placed wave 4 before sound" is wrong. The tech lead took no side (TL-35 to TL-37) | the PR reviewer (Sonnet) | acted | README: "The tech lead took no side" |
+| 18 | Three council reports hold home paths on line 3, against AGENTS.md's public-repo rule | the PR reviewer | acted | rewritten as `~/Development/...`. Scratch paths became "the session scratch folder" |
+| 19 | Stage names, the epic guesses, "card #417, not P417", the wave 4 count, the 165-test cite, two long sentences, the refuter's README version | the PR reviewer | acted | all fixed in README.md and council/refuter.md |
