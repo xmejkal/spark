@@ -1,7 +1,7 @@
 # P601 the SWAR blend for the fire, after a bound probe: rows
 
 What the plan council, the board runs, the PR review and the PR refuter found. Card:
-[P601 #802](https://github.com/xmejkal/spark/issues/802).
+[P601 #802](https://github.com/xmejkal/spark/issues/802). Bench rows: pixel-games `bench.md`, the P601 section (branch p601-bound-probe).
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
@@ -20,3 +20,4 @@ What the plan council, the board runs, the PR review and the PR refuter found. C
 | 13 | The bound probe misses D5 in both modes. Linear: 14.50 to 14.62 ms of draw with no pixel mixed, against 15.03 to 15.52 ms today (runs 124 to 127). Picture: 15.85 to 16.18 ms at 22 to 23 fps, against 18.26 to 19.29 ms at 21 fps. No blend rewrite, SWAR or PIE on the blend, can make either mode pass | the board, 2026-11-06 | acted | pixel-games `bench.md`, the P601 section (branch p601-bound-probe). Step 1 waits for the PO's choice, as the plan set |
 | 14 | The blend math costs about 0.75 ms in linear and 2.6 to 2.9 ms in picture. The bilinear interpolation, paid by every pixel, also a skipped one, is the larger cost | the board, runs 124 to 127 | raised | the lever for the PO's choice: an early-out for cold cells, or PIE on the interpolation |
 | 15 | Four picture runs ran in linear: the probe set `self.mode` after `Game.__init__`, which already ran `setup` and `set_mode(0)` (`games/gfx.py:316`). The same trap as P639's row 14 | the lead, reading the report lines | acted | kept as four more linear runs, renamed `-linear2`. The probe starts a mode in `setup` now, and the picture runs ran again |
+| 16 | The PO picked the early-out in C over PIE on the interpolation and over keeping today's speed (2026-11-06) | the PO | acted | card P646 #865 in Ready, under #812. P601 closes with the finding: no SWAR blend and no PIE built |
