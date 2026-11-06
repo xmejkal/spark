@@ -146,6 +146,13 @@ class TheNoSimulationDryRunTest(ProjectCase):
         self.addCleanup(patcher.stop)
         self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
 
+    def test_a_dry_run_declares_reads_alone_and_runs_with_no_simulation_and_a_deploy_everything(self):
+        # P655: `outside.run` refuses in a dry run, whose only child is the compile check of --no-simulation
+        effects_of = DeployImage().effects_of
+        self.assertEqual(effects_of({"dry_run": True, "no_simulation": False}), ("reads",))
+        self.assertEqual(effects_of({"dry_run": True, "no_simulation": True}), ("reads", "runs"))
+        self.assertEqual(effects_of({"dry_run": False, "no_simulation": False}), ("reads", "runs", "board", "deletes", "writes"))
+
     def turn_littlefs(self, on):
         """The project's .spark/tools.json turns littlefs-python on or off (P457)."""
         (self.project / ".spark").mkdir(exist_ok=True)

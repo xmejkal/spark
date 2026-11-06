@@ -85,17 +85,17 @@ def who_said_yes(consent):
 
 class DeployRun:
     """
-    Service: one deploy from the plan to the record, phase by phase, over a DeployService. Each phase returns the exit
-    code when the run ends there, or None to go on. `reached` is what the result reports, filled as the run goes; its
-    `stage` follows each BEGIN that passes through `report`, the service's too. `diagnostics` are the stderr lines.
+    Service: one deploy from the plan to the record, phase by phase, over a DeployService built by `service_for`. Each phase
+    returns the exit code when the run ends there, or None to go on. `reached` is what the result reports, filled as the run
+    goes; its `stage` follows each BEGIN that passes through `report`, the service's too. `diagnostics` are the stderr lines.
     """
 
-    def __init__(self, project, evidence, platform, outside, grants, records):
+    def __init__(self, service_for, outside, grants):
+        """`service_for(world)` builds the DeployService over `world`, the outside whose `report` is this run's."""
         self.outside, self.grants = outside, grants
-        self.reached = {"project": project.resolve(), "evidence": evidence, "stage": STAGE_PLAN}
+        self.service = service_for(OutsideWorld(outside.run, outside.find_tool, self.report, outside.clock, outside.make_consent))
+        self.reached = {"project": self.service.project.resolve(), "evidence": self.service.evidence, "stage": STAGE_PLAN}
         self.diagnostics, self.look, self.consent, self.planned = [], None, None, None
-        self.service = DeployService(project, platform, evidence, OutsideWorld(outside.run, outside.find_tool, self.report,
-                                                                               outside.clock, outside.make_consent), records)
 
     def report(self, event):
         """The outside's report, and a BEGIN also moves `reached["stage"]`."""
@@ -234,8 +234,9 @@ class DeployImage(Operation):
 
     def run(self, project, port, token, ignore_older_runs, no_simulation, dry_run, *, outside):
         evidence = evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)
-        going = DeployRun(project, evidence, self.platform_for(project, outside.find_tool), outside,
-                          self.grant_service or board_grant.GrantService(), self.records)
+        platform = self.platform_for(project, outside.find_tool)
+        going = DeployRun(lambda world: DeployService(project, platform, evidence, world, self.records), outside,
+                          self.grant_service or board_grant.GrantService())
         going.reached.update(token=token, port=port, dry_run=dry_run)
         code = going.plan(port, dry_run)
         try:

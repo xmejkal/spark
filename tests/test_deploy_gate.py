@@ -35,12 +35,14 @@ import flash_image  # noqa: E402
 import flasher  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
+import run_scenario  # noqa: E402
 import tools  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform,  # noqa: E402
                    FakeOutsideWorld, FakeProbePlatform,
                    line_made_at_import, pin_time_zone)
 from firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import deploy_image  # noqa: E402
+from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
@@ -111,9 +113,28 @@ class GateCase(LookCase):
         DeployImage builds (None: the project's MicroPython one, over `probe` when given). self.ran keeps every command. The first flash command
         exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait.
         `devs_text` may be a list: the listing of each `mpremote devs` call (the look's first), then the last for good."""
-        self.copied = getattr(self, "copied", {})
-        flash, self.devs_calls, self.deploy_clock = [], 0, clock or FakeClock()
+        run = self.fake_tools_run(esptool, text, devs, devs_text, fails, fail_code, write_fails, look_fails)
+        out, err = io.StringIO(), io.StringIO()
+        operation = DeployImage(platform_for=lambda project, find_tool: platform or (FakeProbePlatform(project, probe, find_tool) if probe
+                                                                                     else MicroPythonPlatform(project, find_tool)),
+                                grant_service=grant_service)
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            outside = self.outside_world(run, consent, TerminalReporter.for_json("--json" in argv), clock)
+            code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=operation)
+        return code, out.getvalue(), err.getvalue()
+
+    def outside_world(self, run, consent, reporter, clock=None):
+        """The FakeOutsideWorld of a deploy: `run`, the fake tools, `reporter`, a clock whose waits self.slept keeps, and
+        `consent` as the yes (None: the terminal, which the tests' stdout is not)."""
+        self.deploy_clock = clock or FakeClock()
         self.slept = self.deploy_clock.slept  # every wait: the flasher's retry, the facts file's and the start wait's polls
+        return FakeOutsideWorld(run, find_tool=find_fake_tool, reporter=reporter, clock=self.deploy_clock,
+                                make_consent=lambda line: consent or deploy_gate.TerminalConsentStrategy(line))
+
+    def fake_tools_run(self, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, look_fails=False):
+        """The `run` of the fake tools: esptool answers from the fixture, mpremote from the fake board. self.ran keeps every command."""
+        self.copied = getattr(self, "copied", {})
+        flash, self.devs_calls = [], 0
         devs_text = list(devs_text) if isinstance(devs_text, list) else devs_text
 
         def run(command, **kw):
@@ -136,16 +157,7 @@ class GateCase(LookCase):
             if (first and flash.count(command) <= fails) or (not first and write_fails):
                 raise subprocess.CalledProcessError(fail_code, command) if isinstance(fail_code, int) else fail_code
             return done("")
-
-        out, err = io.StringIO(), io.StringIO()
-        operation = DeployImage(platform_for=lambda project, find_tool: platform or (FakeProbePlatform(project, probe, find_tool) if probe
-                                                                                     else MicroPythonPlatform(project, find_tool)),
-                                grant_service=grant_service)
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            outside = FakeOutsideWorld(run, find_tool=find_fake_tool, reporter=TerminalReporter.for_json("--json" in argv), clock=self.deploy_clock,
-                                       make_consent=lambda line: consent or deploy_gate.TerminalConsentStrategy(line))
-            code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=operation)
-        return code, out.getvalue(), err.getvalue()
+        return run
 
     def token(self, **kw):
         return self.look(**kw).token()
@@ -448,6 +460,35 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.run_the_scenario()
         return self.deploy("--token", self.token(), consent=consent or FakeConsent(True))
 
+    def test_every_line_of_a_ready_deploy_is_an_event_printed_as_before_and_none_is_a_result_line(self):
+        # P655 check 4 (E2): the stream a TerminalReporter prints holds the bytes deploy.py printed before the seam
+        self.run_the_scenario()
+        token, stream, port = self.token(), io.StringIO(), "/dev/cu.usbmodem101"
+        outside = self.outside_world(self.fake_tools_run(), FakeConsent(True), TerminalReporter(stream))
+        values = {"project": self.project, "port": None, "token": token, "ignore_older_runs": False, "no_simulation": False, "dry_run": False}
+        result = run_operation(DeployImage(platform_for=MicroPythonPlatform), values, outside)
+        image = self.image.read_bytes()
+        write = ["/opt/python3", "-m", "esptool", "--chip", "esp32c6", "--port", port, "--after", "watchdog-reset", "write-flash", "0x0", str(self.image)]
+        self.assertEqual(stream.getvalue().splitlines(), [
+            "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.",
+            "  port   %s" % port,
+            "  mac    8c:bf:ea:xx:xx:xx",
+            "  spark's last deploy here: none in its store record (it keeps only its own deploys)",
+            "  chip   same      esp32c6",
+            "  flash  same      4 MB",
+            "  simulation: passed",
+            "  " + CAVEAT_OF_A_RUN_THAT_PRESSED_NOTHING,
+            "  all fields match the board record xiao-esp32-c6.",
+            "  running: /opt/python3 -m esptool --chip esp32c6 --port %s erase-flash" % port,
+            "  running: %s" % shlex.join(write),
+            "  facts file spark.json sha256: %s" % hashlib.sha256(self.copied["spark.json"].encode()).hexdigest(),
+            "  image sha256: %s, yes: a test" % hashlib.sha256(image).hexdigest(),
+            "  ready seen: the firmware printed 'ready' and the board's 1 files match the image",
+            "  board log: %s" % (self.project / "sim" / "runs" / "board" / "2026-10-17T09-00-00.log"),
+            "  store record: %s" % (store.place("boards") / "8c-bf-ea-xx-xx-xx.json"),
+        ])
+        self.assertEqual((result.status(), list(result.lines)), ("ok", []))
+
     def test_ready_seen_is_kept_in_a_board_log_beside_the_run_logs_and_the_next_look_ignores_it(self):
         code, said, _ = self.flash()
         logs = list((self.project / "sim" / "runs" / "board").glob("*.log"))
@@ -490,8 +531,13 @@ class TheBoardAfterTheFlashTest(GateCase):
         self.assertIn("Traceback: OSError: 19", log.read_text())
 
     def test_a_passed_log_gone_after_the_flash_is_unknown_not_a_traceback(self):
-        with mock.patch.object(deploy_service.ProjectImage, "find_passed_log", side_effect=lambda *a: None):
-            code, said, _ = self.flash()
+        runs = self.project / "sim" / "runs"
+
+        class DeletesTheLog(FakeConsent):
+            def require_ready(self):  # the service asks right before the erase, after the plan read the log
+                for log in runs.glob("*.log"):
+                    log.unlink()
+        code, said, _ = self.flash(DeletesTheLog(True))
         self.assertEqual(code, 2)
         self.assertIn("ready unknown: the passed run's log names no files", said)
 
@@ -679,8 +725,10 @@ class TheBoardInDownloadModeTest(GateCase):
 
     def test_a_passed_log_that_names_no_files_is_never_probed(self):
         probe = FakeConsoleProbe("waiting for download\n")
-        with mock.patch.object(image_evidence, "file_hashes", side_effect=lambda log: {}):
-            code, said, _ = self.flash(probe)
+        self.run_the_scenario()
+        log = next((self.project / "sim" / "runs").glob("*.log"))  # a log from before P215: no file lines
+        log.write_text("".join(line for line in log.read_text().splitlines(keepends=True) if not line.startswith(run_scenario.FILE_LINE)))
+        code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), probe=probe)
         self.assertEqual((code, probe.asked), (2, []))
         self.assertIn("ready unknown: the passed run's log names no files", said)
 
