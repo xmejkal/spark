@@ -13,6 +13,7 @@ from pathlib import Path
 
 import board_doctor
 import boards
+from board_codes import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY  # noqa: F401  (the stages are data.stage; the look reads them here)
 import design
 from spark.core import outcomes
 from spark.core.result import Finding, NextStep, OperationResult
@@ -27,10 +28,8 @@ GRANT_CLAUSE = " (or a deploy grant stands)"
 
 #: A `fix` for each thing a deploy can wait for.
 FIX_FOR_NEXT = {NEXT_DEPLOY: "the person runs data.run_in_terminal in their own terminal", NEXT_LOOK: "run look.py again"}
-#: The stages of a deploy, the last one reached is `data.stage`.
-STAGE_PLAN, STAGE_LOOK, STAGE_GATE, STAGE_FLASH, STAGE_VERIFY = "plan", "look", "gate", "flash", "verify"
-#: The board's state after a flash command failed.
-MAY_BE_ERASED = "may_be_erased"
+#: The board's state after a flash command failed, and after a crash once the flash finished (P655).
+MAY_BE_ERASED, FLASHED_NOT_VERIFIED = "may_be_erased", "flashed_not_verified"
 
 
 def yes_rule(evidence):
@@ -86,7 +85,7 @@ def doctor_fix(doctor, places):
     return board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
 
 
-def deploy_finding(reached, code):
+def _finding(reached, code):
     """The one Finding of a deploy run that did not reach ready, of the exit `code`'s severity: its subject is the stage, or
     `ready` once the board was read, its code the reason, its fix the doctor's step or the step of what it waits for."""
     result, doctor = reached.get("result"), reached.get("doctor")
@@ -94,7 +93,7 @@ def deploy_finding(reached, code):
     return Finding(outcomes.STATUS_FOR[code], "ready" if result else reached["stage"], reached.get("reason"), reached.get("refusal"), fix)
 
 
-def deploy_steps(reached):
+def _steps(reached):
     """The NextSteps of a deploy run: the look after a dry run or a stale look, the deploy line (and the grant line) the
     person runs when there was no terminal, the REPL to watch when ready is unknown."""
     result, evidence, next_op = reached.get("result"), reached["evidence"], reached.get("next_op")
@@ -121,6 +120,7 @@ def deploy_steps(reached):
     return [NextStep(**step) for step in following]
 
 
+# --- Later, not MVP: a typed record of the run; `reached` is the dict the old main filled, kept so the goldens stay byte-equal ---
 def deploy_data(reached):
     """The `data` of a deploy run, keys in the order the goldens hold: what the run reached, the look, the yes, the board
     after the flash, the records, and the board's state after a flash that failed."""
@@ -153,5 +153,5 @@ def deploy_result(reached, code, diagnostics=()):
     unchecked, so the status is the code's. The person's lines were Events, so `lines` is empty; `diagnostics` are the stderr lines.
     """
     plan = reached.get("plan")
-    return OperationResult(deploy_data(reached), [] if code == outcomes.EXIT_OK else [deploy_finding(reached, code)], deploy_steps(reached),
+    return OperationResult(deploy_data(reached), [] if code == outcomes.EXIT_OK else [_finding(reached, code)], _steps(reached),
                            diagnostics=list(diagnostics), notes=((list(plan.notes) if plan else []) + reached.get("notes", [])) or None)

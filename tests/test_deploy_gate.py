@@ -979,10 +979,18 @@ class TheBoardLogTextTest(unittest.TestCase):
 class TheConsentTest(unittest.TestCase):
     def test_a_consent_that_does_not_say_who_cannot_be_built(self):
         class Silent(deploy_gate.ConsentStrategy):
+            yes_kind = deploy_gate.TYPED
+
             def ask(self, question):
                 return True
         with self.assertRaises(TypeError):
             Silent()
+
+        class Unkinded(Silent):
+            who = "nobody"
+        with self.assertRaises(TypeError):  # P655: `yes_kind` is required as `who` is
+            type("NoKind", (deploy_gate.ConsentStrategy,), {"who": "nobody", "ask": lambda self, q: True})()
+        self.assertEqual(Unkinded().yes_kind, deploy_gate.TYPED)
 
     def test_the_terminal_says_who_typed_the_yes(self):
         terminal = deploy_gate.TerminalConsentStrategy("x", user_name=lambda: "ada")

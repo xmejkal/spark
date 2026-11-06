@@ -26,7 +26,7 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "deploy-no-show-running",
-  "find": "self.report(Event.line(board_envelope.STAGE_FLASH, \"running: %s\" % shlex.join(command)))",
+  "find": "self.report(Event.line(board_codes.STAGE_FLASH, \"running: %s\" % shlex.join(command)))",
   "replace": "pass"
  },
  {
@@ -56,7 +56,7 @@
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "main-dry-run-off",
-  "find": "        if not dry_run:\n            return None\n",
+  "find": "        if not self.asked.dry_run:\n            return None\n",
   "replace": "        return None\n"
  },
  {

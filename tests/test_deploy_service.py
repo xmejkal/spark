@@ -203,8 +203,8 @@ class TheVerifyTest(ServiceCase):
             with self.assertRaises(project_image.DeployError):
                 service.verify(report, planned)
 
-    def test_a_fault_after_the_flash_is_a_crash_that_says_the_board_may_be_erased(self):
-        # P655: it was a traceback and exit 1; now one unchecked `crash` item with the stage, and the traceback on stderr
+    def test_a_fault_in_the_verify_is_a_crash_that_says_the_board_is_flashed_and_not_verified(self):
+        # P655: it was a traceback and exit 1; now one unchecked `crash` item with the stage, the look next, and the traceback on stderr
         token = self.token()
         real = project_image.ProjectImage.find_passed_log
 
@@ -215,10 +215,27 @@ class TheVerifyTest(ServiceCase):
         with mock.patch.object(project_image.ProjectImage, "find_passed_log", find_passed_log):
             code, said, problems = self.deploy("--token", token, "--json", consent=FakeConsent(True))
         envelope = json.loads(said)
-        self.assertEqual((code, envelope["unchecked"][0]["code"], envelope["unchecked"][0]["subject"]), (2, "crash", "verify"))
-        self.assertEqual((envelope["data"]["stage"], envelope["data"]["board_state"]), ("verify", "may_be_erased"))
-        self.assertIn("deploy.py: crashed, DeployError\nrun look.py, then deploy again\n", problems)
+        item, = envelope["unchecked"]
+        self.assertEqual((code, item["code"], item["subject"], item["fix"]), (2, "crash", "verify", "read the board with look.py; do not deploy again"))
+        self.assertEqual(item["sentence"], "DeployError: the traceback is on stderr; the board is flashed, not verified")
+        self.assertEqual((envelope["data"]["stage"], envelope["data"]["board_state"]), ("verify", "flashed_not_verified"))
+        self.assertEqual(envelope["data"]["yes"], {"kind": "typed", "who": "a test"})
+        self.assertEqual([(step["op"], step["why"]) for step in envelope["next"]], [("look", "the deploy crashed: the board is flashed, not verified")])
+        self.assertIn("deploy: crashed, DeployError\nread the board with look.py; do not deploy again\n", problems)
         self.assertIn("the log is gone", problems)
+
+    def test_a_crash_in_the_flash_loop_keeps_the_yes_and_says_the_board_may_be_erased(self):
+        # P655, the AI-UX lens: a RuntimeError while esptool runs is no FlashError, so the crash path must still report the yes
+        code, said, problems = self.deploy("--token", self.token(), "--json", consent=FakeConsent(True), fails=1, fail_code=RuntimeError("usb fell off"))
+        envelope = json.loads(said)
+        item, = envelope["unchecked"]
+        self.assertEqual((code, item["code"], item["subject"], item["fix"]), (2, "crash", "flash", "run look.py, then deploy again"))
+        self.assertEqual(item["sentence"], "RuntimeError: the traceback is on stderr; the board may be erased")
+        self.assertEqual((envelope["data"]["stage"], envelope["data"]["board_state"], envelope["data"]["yes"]),
+                         ("flash", "may_be_erased", {"kind": "typed", "who": "a test"}))
+        self.assertEqual([step["op"] for step in envelope["next"]], ["look"])
+        self.assertIn("deploy: crashed, RuntimeError\n", problems)
+        self.assertIn("usb fell off", problems)
 
 
     def test_a_who_that_cannot_be_read_is_a_store_record_not_written_after_the_board_log_line(self):

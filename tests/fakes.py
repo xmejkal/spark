@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import store  # noqa: E402
 from firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
+from spark.core.outside import OutsideWorld  # noqa: E402
 
 #: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
 IMPORT_HOME = os.environ["SPARK_HOME"]
@@ -298,6 +299,10 @@ class FakeOutsideWorld:
     def make_consent(self, line):
         assert self._make_consent, "the test gave no make_consent, and the Operation asked for the yes"
         return self._make_consent(line)
+
+    def _replace(self, **changes):
+        """As the OutsideWorld namedtuple's: the same world with `changes`, a real OutsideWorld."""
+        return OutsideWorld(self.run, self.find_tool, self.report, self.clock, self.make_consent)._replace(**changes)
 
     def run(self, command, **options):
         self.ran.append(command)

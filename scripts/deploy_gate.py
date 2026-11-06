@@ -48,7 +48,10 @@ class ConsentStrategy(abc.ABC):
     """Strategy: how the person says yes to a question. A subclass supplies `ask`, which returns True for yes, `who`, the
     phrase that tells the store's record whose yes it was, and `yes_kind`, TYPED or GRANT, which the envelope says (P655)."""
 
-    yes_kind = None
+    @property
+    @abc.abstractmethod
+    def yes_kind(self):
+        """TYPED or GRANT: the kind of yes, as the envelope's `data.yes.kind` says it. A subclass sets it as a class attribute."""
 
     @property
     @abc.abstractmethod

@@ -6,6 +6,7 @@ says the board may be erased, is the one new output.
 """
 
 import shlex
+from collections import namedtuple
 from pathlib import Path
 
 import board_codes
@@ -18,18 +19,17 @@ import ready_check
 import store
 import tools
 from board_console import LEAVE_CONSOLE
-from board_envelope import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY
+from board_codes import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY
 from deploy_service import DeployService, FlashError
 from firmware_platform import MicroPythonPlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
 from spark.core import codes, outcomes
 from spark.core.cli import CRASH_MESSAGE, CRASHED_MESSAGE, traceback_lines
-from spark.core.events import BEGIN, Event
+from spark.core.events import BEGIN, Event, Reporter
 from spark.core.operation import BOARD, COMMON_ARGUMENTS, DELETES, READS, RUNS, WRITES, Argument, Operation
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
-from spark.core.outside import OutsideWorld
-from spark.core.result import Finding, OperationResult
+from spark.core.result import Finding, NextStep, OperationResult
 
 # --- MVP ---
 #: The lines of a refusal name the script that printed them before the core, so they read the same from every frontend.
@@ -44,8 +44,6 @@ DEPLOYED_LINE = "image sha256: %s, yes: %s"
 #: The last line: how the person sees the firmware start.
 WATCH = ("then, to see it start: %%s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`. Then %s: an open "
          "console holds the port, and the next deploy cannot open it" % LEAVE_CONSOLE)
-#: The fix of a crash after the gate: the board's state is not known until the look reads it.
-CRASH_AFTER_GATE_FIX = "run look.py, then deploy again"
 #: What the person did not get told of a grant that was not used: with no grant, the no-terminal text says it all.
 WHY_NOT_SAID = (None, board_grant.WHY_NO_GRANT)
 
@@ -83,68 +81,102 @@ def who_said_yes(consent):
         return "not known (%s)" % cannot
 
 
-class DeployRun:
-    """
-    Service: one deploy from the plan to the record, phase by phase, over a DeployService built by `service_for`. Each phase
-    returns the exit code when the run ends there, or None to go on. `reached` is what the result reports, filled as the run
-    goes; its `stage` follows each BEGIN that passes through `report`, the service's too. `diagnostics` are the stderr lines.
-    """
+class StageTrackingReporter(Reporter):
+    """Decorator: a Reporter that keeps the code of the last BEGIN as `stage`, and passes every event on to `report_on`, the
+    outside's report. So the result knows the stage the run reached, the service's BEGINs counted (P655)."""
 
-    def __init__(self, service_for, outside, grants):
-        """`service_for(world)` builds the DeployService over `world`, the outside whose `report` is this run's."""
-        self.outside, self.grants = outside, grants
-        self.service = service_for(OutsideWorld(outside.run, outside.find_tool, self.report, outside.clock, outside.make_consent))
-        self.reached = {"project": self.service.project.resolve(), "evidence": self.service.evidence, "stage": STAGE_PLAN}
-        self.diagnostics, self.look, self.consent, self.planned = [], None, None, None
+    def __init__(self, report_on):
+        self.report_on, self.stage = report_on, STAGE_PLAN
 
     def report(self, event):
-        """The outside's report, and a BEGIN also moves `reached["stage"]`."""
         if event.kind == BEGIN:
-            self.reached["stage"] = event.code
-        self.outside.report(event)
+            self.stage = event.code
+        self.report_on(event)
+
+
+#: Value: what the person asked of this deploy: the port, the token look.py printed, and whether it is a dry run.
+Asked = namedtuple("Asked", "port token dry_run")
+#: Value: what the result says of the board after a crash in `stage`: `data.board_state`, the words of the sentence, the fix.
+CrashState = namedtuple("CrashState", "board_state words fix")
+CRASH_STATES = {
+    STAGE_FLASH: CrashState(board_envelope.MAY_BE_ERASED, "may be erased", "run look.py, then deploy again"),
+    STAGE_VERIFY: CrashState(board_envelope.FLASHED_NOT_VERIFIED, "is flashed, not verified", "read the board with look.py; do not deploy again"),
+}
+CRASH_WHY_LOOK = "the deploy crashed: the board %s"
+
+
+class DeployFlowService:
+    """
+    Service: one deploy from the plan to the record, phase by phase, over a DeployService built by `service_for`. Each phase
+    returns the exit code when the run ends there, or None to go on. `reached()` is what the result reports, filled as the
+    run goes; its `stage` is the StageTrackingReporter's. `diagnostics` are the stderr lines.
+    """
+
+    def __init__(self, service_for, outside, grants, asked):
+        """`service_for(world)` builds the DeployService over `world`, the outside whose `report` tracks the stage. `asked`
+        is the Asked of this run."""
+        self.outside, self.grants, self.asked = outside, grants, asked
+        self.stages = StageTrackingReporter(outside.report)
+        self.service = service_for(outside._replace(report=self.stages.report))
+        self._reached = {"project": self.service.project.resolve(), "evidence": self.service.evidence,
+                         "token": asked.token, "port": asked.port, "dry_run": asked.dry_run}
+        self.diagnostics, self.look, self.consent, self.planned = [], None, None, None
+
+    def reached(self):
+        """What the run reached so far, with the stage, for `board_envelope.deploy_result`."""
+        return dict(self._reached, stage=self.stages.stage)
+
+    def report(self, event):
+        self.stages.report(event)
 
     def say(self, stage, text):
         self.report(Event.line(stage, text))
 
+    def keep_yes(self):
+        """The yes in `reached`, once there is one: only after the gate passed, or after a flash command ran."""
+        if self.consent is not None and "consent" not in self._reached:
+            self._reached.update(consent=self.consent, yes_kind=self.consent.yes_kind, who=who_said_yes(self.consent))
+
     def refuse(self, cannot):
         """The exit code of a refusal before the board was touched, said on stderr as `deploy.py: <why>`."""
-        self.reached.update(refusal=str(cannot), reason=reason_of(cannot))
+        self._reached.update(refusal=str(cannot), reason=reason_of(cannot))
         self.diagnostics.append("%s: %s" % (SCRIPT, cannot))
         return EXIT_COULD_NOT_RUN
 
-    def plan(self, port, dry_run):
-        """The plan's notes, then with `dry_run` each command the deploy would run and the REPL line, and the run ends."""
+    def plan(self):
+        """The plan's notes, then in a dry run each command the deploy would run and the REPL line, and the run ends."""
         self.report(Event.begin(STAGE_PLAN))
         try:
-            planned = self.reached["plan"] = self.service.plan(port)
+            planned = self._reached["plan"] = self.service.plan(self.asked.port)
         except (DeployError, tools.ToolProblem) as cannot:
             return self.refuse(cannot)
         for note in planned.notes:
             self.say(STAGE_PLAN, "note: %s" % note)
-        if not dry_run:
+        if not self.asked.dry_run:
             return None
         for command in planned.commands:
             self.say(STAGE_PLAN, "would run: %s" % shlex.join(command))
         self.say(STAGE_PLAN, "board: not looked at: run look.py")
-        self.say(STAGE_PLAN, WATCH % shlex.join(self.service.platform.make_connection(planned.mpremote, port, self.outside.run).repl_command()))
+        self.say(STAGE_PLAN, WATCH % shlex.join(self.service.platform.make_connection(planned.mpremote, self.asked.port, self.outside.run).repl_command()))
         return EXIT_OK
 
-    def gate(self, port, token):
-        """The look, its lines, the yes, the gate and the flash. A refusal is said on stderr; a failed read gets the doctor (P354)."""
-        reached = self.reached
+    def look_and_flash(self):
+        """The look and its lines, the yes, the gate, then the flash. A refusal is said on stderr; a failed read gets the
+        doctor (P354); a closed gate gives the line to run in the terminal."""
+        reached, token = self._reached, self.asked.token
         try:
             self.report(Event.begin(STAGE_LOOK))
-            look = self.look = reached["report"] = self.service.look(port)
+            look = self.look = reached["report"] = self.service.look(self.asked.port)
             for line in board_look.report_lines(look, token=False, indent=""):
                 self.say(STAGE_LOOK, line)
             reached["port"] = look.port
-            consent = self.consent = self.choose_consent(look, token)
+            self.consent = self.choose_consent(look, token)
             self.report(Event.begin(STAGE_GATE))
-            self.planned = self.service.deploy(look, token, consent)
-            reached.update(consent=consent, yes_kind=consent.yes_kind, who=who_said_yes(consent))  # only now is there a yes to report
+            self.planned = self.service.deploy(look, token, self.consent)
+            self.keep_yes()  # only now is there a yes to report
         except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
             if isinstance(cannot, FlashError):
-                reached.update(consent=consent, yes_kind=consent.yes_kind, who=who_said_yes(consent))
+                self.keep_yes()
             reached.update(refusal=str(cannot), reason=reason_of(cannot))
             lines = ["%s: %s" % (SCRIPT, cannot)]
             if isinstance(cannot, board_look.LookStop):
@@ -165,7 +197,7 @@ class DeployRun:
         """The ConsentStrategy for this deploy, after the look: the standing yes of a valid deploy grant when the look
         matched and the evidence allows it (a passed run's, with no ignored older run), else the outside's, which asks the
         person. One line says why the grant was not used, unless there is none."""
-        project, evidence = self.reached["project"], self.reached["evidence"]
+        project, evidence = self._reached["project"], self._reached["evidence"]
         line = rerun_line(project, token, look.port, evidence)
         if board_grant.grant_may_cover(look, evidence):
             line += grant_hint(project, look.port)
@@ -176,7 +208,7 @@ class DeployRun:
 
     def verify(self):
         """The board after the flash: the facts, ready, the board log, the store record, and the REPL line when ready is unknown."""
-        reached = self.reached
+        reached = self._reached
         self.report(Event.begin(STAGE_VERIFY))
         result = reached["result"] = self.service.verify(self.look, self.planned)
         ready = result.ready
@@ -202,7 +234,7 @@ class DeployRun:
 
 class DeployImage(Operation):
     """
-    Operation: the deploy. It builds the evidence (image_evidence), the platform and a DeployRun, and returns
+    Operation: the deploy. It builds the evidence (image_evidence), the platform and a DeployFlowService, and returns
     `board_envelope.deploy_result`. `platform_for(project, find_tool)` is a `_for` builder of the FirmwarePlatform
     (default: MicroPythonPlatform), `grant_service` the board_grant.GrantService that finds a deploy grant and `records`
     the DeployRecordStore (None for the store's own, built per run): the collaborators a test swaps whole. The dry run
@@ -235,27 +267,29 @@ class DeployImage(Operation):
     def run(self, project, port, token, ignore_older_runs, no_simulation, dry_run, *, outside):
         evidence = evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)
         platform = self.platform_for(project, outside.find_tool)
-        going = DeployRun(lambda world: DeployService(project, platform, evidence, world, self.records), outside,
-                          self.grant_service or board_grant.GrantService())
-        going.reached.update(token=token, port=port, dry_run=dry_run)
-        code = going.plan(port, dry_run)
+        flow = DeployFlowService(lambda world: DeployService(project, platform, evidence, world, self.records), outside,
+                                 self.grant_service or board_grant.GrantService(), Asked(port, token, dry_run))
+        code = flow.plan()
         try:
             if code is None:
-                code = going.gate(port, token)
+                code = flow.look_and_flash()
             if code is None:
-                code = going.verify()
+                code = flow.verify()
         except Exception as crashed:  # noqa: BLE001  after the gate the board may be erased: the result must say so
-            if going.reached["stage"] not in (STAGE_FLASH, STAGE_VERIFY):
+            if flow.stages.stage not in CRASH_STATES:
                 raise
-            return self._crashed(going, crashed)
-        return board_envelope.deploy_result(going.reached, code, going.diagnostics)
+            return self._crashed(flow, crashed)
+        return board_envelope.deploy_result(flow.reached(), code, flow.diagnostics)
 
-    @staticmethod
-    def _crashed(going, crashed):
-        """The result of a crash after the gate passed: one unchecked Finding with code `crash`, the data reached with the
-        board's state, and the traceback in the diagnostics, as the core's crash prints it."""
-        name = type(crashed).__name__
-        data = dict(board_envelope.deploy_data(going.reached), board_state=board_envelope.MAY_BE_ERASED)
-        return OperationResult(data, [Finding(outcomes.COULD_NOT_RUN, going.reached["stage"], codes.CRASH, CRASH_MESSAGE % name, CRASH_AFTER_GATE_FIX)],
-                               diagnostics=going.diagnostics + [CRASHED_MESSAGE % (SCRIPT, name), CRASH_AFTER_GATE_FIX] + traceback_lines(crashed))
+    def _crashed(self, flow, crashed):
+        """The result of a crash after the gate passed: one unchecked Finding with code `crash` that names the board's state,
+        the data reached with the yes and `board_state`, the look as the next step, and the traceback in the diagnostics."""
+        flow.keep_yes()  # a crash in the flash loop still says whose yes it was
+        reached, name = flow.reached(), type(crashed).__name__
+        state = CRASH_STATES[reached["stage"]]
+        data = dict(board_envelope.deploy_data(reached), board_state=state.board_state)
+        finding = Finding(outcomes.COULD_NOT_RUN, reached["stage"], codes.CRASH, "%s; the board %s" % (CRASH_MESSAGE % name, state.words), state.fix)
+        look = NextStep(**board_envelope.look_step(reached["project"], reached.get("port"), reached["evidence"], CRASH_WHY_LOOK % state.words))
+        return OperationResult(data, [finding], [look],
+                               diagnostics=flow.diagnostics + [CRASHED_MESSAGE % (self.name, name), state.fix] + traceback_lines(crashed))
 # --- end MVP ---

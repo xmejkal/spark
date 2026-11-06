@@ -15,6 +15,8 @@ The codes every Operation can write (`bad_argument`, `crash`) are the core's, in
 """
 
 # --- MVP ---
+#: The stages of a deploy, the last one reached is the envelope's `data.stage` and each Event's code (P655).
+STAGE_PLAN, STAGE_LOOK, STAGE_GATE, STAGE_FLASH, STAGE_VERIFY = "plan", "look", "gate", "flash", "verify"
 #: A LookStop's reason: the look could not go on.
 LIST_FAILED, LIST_TIMEOUT = "list_failed", "list_timeout"
 NO_PORT, PORT_NOT_LISTED, TWO_BOARDS = "no_port", "port_not_listed", "two_boards"

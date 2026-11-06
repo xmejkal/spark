@@ -292,7 +292,7 @@ class RunOperationTest(unittest.TestCase):
 
     def test_a_declared_run_is_a_program_runner_and_the_finder_is_the_given_one(self):
         outside = build_outside_world((READS, RUNS), FakeReporter(), find_tool={"flasher": TOOL}.get)
-        self.assertEqual((outside.run.__func__, outside.run.__self__.echo_to), (ProgramRunner.run, None))
+        self.assertEqual((outside.run.__func__, outside.run.__self__.echo_fd), (ProgramRunner.run, None))
         self.assertEqual((outside.find_tool("flasher"), outside.find_tool("x")), (TOOL, None))
 
     def test_a_runner_echoes_an_uncaptured_child_where_the_reporter_says_and_a_captured_one_never(self):
@@ -305,7 +305,7 @@ class RunOperationTest(unittest.TestCase):
             ProgramRunner(held.fileno()).run(echo)
             held.seek(0)
             self.assertEqual((captured.stdout, held.read()), ("echoed\n", b"echoed\n"))
-        self.assertEqual((TerminalReporter(sys.stdout).echo_to(), TerminalReporter(io.StringIO()).echo_to(), FakeReporter().echo_to()), (None, 2, None))
+        self.assertEqual((TerminalReporter(sys.stdout).echo_fd(), TerminalReporter(io.StringIO()).echo_fd(), FakeReporter().echo_fd()), (None, 2, None))
 
     def test_an_undeclared_consent_is_refused_and_a_declared_one_is_the_given_builder(self):
         from spark.core.operation import DELETES
