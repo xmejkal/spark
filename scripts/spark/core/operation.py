@@ -33,7 +33,7 @@ COMMON_ARGUMENTS = {
 JSON_TYPE_OF_KIND = {Path: "string", str: "string", bool: "boolean"}
 
 
-def argument_schema(argument):
+def _argument_schema(argument):
     """One Argument as a JSON Schema property: its type, its help, and its default when it has one (a flag's is False)."""
     default = False if argument.kind is bool else argument.default
     said = {"type": JSON_TYPE_OF_KIND[argument.kind], "description": argument.help}
@@ -58,7 +58,7 @@ class Operation:
     def input_schema(self):
         """The JSON Schema of `run`'s values, an MCP tool's `inputSchema` (P605): a property per Argument but `json`,
         which is the frontend's. A group of arguments that exclude each other is not in it yet."""
-        properties = {argument.dest: argument_schema(argument) for argument in self.arguments if argument.dest != JSON_DEST}
+        properties = {argument.dest: _argument_schema(argument) for argument in self.arguments if argument.dest != JSON_DEST}
         return {"type": "object", "properties": properties, "additionalProperties": False}
 
     def output_schema(self):

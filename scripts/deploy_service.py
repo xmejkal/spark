@@ -61,7 +61,7 @@ def write_board_log(project, log):
 
 class DeployService:
     """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `run` runs a command, `clock` has `now`,
-    `monotonic` and `sleep` (default: board_console.SystemClock), `records` keeps the deploy (default: the store's
+    `monotonic` and `sleep` (default: spark.core.clock.SystemClock), `records` keeps the deploy (default: the store's
     DeployRecordStore). `evidence` (an ImageEvidence) holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
     `deploy_gate.GateClosedError` to say why a step cannot go on; they never print and never exit."""
 

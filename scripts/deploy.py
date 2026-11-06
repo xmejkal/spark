@@ -162,7 +162,7 @@ def main(argv=None, run=None, consent=None, platform=None, clock=None, grant_ser
     """
     Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `run` is how a command runs,
     `consent` how the person says yes (default: in this terminal), `platform` the FirmwarePlatform with the board tools
-    (default: MicroPythonPlatform), `clock` the time and the waits (default: board_console.SystemClock),
+    (default: MicroPythonPlatform), `clock` the time and the waits (default: spark.core.clock.SystemClock),
     `grant_service` the board_grant.GrantService that finds a deploy grant (default: the store's). A `consent` given always
     wins: the grant is read only when none is given. Returns the exit code.
     """

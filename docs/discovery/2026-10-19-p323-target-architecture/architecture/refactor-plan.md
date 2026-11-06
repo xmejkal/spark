@@ -244,10 +244,10 @@ rules are added to it, each checked by one test in `tests/test_core.py`:
 2. No Operation asks or prints. It asks only through `outside.consent`, a `ConsentStrategy`, and tells only through
    `outside.report` (P507). The test: rule X2 of S3 finds no `print`, `input`, `sys.stdin`, `sys.stdout` or
    `readline` in `spark/` outside the Renderers, the terminal consent and `TerminalReporter`.
-3. `run_operation(operation, values, outside, backends, trace=None)` has one hook. `trace` is a callable that gets the
+3. `run_operation(operation, values, outside, build_outside, options)` has one hook, `options.trace` (P605: a `RunOptions` of `privacy`, `trace` and `clock`). `trace` is a callable that gets the
    Operation's name, the values, the result and the seconds, once per run, after `Privacy` masked them. A tracer that
    raises is caught and said on stderr, and the run's result stands. Langfuse plugs in there. The core imports no
-   tracer. The test: a recording `trace` sees one call with the masked result. P605 built it as `run_operation(operation, values, outside, build_outside, options)`: the trace, the Privacy step and the clock arrive in one `RunOptions` (rule R3 allows 5 parameters), and W4-2 adds `backends` to it as a field.
+   tracer. The test: a recording `trace` sees one call with the masked result. The plan's `backends` and `trace=None` parameters became fields of `RunOptions`, because rule R3 allows 5 parameters. W4-2 adds `backends` to it.
 4. `Privacy` runs inside `run_operation`, before `trace` and before any frontend sees the result. `run_cli` masks
    nothing of its own. S5 builds it as a pass-through, and S10 fills its rules. The test: a result with a store path
    reaches `trace` and the Renderer shortened. That test waits for S10. P605's test gives a marking Privacy and sees the trace and the result marked.
@@ -509,7 +509,7 @@ is an instance field with the class default `could-not-run`, because `GateClosed
 today. Section 4's four tests are in it. When a toy Operation passes every path (ok, problems, `could-not-run`, bad
 flag, `SparkError`, crash, undeclared effect) and an unchecked Finding never gives `ok`, the slice is done. Done in P442
 (#587, PR W3-3), with the wave 3 plan's cut: `schema()`, `Privacy`, `trace`, `Backends` and `ToolFinder` wait for their
-first user; `OutsideWorld` holds `run` and `find_tool`, and `SparkError` is a `ValueMessageError`.
+first user; `OutsideWorld` holds `run` and `find_tool`, and `SparkError` is a `ValueMessageError`. P605 (#807) gave `schema()` as `input_schema()` and `output_schema()`, `Privacy` and `trace`.
 
 S6, `look` on the core: `spark/bench/look_at_board.py` with `LookAtBoard`, `OPERATIONS` in `spark/bench/__init__.py`,
 `Backends` with `ToolFinder`, and `look.main` at most 15 lines by `ast`. It is an output slice for one path. A crash

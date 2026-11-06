@@ -339,6 +339,9 @@ class RunOptionsTest(unittest.TestCase):
             with self.subTest(what=what):
                 result, calls = self.run_traced(what)
                 self.assertEqual(calls, [("toy", toy_values(what), result, 2.5)])
+        calls = []
+        result = run_operation(Toy(), toy_values("ok"), None, lambda: 1 / 0, RunOptions(Privacy(), lambda *call: calls.append(call), TickingClock()))
+        self.assertEqual((result.findings[0].code, calls), (codes.CRASH, [("toy", toy_values("ok"), result, 2.5)]), "a builder that crashes")
 
     def test_a_tracer_that_raises_leaves_the_result_standing(self):
         def broken(*call):
@@ -358,7 +361,8 @@ class RunOptionsTest(unittest.TestCase):
         result = OperationResult({"a": 1}, [PROBLEM], lines=["one"])
         self.assertIs(DEFAULT_RUN.privacy.mask_result(result), result)
         self.assertEqual(DEFAULT_RUN.privacy.mask_values({"a": 1}), {"a": 1})
-        self.assertEqual(cli("--json")[0], 0)
+        outside = FakeOutsideWorld(find_tool={"flasher": TOOL}.get)
+        self.assertEqual(run_operation(Toy(), toy_values("problems"), outside), Toy().run(**toy_values("problems"), outside=outside))
 
 
 class SchemaTest(unittest.TestCase):
