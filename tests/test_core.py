@@ -290,12 +290,30 @@ class RunOperationTest(unittest.TestCase):
         self.assertEqual((code, json.loads(out)["unchecked"][0]["code"], err), (2, "undeclared_effect", ""))
         self.assertIn("cannot run ['ls']", json.loads(out)["unchecked"][0]["sentence"])
 
-    def test_a_declared_run_is_subprocess_run_and_the_finder_is_the_given_one(self):
-        import subprocess
+    def test_a_declared_run_is_a_program_runner_and_the_finder_is_the_given_one(self):
         outside = build_outside_world((READS, RUNS), FakeReporter(), find_tool={"flasher": TOOL}.get)
-        self.assertIs(outside.run, subprocess.run)
-        self.assertIs(ProgramRunner.run, subprocess.run)
+        self.assertEqual((outside.run.__func__, outside.run.__self__.echo_to), (ProgramRunner.run, None))
         self.assertEqual((outside.find_tool("flasher"), outside.find_tool("x")), (TOOL, None))
+
+    def test_a_runner_echoes_an_uncaptured_child_where_the_reporter_says_and_a_captured_one_never(self):
+        import io
+        import sys
+        import tempfile
+        echo = [sys.executable, "-c", "print('echoed')"]
+        with tempfile.TemporaryFile() as held:
+            captured = ProgramRunner(held.fileno()).run(echo, capture_output=True, text=True)
+            ProgramRunner(held.fileno()).run(echo)
+            held.seek(0)
+            self.assertEqual((captured.stdout, held.read()), ("echoed\n", b"echoed\n"))
+        self.assertEqual((TerminalReporter(sys.stdout).echo_to(), TerminalReporter(io.StringIO()).echo_to(), FakeReporter().echo_to()), (None, 2, None))
+
+    def test_an_undeclared_consent_is_refused_and_a_declared_one_is_the_given_builder(self):
+        from spark.core.operation import DELETES
+        outside = build_outside_world((READS,), FakeReporter(), make_consent=lambda line: line)
+        with self.assertRaises(SparkError) as refused:
+            outside.make_consent("deploy.py --token t")
+        self.assertEqual(refused.exception.code, "undeclared_effect")
+        self.assertEqual(build_outside_world((READS, DELETES), FakeReporter(), make_consent=lambda line: line).make_consent("x"), "x")
 
     def test_the_renderers_decide_nothing_again(self):
         result = OperationResult({"a": 1}, [PROBLEM], lines=["one", "two"])
@@ -340,7 +358,7 @@ class RunOptionsTest(unittest.TestCase):
                 result, calls = self.run_traced(what)
                 self.assertEqual(calls, [("toy", toy_values(what), result, 2.5)])
         calls = []
-        result = run_operation(Toy(), toy_values("ok"), None, lambda: 1 / 0, RunOptions(Privacy(), lambda *call: calls.append(call), TickingClock()))
+        result = run_operation(Toy(), toy_values("ok"), None, lambda effects: 1 / 0, RunOptions(Privacy(), lambda *call: calls.append(call), TickingClock()))
         self.assertEqual((result.findings[0].code, calls), ("crash", [("toy", toy_values("ok"), result, 2.5)]), "a builder that crashes")
 
     def test_a_tracer_that_raises_leaves_the_result_standing(self):
