@@ -291,7 +291,10 @@ The rules and the role words are in [patterns-and-names.md](patterns-and-names.m
 ## Patterns and names in spark's core
 
 New code is small classes with one job each, and `main()` only parses and prints. The patterns, the names table and the
-role words (Operation, Strategy, Adapter, Value, Renderer and the rest) live in [patterns-and-names.md](patterns-and-names.md). `run_cli` traces nothing. A frontend that traces a run (P417, Langfuse) calls `run_operation` with its `trace` in a `RunOptions`.
+role words (Operation, Strategy, Adapter, Value, Renderer and the rest) live in [patterns-and-names.md](patterns-and-names.md). An Operation
+declares its `effects`, and `effects_of(values)` narrows them for one run (deploy's `--dry-run` keeps `reads` alone), so
+`run_operation` builds the same outside for every frontend. A collaborator a test swaps whole comes through the
+Operation's constructor, None for the real one (`DeployImage(platform_for, grant_service, records)`). `run_cli` traces nothing. A frontend that traces a run (P417, Langfuse) calls `run_operation` with its `trace` in a `RunOptions`.
 
 ## One board per project
 

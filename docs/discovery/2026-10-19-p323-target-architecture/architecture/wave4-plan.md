@@ -72,8 +72,8 @@ Status, 2026-11-06:
 - E2a (P508, deploy's goldens): done in https://github.com/xmejkal/spark/pull/725. The goldens
   `deploy-could-not-run-flash-failed-grant.{json,txt}` and their `.stderr` files are in `tests/golden`.
 - PR A (P605 #807, the schemas, the trace hook and the Privacy step): done in https://github.com/xmejkal/spark/pull/880.
-- W4-2 (P655 #879): in Build.
-- W4-3 with P383 #491 (PR C): no card yet.
+- W4-2 (P655 #879): built on branch `p655-deploy-core`, with E2 and P457 (the littlefs lookup asks with the project).
+- W4-3 with P383 #491 (PR C): no card yet. Its Operations take their collaborators as W4-2's does: `IssueGrant(grant_service=None)`, None for the store's own.
 - W4-4 (PR D): no card yet.
 
 ### W4-1, the seams (S7a and S8)
@@ -236,8 +236,10 @@ sequenceDiagram
 
 1. Each bench `main` is at most 15 lines (W4-2 and W4-3, look already is).
 2. No golden changed (every PR).
-3. `T2:tests/test_deploy_gate.py` is gone from the baseline (W4-2).
+3. `T2:tests/test_deploy_gate.py` is gone from the baseline (W4-2). It fell from 5 to 1: the `interpreter_for` patch
+   stays, because `flash_image.build_entry` reads the merged tools lists itself, not through a finder.
 4. S9b's two refusals are tested (W4-4).
+5. Every line deploy shows while a phase runs is an Event in a test, and no event text is a result line (W4-2, E2).
 
 ## Risks
 

@@ -25,7 +25,7 @@ import tools  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import store  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
-from test_board_look import FOUND, done, found  # noqa: E402
+from test_board_look import done  # noqa: E402
 import test_deploy_gate  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 from test_look import LookScriptCase  # noqa: E402
