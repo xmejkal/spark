@@ -370,7 +370,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `undeclared_effect` | no script today: the look declares `runs`. An Operation whose `effects` miss what it reaches | the operation ran a program its effects do not declare: a defect in spark | report it, as for `crash` | yes |
 
 `bad_argument`, `crash` and `undeclared_effect` are the core's codes, in `scripts/spark/core/codes.py`: every operation can write them. The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `serial_not_mac` and `no_mac` are in the table of `scripts/board_codes.py` too. They name the reasons of
-`grant.py`'s refusals, which do not reach this envelope. With two stops, the deploy gate's `code` is the first stop's.
+`grant.py`'s refusals, which do not reach this envelope. So do `no_grant`, `grant_expired`, `grant_no_zone`, `not_reached`, `reset_failed`, `raised`, `refused_no_grant`, `refused_pin`, `refused_no_parse`, `store_problem` and `board_record_unusable`: the codes of the findings that `grant.py`, `live.py` and `reach.py` give the core, which print no envelope. With two stops, the deploy gate's `code` is the first stop's.
 
 **A bad flag.** With `--json`, `look.py` and `deploy.py` print an envelope for an argument they cannot run with, such as
 `--no-simulation` with `--ignore-older-runs`: status `could-not-run`, `data: null`, one `unchecked` item with `code`
