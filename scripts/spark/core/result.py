@@ -25,6 +25,13 @@ def envelope_item(finding):
     return dict(subject=finding.subject, **item) if finding.subject is not None or finding.severity == outcomes.PROBLEMS else item
 
 
+def output_schema():
+    """The JSON Schema of the envelope every Operation answers with (P605): its keys are the keys of `outcomes.envelope`,
+    so the schema cannot drift from what a run prints. `notes` and `assumptions` are keys only for a tool that passes them."""
+    return {"type": "object", "required": list(outcomes.envelope(None, None)),
+            "properties": {"envelope": {"const": 1}, "status": {"enum": [outcomes.OK, outcomes.PROBLEMS, outcomes.COULD_NOT_RUN]}}}
+
+
 class OperationResult(namedtuple("OperationResult", "data findings next lines diagnostics notes", defaults=(None, (), (), (), (), None))):
     """
     Result: what `Operation.run` returns. `data` is the answer as JSON values, `findings` the Findings, `next` the

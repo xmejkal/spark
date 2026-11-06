@@ -6,6 +6,8 @@ The Operation (P442, W3-3): one job, with one public method, `run`. A CLI, an ag
 from collections import namedtuple
 from pathlib import Path
 
+from spark.core.result import output_schema
+
 # --- MVP ---
 #: Value: one argument of an Operation, as argparse adds it. `flags` are its option strings, `dest` the keyword `run`
 #: takes, `kind` the type of the value (`Path`, `str`) or `bool` for a flag that is on when given, `group` the name of
@@ -27,6 +29,17 @@ COMMON_ARGUMENTS = {
 }
 
 
+#: The JSON Schema `type` of each Argument kind (P605). A kind enters with its first Operation.
+JSON_TYPE_OF_KIND = {Path: "string", str: "string", bool: "boolean"}
+
+
+def argument_schema(argument):
+    """One Argument as a JSON Schema property: its type, its help, and its default when it has one (a flag's is False)."""
+    default = False if argument.kind is bool else argument.default
+    said = {"type": JSON_TYPE_OF_KIND[argument.kind], "description": argument.help}
+    return said if default is None else dict(said, default=str(default) if isinstance(default, Path) else default)
+
+
 class Operation:
     """
     Operation: one job, with one public method, `run`. A subclass gives `name` (the `op` the envelope prints), `arguments`
@@ -41,4 +54,14 @@ class Operation:
 
     def run(self, *, outside, **values):
         raise NotImplementedError
+
+    def input_schema(self):
+        """The JSON Schema of `run`'s values, an MCP tool's `inputSchema` (P605): a property per Argument but `json`,
+        which is the frontend's. A group of arguments that exclude each other is not in it yet."""
+        properties = {argument.dest: argument_schema(argument) for argument in self.arguments if argument.dest != JSON_DEST}
+        return {"type": "object", "properties": properties, "additionalProperties": False}
+
+    def output_schema(self):
+        """The JSON Schema of the envelope, an MCP tool's `outputSchema` (P605): the same for every Operation."""
+        return output_schema()
 # --- end MVP ---

@@ -497,6 +497,15 @@ class TheOperationTest(LookScriptCase):
         self.assertEqual(ran_at_the_begin, [[]], "the BEGIN comes before the look runs anything")
         self.assertTrue(outside.ran, "the look ran its read after the BEGIN")
 
+    def test_the_input_schema_names_each_value_that_run_takes(self):
+        # P605: an MCP tool or a LangGraph node (P417) builds the values from this schema, so its names are run's keywords
+        import inspect
+        schema = look_at_board.LookAtBoard().input_schema()
+        keywords = [name for name, kind in inspect.signature(look_at_board.LookAtBoard.run).parameters.items()
+                    if kind.kind == kind.POSITIONAL_OR_KEYWORD and name != "self"]
+        self.assertEqual(list(schema["properties"]), keywords)
+        self.assertEqual([schema["properties"][name].get("default") for name in keywords], [".", None, False, False])
+
     @needs_littlefs
     def test_run_operation_gives_the_lines_the_findings_and_the_deploy_step_with_no_stdout(self):
         self.run_the_scenario()
