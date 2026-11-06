@@ -86,7 +86,7 @@ use the network; read it before calling `parts.py`.
 Run each `parts.py` write with `--dry-run` first. For example, in a project whose needs are set
 (`parts.py --needs-set`) and with the FireBeetle in the person's drawer,
 `parts.py --pick . press=tactile-button light=led-red-5mm board=firebeetle2-esp32s3 --dry-run --json` answers in one
-envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`.
+envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`. `parts.py --needs-drop . light --dry-run --json` says in `data.released` which holds dropping the need `light` would release; history stays.
 
 These only read:
 
@@ -284,7 +284,7 @@ These write:
 - `assign_pins.py --emit-pins`; `boards.py --resolve`.
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
-  - `--drawer-set`, `--needs-set`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
+  - `--drawer-set`, `--needs-set`, `--needs-drop`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
     also uses the network.
   - **A bench result goes back with `--fact-set`** ([P374](https://github.com/xmejkal/spark/issues/479)), under the `write`
     key of the `--unverified` row. Write `verified: true` only for a result the person stated in this conversation, and

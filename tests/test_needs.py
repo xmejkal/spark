@@ -25,10 +25,13 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import boards  # noqa: E402
 import check_spine  # noqa: E402
 import design  # noqa: E402
+import drawer  # noqa: E402
 import emit_board  # noqa: E402
 import needs  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
+from spark.core.cli import run_operation  # noqa: E402
+from spark.idea.drop_need import DropNeed  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 
@@ -1731,6 +1734,33 @@ class TheNeedsDropTest(unittest.TestCase):
                           "If the firmware imported its signal, run import_firmware.py." % self.project])
         elsewhere, _ = run(["--needs-drop", str(self.project), "alarm"])
         self.assertEqual(elsewhere["notes"], [])
+
+    def test_a_drawer_that_refuses_the_write_leaves_the_needs_file_as_it_was_so_a_retry_finishes(self):
+        class FullDrawer:
+            entries = staticmethod(drawer.entries)
+
+            @staticmethod
+            def apply(changes):
+                raise OSError("disk full")
+
+        result = run_operation(DropNeed(drawer_store=FullDrawer), {"project": self.project, "need": "alarm", "dry_run": False},
+                               build_outside=lambda effects: None)
+        self.assertEqual((result.status(), self.need_ids()), ("could-not-run", ["soil", "alarm", "input"]))
+        run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((self.need_ids(), self.entry("speaker")["used_in"]), (["soil", "input"], {}))
+
+    def test_the_note_reads_a_hand_written_entry_pick_as_the_record_it_is(self):
+        path = self.project / ".spark" / "needs.json"
+        path.write_text(json.dumps({"schema": 1, "needs": [{"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "probe"}]}]}))
+        (self.project / "requirements.json").write_text(json.dumps({"parts": ["x-soil"]}))
+        said, _ = run(["--needs-drop", str(self.project), "soil"])
+        self.assertEqual([note["sentence"][:36] for note in said["notes"]], ["requirements.json still lists x-soil"])
+
+    def test_a_part_another_need_still_picks_gets_no_note(self):
+        run(["--pick", str(self.project), "alarm=x-soil"])
+        (self.project / "requirements.json").write_text(json.dumps({"parts": [{"part": "x-soil"}]}))
+        said, _ = run(["--needs-drop", str(self.project), "soil"])
+        self.assertEqual(said["notes"], [])
 
     def test_a_pick_after_the_drop_gives_the_other_needs_the_same_picks(self):
         run(["--needs-drop", str(self.project), "alarm"])

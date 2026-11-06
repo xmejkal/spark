@@ -45,8 +45,7 @@ names the rule. A library needs no such line. `scripts/spark/core/` holds the co
 section) and the leaf modules every script shares: `outcomes` (the exit codes and the three outcomes), `text_guards`,
 `zone_time`, `codes`, `clock` (the one `SystemClock`) and `privacy` (the Privacy step). The leaves import nothing of spark. A script writes `from spark.core import outcomes` and then
 `outcomes.EXIT_OK`, or `from spark.core.outcomes import EXIT_OK`. `scripts/spark/bench/` is the first area package: one
-module per Operation (`look_at_board`), and `OPERATIONS` and the area's `build_project_outside_world` in its `__init__.py`.
-`scripts/spark/idea/` is the second, named for the idea stage: `drop_need` (`DropNeed`, P514), its `codes.py` and its `OPERATIONS`.
+module per Operation (`look_at_board`), and `OPERATIONS` and the area's `build_project_outside_world` in its `__init__.py`. `scripts/spark/idea/` is the second, named for the idea stage: `drop_need` (`DropNeed`, P514), its `idea_codes.py` and its `OPERATIONS`.
 The other scripts stay flat in `scripts/` until their own card moves them. A tool that lists the scripts
 (`tools/inventory.py`, `tools/measure.py`, the tests that read every script) looks in the folders under `scripts/` too.
 Most of them leave out `scripts/stand_in/`, but `test_no_magic_strings` reads it too. `test_orphans`,

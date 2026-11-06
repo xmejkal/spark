@@ -11,7 +11,7 @@ from spark.core import outcomes
 from spark.core.errors import SparkError
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Argument, Operation
 from spark.core.result import Finding, OperationResult
-from spark.idea import codes
+from spark.idea import idea_codes
 
 # --- MVP ---
 #: The sentence of a need that is not there, with the ids that are.
@@ -51,13 +51,13 @@ class DropNeed(Operation):
         try:
             current, entries = self.needs.read(project), self.drawer.entries()
         except store.StoreProblem as unreadable:
-            raise SparkError("%s", unreadable, code=codes.NEEDS_UNREADABLE, fix=UNREADABLE_FIX)
+            raise SparkError("%s", unreadable, code=idea_codes.NEEDS_UNREADABLE, fix=UNREADABLE_FIX)
         name, ids = store.plan_listed_name(project), [each["id"] for each in current]
         dropped = next((each for each in current if each["id"] == need), None)
         if dropped is None:
             sentence = NEED_UNKNOWN_SENTENCE % (need, ", ".join(ids) or "none")
             return OperationResult({"project": name, "need": need, "needs": ids},
-                                   [Finding(outcomes.PROBLEMS, need, codes.NEED_UNKNOWN, sentence, NEED_UNKNOWN_FIX)])
+                                   [Finding(outcomes.PROBLEMS, need, idea_codes.NEED_UNKNOWN, sentence, NEED_UNKNOWN_FIX)])
         after = [each for each in current if each["id"] != need]
         changes, _, _ = self.needs.plan_holds(name, after, entries)
         released = self.needs.released_holds(changes, name)

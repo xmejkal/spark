@@ -1,6 +1,6 @@
 ---
 description: From a goal in words to needs, each matched against what you own and what spark knows — store first; research only for a real gap — then a part picked per need with what you own reserved, a requirements file for /spark:build, and one cost line.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --offer *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-drop *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --offer *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *)
 ---
 
 # spark:idea
@@ -53,7 +53,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    ```
 
    then without `--dry-run`. A need holds no reason, count or place, and `--needs-set` sets no pick (`--pick` does, below) — the
-   file belongs to the project.
+   file belongs to the project. To remove a need, run `parts.py --needs-drop <project> <need> --dry-run` first, then without it: it releases the holds only that pick explained, history stays, and it says when requirements.json still lists the part.
 
 ## M — what the store offers for each need
 
