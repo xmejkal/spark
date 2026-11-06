@@ -247,10 +247,10 @@ rules are added to it, each checked by one test in `tests/test_core.py`:
 3. `run_operation(operation, values, outside, backends, trace=None)` has one hook. `trace` is a callable that gets the
    Operation's name, the values, the result and the seconds, once per run, after `Privacy` masked them. A tracer that
    raises is caught and said on stderr, and the run's result stands. Langfuse plugs in there. The core imports no
-   tracer. The test: a recording `trace` sees one call with the masked result.
+   tracer. The test: a recording `trace` sees one call with the masked result. P605 built it as `run_operation(operation, values, outside, build_outside, options)`: the trace, the Privacy step and the clock arrive in one `RunOptions` (rule R3 allows 5 parameters), and W4-2 adds `backends` to it as a field.
 4. `Privacy` runs inside `run_operation`, before `trace` and before any frontend sees the result. `run_cli` masks
    nothing of its own. S5 builds it as a pass-through, and S10 fills its rules. The test: a result with a store path
-   reaches `trace` and the Renderer shortened.
+   reaches `trace` and the Renderer shortened. That test waits for S10. P605's test gives a marking Privacy and sees the trace and the result marked.
 
 Consent in a graph. A graph pauses between Operations, never inside one. `OutsideWorld.consent` is one of three
 strategies. `TerminalConsentStrategy` asks in the person's terminal. `StandingConsentStrategy` reads a grant the
