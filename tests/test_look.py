@@ -30,6 +30,7 @@ from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event  # noqa: E402
 from suite_runs import needs_littlefs  # noqa: E402
 from test_board_look import LookCase, data, done, found  # noqa: E402
+from test_deploy import real_littlefs  # noqa: E402
 
 RESTART = "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
 MAC = "8c:bf:ea:xx:xx:xx"
@@ -262,6 +263,16 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(code, 2)
         self.assertRegex(said[-1], r"^  no token: .*flash_image\.py --project .* --files .*/firmware'? -o ")
 
+    def test_littlefs_turned_off_in_the_project_is_named_by_the_look(self):
+        # P457: the image check asks the finder with the project, so the sentence names the file that turned it off
+        (self.project / ".spark").mkdir(exist_ok=True)
+        (self.project / ".spark" / "tools.json").write_text(json.dumps({"littlefs-python": {"on": False}}))
+        self.image.write_bytes(b"x")
+        code, said, _ = self.go_with(FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
+                                                      else done(data("c6-flash-id.txt")), find_tool=real_littlefs), "--no-simulation")
+        self.assertEqual(code, 2)
+        self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", said[-1])
+
     def test_no_simulation_with_a_finder_that_lacks_littlefs_gives_no_token_and_the_install_line(self):
         # P442: the image check asks the finder the look was given, not tools.find, so the fake decides what is installed
         self.image.write_bytes(b"x")  # P452: the finder answers before the image is read, so no littlefs is needed to build one
@@ -274,8 +285,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         code, said, _ = self.go_with(FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
                                                       else done(data("c6-flash-id.txt")), find_tool=without_littlefs), "--no-simulation", "--json")
         self.assertEqual(code, 2)
-        # as main asked it (flash_image.main's `tools.find("littlefs")`): the shared lists, not the project's file (row 23)
-        self.assertEqual([where for name, where in asked if name == "littlefs"], [{"project": None}])
+        # P457: with the project, so a tools file that turns littlefs off is named (it was project=None, row 23)
+        self.assertEqual([where for name, where in asked if name == "littlefs"], [{"project": self.project}])
         self.assertEqual([where for name, where in asked if name != "littlefs"], [{}] * (len(asked) - 1))
         no_token = [item for item in json.loads(said[-1])["unchecked"] if item["sentence"].startswith("no token: ")]
         self.assertEqual([item["code"] for item in no_token], ["tool_missing"])

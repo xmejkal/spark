@@ -464,7 +464,7 @@ class ScenarioRun:
             return NO_MAIN % (self.project, READY)
         try:
             self.steps = with_ready_wait(self.scenario.read_text())
-            tools.find("littlefs")
+            tools.find("littlefs", self.project)  # P457: a project's tools file that turns it off is named
             self.image = image_in(self.sim / "wokwi.toml")
             self.files = flash_image.files_under(self.project / "firmware")
             self.flash = flash_image.interpreter_for(self.micropython, self.project).image(self.files)

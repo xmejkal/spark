@@ -46,6 +46,11 @@ FOUND = {"flasher": tools.Tool("esptool", "flasher", {"kind": "python", "module"
 PORT = "/dev/cu.usbmodem1101"
 
 
+def real_littlefs(name, **where):
+    """The fakes for every role but littlefs, which the real tools lists answer, with the project when given (P457)."""
+    return tools.find(name, **where) if name == "littlefs" else found(name)
+
+
 def found(name, *args, **kwargs):
     """tools.find for the roles and tools deploy.py and the image check ask for."""
     if name not in FOUND:  # P436: as tools.find does for a tool nothing installed, so a test can meet a missing tool with no patch
@@ -141,6 +146,24 @@ class TheNoSimulationDryRunTest(ProjectCase):
         self.addCleanup(patcher.stop)
         self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
 
+    def turn_littlefs(self, on):
+        """The project's .spark/tools.json turns littlefs-python on or off (P457)."""
+        (self.project / ".spark").mkdir(exist_ok=True)
+        (self.project / ".spark" / "tools.json").write_text(json.dumps({"littlefs-python": {"on": on}}))
+
+    def test_littlefs_turned_off_in_the_project_is_named_by_the_dry_run_and_the_scenario_run_and_on_changes_nothing(self):
+        # P457: the three sites ask with the project, so the sentence names the file that turned it off
+        self.turn_littlefs(False)
+        code, _, problems, ran = self.deploy("--dry-run", "--no-simulation", find=real_littlefs)
+        self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
+        self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", problems)
+        status, sentence, log = run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
+        self.assertEqual((status, log), (run_scenario.COULD_NOT_RUN, None))
+        self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", sentence)
+        self.turn_littlefs(True)
+        code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=real_littlefs)
+        self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
+
     def test_the_flag_plans_the_flash_lines_with_no_run_log(self):
         code, said, problems, ran = self.deploy("--port", PORT, "--dry-run", "--no-simulation")
         self.assertEqual((code, problems, ran), (deploy.EXIT_OK, "", []))
@@ -158,8 +181,8 @@ class TheNoSimulationDryRunTest(ProjectCase):
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
         self.assertIn("firmware/main.py, line", problems)
 
-    def test_the_image_check_asks_for_littlefs_without_the_project_as_flash_image_does(self):
-        # P442: with no finder given, the evidence asks tools.find as main did, so a project's tools file changes nothing here
+    def test_the_image_check_asks_for_littlefs_with_the_project(self):
+        # P457: through the outside's finder, with the project, so a project's tools file that turns it off is named
         asked = []
 
         def find(name, *args, **kwargs):
@@ -167,7 +190,7 @@ class TheNoSimulationDryRunTest(ProjectCase):
             return found(name, *args, **kwargs)
         code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=find)
         self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
-        self.assertIn(("littlefs", (), {"project": None}), asked)
+        self.assertIn(("littlefs", (), {"project": self.project}), asked)
 
     def test_the_dry_run_json_names_the_look_step_with_the_flag(self):
         code, said, _, _ = self.deploy("--dry-run", "--no-simulation", "--json")

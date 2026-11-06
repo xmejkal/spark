@@ -285,8 +285,9 @@ def main(argv=None):
     parser.add_argument("-o", "--output", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
-        tools.find("littlefs")
-        interpreter = interpreter_for(args.micropython, args.project or project_here())
+        project = args.project or project_here()
+        tools.find("littlefs", project)  # P457: a project's tools file that turns it off is named
+        interpreter = interpreter_for(args.micropython, project)
     except tools.ToolProblem as missing:
         print("flash_image.py: %s" % missing, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
