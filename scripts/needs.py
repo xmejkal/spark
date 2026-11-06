@@ -307,6 +307,25 @@ def _as_record(pick, known, entries):
     return dict(said) if said and next(iter(said.items())) in known else pick
 
 
+def parts_left_listed(project, dropped, after):
+    """
+    The parts requirements.json still lists after a need is dropped (P514): those the `dropped` need picked as a record
+    (`_as_record`) that no need `after` picks. A requirements file that is missing or not in shape lists none.
+    """
+    path = Path(project) / REQUIREMENTS
+    try:
+        held = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        listed = {_part_of(entry) for entry in held.get("parts") or []}
+    except (ValueError, AttributeError, TypeError, OSError):
+        return []
+    known, entries = {row[:2]: row for row in drawer.linkable(project)}, drawer.entries()
+
+    def picked(wanted):
+        return {key for each in wanted for pick in each.get("pick") or [] for kind, key in [next(iter(_as_record(pick, known, entries).items()))]
+                if kind == "part"}
+    return sorted((picked([dropped]) - picked(after)) & listed)
+
+
 def _resolve(pick_id, known, entries):
     """
     A pick by its id (§5.3): the record of that id — a part's, then a board's — else the drawer entry of that key, as the
