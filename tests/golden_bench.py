@@ -44,28 +44,43 @@ BOARD_ID = "firebeetle2-esp32s3"
 #: Value. One golden: its name (`<op>-<status>[-<scenario>]`, the extension says which output), the script, its
 #: arguments after --project, the files of the canned flash id and device list, the exit code it must end with,
 #: `plant`: (path under the store, text) pairs written into the run's store first (a text may be a callable that gives
-#: it at run time, for a time that moves), and `stderr_golden`: the name of the golden of the run's stderr, or None.
-Case = namedtuple("Case", "golden script argv flash_id_file devs_file exit_code plant stderr_golden",
-                  defaults=((), None))
+#: it at run time, for a time that moves), `stderr_golden`: the name of the golden of the run's stderr, or None, and
+#: `fake_board`: True when the run flashes a board that the fakes keep in a folder (tests/fake_modules, FAKE_BOARD).
+Case = namedtuple("Case", "golden script argv flash_id_file devs_file exit_code plant stderr_golden fake_board",
+                  defaults=((), None, False))
 #: A store record of the canned board's last deploy that cannot be read (P416).
 UNREADABLE_LAST_DEPLOY = (("boards/dc-da-0c-xx-xx-xx.json", "{not json"),)
 #: The canned board's address, masked as every tracked file holds one (P505).
 BOARD_MAC = "dc:da:0c:xx:xx:xx"
+#: The USB serial of the canned device list: a live grant is found by it, a deploy grant by BOARD_MAC (P242).
+SERIAL_MAC = "8c:bf:ea:xx:xx:xx"
 GRANT_MINUTES = 60
 
 
-def deploy_grant_text():
-    """The text of a deploy grant for the canned board, given one minute ago, valid for GRANT_MINUTES: it takes
-    deploy.py past the gate with a standing yes. Made at run time, because a grant holds only for a time that moves."""
+def grant_text(mac, scope):
+    """The text of a grant of `scope` for the board `mac`, given one minute ago, valid for GRANT_MINUTES. Made at run time,
+    because a grant holds only for a time that moves."""
     now = datetime.datetime.now().astimezone().replace(microsecond=0)
-    return json.dumps({"mac": BOARD_MAC, "board_token": board_look.board_token(BOARD_MAC), "granted_by": "tester",
+    return json.dumps({"mac": mac, "board_token": board_look.board_token(mac), "granted_by": "tester",
                        "granted_at": (now - datetime.timedelta(minutes=1)).isoformat(),
-                       "expires_at": (now + datetime.timedelta(minutes=GRANT_MINUTES)).isoformat(), "scope": "deploy"})
+                       "expires_at": (now + datetime.timedelta(minutes=GRANT_MINUTES)).isoformat(), "scope": scope})
+
+
+def deploy_grant_text():
+    """A deploy grant for the canned board: it takes deploy.py past the gate with a standing yes."""
+    return grant_text(BOARD_MAC, "deploy")
+
+
+def live_grant_text():
+    """A live grant for the canned device list's board: it takes live.py past the grant check, and grant.py --check finds it."""
+    return grant_text(SERIAL_MAC, "live")
 
 
 #: A deploy grant in the store: deploy.py passes the gate, runs the erase, which the fake esptool fails with its retry
 #: exit code, waits 5 s (the flasher's real wait), and ends with the flash failure.
 DEPLOY_GRANT = (("grants/dc-da-0c-xx-xx-xx-deploy.json", deploy_grant_text),)
+#: A live grant in the store, found by the serial of the canned device list.
+LIVE_GRANT = (("grants/8c-bf-ea-xx-xx-xx.json", live_grant_text),)
 CASES = [
     Case("look-ok.json", "look.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
     Case("look-ok.txt", "look.py", [], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
@@ -98,6 +113,12 @@ CASES = [
     Case("live-could-not-run-two-boards.json", "live.py", ["--code", "print(1)", "--json"], "s3-flash-id-16mb.txt",
          "mpremote-devs-two.txt", 2),
     Case("reach-ok.json", "reach.py", ["--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0),
+    # P383: the three goldens of the happy paths, on a board the fakes keep
+    Case("grant-ok-granted.json", "grant.py", ["--check", "--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0, LIVE_GRANT),
+    Case("live-ok-ran.json", "live.py", ["--code", 'print("reached")', "--json"], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0,
+         LIVE_GRANT),
+    Case("deploy-ok-ready-seen.json", "deploy.py", ["--json", "--token", LOOK_TOKEN], "s3-flash-id-16mb.txt", "mpremote-devs-one.txt", 0,
+         DEPLOY_GRANT, "deploy-ok-ready-seen.json.stderr", True),
 ]
 
 
@@ -154,6 +175,9 @@ def run_script(case, project, store, token=None):
         (Path(store) / place).parent.mkdir(parents=True, exist_ok=True)
         (Path(store) / place).write_text(text() if callable(text) else text)
     env = child_env(store, case.flash_id_file, case.devs_file)
+    if case.fake_board:
+        env["FAKE_BOARD"] = str(Path(store) / "fake-board")
+        (Path(store) / "fake-board").mkdir(parents=True, exist_ok=True)
     done = subprocess.run([sys.executable, str(ROOT / "scripts" / case.script), "--project", str(project), *argv],
                           cwd=str(project), env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
                           timeout=RUN_TIMEOUT_S)
@@ -183,6 +207,12 @@ MOMENT = re.compile(r'"at": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d{4}"')
 CLOCK = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d")
 
 
+#: The name of a board log, a moment of the run (sim/runs/board/<moment>.log), which CLOCK does not match (P383).
+BOARD_LOG = re.compile(r"\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d\.log")
+#: The facts file's sha256 in the deploy's line. The facts hold the moment of the deploy, so the hash moves (P383).
+FACTS_SHA = re.compile(r"(spark\.json sha256: )[0-9a-f]{64}")
+
+
 #: A word in a script's shell quotes that starts with a placeholder. A script quotes a path only when it holds a space,
 #: so the quotes go, and a golden reads the same on a machine whose paths have none.
 QUOTED_PLACE = re.compile(r"'(<(?:project|store|repo|python)>[^'\s]*(?: [^'\s]+)*)'")
@@ -193,7 +223,7 @@ def scrub(text, places):
     dropped, reach's moment replaced by `<at>` and a grant's clock times by `<time>`."""
     pattern = re.compile("|".join(re.escape(place) for place in places))
     placed = QUOTED_PLACE.sub(r"\1", pattern.sub(lambda found: places[found.group(0)], text))
-    return CLOCK.sub("<time>", MOMENT.sub('"at": "<at>"', placed))
+    return FACTS_SHA.sub(r"\1<facts-sha256>", BOARD_LOG.sub("<time>.log", CLOCK.sub("<time>", MOMENT.sub('"at": "<at>"', placed))))
 
 
 def check_golden(case, text, name=None):
