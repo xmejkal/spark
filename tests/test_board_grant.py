@@ -1,14 +1,9 @@
 """P253 (#265): the live grant. The person's one yes for one board and a time limit is kept in the store, a later call
 finds it with `mpremote devs` only, and one after the limit, on another board or with no grant is refused."""
 
-import contextlib
 import datetime
-import hashlib
-import io
 import json
 import os
-import shlex
-import stat
 import subprocess
 import sys
 import tempfile
@@ -25,18 +20,11 @@ GRANT_SCRIPT = str(ROOT / "scripts" / "grant.py")
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import board_console  # noqa: E402
-import board_doctor  # noqa: E402
 import board_grant  # noqa: E402
-import store  # noqa: E402
 import board_look  # noqa: E402
-import boards  # noqa: E402
 import deploy_gate  # noqa: E402
-import grant  # noqa: E402
 import image_evidence  # noqa: E402
-import tools  # noqa: E402
-from fakes import FakeClock, FakeConsent, FakeProbePlatform, line_made_at_import, pin_time_zone  # noqa: E402
-from test_board_look import data, done  # noqa: E402
-from test_deploy import found  # noqa: E402
+from fakes import FakeClock, FakeConsent, pin_time_zone  # noqa: E402
 
 
 UTC = datetime.timezone.utc

@@ -51,7 +51,6 @@ import import_firmware  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 import test_deploy_gate  # noqa: E402
-import tools  # noqa: E402
 from suite_runs import slow  # noqa: E402
 from fakes import FakeOutsideWorld  # noqa: E402
 from test_deploy import found  # noqa: E402

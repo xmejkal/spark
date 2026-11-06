@@ -14,7 +14,7 @@ from firmware_platform import MicroPythonPlatform
 from spark.bench.stops import stop_result
 from spark.core import outcomes
 from spark.core.cli import FlatJsonLine
-from spark.core.operation import BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
+from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines
 
