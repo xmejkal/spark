@@ -64,8 +64,8 @@ fix), `next` (a `NextStep` per step an agent may take), `lines` (the report a pe
 the person beside the answer: the board doctor's, a crash's traceback) and `notes`. `status()` is `outcomes.status_of`
 over the findings, so `ok` stays unreachable while anything is unchecked, and `to_envelope(tool, op)` is the envelope in
 today's key order. An Operation reaches the outside only through `outside`, an `OutsideWorld` (`spark.core.outside`):
-`run` runs a program, `find_tool` gives a tool by its name, and `report(event)` tells the person what happens now (an
-`Event` of `spark.core.events`, to the frontend's `Reporter`). The rest of the outside (the project's files, the store,
+`run` runs a program, `find_tool` gives a tool by its name, `report(event)` tells the person what happens now (an `Event` of `spark.core.events`, to the frontend's `Reporter`), `clock` is the time and the waits, and `make_consent(line)` asks the person for the yes (P655).
+A collaborator that a test swaps whole comes through the Operation's constructor, None for the real one, and `effects_of(values)` narrows the effects of one run. The rest of the outside (the project's files, the store,
 and the child Python that `image_evidence.CompileCheck` starts) still goes direct, and moves behind the outside with its
 own card. `build_outside_world(effects, reporter, find_tool)` gives the real `run` only when the effects hold `runs`,
 and a stub that raises `SparkError` with code `undeclared_effect` otherwise; an area's builder,

@@ -11,7 +11,7 @@
  {"file": "scripts/deploy_service.py", "name": "the records seam is ignored", "find": "return self.records.write_deploy(", "replace": "return deploy_record_store.DeployRecordStore().write_deploy("},
  {"file": "scripts/deploy_service.py", "name": "the deploy moment is read from the system clock", "find": "moment = self.clock.now()", "replace": "moment = board_console.SystemClock.now()"},
  {"file": "scripts/deploy_service.py", "name": "the flasher's retry waits on the system clock", "find": "self.clock.sleep(flasher.RETRY_WAIT_S)", "replace": "board_console.SystemClock.sleep(flasher.RETRY_WAIT_S)"},
- {"file": "scripts/deploy_service.py", "name": "the start wait runs on the system clock", "find": "report.reading.mac, self.clock,", "replace": "report.reading.mac, board_console.SystemClock(),"},
+ {"file": "scripts/deploy_service.py", "name": "the start wait runs on the system clock", "find": "look.reading.mac, self.clock,", "replace": "look.reading.mac, type(self.clock)(),"},
  {"file": "scripts/deploy_service.py", "name": "the look ignores the service's platform", "find": "board_look.looker(self.platform, self.run)", "replace": "board_look.looker(__import__('firmware_platform').MicroPythonPlatform(self.project), self.run)"},
  {"file": "scripts/board_doctor.py", "name": "the doctor reads the shell's silent step, not the flasher's", "find": "platform.find_tool(\"flasher\"), stop.tool_said)", "replace": "platform.find_tool(\"board-shell\"), stop.tool_said)"},
  {"file": "scripts/board_doctor.py", "name": "the doctor's console probe is not from the platform", "find": "platform.make_console_probe(stop.port, run))", "replace": "None)"},

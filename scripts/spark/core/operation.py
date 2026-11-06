@@ -14,9 +14,9 @@ from spark.core.result import output_schema
 #: the group whose arguments exclude each other, or None.
 Argument = namedtuple("Argument", "flags dest kind help default group", defaults=(None, None))
 
-#: What an Operation does outside spark: it reads the project's files, runs a program, touches the board. A step's
-#: `deletes` and `writes` (`outcomes.step`) enter with their first Operation.
-READS, RUNS, BOARD = "reads", "runs", "board"
+#: What an Operation does outside spark: it reads the project's files, runs a program, touches the board, erases what is
+#: on it, writes to it. They are the words of a step's `effects` (`outcomes.step`); DELETES and WRITES came with deploy (P655).
+READS, RUNS, BOARD, DELETES, WRITES = "reads", "runs", "board", "deletes", "writes"
 #: The flag that asks for the envelope. `run_cli` reads it, and the Operation never sees it.
 JSON_FLAG, JSON_DEST = "--json", "json"
 #: The arguments every Operation on a project takes, by `dest`, with the words of the first Operation, look.py. An
@@ -54,6 +54,11 @@ class Operation:
 
     def run(self, *, outside, **values):
         raise NotImplementedError
+
+    def effects_of(self, values):
+        """The effects of a run with these `values` (the keywords `run` takes): `effects`, unless a flag narrows them, as
+        deploy's `--dry-run` does (P655). `run_operation` builds the outside from this, so every frontend declares the same."""
+        return self.effects
 
     def input_schema(self):
         """The JSON Schema of `run`'s values, an MCP tool's `inputSchema` (P605): a property per Argument but `json`,

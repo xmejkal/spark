@@ -24,6 +24,9 @@ NO_TERMINAL = "no terminal to ask you in. Run this line in your own terminal win
 
 #: What an agent does next (P213), for a GateClosedError: `deploy.py`'s `--json` turns it into a step.
 NEXT_DEPLOY, NEXT_LOOK = "deploy", "look"
+#: The kinds of a yes, as the envelope's `data.yes.kind` says them: typed in a terminal, or a standing deploy grant.
+#: A yes relayed by an agent (RELAYED) comes with W4-4.
+TYPED, GRANT = "typed", "grant"
 
 
 # --- MVP ---
@@ -42,8 +45,13 @@ class GateClosedError(Exception):
 
 
 class ConsentStrategy(abc.ABC):
-    """Strategy: how the person says yes to a question. A subclass supplies `ask`, which returns True for yes, and
-    `who`, the phrase that tells the store's record whose yes it was."""
+    """Strategy: how the person says yes to a question. A subclass supplies `ask`, which returns True for yes, `who`, the
+    phrase that tells the store's record whose yes it was, and `yes_kind`, TYPED or GRANT, which the envelope says (P655)."""
+
+    @property
+    @abc.abstractmethod
+    def yes_kind(self):
+        """TYPED or GRANT: the kind of yes, as the envelope's `data.yes.kind` says it. A subclass sets it as a class attribute."""
 
     @property
     @abc.abstractmethod
@@ -62,6 +70,8 @@ class ConsentStrategy(abc.ABC):
 class TerminalConsentStrategy(ConsentStrategy):
     """Strategy: `yes` typed in a real terminal. With no terminal, GateClosedError gives `line`, the command to run
     in one."""
+
+    yes_kind = TYPED
 
     def __init__(self, line, stdin=None, stdout=None, user_name=getpass.getuser):
         self.line, self.stdin, self.stdout = line, stdin or sys.stdin, stdout or sys.stdout

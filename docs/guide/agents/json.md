@@ -320,8 +320,8 @@ P423 and P430 set these rules for the text output of `parts.py`, `look.py`, `dep
 `tool`, `op`, `status`, `data`, `problems`, `unchecked`, `next`, `truncated`, and `notes` for deploy) on stdout. The status is
 the exit code's ([the outcomes](../agents.md#the-outcomes-and-their-exit-codes)). With `--json`, deploy.py prints every line a person reads, and
 the flash tool's own output, on **stderr**, so stdout holds the envelope alone. A bad flag prints an envelope with `--json` (below).
-A raise after the flash (a traceback) prints no envelope; read the exit code and stderr. A crash in `look.py` prints an envelope with
-one `unchecked` item, code `crash`, and exits 2; stderr gets `look: crashed, <class>`, the fix and the traceback, never the envelope.
+A crash in `look.py` or `deploy.py` prints an envelope with
+one `unchecked` item, code `crash`, and exits 2; stderr gets `<tool>: crashed, <class>`, the fix and the traceback, never the envelope. A `DeployError` or a `ToolProblem` raised in deploy's verify, after the flash, is such a crash too (exit 2, `data.board_state` set), where it once printed a traceback with exit 1.
 Without `--json` it prints the same on stderr and nothing on stdout ([P442](https://github.com/xmejkal/spark/issues/587)).
 
 **The `code` of an item** ([P433](https://github.com/xmejkal/spark/issues/575)). Every item of `problems` and `unchecked` in
@@ -366,7 +366,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `download_mode_stayed` | deploy, stage `verify` | the board still waits in download mode after the flash: the wait for its start ran out, though the port may have gone and come back. A restart counts only when mpremote answers after it ([P462](https://github.com/xmejkal/spark/issues/630)) | relay `data.person_action` (press RESET once) to the person, then run the `watch` step. Never deploy again for this | yes |
 | `port_gone` | deploy, stage `verify` | the board's port was not listed after the flash, or went and did not come back. No mpremote call was made on a dead port, so `data.repl_command` is null and `next` has no `watch` step (mpremote would choose a board of its own) | relay `data.person_action` (press RESET, then unplug and plug in, then `python3 -m mpremote devs` lists the ports). Never deploy again for this | yes |
 | `bad_argument` | both scripts | an argument that the script cannot run with (below) | fix the flag, run again | no |
-| `crash` | `look.py` | the look crashed: a defect in spark, never in the project. The sentence names the exception class; the traceback is on stderr | report it to the spark maintainers with the stderr traceback; running the look again for it is no use | yes |
+| `crash` | `look.py`, `deploy.py` | the look crashed: a defect in spark, never in the project. The sentence names the exception class; the traceback is on stderr | report it to the spark maintainers with the stderr traceback; running the look again for it is no use | yes |
 | `undeclared_effect` | no script today: the look declares `runs`. An Operation whose `effects` miss what it reaches | the operation ran a program its effects do not declare: a defect in spark | report it, as for `crash` | yes |
 
 `bad_argument`, `crash` and `undeclared_effect` are the core's codes, in `scripts/spark/core/codes.py`: every operation can write them. The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `serial_not_mac` and `no_mac` are in the table of `scripts/board_codes.py` too. They name the reasons of
@@ -389,7 +389,7 @@ the sentence if you must tell which. The check is the word `--json` in the argum
 - `deploy.py` `data`: `stage` (`plan`, `look`, `gate`, `flash`, `verify`: the last stage it reached), `dry_run`, `token`,
   `commands`, `look` (the look's `data`), `yes` (`{kind: "typed"|"grant", who}`), `ready` (`verdict`, `sentence`),
   `facts_line`, `image_sha256` (the image on the board, null before a flash, P213), `board_log`, `repl_command`, `store_record` (a path, or null with `store_record_error` beside it),
-  `board_state` (`may_be_erased` when a flash command failed), `person_action`, `run_in_terminal`, and `simulation` (`passed`, or `none` with `--no-simulation`: no simulation tested the image, P337). Keys not reached are null,
+  `board_state` (`may_be_erased` when a flash command failed, or `flashed_not_verified` when a crash came after the flash), `person_action`, `run_in_terminal`, and `simulation` (`passed`, or `none` with `--no-simulation`: no simulation tested the image, P337). Keys not reached are null,
   and so is `simulation` before a look or when the look refused the image. The caveats of the look are in `data.look.caveats`, its limits in `data.look.limits`, and its last deploy in `data.look.last_deploy`. The erase question names that last deploy.
   If the erase stops with exit 2, deploy.py makes one retry after 5 s and prints `retry in 5 s: ...` on stderr
   ([P290](https://github.com/xmejkal/spark/issues/347)). A retry that worked is a normal deploy, with no extra key.

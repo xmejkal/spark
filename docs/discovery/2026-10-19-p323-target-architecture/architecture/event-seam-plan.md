@@ -233,6 +233,9 @@ reviewer. E2 keeps W4-2's review. This plan takes two council rounds before the 
 
 ## 3. What changes in the plans
 
+E2 landed with W4-2 (P655 #879): every person line of deploy is a `LINE`, each phase a `BEGIN`, `echo_to` sits on
+`ProgramRunner`, `show_line` is gone from the scripts, and `OutsideWorld` holds `clock` and `make_consent`.
+
 No file is edited by this card. Each edit lands in the PR of the slice that makes it true. After E2's PR,
 `/usr/bin/grep -rn show_line docs/discovery/2026-10-19-p323-target-architecture scripts` finds nothing outside this file.
 

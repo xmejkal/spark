@@ -201,6 +201,19 @@ class RunCliTest(unittest.TestCase):
             code = run_cli(TEXT, Toy(), ["--project", "here", "--what", "ok"], outside_builder=builder)
         self.assertEqual((code, asked), (0, [(Path("here"), (READS,), TerminalReporter)]))
 
+    def test_the_builder_gets_the_effects_the_operation_narrows_to_for_these_values(self):
+        asked = []
+
+        class Narrow(Toy):
+            """Operation: the toy that declares RUNS and READS, and narrows to RUNS alone when `--left` is given."""
+
+            effects = (READS, RUNS)
+
+            def effects_of(self, values):
+                return (RUNS,) if values["left"] else self.effects
+        run_operation(Narrow(), toy_values("ok") | {"left": True}, None, lambda effects: asked.append(effects) or FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
+        self.assertEqual(asked, [(RUNS,)])
+
 
 class RunOperationTest(unittest.TestCase):
     def test_a_spark_error_is_one_finding_with_its_status(self):
@@ -290,12 +303,39 @@ class RunOperationTest(unittest.TestCase):
         self.assertEqual((code, json.loads(out)["unchecked"][0]["code"], err), (2, "undeclared_effect", ""))
         self.assertIn("cannot run ['ls']", json.loads(out)["unchecked"][0]["sentence"])
 
-    def test_a_declared_run_is_subprocess_run_and_the_finder_is_the_given_one(self):
-        import subprocess
+    def test_a_declared_run_is_a_program_runner_and_the_finder_is_the_given_one(self):
         outside = build_outside_world((READS, RUNS), FakeReporter(), find_tool={"flasher": TOOL}.get)
-        self.assertIs(outside.run, subprocess.run)
-        self.assertIs(ProgramRunner.run, subprocess.run)
+        self.assertEqual((outside.run.__func__, outside.run.__self__.echo_fd), (ProgramRunner.run, None))
         self.assertEqual((outside.find_tool("flasher"), outside.find_tool("x")), (TOOL, None))
+
+    def test_a_runner_echoes_an_uncaptured_child_where_the_reporter_says_and_a_captured_one_never(self):
+        import io
+        import sys
+        import tempfile
+        echo = [sys.executable, "-c", "print('echoed')"]
+        with tempfile.TemporaryFile() as held:
+            captured = ProgramRunner(held.fileno()).run(echo, capture_output=True, text=True)
+            ProgramRunner(held.fileno()).run(echo)
+            held.seek(0)
+            self.assertEqual((captured.stdout, held.read()), ("echoed\n", b"echoed\n"))
+        self.assertEqual((TerminalReporter(sys.stdout).echo_fd(), TerminalReporter(io.StringIO()).echo_fd(), FakeReporter().echo_fd()), (None, 2, None))
+
+    def test_a_runner_keeps_the_stdout_the_caller_gives(self):
+        import subprocess
+        import sys
+        import tempfile
+        with tempfile.TemporaryFile() as held:
+            piped = ProgramRunner(held.fileno()).run([sys.executable, "-c", "print('piped')"], stdout=subprocess.PIPE, text=True)
+            held.seek(0)
+            self.assertEqual((piped.stdout, held.read()), ("piped\n", b""))
+
+    def test_an_undeclared_consent_is_refused_and_a_declared_one_is_the_given_builder(self):
+        from spark.core.operation import DELETES
+        outside = build_outside_world((READS,), FakeReporter(), make_consent=lambda line: line)
+        with self.assertRaises(SparkError) as refused:
+            outside.make_consent("deploy.py --token t")
+        self.assertEqual(refused.exception.code, "undeclared_effect")
+        self.assertEqual(build_outside_world((READS, DELETES), FakeReporter(), make_consent=lambda line: line).make_consent("x"), "x")
 
     def test_the_renderers_decide_nothing_again(self):
         result = OperationResult({"a": 1}, [PROBLEM], lines=["one", "two"])
@@ -340,7 +380,7 @@ class RunOptionsTest(unittest.TestCase):
                 result, calls = self.run_traced(what)
                 self.assertEqual(calls, [("toy", toy_values(what), result, 2.5)])
         calls = []
-        result = run_operation(Toy(), toy_values("ok"), None, lambda: 1 / 0, RunOptions(Privacy(), lambda *call: calls.append(call), TickingClock()))
+        result = run_operation(Toy(), toy_values("ok"), None, lambda effects: 1 / 0, RunOptions(Privacy(), lambda *call: calls.append(call), TickingClock()))
         self.assertEqual((result.findings[0].code, calls), ("crash", [("toy", toy_values("ok"), result, 2.5)]), "a builder that crashes")
 
     def test_a_tracer_that_raises_leaves_the_result_standing(self):

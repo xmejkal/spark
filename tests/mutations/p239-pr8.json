@@ -26,13 +26,13 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "deploy-no-show-running",
-  "find": "show_line(\"  running: %s\" % shlex.join(command))",
+  "find": "self.report(Event.line(deploy_stages.STAGE_FLASH, \"running: %s\" % shlex.join(command)))",
   "replace": "pass"
  },
  {
   "file": "scripts/deploy_service.py",
   "name": "deploy-token-recheck-off",
-  "find": "if report.token() != token:",
+  "find": "if look.token() != token:",
   "replace": "if False:"
  },
  {
@@ -54,21 +54,21 @@
   "replace": "    return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip_of(project))"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "main-dry-run-off",
-  "find": "if args.dry_run:",
-  "replace": "if False:"
+  "find": "        if not self.asked.dry_run:\n            return None\n",
+  "replace": "        return None\n"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "main-exit-ok-always",
   "find": "return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS",
   "replace": "return EXIT_OK"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "main-unknown-exit-problems",
-  "find": "        return EXIT_COULD_NOT_RUN\n    return EXIT_OK if",
-  "replace": "        return EXIT_PROBLEMS\n    return EXIT_OK if"
+  "find": "            return EXIT_COULD_NOT_RUN\n        return EXIT_OK if",
+  "replace": "            return EXIT_PROBLEMS\n        return EXIT_OK if"
  }
 ]

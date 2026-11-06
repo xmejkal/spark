@@ -72,12 +72,13 @@ def run_operation(operation, values, outside=None, build_outside=None, options=D
 
 
 def _guarded_result(operation, values, outside, build_outside):
-    """The OperationResult of `operation.run(**values, outside=outside)`, `outside` built by `build_outside()` when None. A
+    """The OperationResult of `operation.run(**values, outside=outside)`, `outside` built by
+    `build_outside(operation.effects_of(values))` when None. A
     SparkError is one Finding of its status. Any other exception, the builder's too, is a crash: one unchecked Finding with
     code `crash` and the class in its sentence, and in `diagnostics` the op and the class, the fix, and the traceback,
     never in the envelope (an exception's message can carry a home path, so it goes to stderr, on one line)."""
     try:
-        return operation.run(**values, outside=outside or build_outside())
+        return operation.run(**values, outside=outside or build_outside(operation.effects_of(values)))
     except SparkError as refused:
         return OperationResult(findings=[Finding(refused.status, None, refused.code, str(refused), refused.fix)])
     except Exception as crashed:  # noqa: BLE001  the core's one catch-all: a crash is answered as could-not-run, never hidden
@@ -117,7 +118,8 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     """
     The exit code of `operation` run as a CLI. It parses `argv` (sys.argv without the script when None) from the
     Operation's arguments and answers a bad flag with a `bad_argument` envelope under --json, or the usage on stderr
-    without (P433). It builds the outside with `outside_builder(project, effects, reporter)` unless a test gave `outside`, the
+    without (P433). It builds the outside with `outside_builder(project, effects, reporter)`, the effects those of
+    `operation.effects_of(values)`, unless a test gave `outside`, the
     reporter `TerminalReporter.for_json(as_json)` (P507: the events on stdout, on stderr with --json), runs,
     prints the rendering on stdout as it is (--json keeps every value raw, and the report's lines guard themselves) and
     the diagnostics on stderr through `guard_lines`, and returns the exit code of the result's status. The one place in
@@ -135,7 +137,7 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
         return outcomes.EXIT_COULD_NOT_RUN
     as_json = values.pop(JSON_DEST)
     reporter = TerminalReporter.for_json(as_json)
-    result = run_operation(operation, values, outside, lambda: outside_builder(values.get("project"), operation.effects, reporter))
+    result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter))
     said = JsonEnvelope.render(result, operation.name, operation.name) if as_json else TextReport.render(result)
     if said:
         print(said)

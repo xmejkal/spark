@@ -124,8 +124,8 @@ classDiagram
     <<Service>>
     plan(port) DeployPlan
     look(port) LookReport
-    deploy(report, token, consent, show_line) DeployPlan
-    verify(report, planned, show_line) DeployResult
+    deploy(look, token, consent) DeployPlan
+    verify(look, planned) DeployResult
     record(result, consent)
   }
   class FirmwarePlatform {
@@ -185,21 +185,21 @@ sequenceDiagram
   OP->>DS: look(port)
   DS->>ST: read_last_deploy(mac)
   DS-->>OP: LookReport with LastDeploy
-  OP->>DS: deploy(report, token, consent, show_line)
+  OP->>DS: deploy(look, token, consent)
   DS->>GT: require_open_gate(report, token, consent, image, caveats)
   GT-->>DS: open, or GateClosedError
   DS->>DS: plan(report.port) again, because the image can have changed
   DS->>OW: esptool erase, esptool write
   DS-->>OP: the DeployPlan it ran
-  OP->>DS: verify(report, planned, show_line)
+  OP->>DS: verify(look, planned)
   DS-->>OP: DeployResult (facts, ready, log_path)
   OP->>DS: record(result, consent)
   DS->>ST: write_deploy(facts, verdict, who)
   OP-->>OP: OperationResult, next step live
 ```
 
-Each method does one step of the flow and returns a Result or raises an Error. None prints. `show_line` is the one
-callable a method gets for text while esptool runs, and it is `OutsideWorld.show_line` after S7b. `image_stale` is a
+Each method does one step of the flow and returns a Result or raises an Error. None prints. A line the person
+reads while esptool runs is an Event through `OutsideWorld.report` (E2, landed with W4-2 in P655). `image_stale` is a
 code that S2 adds. The gate stays inside `DeployService.deploy`, as today, because that method is the only path to the
 erase (`deploy_gate.py`, D8). A LangGraph node or an MCP tool that composes the service cannot skip it. The
 Operation never calls the gate. The order is today's: plan, look, deploy (gate and plan inside), verify, record.
@@ -625,7 +625,7 @@ still hold and sit on no page.
 | `parts.Answer`, `outcomes.answer` | `OperationResult` |
 | `parts._problem`, the item dicts of `board_envelope` | `Finding` |
 | `outcomes.step`, `board_envelope.look_step`, `deploy_step` | `NextStep` |
-| `board_envelope.dumps`, `board_look.report_lines`, `deploy.show_line` | `JsonEnvelope`, `TextReport`, `OutsideWorld.show_line` |
+| `board_envelope.dumps`, `board_look.report_lines`, `deploy.show_line` | `JsonEnvelope`, `TextReport`, `OutsideWorld.report` with `TerminalReporter` (E2) |
 | `store.py`, `store.layers`, `store.records` | `records/store.py`, `RecordFinder` over `RecordFolders` |
 | `boards.validate`, `parts.validate`, `REQUIRED_KEYS` of both | `RecordKind.validate`, one named rule per function |
 | `parts.keep_in_store`, `keep_local`, `scan_datasheet`, `read_datasheet`, `fetch_documents` | `sourcing/datasheets.py`, the `Retriever`'s datasheet adapter |

@@ -526,6 +526,19 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(code, flash_image.EXIT_COULD_NOT_RUN)
         self.assertIn("flash_offset", err.getvalue())
 
+    def test_the_command_names_a_tools_file_of_the_project_that_turns_littlefs_off(self):
+        import contextlib
+        import io
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / ".spark" / "tools.json").write_text(json.dumps({"littlefs-python": {"on": False}}))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+            code = flash_image.main(["--micropython", str(self.root / "micropython.bin"), "--project", str(project),
+                                     "--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
+        self.assertEqual(code, flash_image.EXIT_COULD_NOT_RUN)
+        self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", err.getvalue())
+
     @needs_littlefs
     def test_the_command_says_where_the_interpreter_starts_and_ends(self):
         import contextlib

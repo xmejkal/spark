@@ -1,10 +1,10 @@
 """
-The `--json` answer of deploy.py (P213 PR a): one `outcomes.envelope`, built from what the run found, and the steps and
-words it shares with the look (`deploy_step`, `yes_rule`, `doctor_fix`; the look's items are in spark.bench.look_at_board,
-P442). Every `problems` and `unchecked` item carries a `code` from board_codes, the reason an agent decides on (P433).
+The answer of deploy (P213 PR a; an OperationResult since P655): `deploy_result`, built from what the run found, and the
+steps and words it shares with the look (`deploy_step`, `yes_rule`, `doctor_fix`; the look's items are in
+spark.bench.look_at_board, P442). Every Finding carries a `code` from board_codes, the reason an agent decides on (P433).
 
-Nothing here runs a command or prints. The status comes from `outcomes.envelope`, and the problems and unchecked
-items are chosen from the exit code the script already decided, so the status and the exit code cannot disagree.
+Nothing here runs a command or prints. The status comes from the one Finding, chosen from the exit code the run already
+decided, so the status and the exit code cannot disagree.
 A step that needs the person (`needs_yes`) is a step Claude relays, never one it runs on its own: the token is
 not the yes, and neither is "go ahead" in a chat.
 """
@@ -13,8 +13,10 @@ from pathlib import Path
 
 import board_doctor
 import boards
+from deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY  # noqa: F401  (the stages are data.stage; the look reads them here)
 import design
-from spark.core import codes, outcomes
+from spark.core import outcomes
+from spark.core.result import Finding, NextStep, OperationResult
 import ready_check
 import store
 from deploy_gate import NEXT_LOOK, NEXT_DEPLOY
@@ -26,10 +28,8 @@ GRANT_CLAUSE = " (or a deploy grant stands)"
 
 #: A `fix` for each thing a deploy can wait for.
 FIX_FOR_NEXT = {NEXT_DEPLOY: "the person runs data.run_in_terminal in their own terminal", NEXT_LOOK: "run look.py again"}
-#: The stages of a deploy, the last one reached is `data.stage`.
-STAGE_PLAN, STAGE_LOOK, STAGE_GATE, STAGE_FLASH, STAGE_VERIFY = "plan", "look", "gate", "flash", "verify"
-#: The board's state after a flash command failed.
-MAY_BE_ERASED = "may_be_erased"
+#: The board's state after a flash command failed, and after a crash once the flash finished (P655).
+MAY_BE_ERASED, FLASHED_NOT_VERIFIED = "may_be_erased", "flashed_not_verified"
 
 
 def yes_rule(evidence):
@@ -79,31 +79,25 @@ def deploy_step(project, token, port, evidence, why):
                                           effects=["deletes", "writes"], needs_yes=True), store.read_given_env())
 
 
-def bad_argument_envelope(tool, bad):
-    """The envelope of a run that a bad argument stopped (outcomes.BadArgument `bad`): one unchecked item, and no data."""
-    return outcomes.envelope(tool, tool, None, unchecked=[{"code": codes.BAD_ARGUMENT, "sentence": str(bad),
-                                                           "fix": "%s.py --help lists the arguments" % tool}])
-
-
 def doctor_fix(doctor, places):
     """The `fix` of a BoardDoctorResult: its next step's sentence, naming the buttons as `places` does, or '' when there
     is no doctor result or it names no step."""
     return board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
 
 
-def deploy_envelope(reached, code):
-    """
-    The envelope of one deploy run. `reached` is a dict main filled as it went (the keys read below: `evidence` always, the rest optional), `code` the
-    exit code it returns: 0 no item, 1 `problems`, 2 `unchecked`, so the status is the code's.
-    """
-    report, result, plan, consent = reached.get("report"), reached.get("result"), reached.get("plan"), reached.get("consent")
-    project, port = reached["project"], reached.get("port") or (report.port if report else None)
-    evidence, next_op = reached["evidence"], reached.get("next_op")
-    stage = reached["stage"]
-    sentence, doctor = reached.get("refusal"), reached.get("doctor")
-    fix = doctor_fix(doctor, boards.ButtonPlaces.of_project(project)) if doctor else FIX_FOR_NEXT.get(next_op, "")
-    item = {"subject": "ready" if result else stage, "code": reached.get("reason"), "sentence": sentence, "fix": fix}
-    ready = result.ready if result else None
+def _finding(reached, code):
+    """The one Finding of a deploy run that did not reach ready, of the exit `code`'s severity: its subject is the stage, or
+    `ready` once the board was read, its code the reason, its fix the doctor's step or the step of what it waits for."""
+    result, doctor = reached.get("result"), reached.get("doctor")
+    fix = doctor_fix(doctor, boards.ButtonPlaces.of_project(reached["project"])) if doctor else FIX_FOR_NEXT.get(reached.get("next_op"), "")
+    return Finding(outcomes.STATUS_FOR[code], "ready" if result else reached["stage"], reached.get("reason"), reached.get("refusal"), fix)
+
+
+def _steps(reached):
+    """The NextSteps of a deploy run: the look after a dry run or a stale look, the deploy line (and the grant line) the
+    person runs when there was no terminal, the REPL to watch when ready is unknown."""
+    result, evidence, next_op = reached.get("result"), reached["evidence"], reached.get("next_op")
+    project, port = reached["project"], reached.get("port") or (reached["report"].port if reached.get("report") else None)
     following = []
     if reached.get("dry_run"):
         following = [look_step(project, port, evidence, "deploy.py --dry-run did not look at the board")]
@@ -123,6 +117,15 @@ def deploy_envelope(reached, code):
         following = [] if gone else [outcomes.step("watch", list(result.repl_command),
                                    again + (". First the person does what data.person_action says" if stopped else ""),
                                    needs_person=True if stopped else None)]
+    return [NextStep(**step) for step in following]
+
+
+# --- Later, not MVP: a typed record of the run; `reached` is the dict the old main filled, kept so the goldens stay byte-equal ---
+def deploy_data(reached):
+    """The `data` of a deploy run, keys in the order the goldens hold: what the run reached, the look, the yes, the board
+    after the flash, the records, and the board's state after a flash that failed."""
+    report, result, plan, consent = reached.get("report"), reached.get("result"), reached.get("plan"), reached.get("consent")
+    ready, stage = result.ready if result else None, reached["stage"]
     data = {
         "stage": stage, "simulation": report.simulation if report else None, "dry_run": bool(reached.get("dry_run")), "token": reached.get("token"),
         "commands": [list(command) for command in plan.commands] if plan else None,
@@ -138,8 +141,17 @@ def deploy_envelope(reached, code):
         "person_action": result.start.sentence if result and result.start and result.start.code else None,
         "run_in_terminal": reached.get("run_in_terminal"),
     }
-    if doctor:  # P354: a look that esptool could not read, as look.py's envelope carries it
-        data["doctor"] = board_doctor.as_dict(doctor)
-    return outcomes.envelope("deploy", "deploy", data, [item] if code == outcomes.EXIT_PROBLEMS else (),
-                             [item] if code == outcomes.EXIT_COULD_NOT_RUN else (), following,
-                             notes=((list(plan.notes) if plan else []) + reached.get("notes", [])) or None)
+    if reached.get("doctor"):  # P354: a look that esptool could not read, as look.py's envelope carries it
+        data["doctor"] = board_doctor.as_dict(reached["doctor"])
+    return data
+
+
+def deploy_result(reached, code, diagnostics=()):
+    """
+    The OperationResult of one deploy run. `reached` is the dict the run filled as it went (the keys read above: `project`,
+    `evidence` and `stage` always, the rest optional), `code` the exit code it decided: 0 no Finding, 1 a problem, 2
+    unchecked, so the status is the code's. The person's lines were Events, so `lines` is empty; `diagnostics` are the stderr lines.
+    """
+    plan = reached.get("plan")
+    return OperationResult(deploy_data(reached), [] if code == outcomes.EXIT_OK else [_finding(reached, code)], _steps(reached),
+                           diagnostics=list(diagnostics), notes=((list(plan.notes) if plan else []) + reached.get("notes", [])) or None)

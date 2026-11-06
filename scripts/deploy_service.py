@@ -1,9 +1,9 @@
 """
 The flow of a deploy, without a terminal (P239 PR 8): plan, look, gate, flash, then the facts, ready and the log.
 
-`DeployService` prints nothing and never exits. A line the person must see while a step runs goes to `show_line`; the
-rest comes back in a `DeployResult`; a refusal is an exception (`LookStop`, `DeployError`, `tools.ToolProblem`,
-`deploy_gate.GateClosedError`). deploy.py parses the arguments, chooses the yes, prints and maps the exit code.
+`DeployService` prints nothing and never exits. A line the person must see while a step runs is an Event it reports
+through `outside.report` (E2, P655); the rest comes back in a `DeployResult`; a refusal is an exception (`LookStop`,
+`DeployError`, `tools.ToolProblem`, `deploy_gate.GateClosedError`). The DeployImage Operation chooses the yes and builds the result.
 """
 
 import collections
@@ -12,10 +12,9 @@ import shlex
 import subprocess
 
 import board_codes
+import deploy_stages
 import board_facts
 import boards
-import board_grant
-import board_console
 import board_look
 import board_start
 import deploy_gate
@@ -23,6 +22,7 @@ import deploy_record_store
 import download_mode
 import ready_check
 from project_image import DeployError, ProjectImage
+from spark.core.events import Event
 
 #: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is
 #: the board shell's command, and `notes` are sentences for the person.
@@ -60,16 +60,16 @@ def write_board_log(project, log):
 
 
 class DeployService:
-    """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `run` runs a command, `clock` has `now`,
-    `monotonic` and `sleep` (default: spark.core.clock.SystemClock), `records` keeps the deploy (default: the store's
-    DeployRecordStore). `evidence` (an ImageEvidence) holds for every step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or
-    `deploy_gate.GateClosedError` to say why a step cannot go on; they never print and never exit."""
+    """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `outside` is the OutsideWorld: its `run` runs a
+    command, its `clock` has `now`, `monotonic` and `sleep`, and its `report` takes each Event a person reads while a step
+    runs. `records` keeps the deploy (default: the store's DeployRecordStore). `evidence` (an ImageEvidence) holds for every
+    step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or `deploy_gate.GateClosedError` to
+    say why a step cannot go on; they never print and never exit."""
 
-    def __init__(self, project, platform, evidence, run=subprocess.run, clock=None, echo_to=None, records=None):
+    def __init__(self, project, platform, evidence, outside, records=None):
         self.project, self.platform, self.evidence = project, platform, evidence
-        self.run, self.clock = run, clock or board_console.SystemClock()
+        self.run, self.clock, self.report = outside.run, outside.clock, outside.report
         self.records = records or deploy_record_store.DeployRecordStore()
-        self.echo_to = echo_to  # a file descriptor for the flash tool's own output (2 under --json), or None: as it is
 
     def plan(self, port=None):
         """
@@ -90,85 +90,86 @@ class DeployService:
         """The LookReport of the board on USB. Raises LookStop to say why not."""
         return board_look.looker(self.platform, self.run).run(self.project, port, self.evidence)
 
-    def deploy(self, report, token, consent, show_line):
+    def deploy(self, look, token, consent):
         """
-        Pass the gate, then run the flash commands, erase first. Returns the DeployPlan it ran. `report` is the LookReport,
-        `consent` the person's yes, `show_line` takes the lines to show while this runs. GateClosedError, DeployError and
-        tools.ToolProblem say why nothing, or not everything, was flashed.
+        Pass the gate, then run the flash commands, erase first. Returns the DeployPlan it ran. `look` is the LookReport,
+        `consent` the person's yes. It reports the gate's yes line, a BEGIN of the flash and a line per command (E2).
+        GateClosedError, DeployError and tools.ToolProblem say why nothing, or not everything, was flashed.
         """
         image_path = ProjectImage(self.project).path.relative_to(self.project)
-        deploy_gate.require_open_gate(report, token, consent, image_path, report.question_caveats())
-        if isinstance(consent, board_grant.StandingConsentStrategy):
-            show_line("  yes: %s" % consent.who)
-        planned = self.plan(report.port)
-        if report.token() != token:  # AT116: the image changed while the person answered
+        deploy_gate.require_open_gate(look, token, consent, image_path, look.question_caveats())
+        if consent.yes_kind == deploy_gate.GRANT:
+            self.report(Event.line(deploy_stages.STAGE_GATE, "yes: %s" % consent.who))
+        planned = self.plan(look.port)
+        if look.token() != token:  # AT116: the image changed while the person answered
             raise DeployError("the image changed after your yes: run look.py again. not flashed.", reason=board_codes.IMAGE_CHANGED)
         consent.require_ready()  # a deploy grant can end while the plan reads the image
+        self.report(Event.begin(deploy_stages.STAGE_FLASH))
         for index, command in enumerate(planned.commands):
-            show_line("  running: %s" % shlex.join(command))
+            self.report(Event.line(deploy_stages.STAGE_FLASH, "running: %s" % shlex.join(command)))
             try:
-                self._run_flash(command, planned.flasher, consent, show_line, retry=index == 0)
+                self._run_flash(command, planned.flasher, consent, retry=index == 0)
             except (OSError, subprocess.CalledProcessError) as failed:
                 hint = planned.flasher.boot_hint
                 raise FlashError("`%s` failed (%s)%s" % (shlex.join(command), failed, ": " + hint if hint else ""),
                                  reason=board_codes.FLASH_FAILED)
         return planned
 
-    def _run_flash(self, command, flasher, consent, show_line, retry):
-        """Run one flash command. With `retry`, a stop with the flasher's RETRY_EXIT_CODE runs it once more, after the
-        flasher's wait, while the yes still holds (P290: the erase right after the look's reset)."""
-        echo = {} if self.echo_to is None else {"stdout": self.echo_to}
+    def _run_flash(self, command, flasher, consent, retry):
+        """Run one flash command; the flash tool's own output goes where `outside.run` echoes it. With `retry`, a stop with the
+        flasher's RETRY_EXIT_CODE runs it once more, after the flasher's wait, while the yes still holds (P290: the erase
+        right after the look's reset)."""
         try:
-            self.run(command, check=True, **echo)
+            self.run(command, check=True)
         except subprocess.CalledProcessError as failed:
             if not retry or failed.returncode != flasher.RETRY_EXIT_CODE:
                 raise
-            show_line("  " + flasher.RETRY_LINE % {"wait": flasher.RETRY_WAIT_S, "command": shlex.join(command),
-                                                   "code": failed.returncode})
+            self.report(Event.line(deploy_stages.STAGE_FLASH, flasher.RETRY_LINE % {
+                "wait": flasher.RETRY_WAIT_S, "command": shlex.join(command), "code": failed.returncode}))
             self.clock.sleep(flasher.RETRY_WAIT_S)
             try:
                 consent.require_ready()
             except deploy_gate.GateClosedError as shut:  # the first try ran: the board may be erased
                 raise FlashError("`%s` failed (%s), and its retry did not run: %s" % (shlex.join(command), failed, shut),
                                  reason=shut.reason)  # the yes ended: grant_ended
-            self.run(command, check=True, **echo)
+            self.run(command, check=True)
 
-    def verify(self, report, planned, show_line):
+    def verify(self, look, planned):
         """
         Read the board after the flash: find its port by the MAC, copy the facts file, check each file's sha256 and wait for
         `ready`, with the recovery for a board in download mode (P243 to P245, P462). Writes the board log. Raises DeployError
         when the passed run's log cannot be read, and tools.ToolProblem when a tool is missing: after the flash they are not
-        turned into a sentence. `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
+        turned into a sentence. `look` is the LookReport, `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
         """
         image = ProjectImage(self.project)  # fresh: the flash and the person's wait are behind us
         expected = self.evidence.expected_files(image)
         moment = self.clock.now()  # once: the facts file and the board log share it
-        starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), report.reading.mac, self.clock,
+        starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), look.reading.mac, self.clock,
                                                 boards.ButtonPlaces.of_project(self.project))
-        row = starter.find_port(report.port)
+        row = starter.find_port(look.port)
         port = row and row.device
 
         def read(on):
-            return self._read_board(image, report, on and self.platform.make_connection(planned.mpremote, on, self.run), expected, moment)
+            return self._read_board(image, look, on and self.platform.make_connection(planned.mpremote, on, self.run), expected, moment)
 
         board, start = read(port), None
         if port is None:
             start = starter.gone_result()
         elif (board[2].verdict == ready_check.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
-              and board_start.console_may_be_read(row, report.port)):
-            board, start = self._after_silence(starter, row, board, read, show_line)
+              and board_start.console_may_be_read(row, look.port)):
+            board, start = self._after_silence(starter, row, board, read)
         facts, facts_line, ready = board
         if start and start.code:
             ready = ready._replace(sentence=start.sentence)
         image_sha256 = image.sha256  # read once: the board log and the result name the same image (P213)
-        log_path = write_board_log(self.project, BoardLog(moment, report.port, image_sha256,
+        log_path = write_board_log(self.project, BoardLog(moment, look.port, image_sha256,
                                                           facts_line, ready.verdict, ready.sentence,
                                                           "".join(starter.heard) + ready.log, self.evidence.simulation))
         shown_on = start.port if start else port  # the REPL names the port the board answered on, or none when it is gone
         repl = self.platform.make_connection(planned.mpremote, shown_on, self.run).repl_command()
         return DeployResult(facts, facts_line, ready, log_path, repl, start, image_sha256)
 
-    def _after_silence(self, starter, row, board, read, show_line):
+    def _after_silence(self, starter, row, board, read):
         """(the board read last, a BoardStartResult or None) for a board that stayed silent on the Port `row` after the flash: the
         console tells download mode from a late start. In download mode the person presses RESET and the wait counts only a
         restart that mpremote answers after (`read(port)` reads the board again)."""
@@ -179,10 +180,10 @@ class DeployService:
         waits, console = probe.waits_in_download_mode()
         starter.note("console with DTR and RTS off: %s\n" % (console.strip() or "nothing"))
         if waits:
-            show_line("  %s" % download_mode.press_reset(starter.places))
+            self.report(Event.line(deploy_stages.STAGE_VERIFY, download_mode.press_reset(starter.places)))
             latest = [board]
             start = starter.wait_for_start(port, lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_check.UNKNOWN,
-                                           show_line, usb=row.usb)
+                                           self.report, usb=row.usb)
             return latest[-1], start
         if download_mode.booted(console):  # P245: mpremote asked while the board still restarted
             starter.note(download_mode.READ_AGAIN + "\n")

@@ -124,8 +124,8 @@ classDiagram
     <<Service>>
     plan(port) DeployPlan
     look(port) LookReport
-    deploy(report, token, consent, show_line) DeployPlan
-    verify(report, planned, show_line) DeployResult
+    deploy(look, token, consent) DeployPlan
+    verify(look, planned) DeployResult
     record(result, consent)
   }
   class ConsentStrategy {
@@ -170,7 +170,7 @@ sequenceDiagram
   OP->>DS: look(port)
   DS->>ST: read_last_deploy(mac)
   DS-->>OP: LookReport with LastDeploy
-  OP->>DS: deploy(report, token, consent, show_line)
+  OP->>DS: deploy(look, token, consent)
   DS->>G: require_open_gate(report, token, consent, image, caveats)
   G->>C: ask the deploy question
   C->>P: the question in the terminal
@@ -179,7 +179,7 @@ sequenceDiagram
   DS->>DS: plan(report.port) again
   DS->>OW: esptool erase and write
   DS-->>OP: the DeployPlan it ran
-  OP->>DS: verify(report, planned, show_line)
+  OP->>DS: verify(look, planned)
   DS-->>OP: DeployResult, ready seen, files match
   OP->>DS: record(result, consent)
   DS->>ST: record(facts, verdict, who)

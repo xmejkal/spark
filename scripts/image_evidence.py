@@ -396,7 +396,7 @@ class NoSimulationEvidence(ImageEvidence):
     # --- MVP --- P436: a missing tool raises its ToolProblem (tool_missing: /spark:setup); an unreadable file is a sentence
     def _why_image_differs(self, image):
         try:
-            (self.find_tool or tools.find)("littlefs", project=None)  # as flash_image.main does, so a missing littlefs names its install line
+            (self.find_tool or tools.find)("littlefs", project=self.project)  # P457: a missing or turned-off littlefs names its own fix
             built = flash_image.interpreter_for(None, self.project, self.find_tool).image(flash_image.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tools.ToolProblem, ImportError) as cannot:

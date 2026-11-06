@@ -156,33 +156,27 @@
   "replace": "        return GrantCheckResult(True, grant, None)"
  },
  {
-  "file": "scripts/deploy.py",
-  "name": "grant-beats-the-given-consent",
-  "find": "consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService())",
-  "replace": "consent = choose_consent(args, report, grant_service or board_grant.GrantService())"
- },
- {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "hint-for-ignore-older-runs",
-  "find": "if report.verdict == board_look.VERDICT_MATCH and evidence.grant_refusal is None:\n        line +=",
-  "replace": "if report.verdict == board_look.VERDICT_MATCH:\n        line +="
+  "find": "        if board_grant.grant_may_cover(look, evidence):\n            line += grant_hint",
+  "replace": "        if look.verdict == board_look.VERDICT_MATCH:\n            line += grant_hint"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "ignore-older-runs-not-passed",
-  "find": "consent_for_deploy(report, evidence, ",
-  "replace": "consent_for_deploy(report, PassedRunEvidence(), "
+  "find": "self.grants.consent_for_deploy(look, evidence, ",
+  "replace": "self.grants.consent_for_deploy(look, evidence_for(project, False, False, None), "
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "why-not-printed",
-  "find": "        print(\"  standing yes: not used: %s\" % said, flush=True)\n",
-  "replace": ""
+  "find": "            self.say(STAGE_GATE, \"standing yes: not used: %s\" % (board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]))\n",
+  "replace": "            pass\n"
  },
  {
   "file": "scripts/deploy_service.py",
   "name": "standing-yes-not-printed",
-  "find": "            show_line(\"  yes: %s\" % consent.who)\n",
+  "find": "            self.report(Event.line(deploy_stages.STAGE_GATE, \"yes: %s\" % consent.who))\n",
   "replace": "            pass\n"
  },
  {
@@ -216,28 +210,28 @@
   "replace": "        pass"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "no-grant-also-printed",
-  "find": "if chosen.why not in (None, board_grant.WHY_NO_GRANT):",
+  "find": "if chosen.why not in WHY_NOT_SAID:",
   "replace": "if chosen.why is not None:"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "deploy-message-ignored",
   "find": "board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]",
   "replace": "board_grant.MESSAGE_FOR[chosen.why]"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "hint-drops-port",
-  "find": "\"--project\", args.project.resolve(), \"--port\", port])",
-  "replace": "\"--project\", args.project.resolve()])"
+  "find": "\"--project\", str(project.resolve()), \"--port\", port]",
+  "replace": "\"--project\", str(project.resolve())]"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "hint-wrong-scope",
-  "find": "\"--scope\", board_grant.SCOPE_DEPLOY, \"--minutes\", \"N\", \"--project\"",
-  "replace": "\"--scope\", board_grant.SCOPE_LIVE, \"--minutes\", \"N\", \"--project\""
+  "find": "\"--scope\", board_grant.SCOPE_DEPLOY, \"--minutes\", minutes, \"--project\"",
+  "replace": "\"--scope\", board_grant.SCOPE_LIVE, \"--minutes\", minutes, \"--project\""
  },
  {
   "file": "scripts/board_grant.py",

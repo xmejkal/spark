@@ -31,6 +31,7 @@ class BoardStartTest(unittest.TestCase):
         """The service over a finder that lists `looks` (each a list of Ports) call by call, then the last one for good."""
         self.clock, self.finder = FakeClock(), FakePortFinder(*looks)
         self.lines = []
+        self.report = lambda event: self.lines.append(event.text)  # what the person reads of each Event
         return board_start.BoardStartService(self.finder, mac, self.clock, boards.ButtonPlaces.EMPTY)
 
     def answers_after(self, calls):
@@ -77,7 +78,7 @@ class BoardStartTest(unittest.TestCase):
         # P472 bench: esptool's restart dropped the port and brought it back, and the ROM still waited
         service = self.service([ROM], [], [ROM])
         read = self.answers_after(99)
-        start = service.wait_for_start(ROM.device, read, self.lines.append, timeout_s=10)
+        start = service.wait_for_start(ROM.device, read, self.report, timeout_s=10)
         self.assertEqual((start.code, start.port), ("download_mode_stayed", ROM.device))
         self.assertEqual(self.asked, [ROM.device])
         self.assertEqual(len(self.lines), 1)
@@ -85,42 +86,42 @@ class BoardStartTest(unittest.TestCase):
 
     def test_a_press_of_reset_counts_when_mpremote_answers_after_it(self):
         service = self.service([ROM], [ROM], [], [MICROPYTHON])
-        start = service.wait_for_start(ROM.device, self.answers_after(0), self.lines.append, timeout_s=10)
+        start = service.wait_for_start(ROM.device, self.answers_after(0), self.report, timeout_s=10)
         self.assertEqual((start.code, start.port), (None, MICROPYTHON.device))
         self.assertEqual((self.asked, self.lines), ([MICROPYTHON.device], []))
         self.assertIn("reset seen: the firmware answered", "".join(service.heard))
 
     def test_a_restart_that_did_not_count_and_a_press_that_did(self):
         service = self.service([ROM], [], [ROM], [], [ROM])
-        start = service.wait_for_start(ROM.device, self.answers_after(1), self.lines.append, timeout_s=10)
+        start = service.wait_for_start(ROM.device, self.answers_after(1), self.report, timeout_s=10)
         self.assertEqual((start.code, len(self.asked), len(self.lines)), (None, 2, 1))
 
     def test_a_port_that_never_comes_back_is_port_gone_and_no_read_was_made(self):
         service = self.service([ROM], [])
-        start = service.wait_for_start(ROM.device, self.answers_after(0), self.lines.append, timeout_s=3)
+        start = service.wait_for_start(ROM.device, self.answers_after(0), self.report, timeout_s=3)
         self.assertEqual((start.code, start.port, self.asked), ("port_gone", None, []))
         self.assertIn("unplug", start.sentence)
 
     def test_a_port_that_never_goes_is_download_mode_stayed(self):
         service = self.service([ROM])
-        start = service.wait_for_start(ROM.device, self.answers_after(0), self.lines.append, timeout_s=3)
+        start = service.wait_for_start(ROM.device, self.answers_after(0), self.report, timeout_s=3)
         self.assertEqual((start.code, start.port, self.asked), ("download_mode_stayed", ROM.device, []))
 
     def test_a_failed_list_between_two_listings_is_no_restart(self):
         failed = board_look.LookStop("could not list", reason="list_failed")
         service = self.service([ROM], failed, [ROM])
         read = self.answers_after(99)
-        start = service.wait_for_start(ROM.device, read, self.lines.append, timeout_s=3, usb=ROM.usb)
+        start = service.wait_for_start(ROM.device, read, self.report, timeout_s=3, usb=ROM.usb)
         self.assertEqual((start.code, self.asked, self.lines), ("download_mode_stayed", [], []))
 
     def test_a_row_whose_usb_id_changed_is_a_restart_even_with_no_gap_seen(self):
         service = self.service([ROM], [MICROPYTHON])
-        start = service.wait_for_start(ROM.device, self.answers_after(0), self.lines.append, timeout_s=3, usb=ROM.usb)
+        start = service.wait_for_start(ROM.device, self.answers_after(0), self.report, timeout_s=3, usb=ROM.usb)
         self.assertEqual((start.code, start.port, self.asked), (None, MICROPYTHON.device, [MICROPYTHON.device]))
 
     def test_the_port_that_the_wait_gave_up_on_is_the_one_listed_by_the_mac(self):
         service = self.service([MICROPYTHON])  # no usb id given: the first listing is not a change
-        start = service.wait_for_start(ROM.device, self.answers_after(99), self.lines.append, timeout_s=2)
+        start = service.wait_for_start(ROM.device, self.answers_after(99), self.report, timeout_s=2)
         self.assertEqual((start.code, start.port, self.asked), ("download_mode_stayed", MICROPYTHON.device, []))
 
 

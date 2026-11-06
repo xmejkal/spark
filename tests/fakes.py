@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import store  # noqa: E402
 from firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
+from spark.core.outside import OutsideWorld  # noqa: E402
 
 #: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
 IMPORT_HOME = os.environ["SPARK_HOME"]
@@ -62,6 +63,8 @@ class FakeConsent:
 
     #: Who said yes, as the store's record keeps it.
     who = "a test"
+    #: The kind of yes the envelope says: a typed one (deploy_gate.TYPED).
+    yes_kind = "typed"
 
     def __init__(self, answer):
         self.answer, self.asked = answer, []
@@ -284,12 +287,22 @@ class FakeOutsideWorld:
     """Fake OutsideWorld (spark.core.outside): `run` answers a command as `subprocess.run` would, with the callable a test
     gives, and keeps each command in `ran`; `find_tool` gives a tools.Tool by its name with the callable given (a dict's
     `get`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program.
-    `report` is its `reporter`'s, a FakeReporter of its own unless the test gives one (P507)."""
+    `report` is its `reporter`'s, a FakeReporter of its own unless the test gives one (P507). `clock` is a FakeClock unless
+    given, and `make_consent` the callable given, or one that fails the test on its first call (P655)."""
 
-    def __init__(self, run=None, find_tool=None, reporter=None):
+    def __init__(self, run=None, find_tool=None, reporter=None, clock=None, make_consent=None):
         self.ran, self._run, self._find_tool = [], run, find_tool
         self.reporter = reporter or FakeReporter()
         self.report = self.reporter.report
+        self.clock, self._make_consent = clock or FakeClock(), make_consent
+
+    def make_consent(self, line):
+        assert self._make_consent, "the test gave no make_consent, and the Operation asked for the yes"
+        return self._make_consent(line)
+
+    def _replace(self, **changes):
+        """As the OutsideWorld namedtuple's: the same world with `changes`, a real OutsideWorld."""
+        return OutsideWorld(self.run, self.find_tool, self.report, self.clock, self.make_consent)._replace(**changes)
 
     def run(self, command, **options):
         self.ran.append(command)

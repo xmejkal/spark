@@ -13,7 +13,7 @@
  {"file": "scripts/deploy_service.py", "name": "the stop's sentence is not told", "find": "ready = ready._replace(sentence=start.sentence)", "replace": "pass"},
  {"file": "scripts/board_envelope.py", "name": "needs_person is always on", "find": "needs_person=True if stopped else None)", "replace": "needs_person=True)"},
  {"file": "scripts/board_envelope.py", "name": "person_action is told with no stop", "find": "result.start.sentence if result and result.start and result.start.code else None", "replace": "result.start.sentence if result and result.start else None"},
- {"file": "scripts/deploy_service.py", "name": "the console is read on a moved or MicroPython port", "find": "and board_start.console_may_be_read(row, report.port)):", "replace": "):"},
+ {"file": "scripts/deploy_service.py", "name": "the console is read on a moved or MicroPython port", "find": "and board_start.console_may_be_read(row, look.port)):", "replace": "):"},
  {"file": "scripts/board_start.py", "name": "the console is read on MicroPython's port", "find": "row.device == looked_port and row.usb != MICROPYTHON_USB", "replace": "row.device == looked_port"},
  {"file": "scripts/board_start.py", "name": "the console is read on a moved port", "find": "row.device == looked_port and row.usb", "replace": "True and row.usb"},
  {"file": "scripts/board_envelope.py", "name": "a gone port still gets a watch step", "find": "following = [] if gone else [", "replace": "following = ["},
@@ -21,5 +21,5 @@
  {"file": "scripts/board_start.py", "name": "a failed list at the deadline is port_gone with no second ask", "find": "        if row is None and self.failed:", "replace": "        if False:"},
  {"file": "scripts/board_start.py", "name": "a failed list is a gone port", "find": "gone = gone or not self.failed", "replace": "gone = True"},
  {"file": "scripts/board_start.py", "name": "a changed USB id is no restart", "find": "elif gone or (usb and row.usb != usb):", "replace": "elif gone:"},
- {"file": "scripts/deploy_service.py", "name": "the wait is not told the port's USB id", "find": "show_line, usb=row.usb)", "replace": "show_line)"}
+ {"file": "scripts/deploy_service.py", "name": "the wait is not told the port's USB id", "find": "self.report, usb=row.usb)", "replace": "self.report)"}
 ]

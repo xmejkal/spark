@@ -51,14 +51,14 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "erase on args.port",
-  "find": "planned = self.plan(report.port)",
+  "find": "planned = self.plan(look.port)",
   "replace": "planned = self.plan(None)"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "look in dry run",
-  "find": "    if args.dry_run:\n        print(\"\\n\".join",
-  "replace": "    if args.dry_run and False:\n        print(\"\\n\".join"
+  "find": "        if not self.asked.dry_run:\n            return None",
+  "replace": "        if self.asked.dry_run:\n            return None"
  },
  {
   "file": "scripts/deploy_service.py",

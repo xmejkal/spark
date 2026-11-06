@@ -14,6 +14,8 @@ from spark.core.text_guards import guard_lines
 LINE, BEGIN = "line", "begin"
 #: The indent of an event line on a terminal. It is presentation, so the terminal adds it, not the Event.
 INDENT = "  "
+#: The file descriptor of stderr, where a child's output goes under --json.
+STDERR_FD = 2
 
 
 class Event(namedtuple("Event", "kind code text")):
@@ -41,6 +43,10 @@ class Reporter:
     def report(self, event):
         """Show `event`, or nothing: the base shows nothing."""
 
+    def echo_fd(self):
+        """The file descriptor a child's uncaptured stdout goes to, so it lands beside the events (E2), or None: as it is."""
+        return None
+
 
 class TerminalReporter(Reporter):
     """Strategy: the CLI's Reporter. It prints a LINE at once, guarded and each of its lines indented, and nothing for a BEGIN, so every line
@@ -57,4 +63,8 @@ class TerminalReporter(Reporter):
     def report(self, event):
         if event.kind == LINE:
             print("\n".join(INDENT + line for line in guard_lines(event.text).split("\n")), file=self.stream, flush=True)
+
+    def echo_fd(self):
+        """fd 2 when the events go to stderr (--json), so a child's output stays out of the envelope; None on stdout, as it is."""
+        return None if self.stream is sys.stdout else STDERR_FD
 # --- end MVP ---

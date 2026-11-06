@@ -126,8 +126,8 @@ the diagnostics go to stderr, as text for a person. Decide on stdout only: read 
 - A script run on its own can crash on an input it cannot read: exit 1, a traceback on stderr, nothing on stdout
   ([P131](https://github.com/xmejkal/spark/issues/65)). So exit 1 with an empty stdout is a crash, not problems.
   check_all reports each crash as could-not-run.
-- `look.py` is the exception: it answers a crash with an envelope and exit 2
-  ([its envelope](agents/json.md#lookpy-and-deploypys-envelope)).
+- `look.py` and `deploy.py` are the exceptions: a crash exits 2 and `--json` prints an envelope. After a flash it holds
+  `data.board_state`, `may_be_erased` or `flashed_not_verified` ([its envelope](agents/json.md#lookpy-and-deploypys-envelope)).
 - `compare_design.py`, `assign_pins.py` and `check_spine.py` answer 2 instead of crashing
   ([check_spine.py's refusals](agents/json.md#check_spinepy)).
 - These inputs crash a script:
