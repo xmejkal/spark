@@ -2136,7 +2136,7 @@ def _op_pick(args, project):
     asked, name = dict(pairs), store.plan_listed_name(target)
     picks = [{"need": need["id"], "pick": need.get("pick") or []} for need in after if need["id"] in asked]
     said = [] if problems else ["  %s: %s" % (one["need"], ", ".join(next(iter(pick.values())) for pick in one["pick"])) for one in picks]
-    released = _released(changes, name)
+    released = needs.released_holds(changes, name)
     said += [] if problems else ["  %s%s: %s — no pick of this project explains it" % (
         "would release" if args.dry_run else "released", "" if hold["now"] == 0 else " %d of %d" % (hold["was"] - hold["now"], hold["was"]),
         hold["entry"]) for hold in released]
@@ -2176,16 +2176,6 @@ def _names_your_entries(file_name, new_keys, dry_run):
     """
     return ["  %s %s your drawer entr%s %s — a key made from your label, in the project's own file" % (file_name, "would name" if dry_run else
         "names", "y" if len(new_keys) == 1 else "ies", ", ".join(sorted(new_keys)))] if new_keys else []
-
-
-def _released(changes, name):
-    """
-    The holds of project `name` a pick lets go (C-4): each drawer entry whose reservation for it goes down, because no pick of
-    the project explains it any more — a re-pick, or a hold given by hand — as {"entry", "was", "now"}. A pick rebuilds the
-    project's holds from its picks (§8 C), and what it drops is said, never left to a bare `used_in … → {}`.
-    """
-    return [{"entry": change["entry"], "was": was, "now": now} for change in changes
-            for was, now in [((change["was"].get("used_in") or {}).get(name, 0), change["now"]["used_in"].get(name, 0))] if now < was]
 
 
 def _op_requirements(args, project):
