@@ -1588,6 +1588,10 @@ OPERATIONS = (
      "what it notes is under `notes`: a board given a need that its own part serves says what a run does not test of the part, "
      "and the other choice",
      ("writes",), ("project", "picks", "reserved", "released", "written")),
+    ("needs-drop", {"nargs": 2, "metavar": ("PROJECT", "NEED")},
+     "drop a need and its pick from .spark/needs.json and release the project's holds that only that pick explained; --dry-run "
+     "says what it would do; history stays, and requirements.json is not changed: a note says when it still lists the part",
+     ("writes",), ("project", "need", "dropped", "released", "written")),
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; board_only when the board itself serves every need",
      ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "unserved", "no_supply",
@@ -2110,6 +2114,23 @@ def _op_needs_set(args, project):
     if written and changes:
         needs.write(target, after)
     return Answer({"changes": changes, "written": written}, _write_lines(changes, problems, args.dry_run), problems=problems)
+
+
+def _op_needs_drop(args, project):
+    """The drop of a need, run on the core (P514): DropNeed through `run_operation`, its result as parts.py's Answer."""
+    from spark.core import outcomes
+    from spark.core.cli import run_operation
+    from spark.core.events import Reporter
+    from spark.core.outside import build_outside_world
+    from spark.idea.drop_need import DropNeed
+    target, need = args.needs_drop
+    result = run_operation(DropNeed(), {"project": Path(target), "need": need, "dry_run": args.dry_run},
+                           build_outside=lambda effects: build_outside_world(effects, Reporter()))
+    if result.diagnostics:  # a crash's traceback: an Answer has no place for it
+        print(guard_lines("\n".join(result.diagnostics)), file=sys.stderr)
+    return Answer(result.data, result.lines, notes=result.notes or (),
+                  problems=[_problem(found.subject, found.sentence, found.fix) for found in result.findings if found.severity == outcomes.PROBLEMS],
+                  unchecked=[_cannot(found.sentence, found.fix) for found in result.findings if found.severity == outcomes.COULD_NOT_RUN])
 
 
 def _op_pick(args, project):
