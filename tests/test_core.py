@@ -14,10 +14,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import tools  # noqa: E402
 from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
-from spark.core.cli import DEFAULT_RUN, HelpText, JsonEnvelope, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
+from spark.core.cli import DEFAULT_RUN, FlatJsonLine, HelpText, JsonEnvelope, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
-from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Argument, Operation  # noqa: E402
+from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Argument, Operation  # noqa: E402
 from spark.core.privacy import Privacy  # noqa: E402
 from spark.core.outside import ProgramRunner, build_outside_world  # noqa: E402
 from spark.core.result import Finding, NextStep, OperationResult, envelope_item, output_schema  # noqa: E402
@@ -170,6 +170,26 @@ class RunCliTest(unittest.TestCase):
             run_cli(TEXT, Toy(), ["--left", "--right"], outside_builder=None)
         self.assertEqual(raised.exception.code, 2)
         self.assertTrue(err.getvalue().startswith("usage: toy.py "), err.getvalue())
+
+    def test_a_required_argument_and_a_choice_are_argparse_s_own(self):
+        class Minutes(Toy):
+            arguments = (Argument(("--minutes",), "minutes", int, "how long", required=True),
+                         Argument(("--scope",), "scope", str, "what for", "live", choices=("live", "deploy")), COMMON_ARGUMENTS["json"])
+
+            def run(self, minutes, scope, *, outside):
+                return OperationResult({"minutes": minutes, "scope": scope}, lines=["%s %s" % (minutes, scope)])
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = run_cli(TEXT, Minutes(), ["--minutes", "5", "--scope", "deploy"], outside_builder=None, outside=FakeOutsideWorld())
+        self.assertEqual((code, out.getvalue()), (0, "5 deploy\n"))
+        for argv, said in ((["--scope", "live"], "the following arguments are required: --minutes"), (["--minutes", "5", "--scope", "x"], "invalid choice: 'x' (choose from")):
+            err = io.StringIO()
+            with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(err):
+                run_cli(TEXT, Minutes(), argv, outside_builder=None, outside=FakeOutsideWorld())
+            self.assertEqual(raised.exception.code, 2)
+            self.assertIn(said, err.getvalue())
 
     def test_the_usage_and_the_diagnostics_are_guarded(self):
         import contextlib
@@ -335,13 +355,63 @@ class RunOperationTest(unittest.TestCase):
         with self.assertRaises(SparkError) as refused:
             outside.make_consent("deploy.py --token t")
         self.assertEqual(refused.exception.code, "undeclared_effect")
-        self.assertEqual(build_outside_world((READS, DELETES), FakeReporter(), make_consent=lambda line: line).make_consent("x"), "x")
+        self.assertIn("declares no `asks` effect", str(refused.exception))
+        self.assertEqual(build_outside_world((READS, ASKS), FakeReporter(), make_consent=lambda line: line).make_consent("x"), "x")
+        with self.assertRaises(SparkError, msg="an erase alone is no yes to ask for"):
+            build_outside_world((READS, DELETES), FakeReporter(), make_consent=lambda line: line).make_consent("x")
+
+    def test_a_flat_operation_prints_its_data_as_one_line_and_a_bad_argument_as_the_usage(self):
+        class Flat(Toy):
+            json_renderer = FlatJsonLine
+
+            def run(self, project, what, left, right, *, outside):
+                return OperationResult(None if what == "crash" else {"what": what, "näme": 1}, [] if what == "ok" else [PROBLEM])
+        import contextlib
+        import io
+        for what, code, said in (("ok", 0, '{"what": "ok", "n\\u00e4me": 1}\n'), ("problems", 1, '{"what": "problems", "n\\u00e4me": 1}\n')):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(run_cli(TEXT, Flat(), ["--what", what, "--json"], outside_builder=None, outside=FakeOutsideWorld()), code)
+            self.assertEqual(out.getvalue(), said)
+        err = io.StringIO()
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()) as out:
+            run_cli(TEXT, Flat(), ["--left", "--right", "--json"], outside_builder=None)
+        self.assertEqual((raised.exception.code, out.getvalue()), (2, ""))
+        self.assertTrue(err.getvalue().startswith("usage: toy.py "), err.getvalue())
+
+    def test_a_crash_under_a_flat_json_prints_no_stdout_line(self):
+        class Flat(Toy):
+            json_renderer = FlatJsonLine
+        import contextlib
+        import io
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = run_cli(TEXT, Flat(), ["--what", "crash", "--json"], outside_builder=None, outside=FakeOutsideWorld())
+        self.assertEqual((code, out.getvalue()), (2, ""))
+        self.assertIn("Traceback (most recent call last):", err.getvalue())
+
+    def test_an_operation_with_no_json_argument_runs_and_prints_its_lines(self):
+        class NoJson(Toy):
+            arguments = (COMMON_ARGUMENTS["project"],)
+
+            def run(self, project, *, outside):
+                return OperationResult({"a": 1}, lines=["a line"])
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = run_cli(TEXT, NoJson(), [], outside_builder=None, outside=FakeOutsideWorld())
+        self.assertEqual((code, out.getvalue()), (0, "a line\n"))
 
     def test_the_renderers_decide_nothing_again(self):
         result = OperationResult({"a": 1}, [PROBLEM], lines=["one", "two"])
         self.assertEqual(TextReport.render(result), "one\ntwo")
         self.assertEqual(JsonEnvelope.render(result, "t", "o"), outcomes.dumps(result.to_envelope("t", "o")))
         self.assertEqual(TextReport.render(OperationResult(None)), "")
+        self.assertEqual(FlatJsonLine.render(result, "t", "o"), '{"a": 1}')
+        self.assertEqual(FlatJsonLine.render(OperationResult(None, [PROBLEM]), "t", "o"), "")
+        self.assertIsNone(FlatJsonLine.render_bad_argument(result, "t", "o"))
+        self.assertEqual(JsonEnvelope.render_bad_argument(result, "t", "o"), JsonEnvelope.render(result, "t", "o"))
 
 
 class TickingClock:
@@ -427,9 +497,19 @@ class SchemaTest(unittest.TestCase):
 
     def test_a_kind_outside_the_table_is_refused(self):
         class Counting(Toy):
-            arguments = (Argument(("--times",), "times", int, "how often"),)
+            arguments = (Argument(("--times",), "times", float, "how often"),)
         with self.assertRaises(KeyError):
             Counting().input_schema()
+
+    def test_a_required_integer_with_choices_in_the_input_schema(self):
+        class Minutes(Toy):
+            arguments = (Argument(("--minutes",), "minutes", int, "how long", required=True),
+                         Argument(("--scope",), "scope", str, "what for", "live", choices=("live", "deploy")))
+        schema = Minutes().input_schema()
+        self.assertEqual(schema["required"], ["minutes"])
+        self.assertEqual(schema["properties"]["minutes"], {"type": "integer", "description": "how long"})
+        self.assertEqual(schema["properties"]["scope"], {"type": "string", "description": "what for", "enum": ["live", "deploy"], "default": "live"})
+        self.assertNotIn("required", Toy().input_schema(), "[] is invalid in JSON Schema draft 4")
 
     def test_the_output_schema_requires_the_keys_of_a_real_envelope(self):
         schema = Toy().output_schema()

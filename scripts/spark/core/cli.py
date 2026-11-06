@@ -5,6 +5,7 @@ script's `main` calls `run_cli` and nothing else, so an agent or an MCP tool can
 """
 
 import argparse
+import json
 import sys
 import traceback
 from collections import namedtuple
@@ -44,6 +45,25 @@ class JsonEnvelope:
     @staticmethod
     def render(result, tool, op):
         return outcomes.dumps(result.to_envelope(tool, op))
+
+    @staticmethod
+    def render_bad_argument(result, tool, op):
+        """The line a bad argument gets under --json: the envelope. A Renderer that has none returns None (FlatJsonLine)."""
+        return JsonEnvelope.render(result, tool, op)
+
+
+class FlatJsonLine:
+    """Renderer: an OperationResult as the one flat line of JSON the bench scripts print with --json (P657): its `data` as
+    `json.dumps` writes it, with no envelope, and an empty text when `data` is None, so nothing is printed. A bad argument
+    gets no line of its own: the usage on stderr, as argparse prints it."""
+
+    @staticmethod
+    def render(result, tool, op):
+        return "" if result.data is None else json.dumps(result.data)
+
+    @staticmethod
+    def render_bad_argument(result, tool, op):
+        return None
 
 
 class TextReport:
@@ -110,35 +130,37 @@ def parser_for(text, operation):
         if argument.kind is bool:
             target.add_argument(*argument.flags, dest=argument.dest, action="store_true", help=argument.help)
         else:
-            target.add_argument(*argument.flags, dest=argument.dest, type=argument.kind, default=argument.default, help=argument.help)
+            target.add_argument(*argument.flags, dest=argument.dest, type=argument.kind, default=argument.default, help=argument.help,
+                                required=argument.required, choices=argument.choices)
     return parser
 
 
 def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     """
     The exit code of `operation` run as a CLI. It parses `argv` (sys.argv without the script when None) from the
-    Operation's arguments and answers a bad flag with a `bad_argument` envelope under --json, or the usage on stderr
-    without (P433). It builds the outside with `outside_builder(project, effects, reporter)`, the effects those of
+    Operation's arguments and answers a bad flag with the Renderer's `render_bad_argument` under --json (an envelope with
+    `bad_argument`, or None for a flat Operation: then the usage), the usage on stderr without (P433). It builds the outside with `outside_builder(project, effects, reporter)`, the effects those of
     `operation.effects_of(values)`, unless a test gave `outside`, the
     reporter `TerminalReporter.for_json(as_json)` (P507: the events on stdout, on stderr with --json), runs,
     prints the rendering on stdout as it is (--json keeps every value raw, and the report's lines guard themselves) and
     the diagnostics on stderr through `guard_lines`, and returns the exit code of the result's status. The one place in
     the core that prints (rule X2).
     """
-    parser = parser_for(text, operation)
+    parser, renderer = parser_for(text, operation), operation.json_renderer or JsonEnvelope
     argv = sys.argv[1:] if argv is None else list(argv)
     try:
         values = vars(parser.parse_args(argv))
     except outcomes.BadArgument as bad:
-        if JSON_FLAG not in argv:
-            parser.exit_with_usage(guard_lines(str(bad)))
         refused = OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.BAD_ARGUMENT, str(bad), BAD_ARGUMENT_FIX % text.prog)])
-        print(JsonEnvelope.render(refused, operation.name, operation.name))
+        line = renderer.render_bad_argument(refused, operation.name, operation.name) if JSON_FLAG in argv else None
+        if line is None:
+            parser.exit_with_usage(guard_lines(str(bad)))
+        print(line)
         return outcomes.EXIT_COULD_NOT_RUN
-    as_json = values.pop(JSON_DEST)
+    as_json = values.pop(JSON_DEST, False)
     reporter = TerminalReporter.for_json(as_json)
     result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter))
-    said = JsonEnvelope.render(result, operation.name, operation.name) if as_json else TextReport.render(result)
+    said = renderer.render(result, operation.name, operation.name) if as_json else TextReport.render(result)
     if said:
         print(said)
     if result.diagnostics:

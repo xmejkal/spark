@@ -11,12 +11,14 @@ from spark.core.result import output_schema
 # --- MVP ---
 #: Value: one argument of an Operation, as argparse adds it. `flags` are its option strings, `dest` the keyword `run`
 #: takes, `kind` the type of the value (`Path`, `str`) or `bool` for a flag that is on when given, `group` the name of
-#: the group whose arguments exclude each other, or None.
-Argument = namedtuple("Argument", "flags dest kind help default group", defaults=(None, None))
+#: the group whose arguments exclude each other, or None, `required` whether the person must give it, and `choices` the
+#: values it may take, or None.
+Argument = namedtuple("Argument", "flags dest kind help default group required choices", defaults=(None, None, False, None))
 
 #: What an Operation does outside spark: it reads the project's files, runs a program, touches the board, erases what is
-#: on it, writes to it. They are the words of a step's `effects` (`outcomes.step`); DELETES and WRITES came with deploy (P655).
-READS, RUNS, BOARD, DELETES, WRITES = "reads", "runs", "board", "deletes", "writes"
+#: on it, writes to it, asks the person for a yes. They are the words of a step's `effects` (`outcomes.step`); DELETES and
+#: WRITES came with deploy (P655), ASKS with grant (P657): `build_outside_world` gives `make_consent` to an Operation that declares it.
+READS, RUNS, BOARD, DELETES, WRITES, ASKS = "reads", "runs", "board", "deletes", "writes", "asks"
 #: The flag that asks for the envelope. `run_cli` reads it, and the Operation never sees it.
 JSON_FLAG, JSON_DEST = "--json", "json"
 #: The arguments every Operation on a project takes, by `dest`, with the words of the first Operation, look.py. An
@@ -30,13 +32,15 @@ COMMON_ARGUMENTS = {
 
 
 #: The JSON Schema `type` of each Argument kind (P605). A kind enters with its first Operation.
-JSON_TYPE_OF_KIND = {Path: "string", str: "string", bool: "boolean"}
+JSON_TYPE_OF_KIND = {Path: "string", str: "string", bool: "boolean", int: "integer"}
 
 
 def _argument_schema(argument):
-    """One Argument as a JSON Schema property: its type, its help, and its default when it has one (a flag's is False)."""
+    """One Argument as a JSON Schema property: its type, its help, its `enum` when it has choices, and its default when it
+    has one (a flag's is False)."""
     default = False if argument.kind is bool else argument.default
     said = {"type": JSON_TYPE_OF_KIND[argument.kind], "description": argument.help}
+    said.update({"enum": list(argument.choices)} if argument.choices else {})
     return said if default is None else dict(said, default=str(default) if isinstance(default, Path) else default)
 
 
@@ -51,6 +55,9 @@ class Operation:
     name = None
     arguments = ()
     effects = ()
+    #: The Renderer of the `--json` line: None for the envelope (`cli.JsonEnvelope`), or a class with `render` and
+    #: `render_bad_argument`, such as `cli.FlatJsonLine`. A class attribute, not a flag (P657).
+    json_renderer = None
 
     def run(self, *, outside, **values):
         raise NotImplementedError
@@ -62,9 +69,13 @@ class Operation:
 
     def input_schema(self):
         """The JSON Schema of `run`'s values, an MCP tool's `inputSchema` (P605): a property per Argument but `json`,
-        which is the frontend's. A group of arguments that exclude each other is not in it yet."""
-        properties = {argument.dest: _argument_schema(argument) for argument in self.arguments if argument.dest != JSON_DEST}
-        return {"type": "object", "properties": properties, "additionalProperties": False}
+        which is the frontend's, and `required` lists the dests the person must give (left out when none, as draft 4 asks). A
+        group of arguments that exclude each other is not in it yet."""
+        shown = [argument for argument in self.arguments if argument.dest != JSON_DEST]
+        schema = {"type": "object", "properties": {argument.dest: _argument_schema(argument) for argument in shown},
+                  "additionalProperties": False}
+        required = [argument.dest for argument in shown if argument.required]
+        return dict(schema, required=required) if required else schema
 
     def output_schema(self):
         """The JSON Schema of the envelope, an MCP tool's `outputSchema` (P605): the same for every Operation."""

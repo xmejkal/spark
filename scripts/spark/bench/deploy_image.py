@@ -27,7 +27,7 @@ from project_image import DeployError
 from spark.core import codes, outcomes
 from spark.core.cli import CRASH_MESSAGE, CRASHED_MESSAGE, traceback_lines
 from spark.core.events import BEGIN, Event, Reporter
-from spark.core.operation import BOARD, COMMON_ARGUMENTS, DELETES, READS, RUNS, WRITES, Argument, Operation
+from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, DELETES, READS, RUNS, WRITES, Argument, Operation
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 from spark.core.result import Finding, NextStep, OperationResult
 
@@ -253,7 +253,7 @@ class DeployImage(Operation):
                           "image holds. Needs look.py --no-simulation. The person's typed yes names the caveat", group=EVIDENCE_GROUP),
                  Argument(("--dry-run",), "dry_run", bool, "print each command and run nothing"),
                  COMMON_ARGUMENTS["json"]._replace(help="print one envelope on stdout, the lines a person reads on stderr (docs/guide/agents/json.md)"))
-    effects = (READS, RUNS, BOARD, DELETES, WRITES)
+    effects = (READS, RUNS, BOARD, DELETES, WRITES, ASKS)
 
     def __init__(self, platform_for=None, grant_service=None, records=None):
         self.platform_for = platform_for or MicroPythonPlatform
