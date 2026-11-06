@@ -10,7 +10,7 @@ with a pointer, H a hypothesis and its source, D a decision (who, when). Nothing
 
 > 1. Proposed order (the refuter's rival, which Claude now holds): stage 0 cleans the board. The main line is
 >    spark: wave 4, then LangGraph (P417 #545) and RAG (P419 #548) for the CV. Beside it runs one games card at a
->    time for the demo. Sound, a second button and ESP-NOW come after.
+>    time for the demo, and it holds sound, the joystick and a flamethrower game. A second button and ESP-NOW come after.
 > 2. Why: the PO's own words point there. On 2026-11-04 he said "Finish wave 4 first". On 2026-11-06 he said
 >    "we're actually manily working on spark, we need to finish the refactoring". The job goal needs P417, and
 >    P417 needs wave 4.
@@ -28,15 +28,16 @@ want the sound soon.", then "And the joystick maybe, some flamethrower game". Th
 [council/vote-po-assistant.md](council/vote-po-assistant.md) and [council/vote-tech-lead.md](council/vote-tech-lead.md).
 Where they split, the PO assistant decides Q1, Q2, Q4 and Q6, and the tech lead decides Q3, Q5 and Q7.
 
-The drawer changes the plan. It already holds a MAX98357 I2S amplifier (DFR0954), a 3 W speaker (FIT0502) and a
-PS2 joystick, two of each (E, council/vote-tech-lead.md V-1, from the store's drawer). So no shop order is needed,
-and sound and the joystick move from stage 2 into the games lane.
+The drawer changes the plan. It holds two MAX98357 I2S amplifiers (DFR0954), two 3 W speakers (FIT0502) and two
+PS2 joysticks. One amplifier and one speaker are used in plant-alarm, so one of each is free (E,
+council/vote-tech-lead.md V-1, from the store's drawer). The free pins are not checked yet (H, V-4). So no shop
+order is needed unless the pin check fails, and sound and the joystick move from stage 2 into the games lane.
 
 | question | answer | votes |
 | --- | --- | --- |
-| Q1 the order | spark is the main line: wave 4, then P417 LangGraph, then P419 RAG. The games lane runs beside it, one card at a time, and holds sound, the joystick and the fire games | both agree |
-| Q2 the finish line | the games lane's list below. The flamethrower game is the effect game. The Runner on fire fills the time while the wiring waits for the PO's bench | the PO assistant keeps both games. The tech lead keeps the Runner as a fallback |
-| Q3 the CV date | no date yet. By default the main line never waits for the games lane. A games card starts only when no main-line PR waits on the PO's review | both agree |
+| Q1 the order | spark is the main line: wave 4, then P417 LangGraph, then P419 RAG. The games lane runs beside it, one card at a time, and holds sound, the joystick and the fire games | both agree. They split on the first card: the tech lead wants the sound and joystick walk first, the PO assistant the smoke run. The PO assistant decides Q1, so the smoke run is first |
+| Q2 the finish line | the games lane's items 1 to 6 below, with a sound cue and a joystick read in a fire game. The Runner on fire stays as item 3 and fills the time while the wiring waits for the PO's bench. No new games card that is not a fire game enters Ready until the line is met | the PO assistant keeps both games. The tech lead keeps the Runner as a fallback. The PO assistant decides Q2 |
+| Q3 the CV date | no date yet. By default the main line never waits for the games lane. A games card starts only when no main-line PR waits on the PO's review | both agree on the default. The PO assistant applies the wait only from the walk card on. The tech lead decides Q3, so it applies to every games card |
 | Q4 the burning people | not in the employer demo. P635 #850 moves to Idea | both agree |
 | Q5 P622 and P640 | both move to Idea. P640 comes back if the flamethrower needs a scene list | both agree |
 | Q6 the reader | the story page first, with one clip at the top: the flamethrower with sound | both agree |
@@ -44,15 +45,19 @@ and sound and the joystick move from stage 2 into the games lane.
 
 The games lane, one card in flight at a time (merged from both votes):
 
-1. A smoke run of all 14 games on today's image.
-2. One spark walk for the amplifier, the speaker and the joystick from the drawer: part records, requirements, one
-   pin map, build, breadboard sheet, deploy, a tone cue and a joystick test scene. This is P581 #782, refined. The
-   wiring needs the PO's bench.
-3. P651 #874, the Runner on fire, while the wiring waits for the bench.
-4. The flamethrower game, P654 [#878](https://github.com/xmejkal/spark/issues/878): the joystick aims, the button fires, the fire effect burns, a sound plays.
+1. A smoke run of all 14 games on today's image, with one bench row.
+2. One spark walk for the amplifier, the speaker and the joystick from the drawer: part records, requirements and
+   one pin map. Then build, breadboard sheet, deploy, a tone cue and a joystick test scene. The sound kernel gets a
+   Mac stand-in test first. This is P581 #782, refined. The wiring needs the PO's bench.
+3. P651 #874, the Runner on fire, with its fps measured first, while the wiring waits for the bench.
+4. The flamethrower game, P654 [#878](https://github.com/xmejkal/spark/issues/878): the joystick aims, the button
+   fires, the fire effect burns, a sound plays. Its fps is measured first.
 5. Sound slice 2: the synthesized crackle, a C kernel that fills the I2S buffer.
 6. The story page, with the flamethrower clip at the top.
 7. Later: P625 #838, P626 #839, ESP-NOW and a second player.
+
+Dropped from the votes: the PO assistant's early story page v1 (the page now waits for the flamethrower clip), and
+P625 as a filler while an order ships (no order is needed).
 
 ## The PO's words this order rests on
 
@@ -79,7 +84,7 @@ The words split in one place. The demo comes "then we could get back on spark", 
 | Flappy with fire | removed by the PO on 2026-11-04. The fire code merged with no game that uses it | E TL-7, bench.md:441-456 |
 | Tests for the ten arcade games | none by name | E TL-10 |
 | Story page, photos, clips | none | E PS-6, PS-7 |
-| Sound | no code, no speaker. The card P581 #782 (2026-11-02) asks for "a small piezo buzzer" that "plays short cues on hits and deaths" | E TL-31, spark #782 title |
+| Sound | no code, nothing wired on the board. The card P581 #782 (2026-11-02) asks for "a small piezo buzzer" that "plays short cues on hits and deaths" | E TL-31, spark #782 title |
 | Controls | two buttons, every game uses one | E TL-28, TL-29 |
 | "Uses the S3's optimizations" | true for DMA and PSRAM, not for the PIE vector instructions | E PS-15 |
 | "Built by talking to Claude with spark" | true for the screen's research, the first games and deploy. Claude built the C driver and engine outside spark's chain | E PS-19, spark README.md:124-125, :161 |
@@ -91,8 +96,8 @@ flowchart LR
   S0["Stage 0<br/>clean the board"] --> M1["Stage 1, main line<br/>wave 4: PR A to D"]
   M1 --> M2["P417 LangGraph node"]
   M2 --> M3["P419 RAG case"]
-  S0 --> G["Stage 1, games lane<br/>one card at a time<br/>story page, smoke run, Runner on fire"]
-  M3 --> S2["Stage 2<br/>sound P581, a button,<br/>ESP-NOW"]
+  S0 --> G["Stage 1, games lane<br/>one card at a time<br/>smoke run, sound and joystick walk,<br/>Runner on fire, flamethrower,<br/>crackle, story page"]
+  M3 --> S2["Stage 2<br/>a second button,<br/>ESP-NOW"]
   G --> S2
   S2 --> L["Later<br/>rebuild with spark alone"]
 ```
@@ -117,26 +122,19 @@ Stage 1, main line, spark (H, from TL-21 to TL-26, LF-8):
 
 The plan's own sizes: W4-2 about 300 product and 400 test lines, W4-3 about 350 and 300 (TL-26, estimates).
 
-Stage 1, games lane, one card in flight at a time, beside the main line. The two touch different files (TL-37), but your
-review and play time is shared. The finish line, which you set at Q2:
-
-1. One story page in pixel-games tells the steps from "spark found the screen" to the C engine. Each step links
-   its PR, card and bench row, and has a picture: a Mac render from `tools/render_scene.py` or a short board clip
-   (PS section 2, PS-8). Its claims are exact: DMA and PSRAM, not PIE (PS-15). Spark started the project, and
-   Claude carried the C driver and engine outside spark's chain (PS-19). A new card is needed for it.
-2. A smoke run passes for all 14 games on today's image, with one bench row (TL-9).
-3. One game with an effect: P651 #874, the Runner on fire, with its fps measured (TL-17).
-4. No new games card enters Ready until 1 to 3 are met (LF-11).
+Stage 1, games lane, one card in flight at a time, beside the main line. The two touch different files (TL-37), but
+your review and play time is shared. Its cards and finish line are in "The answers" above. The story page's claims
+are exact: DMA and PSRAM, not PIE (PS-15). Spark started the project, and Claude carried the C driver and engine
+outside spark's chain (PS-19).
 
 Stage 2, after the main line (H, from TL-31 to TL-34, PS section 5). This is games work with a short spark walk.
 Spark's share is one part record, one requirements line and a regenerated `pins.py`. Walk 4 ran the same chain
 for the screen (PS-1, refuter part 3):
 
-- Sound starts from P581 #782, the buzzer card. Your wish is synthesized fire sound, which needs more than a buzzer
-  (H, model knowledge, not read). So #782 is refined first: buzzer cues, or a speaker with an amplifier.
-- The synthesis follows the engine's split: a C kernel fills the sample buffer, and Python starts each sound
-  (D12 in pixel-games docs/engine-walkthrough.md). The S3's I2S peripheral can stream the buffer by DMA, and its
-  PIE vector instructions can mix the voices (H, model knowledge, not read).
+- Sound and the joystick moved into the games lane (Q7). The synthesis follows the engine's split: a C kernel
+  fills the sample buffer, and Python starts each sound (D12 in pixel-games docs/engine-walkthrough.md). The S3's
+  I2S peripheral can stream the buffer by DMA, and its PIE vector instructions can mix the voices (H, model
+  knowledge, not read).
 - A second button follows the same short walk (TL-32).
 - Multiplayer over ESP-NOW, Espressif's direct radio link between ESP32 boards (H, not read). It needs a second
   board and one game that two people play.
@@ -151,7 +149,7 @@ the one that serves spark's bar most (AGENTS.md: "a basic project closer to a br
 | The engine structure cards: P621 to P623, P628 to P631, P634, P640 to P644 | none changes what a viewer sees (PS-16, TL-17) |
 | P601 #802, P648 #870 | the bound probe answered P601's question (TL-18). Keep both for after the demo |
 | P649 #871, P650 #872 | paused. P650's light flow is a polish, and the PO's pick of the clips stands |
-| P597 #798, P600 #801, P610, P611, P625, P626 | more effects. P625 and P626 are the cheapest after the games lane (PS section 3) |
+| P597 #798, P600 #801, P610, P611, P625, P626 | more effects. P625 and P626 are item 7, later, in the games lane |
 | P635 to P637, the burning people | costly, feel slices. The PO called the subject "nicely controversial", so it is a question for an employer's demo (PS-13, Q4) |
 | P539 #743, the public graphics library | the largest question, not on the finish line (LF section 3) |
 
@@ -164,7 +162,7 @@ the one that serves spark's bar most (AGENTS.md: "a basic project closer to a br
 - P622 #829 and P640 #858: lean flow puts them on the finish line because they sit in Ready. The tech lead says
   the demo needs neither. This synthesis leaves them off the line (Q5).
 
-## Questions for the PO
+## Questions for the PO (answered above)
 
 1. Q1 · Spark as the main line (wave 4, then LangGraph and RAG), with one games card at a time beside it? Or the demo first? · decides the order.
 2. Q2 · Is the games lane's checklist your finish line? Add or drop an item. · decides the end of the games lane.
