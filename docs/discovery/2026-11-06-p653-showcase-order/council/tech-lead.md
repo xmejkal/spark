@@ -1,6 +1,6 @@
 # P653 council, tech lead (2026-11-06)
 
-Tags: E = seen, with a pointer. H = hypothesis, with its source. D = decided, by whom and when. Paths: PG = /Users/petr/Development/firebeetle-games (pixel-games, branch master c9e1045), SP = /Users/petr/Development/spark (main 331842eb). I decided nothing.
+Tags: E = seen, with a pointer. H = hypothesis, with its source. D = decided, by whom and when. Paths: PG = ~/Development/firebeetle-games (pixel-games, branch master c9e1045), SP = ~/Development/spark (main 331842eb). I decided nothing.
 
 ## 1. Findings
 

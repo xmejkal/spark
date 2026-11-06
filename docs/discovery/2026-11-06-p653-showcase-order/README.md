@@ -15,10 +15,10 @@ with a pointer, H a hypothesis and its source, D a decision (who, when). Nothing
 >    "we're actually manily working on spark, we need to finish the refactoring". The job goal needs P417, and
 >    P417 needs wave 4.
 > 3. The games run. The four effect scenes have their own bench rows. All 14 games started in one smoke run on
->    2026-11-04 (run107, before four later changes). The Mac suite passes 165 tests (TL-2, TL-9).
-> 4. The demo's main gap is a story page with pictures. Every step has a record, but in four places, and neither
->    repository holds a photo or clip of the board (PS-6, PS-7).
-> 5. Wave 4 is one PR of four in, and no card exists for W4-2 onward (TL-21 to TL-25, LF-8). Waiting costs rebase
+>    2026-11-04 (run107, before four later changes). The Mac suite passes 165 tests (TL-2).
+> 4. The demo's main gap is a story page with pictures. Every step has a record, but in four places. pixel-games holds no photo or
+>    clip of the board (PS-7), and spark holds only page screenshots.
+> 5. Wave 4: W4-1 is done, and PR A to PR D are not started. No card exists for W4-2 onward (TL-21 to TL-25, LF-8). Waiting costs rebase
 >    drift, not a half-moved seam.
 
 ## The PO's words this order rests on
@@ -26,7 +26,7 @@ with a pointer, H a hypothesis and its source, D a decision (who, when). Nothing
 | when | words, verbatim | where |
 | --- | --- | --- |
 | 2026-11-04 | "Finish wave 4 first" | spark #94 (board memory, 11-04) |
-| 2026-11-06 | "we're actually manily working on spark, we need to finish the refactoring" | this session |
+| 2026-11-06 | "we're actually manily working on spark, we need to finish the refactoring" | chat, about 12:50 Prague, quoted in council/refuter.md |
 | 2026-11-06 | "finish it in some nice demonstratable state, some games using the effeevts we have, then we could get back on spark" | spark #875 |
 | 2026-11-06 | "the main demo about it is spark, so we'll have to recreate the things later purely by using spark again, but thats later" | spark #875 |
 | 2026-11-06 | "I'm looking forward to synthesising the fire sounds" and "hoping to also reuse this with the sound synthesis, using the s3's chip's advantages too" | spark #875 |
@@ -55,10 +55,10 @@ The words split in one place. The demo comes "then we could get back on spark", 
 
 ```mermaid
 flowchart LR
-  S0["Stage 0<br/>clean the board"] --> M1["Main line<br/>wave 4: PR A to D"]
+  S0["Stage 0<br/>clean the board"] --> M1["Stage 1, main line<br/>wave 4: PR A to D"]
   M1 --> M2["P417 LangGraph node"]
   M2 --> M3["P419 RAG case"]
-  S0 --> G["Games lane, one card at a time<br/>story page, smoke run, Runner on fire"]
+  S0 --> G["Stage 1, games lane<br/>one card at a time<br/>story page, smoke run, Runner on fire"]
   M3 --> S2["Stage 2<br/>sound P581, a button,<br/>ESP-NOW"]
   G --> S2
   S2 --> L["Later<br/>rebuild with spark alone"]
@@ -66,15 +66,15 @@ flowchart LR
 
 Stage 0, clean the board (H, from LF-2, LF-5, TL-12 to TL-15):
 
-- Mark which in-flight cards are epics (#812, #769, #787, #743). Epics count in no stage, so the true flight
+- Mark which in-flight cards are epics (LF-2 guesses #224, #812 and #769). Epics count in no stage, so the true flight
   count is unknown until then. Eleven cards sit in the working stages (LF-2).
-- Park the idle spark Design cards #224, #304 and #417 in Idea, each with its reason (LF-5, figures not
+- Park the idle spark Design cards #224, #304 and #417 (card #417, not P417) in Idea, each with its reason (LF-5, figures not
   re-exported by the refuter).
 - Close P627 #840 and P628 #841 once their Miro work is done, or park them (their comments say what is left).
 - Drafts: #46 stays parked (P649). #44 waits for P650 (its engine commit ab970c4 is pushed with no PR). #10, the
   heavy RENT floors, needs your play or a park (TL-12).
 
-Main line, spark (H, from TL-21 to TL-26, LF-8):
+Stage 1, main line, spark (H, from TL-21 to TL-26, LF-8):
 
 1. File W4-2 as a card and refresh the wave 4 plan's line numbers against main. The plan was written on
    67c37600 on 2026-11-01.
@@ -84,7 +84,7 @@ Main line, spark (H, from TL-21 to TL-26, LF-8):
 
 The plan's own sizes: W4-2 about 300 product and 400 test lines, W4-3 about 350 and 300 (TL-26, estimates).
 
-Games lane, one card in flight at a time, beside the main line. The two touch different files (TL-37), but your
+Stage 1, games lane, one card in flight at a time, beside the main line. The two touch different files (TL-37), but your
 review and play time is shared. The finish line, which you set at Q2:
 
 1. One story page in pixel-games tells the steps from "spark found the screen" to the C engine. Each step links
@@ -108,7 +108,7 @@ for the screen (PS-1, refuter part 3):
 - Multiplayer over ESP-NOW, Espressif's direct radio link between ESP32 boards (H, not read). It needs a second
   board and one game that two people play.
 
-Later: rebuild the project with spark alone (the PO, 2026-11-06, on #875). That is a walk of its own, and it is
+Later: rebuild the project with spark alone (the PO, 2026-11-06, on #875). That is a walk of its own. It is
 the one that serves spark's bar most (AGENTS.md: "a basic project closer to a breadboard with working firmware").
 
 ## Not now
@@ -124,8 +124,8 @@ the one that serves spark's bar most (AGENTS.md: "a basic project closer to a br
 
 ## Where the views split
 
-- The order. The first synthesis put the demo, then sound, then wave 4. The refuter refuted it against the PO's
-  11-04 and 11-06 words and the job goal. Lean flow and the tech lead also placed wave 4 before sound. The
+- The order. The first synthesis put the demo, then sound, then wave 4. The refuter refuted it. It cited the PO's
+  11-04 and 11-06 words and the job goal. Lean flow also placed wave 4 before sound. The tech lead took no side. The
   product lens wanted sound right after the demo. This version follows the refuter (Q1).
 - Flappy with fire: PS-10 says it exists, and TL-7 shows that you removed it on 2026-11-04. TL-7 holds.
 - P622 #829 and P640 #858: lean flow puts them on the finish line because they sit in Ready. The tech lead says

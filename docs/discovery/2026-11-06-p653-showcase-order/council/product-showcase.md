@@ -1,6 +1,6 @@
 # P653 council: product and showcase lens (2026-11-06)
 
-Tags: E = evidence with a pointer, H = hypothesis with its source, D = decision (who, when). Paths: PG = /Users/petr/Development/firebeetle-games, SP = /Users/petr/Development/spark. "—" = unknown.
+Tags: E = evidence with a pointer, H = hypothesis with its source, D = decision (who, when). Paths: PG = ~/Development/firebeetle-games, SP = ~/Development/spark. "—" = unknown.
 
 ## 1. Findings
 

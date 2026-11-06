@@ -1,6 +1,8 @@
 # P653 council: refuter (Fable, 2026-11-06)
 
-Read: README.md at 13:05 (133 lines; it grew from 122 lines at 13:02 while this check ran, adding the job goal, ESP-NOW and Q8), the three lens reports, pixel-games master c9e1045, spark main 331842eb, #875's four comments, #617 and #782 by REST. PG = /Users/petr/Development/firebeetle-games, SP = /Users/petr/Development/spark. I decided nothing.
+This report cites the README as of 13:05 Prague. Its line numbers, Q8 and "stage 3" belong to that version.
+
+Read: README.md at 13:05 (133 lines; it grew from 122 lines at 13:02 while this check ran, adding the job goal, ESP-NOW and Q8), the three lens reports, pixel-games master c9e1045, spark main 331842eb, #875's four comments, #617 and #782 by REST. PG = ~/Development/firebeetle-games, SP = ~/Development/spark. I decided nothing.
 
 ## 1. Claims and their sources
 

@@ -1,6 +1,6 @@
 # P653 council: lean flow lens
 
-Tags: E = evidence with a pointer, H = hypothesis, D = decision (who, when). "—" = unknown. gh calls used: 7 (of 8). Scratch data: /private/tmp/claude-501/-Users-petr-Development-spark/d278b9fb-f69a-4627-a382-d87c26d5c958/scratchpad/ (items2.json, closed.json, created.json, open.json).
+Tags: E = evidence with a pointer, H = hypothesis, D = decision (who, when). "—" = unknown. gh calls used: 7 (of 8). Scratch data: the session scratch folder (items2.json, closed.json, created.json, open.json).
 "Games" = the project field "slice" is pixel-games or graphics library. "Spark" = every other slice or none.
 
 ## 1. Findings
