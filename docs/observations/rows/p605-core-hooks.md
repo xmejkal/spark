@@ -24,3 +24,4 @@ What the plan council (two rounds), the review and the build found. Card:
 | 17 | `deploy.py` and `deploy_service.py` docstrings name `board_console.SystemClock` as the default | the PR refuter | acted | they name `spark.core.clock.SystemClock` |
 | 18 | `argument_schema` was a public helper with no role word | the PR reviewer | acted | `_argument_schema` |
 | 19 | The raising-tracer test covers only the problems path, and `output_schema` calls `outcomes.envelope(None, None)` | the PR reviewer | rejected | the code treats every path alike, and the output schema test fails if `envelope` ever refuses None |
+| 20 | The mutation run (Sonnet): 20 planted, 19 caught. A run with no trace could return the unmasked result, because no test gave a masking Privacy without a trace | the mutation tester | acted | the Privacy test runs once more with no trace. The table `tests/mutations/p605-core-hooks.json` (19 rows) is all caught |

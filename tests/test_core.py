@@ -355,6 +355,9 @@ class RunOptionsTest(unittest.TestCase):
         result, calls = self.run_traced("ok", privacy=MarkingPrivacy())
         self.assertEqual(result.notes, ["masked"])
         self.assertEqual(calls, [("toy", dict(toy_values("ok"), project="<project>"), result, 2.5)])
+        untraced = run_operation(Toy(), toy_values("ok"), FakeOutsideWorld(find_tool={"flasher": TOOL}.get),
+                                 options=RunOptions(MarkingPrivacy(), None, TickingClock()))
+        self.assertEqual(untraced.notes, ["masked"], "a run with no trace is masked too")
 
     def test_the_default_run_masks_nothing_and_traces_nothing(self):
         self.assertIsNone(DEFAULT_RUN.trace)

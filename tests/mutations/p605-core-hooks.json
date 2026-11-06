@@ -1,0 +1,21 @@
+[
+ {"file": "scripts/spark/core/cli.py", "name": "trace skipped on crash/SparkError (guard result)", "find": "    if options.trace is None:\n        return masked", "replace": "    if options.trace is None or result.findings and result.findings[0].code == 'crash':\n        return masked"},
+ {"file": "scripts/spark/core/cli.py", "name": "trace never called", "find": "    if options.trace is None:\n        return masked", "replace": "    if True:\n        return masked"},
+ {"file": "scripts/spark/core/cli.py", "name": "trace gets unmasked result", "find": "mask_values(values), masked, seconds)", "replace": "mask_values(values), result, seconds)"},
+ {"file": "scripts/spark/core/cli.py", "name": "trace gets unmasked values", "find": "options.trace(operation.name, options.privacy.mask_values(values), masked", "replace": "options.trace(operation.name, values, masked"},
+ {"file": "scripts/spark/core/cli.py", "name": "unmasked result returned (no trace)", "find": "    if options.trace is None:\n        return masked", "replace": "    if options.trace is None:\n        return result"},
+ {"file": "scripts/spark/core/cli.py", "name": "unmasked result returned (after trace)", "find": "        return masked._replace(diagnostics=list(masked.diagnostics) + [TRACE_FAILED_MESSAGE % printable(type(failed).__name__)])\n    return masked", "replace": "        return masked._replace(diagnostics=list(masked.diagnostics) + [TRACE_FAILED_MESSAGE % printable(type(failed).__name__)])\n    return result"},
+ {"file": "scripts/spark/core/cli.py", "name": "seconds after - after", "find": "seconds = options.clock.monotonic() - started", "replace": "seconds = options.clock.monotonic() - options.clock.monotonic()"},
+ {"file": "scripts/spark/core/cli.py", "name": "seconds before - before", "find": "seconds = options.clock.monotonic() - started", "replace": "seconds = started - started"},
+ {"file": "scripts/spark/core/cli.py", "name": "seconds reversed sign", "find": "seconds = options.clock.monotonic() - started", "replace": "seconds = started - options.clock.monotonic()"},
+ {"file": "scripts/spark/core/cli.py", "name": "tracer error swallowed, no diagnostics", "find": "        return masked._replace(diagnostics=list(masked.diagnostics) + [TRACE_FAILED_MESSAGE % printable(type(failed).__name__)])\n    return masked", "replace": "        pass\n    return masked"},
+ {"file": "scripts/spark/core/cli.py", "name": "diagnostics replaced not appended", "find": "diagnostics=list(masked.diagnostics) + [TRACE", "replace": "diagnostics=[TRACE"},
+ {"file": "scripts/spark/core/operation.py", "name": "json kept in input schema", "find": " if argument.dest != JSON_DEST}", "replace": "}"},
+ {"file": "scripts/spark/core/operation.py", "name": "additionalProperties True", "find": "\"additionalProperties\": False", "replace": "\"additionalProperties\": True"},
+ {"file": "scripts/spark/core/operation.py", "name": "additionalProperties dropped", "find": ", \"additionalProperties\": False}", "replace": "}"},
+ {"file": "scripts/spark/core/operation.py", "name": "None default kept", "find": "return said if default is None else dict(said, default=", "replace": "return dict(said, default=None) if default is None else dict(said, default="},
+ {"file": "scripts/spark/core/operation.py", "name": "bool flag default None", "find": "default = False if argument.kind is bool else argument.default", "replace": "default = argument.default"},
+ {"file": "scripts/spark/core/operation.py", "name": "Path default not str", "find": "default=str(default) if isinstance(default, Path) else default)", "replace": "default=default)"},
+ {"file": "scripts/spark/core/result.py", "name": "status enum missing COULD_NOT_RUN", "find": "[outcomes.OK, outcomes.PROBLEMS, outcomes.COULD_NOT_RUN]", "replace": "[outcomes.OK, outcomes.PROBLEMS]"},
+ {"file": "scripts/spark/core/result.py", "name": "required dropped", "find": "\"required\": list(outcomes.envelope(None, None))", "replace": "\"required\": []"}
+]
