@@ -1,0 +1,19 @@
+# P601 the SWAR blend for the fire, after a bound probe: rows
+
+What the plan council, the board runs, the PR review and the PR refuter found. Card:
+[P601 #802](https://github.com/xmejkal/spark/issues/802).
+
+| # | claim | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 1 | The one-multiply SWAR blend on the 0x07E0F81F spread, with alpha rounded to 32 steps (`(alpha + 4) >> 3`), is within 1 step per channel of `alpha_blend_565`. With alpha floored (`alpha >> 3`), green is off by 2 | the lead's Mac check (Python), 2026-11-06 | acted | the plan uses the rounded alpha |
+| 2 | The SWAR math holds when the background is brighter than the colour in some fields (borrows): 0 mismatches against the exact 5-bit blend on all 65,536 × 65,536 colour pairs at six alphas, and at most 1 step off the old blend on 20 M random colours at all 256 alphas. A signed `(fg - bg) * 31` overflows `int32_t` | the plan refuter (Fable), C check | acted | the plan does the math in `uint32_t` |
+| 3 | `(alpha + 4) >> 3` gives 0 for alpha 252 to 255 if the sum is truncated to 8 bits | the plan refuter | acted | the plan computes it in `uint32_t`, and a mutant plants the truncation |
+| 4 | The blend math is about 0.65 ms of the about 8 ms front pass. The rest is the bilinear interpolation that every pixel pays, also a skipped one, so SWAR very likely misses D5 in linear (gap 1.6 to 2.0 ms), and PIE on the blend would aim at the wrong place | the plan refuter (MUST), from run119 and a Mac scene count (62,476 skipped, 14,319 mixed, 5 solid pixels in the front pass) | acted | step 0: a bound probe, Python only, before any C |
+| 5 | A bound at alpha 128 changes which pixels are written: it skips heats 100 to 164 of the front, so it bounds more than the blend math | the round-2 refuter (Fable, MUST) | acted | the bound sets 255 wherever the real alpha is 4 or more, the SWAR blend's own written set |
+| 6 | The bound saves one PSRAM read per written pixel: a store of 255 never reads the background, and the frame is in PSRAM (`games/lcd.py:38`) | the round-2 refuter | acted | a pass within 0.5 ms of the line counts as a miss |
+| 7 | A Python SWAR reference that the C must match byte for byte copies the C's own mistakes, and a bound of 1 step lets a rounding error pass | the tech-lead lens (Sonnet, MUST) | acted | the test plan adds an independent per-channel reference, compared for exact equality |
+| 8 | Two stack tables (1.25 KiB on the 16 KiB MicroPython task stack) are extra code that the bench has not asked for | the tech-lead lens | acted | the helper is a drop-in for `alpha_blend_565`, with no tables |
+| 9 | Names: `fg` meant a colour in `blend565.h` and a spread word in the plan, `blend_spread_565` swapped the verb order, and `blend_swar.h` did not match `blend565.h` | the tech-lead lens | acted | `alpha_blend_565_swar` in `blend565_swar.h` |
+| 10 | NEAREST has no game caller with a blend (`games/fire.py:72`), so the board cannot test that path | the tech-lead lens | acted | the plan says that only the Mac tests cover it |
+| 11 | Who is affected: FRONT_ALPHA heats 101 and 102 skip and 229 stores, the fire's ALPHA heat 1 skips. The old blend darkened equal colours by 1 step | the tech-lead lens and the round-2 refuter | acted | listed in the plan's pixel-games PR |
+| 12 | The A/B runs had one run each, while earlier runs spread by 1 ms (run117, run118) | the tech-lead lens | acted | every variant runs twice |
