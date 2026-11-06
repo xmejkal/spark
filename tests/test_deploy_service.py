@@ -237,6 +237,13 @@ class TheVerifyTest(ServiceCase):
         self.assertIn("deploy: crashed, RuntimeError\n", problems)
         self.assertIn("usb fell off", problems)
 
+    def test_the_look_after_a_flash_crash_names_the_port_the_deploy_was_given(self):
+        # P655: the next step is the look on the same port, so the person does not have to find the board again
+        code, said, _ = self.deploy("--port", PORT, "--token", self.token(), "--json", consent=FakeConsent(True), fails=1, fail_code=RuntimeError("usb fell off"))
+        look, = json.loads(said)["next"]
+        self.assertEqual(code, 2)
+        self.assertEqual(look["argv"][look["argv"].index("--port") + 1], "/dev/cu.usbmodem101")
+
 
     def test_a_who_that_cannot_be_read_is_a_store_record_not_written_after_the_board_log_line(self):
         class Nobody(FakeConsent):

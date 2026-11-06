@@ -201,6 +201,19 @@ class RunCliTest(unittest.TestCase):
             code = run_cli(TEXT, Toy(), ["--project", "here", "--what", "ok"], outside_builder=builder)
         self.assertEqual((code, asked), (0, [(Path("here"), (READS,), TerminalReporter)]))
 
+    def test_the_builder_gets_the_effects_the_operation_narrows_to_for_these_values(self):
+        asked = []
+
+        class Narrow(Toy):
+            """Operation: the toy that declares RUNS and READS, and narrows to RUNS alone when `--left` is given."""
+
+            effects = (READS, RUNS)
+
+            def effects_of(self, values):
+                return (RUNS,) if values["left"] else self.effects
+        run_operation(Narrow(), toy_values("ok") | {"left": True}, None, lambda effects: asked.append(effects) or FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
+        self.assertEqual(asked, [(RUNS,)])
+
 
 class RunOperationTest(unittest.TestCase):
     def test_a_spark_error_is_one_finding_with_its_status(self):
@@ -306,6 +319,15 @@ class RunOperationTest(unittest.TestCase):
             held.seek(0)
             self.assertEqual((captured.stdout, held.read()), ("echoed\n", b"echoed\n"))
         self.assertEqual((TerminalReporter(sys.stdout).echo_fd(), TerminalReporter(io.StringIO()).echo_fd(), FakeReporter().echo_fd()), (None, 2, None))
+
+    def test_a_runner_keeps_the_stdout_the_caller_gives(self):
+        import subprocess
+        import sys
+        import tempfile
+        with tempfile.TemporaryFile() as held:
+            piped = ProgramRunner(held.fileno()).run([sys.executable, "-c", "print('piped')"], stdout=subprocess.PIPE, text=True)
+            held.seek(0)
+            self.assertEqual((piped.stdout, held.read()), ("piped\n", b""))
 
     def test_an_undeclared_consent_is_refused_and_a_declared_one_is_the_given_builder(self):
         from spark.core.operation import DELETES
