@@ -25,3 +25,6 @@ Also covers the paused P649 discovery (draft https://github.com/xmejkal/pixel-ga
 | 17 | "Lean flow and the tech lead also placed wave 4 before sound" is wrong. The tech lead took no side (TL-35 to TL-37) | the PR reviewer (Sonnet) | acted | README: "The tech lead took no side" |
 | 18 | Three council reports hold home paths on line 3, against AGENTS.md's public-repo rule | the PR reviewer | acted | rewritten as `~/Development/...`. Scratch paths became "the session scratch folder" |
 | 19 | Stage names, the epic guesses, "card #417, not P417", the wave 4 count, the 165-test cite, two long sentences, the refuter's README version | the PR reviewer | acted | all fixed in README.md and council/refuter.md |
+| 20 | The drawer already holds a MAX98357 I2S amplifier, a 3 W speaker and a PS2 joystick, two of each, so no shop order is needed | the tech lead's vote (Sonnet) | acted | sound and the joystick move into the games lane. P581 #782 refined |
+| 21 | The PO assistant's vote planned a shop order for the speaker and the joystick | the PO assistant's vote (Sonnet) | rejected | row 20: the parts are in the drawer |
+| 22 | The votes answer Q1 to Q7: spark main line, games lane with sound, joystick and a flamethrower game, P635, P622 and P640 to Idea | both votes, for the PO | acted | README "The answers". Board moves done, P654 #878 filed |

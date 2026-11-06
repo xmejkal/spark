@@ -21,6 +21,39 @@ with a pointer, H a hypothesis and its source, D a decision (who, when). Nothing
 > 5. Wave 4: W4-1 is done, and PR A to PR D are not started. No card exists for W4-2 onward (TL-21 to TL-25, LF-8). Waiting costs rebase
 >    drift, not a half-moved seam.
 
+## The answers (votes for the PO, 2026-11-06)
+
+The PO: "have the po ssist and tech lead vote for me. And we can also do some other cool fire games, but I also
+want the sound soon.", then "And the joystick maybe, some flamethrower game". The votes are in
+[council/vote-po-assistant.md](council/vote-po-assistant.md) and [council/vote-tech-lead.md](council/vote-tech-lead.md).
+Where they split, the PO assistant decides Q1, Q2, Q4 and Q6, and the tech lead decides Q3, Q5 and Q7.
+
+The drawer changes the plan. It already holds a MAX98357 I2S amplifier (DFR0954), a 3 W speaker (FIT0502) and a
+PS2 joystick, two of each (E, council/vote-tech-lead.md V-1, from the store's drawer). So no shop order is needed,
+and sound and the joystick move from stage 2 into the games lane.
+
+| question | answer | votes |
+| --- | --- | --- |
+| Q1 the order | spark is the main line: wave 4, then P417 LangGraph, then P419 RAG. The games lane runs beside it, one card at a time, and holds sound, the joystick and the fire games | both agree |
+| Q2 the finish line | the games lane's list below. The flamethrower game is the effect game. The Runner on fire fills the time while the wiring waits for the PO's bench | the PO assistant keeps both games. The tech lead keeps the Runner as a fallback |
+| Q3 the CV date | no date yet. By default the main line never waits for the games lane. A games card starts only when no main-line PR waits on the PO's review | both agree |
+| Q4 the burning people | not in the employer demo. P635 #850 moves to Idea | both agree |
+| Q5 P622 and P640 | both move to Idea. P640 comes back if the flamethrower needs a scene list | both agree |
+| Q6 the reader | the story page first, with one clip at the top: the flamethrower with sound | both agree |
+| Q7 sound | a synthesized fire sound through the owned amplifier and speaker. P581 #782 is refined to say so. Slice 1 is a tone cue, slice 2 the crackle. A PWM buzzer only if the pin check fails | both agree |
+
+The games lane, one card in flight at a time (merged from both votes):
+
+1. A smoke run of all 14 games on today's image.
+2. One spark walk for the amplifier, the speaker and the joystick from the drawer: part records, requirements, one
+   pin map, build, breadboard sheet, deploy, a tone cue and a joystick test scene. This is P581 #782, refined. The
+   wiring needs the PO's bench.
+3. P651 #874, the Runner on fire, while the wiring waits for the bench.
+4. The flamethrower game, P654 [#878](https://github.com/xmejkal/spark/issues/878): the joystick aims, the button fires, the fire effect burns, a sound plays.
+5. Sound slice 2: the synthesized crackle, a C kernel that fills the I2S buffer.
+6. The story page, with the flamethrower clip at the top.
+7. Later: P625 #838, P626 #839, ESP-NOW and a second player.
+
 ## The PO's words this order rests on
 
 | when | words, verbatim | where |
