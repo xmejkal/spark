@@ -60,10 +60,10 @@
   "replace": "return PassedRunEvidence(ignore_older_runs) if no_simulation else"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "both-flags-allowed",
-  "find": "which = parser.add_mutually_exclusive_group()",
-  "replace": "which = parser"
+  "find": "names the caveat\", group=EVIDENCE_GROUP)",
+  "replace": "names the caveat\")"
  },
  {
   "file": "scripts/image_evidence.py",

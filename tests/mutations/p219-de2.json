@@ -24,10 +24,10 @@
   "replace": "return notes"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "flag-not-passed",
-  "find": "evidence = PassedRunEvidence(args.ignore_older_runs)",
-  "replace": "evidence = PassedRunEvidence(False)"
+  "find": "evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)",
+  "replace": "evidence_for(project, no_simulation, False, outside.find_tool)"
  },
  {
   "file": "scripts/image_evidence.py",
@@ -36,10 +36,10 @@
   "replace": "def __init__(self, ignore_older_runs=True):"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "store-true-false",
-  "find": "\"--ignore-older-runs\", action=\"store_true\"",
-  "replace": "\"--ignore-older-runs\", action=\"store_false\""
+  "find": "\"ignore_older_runs\", bool,",
+  "replace": "\"ignore_older_runs\", str,"
  },
  {
   "file": "scripts/image_evidence.py",

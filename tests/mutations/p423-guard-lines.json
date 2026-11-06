@@ -32,8 +32,8 @@
  {
   "file": "scripts/board_look.py",
   "name": "the look's report lines are not guarded one by one, in look.py and in deploy.py",
-  "find": "return [\"  \" + printable(line) for line in out]",
-  "replace": "return [\"  \" + line for line in out]"
+  "find": "return [indent + printable(line) for line in out]",
+  "replace": "return [indent + line for line in out]"
  },
  {
   "file": "scripts/spark/core/cli.py",
@@ -42,22 +42,22 @@
   "replace": "print(\"\\n\".join(result.diagnostics), file=sys.stderr)"
  },
  {
-  "file": "scripts/deploy.py",
-  "name": "deploy.py's one print helper prints the text as it is",
-  "find": "print(guard_lines(text), flush=flush, file=out)",
-  "replace": "print(text, flush=flush, file=out)"
+  "file": "scripts/spark/core/events.py",
+  "name": "the terminal prints an event's text as it is",
+  "find": "print(\"\\n\".join(INDENT + line for line in guard_lines(event.text).split(\"\\n\")), file=self.stream, flush=True)",
+  "replace": "print(\"\\n\".join(INDENT + line for line in event.text.split(\"\\n\")), file=self.stream, flush=True)"
  },
  {
-  "file": "scripts/deploy.py",
-  "name": "deploy.py's plan refusal prints around the helper",
-  "find": "shown(\"deploy.py: %s\" % cannot, sys.stderr)",
-  "replace": "print(\"deploy.py: %s\" % cannot, file=sys.stderr)"
+  "file": "scripts/spark/core/cli.py",
+  "name": "a refusal's diagnostics print around the guard",
+  "find": "print(guard_lines(\"\\n\".join(result.diagnostics)), file=sys.stderr)",
+  "replace": "print(\"\\n\".join(result.diagnostics), file=sys.stderr)"
  },
  {
-  "file": "scripts/deploy.py",
-  "name": "deploy.py's dry run prints around the helper",
-  "find": "    def say(line):\n        shown(line, out)",
-  "replace": "    def say(line):\n        print(line, file=out)"
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "deploy's lines print around the reporter",
+  "find": "        self.report(Event.line(stage, text))",
+  "replace": "        print(\"  \" + text, flush=True)"
  },
  {
   "file": "scripts/check_spine.py",
@@ -90,28 +90,28 @@
   "replace": "% question)"
  },
  {
-  "file": "scripts/deploy.py",
-  "name": "deploy.py's standing-yes line prints around the helper",
-  "find": "shown(\"  standing yes: not used: %s\" % said, out, flush=True)",
-  "replace": "print(\"  standing yes: not used: %s\" % said, flush=True, file=out)"
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "deploy's standing-yes line prints around the reporter",
+  "find": "self.say(STAGE_GATE, \"standing yes: not used: %s\" %",
+  "replace": "print(\"  standing yes: not used: %s\" %"
  },
  {
-  "file": "scripts/deploy.py",
-  "name": "deploy.py's failed read prints its lines around the helper",
-  "find": "shown(\"\\n\".join(lines), sys.stderr)",
-  "replace": "print(\"\\n\".join(lines), file=sys.stderr)"
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "deploy's failed read loses the doctor's lines",
+  "find": "lines, reached[\"doctor\"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)",
+  "replace": "lines, reached[\"doctor\"] = [\"%s: %s\" % (SCRIPT, cannot)], None"
  },
  {
-  "file": "scripts/deploy.py",
-  "name": "deploy.py's gate refusal prints around the helper",
-  "find": "shown(\"deploy.py: %s\" % shut, sys.stderr)",
-  "replace": "print(\"deploy.py: %s\" % shut, file=sys.stderr)"
+  "file": "scripts/spark/bench/deploy_image.py",
+  "name": "deploy's gate refusal is an event, not a diagnostic",
+  "find": "            self.diagnostics.append(\"%s: %s\" % (SCRIPT, shut))",
+  "replace": "            self.say(STAGE_GATE, \"%s: %s\" % (SCRIPT, shut))"
  },
  {
-  "file": "scripts/deploy.py",
-  "name": "deploy.py's helper does not flush when asked to",
-  "find": "print(guard_lines(text), flush=flush, file=out)",
-  "replace": "print(guard_lines(text), file=out)"
+  "file": "scripts/spark/core/events.py",
+  "name": "the terminal does not flush an event line",
+  "find": "file=self.stream, flush=True)",
+  "replace": "file=self.stream)"
  },
  {
   "file": "scripts/run_scenario.py",

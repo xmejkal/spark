@@ -60,9 +60,9 @@
   "replace": "[]"
  },
  {
-  "file": "scripts/deploy.py",
+  "file": "scripts/spark/bench/deploy_image.py",
   "name": "deploy-script",
-  "find": "format_rerun_line(__file__,",
-  "replace": "format_rerun_line(\"deploy.py\","
+  "find": "format_rerun_line(DEPLOY_SCRIPT, board_envelope.deploy_argv",
+  "replace": "format_rerun_line(\"deploy.py\", board_envelope.deploy_argv"
  }
 ]

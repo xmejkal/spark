@@ -1,0 +1,11 @@
+[
+ {"file": "scripts/spark/bench/deploy_image.py", "name": "a dry run keeps RUNS", "find": "return (READS, RUNS) if values[\"no_simulation\"] else (READS,)", "replace": "return self.effects"},
+ {"file": "scripts/deploy_service.py", "name": "the gate is skipped before the erase", "find": "deploy_gate.require_open_gate(look, token, consent, image_path, look.question_caveats())", "replace": "None"},
+ {"file": "scripts/board_grant.py", "name": "yes_kind is wrong for a grant", "find": "    yes_kind = GRANT", "replace": "    yes_kind = \"typed\""},
+ {"file": "scripts/spark/core/outside.py", "name": "the echo goes to stdout under --json", "find": "options[\"stdout\"] = self.echo_to", "replace": "options[\"stdout\"] = None"},
+ {"file": "scripts/spark/bench/deploy_image.py", "name": "DELETES is undeclared", "find": "effects = (READS, RUNS, BOARD, DELETES, WRITES)", "replace": "effects = (READS, RUNS, BOARD, WRITES)"},
+ {"file": "scripts/spark/core/events.py", "name": "a BEGIN prints", "find": "        if event.kind == LINE:", "replace": "        if event.kind in (LINE, BEGIN):"},
+ {"file": "scripts/board_envelope.py", "name": "an event line is also a result line", "find": "deploy_steps(reached),\n                           diagnostics=list(diagnostics)", "replace": "deploy_steps(reached), [\"ready seen\"],\n                           diagnostics=list(diagnostics)"},
+ {"file": "scripts/image_evidence.py", "name": "littlefs is asked with no project", "find": "(\"littlefs\", project=self.project)", "replace": "(\"littlefs\", project=None)"},
+ {"file": "scripts/spark/bench/deploy_image.py", "name": "a crash after the erase loses board_state", "find": "data = dict(board_envelope.deploy_data(going.reached), board_state=board_envelope.MAY_BE_ERASED)", "replace": "data = board_envelope.deploy_data(going.reached)"}
+]

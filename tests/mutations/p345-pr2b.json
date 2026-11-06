@@ -68,8 +68,8 @@
  {
   "file": "scripts/board_look.py",
   "name": "report_lines prints the unnamed must lines without printable",
-  "find": "return [\"  \" + printable(line) for line in out]",
-  "replace": "return [\"  \" + str(line) for line in out]"
+  "find": "return [indent + printable(line) for line in out]",
+  "replace": "return [indent + str(line) for line in out]"
  },
  {
   "file": "scripts/board_look.py",
@@ -122,8 +122,8 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "B: the gate gets the look's caveats without the count",
-  "find": "image_path, report.question_caveats())",
-  "replace": "image_path, report.caveats)"
+  "find": "image_path, look.question_caveats())",
+  "replace": "image_path, look.caveats)"
  },
  {
   "file": "scripts/board_look.py",

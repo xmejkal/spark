@@ -52,7 +52,7 @@ class ServiceCase(GateCase):
         patch.start()
         self.addCleanup(patch.stop)
 
-    def outside_world(self):
+    def service_outside(self):
         """The FakeOutsideWorld of a service: `fake_run`, the test's clock, and a reporter whose LINE texts `said` gives."""
         self.outside = FakeOutsideWorld(self.fake_run, clock=self.clock)
         return self.outside
@@ -70,7 +70,7 @@ class ServiceCase(GateCase):
 
     def service(self, **kwargs):
         return deploy_service.DeployService(self.project, firmware_platform.MicroPythonPlatform(self.project),
-                                            image_evidence.PassedRunEvidence(), self.outside_world(), **kwargs)
+                                            image_evidence.PassedRunEvidence(), self.service_outside(), **kwargs)
 
 
 class TheFlashTest(ServiceCase):
@@ -133,7 +133,7 @@ class TheLookTest(ServiceCase):
         reader = FakeBoardReader(reading)
         platform = FakeFirmwarePlatform(self.project, port_finder=object(), board_reader=reader)
         service = deploy_service.DeployService(self.project, platform, image_evidence.PassedRunEvidence(),
-                                               self.outside_world())
+                                               self.service_outside())
         report = service.look(PORT)
         self.assertEqual((report.reading, reader.read_ports), (reading, [PORT]))
 
@@ -156,7 +156,7 @@ class TheRecordTest(ServiceCase):
 class TheNoSimulationServiceTest(ServiceCase):
     def service(self, **kwargs):
         return deploy_service.DeployService(self.project, firmware_platform.MicroPythonPlatform(self.project),
-                                            image_evidence.NoSimulationEvidence(self.project), self.outside_world(), **kwargs)
+                                            image_evidence.NoSimulationEvidence(self.project), self.service_outside(), **kwargs)
 
     def build(self):
         patcher = mock.patch.object(flash_image, "interpreter_for",
