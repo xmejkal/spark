@@ -37,10 +37,18 @@ import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform,  # noqa: E402
-                   FakeProbePlatform,
+                   FakeOutsideWorld, FakeProbePlatform,
                    line_made_at_import, pin_time_zone)
 from firmware_platform import MicroPythonPlatform  # noqa: E402
+from spark.bench import deploy_image  # noqa: E402
+from spark.core.events import Event, TerminalReporter  # noqa: E402
+from spark.bench.deploy_image import DeployImage  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
+
+
+def find_fake_tool(name, **where):
+    """The tests' tools: the fake flasher for its role, and test_board_look's `found` for every other name."""
+    return FOUND["flasher"] if name == "flasher" else found(name)
 
 #: The words the erase sentence has for a board the store holds no deploy of (P401).
 NONE_RECORDED = "spark's store record names no deploy here"
@@ -98,7 +106,9 @@ class GateCase(LookCase):
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
     def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False, platform=None):
-        """(exit code, stdout, stderr) of deploy.py with fake tools. self.ran keeps every command. The first flash command
+        """(exit code, stdout, stderr) of deploy.py with fake tools, through a FakeOutsideWorld: `consent` is the yes its
+        `make_consent` gives (None: the terminal, which the tests' stdout is not), `platform` the FirmwarePlatform the
+        DeployImage builds (None: the project's MicroPython one, over `probe` when given). self.ran keeps every command. The first flash command
         exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait.
         `devs_text` may be a list: the listing of each `mpremote devs` call (the look's first), then the last for good."""
         self.copied = getattr(self, "copied", {})
@@ -128,10 +138,13 @@ class GateCase(LookCase):
             return done("")
 
         out, err = io.StringIO(), io.StringIO()
-        with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)), \
-                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = deploy.main(["--project", str(self.project), *argv], run=run, consent=consent, clock=self.deploy_clock,
-                               platform=platform or (probe and FakeProbePlatform(self.project, probe)), grant_service=grant_service)
+        operation = DeployImage(platform_for=lambda project, find_tool: platform or (FakeProbePlatform(project, probe, find_tool) if probe
+                                                                                     else MicroPythonPlatform(project, find_tool)),
+                                grant_service=grant_service)
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            outside = FakeOutsideWorld(run, find_tool=find_fake_tool, reporter=TerminalReporter.for_json("--json" in argv), clock=self.deploy_clock,
+                                       make_consent=lambda line: consent or deploy_gate.TerminalConsentStrategy(line))
+            code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=operation)
         return code, out.getvalue(), err.getvalue()
 
     def token(self, **kw):
@@ -990,22 +1003,15 @@ class TheStandingYesTest(GateCase):
         self.assertIn("  image sha256: %s, yes: %s" % (sha256, who), said.splitlines())  # P213, card A
 
     @needs_littlefs
-    def test_the_standing_yes_line_shows_an_override_and_a_carriage_return_as_question_marks(self):
-        # P423: the sentence of a refusal reaches the terminal through the guard
+    def test_the_standing_yes_line_is_an_event_so_the_terminal_guards_it(self):
+        # P423: the sentence of a refusal reaches the terminal through the guard (TerminalReporter, test_core)
         self.give()
         self.clock.advance(minutes=30)
-        with mock.patch.object(board_grant, "DEPLOY_MESSAGE_FOR", {"expired": "ended\u202e\rthe grant"}):
-            _, said, _ = self.flash()
-        self.assertIn("  standing yes: not used: ended??the grant", said.splitlines())
-
-    @needs_littlefs
-    def test_a_consent_given_to_main_wins_over_a_valid_grant(self):
-        self.give()
-        consent = FakeConsent(False)
-        code, _, problems = self.flash(consent=consent)
-        self.assertEqual((code, self.flashed()), (2, []))
-        self.assertEqual(len(consent.asked), 1)
-        self.assertIn("you answered no", problems)
+        _, said, _ = self.flash()
+        self.assertIn("  standing yes: not used: %s" % board_grant.DEPLOY_MESSAGE_FOR["expired"], said.splitlines())
+        out = io.StringIO()
+        TerminalReporter(out).report(Event.line("gate", "standing yes: not used: ended\u202e\rthe grant"))
+        self.assertEqual(out.getvalue(), "  standing yes: not used: ended??the grant\n")
 
     def assertAsksInTheTerminal(self, why, *argv):
         """deploy.py with `argv` erases nothing, says `why` it did not use the grant, and asks for a terminal."""
@@ -1295,9 +1301,7 @@ class TheRerunLineTest(unittest.TestCase):
         self.assertEqual(line, "SPARK_HOME=%s /s/grant.py" % Path("rel-store").resolve())
 
     def test_deploy_keeps_ignore_older_runs_in_its_line(self):
-        import argparse
-        args = argparse.Namespace(project=Path("."), token="aaaa-bbbb", ignore_older_runs=True)
-        self.assertTrue(deploy.rerun_line(args, "/dev/cu.usbmodem101", image_evidence.PassedRunEvidence(True)).endswith(" --ignore-older-runs"))
+        self.assertTrue(deploy_image.rerun_line(Path("p"), "t", "/dev/cu.usbmodem101", image_evidence.PassedRunEvidence(True)).endswith(" --ignore-older-runs"))
 
     def test_a_path_with_a_space_is_quoted(self):
         with mock.patch.dict(os.environ):

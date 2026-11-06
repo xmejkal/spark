@@ -27,7 +27,8 @@ import ready_check  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeDeployRecordStore, FakeFirmwarePlatform  # noqa: E402
+from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld  # noqa: E402
+from spark.core.events import LINE  # noqa: E402
 from test_board_look import FOUND, found  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 
@@ -44,12 +45,20 @@ class ServiceCase(GateCase):
     def setUp(self):
         super().setUp()
         self.run_the_scenario()
-        self.lines, self.commands = [], []
+        self.commands = []
         self.clock = FakeClock()
         self.slept = self.clock.slept
         patch = mock.patch.object(tools, "find", side_effect=find)
         patch.start()
         self.addCleanup(patch.stop)
+
+    def outside_world(self):
+        """The FakeOutsideWorld of a service: `fake_run`, the test's clock, and a reporter whose LINE texts `said` gives."""
+        self.outside = FakeOutsideWorld(self.fake_run, clock=self.clock)
+        return self.outside
+
+    def said(self):
+        return [event.text for event in self.outside.reporter.events if event.kind == LINE]
 
     def fake_run(self, command, **kwargs):
         self.commands.append(command)
@@ -61,23 +70,23 @@ class ServiceCase(GateCase):
 
     def service(self, **kwargs):
         return deploy_service.DeployService(self.project, firmware_platform.MicroPythonPlatform(self.project),
-                                            image_evidence.PassedRunEvidence(), run=self.fake_run, clock=self.clock, **kwargs)
+                                            image_evidence.PassedRunEvidence(), self.outside_world(), **kwargs)
 
 
 class TheFlashTest(ServiceCase):
     @needs_littlefs
     def test_deploy_shows_each_command_before_it_runs_and_returns_the_plan_it_ran(self):
         report = self.look()
-        planned = self.service().deploy(report, report.token(), FakeConsent(True), self.lines.append)
+        planned = self.service().deploy(report, report.token(), FakeConsent(True))
         self.assertEqual(planned.commands, self.commands)
-        self.assertEqual(self.lines, ["  running: %s" % shlex.join(command) for command in self.commands])
+        self.assertEqual(self.said(), ["running: %s" % shlex.join(command) for command in self.commands])
         self.assertEqual(len(self.commands), 2)
 
     @needs_littlefs
     def test_the_gate_question_starts_with_the_caveats_of_the_passed_run(self):
         report = self.look()
         consent = FakeConsent(True)
-        self.service().deploy(report, report.token(), consent, self.lines.append)
+        self.service().deploy(report, report.token(), consent)
         self.assertTrue(consent.asked[0].startswith("the passed run's scenario has no set-control step"), consent.asked[0])
 
     @needs_littlefs
@@ -86,7 +95,7 @@ class TheFlashTest(ServiceCase):
         (self.project / ".spark" / "project.json").write_text('{"must": ["a", "b"]}')
         report = self.look()
         consent = FakeConsent(True)
-        self.service().deploy(report, report.token(), consent, self.lines.append)
+        self.service().deploy(report, report.token(), consent)
         self.assertEqual(consent.asked[0].count("2 must lines were not named by any scenario (see the look)"), 1)
         self.assertTrue(consent.asked[0].startswith("the passed run's scenario has no set-control step"), consent.asked[0])
 
@@ -95,18 +104,18 @@ class TheFlashTest(ServiceCase):
         report = self.look()
         self.fails = True
         with self.assertRaises(project_image.DeployError) as failed:
-            self.service().deploy(report, report.token(), FakeConsent(True), self.lines.append)
+            self.service().deploy(report, report.token(), FakeConsent(True))
         self.assertTrue(str(failed.exception).startswith("`"))
         self.assertTrue(str(failed.exception).endswith(": if esptool could not connect, " + "hold the board's BOOT button (B, top right, beside the USB-C), press and release RESET (R, top left, beside the USB-C), release BOOT, and run it again. Left and right as seen with the metal shield facing you, USB-C at the top"))  # the XIAO record names the places
-        self.assertEqual(len(self.lines), 2)  # the erase and its one retry were shown; the write never started
-        self.assertEqual((self.lines[1].startswith("  retry in 5 s: "), self.slept, len(self.commands)), (True, [5], 2))
+        self.assertEqual(len(self.said()), 2)  # the erase and its one retry were shown; the write never started
+        self.assertEqual((self.said()[1].startswith("retry in 5 s: "), self.slept, len(self.commands)), (True, [5], 2))
 
     @needs_littlefs
     def test_a_token_that_is_not_the_looks_is_refused_before_any_command(self):
         report = self.look()
         with self.assertRaises(deploy_gate.GateClosedError):
-            self.service().deploy(report, "aaaa-bbbb", FakeConsent(True), self.lines.append)
-        self.assertEqual((self.commands, self.lines), ([], []))
+            self.service().deploy(report, "aaaa-bbbb", FakeConsent(True))
+        self.assertEqual((self.commands, self.said()), ([], []))
 
     def test_a_yes_that_ends_before_the_flash_stops_it(self):
         class Ended(FakeConsent):
@@ -114,7 +123,7 @@ class TheFlashTest(ServiceCase):
                 raise project_image.DeployError("the yes ended", reason="grant_ended")
         report = self.look()
         with self.assertRaises(project_image.DeployError):
-            self.service().deploy(report, report.token(), Ended(True), self.lines.append)
+            self.service().deploy(report, report.token(), Ended(True))
         self.assertEqual(self.commands, [])
 
 
@@ -123,8 +132,8 @@ class TheLookTest(ServiceCase):
         reading = self.look().reading
         reader = FakeBoardReader(reading)
         platform = FakeFirmwarePlatform(self.project, port_finder=object(), board_reader=reader)
-        service = deploy_service.DeployService(self.project, platform, image_evidence.PassedRunEvidence(), run=self.fake_run,
-                                               clock=self.clock)
+        service = deploy_service.DeployService(self.project, platform, image_evidence.PassedRunEvidence(),
+                                               self.outside_world())
         report = service.look(PORT)
         self.assertEqual((report.reading, reader.read_ports), (reading, [PORT]))
 
@@ -147,7 +156,7 @@ class TheRecordTest(ServiceCase):
 class TheNoSimulationServiceTest(ServiceCase):
     def service(self, **kwargs):
         return deploy_service.DeployService(self.project, firmware_platform.MicroPythonPlatform(self.project),
-                                            image_evidence.NoSimulationEvidence(self.project), run=self.fake_run, clock=self.clock, **kwargs)
+                                            image_evidence.NoSimulationEvidence(self.project), self.outside_world(), **kwargs)
 
     def build(self):
         patcher = mock.patch.object(flash_image, "interpreter_for",
@@ -162,7 +171,7 @@ class TheNoSimulationServiceTest(ServiceCase):
         self.build()
         report = self.look(evidence=image_evidence.NoSimulationEvidence(self.project))
         consent = FakeConsent(True)
-        planned = self.service().deploy(report, report.token(), consent, self.lines.append)
+        planned = self.service().deploy(report, report.token(), consent)
         self.assertTrue(consent.asked[0].startswith("no simulation tested this image. erase ALL"))
         self.assertEqual((planned.notes, len(self.commands)), ([], 2))
 
@@ -171,7 +180,7 @@ class TheNoSimulationServiceTest(ServiceCase):
         self.record_a_deploy()
         report = self.look(evidence=image_evidence.NoSimulationEvidence(self.project))
         consent = FakeConsent(True)
-        self.service().deploy(report, report.token(), consent, self.lines.append)
+        self.service().deploy(report, report.token(), consent)
         self.assertIn("erase ALL of this board's flash (spark's store record names blink-c6 as its last deploy here, "
                       "2026-10-19T09:24:50+02:00, ready seen) and write ", consent.asked[0])
 
@@ -189,12 +198,13 @@ class TheVerifyTest(ServiceCase):
     def test_a_fault_reading_the_passed_log_after_the_flash_is_not_turned_into_a_sentence(self):
         report = self.look()
         service = self.service()
-        planned = service.deploy(report, report.token(), FakeConsent(True), self.lines.append)
+        planned = service.deploy(report, report.token(), FakeConsent(True))
         with mock.patch.object(project_image.ProjectImage, "find_passed_log", side_effect=project_image.DeployError("x", reason="log_unreadable")):
             with self.assertRaises(project_image.DeployError):
-                service.verify(report, planned, self.lines.append)
+                service.verify(report, planned)
 
-    def test_main_lets_a_fault_after_the_flash_through_as_a_traceback(self):
+    def test_a_fault_after_the_flash_is_a_crash_that_says_the_board_may_be_erased(self):
+        # P655: it was a traceback and exit 1; now one unchecked `crash` item with the stage, and the traceback on stderr
         token = self.token()
         real = project_image.ProjectImage.find_passed_log
 
@@ -203,8 +213,12 @@ class TheVerifyTest(ServiceCase):
                 raise project_image.DeployError("the log is gone", reason="log_unreadable")
             return real(image)
         with mock.patch.object(project_image.ProjectImage, "find_passed_log", find_passed_log):
-            with self.assertRaises(project_image.DeployError):
-                self.deploy("--token", token, consent=FakeConsent(True))
+            code, said, problems = self.deploy("--token", token, "--json", consent=FakeConsent(True))
+        envelope = json.loads(said)
+        self.assertEqual((code, envelope["unchecked"][0]["code"], envelope["unchecked"][0]["subject"]), (2, "crash", "verify"))
+        self.assertEqual((envelope["data"]["stage"], envelope["data"]["board_state"]), ("verify", "may_be_erased"))
+        self.assertIn("deploy.py: crashed, DeployError\nrun look.py, then deploy again\n", problems)
+        self.assertIn("the log is gone", problems)
 
 
     def test_a_who_that_cannot_be_read_is_a_store_record_not_written_after_the_board_log_line(self):

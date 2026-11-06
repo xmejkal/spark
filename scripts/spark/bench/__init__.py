@@ -5,12 +5,13 @@ W3-3), `deploy` the second (P655, W4-2); grant, live and reach follow in S7. `OP
 
 import deploy_gate
 import tools
+from spark.bench.deploy_image import DeployImage
 from spark.bench.look_at_board import LookAtBoard
 from spark.core.clock import SystemClock
 from spark.core.outside import build_outside_world
 
 # --- MVP ---
-OPERATIONS = {LookAtBoard.name: LookAtBoard}
+OPERATIONS = {LookAtBoard.name: LookAtBoard, DeployImage.name: DeployImage}
 
 
 def build_project_outside_world(project, effects, reporter):

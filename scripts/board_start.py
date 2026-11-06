@@ -11,8 +11,10 @@ restart left that board in download mode, with the port gone and back as for a r
 import collections
 
 import board_codes
+import board_envelope
 import board_look
 import download_mode
+from spark.core.events import Event
 
 #: How long the port may take to be listed after the write, in seconds. One bench observation: after esptool's restart
 #: command started, the FireBeetle 2 was listed again after at most 7 s, in both tries (bench.log 23:29:16 to 23:29:23,
@@ -87,9 +89,9 @@ class BoardStartService:
         """The result for a board that is not listed."""
         return BoardStartResult(board_codes.PORT_GONE, None, download_mode.port_gone(self.places))
 
-    def wait_for_start(self, port, read, show_line, timeout_s=download_mode.RESET_WAIT_S, usb=None):
+    def wait_for_start(self, port, read, report, timeout_s=download_mode.RESET_WAIT_S, usb=None):
         """Wait at most `timeout_s` for the port to go and come back, and call `read(port)` each time it does: it says
-        whether mpremote answered. A restart after which it does not answer is shown to the person (`show_line`) and the
+        whether mpremote answered. A restart after which it does not answer is reported to the person as an Event (`report`, E2) and the
         wait goes on. A row whose USB id is not `usb` (the id the port had) counts as a restart too, for a poll can miss
         the gap. A failed list is never a gone port. A BoardStartResult."""
         end, gone = self.clock.monotonic() + timeout_s, False
@@ -103,7 +105,7 @@ class BoardStartService:
                     self.note(COUNTED)
                     return BoardStartResult(None, port, "")
                 self.note(NOT_COUNTED_LOG)
-                show_line("  " + download_mode.not_counted(self.places))
+                report(Event.line(board_envelope.STAGE_VERIFY, download_mode.not_counted(self.places)))
             usb = row.usb if row else usb
             self.clock.sleep(POLL_S)
         row = self._listed(port)

@@ -31,6 +31,7 @@ from spark.core import outcomes
 import project_image
 import sim_project
 import tools
+from spark.core.events import INDENT
 from spark.core.text_guards import ValueMessageError, printable
 
 #: mpremote devs lists these for Bluetooth and the debug console, and they are no board.
@@ -383,7 +384,7 @@ def say_limit(limit):
 # --- end MVP ---
 
 
-def report_lines(report, token=True):
+def report_lines(report, token=True, indent=INDENT):
     """The lines a person reads, for a LookReport, each through `printable`. deploy.py prints them without the token line."""
     reading, name = report.reading, report.record["id"]
     shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
@@ -414,7 +415,7 @@ def report_lines(report, token=True):
     if token:
         mine = report.token()
         out.append(TOKEN_LINE % mine if mine else "no token: %s" % report.no_token_reason().sentence)
-    return ["  " + printable(line) for line in out]  # P423: one line each, so a newline in a port or a name shows as `?`
+    return [indent + printable(line) for line in out]  # P423: one line each, so a newline in a port or a name shows as `?`
 
 
 class LookService:

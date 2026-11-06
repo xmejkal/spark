@@ -29,6 +29,9 @@ import run_scenario  # noqa: E402
 import sim_project  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
+from fakes import FakeOutsideWorld  # noqa: E402
+from spark.bench.deploy_image import DeployImage  # noqa: E402
+from spark.core.events import TerminalReporter  # noqa: E402
 
 FAKE_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
 READY_MATCHED = '[s] Expected text matched: "ready"\n'
@@ -79,15 +82,17 @@ class ProjectCase(unittest.TestCase):
         """The DeployPlan of a DeployService over this project's MicroPython platform. tools.find must be patched."""
         evidence = image_evidence.PassedRunEvidence(ignore_older_runs)  # the default is the refusal
         return deploy_service.DeployService(
-            self.project, firmware_platform.MicroPythonPlatform(self.project), evidence).plan(port)
+            self.project, firmware_platform.MicroPythonPlatform(self.project), evidence, FakeOutsideWorld()).plan(port)
 
     def deploy(self, *argv, find=found, run=None):
-        """(exit code, stdout, stderr, the commands run) of deploy.py in this project."""
+        """(exit code, stdout, stderr, the commands run) of deploy.py in this project, through a FakeOutsideWorld whose
+        tools come from `find` and whose `run` keeps each command (or is the one given)."""
         ran = []
         out, err = io.StringIO(), io.StringIO()
-        with mock.patch.object(tools, "find", side_effect=find), contextlib.redirect_stdout(out), \
-                contextlib.redirect_stderr(err):
-            code = deploy.main(["--project", str(self.project), *argv], run=run or (lambda argv, **kw: ran.append(argv)))
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            outside = FakeOutsideWorld(run or (lambda argv, **kw: ran.append(argv)), find_tool=find,
+                                       reporter=TerminalReporter.for_json("--json" in argv))
+            code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=DeployImage())
         return code, out.getvalue(), err.getvalue(), ran
 
 
@@ -159,7 +164,7 @@ class TheNoSimulationDryRunTest(ProjectCase):
 
         def find(name, *args, **kwargs):
             asked.append((name, args, kwargs))
-            return found(name)
+            return found(name, *args, **kwargs)
         code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=find)
         self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
         self.assertIn(("littlefs", (), {"project": None}), asked)
@@ -358,27 +363,8 @@ class WhatDeployNeedsTest(ProjectCase):
 
 
 class TheGuardedPrintTest(ProjectCase):
-    """P423 (#556): every text print of deploy.py shows a character a terminal does not print as `?`; --json keeps it raw."""
-
-    def test_shown_guards_each_line_and_keeps_the_newlines_on_the_stream_it_is_given(self):
-        out = io.StringIO()
-        deploy.shown("a\u202eb\nc\x1bd\te", out, flush=True)
-        self.assertEqual(out.getvalue(), "a?b\nc?d?e\n")
-
-    def test_shown_flushes_when_asked_to_and_only_then_and_a_service_line_always_does(self):
-        class Recording(io.StringIO):
-            flushed = 0
-
-            def flush(self):
-                self.flushed += 1
-
-        stream = Recording()
-        deploy.shown("a", stream)
-        self.assertEqual(stream.flushed, 0)
-        deploy.shown("b", stream, flush=True)
-        self.assertEqual(stream.flushed, 1)
-        deploy.show_line("c", stream)
-        self.assertEqual((stream.flushed, stream.getvalue()), (2, "a\nb\nc\n"))
+    """P423 (#556): every text print of deploy.py shows a character a terminal does not print as `?`; --json keeps it raw.
+    The lines a person reads are Events now, guarded by TerminalReporter (test_core); here what deploy itself prints."""
 
     @needs_littlefs
     def test_the_dry_run_on_stdout_shows_a_right_to_left_override_in_the_port_as_a_question_mark(self):
@@ -402,7 +388,7 @@ class TheDeployEnvelopeYesRuleTest(unittest.TestCase):
     def step_why(self, evidence):
         reached = {"project": Path("p"), "evidence": evidence, "stage": "gate", "next_op": "deploy",
                    "token": "t", "port": "/dev/x", "refusal": "no yes"}
-        return board_envelope.deploy_envelope(reached, 2)["next"][0]["why"]
+        return board_envelope.deploy_result(reached, 2).next[0].why
 
     def test_no_simulation_drops_the_grant_clause_and_a_passed_run_keeps_it(self):
         self.assertNotIn("grant", self.step_why(image_evidence.NoSimulationEvidence("p")))

@@ -23,36 +23,18 @@ the project's board (requirements.json's `board`), and esptool refuses a board w
 esptool and mpremote are the tools list's `flasher` and `board-shell`, which /spark:setup installs.
 """
 
-import argparse
-import shlex
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import board_codes
-import board_doctor
-import board_envelope
-import board_grant
-import board_look
-import deploy_gate
 import download_mode
 import ready_check
-import store
-import tools
-from board_console import LEAVE_CONSOLE
-from deploy_service import DeployService, FlashError
-from firmware_platform import MicroPythonPlatform
-from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_CAVEAT, NO_SIMULATION_FLAG, evidence_for
-from project_image import DeployError
-from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, AnsweringParser, BadArgument
-from spark.core.text_guards import guard_lines
+from image_evidence import NO_SIMULATION_CAVEAT
+from spark.bench import build_project_outside_world
+from spark.bench.deploy_image import DeployImage
+from spark.core.cli import HelpText, run_cli
+from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK  # noqa: F401  (the tests read deploy's exit codes here)
 
-#: The line after a deploy that names the image on the board and whose yes erased it (P213, card A).
-DEPLOYED_LINE = "image sha256: %s, yes: %s"
-#: The last line: how the person sees the firmware start.
-WATCH = ("then, to see it start: %%s, press Ctrl-C, then Ctrl-D: the firmware prints `ready`. Then %s: an open "
-         "console holds the port, and the next deploy cannot open it" % LEAVE_CONSOLE)
 #: What --help says beyond the arguments.
 EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
 (--ignore-older-runs flashes anyway).
@@ -114,179 +96,13 @@ came, 2 it could not run, you answered no, there was no terminal, or ready is un
     NO_SIMULATION_CAVEAT, ready_check.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 
-def shown(text, out=None, flush=False):
-    """Print `text` as a person reads it (P423): a character a terminal does not print shows as `?`, and the text's own
-    newlines stay. `out` is the stream (None: stdout). `--json` prints through no such helper: it carries the raw text."""
-    print(guard_lines(text), flush=flush, file=out)
 
 
-def rerun_line(args, port, evidence):
-    """The line that runs this deploy again, for the person's own terminal."""
-    return deploy_gate.format_rerun_line(__file__, board_envelope.deploy_argv(args.project.resolve(), args.token, port,
-                                                                            evidence))
-
-
-def grant_argv(args, port, minutes="N"):
-    """The arguments of grant.py that give a deploy grant for this board."""
-    return ["--scope", board_grant.SCOPE_DEPLOY, "--minutes", minutes, "--project", str(args.project.resolve()), "--port", port]
-
-
-def grant_hint(args, port):
-    """The text added to the no-terminal line when a deploy grant could make the yes unnecessary: the line the person
-    runs once in their own terminal to give it."""
-    line = deploy_gate.format_rerun_line(Path(__file__).resolve().with_name("grant.py"), grant_argv(args, port))
-    return ("\nOr, to let Claude deploy this board for N minutes (1 to 1440) with no yes each time, run this once. It "
-            "allows an erase of ALL of the flash and any passed image of any project:\n  %s" % line)
-
-
-def choose_consent(args, report, grant_service, evidence, out=None):
-    """The ConsentStrategy for this deploy, after the look: the standing yes of a valid deploy grant when the look
-    matched and the evidence allows it (a passed run's, with no ignored older run), else a yes typed in this terminal.
-    Prints one line that says which, and why not when it is the terminal."""
-    line = rerun_line(args, report.port, evidence)
-    if board_grant.grant_may_cover(report, evidence):
-        line += grant_hint(args, report.port)
-    chosen = grant_service.consent_for_deploy(report, evidence, deploy_gate.TerminalConsentStrategy(line, stdout=out))
-    if chosen.why not in (None, board_grant.WHY_NO_GRANT):  # a person with no grant is told only by the no-terminal text
-        said = board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]
-        shown("  standing yes: not used: %s" % said, out, flush=True)
-    return chosen.consent
-
-
-def show_line(line, out=None):
-    """How the service's lines reach the person: printed at once, because a step is still running."""
-    shown(line, out, flush=True)
-
-
-def main(argv=None, run=None, consent=None, platform=None, clock=None, grant_service=None):
-    """
-    Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `run` is how a command runs,
-    `consent` how the person says yes (default: in this terminal), `platform` the FirmwarePlatform with the board tools
-    (default: MicroPythonPlatform), `clock` the time and the waits (default: spark.core.clock.SystemClock),
-    `grant_service` the board_grant.GrantService that finds a deploy grant (default: the store's). A `consent` given always
-    wins: the grant is read only when none is given. Returns the exit code.
-    """
-    parser = AnsweringParser(prog="deploy.py", description=__doc__.strip().split("\n\n")[0], epilog=EPILOG,
-                             formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--project", type=Path, default=Path("."),
-                        help="the project folder with sim/ and requirements.json (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on "
-                        "USB: the look lists them")
-    parser.add_argument("--token", help="the token look.py printed for this board and this image")
-    which = parser.add_mutually_exclusive_group()
-    which.add_argument(IGNORE_OLDER_RUNS_FLAG, action="store_true",
-                       help="flash even when a log in sim/runs/ tested another image, and name it in a note "
-                       "(default: refuse)")
-    which.add_argument(NO_SIMULATION_FLAG, action="store_true",
-                       help="flash an image that no simulation tested: firmware/ must have a main.py, compile and be "
-                       "what the image holds. Needs look.py --no-simulation. The person's typed yes names the caveat")
-    parser.add_argument("--dry-run", action="store_true", help="print each command and run nothing")
-    parser.add_argument("--json", action="store_true", help="print one envelope on stdout, the lines a person reads on "
-                        "stderr (docs/guide/agents/json.md)")
-    argv = sys.argv[1:] if argv is None else list(argv)
-    try:
-        args = parser.parse_args(argv)
-    except BadArgument as bad:  # P433: with --json an envelope, else the usage on stderr as argparse prints it
-        if "--json" not in argv:
-            parser.exit_with_usage(guard_lines(str(bad)))
-        print(board_envelope.dumps(board_envelope.bad_argument_envelope("deploy", bad)))
-        return EXIT_COULD_NOT_RUN
-    evidence = evidence_for(args.project, args.no_simulation, args.ignore_older_runs)
-    reached = {"project": args.project.resolve(), "token": args.token, "port": args.port, "stage": board_envelope.STAGE_PLAN,
-            "evidence": evidence, "dry_run": args.dry_run}
-    code = _deploy(args, evidence, run or subprocess.run, consent, platform, clock, grant_service, sys.stderr if args.json else None, reached)
-    if args.json:
-        print(board_envelope.dumps(board_envelope.deploy_envelope(reached, code)))
-    return code
-
-
-def reason_of(refusal):
-    """The board_codes code for a refusal that deploy.py catches: the `reason` of a LookStop or a DeployError (a FlashError
-    too), and tool_missing for a tools.ToolProblem (P433)."""
-    return board_codes.TOOL_MISSING if isinstance(refusal, tools.ToolProblem) else refusal.reason
-
-
-def who_said_yes(consent):
-    """Whose yes it was, as a phrase, read once. getpass can find no user (OSError since Python 3.13, KeyError before
-    it), and then the phrase says so; the store record names the error itself."""
-    try:
-        return consent.who
-    except (OSError, KeyError) as cannot:
-        return "not known (%s)" % cannot
-
-
-def _deploy(args, evidence, run, consent, platform, clock, grant_service, out, reached):
-    """The deploy main parses for. Every line a person reads goes to `out` (None: stdout). What `--json` reports it puts in
-    `reached`. Returns the exit code."""
-    def say(line):
-        shown(line, out)
-
-    service = DeployService(args.project, platform or MicroPythonPlatform(args.project), evidence, run, clock,
-                            echo_to=None if out is None else 2)
-    try:
-        planned = service.plan(args.port)
-    except (DeployError, tools.ToolProblem) as cannot:
-        reached.update(refusal=str(cannot), reason=reason_of(cannot))
-        shown("deploy.py: %s" % cannot, sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    reached["plan"] = planned
-    for note in planned.notes:
-        say("  note: %s" % note)
-    if args.dry_run:
-        say("\n".join("  would run: %s" % shlex.join(command) for command in planned.commands))
-        say("  board: not looked at: run look.py")
-        say("  " + WATCH % shlex.join(service.platform.make_connection(planned.mpremote, args.port, run).repl_command()))
-        return EXIT_OK
-    try:
-        reached["stage"] = board_envelope.STAGE_LOOK
-        report = reached["report"] = service.look(args.port)
-        shown("\n".join(board_look.report_lines(report, token=False)), out, flush=True)
-        reached["port"] = report.port
-        consent = consent or choose_consent(args, report, grant_service or board_grant.GrantService(), evidence, out)
-        yes_kind = consent.yes_kind
-        reached["stage"] = board_envelope.STAGE_GATE
-        planned = service.deploy(report, args.token, consent, lambda line: show_line(line, out))
-        # the gate is passed: only now is there a yes to report
-        reached.update(consent=consent, yes_kind=yes_kind, who=who_said_yes(consent))
-    except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
-        if isinstance(cannot, FlashError):
-            reached.update(stage=board_envelope.STAGE_FLASH, consent=consent, yes_kind=yes_kind,
-                           who=who_said_yes(consent))
-        reached.update(refusal=str(cannot), reason=reason_of(cannot))
-        lines = ["deploy.py: %s" % cannot]
-        if isinstance(cannot, board_look.LookStop):  # P354: a failed read gets the doctor, a busy port its step
-            lines, reached["doctor"] = board_doctor.stop_answer("deploy.py", cannot, service.platform, run)
-        shown("\n".join(lines), sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    except deploy_gate.GateClosedError as shut:
-        reached.update(refusal=str(shut), reason=shut.reason, next_op=shut.next_op)
-        if shut.next_op == deploy_gate.NEXT_DEPLOY:
-            reached["run_in_terminal"] = rerun_line(args, report.port, evidence)
-            if board_grant.grant_may_cover(report, evidence):
-                reached["grant_argv"] = grant_argv(args, report.port, "60")
-        shown("deploy.py: %s" % shut, sys.stderr)
-        return shut.code
-    reached["stage"] = board_envelope.STAGE_VERIFY
-    result = reached["result"] = service.verify(report, planned, lambda line: show_line(line, out))
-    ready = result.ready
-    if ready.verdict != ready_check.SEEN:
-        reached.update(refusal=ready.sentence, reason=(result.start and result.start.code) or board_codes.READY_UNKNOWN
-                       if ready.verdict == ready_check.UNKNOWN else board_codes.READY_NOT_SEEN)
-    who = reached["who"]
-    say("  %s\n  %s\n  %s: %s\n  board log: %s" % (result.facts_line, DEPLOYED_LINE % (result.image_sha256, who),
-                                                ready.verdict, ready.sentence, result.log_path))
-    try:
-        reached["store_record"] = str(service.record(result, consent))
-        say("  store record: %s" % reached["store_record"])
-    except (OSError, KeyError, store.StoreProblem) as cannot:  # KeyError: getpass before Python 3.13
-        reached["store_record_error"] = str(cannot)
-        reached["notes"] = ["the store record was not written: %s" % cannot]
-        say("  store record: not written: %s" % cannot)
-    if ready.verdict == ready_check.UNKNOWN:
-        if result.start is None or result.start.port:  # P462: with the port gone there is nothing to watch
-            say("  " + WATCH % shlex.join(result.repl_command))
-        return EXIT_COULD_NOT_RUN
-    return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS
+def main(argv=None, outside=None, operation=None):
+    """Print the flash commands (--dry-run) or look, pass the gate and run them, erase first. `outside` is the OutsideWorld
+    a test gives (a run builds the project's), `operation` the DeployImage a test gives with its Fakes. Returns the exit code."""
+    return run_cli(HelpText("deploy.py", __doc__.strip().split("\n\n")[0], EPILOG), operation or DeployImage(), argv,
+                   outside_builder=build_project_outside_world, outside=outside)
 
 
 if __name__ == "__main__":

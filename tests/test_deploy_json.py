@@ -24,7 +24,7 @@ import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import store  # noqa: E402
-from fakes import FakeConsent, FakeConsoleProbe  # noqa: E402
+from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
 from test_board_look import FOUND, done, found  # noqa: E402
 import test_deploy_gate  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
@@ -448,17 +448,15 @@ class DeployJsonTest(JsonCase, GateCase):
         self.assertEqual((code, said["data"]["store_record"], said["data"]["store_record_error"]), (0, None, "no"))
 
     @needs_littlefs
-    def test_the_flash_tool_writes_to_the_descriptor_it_is_given(self):
+    def test_the_flash_tool_leaves_its_output_to_the_runner_which_echoes_it_where_the_reporter_says(self):
+        # E2: the service names no stream; ProgramRunner sends an uncaptured child to fd 2 under --json (test_core)
         self.run_the_scenario()
         seen = []
-        platform = firmware_platform.MicroPythonPlatform(self.project)
-        for echo_to, expected in ((2, {"stdout": 2}), (None, {})):
-            seen.clear()
-            service = deploy_service.DeployService(self.project, platform, image_evidence.PassedRunEvidence(), echo_to=echo_to,
-                                                   run=lambda command, **kw: seen.append(kw) or done(""))
-            with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: FOUND["flasher"] if name == "flasher" else found(name)):
-                service.deploy(self.look(), self.token(), FakeConsent(True), lambda line: None)
-            self.assertEqual(seen, [dict(check=True, **expected)] * 2)
+        platform = firmware_platform.MicroPythonPlatform(self.project, test_deploy_gate.find_fake_tool)
+        service = deploy_service.DeployService(self.project, platform, image_evidence.PassedRunEvidence(),
+                                               FakeOutsideWorld(lambda command, **kw: seen.append(kw) or done("")))
+        service.deploy(self.look(), self.token(), FakeConsent(True))
+        self.assertEqual(seen, [dict(check=True)] * 2)
 
 
 if __name__ == "__main__":
