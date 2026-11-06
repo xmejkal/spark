@@ -341,7 +341,7 @@ class RunOptionsTest(unittest.TestCase):
                 self.assertEqual(calls, [("toy", toy_values(what), result, 2.5)])
         calls = []
         result = run_operation(Toy(), toy_values("ok"), None, lambda: 1 / 0, RunOptions(Privacy(), lambda *call: calls.append(call), TickingClock()))
-        self.assertEqual((result.findings[0].code, calls), (codes.CRASH, [("toy", toy_values("ok"), result, 2.5)]), "a builder that crashes")
+        self.assertEqual((result.findings[0].code, calls), ("crash", [("toy", toy_values("ok"), result, 2.5)]), "a builder that crashes")
 
     def test_a_tracer_that_raises_leaves_the_result_standing(self):
         def broken(*call):
