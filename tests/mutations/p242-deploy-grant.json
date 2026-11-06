@@ -176,7 +176,7 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "standing-yes-not-printed",
-  "find": "            self.report(Event.line(board_codes.STAGE_GATE, \"yes: %s\" % consent.who))\n",
+  "find": "            self.report(Event.line(deploy_stages.STAGE_GATE, \"yes: %s\" % consent.who))\n",
   "replace": "            pass\n"
  },
  {

@@ -13,7 +13,7 @@ from pathlib import Path
 
 import board_doctor
 import boards
-from board_codes import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY  # noqa: F401  (the stages are data.stage; the look reads them here)
+from deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY  # noqa: F401  (the stages are data.stage; the look reads them here)
 import design
 from spark.core import outcomes
 from spark.core.result import Finding, NextStep, OperationResult

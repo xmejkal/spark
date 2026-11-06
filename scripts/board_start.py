@@ -11,6 +11,7 @@ restart left that board in download mode, with the port gone and back as for a r
 import collections
 
 import board_codes
+import deploy_stages
 import board_look
 import download_mode
 from spark.core.events import Event
@@ -104,7 +105,7 @@ class BoardStartService:
                     self.note(COUNTED)
                     return BoardStartResult(None, port, "")
                 self.note(NOT_COUNTED_LOG)
-                report(Event.line(board_codes.STAGE_VERIFY, download_mode.not_counted(self.places)))
+                report(Event.line(deploy_stages.STAGE_VERIFY, download_mode.not_counted(self.places)))
             usb = row.usb if row else usb
             self.clock.sleep(POLL_S)
         row = self._listed(port)

@@ -12,6 +12,7 @@ import shlex
 import subprocess
 
 import board_codes
+import deploy_stages
 import board_facts
 import boards
 import board_look
@@ -98,14 +99,14 @@ class DeployService:
         image_path = ProjectImage(self.project).path.relative_to(self.project)
         deploy_gate.require_open_gate(look, token, consent, image_path, look.question_caveats())
         if consent.yes_kind == deploy_gate.GRANT:
-            self.report(Event.line(board_codes.STAGE_GATE, "yes: %s" % consent.who))
+            self.report(Event.line(deploy_stages.STAGE_GATE, "yes: %s" % consent.who))
         planned = self.plan(look.port)
         if look.token() != token:  # AT116: the image changed while the person answered
             raise DeployError("the image changed after your yes: run look.py again. not flashed.", reason=board_codes.IMAGE_CHANGED)
         consent.require_ready()  # a deploy grant can end while the plan reads the image
-        self.report(Event.begin(board_codes.STAGE_FLASH))
+        self.report(Event.begin(deploy_stages.STAGE_FLASH))
         for index, command in enumerate(planned.commands):
-            self.report(Event.line(board_codes.STAGE_FLASH, "running: %s" % shlex.join(command)))
+            self.report(Event.line(deploy_stages.STAGE_FLASH, "running: %s" % shlex.join(command)))
             try:
                 self._run_flash(command, planned.flasher, consent, retry=index == 0)
             except (OSError, subprocess.CalledProcessError) as failed:
@@ -123,7 +124,7 @@ class DeployService:
         except subprocess.CalledProcessError as failed:
             if not retry or failed.returncode != flasher.RETRY_EXIT_CODE:
                 raise
-            self.report(Event.line(board_codes.STAGE_FLASH, flasher.RETRY_LINE % {
+            self.report(Event.line(deploy_stages.STAGE_FLASH, flasher.RETRY_LINE % {
                 "wait": flasher.RETRY_WAIT_S, "command": shlex.join(command), "code": failed.returncode}))
             self.clock.sleep(flasher.RETRY_WAIT_S)
             try:
@@ -179,7 +180,7 @@ class DeployService:
         waits, console = probe.waits_in_download_mode()
         starter.note("console with DTR and RTS off: %s\n" % (console.strip() or "nothing"))
         if waits:
-            self.report(Event.line(board_codes.STAGE_VERIFY, download_mode.press_reset(starter.places)))
+            self.report(Event.line(deploy_stages.STAGE_VERIFY, download_mode.press_reset(starter.places)))
             latest = [board]
             start = starter.wait_for_start(port, lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_check.UNKNOWN,
                                            self.report, usb=row.usb)

@@ -19,7 +19,7 @@ import ready_check
 import store
 import tools
 from board_console import LEAVE_CONSOLE
-from board_codes import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY
+from deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY
 from deploy_service import DeployService, FlashError
 from firmware_platform import MicroPythonPlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
@@ -170,8 +170,8 @@ class DeployFlowService:
             for line in board_look.report_lines(look, token=False, indent=""):
                 self.say(STAGE_LOOK, line)
             reached["port"] = look.port
+            self.report(Event.begin(STAGE_GATE))  # before the "standing yes" line, which is a gate line
             self.consent = self.choose_consent(look, token)
-            self.report(Event.begin(STAGE_GATE))
             self.planned = self.service.deploy(look, token, self.consent)
             self.keep_yes()  # only now is there a yes to report
         except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:

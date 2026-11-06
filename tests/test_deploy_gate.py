@@ -35,7 +35,6 @@ import flash_image  # noqa: E402
 import flasher  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
-import run_scenario  # noqa: E402
 import tools  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform,  # noqa: E402
                    FakeOutsideWorld, FakeProbePlatform,
@@ -727,7 +726,7 @@ class TheBoardInDownloadModeTest(GateCase):
         probe = FakeConsoleProbe("waiting for download\n")
         self.run_the_scenario()
         log = next((self.project / "sim" / "runs").glob("*.log"))  # a log from before P215: no file lines
-        log.write_text("".join(line for line in log.read_text().splitlines(keepends=True) if not line.startswith(run_scenario.FILE_LINE)))
+        log.write_text("".join(line for line in log.read_text().splitlines(keepends=True) if not line.startswith("file sha256: ")))
         code, said, _ = self.deploy("--token", self.token(), consent=FakeConsent(True), probe=probe)
         self.assertEqual((code, probe.asked), (2, []))
         self.assertIn("ready unknown: the passed run's log names no files", said)
@@ -979,7 +978,7 @@ class TheBoardLogTextTest(unittest.TestCase):
 class TheConsentTest(unittest.TestCase):
     def test_a_consent_that_does_not_say_who_cannot_be_built(self):
         class Silent(deploy_gate.ConsentStrategy):
-            yes_kind = deploy_gate.TYPED
+            yes_kind = "typed"
 
             def ask(self, question):
                 return True
@@ -990,7 +989,7 @@ class TheConsentTest(unittest.TestCase):
             who = "nobody"
         with self.assertRaises(TypeError):  # P655: `yes_kind` is required as `who` is
             type("NoKind", (deploy_gate.ConsentStrategy,), {"who": "nobody", "ask": lambda self, q: True})()
-        self.assertEqual(Unkinded().yes_kind, deploy_gate.TYPED)
+        self.assertEqual(Unkinded().yes_kind, "typed")
 
     def test_the_terminal_says_who_typed_the_yes(self):
         terminal = deploy_gate.TerminalConsentStrategy("x", user_name=lambda: "ada")
@@ -1064,7 +1063,9 @@ class TheStandingYesTest(GateCase):
         self.give()
         self.clock.advance(minutes=30)
         _, said, _ = self.flash()
-        self.assertIn("  standing yes: not used: %s" % board_grant.DEPLOY_MESSAGE_FOR["expired"], said.splitlines())
+        ended = [line for line in said.splitlines() if line.startswith("  standing yes: not used: the deploy grant for this board ended: the person runs ")]
+        self.assertEqual(len(ended), 1)
+        self.assertTrue(ended[0].endswith("grant.py --scope deploy --minutes N again"))
         out = io.StringIO()
         TerminalReporter(out).report(Event.line("gate", "standing yes: not used: ended\u202e\rthe grant"))
         self.assertEqual(out.getvalue(), "  standing yes: not used: ended??the grant\n")

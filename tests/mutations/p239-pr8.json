@@ -26,7 +26,7 @@
  {
   "file": "scripts/deploy_service.py",
   "name": "deploy-no-show-running",
-  "find": "self.report(Event.line(board_codes.STAGE_FLASH, \"running: %s\" % shlex.join(command)))",
+  "find": "self.report(Event.line(deploy_stages.STAGE_FLASH, \"running: %s\" % shlex.join(command)))",
   "replace": "pass"
  },
  {
