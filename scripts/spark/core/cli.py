@@ -10,9 +10,11 @@ import traceback
 from collections import namedtuple
 
 from spark.core import codes, outcomes
+from spark.core.clock import SystemClock
 from spark.core.errors import SparkError
 from spark.core.events import TerminalReporter
 from spark.core.operation import JSON_DEST, JSON_FLAG
+from spark.core.privacy import Privacy
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines, printable
 
@@ -27,6 +29,13 @@ CRASHED_MESSAGE = "%s: crashed, %s"
 #: How Python starts a frame's chunk of a traceback; the other chunks are one sentence each.
 FRAME_START = '  File "'
 BAD_ARGUMENT_FIX = "%s --help lists the arguments"
+#: The diagnostics line of a trace that raised: the class only, as a crash's sentence.
+TRACE_FAILED_MESSAGE = "trace: %s raised, the result stands"
+#: Value: how one run is done (P605, a parameter object). `privacy` masks the result and the values, `trace` is called
+#: once per run with the name, the masked values, the masked result and the seconds, or None, and `clock` times the run.
+RunOptions = namedtuple("RunOptions", "privacy trace clock")
+#: The run of a CLI: the Privacy step and no trace.
+DEFAULT_RUN = RunOptions(Privacy(), None, SystemClock())
 
 
 class JsonEnvelope:
@@ -45,7 +54,24 @@ class TextReport:
         return "\n".join(result.lines)
 
 
-def run_operation(operation, values, outside=None, build_outside=None):
+def run_operation(operation, values, outside=None, build_outside=None, options=DEFAULT_RUN):
+    """The OperationResult of `operation.run(**values, outside=outside)` (see `_guarded_result`), masked by `options.privacy`
+    (P605). Then `options.trace`, when given, sees the run once: the name, the masked values, the masked result and the
+    seconds of `options.clock`. A trace that raises adds one diagnostics line, and the result stands."""
+    started = options.clock.monotonic()
+    result = _guarded_result(operation, values, outside, build_outside)
+    seconds = options.clock.monotonic() - started
+    masked = options.privacy.mask_result(result)
+    if options.trace is None:
+        return masked
+    try:
+        options.trace(operation.name, options.privacy.mask_values(values), masked, seconds)
+    except Exception as failed:  # noqa: BLE001  a tracer never changes the answer
+        return masked._replace(diagnostics=list(masked.diagnostics) + [TRACE_FAILED_MESSAGE % printable(type(failed).__name__)])
+    return masked
+
+
+def _guarded_result(operation, values, outside, build_outside):
     """The OperationResult of `operation.run(**values, outside=outside)`, `outside` built by `build_outside()` when None. A
     SparkError is one Finding of its status. Any other exception, the builder's too, is a crash: one unchecked Finding with
     code `crash` and the class in its sentence, and in `diagnostics` the op and the class, the fix, and the traceback,

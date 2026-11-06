@@ -34,7 +34,7 @@ gave `ReadyResult`, `DeployPlan` and `BoardLog`. PR 5 gave `ProjectImage`, `Depl
 sentence an `EsptoolFlasher` holds, `boot_hint_for(places)` builds it, and `boards.ButtonPlaces` (a Value) names the
 buttons from the record's `physical.buttons`. `board_doctor.step_sentence` does the same for the doctor's steps.
 PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `deploy_service.DeployResult` and
-`firmware_platform.FirmwarePlatform`. P475 made that class the base of `MicroPythonPlatform`, gave it the board reader and the port finder, and made `board_console.SystemClock` the one clock (`now`, `monotonic`, `sleep`). `deploy.py` only parses, prints and maps the exit code.
+`firmware_platform.FirmwarePlatform`. P475 made that class the base of `MicroPythonPlatform`, gave it the board reader and the port finder, and made `SystemClock` the one clock (`now`, `monotonic`, `sleep`), in `spark.core.clock` since P605 and re-imported by `board_console`. `deploy.py` only parses, prints and maps the exit code.
 
 ### The package
 
@@ -43,7 +43,7 @@ guard) puts its own folder on `sys.path` before its first sibling import (the on
 `sys.path.insert(0, str(Path(__file__).resolve().parent))`, or the same through a `SCRIPTS` constant), so it runs under `python3 -I` (which drops the script's folder and ignores PYTHONPATH). `tests/test_scripts_isolated.py`
 names the rule. A library needs no such line. `scripts/spark/core/` holds the core contract (the next
 section) and the leaf modules every script shares: `outcomes` (the exit codes and the three outcomes), `text_guards`,
-`zone_time` and `codes`. The leaves import nothing of spark. A script writes `from spark.core import outcomes` and then
+`zone_time`, `codes`, `clock` (the one `SystemClock`) and `privacy` (the Privacy step). The leaves import nothing of spark. A script writes `from spark.core import outcomes` and then
 `outcomes.EXIT_OK`, or `from spark.core.outcomes import EXIT_OK`. `scripts/spark/bench/` is the first area package: one
 module per Operation (`look_at_board`), and `OPERATIONS` and the area's `build_project_outside_world` in its `__init__.py`.
 The other scripts stay flat in `scripts/` until their own card moves them. A tool that lists the scripts
@@ -58,7 +58,7 @@ child of `image_evidence`) still never import `spark.core`: they add no path lin
 The core ([P442](https://github.com/xmejkal/spark/issues/587), wave 3 of the refactor) is what every area and every
 frontend shares, so that a CLI, an agent or an MCP tool runs the same code. An Operation (`spark.core.operation`) is a
 class with `name` (the `op` the envelope prints), `arguments` (its `Argument`s, as argparse adds them) and `effects`
-(`reads`, `runs`, `board`), and one public method, `run(**values, outside)`, which returns an `OperationResult`
+(`reads`, `runs`, `board`), `input_schema()` and `output_schema()` (JSON Schemas of the values and the envelope, an MCP tool's `inputSchema` and `outputSchema`, P605), and one public method, `run(**values, outside)`, which returns an `OperationResult`
 (`spark.core.result`): `data`, `findings` (a `Finding` per thing found, with its severity, subject, code, sentence and
 fix), `next` (a `NextStep` per step an agent may take), `lines` (the report a person reads), `diagnostics` (lines for
 the person beside the answer: the board doctor's, a crash's traceback) and `notes`. `status()` is `outcomes.status_of`
@@ -73,7 +73,7 @@ and a stub that raises `SparkError` with code `undeclared_effect` otherwise; an 
 `FakeOutsideWorld`. `SparkError` (`spark.core.errors`) is the one error an Operation raises to answer instead of
 crashing: a `ValueMessageError` with `code`, `fix` and `status`.
 
-`spark.core.cli` holds the frontends. `run_operation(operation, values, outside)` runs for any frontend and turns a
+`spark.core.cli` holds the frontends. `run_operation(operation, values, outside, build_outside, options)` runs for any frontend (P605: `options` is a `RunOptions` of `privacy`, `trace` and `clock`. It masks the result with the `Privacy` step, a pass-through until S10, then calls `trace` once with the name, the masked values, the result and the seconds, and a trace that raises adds one diagnostics line), and turns a
 `SparkError` into one Finding of its status, and any other exception into one unchecked Finding with code `crash`: the
 sentence names the exception class only, because a message can carry a home path, and `diagnostics` gets the op and the
 class, the fix, and the traceback, its last line through `printable`. `run_cli(text, operation, argv, *,

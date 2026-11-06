@@ -14,12 +14,13 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import tools  # noqa: E402
 from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
-from spark.core.cli import HelpText, JsonEnvelope, TextReport, run_cli, run_operation  # noqa: E402
+from spark.core.cli import DEFAULT_RUN, HelpText, JsonEnvelope, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
-from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, Argument, Operation  # noqa: E402
+from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Argument, Operation  # noqa: E402
+from spark.core.privacy import Privacy  # noqa: E402
 from spark.core.outside import ProgramRunner, build_outside_world  # noqa: E402
-from spark.core.result import Finding, NextStep, OperationResult, envelope_item  # noqa: E402
+from spark.core.result import Finding, NextStep, OperationResult, envelope_item, output_schema  # noqa: E402
 
 PROBLEM = Finding(outcomes.PROBLEMS, "flash", "flash_differs", "the flash differs", "accept it")
 UNCHECKED = Finding(outcomes.COULD_NOT_RUN, None, "field_unknown", "flash unknown", "unknown is not a pass")
@@ -301,6 +302,102 @@ class RunOperationTest(unittest.TestCase):
         self.assertEqual(TextReport.render(result), "one\ntwo")
         self.assertEqual(JsonEnvelope.render(result, "t", "o"), outcomes.dumps(result.to_envelope("t", "o")))
         self.assertEqual(TextReport.render(OperationResult(None)), "")
+
+
+class TickingClock:
+    """A clock whose `monotonic` gives 10.0 and then 12.5, and raises StopIteration on a third read (FakeClock stands still)."""
+
+    def __init__(self):
+        self.monotonic = iter([10.0, 12.5]).__next__
+
+
+class MarkingPrivacy(Privacy):
+    """Privacy: marks what it masked, so a test sees that the trace and the frontend get the masked result and values."""
+
+    def mask_result(self, result):
+        return result._replace(notes=["masked"])
+
+    def mask_values(self, values):
+        return dict(values, project="<project>")
+
+
+def toy_values(what):
+    return {"project": Path("/opt/someone/p"), "what": what, "left": False, "right": False}
+
+
+class RunOptionsTest(unittest.TestCase):
+    """P605: run_operation masks the result with the Privacy step, then calls the one trace hook once per run."""
+
+    def run_traced(self, what, privacy=Privacy(), trace=None):
+        calls = []
+        options = RunOptions(privacy, trace or (lambda *call: calls.append(call)), TickingClock())
+        outside = FakeOutsideWorld(find_tool={"flasher": TOOL}.get)
+        return run_operation(Toy(), toy_values(what), outside, options=options), calls
+
+    def test_a_recording_trace_sees_one_call_per_run(self):
+        for what in ("ok", "error", "crash"):
+            with self.subTest(what=what):
+                result, calls = self.run_traced(what)
+                self.assertEqual(calls, [("toy", toy_values(what), result, 2.5)])
+        calls = []
+        result = run_operation(Toy(), toy_values("ok"), None, lambda: 1 / 0, RunOptions(Privacy(), lambda *call: calls.append(call), TickingClock()))
+        self.assertEqual((result.findings[0].code, calls), ("crash", [("toy", toy_values("ok"), result, 2.5)]), "a builder that crashes")
+
+    def test_a_tracer_that_raises_leaves_the_result_standing(self):
+        def broken(*call):
+            raise ValueError("the tracer at /opt/someone is down")
+        untraced = run_operation(Toy(), toy_values("problems"), FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
+        result, _ = self.run_traced("problems", trace=broken)
+        self.assertEqual(result.to_envelope("toy", "toy"), untraced.to_envelope("toy", "toy"))
+        self.assertEqual(list(result.diagnostics), list(untraced.diagnostics) + ["trace: ValueError raised, the result stands"])
+
+    def test_privacy_runs_before_the_trace_and_the_result(self):
+        result, calls = self.run_traced("ok", privacy=MarkingPrivacy())
+        self.assertEqual(result.notes, ["masked"])
+        self.assertEqual(calls, [("toy", dict(toy_values("ok"), project="<project>"), result, 2.5)])
+        untraced = run_operation(Toy(), toy_values("ok"), FakeOutsideWorld(find_tool={"flasher": TOOL}.get),
+                                 options=RunOptions(MarkingPrivacy(), None, TickingClock()))
+        self.assertEqual(untraced.notes, ["masked"], "a run with no trace is masked too")
+
+    def test_the_default_run_masks_nothing_and_traces_nothing(self):
+        self.assertIsNone(DEFAULT_RUN.trace)
+        result = OperationResult({"a": 1}, [PROBLEM], lines=["one"])
+        self.assertIs(DEFAULT_RUN.privacy.mask_result(result), result)
+        self.assertEqual(DEFAULT_RUN.privacy.mask_values({"a": 1}), {"a": 1})
+        outside = FakeOutsideWorld(find_tool={"flasher": TOOL}.get)
+        self.assertEqual(run_operation(Toy(), toy_values("problems"), outside), Toy().run(**toy_values("problems"), outside=outside))
+
+
+class SchemaTest(unittest.TestCase):
+    """P605: an Operation's input and output as JSON Schemas, for an MCP tool or a LangGraph node (P417)."""
+
+    def test_every_argument_but_json_is_a_property_of_the_input_schema(self):
+        schema = Toy().input_schema()
+        dests = [argument.dest for argument in Toy.arguments if argument.dest != JSON_DEST]
+        self.assertEqual(list(schema["properties"]), dests)
+        self.assertEqual((schema["type"], schema["additionalProperties"]), ("object", False))
+        self.assertEqual(schema["properties"]["project"], {"type": "string", "description": COMMON_ARGUMENTS["project"].help, "default": "."})
+        self.assertEqual(schema["properties"]["left"], {"type": "boolean", "description": "one side", "default": False})
+        self.assertEqual(schema["properties"]["what"]["default"], "ok")
+
+    def test_an_argument_with_no_default_has_no_default_key(self):
+        class Port(Toy):
+            arguments = (COMMON_ARGUMENTS["port"],)
+        self.assertEqual(Port().input_schema()["properties"]["port"], {"type": "string", "description": COMMON_ARGUMENTS["port"].help})
+
+    def test_a_kind_outside_the_table_is_refused(self):
+        class Counting(Toy):
+            arguments = (Argument(("--times",), "times", int, "how often"),)
+        with self.assertRaises(KeyError):
+            Counting().input_schema()
+
+    def test_the_output_schema_requires_the_keys_of_a_real_envelope(self):
+        schema = Toy().output_schema()
+        self.assertEqual(schema, output_schema())
+        envelope = json.loads(cli("--json")[1])
+        self.assertEqual(schema["required"], list(envelope))
+        self.assertEqual(schema["properties"]["status"], {"enum": [outcomes.OK, outcomes.PROBLEMS, outcomes.COULD_NOT_RUN]})
+        self.assertEqual(schema["properties"]["envelope"], {"const": 1})
 
 
 class FakeOutsideWorldTest(unittest.TestCase):

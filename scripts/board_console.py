@@ -7,15 +7,14 @@ download mode (P243; board_start.py waits for its restart, P462). P251 moved it 
 restarted a board whose USB output died at power-on (docs/observations/2026-10-15-p235-reach-test.md, AT187).
 """
 
-import datetime
 import os
 import re
 import subprocess
-import time
 from collections import namedtuple
 
 from download_mode import DOWNLOAD_MODE
 from run_scenario import printed_text
+from spark.core.clock import SystemClock
 
 #: How long the console is read, and how often the port is looked at, in seconds.
 READ_S, POLL_S = 2, 0.1
@@ -79,17 +78,6 @@ def shows_restart(console):
 def shows_boot(console):
     """True when `console` holds the ROM's line of a restart or of a boot's end."""
     return shows_restart(console) or BOOT_END.search(console) is not None
-
-
-class SystemClock:
-    """Adapter: the computer's own clock. `now` is the time in the machine's zone, with the zone (P291): the zone a person
-    reads, and a stored time carries it."""
-
-    monotonic, sleep = staticmethod(time.monotonic), staticmethod(time.sleep)
-
-    @staticmethod
-    def now():
-        return datetime.datetime.now().astimezone()
 
 
 class ConsoleProbe:
