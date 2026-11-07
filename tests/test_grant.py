@@ -170,16 +170,28 @@ class IssueTest(GrantCase):
         self.assertEqual(service.issue(None, 30, FakeConsent(True)).granted_by, "grace")
 
     def test_a_relayed_yes_makes_a_live_grant_that_names_the_person_and_the_program(self):
-        # P675 (W4-4): the login is never asked for, because getpass can raise
+        # P675 (W4-4)
         asked = []
         relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: asked.append(question) or True)
-        with mock.patch("getpass.getuser", side_effect=OSError("no user")):
-            code, _, err = self.grant("--minutes", "30", consent=relayed)
+        code, _, err = self.grant("--minutes", "30", consent=relayed)
         self.assertEqual(code, 0, err)
         self.assertEqual(self.kept()["granted_by"], "relayed by ada through test-ui")
         self.assertIn("8c:bf:ea:xx:xx:xx (token %s) for 30 minutes" % self.kept()["board_token"], asked[0])
         code, checked = self.check()
         self.assertEqual((code, checked["granted"], checked["grant"]["granted_by"]), (0, True, "relayed by ada through test-ui"))
+
+    def test_a_relayed_grant_never_asks_for_the_login(self):
+        # getpass can find no user (OSError since Python 3.13), and the login is not who said yes
+        finder = mock.Mock()
+        finder.require_one_board.return_value = mock.Mock(device="/dev/cu.usbmodem101", serial=MAC)
+        reader = mock.Mock()
+        reader.read.return_value = mock.Mock(mac=MAC)
+
+        def no_user():
+            raise OSError("no user")
+        service = board_grant.GrantService(finder, reader, mock.Mock(), now=lambda: START, user_name=no_user)
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        self.assertEqual(service.issue(None, 30, relayed).granted_by, "relayed by ada through test-ui")
 
     def test_a_relayed_yes_makes_no_deploy_grant_and_never_touches_the_board(self):
         relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
