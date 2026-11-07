@@ -1,5 +1,6 @@
 """P683 (#920, W6-F1): what run_scenario.py, flash_image.py and import_firmware.py print today stays what they print, so
-no move breaks it. No golden run spends a Wokwi minute: the guard tests come first."""
+no move breaks it. No golden run spends a Wokwi minute: ShimGuardTest proves the guard, and FirmwareGoldenTest runs
+no Case unless the simulator found is the shim."""
 
 import os
 import shutil
@@ -13,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 from suite_runs import needs_littlefs  # noqa: E402
 
+import golden_bench  # noqa: E402
 import golden_firmware  # noqa: E402
 import tools  # noqa: E402
 
@@ -32,7 +34,7 @@ class ShimGuardTest(unittest.TestCase):
         env = dict(os.environ, WOKWI_CLI_TOKEN=token, FAKE_WOKWI_SERIAL="ready\n")
         log = self.folder / "serial.log"
         return subprocess.run([str(self.shim), "sim", "--serial-log-file", str(log)], env=env, stdin=subprocess.DEVNULL,
-                              capture_output=True, text=True, timeout=golden_firmware.golden_bench.RUN_TIMEOUT_S)
+                              capture_output=True, text=True, timeout=golden_bench.RUN_TIMEOUT_S)
 
     def test_the_simulator_found_is_the_shim(self):
         self.assertEqual(tools.find("simulator", self.project).command, [str(self.shim)])
@@ -57,6 +59,23 @@ class ShimGuardTest(unittest.TestCase):
         self.assertIn("Wokwi CLI v0.0.0 (fake)", done.stdout)
 
 
+class FirmwareOpTest(unittest.TestCase):
+    """The op an accept run names is the script's name with dashes, for the firmware Cases and the bench's alike."""
+
+    def test_the_op_of_a_firmware_case_is_its_script(self):
+        self.assertEqual({golden_bench.op_of(case) for case in golden_firmware.CASES},
+                         {"run-scenario", "flash-image", "import-firmware"})
+
+    def test_the_op_of_a_bench_case_is_still_the_first_word_of_its_golden(self):
+        self.assertEqual([golden_bench.op_of(case) for case in golden_bench.CASES],
+                         [case.golden.split("-")[0] for case in golden_bench.CASES])
+
+    def test_a_missing_golden_names_its_op(self):
+        case = golden_firmware.CASES[0]
+        why = golden_bench.check_golden(case, "printed", golden_dir=Path(tempfile.mkdtemp()))
+        self.assertEqual(why, "%s does not exist: write it with SPARK_ACCEPT=run-scenario" % case.golden)
+
+
 @needs_littlefs
 class FirmwareGoldenTest(unittest.TestCase):
     """Each Case of golden_firmware.CASES is one test, named after its golden, run in its own copy of one project built
@@ -65,10 +84,12 @@ class FirmwareGoldenTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.folder = Path(tempfile.mkdtemp())
-        cls.project = golden_firmware.golden_bench.build_project(cls.folder)
+        cls.project = golden_bench.build_project(cls.folder)
         cls.shim = golden_firmware.name_the_shim(cls.project, cls.folder)
-        # The guard holds before any child runs: no Case starts unless the simulator found is the shim.
-        assert tools.find("simulator", cls.project).command == [str(cls.shim)], "the simulator found is not the shim"
+        # The guard holds before any child runs: no Case starts unless the simulator found is the shim. A raise, not an
+        # assert, which python -O strips.
+        if tools.find("simulator", cls.project).command != [str(cls.shim)]:
+            raise RuntimeError("the simulator found is not the shim, so no firmware golden runs")
 
     def run_case(self, case):
         work = Path(tempfile.mkdtemp(dir=self.folder))
@@ -76,13 +97,13 @@ class FirmwareGoldenTest(unittest.TestCase):
         shutil.copytree(self.project, project)
         code, text = golden_firmware.run_script(case, project, store)
         self.assertEqual(code, case.exit_code, text)
-        scrubbed = golden_firmware.golden_bench.scrub(text, golden_firmware.golden_bench.replacements_of(project, store))
-        self.assertIsNone(golden_firmware.check_golden(case, scrubbed))
+        scrubbed = golden_bench.scrub(text, golden_bench.replacements_of(project, store))
+        self.assertIsNone(golden_bench.check_golden(case, scrubbed, golden_dir=golden_firmware.GOLDEN_DIR))
 
     def test_no_golden_holds_a_path_of_this_machine(self):
         for golden in sorted(golden_firmware.GOLDEN_DIR.iterdir()):
             text = golden.read_text()
-            for path in (str(Path.home()), "/Users/", tempfile.gettempdir(), str(golden_firmware.golden_bench.ROOT)):
+            for path in (str(Path.home()), "/Users/", tempfile.gettempdir(), str(golden_bench.ROOT)):
                 self.assertNotIn(path, text, golden.name)
 
     def test_every_golden_has_its_case(self):

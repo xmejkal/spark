@@ -123,8 +123,9 @@ CASES = [
 
 
 def op_of(case):
-    """The op a Case belongs to: the first word of its golden's name, such as `look`."""
-    return case.golden.split("-")[0]
+    """The op a Case belongs to: its script's name with dashes, such as `look` or `run-scenario` (P683). A golden's name
+    starts with its op."""
+    return Path(case.script).stem.replace("_", "-")
 
 
 def build_project(folder):
@@ -239,18 +240,18 @@ def scrub(text, places):
     return FACTS_SHA.sub(r"\1<facts-sha256>", BOARD_LOG.sub("<time>.log", CLOCK.sub("<time>", MOMENT.sub('"at": "<at>"', placed))))
 
 
-def check_golden(case, text, name=None):
-    """None when `text` equals `case`'s golden (the file `name` names, for its stderr), else the reason it does not.
-    When ACCEPT_VARIABLE names the case's op, the golden is written from `text` and the reason says so, so the run
-    still fails."""
+def check_golden(case, text, name=None, golden_dir=GOLDEN_DIR):
+    """None when `text` equals `case`'s golden in `golden_dir` (the file `name` names, for its stderr), else the reason
+    it does not. When ACCEPT_VARIABLE names the case's op, the golden is written from `text` and the reason says so, so
+    the run still fails."""
     name = name or case.golden
-    golden = GOLDEN_DIR / name
+    golden = golden_dir / name
     if not text.strip():
         return "%s printed nothing, and an empty golden guards nothing" % name
     if os.environ.get(ACCEPT_VARIABLE) == op_of(case):
-        GOLDEN_DIR.mkdir(exist_ok=True)
+        golden_dir.mkdir(exist_ok=True)
         golden.write_text(text)
-        return "goldens written for %s: read git diff tests/golden, then run again" % op_of(case)
+        return "goldens written for %s: read git diff %s, then run again" % (op_of(case), golden_dir.relative_to(ROOT))
     if not golden.exists():
         return "%s does not exist: write it with %s=%s" % (golden.name, ACCEPT_VARIABLE, op_of(case))
     return None if golden.read_text() == text else "%s differs from today's output" % golden.name

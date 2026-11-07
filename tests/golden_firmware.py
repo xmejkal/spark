@@ -13,7 +13,6 @@ other place to look, every child carries FAKE_TOKEN, and the shim runs tests/fak
 """
 
 import json
-import os
 import shlex
 import subprocess
 import sys
@@ -74,11 +73,6 @@ CASES = [
 ]
 
 
-def op_of(case):
-    """The op a Case belongs to: its script's name with dashes, such as `run-scenario`."""
-    return Path(case.script).stem.replace("_", "-")
-
-
 def name_the_shim(project, folder):
     """Write the shim into `folder` and name it as wokwi-cli in `project`'s tools list, with no other place to look
     (`also` empty, no `fetch`), so tools.find finds the shim or nothing. Returns the shim's Path."""
@@ -125,17 +119,3 @@ def run_script(case, project, store):
         text += LOG_MARK % log.relative_to(project) + log.read_text()
     return done.returncode, text
 
-
-def check_golden(case, text):
-    """None when `text` equals `case`'s golden, else the reason it does not. When ACCEPT_VARIABLE names the case's op,
-    the golden is written from `text` and the reason says so, so the run still fails."""
-    golden = GOLDEN_DIR / case.golden
-    if not text.strip():
-        return "%s printed nothing, and an empty golden guards nothing" % case.golden
-    if os.environ.get(golden_bench.ACCEPT_VARIABLE) == op_of(case):
-        GOLDEN_DIR.mkdir(exist_ok=True)
-        golden.write_text(text)
-        return "goldens written for %s: read git diff tests/golden-firmware, then run again" % op_of(case)
-    if not golden.exists():
-        return "%s does not exist: write it with %s=%s" % (golden.name, golden_bench.ACCEPT_VARIABLE, op_of(case))
-    return None if golden.read_text() == text else "%s differs from today's output" % golden.name
