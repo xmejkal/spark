@@ -1,0 +1,13 @@
+{
+  "status": "ok",
+  "problems": [],
+  "unchecked": [],
+  "tool": "import_firmware",
+  "modules": [
+    {
+      "module": "led",
+      "status": "imported",
+      "detail": ""
+    }
+  ]
+}

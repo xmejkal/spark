@@ -1,0 +1,2 @@
+--- stderr ---
+run_scenario.py: no simulation project in <project-dir>/sim: build first with /spark:build --keep .

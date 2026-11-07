@@ -1,0 +1,2 @@
+  /main.py                         15 bytes
+wrote flash.bin: 4096 KB (MicroPython at 0x0-0x9000, filesystem at 0x200000, the "vfs" partition of its table)

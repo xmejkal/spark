@@ -57,5 +57,43 @@ class ShimGuardTest(unittest.TestCase):
         self.assertIn("Wokwi CLI v0.0.0 (fake)", done.stdout)
 
 
+@needs_littlefs
+class FirmwareGoldenTest(unittest.TestCase):
+    """Each Case of golden_firmware.CASES is one test, named after its golden, run in its own copy of one project built
+    for the class: the bench's golden project, with the shim named as its simulator."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.folder = Path(tempfile.mkdtemp())
+        cls.project = golden_firmware.golden_bench.build_project(cls.folder)
+        cls.shim = golden_firmware.name_the_shim(cls.project, cls.folder)
+        # The guard holds before any child runs: no Case starts unless the simulator found is the shim.
+        assert tools.find("simulator", cls.project).command == [str(cls.shim)], "the simulator found is not the shim"
+
+    def run_case(self, case):
+        work = Path(tempfile.mkdtemp(dir=self.folder))
+        project, store = work / self.project.name, work / "store"
+        shutil.copytree(self.project, project)
+        code, text = golden_firmware.run_script(case, project, store)
+        self.assertEqual(code, case.exit_code, text)
+        scrubbed = golden_firmware.golden_bench.scrub(text, golden_firmware.golden_bench.replacements_of(project, store))
+        self.assertIsNone(golden_firmware.check_golden(case, scrubbed))
+
+    def test_no_golden_holds_a_path_of_this_machine(self):
+        for golden in sorted(golden_firmware.GOLDEN_DIR.iterdir()):
+            text = golden.read_text()
+            for path in (str(Path.home()), "/Users/", tempfile.gettempdir(), str(golden_firmware.golden_bench.ROOT)):
+                self.assertNotIn(path, text, golden.name)
+
+    def test_every_golden_has_its_case(self):
+        written = {golden.name for golden in golden_firmware.GOLDEN_DIR.iterdir()}
+        self.assertEqual(written, {case.golden for case in golden_firmware.CASES})
+
+
+for _case in golden_firmware.CASES:
+    setattr(FirmwareGoldenTest, "test_" + _case.golden.replace("-", "_").replace(".", "_"),
+            lambda self, case=_case: self.run_case(case))
+
+
 if __name__ == "__main__":
     unittest.main()

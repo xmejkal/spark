@@ -1,0 +1,33 @@
+s.scenario.yaml: passed, but it has no set-control step (the step that presses a button or sets a sensor) and no expect-pin step (the step that reads a pin)
+log: <project-dir>/sim/runs/s.log
+--- sim/runs/s.log ---
+# s.scenario.yaml, run <time>, timeout 60000 ms
+verdict: passed
+step counts: expect-pin 0, set-control 0, wait-serial 2
+step names: 0
+image sha256: <image-sha256>
+file sha256: e13cdff7de4a58aa927d0812d424a163af37d0619bebb12c0e68f042cd02a511 /main.py
+
+--- what this simulation cannot show ---
+# What this simulation cannot show
+
+Generated beside the diagram by spark. Most lines come from a part record's own words, or from
+the board's Wokwi definition: the JSON file of the Wokwi part type that spark keeps in its store.
+The rest say what spark did not check or leaves out of the diagram.
+A scenario passing over any of these proves what the FIRMWARE did, and nothing about
+the hardware the stand-in replaced or the board's part that Wokwi lacks.
+
+- **ONBOARD_DISPLAY** — spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. Test it on the board.
+
+--- the scenario as run ---
+name: s
+version: 1
+steps:
+  - wait-serial: "ready"
+  - wait-serial: "LED on"
+
+--- wokwi-cli printed ---
+Wokwi CLI v0.0.0 (fake)
+ready
+LED on
+[s] Expected text matched: "ready"

@@ -1,0 +1,20 @@
+{
+  "status": "problems",
+  "problems": [
+    "sensor raised: ModuleNotFoundError: No module named 'missing_driver'"
+  ],
+  "unchecked": [],
+  "tool": "import_firmware",
+  "modules": [
+    {
+      "module": "led",
+      "status": "imported",
+      "detail": ""
+    },
+    {
+      "module": "sensor",
+      "status": "raised",
+      "detail": "ModuleNotFoundError: No module named 'missing_driver'"
+    }
+  ]
+}
