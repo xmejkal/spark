@@ -1,7 +1,15 @@
 """
 The bench's Privacy (S10, P677): what a bench run may show outside spark. Each bench Operation names `privacy_for` as its
 own, so `run_cli` masks its result and its Events: its paths, the store's and the home folder's, and the account tokens
-of the tools lists, but the lines a person pastes (`board_codes.PASTED_CODES`, `board_envelope.PASTED_KEYS`).
+of the tools lists, but the lines a person pastes (`board_codes.PASTED_CODES`, `board_envelope.PASTED_KEYS`). A new
+bench Operation declares it as the six do:
+
+    from spark.bench import bench_privacy
+
+    class NewBenchOp(Operation):
+        privacy_for = staticmethod(bench_privacy.privacy_for)
+
+How to mark a raw place is in `spark.core.privacy`'s docstring.
 """
 
 import os

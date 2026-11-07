@@ -29,7 +29,10 @@ Read these rules before you run a script:
    `firmware/main.py` from `pins.py` and follow `next`. A `signals` entry takes a `pin` ([the file](../../commands/build.md#the-requirements-file)).
 7. **Check someone else's project in a scratch store** (`SPARK_HOME`). Never put the person's drawer, history or
    projects list into a URL, a prompt or a commit. Run a `next` step with its `env` set ([`env`](agents/json.md)).
-   The bench scripts mask their output: a project path is relative, `<store>` is SPARK_HOME (else ~/.local/share/spark), any other home path is `~/...` and an account token `***`. A line to paste keeps its real paths ([P677](agents/json.md#what-the-text-output-shows)).
+   The bench scripts mask their output (P677). A `<store>`, `~/` or relative path in it is masked: never guess its real
+   path. `<store>` is the store as `store.home()` finds it (SPARK_HOME, else XDG_DATA_HOME/spark, else
+   ~/.local/share/spark), and a token shows as `***`. Take a path to open or run from a raw field: `data.run_in_terminal`,
+   `data.board_log`, `data.commands`, `next[].argv`, `next[].env` ([masking](agents/json.md#what-the-text-output-shows)).
 
 A build of spark's button-and-LED example, shortened with `...`:
 
@@ -92,9 +95,6 @@ import them from there. Every script ends in exactly one of three outcomes, neve
 not the same as one that could not look. More in the glossary:
 [the three outcomes](../../GLOSSARY.md#the-three-outcomes--ok-problems-could-not-run) and
 [`skipped`](../../GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it).
-
-**What `check_all.py`'s exit 0 means** is less than it says: [check_all's answer](agents/json.md#what-exit-0-means)
-gives each case.
 
 **Not yet true everywhere:**
 

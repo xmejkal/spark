@@ -111,8 +111,7 @@ The fields:
 **When a field is absent.** A field with nothing to say may be absent:
 
 - `problems` and `unchecked` are present whenever a check ran.
-- A skipped result, and a could-not-run caused by an ambiguous input, carry `reason` instead, and `reason` is then the
-  only explanation.
+- A skipped result, and a could-not-run caused by an ambiguous input, carry `reason` instead, and `reason` is then the only explanation.
 - `results[].unmeasured` appears only when it is non-empty. The top-level `unmeasured` is always present, as an integer.
 
 **Under problems, read `unchecked` too.** `unchecked` can be non-empty under `problems`. problems outranks
@@ -144,8 +143,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 ### check_spine.py
 
 - `stages` names the stage that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`.
-  `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it
-  when a part is listed.
+  `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed.
 - `kept`, with `--keep` or `--sim-dir`, lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`,
   `removed`, `not written` or `not kept`) and `why`. A `not written` entry of a drawing has `code` (`null` for an older
   refusal), `subject` and `expected` (`true` means by design, so do not retry). A `wrote` entry for `breadboard.svg` may
@@ -161,8 +159,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   - An item never changes `status` and is never in `unchecked`. So after `status`, read `missing_facts` when you built
     with `--keep`: `ok` does not mean the firmware has every fact.
   - Never guess the level. Ask the person (see `/spark:build`), or use `/spark:research` or a bench measure. Write the
-    answer with `parts.py --fact-set <board> FILE --project <the project's folder>` (a board of another project is
-    refused), and build again.
+    answer with `parts.py --fact-set <board> FILE --project <the project's folder>` (a board of another project is refused), and build again.
 - The simulation line warns "no serial monitor is wired in the diagram" when the diagram has no `$serialMonitor` wires
   and the board's record lacks `serial_without_wires: true` ([P468](https://github.com/xmejkal/spark/issues/636)).
   spark's XIAO ESP32-C6 and FireBeetle 2 records carry it, so they get no warning. Read the warning as a possible silent
@@ -187,8 +184,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
     ([P407](https://github.com/xmejkal/spark/issues/532)).
   - A requirements file whose `signals` or `parts` is no list, or whose `pin` is no non-empty string, is refused the same
     way, under `requirements`, naming the file and the field (`car.json: signals[0].pin is a list; write a pin name …`,
-    [P438](https://github.com/xmejkal/spark/issues/583)). A `.spark/rules.json` that is a folder is refused under
-    `schematic`.
+    [P438](https://github.com/xmejkal/spark/issues/583)). A `.spark/rules.json` that is a folder is refused under `schematic`.
 
 ### import_firmware.py
 
@@ -204,8 +200,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 - A could-not-run has `board`, `status` and `reason`.
 - A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose
   header held no pins. A live run refused before or during the fetch has none.
-- `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or
-  `spark's cache (<name>)` with `--offline`.
+- `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`.
 - The status may say `mismatch` ([P43](https://github.com/xmejkal/spark/issues/11)).
 
 Checking a shipped board's pin map, as an agent does, without the network:
@@ -231,11 +226,9 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
 
 ### parts.py's envelope
 
-- `problems` and `unchecked` hold items `{subject, sentence, fix}`; an `unchecked` item has no `subject`. `fix` says
-  what to do, and may be null.
+- `problems` and `unchecked` hold items `{subject, sentence, fix}`; an `unchecked` item has no `subject`. `fix` says what to do, and may be null.
 - `assumptions` is what an answer rests on that nobody has checked. It never changes the status, so read it whenever it
-  is not empty. Each entry says what it is about (`fact`), why nobody has checked it (`basis`) and what depends on it
-  (`sentence`).
+  is not empty. Each entry says what it is about (`fact`), why nobody has checked it (`basis`) and what depends on it (`sentence`).
   - `--unverified` lists one per fact whose `verified` is not true: `fact` is `<part>.<fact>`, `basis` is `unverified`,
     `assumed` is the value taken for now, `source` is where it came from, and `write` is the key a result goes back to
     with `--fact-set`: `facts.<name>`, `pin_order_proof` or `body_mm`. A guessed outline (`body_mm`) is listed, with its
@@ -256,8 +249,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
 - `next` holds the steps an agent may take, each `{op, argv, why, effects, needs_yes}` with `needs_person` and `env` only when they apply. `truncated.next` is the step for the rest of a long answer.
 - `env` on a `next` step is an object of variables to set when you run it, there only when the run had `SPARK_HOME` set (a store found through `XDG_DATA_HOME` gives none, so set `SPARK_HOME` to pass it on) ([P473](https://github.com/xmejkal/spark/issues/647)). Today it is `{"SPARK_HOME": "<whole path>"}`, so a fresh environment (Claude Code's Bash, an MCP or LangGraph caller) sees the same drawer, downloads and grants. The `look`, `deploy` and `grant` steps and the steps of `parts.py` carry it. `watch` has none, because mpremote reads no store.
 - Run every write with `--dry-run` first.
-- In text, every item's fix and every next step is printed under the answer's lines, and a CONFLICT on unverified facts
-  starts with `?`.
+- In text, every item's fix and every next step is printed under the answer's lines, and a CONFLICT on unverified facts starts with `?`.
 
 What nobody has checked about the 2-pin power inlet, as an agent reads it:
 
@@ -311,7 +303,15 @@ P423 and P430 set these rules for the text output of `parts.py`, `look.py`, `dep
 
 - Guarded: a character that a terminal does not print, such as a control character or a right-to-left override, shows as `?`. A text's own line breaks stay. A value that can hold a line break of its own (a port, a project path, a button word of a board record) is put on one line first, so it cannot fake a line. This holds for the question that `deploy.py` asks you to type yes to, and for the sentence `grant.py` gives when it has no terminal to ask in (it holds the line to run, with your project path and port). A tools file is refused when a tool's name, or a name in its `needs`, holds a character that `str.isprintable` rejects: a control character or a bidi mark, and also a tab, a zero-width joiner (U+200D) or a no-break space (U+00A0), which an older spark let through. The `rm` path that `grant.py` prints after a deploy grant may show `?`: copy it from the store, not from the screen.
 - Flat messages (P444, P445): a value that an error message holds (a store path, a record's name, a URL) is put on one line by the error class that builds the message (`ValueMessageError`), so a newline in it cannot fake a line of spark's own, in the text and in `--json` alike. This holds for every raise of every class that inherits `ValueMessageError`, and for the scripts that print their errors (`look.py`, `grant.py`, `live.py`, `reach.py`, `deploy.py`) and the lines `tools.py` prints about a folder. The V1 baseline is empty. An error class that does not inherit from `ValueMessageError` is outside this. The `reason` or `code` of a stop names why; key on it and never on the sentence. The raw values stay on the exception for a later field. A lone surrogate character in a text is cleaned to a space, and in a key it is refused, with or without `--dry-run`.
-- Raw: `--json` carries the raw text of the other fields, so decide on the JSON and not on the screen (`check_spine.py --json` holds the raw text of a crash). `run_scenario.py` has no `--json`, and its log file in `sim/runs/` keeps the raw text. Two paths print raw text: the flash tool that `deploy.py` runs writes its own output to the terminal, and `emit_footprint.py` prints its own messages. The bench scripts (`look.py`, `deploy.py`, `grant.py`, `live.py`, `reach.py`) mask their paths and tokens, in the text and in `--json` (P677): a path in the project is relative to it, one in the store starts with `<store>` (SPARK_HOME, else `~/.local/share/spark`), any other under your home starts with `~/`, and the value of a tools list's `account_env` shows as `***`. A line to paste or a file to open keeps its real paths: `data.run_in_terminal`, `data.board_log`, each `next` step's `argv` and `env`, grant.py's `rm` line, an item whose code is in `board_codes.PASTED_CODES` (`no_terminal`, `no_grant`, `refused_no_grant`, `no_image`, `evidence_refuses`, `last_deploy_not_checked` and the grant's) and every line that holds its sentence.
+- Raw: `--json` carries the raw text of the other fields, so decide on the JSON and not on the screen (`check_spine.py --json` holds the raw text of a crash). `run_scenario.py` has no `--json`, and its log file in `sim/runs/` keeps the raw text. Two paths print raw text: the flash tool that `deploy.py` runs writes its own output to the terminal, and `emit_footprint.py` prints its own messages.
+- Masked (P677): the bench scripts (`look.py`, `deploy.py`, `grant.py`, `live.py`, `reach.py`) mask what they print, in
+  the text and in `--json`. The project folder is `<project>` and a path in it is relative; a path in the store starts
+  with `<store>` (the store as `store.home()` finds it: SPARK_HOME, else XDG_DATA_HOME/spark, else ~/.local/share/spark),
+  as `store_record` shows; any other path under your home starts with `~/`; a tools list's `account_env` value is `***`.
+  A path to open or run keeps its real form: `data.run_in_terminal`, `data.board_log`, `data.commands`,
+  `data.repl_command`, each `next` step's `argv` and `env`, grant.py's `rm` line, an item whose code is in
+  `board_codes.PASTED_CODES` and every line that holds its sentence. Tokens are masked there too. Any other path to
+  open: rebuild it from the store as `store.home()` finds it.
 - Exact reply: in the text of `live.py` a tab in the board's reply shows as `?`, so read `output` from `--json` for the exact reply.
 
 ## look.py and deploy.py's envelope
