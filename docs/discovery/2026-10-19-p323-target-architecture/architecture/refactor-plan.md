@@ -560,6 +560,9 @@ the quick run and the full run. S13 is done in P425 (the order of work in sectio
 
 ### Wave 6: the other areas
 
+Its plan is [wave6-plan.md](wave6-plan.md) (P681 #916, 2026-11-07): the firmware group refined into three PRs,
+the later groups one paragraph each.
+
 When an area is pulled, it gets three PRs. The order of the areas is firmware, breadboard, checks, design with build,
 records with sourcing. The moves run back to back, a PR for each kind of slice (decision 3). No story comes between them unless the PO pulls one (decision 4, epic
 #94, 2026-10-26: *"I think for question 3 ideally we'd go all in one, so option c, but if it would take too much time,
