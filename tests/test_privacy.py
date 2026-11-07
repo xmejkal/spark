@@ -68,6 +68,9 @@ class PathRulesTest(unittest.TestCase):
         self.assertEqual(privacy().mask_text("it is in %s." % HOME), "it is in ~.")
         self.assertEqual(privacy().mask_text("%s.bak/x and %s.old" % (PROJECT, STORE)), "~/gadgets/lamp.bak/x and ~/.local/share/spark.old")
 
+    def test_the_project_folder_with_a_trailing_slash_keeps_its_slash(self):
+        self.assertEqual(privacy().mask_text("copied to %s/ now, %s/.spark" % (PROJECT, PROJECT)), "copied to <project>/ now, .spark")
+
     def test_an_empty_secret_masks_nothing(self):
         self.assertEqual(privacy(secrets=("",)).mask_text("/usr/bin/x"), "/usr/bin/x")
 
@@ -204,19 +207,19 @@ class BenchPrivacyTest(unittest.TestCase):
 
 
 class BenchGoldenPathsTest(unittest.TestCase):
-    """What the goldens of tests/golden show of a path, after `golden_bench.scrub`: `<project>`, `<spark-home>`, `<repo>`
-    and `<python>` are the run's own paths, printed raw; `sim/...` and `<store>` are what Privacy printed."""
+    """What the goldens of tests/golden show of a path, after `golden_bench.scrub`: `<project-dir>`, `<spark-home>`, `<repo>`
+    and `<python>` are the run's own paths, printed raw; `<project>`, `sim/...` and `<store>` are what Privacy printed."""
 
     def golden(self, name):
         return json.loads((golden_bench.GOLDEN_DIR / name).read_text())
 
     def test_the_pasted_lines_keep_their_paths(self):
         ran = self.golden("deploy-could-not-run-no-terminal.json")
-        self.assertTrue(ran["data"]["run_in_terminal"].startswith("SPARK_HOME=<spark-home> <repo>/scripts/deploy.py --project <project> "))
-        self.assertIn("<repo>/scripts/grant.py --scope deploy", ran["unchecked"][0]["sentence"])
-        self.assertEqual((ran["next"][0]["argv"][1], ran["next"][0]["env"]), ("<project>", {"SPARK_HOME": "<spark-home>"}))
+        self.assertTrue(ran["data"]["run_in_terminal"].startswith("SPARK_HOME=<spark-home> <repo>/scripts/deploy.py --project <project-dir> "))
+        self.assertIn("<repo>/scripts/grant.py --scope deploy --minutes N --project <project-dir> ", ran["unchecked"][0]["sentence"])
+        self.assertEqual((ran["next"][0]["argv"][1], ran["next"][0]["env"]), ("<project-dir>", {"SPARK_HOME": "<spark-home>"}))
         stderr = (golden_bench.GOLDEN_DIR / "deploy-could-not-run-no-terminal.json.stderr").read_text()
-        self.assertIn("SPARK_HOME=<spark-home> <repo>/scripts/deploy.py --project <project>", stderr)
+        self.assertIn("SPARK_HOME=<spark-home> <repo>/scripts/deploy.py --project <project-dir>", stderr)
         self.assertIn("<repo>/scripts/grant.py --minutes N", self.golden("live-problems-refused-no-grant.json")["why"])
 
     def test_the_other_paths_are_masked(self):
@@ -226,15 +229,15 @@ class BenchGoldenPathsTest(unittest.TestCase):
 
     def test_a_command_a_person_runs_keeps_its_paths(self):
         data = self.golden("deploy-ok-ready-seen.json")["data"]
-        self.assertEqual(data["commands"][1][-1], "<project>/sim/flash-with-firmware.bin")
+        self.assertEqual(data["commands"][1][-1], "<project-dir>/sim/flash-with-firmware.bin")
         stderr = (golden_bench.GOLDEN_DIR / "deploy-ok-ready-seen.json.stderr").read_text()
-        self.assertIn("write-flash 0x0 <project>/sim/flash-with-firmware.bin\n", stderr)
-        self.assertIn("  board log: <project>/sim/runs/board/<time>.log\n", stderr)
+        self.assertIn("write-flash 0x0 <project-dir>/sim/flash-with-firmware.bin\n", stderr)
+        self.assertIn("  board log: <project-dir>/sim/runs/board/<time>.log\n", stderr)
         dry = (golden_bench.GOLDEN_DIR / "deploy-ok-dry-run.txt").read_text()
-        self.assertIn("  would run: <python> -m esptool --chip esp32s3 --after watchdog-reset write-flash 0x0 <project>/sim/flash-with-firmware.bin\n", dry)
+        self.assertIn("  would run: <python> -m esptool --chip esp32s3 --after watchdog-reset write-flash 0x0 <project-dir>/sim/flash-with-firmware.bin\n", dry)
 
     def test_a_file_a_person_or_an_agent_opens_keeps_its_path(self):
-        self.assertEqual(self.golden("deploy-ok-ready-seen.json")["data"]["board_log"], "<project>/sim/runs/board/<time>.log")
+        self.assertEqual(self.golden("deploy-ok-ready-seen.json")["data"]["board_log"], "<project-dir>/sim/runs/board/<time>.log")
         fix = self.golden("look-could-not-run-last-deploy-not-checked.json")["unchecked"][0]["fix"]
         self.assertEqual(fix, "repair or remove <spark-home>/boards/dc-da-0c-xx-xx-xx.json, then run look.py again")
 
@@ -243,7 +246,7 @@ class BenchGoldenPathsTest(unittest.TestCase):
         home = Path.home()
         if golden_bench.ROOT.is_relative_to(home):
             self.assertEqual(places["~/" + str(golden_bench.ROOT.relative_to(home))], "<repo>")
-        self.assertEqual(places["/nowhere/s"], "<spark-home>")
+        self.assertEqual((places["/nowhere/s"], places["/nowhere/p"]), ("<spark-home>", "<project-dir>"))
 
 
 if __name__ == "__main__":

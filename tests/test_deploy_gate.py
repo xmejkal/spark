@@ -40,9 +40,11 @@ from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, Fa
                    FakeOutsideWorld, FakeProbePlatform,
                    line_made_at_import, pin_time_zone)
 from firmware_platform import MicroPythonPlatform  # noqa: E402
-from spark.bench import deploy_image  # noqa: E402
+from spark.bench import build_project_outside_world, deploy_image  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
+from spark.core.operation import ASKS  # noqa: E402
+from spark.core.privacy import MaskingReporter, Privacy  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
@@ -1447,6 +1449,18 @@ class TerminalConsentTest(unittest.TestCase):
         consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout)
         consent.ask("erase\u202e\r ALL\x1b")
         self.assertEqual(stdout.getvalue(), "erase?? ALL? type yes to go on: ")
+
+    def test_the_question_is_masked_before_it_is_written(self):
+        # P677: the question names the last deploy's project, a path under the person's home
+        stdout = Stream()
+        consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout, mask=lambda text: text.replace("/home/ada", "~"))
+        consent.ask("erase /home/ada/lamp?")
+        self.assertEqual(stdout.getvalue(), "erase ~/lamp? type yes to go on: ")
+
+    def test_the_bench_asks_through_the_masking_reporter(self):
+        reporter = MaskingReporter(TerminalReporter(Stream()), Privacy.of("/p", "/s", "/home/ada", ()))
+        consent = build_project_outside_world(None, (ASKS,), reporter).make_consent(self.LINE)
+        self.assertEqual(consent.mask("erase /home/ada/lamp?"), "erase ~/lamp?")
 
     def test_anything_else_is_no(self):
         for typed in ("y\n", "YES please\n", "\n", ""):
