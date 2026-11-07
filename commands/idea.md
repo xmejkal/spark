@@ -53,7 +53,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    ```
 
    then without `--dry-run`. A need holds no reason, count or place, and `--needs-set` sets no pick (`--pick` does, below) — the
-   file belongs to the project. To remove a need, run `parts.py --needs-drop <project> <need> --dry-run` first, then without it: it releases the holds only that pick explained, history stays, and it says when requirements.json still lists the part.
+   file belongs to the project. To remove a need, run `parts.py --needs-drop <project> <need> --dry-run` first, then without it: it releases only the holds of the dropped pick, and every other hold stays, history stays, and it says when requirements.json still lists the part.
 
 ## M — what the store offers for each need
 

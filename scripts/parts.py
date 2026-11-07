@@ -1589,7 +1589,7 @@ OPERATIONS = (
      "and the other choice",
      ("writes",), ("project", "picks", "reserved", "released", "written")),
     ("needs-drop", {"nargs": 2, "metavar": ("PROJECT", "NEED")},
-     "drop a need and its pick from .spark/needs.json and release the project's holds that only that pick explained; --dry-run "
+     "drop a need and its pick from .spark/needs.json and release only the holds of the dropped pick (every other hold stays); --dry-run "
      "says what it would do; history stays, and requirements.json is not changed: a note says when it still lists the part",
      ("writes",), ("project", "need", "dropped", "released", "written")),
     ("requirements", {"metavar": "PROJECT"},

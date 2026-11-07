@@ -1,26 +1,62 @@
 [
- {"file": "scripts/spark/idea/drop_need.py", "name": "the need filter is inverted: every other need goes",
+ {
+  "file": "scripts/spark/idea/drop_need.py",
+  "name": "the need filter is inverted: every other need goes",
   "find": "[each for each in current if each[\"id\"] != need]",
-  "replace": "[each for each in current if each[\"id\"] == need]"},
- {"file": "scripts/spark/idea/drop_need.py", "name": "the dry run writes",
+  "replace": "[each for each in current if each[\"id\"] == need]"
+ },
+ {
+  "file": "scripts/spark/idea/drop_need.py",
+  "name": "the dry run writes",
   "find": "        if not dry_run:\n",
-  "replace": "        if True:\n"},
- {"file": "scripts/spark/idea/drop_need.py", "name": "the drop clears every holder of an entry, another project's too",
-  "find": "self.drawer.apply([change for change in changes if change[\"entry\"] in lowered])",
-  "replace": "self.drawer.apply([dict(change, after=dict(change[\"after\"], used_in={})) for change in changes if change[\"entry\"] in lowered])"},
- {"file": "scripts/spark/idea/drop_need.py", "name": "a need that is not there answers ok",
+  "replace": "        if True:\n"
+ },
+ {
+  "file": "scripts/spark/idea/drop_need.py",
+  "name": "the drop clears every holder of an entry, another project's too",
+  "find": "self.drawer.apply(changes)",
+  "replace": "self.drawer.apply([dict(change, after=dict(change[\"after\"], used_in={})) for change in changes])"
+ },
+ {
+  "file": "scripts/spark/idea/drop_need.py",
+  "name": "a need that is not there answers ok",
   "find": "Finding(outcomes.PROBLEMS, need,",
-  "replace": "Finding(\"ok\", need,"},
- {"file": "scripts/needs.py", "name": "a hold that stays the same counts as released",
+  "replace": "Finding(\"ok\", need,"
+ },
+ {
+  "file": "scripts/needs.py",
+  "name": "a hold that stays the same counts as released",
   "find": "if now < was]",
-  "replace": "if now != was]"},
- {"file": "scripts/spark/idea/drop_need.py", "name": "a needs file that is no JSON crashes instead of exiting 2",
+  "replace": "if now != was]"
+ },
+ {
+  "file": "scripts/spark/idea/drop_need.py",
+  "name": "a needs file that is no JSON crashes instead of exiting 2",
   "find": "        except store.StoreProblem as unreadable:",
-  "replace": "        except KeyError as unreadable:"},
- {"file": "scripts/spark/idea/drop_need.py", "name": "the needs file is written before the drawer",
-  "find": "            self.drawer.apply([change for change in changes if change[\"entry\"] in lowered])\n            self.needs.write(project, after)\n",
-  "replace": "            self.needs.write(project, after)\n            self.drawer.apply([change for change in changes if change[\"entry\"] in lowered])\n"},
- {"file": "scripts/needs.py", "name": "the requirements note compares the entry key, not the record a pick is",
+  "replace": "        except KeyError as unreadable:"
+ },
+ {
+  "file": "scripts/spark/idea/drop_need.py",
+  "name": "the needs file is written before the drawer",
+  "find": "                self.drawer.apply(changes)\n                self.needs.write(project, after)\n",
+  "replace": "                self.needs.write(project, after)\n                self.drawer.apply(changes)\n"
+ },
+ {
+  "file": "scripts/needs.py",
+  "name": "the requirements note compares the entry key, not the record a pick is",
   "find": "[next(iter(_as_record(pick, known, entries).items()))]\n                if kind == \"part\"}",
-  "replace": "[next(iter(pick.items()))]\n                if kind == \"part\"}"}
+  "replace": "[next(iter(pick.items()))]\n                if kind == \"part\"}"
+ },
+ {
+  "file": "scripts/needs.py",
+  "name": "a drop releases every entry whose hold falls in the plan, not only the dropped pick's fall",
+  "find": "fall = before.get(entry_id, has) - later.get(entry_id, has)",
+  "replace": "fall = has - later.get(entry_id, has)"
+ },
+ {
+  "file": "scripts/spark/idea/drop_need.py",
+  "name": "a refused write escapes as a crash, not a SparkError",
+  "find": "        except (OSError, store.StoreProblem) as failed:\n            raise SparkError(\"the drop of",
+  "replace": "        except KeyError as failed:\n            raise SparkError(\"the drop of"
+ }
 ]

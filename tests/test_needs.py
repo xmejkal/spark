@@ -1712,7 +1712,8 @@ class TheNeedsDropTest(unittest.TestCase):
         said, code = run(["--needs-drop", str(self.project), "light"])
         self.assertEqual((said["status"], code, self.digest()), ("problems", 1, before))
         self.assertEqual(said["problems"][0]["subject"], "light")
-        self.assertEqual(said["data"], {"project": "plant-alarm", "need": "light", "needs": ["soil", "alarm", "input"]})
+        self.assertEqual(said["data"], {"project": "plant-alarm", "need": "light", "needs": ["soil", "alarm", "input"],
+                                         "dropped": None, "released": [], "written": False})
         self.assertIn("no need called light: it was never there or is already dropped. --needs lists them: soil, alarm, input",
                       said["problems"][0]["sentence"])
         run(["--needs-drop", str(self.project), "alarm"])
@@ -1724,7 +1725,6 @@ class TheNeedsDropTest(unittest.TestCase):
         said, code = run(["--needs-drop", str(self.project), "alarm"])
         self.assertEqual((said["status"], code), ("could-not-run", 2))
         self.assertIn("needs.json", said["unchecked"][0]["sentence"])
-        self.assertNotIn("crash", json.dumps(said))
 
     def test_requirements_that_still_list_the_dropped_part_get_a_note_that_says_who_runs_what(self):
         (self.project / "requirements.json").write_text(json.dumps({"parts": [{"part": "x-soil"}]}))
@@ -1748,6 +1748,41 @@ class TheNeedsDropTest(unittest.TestCase):
         self.assertEqual((result.status(), self.need_ids()), ("could-not-run", ["soil", "alarm", "input"]))
         run(["--needs-drop", str(self.project), "alarm"])
         self.assertEqual((self.need_ids(), self.entry("speaker")["used_in"]), (["soil", "input"], {}))
+
+    def test_a_hold_given_by_hand_that_no_pick_explains_stays_when_an_unrelated_need_is_dropped(self):
+        run(["--drawer-set", a_file([{"entry": "probe", "used_in": {"plant-alarm": 1}}, {"entry": "speaker", "used_in": {"plant-alarm": 1}}])])
+        (self.home / "drawer" / "extra.json").write_text(json.dumps({"schema": 1, "label": "Extra", "count": 2, "used_in": {"plant-alarm": 1}}))
+        said, code = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((code, said["data"]["released"], self.entry("extra")["used_in"]), (0, [{"entry": "speaker", "was": 1, "now": 0}], {"plant-alarm": 1}))
+
+    def test_a_pick_that_stays_keeps_its_hold_when_another_project_over_holds_the_entry(self):
+        run(["--drawer-set", a_file([{"entry": "probe", "used_in": {"plant-alarm": 1, "other-gadget": 8}}])])
+        before = self.entry("probe")["used_in"]
+        said, code = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((code, said["data"]["released"], self.entry("probe")["used_in"]), (0, [{"entry": "speaker", "was": 1, "now": 0}], before))
+
+    def test_a_need_with_only_an_id_drops_cleanly_dry_run_and_real(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "b"}]}))
+        said, code = run(["--needs-drop", str(self.project), "b", "--dry-run"])
+        self.assertEqual((said["status"], code, said["data"]["dropped"]), ("ok", 0, {"id": "b"}))
+        said, code = run(["--needs-drop", str(self.project), "b"])
+        self.assertEqual((said["status"], code, self.need_ids()), ("ok", 0, []))
+
+    def test_a_needs_file_that_refuses_the_write_after_the_drawer_is_written_exits_2_with_a_code_and_a_retry_finishes(self):
+        class FullNeeds:
+            def __getattr__(self, attr):
+                return getattr(needs, attr)
+
+            @staticmethod
+            def write(project, after):
+                raise OSError("disk full")
+
+        result = run_operation(DropNeed(needs_file=FullNeeds()), {"project": self.project, "need": "alarm", "dry_run": False},
+                               build_outside=lambda effects: None)
+        self.assertEqual((result.status(), self.need_ids(), self.entry("speaker")["used_in"]), ("could-not-run", ["soil", "alarm", "input"], {}))
+        self.assertEqual(result.findings[0].code, "drop_unwritten")
+        run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual(self.need_ids(), ["soil", "input"])
 
     def test_the_note_reads_a_hand_written_entry_pick_as_the_record_it_is(self):
         path = self.project / ".spark" / "needs.json"

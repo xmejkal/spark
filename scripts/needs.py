@@ -452,6 +452,26 @@ def released_holds(changes, name):
             for was, now in [((change["was"].get("used_in") or {}).get(name, 0), change["now"]["used_in"].get(name, 0))] if now < was]
 
 
+def dropped_holds(name, current, after, entries):
+    """
+    What dropping a need lets go (P514): (drawer changes, released) for project `name`. Only an entry whose planned hold falls
+    between the needs `current` and the needs `after` is touched, and by that fall alone, taken off the hold the entry has now.
+    A hold no pick explains, and a hold another project's over-holding keeps from the plan, stay as they are.
+    """
+    def planned(needs):
+        return {change["entry"]: change["now"]["used_in"].get(name, 0) for change in plan_holds(name, needs, entries)[0]}
+    before, later, changes, released = planned(current), planned(after), [], []
+    for entry_id, entry in sorted(entries.items()):
+        has = (entry.get("used_in") or {}).get(name, 0)
+        fall = before.get(entry_id, has) - later.get(entry_id, has)
+        if fall > 0 and has > 0:
+            used_in = {who: n for who, n in entry["used_in"].items() if who != name}
+            used_in.update({name: has - fall} if has > fall else {})
+            changes.append(drawer.settle(entry_id, entry, {"used_in": used_in}, [])[0])
+            released.append({"entry": entry_id, "was": has, "now": used_in.get(name, 0)})
+    return changes, released
+
+
 def plan_pick(project, given, passed_over=()):
     """
     What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is

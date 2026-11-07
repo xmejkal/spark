@@ -8,10 +8,13 @@ names its code in a Finding, and `CODES` says in one sentence what each means. T
 NEED_UNKNOWN = "need_unknown"
 #: The needs file or the drawer cannot be read, so nothing is dropped.
 NEEDS_UNREADABLE = "needs_unreadable"
+#: The drop could not be written, or the holds could not be planned: the drawer is written first and the needs file last.
+DROP_UNWRITTEN = "drop_unwritten"
 
 #: Each code and the one sentence that says what it means.
 CODES = {
     NEED_UNKNOWN: "the project has no need of that id: it never had one, or it is already dropped",
     NEEDS_UNREADABLE: "the needs file or the drawer cannot be read, so nothing is dropped",
+    DROP_UNWRITTEN: "the drop could not be planned or written: the drawer is written first and the needs file last, so a retry finishes it",
 }
 # --- end MVP ---
