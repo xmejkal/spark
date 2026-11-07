@@ -24,3 +24,5 @@ The base is PR #906's branch merged with main (39a35e65).
 | 16 | `docs/guide/map.md` is regenerated | plan | acted | `tools/map.py --write`: 18 rows added to the bench area. `deploy_stages.py` shows "none" under tests that import it |
 | 17 | the docs name each module where it lives | plan | acted | the live guides name the modules by file name only, which still holds; `check_docs.py` passes. `patterns-and-names.md` says the package holds the libraries and why the two leaves stay; `areas/bench.md` and `refactor-plan.md` section 10 say the same |
 | 18 | `tests/test_self_confirmation`'s `module.NAME` keys | build | acted | unchanged: `from spark.bench import board_live` keeps the name `board_live`, and the test reads `ImportFrom` names under `spark` |
+| 19 | The glob test misses a moved module that is not board_ or deploy_ (flasher.py, image_evidence.py) coming back to scripts/ | reviewer, PR | acted | test_no_bench_module_has_a_second_copy_in_scripts, seen failing on a planted copy |
+| 20 | The plan's goal line misses deploy_record_store.py | reviewer, PR | rejected | wave5-plan.md:211-212 names it, the line break hid it |

@@ -280,6 +280,12 @@ class TheBenchAreaTest(unittest.TestCase):
         left = sorted(path.name for pattern in ("board_*.py", "deploy_*.py") for path in (ROOT / "scripts").glob(pattern))
         self.assertEqual(left, ["board_codes.py", "board_pads.py", "deploy_record_store.py"])
 
+    def test_no_bench_module_has_a_second_copy_in_scripts(self):
+        # the review of #915: flasher.py or image_evidence.py back in scripts/ would pass the glob above
+        twins = sorted(path.name for path in self.BENCH.glob("*.py")
+                       if path.name != "__init__.py" and (ROOT / "scripts" / path.name).exists())
+        self.assertEqual(twins, [])
+
     def test_each_bench_module_imports_alone(self):
         # a child Python per module: an import cycle shows as "partially initialized module", which a warm process hides
         for module in sorted(path.stem for path in self.BENCH.glob("*.py") if path.name != "__init__.py"):
