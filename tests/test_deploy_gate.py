@@ -219,6 +219,26 @@ class TheGateTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("not flashed: you answered no.", problems)
 
+    def test_a_relayed_yes_never_opens_the_erase_and_its_program_is_never_asked(self):
+        # P675 (W4-4): the PO's decision 6, a yes another program collected makes a live grant only
+        self.run_the_scenario()
+        asked = []
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: asked.append(question) or True)
+        code, said, problems = self.deploy("--token", self.token(), "--json", consent=relayed)
+        envelope = json.loads(said)
+        self.assertEqual((code, self.flashed(), asked), (2, [], []))
+        self.assertIn("a yes relayed by another program never opens the erase", problems)
+        self.assertIn("relayed_yes_refused", [item["code"] for item in envelope["problems"] + envelope["unchecked"]])
+        self.assertIsNone(envelope["data"]["yes"])
+        self.assertIn("--token %s" % self.token(), json.dumps(envelope["next"]))
+
+    def test_a_relayed_yes_with_no_token_still_says_to_run_the_look_first(self):
+        self.run_the_scenario()
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        code, _, problems = self.deploy(consent=relayed)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("run look.py first", problems)
+
     def test_a_token_for_another_board_names_the_board(self):
         self.run_the_scenario()
         image = self.token().split("-")[1]
