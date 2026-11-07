@@ -1,7 +1,8 @@
 # Wave 4 plan: the bench on the core (P474, #649)
 
 > Four PRs. W4-1 gives every board tool and clock one seam. W4-2 puts deploy on the core. W4-3 puts grant, live and
-> reach on the core. W4-4 adds the relayed yes, which the PO merges in every mode. The plan waits for the PO's approval.
+> reach on the core. W4-4 adds the relayed yes, which the PO merges in every mode. Status 2026-11-06: W4-1 and W4-2 are merged; W4-3 is
+> built as P657 #883 (PR C), with P383's three goldens; W4-4 waits for the PO.
 
 Fable 5.1 wrote this plan on 2026-11-01 in auto mode, with one council of two rounds inside. It was planned on
 `origin/main` 67c37600 with PR #648 (P462) read as merged. On 2026-11-06 the line numbers of W4-2 and W4-3, and of the
@@ -73,7 +74,7 @@ Status, 2026-11-06:
   `deploy-could-not-run-flash-failed-grant.{json,txt}` and their `.stderr` files are in `tests/golden`.
 - PR A (P605 #807, the schemas, the trace hook and the Privacy step): done in https://github.com/xmejkal/spark/pull/880.
 - W4-2 (P655 #879): built on branch `p655-deploy-core`, with E2 and P457 (the littlefs lookup asks with the project).
-- W4-3 with P383 #491 (PR C): no card yet. Its Operations take their collaborators as W4-2's does: `IssueGrant(grant_service=None)`, None for the store's own.
+- W4-3 with P383 #491 (PR C): no card yet. Its Operations take their collaborators as W4-2's does: `IssueGrant(platform_for=None)`, None for the MicroPython platform.
 - W4-4 (PR D): no card yet.
 
 ### W4-1, the seams (S7a and S8)
@@ -149,9 +150,8 @@ reporter)`.
 Goal: the three last CLIs are 15-line mains over `IssueGrant`, `CheckGrant`, `RunLiveCode` and `ReachBoard`. They print
 today's lines and today's flat JSON.
 
-Classes: the four Operations, one module each. `FlatJsonLine`, a Renderer that `Operation.json_renderer` picks (the
-default stays `JsonEnvelope`). `GrantService.of(platform, clock)`, built once. It does not exist yet: `GrantService.__init__` (board_grant.py:208-210) takes
-`finder`, `reader`, `grants`, `now` and `user_name` since W4-1.
+Classes: the four Operations, one module each. `FlatJsonLine`, a Renderer that `Operation.json_renderer` picks (None: the
+`JsonEnvelope`; the class attribute holds None because operation.py cannot import cli.py). No `GrantService.of(platform, clock)`: check and issue need a finder built from `outside.run` per run, so each Operation builds `GrantService(finder, reader, now=outside.clock.now)` (P657).
 
 Files: grant.py:70-130. With `--check` in argv, `main` chooses `CheckGrant`. So `--help` splits per mode, the one
 public change, named in the PR. live.py:74-105. reach.py:67-105. core/cli.py:139 (the renderer choice). bench/__init__.py

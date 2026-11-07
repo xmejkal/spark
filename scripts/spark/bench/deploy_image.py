@@ -24,10 +24,11 @@ from deploy_service import DeployService, FlashError
 from firmware_platform import MicroPythonPlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
+from spark.bench.stops import reason_of
 from spark.core import codes, outcomes
 from spark.core.cli import CRASH_MESSAGE, CRASHED_MESSAGE, traceback_lines
 from spark.core.events import BEGIN, Event, Reporter
-from spark.core.operation import BOARD, COMMON_ARGUMENTS, DELETES, READS, RUNS, WRITES, Argument, Operation
+from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, DELETES, READS, RUNS, WRITES, Argument, Operation
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 from spark.core.result import Finding, NextStep, OperationResult
 
@@ -64,12 +65,6 @@ def grant_hint(project, port):
     line = deploy_gate.format_rerun_line(GRANT_SCRIPT, grant_argv(project, port))
     return ("\nOr, to let Claude deploy this board for N minutes (1 to 1440) with no yes each time, run this once. It "
             "allows an erase of ALL of the flash and any passed image of any project:\n  %s" % line)
-
-
-def reason_of(refusal):
-    """The board_codes code for a refusal that deploy catches: the `reason` of a LookStop or a DeployError (a FlashError
-    too), and tool_missing for a tools.ToolProblem (P433)."""
-    return board_codes.TOOL_MISSING if isinstance(refusal, tools.ToolProblem) else refusal.reason
 
 
 def who_said_yes(consent):
@@ -253,7 +248,7 @@ class DeployImage(Operation):
                           "image holds. Needs look.py --no-simulation. The person's typed yes names the caveat", group=EVIDENCE_GROUP),
                  Argument(("--dry-run",), "dry_run", bool, "print each command and run nothing"),
                  COMMON_ARGUMENTS["json"]._replace(help="print one envelope on stdout, the lines a person reads on stderr (docs/guide/agents/json.md)"))
-    effects = (READS, RUNS, BOARD, DELETES, WRITES)
+    effects = (READS, RUNS, BOARD, DELETES, WRITES, ASKS)
 
     def __init__(self, platform_for=None, grant_service=None, records=None):
         self.platform_for = platform_for or MicroPythonPlatform

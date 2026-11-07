@@ -127,7 +127,7 @@ the diagnostics go to stderr, as text for a person. Decide on stdout only: read 
   ([P131](https://github.com/xmejkal/spark/issues/65)). So exit 1 with an empty stdout is a crash, not problems.
   check_all reports each crash as could-not-run.
 - `look.py` and `deploy.py` are the exceptions: a crash exits 2 and `--json` prints an envelope. After a flash it holds
-  `data.board_state`, `may_be_erased` or `flashed_not_verified` ([its envelope](agents/json.md#lookpy-and-deploypys-envelope)).
+  `data.board_state`, `may_be_erased` or `flashed_not_verified` ([its envelope](agents/json.md#lookpy-and-deploypys-envelope)). `grant.py`, `live.py` and `reach.py` (P657) exit 2 too, with no `--json` line.
 - `compare_design.py`, `assign_pins.py` and `check_spine.py` answer 2 instead of crashing
   ([check_spine.py's refusals](agents/json.md#check_spinepy)).
 - These inputs crash a script:

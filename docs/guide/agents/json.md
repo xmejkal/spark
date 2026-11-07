@@ -301,7 +301,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 ### Which scripts take --json
 
 These take it: `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
-`check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py`, `look.py` and `parts.py`. These do not take
+`check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py`, `look.py` and `parts.py`. `grant.py`, `live.py` and `reach.py` print one flat line of JSON, not the envelope (P657): the keys of `data` below, and no line at all after a crash or a reach that could not start. A bad argument with `--json` prints the usage on stderr, exit 2. These do not take
 it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
@@ -327,7 +327,7 @@ Without `--json` it prints the same on stderr and nothing on stdout ([P442](http
 **The `code` of an item** ([P433](https://github.com/xmejkal/spark/issues/575)). Every item of `problems` and `unchecked` in
 `look.py --json` and `deploy.py --json` has `code`, the cause in one word. Decide on the code, never on the sentence. The codes
 come from one table, `scripts/board_codes.py`. The same code can come from the look and from deploy.py (`evidence_refuses` is both).
-`grant.py` and the other scripts write no `code`. In deploy.py, the reasons of a look that could not run come as an `unchecked` item of stage `look`.
+The flat line of `grant.py`, `live.py` and `reach.py` has no `code`; their Findings do. In deploy.py, the reasons of a look that could not run come as an `unchecked` item of stage `look`.
 look.py gives each stop, warning and unknown field an item of its own. deploy.py's gate gives one item for all the look's stops, with the first stop's `code`.
 The column "needs the person" says whether the next step waits on the person's hands, yes or choice.
 
@@ -366,11 +366,11 @@ The column "needs the person" says whether the next step waits on the person's h
 | `download_mode_stayed` | deploy, stage `verify` | the board still waits in download mode after the flash: the wait for its start ran out, though the port may have gone and come back. A restart counts only when mpremote answers after it ([P462](https://github.com/xmejkal/spark/issues/630)) | relay `data.person_action` (press RESET once) to the person, then run the `watch` step. Never deploy again for this | yes |
 | `port_gone` | deploy, stage `verify` | the board's port was not listed after the flash, or went and did not come back. No mpremote call was made on a dead port, so `data.repl_command` is null and `next` has no `watch` step (mpremote would choose a board of its own) | relay `data.person_action` (press RESET, then unplug and plug in, then `python3 -m mpremote devs` lists the ports). Never deploy again for this | yes |
 | `bad_argument` | both scripts | an argument that the script cannot run with (below) | fix the flag, run again | no |
-| `crash` | `look.py`, `deploy.py` | the look crashed: a defect in spark, never in the project. The sentence names the exception class; the traceback is on stderr | report it to the spark maintainers with the stderr traceback; running the look again for it is no use | yes |
+| `crash` | `look.py`, `deploy.py` | the look crashed (`grant.py`, `live.py` and `reach.py` print no stdout line for a crash, exit 2, the traceback on stderr): a defect in spark, never in the project. The sentence names the exception class; the traceback is on stderr | report it to the spark maintainers with the stderr traceback; running the look again for it is no use | yes |
 | `undeclared_effect` | no script today: the look declares `runs`. An Operation whose `effects` miss what it reaches | the operation ran a program its effects do not declare: a defect in spark | report it, as for `crash` | yes |
 
 `bad_argument`, `crash` and `undeclared_effect` are the core's codes, in `scripts/spark/core/codes.py`: every operation can write them. The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `serial_not_mac` and `no_mac` are in the table of `scripts/board_codes.py` too. They name the reasons of
-`grant.py`'s refusals, which do not reach this envelope. With two stops, the deploy gate's `code` is the first stop's.
+`grant.py`'s refusals, which do not reach this envelope. So do `no_grant`, `grant_expired`, `grant_no_zone`, `not_reached`, `no_probe`, `reset_failed`, `raised`, `refused_no_grant`, `refused_pin`, `refused_no_parse`, `store_problem` and `board_record_unusable`: the codes of the findings that `grant.py`, `live.py` and `reach.py` give the core, which print no envelope. With two stops, the deploy gate's `code` is the first stop's.
 
 **A bad flag.** With `--json`, `look.py` and `deploy.py` print an envelope for an argument they cannot run with, such as
 `--no-simulation` with `--ignore-older-runs`: status `could-not-run`, `data: null`, one `unchecked` item with `code`

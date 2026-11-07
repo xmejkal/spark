@@ -23,7 +23,8 @@ import board_look  # noqa: E402
 import live  # noqa: E402
 import tools  # noqa: E402
 from board_console import Cure  # noqa: E402
-from fakes import FakeConsoleProbe, FakeProbePlatform  # noqa: E402
+from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
+from spark.bench.run_live_code import RunLiveCode  # noqa: E402
 from test_board_look import C6_PORT, data, done  # noqa: E402
 from test_deploy import found  # noqa: E402
 
@@ -46,26 +47,32 @@ class LiveScriptTest(unittest.TestCase):
         board_grant.GrantStore().save(board_grant.Grant(MAC, board_look.board_token(MAC), "petr", NOW.isoformat(),
                                                         (NOW + datetime.timedelta(minutes=30)).isoformat()))
 
-    def go(self, *argv, answers=("1\n", ""), devs="mpremote-devs-one.txt", minutes_later=0, probe=None):
-        """(exit code, stdout, stderr, the commands run) of live.py with fake tools."""
-        answers, ran = list(answers), []
+    def world(self, answers=("1\n", ""), devs="mpremote-devs-one.txt", minutes_later=0):
+        """A FakeOutsideWorld whose `run` answers mpremote devs from a fixture, then the exec and the reset from `answers` in turn."""
+        answers = list(answers)
 
         def run(command, **kw):
-            ran.append(command)
             if "devs" in command:
                 return done(data(devs))
             answer = answers.pop(0)
             if isinstance(answer, Exception):
                 raise answer
             return done(answer)
+        return FakeOutsideWorld(run=run, find_tool=found, clock=FakeClock(NOW + datetime.timedelta(minutes=minutes_later)))
 
+    def platform_for(self, project, find_tool, probe=None):
+        """The FakeProbePlatform of a run: the probe is `probe`, or one whose cure restarts the board."""
+        return FakeProbePlatform(project, probe or FakeConsoleProbe(cured=RESTART), find_tool)
+
+    def go(self, *argv, answers=("1\n", ""), devs="mpremote-devs-one.txt", minutes_later=0, probe=None):
+        """(exit code, stdout, stderr, the commands run) of live.py with fake tools."""
+        outside = self.world(answers, devs, minutes_later)
         out, err = io.StringIO(), io.StringIO()
         argv = ["--project", str(self.project)] + list(argv)
-        platform = FakeProbePlatform(self.project, probe or FakeConsoleProbe(cured=RESTART), lambda role: found(role))
+        operation = RunLiveCode(platform_for=lambda project, find_tool: self.platform_for(project, find_tool, probe))
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = live.main(argv, run=run, platform=platform,
-                             now=lambda: NOW + datetime.timedelta(minutes=minutes_later))
-        return code, out.getvalue(), err.getvalue(), ran
+            code = live.main(argv, outside=outside, operation=operation)
+        return code, out.getvalue(), err.getvalue(), outside.ran
 
     def test_print_1_runs_on_the_checked_port_and_the_board_is_reset(self):
         code, said, _, ran = self.go("--code", "print(1)", "--json")
@@ -202,6 +209,53 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual(len(err.getvalue().splitlines()), 1, err.getvalue())
         self.assertIn("a?GRANTED: board ok", err.getvalue())
         self.assertIn("a?GRANTED: board ok", json.loads(out.getvalue())["why"])  # P444: --json carries the flat message
+
+    def test_a_failed_reset_is_exit_2_and_one_unchecked_item_whatever_the_answer(self):
+        failed = subprocess.CalledProcessError(1, [], "", "the reset died")
+        code, said, _, _ = self.go("--code", "print(1)", "--json", answers=("1\n", failed))
+        line = json.loads(said)
+        self.assertEqual((code, line["answer"], line["reset"]), (2, "ran", "failed"))
+        self.assertIn("the reset failed", line["why"])
+        result = RunLiveCode(platform_for=self.platform_for).run(code="print(1)", project=self.project, port=C6_PORT, outside=self.world(("1\n", failed)))
+        self.assertEqual([(found.severity, found.code) for found in result.findings], [("could-not-run", "reset_failed")])
+
+    def test_each_answer_is_one_finding_of_its_status_with_the_answer_for_its_code(self):
+        def finding_of(code, **world):
+            result = RunLiveCode(platform_for=self.platform_for).run(code=code, project=self.project, port=C6_PORT, outside=self.world(**world))
+            return result.status(), [found.code for found in result.findings]
+        self.assertEqual(finding_of("print(1)", answers=("1\n", "")), ("ok", []))
+        self.assertEqual(finding_of("print(", answers=()), ("problems", ["refused_no_parse"]))
+        self.assertEqual(finding_of("print(1)", answers=(), minutes_later=31), ("problems", ["refused_no_grant"]))
+        self.assertEqual(finding_of("time.sleep(12)", answers=()), ("problems", ["refused_pin"]))
+        refused = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
+        self.assertEqual(finding_of("print(1)", answers=(refused, refused)), ("could-not-run", ["not_reached"]))
+
+    def test_every_answer_but_ran_is_a_code_of_the_table(self):
+        import board_codes
+        import board_live
+        for answer in set(board_live.EXIT_FOR_ANSWER) - {board_live.RAN}:
+            self.assertIn(answer, board_codes.CODES)
+
+    def test_a_stop_has_the_empty_fields_a_finding_and_the_stderr_line(self):
+        result = RunLiveCode(platform_for=self.platform_for).run(code="print(1)", project=self.project, port=None,
+                                                                 outside=self.world(devs="mpremote-devs-two.txt"))
+        self.assertEqual((result.status(), [found.code for found in result.findings]), ("could-not-run", ["two_boards"]))
+        self.assertEqual((result.data["answer"], result.data["port"], result.data["output"]), ("could-not-run", None, None))
+        self.assertTrue(result.diagnostics[0].startswith("live.py: "), result.diagnostics)
+
+    def test_a_bad_argument_with_json_is_the_usage_and_a_missing_code_is_refused(self):
+        for argv, said in ((["--code", "print(1)", "--json", "--bogus"], "unrecognized arguments: --bogus"),
+                           (["--json"], "the following arguments are required: --code")):
+            out, err = io.StringIO(), io.StringIO()
+            with self.assertRaises(SystemExit) as raised, contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                live.main(argv, outside=FakeOutsideWorld())
+            self.assertEqual((raised.exception.code, out.getvalue()), (2, ""))
+            self.assertIn(said, err.getvalue())
+
+    def test_a_crash_with_json_prints_no_line_and_the_traceback_on_stderr(self):
+        code, said, problems, _ = self.go("--code", "print(1)", "--json", answers=(RuntimeError("boom"),))
+        self.assertEqual((code, said), (2, ""))
+        self.assertIn("Traceback (most recent call last):", problems)
 
 
 if __name__ == "__main__":

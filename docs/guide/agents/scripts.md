@@ -108,7 +108,7 @@ These only read:
   Exit 1 is a stop (deploy.py will refuse, no token) or a field that differs but that the person can accept (with a token):
   the stop line or the token line tells them apart. The token is not the person's yes;
   a `sim/wokwi.toml` whose firmware line is not `firmware = "name.bin"` ([P429](https://github.com/xmejkal/spark/issues/566)) gives the line `no token: sim/wokwi.toml names its firmware in a form spark cannot use: ...`, exit 2: rewrite the line, then look again;
-- `grant.py --check`. It runs only `mpremote devs`, so the board does not restart. It says whether the board on USB has
+- `grant.py --check`. It runs only `mpremote devs`, so the board does not restart. `grant.py --check --help` and `grant.py --help` list the flags of each mode (P657), and a flag of the other mode is refused with the usage and exit 2. It says whether the board on USB has
   a live grant now: exit 0 granted, 1 not (no grant, it ended, a grant file that is not this board's), 2 it could not
   run. `--json` gives `granted`, `why` (a code, or null; `could not run` when it could not look) and `grant` ([P253](https://github.com/xmejkal/spark/issues/265)). Never run `grant.py --minutes` (with `--scope live`
   or `--scope deploy`): that is the person's yes, typed in their own terminal. `--check` looks for a live grant only. Give the person the line that `live.py` or `grant.py --check`

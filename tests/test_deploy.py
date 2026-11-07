@@ -151,7 +151,7 @@ class TheNoSimulationDryRunTest(ProjectCase):
         effects_of = DeployImage().effects_of
         self.assertEqual(effects_of({"dry_run": True, "no_simulation": False}), ("reads",))
         self.assertEqual(effects_of({"dry_run": True, "no_simulation": True}), ("reads", "runs"))
-        self.assertEqual(effects_of({"dry_run": False, "no_simulation": False}), ("reads", "runs", "board", "deletes", "writes"))
+        self.assertEqual(effects_of({"dry_run": False, "no_simulation": False}), ("reads", "runs", "board", "deletes", "writes", "asks"))
 
     def turn_littlefs(self, on):
         """The project's .spark/tools.json turns littlefs-python on or off (P457)."""
