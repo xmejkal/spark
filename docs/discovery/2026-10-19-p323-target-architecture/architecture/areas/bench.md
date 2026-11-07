@@ -6,8 +6,8 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 New names (proposed): `MicroPythonPlatform`, `PLATFORMS`, `DEFAULT_PLATFORM`, `make_port_finder`,
 `make_board_reader`, `make_ready_probe`, `ReadyProbe`, `DoctorProbe`, `DoctorProbeResult`, `LookStopError`,
 `ReadingFile`, `DeferringConsentStrategy`, the six Operation classes, `FakeFirmwarePlatform`, `FakeBoardReader`, `FakePortFinder`, `FirmwarePlatformContract`,
-`FlasherContract`. Three names are renamed in S11: `ready_probe` is `ready_check.py` today, `ReadyProbe` is
-`ReadyCheck`, and `make_ready_probe` is `make_ready_check`.
+`FlasherContract`. Three names were renamed in S11 (W5-3b, P680): `ready_probe.py` was `ready_check.py`, `ReadyProbe` was
+`ReadyCheck`, and `make_ready_probe` was `make_ready_check`.
 
 ## Level 2: what bench does
 
@@ -74,7 +74,7 @@ flowchart TB
 
 | Seam | Real adapter | Fake |
 |---|---|---|
-| `FirmwarePlatform`: makes every board tool below (`make_flasher`, `make_shell_command`, `make_port_finder`, `make_board_reader`, `make_connection`, `make_ready_check`, `make_console_probe`; `find_tool` for the doctor) (P475, done) | `MicroPythonPlatform` (`firmware_platform.py`) | `FakeFirmwarePlatform` (each part is a Fake or an exception to raise) and `FakeProbePlatform` (real finder and reader over a fake `run`), both in `tests/fakes.py` |
+| `FirmwarePlatform`: makes every board tool below (`make_flasher`, `make_shell_command`, `make_port_finder`, `make_board_reader`, `make_connection`, `make_ready_probe`, `make_console_probe`; `find_tool` for the doctor) (P475, done) | `MicroPythonPlatform` (`firmware_platform.py`) | `FakeFirmwarePlatform` (each part is a Fake or an exception to raise) and `FakeProbePlatform` (real finder and reader over a fake `run`), both in `tests/fakes.py` |
 | `Flasher`: `build_commands` | `EsptoolFlasher` (`flasher.py`) | the contract test with a recording `run` |
 | `BoardReader`: `read(port)` | `EsptoolReader` (`board_look.py`) | `FakeBoardReader` (`tests/fakes.py`, P475) |
 | port finder: `ports()`, `require_one_port` | `PortFinder` over `mpremote devs` (`board_look.py`) | `FakePortFinder` (`tests/fakes.py`) |
@@ -149,7 +149,7 @@ Today `FirmwarePlatform` (`firmware_platform.py:41`) is one class that a classme
 two classes (`firmware_platform.py:55-60`). In the target it is a base class, and `MicroPythonPlatform` (proposed) fills it. The
 Platform role word folds into Strategy. `make_port_finder` and `make_board_reader` are proposed: today 8 lookups
 of `board-shell` or `flasher` sit outside the platform (`live.py:84`, `reach.py:79`, `grant.py:88`, `grant.py:95`,
-two in `looker`, two in `board_doctor`). `make_ready_check` becomes `make_ready_probe`. Pin map
+two in `looker`, two in `board_doctor`). `make_ready_check` became `make_ready_probe` (P680). Pin map
 text and image building stay out of the platform until a second one exists.
 
 ### The main flow: deploy

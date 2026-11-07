@@ -23,7 +23,7 @@ from spark.bench import firmware_platform  # noqa: E402
 import flash_image  # noqa: E402
 from spark.bench import flasher  # noqa: E402
 import project_image  # noqa: E402
-from spark.bench import ready_check  # noqa: E402
+from spark.bench import ready_probe  # noqa: E402
 import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
@@ -141,13 +141,13 @@ class TheLookTest(ServiceCase):
 class TheRecordTest(ServiceCase):
     def test_the_deploy_is_kept_in_the_records_the_service_is_given_with_whose_yes_it_was(self):
         records = FakeDeployRecordStore(Path("kept.json"))
-        result = deploy_service.DeployResult({"mac": "aa:bb"}, "", ready_check.ReadyResult("ready seen", "ready", ""), None, [])
+        result = deploy_service.DeployResult({"mac": "aa:bb"}, "", ready_probe.ReadyResult("ready seen", "ready", ""), None, [])
         kept = self.service(records=records).record(result, FakeConsent(True))
         self.assertEqual((kept, records.written), (Path("kept.json"), [({"mac": "aa:bb"}, "ready seen", "a test")]))
 
     def test_a_store_that_cannot_be_written_raises_what_the_records_raise(self):
         records = FakeDeployRecordStore(raises=store.StoreProblem("no room"))
-        result = deploy_service.DeployResult({"mac": "aa:bb"}, "", ready_check.ReadyResult("ready seen", "ready", ""), None, [])
+        result = deploy_service.DeployResult({"mac": "aa:bb"}, "", ready_probe.ReadyResult("ready seen", "ready", ""), None, [])
         with self.assertRaises(store.StoreProblem):
             self.service(records=records).record(result, FakeConsent(True))
 
@@ -299,7 +299,7 @@ class TheFirmwarePlatformTest(ServiceCase):
         connection = platform.make_connection(command, PORT, subprocess.run)
         self.assertIsInstance(connection, board_connection.BoardConnection)
         self.assertEqual(connection.repl_command(), command + ["connect", PORT, "repl"])
-        self.assertIsInstance(platform.make_ready_check(connection), ready_check.ReadyCheck)
+        self.assertIsInstance(platform.make_ready_probe(connection), ready_probe.ReadyProbe)
         self.assertIsNone(platform.make_console_probe(None, subprocess.run))
         self.assertEqual(platform.board_of(), "xiao-esp32-c6")
 

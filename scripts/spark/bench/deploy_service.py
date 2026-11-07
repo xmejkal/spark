@@ -20,7 +20,7 @@ from spark.bench import board_start
 from spark.bench import deploy_gate
 import deploy_record_store
 from spark.bench import download_mode
-from spark.bench import ready_check
+from spark.bench import ready_probe
 from project_image import DeployError, ProjectImage
 from spark.core.events import Event
 
@@ -155,7 +155,7 @@ class DeployService:
         board, start = read(port), None
         if port is None:
             start = starter.gone_result()
-        elif (board[2].verdict == ready_check.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
+        elif (board[2].verdict == ready_probe.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
               and board_start.console_may_be_read(row, look.port)):
             board, start = self._after_silence(starter, row, board, read)
         facts, facts_line, ready = board
@@ -182,7 +182,7 @@ class DeployService:
         if waits:
             self.report(Event.line(deploy_stages.STAGE_VERIFY, download_mode.press_reset(starter.places)))
             latest = [board]
-            start = starter.wait_for_start(port, lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_check.UNKNOWN,
+            start = starter.wait_for_start(port, lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_probe.UNKNOWN,
                                            self.report, usb=row.usb)
             return latest[-1], start
         if download_mode.booted(console):  # P245: mpremote asked while the board still restarted
@@ -200,9 +200,9 @@ class DeployService:
         none (the port is gone) nothing is read, because mpremote would choose a board of its own: the facts are made and not written."""
         if connection is None:
             return (self._facts_of(image, report, expected, moment), "facts file: not written: the board's port is gone",
-                    ready_check.ReadyResult(ready_check.UNKNOWN, "", ""))
+                    ready_probe.ReadyResult(ready_probe.UNKNOWN, "", ""))
         facts, facts_line = self._put_facts(image, report, connection, expected, moment)
-        return facts, facts_line, self.platform.make_ready_check(connection).check(expected)
+        return facts, facts_line, self.platform.make_ready_probe(connection).check(expected)
 
     def _facts_of(self, image, report, expected, moment):
         """The facts that spark puts on the board (D22)."""

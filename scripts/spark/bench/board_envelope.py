@@ -17,7 +17,7 @@ from spark.bench.deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE
 import design
 from spark.core import outcomes
 from spark.core.result import Finding, NextStep, OperationResult
-from spark.bench import ready_check
+from spark.bench import ready_probe
 import store
 from spark.bench.deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 
@@ -110,7 +110,7 @@ def _steps(reached):
             following.append(outcomes.add_env(outcomes.step("grant", reached["grant_argv"],
                                            "the person runs it once in their own terminal; it lets Claude erase ALL of the flash for N minutes (1 to 1440, 60 here)",
                                            effects=["writes"], needs_yes=True), store.read_given_env()))
-    elif result and result.ready.verdict == ready_check.UNKNOWN:
+    elif result and result.ready.verdict == ready_probe.UNKNOWN:
         stopped = bool(result.start and result.start.code)  # P462: the person has a step first
         gone = stopped and result.start.port is None  # no port to open: mpremote would choose a board of its own
         again = "read the board again with the REPL (data.repl_command): the firmware prints `ready`. Never deploy again for this"

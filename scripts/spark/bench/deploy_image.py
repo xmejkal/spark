@@ -15,7 +15,7 @@ from spark.bench import board_envelope
 from spark.bench import board_grant
 from spark.bench import board_look
 from spark.bench import deploy_gate
-from spark.bench import ready_check
+from spark.bench import ready_probe
 import store
 import tools
 from spark.bench.board_console import LEAVE_CONSOLE
@@ -210,9 +210,9 @@ class DeployFlowService:
         self.report(Event.begin(STAGE_VERIFY))
         result = reached["result"] = self.service.verify(self.look, self.planned)
         ready = result.ready
-        if ready.verdict != ready_check.SEEN:
+        if ready.verdict != ready_probe.SEEN:
             reached.update(refusal=ready.sentence, reason=(result.start and result.start.code) or board_codes.READY_UNKNOWN
-                           if ready.verdict == ready_check.UNKNOWN else board_codes.READY_NOT_SEEN)
+                           if ready.verdict == ready_probe.UNKNOWN else board_codes.READY_NOT_SEEN)
         for line in (result.facts_line, DEPLOYED_LINE % (result.image_sha256, reached["who"]), "%s: %s" % (ready.verdict, ready.sentence)):
             self.say(STAGE_VERIFY, line)
         self.say(STAGE_VERIFY, "board log: %s" % result.log_path, raw=True)  # P677: a file a person opens, as data.board_log
@@ -223,11 +223,11 @@ class DeployFlowService:
             reached["store_record_error"] = str(cannot)
             reached["notes"] = ["the store record was not written: %s" % cannot]
             self.say(STAGE_VERIFY, "store record: not written: %s" % cannot)
-        if ready.verdict == ready_check.UNKNOWN:
+        if ready.verdict == ready_probe.UNKNOWN:
             if result.start is None or result.start.port:  # P462: with the port gone there is nothing to watch
                 self.say(STAGE_VERIFY, WATCH % shlex.join(result.repl_command), raw=True)
             return EXIT_COULD_NOT_RUN
-        return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS
+        return EXIT_OK if ready.verdict == ready_probe.SEEN else EXIT_PROBLEMS
 
 
 class DeployImage(Operation):

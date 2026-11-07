@@ -50,19 +50,19 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "probe without expected files",
-  "find": "board[2].verdict == ready_check.UNKNOWN and expected",
-  "replace": "board[2].verdict == ready_check.UNKNOWN"
+  "find": "board[2].verdict == ready_probe.UNKNOWN and expected",
+  "replace": "board[2].verdict == ready_probe.UNKNOWN"
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "probe whatever the verdict",
-  "find": "board[2].verdict == ready_check.UNKNOWN and expected",
+  "find": "board[2].verdict == ready_probe.UNKNOWN and expected",
   "replace": "expected"
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "no read after the restart",
-  "find": "lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_check.UNKNOWN",
+  "find": "lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_probe.UNKNOWN",
   "replace": "lambda on: True"
  },
  {

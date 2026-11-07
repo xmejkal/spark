@@ -131,7 +131,6 @@
 "R6:scripts/spark/bench/board_look.py:PortFinder": 1,
 "R6:scripts/spark/bench/flasher.py:EsptoolFlasher": 1,
 "R6:scripts/spark/bench/image_evidence.py:CompileCheck": 1,
-"R6:scripts/spark/bench/ready_check.py:ReadyCheck": 1,
 "R6:scripts/spark/core/outcomes.py:AnsweringParser": 1,
 "R6:scripts/spark/core/outcomes.py:BadArgument": 1,
 "T1:scripts/assign_pins.py:file-write": 1,

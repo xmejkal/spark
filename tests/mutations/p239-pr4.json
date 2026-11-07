@@ -12,7 +12,7 @@
   "replace": "\"deployed\": __import__(\"datetime\").datetime.now().isoformat(timespec=\"seconds\")}"
  },
  {
-  "file": "scripts/spark/bench/ready_check.py",
+  "file": "scripts/spark/bench/ready_probe.py",
   "name": "the sentence and the log are swapped",
   "find": "ReadyResult(NOT_SEEN, \"the firmware stopped with an error: %s\" % stopped, log)",
   "replace": "ReadyResult(NOT_SEEN, log, \"the firmware stopped with an error: %s\" % stopped)"

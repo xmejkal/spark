@@ -165,7 +165,7 @@ classDiagram
 
 `DeployService`, `FirmwarePlatform`, `ConsentStrategy` and `GateClosedError` exist (`deploy_service.py`,
 `firmware_platform.py`, `deploy_gate.py`). `DeployRecordStore` exists too (`deploy_record_store.py`, P431), and the Operation is proposed. So are `make_board_reader`
-(S8) and `make_ready_probe`, which is `make_ready_check` today (S11). `LastDeploy` lives in `deploy_record_store.py`. It holds the reasons and the zone note of a time, and no line or question words. The look says it with
+(S8) and `make_ready_probe`, which was `make_ready_check` until S11 (P680). `LastDeploy` lives in `deploy_record_store.py`. It holds the reasons and the zone note of a time, and no line or question words. The look says it with
 `board_look.say_last_deploy` and the deploy question with `deploy_gate.say_last_deploy_in_question` (OC5, P431). The result types are today's: `plan` and `deploy` return
 a `DeployPlan`, `verify` a `DeployResult` whose `ready` is a `ReadyResult`.
 

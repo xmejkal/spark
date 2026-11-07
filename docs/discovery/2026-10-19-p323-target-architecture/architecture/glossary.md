@@ -92,7 +92,7 @@ Back to [the architecture](README.md).
 | person text | `sentence`, `why`, `reason` (`check_all.py`), `message` (`emit_footprint._report`), `detail` (`check_spine.py`) | new JSON uses only `sentence` and `why`. |
 | finding / problem / failure | `Finding` twice (`check_footprints.py:54`, `check_physics.py:93`), `Failure` (`compare_design.py:44`), `parts._problem` | one `Finding` in core. The three classes fold into it at the checks move. |
 | answer | `outcomes.answer` (`outcomes.py:49`), `parts.Answer` | `OperationResult`. "answer" is not a class name. |
-| check | `Check` (`check_all.py:63`), `BoardCheckStrategy` (`board_doctor.py`), `ReadyCheck` (`ready_check.py:43`) | `DoctorProbe`, `ReadyProbe`, both proposed, in the bench move. "Step" keeps one meaning, and both look without changing. |
+| check | `Check` (`check_all.py:63`), `BoardCheckStrategy` (`board_doctor.py`), `ReadyCheck` (`ready_check.py`, now `ReadyProbe` in `ready_probe.py`) | `DoctorProbe`, `ReadyProbe`, both proposed, in the bench move. "Step" keeps one meaning, and both look without changing. |
 | stage | build stages, deploy's `STAGE_*` (`board_envelope.py`) | build only. `DeployPhase` in code, proposed. JSON `stage` stays. |
 | step | next action, wiring `Step` (`breadboard_steps.py:34`) | `NextStep`, `WiringStep` (proposed, breadboard move). |
 | record | fact file, `WiringRecord` (`breadboard_changes.py:103`) | `WiringLog` (proposed). A simulation log is a `RunLog` (proposed). |
