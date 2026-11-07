@@ -95,21 +95,24 @@ def child_env(store):
 
 
 def plant(case, project):
-    """Write or remove each of `case`'s planted files in `project`."""
+    """Write or remove each of `case`'s planted files in `project`: text as text, bytes as bytes (P687's fab packages)."""
     for place, text in case.plant:
         if text is None:
             (Path(project) / place).unlink()
+        elif isinstance(text, bytes):
+            (Path(project) / place).write_bytes(text)
         else:
             (Path(project) / place).write_text(text)
 
 
-def run_script(case, project, store):
+def run_script(case, project, store, env=None):
     """The text of `case`'s script run as a child in `project` with `store` as its SPARK_HOME, and its exit code: stdout,
-    then stderr after STDERR_MARK, then the log the run wrote after LOG_MARK. stdin is closed."""
+    then stderr after STDERR_MARK, then the log the run wrote after LOG_MARK. stdin is closed. `env` is the child's
+    environment before the Case's own (default: child_env, P687 gives the checks' own)."""
     plant(case, project)
     for log in Path(project).glob("sim/runs/*.log"):  # the project's own passed run: only a log this run writes is shown
         log.unlink()
-    env = dict(child_env(store), **case.env)
+    env = dict(env or child_env(store), **case.env)
     argv = [str(project) if arg == PROJECT else arg for arg in case.argv]
     done = subprocess.run([sys.executable, str(golden_bench.ROOT / "scripts" / case.script), *argv], cwd=str(project),
                           env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
