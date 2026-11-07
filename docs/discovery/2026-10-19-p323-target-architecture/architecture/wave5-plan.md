@@ -116,7 +116,7 @@ makes #906 unmergeable, and a rebase of his PR rewrites his branch. So:
 2. W5-3a (S11, the move) branches from the first main that holds #906. W5-3b (the renames) follows it. If W5-1 and
    W5-2 are merged and #906 is still open, the reply to the PO names #906 as the one thing wave 5 waits on.
 
-After this plan merges, four cards are filed as sub-issues of P323, in this Ready order: W5-1 (S10), W5-2 (S12), W5-3a
+After this plan merges, four cards are filed as sub-issues of epic #94, in this Ready order: W5-1 (S10), W5-2 (S12), W5-3a
 (S11 move), W5-3b (S11 renames). P476 #652 and P399 #515 follow them in Ready.
 
 ## The PRs
