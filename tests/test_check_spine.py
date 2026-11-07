@@ -883,6 +883,22 @@ class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
         self.assertEqual([120], limits)
 
 
+    def test_the_sentence_reads_text_a_string_command_a_runtime_and_no_words(self):
+        late = subprocess.TimeoutExpired
+        self.assertEqual("`tsci build` did not finish in 900s; its last words: routing net 4",
+                         check_spine.timed_out_sentence(late("/Users/someone/x/tsci build board.tsx", 900, stderr="routing net 4\n")))
+        self.assertEqual("`bun run cli.ts` did not finish in 120s",
+                         check_spine.timed_out_sentence(late(["/opt/bun", "run", "/Users/someone/tools/cli.ts"], 120)))
+        self.assertEqual("`convert-wokwi --circuit` did not finish in 120s; its last words: wrote 3 parts",
+                         check_spine.timed_out_sentence(late(["convert-wokwi", "--circuit"], 120, output=b"wrote 3 parts\n", stderr=b"")))
+
+    def test_the_last_words_keep_their_end_and_no_more_than_800_characters(self):
+        said = check_spine.timed_out_sentence(subprocess.TimeoutExpired(["tsci", "build"], 900, stderr="x" * 5000 + "END"))
+        self.assertTrue(said.endswith("END"))
+        self.assertLessEqual(len(said), 900)
+
+
+
 class FindingTheToolchainTest(unittest.TestCase):
     def test_a_projects_own_tsci_is_preferred_over_the_global_one(self):
         # A project pins a version for a reason; silently building with a different one produces

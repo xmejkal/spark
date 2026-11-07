@@ -48,6 +48,7 @@ on which one PATH found first, and nothing said so.
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -666,12 +667,22 @@ def design_handed_to(workdir, project):
         return None
 
 
+#: The programs that run another one: a converter run as `bun run cli.ts` is named by three words, not two (P659).
+RUNTIMES = ("bun", "node", "npx")
+#: How much of a late command's own output the sentence keeps, as the other last-words sites cap theirs.
+LAST_WORDS_CAP = 800
+
+
 def timed_out_sentence(late):
-    """What a command that ran past its limit said (P659): the command, the limit it had, and its last words."""
-    cmd = [Path(str(word)).name for word in (late.cmd if isinstance(late.cmd, (list, tuple)) else [late.cmd])[:2]]
-    said = late.stderr.decode(errors="replace") if isinstance(late.stderr, bytes) else (late.stderr or "")
-    last = " | ".join(said.strip().splitlines()[-3:])
-    return "`%s` did not finish in %ds%s" % (" ".join(cmd), late.timeout, "; its last words: " + last if last else "")
+    """What a command that ran past its limit said (P659): the command by its file names (two words, three after a
+    runtime), the limit it had, and its last three lines of stderr, or of stdout when stderr is empty, capped."""
+    words = shlex.split(late.cmd) if isinstance(late.cmd, str) else list(late.cmd)
+    names = [Path(str(word)).name for word in words]
+    cmd = names[:3] if names and names[0] in RUNTIMES else names[:2]
+    out = late.stderr or late.stdout or ""
+    said = out.decode(errors="replace") if isinstance(out, bytes) else out
+    last = " | ".join(said.strip()[-LAST_WORDS_CAP:].splitlines()[-3:])
+    return "`%s` did not finish in %ss%s" % (" ".join(cmd), late.timeout, "; its last words: " + last if last else "")
 
 
 def main(argv=None):

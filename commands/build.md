@@ -202,7 +202,8 @@ element, every component on a ground. `!!` is a defect in the design, named. `??
 **could-not-run**: the stage was not exercised — no `tsci`, a tool that cannot build even a
 trivial board, a requirements file that is not JSON, an empty parts list — and the exit code (2)
 says so. A chain that could not be exercised has not been proven; the difference is the whole
-point. A big board can take several minutes to route (15 minutes is the build's limit); a build that runs past its limit is could-not-run, not a pass.
+point. A big board can take many minutes to build. The build stops after 15 minutes, and then the stage is
+could-not-run, not a pass.
 
 A line `… is not installed — install: …` is answered by asking the person once and running `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, then running the step again (`/spark:setup` does the same for everything at once). `--install` downloads, so no command's `allowed-tools` lists it, this one's included: Claude Code asks before it runs (unless the person's own settings already let it run: an allow rule of theirs, or auto mode), and the person's answer there is the yes. If the project has no `package.json`, run `/spark:init` first: without one, npm installs into the nearest parent folder that has one ([P113](https://github.com/xmejkal/spark/issues/47)).
 
