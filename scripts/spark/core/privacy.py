@@ -24,6 +24,8 @@ SECRET_MASK = "***"
 #: After a path: the next character is no part of a name, so the rule of `/a/b` leaves `/a/bc` and `/a/b.bak` alone,
 #: and masks `/a/b.` at the end of a sentence.
 PATH_END = r"(?![\w-]|\.\w)"
+#: After the project folder's slash: a name follows, so `/p/sim` becomes `sim` and `/p/ now` keeps `<project>/`.
+NAME_FOLLOWS = r"(?=[\w.-])"
 #: A string that a pasted sentence holds stays raw only from this length on, so a word such as `ok` gets no free pass.
 KEPT_PART_MIN = 12
 #: Value: one masking rule: the text it finds (`place`), the pattern that must follow it, and what it becomes.
@@ -77,7 +79,7 @@ class Privacy:
         account tokens the run may hold (an empty one masks nothing)."""
         rules = [MaskRule(secret, "", SECRET_MASK) for secret in secrets if secret]
         for form in forms_of(project):
-            rules += [MaskRule(form + "/", "", ""), MaskRule(form, PATH_END, PROJECT_PLACEHOLDER)]
+            rules += [MaskRule(form + "/", NAME_FOLLOWS, ""), MaskRule(form, PATH_END, PROJECT_PLACEHOLDER)]
         rules += [MaskRule(form, PATH_END, STORE_PLACEHOLDER) for form in forms_of(store)]
         rules += [MaskRule(form, PATH_END, "~") for form in forms_of(home)]
         return cls(rules, pasted)
@@ -88,7 +90,8 @@ class Privacy:
 
     def masked(self, value, kept=(), raw=False):
         """`value` with every string masked, through lists, tuples and dicts; in a raw place (`raw`, a pasted key, a
-        PastedLine) only its tokens. `kept` are the pasted sentences (see `_masked_text`). A path becomes its string."""
+        PastedLine) only its tokens. `kept` are the sentences and fixes of the pasted Findings (see `_masked_text`). A
+        path becomes its string."""
         if self.paths.pattern is None:
             return value
         if isinstance(value, PurePath):
@@ -119,7 +122,7 @@ class Privacy:
         and `notes` masked, the raw places only of their tokens."""
         if self.paths.pattern is None:
             return result
-        kept = [found.sentence for found in result.findings if found.code in self.pasted.codes and found.sentence]
+        kept = [text for found in result.findings if found.code in self.pasted.codes for text in (found.sentence, found.fix) if text]
         findings = [self._masked_finding(found, kept, found.code in self.pasted.codes) for found in result.findings]
         steps = [step._replace(argv=self.masked(step.argv, raw=True), env=self.masked(step.env, raw=True), why=self.masked(step.why, kept))
                  for step in result.next]
@@ -155,4 +158,7 @@ class MaskingReporter(Reporter):
 
     def echo_fd(self):
         return self.inner.echo_fd()
+
+    def mask(self, text):
+        return self.privacy.mask_text(text)
 # --- end MVP ---

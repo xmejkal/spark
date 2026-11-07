@@ -48,6 +48,10 @@ class Reporter:
         """The file descriptor a child's uncaptured stdout goes to, so it lands beside the events (E2), or None: as it is."""
         return None
 
+    def mask(self, text):
+        """`text` that the frontend writes beside the events, such as the yes question, as a reader may see it (P677)."""
+        return text
+
 
 class TerminalReporter(Reporter):
     """Strategy: the CLI's Reporter. It prints a LINE at once, guarded and each of its lines indented, and nothing for a BEGIN, so every line

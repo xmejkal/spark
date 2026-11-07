@@ -77,10 +77,10 @@ A golden is a file with the expected output of one script run. `tests/test_golde
 `tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first on the child's
 `PYTHONPATH`, and the child runs with `TZ=UTC` and a store of its own. The scripts mask their own paths (P677:
 `<project>`, `sim/...`, `<store>`, `~/...`), and the test replaces what is left of the run's paths, the image hash and the
-time with placeholders before it compares. `<spark-home>` is the harness's name for the test run's own store. Only a
-line a person pastes or opens shows it, because the scripts print `<store>` everywhere else. A golden's name is the op,
-the status and the scenario: `look-could-not-run-two-boards.json`. A Case may name a stderr golden (`.stderr` added). It
-may also plant a file in the store, such as a deploy grant that takes `deploy.py` past the gate
+time with placeholders before it compares. `<spark-home>` and `<project-dir>` are the harness's names for the test run's
+own store and project. Only a line a person pastes or opens shows them: the scripts print `<store>` and `<project>`
+elsewhere. A golden's name is the op, the status and the scenario: `look-could-not-run-two-boards.json`. A Case may name
+a stderr golden (`.stderr` added). It may also plant a file in the store, such as a deploy grant that takes `deploy.py` past the gate
 ([P508](https://github.com/xmejkal/spark/issues/703)); the two grant runs add about 10 s.
 
 If you change what a bench script prints on purpose, write that op's goldens again, read the diff, and run once more.

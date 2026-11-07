@@ -97,7 +97,7 @@ class MaskResultTest(unittest.TestCase):
         line = "SPARK_HOME=%s %s/scripts/deploy.py --project %s" % (STORE, REPO, PROJECT)
         sentence = "no terminal to ask you in. Run this line:\n  " + line
         step = NextStep("deploy", ["--project", PROJECT], "run %s/x" % PROJECT, env={"SPARK_HOME": STORE})
-        result = OperationResult({"run_in_terminal": line, "look": PROJECT + "/sim"}, [finding(sentence, "no_terminal", fix=PROJECT)],
+        result = OperationResult({"run_in_terminal": line, "look": PROJECT + "/sim"}, [finding(sentence, "no_terminal", fix="run it in your own terminal")],
                                  [step], diagnostics=["deploy.py: " + sentence, PROJECT + "/sim"])
         masked = privacy().mask_result(result)
         self.assertEqual((masked.data["run_in_terminal"], masked.findings[0], masked.next[0].argv, masked.next[0].env),

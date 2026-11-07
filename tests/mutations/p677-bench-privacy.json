@@ -6,7 +6,7 @@
  {"file": "scripts/spark/core/privacy.py", "name": "an empty secret masks every string", "find": "for secret in secrets if secret]", "replace": "for secret in secrets]"},
  {"file": "scripts/spark/core/privacy.py", "name": "lines are not walked", "find": "lines=self.masked(result.lines, kept), diagnostics", "replace": "lines=result.lines, diagnostics"},
  {"file": "scripts/spark/core/privacy.py", "name": "notes are not walked", "find": "notes=self.masked(result.notes, kept))", "replace": "notes=result.notes)"},
- {"file": "scripts/spark/core/privacy.py", "name": "an empty pasted sentence keeps every line raw", "find": "if found.code in self.pasted.codes and found.sentence]", "replace": "if found.code in self.pasted.codes]"},
+ {"file": "scripts/spark/core/privacy.py", "name": "an empty pasted sentence keeps every line raw", "find": "for text in (found.sentence, found.fix) if text]", "replace": "for text in (found.sentence, found.fix)]"},
  {"file": "scripts/spark/core/cli.py", "name": "run_cli never masks the Events", "find": "        reporter = MaskingReporter(reporter, privacy)\n", "replace": "\n"},
  {"file": "scripts/spark/core/cli.py", "name": "run_cli never masks the result", "find": "                           DEFAULT_RUN._replace(privacy=privacy))", "replace": "                           DEFAULT_RUN)"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "the standing-yes line with the grant line is masked", "find": "board_grant.MESSAGE_FOR[chosen.why]), raw=True)", "replace": "board_grant.MESSAGE_FOR[chosen.why]))"},
@@ -40,5 +40,10 @@
  {"file": "scripts/spark/bench/bench_privacy.py", "name": "a short token is masked", "find": "MIN_SECRET = 8", "replace": "MIN_SECRET = 1"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "the would-run line is masked", "find": "shlex.join(command), raw=True)  # P677: a command a person may run", "replace": "shlex.join(command))"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "the board log line is masked", "find": "\"board log: %s\" % result.log_path, raw=True)", "replace": "\"board log: %s\" % result.log_path)"},
- {"file": "scripts/deploy_service.py", "name": "the running line is masked", "find": "\"running: %s\" % shlex.join(command), raw=True))", "replace": "\"running: %s\" % shlex.join(command)))"}
+ {"file": "scripts/deploy_service.py", "name": "the running line is masked", "find": "\"running: %s\" % shlex.join(command), raw=True))", "replace": "\"running: %s\" % shlex.join(command)))"},
+ {"file": "scripts/spark/core/privacy.py", "name": "a pasted Finding's fix is masked in the line that holds it", "find": "for text in (found.sentence, found.fix) if text]", "replace": "for text in (found.sentence,) if text]"},
+ {"file": "scripts/spark/core/privacy.py", "name": "the project folder's trailing slash vanishes", "find": "MaskRule(form + \"/\", NAME_FOLLOWS, \"\")", "replace": "MaskRule(form + \"/\", \"\", \"\")"},
+ {"file": "scripts/spark/core/privacy.py", "name": "the masking reporter shows the yes question raw", "find": "    def mask(self, text):\n        return self.privacy.mask_text(text)", "replace": "    def mask(self, text):\n        return text"},
+ {"file": "scripts/deploy_gate.py", "name": "the yes question skips the mask", "find": "guard_lines(self.mask(question))", "replace": "guard_lines(question)"},
+ {"file": "scripts/spark/bench/__init__.py", "name": "the bench's consent gets no mask", "find": "stdout=reporter.stream, mask=reporter.mask))", "replace": "stdout=reporter.stream))"}
 ]

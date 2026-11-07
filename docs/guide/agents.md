@@ -29,10 +29,10 @@ Read these rules before you run a script:
    `firmware/main.py` from `pins.py` and follow `next`. A `signals` entry takes a `pin` ([the file](../../commands/build.md#the-requirements-file)).
 7. **Check someone else's project in a scratch store** (`SPARK_HOME`). Never put the person's drawer, history or
    projects list into a URL, a prompt or a commit. Run a `next` step with its `env` set ([`env`](agents/json.md)).
-   The bench scripts mask their output (P677). A `<store>`, `~/` or relative path in it is masked: never guess its real
-   path. `<store>` is the store as `store.home()` finds it (SPARK_HOME, else XDG_DATA_HOME/spark, else
-   ~/.local/share/spark), and a token shows as `***`. Take a path to open or run from a raw field: `data.run_in_terminal`,
-   `data.board_log`, `data.commands`, `next[].argv`, `next[].env` ([masking](agents/json.md#what-the-text-output-shows)).
+   The bench scripts mask their output (P677): `<project>` is the project folder, a relative path is under it, `<store>`
+   is the store as `store.home()` finds it (SPARK_HOME, else XDG_DATA_HOME/spark, else ~/.local/share/spark), `~/` is
+   home and `***` a token. Never guess a masked path's real form: take a path to open or run from
+   [a raw field](agents/json.md#what-the-text-output-shows).
 
 A build of spark's button-and-LED example, shortened with `...`:
 

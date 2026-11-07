@@ -10,6 +10,6 @@
   - ONBOARD_DISPLAY — spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. Test it on the board.
   all fields match the board record firebeetle2-esp32s3.
 deploy.py: no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):
-  SPARK_HOME=<spark-home> <repo>/scripts/deploy.py --project <project> --token 5aed-<image> --port /dev/cu.usbmodem101
+  SPARK_HOME=<spark-home> <repo>/scripts/deploy.py --project <project-dir> --token 5aed-<image> --port /dev/cu.usbmodem101
 Or, to let Claude deploy this board for N minutes (1 to 1440) with no yes each time, run this once. It allows an erase of ALL of the flash and any passed image of any project:
-  SPARK_HOME=<spark-home> <repo>/scripts/grant.py --scope deploy --minutes N --project <project> --port /dev/cu.usbmodem101
+  SPARK_HOME=<spark-home> <repo>/scripts/grant.py --scope deploy --minutes N --project <project-dir> --port /dev/cu.usbmodem101
