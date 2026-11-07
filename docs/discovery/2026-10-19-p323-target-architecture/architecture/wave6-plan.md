@@ -298,6 +298,56 @@ Review: no new logic. One reviewer on the everyday model and the refuter on the 
 the one mutation run. A whole-branch review runs before the PR, because it is the group's biggest diff. Size est.:
 1,656 lines moved, 52 import lines, 228 rows, 15 baseline keys, 3 `__file__` fixes, 5 path sentences and tests.
 
+### W6-B1, the breadboard golden net
+
+Goal: what `breadboard.py` prints today, and the files it writes beside the sheet, stays what it prints, so the
+breadboard codes and the move break nothing. This net is the first of the breadboard group's three PRs.
+
+Nothing is faked, and no run spends anything. `breadboard.py` runs no tool and opens no URL. This was checked: with
+`subprocess.run`, `subprocess.Popen`, `urlopen` and `socket.create_connection` set to raise, `main` on
+`button-light-xiao` returns 0. `page.html` and its `tsci` export are written by `check_spine.keep_tabbed_page`
+(`check_spine.py:894`, `:766`), not by `breadboard.py`. So the paragraph below and `areas/breadboard.md:17` are wrong
+to say "tsci faked" and "runs `tsci` for the page". This PR fixes both, and the stale `tests/fakes.py:137`/`:147`
+there (now `:251`/`:261`). Each child gets an empty store, so the sheet's "have" column is blank (the docstring, and
+the store was still empty after each probe run). The child env is `golden_bench.child_env`, without `WOKWI_CLI_TOKEN`.
+
+The CLI: `breadboard.py requirements.json [--out FILE]`. Exit 0 means the sheet is written. Exit 2 means the run stopped
+(`breadboard.py:67`, `:583`, `:596`). It has no exit 1. Cases, est. 7, each probed on a copy of its fixture in
+`tests/data/breadboard/`. Each copy keeps the fixture's folder name, because the sheet's title is that name
+(`breadboard.py:451`):
+
+| Golden | Fixture and change | Exit |
+|---|---|---|
+| `breadboard-ok-xiao.txt` | `button-light-xiao`: the sheet, `breadboard.json` and `breadboard.svg` | 0 |
+| `breadboard-ok-firebeetle.txt` | `button-light`: the SVG only, "breadboard.json not written: Wokwi has no part with this board's pins" | 0 |
+| `breadboard-ok-not-drawn.txt` | `motor`: no drawing, "nothing says how to draw L9110sModule in Wokwi" | 0 |
+| `breadboard-ok-rebuild.txt` | `button-light-xiao`, run, then `button-only-xiao`'s requirements and `dist/` as `test_breadboard_keep.change_requirements` (`:44`) does, run again: `change:` and `not kept:` lines | 0 |
+| `breadboard-could-not-run-not-built.txt` | `button-light` without `dist/board/circuit.json` | 2 |
+| `breadboard-could-not-run-stale.txt` | `button-light` with `motor`'s `requirements.json` | 2 |
+| `breadboard-could-not-run-bad-out.txt` | `button-light`, `--out no/such/x.md` | 2 |
+
+The folder is `tests/golden-breadboard/`. A golden holds stdout, then stderr after `golden_firmware.STDERR_MARK`, then
+`breadboard.json`, `breadboard.svg` and `wiring-record.json`, each after `LOG_MARK` with its name. A rebuild's golden
+holds only the second run. Reuse, with no copy: `golden_bench.child_env`, `replacements_of`, `scrub`, `op_of` (from
+`breadboard.py`, the op is `breadboard`), `check_golden(case, text, golden_dir=GOLDEN_DIR)` and `RUN_TIMEOUT_S`. The
+scrub needs nothing new: no output of the probes held a run date or a hash.
+
+Files: `tests/golden_breadboard.py`, `tests/test_golden_breadboard.py`, the 7 goldens,
+`tests/mutations/p686-breadboard-net.json`, `docs/observations/rows/p686-breadboard-net.md`, and
+`docs/guide/developing.md` beside the firmware lines (`:76`, `:96`). The helper (proposed) holds `CASES`, `run_script`
+and a `Case` namedtuple: `golden script fixture argv exit_code plant then`. `golden_bench.py` is imported, not edited, because #915 edits it.
+
+Tests: one test per Case. `SPARK_ACCEPT=breadboard` writes the goldens and fails. A test checks that every golden
+has its Case. Another checks that no golden holds a path of this machine. These two repeat `test_golden_firmware.py`,
+and a row asks to lift both into `golden_bench` once #915 merges. No `needs_littlefs`.
+
+Mutation (est. 6 rows, proven with `--anchors`, run with `--copy`): the scrub is skipped. A Case's exit code is
+wrong. The stderr is dropped. The written files are not appended. The rebuild's first run is skipped. One product
+row: `breadboard.py` stops printing its `not kept:` lines.
+
+Review: no new product logic. One reviewer on the everyday model, the refuter on the strongest, one mutation run.
+Size est.: 110 test lines and 7 goldens.
+
 ## The later groups
 
 Each group follows the same three PRs. The order is the plan's. Open question 1 says which moves share a PR.
