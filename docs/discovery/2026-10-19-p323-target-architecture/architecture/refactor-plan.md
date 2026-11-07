@@ -532,7 +532,7 @@ and gated, `--dry-run` fills `board` and `deletes` with refusing stubs. S8, the 
 `board_look.looker` (two) and `board_doctor` (two). `FakeFirmwarePlatform` in `tests/fakes.py` is the base's second
 case (rule T3). What the swap covers: flashing, reading and the ready probe. `DeployService.verify`'s download-mode
 cure and the reset-button places (`download_mode`, `boards.ButtonPlaces`) are MicroPython's and move behind the
-platform when a second one exists. S9, `grant`, `live` and `reach` on the core, `GrantService` built once.
+platform when a second one exists. S9, `grant`, `live` and `reach` on the core (P657, built; `GrantService` is built per run by each Operation, not once).
 
 S9b, the relayed yes (proposed): it builds decision 6's third kind of yes (section 4) on `GrantService`, which S9
 builds once. The gate refuses a `relayed` yes for the erase. `GrantService.issue` accepts it for a `live` grant and

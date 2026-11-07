@@ -1,0 +1,20 @@
+[
+ {"file": "scripts/spark/bench/check_grant.py", "name": "CheckGrant prints the envelope under --json again", "find": "json_renderer = FlatJsonLine", "replace": "json_renderer = None"},
+ {"file": "scripts/spark/core/renderers.py", "name": "a flat Operation's bad argument gets the envelope", "find": "    def render_bad_argument(result, tool, op):\n        return None", "replace": "    def render_bad_argument(result, tool, op):\n        return JsonEnvelope.render(result, tool, op)"},
+ {"file": "scripts/spark/core/outside.py", "name": "consent is given whatever the effects", "find": "ASKS in effects and make_consent", "replace": "True and make_consent"},
+ {"file": "scripts/spark/bench/issue_grant.py", "name": "IssueGrant does not declare ASKS", "find": "effects = (READS, RUNS, BOARD, ASKS)", "replace": "effects = (READS, RUNS, BOARD)"},
+ {"file": "scripts/spark/bench/reach_board.py", "name": "a reach that did not answer is a problem, not an unchecked item", "find": "Finding(outcomes.COULD_NOT_RUN, None, board_codes.NOT_REACHED,", "replace": "Finding(outcomes.PROBLEMS, None, board_codes.NOT_REACHED,"},
+ {"file": "scripts/spark/bench/run_live_code.py", "name": "live's status is ok whatever the answer", "find": "status = outcomes.STATUS_FOR[board_live.exit_code(result)]", "replace": "status = outcomes.OK"},
+ {"file": "scripts/spark/bench/run_live_code.py", "name": "a failed reset has the answer's code, not reset_failed", "find": "code = board_codes.RESET_FAILED if result.reset == board_live.RESET_FAILED_STATE else result.answer", "replace": "code = result.answer"},
+ {"file": "scripts/spark/bench/issue_grant.py", "name": "a closed gate is always a problem", "find": "Finding(outcomes.STATUS_FOR[closed.code],", "replace": "Finding(outcomes.PROBLEMS,"},
+ {"file": "scripts/spark/bench/run_live_code.py", "name": "--code is not required", "find": "\"the code to run on the board, e.g. 'print(1)'\", required=True)", "replace": "\"the code to run on the board, e.g. 'print(1)'\")"},
+ {"file": "scripts/spark/core/cli.py", "name": "the parser takes any value for a choice", "find": "required=argument.required, choices=argument.choices)", "replace": "required=argument.required)"},
+ {"file": "scripts/grant.py", "name": "an abbreviation of --check picks the issue", "find": "CHECK_FLAG.startswith(item)", "replace": "item == CHECK_FLAG"},
+ {"file": "scripts/spark/core/operation.py", "name": "an integer argument has no type in the schema", "find": "bool: \"boolean\", int: \"integer\"}", "replace": "bool: \"boolean\"}"},
+ {"file": "scripts/spark/bench/reach_board.py", "name": "the reach's time is the machine's, not the outside clock's", "find": "outside.clock.now().strftime(AT_FORMAT)", "replace": "__import__('time').strftime(AT_FORMAT)"},
+ {"file": "scripts/spark/bench/issue_grant.py", "name": "the restart notice is not reported", "find": "outside.report(Event.line(STAGE_LOOK, guard_sentence(text, places.reset, places.orientation)))", "replace": "pass"},
+ {"file": "scripts/board_live.py", "name": "live's answer constants are a second copy of the codes' table", "find": "RAISED, NOT_REACHED = board_codes.RAISED, board_codes.NOT_REACHED", "replace": "RAISED, NOT_REACHED = \"raisd\", \"not_reached\""},
+ {"file": "scripts/spark/core/operation.py", "name": "an Operation prints no envelope by default", "find": "json_renderer = JsonEnvelope", "replace": "json_renderer = None"},
+ {"file": "scripts/spark/bench/reach_board.py", "name": "a reach with no probe has the tool_missing code", "find": "board_codes.NO_PROBE, board_reach.NO_PROBE", "replace": "board_codes.TOOL_MISSING, board_reach.NO_PROBE"},
+ {"file": "scripts/spark/bench/check_grant.py", "name": "a stop shares its data dict with every later stop", "find": "data=dict(COULD_NOT_RUN_DATA)", "replace": "data=COULD_NOT_RUN_DATA"}
+]

@@ -16,6 +16,7 @@ A Ctrl-C during the run stops live.py before the reset.
 
 from collections import namedtuple
 
+import board_codes
 import board_doctor
 import board_reach
 from board_connection import BoardUnreachableError
@@ -25,13 +26,14 @@ from restricted_pins import RestrictedPins, whole_numbers_in
 
 #: The answer codes. RAN: the board ran the code (an empty answer counts). RAISED: the board ran it and it raised.
 #: NOT_REACHED: the board did not answer. The REFUSED_ codes: nothing was sent to the board.
-RAN, RAISED, NOT_REACHED = "ran", "raised", "not_reached"
-REFUSED_NO_GRANT, REFUSED_PIN, REFUSED_NO_PARSE = "refused_no_grant", "refused_pin", "refused_no_parse"
+RAN = "ran"
+RAISED, NOT_REACHED = board_codes.RAISED, board_codes.NOT_REACHED
+REFUSED_NO_GRANT, REFUSED_PIN, REFUSED_NO_PARSE = board_codes.REFUSED_NO_GRANT, board_codes.REFUSED_PIN, board_codes.REFUSED_NO_PARSE
 #: The exit code for each answer, from outcomes.py: a refusal or a raise is a problem found, as grant.py's refusals are.
 EXIT_FOR_ANSWER = {RAN: EXIT_OK, RAISED: EXIT_PROBLEMS, REFUSED_NO_GRANT: EXIT_PROBLEMS, REFUSED_PIN: EXIT_PROBLEMS,
                    REFUSED_NO_PARSE: EXIT_PROBLEMS, NOT_REACHED: EXIT_COULD_NOT_RUN}
 #: The reset codes: `mpremote reset` exited 0, or it did not. A result with no reset holds None.
-RESET_DONE, RESET_FAILED = "done", "failed"
+RESET_DONE, RESET_FAILED_STATE = "done", "failed"
 #: Added to `why` when the reset failed after code got into the board.
 RESET_FAILED_MESSAGE = "the reset failed (%s), so the firmware may be stopped: press R or replug to run it"
 #: What a person reads when the record names no restricted pin (`pins_checked` is False).
@@ -39,7 +41,7 @@ NO_RESTRICTED_PINS_MESSAGE = "the board record names no usb or flash pin, so the
 
 #: Result: `answer` one of the answer codes, `grant_why` the grant's own WHY_ code when it refused, else None, `why` the
 #: sentence (None after a clean run), `output` what the board printed, `cure` the board_console.Cure when one ran,
-#: `reset` RESET_DONE, RESET_FAILED or None, `pins_checked` False when the record names no restricted pin,
+#: `reset` RESET_DONE, RESET_FAILED_STATE or None, `pins_checked` False when the record names no restricted pin,
 #: `gpio_numbers_in_code` the whole numbers in the code that are a GPIO of this board. That list over-claims:
 #: `print(1)` lists GPIO1. `doctor` is the board_doctor.BoardDoctorResult when mpremote never got in, else None (P282).
 LiveTryResult = namedtuple("LiveTryResult",
@@ -49,7 +51,7 @@ LiveTryResult = namedtuple("LiveTryResult",
 
 def exit_code(result):
     """The exit code of a LiveTryResult: the answer's, but a failed reset can never read as a clean run."""
-    return EXIT_COULD_NOT_RUN if result.reset == RESET_FAILED else EXIT_FOR_ANSWER[result.answer]
+    return EXIT_COULD_NOT_RUN if result.reset == RESET_FAILED_STATE else EXIT_FOR_ANSWER[result.answer]
 
 
 def gpio_numbers(board):
@@ -91,7 +93,7 @@ class LiveTryService:
                 self.connection.reset()
                 reset = RESET_DONE
             except BoardUnreachableError as failed:
-                reset, why = RESET_FAILED, ". ".join(filter(None, [why, RESET_FAILED_MESSAGE % failed]))
+                reset, why = RESET_FAILED_STATE, ". ".join(filter(None, [why, RESET_FAILED_MESSAGE % failed]))
         examined = None
         if not reached.entered and self.doctor is not None:
             try:

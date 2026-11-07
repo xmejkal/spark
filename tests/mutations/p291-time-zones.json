@@ -54,7 +54,7 @@
   "replace": "self.user_name(), stamp(now + datetime.timedelta(minutes=minutes)), stamp("
  },
  {
-  "file": "scripts/grant.py",
+  "file": "scripts/spark/bench/check_grant.py",
   "name": "describe prints raw until",
   "find": "board_grant.say_in_local_zone(result.grant.expires_at))",
   "replace": "result.grant.expires_at)"
