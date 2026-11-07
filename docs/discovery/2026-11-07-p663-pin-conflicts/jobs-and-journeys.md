@@ -10,7 +10,7 @@ e.g. `- Team leads who assign work · H Lena's belief, no interview yet` -->
 ## Jobs
 <!-- One job story per line, each clause tagged: When …, I want to …, so I can ….
 e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee to see it that day [H Lena], so I can stop chasing people [E tickets.csv:7]` -->
-- J1 · When a part plugs into a connector that the board fixes, such as the screen on the GDI cable [E walk 4 diary:24, the PO: "i've used the gdi cable", and E P581 row 1], I want spark to ask "cable or wires?" once and then place the connector's pins first [D1, the PO, 2026-11-07], so I can plug the cable and wire only the other parts [H the PO's words in #892, "the sheet says plug the ribbon cable"]. <!-- REQUIRED:jobs -->
+- J1 · When a part plugs into a connector that the board fixes, such as the screen on the GDI cable [E walk 4 diary:24, the PO: "i've used the gdi cable", and E P581 row 1], I want spark to place the connector's pins first by default and say so in one line, with no question [D1, narrowed by D4, the PO, 2026-11-07], so I can plug the cable and wire only the other parts [H the PO's words in #892, "the sheet says plug the ribbon cable"]. <!-- REQUIRED:jobs -->
 - J2 · When a pin that a part needs is also a strap or an onboard part's pin, such as DC on GPIO3 or the backlight on GPIO21 with the onboard LED [E P581 rows 3 and 4], I want spark to accept it when a connector fixes it and to name the second job [E #892 body, P527 #726], so I can trust that `pins.py` and the sheet match the wires on the bench [E P581 row 3: `pins.TFT_DC` says 11 while the cable holds 3].
 - J3 · When two claims want the same pin and spark cannot pick alone [E `scripts/assign_pins.py:283`, "already taken" stops the run], I want one question that names both claims, the pin and the choices [D1, option B], so I can decide once and the next run keeps my answer [H, nobody asked yet where an answer lives].
 - J4 · When I add parts to a gadget that already works and is wired [E P581 row 11: init "sees none of it"], I want spark to keep the pins already in use and give new parts the rest [H option D in #892, "later, not this card"], so I do not rewire a working project [H].
@@ -20,7 +20,7 @@ e.g. `- When I assign a task in a meeting [E tickets.csv:6], I want the assignee
 <!-- Per job: what they do instead today (a competitor, a workaround or nothing), tagged.
 e.g. `- Job 1 · paste each task into Slack by hand · E tickets.csv:7` -->
 - J1 · pin each of the screen's signals by hand with top-level `signals: [{"name": ..., "pin": ...}]` (P513). Four of the five signals took. Nothing reads the record's `gdi_on_firebeetle2_s3_gpio` or its `host_requirements` line · E P581 rows 1 and 2 <!-- REQUIRED:today -->
-- J2 · the fifth signal fails: a strap asked for by name is refused (close audit C4), so DC lands on a free pin that nothing is wired to · E `scripts/assign_pins.py:65-70`, P581 row 3. A shared onboard job is named only when the assigner chose that pin for lack of a free one, never when the person named it · E `scripts/assign_pins.py:357-360`, P581 row 4 (TFT_BL and ONBOARD_LED both 21, unnamed)
+- J2 · the fifth signal fails: a strap asked for by name is refused (close audit C4), so DC lands on a free pin that nothing is wired to · E `scripts/assign_pins.py:65-70`, P581 row 3. A shared onboard job is named only when the assigner chose that pin for lack of a free one, never when the person named it · E `scripts/assign_pins.py:357-360`, P581 row 4 (TFT_BL and ONBOARD_LED both 21, half-visible)
 - J3 · the run stops with "asks for … which is already taken" and an exit code, with no choices. The person or Claude edits `requirements.json` and runs again · E `scripts/assign_pins.py:283`. Two shared bus lines and a second SPI select are handled without a stop · E `scripts/assign_pins.py:272-282`
 - J4 · nothing. Init in a working project reports no board and no rails, and the person starts from zero · E P581 row 11
 - J5 · Claude reads the one-line refusal text and turns it into a question by hand. Whether `--json` carries a conflict kind is — (the Feasibility lens reads it)
@@ -51,7 +51,7 @@ Paths: W4 = `~/Development/spark-walks/walk4/walk4-diary.md`, P581 = `~/Developm
 | 5 Pin map | `assign_pins.py` places TFT_BL 38, CS 11, DC 12, RST 13, SD_CS 14. The cable holds 21, 18, 3, 38, 9 | E W4:86, G27 | 5 of 8 signals disagree with the cable. No warning. `pins.py` keeps `ONBOARD_LED` after the need left (G31) | partly | — |
 | 6 Build | `check_spine.py --keep .` exits 1 on `source_trace_not_connected_error` with no trace named | E W4:87, G29, G30 | The trace fault masks the pin conflict | not yet | — |
 | 7 Sheet | No breadboard sheet is produced | E W4:87 | The step that tells a wrong wire never ran | not yet | — |
-| 8 Firmware and deploy | Claude types the cable's numbers (DC 3, RST 38, CS 18, SD_CS 9, BL 21) into `gdi.py`. The PO flashes and reports "It works" | E W4:30 (20:00 row), G27 | Two sources of truth: `gdi.py` and `pins.py` disagree. The rule "firmware never types a GPIO number" is broken | works, by going around spark | — |
+| 8 Firmware and deploy | Claude types the cable's numbers (DC 3, RST 38, CS 18, SD_CS 9, BL 21) into `gdi.py`. The PO flashes and reports "It works" | E W4:30 (20:08 row), G27 | Two sources of truth: `gdi.py` and `pins.py` disagree. The rule "firmware never types a GPIO number" is broken | works, by going around spark | — |
 
 ```mermaid
 flowchart LR
@@ -86,7 +86,7 @@ flowchart LR
 | 1 | Runs `assign_pins.py req.json --project <p> --json` on two signals that name D3 | E ux.md UX-1, UX-2 | stdout is `cannot place every signal on this board: / TFT_RST asks for D3 (GPIO38), which is already taken`, not JSON. Exit 1 | not yet | Does `--json` print JSON on a refusal (existing Q4)? |
 | 2 | Parses stdout | E UX-2, `scripts/assign_pins.py:538-540` | A parse error on the one answer it needs most | not yet | — |
 | 3 | Reads the sentence | E UX-1, `:283-284` | One claimant named (TFT_RST), the other (TFT_CS) not. No choices | not yet | — |
-| 4 | On a strap, reads "drop `pin` and spark picks another, or see P527 (#726)" | E UX-12, `:69-70` | The advice breaks the cable wiring. A card number is nothing Claude acts on | not yet | — |
+| 4 | On a strap, reads "drop `pin` and spark picks another, or see P527 (#726)" | E UX-12, `:70-71` | The advice breaks the cable wiring. A card number is nothing Claude acts on | not yet | — |
 | 5 | Runs the same file through `check_spine.py --json` | E UX-6, `scripts/check_spine.py:408-410` | Stage `schematic`, status `could-not-run`, exit 2, `detail` holds the sentence. No code to key on | not yet | One status word for a conflict (ux Q1)? |
 | 6 | Asks the person a question it writes itself, edits `requirements.json` by hand and runs again | E UX-8 (no page holds the question), P581 row 2 | The question's text and choices live nowhere in spark. The next run has no memory of the answer | partly | Sentence-first or data-first (ux Q6)? |
 

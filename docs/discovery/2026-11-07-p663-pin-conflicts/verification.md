@@ -27,7 +27,7 @@ e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
 - Agree: the lenses and the refuter agree on ★C2, ★C6, ★C8, ★C9, ★C13, ★C14, ★C15, ★C16 as the brief states them.
 - Agree: three cable pins are taken, not two. The refuter and the facilitator reproduced TFT_BL on GPIO38 (★C4).
 - Agree: the exit-code split is the same Impossible refusal, and agents.md:131 is not contradicted (★C3, F1).
-- Split: Physics (PH-5, PH-15) says K3 is bookkeeping with no answer, and the first brief made it a stop. Resolved in the files: K3 is a note, never a stop. Q10 stays open, and slice 0 takes the note reading, pending Q10.
+- Split: Physics (PH-5, PH-15) says K3 is bookkeeping with no answer, and the first brief made it a stop. Resolved in the files: K3 is a note, never a stop. D6 answers the first half of Q10 (K3 is a note). The severity per kind stays for the plan council.
 - Split: the brief says K2 is bookkeeping unless the eFuse is burned, and Physics (PH-1, PH-2) with datasheet §3.4 says a defined level is still asked for. Weakened in ★C11 · Q12
 - Split: the Feasibility lens used ~/Development/firebeetle-games and the refuter used the walk's own file. Same result, so no question.
 - Split: the lenses did not name P281 #323 for F2, and RI-15 did. P672 is narrowed and the choice "add to #323" is in Q6.
@@ -35,5 +35,4 @@ e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
 - Split: D1 rests on one AskUserQuestion, and #892's own body states a cable default · Q13 (moved first)
 - Split: EX-16 (ESPHome warns unless acknowledged) would weaken C4, and no question held it · Q18
 - Split: A6's pass line does not cover the intended new stop on walk 4's unpinned project · Q19
-- Open, not a split: the P581 build stops at 300 s (P664 #893), so the Outcome's proof depends on it. Added to the depends-on of P663 and P665.
-- Not fixed here: jobs-and-journeys.md step 8 cites W4:27 and step 6 says "unnamed". It is outside the files this pass may edit. Correct it to W4:30 and "half-visible". <!-- REQUIRED:agree-split -->
+- Open, not a split: the P581 build stops at 300 s (P664 #893), so the Outcome's proof depends on it. Added to the depends-on of P663 and P665. <!-- REQUIRED:agree-split -->
