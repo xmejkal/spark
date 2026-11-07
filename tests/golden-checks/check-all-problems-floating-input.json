@@ -1,0 +1,57 @@
+{
+  "tool": "check_all",
+  "status": "problems",
+  "unmeasured": 0,
+  "resolved": [
+    "circuit      dist/board/circuit.json",
+    "rules        .spark/rules.json",
+    "package      not found (looked for *-gerbers.zip, fab/*.zip)",
+    "boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6"
+  ],
+  "results": [
+    {
+      "check": "vendor-truth",
+      "what": "the board definition matches the vendor's own pin header",
+      "status": "ok",
+      "problems": [],
+      "unchecked": []
+    },
+    {
+      "check": "buildability",
+      "what": "holes take their pins, packages hold their values",
+      "status": "ok",
+      "problems": [],
+      "unchecked": []
+    },
+    {
+      "check": "the-order",
+      "status": "skipped",
+      "what": "the fab package orders the parts the schematic specifies",
+      "reason": "not given package"
+    },
+    {
+      "check": "physics",
+      "what": "the board obeys physics, not just itself",
+      "status": "could-not-run",
+      "problems": [],
+      "unchecked": [
+        "1 resistor(s): could not be assessed: LedRed5mmSeriesA. A netlist records neither the current through a resistor nor the voltage across it, and both depend on topology the design does not state"
+      ],
+      "unmeasured": [
+        "V33: draws 355 mA of 1.50 A, resting on figures nobody has verified: Mcu.3V3: regulator_3v3_a",
+        "GND: no maximum current stated, so nothing here can be verified",
+        "V33: carries up to 0.35 A (summed from the part records) but has no routed trace of its own \u2014 if it is served by a copper pour, say so in the rules file"
+      ]
+    },
+    {
+      "check": "rules-vs-netlist",
+      "what": "written rules hold in the design that was built",
+      "status": "problems",
+      "problems": [
+        "[floating-input] TactileButton.A: joined to Mcu.D3 and no resistor to a rail"
+      ],
+      "unchecked": []
+    }
+  ],
+  "project": "<project-dir>"
+}

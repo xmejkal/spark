@@ -1,0 +1,14 @@
+  resolved from <project-dir>:
+    circuit      dist/board/circuit.json
+    rules        not found (looked for .spark/rules.json)
+    package      not found (looked for *-gerbers.zip, fab/*.zip)
+    boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6
+
+  [ok  ] vendor-truth       the board definition matches the vendor's own pin header
+  [ok  ] buildability       holes take their pins, packages hold their values
+  [--  ] the-order          the fab package orders the parts the schematic specifies
+  [--  ] physics            the board obeys physics, not just itself
+  [--  ] rules-vs-netlist   written rules hold in the design that was built
+
+  3 not asked for: the-order, physics, rules-vs-netlist
+  nothing found by the 2 check(s) that completed, of 5

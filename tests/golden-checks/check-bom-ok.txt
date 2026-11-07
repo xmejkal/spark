@@ -1,0 +1,2 @@
+bom.csv: 1 line(s) checked against the design
+   the order matches the schematic.
