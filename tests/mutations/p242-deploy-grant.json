@@ -180,22 +180,22 @@
   "replace": "            pass\n"
  },
  {
-  "file": "scripts/grant.py",
+  "file": "scripts/spark/bench/issue_grant.py",
   "name": "scope-not-passed",
-  "find": "            scope=args.scope)",
-  "replace": "            )"
+  "find": "before_look=lambda: self._tell_restart(outside, places), scope=scope)",
+  "replace": "before_look=lambda: self._tell_restart(outside, places))"
  },
  {
-  "file": "scripts/grant.py",
+  "file": "scripts/spark/bench/check_grant.py",
   "name": "check-takes-a-scope",
-  "find": "    if args.check and args.scope != board_grant.SCOPE_LIVE:",
-  "replace": "    if False:"
+  "find": "COMMON_ARGUMENTS[\"port\"], COMMON_ARGUMENTS[\"json\"]._replace(help=\"print one line of JSON: granted, why and the grant\"))",
+  "replace": "COMMON_ARGUMENTS[\"port\"], Argument((\"--scope\",), \"scope\", str, \"x\", \"live\"), COMMON_ARGUMENTS[\"json\"])"
  },
  {
-  "file": "scripts/grant.py",
+  "file": "scripts/spark/bench/issue_grant.py",
   "name": "deploy-line-drops-its-scope",
-  "find": "([\"--scope\", args.scope] if args.scope != board_grant.SCOPE_LIVE else [])",
-  "replace": "([\"--scope\", args.scope] if False else [])"
+  "find": "([\"--scope\", scope] if scope != board_grant.SCOPE_LIVE else [])",
+  "replace": "([\"--scope\", scope] if False else [])"
  },
  {
   "file": "scripts/board_look.py",
@@ -276,9 +276,9 @@
   "replace": "VERDICT_WARNING if self.warnings else VERDICT_MATCH"
  },
  {
-  "file": "scripts/grant.py",
+  "file": "scripts/spark/bench/issue_grant.py",
   "name": "deploy-message-dropped",
-  "find": "    if grant.scope == board_grant.SCOPE_DEPLOY:\n        grant_file =",
-  "replace": "    if False:\n        grant_file ="
+  "find": "        if grant.scope == board_grant.SCOPE_DEPLOY:\n            grant_file =",
+  "replace": "        if False:\n            grant_file ="
  }
 ]

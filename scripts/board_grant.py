@@ -116,7 +116,8 @@ DEPLOY_MESSAGE_FOR = {
                      ": the person runs %s again" % DEPLOY_GRANT_COMMAND,
 }
 #: The board_codes code for each WHY_ word that a GrantRefusedError is raised with (P433).
-CODE_FOR_WHY = {WHY_NOT_A_GRANT: board_codes.NOT_A_GRANT, WHY_BAD_MINUTES: board_codes.BAD_MINUTES,
+CODE_FOR_WHY = {WHY_NO_GRANT: board_codes.NO_GRANT, WHY_EXPIRED: board_codes.GRANT_EXPIRED, WHY_NO_ZONE: board_codes.GRANT_NO_ZONE,
+                WHY_NOT_A_GRANT: board_codes.NOT_A_GRANT, WHY_BAD_MINUTES: board_codes.BAD_MINUTES,
                 WHY_BAD_SCOPE: board_codes.BAD_SCOPE, WHY_NO_MAC: board_codes.NO_MAC,
                 WHY_SERIAL_NOT_MAC: board_codes.SERIAL_NOT_MAC, WHY_ANSWERED_NO: board_codes.ANSWERED_NO}
 #: The exit code for a code that is no refusal but a run that could not finish: 2, as outcomes.py says.

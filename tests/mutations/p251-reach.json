@@ -48,15 +48,15 @@
   "replace": "elif False:"
  },
  {
-  "file": "scripts/reach.py",
+  "file": "scripts/spark/bench/reach_board.py",
   "name": "reach.py exits 0 when not reached",
-  "find": "return EXIT_OK if result.reached else EXIT_COULD_NOT_RUN",
-  "replace": "return EXIT_OK"
+  "find": "findings = [] if result.reached else [Finding(",
+  "replace": "findings = [] if True else [Finding("
  },
  {
-  "file": "scripts/reach.py",
+  "file": "scripts/spark/bench/reach_board.py",
   "name": "cure-first without a probe runs anyway",
-  "find": "if args.cure_first and probe is None:",
+  "find": "if cure_first and probe is None:",
   "replace": "if False:"
  },
  {
@@ -96,7 +96,7 @@
   "replace": "        if True:\n"
  },
  {
-  "file": "scripts/reach.py",
+  "file": "scripts/spark/bench/reach_board.py",
   "name": "the firmware-stopped line when nothing ran",
   "find": "    if result.reached:\n        out.append(FIRMWARE_STOPPED_MESSAGE)",
   "replace": "    if True:\n        out.append(FIRMWARE_STOPPED_MESSAGE)"
@@ -126,7 +126,7 @@
   "replace": "    return shows_restart(console)"
  },
  {
-  "file": "scripts/reach.py",
+  "file": "scripts/spark/bench/reach_board.py",
   "name": "a boot tail is said as no restart",
   "find": "\"boot tail heard, no rst: line\" if cure.boot_heard",
   "replace": "\"no restart heard\" if cure.boot_heard"

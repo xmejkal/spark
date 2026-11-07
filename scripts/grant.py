@@ -1,29 +1,18 @@
 #!/usr/bin/env python3
 """Let Claude run code on one board for a time limit: one yes typed in your own terminal (P253), and the check a later call makes."""
 
-import argparse
-import json
-import shlex
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import board_doctor
-import board_grant
-import board_look
-import board_console
-import boards
-import flasher
-import store
-import tools
-from firmware_platform import MicroPythonPlatform
-from deploy_gate import GateClosedError, TerminalConsentStrategy, format_rerun_line
-from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
-from spark.core.text_guards import guard_lines, guard_sentence, printable
+from spark.bench import build_project_outside_world
+from spark.bench.check_grant import CheckGrant
+from spark.bench.issue_grant import IssueGrant
+from spark.core.cli import HelpText, run_cli
 
-RESTART = ("the board restarts while it is read: a running program stops and starts again. Nothing is erased or "
-           "written. If it then waits in download mode, press its %(reset)s once%(orientation)s.")
+#: The flag that picks the check. argparse takes a prefix of it too (`--ch`), so `operation_for` does.
+CHECK_FLAG = "--check"
+
 EPILOG = """grant.py --minutes N reads the board on USB once with esptool (the board restarts), and asks you in your own
 terminal to let Claude run code on that board for N minutes from your yes (1 to 1440, one day). A pipe, a heredoc or
 Claude Code's ! is no terminal, so grant.py gives no grant there. Your yes is kept in your store as a file named by the
@@ -54,80 +43,18 @@ the MAC), 2 grant.py could not run (no board, two boards, the MAC not read, --mi
 last line says why. With --check --json, a run that could not look prints why "could not run" too."""
 
 
-def describe(result):
-    """The line a person reads, for a GrantCheckResult."""
-    if result.granted:
-        return "  granted: board %s until %s" % (result.grant.mac, board_grant.say_in_local_zone(result.grant.expires_at))
-    return "  not granted: %s" % board_grant.MESSAGE_FOR[result.why]
+def operation_for(argv):
+    """The Operation `argv` asks for: CheckGrant when an item is `--check` or a prefix of it longer than `--` (argparse's
+    abbreviations take `--ch`), else IssueGrant. Each has its own arguments, so each mode's `--help` lists its own."""
+    return CheckGrant if any(len(item) > len("--") and CHECK_FLAG.startswith(item) for item in argv) else IssueGrant
 
 
-def to_json(result):
-    """One line of JSON for a GrantCheckResult: granted, why (a code or null), and the grant's fields or null."""
-    grant = result.grant._asdict() if result.grant is not None else None
-    return json.dumps({"granted": result.granted, "why": result.why, "grant": grant})
-
-
-def main(argv=None, run=subprocess.run, consent=None, now=board_console.SystemClock.now, platform=None):
-    """Issue or check a grant. `run` runs a command, `consent` is the yes (default: a real terminal), `now` the clock,
-    `platform` the FirmwarePlatform with the board tools (default: MicroPythonPlatform). Returns the exit code."""
-    parser = argparse.ArgumentParser(prog="grant.py", description=__doc__.strip(), epilog=EPILOG,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--minutes", type=int, help="give a grant for this many minutes from your yes (1 to 1440)")
-    mode.add_argument("--check", action="store_true", help="say whether the board on USB has a live grant now")
-    parser.add_argument("--scope", choices=board_grant.SCOPES, default=board_grant.SCOPE_LIVE,
-                        help="with --minutes: what the grant allows. live (default) lets Claude run code on the "
-                        "board. deploy lets Claude erase it and write a passed image with deploy.py, with no yes "
-                        "typed for each deploy")
-    parser.add_argument("--project", type=Path, default=Path("."),
-                        help="the project folder whose tools list names mpremote and esptool (default: here)")
-    parser.add_argument("--port", help="the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
-                        "(one board on two nodes named by its serial counts once)")
-    parser.add_argument("--json", action="store_true", help="with --check, print one line of JSON")
-    args = parser.parse_args(argv)
-    if args.json and not args.check:
-        parser.error("--json goes with --check only")
-    if args.check and args.scope != board_grant.SCOPE_LIVE:
-        parser.error("--scope goes with --minutes only: --check looks for a live grant")
-    platform = platform or MicroPythonPlatform(args.project)
-    try:
-        finder = platform.make_port_finder(run)
-        if args.check:
-            result = board_grant.GrantService(finder, now=now).check(args.port)
-            print(to_json(result) if args.json else guard_lines(describe(result)))  # --- MVP --- the MAC is data (P430)
-            return EXIT_OK if result.granted else EXIT_PROBLEMS
-        places = boards.ButtonPlaces.of_project(args.project)
-        reader = platform.make_board_reader(run, flasher.EsptoolFlasher.boot_hint_for(places))
-        line = format_rerun_line(__file__, (["--scope", args.scope] if args.scope != board_grant.SCOPE_LIVE else [])
-                                 + ["--minutes", args.minutes, "--project", args.project.resolve()]
-                                 + (["--port", args.port] if args.port else []))
-        notice = "  " + RESTART % {"reset": places.reset, "orientation": places.orientation}
-        grant = board_grant.GrantService(finder, reader, now=now).issue(
-            args.port, args.minutes, consent or TerminalConsentStrategy(line),
-            before_look=lambda: print(guard_sentence(notice, places.reset, places.orientation)),  # --- MVP --- button words are data (P430)
-            scope=args.scope)
-    except GateClosedError as closed:
-        # --- MVP --- the closed gate's sentence holds the rerun line: the project path and the port, quoted as that line quotes them (P430)
-        print(guard_sentence("grant.py: %s" % closed, shlex.quote(str(args.project.resolve())), shlex.quote(args.port) if args.port else None),
-              file=sys.stderr)
-        return closed.code
-    except (tools.ToolProblem, board_look.LookStop, store.StoreProblem) as cannot:  # P499: a store that refuses
-        if args.json:
-            print(to_json(board_grant.GrantCheckResult(False, None, board_grant.WHY_COULD_NOT_RUN)))
-        if isinstance(cannot, board_look.LookStop):
-            # --- MVP --- the stop holds the port and the board record's button words, each on one line (P430)
-            shown = boards.ButtonPlaces.of_project(args.project)
-            print(guard_sentence("\n".join(board_doctor.stop_lines("grant.py", cannot, platform, run)), args.port,
-                                 shown.boot, shown.reset, shown.orientation), file=sys.stderr)
-        else:
-            print(guard_sentence("grant.py: %s" % cannot, args.project), file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    print(guard_lines("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at)))
-    if grant.scope == board_grant.SCOPE_DEPLOY:
-        grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
-        print("  Claude can now run deploy.py on this board with no yes from you, and it erases ALL of the board's "
-              "flash each time, until that time. To end it sooner, run: rm %s" % shlex.quote(printable(str(grant_file))))  # P430: one line
-    return EXIT_OK
+def main(argv=None, outside=None, operation=None):
+    """Issue or check a grant. `outside` is the OutsideWorld a test gives (a run builds the project's), `operation` the
+    CheckGrant or IssueGrant a test gives with its Fakes. Returns the exit code."""
+    argv = sys.argv[1:] if argv is None else list(argv)
+    return run_cli(HelpText("grant.py", __doc__.strip(), EPILOG), operation or operation_for(argv)(), argv,
+                   outside_builder=build_project_outside_world, outside=outside)
 
 
 if __name__ == "__main__":

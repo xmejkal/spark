@@ -18,21 +18,21 @@
   "replace": "return prefix_home(\" \".join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))"
  },
  {
-  "file": "scripts/grant.py",
+  "file": "scripts/spark/bench/issue_grant.py",
   "name": "grant-no-project",
-  "find": "[\"--minutes\", args.minutes, \"--project\", args.project.resolve()]",
-  "replace": "[\"--minutes\", args.minutes]"
+  "find": "[\"--minutes\", minutes, \"--project\", project.resolve()]",
+  "replace": "[\"--minutes\", minutes]"
  },
  {
-  "file": "scripts/grant.py",
+  "file": "scripts/spark/bench/issue_grant.py",
   "name": "grant-no-port",
-  "find": "+ ([\"--port\", args.port] if args.port else []))",
+  "find": "+ ([\"--port\", port] if port else []))",
   "replace": ")"
  },
  {
-  "file": "scripts/grant.py",
+  "file": "scripts/spark/bench/issue_grant.py",
   "name": "grant-script-name",
-  "find": "format_rerun_line(__file__, ([\"--scope\"",
+  "find": "format_rerun_line(GRANT_SCRIPT, ([\"--scope\"",
   "replace": "format_rerun_line(\"grant.py\", ([\"--scope\""
  },
  {

@@ -1,6 +1,7 @@
 """P251 (#264): reach.py, the PO's bench tool, says whether the board answered and whether a cure ran."""
 
 import contextlib
+import datetime
 import io
 import json
 import subprocess
@@ -19,32 +20,41 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import reach  # noqa: E402
 import tools  # noqa: E402
 from board_console import Cure  # noqa: E402
-from fakes import FakeConsoleProbe, FakeProbePlatform  # noqa: E402
+from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
+from spark.bench.reach_board import ReachBoard  # noqa: E402
 from test_board_look import C6_PORT, data, done, found  # noqa: E402
 
+MOMENT = datetime.datetime(2026, 10, 17, 9, 0, tzinfo=datetime.timezone.utc)
 REFUSED = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
 RESTART = Cure("rst:0x15 (USB_UART_HPSYS),boot:0x1e\n", None, True, True)
 
 
 class ReachScriptTest(unittest.TestCase):
-    def go(self, *argv, answers=("reached\n",), devs="mpremote-devs-one.txt", probe=None, devs_text=None):
-        """(exit code, stdout, stderr, the commands run) of reach.py with fake tools."""
-        answers, ran = list(answers), []
+    def world(self, answers=("reached\n",), devs="mpremote-devs-one.txt", devs_text=None):
+        """A FakeOutsideWorld whose `run` answers mpremote devs from a fixture and the exec of each of `answers` in turn."""
+        answers = list(answers)
 
         def run(command, **kw):
-            ran.append(command)
             if "devs" in command:
                 return done(data(devs) if devs_text is None else devs_text)
             answer = answers.pop(0)
             if isinstance(answer, Exception):
                 raise answer
             return done(answer)
+        return FakeOutsideWorld(run=run, find_tool=found, clock=FakeClock(MOMENT))
 
+    def operation(self, probe=None):
+        """The ReachBoard with a platform whose console probe is `probe` (default: one whose cure restarts the board)."""
+        probe = FakeConsoleProbe(cured=RESTART) if probe is None else probe
+        return ReachBoard(platform_for=lambda project, find_tool: FakeProbePlatform(project, probe, find_tool))
+
+    def go(self, *argv, answers=("reached\n",), devs="mpremote-devs-one.txt", probe=None, devs_text=None):
+        """(exit code, stdout, stderr, the commands run) of reach.py with fake tools."""
+        outside = self.world(answers, devs, devs_text)
         out, err = io.StringIO(), io.StringIO()
-        platform = FakeProbePlatform(Path("."), FakeConsoleProbe(cured=RESTART) if probe is None else probe, lambda role: found(role))
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = reach.main(list(argv), run=run, platform=platform)
-        return code, out.getvalue(), err.getvalue(), ran
+            code = reach.main(list(argv), outside=outside, operation=self.operation(probe))
+        return code, out.getvalue(), err.getvalue(), outside.ran
 
     def test_a_board_that_answers_exits_0_and_says_the_firmware_is_stopped(self):
         code, said, _, ran = self.go()
@@ -71,6 +81,7 @@ class ReachScriptTest(unittest.TestCase):
         line = json.loads(said)
         self.assertEqual(code, 0)
         self.assertEqual(sorted(line), ["at", "cure", "cure_first", "doctor", "entered", "first_try_failed", "output", "port", "reached", "why"])
+        self.assertEqual(line["at"], "2026-10-17T09:00:00+0000", "the time is the outside's clock")
         self.assertEqual(line["cure"], {"heard": RESTART.heard, "why": None, "restart_heard": True, "port_back": True, "boot_heard": False})
         self.assertFalse(line["cure_first"])
         self.assertTrue(line["first_try_failed"])
@@ -100,13 +111,16 @@ class ReachScriptTest(unittest.TestCase):
 
     def test_cure_first_with_mpremote_not_a_python_package_runs_nothing(self):
         command = tools.Tool("mpremote", "board-shell", {"kind": "command"}, ["/usr/local/bin/mpremote"])
-        ran, err = [], io.StringIO()
-        with mock.patch.object(tools, "find", return_value=command), contextlib.redirect_stdout(io.StringIO()), \
-                contextlib.redirect_stderr(err):
-            code = reach.main(["--cure-first", "--port", C6_PORT], run=lambda c, **kw: ran.append(c))
-        self.assertEqual(code, 2)
-        self.assertIn("no cure: mpremote is not a Python package", err.getvalue())
-        self.assertEqual(ran, [])
+        outside = FakeOutsideWorld(run=lambda c, **kw: None, find_tool=lambda name, **where: command)
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = reach.main(["--cure-first", "--port", C6_PORT], outside=outside)
+        self.assertEqual((code, out.getvalue()), (2, ""))
+        self.assertIn("reach.py: no cure: mpremote is not a Python package", err.getvalue())
+        self.assertEqual(outside.ran, [])
+        result = ReachBoard().run(project=Path("."), port=C6_PORT, cure_first=True, outside=outside)
+        self.assertEqual([(found.severity, found.code) for found in result.findings], [("could-not-run", "no_probe")])
+        self.assertIsNone(result.data)
 
     def test_a_cure_whose_read_failed_says_why(self):
         unread = Cure("", "could not open port", False, True)
@@ -184,6 +198,33 @@ class ReachScriptTest(unittest.TestCase):
             code = reach.main(["--project", str(project)])
         self.assertEqual(code, 2)
         self.assertEqual([line for line in err.getvalue().splitlines() if line.startswith("GRANTED")], [])
+
+    def test_a_bad_argument_with_json_is_the_usage_on_stderr_and_no_line(self):
+        out, err = io.StringIO(), io.StringIO()
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            reach.main(["--bogus", "--json"], outside=self.world(), operation=self.operation())
+        self.assertEqual((raised.exception.code, out.getvalue()), (2, ""))
+        self.assertTrue(err.getvalue().startswith("usage: reach.py "), err.getvalue())
+
+    def test_a_crash_with_json_prints_no_line_and_the_traceback_on_stderr(self):
+        code, said, problems, _ = self.go("--json", answers=(RuntimeError("boom"),))
+        self.assertEqual((code, said), (2, ""))
+        self.assertIn("Traceback (most recent call last):", problems)
+        self.assertIn("reach: crashed, RuntimeError", problems)
+
+    def test_a_board_that_answers_is_no_finding_and_a_silent_one_is_one_unchecked_item(self):
+        answered = self.operation().run(project=Path("."), port=None, cure_first=False, outside=self.world())
+        self.assertEqual((answered.status(), answered.findings), ("ok", []))
+        silent = self.operation().run(project=Path("."), port=None, cure_first=False, outside=self.world(answers=(REFUSED, REFUSED)))
+        self.assertEqual([(found.severity, found.code, found.subject) for found in silent.findings], [("could-not-run", "not_reached", None)])
+        self.assertIn("does not read its console", silent.findings[0].sentence)
+        self.assertTrue(silent.findings[0].fix.startswith("press the board's RESET once"), silent.findings[0].fix)
+        self.assertEqual(silent.status(), "could-not-run")
+
+    def test_a_stop_before_the_try_has_no_data_and_the_code_of_the_stop(self):
+        stopped = self.operation().run(project=Path("."), port=None, cure_first=False, outside=self.world(devs="mpremote-devs-two.txt"))
+        self.assertEqual((stopped.data, [found.code for found in stopped.findings]), (None, ["two_boards"]))
+        self.assertTrue(stopped.diagnostics[0].startswith("reach.py: "), stopped.diagnostics)
 
 
 if __name__ == "__main__":
