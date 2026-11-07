@@ -19,7 +19,7 @@ from deploy_stages import STAGE_LOOK
 from firmware_platform import MicroPythonPlatform
 from spark.bench.stops import stop_result
 from spark.core import outcomes
-from spark.core.cli import FlatJsonLine
+from spark.core.renderers import FlatJsonLine
 from spark.core.events import Event
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
@@ -46,7 +46,7 @@ class IssueGrant(Operation):
     one unchecked item. It has no `--json`, so its data (the grant) is for an agent or an MCP tool.
     """
 
-    name = "issue_grant"
+    name = "issue-grant"
     arguments = (Argument(("--minutes",), "minutes", int, "give a grant for this many minutes from your yes (1 to 1440)", required=True),
                  Argument(("--scope",), "scope", str, SCOPE_HELP, board_grant.SCOPE_LIVE, choices=board_grant.SCOPES),
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote and esptool (default: here)"),
@@ -67,7 +67,7 @@ class IssueGrant(Operation):
                 port, minutes, outside.make_consent(self._rerun_line(minutes, scope, project, port)),
                 before_look=lambda: self._tell_restart(outside, places), scope=scope)
         except GateClosedError as closed:
-            # --- MVP --- the closed gate's sentence holds the rerun line: the project path and the port, quoted as that line quotes them (P430)
+            # P430: the closed gate's sentence holds the rerun line: the project path and the port, quoted as that line quotes them
             said = guard_sentence("%s: %s" % (SCRIPT, closed), shlex.quote(str(project.resolve())), shlex.quote(port) if port else None)
             return OperationResult(None, [Finding(outcomes.STATUS_FOR[closed.code], None, closed.reason, str(closed), "")], diagnostics=[said])
         except (tools.ToolProblem, board_look.LookStop, store.StoreProblem) as cannot:  # P499: a store that refuses
@@ -89,5 +89,5 @@ class IssueGrant(Operation):
         """The look begins, and the person reads that the board restarts (an Event, so the terminal indents it)."""
         outside.report(Event.begin(STAGE_LOOK))
         text = RESTART % {"reset": places.reset, "orientation": places.orientation}
-        outside.report(Event.line(STAGE_LOOK, guard_sentence(text, places.reset, places.orientation)))  # --- MVP --- button words are data (P430)
+        outside.report(Event.line(STAGE_LOOK, guard_sentence(text, places.reset, places.orientation)))  # P430: button words are data
 # --- end MVP ---

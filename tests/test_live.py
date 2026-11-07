@@ -232,7 +232,8 @@ class LiveScriptTest(unittest.TestCase):
 
     def test_every_answer_but_ran_is_a_code_of_the_table(self):
         import board_codes
-        for answer in ("raised", "refused_no_grant", "refused_pin", "refused_no_parse", "not_reached"):
+        import board_live
+        for answer in set(board_live.EXIT_FOR_ANSWER) - {board_live.RAN}:
             self.assertIn(answer, board_codes.CODES)
 
     def test_a_stop_has_the_empty_fields_a_finding_and_the_stderr_line(self):

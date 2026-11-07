@@ -5,7 +5,6 @@ script's `main` calls `run_cli` and nothing else, so an agent or an MCP tool can
 """
 
 import argparse
-import json
 import sys
 import traceback
 from collections import namedtuple
@@ -37,33 +36,6 @@ TRACE_FAILED_MESSAGE = "trace: %s raised, the result stands"
 RunOptions = namedtuple("RunOptions", "privacy trace clock")
 #: The run of a CLI: the Privacy step and no trace.
 DEFAULT_RUN = RunOptions(Privacy(), None, SystemClock())
-
-
-class JsonEnvelope:
-    """Renderer: an OperationResult as the one envelope line a CLI prints with --json. It decides nothing again."""
-
-    @staticmethod
-    def render(result, tool, op):
-        return outcomes.dumps(result.to_envelope(tool, op))
-
-    @staticmethod
-    def render_bad_argument(result, tool, op):
-        """The line a bad argument gets under --json: the envelope. A Renderer that has none returns None (FlatJsonLine)."""
-        return JsonEnvelope.render(result, tool, op)
-
-
-class FlatJsonLine:
-    """Renderer: an OperationResult as the one flat line of JSON the bench scripts print with --json (P657): its `data` as
-    `json.dumps` writes it, with no envelope, and an empty text when `data` is None, so nothing is printed. A bad argument
-    gets no line of its own: the usage on stderr, as argparse prints it."""
-
-    @staticmethod
-    def render(result, tool, op):
-        return "" if result.data is None else json.dumps(result.data)
-
-    @staticmethod
-    def render_bad_argument(result, tool, op):
-        return None
 
 
 class TextReport:
@@ -139,14 +111,14 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     """
     The exit code of `operation` run as a CLI. It parses `argv` (sys.argv without the script when None) from the
     Operation's arguments and answers a bad flag with the Renderer's `render_bad_argument` under --json (an envelope with
-    `bad_argument`, or None for a flat Operation: then the usage), the usage on stderr without (P433). It builds the outside with `outside_builder(project, effects, reporter)`, the effects those of
-    `operation.effects_of(values)`, unless a test gave `outside`, the
-    reporter `TerminalReporter.for_json(as_json)` (P507: the events on stdout, on stderr with --json), runs,
+    `bad_argument`, or None for a flat Operation: then the usage), the usage on stderr without (P433). It builds the
+    outside with `outside_builder(project, effects, reporter)`, the effects those of `operation.effects_of(values)`,
+    unless a test gave `outside`, the reporter `TerminalReporter.for_json(as_json)` (P507: the events on stdout, on stderr with --json), runs,
     prints the rendering on stdout as it is (--json keeps every value raw, and the report's lines guard themselves) and
     the diagnostics on stderr through `guard_lines`, and returns the exit code of the result's status. The one place in
     the core that prints (rule X2).
     """
-    parser, renderer = parser_for(text, operation), operation.json_renderer or JsonEnvelope
+    parser, renderer = parser_for(text, operation), operation.json_renderer
     argv = sys.argv[1:] if argv is None else list(argv)
     try:
         values = vars(parser.parse_args(argv))

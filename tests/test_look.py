@@ -576,7 +576,7 @@ class ACrashTest(LookScriptCase):
 
     def test_the_bench_lists_the_look_for_the_frontends(self):
         from spark import bench
-        self.assertEqual(sorted(bench.OPERATIONS), ["check_grant", "deploy", "issue_grant", "live", "look", "reach"])
+        self.assertEqual(sorted(bench.OPERATIONS), ["check-grant", "deploy", "issue-grant", "live", "look", "reach"])
         self.assertIs(bench.OPERATIONS["look"], bench.look_at_board.LookAtBoard)
         self.assertIs(bench.OPERATIONS["deploy"], bench.deploy_image.DeployImage)
 

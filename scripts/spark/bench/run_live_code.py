@@ -17,7 +17,7 @@ from firmware_platform import MicroPythonPlatform
 from restricted_pins import BrokenRecordError
 from spark.bench import stops
 from spark.core import outcomes
-from spark.core.cli import FlatJsonLine
+from spark.core.renderers import FlatJsonLine
 from spark.core.operation import BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
@@ -39,7 +39,7 @@ def describe(result, places=boards.ButtonPlaces.EMPTY):
                    % ", ".join(str(gpio) for gpio in result.gpio_numbers_in_code))
     if result.doctor:
         out += board_doctor.describe(result.doctor, places)
-    # --- MVP --- the board's reply and the doctor's lines are data, one line each, shown guarded (P430)
+    # P430: the board's reply and the doctor's lines are data, one line each
     return ["  " + printable(line) for line in out]
 
 
@@ -95,6 +95,6 @@ class RunLiveCode(Operation):
         status = outcomes.STATUS_FOR[board_live.exit_code(result)]
         if status == outcomes.OK:
             return []
-        code = board_codes.RESET_FAILED if result.reset == board_live.RESET_FAILED else result.answer
+        code = board_codes.RESET_FAILED if result.reset == board_live.RESET_FAILED_STATE else result.answer
         return [Finding(status, None, code, result.why or result.answer, board_envelope.doctor_fix(result.doctor, places))]
 # --- end MVP ---

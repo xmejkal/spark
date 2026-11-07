@@ -9,7 +9,6 @@ import board_grant
 from spark.bench import build_project_outside_world
 from spark.bench.run_live_code import RunLiveCode
 from spark.core.cli import HelpText, run_cli
-from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS  # noqa: F401  (the tests read live's exit codes here)
 
 EPILOG = """live.py --code 'print(1)' runs the code on the board on USB with mpremote's exec, after two checks that do not
 touch the board. First, the board must have a grant now: the person runs %s in their own terminal,

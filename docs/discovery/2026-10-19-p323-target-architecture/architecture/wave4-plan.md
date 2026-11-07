@@ -74,7 +74,7 @@ Status, 2026-11-06:
   `deploy-could-not-run-flash-failed-grant.{json,txt}` and their `.stderr` files are in `tests/golden`.
 - PR A (P605 #807, the schemas, the trace hook and the Privacy step): done in https://github.com/xmejkal/spark/pull/880.
 - W4-2 (P655 #879): built on branch `p655-deploy-core`, with E2 and P457 (the littlefs lookup asks with the project).
-- W4-3 with P383 #491 (PR C): no card yet. Its Operations take their collaborators as W4-2's does: `IssueGrant(grant_service=None)`, None for the store's own.
+- W4-3 with P383 #491 (PR C): no card yet. Its Operations take their collaborators as W4-2's does: `IssueGrant(platform_for=None)`, None for the MicroPython platform.
 - W4-4 (PR D): no card yet.
 
 ### W4-1, the seams (S7a and S8)

@@ -13,7 +13,7 @@ import tools
 from firmware_platform import MicroPythonPlatform
 from spark.bench.stops import stop_result
 from spark.core import outcomes
-from spark.core.cli import FlatJsonLine
+from spark.core.renderers import FlatJsonLine
 from spark.core.operation import COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines
@@ -44,7 +44,7 @@ class CheckGrant(Operation):
     Operation (grant.operation_for). A grant that holds is no Finding; one that does not is one problem with the WHY_ word's code.
     """
 
-    name = "check_grant"
+    name = "check-grant"
     arguments = (Argument(("--check",), "check", bool, "say whether the board on USB has a live grant now"),
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote (default: here)"),
                  COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON: granted, why and the grant"))
@@ -54,15 +54,15 @@ class CheckGrant(Operation):
     def __init__(self, platform_for=None):
         self.platform_for = platform_for or MicroPythonPlatform
 
-    def run(self, check, project, port, *, outside):
+    def run(self, project, port, *, outside, check=True):
         platform = self.platform_for(project, outside.find_tool)
         try:
             finder = platform.make_port_finder(outside.run)
             result = board_grant.GrantService(finder, now=outside.clock.now).check(port)
         except (tools.ToolProblem, board_look.LookStop, store.StoreProblem) as cannot:
             doctor_for = lambda stop: board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)  # noqa: E731
-            return stop_result(cannot, SCRIPT, project, port, doctor_for)._replace(data=COULD_NOT_RUN_DATA)
+            return stop_result(cannot, SCRIPT, project, port, doctor_for)._replace(data=dict(COULD_NOT_RUN_DATA))
         findings = [] if result.granted else [Finding(outcomes.PROBLEMS, None, board_grant.CODE_FOR_WHY[result.why],
                                                      board_grant.MESSAGE_FOR[result.why], "")]
-        return OperationResult(data_of(result), findings, lines=[guard_lines(describe(result))])  # --- MVP --- the MAC is data (P430)
+        return OperationResult(data_of(result), findings, lines=[guard_lines(describe(result))])  # P430: the MAC is data
 # --- end MVP ---

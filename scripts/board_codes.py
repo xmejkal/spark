@@ -47,7 +47,7 @@ NOT_A_GRANT, BAD_MINUTES, BAD_SCOPE, SERIAL_NOT_MAC = "not_a_grant", "bad_minute
 #: grant.py --check's refusals (P657), one code for each WHY_ word that had none.
 NO_GRANT, GRANT_EXPIRED, GRANT_NO_ZONE = "no_grant", "grant_expired", "grant_no_zone"
 #: What reach.py and live.py answer (P657). The answer codes of live.py (board_live.RAN is no finding) are the codes of its findings.
-NOT_REACHED, RESET_FAILED = "not_reached", "reset_failed"
+NOT_REACHED, RESET_FAILED, NO_PROBE = "not_reached", "reset_failed", "no_probe"
 RAISED, REFUSED_NO_GRANT, REFUSED_PIN, REFUSED_NO_PARSE = "raised", "refused_no_grant", "refused_pin", "refused_no_parse"
 #: A stop that is no look's: the store cannot be used, or the board record or its pin roles cannot.
 STORE_PROBLEM, BOARD_RECORD_UNUSABLE = "store_problem", "board_record_unusable"
@@ -98,6 +98,7 @@ CODES = {
     GRANT_EXPIRED: "the board's live grant ended",
     GRANT_NO_ZONE: "the board's live grant holds a time with no zone, so it was not trusted",
     NOT_REACHED: "the board did not answer reach.py or live.py, after the cure when one ran",
+    NO_PROBE: "reach.py --cure-first needs mpremote as a Python package, and it is not one here",
     RESET_FAILED: "live.py's code got into the board, but the reset after it failed, so the firmware may be stopped",
     RAISED: "the board ran live.py's code and the code raised",
     REFUSED_NO_GRANT: "live.py sent nothing to the board: there is no live grant for it now",

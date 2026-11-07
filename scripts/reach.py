@@ -8,7 +8,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.bench import build_project_outside_world
 from spark.bench.reach_board import ReachBoard
 from spark.core.cli import HelpText, run_cli
-from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK  # noqa: F401  (the tests read reach's exit codes here)
 
 EPILOG = """It runs print("reached") on the board with mpremote's exec. When mpremote says "could not enter raw repl", it
 opens the port once with DTR and RTS off, which restarted a XIAO ESP32-C6 whose USB output died at power-on, waits until

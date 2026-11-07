@@ -13,7 +13,7 @@ import tools
 from firmware_platform import MicroPythonPlatform
 from spark.bench.stops import stop_result
 from spark.core import outcomes
-from spark.core.cli import FlatJsonLine
+from spark.core.renderers import FlatJsonLine
 from spark.core.operation import BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import printable
@@ -83,7 +83,7 @@ class ReachBoard(Operation):
         except (tools.ToolProblem, board_look.LookStop) as cannot:
             return stop_result(cannot, SCRIPT, project, port)
         if cure_first and probe is None:
-            return OperationResult(None, [Finding(outcomes.COULD_NOT_RUN, None, board_codes.TOOL_MISSING, board_reach.NO_PROBE_MESSAGE, "")],
+            return OperationResult(None, [Finding(outcomes.COULD_NOT_RUN, None, board_codes.NO_PROBE, board_reach.NO_PROBE_MESSAGE, "")],
                                    diagnostics=["%s: %s" % (SCRIPT, board_reach.NO_PROBE_MESSAGE)])
         result = board_reach.reach(platform.make_connection(platform.make_shell_command(), port, outside.run), probe, cure_first=cure_first)
         diagnostics = []
@@ -91,13 +91,13 @@ class ReachBoard(Operation):
             doctor = (None if result.entered else
                       board_doctor.BoardDoctorService.for_board(finder, probe).examine(port, platform.find_tool("board-shell"), result.why))
         except board_doctor.UnknownStepError as cannot:
-            diagnostics.append("%s: no doctor: %s" % (SCRIPT, cannot))  # --- MVP --- the tools list's words: run_cli guards the stderr lines (P430)
+            diagnostics.append("%s: no doctor: %s" % (SCRIPT, cannot))  # P430: the tools list's words: run_cli guards the stderr lines
             doctor = None
         places = boards.ButtonPlaces.of_project(project)
         lines = describe(port, result) + (["  " + line for line in board_doctor.describe(doctor, places)] if doctor else [])
         fix = board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
         findings = [] if result.reached else [Finding(outcomes.COULD_NOT_RUN, None, board_codes.NOT_REACHED, result.why, fix)]
-        # --- MVP --- the port, the cure's read and the board's reply are data, each line shown guarded (P430)
+        # P430: the port, the cure's read and the board's reply are data, each line shown guarded
         return OperationResult(data_of(port, result, cure_first, doctor, outside.clock.now().strftime(AT_FORMAT)), findings,
                                lines=[printable(line) for line in lines], diagnostics=diagnostics)
 # --- end MVP ---

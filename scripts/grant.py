@@ -9,7 +9,6 @@ from spark.bench import build_project_outside_world
 from spark.bench.check_grant import CheckGrant
 from spark.bench.issue_grant import IssueGrant
 from spark.core.cli import HelpText, run_cli
-from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS  # noqa: F401  (the tests read grant's exit codes here)
 
 #: The flag that picks the check. argparse takes a prefix of it too (`--ch`), so `operation_for` does.
 CHECK_FLAG = "--check"

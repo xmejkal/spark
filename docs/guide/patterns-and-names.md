@@ -25,7 +25,7 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Fake | stands in for a real part in the tests, in `tests/fakes.py` | `Fake`, then the whole name of the part | `FakeBoardConnection`, `FakeConsoleProbe`, `FakeOutsideWorld` |
 | Operation | one job, with one public method, `run()`: a class with `name`, `arguments` and `effects`, which a frontend runs through the core (see [The core contract](#the-core-contract)) | a verb, then its object | `LookAtBoard` |
 
-An `Argument` can be `required` or have `choices`. The effects are `reads`, `runs`, `board`, `deletes`, `writes` and `asks` (the person's yes). `json_renderer` is None for the envelope, or `FlatJsonLine` for a bench script's flat line (P657). The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
+An `Argument` can be `required` or have `choices`. The effects are `reads`, `runs`, `board`, `deletes`, `writes` and `asks` (the person's yes). `json_renderer` is `JsonEnvelope` by default, or `FlatJsonLine` for a bench script's flat line (P657). The examples in this section are the deploy area's target names. P239's PRs 3 to 8 give the code these names. PR 3
 gave `ConsentStrategy`, `TerminalConsentStrategy`, `GateClosedError`, `require_open_gate` and the unit suffixes. PR 4
 gave `ReadyResult`, `DeployPlan` and `BoardLog`. PR 5 gave `ProjectImage`, `DeployError`, `tools.command_for` and
 `board_look.BOOT_HINT` (PR 7 moved it to the flasher, and P213 b2 made it `boot_hint`). PR 6 gave `LookReport` (with `to_dict()`), `LookService`,
@@ -58,7 +58,7 @@ child of `image_evidence`) still never import `spark.core`: they add no path lin
 The core ([P442](https://github.com/xmejkal/spark/issues/587), wave 3 of the refactor) is what every area and every
 frontend shares, so that a CLI, an agent or an MCP tool runs the same code. An Operation (`spark.core.operation`) is a
 class with `name` (the `op` the envelope prints), `arguments` (its `Argument`s, as argparse adds them) and `effects`
-(`reads`, `runs`, `board`), `input_schema()` and `output_schema()` (JSON Schemas of the values and the envelope, an MCP tool's `inputSchema` and `outputSchema`, P605), and one public method, `run(**values, outside)`, which returns an `OperationResult`
+(the effect words are listed under the table at the top), `input_schema()` and `output_schema()` (JSON Schemas of the values and the envelope, an MCP tool's `inputSchema` and `outputSchema`, P605), and one public method, `run(**values, outside)`, which returns an `OperationResult`
 (`spark.core.result`): `data`, `findings` (a `Finding` per thing found, with its severity, subject, code, sentence and
 fix), `next` (a `NextStep` per step an agent may take), `lines` (the report a person reads), `diagnostics` (lines for
 the person beside the answer: the board doctor's, a crash's traceback) and `notes`. `status()` is `outcomes.status_of`
@@ -225,7 +225,8 @@ to the rules we set". New code follows them now. Today's names change in the nam
 4. An Operation's module, class and op name (printed as `op` in the JSON) use the same words: the module `show_part`,
    the class `ShowPart`, the op `"show-part"`. Its subcommand is the verb alone, because the CLI's topic noun gives
    the object: `parts.py show`. An `op` that a golden or a command page already pins keeps its spelling (decision 5 of
-   the refactor plan, the PO on 2026-10-26); only a new Operation follows this rule.
+   the refactor plan, the PO on 2026-10-26); only a new Operation follows this rule. The op is the script's name, and a
+   script with two modes names its mode: `issue-grant`, `check-grant` (`grant.py`, `grant.py --check`).
 5. A class that only reads says so in its name: `Reader`, `Finder` or `Probe`. A class or a method that changes a
    board, a file or a port has a verb that names the change: `write`, `erase`, `cure`, `save`.
 
@@ -271,9 +272,7 @@ state and offers several actions on it, or when a test or a caller must swap it.
 The fake of a part that a caller can swap lives in `tests/fakes.py` and starts with `Fake`, for example
 `FakeBoardConnection` and `FakeConsent`. A fake of a tool's output, such as mpremote's, stays in its test file.
 
-The PO's bench tools for live work on a board sit beside the deploy area. `scripts/reach.py` runs one line on the
-board on USB and cures it once when its USB output died at power-on (P251,
-[#264](https://github.com/xmejkal/spark/issues/264)). Its flags are `--project`, `--port`, `--json` (one line for the
-bench log) and `--cure-first` (the bench's cold arm). It is not in [the scripts guide for AI agents](agents/scripts.md) until P247 puts it behind
-the PO's grant.
+The PO's bench tools for live work on a board sit beside the deploy area. The four Operations in `scripts/spark/bench/` (`issue-grant`, `check-grant`, `live`, `reach`) are behind `grant.py`, `live.py` and `reach.py`
+(P657). `reach.py` runs one line on the board and cures it once when its USB output died at power-on (P251,
+[#264](https://github.com/xmejkal/spark/issues/264)).
 

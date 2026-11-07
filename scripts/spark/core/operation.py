@@ -6,6 +6,7 @@ The Operation (P442, W3-3): one job, with one public method, `run`. A CLI, an ag
 from collections import namedtuple
 from pathlib import Path
 
+from spark.core.renderers import JsonEnvelope
 from spark.core.result import output_schema
 
 # --- MVP ---
@@ -55,9 +56,9 @@ class Operation:
     name = None
     arguments = ()
     effects = ()
-    #: The Renderer of the `--json` line: None for the envelope (`cli.JsonEnvelope`), or a class with `render` and
-    #: `render_bad_argument`, such as `cli.FlatJsonLine`. A class attribute, not a flag (P657).
-    json_renderer = None
+    #: The Renderer of the `--json` line: `JsonEnvelope`, or a class with `render` and `render_bad_argument`, such as
+    #: `renderers.FlatJsonLine`. A class attribute, not a flag (P657).
+    json_renderer = JsonEnvelope
 
     def run(self, *, outside, **values):
         raise NotImplementedError

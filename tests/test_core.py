@@ -14,7 +14,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import tools  # noqa: E402
 from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
-from spark.core.cli import DEFAULT_RUN, FlatJsonLine, HelpText, JsonEnvelope, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
+from spark.core.cli import DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
+from spark.core.renderers import FlatJsonLine, JsonEnvelope  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
 from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Argument, Operation  # noqa: E402

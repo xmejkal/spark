@@ -119,7 +119,7 @@ class ReachScriptTest(unittest.TestCase):
         self.assertIn("reach.py: no cure: mpremote is not a Python package", err.getvalue())
         self.assertEqual(outside.ran, [])
         result = ReachBoard().run(project=Path("."), port=C6_PORT, cure_first=True, outside=outside)
-        self.assertEqual([(found.severity, found.code) for found in result.findings], [("could-not-run", "tool_missing")])
+        self.assertEqual([(found.severity, found.code) for found in result.findings], [("could-not-run", "no_probe")])
         self.assertIsNone(result.data)
 
     def test_a_cure_whose_read_failed_says_why(self):
