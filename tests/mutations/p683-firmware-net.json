@@ -1,0 +1,11 @@
+[
+{"file":"tests/test_golden_firmware.py","name":"the scrub skipped","find":"scrubbed = golden_bench.scrub(text, golden_bench.replacements_of(project, store))","replace":"scrubbed = text"},
+{"file":"tests/golden_firmware.py","name":"a Case's exit code is wrong, so the check of the exit code must catch it","find":"\"--micropython\", \"micropython.bin\"], 0,\n         env=READY_RUN)","replace":"\"--micropython\", \"micropython.bin\"], 1,\n         env=READY_RUN)"},
+{"file":"tests/golden_firmware.py","name":"the stderr dropped","find":"text = done.stdout + (STDERR_MARK + done.stderr if done.stderr else \"\")","replace":"text = done.stdout"},
+{"file":"tests/golden_firmware.py","name":"the golden project's own log kept","find":"        log.unlink()\n","replace":"        pass\n"},
+{"file":"tests/golden_firmware.py","name":"the fake token not set, so the shim refuses the parent's token or the run finds none","find":"    env[\"WOKWI_CLI_TOKEN\"] = FAKE_TOKEN\n","replace":"    pass\n"},
+{"file":"tests/golden_firmware.py","name":"the shim accepts any token","find":"  exit %(refused)d\n","replace":"  true\n"},
+{"file":"tests/golden_firmware.py","name":"the default places of wokwi-cli kept","find":"\"also\": [], \"fetch\": None}","replace":"\"fetch\": None}"},
+{"file":"tests/golden_bench.py","name":"the op is the golden's first word again, so run-scenario names no Case","find":"return Path(case.script).stem.replace(\"_\", \"-\")","replace":"return case.golden.split(\"-\")[0]"},
+{"file":"tests/golden_bench.py","name":"the golden folder given is ignored","find":"golden = golden_dir / name","replace":"golden = GOLDEN_DIR / name"}
+]

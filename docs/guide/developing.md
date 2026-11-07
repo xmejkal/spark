@@ -11,7 +11,7 @@ python3 -m unittest discover -s tests
 ```
 
 The count is whatever that prints. A count written into the README rotted three times in four days, so a count
-appears only inside a dated output, like the push below.
+appears only inside a dated output, like the outputs below.
 
 **No `littlefs-python`, no image tests** ([P452](https://github.com/xmejkal/spark/issues/607),
 [P456](https://github.com/xmejkal/spark/issues/621)). On a Python without that package, the tests that build or check a
@@ -73,23 +73,28 @@ The suite still reads source for rules about the code itself:
 
 A golden is a file with the expected output of one script run. `tests/test_golden_bench.py` keeps the goldens in
 `tests/golden/`, for `look.py`, `deploy.py`, `grant.py --check`, `live.py` and `reach.py`
-([P380](https://github.com/xmejkal/spark/issues/487)). Each test runs one script as a child process in an S3 project that
-`tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first on the child's
-`PYTHONPATH`, and the child runs with `TZ=UTC` and a store of its own. The scripts mask their own paths (P677:
-`<project>`, `sim/...`, `<store>`, `~/...`), and the test replaces what is left of the run's paths, the image hash and the
-time with placeholders before it compares. `<spark-home>` and `<project-dir>` are the harness's names for the test run's
-own store and project. Only a line a person pastes or opens shows them: the scripts print `<store>` and `<project>`
-elsewhere. A golden's name is the op, the status and the scenario: `look-could-not-run-two-boards.json`. A Case may name
-a stderr golden (`.stderr` added). It may also plant a file in the store, such as a deploy grant that takes `deploy.py` past the gate
-([P508](https://github.com/xmejkal/spark/issues/703)); the two grant runs add about 10 s.
+([P380](https://github.com/xmejkal/spark/issues/487)), and `tests/test_golden_firmware.py` those of `run_scenario.py`,
+`flash_image.py` and `import_firmware.py` in `tests/golden-firmware/`
+([P683](https://github.com/xmejkal/spark/issues/920)): its `wokwi-cli` is a shim that runs `tests/fake_wokwi_cli.py`
+only with a fake token, so no golden spends a Wokwi minute. Each test runs one script as a child process in an S3
+project that `tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first
+on the child's `PYTHONPATH`, and the child runs with `TZ=UTC` and a store of its own. The scripts mask their own paths
+(P677: `<project>`, `sim/...`, `<store>`, `~/...`), and the test replaces what is left of the run's paths, the image
+hash and the time with placeholders before it compares. `<spark-home>` and `<project-dir>` are the harness's names for
+the test run's own store and project. Only a line a person pastes or opens shows them: the scripts print `<store>` and
+`<project>` elsewhere. A golden's name is the op, the status and the scenario: `look-could-not-run-two-boards.json`. A
+bench Case may name a stderr golden (`.stderr` added), and a firmware Case puts its stderr in the same golden, after
+`--- stderr ---`. A bench Case may also plant a file in the store, such as a deploy grant that takes `deploy.py` past
+the gate ([P508](https://github.com/xmejkal/spark/issues/703)).
 
-If you change what a bench script prints on purpose, write that op's goldens again, read the diff, and run once more.
-An accept run writes only the goldens of the op it names:
+If you change what a bench or firmware script prints on purpose, write that op's goldens again, read the diff, and run
+once more. An accept run writes only the goldens of the op it names:
 
 ```sh
 SPARK_ACCEPT=look python3 -m unittest tests.test_golden_bench   # writes look's goldens, then fails
 git diff tests/golden
-python3 -m unittest tests.test_golden_bench
+SPARK_ACCEPT=run-scenario python3 -m unittest tests.test_golden_firmware   # or flash-image, import-firmware
+git diff tests/golden-firmware
 ```
 
 **The second rule: every fix that holds logic is mutation-tested.** Before the pull request, the council's mutation
@@ -165,15 +170,6 @@ It reports:
   spark's cards are judged alone, with the bin's unread line saying why —
   `backlog: the bin's board could not be read (it holds 25 items, 2 were read) — its cards were not counted or checked`,
   or `(no card of its 2 has a Status)`.
-
-From a push on 2026-10-05 (the gate's wording has changed since; the lines are a dated record, not today's output):
-
-<!-- output: run 2026-10-05, spark 0.6.0 -->
-```text
-264a9b7 as committed: Ran 1144 tests in 22.777s / OK (skipped=1); 562 mutation(s) in 93 table(s): every anchor present, once
-  scripts/: 5,529 code lines (+0 since origin/main)
-  backlog: 28 open, the limits hold
-```
 
 The full run, `python3 tools/check_commit.py --full` (or `python3 tools/check_commit.py <commit> --full`), is the same
 gate with every test, the slow ones too. It prints `<commit> as committed, full run: Ran M tests in S s / OK`. Run it

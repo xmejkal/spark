@@ -1,0 +1,2 @@
+--- stderr ---
+run_scenario.py: WOKWI_CLI_TOKEN is not set: a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci (a run spends Wokwi CI minutes)

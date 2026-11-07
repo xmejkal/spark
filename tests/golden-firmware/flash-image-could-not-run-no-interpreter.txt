@@ -1,0 +1,2 @@
+--- stderr ---
+flash_image.py: no interpreter at missing.bin — download a build from micropython.org/download for the board's chip
