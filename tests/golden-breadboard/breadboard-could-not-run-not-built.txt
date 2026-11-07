@@ -1,0 +1,2 @@
+--- stderr ---
+breadboard.py: could not run — nothing is built at <project-dir>/dist/board/circuit.json yet: run `check_spine.py requirements.json --keep .` first

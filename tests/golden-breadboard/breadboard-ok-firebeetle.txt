@@ -1,0 +1,297 @@
+# Breadboard: button-light, on a DFRobot FireBeetle 2 ESP32-S3
+
+## Parts
+
+| qty | part | for | have |
+| --- | --- | --- | --- |
+| 1 | DFRobot FireBeetle 2 ESP32-S3 | the board |  |
+| 1 | 6x6 mm tactile push button | TactileButton |  |
+| 1 | Kingbright L-7113ID 5 mm red LED | LedRed5mm |  |
+| 1 | 330Ω resistor, through-hole | R1 in series with LedRed5mm A |  |
+| | a breadboard and jumper wires | |  |
+
+*have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · to get = not in your drawer · blank = this project is not on your list (`/spark:init` puts it there)
+
+## Wiring
+
+### Steps
+
+One connection per step. The board's pins take the rows beside them, so a board pin always gets a jumper.
+
+1. Put the board in the breadboard, each pin in its own row.
+2. Put TactileButton in the breadboard, each pin in its own row.
+3. Put LedRed5mm in the breadboard, each pin in its own row.
+4. Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row.
+5. Run a jumper from board A5 to the row of R1 end 1.
+6. Run a jumper from board D3 to the row of TactileButton A.
+7. Run a jumper from board GND to the row of LedRed5mm K.
+8. Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K.
+9. Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A.
+
+### Diagram
+
+Each line is one step, with its number.
+
+```mermaid
+flowchart LR
+  subgraph g1["board"]
+    n1["board A5"]
+    n2["board D3"]
+    n3["board GND"]
+  end
+  subgraph g2["R1"]
+    n4["R1 end 1"]
+    n5["R1 end 2"]
+  end
+  subgraph g3["TactileButton"]
+    n6["TactileButton A"]
+    n7["TactileButton B"]
+  end
+  subgraph g4["LedRed5mm"]
+    n8["LedRed5mm K"]
+    n9["LedRed5mm A"]
+  end
+  n1 ---|"5"| n4
+  n2 ---|"6"| n6
+  n3 ---|"7"| n8
+  n7 ---|"8"| n8
+  n5 ---|"9"| n9
+```
+
+![The layout on a breadboard](breadboard.svg) Each jumper has its step's color: 5 cyan, 6 blue, 7 purple, 8 magenta.
+
+There is no Wokwi diagram for this board. Use the picture.
+
+On the board, GND is the pad GND2. The pads GND1 and GND3 are not used (the record says they may have no net).
+
+Hold your board to the picture. If the pins sit on the other side, tell spark.
+
+### Points
+
+After the steps, each line is one point: its ends must be joined, and nothing else.
+
+1. board A5 · R1 (330Ω in series with LedRed5mm A), end 1
+2. board D3 · TactileButton A (either leg of one joined pair; a meter on continuity shows which legs are joined)
+3. board GND · LedRed5mm K (the cathode, the shorter leg, by the flat of the rim) · TactileButton B (either leg of the other pair)
+4. LedRed5mm A (the anode, the longer leg) · R1 (330Ω in series with LedRed5mm A), end 2
+
+## Before you power it
+
+- TactileButton A has no resistor: the firmware must pull it up with Pin.PULL_UP, as `pins.py` says (P204)
+- 6x6 mm tactile push button: Decide the polarity against deep sleep, not convenience. MicroPython's esp32.wake_on_ext1(pins, level) takes ONE level for every pin in the mask, on every chip (ports/esp32/modesp32.c, v1.29.0), so a board with two wake sources must have them assert in the same direction. Both directions are an OR on the S3 and C6: WAKEUP_ALL_LOW is a true AND only on the original ESP32, and ESP-IDF aliases it to ANY_LOW on every later chip (components/esp_hw_support/include/esp_sleep.h, v5.5.2). Prefer wiring a wake button to 3V3 behind a pull-down and arming WAKEUP_ANY_HIGH: low-level wake has an open MicroPython bug, micropython#17334 ('stuck pin', reported on a C6, v1.25.0). Corrected 2026-10-01 (spark P63): this line used to say ALL_LOW is an AND here, which is false on these chips.
+- 6x6 mm tactile push button: Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin's first edge is the one that matters and it is not debounced by anything.
+- Kingbright L-7113ID 5 mm red LED: A series resistor between the GPIO and the anode, always: without it the LED's current is set only by the pin's drive strength, and it either runs far past 30 mA or droops the pin's level.
+- Kingbright L-7113ID 5 mm red LED: Keep it off the chip's strapping pins: an LED and resistor to ground load the pin while the chip samples its straps at reset, and can change how it boots. (Reasoned from the circuit, not from this datasheet.)
+- Kingbright L-7113ID 5 mm red LED: On a breadboard: the LONG lead (anode) goes to the resistor; the short lead, on the side of the flat in the rim, goes to ground. Once the leads are trimmed equal, the flat is the mark that survives.
+
+Each record whole, with what it asks of the board: `parts.py --show led-red-5mm`, `parts.py --show tactile-button`.
+--- stderr ---
+wrote <project-dir>/breadboard.md
+wrote <project-dir>/breadboard.svg — a picture of the same layout, which breadboard.md shows
+breadboard.json not written: Wokwi has no part with this board's pins
+--- breadboard.svg ---
+<svg xmlns="http://www.w3.org/2000/svg" width="649.2" height="184.6" viewBox="0 0 649.2 184.6"><rect width="649.2" height="184.6" rx="6" fill="#f4f4f4" /><path d="M26 51h0M26 60.6h0M26 70.2h0M26 79.8h0M26 89.4h0M26 118.2h0M26 127.8h0M26 137.4h0M26 147h0M26 156.6h0M35.6 51h0M35.6 60.6h0M35.6 70.2h0M35.6 79.8h0M35.6 89.4h0M35.6 118.2h0M35.6 127.8h0M35.6 137.4h0M35.6 147h0M35.6 156.6h0M45.2 51h0M45.2 60.6h0M45.2 70.2h0M45.2 79.8h0M45.2 89.4h0M45.2 118.2h0M45.2 127.8h0M45.2 137.4h0M45.2 147h0M45.2 156.6h0M54.8 51h0M54.8 60.6h0M54.8 70.2h0M54.8 79.8h0M54.8 89.4h0M54.8 118.2h0M54.8 127.8h0M54.8 137.4h0M54.8 147h0M54.8 156.6h0M64.4 51h0M64.4 60.6h0M64.4 70.2h0M64.4 79.8h0M64.4 89.4h0M64.4 118.2h0M64.4 127.8h0M64.4 137.4h0M64.4 147h0M64.4 156.6h0M74 51h0M74 60.6h0M74 70.2h0M74 79.8h0M74 89.4h0M74 118.2h0M74 127.8h0M74 137.4h0M74 147h0M74 156.6h0M83.6 51h0M83.6 60.6h0M83.6 70.2h0M83.6 79.8h0M83.6 89.4h0M83.6 118.2h0M83.6 127.8h0M83.6 137.4h0M83.6 147h0M83.6 156.6h0M93.2 51h0M93.2 60.6h0M93.2 70.2h0M93.2 79.8h0M93.2 89.4h0M93.2 118.2h0M93.2 127.8h0M93.2 137.4h0M93.2 147h0M93.2 156.6h0M102.8 51h0M102.8 60.6h0M102.8 70.2h0M102.8 79.8h0M102.8 89.4h0M102.8 118.2h0M102.8 127.8h0M102.8 137.4h0M102.8 147h0M102.8 156.6h0M112.4 51h0M112.4 60.6h0M112.4 70.2h0M112.4 79.8h0M112.4 89.4h0M112.4 118.2h0M112.4 127.8h0M112.4 137.4h0M112.4 147h0M112.4 156.6h0M122 51h0M122 60.6h0M122 70.2h0M122 79.8h0M122 89.4h0M122 118.2h0M122 127.8h0M122 137.4h0M122 147h0M122 156.6h0M131.6 51h0M131.6 60.6h0M131.6 70.2h0M131.6 79.8h0M131.6 89.4h0M131.6 118.2h0M131.6 127.8h0M131.6 137.4h0M131.6 147h0M131.6 156.6h0M141.2 51h0M141.2 60.6h0M141.2 70.2h0M141.2 79.8h0M141.2 89.4h0M141.2 118.2h0M141.2 127.8h0M141.2 137.4h0M141.2 147h0M141.2 156.6h0M150.8 51h0M150.8 60.6h0M150.8 70.2h0M150.8 79.8h0M150.8 89.4h0M150.8 118.2h0M150.8 127.8h0M150.8 137.4h0M150.8 147h0M150.8 156.6h0M160.4 51h0M160.4 60.6h0M160.4 70.2h0M160.4 79.8h0M160.4 89.4h0M160.4 118.2h0M160.4 127.8h0M160.4 137.4h0M160.4 147h0M160.4 156.6h0M170 51h0M170 60.6h0M170 70.2h0M170 79.8h0M170 89.4h0M170 118.2h0M170 127.8h0M170 137.4h0M170 147h0M170 156.6h0M179.6 51h0M179.6 60.6h0M179.6 70.2h0M179.6 79.8h0M179.6 89.4h0M179.6 118.2h0M179.6 127.8h0M179.6 137.4h0M179.6 147h0M179.6 156.6h0M189.2 51h0M189.2 60.6h0M189.2 70.2h0M189.2 79.8h0M189.2 89.4h0M189.2 118.2h0M189.2 127.8h0M189.2 137.4h0M189.2 147h0M189.2 156.6h0M198.8 51h0M198.8 60.6h0M198.8 70.2h0M198.8 79.8h0M198.8 89.4h0M198.8 118.2h0M198.8 127.8h0M198.8 137.4h0M198.8 147h0M198.8 156.6h0M208.4 51h0M208.4 60.6h0M208.4 70.2h0M208.4 79.8h0M208.4 89.4h0M208.4 118.2h0M208.4 127.8h0M208.4 137.4h0M208.4 147h0M208.4 156.6h0M218 51h0M218 60.6h0M218 70.2h0M218 79.8h0M218 89.4h0M218 118.2h0M218 127.8h0M218 137.4h0M218 147h0M218 156.6h0M227.6 51h0M227.6 60.6h0M227.6 70.2h0M227.6 79.8h0M227.6 89.4h0M227.6 118.2h0M227.6 127.8h0M227.6 137.4h0M227.6 147h0M227.6 156.6h0M237.2 51h0M237.2 60.6h0M237.2 70.2h0M237.2 79.8h0M237.2 89.4h0M237.2 118.2h0M237.2 127.8h0M237.2 137.4h0M237.2 147h0M237.2 156.6h0M246.8 51h0M246.8 60.6h0M246.8 70.2h0M246.8 79.8h0M246.8 89.4h0M246.8 118.2h0M246.8 127.8h0M246.8 137.4h0M246.8 147h0M246.8 156.6h0M256.4 51h0M256.4 60.6h0M256.4 70.2h0M256.4 79.8h0M256.4 89.4h0M256.4 118.2h0M256.4 127.8h0M256.4 137.4h0M256.4 147h0M256.4 156.6h0M266 51h0M266 60.6h0M266 70.2h0M266 79.8h0M266 89.4h0M266 118.2h0M266 127.8h0M266 137.4h0M266 147h0M266 156.6h0M275.6 51h0M275.6 60.6h0M275.6 70.2h0M275.6 79.8h0M275.6 89.4h0M275.6 118.2h0M275.6 127.8h0M275.6 137.4h0M275.6 147h0M275.6 156.6h0M285.2 51h0M285.2 60.6h0M285.2 70.2h0M285.2 79.8h0M285.2 89.4h0M285.2 118.2h0M285.2 127.8h0M285.2 137.4h0M285.2 147h0M285.2 156.6h0M294.8 51h0M294.8 60.6h0M294.8 70.2h0M294.8 79.8h0M294.8 89.4h0M294.8 118.2h0M294.8 127.8h0M294.8 137.4h0M294.8 147h0M294.8 156.6h0M304.4 51h0M304.4 60.6h0M304.4 70.2h0M304.4 79.8h0M304.4 89.4h0M304.4 118.2h0M304.4 127.8h0M304.4 137.4h0M304.4 147h0M304.4 156.6h0M314 51h0M314 60.6h0M314 70.2h0M314 79.8h0M314 89.4h0M314 118.2h0M314 127.8h0M314 137.4h0M314 147h0M314 156.6h0M323.6 51h0M323.6 60.6h0M323.6 70.2h0M323.6 79.8h0M323.6 89.4h0M323.6 118.2h0M323.6 127.8h0M323.6 137.4h0M323.6 147h0M323.6 156.6h0M333.2 51h0M333.2 60.6h0M333.2 70.2h0M333.2 79.8h0M333.2 89.4h0M333.2 118.2h0M333.2 127.8h0M333.2 137.4h0M333.2 147h0M333.2 156.6h0M342.8 51h0M342.8 60.6h0M342.8 70.2h0M342.8 79.8h0M342.8 89.4h0M342.8 118.2h0M342.8 127.8h0M342.8 137.4h0M342.8 147h0M342.8 156.6h0M352.4 51h0M352.4 60.6h0M352.4 70.2h0M352.4 79.8h0M352.4 89.4h0M352.4 118.2h0M352.4 127.8h0M352.4 137.4h0M352.4 147h0M352.4 156.6h0M362 51h0M362 60.6h0M362 70.2h0M362 79.8h0M362 89.4h0M362 118.2h0M362 127.8h0M362 137.4h0M362 147h0M362 156.6h0M371.6 51h0M371.6 60.6h0M371.6 70.2h0M371.6 79.8h0M371.6 89.4h0M371.6 118.2h0M371.6 127.8h0M371.6 137.4h0M371.6 147h0M371.6 156.6h0M381.2 51h0M381.2 60.6h0M381.2 70.2h0M381.2 79.8h0M381.2 89.4h0M381.2 118.2h0M381.2 127.8h0M381.2 137.4h0M381.2 147h0M381.2 156.6h0M390.8 51h0M390.8 60.6h0M390.8 70.2h0M390.8 79.8h0M390.8 89.4h0M390.8 118.2h0M390.8 127.8h0M390.8 137.4h0M390.8 147h0M390.8 156.6h0M400.4 51h0M400.4 60.6h0M400.4 70.2h0M400.4 79.8h0M400.4 89.4h0M400.4 118.2h0M400.4 127.8h0M400.4 137.4h0M400.4 147h0M400.4 156.6h0M410 51h0M410 60.6h0M410 70.2h0M410 79.8h0M410 89.4h0M410 118.2h0M410 127.8h0M410 137.4h0M410 147h0M410 156.6h0M419.6 51h0M419.6 60.6h0M419.6 70.2h0M419.6 79.8h0M419.6 89.4h0M419.6 118.2h0M419.6 127.8h0M419.6 137.4h0M419.6 147h0M419.6 156.6h0M429.2 51h0M429.2 60.6h0M429.2 70.2h0M429.2 79.8h0M429.2 89.4h0M429.2 118.2h0M429.2 127.8h0M429.2 137.4h0M429.2 147h0M429.2 156.6h0M438.8 51h0M438.8 60.6h0M438.8 70.2h0M438.8 79.8h0M438.8 89.4h0M438.8 118.2h0M438.8 127.8h0M438.8 137.4h0M438.8 147h0M438.8 156.6h0M448.4 51h0M448.4 60.6h0M448.4 70.2h0M448.4 79.8h0M448.4 89.4h0M448.4 118.2h0M448.4 127.8h0M448.4 137.4h0M448.4 147h0M448.4 156.6h0M458 51h0M458 60.6h0M458 70.2h0M458 79.8h0M458 89.4h0M458 118.2h0M458 127.8h0M458 137.4h0M458 147h0M458 156.6h0M467.6 51h0M467.6 60.6h0M467.6 70.2h0M467.6 79.8h0M467.6 89.4h0M467.6 118.2h0M467.6 127.8h0M467.6 137.4h0M467.6 147h0M467.6 156.6h0M477.2 51h0M477.2 60.6h0M477.2 70.2h0M477.2 79.8h0M477.2 89.4h0M477.2 118.2h0M477.2 127.8h0M477.2 137.4h0M477.2 147h0M477.2 156.6h0M486.8 51h0M486.8 60.6h0M486.8 70.2h0M486.8 79.8h0M486.8 89.4h0M486.8 118.2h0M486.8 127.8h0M486.8 137.4h0M486.8 147h0M486.8 156.6h0M496.4 51h0M496.4 60.6h0M496.4 70.2h0M496.4 79.8h0M496.4 89.4h0M496.4 118.2h0M496.4 127.8h0M496.4 137.4h0M496.4 147h0M496.4 156.6h0M506 51h0M506 60.6h0M506 70.2h0M506 79.8h0M506 89.4h0M506 118.2h0M506 127.8h0M506 137.4h0M506 147h0M506 156.6h0M515.6 51h0M515.6 60.6h0M515.6 70.2h0M515.6 79.8h0M515.6 89.4h0M515.6 118.2h0M515.6 127.8h0M515.6 137.4h0M515.6 147h0M515.6 156.6h0M525.2 51h0M525.2 60.6h0M525.2 70.2h0M525.2 79.8h0M525.2 89.4h0M525.2 118.2h0M525.2 127.8h0M525.2 137.4h0M525.2 147h0M525.2 156.6h0M534.8 51h0M534.8 60.6h0M534.8 70.2h0M534.8 79.8h0M534.8 89.4h0M534.8 118.2h0M534.8 127.8h0M534.8 137.4h0M534.8 147h0M534.8 156.6h0M544.4 51h0M544.4 60.6h0M544.4 70.2h0M544.4 79.8h0M544.4 89.4h0M544.4 118.2h0M544.4 127.8h0M544.4 137.4h0M544.4 147h0M544.4 156.6h0M554 51h0M554 60.6h0M554 70.2h0M554 79.8h0M554 89.4h0M554 118.2h0M554 127.8h0M554 137.4h0M554 147h0M554 156.6h0M563.6 51h0M563.6 60.6h0M563.6 70.2h0M563.6 79.8h0M563.6 89.4h0M563.6 118.2h0M563.6 127.8h0M563.6 137.4h0M563.6 147h0M563.6 156.6h0M573.2 51h0M573.2 60.6h0M573.2 70.2h0M573.2 79.8h0M573.2 89.4h0M573.2 118.2h0M573.2 127.8h0M573.2 137.4h0M573.2 147h0M573.2 156.6h0M582.8 51h0M582.8 60.6h0M582.8 70.2h0M582.8 79.8h0M582.8 89.4h0M582.8 118.2h0M582.8 127.8h0M582.8 137.4h0M582.8 147h0M582.8 156.6h0M592.4 51h0M592.4 60.6h0M592.4 70.2h0M592.4 79.8h0M592.4 89.4h0M592.4 118.2h0M592.4 127.8h0M592.4 137.4h0M592.4 147h0M592.4 156.6h0M602 51h0M602 60.6h0M602 70.2h0M602 79.8h0M602 89.4h0M602 118.2h0M602 127.8h0M602 137.4h0M602 147h0M602 156.6h0M611.6 51h0M611.6 60.6h0M611.6 70.2h0M611.6 79.8h0M611.6 89.4h0M611.6 118.2h0M611.6 127.8h0M611.6 137.4h0M611.6 147h0M611.6 156.6h0M621.2 51h0M621.2 60.6h0M621.2 70.2h0M621.2 79.8h0M621.2 89.4h0M621.2 118.2h0M621.2 127.8h0M621.2 137.4h0M621.2 147h0M621.2 156.6h0" stroke="#a8a8a8" stroke-width="3.5" stroke-linecap="round" /><g transform="translate(95.468 -9.586) rotate(90 48 113.386)"><g transform="scale(0.96 3.78) translate(0 0)"><rect x="1" y="1" width="98" height="58" rx="4" fill="#1565c0" stroke="#0d47a1" stroke-width="2" />
+  <rect x="10" y="20" width="80" height="20" rx="2" fill="#90caf9" />
+</g></g><g transform="translate(240.2 98.4) rotate(90 33.5 24.5)"><g transform="scale(1 1) translate(0 0)"><rect x="10" y="1" width="47.28" height="43.35" rx="3" fill="#3c3c3c" />
+  <rect x="0" y="11.5" width="10" height="3" fill="#8c8c8c" />
+  <rect x="0" y="30.5" width="10" height="3" fill="#8c8c8c" />
+  <rect x="57.28" y="11.5" width="10" height="3" fill="#8c8c8c" />
+  <rect x="57.28" y="30.5" width="10" height="3" fill="#8c8c8c" />
+  <circle cx="33.64" cy="22.68" r="13" fill="#43a047" />
+</g></g><g transform="translate(298.6 76.2) rotate(0 20 25)"><g transform="scale(1 1) translate(0 0)"><rect x="14" y="26" width="2" height="16" fill="#8c8c8c" />
+  <rect x="24" y="26" width="2" height="16" fill="#8c8c8c" />
+  <path d="M8 28 V14 A12 12 0 0 1 32 14 V28 Z" fill="#e53935" />
+  <rect x="6" y="26" width="28" height="4" fill="#c62828" />
+  <path d="M8 26 H14 V30 H8 Z" fill="#8e1b1b" />
+</g></g><g transform="translate(323.4 122.45) rotate(180 29.5 5.5)"><g transform="scale(1.002 1.031) translate(0 0)"><rect x="0" y="4.6" width="59" height="2" fill="#8c8c8c" />
+  <rect x="15" y="1" width="29" height="9" rx="4" fill="#d7b98e" />
+  <rect x="20" y="1" width="3" height="9" fill="#8d6e63" />
+  <rect x="27" y="1" width="3" height="9" fill="#212121" />
+  <rect x="34" y="1" width="3" height="9" fill="#c9a227" />
+</g></g><path d="M150.8 156.6L150.8 123L381.2 123L381.2 118.2" fill="none" stroke="cyan" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="153.8" y="121" font-size="9" font-family="sans-serif" font-weight="bold" fill="cyan">5</text><path d="M208.4 51L208.4 55.8L285.2 55.8L285.2 51" fill="none" stroke="blue" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="211.4" y="53.8" font-size="9" font-family="sans-serif" font-weight="bold" fill="blue">6</text><path d="M102.8 51L102.8 123L314 123L314 127.8" fill="none" stroke="purple" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="105.8" y="121" font-size="9" font-family="sans-serif" font-weight="bold" fill="purple">7</text><path d="M266 51L266 132.6L314 132.6L314 137.4" fill="none" stroke="magenta" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="269" y="130.6" font-size="9" font-family="sans-serif" font-weight="bold" fill="magenta">8</text><g transform="translate(95.468 -9.586) rotate(90 48 113.386)"><text x="9.8" y="21.654" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">RX</text><text x="9.8" y="31.254" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">TX</text><text x="9.8" y="40.854" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D2</text><text x="9.8" y="50.454" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D3</text><text x="9.8" y="60.054" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D5</text><text x="9.8" y="69.654" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D6</text><text x="9.8" y="79.254" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D7</text><text x="9.8" y="88.854" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D9</text><text x="9.8" y="98.454" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">SDA</text><text x="9.8" y="108.054" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">SCL</text><text x="9.8" y="117.654" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">MI</text><text x="9.8" y="127.254" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">MO</text><text x="9.8" y="136.854" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">SCK</text><circle cx="4.8" cy="144.454" r="4" fill="none" stroke="#e65100" stroke-width="1" stroke-dasharray="2 1.5" /><text x="9.8" y="146.454" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">GND1</text><text x="9.8" y="156.054" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">GND2</text><circle cx="4.8" cy="163.654" r="4" fill="none" stroke="#e65100" stroke-width="1" stroke-dasharray="2 1.5" /><text x="9.8" y="165.654" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">GND3</text><text x="9.8" y="175.254" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">3V3</text><text x="9.8" y="184.854" font-size="6" font-family="sans-serif" text-anchor="start" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">RST</text><text x="86.2" y="21.654" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D10</text><text x="86.2" y="31.254" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D11</text><text x="86.2" y="40.854" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D12</text><text x="86.2" y="50.454" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D13</text><text x="86.2" y="60.054" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A0</text><text x="86.2" y="69.654" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A1</text><text x="86.2" y="79.254" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A2</text><text x="86.2" y="88.854" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A3</text><text x="86.2" y="98.454" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A4</text><text x="86.2" y="108.054" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">A5</text><text x="86.2" y="117.654" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D14</text><text x="86.2" y="127.254" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D-</text><text x="86.2" y="136.854" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">D+</text><text x="86.2" y="146.454" font-size="6" font-family="sans-serif" text-anchor="end" fill="#ffffff" stroke="#0d47a1" stroke-width="1.5" paint-order="stroke">VCC</text><rect x="31" y="214.772" width="34" height="12" rx="3" fill="#cfd8dc" stroke="#455a64" stroke-width="1" /></g><circle cx="237.2" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="227.6" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="218" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="208.4" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="198.8" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="189.2" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="179.6" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="170" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="160.4" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="150.8" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="141.2" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="122" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="112.4" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="102.8" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="74" cy="60.6" r="2.5" fill="#2e7d32" /><circle cx="237.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="227.6" cy="147" r="2.5" fill="#2e7d32" /><circle cx="218" cy="147" r="2.5" fill="#2e7d32" /><circle cx="208.4" cy="147" r="2.5" fill="#2e7d32" /><circle cx="198.8" cy="147" r="2.5" fill="#2e7d32" /><circle cx="189.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="179.6" cy="147" r="2.5" fill="#2e7d32" /><circle cx="170" cy="147" r="2.5" fill="#2e7d32" /><circle cx="160.4" cy="147" r="2.5" fill="#2e7d32" /><circle cx="150.8" cy="147" r="2.5" fill="#2e7d32" /><circle cx="141.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="147" r="2.5" fill="#2e7d32" /><circle cx="122" cy="147" r="2.5" fill="#2e7d32" /><circle cx="112.4" cy="147" r="2.5" fill="#2e7d32" /><text x="143.468" y="103.8" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">board</text><circle cx="285.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="266" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="285.2" cy="156.6" r="2.5" fill="#2e7d32" /><circle cx="266" cy="156.6" r="2.5" fill="#2e7d32" /><text x="273.7" y="122.9" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">TactileButton</text><circle cx="323.6" cy="118.2" r="2.5" fill="#2e7d32" /><circle cx="314" cy="118.2" r="2.5" fill="#2e7d32" /><text x="318.6" y="101.2" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">LedRed5mm</text><circle cx="381.2" cy="127.8" r="2.5" fill="#2e7d32" /><circle cx="323.6" cy="127.8" r="2.5" fill="#2e7d32" /><text x="352.9" y="127.95" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">R1</text><text x="14" y="180.6" font-size="8" font-family="sans-serif" fill="#5d4037">pads not verified, row side not verified, USB end not verified, GND1 and GND3 doubtful</text></svg>
+--- wiring-record.json ---
+{
+ "steps": [
+  {
+   "key": [
+    "place",
+    "board"
+   ],
+   "anchor": null,
+   "kind": "place",
+   "source": "the board",
+   "to": "",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "place",
+    "TactileButton"
+   ],
+   "anchor": null,
+   "kind": "place",
+   "source": "TactileButton",
+   "to": "",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "place",
+    "LedRed5mm"
+   ],
+   "anchor": null,
+   "kind": "place",
+   "source": "LedRed5mm",
+   "to": "",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "resistor",
+    "in series with LedRed5mm A",
+    "1"
+   ],
+   "anchor": [
+    "row",
+    "resistor",
+    "in series with LedRed5mm A",
+    "1"
+   ],
+   "kind": "leg",
+   "source": "R1 end 1 (in series with LedRed5mm A)",
+   "to": "a free row",
+   "tag": "R1",
+   "value": "330\u03a9",
+   "job": "in series with LedRed5mm A",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board A5"
+   ],
+   "anchor": [
+    "row",
+    "resistor",
+    "in series with LedRed5mm A",
+    "1"
+   ],
+   "kind": "jumper",
+   "source": "board A5",
+   "to": "the row of R1 end 1 (in series with LedRed5mm A)",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "cyan",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board D3"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "TactileButton A (either leg of one joined pair; a meter on continuity shows which legs are joined)"
+   ],
+   "kind": "jumper",
+   "source": "board D3",
+   "to": "the row of TactileButton A",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "blue",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board GND"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "LedRed5mm K (the cathode, the shorter leg, by the flat of the rim)"
+   ],
+   "kind": "jumper",
+   "source": "board GND",
+   "to": "the row of LedRed5mm K",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "purple",
+   "marks": ""
+  },
+  {
+   "key": [
+    "part",
+    "TactileButton B (either leg of the other pair)"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "LedRed5mm K (the cathode, the shorter leg, by the flat of the rim)"
+   ],
+   "kind": "jumper",
+   "source": "the row of TactileButton B",
+   "to": "the row of LedRed5mm K",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "magenta",
+   "marks": ""
+  },
+  {
+   "key": [
+    "resistor",
+    "in series with LedRed5mm A",
+    "2"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "LedRed5mm A (the anode, the longer leg)"
+   ],
+   "kind": "leg",
+   "source": "R1 end 2 (in series with LedRed5mm A)",
+   "to": "the row of LedRed5mm A",
+   "tag": "R1",
+   "value": "330\u03a9",
+   "job": "in series with LedRed5mm A",
+   "color": null,
+   "marks": ""
+  }
+ ],
+ "drawn_jumpers": [
+  [
+   "14b.j",
+   "38b.f"
+  ],
+  [
+   "20t.a",
+   "28t.a"
+  ],
+  [
+   "26t.a",
+   "31b.h"
+  ],
+  [
+   "31b.g",
+   "9t.a"
+  ]
+ ]
+}
