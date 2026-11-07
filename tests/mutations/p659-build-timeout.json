@@ -1,0 +1,7 @@
+[
+ {"file": "scripts/check_spine.py", "name": "the handler names the build's constant, not the limit that ran out", "find": "late.timeout, \"; its last words: \"", "replace": "BUILD_TIMEOUT_S, \"; its last words: \""},
+ {"file": "scripts/check_spine.py", "name": "the build is given the probe's limit", "find": "                           timeout=BUILD_TIMEOUT_S)\n    version", "replace": "                           timeout=PROBE_TIMEOUT_S)\n    version"},
+ {"file": "scripts/check_spine.py", "name": "the converter is given the build's limit", "find": "timeout=CONVERTER_TIMEOUT_S, env=dict", "replace": "timeout=BUILD_TIMEOUT_S, env=dict"},
+ {"file": "scripts/check_spine.py", "name": "the build's limit falls back to 300", "find": "BUILD_TIMEOUT_S = 900", "replace": "BUILD_TIMEOUT_S = 300"},
+ {"file": "scripts/check_spine.py", "name": "the handler drops the tool's last words", "find": "last = \" | \".join(said.strip().splitlines()[-3:])", "replace": "last = \"\""}
+]

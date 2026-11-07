@@ -822,6 +822,67 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("expected one argument", out.getvalue())
 
 
+class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
+    """P659: the build's limit fits a real build (496 s on the bench), and a late command is named with its own limit."""
+
+    def main_with(self, *, run=None):
+        """`main` on the reference design, every child run late; the verdict as JSON, the exit code and the limits asked."""
+        import contextlib
+        import io
+        limits = []
+        really = subprocess.run
+
+        def a_child_that_ran_late(cmd, *rest, **named):
+            if "emit_board.py" in str(cmd) or "emit_footprint.py" in str(cmd) or "assign_pins.py" in str(cmd):
+                return really(cmd, *rest, **named)
+            limits.append(named.get("timeout"))
+            raise subprocess.TimeoutExpired(cmd, named.get("timeout"), stderr=b"routing net 3\nrouting net 4\n")
+
+        patches = [mock.patch.object(check_spine.subprocess, "run", a_child_that_ran_late),
+                   mock.patch.object(check_spine, "find_toolchain", lambda start: Path("/x/node_modules/.bin/tsci"))]
+        if run:
+            patches.append(mock.patch.object(check_spine, "run", run))
+        with contextlib.ExitStack() as stack:
+            for patch in patches:
+                stack.enter_context(patch)
+            out = stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+            stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
+            code = check_spine.main(["--json"])
+        return json.loads(out.getvalue()), code, limits
+
+    def test_a_build_that_runs_past_its_limit_names_the_command_and_900_seconds(self):
+        said, code, limits = self.main_with()
+        build = [stage for stage in said["stages"] if stage["name"] == "build"][0]
+        self.assertEqual("could-not-run", build["status"])
+        self.assertIn("`tsci build` did not finish in 900s", build["detail"])
+        self.assertIn("routing net 4", build["detail"])
+        self.assertEqual(2, code)
+        self.assertEqual([900], limits)
+
+    def test_the_builds_limit_is_at_least_ten_minutes(self):
+        _, _, limits = self.main_with()
+        self.assertGreaterEqual(limits[0], 600)
+
+    def test_the_probe_that_runs_past_its_limit_names_120_seconds(self):
+        def a_run_that_probed(requirements, workdir, *rest, **named):
+            check_spine.toolchain_can_build(Path("/x/tsci"), workdir)
+        said, code, limits = self.main_with(run=a_run_that_probed)
+        detail = said["stages"][0]["detail"]
+        self.assertIn("`tsci build` did not finish in 120s", detail)
+        self.assertEqual(2, code)
+        self.assertEqual([120], limits)
+
+    def test_the_converter_that_runs_past_its_limit_names_120_seconds(self):
+        def a_run_that_converted(requirements, workdir, *rest, **named):
+            (workdir / "sim").mkdir()
+            with mock.patch.object(check_spine, "converter_command", lambda project, own: ["/x/convert-wokwi", "--circuit"]):
+                check_spine.convert(None, None, ["--circuit", "c.json"], workdir / "sim", workdir)
+        said, code, limits = self.main_with(run=a_run_that_converted)
+        self.assertIn("`convert-wokwi --circuit` did not finish in 120s", said["stages"][0]["detail"])
+        self.assertEqual(2, code)
+        self.assertEqual([120], limits)
+
+
 class FindingTheToolchainTest(unittest.TestCase):
     def test_a_projects_own_tsci_is_preferred_over_the_global_one(self):
         # A project pins a version for a reason; silently building with a different one produces

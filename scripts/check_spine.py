@@ -85,7 +85,11 @@ from spark.core.text_guards import clean, guard_lines  # noqa: E402
 REFERENCE = {"board": "firebeetle2-esp32s3",
              "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
 
-BUILD_TIMEOUT_S = 300
+#: A real tsci build of a five-part board took 496 s on the P581 bench (the autorouter 231.6 s), so the limit is
+#: about 1.8 times that (P659). The probe and the converter are small jobs with their own limit.
+BUILD_TIMEOUT_S = 900
+PROBE_TIMEOUT_S = 120
+CONVERTER_TIMEOUT_S = 120
 
 #: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
 PIN_MODULE = Path("firmware") / "pins.py"
@@ -176,7 +180,7 @@ def toolchain_can_build(toolchain, workdir):
     probe.mkdir(exist_ok=True)
     (probe / "board.tsx").write_text(TRIVIAL_BOARD)
     result = subprocess.run([str(toolchain), "build", "board.tsx"], cwd=str(probe),
-                            capture_output=True, text=True, timeout=BUILD_TIMEOUT_S)
+                            capture_output=True, text=True, timeout=PROBE_TIMEOUT_S)
     return (probe / "dist" / "board" / "circuit.json").is_file(), result.stderr.strip()[-400:]
 
 
@@ -554,7 +558,7 @@ def convert(project, own, source, sim_dir, workdir):
     bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)
     made = subprocess.run(converter_command(project, own) + source + ["--out", str(diagram_path), "--mapping", str(sim_dir / sim_project.MAPPING_FILE),
                                                                       "--chips", str(sim_dir / "chips")], cwd=str(own.parent if own else sim_dir),
-                          capture_output=True, text=True, timeout=BUILD_TIMEOUT_S, env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
+                          capture_output=True, text=True, timeout=CONVERTER_TIMEOUT_S, env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
     if made.returncode or not diagram_path.is_file():
         said = (made.stderr or made.stdout)[-800:]
         if simulation_could_not_look(said):
@@ -662,6 +666,14 @@ def design_handed_to(workdir, project):
         return None
 
 
+def timed_out_sentence(late):
+    """What a command that ran past its limit said (P659): the command, the limit it had, and its last words."""
+    cmd = [Path(str(word)).name for word in (late.cmd if isinstance(late.cmd, (list, tuple)) else [late.cmd])[:2]]
+    said = late.stderr.decode(errors="replace") if isinstance(late.stderr, bytes) else (late.stderr or "")
+    last = " | ".join(said.strip().splitlines()[-3:])
+    return "`%s` did not finish in %ds%s" % (" ".join(cmd), late.timeout, "; its last words: " + last if last else "")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("requirements", nargs="?",
@@ -720,9 +732,8 @@ def main(argv=None):
         firmware = kept.name
     try:
         stages = run(requirements, workdir, toolchain, project, from_library, firmware=firmware)
-    except subprocess.TimeoutExpired:
-        stages = [Stage("build", COULD_NOT_RUN,
-                        "the build did not finish in %ds" % BUILD_TIMEOUT_S)]
+    except subprocess.TimeoutExpired as late:
+        stages = [Stage("build", COULD_NOT_RUN, timed_out_sentence(late))]
     except Exception as exc:  # noqa: BLE001
         # Anything unforeseen is could-not-run, never problems. An exception says this tool
         # failed, which is not the same as the chain failing, and reporting one as the other
