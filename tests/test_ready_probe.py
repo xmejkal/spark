@@ -74,14 +74,14 @@ class WhatTheBoardSaysTest(unittest.TestCase):
         self.assertEqual((verdict, log), ("ready unknown", hashes + "x"))
 
     def test_a_facts_copy_that_raises_on_the_board_is_said_not_raised(self):
-        facts = board_facts.FactsFile(FakeBoardConnection(copy_raises=board_connection.BoardCodeError("Traceback\nOSError: 28\n", 1)),
+        facts = board_facts.ReadingFile(FakeBoardConnection(copy_raises=board_connection.BoardCodeError("Traceback\nOSError: 28\n", 1)),
                                       sleep=lambda seconds: None)
         self.assertEqual(facts.write({"a": 1}), "mpremote could not copy it: OSError: 28")
 
     def test_a_facts_copy_that_fails_once_after_the_reset_is_copied_again_after_two_seconds(self):
         waited = []
         cannot = board_connection.BoardUnreachableError("could not enter raw repl", "")
-        facts = board_facts.FactsFile(FakeBoardConnection(board_facts.facts_text({"a": 1}), copy_raises=[cannot, None]),
+        facts = board_facts.ReadingFile(FakeBoardConnection(board_facts.facts_text({"a": 1}), copy_raises=[cannot, None]),
                                       sleep=waited.append)
         self.assertIsNone(facts.write({"a": 1}))
         self.assertEqual((waited, facts.first_failure), ([2], "mpremote could not copy it: could not enter raw repl"))
@@ -89,13 +89,13 @@ class WhatTheBoardSaysTest(unittest.TestCase):
     def test_a_facts_copy_that_fails_twice_says_the_second_reason_and_waits_once(self):
         waited = []
         refused = board_connection.BoardUnreachableError("could not enter raw repl", "")
-        facts = board_facts.FactsFile(FakeBoardConnection(copy_raises=[refused, refused]), sleep=waited.append)
+        facts = board_facts.ReadingFile(FakeBoardConnection(copy_raises=[refused, refused]), sleep=waited.append)
         self.assertEqual((facts.write({"a": 1}), waited), ("mpremote could not copy it: could not enter raw repl (the first try: "
                                                            "mpremote could not copy it: could not enter raw repl)", [2]))
 
     def test_a_retry_that_reads_back_different_names_the_first_try_too(self):
         refused = board_connection.BoardUnreachableError("could not enter raw repl", "")
-        facts = board_facts.FactsFile(FakeBoardConnection("garbled", copy_raises=[refused, None]), sleep=lambda seconds: None)
+        facts = board_facts.ReadingFile(FakeBoardConnection("garbled", copy_raises=[refused, None]), sleep=lambda seconds: None)
         self.assertEqual(facts.write({"a": 1}), "it read back different from what was copied (the first try: mpremote "
                                                 "could not copy it: could not enter raw repl)")
 
@@ -105,7 +105,7 @@ class WhatTheBoardSaysTest(unittest.TestCase):
                        board_connection.BoardCodeError("Traceback\nOSError: 28\n", 1)):
             with self.subTest(cannot=str(cannot)):
                 waited = []
-                facts = board_facts.FactsFile(FakeBoardConnection(copy_raises=[cannot, None]), sleep=waited.append)
+                facts = board_facts.ReadingFile(FakeBoardConnection(copy_raises=[cannot, None]), sleep=waited.append)
                 self.assertTrue(facts.write({"a": 1}))
                 self.assertEqual((waited, facts.first_failure), ([], None))
 
@@ -113,7 +113,7 @@ class WhatTheBoardSaysTest(unittest.TestCase):
         waited = []
         text = board_facts.facts_text({"a": 1})
         connection = FakeBoardConnection(board_connection.BoardUnreachableError("could not enter raw repl", ""), text)
-        facts = board_facts.FactsFile(connection, sleep=waited.append)
+        facts = board_facts.ReadingFile(connection, sleep=waited.append)
         self.assertIsNone(facts.write({"a": 1}))
         self.assertEqual((waited, len(connection.copied)), ([2], 2))
 

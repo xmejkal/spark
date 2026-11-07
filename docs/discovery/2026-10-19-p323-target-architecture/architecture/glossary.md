@@ -96,7 +96,7 @@ Back to [the architecture](README.md).
 | stage | build stages, deploy's `STAGE_*` (`board_envelope.py`) | build only. `DeployPhase` in code (`deploy_stages.py`, P680). JSON `stage` stays. |
 | step | next action, wiring `Step` (`breadboard_steps.py:34`) | `NextStep`, `WiringStep` (proposed, breadboard move). |
 | record | fact file, `WiringRecord` (`breadboard_changes.py:103`) | `WiringLog` (proposed). A simulation log is a `RunLog` (proposed). |
-| facts | record fields, `FactsFile` that holds a reading (`board_facts.py`) | `ReadingFile` (proposed, bench move, S11). |
+| facts | record fields, `FactsFile` that holds a reading (`board_facts.py`) | `ReadingFile` (in the code since the bench move, P680). |
 | clock | `SystemClock` (`now`, `monotonic`, `sleep`) and `FakeClock` | `SystemClock` is the one clock. `board_grant.read_local_time` and `FakeLocalClock` are gone (P475, S7a). |
 | Operation | a class with `run()` (this page, the standard), a Value holding a function (`core.md`, v1) | a class with `run()`, one module each, `OPERATIONS` in the area's `__init__.py`. |
 | board | dev board, `Board` circuit class (`check_physics.py:114`) | `CircuitBoard` (proposed, checks move). Script names stay. |

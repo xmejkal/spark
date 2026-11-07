@@ -212,7 +212,7 @@ class DeployService:
     def _put_facts(self, image, report, connection, expected, moment):
         """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
         said = self._facts_of(image, report, expected, moment)
-        facts_file = board_facts.FactsFile(connection, self.clock.sleep)
+        facts_file = board_facts.ReadingFile(connection, self.clock.sleep)
         why = facts_file.write(said)
         if why:
             return said, "facts file: not written: %s" % why
