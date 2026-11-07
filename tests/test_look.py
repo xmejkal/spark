@@ -24,6 +24,7 @@ import look  # noqa: E402
 from spark.bench import look_at_board  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 import sim_project  # noqa: E402
+import store  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent, FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import outcomes  # noqa: E402
@@ -425,6 +426,19 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual(code, 2)
         self.assertIn("  mac    not read", said)
         self.assertEqual(said[-1], "  no token: the board's MAC could not be read")
+
+
+class TheMaskedTextTest(LookScriptCase):
+    """P677: look's text keeps raw the store record a person must repair, the fix of a pasted Finding."""
+
+    @needs_littlefs
+    def test_the_text_line_of_a_last_deploy_that_cannot_be_read_keeps_the_record_to_repair(self):
+        self.run_the_scenario()
+        record = store.place("boards") / (store.slug(MAC) + ".json")
+        record.parent.mkdir(parents=True, exist_ok=True)
+        record.write_text("{not json")
+        _, said, _ = self.go()
+        self.assertIn("repair or remove %s, then run look.py again." % record, "\n".join(said))
 
 
 class WhatStopsTheLookTest(LookScriptCase):

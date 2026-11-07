@@ -547,6 +547,9 @@ and that `GrantService.issue` refuses it for a `deploy` grant.
 
 ### Wave 5: the bench in one folder
 
+Its plan is [wave5-plan.md](wave5-plan.md) (P676 #907, 2026-11-07): four PRs, W5-1 (S10), W5-2 (S12), W5-3a and
+W5-3b (S11). The counts below are the plan's of 2026-10-25, and wave5-plan.md corrects them.
+
 S10, bench privacy (an output slice): `Privacy` shortens paths under the project and the store and masks each
 `account_env` value. S11, the bench area move. It moves 16 modules and S2's `board_codes` into `scripts/spark/bench/`,
 today 2,266 lines that 35 files import. It retargets the 217 mutation rows. It applies the renames of section 3:

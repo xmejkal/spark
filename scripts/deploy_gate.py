@@ -86,9 +86,10 @@ class TerminalConsentStrategy(ConsentStrategy):
     yes_kind = TYPED
     opens_erase = True
 
-    def __init__(self, line, stdin=None, stdout=None, user_name=getpass.getuser):
+    def __init__(self, line, stdin=None, stdout=None, user_name=getpass.getuser, mask=None):
         self.line, self.stdin, self.stdout = line, stdin or sys.stdin, stdout or sys.stdout
         self.user_name = user_name  # who types the yes: a test gives a name
+        self.mask = mask or (lambda text: text)  # P677: the run's Privacy, so the question shows no home path
 
     @property
     def who(self):
@@ -100,7 +101,7 @@ class TerminalConsentStrategy(ConsentStrategy):
 
     def ask(self, question):
         self.require_ready()
-        self.stdout.write("%s type yes to go on: " % guard_lines(question))  # P423: the one place a person types yes
+        self.stdout.write("%s type yes to go on: " % guard_lines(self.mask(question)))  # P423: the one place a person types yes
         self.stdout.flush()
         return self.stdin.readline().strip() == "yes"
 

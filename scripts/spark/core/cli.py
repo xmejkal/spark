@@ -14,7 +14,7 @@ from spark.core.clock import SystemClock
 from spark.core.errors import SparkError
 from spark.core.events import TerminalReporter
 from spark.core.operation import JSON_DEST, JSON_FLAG
-from spark.core.privacy import Privacy
+from spark.core.privacy import MaskingReporter, Privacy
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines, printable
 
@@ -34,7 +34,7 @@ TRACE_FAILED_MESSAGE = "trace: %s raised, the result stands"
 #: Value: how one run is done (P605, a parameter object). `privacy` masks the result and the values, `trace` is called
 #: once per run with the name, the masked values, the masked result and the seconds, or None, and `clock` times the run.
 RunOptions = namedtuple("RunOptions", "privacy trace clock")
-#: The run of a CLI: the Privacy step and no trace.
+#: The run of a CLI: the Privacy step (pass-through unless the Operation has a `privacy_for`) and no trace.
 DEFAULT_RUN = RunOptions(Privacy(), None, SystemClock())
 
 
@@ -116,7 +116,8 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     unless a test gave `outside`, the reporter `TerminalReporter.for_json(as_json)` (P507: the events on stdout, on stderr with --json), runs,
     prints the rendering on stdout as it is (--json keeps every value raw, and the report's lines guard themselves) and
     the diagnostics on stderr through `guard_lines`, and returns the exit code of the result's status. The one place in
-    the core that prints (rule X2).
+    the core that prints (rule X2). The Operation's `privacy_for(project)` gives the run's Privacy (P677), which masks
+    the result and, through a MaskingReporter, each Event; None passes everything through.
     """
     parser, renderer = parser_for(text, operation), operation.json_renderer
     argv = sys.argv[1:] if argv is None else list(argv)
@@ -130,8 +131,12 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
         print(line)
         return outcomes.EXIT_COULD_NOT_RUN
     as_json = values.pop(JSON_DEST, False)
-    reporter = TerminalReporter.for_json(as_json)
-    result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter))
+    privacy, reporter = DEFAULT_RUN.privacy, TerminalReporter.for_json(as_json)
+    if operation.privacy_for:
+        privacy = operation.privacy_for(values.get("project"))
+        reporter = MaskingReporter(reporter, privacy)
+    result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter),
+                           DEFAULT_RUN._replace(privacy=privacy))
     said = renderer.render(result, operation.name, operation.name) if as_json else TextReport.render(result)
     if said:
         print(said)

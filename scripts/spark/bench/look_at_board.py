@@ -12,6 +12,7 @@ import board_look
 import boards
 from firmware_platform import MicroPythonPlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
+from spark.bench import bench_privacy
 from spark.core import outcomes
 from spark.core.events import Event
 from spark.core.operation import BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
@@ -44,6 +45,7 @@ class LookAtBoard(Operation):
                           "compiles and is what the image holds (default: a passed run must name the image)", group=EVIDENCE_GROUP),
                  COMMON_ARGUMENTS["json"])
     effects = (READS, RUNS, BOARD)
+    privacy_for = staticmethod(bench_privacy.privacy_for)
 
     def run(self, project, port, ignore_older_runs, no_simulation, *, outside):
         evidence = evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)

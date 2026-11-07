@@ -18,18 +18,19 @@ INDENT = "  "
 STDERR_FD = 2
 
 
-class Event(namedtuple("Event", "kind code text")):
+class Event(namedtuple("Event", "kind code text raw", defaults=(False,))):
     """Value: one event of a run. `kind` is LINE or BEGIN, `code` the snake_case code of the phase it is about, `text` for a
-    LINE one line of words with no newline and no indent, None for a BEGIN. A BEGIN has no end: the next one or the result ends it."""
+    LINE one line of words with no newline and no indent, None for a BEGIN. A BEGIN has no end: the next one or the result ends it.
+    `raw` is True for a LINE that carries a line a person pastes, which Privacy leaves as it is (P677)."""
 
     __slots__ = ()
 
     @staticmethod
-    def line(code, text):
+    def line(code, text, raw=False):
         """A LINE of `text`; a text that is not a string is a defect of the caller, refused here, never at the Reporter."""
         if not isinstance(text, str):
             raise TypeError("a LINE needs its text as a string, not %s" % type(text).__name__)
-        return Event(LINE, code, text)
+        return Event(LINE, code, text, raw)
 
     @staticmethod
     def begin(code):
@@ -46,6 +47,10 @@ class Reporter:
     def echo_fd(self):
         """The file descriptor a child's uncaptured stdout goes to, so it lands beside the events (E2), or None: as it is."""
         return None
+
+    def mask(self, text):
+        """`text` that the frontend writes beside the events, such as the yes question, as a reader may see it (P677)."""
+        return text
 
 
 class TerminalReporter(Reporter):

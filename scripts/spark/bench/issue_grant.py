@@ -17,11 +17,13 @@ import tools
 from deploy_gate import GateClosedError, format_rerun_line
 from deploy_stages import STAGE_LOOK
 from firmware_platform import MicroPythonPlatform
+from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
 from spark.core.renderers import FlatJsonLine
 from spark.core.events import Event
 from spark.core.operation import ASKS, BOARD, COMMON_ARGUMENTS, READS, RUNS, Argument, Operation
+from spark.core.privacy import PastedLine
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines, guard_sentence, printable
 
@@ -52,6 +54,7 @@ class IssueGrant(Operation):
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote and esptool (default: here)"),
                  COMMON_ARGUMENTS["port"])
     effects = (READS, RUNS, BOARD, ASKS)
+    privacy_for = staticmethod(bench_privacy.privacy_for)
     json_renderer = FlatJsonLine
 
     def __init__(self, platform_for=None):
@@ -75,7 +78,7 @@ class IssueGrant(Operation):
         lines = [guard_lines("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))]
         if grant.scope == board_grant.SCOPE_DEPLOY:
             grant_file = store.place("grants") / (board_grant.GrantStore.key(grant.mac, grant.scope) + ".json")
-            lines.append(DEPLOY_NOTICE % shlex.quote(printable(str(grant_file))))  # P430: one line
+            lines.append(PastedLine(DEPLOY_NOTICE % shlex.quote(printable(str(grant_file)))))  # P430: one line; P677: its rm line runs
         return OperationResult(grant._asdict(), lines=lines)
 
     @staticmethod
