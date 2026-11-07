@@ -1,0 +1,44 @@
+[
+ {
+  "file": "tests/test_golden_breadboard.py",
+  "name": "the scrub skipped",
+  "find": "scrubbed = golden_bench.scrub(text, golden_bench.replacements_of(project, store))",
+  "replace": "scrubbed = text"
+ },
+ {
+  "file": "tests/golden_breadboard.py",
+  "name": "a Case's exit code is wrong, so the check of the exit code must catch it",
+  "find": "Case(\"breadboard-ok-xiao.txt\", \"breadboard.py\", \"button-light-xiao\", [REQUIREMENTS], 0)",
+  "replace": "Case(\"breadboard-ok-xiao.txt\", \"breadboard.py\", \"button-light-xiao\", [REQUIREMENTS], 1)"
+ },
+ {
+  "file": "tests/golden_breadboard.py",
+  "name": "the stderr dropped",
+  "find": "text = done.stdout + (STDERR_MARK + done.stderr if done.stderr else \"\")",
+  "replace": "text = done.stdout"
+ },
+ {
+  "file": "tests/golden_breadboard.py",
+  "name": "the files written beside the sheet not appended",
+  "find": "text += LOG_MARK % name + (Path(project) / name).read_text()",
+  "replace": "text += \"\""
+ },
+ {
+  "file": "tests/golden_breadboard.py",
+  "name": "the rebuild's first run skipped, so no change lines",
+  "find": "run_child(case, project, store)\n        rebuild_as(project, case.then)",
+  "replace": "rebuild_as(project, case.then)"
+ },
+ {
+  "file": "tests/golden_breadboard.py",
+  "name": "the parent's WOKWI_CLI_TOKEN reaches the child",
+  "find": "env.pop(\"WOKWI_CLI_TOKEN\", None)",
+  "replace": "pass"
+ },
+ {
+  "file": "scripts/breadboard.py",
+  "name": "breadboard.py stops printing its not kept: lines",
+  "find": "print(\"not kept: %s\" % named.line, file=sys.stderr)",
+  "replace": "pass"
+ }
+]
