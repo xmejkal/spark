@@ -46,11 +46,11 @@ flowchart TB
   DEP --> GRANT
   DEP --> GATE["deploy_gate.py<br/>require_open_gate, ConsentStrategy (Strategy)"]
   DEP --> FACTS["board_facts.py<br/>ReadingFile (Adapter)"]
-  DEP --> READY["ready_probe.py<br/>ReadyProbe (probe)"]
+  DEP --> READY["ready_probe.py<br/>ReadyProbe (Adapter)"]
   DEP --> DM["download_mode.py<br/>the board after a flash (functions)"]
   GRANT --> LOOK
   GRANT --> GATE
-  LIVE --> DOC["board_doctor.py<br/>DoctorProbe (probe)"]
+  LIVE --> DOC["board_doctor.py<br/>DoctorProbe (Strategy)"]
   LIVE --> GRANT
   LIVE --> CONN["board_connection.py, board_console.py<br/>BoardConnection, ConsoleProbe, SystemClock (Adapters)"]
   DOC --> LOOK
