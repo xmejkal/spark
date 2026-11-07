@@ -37,6 +37,26 @@ What changed:
 - The diagram is partial, and `make_console_probe` and `RunLiveCode ..> DoctorProbe` are explained.
 - Line numbers go where a symbol name is enough.
 
+Round 2 (the refuter on Opus, the changes only): 5 held, 1 rejected. What changed:
+
+- A `spark.bench.CLI_DIR` in `__init__` makes a cycle ("cannot import name 'CLI_DIR' from partially initialized module
+  'spark.bench'", reproduced for `board_grant`, `deploy_gate`, `look` and `check_spine`). It is dropped. Each module
+  writes `Path(__file__).resolve().parents[2]` inline, as `DEPLOY_SCRIPT` and `GRANT_SCRIPT` do in `deploy_image.py`.
+- `tests/test_deploy_service.py` `TheServiceHoldsNoPrintTest` reads `ROOT / "scripts" / <name>`. It is on W5-3a's fix
+  list.
+- Masking broke pasted lines: the grant command of `board_grant.MESSAGE_FOR` reaches an Event through
+  `DeployImage.say` ("standing yes: not used"), and the `no_terminal` Finding's sentence holds
+  `SPARK_HOME=<store> .../deploy.py` and `grant.py`. The rule is now one rule: a pasted line travels in a field or an
+  Event marked raw, which `Privacy` never sees. The raw places are named by Finding code and by Event, and tested on
+  the `no-terminal` and `no-grant` goldens.
+- `<python>` also sits in lines nobody pastes (`running:`, `would run:`, `retry in`, the flash-failed sentence). Masked
+  as `~/.pyenv/...`, the golden scrub no longer matched. The scrub now replaces the `~/` form of the repo and of the
+  Python too, so the goldens stay machine-free.
+- `DeployPhase` stays in the leaf `deploy_stages.py` (its docstring says why: a Service and the envelope both read it).
+  A fold into `board_envelope.py` makes a cycle through `deploy_service`. Its site list gains `deploy_image.py` and
+  loses `look_at_board.py`.
+- Rejected: the 18-module move imports cleanly, each module alone, and 23 baseline keys is right.
+
 ## Open questions
 
 Only the PO answers these. Until he does, the plan takes the default.
@@ -59,9 +79,9 @@ The refactor plan (section 10, "Wave 5") counts 16 modules, 2,266 lines and 35 i
   stays until the records move, as the plan says.
 - 58 files under `scripts/`, `tests/` and `tools/` import one of the 20, in 182 import lines (181 by `ast`).
   `check_spine.py` imports `board_envelope`, so the build area loads the bench package after the move.
-- 360 mutation rows in `tests/mutations/*.json` name one of the 20 by path. Six name `deploy_record_store.py` and
-  stay. Two name `scripts/board_ready.py`, a file that no longer exists (`mutate.py` reports such a row). W5-3a
-  recounts on its own base, because #906 adds rows, and reports the two dead ones as a row in its rows file.
+- 360 mutation rows name one of the 20 by path. Six name `deploy_record_store.py` and stay. Two name
+  `scripts/board_ready.py`, a file that no longer exists. W5-3a recounts on its own base, because #906 adds rows, and
+  reports the two dead ones as a row in its rows file.
 - 23 keys of `tests/architecture_baseline.json` hold a bench path. 11 are `R6` keys of bench classes, `ReadyCheck`
   and `FactsFile` among them. 6 are `T1` keys of `image_evidence`, `deploy_service`, `board_look` and `board_facts`.
   One is `C1:board_look.py:LookStop`. One is `R2:board_facts.py:FactsFile.write`. 4 are `R3` keys: `board_facts:facts`,
@@ -89,12 +109,11 @@ makes #906 unmergeable, and a rebase of his PR rewrites his branch. So:
 Goal: a bench run shows no path under the person's home and no account token, except in a line a person pastes. Spark
 is public, and people paste `--json` output and the terminal's lines into issues.
 
-Today `Privacy` passes everything through (`spark/core/privacy.py`). `run_cli` runs every Operation with `DEFAULT_RUN`
-(`cli.py`), and `run_operation` calls `mask_result` and `mask_values`. The store is SPARK_HOME, else XDG_DATA_HOME/spark,
-else `~/.local/share/spark` (`store.py`). A tool with an account names its token's variable in `account_env` (`tools.py`).
-The golden runner scrubs each run's own paths after the run (`golden_bench.replacements_of`: `<project>`, `<store>`,
-`<repo>`, `<python>`). 12 of the 25 files in `tests/golden/` hold such a placeholder, so the scripts print raw paths
-today. The live Events of `TerminalReporter` print raw too: `deploy-ok-ready-seen.json.stderr` lines 15, 20 and 21.
+Today `Privacy` passes everything through (`spark/core/privacy.py`), and `run_operation` (`cli.py`) calls its
+`mask_result` and `mask_values`. The store is SPARK_HOME, else `~/.local/share/spark` (`store.py`). A tool with an
+account names its token's variable in `account_env` (`tools.py`). The golden runner scrubs each run's paths after the
+run (`golden_bench.replacements_of`). 12 of the 25 golden files hold a placeholder, so the scripts print raw paths
+today. The live Events of `TerminalReporter` print raw too (`deploy-ok-ready-seen.json.stderr`).
 
 Classes:
 
@@ -103,8 +122,13 @@ Classes:
   (`sim/flash-with-firmware.bin`). A path under the store becomes `<store>/boards/....json`, the placeholder the
   goldens use. A path under the home folder that is neither, such as the repo or the Python, becomes `~/...`. A secret
   value becomes `***`. `mask_result` walks every string of the `OperationResult`. That is `data`, `findings`, `next`, `lines`,
-  `diagnostics` and `notes`. It skips the pasted places of open question 1 by key.
-  `mask_values` masks the values the same way. `mask_event(event)` (proposed) masks an Event's text. The industry word
+  `diagnostics` and `notes`. `mask_values` masks the values the same way. `mask_event(event)` (proposed) masks an
+  Event's text.
+- The pasted lines (open question 1) follow one rule: a pasted line travels in a field or an Event marked raw, which
+  `Privacy` never sees. The raw places: the `data` keys `run_in_terminal` and `grant_argv`, the `next:` lines of
+  `next_text`, a Finding whose code is in `board_codes.PASTED_CODES` (proposed: `NO_TERMINAL`, `NO_GRANT`, the codes
+  whose `MESSAGE_FOR` sentence holds a command), and an Event with `raw=True` (proposed), which `DeployImage.say` sets
+  for the "standing yes: not used" line that carries the grant command. The industry word
   is data masking (OWASP, "Logging Cheat Sheet": mask or redact sensitive data before it is written).
 - `account_secrets()` (proposed, `tools.py`): the value of each `account_env` of the merged tool lists. `tools.py`
   reads the environment already, and T1 keeps the read out of `spark/core/`.
@@ -119,18 +143,21 @@ Tests, in a new `tests/test_privacy.py`:
 - a repo path under home becomes `~/...`, and a path outside home stays.
 - a secret in a Finding sentence, in a `lines` entry, in `notes` and in an Event becomes `***`.
 - `mask_values` masks the trace's values.
-- `run_in_terminal`, `grant_argv` and the `next:` line keep their paths.
+- `run_in_terminal`, `grant_argv`, the `next:` line, a `PASTED_CODES` Finding and a raw Event keep their paths, checked
+  on the `deploy-could-not-run-no-terminal` and `grant-problems-no-grant` goldens.
 - a `<store>` line a person acts on carries the SPARK_HOME hint or a raw path.
 - if the store sits under the project, the longest rule wins.
 
 The 12 goldens with a placeholder and the `.stderr` goldens with a live line are regenerated, and the PR names each
-one: this is the wave's visible change. The scrub keeps `<repo>` and `<python>` for the pasted lines and the hash. It
-stops replacing `<project>` and `<store>` elsewhere, so a raw path that leaks is a golden diff from then on (est.: the
-scrub needs a per-key split, about 20 lines in `golden_bench.py`).
+one: this is the wave's visible change. `<python>` also sits in lines nobody pastes (`running:`, `would run:`,
+`retry in`, the flash-failed sentence), where it becomes `~/.pyenv/...`. So the scrub also replaces the `~/` form of
+the repo and of the Python. It keeps `<repo>`, `<python>` and the hash for the pasted lines. It stops replacing
+`<project>` and `<store>`, so a leaked raw path is a golden diff from then on (est.: about 20 lines in
+`golden_bench.py`).
 
 Mutation (`p<card>-privacy.json`, est. 10 rows). The store rule skipped. The project rule applied before the store
 rule. A secret left in a Finding. `lines` or `notes` not walked. An Event printed raw. `mask_values` returns the raw
-values. A pasted place masked. An empty secret masks every string.
+values. A `PASTED_CODES` Finding masked. A raw Event masked. An empty secret masks every string.
 
 Docs: `agents.md` (what `--json` shows of a path, and the `<store>` line) and `docs/guide/agents/json.md`.
 `commands/deploy.md` and `commands/look.md` where they show a path. `areas/core.md` (`Privacy` no longer "waits") and
@@ -152,14 +179,10 @@ One class (proposed), in `tools/map.py`, with a `main()` that only parses and pr
 - `tests/test_map.py`: `AreaMap.of(ROOT).markdown()` equals `map.md`, a module without a docstring is listed as
   "(no docstring)", a registry with one key renders one row. The push hook runs it.
 
-In wave 5 the map covers `scripts/spark/` (core and bench) and the five bench CLIs. Wave 6 adds each area as it moves,
-and the stale test makes each move regenerate the page.
-
+In wave 5 the map covers `scripts/spark/` (core and bench) and the five bench CLIs. Wave 6 adds each area as it moves.
 Mutation (`p<card>-map.json`, est. 5 rows): a module skipped, the docstring's second line taken, a registry's keys
-unsorted, the test compares a prefix, the CLI column dropped.
-
-Docs: the `docs/guide` links (`developing.md` "Where the work is planned"), the journey guide's "for developers"
-pointer, `architecture/README.md` from "proposed" to done.
+unsorted, the test compares a prefix, the CLI column dropped. Docs: the `docs/guide` links (`developing.md` "Where the
+work is planned") and `architecture/README.md` from "proposed" to done.
 
 ### W5-3a, the bench area move (S11, after #906)
 
@@ -175,10 +198,14 @@ Move Module (Fowler, Refactoring, 2nd ed., the "Move Function" family).
 The `__file__` paths that break, each fixed in this PR:
 
 - `board_grant.GRANT_COMMAND` and `DEPLOY_GRANT_COMMAND` build `Path(__file__).resolve().parent / "grant.py"`. After the
-  move that is `spark/bench/grant.py`, which does not exist. They take the CLI folder from one constant,
-  `spark.bench.CLI_DIR` (proposed), `Path(__file__).resolve().parents[2]`, as `deploy_image.DEPLOY_SCRIPT` does today.
+  move that is `spark/bench/grant.py`, which does not exist. Each writes `Path(__file__).resolve().parents[2] /
+  "grant.py"` inline, as `DEPLOY_SCRIPT` and `GRANT_SCRIPT` do in `deploy_image.py`. No shared constant in `__init__`,
+  because that makes a cycle (the Council, round 2).
 - `board_facts.PLUGIN_JSON` reads `.claude-plugin/plugin.json` two folders up. It becomes four.
-- `board_envelope.next_text` builds the `next:` line with `Path(__file__).with_name("%s.py" % op)`. It uses `CLI_DIR`.
+- `board_envelope.next_text` builds the `next:` line with `Path(__file__).with_name("%s.py" % op)`. It writes
+  `Path(__file__).resolve().parents[2] / ("%s.py" % op)` inline.
+- `tests/test_deploy_service.py` `TheServiceHoldsNoPrintTest` parses `ROOT / "scripts" / <name>` and
+  `firmware_platform.py` by path. The paths follow the move.
 - `tests/test_boards.py` (`test_no_other_python_file_reads_the_key`) allows `scripts/board_pads.py` by path. The leaf
   stays, so the test stays. The PR says so.
 
@@ -208,22 +235,21 @@ which guide pages must be current (est.: see `tools/check_docs.py`).
 
 ### W5-3b, the five renames (S11)
 
-Goal: the names of section 3 are in the code. The goldens stay byte-equal, and JSON `stage` keys stay.
+Goal: the names of section 3 are in the code. The goldens stay byte-equal, and the JSON `stage` keys stay. Each
+renamed class's docstring starts with its role word (R6), so its `R6` key goes. Each rename is one commit.
 
 | Today | Becomes | Sites |
 |---|---|---|
-| `LookStop` (`board_look.py`) | `LookStopError` (rule C1: an exception ends in Error) | `stops.reason_of` and `stop_result`, the raisers in `board_look.py`, the tests. The `C1` baseline key goes |
-| `ReadyCheck` (`ready_check.py`), `make_ready_check` (`firmware_platform.py`) | `ReadyProbe` in `ready_probe.py`, `make_ready_probe` (glossary: "probe: a read-only look"), docstring "Adapter: ..." | `FakeFirmwarePlatform`, `deploy_service.py`, `test_ready_check.py` renamed `test_ready_probe.py`. The `R6` key goes |
-| `BoardCheckStrategy` with `PortListedBoardCheck`, `ConsoleBoardCheck`, `BoardDoctorResult` (`board_doctor.py`) | `DoctorProbe` (docstring "Strategy: ..."), `PortListedDoctorProbe`, `ConsoleDoctorProbe`, `DoctorProbeResult` (bench.md) | `board_doctor.py`, `stops.stop_result` docstring, `board_envelope.doctor_fix`, `test_board_doctor.py`. Two `R6` keys go |
-| `STAGE_PLAN ... STAGE_VERIFY` (`deploy_stages.py`) | `DeployPhase` (Value, glossary) in `board_envelope.py`, a class with the five constants | `deploy_service.py`, `board_envelope.py`, `issue_grant.py`, `look_at_board.py`, `board_start.py`. `deploy_stages.py` goes |
-| `FactsFile` (`board_facts.py`) | `ReadingFile` (glossary), docstring "Adapter: ..." | `board_look.py`, `deploy_service.py`, `test_board_look.py`. The `R6`, `R2` and `R3` keys follow the name |
+| `LookStop` (`board_look.py`) | `LookStopError` (C1: an exception ends in Error) | `stops.py`, `board_look.py`, the tests. The `C1` key goes |
+| `ReadyCheck`, `make_ready_check` | `ReadyProbe` in `ready_probe.py`, `make_ready_probe`, an Adapter | `firmware_platform.py`, `FakeFirmwarePlatform`, `deploy_service.py`, `test_ready_probe.py` |
+| `BoardCheckStrategy`, `PortListedBoardCheck`, `ConsoleBoardCheck`, `BoardDoctorResult` | `DoctorProbe` (a Strategy), `PortListedDoctorProbe`, `ConsoleDoctorProbe`, `DoctorProbeResult` | `board_doctor.py`, `stops.py`, `board_envelope.doctor_fix`, `test_board_doctor.py` |
+| `STAGE_PLAN ... STAGE_VERIFY` | `DeployPhase` (Value), a class with the five constants, in the leaf `deploy_stages.py` | `deploy_service.py`, `board_envelope.py`, `issue_grant.py`, `deploy_image.py`, `board_start.py` |
+| `FactsFile` (`board_facts.py`) | `ReadingFile`, an Adapter | `board_look.py`, `deploy_service.py`, `test_board_look.py`. The `R2` and `R3` keys follow |
 
-The industry word is Rename (Fowler, "Rename Variable" and "Rename Field"). Each rename is one commit, so a review
-reads them apart. Mutation: the rows whose `find` text names an old class get the new name. No row is dropped. The
-retargeted tables are the one mutation run.
+The industry word is Rename (Fowler, "Rename Variable" and "Rename Field"). Mutation: the rows whose `find` text names
+an old class get the new name. No row is dropped. The retargeted tables are the one mutation run.
 
-Docs: `areas/bench.md` and the glossary rows marked done, `developing.md` where it names a class, `refactor-plan.md`
-section 3 (the five rows) and section 10 (wave 5 done).
+Docs: `areas/bench.md`, the glossary rows, `developing.md` where it names a class, `refactor-plan.md` sections 3 and 10.
 
 ## The bench after wave 5 (partial: renamed and new classes only)
 
@@ -277,8 +303,6 @@ Services of wave 4 are unchanged (`wave4-plan.md`). After W5-3a all of these sit
 4. 182 import lines and about 360 rows change by one script. A missed row fails the mutation run, not the suite.
 5. The move changes 18 file paths that 170 docs name. The hook's docs check draws the line between a guide and history.
 6. R1 and X2 hold at a57c304a. #906 adds about 60 lines to two moved files, so W5-3a measures again on its own base.
-7. `check_spine.py` imports `board_envelope`, so a build loads the bench package. The import-alone test shows a cycle
-   there first.
 
 ## Review size
 
