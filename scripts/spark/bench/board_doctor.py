@@ -20,9 +20,9 @@ from collections import namedtuple
 
 import boards
 import tools
-from board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
-from board_look import LookStop
-from download_mode import DOWNLOAD_MODE
+from spark.bench.board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
+from spark.bench.board_look import LookStop
+from spark.bench.download_mode import DOWNLOAD_MODE
 
 #: The next steps, one code each. The sources are in MESSAGE_FOR's comments.
 NEXT_PLUG_IN, NEXT_CLOSE_OTHER, NEXT_PRESS_RESET = "plug_in", "close_other", "press_reset"

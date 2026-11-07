@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 
 import board_codes
-import board_envelope
+from spark.bench import board_envelope
 import store
 import tools
 from spark.core.privacy import Pasted, Privacy

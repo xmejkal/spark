@@ -40,11 +40,11 @@ import check_physics  # noqa: E402
 import check_spine  # noqa: E402
 import board_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
-import board_grant  # noqa: E402
-import board_look  # noqa: E402
+from spark.bench import board_grant  # noqa: E402
+from spark.bench import board_look  # noqa: E402
 import check_vendor_pins  # noqa: E402
 import compare_design  # noqa: E402
-import deploy_gate  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
 import grant  # noqa: E402
 import import_firmware  # noqa: E402

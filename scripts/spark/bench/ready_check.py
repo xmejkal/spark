@@ -9,7 +9,7 @@ the board, it is unknown, never seen. So is a passed run's log from before P215,
 
 import collections
 
-from board_connection import BoardUnreachableError, BoardCodeError
+from spark.bench.board_connection import BoardUnreachableError, BoardCodeError
 from run_scenario import READY
 
 #: How long the board's output is read for `ready`, in seconds. The firmware keeps running after it, so mpremote is

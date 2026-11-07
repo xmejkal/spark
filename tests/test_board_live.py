@@ -11,10 +11,10 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_grant  # noqa: E402
-import board_live  # noqa: E402
-from board_connection import BoardCodeError, BoardUnreachableError  # noqa: E402
-from board_console import Cure  # noqa: E402
+from spark.bench import board_grant  # noqa: E402
+from spark.bench import board_live  # noqa: E402
+from spark.bench.board_connection import BoardCodeError, BoardUnreachableError  # noqa: E402
+from spark.bench.board_console import Cure  # noqa: E402
 from fakes import FakeBoardConnection, FakeConsoleProbe  # noqa: E402
 
 #: The XIAO ESP32-C6's record, with its usb and flash pins (P254).

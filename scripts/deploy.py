@@ -27,9 +27,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import download_mode
-import ready_check
-from image_evidence import NO_SIMULATION_CAVEAT
+from spark.bench import download_mode
+from spark.bench import ready_check
+from spark.bench.image_evidence import NO_SIMULATION_CAVEAT
 from spark.bench import build_project_outside_world
 from spark.bench.deploy_image import DeployImage
 from spark.core.cli import HelpText, run_cli

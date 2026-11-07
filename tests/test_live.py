@@ -18,11 +18,11 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_grant  # noqa: E402
-import board_look  # noqa: E402
+from spark.bench import board_grant  # noqa: E402
+from spark.bench import board_look  # noqa: E402
 import live  # noqa: E402
 import tools  # noqa: E402
-from board_console import Cure  # noqa: E402
+from spark.bench.board_console import Cure  # noqa: E402
 from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
 from spark.bench.run_live_code import RunLiveCode  # noqa: E402
 from test_board_look import C6_PORT, data, done  # noqa: E402
@@ -232,7 +232,7 @@ class LiveScriptTest(unittest.TestCase):
 
     def test_every_answer_but_ran_is_a_code_of_the_table(self):
         import board_codes
-        import board_live
+        from spark.bench import board_live
         for answer in set(board_live.EXIT_FOR_ANSWER) - {board_live.RAN}:
             self.assertIn(answer, board_codes.CODES)
 

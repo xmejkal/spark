@@ -15,12 +15,12 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_doctor  # noqa: E402
-import board_envelope  # noqa: E402
+from spark.bench import board_doctor  # noqa: E402
+from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
-import deploy_service  # noqa: E402
-import firmware_platform  # noqa: E402
-import image_evidence  # noqa: E402
+from spark.bench import deploy_service  # noqa: E402
+from spark.bench import firmware_platform  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import store  # noqa: E402

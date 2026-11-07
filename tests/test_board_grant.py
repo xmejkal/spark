@@ -19,11 +19,11 @@ ROOT = Path(__file__).resolve().parent.parent
 GRANT_SCRIPT = str(ROOT / "scripts" / "grant.py")
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_console  # noqa: E402
-import board_grant  # noqa: E402
-import board_look  # noqa: E402
-import deploy_gate  # noqa: E402
-import image_evidence  # noqa: E402
+from spark.bench import board_console  # noqa: E402
+from spark.bench import board_grant  # noqa: E402
+from spark.bench import board_look  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 from fakes import FakeClock, FakeConsent, pin_time_zone  # noqa: E402
 
 

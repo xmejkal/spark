@@ -11,11 +11,11 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_doctor  # noqa: E402
+from spark.bench import board_doctor  # noqa: E402
 import boards  # noqa: E402
 import tools  # noqa: E402
-from board_console import ConsoleReadResult  # noqa: E402
-from board_look import LookStop, Port  # noqa: E402
+from spark.bench.board_console import ConsoleReadResult  # noqa: E402
+from spark.bench.board_look import LookStop, Port  # noqa: E402
 from fakes import FakeConsoleProbe, FakeFirmwarePlatform, FakePortFinder  # noqa: E402
 
 PORT = "/dev/cu.usbmodem1101"

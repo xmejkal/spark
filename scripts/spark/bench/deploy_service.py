@@ -12,15 +12,15 @@ import shlex
 import subprocess
 
 import board_codes
-import deploy_stages
-import board_facts
+from spark.bench import deploy_stages
+from spark.bench import board_facts
 import boards
-import board_look
-import board_start
-import deploy_gate
+from spark.bench import board_look
+from spark.bench import board_start
+from spark.bench import deploy_gate
 import deploy_record_store
-import download_mode
-import ready_check
+from spark.bench import download_mode
+from spark.bench import ready_check
 from project_image import DeployError, ProjectImage
 from spark.core.events import Event
 

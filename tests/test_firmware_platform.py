@@ -12,8 +12,8 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_look  # noqa: E402
-import firmware_platform  # noqa: E402
+from spark.bench import board_look  # noqa: E402
+from spark.bench import firmware_platform  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeBoardReader, FakeFirmwarePlatform  # noqa: E402
 

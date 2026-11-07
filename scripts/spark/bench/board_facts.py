@@ -13,11 +13,11 @@ import tempfile
 import time
 from pathlib import Path
 
-from board_connection import RAW_REPL_REFUSED, BoardUnreachableError, BoardCodeError
+from spark.bench.board_connection import RAW_REPL_REFUSED, BoardUnreachableError, BoardCodeError
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).
 FACTS_FILE = "spark.json"
-PLUGIN_JSON = Path(__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json"
+PLUGIN_JSON = Path(__file__).resolve().parents[3] / ".claude-plugin" / "plugin.json"
 
 
 def facts(project, board, mac, image, files, moment, simulation):

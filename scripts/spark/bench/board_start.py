@@ -11,9 +11,9 @@ restart left that board in download mode, with the port gone and back as for a r
 import collections
 
 import board_codes
-import deploy_stages
-import board_look
-import download_mode
+from spark.bench import deploy_stages
+from spark.bench import board_look
+from spark.bench import download_mode
 from spark.core.events import Event
 
 #: How long the port may take to be listed after the write, in seconds. One bench observation: after esptool's restart
