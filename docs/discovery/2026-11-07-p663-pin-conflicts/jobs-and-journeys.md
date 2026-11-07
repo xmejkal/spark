@@ -51,7 +51,7 @@ Paths: W4 = `~/Development/spark-walks/walk4/walk4-diary.md`, P581 = `~/Developm
 | 5 Pin map | `assign_pins.py` places TFT_BL 38, CS 11, DC 12, RST 13, SD_CS 14. The cable holds 21, 18, 3, 38, 9 | E W4:86, G27 | 5 of 8 signals disagree with the cable. No warning. `pins.py` keeps `ONBOARD_LED` after the need left (G31) | partly | — |
 | 6 Build | `check_spine.py --keep .` exits 1 on `source_trace_not_connected_error` with no trace named | E W4:87, G29, G30 | The trace fault masks the pin conflict | not yet | — |
 | 7 Sheet | No breadboard sheet is produced | E W4:87 | The step that tells a wrong wire never ran | not yet | — |
-| 8 Firmware and deploy | Claude types the cable's numbers (DC 3, RST 38, CS 18, SD_CS 9, BL 21) into `gdi.py`. The PO flashes and reports "It works" | E W4:27 (20:00 row), G27 | Two sources of truth: `gdi.py` and `pins.py` disagree. The rule "firmware never types a GPIO number" is broken | works, by going around spark | — |
+| 8 Firmware and deploy | Claude types the cable's numbers (DC 3, RST 38, CS 18, SD_CS 9, BL 21) into `gdi.py`. The PO flashes and reports "It works" | E W4:30 (20:00 row), G27 | Two sources of truth: `gdi.py` and `pins.py` disagree. The rule "firmware never types a GPIO number" is broken | works, by going around spark | — |
 
 ```mermaid
 flowchart LR
@@ -68,7 +68,7 @@ flowchart LR
 | 3 Pin map, unpinned | `assign_pins.py` puts I2S_BCLK on GPIO18 and JOY_SW on GPIO9, the cable's CS and SD_CS | E P581 row 1 | Silent K1, exit 0. Built, two wires share a pin: the screen fails or the joystick always reads | not yet | — |
 | 4 Pin map, pinned | Claude pins four signals by pad label (D3, D6, D7, D13) with top-level `signals` (P513) | E P581 row 2 | Needs the cable's pins from the PO's head through Claude. Four of five take | partly | Can a question name a pad label (journey Q-A4)? |
 | 5 DC on GPIO3 | DC pinned to D2 is refused: "GPIO3 is strapping ... see P527 (#726)" (C4) | E P581 row 3, `scripts/assign_pins.py:69-70` | A dead end. Without `pin`, DC lands on GPIO11 and `pins.TFT_DC` says 11 while the cable holds 3 | not yet | — |
-| 6 Backlight | TFT_BL = 21 is right. `ONBOARD_LED = 21` sits 11 lines below, unnamed | E P581 row 4 | K3 unnamed. The role reaches the comment, the second claim does not | not yet | — |
+| 6 Backlight | TFT_BL = 21 is right. `ONBOARD_LED = 21` sits 11 lines below. The role word is in the comment, the second signal is not | E P581 row 4 | K3 half named. The role reaches the comment, the second claim does not | not yet | — |
 | 7 Build | `check_spine.py --keep .` stops at 300 s, exit 2, no sheet | E P581 rows 5-6 | `pins.py` is still written. No sheet, so no wire list carried the conflict to the bench | not yet | P664 #893 filed |
 | 8 Pin change | After a fix the pin map changes and `--keep` leaves the old `board.tsx` | E P581 row 7 | A second run builds the old board (P660 #886) | not yet | — |
 | 9 Question | Claude asks how spark is to behave: A place, B ask, C warn, D keep wired. He chooses B with C as the net | E P581 row 13, #892, D1 | The decision lives in a chat, not in the project | partly | Where does the answer live (J3)? |
@@ -76,7 +76,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   b1["1 init sees nothing (K6)"] --> b2["2 requirements, no cable word"] --> b3["3 unpinned: BCLK on 18, JOY_SW on 9 (K1)"]
-  b3 --> b4["4 pinned by pad label, 4 of 5"] --> b5["5 DC refused: strap (K2)"] --> b6["6 BL and LED both 21, unnamed (K3)"]
+  b3 --> b4["4 pinned by pad label, 4 of 5"] --> b5["5 DC refused: strap (K2)"] --> b6["6 BL and LED both 21, half named (K3)"]
   b6 --> b7["7 build stops at 300 s, no sheet"] --> b8["8 kept board.tsx stale"] --> b9["9 'A, B, C or D?' in chat: B"]
 ```
 

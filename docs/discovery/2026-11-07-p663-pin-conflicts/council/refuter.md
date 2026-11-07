@@ -77,6 +77,6 @@ Paths are under `~/Development/spark-p663` unless marked. Walk files: `P581` = `
 
 ## Searches
 
-- `gh issue list --repo xmejkal/spark --state open --search <word>` for: onboard, strap, "exit code", stderr, json, connector, conflict, summary, reset, severity, researcher, "pin map", note (2026-11-07).
-- Fetched `https://raw.githubusercontent.com/esphome/esphome/dev/esphome/pins.py` and `https://raw.githubusercontent.com/esphome/esphome/dev/LICENSE` (2026-11-07), for ★C15.
-- No web search.
+- `gh issue list --repo xmejkal/spark --state open --search <word>` for: onboard, strap, "exit code", stderr, json, connector, conflict, summary, reset, severity, researcher, "pin map", note (2026-11-07) · decision served: whether each proposed item and Found-on-the-way find duplicates an open card · used
+- Fetched `https://raw.githubusercontent.com/esphome/esphome/dev/esphome/pins.py` and `https://raw.githubusercontent.com/esphome/esphome/dev/LICENSE` (2026-11-07) · decision served: whether ★C15 holds (reuse ESPHome's approach and its license) · used
+- none (no web search)

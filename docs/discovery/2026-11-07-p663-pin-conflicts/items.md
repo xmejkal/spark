@@ -4,24 +4,24 @@ block for more. needed by: the decider's words, quoted. value proven by: a proof
 status: proposed, or filed D<n>.
 e.g. `- needed by: "I want to know what we should build next" (Lena, 2026-10-06)` -->
 
-Prefix P, next free number P665 (read from `gh issue list --state all` on 2026-11-07: the newest is P664). Numbers below are placeholders until filing. The repository has no `.github/ISSUE_TEMPLATE/item.yml` read in this step, so each block carries the core card plus the board's fields. The Slice is proposed as the board's "v0.10 The basic journey", because P663's parent P100 #6 sits there. The order of the stories follows Q2. If the PO says bridge, P665 goes first. If not, the design move goes first.
+Prefix P, next free number P665 (read from `gh issue list --state all` on 2026-11-07: the newest is P664). Numbers below are placeholders until filing. The repository has `.github/ISSUE_TEMPLATE/item.yml` (the refuter listed it). It was not read in this step, so each block carries the core card plus the board's fields. The Slice is proposed as the board's "v0.10 The basic journey", because P663's parent P100 #6 sits there. The order of the stories follows Q2. If the PO says bridge, P665 goes first. If not, the design move goes first.
 
 ## P663 #892 — spark has no general way to handle pin conflicts → one conflict model in the core, shown and asked in every interface (the epic)
 - type: epic (it carries the `epic` label today) <!-- REQUIRED:item-type -->
 - needed by: "lets'have a good thought through general approach t conflicts like that, how each interface deals with it, the core, etc." (the PO, 2026-11-07, #892) <!-- REQUIRED:needed-by -->
 - value proven by: `check_spine.py requirements.json --keep .` on the P581 project builds with no two claims on one pin, each conflict named or asked once, and a fixture per kind under tests/ <!-- REQUIRED:value-proven-by -->
-- depends on: P460 #628 (the connector shape), P527 #726 (the strap), P660 #886 (the kept board), wave 6's design move (D2, Q2) <!-- REQUIRED:depends-on -->
+- depends on: P664 #893 (the 300 s build time limit: the proof's build stops at 300 s today, P581 row 5), P460 #628 (the connector shape), P527 #726 (the strap), P660 #886 (the kept board), wave 6's design move (D2, Q2) <!-- REQUIRED:depends-on -->
 - status: proposed <!-- REQUIRED:item-status -->
 - label (the repository's type label): epic <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P100 #6 (as today) <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, or ask the decider for a new one ("Pin conflicts") <!-- REQUIRED:spark-process:slice -->
 <!-- EXTEND:item-fields -->
 
-## P665 — a left pin conflict is silent or one sentence → the assigner stops on K1, K2, K3 and K5, names both claims and the pin, and `--json` answers in JSON with a code (the walking skeleton, option C of D1)
+## P665 — a left pin conflict is silent or one sentence → the assigner stops on K1, K2 and K5, names both claims, notes K3 on the run and the pin, and `--json` answers in JSON with a code (the walking skeleton, option C of D1)
 - type: story
 - needed by: "A check that reads the record's taken pins stays as a safety net" (the PO's words in #892, D1, 2026-11-07)
-- value proven by: `assign_pins.py --json` on a fixture per kind exits 1 with a JSON object that holds `code`, both claims and the pin. The P581 file stops on GPIO18 and GPIO9 instead of exit 0 (★C4)
-- depends on: Q2 (where it lands), Q4 (the shape and exit code), the connector fact (P460 or the part fact as a bridge)
+- value proven by: `assign_pins.py --json` on a fixture per kind exits 1 with a JSON object that holds `code`, both claims and the pin. A K3 fixture exits 0 with a note. K3 is never a stop (PH-5, PH-15), pending Q10. The P581 file stops on GPIO18, GPIO9 and GPIO38 instead of exit 0 (★C4)
+- depends on: P664 #893 (the 300 s build time limit, because the Outcome's proof is that build), Q2 (where it lands), Q4 (the shape and exit code), Q10 (the K3 note), the connector fact (P460 or the part fact as a bridge)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P663 #892
@@ -51,7 +51,7 @@ Prefix P, next free number P665 (read from `gh issue list --state all` on 2026-1
 - type: story
 - needed by: "the sheet says plug the ribbon cable" (the PO's words in #892, 2026-11-07)
 - value proven by: `breadboard.md` of the P581 project holds the cable line and no wire for DC, CS, RST, SD_CS or BL. `pins.py` names `ONBOARD_LED` beside `TFT_BL` on GPIO21 (★C7)
-- depends on: P667, P660 #886 (a kept board after a pin change). If the onboard half lands in P332 #426 (Q6), that too
+- depends on: P667, P660 #886 (a kept board after a pin change). If the onboard half lands in P332 #426 (Q6), that too. The onboard half partly overlaps the body of P460 #628 (G31: it leaves `ONBOARD_LED` out of `pins.py` while a connector claims GPIO21) and touches P491 #670. Cite them, do not duplicate
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P663 #892
@@ -80,18 +80,18 @@ Prefix P, next free number P665 (read from `gh issue list --state all` on 2026-1
 ## P671 — one refusal, two exit codes → `assign_pins.py`, `emit_board.py` and `check_spine.py` give one refusal one code, and `docs/guide/agents.md` says which
 - type: bug (found on the way, F1)
 - needed by: "A `could-not-run` or a `skipped` is not a pass" (AGENTS.md, the never-assume rule). No PO words yet
-- value proven by: the three scripts on one K5 fixture exit with the same code, and `docs/guide/agents.md:131` matches
+- value proven by: the three scripts on one K5 fixture exit with the same code, and `docs/guide/agents/json.md` (or `docs/guide/agents.md`) says which code a refusal gets. `agents.md:131` is not the defect: it is about input a script cannot read
 - depends on: Q4
 - status: proposed
 - label (the repository's type label): bug
 - parent (the epic, as a sub-issue): P663 #892. If the PO keeps it a standalone bug, none
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey
 
-## P672 — the board record marks straps 0 and 3 only → the chip's restricted pins (straps 45, 46, USB 19, 20, JTAG 39 to 42, octal PSRAM 35 to 37) are in a record with the datasheet page cited
-- type: story (found on the way, F2)
+## P672 — the board record marks straps 0 and 3 only → add straps 45, 46 and JTAG 39 to 42, with the datasheet page cited, to the FireBeetle S3 record (the rest is P281 #323)
+- type: story (found on the way, F2). P281 #323 (open, the FireBeetle S3 record's USB and flash pins) covers two of the four groups (USB 19, 20 and flash and PSRAM 35 to 37). If the decider prefers, this is "add to #323" and no new card (Q6)
 - needed by: no PO words yet. The Physics lens: "a connector record that fixes camera pins on IO45 or IO46 has nothing to be checked against" (PH-8)
 - value proven by: `boards.validate` passes, and the camera fixture's XMCLK on IO45 is refused or named as a strap
-- depends on: Q6 (board record or chip record, physics Q3). Not in the first slice (RI-8)
+- depends on: P281 #323, Q6 (board record or chip record, physics Q3). Not in the first slice (RI-8)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P663 #892
