@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
@@ -17,12 +18,14 @@ import golden_breadboard  # noqa: E402
 class BreadboardChildTest(unittest.TestCase):
     """A child carries no Wokwi token, and every Case belongs to the op `breadboard`."""
 
-    def test_the_child_env_holds_no_wokwi_token(self):
-        before = os.environ.get("WOKWI_CLI_TOKEN")
-        os.environ["WOKWI_CLI_TOKEN"] = "a-pretend-token"
-        self.addCleanup(lambda: os.environ.pop("WOKWI_CLI_TOKEN") if before is None
-                        else os.environ.__setitem__("WOKWI_CLI_TOKEN", before))
-        self.assertNotIn("WOKWI_CLI_TOKEN", golden_breadboard.child_env(Path(tempfile.mkdtemp())))
+    def test_a_child_run_carries_no_wokwi_token(self):
+        folder = Path(tempfile.mkdtemp())
+        probe = folder / "probe.py"  # an absolute script: run_child runs it in place of one in scripts/
+        probe.write_text("import os\nprint(os.environ.get('WOKWI_CLI_TOKEN'))\n")
+        case = golden_breadboard.CASES[0]._replace(script=str(probe), argv=[])
+        with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": "a-pretend-token"}):
+            done = golden_breadboard.run_child(case, folder, folder / "store")
+        self.assertEqual(done.stdout, "None\n", done.stderr)
 
     def test_the_op_of_every_case_is_breadboard(self):
         self.assertEqual({golden_bench.op_of(case) for case in golden_breadboard.CASES}, {"breadboard"})

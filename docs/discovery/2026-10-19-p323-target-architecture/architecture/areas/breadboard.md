@@ -40,8 +40,8 @@ No module name repeats the area's name (rule C1).
 |---|---|---|---|
 | `PartPlacement` Strategy | `FirstFitPartPlacement`, `KeepMovesFirstFitPartPlacement` | none needed, both are pure | none, the Service picks by "is there an earlier drawing" |
 | `JumperPlacement` Strategy | `JumperPlacement`, `KeepMovesJumperPlacement` | none needed | as above |
-| drawing Renderer | `WokwiBreadboardDiagram`, `SvgBreadboardDiagram` | none needed | `DRAWING_RENDERERS` (`breadboard.py:94`) |
-| wiring view Renderer | `NumberedList`, `MermaidDiagram` | none needed | `WIRING_VIEWS` (`breadboard.py:82`) |
+| drawing Renderer | `WokwiBreadboardDiagram`, `SvgBreadboardDiagram` | none needed | `DRAWING_RENDERERS` (`breadboard.py:96`) |
+| wiring view Renderer | `NumberedList`, `MermaidDiagram` | none needed | `WIRING_VIEWS` (`breadboard.py:86`) |
 | `PartPictures` Strategy | `PictogramPartPictures` | `FakePartPictures` (`tests/fakes.py:251`) | none yet |
 | the circuit export | `TscircuitExport` over `tsci` | `FakeTscircuitExport` (`tests/fakes.py:261`) | none |
 
