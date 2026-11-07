@@ -1588,6 +1588,10 @@ OPERATIONS = (
      "what it notes is under `notes`: a board given a need that its own part serves says what a run does not test of the part, "
      "and the other choice",
      ("writes",), ("project", "picks", "reserved", "released", "written")),
+    ("needs-drop", {"nargs": 2, "metavar": ("PROJECT", "NEED")},
+     "drop a need and its pick from .spark/needs.json and release only the holds of the dropped pick (every other hold stays); --dry-run "
+     "says what it would do; history stays, and requirements.json is not changed: a note says when it still lists the part",
+     ("writes",), ("project", "need", "dropped", "released", "written")),
     ("requirements", {"metavar": "PROJECT"},
      "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; board_only when the board itself serves every need",
      ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "unserved", "no_supply",
@@ -2112,6 +2116,23 @@ def _op_needs_set(args, project):
     return Answer({"changes": changes, "written": written}, _write_lines(changes, problems, args.dry_run), problems=problems)
 
 
+def _op_needs_drop(args, project):
+    """The drop of a need, run on the core (P514): DropNeed through `run_operation`, its result as parts.py's Answer."""
+    from spark.core import outcomes
+    from spark.core.cli import run_operation
+    from spark.core.events import Reporter
+    from spark.core.outside import build_outside_world
+    from spark.idea.drop_need import DropNeed
+    target, need = args.needs_drop
+    result = run_operation(DropNeed(), {"project": Path(target), "need": need, "dry_run": args.dry_run},
+                           build_outside=lambda effects: build_outside_world(effects, Reporter()))
+    if result.diagnostics:  # a crash's traceback: an Answer has no place for it
+        print(guard_lines("\n".join(result.diagnostics)), file=sys.stderr)
+    return Answer(result.data, result.lines, notes=result.notes or (),
+                  problems=[_problem(found.subject, found.sentence, found.fix) for found in result.findings if found.severity == outcomes.PROBLEMS],
+                  unchecked=[_cannot(found.sentence, found.fix) for found in result.findings if found.severity == outcomes.COULD_NOT_RUN])
+
+
 def _op_pick(args, project):
     import drawer
     import needs
@@ -2136,7 +2157,7 @@ def _op_pick(args, project):
     asked, name = dict(pairs), store.plan_listed_name(target)
     picks = [{"need": need["id"], "pick": need.get("pick") or []} for need in after if need["id"] in asked]
     said = [] if problems else ["  %s: %s" % (one["need"], ", ".join(next(iter(pick.values())) for pick in one["pick"])) for one in picks]
-    released = _released(changes, name)
+    released = needs.released_holds(changes, name)
     said += [] if problems else ["  %s%s: %s — no pick of this project explains it" % (
         "would release" if args.dry_run else "released", "" if hold["now"] == 0 else " %d of %d" % (hold["was"] - hold["now"], hold["was"]),
         hold["entry"]) for hold in released]
@@ -2176,16 +2197,6 @@ def _names_your_entries(file_name, new_keys, dry_run):
     """
     return ["  %s %s your drawer entr%s %s — a key made from your label, in the project's own file" % (file_name, "would name" if dry_run else
         "names", "y" if len(new_keys) == 1 else "ies", ", ".join(sorted(new_keys)))] if new_keys else []
-
-
-def _released(changes, name):
-    """
-    The holds of project `name` a pick lets go (C-4): each drawer entry whose reservation for it goes down, because no pick of
-    the project explains it any more — a re-pick, or a hold given by hand — as {"entry", "was", "now"}. A pick rebuilds the
-    project's holds from its picks (§8 C), and what it drops is said, never left to a bare `used_in … → {}`.
-    """
-    return [{"entry": change["entry"], "was": was, "now": now} for change in changes
-            for was, now in [((change["was"].get("used_in") or {}).get(name, 0), change["now"]["used_in"].get(name, 0))] if now < was]
 
 
 def _op_requirements(args, project):

@@ -252,7 +252,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
   it rests on is verified, `--show` lists it under `problems`, with a `fix`, and exits 1; `data.record` is there
   whatever the exit. Say it to the person. Never clear it by marking a fact unverified ([P124](https://github.com/xmejkal/spark/issues/58)).
 - `notes` are said and never fail, each `{subject, sentence}`. `subject` is null when a note names nothing. A pick's
-  notes are here.
+  notes are here, and so is the note of `--needs-drop` that requirements.json still lists the part of the dropped need (`data` has `dropped`, `released` and `written`; a missing need is a `problems` item with its ids in `data.needs`).
 - `next` holds the steps an agent may take, each `{op, argv, why, effects, needs_yes}` with `needs_person` and `env` only when they apply. `truncated.next` is the step for the rest of a long answer.
 - `env` on a `next` step is an object of variables to set when you run it, there only when the run had `SPARK_HOME` set (a store found through `XDG_DATA_HOME` gives none, so set `SPARK_HOME` to pass it on) ([P473](https://github.com/xmejkal/spark/issues/647)). Today it is `{"SPARK_HOME": "<whole path>"}`, so a fresh environment (Claude Code's Bash, an MCP or LangGraph caller) sees the same drawer, downloads and grants. The `look`, `deploy` and `grant` steps and the steps of `parts.py` carry it. `watch` has none, because mpremote reads no store.
 - Run every write with `--dry-run` first.

@@ -1733,6 +1733,7 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
                      ["--keep", str(project / "absent.pdf")], ["--function-set", "x-part", str(project / "absent.json")],
                      ["--fact-set", "x-part", str(project / "absent.json")],
                      ["--audit"], ["--needs", str(project)], ["--needs-set", str(project), str(project / "absent.json")],
+                     ["--needs-drop", str(project), "light"],
                      ["--match", str(project)], ["--pick", str(project), "soil=x-part"], ["--bogus"], [],
                      ["--requirements", str(project)], ["--step", str(project), "C"], ["--tally", str(project / "untallied")],
                      ["--list", "--show", "x"]):

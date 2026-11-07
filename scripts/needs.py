@@ -307,6 +307,25 @@ def _as_record(pick, known, entries):
     return dict(said) if said and next(iter(said.items())) in known else pick
 
 
+def parts_left_listed(project, dropped, after):
+    """
+    The parts requirements.json still lists after a need is dropped (P514): those the `dropped` need picked as a record
+    (`_as_record`) that no need `after` picks. A requirements file that is missing or not in shape lists none.
+    """
+    path = Path(project) / REQUIREMENTS
+    try:
+        held = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        listed = {_part_of(entry) for entry in held.get("parts") or []}
+    except (ValueError, AttributeError, TypeError, OSError):
+        return []
+    known, entries = {row[:2]: row for row in drawer.linkable(project)}, drawer.entries()
+
+    def picked(wanted):
+        return {key for each in wanted for pick in each.get("pick") or [] for kind, key in [next(iter(_as_record(pick, known, entries).items()))]
+                if kind == "part"}
+    return sorted((picked([dropped]) - picked(after)) & listed)
+
+
 def _resolve(pick_id, known, entries):
     """
     A pick by its id (§5.3): the record of that id — a part's, then a board's — else the drawer entry of that key, as the
@@ -382,6 +401,77 @@ def _limits_notes(after, picked, rows, entries, mine):
 # --- end MVP ---
 
 
+def plan_holds(name, after, entries):
+    """
+    The drawer changes that bring project `name`'s holds in line with its needs `after` (§8 C), with the notes and problems
+    working them out gives: (changes, notes, problems). One piece per pick, one board however many needs pick it, on the
+    entries that hold it, never past what is owned or what another project holds. Nothing is written here.
+    """
+    notes, problems = [], []
+    wanted = collections.Counter(next(iter(pick.items())) for need in after for pick in need.get("pick") or [])
+    # --- MVP --- P387: a project has one board, however many needs its own LED or button serves
+    wanted = collections.Counter({asked: 1 if asked[0] == "board" else pieces for asked, pieces in wanted.items()})
+    pointing, mine = _pointing(entries), collections.Counter()
+    # a pick of one drawer entry has nowhere else to go: it takes its piece before a pick of a record, which may take another entry
+    for (kind, key), pieces in sorted(wanted.items(), key=lambda asked: (asked[0][0] != "entry", asked[0])):
+        held = _held({kind: key}, entries, pointing)
+        owned, _, unsure = _counts([entry for _, entry in held], name)
+        if owned == 0:
+            notes.append("%s: to get — known, not owned" % key)
+            continue
+        for entry_id, entry in held:
+            # what an earlier pick of the same stock — its record, or its drawer entry by key — took is not there to take again
+            room = pieces if not isinstance(entry.get("count"), int) else entry["count"] - sum(
+                n for who, n in (entry.get("used_in") or {}).items() if who != name) - mine[entry_id]
+            taken = max(min(room, pieces), 0)
+            mine[entry_id] += taken
+            pieces -= taken
+        holders = drawer.holders_of([entry for _, entry in held], name)
+        if pieces:
+            problems.append(parts._problem(key, "%s owned%s — %d picked here" % (owned, ", held by " + ", ".join(printable(who) for who in holders) if holders else "",
+                                                                                 pieces + sum(mine[entry_id] for entry_id, _ in held)),
+                                           _how_to_free([entry_id for entry_id, _ in held], holders)))
+        notes += ["%s: maybe owned — check the drawer first" % key] if unsure else []
+        notes += ["%s: count unknown — check the drawer" % key] if owned == "unknown" else []
+    changes = []
+    for entry_id, entry in sorted(entries.items()):
+        used_in = {who: n for who, n in (entry.get("used_in") or {}).items() if who != name}
+        used_in.update({name: mine[entry_id]} if mine[entry_id] else {})
+        if used_in != (entry.get("used_in") or {}):
+            changes.append(drawer.settle(entry_id, entry, {"used_in": used_in}, [])[0])
+    return changes, notes, problems
+
+
+def released_holds(changes, name):
+    """
+    The holds of project `name` a pick lets go (C-4): each drawer entry whose reservation for it goes down, because no pick of
+    the project explains it any more — a re-pick, or a hold given by hand — as {"entry", "was", "now"}. A pick rebuilds the
+    project's holds from its picks (§8 C), and what it drops is said, never left to a bare `used_in … → {}`.
+    """
+    return [{"entry": change["entry"], "was": was, "now": now} for change in changes
+            for was, now in [((change["was"].get("used_in") or {}).get(name, 0), change["now"]["used_in"].get(name, 0))] if now < was]
+
+
+def dropped_holds(name, current, after, entries):
+    """
+    What dropping a need lets go (P514): (drawer changes, released) for project `name`. Only an entry whose planned hold falls
+    between the needs `current` and the needs `after` is touched, and by that fall alone, taken off the hold the entry has now.
+    A hold no pick explains, and a hold another project's over-holding keeps from the plan, stay as they are.
+    """
+    def planned(needs):
+        return {change["entry"]: change["now"]["used_in"].get(name, 0) for change in plan_holds(name, needs, entries)[0]}
+    before, later, changes, released = planned(current), planned(after), [], []
+    for entry_id, entry in sorted(entries.items()):
+        has = (entry.get("used_in") or {}).get(name, 0)
+        fall = before.get(entry_id, has) - later.get(entry_id, has)
+        if fall > 0 and has > 0:
+            used_in = {who: n for who, n in entry["used_in"].items() if who != name}
+            used_in.update({name: has - fall} if has > fall else {})
+            changes.append(drawer.settle(entry_id, entry, {"used_in": used_in}, [])[0])
+            released.append({"entry": entry_id, "was": has, "now": used_in.get(name, 0)})
+    return changes, released
+
+
 def plan_pick(project, given, passed_over=()):
     """
     What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
@@ -413,31 +503,9 @@ def plan_pick(project, given, passed_over=()):
             renamed = "%s: the drawer entry of %s — picked as that record" % (pick_id, named)
             notes += [renamed] if named != pick_id and renamed not in notes else []
     after = [dict(need, pick=picked[need["id"]]) if need["id"] in picked else need for need in current]
-    wanted = collections.Counter(next(iter(pick.items())) for need in after for pick in need.get("pick") or [])
-    # --- MVP --- P387: a project has one board, however many needs its own LED or button serves
-    wanted = collections.Counter({asked: 1 if asked[0] == "board" else pieces for asked, pieces in wanted.items()})
-    pointing, mine = _pointing(entries), collections.Counter()
-    # a pick of one drawer entry has nowhere else to go: it takes its piece before a pick of a record, which may take another entry
-    for (kind, key), pieces in sorted(wanted.items(), key=lambda asked: (asked[0][0] != "entry", asked[0])):
-        held = _held({kind: key}, entries, pointing)
-        owned, _, unsure = _counts([entry for _, entry in held], name)
-        if owned == 0:
-            notes.append("%s: to get — known, not owned" % key)
-            continue
-        for entry_id, entry in held:
-            # what an earlier pick of the same stock — its record, or its drawer entry by key — took is not there to take again
-            room = pieces if not isinstance(entry.get("count"), int) else entry["count"] - sum(
-                n for who, n in (entry.get("used_in") or {}).items() if who != name) - mine[entry_id]
-            taken = max(min(room, pieces), 0)
-            mine[entry_id] += taken
-            pieces -= taken
-        holders = drawer.holders_of([entry for _, entry in held], name)
-        if pieces:
-            problems.append(parts._problem(key, "%s owned%s — %d picked here" % (owned, ", held by " + ", ".join(printable(who) for who in holders) if holders else "",
-                                                                                 pieces + sum(mine[entry_id] for entry_id, _ in held)),
-                                           _how_to_free([entry_id for entry_id, _ in held], holders)))
-        notes += ["%s: maybe owned — check the drawer first" % key] if unsure else []
-        notes += ["%s: count unknown — check the drawer" % key] if owned == "unknown" else []
+    changes, hold_notes, hold_problems = plan_holds(name, after, entries)
+    notes += hold_notes
+    problems += hold_problems
     notes += ["%s: a board needs a board file — a record in boards/ — before spark can build with it" % key
               for key in _unfiled_boards(after, known, entries)]
     # F12 (C-7): a board this pick picks that stops the chain at the footprint stage is said, never refused
@@ -445,12 +513,6 @@ def plan_pick(project, given, passed_over=()):
         stop = boards.footprint_stop(key, project)
         notes += ["board %s: %s" % (key, stop)] if stop else []
     notes += _limits_notes(after, picked, rows, entries, name)
-    changes = []
-    for entry_id, entry in sorted(entries.items()):
-        used_in = {who: n for who, n in (entry.get("used_in") or {}).items() if who != name}
-        used_in.update({name: mine[entry_id]} if mine[entry_id] else {})
-        if used_in != (entry.get("used_in") or {}):
-            changes.append(drawer.settle(entry_id, entry, {"used_in": used_in}, [])[0])
     events = [dict({"event": "reused", "project": name, "need": need_id}, **pick) for need_id in picked for pick in picked[need_id]]
     # a record the project keeps in its own parts/ or boards/ was not there before the project: it is no reuse of the store (§6.7)
     events = [event for event in events if not any(known.get((kind, event.get(kind))) == "project" for kind in ("part", "board"))]

@@ -530,6 +530,13 @@ class AModuleThatImportsIsOkTest(unittest.TestCase):
         self.assertEqual(code, outcomes.EXIT_OK, answer)
         self.assertEqual(sorted(entry["module"] for entry in answer["modules"]), ["light", "pins"])
 
+    def test_a_firmware_that_imports_a_pin_the_pins_module_lost_to_a_dropped_need_raises_naming_it(self):
+        # P514: --needs-drop leaves pins.py and the firmware alone, so the import check is what finds the signal that went
+        project = a_project(pins="LED = 4\n", light="from pins import LED, BUTTON\n")
+        code, answer = answer_for(project)
+        self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
+        self.assertIn("BUTTON", module_named(answer, "light")["detail"])
+
     def test_a_driver_kept_in_firmware_lib_is_found_as_on_the_board(self):
         # F5: MicroPython looks in /lib after the root, and the project's firmware/ is uploaded as the root.
         project = a_project(light="import driver\nlevel = driver.LEVEL\n")
