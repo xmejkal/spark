@@ -13,6 +13,7 @@ Fake per Strategy) and enters with the slice that first needs it.
     python3 -m unittest discover -s tests
 """
 
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -267,6 +268,25 @@ class PlantedBreachesTest(unittest.TestCase):
     def test_v1_a_baselined_count_that_the_code_no_longer_has_fails_as_gone(self):
         self.assertEqual(measure.compare({}, {"V1:scripts/x.py:OneError": 2}),
                          [measure.Drift("V1:scripts/x.py:OneError", "entry-gone", None, 2)])
+
+
+class TheBenchAreaTest(unittest.TestCase):
+    """W5-3a (P679, S11): the bench's modules live in `scripts/spark/bench/`, and each one imports alone."""
+    BENCH = ROOT / "scripts" / "spark" / "bench"
+
+    def test_only_the_two_leaves_and_the_record_store_stay_in_scripts(self):
+        # board_codes and board_pads are leaves other areas import (a cycle through spark.bench, wave 6 picks their home);
+        # deploy_record_store waits for the records to move
+        left = sorted(path.name for pattern in ("board_*.py", "deploy_*.py") for path in (ROOT / "scripts").glob(pattern))
+        self.assertEqual(left, ["board_codes.py", "board_pads.py", "deploy_record_store.py"])
+
+    def test_each_bench_module_imports_alone(self):
+        # a child Python per module: an import cycle shows as "partially initialized module", which a warm process hides
+        for module in sorted(path.stem for path in self.BENCH.glob("*.py") if path.name != "__init__.py"):
+            with self.subTest(module=module):
+                run = subprocess.run([sys.executable, "-c", "import spark.bench.%s" % module], cwd=ROOT / "scripts",
+                                     capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+                self.assertEqual(run.returncode, 0, run.stderr)
 
 
 if __name__ == "__main__":
