@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "the gate lets a relayed yes reach the question",
+  "find": "    if not consent.opens_erase:  # P675",
+  "replace": "    if False:  # P675"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "the gate refuses every yes that can open the erase",
+  "find": "    if not consent.opens_erase:  # P675",
+  "replace": "    if consent.opens_erase:  # P675"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "the relayed yes can open the erase",
+  "find": "    yes_kind = RELAYED\n    opens_erase = False",
+  "replace": "    yes_kind = RELAYED\n    opens_erase = True"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "the relayed grant names the machine's login",
+  "find": "        return self.who  # the login at this machine is not who said yes",
+  "replace": "        return user_name()"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "any answer that is not empty is a yes",
+  "find": "        return self.ask_in_program(question) is True",
+  "replace": "        return bool(self.ask_in_program(question))"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "a blank person or program is accepted",
+  "find": "            if not isinstance(name, str) or not name.strip():",
+  "replace": "            if not isinstance(name, str):"
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "a relayed yes makes a deploy grant",
+  "find": "        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/board_grant.py",
+  "name": "the deploy grant's refusal comes after the board restarts",
+  "find": "        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n        board = self.finder.require_one_board(script, port)\n",
+  "replace": "        board = self.finder.require_one_board(script, port)\n        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n"
+ }
+]

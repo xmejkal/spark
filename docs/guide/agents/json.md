@@ -353,6 +353,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `token_missing` | deploy, stage `gate` | deploy.py got no token, so no look came before it | run look.py, then deploy.py with its token | no |
 | `token_stale` | deploy, stage `gate` | the board or the image is not the one the token names | run look.py again | no |
 | `answered_no` | deploy, stage `gate` | the person answered no | stop | yes |
+| `relayed_yes_refused` | deploy, stage `gate` (exit 2), or grant (exit 1) | a yes that another program collected cannot open the erase or make a deploy grant ([P675](https://github.com/xmejkal/spark/issues/905)). `data.yes` stays null | give the person `data.run_in_terminal` (deploy) or the `grant.py --scope deploy` line, word for word | yes |
 | `grant_ended` | deploy, stage `gate` or `flash` | the deploy grant ended before the erase. At stage `flash`, `board_state` is `may_be_erased` | ask the person for a new grant or a typed yes. At stage `flash`, tell the person the board may be erased | yes |
 | `no_sim_toml` | deploy, stage `plan` or a look | the project has no `sim/wokwi.toml` | build first (`/spark:build --keep`) | no |
 | `firmware_line_bad` | deploy, stage `plan` or a look | the firmware line of `sim/wokwi.toml` cannot be read, or names an image outside `sim/` | fix the line as the sentence says, build again | no |

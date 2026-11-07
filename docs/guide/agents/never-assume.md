@@ -167,7 +167,7 @@ terminal, lets you run `deploy.py --token T` for N minutes (1 to 1440) on that b
 passed image of any project. It covers only a look with no warning, no unknown field and no stop, and never
 `--ignore-older-runs` or `--no-simulation`; for those deploy.py asks in the terminal. deploy.py is on `/spark:deploy`'s (and build.md's) `allowed-tools`, so Claude Code
 does not ask before it runs: the grant is the gate. Never run `grant.py --scope deploy` yourself, and never write or
-change a grant file. A grant file is not tamper-proof: its token is derived from the MAC, and the store accepts what you write. The rule is the guard, and the person accepts that risk. The store's deploy record says `standing yes typed by
+change a grant file. A grant file is not tamper-proof: its token is derived from the MAC, and the store accepts what you write. The rule is the guard, and the person accepts that risk. A yes that another program collected, for example an MCP client's own question, is a relayed yes ([P675](https://github.com/xmejkal/spark/issues/905)). It can make a live grant only, which lets `live.py` run code that names no restricted pin. The deploy gate and `grant.py --scope deploy` refuse it with `relayed_yes_refused`, so the erase still needs the person's own terminal. No command-line flag gives a relayed yes, and you never supply one. The store's deploy record says `standing yes typed by
 <login> at <time>, until <time>`. After the flash, only `ready seen` (exit 0) is a pass:
 the board's files match the passed run's sha256s and the firmware printed `ready`. `ready unknown` (exit 2) is not
 a pass: mpremote could not reach the board, or the passed log names no files and the scenario must run again ([P215](https://github.com/xmejkal/spark/issues/196)).

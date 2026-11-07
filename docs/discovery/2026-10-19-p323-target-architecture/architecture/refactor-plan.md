@@ -265,7 +265,7 @@ restarts the board twice. A yes stays `typed` or `grant`, as `data.yes.kind` say
 collected. It names `who` and the program. The gate refuses it for the erase. It can make a `live` grant only, never a
 `deploy` grant. So every erase still needs a yes typed in the person's own terminal, or a deploy grant made there.
 Claude never supplies a yes (`docs/guide/agents.md` stays). The PO chose the third kind (decision 6, epic #94,
-2026-10-26). The `live`-only guard is a recorded reading of his answer, and he can change it. Slice S9b builds it.
+2026-10-26). The `live`-only guard is a recorded reading of his answer, and he can change it. Slice S9b built it (P675 #905).
 
 The `Retriever` Strategy (comment 2's fourth rule) enters in wave 6 with the sourcing move, not in S5. Its
 `search(words, project)` fits `parts.need` today. `scan_datasheet` reads pages, so the datasheet adapter and a vector
@@ -534,7 +534,7 @@ case (rule T3). What the swap covers: flashing, reading and the ready probe. `De
 cure and the reset-button places (`download_mode`, `boards.ButtonPlaces`) are MicroPython's and move behind the
 platform when a second one exists. S9, `grant`, `live` and `reach` on the core (P657, built; `GrantService` is built per run by each Operation, not once).
 
-S9b, the relayed yes (proposed): it builds decision 6's third kind of yes (section 4) on `GrantService`, which S9
+S9b, the relayed yes (P675 #905, built; wave4-plan.md, W4-4, names its three changes): it builds decision 6's third kind of yes (section 4) on `GrantService`, which S9
 builds once. The gate refuses a `relayed` yes for the erase. `GrantService.issue` accepts it for a `live` grant and
 refuses it for a `deploy` grant. A `relayed` yes names `who` and the program that collected it. This placement after
 S9 is the plan's reading, and the PO can change it. S9b changes a safety rule, so it runs the full council, and the
