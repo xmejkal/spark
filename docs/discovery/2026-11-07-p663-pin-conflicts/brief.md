@@ -31,7 +31,7 @@ is unrated. check computes both. -->
 - Extensions (each active id · the fact that activated it; when none matched, only "none matched: core only · the fact that decided it", naming no extension; list any directive skipped under rule 9): electronics-firmware · repo-has boards/*.json; spark-process · repo-has scrum/WORKING_AGREEMENTS.md <!-- REQUIRED:extensions -->
 - The item (its issue, or the proposal in the decider's words) · what is still open elsewhere · the repository's push check, or "no push check here": P663 #892 (story, Idea, under P100 #6), proposed to grow into an epic for pin conflicts with P663 as its first story, Q0 · open elsewhere: P659 #890 and P514 #888 in Review, their gates running; the P581 bench walk paused at the must lines · push check: the pre-push hook, `scripts/check_commit.py` <!-- REQUIRED:spark-process:item -->
 <!-- EXTEND:frame -->
-- Depth: TRIO (default: PO assistant, user, tech lead) | FULL or LIGHT (who asked, when); add "no independent review" if subagents could not start: TRIO with two lenses the PO's standing rules add: architecture (design craft in every council, 2026-10-14) and UX plus AI-UX (every interface for a person and Claude, 2026-10-18); everyday model for lenses, the strongest model for the refuter (proposed) <!-- REQUIRED:depth -->
+- Depth: TRIO (default: PO assistant, user, tech lead) | FULL or LIGHT (who asked, when); add "no independent review" if subagents could not start: FULL, asked by the PO on 2026-11-07 (Q0, D3): 7 lenses in parallel on the everyday model (Sonnet): the four core lenses (Existing first, Feasibility, the user's journey, Risks and assumptions), electronics-firmware's Physics lens, and the PO's two standing lenses, architecture (2026-10-14) and UX with AI-UX (2026-10-18); then the refuter on the strongest model (Fable). 8 agents in all <!-- REQUIRED:depth -->
   <!-- Cost, measured once: the P900 rehearsal's council took 6 agents, 499 calls and about 90M input tokens (2026-10-06). -->
 - Search budget: two web searches per decision, for how other pin assigners and board tools handle conflicts (for example PlatformIO, ESPHome, KiCad's ERC), stopping at the first good match <!-- REQUIRED:budget -->
 - Appetite (the decider's, asked only when heading for design) | —: — <!-- REQUIRED:appetite -->
@@ -60,13 +60,16 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
 opinion (whose) · kind: decision | account (a past-tense question about the decider's own use; the answer is E,
 account, n = 1) · status: queued | asked <date> | answered D<n>.
 If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
-- Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: ⟨fill⟩ <!-- REQUIRED:q0 -->
+- Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D3 <!-- REQUIRED:q0 -->
 - Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: ⟨fill⟩ <!-- REQUIRED:q1 -->
 
 ## Decisions
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
 Name what a D confirms in its words: the frame, the jobs, a direction, the remaining risk, a test, items.md. -->
+- D1 · option B for the GDI cable: ask "cable or wires?", then place the connector's pins first, with a check that stops on a conflict that is left · the PO · 2026-11-07 · AskUserQuestion, issue #892 · options: A place without asking, B ask then place, C warn only, D keep what is wired
+- D2 · finish the refactoring soon; the conflict model lands on the core · the PO · 2026-11-07 · this session, his words in the frame · options: none offered
+- D3 · Q0: the frame is confirmed, with a FULL council instead of TRIO · the PO · 2026-11-07 · AskUserQuestion · options: as written, FULL, keep P663 a story, change it
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
