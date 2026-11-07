@@ -107,8 +107,8 @@ MESSAGE_FOR = {
                                  "not cover this deploy: the person types yes",
     WHY_IGNORE_OLDER_RUNS: "--ignore-older-runs is never covered by a deploy grant: the person types yes",
     WHY_NO_SIMULATION: "--no-simulation is never covered by a deploy grant: the person types yes",
-    WHY_RELAYED_YES: "no deploy grant: a yes another program relayed makes a live grant only: the person runs %s in "
-                     "their own terminal" % DEPLOY_GRANT_COMMAND,
+    WHY_RELAYED_YES: "no deploy grant: a yes given through another program makes a live grant only. The person runs %s "
+                     "in their own terminal" % DEPLOY_GRANT_COMMAND,
 }
 #: The sentences for a missing, ended or untrusted deploy grant: they name the deploy grant's command, not the live one.
 DEPLOY_MESSAGE_FOR = {
@@ -181,6 +181,7 @@ class StandingConsentStrategy(ConsentStrategy):
     GateClosedError, so the erase never runs on a stale yes."""
 
     yes_kind = GRANT
+    opens_erase = True
 
     def __init__(self, grant, now=board_console.SystemClock.now):
         self.grant, self.now = grant, now

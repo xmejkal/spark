@@ -32,7 +32,6 @@ import store  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeClock, FakeConsent, FakeOutsideWorld, FakeProbePlatform, line_made_at_import, pin_time_zone  # noqa: E402
 from spark.bench.check_grant import CheckGrant  # noqa: E402
-from spark.bench.deploy_image import DeployImage  # noqa: E402
 from spark.bench.issue_grant import IssueGrant  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import BEGIN, LINE, TerminalReporter  # noqa: E402
@@ -175,10 +174,10 @@ class IssueTest(GrantCase):
         relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: asked.append(question) or True)
         code, _, err = self.grant("--minutes", "30", consent=relayed)
         self.assertEqual(code, 0, err)
-        self.assertEqual(self.kept()["granted_by"], "relayed by ada through test-ui")
+        self.assertEqual(self.kept()["granted_by"], "given through test-ui by ada")
         self.assertIn("8c:bf:ea:xx:xx:xx (token %s) for 30 minutes" % self.kept()["board_token"], asked[0])
         code, checked = self.check()
-        self.assertEqual((code, checked["granted"], checked["grant"]["granted_by"]), (0, True, "relayed by ada through test-ui"))
+        self.assertEqual((code, checked["granted"], checked["grant"]["granted_by"]), (0, True, "given through test-ui by ada"))
 
     def test_a_relayed_grant_never_asks_for_the_login(self):
         # getpass can find no user (OSError since Python 3.13), and the login is not who said yes
@@ -191,13 +190,13 @@ class IssueTest(GrantCase):
             raise OSError("no user")
         service = board_grant.GrantService(finder, reader, mock.Mock(), now=lambda: START, user_name=no_user)
         relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
-        self.assertEqual(service.issue(None, 30, relayed).granted_by, "relayed by ada through test-ui")
+        self.assertEqual(service.issue(None, 30, relayed).granted_by, "given through test-ui by ada")
 
     def test_a_relayed_yes_makes_no_deploy_grant_and_never_touches_the_board(self):
         relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
         code, _, err = self.grant("--minutes", "30", "--scope", "deploy", consent=relayed)
         self.assertEqual((code, self.ran), (1, []))
-        self.assertIn("a yes another program relayed makes a live grant only", err)
+        self.assertIn("a yes given through another program makes a live grant only", err)
         self.assertFalse((self.home / "grants").exists())
 
     def test_a_relayed_answer_that_is_not_true_is_no(self):
@@ -210,13 +209,15 @@ class IssueTest(GrantCase):
         for person, program in (("", "ui"), (" \n", "ui"), ("ada", ""), (None, "ui"), ("ada", 7)):
             with self.assertRaises(ValueError, msg=(person, program)):
                 deploy_gate.RelayedConsentStrategy(person, program, lambda question: True)
-        relayed = deploy_gate.RelayedConsentStrategy("ada\nyes", "ui", lambda question: True)
-        self.assertEqual(len(relayed.who.splitlines()), 1)
+        relayed = deploy_gate.RelayedConsentStrategy("ada\nyes\x1b[31m", "ui", lambda question: True)
+        self.assertEqual((len(relayed.who.splitlines()), "\x1b" in relayed.who), (1, False))
+        self.assertEqual(relayed.granted_by(lambda: "login"), relayed.who)
 
-    def test_no_operation_takes_a_relayed_yes_from_the_command_line(self):
-        for operation in (IssueGrant, CheckGrant, DeployImage):
-            for argument in operation.arguments:
-                self.assertNotIn("relay", " ".join(argument.flags) + argument.dest, operation.name)
+    def test_no_script_builds_a_relayed_yes(self):
+        # P675: no command-line flag carries it; only a frontend that is not a script here gives it as make_consent
+        builders = [str(path.relative_to(ROOT)) for path in (ROOT / "scripts").rglob("*.py")
+                    if "RelayedConsentStrategy(" in path.read_text() and path.name != "deploy_gate.py"]
+        self.assertEqual(builders, [])
 
     def test_the_token_is_the_first_half_of_the_looks_token(self):
         self.grant("--minutes", "5", consent=FakeConsent(True))

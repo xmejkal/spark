@@ -17,3 +17,13 @@ What the plan council and the session found while W4-4 was planned and built. Ca
 | 10 | `FakeConsent` does not inherit from `ConsentStrategy`, so every test would fail on the new attributes | refuter, plan round 2 | acted | `FakeConsent` has both |
 | 11 | The `opens_erase` check trusts the strategy's own attribute, so code in the same process can claim it | refuter, plan | acted | one docstring sentence on `ConsentStrategy`. The guard is the rule, as for the grant file |
 | 12 | The full council that wave4-plan asks for would be today's second, over the PO's one-a-day allowance | session | raised | the lenses, the refuter and the mutation run go first, and the PO decides on a full council |
+| 13 | `opens_erase = True` on the base class fails open: a new kind that forgets it opens the erase | tech lead, PR | acted | False on the base, True on the terminal and standing kinds |
+| 14 | The "no CLI flag" test only looked for "relay" in flag names | tech lead, PR | acted | the test now finds no script but deploy_gate.py that builds the class |
+| 15 | No test pinned the gate order with a stale token, and the code's list was loose | tech lead, PR | acted | a stale-token test, and the code asserted in `unchecked` |
+| 16 | "relayed by ada through X" is unclear to a person; the grant sentence had two colons | journey, PR | acted | "given through X by ada", and both sentences rewritten |
+| 17 | The docstring did not say how a frontend passes the class, or that only an exact True is a yes | examples, PR | acted | one docstring sentence each |
+| 18 | how-it-works.md, scripts.md and commands/deploy.md were silent on the relayed yes; never-assume split a passage | docs lenses, PR | acted | one clause in each, and the never-assume sentences moved after the deploy record |
+| 19 | The old W4-4 text and decision 6's line still read as the plan, and S9b was in the future tense | docs for humans, PO assistant, PR | acted | a lead line on the old text, "built" in decision 6, the past tense in S9b |
+| 20 | A lost space in `report.warnings + [` | examples, tech lead, PO assistant | acted | restored |
+| 21 | Three defects no row planted: printable dropped, the check before the tokens, NEXT_LOOK | mutation tester | acted | the first two planted by hand, both caught, and added to the table. NEXT_LOOK is pinned by the test that asserts the next op is deploy |
+| 22 | The mutation table caught 8 of 8 | mutation tester | closed | `tools/mutate.py --copy`, 486 s |

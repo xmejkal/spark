@@ -25,12 +25,11 @@ NO_TERMINAL = "no terminal to ask you in. Run this line in your own terminal win
 
 #: What an agent does next (P213), for a GateClosedError: `deploy.py`'s `--json` turns it into a step.
 NEXT_DEPLOY, NEXT_LOOK = "deploy", "look"
-#: The kinds of a yes: typed in a terminal, a standing deploy grant, or relayed by another program. The envelope's
-#: `data.yes.kind` says only the first two, because a relayed yes never passes the gate.
+#: The kinds of a yes: typed in a terminal, a standing deploy grant, or relayed by another program (never past the gate).
 TYPED, GRANT, RELAYED = "typed", "grant", "relayed"
 #: Why the gate refuses a yes that cannot open the erase (P675).
-RELAYED_REFUSED = ("a yes relayed by another program never opens the erase: the person types yes in their own terminal, "
-                   "or gives a deploy grant there. not flashed.")
+RELAYED_REFUSED = ("a yes given through another program cannot open the erase. Type yes in your own terminal, or give a "
+                   "deploy grant there. not flashed.")
 
 
 # --- MVP ---
@@ -51,10 +50,11 @@ class GateClosedError(Exception):
 class ConsentStrategy(abc.ABC):
     """Strategy: how the person says yes to a question. A subclass supplies `ask`, which returns True for yes, `who`, the
     phrase that tells the store's record whose yes it was, and `yes_kind`, TYPED, GRANT or RELAYED (P655, P675).
-    `opens_erase` says whether this yes can open the erase or make a deploy grant. The gate trusts the strategy's own
-    attribute, so it guards against a frontend's mistake, not against code in the same process."""
+    `opens_erase` says whether this yes can open the erase or make a deploy grant. It is False unless a subclass sets it,
+    so a new kind stays shut until it chooses. The gate trusts the strategy's own attribute, so it guards against a
+    frontend's mistake, not against code in the same process."""
 
-    opens_erase = True
+    opens_erase = False
 
     @property
     @abc.abstractmethod
@@ -84,6 +84,7 @@ class TerminalConsentStrategy(ConsentStrategy):
     in one."""
 
     yes_kind = TYPED
+    opens_erase = True
 
     def __init__(self, line, stdin=None, stdout=None, user_name=getpass.getuser):
         self.line, self.stdin, self.stdout = line, stdin or sys.stdin, stdout or sys.stdout
@@ -106,10 +107,12 @@ class TerminalConsentStrategy(ConsentStrategy):
 
 # --- MVP ---
 class RelayedConsentStrategy(ConsentStrategy):
-    """Strategy: a yes that another program collected (P675). `ask_in_program(question)` is the program's own question to
-    the person, as MCP's elicitation asks through the client (modelcontextprotocol.io, spec 2025-06-18), and only its
-    True is a yes. `person` and `program` name who said yes and through what. It makes a live grant only: `opens_erase`
-    is False, so the deploy gate and a deploy grant refuse it. A blank name is a defect in the frontend: ValueError."""
+    """Strategy: a yes that another program collected (P675). `ask_in_program(question)` takes the question text and
+    asks the person in the program, as MCP's elicitation asks through the client (modelcontextprotocol.io, spec
+    2025-06-18). Only an exact True is a yes. `person` and `program` name who said yes and through what. A frontend
+    passes `make_consent=lambda line: RelayedConsentStrategy(person, program, ask)` to `build_outside_world`, and
+    `line` goes unused. It makes a live grant only: `opens_erase` is False, so the deploy gate and a deploy grant
+    refuse it. A blank name is a defect in the frontend: ValueError."""
 
     yes_kind = RELAYED
     opens_erase = False
@@ -122,7 +125,7 @@ class RelayedConsentStrategy(ConsentStrategy):
 
     @property
     def who(self):
-        return "relayed by %s through %s" % (self.person, self.program)
+        return "given through %s by %s" % (self.program, self.person)
 
     def granted_by(self, user_name):
         return self.who  # the login at this machine is not who said yes
@@ -164,7 +167,7 @@ def require_open_gate(report, token, consent, image, caveats):
                               reason=board_codes.TOKEN_STALE)
     if not consent.opens_erase:  # P675: after the token checks, so the line to rerun holds a token that passes them
         raise GateClosedError(RELAYED_REFUSED, next_op=NEXT_DEPLOY, reason=board_codes.RELAYED_YES_REFUSED)
-    accepted = report.warnings +["%s unknown (%s)" % each for each in report.unknown.items()]
+    accepted = report.warnings + ["%s unknown (%s)" % each for each in report.unknown.items()]
     question = "erase ALL of this board's flash (%s) and write %s?" % (say_last_deploy_in_question(report.last_deploy), image)
     if accepted:
         question = "you accept: %s. %s" % ("; ".join(accepted), question)

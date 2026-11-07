@@ -46,5 +46,17 @@
   "name": "the deploy grant's refusal comes after the board restarts",
   "find": "        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n        board = self.finder.require_one_board(script, port)\n",
   "replace": "        board = self.finder.require_one_board(script, port)\n        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "a name with a control character reaches the record",
+  "find": "printable(person), printable(program)",
+  "replace": "person, program"
+ },
+ {
+  "file": "scripts/deploy_gate.py",
+  "name": "the relayed refusal comes before the token checks",
+  "find": "    if not consent.opens_erase:  # P675: after the token checks, so the line to rerun holds a token that passes them\n        raise GateClosedError(RELAYED_REFUSED, next_op=NEXT_DEPLOY, reason=board_codes.RELAYED_YES_REFUSED)\n",
+  "replace": ""
  }
 ]

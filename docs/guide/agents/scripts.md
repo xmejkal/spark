@@ -111,7 +111,7 @@ These only read:
 - `grant.py --check`. It runs only `mpremote devs`, so the board does not restart. `grant.py --check --help` and `grant.py --help` list the flags of each mode (P657), and a flag of the other mode is refused with the usage and exit 2. It says whether the board on USB has
   a live grant now: exit 0 granted, 1 not (no grant, it ended, a grant file that is not this board's), 2 it could not
   run. `--json` gives `granted`, `why` (a code, or null; `could not run` when it could not look) and `grant` ([P253](https://github.com/xmejkal/spark/issues/265)). Never run `grant.py --minutes` (with `--scope live`
-  or `--scope deploy`): that is the person's yes, typed in their own terminal. `--check` looks for a live grant only. Give the person the line that `live.py` or `grant.py --check`
+  or `--scope deploy`): that is the person's yes, typed in their own terminal. `--check` looks for a live grant only. `--scope deploy` refuses a yes that another program relayed, with `relayed_yes_refused` and exit 1 ([its row](json.md)). Give the person the line that `live.py` or `grant.py --check`
   printed, which names `grant.py` by its whole path. Fill in the minutes for `N`, and add `--project` with the project's
   absolute path, and `--port` when two boards are on USB. Never give a bare `grant.py`, because
   it is not on the person's PATH, and `$CLAUDE_PLUGIN_ROOT` is not set in their terminal ([P283](https://github.com/xmejkal/spark/issues/329)). While the board has a grant, you can run `live.py` (below). The

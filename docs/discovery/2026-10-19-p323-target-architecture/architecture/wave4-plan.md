@@ -162,7 +162,7 @@ rows: the renderer swapped, the exit 1 path as `COULD_NOT_RUN`. Docs: the agents
 
 ### W4-4, the relayed yes (S9b, the full council, the PO merges it in every mode)
 
-Goal: a yes that another program collected is a third kind. It can make a live grant, and it never opens the erase.
+The plan as written on 2026-11-01. The build changed three parts of it, as the note below says. Goal: a yes that another program collected is a third kind. It can make a live grant, and it never opens the erase.
 
 Classes: `RelayedConsentStrategy(who, program)`, a Strategy in deploy_gate.py, with `kind=RELAYED` and `who` as "relayed
 by %s through %s". `require_open_gate` (:97-122) refuses `RELAYED` first, with the reason

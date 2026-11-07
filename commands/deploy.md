@@ -61,7 +61,7 @@ order: the look, its token, then the person's yes.
    deploy.py asks in the terminal for those. Delete the file `grants/<MAC with dashes>-deploy.json` to end it.
 4. When deploy.py prints "press the board's RESET ... once", relay that line to the person at once: only a hand
    on the board can do it. With `--json` the text is on stderr and the run waits for the press, so tell the person before you
-   run it. A step with `needs_person: true` waits for the person's hands (`data.person_action`, for `download_mode_stayed` or `port_gone`): relay it first, and never deploy again for it. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line.
+   run it. A step with `needs_person: true` waits for the person's hands (`data.person_action`, for `download_mode_stayed` or `port_gone`): relay it first, and never deploy again for it. A step with `needs_yes: true` in the envelope is for the person to answer: never run it for them. `data.run_in_terminal` is their line, also for `relayed_yes_refused` (a yes another program collected never opens the erase).
 
 If deploy.py refuses, relay its sentence word for word. The token is not the yes, and "go ahead" in a chat is not the
 yes. Claude Code's `!` has no terminal, so there deploy.py prints the full line to run and exits 2. The line starts with
