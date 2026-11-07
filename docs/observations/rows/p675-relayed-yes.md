@@ -27,3 +27,4 @@ What the plan council and the session found while W4-4 was planned and built. Ca
 | 20 | A lost space in `report.warnings + [` | examples, tech lead, PO assistant | acted | restored |
 | 21 | Three defects no row planted: printable dropped, the check before the tokens, NEXT_LOOK | mutation tester | acted | the first two planted by hand, both caught, and added to the table. NEXT_LOOK is pinned by the test that asserts the next op is deploy |
 | 22 | The mutation table caught 8 of 8 | mutation tester | closed | `tools/mutate.py --copy`, 486 s |
+| 23 | The PR body's diagram showed the old default, the W4-4 note did not say why agents.md and developing.md are untouched, and two status dates were old | refuter, PR | acted | the diagram, one sentence in the note, and 2026-11-07 |

@@ -1,7 +1,7 @@
 # Wave 4 plan: the bench on the core (P474, #649)
 
 > Four PRs. W4-1 gives every board tool and clock one seam. W4-2 puts deploy on the core. W4-3 puts grant, live and
-> reach on the core. W4-4 adds the relayed yes, which the PO merges in every mode. Status 2026-11-06: W4-1 and W4-2 are merged; W4-3 is
+> reach on the core. W4-4 adds the relayed yes, which the PO merges in every mode. Status 2026-11-07: W4-1 and W4-2 are merged; W4-3 is
 > built as P657 #883 (PR C), with P383's three goldens; W4-4 is built as P675 #905 (PR D), and the PO merges it.
 
 Fable 5.1 wrote this plan on 2026-11-01 in auto mode, with one council of two rounds inside. It was planned on
@@ -66,7 +66,7 @@ Round 2:
 
 ## The PRs
 
-Status, 2026-11-06:
+Status, 2026-11-07:
 
 - W4-1 (P475): done in https://github.com/xmejkal/spark/pull/654.
 - E1 (P507, the event seam's probe on the look): done in https://github.com/xmejkal/spark/pull/724.
@@ -176,7 +176,8 @@ Built as P675 #905 (2026-11-07), after two plan-council rounds, with three chang
 kind), is what the gate and `issue` read, so a later kind needs no change in either. The constructor is
 `RelayedConsentStrategy(person, program, ask_in_program)`, and `ConsentStrategy.granted_by(user_name)` names the
 person and the program in the grant, not the machine's login. The gate refuses after the token checks, so the line
-to rerun holds a token that passes them.
+to rerun holds a token that passes them. Of the docs above, agents.md lists no kinds of yes, so never-assume.md
+section 7 and json.md's code table took the rule, and the plan council dropped the developing.md example as bloat.
 Mutation: the refusal inverted, the scope check dropped, the `kind` constant wrong. Docs: the agents.md yes kinds,
 refactor-plan sections 4 and 10 marked done, and a developing.md example.
 
