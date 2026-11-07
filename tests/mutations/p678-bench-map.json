@@ -10,5 +10,5 @@
 {"file":"tools/map.py","name":"a class that is no Operation is listed","find":"and \"Operation\" in [getattr(base, \"id\", getattr(base, \"attr\", \"\")) for base in node.bases]:","replace":":"},
 {"file":"tools/map.py","name":"import x as y is not read","find":"        elif isinstance(node, ast.Import):","replace":"        elif False:"},
 {"file":"tools/map.py","name":"the test named for the module is not first","find":"key=lambda test: test != \"tests/test_%s.py\" % stem)","replace":"key=lambda test: 0)"},
-{"file":"tools/map.py","name":"a missing module crashes the map","find":"if module.is_file() else {}","replace":"else {}"}
+{"file":"tools/map.py","name":"a missing module crashes the map","find":"if module.is_file() else {}","replace":"if True else {}"}
 ]
