@@ -307,12 +307,15 @@ Nothing is faked, and no run spends anything. `breadboard.py` runs no tool and o
 `subprocess.run`, `subprocess.Popen`, `urlopen` and `socket.create_connection` set to raise, `main` on
 `button-light-xiao` returns 0. `page.html` and its `tsci` export are written by `check_spine.keep_tabbed_page`
 (`check_spine.py:894`, `:766`), not by `breadboard.py`. So the paragraph below and `areas/breadboard.md:17` are wrong
-to say "tsci faked" and "runs `tsci` for the page". This PR fixes both, and the stale `tests/fakes.py:137`/`:147`
-there (now `:251`/`:261`). Each child gets an empty store, so the sheet's "have" column is blank (the docstring, and
-the store was still empty after each probe run). The child env is `golden_bench.child_env`, without `WOKWI_CLI_TOKEN`.
+to say "tsci faked" and "runs `tsci` for the page". This PR fixes both, `areas/breadboard.md:128` (the same error),
+`:17` (it leaves out `breadboard.svg` and `wiring-record.json`), and the stale `tests/fakes.py:137`/`:147` there. Each child gets an empty store, so the sheet's "have" column is blank (the docstring, and
+the store was still empty after each probe run). The child env is `golden_bench.child_env` (`tests/golden_bench.py:162`). It drops only `SPARK_*`, so the helper
+pops `WOKWI_CLI_TOKEN`, and a test checks that. It passes the bench's canned flash id and device list, which
+`breadboard.py` never reads.
 
 The CLI: `breadboard.py requirements.json [--out FILE]`. Exit 0 means the sheet is written. Exit 2 means the run stopped
-(`breadboard.py:67`, `:583`, `:596`). It has no exit 1. Cases, est. 7, each probed on a copy of its fixture in
+(`breadboard.py:67`, `:583`). It has no handled exit 1. A renderer that raises still exits 1 with a traceback
+(`:548`-`:553`, `:559`-`:563`). Cases, est. 7, each probed on a copy of its fixture in
 `tests/data/breadboard/`. Each copy keeps the fixture's folder name, because the sheet's title is that name
 (`breadboard.py:451`):
 
@@ -330,7 +333,9 @@ The folder is `tests/golden-breadboard/`. A golden holds stdout, then stderr aft
 `breadboard.json`, `breadboard.svg` and `wiring-record.json`, each after `LOG_MARK` with its name. A rebuild's golden
 holds only the second run. Reuse, with no copy: `golden_bench.child_env`, `replacements_of`, `scrub`, `op_of` (from
 `breadboard.py`, the op is `breadboard`), `check_golden(case, text, golden_dir=GOLDEN_DIR)` and `RUN_TIMEOUT_S`. The
-scrub needs nothing new: no output of the probes held a run date or a hash.
+scrub needs nothing new: no output of the probes held a run date or a hash. No Case reaches the `drawing differs:`
+line (`:592`-`:593`) or the sheet's matching paragraph: only a mocked `_plan_layout` does, and
+`tests/test_breadboard_match.py:126`-`:137` covers both.
 
 Files: `tests/golden_breadboard.py`, `tests/test_golden_breadboard.py`, the 7 goldens,
 `tests/mutations/p686-breadboard-net.json`, `docs/observations/rows/p686-breadboard-net.md`, and
@@ -341,7 +346,7 @@ Tests: one test per Case. `SPARK_ACCEPT=breadboard` writes the goldens and fails
 has its Case. Another checks that no golden holds a path of this machine. These two repeat `test_golden_firmware.py`,
 and a row asks to lift both into `golden_bench` once #915 merges. No `needs_littlefs`.
 
-Mutation (est. 6 rows, proven with `--anchors`, run with `--copy`): the scrub is skipped. A Case's exit code is
+Mutation (est. 6 rows, proven with `--anchors`, not run in this PR): the scrub is skipped. A Case's exit code is
 wrong. The stderr is dropped. The written files are not appended. The rebuild's first run is skipped. One product
 row: `breadboard.py` stops printing its `not kept:` lines.
 
@@ -353,7 +358,7 @@ Size est.: 110 test lines and 7 goldens.
 Each group follows the same three PRs. The order is the plan's. Open question 1 says which moves share a PR.
 
 **Breadboard** (9 modules, 2,324 lines). The nine move into `spark/breadboard/` under the page's names, after a
-golden of `breadboard.py` with `tsci` faked and a `breadboard_codes.py`. Done: `ls scripts/breadboard*.py` prints
+golden of `breadboard.py` (W6-B1, it runs no tool) and a `breadboard_codes.py`. Done: `ls scripts/breadboard*.py` prints
 only `breadboard.py`, and the goldens hold (est. three PRs of 150, 150 and 2,300 moved lines).
 
 **Checks** (6 CLIs, 2,585 lines). After goldens of the six with `gh` faked and one `check_codes.py`, the five

@@ -14,7 +14,7 @@ with three tabs. It keeps the person's own moves across a rebuild and says what 
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `breadboard` | `breadboard.py` with `--out` (`breadboard.py:577`) | reads, runs `tsci` for the page, writes the sheet, `breadboard.json` and `page.html` |
+| `breadboard` | `breadboard.py` with `--out` (`breadboard.py:575`) | reads the built circuit, writes the sheet, `breadboard.json`, `breadboard.svg` and `wiring-record.json`. It runs no tool. `page.html` is the build's (`check_spine.keep_tabbed_page`) |
 
 The build runs the same Service as its breadboard stage.
 
@@ -42,8 +42,8 @@ No module name repeats the area's name (rule C1).
 | `JumperPlacement` Strategy | `JumperPlacement`, `KeepMovesJumperPlacement` | none needed | as above |
 | drawing Renderer | `WokwiBreadboardDiagram`, `SvgBreadboardDiagram` | none needed | `DRAWING_RENDERERS` (`breadboard.py:94`) |
 | wiring view Renderer | `NumberedList`, `MermaidDiagram` | none needed | `WIRING_VIEWS` (`breadboard.py:82`) |
-| `PartPictures` Strategy | `PictogramPartPictures` | `FakePartPictures` (`tests/fakes.py:137`) | none yet |
-| the circuit export | `TscircuitExport` over `tsci` | `FakeTscircuitExport` (`tests/fakes.py:147`) | none |
+| `PartPictures` Strategy | `PictogramPartPictures` | `FakePartPictures` (`tests/fakes.py:251`) | none yet |
+| the circuit export | `TscircuitExport` over `tsci` | `FakeTscircuitExport` (`tests/fakes.py:261`) | none |
 
 Breadboard imports design (the `Design` Value and `Netlist`), records and core.
 
@@ -125,7 +125,7 @@ sequenceDiagram
 
 ### How breadboard is tested alone
 
-- A built design from `tests/data/breadboard/`, no `tsci` run: `FakeTscircuitExport` gives the page its tabs.
+- A built design from `tests/data/breadboard/`. `breadboard.py` runs no tool. `FakeTscircuitExport` gives the build's page its tabs.
 - `FakePartPictures` gives the SVG its pictures, with no download.
 - A contract test per Strategy base: every `PartPlacement` and every `JumperPlacement` passes the same cases.
 - The golden of `breadboard.py` on the fixture project stays unchanged through the move.
