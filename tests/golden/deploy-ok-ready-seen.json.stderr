@@ -12,10 +12,10 @@
   yes: standing yes typed by tester at <time>, until <time>
   running: <python> -m esptool --chip esp32s3 --port /dev/cu.usbmodem101 erase-flash
 fake esptool: erase-flash done
-  running: <python> -m esptool --chip esp32s3 --port /dev/cu.usbmodem101 --after watchdog-reset write-flash 0x0 'sim/flash-with-firmware.bin'
+  running: <python> -m esptool --chip esp32s3 --port /dev/cu.usbmodem101 --after watchdog-reset write-flash 0x0 <project>/sim/flash-with-firmware.bin
 fake esptool: write-flash done
   facts file spark.json sha256: <facts-sha256>
   image sha256: <image-sha256>, yes: standing yes typed by tester at <time>, until <time>
   ready seen: the firmware printed 'ready' and the board's 1 files match the image
-  board log: sim/runs/board/<time>.log
+  board log: <project>/sim/runs/board/<time>.log
   store record: <store>/boards/dc-da-0c-xx-xx-xx.json

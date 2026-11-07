@@ -106,7 +106,7 @@ class DeployService:
         consent.require_ready()  # a deploy grant can end while the plan reads the image
         self.report(Event.begin(deploy_stages.STAGE_FLASH))
         for index, command in enumerate(planned.commands):
-            self.report(Event.line(deploy_stages.STAGE_FLASH, "running: %s" % shlex.join(command)))
+            self.report(Event.line(deploy_stages.STAGE_FLASH, "running: %s" % shlex.join(command), raw=True))  # P677: a command
             try:
                 self._run_flash(command, planned.flasher, consent, retry=index == 0)
             except (OSError, subprocess.CalledProcessError) as failed:

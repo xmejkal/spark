@@ -404,16 +404,16 @@ class TheGuardedPrintTest(ProjectCase):
         self.assertIn("--port '/dev/cu.usb?modem' erase-flash", said)
 
     def test_a_refusal_naming_the_project_masks_it_on_stderr_and_in_the_json(self):
-        # P677: the project path is masked as `.`, so no override reaches either; a raw place that keeps one is still
+        # P677: the project path is masked as `<project>`, so no override reaches either; a raw place that keeps one is still
         # guarded on stderr (test_privacy.GuardedRawLineTest)
         bad = str(self.project.with_name("a\u202eb"))
         code, _, problems, _ = self.deploy("--project", bad, "--dry-run")
         self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
-        self.assertIn("no sim/wokwi.toml in .: build", problems)
+        self.assertIn("no sim/wokwi.toml in <project>: build", problems)
         self.assertNotIn("\u202e", problems)
         _, said, _, _ = self.deploy("--project", bad, "--dry-run", "--json")
         sentence = json.loads(said)["unchecked"][0]["sentence"]
-        self.assertTrue(sentence.startswith("no sim/wokwi.toml in .: build"), sentence)
+        self.assertTrue(sentence.startswith("no sim/wokwi.toml in <project>: build"), sentence)
         self.assertTrue(json.loads(said)["next"][0]["argv"][1].endswith("/a\u202eb"))  # a pasted place: --json keeps it raw
 
 

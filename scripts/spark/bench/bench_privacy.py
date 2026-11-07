@@ -15,10 +15,14 @@ from spark.core.privacy import Pasted, Privacy
 
 # --- MVP ---
 
+#: A token shorter than this is not masked: it would mask the same characters wherever they stand, in every line.
+MIN_SECRET = 8
+
+
 class AccountSecrets:
     """Adapter: the account tokens a run may hold: the value of each `account_env` the tool lists name, read from the
-    environment. A project's list that cannot be read falls back to the shared lists, and those to none, because the
-    run's own tool lookup says what is wrong with them."""
+    environment, MIN_SECRET characters or more. A project's list that cannot be read falls back to the shared lists, and
+    those to none, because the run's own tool lookup says what is wrong with them."""
 
     @staticmethod
     def read(project):
@@ -30,7 +34,7 @@ class AccountSecrets:
             except tools.ToolProblem:
                 continue
         names = [entry.get("account_env") for entry in entries]
-        return [os.environ[name] for name in names if isinstance(name, str) and os.environ.get(name)]
+        return [os.environ[name] for name in names if isinstance(name, str) and len(os.environ.get(name, "")) >= MIN_SECRET]
 
 
 def privacy_for(project):

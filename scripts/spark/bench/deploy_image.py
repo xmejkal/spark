@@ -151,9 +151,10 @@ class DeployFlowService:
         if not self.asked.dry_run:
             return None
         for command in planned.commands:
-            self.say(STAGE_PLAN, "would run: %s" % shlex.join(command))
+            self.say(STAGE_PLAN, "would run: %s" % shlex.join(command), raw=True)  # P677: a command a person may run
         self.say(STAGE_PLAN, "board: not looked at: run look.py")
-        self.say(STAGE_PLAN, WATCH % shlex.join(self.service.platform.make_connection(planned.mpremote, self.asked.port, self.outside.run).repl_command()))
+        self.say(STAGE_PLAN, WATCH % shlex.join(self.service.platform.make_connection(planned.mpremote, self.asked.port, self.outside.run).repl_command()),
+                 raw=True)
         return EXIT_OK
 
     def look_and_flash(self):
@@ -212,9 +213,9 @@ class DeployFlowService:
         if ready.verdict != ready_check.SEEN:
             reached.update(refusal=ready.sentence, reason=(result.start and result.start.code) or board_codes.READY_UNKNOWN
                            if ready.verdict == ready_check.UNKNOWN else board_codes.READY_NOT_SEEN)
-        for line in (result.facts_line, DEPLOYED_LINE % (result.image_sha256, reached["who"]),
-                     "%s: %s" % (ready.verdict, ready.sentence), "board log: %s" % result.log_path):
+        for line in (result.facts_line, DEPLOYED_LINE % (result.image_sha256, reached["who"]), "%s: %s" % (ready.verdict, ready.sentence)):
             self.say(STAGE_VERIFY, line)
+        self.say(STAGE_VERIFY, "board log: %s" % result.log_path, raw=True)  # P677: a file a person opens, as data.board_log
         try:
             reached["store_record"] = str(self.service.record(result, self.consent))
             self.say(STAGE_VERIFY, "store record: %s" % reached["store_record"])
@@ -224,7 +225,7 @@ class DeployFlowService:
             self.say(STAGE_VERIFY, "store record: not written: %s" % cannot)
         if ready.verdict == ready_check.UNKNOWN:
             if result.start is None or result.start.port:  # P462: with the port gone there is nothing to watch
-                self.say(STAGE_VERIFY, WATCH % shlex.join(result.repl_command))
+                self.say(STAGE_VERIFY, WATCH % shlex.join(result.repl_command), raw=True)
             return EXIT_COULD_NOT_RUN
         return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS
 
