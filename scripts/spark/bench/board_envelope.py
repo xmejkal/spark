@@ -13,7 +13,7 @@ from pathlib import Path
 
 from spark.bench import board_doctor
 import boards
-from spark.bench.deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY  # noqa: F401  (the stages are data.stage; the look reads them here)
+from spark.bench.deploy_stages import DeployPhase
 import design
 from spark.core import outcomes
 from spark.core.result import Finding, NextStep, OperationResult
@@ -142,7 +142,7 @@ def deploy_data(reached):
         "board_log": str(result.log_path) if result else None,
         "repl_command": list(result.repl_command) if result and not (result.start and result.start.port is None) else None,
         "store_record": reached.get("store_record"), "store_record_error": reached.get("store_record_error"),
-        "board_state": MAY_BE_ERASED if stage == STAGE_FLASH else None,
+        "board_state": MAY_BE_ERASED if stage == DeployPhase.FLASH else None,
         "person_action": result.start.sentence if result and result.start and result.start.code else None,
         "run_in_terminal": reached.get("run_in_terminal"),
     }

@@ -5,4 +5,7 @@ A leaf: it imports nothing of spark, so a Service and the envelope both read the
 """
 
 # --- MVP ---
-STAGE_PLAN, STAGE_LOOK, STAGE_GATE, STAGE_FLASH, STAGE_VERIFY = "plan", "look", "gate", "flash", "verify"
+class DeployPhase:
+    """Value: the five stages of a deploy, in their order. Each is a JSON `stage` word."""
+
+    PLAN, LOOK, GATE, FLASH, VERIFY = "plan", "look", "gate", "flash", "verify"

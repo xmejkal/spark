@@ -93,7 +93,7 @@ Back to [the architecture](README.md).
 | finding / problem / failure | `Finding` twice (`check_footprints.py:54`, `check_physics.py:93`), `Failure` (`compare_design.py:44`), `parts._problem` | one `Finding` in core. The three classes fold into it at the checks move. |
 | answer | `outcomes.answer` (`outcomes.py:49`), `parts.Answer` | `OperationResult`. "answer" is not a class name. |
 | check | `Check` (`check_all.py:63`), `BoardCheckStrategy` (`board_doctor.py`, now `DoctorProbe`), `ReadyCheck` (`ready_check.py`, now `ReadyProbe` in `ready_probe.py`) | `DoctorProbe`, `ReadyProbe`, both in the code since the bench move (P680). "Step" keeps one meaning, and both look without changing. |
-| stage | build stages, deploy's `STAGE_*` (`board_envelope.py`) | build only. `DeployPhase` in code, proposed. JSON `stage` stays. |
+| stage | build stages, deploy's `STAGE_*` (`board_envelope.py`) | build only. `DeployPhase` in code (`deploy_stages.py`, P680). JSON `stage` stays. |
 | step | next action, wiring `Step` (`breadboard_steps.py:34`) | `NextStep`, `WiringStep` (proposed, breadboard move). |
 | record | fact file, `WiringRecord` (`breadboard_changes.py:103`) | `WiringLog` (proposed). A simulation log is a `RunLog` (proposed). |
 | facts | record fields, `FactsFile` that holds a reading (`board_facts.py`) | `ReadingFile` (proposed, bench move, S11). |

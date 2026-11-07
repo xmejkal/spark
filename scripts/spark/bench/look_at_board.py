@@ -9,6 +9,7 @@ import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_envelope
 from spark.bench import board_look
+from spark.bench.deploy_stages import DeployPhase
 import boards
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
@@ -51,7 +52,7 @@ class LookAtBoard(Operation):
         evidence = evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)
         platform = MicroPythonPlatform(project, outside.find_tool)
         # P507: after the evidence and the platform, which touch no board, and right before the esptool read
-        outside.report(Event.begin(board_envelope.STAGE_LOOK))
+        outside.report(Event.begin(DeployPhase.LOOK))
         try:
             report = board_look.looker(platform, outside.run).run(project, port, evidence)
         except board_look.LookStopError as stop:

@@ -15,7 +15,7 @@ from spark.bench import flasher
 import store
 import tools
 from spark.bench.deploy_gate import GateClosedError, format_rerun_line
-from spark.bench.deploy_stages import STAGE_LOOK
+from spark.bench.deploy_stages import DeployPhase
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
@@ -90,7 +90,7 @@ class IssueGrant(Operation):
     @staticmethod
     def _tell_restart(outside, places):
         """The look begins, and the person reads that the board restarts (an Event, so the terminal indents it)."""
-        outside.report(Event.begin(STAGE_LOOK))
+        outside.report(Event.begin(DeployPhase.LOOK))
         text = RESTART % {"reset": places.reset, "orientation": places.orientation}
-        outside.report(Event.line(STAGE_LOOK, guard_sentence(text, places.reset, places.orientation)))  # P430: button words are data
+        outside.report(Event.line(DeployPhase.LOOK, guard_sentence(text, places.reset, places.orientation)))  # P430: button words are data
 # --- end MVP ---
