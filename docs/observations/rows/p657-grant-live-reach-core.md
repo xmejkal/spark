@@ -40,3 +40,6 @@ What the plan council's two rounds found, and what the build changed against the
 | 33 | Move GRANT_SCRIPT's path out | review | rejected | deploy_image.py uses the same pattern |
 | 34 | `operation=None` on look.py's main | review | rejected | out of scope for P657 |
 | 35 | `parse_known_args` instead of `operation_for` | review | rejected | the council chose `operation_for` |
+| 36 | Mutation run on the 153 rows of the changed files (17,608 s): 4 escaped, 3 refused | mutation | acted | the escapes: stop_result's port and project guards (3 p430 rows), which no test reached because every refusal's own message is flat since P444, and CheckGrant's shared stop data. tests/test_bench_stops.py gives each one a test with a raw value in the message |
+| 37 | 3 refused rows: p242's stamp rows anchor on `find` in board_grant.py, which is gone on main too | mutation | raised | old rows, not this PR's; a card for stale tables beside P661 #889 |
+| 38 | The run took 4.9 h, because `--for` on whole files pulls every old row on them | mutation | raised | learned rule: estimate about 2 min a row before a run |
