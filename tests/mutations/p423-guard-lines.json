@@ -30,7 +30,7 @@
   "replace": "% path.name, file=sys.stderr)"
  },
  {
-  "file": "scripts/board_look.py",
+  "file": "scripts/spark/bench/board_look.py",
   "name": "the look's report lines are not guarded one by one, in look.py and in deploy.py",
   "find": "return [indent + printable(line) for line in out]",
   "replace": "return [indent + line for line in out]"
@@ -84,7 +84,7 @@
   "replace": "    print(\"%s: %s%s\" % (args.scenario.name, sentence, \"\\nlog: %s\" % log if log else \"\"),"
  },
  {
-  "file": "scripts/deploy_gate.py",
+  "file": "scripts/spark/bench/deploy_gate.py",
   "name": "the erase question, where the person types yes, is written as it is",
   "find": "% guard_lines(question))",
   "replace": "% question)"

@@ -13,7 +13,7 @@
  {"file": "scripts/spark/core/operation.py", "name": "an integer argument has no type in the schema", "find": "bool: \"boolean\", int: \"integer\"}", "replace": "bool: \"boolean\"}"},
  {"file": "scripts/spark/bench/reach_board.py", "name": "the reach's time is the machine's, not the outside clock's", "find": "outside.clock.now().strftime(AT_FORMAT)", "replace": "__import__('time').strftime(AT_FORMAT)"},
  {"file": "scripts/spark/bench/issue_grant.py", "name": "the restart notice is not reported", "find": "outside.report(Event.line(STAGE_LOOK, guard_sentence(text, places.reset, places.orientation)))", "replace": "pass"},
- {"file": "scripts/board_live.py", "name": "live's answer constants are a second copy of the codes' table", "find": "RAISED, NOT_REACHED = board_codes.RAISED, board_codes.NOT_REACHED", "replace": "RAISED, NOT_REACHED = \"raisd\", \"not_reached\""},
+ {"file": "scripts/spark/bench/board_live.py", "name": "live's answer constants are a second copy of the codes' table", "find": "RAISED, NOT_REACHED = board_codes.RAISED, board_codes.NOT_REACHED", "replace": "RAISED, NOT_REACHED = \"raisd\", \"not_reached\""},
  {"file": "scripts/spark/core/operation.py", "name": "an Operation prints no envelope by default", "find": "json_renderer = JsonEnvelope", "replace": "json_renderer = None"},
  {"file": "scripts/spark/bench/reach_board.py", "name": "a reach with no probe has the tool_missing code", "find": "board_codes.NO_PROBE, board_reach.NO_PROBE", "replace": "board_codes.TOOL_MISSING, board_reach.NO_PROBE"},
  {"file": "scripts/spark/bench/check_grant.py", "name": "a stop shares its data dict with every later stop", "find": "data=dict(COULD_NOT_RUN_DATA)", "replace": "data=COULD_NOT_RUN_DATA"}

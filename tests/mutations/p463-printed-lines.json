@@ -30,7 +30,7 @@
   "replace": "% self.path.name + \"\")"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "own-build-hint-dropped",
   "find": "\"; or \" + own if own else \"\"))",
   "replace": "\"\"))"
