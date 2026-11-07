@@ -6,6 +6,8 @@
 > now, in two worktrees. W5-3a starts on a main that holds PR #906 (W4-4), because #906 edits three of the files it
 > moves.
 
+A pasted line is a raw place: `Privacy` never sees it. "Raw" names only that marker in this plan.
+
 Fable 5.1 wrote this plan on 2026-11-07, against `origin/main` a57c304a. S13 is done (P425, #559). Every count below
 is from that tree. A name marked "proposed" is not in the code yet.
 
@@ -41,7 +43,8 @@ Round 2 (the refuter on Opus, the changes only): 5 held, 1 rejected. What change
 
 - A `spark.bench.CLI_DIR` in `__init__` makes a cycle ("cannot import name 'CLI_DIR' from partially initialized module
   'spark.bench'", reproduced for `board_grant`, `deploy_gate`, `look` and `check_spine`). It is dropped. Each module
-  writes `Path(__file__).resolve().parents[2]` inline, as `DEPLOY_SCRIPT` and `GRANT_SCRIPT` do in `deploy_image.py`.
+  writes `Path(__file__).resolve().parents[2]` inline, as `DEPLOY_SCRIPT` in `deploy_image.py` and `GRANT_SCRIPT` in
+  `issue_grant.py` do.
 - `tests/test_deploy_service.py` `TheServiceHoldsNoPrintTest` reads `ROOT / "scripts" / <name>`. It is on W5-3a's fix
   list.
 - Masking broke pasted lines: the grant command of `board_grant.MESSAGE_FOR` reaches an Event through
@@ -53,9 +56,20 @@ Round 2 (the refuter on Opus, the changes only): 5 held, 1 rejected. What change
   as `~/.pyenv/...`, the golden scrub no longer matched. The scrub now replaces the `~/` form of the repo and of the
   Python too, so the goldens stay machine-free.
 - `DeployPhase` stays in the leaf `deploy_stages.py` (its docstring says why: a Service and the envelope both read it).
-  A fold into `board_envelope.py` makes a cycle through `deploy_service`. Its site list gains `deploy_image.py` and
-  loses `look_at_board.py`.
+  A fold into `board_envelope.py` makes a cycle through `deploy_service`. Its site list gains `deploy_image.py`.
 - Rejected: the 18-module move imports cleanly, each module alone, and 23 baseline keys is right.
+
+PR council (2026-11-07, one Sonnet reviewer, the refuter on Opus on the round-2 diff). What changed:
+
+- `GRANT_SCRIPT` with inline `parents[2]` is in `issue_grant.py`, not `deploy_image.py`, which builds it with `with_name`.
+- `look_at_board.py` is back on the `DeployPhase` site list: it reads `board_envelope.STAGE_LOOK` through the re-export
+  in `board_envelope.py`, and two rows of `p507-event-seam-e1.json` find that text.
+- The scrub keeps replacing `<project>` and `<store>` in the raw places, per key, because the pasted lines hold them.
+- Two raw places added: the envelope's `next[].argv` and `next[].env`, and the image-mismatch Finding whose sentence
+  holds `flash_image.build_command` and `own_build_hint_for`'s lines.
+- `Event.raw` defaults to False, so `Event("begin", "toy", None)` keeps working.
+- The four cards and their Ready order, the docs-check rule, an example `<store>` hint line, why W5-1 is one PR, and
+  the "raw" line under the short version.
 
 ## Open questions
 
@@ -102,6 +116,9 @@ makes #906 unmergeable, and a rebase of his PR rewrites his branch. So:
 2. W5-3a (S11, the move) branches from the first main that holds #906. W5-3b (the renames) follows it. If W5-1 and
    W5-2 are merged and #906 is still open, the reply to the PO names #906 as the one thing wave 5 waits on.
 
+After this plan merges, four cards are filed as sub-issues of P323, in this Ready order: W5-1 (S10), W5-2 (S12), W5-3a
+(S11 move), W5-3b (S11 renames). P476 #652 and P399 #515 follow them in Ready.
+
 ## The PRs
 
 ### W5-1, bench privacy (S10, an output slice)
@@ -125,17 +142,21 @@ Classes:
   `diagnostics` and `notes`. `mask_values` masks the values the same way. `mask_event(event)` (proposed) masks an
   Event's text.
 - The pasted lines (open question 1) follow one rule: a pasted line travels in a field or an Event marked raw, which
-  `Privacy` never sees. The raw places: the `data` keys `run_in_terminal` and `grant_argv`, the `next:` lines of
-  `next_text`, a Finding whose code is in `board_codes.PASTED_CODES` (proposed: `NO_TERMINAL`, `NO_GRANT`, the codes
-  whose `MESSAGE_FOR` sentence holds a command), and an Event with `raw=True` (proposed), which `DeployImage.say` sets
-  for the "standing yes: not used" line that carries the grant command. The industry word
+  `Privacy` never sees. The raw places are these. The `data` keys `run_in_terminal` and `grant_argv`. Each
+  `next[].argv` and `next[].env`, because `mask_result` walks `next`. The `next:` lines of `next_text`. A Finding
+  whose code is in `board_codes.PASTED_CODES` (proposed). That set holds `NO_TERMINAL`, `NO_GRANT` and the other codes
+  whose `MESSAGE_FOR` sentence holds a command. It also holds the image-mismatch code (`IMAGE_CHANGED`, est.), whose
+  sentence holds `flash_image.build_command` and `own_build_hint_for`'s lines. An Event with `raw=True`. `raw` is a new `Event`
+  field with the default False (namedtuple defaults), so `Event("begin", "toy", None)` in `test_core.py` keeps working.
+  `DeployImage.say` sets it for the "standing yes: not used" line that carries the grant command. The industry word
   is data masking (OWASP, "Logging Cheat Sheet": mask or redact sensitive data before it is written).
 - `account_secrets()` (proposed, `tools.py`): the value of each `account_env` of the merged tool lists. `tools.py`
   reads the environment already, and T1 keeps the read out of `spark/core/`.
 - `run_cli` (`cli.py`) builds `RunOptions(Privacy.of(project, store.home(), tools.account_secrets()), ...)` from the
   parsed project, and wraps the Reporter so each Event passes `mask_event` first. `DEFAULT_RUN` stays the pass-through.
 - One doc line, in `agents.md` and in the first `<store>` line a person acts on: `<store>` is SPARK_HOME. A printed
-  `<store>` line that asks the person to open a file carries that hint, or the raw path.
+  `<store>` line that asks the person to open a file carries that hint, or the path itself. The example W5-1 writes:
+  `the board's record: <store>/boards/dc-da-0c-xx-xx-xx.json (<store> is SPARK_HOME, ~/.local/share/spark unless set)`.
 
 Tests, in a new `tests/test_privacy.py`:
 
@@ -151,9 +172,10 @@ Tests, in a new `tests/test_privacy.py`:
 The 12 goldens with a placeholder and the `.stderr` goldens with a live line are regenerated, and the PR names each
 one: this is the wave's visible change. `<python>` also sits in lines nobody pastes (`running:`, `would run:`,
 `retry in`, the flash-failed sentence), where it becomes `~/.pyenv/...`. So the scrub also replaces the `~/` form of
-the repo and of the Python. It keeps `<repo>`, `<python>` and the hash for the pasted lines. It stops replacing
-`<project>` and `<store>`, so a leaked raw path is a golden diff from then on (est.: about 20 lines in
-`golden_bench.py`).
+the repo and of the Python. In the raw places it keeps replacing all four placeholders, per key. The pasted lines
+hold them: `deploy-could-not-run-no-terminal.json`'s `run_in_terminal`, and its `.stderr`. Outside the raw
+places it stops replacing `<project>` and `<store>`. So a leaked path is a golden diff from then on (est.: about 20
+lines in `golden_bench.py`).
 
 Mutation (`p<card>-privacy.json`, est. 10 rows). The store rule skipped. The project rule applied before the store
 rule. A secret left in a Finding. `lines` or `notes` not walked. An Event printed raw. `mask_values` returns the raw
@@ -199,7 +221,8 @@ The `__file__` paths that break, each fixed in this PR:
 
 - `board_grant.GRANT_COMMAND` and `DEPLOY_GRANT_COMMAND` build `Path(__file__).resolve().parent / "grant.py"`. After the
   move that is `spark/bench/grant.py`, which does not exist. Each writes `Path(__file__).resolve().parents[2] /
-  "grant.py"` inline, as `DEPLOY_SCRIPT` and `GRANT_SCRIPT` do in `deploy_image.py`. No shared constant in `__init__`,
+  "grant.py"` inline, as `DEPLOY_SCRIPT` in `deploy_image.py` and `GRANT_SCRIPT` in `issue_grant.py` do. No shared
+  constant in `__init__`,
   because that makes a cycle (the Council, round 2).
 - `board_facts.PLUGIN_JSON` reads `.claude-plugin/plugin.json` two folders up. It becomes four.
 - `board_envelope.next_text` builds the `next:` line with `Path(__file__).with_name("%s.py" % op)`. It writes
@@ -230,8 +253,9 @@ Two new tests in `test_architecture.py`: the closing `ls` check, and each moved 
 
 Docs: `developing.md`, `patterns-and-names.md`, `agents.md` and the command pages where they name a module.
 `areas/bench.md` (file names, the two leaves) and `refactor-plan.md` section 10. The 170 files are not all touched: the
-pages in `docs/discovery/` and `docs/archive/` are history and keep the old paths. The push hook's docs check decides
-which guide pages must be current (est.: see `tools/check_docs.py`).
+pages in `docs/discovery/` and `docs/archive/` are history and keep the old paths. The rule is `tools/check_docs.py`'s.
+"The docs name only what is there" holds for `README.md`, `AGENTS.md` and `docs/guide/**/*.md`. It also holds for every
+page that `scripts/`, `data/`, `commands/`, `skills/` or `agents/` cite.
 
 ### W5-3b, the five renames (S11)
 
@@ -243,7 +267,7 @@ renamed class's docstring starts with its role word (R6), so its `R6` key goes. 
 | `LookStop` (`board_look.py`) | `LookStopError` (C1: an exception ends in Error) | `stops.py`, `board_look.py`, the tests. The `C1` key goes |
 | `ReadyCheck`, `make_ready_check` | `ReadyProbe` in `ready_probe.py`, `make_ready_probe`, an Adapter | `firmware_platform.py`, `FakeFirmwarePlatform`, `deploy_service.py`, `test_ready_probe.py` |
 | `BoardCheckStrategy`, `PortListedBoardCheck`, `ConsoleBoardCheck`, `BoardDoctorResult` | `DoctorProbe` (a Strategy), `PortListedDoctorProbe`, `ConsoleDoctorProbe`, `DoctorProbeResult` | `board_doctor.py`, `stops.py`, `board_envelope.doctor_fix`, `test_board_doctor.py` |
-| `STAGE_PLAN ... STAGE_VERIFY` | `DeployPhase` (Value), a class with the five constants, in the leaf `deploy_stages.py` | `deploy_service.py`, `board_envelope.py`, `issue_grant.py`, `deploy_image.py`, `board_start.py` |
+| `STAGE_PLAN ... STAGE_VERIFY` | `DeployPhase` (Value), a class with the five constants, in the leaf `deploy_stages.py` | `deploy_service.py`, `board_envelope.py` (the re-export too), `issue_grant.py`, `deploy_image.py`, `look_at_board.py` (it reads `board_envelope.STAGE_LOOK`), `board_start.py`. Two rows of `p507-event-seam-e1.json` find `board_envelope.STAGE_LOOK` and get the new name |
 | `FactsFile` (`board_facts.py`) | `ReadingFile`, an Adapter | `board_look.py`, `deploy_service.py`, `test_board_look.py`. The `R2` and `R3` keys follow |
 
 The industry word is Rename (Fowler, "Rename Variable" and "Rename Field"). Mutation: the rows whose `find` text names
@@ -308,6 +332,7 @@ Services of wave 4 are unchanged (`wave4-plan.md`). After W5-3a all of these sit
 
 - W5-1 (S10): about 150 product lines (`privacy.py`, `cli.py`, `tools.py`, `golden_bench.py`), 150 test lines and the
   regenerated goldens. It holds logic: the lenses on the everyday model, the refuter on the strongest, one mutation run.
+  It stays one PR because it is one visible output change, and its goldens are regenerated with it.
 - W5-2 (S12): about 120 product lines in `tools/map.py`, 60 test lines and the generated page. It holds logic: one
   reviewer on the everyday model, the refuter on the strongest, one mutation run.
 - W5-3a (S11, the move): 18 modules, 182 import lines, four `__file__` fixes, about 360 rows and 23 baseline keys. No
