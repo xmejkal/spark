@@ -107,4 +107,7 @@ CODES = {
     STORE_PROBLEM: "spark's store cannot be read or written",
     BOARD_RECORD_UNUSABLE: "the project's board record, or its pin roles, cannot be used",
 }
+#: The codes whose sentence holds a command a person pastes, so Privacy leaves it, and each line that holds it, as it is
+#: (P677): the line to run with no terminal, the grant line, and the line that builds the image.
+PASTED_CODES = frozenset((NO_TERMINAL, NO_GRANT, GRANT_EXPIRED, GRANT_NO_ZONE, REFUSED_NO_GRANT, NO_IMAGE, EVIDENCE_REFUSES))
 # --- end MVP ---

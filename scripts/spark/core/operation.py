@@ -59,6 +59,8 @@ class Operation:
     #: The Renderer of the `--json` line: `JsonEnvelope`, or a class with `render` and `render_bad_argument`, such as
     #: `renderers.FlatJsonLine`. A class attribute, not a flag (P657).
     json_renderer = JsonEnvelope
+    #: `privacy_for(project)` gives the Privacy of a run on `project` (P677), or None: the run passes everything through.
+    privacy_for = None
 
     def run(self, *, outside, **values):
         raise NotImplementedError

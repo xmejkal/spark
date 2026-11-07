@@ -30,6 +30,7 @@ import flasher
 from spark.core import outcomes
 import project_image
 import sim_project
+import store
 import tools
 from spark.core.events import INDENT
 from spark.core.text_guards import ValueMessageError, printable
@@ -327,7 +328,8 @@ class LookReport:
     def last_deploy_fix(self):
         """What the person does about a last deploy that was not checked."""
         if self.last_deploy.why == deploy_record_store.WHY_UNREADABLE:
-            return "repair or remove %s, then run look.py again" % deploy_record_store.DeployRecordStore().find_path(self.reading.mac)
+            return "repair or remove %s %s, then run look.py again" % (deploy_record_store.DeployRecordStore().find_path(self.reading.mac),
+                                                                       store.PLACEHOLDER_HINT)
         return "reconnect the board so that its MAC can be read, then run look.py again"
 
     def exit_code(self):

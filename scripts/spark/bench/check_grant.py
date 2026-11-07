@@ -11,6 +11,7 @@ import board_look
 import store
 import tools
 from firmware_platform import MicroPythonPlatform
+from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
 from spark.core.renderers import FlatJsonLine
@@ -49,6 +50,7 @@ class CheckGrant(Operation):
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote (default: here)"),
                  COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON: granted, why and the grant"))
     effects = (READS, RUNS)
+    privacy_for = staticmethod(bench_privacy.privacy_for)
     json_renderer = FlatJsonLine
 
     def __init__(self, platform_for=None):

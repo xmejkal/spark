@@ -19,7 +19,7 @@ import board_codes  # noqa: E402
 import golden_bench  # noqa: E402
 import store  # noqa: E402
 from fakes import FakeReporter  # noqa: E402
-from spark import bench  # noqa: E402
+from spark.bench import bench_privacy  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
 from spark.core.privacy import MaskingReporter, Pasted, Privacy  # noqa: E402
@@ -97,6 +97,11 @@ class MaskResultTest(unittest.TestCase):
         self.assertEqual(masked.diagnostics, ["deploy.py: " + sentence, "sim"])
         self.assertEqual((masked.data["look"], masked.next[0].why), ("sim", "run x"))
 
+    def test_a_part_of_a_pasted_sentence_keeps_its_paths(self):
+        reason = "build it with %s/scripts/flash_image.py --project %s" % (REPO, PROJECT)
+        result = OperationResult({"no_token_reason": reason}, [finding("no token: " + reason, "no_terminal")])
+        self.assertEqual(privacy().mask_result(result).data, {"no_token_reason": reason})
+
     def test_an_empty_pasted_sentence_keeps_nothing_else_raw(self):
         result = OperationResult(None, [finding("", "no_terminal")], lines=[PROJECT + "/sim"])
         self.assertEqual(privacy().mask_result(result).lines, ["sim"])
@@ -125,7 +130,7 @@ class BenchPrivacyTest(unittest.TestCase):
 
     def test_the_bench_masks_the_token_of_a_tool_with_an_account(self):
         with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": TOKEN}):
-            masked = bench.privacy_for(Path(".")).mask_text("token " + TOKEN)
+            masked = bench_privacy.privacy_for(Path(".")).mask_text("token " + TOKEN)
         self.assertEqual(masked, "token ***")
 
     def test_the_pasted_codes_hold_the_codes_whose_sentence_holds_a_command(self):

@@ -184,13 +184,26 @@ def run_script(case, project, store, token=None):
     return done.returncode, done.stdout, done.stderr
 
 
+def tilde_form(path):
+    """`path` as Privacy prints it when it sits under the home folder (`~/...`), or None (P677)."""
+    try:
+        return "~/" + str(Path(path).relative_to(Path.home()))
+    except ValueError:
+        return None
+
+
 def replacements_of(project, store):
     """What scrub replaces, longest first: each path in its written and its resolved form, the Python, the image's
-    hash. The token keeps its MAC half, and its image half follows the installed littlefs, so it is replaced too."""
+    hash. The token keeps its MAC half, and its image half follows the installed littlefs, so it is replaced too.
+    Privacy prints the repo and the Python as `~/...` on a machine that keeps them under home, so that form is replaced
+    too. The run's own store is `<spark-home>`, which only a line a person pastes prints: `<store>` is Privacy's own
+    word (P677), so a store path that Privacy missed is a golden diff."""
     places = {}
-    for path, name in ((project, "<project>"), (store, "<store>"), (ROOT, "<repo>"), (sys.executable, "<python>")):
+    for path, name in ((project, "<project>"), (store, "<spark-home>"), (ROOT, "<repo>"), (sys.executable, "<python>")):
         for form in (str(path), str(Path(path).resolve())):
             places[form] = name
+            if name in ("<repo>", "<python>") and tilde_form(form):
+                places[tilde_form(form)] = name
     for image in Path(project).glob("sim/*.bin"):
         sha = hashlib.sha256(image.read_bytes()).hexdigest()
         places[sha] = "<image-sha256>"
@@ -215,7 +228,7 @@ FACTS_SHA = re.compile(r"(spark\.json sha256: )[0-9a-f]{64}")
 
 #: A word in a script's shell quotes that starts with a placeholder. A script quotes a path only when it holds a space,
 #: so the quotes go, and a golden reads the same on a machine whose paths have none.
-QUOTED_PLACE = re.compile(r"'(<(?:project|store|repo|python)>[^'\s]*(?: [^'\s]+)*)'")
+QUOTED_PLACE = re.compile(r"'(<(?:project|spark-home|repo|python)>[^'\s]*(?: [^'\s]+)*)'")
 
 
 def scrub(text, places):

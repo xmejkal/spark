@@ -36,7 +36,7 @@ import flasher  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform,  # noqa: E402
+from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform, FakeReporter,  # noqa: E402
                    FakeOutsideWorld, FakeProbePlatform,
                    line_made_at_import, pin_time_zone)
 from firmware_platform import MicroPythonPlatform  # noqa: E402
@@ -106,19 +106,20 @@ class GateCase(LookCase):
         files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
-    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False, platform=None):
+    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False, platform=None, reporter=None):
         """(exit code, stdout, stderr) of deploy.py with fake tools, through a FakeOutsideWorld: `consent` is the yes its
         `make_consent` gives (None: the terminal, which the tests' stdout is not), `platform` the FirmwarePlatform the
         DeployImage builds (None: the project's MicroPython one, over `probe` when given). self.ran keeps every command. The first flash command
         exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait.
-        `devs_text` may be a list: the listing of each `mpremote devs` call (the look's first), then the last for good."""
+        `devs_text` may be a list: the listing of each `mpremote devs` call (the look's first), then the last for good.
+        `reporter` keeps the Events instead of the terminal when given."""
         run = self.fake_tools_run(esptool, text, devs, devs_text, fails, fail_code, write_fails, look_fails)
         out, err = io.StringIO(), io.StringIO()
         operation = DeployImage(platform_for=lambda project, find_tool: platform or (FakeProbePlatform(project, probe, find_tool) if probe
                                                                                      else MicroPythonPlatform(project, find_tool)),
                                 grant_service=grant_service)
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            outside = self.outside_world(run, consent, TerminalReporter.for_json("--json" in argv), clock)
+            outside = self.outside_world(run, consent, reporter or TerminalReporter.for_json("--json" in argv), clock)
             code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=operation)
         return code, out.getvalue(), err.getvalue()
 
@@ -1069,6 +1070,16 @@ class TheStandingYesTest(GateCase):
         out = io.StringIO()
         TerminalReporter(out).report(Event.line("gate", "standing yes: not used: ended\u202e\rthe grant"))
         self.assertEqual(out.getvalue(), "  standing yes: not used: ended??the grant\n")
+
+    @needs_littlefs
+    def test_the_standing_yes_line_is_raw_so_privacy_keeps_its_grant_line(self):
+        # P677: the sentence holds the grant line the person pastes, so Privacy never masks it
+        self.give()
+        self.clock.advance(minutes=30)
+        reporter = FakeReporter()
+        self.flash(reporter=reporter)
+        said = [event for event in reporter.events if (event.text or "").startswith("standing yes: not used")]
+        self.assertEqual([event.raw for event in said], [True])
 
     def assertAsksInTheTerminal(self, why, *argv):
         """deploy.py with `argv` erases nothing, says `why` it did not use the grant, and asks for a terminal."""

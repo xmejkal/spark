@@ -17,6 +17,7 @@ import tools
 from deploy_gate import GateClosedError, format_rerun_line
 from deploy_stages import STAGE_LOOK
 from firmware_platform import MicroPythonPlatform
+from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
 from spark.core.renderers import FlatJsonLine
@@ -52,6 +53,7 @@ class IssueGrant(Operation):
                  COMMON_ARGUMENTS["project"]._replace(help="the project folder whose tools list names mpremote and esptool (default: here)"),
                  COMMON_ARGUMENTS["port"])
     effects = (READS, RUNS, BOARD, ASKS)
+    privacy_for = staticmethod(bench_privacy.privacy_for)
     json_renderer = FlatJsonLine
 
     def __init__(self, platform_for=None):

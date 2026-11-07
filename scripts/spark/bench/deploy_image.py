@@ -24,6 +24,7 @@ from deploy_service import DeployService, FlashError
 from firmware_platform import MicroPythonPlatform
 from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
+from spark.bench import bench_privacy
 from spark.bench.stops import reason_of
 from spark.core import codes, outcomes
 from spark.core.cli import CRASH_MESSAGE, CRASHED_MESSAGE, traceback_lines
@@ -124,8 +125,8 @@ class DeployFlowService:
     def report(self, event):
         self.stages.report(event)
 
-    def say(self, stage, text):
-        self.report(Event.line(stage, text))
+    def say(self, stage, text, raw=False):
+        self.report(Event.line(stage, text, raw))
 
     def keep_yes(self):
         """The yes in `reached`, once there is one: only after the gate passed, or after a flash command ran."""
@@ -198,7 +199,8 @@ class DeployFlowService:
             line += grant_hint(project, look.port)
         chosen = self.grants.consent_for_deploy(look, evidence, self.outside.make_consent(line))
         if chosen.why not in WHY_NOT_SAID:
-            self.say(STAGE_GATE, "standing yes: not used: %s" % (board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]))
+            # raw: the sentence may hold the grant line the person pastes (P677)
+            self.say(STAGE_GATE, "standing yes: not used: %s" % (board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]), raw=True)
         return chosen.consent
 
     def verify(self):
@@ -249,6 +251,7 @@ class DeployImage(Operation):
                  Argument(("--dry-run",), "dry_run", bool, "print each command and run nothing"),
                  COMMON_ARGUMENTS["json"]._replace(help="print one envelope on stdout, the lines a person reads on stderr (docs/guide/agents/json.md)"))
     effects = (READS, RUNS, BOARD, DELETES, WRITES, ASKS)
+    privacy_for = staticmethod(bench_privacy.privacy_for)
 
     def __init__(self, platform_for=None, grant_service=None, records=None):
         self.platform_for = platform_for or MicroPythonPlatform
