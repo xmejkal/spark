@@ -7,7 +7,7 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** collecting evidence <!-- REQUIRED:ready -->
+**Ready for:** design, with the spike P669 first (the PO confirmed the frame, the jobs, the direction D4 to D7 and the tests in D8) <!-- REQUIRED:ready -->
 **Stands on:** 8 H, — of which would change the decision (A1 and A2 rated by D5, the rest unrated) <!-- REQUIRED:debt -->
 **Decision needed:** none from the PO now (Q1, Q2, Q13 and Q18 are answered). The plan council decides Q4 to Q6, Q8 to Q10, Q17, Q19, Q20 and Q21. Q12 waits for his bench. <!-- REQUIRED:decision-needed -->
 
@@ -37,12 +37,7 @@ is unrated. check computes both. -->
 - Appetite (the decider's, asked only when heading for design) | —: — <!-- REQUIRED:appetite -->
 
 ## What we found <!-- CLAIMS -->
-<!-- One claim per line: `- [★C<n>] claim · E pointer | H source | D who date · caveat: qualifier | none`.
-★ marks a claim that a decision, an option or the riskiest assumption rests on. A quote is verbatim, with its pointer.
-Say what the evidence can support: an account (what happened to one person), data (how often, in its population and
-period), a document (what was specified), the product (what exists, not whether anyone needs it), a benchmark (a
-comparison). Model knowledge is H until a source is read. Elsewhere cite a ★ claim as ★C<n>, with its keep: words.
-e.g. `- [★C2] 13 of 526 tickets ask for recurring tasks · E tickets.csv:2-14 · caveat: picked by Lena; shows that, not how often` -->
+<!-- One claim per line: `- [★C<n>] claim · E pointer | H source | D who date · caveat: qualifier | none`. ★ marks a claim that a decision rests on. -->
 - [★C1] The assigner stops on two kinds only: a named pin that is "already taken" (K5) and a named strap (K2). K5's sentence names one claimant and no choice. K2's names two ways out ("drop `pin` and spark picks another", or see P527), and both are wrong for a cable pin (F5). Neither names a second claimant · E `scripts/assign_pins.py:283-284`, `:70-71`, re-read 2026-11-07 · caveat: three lenses agree (existing EX-2, ux UX-1, feasibility FE-7). K1, K3, K4, K6 and K7 produce no sentence at all
 - [★C2] `assign_pins.py --json` prints plain text, not JSON, on a refusal. The success object's keys are `tool`, `board`, `unverified`, `assignments`, `free`, with no `status` or `code`. `tests/test_json_contracts.py:118` asserts exactly these five keys, so Q4 (a) or (b) changes a contract test, not only goldens · E `scripts/assign_pins.py:538-540`, `:557-562`, re-read; the UX and Feasibility lenses reproduced it by a run · caveat: answers J5's open "—": Claude gets no conflict as data today. Three lenses agree (EX-3, UX-2, FE-7)
 - [★C3] The same refusal is exit 1 from `assign_pins.py` and exit 2 from `check_spine.py`, where it is stage `schematic`, `could-not-run`, the sentence in `detail`. The docs' table says 1 is "it looked and found something" and 2 "it could not look", The doc line `docs/guide/agents.md:131` ("answer 2 instead of crashing") is about input a script cannot read, and `assign_pins.py:529-531` returns `EXIT_COULD_NOT_RUN` for that, so the doc is not contradicted. The split is the same `Impossible` refusal: exit 1 from `assign_pins.py` (`EXIT_PROBLEMS`, `:538-540`) and exit 2 from `emit_board.py` and `check_spine.py` · E `scripts/assign_pins.py:52` (`EXIT_PROBLEMS as EXIT_IMPOSSIBLE`), `scripts/emit_board.py:1089-1093`, `scripts/check_spine.py:408-410`, `docs/guide/agents.md:85-90`, `:131`, all re-read · caveat: three lenses agree (UX-5, UX-23, FE-8). Which code a left conflict gets is a decision, Q4
@@ -64,8 +59,7 @@ e.g. `- [★C2] 13 of 526 tickets ask for recurring tasks · E tickets.csv:2-14 
 - [C19] The board record marks straps 0 and 3 only. The chip's list is 0, 3, 45, 46, and USB (19, 20), JTAG (39 to 42) and octal PSRAM (35 to 37) are unmarked. The camera connector puts XMCLK on IO45 and Y8 on IO46 · H the Physics lens's reading of the datasheet pp.25-26 and W4:83 (PH-8, PH-9) · caveat: 45, 46 and 48 are not in the board record at all. Found on the way <!-- REQUIRED:findings -->
 
 ## Options <!-- CLAIMS -->
-<!-- Two or three per open decision: decision · option · cost · what it would prove · opinion (whose), then the tag
-and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether seen tasks get done · opinion (the facilitator's) · H ★C2 · caveat: none` -->
+<!-- Per decision: option · cost · what it proves · opinion (whose), then the tag and caveat cells. -->
 - Q2 the first slice, given D1, D2, P460 and P527 open · (a) wait: the model lands after wave 6's design move, P581 stays paused · cost: no code now, one paused walk and each GDI bench session hand-pins 4 signals (one such session so far, RI-20) · proves: whether the PO's "soon" holds · opinion (the Risks lens, RI-19) · H ★C9, ★C17 · caveat: no date for wave 6 · the proof is W4:30
 - Q2 · (b) a bridge: option C of D1 as a stop in `assign_pins.py` that reads the record's taken pins and names both claims, plus the JSON refusal, moved by the design move · cost: one PR on the flat script, the move PR grows · proves: that the walk resumes with a true map · opinion (the Risks lens RI-22 and the Architecture lens AR-12 (b): "the cheapest wrong place") · H ★C1, ★C2, ★C5 · caveat: the data it reads is `verified: false` (★C5) · K2 offers two ways out
 - Q2 · (c) the design area pulled now, out of wave 6's order: net, output slice, move, then the model as its own PR on `design/pin_assigner.py` · cost: three refactor PRs before any conflict code · proves: that the model is born on the core · opinion (the Architecture lens, AR-2) · H ★C9 · caveat: changes the order the PO set in #94 · the plan has no date
@@ -82,10 +76,7 @@ and caveat cells. e.g. `- Q2 what first · fix delivery · two weeks · whether 
 - Test · kind · pass line, dated before any result · D5: A2 · a desk spike (electronics-firmware:R0, under an hour by the Risks lens's estimate, no basis given, no code): write the four seen kinds as rows against one record shape (`Claim`, `Resource`, `Conflict` of AR-9) and count the rules left over · pass line, set 2026-11-07: at most one per-kind rule left over for 4 of 4 kinds; more than one means the kinds are separate fixes, not a model. A1 · a desk check (R0): the eight GDI pins against the kept V1.3 schematic (sha256 4062428a…) and the games' working `gdi.py` · pass line, set 2026-11-07: all 8 match both; any mismatch stops the card <!-- REQUIRED:test -->
 
 ## Questions
-<!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides: … · options · unblocks ·
-opinion (whose) · kind: decision | account (a past-tense question about the decider's own use; the answer is E,
-account, n = 1) · status: queued | asked <date> | answered D<n>.
-If the decider cannot be asked, the queue stays here, and whatever rests on it stays H. -->
+<!-- A queue; the first open question is asked alone. Each: Q<n> · question · decides · options · unblocks · opinion · kind · status. -->
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D3 <!-- REQUIRED:q0 -->
 - Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D5 <!-- REQUIRED:q1 -->
 - Q2 · Does D2 mean the whole model waits for wave 6's design move, or does a small bridge on today's `assign_pins.py` (option C of D1 as a stop that names both claims, plus a JSON refusal) let walk P581 resume first, and what is "soon" in weeks? · decides: the first slice and whether code is written twice · options: Q2 (a), (b), (c) above · unblocks: items.md's order · opinion: the Risks and Architecture lenses raise it, none decides · kind: decision · status: answered D6. Marked: this is risks.md's D2 reading question (RI-21, A7)
@@ -117,6 +108,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D5 · Q1: A2 (one shape covers K1, K2, K3, K5) and A1 (the eight GDI pins are right) are the assumptions the plan rests on. Both desk tests run before any code, with the pass lines as written: A2 at most one per-kind rule left over for 4 of 4 kinds, A1 all 8 pins match the V1.3 schematic and `gdi.py`. The other assumptions were not rated · the PO · 2026-11-07 · AskUserQuestion · options: both as written, A1 only, a stricter A2 with zero rules
 - D6 · Q2: a small bridge now. After the two desk tests (D5), one small PR on today's `assign_pins.py` places a connector's pins by default (D4), names the strap and the onboard LED, stops on a conflict that is left, and answers in JSON. P581 resumes with a true map. Wave 6's design move carries the code into the core. This is D2's reading (b), option Q2 (b). "One small PR" is the packaging of "a small bridge now": items.md names P665 as the bridge · the PO · 2026-11-07 · AskUserQuestion · options: a small bridge now, wait for wave 6, pull the design area forward
 - D7 · Q18: "Warn, confirm with a flag": "Like ESPHome: spark warns, and a line in requirements.json (for example `accept_strap: true` on the signal) lets it through. More freedom, one more key to explain." The option's "Like ESPHome" was inexact, because ESPHome warns and proceeds without any flag and `ignore_strapping_warning` only silences the warning (EX-16, refuter second pass). What a run does without the flag (stop with a hint, or warn and place), and the flag's name, are for the plan council (Q20). This replaces C4's refusal in the frame's "must not get worse" line · the PO · 2026-11-07 · AskUserQuestion · options: keep the refusal, warn and confirm with a flag
+- D8 · the understanding is confirmed (the frame, the jobs, the direction D4-D7, the remaining risk, items.md): file the 8 items as sub-issues of #892, which becomes the epic, open the discovery PR, then plan mode for P669 · the PO · 2026-11-07 · AskUserQuestion · options: file all and plan, file only P669 and P665, something is wrong
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
@@ -133,18 +125,24 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 ## Board actions <!-- REQUIRED:spark-process:board-actions -->
 <!-- Each action on the board or the issue (stage, waiting flag, comment, filing): taken, with its D, or pending.
 None is taken without a D. e.g. `- move #16 to Discovery · pending` -->
-- move P663 #892 to Discovery, set Waiting on: the PO and Waiting since: 2026-11-07 for Q1 · pending
-- comment on #892 with a link to this brief · pending
-- relabel #892 from `epic` (its label today) or keep it as the epic and file the stories under it, per items.md · pending
-- file the items in items.md · pending, needs the PO's yes to the list
-- comment on P527 #726 that D4 and D7 change its body ("stays refused, as C4 says" is stale), and fold that into the bridge or keep it, for the plan council · pending
-- none taken
+- move P663 #892 to Discovery, set Waiting on: the PO · not taken, no question waits after D8, #892 is the epic and counts in no stage
+- comment on #892 with a summary of this discovery and the link to this brief · taken, D8
+- relabel #892: it already carries `epic`, so the label stays, the title is the epic's, and the 8 items are its sub-issues · taken, D8
+- file the items in items.md (P667 is merged into P665) · taken, D8: P665 #894, P666 #895, P668 #896, P669 #897, P670 #898, P671 #899, P672 #900, P673 #901
+- comment on P527 #726 that D4 and D7 change its body ("stays refused, as C4 says" is stale) · taken, D8
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
 <!-- Written only after the decider confirms the understanding (a D); copies only confirmed constraints. Holds: outcome ·
 who · success and its proof · constraints (appetite, confirmed no-gos, rabbit holes) · what they said (D) against what
 we assume (H) · links to the journeys and the map · riskiest assumptions and their tests · options considered. -->
-not yet: the PO has not confirmed the understanding. Q1, Q2, Q13 and Q18 are answered (D4 to D7), and both refuter passes ran <!-- REQUIRED:handoff -->
+- Outcome: the P581 project (GDI screen, MAX98357A, joystick on a FireBeetle 2 ESP32-S3) builds with a true pin map, a breadboard sheet that says "plug the cable" and no two claims on one pin. Proof: `check_spine.py requirements.json --keep .` on P581 and a fixture per conflict kind (★C4: the walk's own file places 15 signals today and exits 0, with TFT_BL on GPIO38, the cable's RST pin).
+- Who: the PO at his bench (n = 1), and Claude as the second user of every interface. Success: a run with no line places the screen on the cable and prints one line (D4). A left conflict stops with a code and both claims in JSON (D6). A named strap with no connector warns (D7).
+- Constraints (confirmed): a small bridge on today's `assign_pins.py` first, moved by wave 6's design move (D6, D2). No question to place, a default and one line "wires" to change it (D4). The pins stay `verified: false` until the A1 desk check passes (D5). Must not get worse: walk3, walk4 and reaction-game pin maps, the exit codes. Appetite: none set.
+- Said (D) against assumed (H): D1 to D8 are what the PO said. The remaining H are the unrated assumptions (8 H), the plan council's rows Q4 to Q6, Q8 to Q10, Q17, Q19 to Q21, and the proposed no-gos in Options, which nobody has confirmed. Q12 waits for his bench.
+- Links: [jobs and journeys](jobs-and-journeys.md), [story map](story-map.md), [risks and tests](risks-and-tests.md), [items](items.md), [verification](verification.md).
+- Riskiest assumptions and tests (D5): A2 one shape covers K1, K2, K3, K5, tested by the desk spike P669 #897 (pass: at most one per-kind rule left over for 4 of 4 kinds). A1 the eight GDI pins are right, tested by the desk check against the V1.3 schematic and `gdi.py` (pass: all 8 match). Both run before any code.
+- Options considered: Q2 wait, bridge (chosen, D6), pull the design area forward. Q4 envelope, small shape, exit 2. Q5 four kinds, with severity, all seven. D1 options A to D. D4 options default, ask once, ask every build. D7 keep the refusal, warn with a flag.
+- Next: spike P669 #897 first, then the bridge P665 #894 after the A1 check and P664 #893. <!-- REQUIRED:handoff -->
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/
