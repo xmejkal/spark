@@ -26,3 +26,5 @@ The base is PR #906's branch merged with main (39a35e65).
 | 18 | `tests/test_self_confirmation`'s `module.NAME` keys | build | acted | unchanged: `from spark.bench import board_live` keeps the name `board_live`, and the test reads `ImportFrom` names under `spark` |
 | 19 | The glob test misses a moved module that is not board_ or deploy_ (flasher.py, image_evidence.py) coming back to scripts/ | reviewer, PR | acted | test_no_bench_module_has_a_second_copy_in_scripts, seen failing on a planted copy |
 | 20 | The plan's goal line misses deploy_record_store.py | reviewer, PR | rejected | wave5-plan.md:211-212 names it, the line break hid it |
+| 21 | No test fails if the next: lines name the wrong folder for the CLI | refuter, PR | acted | test_the_next_lines_name_the_cli_in_scripts, seen failing on the old with_name path, and a mutation row in tests/mutations/p679-bench-move.json |
+| 22 | A CLI, a path built from __file__, an import or a retargeted row broke in the move | refuter, PR | rejected | the five CLIs run from /private/tmp with python3 -I, each bench module imports alone, 325 of 364 rows find their text and the 39 others found nothing on the base too |

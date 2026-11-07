@@ -286,6 +286,13 @@ class TheBenchAreaTest(unittest.TestCase):
                        if path.name != "__init__.py" and (ROOT / "scripts" / path.name).exists())
         self.assertEqual(twins, [])
 
+    def test_the_next_lines_name_the_cli_in_scripts(self):
+        # the refuter of #915: next_text builds the CLI's path from its own file, two folders up since the move
+        code = "from spark.bench import board_envelope; print(board_envelope.next_text([{'op': 'look', 'argv': [], 'why': 'w'}]))"
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True,
+                             timeout=60, stdin=subprocess.DEVNULL)
+        self.assertIn(str(ROOT / "scripts" / "look.py"), run.stdout, run.stderr)
+
     def test_each_bench_module_imports_alone(self):
         # a child Python per module: an import cycle shows as "partially initialized module", which a warm process hides
         for module in sorted(path.stem for path in self.BENCH.glob("*.py") if path.name != "__init__.py"):
