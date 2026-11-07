@@ -73,18 +73,19 @@ The suite still reads source for rules about the code itself:
 
 A golden is a file with the expected output of one script run. `tests/test_golden_bench.py` keeps the goldens in
 `tests/golden/`, for `look.py`, `deploy.py`, `grant.py --check`, `live.py` and `reach.py`
-([P380](https://github.com/xmejkal/spark/issues/487)). Each test runs one script as a child process in an S3 project that
+([P380](https://github.com/xmejkal/spark/issues/487)). `tests/test_golden_firmware.py` keeps the firmware scripts'
+goldens in `tests/golden-firmware/` (P683). Each test runs one script as a child process in an S3 project that
 `tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first on the child's
 `PYTHONPATH`, and the child runs with `TZ=UTC` and a store of its own. The scripts mask their own paths (P677:
-`<project>`, `sim/...`, `<store>`, `~/...`), and the test replaces what is left of the run's paths, the image hash and the
-time with placeholders before it compares. `<spark-home>` and `<project-dir>` are the harness's names for the test run's
-own store and project. Only a line a person pastes or opens shows them: the scripts print `<store>` and `<project>`
-elsewhere. A golden's name is the op, the status and the scenario: `look-could-not-run-two-boards.json`. A Case may name
-a stderr golden (`.stderr` added). It may also plant a file in the store, such as a deploy grant that takes `deploy.py` past the gate
-([P508](https://github.com/xmejkal/spark/issues/703)); the two grant runs add about 10 s.
+`<project>`, `sim/...`, `<store>`, `~/...`), and the test replaces what is left of the run's paths, the image hash and
+the time with placeholders before it compares. `<spark-home>` and `<project-dir>` are the harness's names for the test
+run's own store and project. Only a line a person pastes or opens shows them: the scripts print `<store>` and
+`<project>` elsewhere. A golden's name is the op, the status and the scenario: `look-could-not-run-two-boards.json`. A
+Case may name a stderr golden (`.stderr` added). It may also plant a file in the store, such as a deploy grant that
+takes `deploy.py` past the gate ([P508](https://github.com/xmejkal/spark/issues/703)).
 
-If you change what a bench script prints on purpose, write that op's goldens again, read the diff, and run once more.
-An accept run writes only the goldens of the op it names:
+If you change what a bench or firmware script prints on purpose, write that op's goldens again, read the diff, and run
+once more. An accept run writes only the goldens of the op it names (`look`, `run-scenario`):
 
 ```sh
 SPARK_ACCEPT=look python3 -m unittest tests.test_golden_bench   # writes look's goldens, then fails
@@ -298,11 +299,10 @@ role words (Operation, Strategy, Adapter, Value, Renderer and the rest) live in 
 Spark handles one board per project folder today. A gadget with two boards, such as rc-car's car and remote, is two
 project folders, each with its own `init_project.py` run and its own `parts/`. Until a board folder has its own
 `.spark/`, the build and `check_all.py --project` both read its parent's rules and parts
-([P319](https://github.com/xmejkal/spark/issues/403)). When `check_all.py --project` or
-`init_project.py` finds two built designs, `design.one_board_message` says so and names a `--circuit` path. Many
-boards in one project come with v0.13 ([#94](https://github.com/xmejkal/spark/issues/94)): a board is a folder, and
-the project lists the folders. The decision and its costs are in the P318 finding, in
-[PR #404](https://github.com/xmejkal/spark/pull/404).
+([P319](https://github.com/xmejkal/spark/issues/403)). When `check_all.py --project` or `init_project.py` finds two
+built designs, `design.one_board_message` says so and names a `--circuit` path. Many boards in one project come with
+v0.13 ([#94](https://github.com/xmejkal/spark/issues/94)): a board is a folder, and the project lists the folders. The
+decision and its costs are in the P318 finding, in [PR #404](https://github.com/xmejkal/spark/pull/404).
 
 ## The docs name only what is there
 
