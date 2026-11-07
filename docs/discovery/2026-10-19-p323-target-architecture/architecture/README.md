@@ -138,7 +138,7 @@ The glossary is [glossary.md](glossary.md): one word per thing, and the public n
 3. Follow the Service. Its `__init__` lists every collaborator, so its whole outside world is one signature.
 4. For one backend, open the Strategy base. Its contract test shows what every Adapter must do.
 
-A generated page, `docs/guide/map.md` (proposed), lists each CLI with its Operations, each area's modules with their
+A generated page, `docs/guide/map.md`, lists each CLI with its Operations, each area's modules with their
 first docstring line and test file, and each registry with its keys. A test fails when it is stale.
 
 ## One Operation, two frontends
