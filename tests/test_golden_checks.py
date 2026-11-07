@@ -25,6 +25,14 @@ def spark_cache():
     return {path.name: path.read_bytes() for path in sorted(golden_checks.SPARK_CACHE.iterdir())}
 
 
+def restore(name, value):
+    """Put `name` back in this process's environment as it was: `value`, or gone when None."""
+    if value is None:
+        os.environ.pop(name, None)
+    else:
+        os.environ[name] = value
+
+
 class GhShimGuardTest(unittest.TestCase):
     """The guard: a child's PATH is the shim's folder alone, its gh is the fake, its proxies are a closed port, and it
     carries no Wokwi token."""
@@ -36,6 +44,12 @@ class GhShimGuardTest(unittest.TestCase):
 
     def env(self):
         return golden_checks.child_env(self.folder / "store", self.bin)
+
+    def in_parent(self, **values):
+        """Set `values` in this process's environment, which a child's is made from, until the test ends."""
+        for name, value in values.items():
+            self.addCleanup(restore, name, os.environ.get(name))
+            os.environ[name] = value
 
     def run_gh(self, **told):
         return subprocess.run(["gh", "api", "repos/x/y/contents/z", "--jq", ".content"], env=dict(self.env(), **told),
@@ -49,14 +63,14 @@ class GhShimGuardTest(unittest.TestCase):
         self.assertEqual(shutil.which("gh", path=self.env()["PATH"]), str(self.bin / "gh"))
 
     def test_every_proxy_is_a_closed_port_and_nothing_bypasses_it(self):
+        self.in_parent(no_proxy="*", NO_PROXY="*")  # a parent that lets every host bypass the proxy
         env = self.env()
         self.assertEqual({name: env.get(name) for name in golden_checks.PROXIES},
                          dict.fromkeys(golden_checks.PROXIES, golden_checks.CLOSED_PROXY))
         self.assertFalse({"no_proxy", "NO_PROXY"} & set(env))
 
     def test_no_child_carries_a_wokwi_token(self):
-        os.environ["WOKWI_CLI_TOKEN"] = "wok_a-pretend-token"
-        self.addCleanup(os.environ.pop, "WOKWI_CLI_TOKEN")
+        self.in_parent(WOKWI_CLI_TOKEN="wok_a-pretend-token")
         self.assertNotIn("WOKWI_CLI_TOKEN", self.env())
 
     def test_the_shim_runs_the_fake_gh(self):

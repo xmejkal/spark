@@ -76,8 +76,10 @@ A golden is a file with the expected output of one script run. `tests/test_golde
 ([P380](https://github.com/xmejkal/spark/issues/487)), and `tests/test_golden_firmware.py` those of `run_scenario.py`,
 `flash_image.py` and `import_firmware.py` in `tests/golden-firmware/`
 ([P683](https://github.com/xmejkal/spark/issues/920)): its `wokwi-cli` is a shim that runs `tests/fake_wokwi_cli.py`
-only with a fake token, so no golden spends a Wokwi minute. Each test runs one script as a child process in an S3
-project that `tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first
+only with a fake token, so no golden spends a Wokwi minute. `tests/test_golden_checks.py` keeps those of the six check
+CLIs in `tests/golden-checks/` ([P687](https://github.com/xmejkal/spark/issues/925)), in `tests/data/breadboard/button-light`
+after `init_project.py`: a child's `PATH` is a `gh` shim that runs `tests/fake_gh.py`, and its proxies are a closed
+port. Each bench or firmware test runs one script as a child process in an S3 project that `tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first
 on the child's `PYTHONPATH`, and the child runs with `TZ=UTC` and a store of its own. The scripts mask their own paths
 (P677: `<project>`, `sim/...`, `<store>`, `~/...`), and the test replaces what is left of the run's paths, the image
 hash and the time with placeholders before it compares. `<spark-home>` and `<project-dir>` are the harness's names for
@@ -87,14 +89,15 @@ bench Case may name a stderr golden (`.stderr` added), and a firmware Case puts 
 `--- stderr ---`. A bench Case may also plant a file in the store, such as a deploy grant that takes `deploy.py` past
 the gate ([P508](https://github.com/xmejkal/spark/issues/703)).
 
-If you change what a bench or firmware script prints on purpose, write that op's goldens again, read the diff, and run
+If you change what a bench, firmware or check script prints on purpose, write that op's goldens again, read the diff, and run
 once more. An accept run writes only the goldens of the op it names:
 
 ```sh
 SPARK_ACCEPT=look python3 -m unittest tests.test_golden_bench   # writes look's goldens, then fails
 git diff tests/golden
 SPARK_ACCEPT=run-scenario python3 -m unittest tests.test_golden_firmware   # or flash-image, import-firmware
-git diff tests/golden-firmware
+SPARK_ACCEPT=check-all python3 -m unittest tests.test_golden_checks   # or the op of another check CLI
+git diff tests/golden-firmware tests/golden-checks
 ```
 
 **The second rule: every fix that holds logic is mutation-tested.** Before the pull request, the council's mutation

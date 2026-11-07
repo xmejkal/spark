@@ -343,8 +343,9 @@ the text is scrubbed, not masked.
 Tests: one test per Case. `SPARK_ACCEPT=<op>` writes that op's goldens and fails. No golden holds a path of this
 machine, and every golden has its Case. The guard tests are above. No `needs_littlefs`.
 
-Mutation (`p687-checks-net.json`, est. 5 rows). The scrub skipped. A Case's exit code wrong. The proxies not set (the
-child env test). The fake `gh` ignores its exit code. `floating-rules.json` keeps `pulled_by_firmware`. Proven
+Mutation (`p687-checks-net.json`, 9 rows as built). The scrub skipped. A Case's exit code wrong. The proxies not set (the
+child env test). The fake `gh` ignores its exit code. `floating-rules.json` keeps `pulled_by_firmware`. The child's `PATH` keeps
+another folder. The token or `no_proxy` reaches the child. Planted bytes are written as text. Proven
 with `--anchors`, run with `--copy` in parallel shards.
 
 Not pinned, rows for the PR's rows file and proposed cards. `check_vendor_pins.py` on a missing board file ends in a
