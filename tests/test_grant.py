@@ -168,6 +168,57 @@ class IssueTest(GrantCase):
         service = board_grant.GrantService(finder, reader, mock.Mock(), now=lambda: START, user_name=lambda: "grace")
         self.assertEqual(service.issue(None, 30, FakeConsent(True)).granted_by, "grace")
 
+    def test_a_relayed_yes_makes_a_live_grant_that_names_the_person_and_the_program(self):
+        # P675 (W4-4)
+        asked = []
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: asked.append(question) or True)
+        code, _, err = self.grant("--minutes", "30", consent=relayed)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.kept()["granted_by"], "given through test-ui by ada")
+        self.assertIn("8c:bf:ea:xx:xx:xx (token %s) for 30 minutes" % self.kept()["board_token"], asked[0])
+        code, checked = self.check()
+        self.assertEqual((code, checked["granted"], checked["grant"]["granted_by"]), (0, True, "given through test-ui by ada"))
+
+    def test_a_relayed_grant_never_asks_for_the_login(self):
+        # getpass can find no user (OSError since Python 3.13), and the login is not who said yes
+        finder = mock.Mock()
+        finder.require_one_board.return_value = mock.Mock(device="/dev/cu.usbmodem101", serial=MAC)
+        reader = mock.Mock()
+        reader.read.return_value = mock.Mock(mac=MAC)
+
+        def no_user():
+            raise OSError("no user")
+        service = board_grant.GrantService(finder, reader, mock.Mock(), now=lambda: START, user_name=no_user)
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        self.assertEqual(service.issue(None, 30, relayed).granted_by, "given through test-ui by ada")
+
+    def test_a_relayed_yes_makes_no_deploy_grant_and_never_touches_the_board(self):
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        code, _, err = self.grant("--minutes", "30", "--scope", "deploy", consent=relayed)
+        self.assertEqual((code, self.ran), (1, []))
+        self.assertIn("a yes given through another program makes a live grant only", err)
+        self.assertFalse((self.home / "grants").exists())
+
+    def test_a_relayed_answer_that_is_not_true_is_no(self):
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: "yes")
+        code, _, err = self.grant("--minutes", "30", consent=relayed)
+        self.assertEqual(code, 1)
+        self.assertIn("no grant: the person answered no", err)
+
+    def test_a_relayed_yes_names_its_person_and_program_in_one_printable_line(self):
+        for person, program in (("", "ui"), (" \n", "ui"), ("ada", ""), (None, "ui"), ("ada", 7)):
+            with self.assertRaises(ValueError, msg=(person, program)):
+                deploy_gate.RelayedConsentStrategy(person, program, lambda question: True)
+        relayed = deploy_gate.RelayedConsentStrategy("ada\nyes\x1b[31m", "ui", lambda question: True)
+        self.assertEqual((len(relayed.who.splitlines()), "\x1b" in relayed.who), (1, False))
+        self.assertEqual(relayed.granted_by(lambda: "login"), relayed.who)
+
+    def test_no_script_builds_a_relayed_yes(self):
+        # P675: no command-line flag carries it; only a frontend that is not a script here gives it as make_consent
+        builders = [str(path.relative_to(ROOT)) for path in (ROOT / "scripts").rglob("*.py")
+                    if "RelayedConsentStrategy(" in path.read_text() and path.name != "deploy_gate.py"]
+        self.assertEqual(builders, [])
+
     def test_the_token_is_the_first_half_of_the_looks_token(self):
         self.grant("--minutes", "5", consent=FakeConsent(True))
         self.assertEqual(self.kept()["board_token"], hashlib.sha256(MAC.encode()).hexdigest()[:4])
