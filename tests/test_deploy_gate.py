@@ -1453,14 +1453,14 @@ class TerminalConsentTest(unittest.TestCase):
     def test_the_question_is_masked_before_it_is_written(self):
         # P677: the question names the last deploy's project, a path under the person's home
         stdout = Stream()
-        consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout, mask=lambda text: text.replace("/home/ada", "~"))
-        consent.ask("erase /home/ada/lamp?")
+        consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout, mask=lambda text: text.replace("/srv/person", "~"))
+        consent.ask("erase /srv/person/lamp?")
         self.assertEqual(stdout.getvalue(), "erase ~/lamp? type yes to go on: ")
 
     def test_the_bench_asks_through_the_masking_reporter(self):
-        reporter = MaskingReporter(TerminalReporter(Stream()), Privacy.of("/p", "/s", "/home/ada", ()))
+        reporter = MaskingReporter(TerminalReporter(Stream()), Privacy.of("/p", "/s", "/srv/person", ()))
         consent = build_project_outside_world(None, (ASKS,), reporter).make_consent(self.LINE)
-        self.assertEqual(consent.mask("erase /home/ada/lamp?"), "erase ~/lamp?")
+        self.assertEqual(consent.mask("erase /srv/person/lamp?"), "erase ~/lamp?")
 
     def test_anything_else_is_no(self):
         for typed in ("y\n", "YES please\n", "\n", ""):
