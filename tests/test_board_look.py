@@ -75,7 +75,7 @@ class LookCase(ProjectCase):
 
     def look(self, devs="mpremote-devs-one.txt", esptool="c6-flash-id.txt", port=None, flasher=None, esptool_code=0,
              text=None, ignore_older_runs=False, evidence=None):
-        """The LookReport of LookService.run with fake tools. `text` is what esptool prints, in place of the file. LookStop propagates."""
+        """The LookReport of LookService.run with fake tools. `text` is what esptool prints, in place of the file. LookStopError propagates."""
         def run(argv, **kw):
             self.ran.append(argv)
             if "devs" in argv:
@@ -106,7 +106,7 @@ class PortFinderTest(LookCase):
 
     def test_a_failed_mpremote_stops_with_the_last_line_of_its_stderr(self):
         failed = subprocess.CompletedProcess([], 1, "", "Traceback\nmpremote: no such command\n")
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: failed).nodes()
         self.assertEqual(str(stop.exception), "could not list the boards on USB: mpremote: no such command")
         self.assertEqual(stop.exception.reason, "list_failed")
@@ -114,23 +114,23 @@ class PortFinderTest(LookCase):
     def test_an_mpremote_that_cannot_start_stops_the_listing_and_an_unlisted_port_stops_the_look(self):
         def cannot_start(argv, **kw):
             raise OSError("no such file")
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             board_look.PortFinder(FOUND["board-shell"], cannot_start).nodes()
         self.assertEqual(stop.exception.reason, "list_failed")
         listing = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-one.txt")))
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             listing.require_one_board("look.py", "/dev/cu.not-listed")
         self.assertEqual((str(stop.exception), stop.exception.reason),
                          ("no board on /dev/cu.not-listed: mpremote devs does not list it.", "port_not_listed"))
 
     def test_one_port_is_required_and_the_stop_names_the_script_that_asked(self):
         none = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(""))
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             none.require_one_port("reach.py")
         self.assertTrue(str(stop.exception).startswith("no board found."))
         self.assertEqual(stop.exception.reason, "no_port")
         two = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-two.txt")))
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             two.require_one_port("reach.py")
         self.assertIn("2 boards on USB:", str(stop.exception))
         self.assertEqual(stop.exception.reason, "two_boards")
@@ -149,14 +149,14 @@ class PortFinderTest(LookCase):
             raise subprocess.TimeoutExpired(argv, kw["timeout"])
         for call, reason in ((lambda: board_look.PortFinder(FOUND["board-shell"], stalled).nodes(), "list_timeout"),
                              (lambda: board_look.EsptoolReader(FOUND["flasher"], stalled).read(C6_PORT), "read_timeout")):
-            with self.assertRaises(board_look.LookStop) as stop:
+            with self.assertRaises(board_look.LookStopError) as stop:
                 call()
             self.assertEqual(stop.exception.reason, reason)
             self.assertIn("took more than", str(stop.exception))
             self.assertIn("BOOT", str(stop.exception))
 
     def test_two_boards_and_no_port_stops_listing_both_and_reads_neither(self):
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             self.look(devs="mpremote-devs-two.txt")
         said = str(stop.exception)
         for part in (C6_PORT, "8c:bf:ea:xx:xx:xx", "/dev/cu.usbserial-1410", "look.py --port", "unplug one",
@@ -170,7 +170,7 @@ class PortFinderTest(LookCase):
         self.assertFalse([a for a in self.ran if "devs" in a])
 
     def test_no_board(self):
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             self.look(devs="mpremote-devs-none.txt")
         self.assertIn("no board found", str(stop.exception))
         self.assertIn("If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.", str(stop.exception))
@@ -181,7 +181,7 @@ class PortFinderTest(LookCase):
 
     def test_a_grouped_board_listed_second_by_its_serial_is_used_on_that_node_and_the_stop_lists_the_other(self):
         finder = board_look.PortFinder(FOUND["board-shell"], lambda argv, **kw: done(data("mpremote-devs-grouped-and-two-without-serial.txt")))
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             finder.require_one_port("look.py")
         said = str(stop.exception)
         self.assertIn("3 boards on USB:", said)
@@ -250,7 +250,7 @@ class EsptoolReaderTest(unittest.TestCase):
         self.assertIsNone(self.read("c6-flash-id-no-mac.txt").mac)
 
     def test_any_non_zero_exit_raises(self):
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             self.read("wrong-chip.txt", code=2)
         self.assertIn("could not read the board on %s" % C6_PORT, str(stop.exception))
         self.assertIn("BOOT", str(stop.exception))
@@ -259,7 +259,7 @@ class EsptoolReaderTest(unittest.TestCase):
     def test_an_esptool_that_cannot_start_stops_the_read(self):
         def cannot_start(argv, **kw):
             raise OSError("no such file")
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             board_look.EsptoolReader(FOUND["flasher"], cannot_start).read(C6_PORT)
         self.assertEqual((stop.exception.port, stop.exception.reason), (C6_PORT, "board_not_read"))
 
@@ -269,7 +269,7 @@ class EsptoolReaderTest(unittest.TestCase):
         def failed(argv, **kw):
             return subprocess.CompletedProcess([], 2, "Connecting......\n", stderr)
 
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             board_look.EsptoolReader(FOUND["flasher"], failed).read(C6_PORT)
         self.assertEqual((stop.exception.port, stop.exception.tool_said), (C6_PORT, (
             "ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data received.")))
@@ -281,7 +281,7 @@ class EsptoolReaderTest(unittest.TestCase):
         self.assertIsNone(board_look.esptool_said("Connecting......\nHint: check the port\n"))
 
     def test_a_failed_read_with_no_error_line_says_nothing_for_esptool(self):
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             self.read("wrong-chip.txt", code=2)
         self.assertIsNone(stop.exception.tool_said)
 
@@ -298,7 +298,7 @@ class EsptoolReaderTest(unittest.TestCase):
 
     def test_another_flasher_than_esptool_is_not_read(self):
         other = tools.Tool("probe-rs", "flasher", {"kind": "binary"}, ["/opt/probe-rs"])
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             board_look.EsptoolReader(other, lambda argv, **kw: done("")).read(C6_PORT)
         self.assertIn("the look reads only esptool", str(stop.exception))
         self.assertEqual(stop.exception.reason, "flasher_not_esptool")
@@ -322,14 +322,14 @@ class LookNamesTheButtonsTest(LookCase):
     PLACES = "hold the board's BOOT button (B, top right, beside the USB-C), press and release RESET (R, top left, beside the USB-C)"
 
     def test_a_failed_read_on_the_xiao_names_where_the_buttons_are(self):
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             self.look(esptool_code=2)
         self.assertIn(self.PLACES, str(stop.exception))
         self.assertTrue(str(stop.exception).endswith("Left and right as seen with the metal shield facing you, USB-C at the top"))
 
     def test_a_failed_read_on_a_record_without_buttons_says_the_plain_words(self):
         self.board("firebeetle2-esp32s3")
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             self.look(esptool_code=2)
         self.assertIn("hold the board's BOOT button, press and release RESET, release BOOT", str(stop.exception))
         self.assertNotIn("Left and right", str(stop.exception))
@@ -477,27 +477,27 @@ class LookTest(LookCase):
     def test_requirements_missing_or_naming_no_board_stops_without_a_name_of_none(self):
         (self.project / "requirements.json").write_text(json.dumps({"parts": []}))
         for _ in range(2):
-            with self.assertRaises(board_look.LookStop) as stop:
+            with self.assertRaises(board_look.LookStopError) as stop:
                 self.look()
             self.assertEqual((str(stop.exception), stop.exception.reason), ("requirements.json names no board", "no_board_named"))
             (self.project / "requirements.json").unlink(missing_ok=True)
 
     def test_a_board_with_no_record_stops_and_points_to_p230(self):
         self.board("no-such-board")
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             self.look()
         self.assertIn("no board record for no-such-board: P230 will research one.", str(stop.exception))
         self.assertEqual(stop.exception.reason, "no_board_record")
 
     def test_a_tool_that_cannot_be_used_stops_the_look_with_its_sentence(self):
         platform = FakeFirmwarePlatform(self.project, port_finder=tools.ToolProblem("mpremote is not installed"))
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             board_look.looker(platform)
         self.assertEqual((str(stop.exception), stop.exception.reason), ("mpremote is not installed", "tool_missing"))
 
     def test_another_flasher_stops_the_look(self):
         other = tools.Tool("probe-rs", "flasher", {"kind": "binary"}, ["/opt/probe-rs"])
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             self.look(flasher=other)
         self.assertIn("the look reads only esptool", str(stop.exception))
 

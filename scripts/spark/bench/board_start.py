@@ -63,7 +63,7 @@ class BoardStartService:
         self.failed = False
         try:
             rows = self.finder.nodes()
-        except board_look.LookStop:
+        except board_look.LookStopError:
             self.failed = True
             return None
         by_mac = [row for row in rows if self.mac and _key(row.serial).startswith(self.mac)]

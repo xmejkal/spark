@@ -21,7 +21,7 @@ from collections import namedtuple
 import boards
 import tools
 from spark.bench.board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
-from spark.bench.board_look import LookStop
+from spark.bench.board_look import LookStopError
 from spark.bench.download_mode import DOWNLOAD_MODE
 
 #: The next steps, one code each. The sources are in MESSAGE_FOR's comments.
@@ -93,7 +93,7 @@ class PortListedBoardCheck(BoardCheckStrategy):
     def run(self, port, silent_step):
         try:
             boards = self.finder.nodes()
-        except LookStop as cannot:
+        except LookStopError as cannot:
             return CheckResult(self.name, False, "could not list the boards: %s" % cannot, None)
         listed = [board for board in boards if board.device == port]
         if not listed:
@@ -155,7 +155,7 @@ class BoardDoctorService:
 
 
 def after_esptool(stop, platform, run):
-    """The BoardDoctorResult for a board_look.LookStop from esptool's read, or None when the stop names no port (it
+    """The BoardDoctorResult for a board_look.LookStopError from esptool's read, or None when the stop names no port (it
     was no failed read). The tools come from the FirmwarePlatform `platform`. tools.ToolProblem and UnknownStepError pass up."""
     if stop.port is None:
         return None

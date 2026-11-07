@@ -6,7 +6,6 @@
 "C1:scripts/cost.py:NoTranscript": 1,
 "C1:scripts/emit_board.py:RefusedInput": 1,
 "C1:scripts/matching.py:UnknownMatcher": 1,
-"C1:scripts/spark/bench/board_look.py:LookStop": 1,
 "C1:scripts/spark/core/outcomes.py:BadArgument": 1,
 "C1:scripts/store.py:StoreProblem": 1,
 "C1:scripts/tools.py:ToolProblem": 1,

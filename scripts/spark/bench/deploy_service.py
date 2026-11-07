@@ -2,7 +2,7 @@
 The flow of a deploy, without a terminal (P239 PR 8): plan, look, gate, flash, then the facts, ready and the log.
 
 `DeployService` prints nothing and never exits. A line the person must see while a step runs is an Event it reports
-through `outside.report` (E2, P655); the rest comes back in a `DeployResult`; a refusal is an exception (`LookStop`,
+through `outside.report` (E2, P655); the rest comes back in a `DeployResult`; a refusal is an exception (`LookStopError`,
 `DeployError`, `tools.ToolProblem`, `deploy_gate.GateClosedError`). The DeployImage Operation chooses the yes and builds the result.
 """
 
@@ -63,7 +63,7 @@ class DeployService:
     """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `outside` is the OutsideWorld: its `run` runs a
     command, its `clock` has `now`, `monotonic` and `sleep`, and its `report` takes each Event a person reads while a step
     runs. `records` keeps the deploy (default: the store's DeployRecordStore). `evidence` (an ImageEvidence) holds for every
-    step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or `deploy_gate.GateClosedError` to
+    step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStopError` or `deploy_gate.GateClosedError` to
     say why a step cannot go on; they never print and never exit."""
 
     def __init__(self, project, platform, evidence, outside, records=None):
@@ -87,7 +87,7 @@ class DeployService:
         return DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), shell_command, notes)
 
     def look(self, port=None):
-        """The LookReport of the board on USB. Raises LookStop to say why not."""
+        """The LookReport of the board on USB. Raises LookStopError to say why not."""
         return board_look.looker(self.platform, self.run).run(self.project, port, self.evidence)
 
     def deploy(self, look, token, consent):

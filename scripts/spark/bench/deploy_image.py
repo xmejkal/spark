@@ -171,12 +171,12 @@ class DeployFlowService:
             self.consent = self.choose_consent(look, token)
             self.planned = self.service.deploy(look, token, self.consent)
             self.keep_yes()  # only now is there a yes to report
-        except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
+        except (board_look.LookStopError, DeployError, tools.ToolProblem) as cannot:
             if isinstance(cannot, FlashError):
                 self.keep_yes()
             reached.update(refusal=str(cannot), reason=reason_of(cannot))
             lines = ["%s: %s" % (SCRIPT, cannot)]
-            if isinstance(cannot, board_look.LookStop):
+            if isinstance(cannot, board_look.LookStopError):
                 lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
             self.diagnostics += lines
             return EXIT_COULD_NOT_RUN

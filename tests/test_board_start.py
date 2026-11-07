@@ -108,7 +108,7 @@ class BoardStartTest(unittest.TestCase):
         self.assertEqual((start.code, start.port, self.asked), ("download_mode_stayed", ROM.device, []))
 
     def test_a_failed_list_between_two_listings_is_no_restart(self):
-        failed = board_look.LookStop("could not list", reason="list_failed")
+        failed = board_look.LookStopError("could not list", reason="list_failed")
         service = self.service([ROM], failed, [ROM])
         read = self.answers_after(99)
         start = service.wait_for_start(ROM.device, read, self.report, timeout_s=3, usb=ROM.usb)

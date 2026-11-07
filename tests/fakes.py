@@ -107,7 +107,7 @@ class FakeClock:
 
 
 class FakePortFinder:
-    """A fake board_look.PortFinder: each `nodes` call gives the next of `looks`, a list of Ports (or a LookStop to raise),
+    """A fake board_look.PortFinder: each `nodes` call gives the next of `looks`, a list of Ports (or a LookStopError to raise),
     and the last one for good."""
 
     def __init__(self, *looks):
@@ -164,7 +164,7 @@ class FakeConsoleProbe:
 
 
 class FakeBoardReader:
-    """A fake board_look.BoardReader: each `read` gives the next of `readings` (a BoardReading, or a LookStop to raise), and
+    """A fake board_look.BoardReader: each `read` gives the next of `readings` (a BoardReading, or a LookStopError to raise), and
     the last one for good. Keeps each port it was asked for in `read_ports`."""
 
     def __init__(self, *readings):

@@ -67,7 +67,7 @@ class LiveTryService:
     """Service: one live try on the board on one port. `grants` is a board_grant.GrantService, `connection` a bare
     board_connection.BoardConnection on that port, `probe` its board_console.ConsoleProbe (or None for no cure),
     `board` the project's board record, `doctor` a board_doctor.BoardDoctorService with `shell` the tools list's
-    mpremote, or None for no doctor. RestrictedPins.from_board's BrokenRecordError and the grant check's LookStop pass up."""
+    mpremote, or None for no doctor. RestrictedPins.from_board's BrokenRecordError and the grant check's LookStopError pass up."""
 
     def __init__(self, grants, connection, probe, board, doctor=None, shell=None):
         self.grants, self.connection, self.probe, self.board = grants, connection, probe, board

@@ -84,7 +84,7 @@ class RunLiveCode(Operation):
                                                 boards.load(project), board_doctor.BoardDoctorService.for_board(finder, probe),
                                                 platform.find_tool("board-shell"))
             result = service.run(code, port)
-        except (tools.ToolProblem, board_look.LookStop, boards.BoardError, BrokenRecordError) as cannot:
+        except (tools.ToolProblem, board_look.LookStopError, boards.BoardError, BrokenRecordError) as cannot:
             empty = dict.fromkeys(board_live.LiveTryResult._fields)
             return stops.stop_result(cannot, SCRIPT, project, port)._replace(
                 data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(cannot), port=port))

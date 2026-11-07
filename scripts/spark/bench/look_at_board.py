@@ -31,7 +31,7 @@ class LookAtBoard(Operation):
     """
     Operation: the look. It builds the evidence (image_evidence), the LookService (board_look.looker) and runs it, and
     returns the LookReport as an OperationResult: its stops and warnings are problems, its unknown fields, a missing token
-    and a last deploy it could not check are unchecked, and a token brings the deploy step. A LookStop is one unchecked
+    and a last deploy it could not check are unchecked, and a token brings the deploy step. A LookStopError is one unchecked
     Finding with the stop's reason, and the board doctor's lines are the diagnostics. It writes nothing on the board. It
     reports one BEGIN of the look, before the read (P507).
     """
@@ -54,7 +54,7 @@ class LookAtBoard(Operation):
         outside.report(Event.begin(board_envelope.STAGE_LOOK))
         try:
             report = board_look.looker(platform, outside.run).run(project, port, evidence)
-        except board_look.LookStop as stop:
+        except board_look.LookStopError as stop:
             return self._stopped(stop, platform, port, outside)
         return self._found(report, project.resolve(), evidence)
 
@@ -80,7 +80,7 @@ class LookAtBoard(Operation):
 
     @staticmethod
     def _stopped(stop, platform, port, outside):
-        """The result of a LookStop: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
+        """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
         lines, doctor = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
         places = boards.ButtonPlaces.of_project(platform.project)
         # the port and the button words, each on one line (P430); a tool problem's path is flat already (P444)

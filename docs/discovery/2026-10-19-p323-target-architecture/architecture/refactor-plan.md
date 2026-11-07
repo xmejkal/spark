@@ -364,7 +364,7 @@ the code at `d064a65` under this name.
 | `zone_time`, `text_guards`, `provenance` | P401, P403, P389 | `core/zone_time.py`, `core/text_guards.py`, `records/provenance.py` | leaves | exist (`text_guards` was `screen_text`, renamed in P418) |
 | `why_no_footprint`, `footprint_gaps` | P407 | `design/footprint_emitter.py` | functions | exists |
 | `NO_FOOTPRINT_HINT`, `REFUSED_INPUT_MESSAGE` | P407 | `build/stages.py`, `design/board_emitter.py` | constants | exists |
-| `LookStopError` | plan v1 | `bench/board_look.py` | Error | exists as `LookStop` |
+| `LookStopError` | plan v1 | `bench/board_look.py` | Error | exists (renamed from `LookStop` in W5-3b, P680) |
 | `RunLog`, `status_of_run` | plan v1 | `firmware/scenario_run.py` | Value, a function | not built yet (`run_record` builds a tuple, `verdict` stays) |
 | `Brief` | comment 4 | `records/brief.py` | Value | not built yet (exists as `parts.vendor_order` and `parts.sellers`) |
 | `OutsideWorld`, `Backends` | plan v1 | `core/outside.py`, `records/backends.py` | Values | `OutsideWorld` exists (P442, `run` and `find_tool`); `Backends` is not built, `find_tool` serves the look |
