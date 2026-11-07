@@ -29,7 +29,7 @@
 "R1:scripts/check_physics.py:check_resistor_power": 98,
 "R1:scripts/check_physics.py:main": 32,
 "R1:scripts/check_physics.py:run": 62,
-"R1:scripts/check_spine.py:<module>": 1050,
+"R1:scripts/check_spine.py:<module>": 1048,
 "R1:scripts/check_spine.py:main": 81,
 "R1:scripts/check_spine.py:run": 189,
 "R1:scripts/check_vendor_pins.py:main": 45,

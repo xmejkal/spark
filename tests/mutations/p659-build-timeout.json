@@ -5,7 +5,7 @@
  {"file": "scripts/check_spine.py", "name": "the build's limit falls back to 300", "find": "BUILD_TIMEOUT_S = 900", "replace": "BUILD_TIMEOUT_S = 300"},
  {"file": "scripts/check_spine.py", "name": "the handler drops the tool's last words", "find": "last = \" | \".join(said.strip()[-LAST_WORDS_CAP:].splitlines()[-3:])", "replace": "last = \"\""},
  {"file": "scripts/check_spine.py", "name": "the probe is given the build's limit", "find": "timeout=PROBE_TIMEOUT_S)", "replace": "timeout=BUILD_TIMEOUT_S)"},
- {"file": "scripts/check_spine.py", "name": "a runtime's converter is named by two words", "find": "names[:3] if names and names[0] in RUNTIMES else names[:2]", "replace": "names[:2]"},
+ {"file": "scripts/check_spine.py", "name": "a converter run as `<runtime> run cli.ts` is named by two words", "find": "names[:3] if names[1:2] == [\"run\"] else names[:2]", "replace": "names[:2]"},
  {"file": "scripts/check_spine.py", "name": "the last words are not capped", "find": "said.strip()[-LAST_WORDS_CAP:]", "replace": "said.strip()"},
  {"file": "scripts/check_spine.py", "name": "stdout is not read when stderr is empty", "find": "out = late.stderr or late.stdout or \"\"", "replace": "out = late.stderr or \"\""}
 ]

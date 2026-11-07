@@ -886,9 +886,9 @@ class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
     def test_the_sentence_reads_text_a_string_command_a_runtime_and_no_words(self):
         late = subprocess.TimeoutExpired
         self.assertEqual("`tsci build` did not finish in 900s; its last words: routing net 4",
-                         check_spine.timed_out_sentence(late("/Users/someone/x/tsci build board.tsx", 900, stderr="routing net 4\n")))
+                         check_spine.timed_out_sentence(late("/opt/spark/x/tsci build board.tsx", 900, stderr="routing net 4\n")))
         self.assertEqual("`bun run cli.ts` did not finish in 120s",
-                         check_spine.timed_out_sentence(late(["/opt/bun", "run", "/Users/someone/tools/cli.ts"], 120)))
+                         check_spine.timed_out_sentence(late(["/opt/bun", "run", "/opt/spark/tools/cli.ts"], 120)))
         self.assertEqual("`convert-wokwi --circuit` did not finish in 120s; its last words: wrote 3 parts",
                          check_spine.timed_out_sentence(late(["convert-wokwi", "--circuit"], 120, output=b"wrote 3 parts\n", stderr=b"")))
 
