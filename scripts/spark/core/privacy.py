@@ -15,7 +15,7 @@ from pathlib import Path, PurePath
 from spark.core.events import Reporter
 
 # --- MVP ---
-#: What a path under the store becomes. `<store>` is SPARK_HOME, as the docs and `store.PLACEHOLDER_HINT` say.
+#: What a path under the store becomes. `<store>` is SPARK_HOME, as `docs/guide/agents.md` says.
 STORE_PLACEHOLDER = "<store>"
 SECRET_MASK = "***"
 #: After a path: the next character is no part of a name, so the rule of `/a/b` leaves `/a/bc` alone.
