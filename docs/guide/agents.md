@@ -14,8 +14,7 @@ This guide has four pages. Open the one you need:
 Read these rules before you run a script:
 
 1. **Three words, three exit codes.** `ok` exits 0, `problems` exits 1 and `could-not-run` exits 2. `check_all.py`
-   adds `skipped`. A crash also exits 1, so read the JSON, not only the code
-   ([the outcomes](#the-outcomes-and-their-exit-codes)).
+   adds `skipped`. A crash also exits 1, so read the JSON, not only the code ([the outcomes](#the-outcomes-and-their-exit-codes)).
 2. **These are not a pass:** `could-not-run`, `skipped`, `unknown`, a `null` and a `?` line. Never fill in a `null`
    ([what never to assume](agents/never-assume.md)).
 3. **`check_all.py` exit 0 means less than it says.** No check that ran found a problem. Read `resolved` to see that
@@ -30,6 +29,7 @@ Read these rules before you run a script:
    `firmware/main.py` from `pins.py` and follow `next`. A `signals` entry takes a `pin` ([the file](../../commands/build.md#the-requirements-file)).
 7. **Check someone else's project in a scratch store** (`SPARK_HOME`). Never put the person's drawer, history or
    projects list into a URL, a prompt or a commit. Run a `next` step with its `env` set ([`env`](agents/json.md)).
+   The bench scripts mask their output: a project path is relative, `<store>` is SPARK_HOME (else ~/.local/share/spark), any other home path is `~/...` and an account token `***`. A line to paste keeps its real paths ([P677](agents/json.md#what-the-text-output-shows)).
 
 A build of spark's button-and-LED example, shortened with `...`:
 

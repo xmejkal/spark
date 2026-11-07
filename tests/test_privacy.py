@@ -25,7 +25,7 @@ from spark.core.events import Event, TerminalReporter  # noqa: E402
 from spark.core.privacy import MaskingReporter, Pasted, Privacy  # noqa: E402
 from spark.core.result import Finding, NextStep, OperationResult  # noqa: E402
 
-HOME = "/home/ada"
+HOME = "/srv/person"
 PROJECT = HOME + "/gadgets/lamp"
 STORE = HOME + "/.local/share/spark"
 REPO = HOME + "/Development/spark"
