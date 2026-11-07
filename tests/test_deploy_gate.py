@@ -230,7 +230,8 @@ class TheGateTest(GateCase):
         self.assertIn("a yes relayed by another program never opens the erase", problems)
         self.assertIn("relayed_yes_refused", [item["code"] for item in envelope["problems"] + envelope["unchecked"]])
         self.assertIsNone(envelope["data"]["yes"])
-        self.assertIn("--token %s" % self.token(), json.dumps(envelope["next"]))
+        argv = envelope["next"][0]["argv"]
+        self.assertEqual((envelope["next"][0]["op"], argv[argv.index("--token") + 1]), ("deploy", self.token()))
 
     def test_a_relayed_yes_with_no_token_still_says_to_run_the_look_first(self):
         self.run_the_scenario()

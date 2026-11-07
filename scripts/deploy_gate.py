@@ -4,8 +4,9 @@ and there is a yes. It is the only way to the erase (D8).
 
 The yes is a strategy (`ConsentStrategy`). `TerminalConsentStrategy` asks in a real terminal only: a pipe, a
 heredoc or Claude Code's `!` is none, so the person runs the line in their own terminal window.
-`board_grant.StandingConsentStrategy` is the yes the person gave once, as a deploy grant (P242). Another way to say
-yes (an MCP or web yes, D19) is another ConsentStrategy.
+`board_grant.StandingConsentStrategy` is the yes the person gave once, as a deploy grant (P242).
+`RelayedConsentStrategy` is a yes that another program collected (an MCP or web yes, D19; P675): it makes a live grant
+only, and it never opens the erase (decision 6 of the refactor plan, the PO's to change).
 """
 
 import abc
@@ -24,9 +25,12 @@ NO_TERMINAL = "no terminal to ask you in. Run this line in your own terminal win
 
 #: What an agent does next (P213), for a GateClosedError: `deploy.py`'s `--json` turns it into a step.
 NEXT_DEPLOY, NEXT_LOOK = "deploy", "look"
-#: The kinds of a yes, as the envelope's `data.yes.kind` says them: typed in a terminal, or a standing deploy grant.
-#: A yes relayed by an agent (RELAYED) comes with W4-4.
-TYPED, GRANT = "typed", "grant"
+#: The kinds of a yes: typed in a terminal, a standing deploy grant, or relayed by another program. The envelope's
+#: `data.yes.kind` says only the first two, because a relayed yes never passes the gate.
+TYPED, GRANT, RELAYED = "typed", "grant", "relayed"
+#: Why the gate refuses a yes that cannot open the erase (P675).
+RELAYED_REFUSED = ("a yes relayed by another program never opens the erase: the person types yes in their own terminal, "
+                   "or gives a deploy grant there. not flashed.")
 
 
 # --- MVP ---
@@ -46,12 +50,16 @@ class GateClosedError(Exception):
 
 class ConsentStrategy(abc.ABC):
     """Strategy: how the person says yes to a question. A subclass supplies `ask`, which returns True for yes, `who`, the
-    phrase that tells the store's record whose yes it was, and `yes_kind`, TYPED or GRANT, which the envelope says (P655)."""
+    phrase that tells the store's record whose yes it was, and `yes_kind`, TYPED, GRANT or RELAYED (P655, P675).
+    `opens_erase` says whether this yes can open the erase or make a deploy grant. The gate trusts the strategy's own
+    attribute, so it guards against a frontend's mistake, not against code in the same process."""
+
+    opens_erase = True
 
     @property
     @abc.abstractmethod
     def yes_kind(self):
-        """TYPED or GRANT: the kind of yes, as the envelope's `data.yes.kind` says it. A subclass sets it as a class attribute."""
+        """TYPED, GRANT or RELAYED: the kind of yes. A subclass sets it as a class attribute."""
 
     @property
     @abc.abstractmethod
@@ -65,6 +73,10 @@ class ConsentStrategy(abc.ABC):
     def require_ready(self):
         """Raises GateClosedError when it could not ask now, so a caller stops before it touches the board. The default
         can always ask."""
+
+    def granted_by(self, user_name):
+        """The name a grant keeps as `granted_by`: by default `user_name()`, the login of the person at this machine."""
+        return user_name()
 
 
 class TerminalConsentStrategy(ConsentStrategy):
@@ -90,6 +102,34 @@ class TerminalConsentStrategy(ConsentStrategy):
         self.stdout.write("%s type yes to go on: " % guard_lines(question))  # P423: the one place a person types yes
         self.stdout.flush()
         return self.stdin.readline().strip() == "yes"
+
+
+# --- MVP ---
+class RelayedConsentStrategy(ConsentStrategy):
+    """Strategy: a yes that another program collected (P675). `ask_in_program(question)` is the program's own question to
+    the person, as MCP's elicitation asks through the client (modelcontextprotocol.io, spec 2025-06-18), and only its
+    True is a yes. `person` and `program` name who said yes and through what. It makes a live grant only: `opens_erase`
+    is False, so the deploy gate and a deploy grant refuse it. A blank name is a defect in the frontend: ValueError."""
+
+    yes_kind = RELAYED
+    opens_erase = False
+
+    def __init__(self, person, program, ask_in_program):
+        for name in (person, program):
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError("a relayed yes names its person and its program, got %r" % (name,))
+        self.person, self.program, self.ask_in_program = printable(person), printable(program), ask_in_program
+
+    @property
+    def who(self):
+        return "relayed by %s through %s" % (self.person, self.program)
+
+    def granted_by(self, user_name):
+        return self.who  # the login at this machine is not who said yes
+
+    def ask(self, question):
+        return self.ask_in_program(question) is True
+# --- end MVP ---
 
 
 # --- MVP ---
@@ -122,7 +162,9 @@ def require_open_gate(report, token, consent, image, caveats):
     if changed:
         raise GateClosedError("%s changed since the look: run look.py again." % " and ".join(changed), next_op=NEXT_LOOK,
                               reason=board_codes.TOKEN_STALE)
-    accepted = report.warnings + ["%s unknown (%s)" % each for each in report.unknown.items()]
+    if not consent.opens_erase:  # P675: after the token checks, so the line to rerun holds a token that passes them
+        raise GateClosedError(RELAYED_REFUSED, next_op=NEXT_DEPLOY, reason=board_codes.RELAYED_YES_REFUSED)
+    accepted = report.warnings +["%s unknown (%s)" % each for each in report.unknown.items()]
     question = "erase ALL of this board's flash (%s) and write %s?" % (say_last_deploy_in_question(report.last_deploy), image)
     if accepted:
         question = "you accept: %s. %s" % ("; ".join(accepted), question)

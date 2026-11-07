@@ -65,12 +65,18 @@ class FakeConsent:
     who = "a test"
     #: The kind of yes the envelope says: a typed one (deploy_gate.TYPED).
     yes_kind = "typed"
+    #: A typed yes can open the erase (deploy_gate.ConsentStrategy.opens_erase).
+    opens_erase = True
 
     def __init__(self, answer):
         self.answer, self.asked = answer, []
 
     def require_ready(self):
         """The fake can always ask."""
+
+    def granted_by(self, user_name):
+        """The login, as deploy_gate.ConsentStrategy's default."""
+        return user_name()
 
     def ask(self, question):
         self.asked.append(question)
