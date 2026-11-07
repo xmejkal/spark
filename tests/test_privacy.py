@@ -1,6 +1,7 @@
 """P677 (S10, W5-1): a bench run shows no path under the person's home and no account token, except in a line a person
 pastes. `Privacy` masks the result, the values and the Events; the pasted places keep their real paths."""
 
+import contextlib
 import io
 import json
 import os
@@ -15,14 +16,14 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_codes  # noqa: E402
 import golden_bench  # noqa: E402
-import store  # noqa: E402
-from fakes import FakeReporter  # noqa: E402
+from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.bench import bench_privacy  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
-from spark.core.privacy import MaskingReporter, Pasted, Privacy  # noqa: E402
+from spark.core.cli import HelpText, run_cli  # noqa: E402
+from spark.core.operation import COMMON_ARGUMENTS, Operation  # noqa: E402
+from spark.core.privacy import MaskingReporter, Pasted, PastedLine, Privacy  # noqa: E402
 from spark.core.result import Finding, NextStep, OperationResult  # noqa: E402
 
 HOME = "/srv/person"
@@ -102,6 +103,11 @@ class MaskResultTest(unittest.TestCase):
         result = OperationResult({"no_token_reason": reason}, [finding("no token: " + reason, "no_terminal")])
         self.assertEqual(privacy().mask_result(result).data, {"no_token_reason": reason})
 
+    def test_a_pasted_line_of_lines_keeps_its_paths(self):
+        line = PastedLine("  rm %s/grants/a.json" % STORE)
+        result = OperationResult(None, lines=[line, STORE + "/grants/a.json"])
+        self.assertEqual(privacy().mask_result(result).lines, [line, "<store>/grants/a.json"])
+
     def test_an_empty_pasted_sentence_keeps_nothing_else_raw(self):
         result = OperationResult(None, [finding("", "no_terminal")], lines=[PROJECT + "/sim"])
         self.assertEqual(privacy().mask_result(result).lines, ["sim"])
@@ -126,6 +132,30 @@ class MaskEventTest(unittest.TestCase):
         self.assertFalse(Event("begin", "toy", None).raw)
 
 
+class Pasting(Operation):
+    """Operation: answers with a pasted line and a plain line, each naming the project, as deploy.py's no-terminal refusal does."""
+
+    name = "pasting"
+    arguments = (COMMON_ARGUMENTS["project"],)
+    privacy_for = staticmethod(lambda project: Privacy.of(project, STORE, HOME, (), PASTED))
+
+    def run(self, *, outside, project):
+        sentence = "no terminal: run %s/deploy.py" % project
+        return OperationResult(None, [Finding(outcomes.COULD_NOT_RUN, None, "no_terminal", sentence, "")],
+                               diagnostics=["deploy.py: " + sentence, "looked in %s/sim" % project])
+
+
+class GuardedRawLineTest(unittest.TestCase):
+    """P430 holds on a raw place too: the pasted line keeps its path, and the terminal still shows an override as `?`."""
+
+    def test_a_pasted_path_stays_raw_and_guarded_and_a_masked_one_goes(self):
+        bad = "/nowhere/a\u202eb"
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            run_cli(HelpText("pasting.py", "", ""), Pasting(), ["--project", bad], outside_builder=None, outside=FakeOutsideWorld())
+        self.assertEqual(err.getvalue(), "deploy.py: no terminal: run /nowhere/a?b/deploy.py\nlooked in sim\n")
+
+
 class BenchPrivacyTest(unittest.TestCase):
 
     def test_the_bench_masks_the_token_of_a_tool_with_an_account(self):
@@ -133,11 +163,10 @@ class BenchPrivacyTest(unittest.TestCase):
             masked = bench_privacy.privacy_for(Path(".")).mask_text("token " + TOKEN)
         self.assertEqual(masked, "token ***")
 
-    def test_the_pasted_codes_hold_the_codes_whose_sentence_holds_a_command(self):
-        self.assertLessEqual({board_codes.NO_TERMINAL, board_codes.NO_GRANT, board_codes.REFUSED_NO_GRANT}, board_codes.PASTED_CODES)
-
-    def test_a_store_line_a_person_acts_on_says_what_store_is(self):
-        self.assertIn("SPARK_HOME", store.PLACEHOLDER_HINT)
+    def test_the_bench_keeps_the_codes_and_keys_of_a_line_a_person_acts_on(self):
+        pasted = bench_privacy.privacy_for(Path(".")).pasted
+        self.assertLessEqual({"no_terminal", "no_grant", "refused_no_grant", "no_image", "last_deploy_not_checked"}, set(pasted.codes))
+        self.assertLessEqual({"run_in_terminal", "board_log"}, set(pasted.keys))
 
 
 class BenchGoldenPathsTest(unittest.TestCase):
@@ -158,10 +187,12 @@ class BenchGoldenPathsTest(unittest.TestCase):
 
     def test_the_other_paths_are_masked(self):
         ran = self.golden("deploy-ok-ready-seen.json")["data"]
-        self.assertEqual((ran["commands"][1][-1], ran["board_log"], ran["store_record"]),
-                         ("sim/flash-with-firmware.bin", "sim/runs/board/<time>.log", "<store>/boards/dc-da-0c-xx-xx-xx.json"))
+        self.assertEqual((ran["commands"][1][-1], ran["store_record"]), ("sim/flash-with-firmware.bin", "<store>/boards/dc-da-0c-xx-xx-xx.json"))
+
+    def test_a_file_a_person_or_an_agent_opens_keeps_its_path(self):
+        self.assertEqual(self.golden("deploy-ok-ready-seen.json")["data"]["board_log"], "<project>/sim/runs/board/<time>.log")
         fix = self.golden("look-could-not-run-last-deploy-not-checked.json")["unchecked"][0]["fix"]
-        self.assertEqual(fix, "repair or remove <store>/boards/dc-da-0c-xx-xx-xx.json %s, then run look.py again" % store.PLACEHOLDER_HINT)
+        self.assertEqual(fix, "repair or remove <spark-home>/boards/dc-da-0c-xx-xx-xx.json, then run look.py again")
 
     def test_the_scrub_knows_the_tilde_form_of_the_repo_and_the_python(self):
         places = golden_bench.replacements_of(Path("/nowhere/p"), Path("/nowhere/s"))

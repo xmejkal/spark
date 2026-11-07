@@ -35,8 +35,6 @@ except ImportError:  # spark installs on macOS and Linux (README); where there i
 
 #: The plugin's own folder: spark's library of parts and boards ships here, read-only.
 PLUGIN = Path(__file__).resolve().parent.parent
-#: What a printed `<store>` means, beside a store line a person acts on (P677: a bench run masks the store's path).
-PLACEHOLDER_HINT = "(<store> is SPARK_HOME, else XDG_DATA_HOME/spark, else ~/.local/share/spark)"
 
 #: The suite never touches the person's store (P88). A process running unittest gets a scratch one here, at
 #: import, whatever SPARK_HOME it inherited (spark's own refusals tell people to set it), and every script it

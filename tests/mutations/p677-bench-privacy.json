@@ -19,8 +19,11 @@
  {"file": "scripts/spark/core/cli.py", "name": "run_cli never masks the result", "find": "                           DEFAULT_RUN._replace(privacy=privacy))", "replace": "                           DEFAULT_RUN)"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "the standing-yes line with the grant line is masked", "find": "board_grant.MESSAGE_FOR[chosen.why]), raw=True)", "replace": "board_grant.MESSAGE_FOR[chosen.why]))"},
  {"file": "scripts/board_codes.py", "name": "the no-terminal line is masked", "find": "PASTED_CODES = frozenset((NO_TERMINAL, NO_GRANT,", "replace": "PASTED_CODES = frozenset((NO_GRANT,"},
- {"file": "scripts/board_codes.py", "name": "the no-image build line is masked", "find": "REFUSED_NO_GRANT, NO_IMAGE, EVIDENCE_REFUSES))", "replace": "REFUSED_NO_GRANT))"},
- {"file": "scripts/board_envelope.py", "name": "run_in_terminal is masked", "find": "PASTED_KEYS = (\"run_in_terminal\",)", "replace": "PASTED_KEYS = ()"},
+ {"file": "scripts/board_codes.py", "name": "the no-image build line is masked", "find": "REFUSED_NO_GRANT, NO_IMAGE, EVIDENCE_REFUSES,", "replace": "REFUSED_NO_GRANT, EVIDENCE_REFUSES,"},
+ {"file": "scripts/board_envelope.py", "name": "run_in_terminal is masked", "find": "PASTED_KEYS = (\"run_in_terminal\", \"board_log\")", "replace": "PASTED_KEYS = (\"board_log\",)"},
  {"file": "scripts/spark/bench/bench_privacy.py", "name": "the account tokens are never read", "find": "return [os.environ[name] for name in names if isinstance(name, str) and os.environ.get(name)]", "replace": "return []"},
- {"file": "scripts/board_look.py", "name": "the store line a person acts on loses its hint", "find": "store.PLACEHOLDER_HINT)", "replace": "\"\")"}
+ {"file": "scripts/board_envelope.py", "name": "board_log, which an agent opens, is masked", "find": "PASTED_KEYS = (\"run_in_terminal\", \"board_log\")", "replace": "PASTED_KEYS = (\"run_in_terminal\",)"},
+ {"file": "scripts/board_codes.py", "name": "the store record to repair is masked", "find": "                          LAST_DEPLOY_NOT_CHECKED))", "replace": "                          ))"},
+ {"file": "scripts/spark/core/privacy.py", "name": "a PastedLine is masked", "find": "        if isinstance(value, PastedLine):\n            return value\n", "replace": ""},
+ {"file": "scripts/spark/bench/issue_grant.py", "name": "the rm line of a deploy grant is masked", "find": "lines.append(PastedLine(DEPLOY_NOTICE % shlex.quote(printable(str(grant_file)))))", "replace": "lines.append(DEPLOY_NOTICE % shlex.quote(printable(str(grant_file))))"}
 ]

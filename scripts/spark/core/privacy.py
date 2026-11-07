@@ -4,8 +4,8 @@ the trace and before any frontend sees them, and `MaskingReporter` masks each Ev
 its output into issues: a path under the project becomes relative to it, one under the store `<store>/...`, any other
 under the home folder `~/...`, and an account token `***` (data masking, OWASP's Logging Cheat Sheet: mask or redact
 sensitive data before it is written). A line a person pastes keeps its real paths, or it would not run: a Finding of a
-pasted code and every string that holds its sentence, a value under a pasted data key, a NextStep's argv and env, and a
-raw Event.
+pasted code and every string that holds its sentence, a value under a pasted data key, a NextStep's argv and env, a
+PastedLine and a raw Event.
 """
 
 import re
@@ -22,8 +22,16 @@ SECRET_MASK = "***"
 PATH_END = r"(?![\w.-])"
 #: Value: one masking rule: the text it finds (`place`), the pattern that must follow it, and what it becomes.
 MaskRule = namedtuple("MaskRule", "place after replacement")
-#: Value: where a pasted line travels: the Finding codes whose sentence holds a command, and the data keys of such a line.
+#: Value: where a line a person or an agent acts on travels (pastes, runs or opens): the Finding codes whose sentence or
+#: fix holds such a line, and the data keys that hold one.
 Pasted = namedtuple("Pasted", "codes keys", defaults=((), ()))
+
+
+class PastedLine(str):
+    """Value: a line of `lines` or `diagnostics` that a person pastes, such as grant.py's `rm` line, where no pasted
+    Finding marks it. Privacy leaves it as it is."""
+
+    __slots__ = ()
 
 
 def forms_of(path):
@@ -64,6 +72,8 @@ class Privacy:
         """`value` with every string masked, through lists, tuples and dicts. A string that holds one of `kept` (a pasted
         sentence), or that one of them holds, stays, as that sentence shows it raw anyway; so does a value under a pasted
         key. A path becomes its masked string."""
+        if isinstance(value, PastedLine):
+            return value
         if isinstance(value, PurePath):
             value = str(value)
         if isinstance(value, str):
