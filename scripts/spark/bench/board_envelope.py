@@ -80,7 +80,7 @@ def deploy_step(project, token, port, evidence, why):
 
 
 def doctor_fix(doctor, places):
-    """The `fix` of a BoardDoctorResult: its next step's sentence, naming the buttons as `places` does, or '' when there
+    """The `fix` of a DoctorProbeResult: its next step's sentence, naming the buttons as `places` does, or '' when there
     is no doctor result or it names no step."""
     return board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
 

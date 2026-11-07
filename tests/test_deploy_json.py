@@ -139,7 +139,7 @@ class LookJsonTest(JsonCase, LookScriptCase):
         self.assertIn("no board found", err)  # the text still goes to stderr
 
     def test_a_failed_read_gives_the_doctor_s_result_and_its_step_as_the_fix(self):
-        result = board_doctor.BoardDoctorResult((), "boom", "hold_boot", None)
+        result = board_doctor.DoctorProbeResult((), "boom", "hold_boot", None)
         with mock.patch.object(board_doctor, "after_esptool", return_value=result):
             code, said, err = self.go("--json", text="x", esptool="c6-flash-id.txt", fail=True)
         said = self.one(code, said, "look", "look")

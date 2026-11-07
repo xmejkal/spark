@@ -425,7 +425,7 @@ class TheBusyPortTest(GateCase):
     """P354: a console left open holds the port, so esptool's look fails. The doctor says so, as look.py's does."""
 
     #: The doctor's result for a port that another program holds (test_deploy_json builds its envelope from it).
-    BUSY = board_doctor.BoardDoctorResult(
+    BUSY = board_doctor.DoctorProbeResult(
         (board_doctor.CheckResult("console", False, "another program holds the port: locked", "close_other"),),
         None, "close_other", None)
 

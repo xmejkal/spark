@@ -121,8 +121,6 @@
 "R6:scripts/parts.py:MapOf": 1,
 "R6:scripts/parts.py:PartError": 1,
 "R6:scripts/run_scenario.py:ScenarioRun": 1,
-"R6:scripts/spark/bench/board_doctor.py:ConsoleBoardCheck": 1,
-"R6:scripts/spark/bench/board_doctor.py:PortListedBoardCheck": 1,
 "R6:scripts/spark/bench/board_facts.py:FactsFile": 1,
 "R6:scripts/spark/bench/board_grant.py:GrantStore": 1,
 "R6:scripts/spark/bench/board_look.py:BoardReader": 1,

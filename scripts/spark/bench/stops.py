@@ -32,7 +32,7 @@ def reason_of(refusal):
 def stop_result(cannot, script, project, port, doctor_for=None):
     """The OperationResult of a stop before the board answered: no data (a caller `_replace`s it), one unchecked Finding with the stop's code, and
     its line on stderr as `<script>: <cannot>`, the port and the project put on one line first (P430). `doctor_for(stop)`,
-    when given, is asked for a LookStopError and answers (lines, BoardDoctorResult or None) as `board_doctor.stop_answer` does: the
+    when given, is asked for a LookStopError and answers (lines, DoctorProbeResult or None) as `board_doctor.stop_answer` does: the
     doctor's lines then replace the sentence, as look.py's stop does."""
     doctor, places = None, boards.ButtonPlaces.of_project(project)
     if doctor_for is not None and isinstance(cannot, board_look.LookStopError):
