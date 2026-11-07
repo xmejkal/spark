@@ -15,6 +15,7 @@ import boards
 import tools
 from firmware_platform import MicroPythonPlatform
 from restricted_pins import BrokenRecordError
+from spark.bench import bench_privacy
 from spark.bench import stops
 from spark.core import outcomes
 from spark.core.renderers import FlatJsonLine
@@ -66,6 +67,7 @@ class RunLiveCode(Operation):
                                                       "names mpremote (default: here)"),
                  COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON"))
     effects = (READS, RUNS, BOARD)
+    privacy_for = staticmethod(bench_privacy.privacy_for)
     json_renderer = FlatJsonLine
 
     def __init__(self, platform_for=None):

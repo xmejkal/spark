@@ -14,8 +14,7 @@ This guide has four pages. Open the one you need:
 Read these rules before you run a script:
 
 1. **Three words, three exit codes.** `ok` exits 0, `problems` exits 1 and `could-not-run` exits 2. `check_all.py`
-   adds `skipped`. A crash also exits 1, so read the JSON, not only the code
-   ([the outcomes](#the-outcomes-and-their-exit-codes)).
+   adds `skipped`. A crash also exits 1, so read the JSON, not only the code ([the outcomes](#the-outcomes-and-their-exit-codes)).
 2. **These are not a pass:** `could-not-run`, `skipped`, `unknown`, a `null` and a `?` line. Never fill in a `null`
    ([what never to assume](agents/never-assume.md)).
 3. **`check_all.py` exit 0 means less than it says.** No check that ran found a problem. Read `resolved` to see that
@@ -30,6 +29,10 @@ Read these rules before you run a script:
    `firmware/main.py` from `pins.py` and follow `next`. A `signals` entry takes a `pin` ([the file](../../commands/build.md#the-requirements-file)).
 7. **Check someone else's project in a scratch store** (`SPARK_HOME`). Never put the person's drawer, history or
    projects list into a URL, a prompt or a commit. Run a `next` step with its `env` set ([`env`](agents/json.md)).
+   The bench scripts mask their output (P677): `<project>` is the project folder, a relative path is under it, `<store>`
+   is the store as `store.home()` finds it (SPARK_HOME, else XDG_DATA_HOME/spark, else ~/.local/share/spark), `~/` is
+   home and `***` a token. Never guess a masked path's real form: take a path to open or run from
+   [a raw field](agents/json.md#what-the-text-output-shows).
 
 A build of spark's button-and-LED example, shortened with `...`:
 
@@ -92,9 +95,6 @@ import them from there. Every script ends in exactly one of three outcomes, neve
 not the same as one that could not look. More in the glossary:
 [the three outcomes](../../GLOSSARY.md#the-three-outcomes--ok-problems-could-not-run) and
 [`skipped`](../../GLOSSARY.md#skipped--the-fourth-word-and-only-check_all-has-it).
-
-**What `check_all.py`'s exit 0 means** is less than it says: [check_all's answer](agents/json.md#what-exit-0-means)
-gives each case.
 
 **Not yet true everywhere:**
 

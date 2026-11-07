@@ -20,9 +20,9 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 | `core/operation.py` | the `Operation` base class, `Argument`, `COMMON_ARGUMENTS` (`--project`, `--json`, `--port`; `--dry-run`, `--out`, `--timeout` and `schema()` wait for their first user), the effects `READS`, `RUNS`, `BOARD` |
 | `core/errors.py` | `SparkError` |
 | `core/codes.py` | the codes the core writes for every Operation: `bad_argument`, `crash`, `undeclared_effect` (`tool_missing` stays the bench's) |
-| `core/outside.py` | `OutsideWorld` (`run`, `find_tool`, `report`), `build_outside_world(effects, reporter, find_tool)`; `Privacy` and `pick` wait |
+| `core/outside.py` | `OutsideWorld` (`run`, `find_tool`, `report`), `build_outside_world(effects, reporter, find_tool)`; `pick` waits |
 | `core/events.py` | `Event` (`kind`, `code`, `text`; kinds `LINE` and `BEGIN`), the `Reporter` base, `TerminalReporter` (P507) |
-| `core/cli.py` | `run_operation(operation, values, outside)`, `run_cli(text, operation, argv, *, outside_builder, outside=None)`, `HelpText`, `TextReport`, `JsonEnvelope`; `trace` and `Privacy` wait |
+| `core/cli.py` | `run_operation(operation, values, outside)`, `run_cli(text, operation, argv, *, outside_builder, outside=None)`, `HelpText`, `TextReport`, `JsonEnvelope`; `trace` waits. `core/privacy.py`: `Privacy.of(project, store, home, secrets, pasted)` and `MaskingReporter` (P677), used by each Operation that names a `privacy_for` |
 | `core/zone_time.py` | the leaf `zone_time`: times with their zone |
 | `core/text_guards.py` | the leaf `text_guards` (once `screen_text`, renamed in P418): the guards where text leaves spark |
 

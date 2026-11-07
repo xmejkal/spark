@@ -21,8 +21,8 @@ OPERATIONS = {operation.name: operation for operation in (LookAtBoard, DeployIma
 def build_project_outside_world(project, effects, reporter):
     """Core's OutsideWorld for an Operation on `project`: `find_tool` finds a role or a tool as the project's tools list says,
     and as the shared lists alone say with `project=None`; `report` is the given Reporter's (P507); `clock` the computer's;
-    `make_consent` asks in the terminal, on the Reporter's stream (P655)."""
+    `make_consent` asks in the terminal, on the Reporter's stream (P655), the question masked as the Reporter masks (P677)."""
     return build_outside_world(effects, reporter, find_tool=lambda name, project=project: tools.find(name, project),
                                clock=SystemClock(),
-                               make_consent=lambda line: deploy_gate.TerminalConsentStrategy(line, stdout=reporter.stream))
+                               make_consent=lambda line: deploy_gate.TerminalConsentStrategy(line, stdout=reporter.stream, mask=reporter.mask))
 # --- end MVP ---

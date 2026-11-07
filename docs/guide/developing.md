@@ -22,8 +22,7 @@ flash image skip with the reason "the littlefs package is not installed". They a
 run: every test. The push hook runs the quick run, which skips the tests marked `@slow`
 ([`tests/suite_runs.py`](../../tests/suite_runs.py)) and says how many it skipped. The quick line is not the suite's
 count, and a commit message or a card quotes the full run's. A mark needs more than about 2 s and a reason anyone
-can check: the reason says what the test runs and its measured seconds, with the date. Put the mark on a class or a
-method:
+can check: the reason says what the test runs and its measured seconds, with the date. Put the mark on a class or a method:
 
 ```python
 from suite_runs import slow
@@ -45,8 +44,7 @@ defect that only a slow test catches must not escape it. The first numbers, meas
   input that makes it find a problem.
 
 The rule exists because of one test, written to catch "a check nobody invokes". It asserted that a string appeared
-in the runner's source. That verified the check was named, not that it ran, and it stayed green for the whole life of
-the bug it was written to prevent.
+in the runner's source. That verified the check was named, not that it ran, and it stayed green for the whole life of the bug it was written to prevent.
 
 The suite still reads source for rules about the code itself:
 
@@ -73,13 +71,17 @@ The suite still reads source for rules about the code itself:
 
 `test_converter.py` also checks the converter's TypeScript, comments stripped, for default paths it must not have.
 
-A golden is a file with the expected output of one script run. `tests/test_golden_bench.py` keeps 21 goldens in
+A golden is a file with the expected output of one script run. `tests/test_golden_bench.py` keeps the goldens in
 `tests/golden/`, for `look.py`, `deploy.py`, `grant.py --check`, `live.py` and `reach.py`
-([P380](https://github.com/xmejkal/spark/issues/487)). Each test runs one script as a child process in an S3
-project that `tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first
-on the child's `PYTHONPATH`, and the child runs with `TZ=UTC` and a store of its own. The test replaces the run's own paths, the image hash and the time with placeholders,
-such as `<project>`, before it compares. A golden's name is the op, the status and the scenario:
-`look-could-not-run-two-boards.json`. A Case may name a stderr golden (`.stderr` added). It may also plant a file in the store, such as a deploy grant that takes `deploy.py` past the gate ([P508](https://github.com/xmejkal/spark/issues/703)); the two grant runs add about 10 s.
+([P380](https://github.com/xmejkal/spark/issues/487)). Each test runs one script as a child process in an S3 project that
+`tests/golden_bench.py` builds. The fake esptool, mpremote and serial in `tests/fake_modules/` come first on the child's
+`PYTHONPATH`, and the child runs with `TZ=UTC` and a store of its own. The scripts mask their own paths (P677:
+`<project>`, `sim/...`, `<store>`, `~/...`), and the test replaces what is left of the run's paths, the image hash and the
+time with placeholders before it compares. `<spark-home>` and `<project-dir>` are the harness's names for the test run's
+own store and project. Only a line a person pastes or opens shows them: the scripts print `<store>` and `<project>`
+elsewhere. A golden's name is the op, the status and the scenario: `look-could-not-run-two-boards.json`. A Case may name
+a stderr golden (`.stderr` added). It may also plant a file in the store, such as a deploy grant that takes `deploy.py` past the gate
+([P508](https://github.com/xmejkal/spark/issues/703)); the two grant runs add about 10 s.
 
 If you change what a bench script prints on purpose, write that op's goldens again, read the diff, and run once more.
 An accept run writes only the goldens of the op it names:
@@ -175,8 +177,7 @@ From a push on 2026-10-05 (the gate's wording has changed since; the lines are a
 
 The full run, `python3 tools/check_commit.py --full` (or `python3 tools/check_commit.py <commit> --full`), is the same
 gate with every test, the slow ones too. It prints `<commit> as committed, full run: Ran M tests in S s / OK`. Run it
-before a PR is marked ready and before an auto-mode merge: a defect only a slow test catches sits on the branch after
-a push, and this run closes that gap.
+before a PR is marked ready and before an auto-mode merge: a defect only a slow test catches sits on the branch after a push, and this run closes that gap.
 
 Run the board part yourself — `--help` lists its rules and exit codes — and the status and the day-close beside it
 (`--dry-run` posts nothing):
@@ -233,8 +234,7 @@ small cases in [`tests/data/snapshot/`](../../tests/data/snapshot/README.md). Th
 
 It records six scripts as the projects run them, with what they call, such as the chain's `emit_board.py`: `boards.py`,
 `check_bom.py`, `check_vendor_pins.py`, `check_physics.py`, `check_spine.py` and `check_all.py`. No `--json` answer is
-kept, and no command of `parts.py`, `drawer.py` or `needs.py` runs, so a change that shows only in their answers does
-not show here.
+kept, and no command of `parts.py`, `drawer.py` or `needs.py` runs, so a change that shows only in their answers does not show here.
 
 Take main first, then the branch against it:
 

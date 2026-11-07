@@ -120,6 +120,11 @@ def _steps(reached):
     return [NextStep(**step) for step in following]
 
 
+#: The data keys whose paths Privacy leaves as they are (P677): the line a person pastes, the board log an agent opens,
+#: and the commands a person runs (the flash commands, the REPL).
+PASTED_KEYS = ("run_in_terminal", "board_log", "commands", "repl_command")
+
+
 # --- Later, not MVP: a typed record of the run; `reached` is the dict the old main filled, kept so the goldens stay byte-equal ---
 def deploy_data(reached):
     """The `data` of a deploy run, keys in the order the goldens hold: what the run reached, the look, the yes, the board

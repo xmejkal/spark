@@ -36,13 +36,15 @@ import flasher  # noqa: E402
 import store  # noqa: E402
 import image_evidence  # noqa: E402
 import tools  # noqa: E402
-from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform,  # noqa: E402
+from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform, FakeReporter,  # noqa: E402
                    FakeOutsideWorld, FakeProbePlatform,
                    line_made_at_import, pin_time_zone)
 from firmware_platform import MicroPythonPlatform  # noqa: E402
-from spark.bench import deploy_image  # noqa: E402
+from spark.bench import build_project_outside_world, deploy_image  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
+from spark.core.operation import ASKS  # noqa: E402
+from spark.core.privacy import MaskingReporter, Privacy  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 
@@ -106,19 +108,20 @@ class GateCase(LookCase):
         files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
-    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False, platform=None):
+    def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False, platform=None, reporter=None):
         """(exit code, stdout, stderr) of deploy.py with fake tools, through a FakeOutsideWorld: `consent` is the yes its
         `make_consent` gives (None: the terminal, which the tests' stdout is not), `platform` the FirmwarePlatform the
         DeployImage builds (None: the project's MicroPython one, over `probe` when given). self.ran keeps every command. The first flash command
         exits with `fail_code` (or raises it, an exception) its first `fails` times, a later one always when `write_fails`. self.slept keeps each wait.
-        `devs_text` may be a list: the listing of each `mpremote devs` call (the look's first), then the last for good."""
+        `devs_text` may be a list: the listing of each `mpremote devs` call (the look's first), then the last for good.
+        `reporter` keeps the Events instead of the terminal when given."""
         run = self.fake_tools_run(esptool, text, devs, devs_text, fails, fail_code, write_fails, look_fails)
         out, err = io.StringIO(), io.StringIO()
         operation = DeployImage(platform_for=lambda project, find_tool: platform or (FakeProbePlatform(project, probe, find_tool) if probe
                                                                                      else MicroPythonPlatform(project, find_tool)),
                                 grant_service=grant_service)
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            outside = self.outside_world(run, consent, TerminalReporter.for_json("--json" in argv), clock)
+            outside = self.outside_world(run, consent, reporter or TerminalReporter.for_json("--json" in argv), clock)
             code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=operation)
         return code, out.getvalue(), err.getvalue()
 
@@ -1070,6 +1073,16 @@ class TheStandingYesTest(GateCase):
         TerminalReporter(out).report(Event.line("gate", "standing yes: not used: ended\u202e\rthe grant"))
         self.assertEqual(out.getvalue(), "  standing yes: not used: ended??the grant\n")
 
+    @needs_littlefs
+    def test_the_standing_yes_line_is_raw_so_privacy_keeps_its_grant_line(self):
+        # P677: the sentence holds the grant line the person pastes, so Privacy never masks it
+        self.give()
+        self.clock.advance(minutes=30)
+        reporter = FakeReporter()
+        self.flash(reporter=reporter)
+        said = [event for event in reporter.events if (event.text or "").startswith("standing yes: not used")]
+        self.assertEqual([event.raw for event in said], [True])
+
     def assertAsksInTheTerminal(self, why, *argv):
         """deploy.py with `argv` erases nothing, says `why` it did not use the grant, and asks for a terminal."""
         code, said, problems = self.flash(*argv)
@@ -1436,6 +1449,18 @@ class TerminalConsentTest(unittest.TestCase):
         consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout)
         consent.ask("erase\u202e\r ALL\x1b")
         self.assertEqual(stdout.getvalue(), "erase?? ALL? type yes to go on: ")
+
+    def test_the_question_is_masked_before_it_is_written(self):
+        # P677: the question names the last deploy's project, a path under the person's home
+        stdout = Stream()
+        consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout, mask=lambda text: text.replace("/srv/person", "~"))
+        consent.ask("erase /srv/person/lamp?")
+        self.assertEqual(stdout.getvalue(), "erase ~/lamp? type yes to go on: ")
+
+    def test_the_bench_asks_through_the_masking_reporter(self):
+        reporter = MaskingReporter(TerminalReporter(Stream()), Privacy.of("/p", "/s", "/srv/person", ()))
+        consent = build_project_outside_world(None, (ASKS,), reporter).make_consent(self.LINE)
+        self.assertEqual(consent.mask("erase /srv/person/lamp?"), "erase ~/lamp?")
 
     def test_anything_else_is_no(self):
         for typed in ("y\n", "YES please\n", "\n", ""):

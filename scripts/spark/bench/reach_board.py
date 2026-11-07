@@ -11,6 +11,7 @@ import board_reach
 import boards
 import tools
 from firmware_platform import MicroPythonPlatform
+from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
 from spark.core.renderers import FlatJsonLine
@@ -69,6 +70,7 @@ class ReachBoard(Operation):
                  COMMON_ARGUMENTS["port"], COMMON_ARGUMENTS["json"]._replace(help="print one line of JSON for the bench log"),
                  Argument(("--cure-first",), "cure_first", bool, "open the port with DTR and RTS off before the only try (the bench's cold arm)"))
     effects = (READS, RUNS, BOARD)
+    privacy_for = staticmethod(bench_privacy.privacy_for)
     json_renderer = FlatJsonLine
 
     def __init__(self, platform_for=None):

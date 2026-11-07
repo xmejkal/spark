@@ -220,8 +220,7 @@ spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, 
   your projects, or when `parts.py --requirements` writes a file for a pick that came from the catalog or from another
   of your projects (a shelf for every part you choose is [P91](https://github.com/xmejkal/spark/issues/22));
 - your boards, `boards/<MAC>.json`: one private record for each physical board that `deploy.py` flashed, with its
-  type and each deploy (the project, the image's sha256, the date, the verdict and whose yes it was)
-  ([P215](https://github.com/xmejkal/spark/issues/196));
+  type and each deploy (the project, the image's sha256, the date, the verdict and whose yes it was) ([P215](https://github.com/xmejkal/spark/issues/196));
 - your history, `history.jsonl`: one line for each event, appended, and private to you (0600 files in 0700 folders,
   refused inside a git work tree). The events are `step` (a project's step started, with the Claude Code session it
   ran in), `reused` (a pick taken from the library, your store or another project), `passed_over` (a part you passed
@@ -230,10 +229,11 @@ spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, 
   simulation stand-in, nor the board's pin roles). It keeps ids, project names, your reasons, and session ids; URLs and
   prices in their usual forms are taken out of a reason. `parts.py --tally` reads the Claude Code transcripts of those
   sessions (`~/.claude/projects`, tool names and counts only) for the cost line;
-- the list of your projects;
-- your tools list;
-- the tools `/spark:setup` downloads (`downloads/`);
-- what a drawer import brought in (`drawer-import/`).
+- the list of your projects and your tools list;
+- the tools `/spark:setup` downloads (`downloads/`) and what a drawer import brought in (`drawer-import/`).
+
+The bench scripts shorten paths when they print: `<project>` is your project folder, `<store>` is this store, `~/` is your
+home folder and `***` is an account token. A line for you to paste keeps its real paths, so it runs as it is.
 
 ## The tools spark calls
 
