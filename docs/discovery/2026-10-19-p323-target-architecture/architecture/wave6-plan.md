@@ -3,9 +3,9 @@
 > Pin down what the firmware tools print. Give their refusals codes. Then move the files. Wave 6 moves the eight
 > areas that are still flat in `scripts/`, in the order of section 10: firmware, breadboard, checks, design with
 > build, records with sourcing. Only firmware is refined here, into three PRs. W6-F1 gives the three firmware CLIs
-> goldens with the fake `wokwi-cli`, and no run spends a Wokwi minute. W6-F2 gives their refusals codes, text
-> unchanged. W6-F3 moves six modules and the stand-ins into `scripts/spark/firmware/` under the names of
-> `areas/firmware.md`, with no module shim. W6-F1 starts now. W6-F2 and W6-F3 wait for PR #906 and PR #915 (W5-3a).
+> a golden net with `fake_wokwi_cli.py`, and no run spends a Wokwi minute. W6-F2 gives their refusals codes, text
+> unchanged. W6-F3 is the move: six modules and the stand-ins go into `scripts/spark/firmware/` under the names of
+> `areas/firmware.md`, and no module re-exports an old name. W6-F1 starts now. W6-F2 and W6-F3 wait for PR #906 and PR #915 (W5-3a).
 > Each later group gets one paragraph. Batching the later moves into fewer PRs is open question 1.
 
 Fable 5.1 wrote this plan on 2026-11-07, against `origin/main` 4e63057e. W5-1 (#914) and W5-2 (#913) are in main.
@@ -33,8 +33,8 @@ and an architecture lens on Sonnet. What changed:
   `commands/deploy.md` and `tests/test_json_contracts.py` are #906's, and `test_json_contracts.py` and
   `golden_bench.py` are #915's. W6-F2 branches from the first main that holds both.
 - `needs_person` means the person must use their hands first (`json.md`, line 399). A paid run is consent, not
-  hands: the `run-scenario` step carries an `effects` entry that names the spent Wokwi CI minutes. `needs_person`
-  stays on the token and install steps.
+  hands: the `run-scenario` step carries an `effects` entry that names the spent Wokwi CI minutes (round 2 dropped
+  this). `needs_person` stays on the token and install steps (round 2 dropped this too).
 - A table maps each name of `run_scenario.py` to its new file.
 - Numbers: `emit_board.py` is 1,208 lines, `project_image.py` raises 4 codes at 5 sites, and the 47 import lines
   are those outside the six modules. 5 more sit among them.
@@ -59,18 +59,31 @@ the rest of the W6-F3 list holds). What changed:
 - One more W6-F3 site: `tools/check_commit.py:94` leaves out only paths that start with `scripts/stand_in/`. After the
   move it tests for `stand_in` in the path's parts, as `measure.py:238` does.
 
+PR council (2026-11-07, PR #919: one Sonnet reviewer, the refuter on Opus). What changed:
+
+- W6-F1 opens with a guard line, and the token check lives in the temp-folder shim, not in `fake_wokwi_cli.py`,
+  which four places run directly (`test_run_scenario.py:30`, `test_deploy.py:36`, `test_journey_basic.py:51`,
+  `golden_bench.py:35` and `:154`).
+- One word for one thing: W6-F1 is the golden net, W6-F2 the codes, W6-F3 the move. "Shim" is the wrapper script
+  alone, and `fake_wokwi_cli.py` is the fake tool.
+- W6-F2's size is one pair, in its section and in Review size.
+- W6-F3: the `run_scenario.py` split is its own commit, and the goldens gate each commit.
+- Four rows name `board_codes.X` in `replace`, not three: `p429`'s one and `p433`'s three.
+- `check_commit.py:94` is in `scripts_size()`, the size line's code count (P99), not the lint.
+- The round-1 `effects` bullet says that round 2 dropped it.
+
 ## Open questions
 
 Only the PO answers these. Until he does, the plan takes the default.
 
 1. Batching. Decision 4 (epic #94, 2026-10-26, his words in `refactor-plan.md`'s decisions table) asks for one pass
-   if it does not take too long, else a continuous version. Once an area's net exists, its move is a mechanical PR
+   if it does not take too long, else a continuous version. Once an area's golden net exists, its move is a mechanical PR
    with no new logic. When the files of two areas do not overlap, their moves can share one PR: breadboard with
    checks, and design with build (the page already pairs them). Records with sourcing stays its own PR, because it
-   splits `parts.py`. Default: nets and output slices stay one PR per area. The moves go in three batches: firmware
-   alone, breadboard with checks, design with build. Records with sourcing follows. One move PR is open at a time,
-   so a broken main is one revert away. A later area's net PR holds tests only, so it can open while a move PR is
-   open, in its own worktree.
+   splits `parts.py`. Default: the golden net and the codes stay one PR per area. The moves go in three batches:
+   firmware alone, breadboard with checks, design with build. Records with sourcing follows. One move PR is open at a
+   time, so a broken main is one revert away. A later area's golden net PR holds tests only, so it can open while a
+   move PR is open, in its own worktree.
 
 ## What the refactor plan said, and what the tree says
 
@@ -124,10 +137,14 @@ When a later group is next, it gets its cards.
 
 ## The PRs
 
-### W6-F1, the firmware net (goldens)
+### W6-F1, the golden net
+
+Guard, do not skip: every child gets a fake `WOKWI_CLI_TOKEN`, the shim's tools entry sets `"also": []`, and the
+shim refuses any other token. The PO allows no paid Wokwi run (2026-10-31).
 
 Goal: what `run_scenario.py`, `flash_image.py` and `import_firmware.py` print today stays what they print, so no
-move breaks it. The fake tool process is `tests/fake_wokwi_cli.py`, which exists.
+move breaks it. The fake tool is `tests/fake_wokwi_cli.py`, which exists. The shim is the new wrapper script in the
+temp folder that the tools layers find and that runs the fake tool.
 
 Files: `tests/golden_firmware.py` (proposed, a helper beside `golden_bench.py`) and `tests/test_golden_firmware.py`.
 The helper reuses `golden_bench.build_project`, `child_env`, `scrub` and `replacements_of`. It adds what a child run
@@ -137,7 +154,9 @@ shim runs `python3 tests/fake_wokwi_cli.py "$@"`. `tools.find` uses `shutil.whic
 path. The entry sets `"also": []`, so `tools.merged` adds no other command for the role. The child env sets
 `WOKWI_CLI_TOKEN` to a fake value, because `child_env` passes the parent's variables on and the PO's shell exports the
 real token. The shim exits non-zero unless `WOKWI_CLI_TOKEN` equals that fake value. So a child that reaches the shim
-with the real token fails its golden, on every machine. A test asserts that `tools.find("simulator", project)` in the
+with the real token fails its golden, on every machine. The check sits in the shim, not in `fake_wokwi_cli.py`. Four
+places run the fake tool directly with no token: `test_run_scenario.py:30`, `test_deploy.py:36`,
+`test_journey_basic.py:51`, and `golden_bench.py` at lines 35 and 154. A test asserts that `tools.find("simulator", project)` in the
 golden project is the shim. No golden run spends a Wokwi minute (the PO, 2026-10-31: no paid Wokwi runs). The Case is a `namedtuple` of its own:
 `golden_bench.Case` without the two canned board files.
 
@@ -159,7 +178,7 @@ because that row runs the real CLI. Proven with `--anchors`, run with `--copy`.
 Review: no new product logic. One reviewer on the everyday model and the refuter on the strongest. Size est.: 120
 test lines and 8 goldens.
 
-### W6-F2, the firmware output slice (codes, after #906 and #915)
+### W6-F2, the codes (after #906 and #915)
 
 Goal: each refusal of the three CLIs has a code. An agent decides on the code (P260). The text lines stay byte-equal
 to the W6-F1 goldens, and the exit codes stay.
@@ -187,8 +206,8 @@ Tests: in the three existing test files. Each code is asserted as a literal (`te
 Each refusal site names its code. The `import_firmware --json` output is checked against the envelope contract in
 `test_json_contracts.py`. The text output of each W6-F1 Case is unchanged. `CODES` names every constant once. Five
 mutation rows name `board_codes.X` in `project_image.py`: one in `p239-pr5.json`, one in `p429-firmware-line.json`
-and three in `p433-bench-codes.json`. The three of `p433` are swap rows that name it in `replace` too. Both `find`
-and `replace` get the new module name, proven with `--anchors`.
+and three in `p433-bench-codes.json`. Four of them name it in `replace` too: `p429`'s one and `p433`'s three. Both
+`find` and `replace` get the new module name, proven with `--anchors`.
 
 Mutation (`p<card>-firmware-codes.json`, est. 8 rows). A code dropped from an item. Two sites with one code swapped.
 `CODES` missing a constant. The text line changed. The exit code changed. The alias in `board_codes` broken.
@@ -197,7 +216,7 @@ Docs: `docs/guide/agents/json.md` (the three ops and their codes), `agents.md`, 
 `commands/deploy.md` where they show the output. Mark the new code `# --- MVP ---`.
 
 Review: it holds logic. The lenses on the everyday model, the refuter on the strongest, one mutation run. Size est.:
-100 product lines, 100 test lines, the 8 goldens unchanged.
+80 product lines, 80 test lines, the 8 goldens unchanged.
 
 ### W6-F3, the firmware move (after #915)
 
@@ -206,7 +225,8 @@ names of its page. The three CLIs stay in `scripts/` as a `main` that parses and
 `scripts/run_scenario.py` re-exports a name. Every import, mutation row, baseline key and guide page follows. The
 goldens stay byte-equal.
 
-Moves (`git mv`, then the page's names, one commit each). `run_scenario.py` splits in two.
+Moves (`git mv`, then the page's names, one commit each, and the goldens run green after each commit). The
+`run_scenario.py` split is its own commit. It splits in two.
 `spark/firmware/scenario_run.py` holds `ScenarioRun` and the run log writer. `spark/firmware/scenario_steps.py`
 holds `ScenarioSteps`, `StepNames`, the step constants, `file_hashes`, `printed_text` and `READY`. The library of
 `flash_image.py` becomes `spark/firmware/image_builder.py`. The library of `import_firmware.py` becomes
@@ -235,7 +255,8 @@ The `__file__` paths that break, each fixed in this PR:
 - `flash_image.py:225` builds the rerun line with `store.format_rerun_line(Path(__file__), ...)`. In the library
   that names `image_builder.py`, not the CLI a person runs. The CLI passes its own `Path(__file__)` in.
 - `tools/check_commit.py:94` leaves out only the paths that start with `scripts/stand_in/`. After the move it tests
-  for `stand_in` in the path's parts, as `measure.py:238` does, so the stand-ins stay out of the quick run's lint.
+  for `stand_in` in the path's parts, as `measure.py:238` does, so the stand-ins stay out of the size line's code
+  count (`scripts_size()`, P99).
 - `tests/test_import_firmware.py` names `scripts/stand_in/machine.py` (lines 36, 138) and
   `scripts/stand_in/fallback/<module>.py` (371, 382) by path, and line 613 runs `scripts/import_child.py` by path.
   The paths follow the move. `SCRIPT` (line 39) stays, because the CLI stays.
