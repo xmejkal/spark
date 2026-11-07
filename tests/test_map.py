@@ -27,7 +27,8 @@ class Thing:
 def tree(root, documented=True):
     """A small tree: one area `demo` with a documented module and a bare one, a test for the first, a CLI, a registry."""
     (root / "tests").mkdir()
-    (root / "tests" / "test_one.py").write_text("")
+    (root / "tests" / "test_one.py").write_text("from spark.demo.one import Thing\n")
+    (root / "tests" / "test_two.py").write_text("")  # named for the module, but it imports nothing: no test of it
     area = root / "scripts" / "spark" / "demo"
     area.mkdir(parents=True)
     (area / "__init__.py").write_text('"""The demo area."""\n')
@@ -48,7 +49,7 @@ class TheMapTest(unittest.TestCase):
         self.assertIn("| `one.py` | Does a thing, over | `tests/test_one.py` |", self.text)
 
     def test_a_module_without_a_docstring_or_a_test_says_so(self):
-        self.assertIn("| `two.py` | (no docstring) | none |", self.text)
+        self.assertIn("| `two.py` | (no docstring) | none |", self.text)  # tests/test_two.py does not import it
 
     def test_an_area_shows_its_own_first_docstring_line(self):
         self.assertIn("## spark/demo: The demo area.", self.text)
