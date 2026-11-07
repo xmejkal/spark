@@ -25,10 +25,13 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import boards  # noqa: E402
 import check_spine  # noqa: E402
 import design  # noqa: E402
+import drawer  # noqa: E402
 import emit_board  # noqa: E402
 import needs  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
+from spark.core.cli import run_operation  # noqa: E402
+from spark.idea.drop_need import DropNeed  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 
@@ -1632,6 +1635,179 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         self.assertTrue(all(size <= 3400 for size in pages), pages)
 # --- end MVP ---
 
+
+# --- MVP --- P514: --needs-drop takes a need and its pick out of the needs file and releases the holds only that pick explained
+class TheNeedsDropTest(unittest.TestCase):
+    """P514 (#710): `--needs-drop PROJECT NEED`, a core Operation (spark/idea/drop_need.py) behind parts.py."""
+
+    def setUp(self):
+        self.home, self.project = a_store_with_a_drawer(), Path(tempfile.mkdtemp()) / "plant-alarm"
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        run(["--needs-set", str(self.project), a_file([
+            {"id": "soil", "does": "sense", "what": "soil-moisture"}, {"id": "alarm", "does": "sound", "what": "alarm"},
+            {"id": "input", "does": "input", "what": "button"}])])
+        run(["--pick", str(self.project), "soil=x-soil", "alarm=speaker"])
+
+    def entry(self, key):
+        return json.loads((self.home / "drawer" / (key + ".json")).read_text())
+
+    def need_ids(self):
+        return [need["id"] for need in json.loads((self.project / ".spark" / "needs.json").read_text())["needs"]]
+
+    def picks(self):
+        return {need["id"]: need.get("pick") for need in json.loads((self.project / ".spark" / "needs.json").read_text())["needs"]}
+
+    def held_by(self, key):
+        said, _ = run(["--drawer"])
+        return next(entry["held_by"] for entry in said["data"]["entries"] if entry["entry"] == key)
+
+    def digest(self):
+        import hashlib
+        return {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+                for root in (self.home, self.project.parent) for path in sorted(root.rglob("*")) if path.is_file()}
+
+    def test_a_need_dropped_leaves_the_others_in_order_and_releases_the_hold_only_it_explained(self):
+        self.assertEqual(self.entry("speaker")["used_in"], {"plant-alarm": 1})
+        said, code = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((said["status"], code), ("ok", 0))
+        self.assertEqual((self.need_ids(), self.entry("speaker")["used_in"], self.entry("probe")["used_in"]),
+                         (["soil", "input"], {}, {"plant-alarm": 1}))
+        self.assertEqual((said["data"]["project"], said["data"]["need"], said["data"]["written"]), ("plant-alarm", "alarm", True))
+        self.assertEqual(said["data"]["dropped"], {"id": "alarm", "does": "sound", "what": "alarm", "pick": [{"entry": "speaker"}]})
+        self.assertEqual(said["data"]["released"], [{"entry": "speaker", "was": 1, "now": 0}])
+
+    def test_the_dry_run_changes_no_byte_and_says_what_it_would_do(self):
+        before = self.digest()
+        said, code = run(["--needs-drop", str(self.project), "alarm", "--dry-run"])
+        self.assertEqual((code, said["data"]["written"], said["data"]["released"]), (0, False, [{"entry": "speaker", "was": 1, "now": 0}]))
+        self.assertEqual(self.digest(), before)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            parts.main(["--needs-drop", str(self.project), "alarm", "--dry-run"])
+        self.assertIn("would drop alarm", out.getvalue())
+        self.assertIn("would release 1 of 1: speaker — its need is dropped", out.getvalue())
+
+    def test_another_projects_hold_on_the_same_entry_stays(self):
+        run(["--drawer-set", a_file([{"entry": "speaker", "used_in": {"plant-alarm": 1, "other-gadget": 1}}])])
+        self.assertEqual(self.held_by("speaker"), ["other-gadget", "plant-alarm"])
+        said, _ = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((self.entry("speaker")["used_in"], self.held_by("speaker")), ({"other-gadget": 1}, ["other-gadget"]))
+        self.assertEqual(said["data"]["released"], [{"entry": "speaker", "was": 1, "now": 0}])
+
+    def test_a_hold_only_this_project_has_shows_in_the_drawer_before_and_not_after(self):
+        self.assertEqual(self.held_by("speaker"), ["plant-alarm"])
+        run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual(self.held_by("speaker"), [])
+
+    def test_a_board_picked_by_two_needs_keeps_its_hold_when_one_is_dropped(self):
+        (self.home / "drawer" / "xiao.json").write_text(json.dumps({"schema": 1, "label": "XIAO", "count": 1, "is": {"board": "xiao-esp32-c6"}}))
+        run(["--pick", str(self.project), "input=xiao-esp32-c6", "alarm=xiao-esp32-c6"])
+        said, code = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((code, said["data"]["released"], self.entry("xiao")["used_in"]), (0, [], {"plant-alarm": 1}))
+
+    def test_a_need_that_is_not_there_exits_1_naming_the_needs_and_a_second_drop_too(self):
+        before = self.digest()
+        said, code = run(["--needs-drop", str(self.project), "light"])
+        self.assertEqual((said["status"], code, self.digest()), ("problems", 1, before))
+        self.assertEqual(said["problems"][0]["subject"], "light")
+        self.assertEqual(said["data"], {"project": "plant-alarm", "need": "light", "needs": ["soil", "alarm", "input"],
+                                         "dropped": None, "released": [], "written": False})
+        self.assertIn("no need called light: it was never there or is already dropped. --needs lists them: soil, alarm, input",
+                      said["problems"][0]["sentence"])
+        run(["--needs-drop", str(self.project), "alarm"])
+        again, code = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((again["status"], code, again["data"]["needs"]), ("problems", 1, ["soil", "input"]))
+
+    def test_a_needs_file_that_is_no_json_exits_2_with_no_crash(self):
+        (self.project / ".spark" / "needs.json").write_text("{not json")
+        said, code = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((said["status"], code), ("could-not-run", 2))
+        self.assertIn("needs.json", said["unchecked"][0]["sentence"])
+
+    def test_requirements_that_still_list_the_dropped_part_get_a_note_that_says_who_runs_what(self):
+        (self.project / "requirements.json").write_text(json.dumps({"parts": [{"part": "x-soil"}]}))
+        said, _ = run(["--needs-drop", str(self.project), "soil"])
+        self.assertEqual([note["sentence"] for note in said["notes"]],
+                         ["requirements.json still lists x-soil: run parts.py --requirements %s or edit the file, then build. "
+                          "If the firmware imported its signal, run import_firmware.py." % self.project])
+        elsewhere, _ = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual(elsewhere["notes"], [])
+
+    def test_a_drawer_that_refuses_the_write_leaves_the_needs_file_as_it_was_so_a_retry_finishes(self):
+        class FullDrawer:
+            entries = staticmethod(drawer.entries)
+
+            @staticmethod
+            def apply(changes):
+                raise OSError("disk full")
+
+        result = run_operation(DropNeed(drawer_store=FullDrawer), {"project": self.project, "need": "alarm", "dry_run": False},
+                               build_outside=lambda effects: None)
+        self.assertEqual((result.status(), self.need_ids()), ("could-not-run", ["soil", "alarm", "input"]))
+        run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((self.need_ids(), self.entry("speaker")["used_in"]), (["soil", "input"], {}))
+
+    def test_a_hold_given_by_hand_that_no_pick_explains_stays_when_an_unrelated_need_is_dropped(self):
+        run(["--drawer-set", a_file([{"entry": "probe", "used_in": {"plant-alarm": 1}}, {"entry": "speaker", "used_in": {"plant-alarm": 1}}])])
+        (self.home / "drawer" / "extra.json").write_text(json.dumps({"schema": 1, "label": "Extra", "count": 2, "used_in": {"plant-alarm": 1}}))
+        said, code = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((code, said["data"]["released"], self.entry("extra")["used_in"]), (0, [{"entry": "speaker", "was": 1, "now": 0}], {"plant-alarm": 1}))
+
+    def test_a_pick_that_stays_keeps_its_hold_when_another_project_over_holds_the_entry(self):
+        run(["--drawer-set", a_file([{"entry": "probe", "used_in": {"plant-alarm": 1, "other-gadget": 8}}])])
+        before = self.entry("probe")["used_in"]
+        said, code = run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual((code, said["data"]["released"], self.entry("probe")["used_in"]), (0, [{"entry": "speaker", "was": 1, "now": 0}], before))
+
+    def test_a_need_with_only_an_id_drops_cleanly_dry_run_and_real(self):
+        (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "b"}]}))
+        said, code = run(["--needs-drop", str(self.project), "b", "--dry-run"])
+        self.assertEqual((said["status"], code, said["data"]["dropped"]), ("ok", 0, {"id": "b"}))
+        said, code = run(["--needs-drop", str(self.project), "b"])
+        self.assertEqual((said["status"], code, self.need_ids()), ("ok", 0, []))
+
+    def test_a_needs_file_that_refuses_the_write_after_the_drawer_is_written_exits_2_with_a_code_and_a_retry_finishes(self):
+        class FullNeeds:
+            def __getattr__(self, attr):
+                return getattr(needs, attr)
+
+            @staticmethod
+            def write(project, after):
+                raise OSError("disk full")
+
+        result = run_operation(DropNeed(needs_file=FullNeeds()), {"project": self.project, "need": "alarm", "dry_run": False},
+                               build_outside=lambda effects: None)
+        self.assertEqual((result.status(), self.need_ids(), self.entry("speaker")["used_in"]), ("could-not-run", ["soil", "alarm", "input"], {}))
+        self.assertEqual(result.findings[0].code, "drop_unwritten")
+        run(["--needs-drop", str(self.project), "alarm"])
+        self.assertEqual(self.need_ids(), ["soil", "input"])
+
+    def test_the_note_reads_a_hand_written_entry_pick_as_the_record_it_is(self):
+        path = self.project / ".spark" / "needs.json"
+        path.write_text(json.dumps({"schema": 1, "needs": [{"id": "soil", "does": "sense", "what": "soil-moisture", "pick": [{"entry": "probe"}]}]}))
+        (self.project / "requirements.json").write_text(json.dumps({"parts": ["x-soil"]}))
+        said, _ = run(["--needs-drop", str(self.project), "soil"])
+        self.assertEqual([note["sentence"][:36] for note in said["notes"]], ["requirements.json still lists x-soil"])
+
+    def test_a_part_another_need_still_picks_gets_no_note(self):
+        run(["--pick", str(self.project), "alarm=x-soil"])
+        (self.project / "requirements.json").write_text(json.dumps({"parts": [{"part": "x-soil"}]}))
+        said, _ = run(["--needs-drop", str(self.project), "soil"])
+        self.assertEqual(said["notes"], [])
+
+    def test_a_pick_after_the_drop_gives_the_other_needs_the_same_picks(self):
+        run(["--needs-drop", str(self.project), "alarm"])
+        before = self.picks()
+        run(["--pick", str(self.project), "soil=x-soil"])
+        self.assertEqual((self.picks(), self.picks()["soil"]), (before, [{"part": "x-soil"}]))
+
+    def test_describe_lists_the_drop_as_a_write(self):
+        said, _ = run(["--describe"])
+        row = next(op for op in said["data"]["operations"] if op["op"] == "needs-drop")
+        self.assertEqual((row["effects"], row["data"]), (["writes"], ["project", "need", "dropped", "released", "written"]))
+# --- end MVP ---
 
 class TheRequirementsFileTest(unittest.TestCase):
     """P97, §8 L: the picks become a requirements file — the board and each part pick with a record that owes nothing."""

@@ -1,0 +1,22 @@
+# P659 the build's time limit fits a real build: rows
+
+What the plan check found, and what the build changed against the plan. Card:
+[P659 #885](https://github.com/xmejkal/spark/issues/885). Plan: `~/.claude/plans/p659-build-timeout.md`.
+
+| # | claim | source | status | evidence / where it went |
+|---|---|---|---|---|
+| 1 | MUST: the "exit 0" claim was tail's exit code, not the build's, so that decision is gone | plan check, refuter | acted | the plan has no exit-0 decision; the stage stays could-not-run, exit 2 |
+| 2 | MUST: one constant served three commands, so the sentence lied for a probe or converter timeout | plan check, refuter | acted | `BUILD_TIMEOUT_S = 900`, `PROBE_TIMEOUT_S = 120`, `CONVERTER_TIMEOUT_S = 120`; `timed_out_sentence` reads `late.cmd` and `late.timeout` |
+| 3 | SHOULD: add tsci's last stderr lines to the sentence | plan check, refuter | acted | `timed_out_sentence` adds the last three lines of `late.stderr` (bytes or text) |
+| 4 | Every line number in the plan (:88, :179, :458, :557, :723) matched origin/main | build | closed | read before the edit; no wrong plan claim found |
+| 5 | The handler's stage is named `build` also for a probe or converter timeout | build | closed | the plan keeps it; the sentence names the real command, so the person is not misled |
+| 6 | The push hook refused aaa78527: R1 `<module>` of scripts/check_spine.py rose 1028 to 1039, T2 `mock.patch` in tests/test_check_spine.py rose 35 to 39 | push hook | acted | accepted with `measure.py --rules --accept-new`: check_spine calls subprocess directly and has no seam for a fake run until it moves onto the core (v0.13, #94), so the timeout tests patch `subprocess.run` as the file's other 35 do |
+| 7 | SHOULD: `timed_out_sentence` had no direct test: text stderr, no stderr, a string command, a path word | PR review, Sonnet | acted | two direct tests with literal sentences; a string command is split with `shlex`, so `tsci build board.tsx` is not named `board.tsx` |
+| 8 | SHOULD and NIT: the last words were uncapped, and a converter run as `bun run cli.ts` was named `bun run` | PR review and refuter | acted | `LAST_WORDS_CAP = 800`, as the other last-words sites; three words after a runtime (`RUNTIMES`); stdout read when stderr is empty |
+| 9 | SHOULD: commands/build.md's sentence used "route" and a bracket | PR review, Sonnet | acted | "A big board can take many minutes to build. The build stops after 15 minutes, and then the stage is could-not-run, not a pass." |
+| 10 | NIT: no mutation row gave the probe the build's limit | PR review, Sonnet | acted | four rows added (the probe's limit, the runtime's words, the cap, the stdout fallback); 9 rows, every anchor present once |
+| 11 | SHOULD: a converter timeout after a good build replaces every stage with one `build` stage, so the report says the board was not built although dist/ exists (check_spine.py:735, why_not_built :863) | PR refuter, Fable | acted | before this PR too; row 5 closed it on the sentence alone, which was not enough. Filed as [P664 #893](https://github.com/xmejkal/spark/issues/893) |
+| 12 | The sentence's `%d` became `%s`, so a TimeoutExpired with no timeout cannot raise | PR review, Sonnet | acted | |
+| 13 | The push hook refused 32092878: R1 `<module>` of scripts/check_spine.py rose 1039 to 1050 (the review fixes: RUNTIMES, LAST_WORDS_CAP, shlex), and 2 more failures it did not name (P661 #889) | push hook | acted | accepted with `--accept-new`; tests.test_check_spine (197, OK), test_architecture, test_lint, test_self_confirmation, test_docs, test_journey, test_json_contracts and test_routes pass alone, so the 2 unnamed failures came from the load of a parallel mutation run |
+| 14 | The push hook refused 7cec7e66 with 2 failures, found by a quick run on an archive of the commit: test_orphans says check_spine.py names tool programs (`bun`, `node` in RUNTIMES, P82) and test_check_spine.py names a home-like path (`/Users/someone/`) | archive run | acted | three words when the second word is `run`, with no program named; the tests use `/opt/spark/...`. Lesson: the hook tests an archive, so a failing push is reproduced on an archive, not in the worktree |
+| 15 | The mutation run on 00f2103d: 9 planted, 9 caught, the suite green with the files restored (541 s) | mutation run, Sonnet | closed | `tests/mutations/p659-build-timeout.json` with `tools/mutate.py --copy` |
