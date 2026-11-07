@@ -46,7 +46,7 @@ class PathRulesTest(unittest.TestCase):
 
     def test_a_project_path_becomes_relative_and_a_store_path_gets_the_placeholder(self):
         masked = privacy().mask_text("wrote %s/sim/flash.bin and %s/boards/a.json for %s" % (PROJECT, STORE, PROJECT))
-        self.assertEqual(masked, "wrote sim/flash.bin and <store>/boards/a.json for .")
+        self.assertEqual(masked, "wrote sim/flash.bin and <store>/boards/a.json for <project>")
 
     def test_a_repo_path_under_home_gets_a_tilde_and_a_path_outside_home_stays(self):
         masked = privacy().mask_text("%s/scripts/deploy.py and /usr/bin/python3" % REPO)
@@ -63,6 +63,10 @@ class PathRulesTest(unittest.TestCase):
     def test_a_relative_project_is_the_folder_it_names(self):
         here = str(Path(".").resolve())
         self.assertEqual(Privacy.of(Path("."), STORE, HOME, ()).mask_text(here + "/sim/x.bin"), "sim/x.bin")
+
+    def test_a_path_before_a_full_stop_is_masked_and_a_longer_name_with_a_dot_is_kept_whole(self):
+        self.assertEqual(privacy().mask_text("it is in %s." % HOME), "it is in ~.")
+        self.assertEqual(privacy().mask_text("%s.bak/x and %s.old" % (PROJECT, STORE)), "~/gadgets/lamp.bak/x and ~/.local/share/spark.old")
 
     def test_an_empty_secret_masks_nothing(self):
         self.assertEqual(privacy(secrets=("",)).mask_text("/usr/bin/x"), "/usr/bin/x")
@@ -84,7 +88,7 @@ class MaskResultTest(unittest.TestCase):
 
     def test_mask_values_masks_the_values_of_a_trace(self):
         values = privacy().mask_values({"project": Path(PROJECT), "code": "print('%s')" % TOKEN, "json": True})
-        self.assertEqual(values, {"project": ".", "code": "print('***')", "json": True})
+        self.assertEqual(values, {"project": "<project>", "code": "print('***')", "json": True})
 
     def test_a_pasted_line_keeps_its_paths(self):
         line = "SPARK_HOME=%s %s/scripts/deploy.py --project %s" % (STORE, REPO, PROJECT)
@@ -108,6 +112,27 @@ class MaskResultTest(unittest.TestCase):
         result = OperationResult(None, lines=[line, STORE + "/grants/a.json"])
         self.assertEqual(privacy().mask_result(result).lines, [line, "<store>/grants/a.json"])
 
+    def test_a_token_is_masked_in_the_raw_places_too(self):
+        line = "%s/deploy.py --token %s" % (PROJECT, TOKEN)
+        step = NextStep("deploy", ["--project", PROJECT, TOKEN], "why", env={"SPARK_HOME": STORE, "T": TOKEN})
+        result = OperationResult({"run_in_terminal": line}, [Finding(outcomes.PROBLEMS, TOKEN, "no_terminal", "run " + line, TOKEN)],
+                                 [step], lines=[PastedLine("rm %s %s" % (STORE, TOKEN))])
+        masked = privacy().mask_result(result)
+        raw = "%s/deploy.py --token ***" % PROJECT
+        self.assertEqual((masked.data["run_in_terminal"], masked.findings[0][1:], masked.next[0].argv, masked.next[0].env, masked.lines),
+                         (raw, ("***", "no_terminal", "run " + raw, "***"), ["--project", PROJECT, "***"], {"SPARK_HOME": STORE, "T": "***"},
+                          ["rm %s ***" % STORE]))
+        self.assertIsInstance(masked.lines[0], PastedLine)
+
+    def test_a_line_that_holds_a_pasted_sentence_masks_the_rest(self):
+        sentence = "run %s/deploy.py" % PROJECT
+        result = OperationResult(None, [finding(sentence, "no_terminal")], diagnostics=["%s/sim: %s, then %s" % (PROJECT, sentence, STORE)])
+        self.assertEqual(privacy().mask_result(result).diagnostics, ["sim: %s, then <store>" % sentence])
+
+    def test_a_short_string_inside_a_pasted_sentence_is_masked(self):
+        result = OperationResult({"home": HOME, "word": "ok"}, [finding("ok, run %s/x" % HOME, "no_terminal")])
+        self.assertEqual(privacy().mask_result(result).data, {"home": "~", "word": "ok"})
+
     def test_an_empty_pasted_sentence_keeps_nothing_else_raw(self):
         result = OperationResult(None, [finding("", "no_terminal")], lines=[PROJECT + "/sim"])
         self.assertEqual(privacy().mask_result(result).lines, ["sim"])
@@ -122,6 +147,10 @@ class MaskEventTest(unittest.TestCase):
             masking.report(event)
         self.assertEqual(reporter.events, [Event.line("look", "token ***"), Event.line("gate", "run %s/x" % REPO, raw=True),
                                            Event.begin("look")])
+
+    def test_a_raw_event_still_masks_a_token(self):
+        self.assertEqual(privacy().mask_event(Event.line("gate", "run %s/x %s" % (REPO, TOKEN), raw=True)),
+                         Event.line("gate", "run %s/x ***" % REPO, raw=True))
 
     def test_the_masking_reporter_keeps_the_terminal_stream_and_its_fd(self):
         stream = io.StringIO()
@@ -163,10 +192,15 @@ class BenchPrivacyTest(unittest.TestCase):
             masked = bench_privacy.privacy_for(Path(".")).mask_text("token " + TOKEN)
         self.assertEqual(masked, "token ***")
 
+    def test_the_bench_ignores_a_token_too_short_to_mask_safely(self):
+        with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": "abc1234"}):
+            masked = bench_privacy.privacy_for(Path(".")).mask_text("abc1234 or 1")
+        self.assertEqual(masked, "abc1234 or 1")
+
     def test_the_bench_keeps_the_codes_and_keys_of_a_line_a_person_acts_on(self):
         pasted = bench_privacy.privacy_for(Path(".")).pasted
         self.assertLessEqual({"no_terminal", "no_grant", "refused_no_grant", "no_image", "last_deploy_not_checked"}, set(pasted.codes))
-        self.assertLessEqual({"run_in_terminal", "board_log"}, set(pasted.keys))
+        self.assertLessEqual({"run_in_terminal", "board_log", "commands", "repl_command"}, set(pasted.keys))
 
 
 class BenchGoldenPathsTest(unittest.TestCase):
@@ -186,8 +220,18 @@ class BenchGoldenPathsTest(unittest.TestCase):
         self.assertIn("<repo>/scripts/grant.py --minutes N", self.golden("live-problems-refused-no-grant.json")["why"])
 
     def test_the_other_paths_are_masked(self):
-        ran = self.golden("deploy-ok-ready-seen.json")["data"]
-        self.assertEqual((ran["commands"][1][-1], ran["store_record"]), ("sim/flash-with-firmware.bin", "<store>/boards/dc-da-0c-xx-xx-xx.json"))
+        self.assertEqual(self.golden("deploy-ok-ready-seen.json")["data"]["store_record"], "<store>/boards/dc-da-0c-xx-xx-xx.json")
+        stderr = (golden_bench.GOLDEN_DIR / "deploy-ok-ready-seen.json.stderr").read_text()
+        self.assertIn("  store record: <store>/boards/dc-da-0c-xx-xx-xx.json\n", stderr)
+
+    def test_a_command_a_person_runs_keeps_its_paths(self):
+        data = self.golden("deploy-ok-ready-seen.json")["data"]
+        self.assertEqual(data["commands"][1][-1], "<project>/sim/flash-with-firmware.bin")
+        stderr = (golden_bench.GOLDEN_DIR / "deploy-ok-ready-seen.json.stderr").read_text()
+        self.assertIn("write-flash 0x0 <project>/sim/flash-with-firmware.bin\n", stderr)
+        self.assertIn("  board log: <project>/sim/runs/board/<time>.log\n", stderr)
+        dry = (golden_bench.GOLDEN_DIR / "deploy-ok-dry-run.txt").read_text()
+        self.assertIn("  would run: <python> -m esptool --chip esp32s3 --after watchdog-reset write-flash 0x0 <project>/sim/flash-with-firmware.bin\n", dry)
 
     def test_a_file_a_person_or_an_agent_opens_keeps_its_path(self):
         self.assertEqual(self.golden("deploy-ok-ready-seen.json")["data"]["board_log"], "<project>/sim/runs/board/<time>.log")
