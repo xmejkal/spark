@@ -112,7 +112,7 @@ def run_script(case, project, store, env=None):
     plant(case, project)
     for log in Path(project).glob("sim/runs/*.log"):  # the project's own passed run: only a log this run writes is shown
         log.unlink()
-    env = dict(env or child_env(store), **case.env)
+    env = dict(child_env(store) if env is None else env, **case.env)
     argv = [str(project) if arg == PROJECT else arg for arg in case.argv]
     done = subprocess.run([sys.executable, str(golden_bench.ROOT / "scripts" / case.script), *argv], cwd=str(project),
                           env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,

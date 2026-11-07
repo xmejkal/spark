@@ -82,6 +82,13 @@ class GhShimGuardTest(unittest.TestCase):
         done = self.run_gh(FAKE_GH_FIND="A0 = 4;", FAKE_GH_REPLACE="A0 = 5;")
         self.assertIn("A0 = 5;", base64.b64decode(done.stdout).decode())
 
+    def test_run_script_gives_the_child_the_env_it_is_given(self):
+        # A dropped env would give a live Case the parent's PATH, and the real gh. The marker is the fake's exit code.
+        project = Path(tempfile.mkdtemp(dir=self.folder))
+        case = golden_firmware.Case("marker.txt", "../tests/fake_gh.py", [], 3)
+        code, text = golden_firmware.run_script(case, project, self.folder / "store", dict(self.env(), FAKE_GH_EXIT="3"))
+        self.assertEqual(code, 3, text)
+
     def test_the_fake_gh_fails_when_told(self):
         done = self.run_gh(FAKE_GH_EXIT="1")
         self.assertEqual((done.returncode, done.stdout), (1, ""))
