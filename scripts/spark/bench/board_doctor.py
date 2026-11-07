@@ -6,9 +6,9 @@ the person does that (the PO's split, 2026-10-17).
 A library. look.py and grant.py call it when esptool's read failed, reach.py and live.py when mpremote never got into
 the board. The steps and their sources are in docs/discovery/2026-10-17-p282-troubleshoot/research.md.
 
-    DoctorProbe     one named check: run(port, silent_step) -> CheckResult.
-    PortListedDoctorProbe   `mpremote devs` lists the port, with its USB serial.
-    ConsoleDoctorProbe      two seconds of the console, opened with the port's lock: busy, download mode, a boot, or
+    DoctorProbe            one named check: run(port, silent_step) -> CheckResult.
+    PortListedDoctorProbe  `mpremote devs` lists the port, with its USB serial.
+    ConsoleDoctorProbe     two seconds of the console, opened with the port's lock: busy, download mode, a boot, or
                            silence. The open itself can restart a C6 (P251, AT187), so a boot is said as such.
     BoardDoctorService     runs BOARD_CHECKS in order and stops at the first that names a step.
 

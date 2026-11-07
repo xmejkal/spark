@@ -3,7 +3,7 @@
  {"file": "scripts/spark/bench/deploy_image.py", "name": "the look's lines go to stdout under --json", "find": "                self.say(DeployPhase.LOOK, line)", "replace": "                print(\"  \" + line, flush=True)"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "a stop's diagnostic goes to stdout", "find": "            self.diagnostics += lines\n            return EXIT_COULD_NOT_RUN", "replace": "            print(\"\\n\".join(lines), flush=True)\n            return EXIT_COULD_NOT_RUN"},
  {"file": "scripts/spark/bench/deploy_service.py", "name": "the yes line loses its indent", "find": "\"yes: %s\" % consent.who))", "replace": "\"  yes: %s\" % consent.who))"},
- {"file": "scripts/spark/bench/deploy_service.py", "name": "the running line says another word", "find": "\"running: %s\" % shlex.join(command)))", "replace": "\"runs: %s\" % shlex.join(command)))"},
+ {"file": "scripts/spark/bench/deploy_service.py", "name": "the running line says another word", "find": "\"running: %s\" % shlex.join(command), raw=True))", "replace": "\"runs: %s\" % shlex.join(command), raw=True))"},
  {"file": "scripts/spark/bench/flasher.py", "name": "the retry line loses its wait", "find": "RETRY_LINE = \"retry in %(wait)d s: %(command)s stopped", "replace": "RETRY_LINE = \"retry: %(command)s stopped"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "the gate's stderr line gets an indent and a blank line", "find": "self.diagnostics.append(\"%s: %s\" % (SCRIPT, shut))", "replace": "self.diagnostics.append(\"\\n  %s: %s\" % (SCRIPT, shut))"}
 ]
