@@ -17,11 +17,11 @@ Prefix P, next free number P665 (read from `gh issue list --state all` on 2026-1
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey, or ask the decider for a new one ("Pin conflicts") <!-- REQUIRED:spark-process:slice -->
 <!-- EXTEND:item-fields -->
 
-## P665 — a left pin conflict is silent or one sentence → the assigner stops on K1, K2 and K5, names both claims, notes K3 on the run and the pin, and `--json` answers in JSON with a code (the walking skeleton, option C of D1)
+## P665 — a left pin conflict is silent or one sentence → the assigner stops on K1, K2 and K5, names both claims, notes K3 on the run and the pin, and `--json` answers in JSON with a code (the walking skeleton, option C of D1), with D7: a strap named with no connector warns, and `accept_strap` on the signal lets it through
 - type: story
 - needed by: "A check that reads the record's taken pins stays as a safety net" (the PO's words in #892, D1, 2026-11-07)
 - value proven by: `assign_pins.py --json` on a fixture per kind exits 1 with a JSON object that holds `code`, both claims and the pin. A K3 fixture exits 0 with a note. K3 is never a stop (PH-5, PH-15), pending Q10. The P581 file stops on GPIO18, GPIO9 and GPIO38 instead of exit 0 (★C4)
-- depends on: P664 #893 (the 300 s build time limit, because the Outcome's proof is that build), Q2 (where it lands), Q4 (the shape and exit code), Q10 (the K3 note), the connector fact (P460 or the part fact as a bridge)
+- depends on: P664 #893 (the 300 s build time limit, because the Outcome's proof is that build), D6 (a bridge on today's `assign_pins.py`), Q4 (the shape and exit code), Q10 (the K3 note), the connector fact (P460 or the part fact as a bridge)
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P663 #892
@@ -37,11 +37,11 @@ Prefix P, next free number P665 (read from `gh issue list --state all` on 2026-1
 - parent (the epic, as a sub-issue): P663 #892
 - slice (one Slice option of the board, or "ask the decider for a new one"): v0.10 The basic journey
 
-## P667 — "cable or wires?" is asked in chat and kept nowhere → one question reaches Claude as data, the answer is written to the requirements file by a dry-run-then-write command, and the next run keeps it
+## P667 — a part that fits a board's connector goes on wires → spark places it on the cable by default, says so in one line, and one line on the part in the requirements file ("wires") changes it (D4)
 - type: story
-- needed by: "ask 'cable or wires?' then place the connector's pins first" (the PO, D1, 2026-11-07)
-- value proven by: on P581, a run with no answer returns the question (a `next` step with `needs_person` and both choices). A run with the answer places DC on GPIO3 with the strap named (P527 #726). The second build does not ask again (A4, A5)
-- depends on: P665, P666, P527 #726, Q3 (the answer's home), Q9 (Strategy or rule)
+- needed by: "ask 'cable or wires?' then place the connector's pins first" (the PO, D1, 2026-11-07), narrowed by D4 (2026-11-07) to a named default with no question
+- value proven by: on P581, a run with no line places the screen's 8 pins on the GDI cable, DC on GPIO3 with the strap named (P527 #726), and prints one line that names the cable and the override. A run with "wires" on the part places the screen like any part. Neither run asks a question (D4)
+- depends on: P665, P666, P527 #726, Q9 (Strategy or rule). Q3 is answered by D4
 - status: proposed
 - label (the repository's type label): story
 - parent (the epic, as a sub-issue): P663 #892
