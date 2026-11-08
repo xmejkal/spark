@@ -57,7 +57,7 @@ import breadboard_changes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
-import breadboard_match  # noqa: E402
+from spark.breadboard import drawing_match  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 import design  # noqa: E402
 import drawer  # noqa: E402
@@ -323,7 +323,7 @@ def _plan_once(read, earlier_path=None, record=None):
     geometry, catalog = _drawing_inputs(read)
 
     def checked(layout, not_kept):
-        differs = breadboard_match.DrawnNets(layout, layout.geometry).differences(read.steps.points, catalog)
+        differs = drawing_match.DrawnNets(layout, layout.geometry).differences(read.steps.points, catalog)
         return PlannedLayout(layout, None, not_kept, fresh, differs)
 
     if earlier_path is None or EDITABLE_DRAWING.why_not_written(fresh):

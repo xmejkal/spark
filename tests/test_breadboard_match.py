@@ -29,7 +29,7 @@ import breadboard_keep  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 import check_spine  # noqa: E402
 from spark.breadboard.drawing import Jumper, WokwiGeometry  # noqa: E402
-from breadboard_match import JOINED_TO_OTHER, JOINED_TO_UNUSED, NOT_JOINED, DrawnNets  # noqa: E402
+from spark.breadboard.drawing_match import JOINED_TO_OTHER, JOINED_TO_UNUSED, NOT_JOINED, DrawnNets  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 GEOMETRY = WokwiGeometry.load()

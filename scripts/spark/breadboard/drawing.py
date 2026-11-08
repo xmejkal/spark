@@ -385,7 +385,7 @@ def end_pin(end, catalog):
 
 def end_group(end, placed, catalog, groups=None):
     """The group an end sits in: its pin's group, or the free group its board pad's jumper took (`groups`, which the
-    planner fills as it draws). The planner and the drawing check (`breadboard_match`) both ask it."""
+    planner fills as it draws). The planner and the drawing check (`drawing_match`) both ask it."""
     if groups and end.name in groups:
         return groups[end.name]
     if end.component not in placed:
