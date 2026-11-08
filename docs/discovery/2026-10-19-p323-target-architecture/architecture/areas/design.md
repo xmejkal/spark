@@ -47,6 +47,9 @@ Design runs no outside program, so it has no Adapter. Its only effect is `Outsid
 board records through records, and offers through sourcing's `Matcher`.
 
 Design imports sourcing, records and core.
+One edge goes up, since P694: `part_shape` imports `spark.breadboard.drawing` for `NotDrawn`, five codes and
+`WOKWI_GEOMETRY_FILE`, and `drawing_catalog` imports `part_shape`. The design wave removes it
+([P698 #943](https://github.com/xmejkal/spark/issues/943) plans it).
 
 ## Level 3: how design is built
 

@@ -50,6 +50,8 @@ core's, as `firmware_codes` is named.
 | the circuit export | `TscircuitExport` over `tsci` | `FakeTscircuitExport` (`tests/fakes.py:267`) | none |
 
 Breadboard imports design (the `Design` Value and `Netlist`), records and core.
+One edge goes back up from design, since P694: `part_shape` imports `drawing`, and `drawing_catalog` imports
+`part_shape`. The design wave removes it ([P698 #943](https://github.com/xmejkal/spark/issues/943)).
 
 ## Level 3: how breadboard is built
 
