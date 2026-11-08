@@ -239,29 +239,33 @@ def run(circuit, rules):
     return failures
 
 
-def compare(circuit_path, rules_path):
-    """Everything main() does except deciding how to say it."""
-    circuit_path = Path(circuit_path)
+def read_inputs(circuit_path, rules_path):
+    """Value: ((the circuit, the rules), None), or (None, the could-not-run answer that says which of the two cannot be read)."""
     if not circuit_path.is_file():
-        return could_not_run("no built design at %s" % circuit_path,
-                             fix="build it first: `make`, or `tsci build`")
-
-    rules_path = Path(rules_path)
+        return None, could_not_run("no built design at %s" % circuit_path,
+                                   fix="build it first: `make`, or `tsci build`")
     if not rules_path.is_file():
-        return could_not_run(
+        return None, could_not_run(
             "no rules at %s" % rules_path,
             fix="a rules file says which nets are an I2C bus and which pins must not float — "
                 "things no netlist format records")
-
     try:
         rules = fab.read_rules(rules_path)  # --- MVP --- (P455): the one reader, so a refused file is a sentence naming it
     except fab.RulesError as refused:
-        return could_not_run(str(refused))
+        return None, could_not_run(str(refused))
     try:
-        circuit = json.loads(circuit_path.read_text())
+        return (json.loads(circuit_path.read_text()), rules), None
     except ValueError as broken:
-        return could_not_run("not valid JSON: %s" % broken)
+        return None, could_not_run("not valid JSON: %s" % broken)
 
+
+def compare(circuit_path, rules_path):
+    """Everything main() does except deciding how to say it."""
+    circuit_path = Path(circuit_path)
+    read, refused = read_inputs(circuit_path, Path(rules_path))
+    if refused:
+        return refused
+    circuit, rules = read
     failures = run(circuit, rules)
     checked = len(rules.get("i2c_buses", [])) + len(rules.get("must_not_float", []))
     if not checked:
