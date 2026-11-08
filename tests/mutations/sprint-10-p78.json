@@ -13,7 +13,7 @@
   "find": "                    module, pad, host_part[\"why\"], \" — %s\" % arithmetic if arithmetic else \"\")))", "replace": "                    module, pad, host_part[\"why\"], \"\")))"},
  {"file": "scripts/emit_board.py", "name": "an LED the pin cannot light gets a resistor anyway",
   "find": "    if forward >= supply:", "replace": "    if False:"},
- {"file": "scripts/sim_project.py", "name": "the diagram's resistor has no value when it was computed",
+ {"file": "scripts/spark/firmware/sim_project.py", "name": "the diagram's resistor has no value when it was computed",
   "find": "                      else (emit_board.series_ohms(part, host_part, design.board)[0],) if host_part[\"kind\"] == \"series\"\n", "replace": ""},
  {"file": "boards/firebeetle2-esp32s3.json", "name": "the board's I/O voltage is stated wrong",
   "find": "\"io_volts\": {\n      \"value\": 3.3,", "replace": "\"io_volts\": {\n      \"value\": 5.0,"}

@@ -1,18 +1,18 @@
 [
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "FILE_LINE prefix changed",
   "find": "FILE_LINE = \"file sha256: \"",
   "replace": "FILE_LINE = \"file: \""
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "no blank line ends the header",
   "find": "%s%s\\n%s\\n%s%s\\n%s\\n\"",
   "replace": "%s%s\\n%s%s%s\\n%s\\n\""
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "prefix matched anywhere in the line",
   "find": "if line.startswith(FILE_LINE))",
   "replace": "if FILE_LINE in line)"

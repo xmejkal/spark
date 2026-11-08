@@ -1,9 +1,9 @@
 [
  {
-  "file": "scripts/project_image.py",
+  "file": "scripts/spark/firmware/project_image.py",
   "name": "find_passed_logs lists a log that tested another image",
-  "find": "if sha256 == self.sha256 and verdict == run_scenario.PASSED]",
-  "replace": "if verdict == run_scenario.PASSED]"
+  "find": "if sha256 == self.sha256 and verdict == scenario_steps.PASSED]",
+  "replace": "if verdict == scenario_steps.PASSED]"
  },
  {
   "file": "scripts/spark/bench/image_evidence.py",
@@ -12,7 +12,7 @@
   "replace": "logs = image.find_passed_logs()[:1]\n        read = [(log, "
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "merge takes the first counted log only",
   "find": "        for each in counted:\n",
   "replace": "        for each in counted[:1]:\n"
@@ -36,13 +36,13 @@
   "replace": "if False else ONE_RUN_MESSAGE"
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "SimulationLimits reads the whole log, not up to the scenario section",
   "find": "section, ended, _ = body[len(LIMITS_SECTION):].partition(SCENARIO_SECTION)",
   "replace": "section, ended, _ = body[len(LIMITS_SECTION):], SCENARIO_SECTION, \"\""
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "a limits section with no limit line is RECORDED with no limits",
   "find": "return cls(limits) if limits else cls([], outcomes.NOT_CHECKED, WHY_NO_LIMIT_LINE)",
   "replace": "return cls(limits)"
@@ -54,7 +54,7 @@
   "replace": "return found"
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "limits_in drops a continuation line",
   "find": "        elif open_limit:",
   "replace": "        elif False:"
@@ -78,19 +78,19 @@
   "replace": "if each.state == outcomes.NOT_CHECKED]"
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "a log cut off inside its limits section is RECORDED",
   "find": "        if not ended:",
   "replace": "        if False:"
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "an empty limit is kept",
   "find": "    return [limit for limit in found if limit.sentence]",
   "replace": "    return found"
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "a blank line does not end the limit",
   "find": "        elif not line.strip():\n            open_limit = False\n",
   "replace": "        elif not line.strip():\n            pass\n"
@@ -102,7 +102,7 @@
   "replace": "said_unreadable=True)"
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "a joined sentence keeps a leading space",
   "find": "found[-1] = Limit(found[-1].component, (\"%s %s\" % (found[-1].sentence, line.strip())).strip())",
   "replace": "found[-1] = Limit(found[-1].component, \"%s %s\" % (found[-1].sentence, line.strip()))"
@@ -114,13 +114,13 @@
   "replace": "            pass"
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "a log cut off inside the limits heading reads as NONE_RECORDED",
   "find": "            if body and (LIMITS_SECTION + \"\\n\").startswith(body):",
   "replace": "            if False:"
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "limits_note writes a blank line inside a sentence",
   "find": "LIMIT_DASH + _one_paragraph(sentence))",
   "replace": "LIMIT_DASH + sentence)"

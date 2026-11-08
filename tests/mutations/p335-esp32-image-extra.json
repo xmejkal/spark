@@ -1,13 +1,13 @@
 [
- {"file": "scripts/flash_image.py", "name": "main drops the offset when it builds the image",
+ {"file": "scripts/spark/firmware/image_builder.py", "name": "main drops the offset when it builds the image",
   "find": "image(micropython, files, config, interpreter.offset)", "replace": "image(micropython, files, config)"},
  {"file": "scripts/flash_image.py", "name": "main prints a wrong filesystem start",
   "find": "interpreter.offset + len(micropython), FILESYSTEM_OFFSET))", "replace": "interpreter.offset + len(micropython), 0))"},
- {"file": "scripts/flash_image.py", "name": "Interpreter.image drops the config overrides",
+ {"file": "scripts/spark/firmware/image_builder.py", "name": "Interpreter.image drops the config overrides",
   "find": "return image(self.path.read_bytes(), files, overrides, self.offset)", "replace": "return image(self.path.read_bytes(), files, None, self.offset)"},
  {"file": "scripts/tools.py", "name": "a zero offset is refused",
   "find": "int(value, 0) >= 0", "replace": "int(value, 0) > 0"},
- {"file": "scripts/run_scenario.py", "name": "the scenario run builds at offset 0",
-  "find": "self.flash = flash_image.interpreter_for(self.micropython, self.project).image(self.files)",
-  "replace": "self.flash = flash_image.image(flash_image.interpreter_for(self.micropython, self.project).path.read_bytes(), self.files)"}
+ {"file": "scripts/spark/firmware/scenario_run.py", "name": "the scenario run builds at offset 0",
+  "find": "self.flash = image_builder.interpreter_for(self.micropython, self.project).image(self.files)",
+  "replace": "self.flash = image_builder.image(image_builder.interpreter_for(self.micropython, self.project).path.read_bytes(), self.files)"}
 ]

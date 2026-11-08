@@ -6,67 +6,67 @@
   "replace": "    refusal = None  # what costs nothing first"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "the token's name is hard-coded, so the tool entry's account_env is ignored",
   "find": "token = simulator.entry.get(\"account_env\", \"WOKWI_CLI_TOKEN\")\n",
   "replace": "token = \"WOKWI_CLI_TOKEN\"\n"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a firmware folder with no main.py runs (the board boots to a bare prompt)",
   "find": "if not (self.project / \"firmware\" / \"main.py\").is_file():",
   "replace": "if False:"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a wokwi.toml firmware line this cannot read is accepted, and the run writes one image while wokwi-cli simulates another",
   "find": "    if named.state == outcomes.NOT_CHECKED:\n        raise ValueError(",
   "replace": "    if False:\n        raise ValueError("
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "an indented, unreadable firmware line is not seen",
   "find": "if not line.strip().startswith(\"firmware\"):",
   "replace": "if not line.startswith(\"firmware\"):"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "the wall clock has no startup allowance, so wokwi-cli is killed while it connects",
   "find": "timeout=self.timeout_ms / 1000 + STARTUP_ALLOWANCE_S)",
   "replace": "timeout=self.timeout_ms / 1000)"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a run that outlives its wall clock leaves no log",
   "find": "return COULD_NOT_RUN, sentence, self.write_log(sentence, \"\\n\".join(map(printed_text, (late.stdout, late.stderr))))",
   "replace": "return COULD_NOT_RUN, sentence, None"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "a killed wokwi-cli's bytes are joined as they are and crash the log",
   "find": "return output.decode(\"utf-8\", \"replace\") if isinstance(output, bytes) else (output or \"\")",
   "replace": "return output or \"\""
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a wokwi-cli that cannot start crashes the run instead of reading as could-not-run",
   "find": "            except OSError as cannot:\n",
   "replace": "            except ZeroDivisionError as cannot:\n"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "the scenario copy is left in the scenarios folder after the run",
   "find": "                as_run.unlink(missing_ok=True)",
   "replace": "                pass"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a second run, with sim/runs/ already there, crashes writing its log",
   "find": "self.log.parent.mkdir(exist_ok=True)",
   "replace": "self.log.parent.mkdir()"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "the scenario copy is written in sim/, so a step's own relative path resolves from the wrong folder",
   "find": "as_run = self.scenario.absolute().parent / (\".as-run.\" + self.scenario.name)",
   "replace": "as_run = self.sim / (\".as-run.\" + self.scenario.name)"

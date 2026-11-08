@@ -48,7 +48,7 @@
   "replace": "                 for port_id, port in []\n                 if port.get(\"source_component_id\") in present & passives\n                 and port_id not in board.nets_of_port]"
  },
  {
-  "file": "scripts/sim_project.py",
+  "file": "scripts/spark/firmware/sim_project.py",
   "name": "the passives spark placed have no Wokwi part",
   "find": "        for host_part in part.get(\"host_parts\") or []:\n            values = ((host_part.get(\"top_ohms\"), host_part.get(\"bottom_ohms\")) if host_part[\"kind\"] == \"divider\"",
   "replace": "        for host_part in []:\n            values = ((host_part.get(\"top_ohms\"), host_part.get(\"bottom_ohms\")) if host_part[\"kind\"] == \"divider\""

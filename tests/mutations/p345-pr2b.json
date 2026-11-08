@@ -36,31 +36,31 @@
   "replace": "return text.casefold()"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "from_log reads a name line after the header",
   "find": "cls._names_in(header))",
   "replace": "cls._names_in(Path(log).read_text(errors=\"replace\").splitlines()))"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "write_log writes no names marker",
   "find": ".from_text(self.steps).log_lines()",
   "replace": ".from_text(self.steps).line()"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "a log without a names marker counts as naming nothing",
   "find": "            return StepNames()\n        if marker == STEPS_NOT_READ:",
   "replace": "            return StepNames((), outcomes.RECORDED)\n        if marker == STEPS_NOT_READ:"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "a nested name in a flow step is read as the step's name",
   "find": "for piece in cls._pieces(\" \".join(texts))]",
   "replace": "for piece in \" \".join(texts).replace(\"{\", \",\").replace(\"[\", \",\").split(\",\")]"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "a nested name in a block step is read as the step's name",
   "find": "if not depth and (number == 0 or len(text) - len(text.lstrip()) == indent):",
   "replace": "if number == 0 or len(text) - len(text.lstrip()) >= indent:"
@@ -90,7 +90,7 @@
   "replace": "        logs ="
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "a flow step reads name as its kind",
   "find": "if kind and kind != cls.NAME_KEY:",
   "replace": "if kind:"
@@ -168,61 +168,61 @@
   "replace": "if False:"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: the comment cut ignores quotes",
   "find": "for index, each in cls._unquoted(line):\n            if each == \"#\"",
   "replace": "for index, each in enumerate(line):\n            if each == \"#\""
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: a hash with no white space before it starts a comment",
   "find": "if each == \"#\" and (index == 0 or line[index - 1].isspace()):",
   "replace": "if each == \"#\":"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: two single quotes in a single-quoted name stay two",
   "find": "(value[1:-1].replace(\"''\", \"'\") if",
   "replace": "(value[1:-1] if"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: two single quotes inside single quotes end the quote",
   "find": "if each == shut and shut == \"'\" and text[index + 1:index + 2] == \"'\":",
   "replace": "if False:"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: a block scalar is read as a name",
   "find": "if value[:1] in (\">\", \"|\") or (number",
   "replace": "if (number"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: a name that the next line goes on with is read",
   "find": "len(texts[number + 1]) - len(texts[number + 1].lstrip()) > indent):",
   "replace": "len(texts[number + 1]) - len(texts[number + 1].lstrip()) > 999):"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: names not read write no marker",
   "find": "        if self.names_state == outcomes.NOT_CHECKED:\n            return",
   "replace": "        if False:\n            return"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: a not read names marker reads as a count",
   "find": "if marker == STEPS_NOT_READ:",
   "replace": "if False:"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "E: a scenario with no steps has no recorded names",
   "find": "return cls({}, outcomes.NONE_RECORDED, None, StepNames((), outcomes.RECORDED))",
   "replace": "return cls({}, outcomes.NONE_RECORDED)"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: an escaped quote inside double quotes ends them",
   "find": "if each == \"\\\\\" and shut == '\"':",
   "replace": "if False:"
