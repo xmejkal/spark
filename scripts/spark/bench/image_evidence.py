@@ -117,7 +117,7 @@ def must_key(text):
 class CompileCheck:
     """
     The .py files compiled in one child process, so that a source which kills the compiler (a stack overflow, signal 11)
-    kills the child and not spark (P427). `why_not` is None, or one sentence. It started like import_firmware.import_one:
+    kills the child and not spark (P427). `why_not` is None, or one sentence. It started like import_probe.import_one:
     this interpreter with -I -B, in spark's own working directory: -I keeps a json.py planted there out, and a relative path
     means what it meant to the parent.
     """
@@ -404,7 +404,7 @@ class NoSimulationEvidence(ImageEvidence):
             raise cannot_check(image.path.name, cannot, tools.ToolProblem)
         except (OSError, ValueError) as cannot:
             return str(cannot_check(image.path.name, cannot))
-        except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as flash_image does
+        except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as image_builder does
             if type(cannot).__name__ != "LittleFSError":
                 raise
             return "firmware/ does not fit the image's file system: %s" % cannot

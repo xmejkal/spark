@@ -5,7 +5,7 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 
 New names (proposed): `SimulationEngine`, `WokwiCliEngine`, `ENGINES`, `RunLog`, `FlashImageBuilder`, `status_of_run`, `SimulationEngineContract`, the modules `image_builder`, `import_probe`, `scenario_run`, `scenario_steps`, `simulation_engine`, `operations`, and the Operation names below.
 
-P345 added `ScenarioSteps` (the counts of a scenario's step kinds, in `run_scenario`) and `ImageEvidence.caveats(image)`, a list of sentences. `RunLog` will own the counts line.
+P345 added `ScenarioSteps` (the counts of a scenario's step kinds, in `scenario_steps` since P685) and `ImageEvidence.caveats(image)`, a list of sentences. `RunLog` will own the counts line.
 
 ## Level 2: what firmware does
 
@@ -129,13 +129,13 @@ sequenceDiagram
 - A `SimulationEngineContract` test runs every engine on one tiny scenario with a recording `run`.
 - `ProjectImage` reads run logs from `tests/data/`. No board, no USB.
 - The patches of `find_toolchain` and `subprocess` go when each Adapter takes `run` (the `wokwi-cli` run in
-  `ScenarioRun`, `sim_project.stage_chips`, `import_firmware.py:58`).
+  `ScenarioRun`, `sim_project.stage_chips`, `import_probe.import_one`).
 
 ### How a new implementation is added
 
 - A new simulator is one `SimulationEngine` subclass, one entry in `ENGINES` and one tool row for the `simulator`
   role. Its engine facts then move under `simulation.<engine>` in the part records.
 - A new firmware platform builds its image with its own builder. That waits for the second platform: today the image
-  is MicroPython plus LittleFS (`flash_image.py:33`), and the board's `micropython_port` picks the build
-  (`flash_image.py:89`).
+  is MicroPython plus LittleFS (`image_builder.filesystem`), and the board's `micropython_port` picks the build
+  (`image_builder.board_build`).
 

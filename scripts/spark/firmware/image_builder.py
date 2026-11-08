@@ -175,7 +175,6 @@ def board_build(project):
         raise tools.ToolProblem.of_lines(["the board %s names no MicroPython build that can be read: %s" % (board, first)] + rest)
 
 
-
 class Interpreter(namedtuple("Interpreter", "path offset")):
     """Value: the MicroPython build chosen for a project, and where it starts in the flash (P335)."""
 
@@ -258,7 +257,6 @@ def interpreter_for(given, project=None, find_tool=None):
                                 own_build_hint_for(project, build, None))
     found = find_tool("firmware-image")
     return Interpreter(Path(found.command[0]), offset_of(found.entry))
-
 
 
 # --- MVP ---

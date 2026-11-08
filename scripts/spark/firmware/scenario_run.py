@@ -11,16 +11,15 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from spark.firmware import image_builder
-from spark.firmware.firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRMWARE_LINE_BAD, NEVER_READY, NO_MAIN_PY, NO_SIM_PROJECT, NO_TOKEN,
-                            RUN_INPUT_UNUSABLE, SIMULATOR_CANNOT_START, SIMULATOR_HUNG, SIMULATOR_LOST,
-                            STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING, Refusal)
 from spark.core import outcomes
-from spark.firmware import sim_project
+from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
+from spark.firmware import image_builder, sim_project
+from spark.firmware.firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRMWARE_LINE_BAD, NEVER_READY, NO_MAIN_PY,
+                                           NO_SIM_PROJECT, NO_TOKEN, RUN_INPUT_UNUSABLE, SIMULATOR_CANNOT_START,
+                                           SIMULATOR_HUNG, SIMULATOR_LOST, STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING, Refusal)
 from spark.firmware.scenario_steps import (FILE_LINE, IMAGE_LINE, NO_MAIN, PASSED, READY, READY_STEP, SET_CONTROL, WAIT_SERIAL,
                                            ScenarioSteps, printed_text)
 import tools
-from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 
 
 #: wokwi-cli's line when a wait-serial step matched (0.27.1): the proof that the ready text arrived.
@@ -55,7 +54,6 @@ def with_ready_wait(scenario):
     step = lines[first].lstrip()
     lines.insert(first, lines[first][:len(lines[first]) - len(step)] + READY_STEP)
     return "\n".join(lines) + "\n"
-
 
 
 def image_in(toml):
@@ -119,7 +117,7 @@ class ScenarioRun:
             self.image = image_in(self.sim / "wokwi.toml")
             self.files = image_builder.files_under(self.project / "firmware")
             self.flash = image_builder.interpreter_for(self.micropython, self.project).image(self.files)
-        except (OSError, ValueError, tools.ToolProblem) as cannot:  # a missing tool or a bad build: flash_image's codes
+        except (OSError, ValueError, tools.ToolProblem) as cannot:  # a missing tool or a bad build: image_builder's codes
             code = TOOL_MISSING if isinstance(cannot, tools.ToolProblem) else getattr(cannot, "code", RUN_INPUT_UNUSABLE)
             return Refusal("%s: %s" % (self.scenario.name, cannot), code)
         outside = sim_project.why_outside_sim(self.sim, self.image)
@@ -174,7 +172,6 @@ class ScenarioRun:
                                self.timeout_ms, sentence, ScenarioSteps.from_text(self.steps).log_lines(), IMAGE_LINE,
                                hashlib.sha256(self.flash).hexdigest(), files, shown, sim_project.SCENARIO_SECTION, self.steps, said.strip()))
         return self.log
-
 
 
 def find_simulator(project, find_tool=None):  # --- MVP --- (P684)

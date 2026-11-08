@@ -4,7 +4,7 @@ The suite cannot pass by asking the code to confirm itself (P54).
 The way it could, found by an outside reading rather than by any test:
 
 * **A test that builds its expected value from the module under test.** `test_flash_image` read
-  the filesystem back at `flash_image.FILESYSTEM_OFFSET` — the very number the module wrote it at.
+  the filesystem back at `image_builder.FILESYSTEM_OFFSET` — the very number the module wrote it at.
   Move the offset and the test moves with it; the one figure that must match MicroPython's own
   partition table was guarded by nothing. Mutation testing is blind to this by construction: a
   mutation on the constant moves both sides of the assertion.

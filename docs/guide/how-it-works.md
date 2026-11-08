@@ -154,7 +154,7 @@ Imported by the scripts above, and not run on their own, except `cost.py`:
 - `cost.py`: what a project's run cost, read from the Claude Code transcripts of the sessions its steps ran in, tool
   names and counts only. `parts.py --step` and `--tally` use it. On one transcript it runs on its own:
   `cost.py <transcript.jsonl>` says what that run cost;
-- `sim_project.py`: the simulation project a design implies, written by `check_spine.py`'s simulation stage.
+- `spark/firmware/sim_project.py`: the simulation project a design implies, written by `check_spine.py`'s simulation stage.
 
 ## The data
 

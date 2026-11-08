@@ -8,7 +8,7 @@ a Refusal. `import_firmware.py --json` writes the code of each module not import
 alone, and their codes wait in the library for the Operation that comes later.
 
 Five codes are also board_codes' (NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE, LOG_UNREADABLE, TOOL_MISSING), as equal
-literals in two leaves, until W6-F3 moves the bench's readers here. The codes every Operation can write are the core's.
+literals in two leaves: project_image raises the first four from here, and the bench raises TOOL_MISSING itself (P685). The codes every Operation can write are the core's.
 """
 
 

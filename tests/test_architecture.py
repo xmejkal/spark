@@ -314,12 +314,18 @@ class TheFirmwareAreaTest(unittest.TestCase):
     module imports alone. `scripts/` keeps the three CLIs only."""
     FIRMWARE = ROOT / "scripts" / "spark" / "firmware"
 
+    #: Each CLI's own top-level functions: `main` and what only it uses to parse and print. A library function back in a
+    #: CLI, under any name, fails the check.
+    CLIS = {"flash_image.py": ["main", "project_here"], "import_firmware.py": ["main", "render"], "run_scenario.py": ["main"]}
+
     def test_scripts_holds_the_three_clis_and_no_firmware_library_module(self):
-        clis = sorted(name for name in ("flash_image.py", "import_firmware.py", "run_scenario.py") if (ROOT / "scripts" / name).is_file())
-        self.assertEqual(clis, ["flash_image.py", "import_firmware.py", "run_scenario.py"])
-        twins = sorted(path.name for path in self.FIRMWARE.glob("*.py") if (ROOT / "scripts" / path.name).exists())
-        self.assertEqual(twins, [])
+        names = {path.stem for path in self.FIRMWARE.glob("*.py") if path.name != "__init__.py"}
+        self.assertEqual(sorted(names & {path.stem for path in (ROOT / "scripts").glob("*.py")}), [])
         self.assertFalse((ROOT / "scripts" / "stand_in").exists())
+        for cli, own in self.CLIS.items():
+            with self.subTest(cli=cli):
+                tree = ast.parse((ROOT / "scripts" / cli).read_text())
+                self.assertEqual(sorted(node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))), own)
 
     def test_the_area_s_init_imports_nothing(self):
         # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)

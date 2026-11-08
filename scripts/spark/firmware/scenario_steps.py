@@ -332,7 +332,6 @@ class ScenarioSteps:
     # --- end MVP ---
 
 
-
 def printed_text(output):
     """What a killed process printed, as text: subprocess hands it back as bytes, as text or as nothing."""
     return output.decode("utf-8", "replace") if isinstance(output, bytes) else (output or "")
@@ -355,10 +354,6 @@ def run_record(log):
         return next((line[len(prefix):].strip() for line in header if line.startswith(prefix)), None)
 
     return field("verdict: "), field(IMAGE_LINE)
-
-
-#: Why a project with no firmware/main.py cannot go on a board: %s are the project and READY.
-NO_MAIN = "no firmware/main.py in %s: the board would boot to a bare prompt and never print %r"
 
 
 def file_hashes(log):

@@ -8,11 +8,8 @@ sim/runs/ that name an image's sha256, and says why an image is not yet one to p
 import functools
 import hashlib
 
-from spark.firmware import firmware_codes
-from spark.firmware import image_builder
 from spark.core import outcomes
-from spark.firmware import scenario_steps
-from spark.firmware import sim_project
+from spark.firmware import firmware_codes, image_builder, scenario_steps, sim_project
 
 
 #: The flag that deploys an image from firmware/ with no simulation.
