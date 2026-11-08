@@ -2525,24 +2525,27 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
     """P701: every Stage that does not end ok names its code (build_codes, or the design error's own), and the sheet's
     `not written` entry carries its code into --json's `kept`. The codes are literals here."""
 
-    #: Each Stage that is not ok, in the order check_spine.py builds them: converter_stage_problem, run, convert,
-    #: board_alone, main. A code a design error carries is named by the expression that passes it on.
+    #: Each Stage that is not ok, in the order the build area builds them (P705): board_engine's converter_stage_problem
+    #: and convert, build_service's run and board_alone, check_spine's main. A code a design error carries is named by the
+    #: expression that passes it on.
     CODES_IN_ORDER = [
         "tool_missing",
+        "converter_lacks_part", "no_diagram",
         "board_unusable", "board_only_with_parts", "no_parts", "broken.code", "refused.code", "stage_crashed",
         "schematic_refused", "stage_crashed", "schematic_noted", "disagreement.code", "stage_crashed", "tool_missing",
         "tool_cannot_build", "design_not_built", "part_stranded", "design_not_built", "not_routed",
         "simulation_fact_missing", "chip_not_compiled", "diagram_unwired",
-        "converter_lacks_part", "no_diagram",
         "simulation_fact_missing", "simulation_fact_missing",
         "broken.code", "stage_timed_out", "stage_crashed",
     ]
 
     def test_each_stage_that_is_not_ok_names_its_code(self):
-        tree = ast.parse((ROOT / "scripts" / "check_spine.py").read_text())
-        stops = sorted((node.lineno, node.col_offset, node) for node in ast.walk(tree)
-                       if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "Stage" and len(node.args) > 1
-                       and getattr(node.args[1], "id", None) in ("COULD_NOT_RUN", "PROBLEMS"))
+        stops = []
+        for source in ("spark/build/board_engine.py", "spark/build/build_service.py", "check_spine.py"):
+            tree = ast.parse((ROOT / "scripts" / source).read_text())
+            stops += sorted((node.lineno, node.col_offset, node) for node in ast.walk(tree)
+                            if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "Stage" and len(node.args) > 1
+                            and getattr(node.args[1], "id", None) in ("COULD_NOT_RUN", "PROBLEMS"))
 
         def code(call):
             if len(call.args) < 4:

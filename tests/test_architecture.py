@@ -432,5 +432,45 @@ class TheDesignAreaTest(unittest.TestCase):
 # --- end MVP ---
 
 
+# --- MVP ---
+class TheBuildAreaTest(unittest.TestCase):
+    """W6-U3 (P705): the build's modules live in `scripts/spark/build/`, its `__init__.py` imports nothing, and each module
+    imports alone. `scripts/` keeps the two CLIs."""
+    BUILD = ROOT / "scripts" / "spark" / "build"
+    #: The seven modules of the area, by the names of its page (`areas/build.md`).
+    MODULES = ["ai_files", "board_engine", "build_codes", "build_service", "kept_files", "project_setup", "stages"]
+    #: Each CLI's own top-level functions: `main` and what only it uses to parse and print (`report` prints). A library
+    #: function back in a CLI, under any name, fails the check.
+    CLIS = {"check_spine.py": ["main", "render", "report", "timed_out_sentence"], "init_project.py": ["main"]}
+
+    def test_scripts_holds_the_two_clis_and_no_build_library_module(self):
+        self.assertEqual(sorted(path.stem for path in self.BUILD.glob("*.py") if path.name != "__init__.py"), self.MODULES)
+        scripts = ROOT / "scripts"
+        old = ["ai_files.py", "build_codes.py", "check_spine.py", "init_project.py"]
+        self.assertEqual([name for name in old if (scripts / name).exists()], sorted(self.CLIS))
+        self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in scripts.glob("*.py")}), [])
+        for cli, own in self.CLIS.items():
+            with self.subTest(cli=cli):
+                tree = ast.parse((scripts / cli).read_text())
+                self.assertEqual(sorted(node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))),
+                                 own)
+
+    def test_the_area_s_init_imports_nothing(self):
+        # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)
+        tree = ast.parse((self.BUILD / "__init__.py").read_text())
+        self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
+
+    def test_each_build_module_imports_alone(self):
+        each_module_imports_alone(self, "build")
+
+    def test_the_build_runs_the_emit_board_cli_in_scripts(self):
+        # run's child is the CLI two folders up from build_service, and the plugin's own library is the plugin folder
+        code = "import boards; from spark.build import build_service; print(build_service.EMIT_BOARD_SCRIPT); print(boards.PLUGIN_ROOT)"
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True,
+                             timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout.split("\n")[:2], [str(ROOT / "scripts" / "emit_board.py"), str(ROOT)], run.stderr)
+# --- end MVP ---
+
+
 if __name__ == "__main__":
     unittest.main()
