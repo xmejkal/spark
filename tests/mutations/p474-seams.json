@@ -4,7 +4,7 @@
  {"file": "scripts/spark/bench/firmware_platform.py", "name": "the port finder is built over the flasher", "find": "return board_look.PortFinder(self.find_tool(\"board-shell\"), run)", "replace": "return board_look.PortFinder(self.find_tool(\"flasher\"), run)"},
  {"file": "scripts/spark/bench/firmware_platform.py", "name": "make_board_reader drops the hint", "find": "return board_look.EsptoolReader(self.find_tool(\"flasher\"), run, hint)", "replace": "return board_look.EsptoolReader(self.find_tool(\"flasher\"), run)"},
  {"file": "scripts/spark/bench/board_look.py", "name": "the looker hands the reader no hint", "find": "platform.make_board_reader(run, hint))", "replace": "platform.make_board_reader(run, \"\"))"},
- {"file": "scripts/spark/bench/board_look.py", "name": "the hint names no buttons", "find": "boot_hint_for(boards.ButtonPlaces.of_project(platform.project))", "replace": "boot_hint_for(boards.ButtonPlaces.EMPTY)"},
+ {"file": "scripts/spark/bench/board_look.py", "name": "the hint names no buttons", "find": "boot_hint_for(board_records.ButtonPlaces.of_project(platform.project))", "replace": "boot_hint_for(board_records.ButtonPlaces.EMPTY)"},
  {"file": "scripts/spark/bench/board_console.py", "name": "now has no zone", "find": "return datetime.datetime.now().astimezone()", "replace": "return datetime.datetime.now()"},
  {"file": "scripts/spark/bench/deploy_gate.py", "name": "the terminal's user_name is ignored", "find": "return TYPED_BY % self.user_name()", "replace": "return TYPED_BY % getpass.getuser()"},
  {"file": "scripts/spark/bench/board_grant.py", "name": "the grant's user_name is ignored", "find": "Grant(mac, token, self.user_name(), stamp", "replace": "Grant(mac, token, getpass.getuser(), stamp"},

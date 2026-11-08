@@ -10,5 +10,5 @@
  {"file": "scripts/parts.py", "name": "another project's silent record is listed",
   "find": " and (kind, found, layer, path) not in linked:", "replace": ":"},
  {"file": "scripts/parts.py", "name": "a malformed board raises",
-  "find": "_shape_problems(boards.validate, record, path, \"board definition\")", "replace": "boards.validate(record, path)"}
+  "find": "_shape_problems(\n            board_records.validate, record, path, \"board definition\")", "replace": "(\n            board_records.validate(record, path))"}
 ]

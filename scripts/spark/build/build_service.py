@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import boards
+from spark.records import board_records
 from spark.build import board_engine  # find_toolchain is read through it: one patch reaches run and check_spine.main
 from spark.build import build_codes
 from spark.build import project_setup
@@ -179,11 +179,11 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     built from and must not require a surrounding project for.
     """
     stages = []
-    project = project or boards.PLUGIN_ROOT
+    project = project or board_records.PLUGIN_ROOT
 
     # --- parts and pin assignment, via the generator that owns them ---
     try:
-        board = boards.load(project, requirements.get("board"))
+        board = board_records.load(project, requirements.get("board"))
     except Exception as exc:  # noqa: BLE001
         return stages + [Stage("board", COULD_NOT_RUN, str(exc), build_codes.BOARD_UNUSABLE)]
     stages.append(Stage("board", OK, board["name"] + (
@@ -365,7 +365,7 @@ def board_alone(board, workdir, firmware=None, project=None):
     skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", board_emitter.SCHEMATIC_STAGE, board_emitter.FOOTPRINT_STAGE, "build")]
     if not board.get("wokwi_part_type"):
         return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type", build_codes.SIMULATION_FACT_MISSING)]
-    sim_dir, project = workdir / "sim", project or boards.PLUGIN_ROOT
+    sim_dir, project = workdir / "sim", project or board_records.PLUGIN_ROOT
     given, own = onboard_parts.read_board_alone(board, project), find_converter(project)
     stopped = given.wired and (converter_stage_problem(project, own) or (Stage("simulation", COULD_NOT_RUN, given.why, build_codes.SIMULATION_FACT_MISSING) if given.why else None))
     if stopped:

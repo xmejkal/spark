@@ -220,7 +220,7 @@ class ResetSentenceTest(unittest.TestCase):
     def test_a_board_with_places_names_where_reset_is(self):
         record = {"physical": {"buttons": {"seen_from": "USB-C at the top", "boot": {"silkscreen": "B", "place": "top right"},
                                            "reset": {"silkscreen": "R", "place": "top left"}}}}
-        places = download_mode.boards.ButtonPlaces.from_record(record)
+        places = download_mode.board_records.ButtonPlaces.from_record(record)
         self.assertEqual(download_mode.press_reset(places), "the board waits in download mode: press the board's RESET (R, top left) once. Left and right as seen "
                          "with USB-C at the top")
         self.assertTrue(download_mode.no_reset(places).endswith("press its RESET (R, top left). Left and right as seen with USB-C at the top"))

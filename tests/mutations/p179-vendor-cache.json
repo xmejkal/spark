@@ -8,7 +8,7 @@
  {
   "file": "scripts/spark/checks/vendor_pins_check.py",
   "name": "the project is guessed two folders up from the path as typed again (P179, council PA-3/U-1)",
-  "find": "    project = boards.project_root(path.resolve().parent)",
+  "find": "    project = board_records.project_root(path.resolve().parent)",
   "replace": "    project = path.parent.parent"
  },
  {
@@ -74,7 +74,7 @@
  {
   "file": "scripts/spark/checks/vendor_pins_check.py",
   "name": "the fetch runs before the project check, spending a network call on a refusal (P179, refuter B9)",
-  "find": "        target = project_header(path, variant)\n    except boards.BoardError:\n        raise CouldNotKeep",
-  "replace": "        fetch_variant_header(variant, repo)\n        target = project_header(path, variant)\n    except boards.BoardError:\n        raise CouldNotKeep"
+  "find": "        target = project_header(path, variant)\n    except board_records.BoardError:\n        raise CouldNotKeep",
+  "replace": "        fetch_variant_header(variant, repo)\n        target = project_header(path, variant)\n    except board_records.BoardError:\n        raise CouldNotKeep"
  }
 ]

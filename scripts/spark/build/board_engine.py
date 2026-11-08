@@ -9,7 +9,7 @@ import os
 import subprocess
 from pathlib import Path
 
-import boards
+from spark.records import board_records
 from spark.build import build_codes
 from spark.build.stages import Stage
 from spark.firmware import sim_project
@@ -101,7 +101,7 @@ def find_converter(start):
     cli.ts needs node_modules an installed plugin does not have (the final review of P82). What the
     plugin ships is the bundle, which the tools list names as the diagram-converter (B10).
     """
-    for directory in boards.walk_up(start):
+    for directory in board_records.walk_up(start):
         for relative in CONVERTER_PATHS:
             candidate = (directory / relative).resolve()
             # A spark checkout's own source — this plugin, or another found walking up — is never a project's.

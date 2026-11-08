@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple, Optional
 
-import boards
+from spark.records import board_records
 from spark.design import board_emitter
 from spark.core import outcomes
 import parts as parts_library
@@ -226,7 +226,7 @@ def write_limits(sim_dir, design, board, wired=None):
     `onboard_parts.say_wired_gpios`). `board` has no default: no test reaches the full build's simulation stage
     (`build_service.simulation_detail`), so a call that drops it fails at once.
     """
-    limits = (limits_of(design) if design is not None else []) + boards.onboard_limits(board, wired)
+    limits = (limits_of(design) if design is not None else []) + board_records.onboard_limits(board, wired)
     if limits:
         (Path(sim_dir) / LIMITS_NOTE).write_text(limits_note(limits))
     return limits

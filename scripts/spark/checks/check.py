@@ -42,7 +42,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-import boards
+from spark.records import board_records
 from spark.design import loader
 from spark.design import design_codes
 from spark.design import fab
@@ -327,7 +327,7 @@ class CheckedFolder:
             # a folder that is not there walked up to a project nobody named
             raise loader.DesignError("no directory at %s — `--project` names a project directory", folder,
                                      code=design_codes.NO_PROJECT_FOLDER)
-        project = boards.project_or_library(folder.resolve())
+        project = board_records.project_or_library(folder.resolve())
         return cls(folder, folder if project == folder.resolve() else project)  # the folder as given, when it is one
 
     @classmethod
@@ -416,14 +416,14 @@ def discover_boards(project, found, notes):
     a vendor header it does not have.
     """
     try:
-        definitions = [str(boards.definition_path(project, board_id))
-                       for board_id in boards.available(project)]
+        definitions = [str(board_records.definition_path(project, board_id))
+                       for board_id in board_records.available(project)]
         if definitions:
             found["boards"] = definitions
             notes.append("%-12s %d definition(s): %s"
                          % ("boards", len(definitions),
-                            ", ".join(sorted(boards.available(project)))))
-        boards.definition_path(project)
+                            ", ".join(sorted(board_records.available(project)))))
+        board_records.definition_path(project)
     except Exception as broken:  # noqa: BLE001 - a project with no board chosen is a normal state
         notes.append("%-12s not resolved (%s)" % ("boards", broken))
 

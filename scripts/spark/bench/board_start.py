@@ -48,9 +48,9 @@ def _key(text):
 
 
 class BoardStartService:
-    """Service: find one board's port and wait for its start. `finder` lists the boards (board_look.PortFinder), `mac` is
-    the board's MAC from the look, `clock` has `monotonic` and `sleep`, `places` (boards.ButtonPlaces) names RESET in
-    what the person reads. It keeps `heard`, the lines for the board log, in time order."""
+    """Service: find one board's port and wait for its start. `finder` lists the boards (board_look.PortFinder), `mac`
+    is the board's MAC from the look, `clock` has `monotonic` and `sleep`, `places` (board_records.ButtonPlaces) names
+    RESET in what the person reads. It keeps `heard`, the lines for the board log, in time order."""
 
     def __init__(self, finder, mac, clock, places):
         self.finder, self.mac, self.clock, self.places = finder, _key(mac), clock, places

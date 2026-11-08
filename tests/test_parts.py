@@ -1247,9 +1247,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         home, project, store = self._kept_world(stored)
         def no_network(url):
             raise AssertionError("--kept must never reach the network, asked for %s" % url)
-        import boards
+        from spark.records import board_records
         with in_store(home), \
-                mock.patch.object(boards, "LIBRARY", home / "no-library"), \
+                mock.patch.object(board_records, "LIBRARY", home / "no-library"), \
                 mock.patch.object(parts, "_download", no_network), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
             code = parts.main(["--kept"] + words + ["--project", str(project)])

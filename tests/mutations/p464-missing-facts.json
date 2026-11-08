@@ -2,7 +2,7 @@
  {
   "file": "scripts/missing_facts.py",
   "name": "the button is dropped from the table of levels a stage needs",
-  "find": "    boards.ONBOARD_BUTTON: \"the level it reads when pressed\",\n",
+  "find": "    board_records.ONBOARD_BUTTON: \"the level it reads when pressed\",\n",
   "replace": ""
  },
  {
@@ -20,7 +20,7 @@
  {
   "file": "scripts/parts.py",
   "name": "spark's library board is not refused",
-  "find": "in (LIBRARY.resolve(), boards.LIBRARY.resolve()):",
+  "find": "in (LIBRARY.resolve(), board_records.LIBRARY.resolve()):",
   "replace": "in (LIBRARY.resolve(),):"
  },
  {
@@ -50,14 +50,14 @@
  {
   "file": "scripts/missing_facts.py",
   "name": "the problems of the record before the write are held against the write",
-  "find": " - set(boards.validate(record, path)))",
+  "find": " - set(board_records.validate(record, path)))",
   "replace": " - set())"
  },
  {
   "file": "scripts/missing_facts.py",
   "name": "the merged result is not validated",
-  "find": "sorted(set(boards.validate(after, path))",
-  "replace": "sorted(set(boards.validate(record, path))"
+  "find": "sorted(set(board_records.validate(after, path))",
+  "replace": "sorted(set(board_records.validate(record, path))"
  },
  {
   "file": "scripts/spark/design/pin_assigner.py",

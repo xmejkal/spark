@@ -13,15 +13,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
-import boards
+from spark.records import board_records
 from spark.firmware.image_builder import FILESYSTEM_OFFSET, make_image
 
 
 def project_here():
     """The project this runs in: the nearest folder up with boards/active.json or .spark/, else the current folder."""
     try:
-        return boards.project_root()
-    except boards.BoardError:
+        return board_records.project_root()
+    except board_records.BoardError:
         return Path(".")
 
 

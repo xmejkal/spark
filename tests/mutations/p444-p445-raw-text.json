@@ -72,7 +72,7 @@
   "replace": "P230 will research one.\" % name, reason"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "a board id that is no string reaches a lookup",
   "find": "records(project).get(board_id) if isinstance(board_id, str) else None",
   "replace": "records(project).get(board_id)"

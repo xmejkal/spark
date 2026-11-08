@@ -6,7 +6,7 @@ the sentence each wired GPIO gives the limits. `build_service.board_alone` calls
 
 from typing import NamedTuple, Optional
 
-import boards
+from spark.records import board_records
 from spark.breadboard import sheet
 from spark.design import loader
 from spark.records import provenance
@@ -28,15 +28,15 @@ class OnboardPart(NamedTuple):
 #: The roles spark wires, each with its stand-in part. Only roles with a scenario verb (a test pins it): the display and
 #: the battery-level pin keep their `not_in_diagram` sentence.
 ONBOARD_PARTS = {
-    boards.ONBOARD_LED: OnboardPart(
+    board_records.ONBOARD_LED: OnboardPart(
         "led-red-5mm", 1,
         "the Wokwi stand-in has no LED on GPIO%(gpio)d, so spark wires Wokwi's LED to GPIO%(gpio)d in its place: a passed "
         "run shows the level a scenario read on GPIO%(gpio)d, not a PWM duty or a brightness, nor that the board's own LED "
-        "lights. " + boards.BENCH),
-    boards.ONBOARD_BUTTON: OnboardPart(
+        "lights. " + board_records.BENCH),
+    board_records.ONBOARD_BUTTON: OnboardPart(
         "tactile-button", 0,
         "the Wokwi stand-in has no button on GPIO%(gpio)d, so spark wires Wokwi's pushbutton to GPIO%(gpio)d in its "
-        "place: a scenario presses that part, not the board's own button. " + boards.BENCH),
+        "place: a scenario presses that part, not the board's own button. " + board_records.BENCH),
 }
 
 #: The netlist's file name in the simulation project. The board's component name is `sheet.BOARD_COMPONENT`, the
@@ -65,7 +65,7 @@ class OnboardPartReader:
         if self.board.get("wokwi_is_stand_in") is not True or not self.ground():
             return []
         found = []
-        for role, _, entry in boards.onboard_entries(self.board):
+        for role, _, entry in board_records.onboard_entries(self.board):
             part, gpios = ONBOARD_PARTS.get(role), entry.get("gpio")
             if not part or not isinstance(gpios, list) or len(gpios) != 1:
                 continue
@@ -77,7 +77,7 @@ class OnboardPartReader:
     def pin_of(self, gpio):
         """The first key of the record's `pins` whose GPIO is `gpio`, or None."""
         pins = self.board.get("pins") if isinstance(self.board.get("pins"), dict) else {}
-        return next((name for name, number in pins.items() if boards.is_gpio(gpio) and number == gpio), None)
+        return next((name for name, number in pins.items() if board_records.is_gpio(gpio) and number == gpio), None)
 
     def ground(self):
         """The first key of the record's `wokwi_power_pins` that names a ground pin, or None."""
@@ -119,7 +119,7 @@ def read_board_alone(board, project):
 
 
 def say_wired_gpios(parts):
-    """{gpio: sentence} for each part `OnboardPartReader.parts` gave, the `wired` of `boards.onboard_limits`."""
+    """{gpio: sentence} for each part `OnboardPartReader.parts` gave, the `wired` of `board_records.onboard_limits`."""
     return {part["gpio"]: ONBOARD_PARTS[part["_instance"]].wired % {"gpio": part["gpio"]} for part in parts}
 
 

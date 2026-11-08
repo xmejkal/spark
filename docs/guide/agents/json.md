@@ -326,7 +326,7 @@ Without `--json` it prints the same on stderr and nothing on stdout ([P442](http
 
 **The `code` of an item** ([P433](https://github.com/xmejkal/spark/issues/575)). Every item of `problems` and `unchecked` in
 `look.py --json` and `deploy.py --json` has `code`, the cause in one word. Decide on the code, never on the sentence. The codes
-come from one table, `scripts/board_codes.py`. The same code can come from the look and from deploy.py (`evidence_refuses` is both).
+come from one table, `scripts/spark/bench/board_codes.py`. The look and deploy.py share a code (`evidence_refuses`).
 The flat line of `grant.py`, `live.py` and `reach.py` has no `code`; their Findings do. In deploy.py, the reasons of a look that could not run come as an `unchecked` item of stage `look`.
 look.py gives each stop, warning and unknown field an item of its own. deploy.py's gate gives one item for all the look's stops, with the first stop's `code`.
 The column "needs the person" says whether the next step waits on the person's hands, yes or choice.

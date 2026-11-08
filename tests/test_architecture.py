@@ -465,7 +465,8 @@ class TheBuildAreaTest(unittest.TestCase):
 
     def test_the_build_runs_the_emit_board_cli_in_scripts(self):
         # run's child is the CLI two folders up from build_service, and the plugin's own library is the plugin folder
-        code = "import boards; from spark.build import build_service; print(build_service.EMIT_BOARD_SCRIPT); print(boards.PLUGIN_ROOT)"
+        code = ("from spark.records import board_records; from spark.build import build_service; "
+                "print(build_service.EMIT_BOARD_SCRIPT); print(board_records.PLUGIN_ROOT)")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True,
                              timeout=60, stdin=subprocess.DEVNULL)
         self.assertEqual(run.stdout.split("\n")[:2], [str(ROOT / "scripts" / "emit_board.py"), str(ROOT)], run.stderr)

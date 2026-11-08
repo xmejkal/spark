@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from spark.bench import board_look  # noqa: E402
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.firmware import scenario_run  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from micropython_fakes import fake_interpreter  # noqa: E402
@@ -144,7 +144,7 @@ def build_project(folder):
     (project / "boards" / "active.json").write_text(json.dumps({"board": BOARD_ID}))
     # The fixture invents this note: the firebeetle S3 board has no display. It makes the run copy a limits section into the log (P345).
     (sim / "WHAT-THIS-CANNOT-SHOW.md").write_text(sim_project.limits_note(
-        [("ONBOARD_DISPLAY", boards.ONBOARD_ROLES[boards.ONBOARD_DISPLAY].not_in_diagram)]))
+        [("ONBOARD_DISPLAY", board_records.ONBOARD_ROLES[board_records.ONBOARD_DISPLAY].not_in_diagram)]))
     scenario = sim / "scenarios" / "s.scenario.yaml"
     scenario.write_text('name: s\nversion: 1\nsteps:\n  - wait-serial: "LED on"\n')
     micropython = project / "micropython.bin"

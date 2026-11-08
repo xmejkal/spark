@@ -1505,21 +1505,20 @@ and 60 in `scripts/`. Rows: 198. Docs: 10 agent-facing pages, `areas/records.md`
 (`deploy.py:91`, `look.py:42`). `.claude/agents/`, `skills/` and `commands/` name no moved module's path (grep), only the
 CLIs. Size: 2,110 lines, est. 130 import lines, 198 rows, 11 keys. Done when
 `ls scripts/*.py` shows `boards.py` alone of the ten, and `scripts/board_codes.py` is gone.
-
 P718 claims check (at badcb180, no decision changed). Holds: the 11 keys; `boards.py:35` (`sys.path`), `:171`
 (`PLUGIN_ROOT`), `:248` (`footprint_stop`, 14 lines), its lazy import `:255`, `:830` (`import parts`), `:956`; the 9
-`boards.*` `MAY_READ` keys; `bench.md:32`, `patterns-and-names.md:48`, `deploy.py:91`, `look.py:42`; the agent pages name
-the CLI `boards.py` alone (`commands/init.md`, `skills/spark-review/SKILL.md`). Corrections: 2,175 lines, not 2,110
+`boards.*` `MAY_READ` keys; `bench.md:32`, `patterns-and-names.md:48`, `deploy.py:91`, `look.py:42`; the agent pages
+name the CLI `boards.py` alone (`commands/init.md`, `skills/spark-review/SKILL.md`). Corrections: 2,175 lines, not 2,110
 (`records_codes.py` 62, `store.py` 455, `deploy_record_store.py` 104); 205 rows, not 198 (`store` 83, `boards` 71,
 `missing_facts` 11, `records_codes` 2); 151 import lines name the ten. `store.py:37` is `:39`, `boards.py:44` is `:45`.
 `board_codes` has 14 bench importers (`stops.py` too). The callers of `footprint_stop` are `init_project.py:79` and
 `spark/build/project_setup.py:392` (P705 split the CLI), `spark/design/needs.py:519` and `parts.py:2225`.
 `footprint_emitter.py:42` imports `boards` at the top, so `footprint_stop` reads the board records there with no lazy
 line, and `parts.py` reads it through its lazy `footprint_emitter` import, as `audit` does (`:148`): `loader.py:40`
-imports `parts` at the top. The CLI `boards.py` keeps `main`, `_validate_all` (it prints) and the `C3` import, and imports
-the library's names by name, so `main` does not change. `LEAVES` and `LEAF_NAMES` name stems and hold both leaves. A
-local `boards` in `board_doctor.run` (`:93`) and a parameter in `tests/test_board_doctor.py:30` keep their name;
-`board_records` binds nowhere; `board_look.boards` and `download_mode.boards` (three test lines) follow.
+imports `parts` at the top. The CLI `boards.py` keeps `main`, `_validate_all` (it prints) and the `C3` import, and
+imports the library's names by name, so `main` does not change. `LEAVES` and `LEAF_NAMES` name stems and hold both
+leaves. A local `boards` in `board_doctor.run` (`:93`) and a parameter in `tests/test_board_doctor.py:30` keep their
+name; `board_records` binds nowhere; `board_look.boards` and `download_mode.boards` (three test lines) follow.
 `OnlyBoardPadsReadsThePadAliasesTest` (`tests/test_boards.py:281`) names `board_pads.py` by path, and it follows.
 
 ### W6-R3b, the tool finder move (after W6-R3a)

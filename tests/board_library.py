@@ -3,7 +3,7 @@ A copy of the plugin's board library in which the XIAO ESP32-C6 lacks one fact, 
 the chain (P278, #314): the shipped XIAO states all its facts now, so a test that needs a board with a gap makes one.
 
     with board_missing("physical.header"):
-        ...     # boards.LIBRARY is a scratch copy; the XIAO's file there has no physical.header
+        ...     # board_records.LIBRARY is a scratch copy; the XIAO's file there has no physical.header
 """
 
 import contextlib
@@ -20,7 +20,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 
 XIAO = "xiao-esp32-c6"
 
@@ -43,5 +43,5 @@ def library_without(field):
 @contextlib.contextmanager
 def board_missing(field):
     """boards.LIBRARY is a scratch copy in which the XIAO lacks `field`, for the length of the block."""
-    with mock.patch.object(boards, "LIBRARY", library_without(field)):
+    with mock.patch.object(board_records, "LIBRARY", library_without(field)):
         yield

@@ -5,7 +5,7 @@ How a flash image goes onto a board (P239 PR 7): the seam that another platform'
 simulator loaded it. Only the commands are built here: deploy.py runs them, and nothing here touches USB.
 """
 
-import boards
+from spark.records import board_records
 import tools
 
 
@@ -60,7 +60,7 @@ class EsptoolFlasher(Flasher):
     RETRY_WAIT_S = 5
     RETRY_LINE = "retry in %(wait)d s: %(command)s stopped with exit %(code)d (esptool's exit for any stop, a failed connect among them)"
 
-    def __init__(self, tool, chip, places=boards.ButtonPlaces.EMPTY):
+    def __init__(self, tool, chip, places=board_records.ButtonPlaces.EMPTY):
         self.tool, self.chip = tool, chip
         self.boot_hint = self.boot_hint_for(places)  # read by deploy.py through its plan's flasher
 

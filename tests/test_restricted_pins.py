@@ -12,7 +12,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.design.restricted_pins import RestrictedPins, whole_numbers_in  # noqa: E402
 
 C6 = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
@@ -24,8 +24,8 @@ class TheRecordTest(unittest.TestCase):
         self.assertEqual((roles["usb"]["gpio"], roles["flash"]["gpio"]), ([12, 13], [24, 25, 26, 27, 28, 29, 30]))
 
     def test_both_roles_are_in_the_vocabulary_and_the_record_is_valid(self):
-        self.assertLessEqual({"usb", "flash"}, set(boards.PIN_ROLES))
-        self.assertEqual(boards.validate(C6, ROOT / "boards" / "xiao-esp32-c6.json"), [])
+        self.assertLessEqual({"usb", "flash"}, set(board_records.PIN_ROLES))
+        self.assertEqual(board_records.validate(C6, ROOT / "boards" / "xiao-esp32-c6.json"), [])
 
 
 class RefusalTest(unittest.TestCase):

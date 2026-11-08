@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_look  # noqa: E402
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.bench import flasher  # noqa: E402
 import tools  # noqa: E402
 
@@ -56,7 +56,7 @@ class TheEsptoolFlasherTest(unittest.TestCase):
         self.assertEqual((flasher.EsptoolFlasher.RETRY_EXIT_CODE, flasher.EsptoolFlasher.RETRY_WAIT_S), (2, 5))
         self.assertEqual((flasher.Flasher.RETRY_EXIT_CODE, flasher.Flasher.RETRY_WAIT_S), (None, 0))
 
-    PLACES = boards.ButtonPlaces.from_record({"physical": {"buttons": {
+    PLACES = board_records.ButtonPlaces.from_record({"physical": {"buttons": {
         "seen_from": "the shield facing you", "boot": {"silkscreen": "B", "place": "top right"},
         "reset": {"silkscreen": "R", "place": "top left"}}}})
 

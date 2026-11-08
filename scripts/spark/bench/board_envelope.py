@@ -12,7 +12,7 @@ not the yes, and neither is "go ahead" in a chat.
 from pathlib import Path
 
 from spark.bench import board_doctor
-import boards
+from spark.records import board_records
 from spark.bench.deploy_stages import DeployPhase
 from spark.design import loader
 from spark.core import outcomes
@@ -89,7 +89,8 @@ def _finding(reached, code):
     """The one Finding of a deploy run that did not reach ready, of the exit `code`'s severity: its subject is the stage, or
     `ready` once the board was read, its code the reason, its fix the doctor's step or the step of what it waits for."""
     result, doctor = reached.get("result"), reached.get("doctor")
-    fix = doctor_fix(doctor, boards.ButtonPlaces.of_project(reached["project"])) if doctor else FIX_FOR_NEXT.get(reached.get("next_op"), "")
+    fix = (doctor_fix(doctor, board_records.ButtonPlaces.of_project(reached["project"])) if doctor
+           else FIX_FOR_NEXT.get(reached.get("next_op"), ""))
     return Finding(outcomes.STATUS_FOR[code], "ready" if result else reached["stage"], reached.get("reason"), reached.get("refusal"), fix)
 
 

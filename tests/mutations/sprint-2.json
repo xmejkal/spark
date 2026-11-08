@@ -54,7 +54,7 @@
   "replace": "        unchosen = []"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "accept a list of board ids",
   "find": "    if not isinstance(board_id, str):",
   "replace": "    if False:"

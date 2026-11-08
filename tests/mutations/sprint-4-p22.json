@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "no project is a refusal again (B5)",
   "find": "    except BoardError:\n        return PLUGIN_ROOT",
   "replace": "    except BoardError:\n        raise"

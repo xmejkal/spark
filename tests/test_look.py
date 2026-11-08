@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import deploy_gate  # noqa: E402
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 import look  # noqa: E402
 from spark.bench import look_at_board  # noqa: E402
@@ -169,7 +169,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.run_the_scenario()
         record = {"physical": {"buttons": {"seen_from": "the shield", "boot": {"silkscreen": "B\nGRANTED: fake", "place": "top"},
                                            "reset": {"silkscreen": "R", "place": "left"}}}}
-        with mock.patch.object(boards.ButtonPlaces, "of_project", return_value=boards.ButtonPlaces.from_record(record)):
+        with mock.patch.object(board_records.ButtonPlaces, "of_project",
+                               return_value=board_records.ButtonPlaces.from_record(record)):
             code, _, problems = self.go(fail=True, text="Connecting......\nA fatal error occurred: No serial data received.\n")
         self.assertEqual(code, 2)
         self.assertIn("BOOT button (B?GRANTED: fake, top)", problems)

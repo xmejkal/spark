@@ -30,7 +30,7 @@
   "replace": "        grounds.append({\"componentId\": role, \"pinName\": signal})"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "a wired GPIO keeps the bare header pin sentence",
   "find": "            if gpio in (wired or {}):",
   "replace": "            if False:"
@@ -48,7 +48,7 @@
   "replace": "  const { netlist, problems: designProblems } = false\n"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "a definition not in the store hides each wired GPIO's sentence",
   "find": "    said = [] if part.state == outcomes.RECORDED else [(ONBOARD_GPIOS, part.why_not_read())]",
   "replace": "    if part.state != outcomes.RECORDED:\n        return [(ONBOARD_GPIOS, part.why_not_read())]\n    said = []"

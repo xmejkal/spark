@@ -1,7 +1,7 @@
 """
 What a fact in a record must carry: a module with no spark imports, so that a part record and a board record check
 their facts by one rule. A fact is {value, verified, source}, and an unverified value says why it matters.
-`parts.validate` and `boards.validate` call it.
+`parts.validate` and `board_records.validate` call it.
 """
 
 import re

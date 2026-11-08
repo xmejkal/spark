@@ -131,7 +131,7 @@ Each by its name in check_all's answer:
 ### The facts
 
 - `boards.py`: which board the project is built around, checked against a contract. `--validate` keeps a board
-  definition to facts, never decisions.
+  definition to facts, never decisions. Its library is `spark/records/board_records.py`.
 - `parts.py`: what a part asks of the board it plugs into, and what is actually known about it. Every fact carries a
   value, a source and whether anyone checked; `--unverified` lists what nobody has. It also keeps the drawer and the
   needs, writes the picks and the requirements file from them, and marks a project's steps and tallies what they cost
@@ -148,7 +148,7 @@ Imported by the scripts above, and not run on their own, except `cost.py`:
 - `spark/design/copper.py`: how much current a piece of copper carries;
 - `spark/design/fab.py`: what a board house can make;
 - `spark/core/outcomes.py`: the exit codes and the three outcomes, defined once;
-- `store.py`: where spark keeps what it keeps;
+- `spark/records/store.py`: where spark keeps what it keeps;
 - `drawer.py`: what you own;
 - `spark/design/needs.py`: what a goal needs, and what the store offers for each;
 - `cost.py`: what a project's run cost, read from the Claude Code transcripts of the sessions its steps ran in, tool
@@ -211,7 +211,7 @@ compares copied geometry with the new board either.
 ## Your store
 
 spark keeps what is yours in one folder outside every repository: `SPARK_HOME`, else `XDG_DATA_HOME/spark`, else
-`~/.local/share/spark` ([`store.py`](../../scripts/store.py)). It holds:
+`~/.local/share/spark` ([`store.py`](../../scripts/spark/records/store.py)). It holds:
 
 - the documents research kept;
 - the catalog of parts research read and did not choose;

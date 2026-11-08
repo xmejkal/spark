@@ -2,7 +2,7 @@
 A pin map and a module list, as a board file you can build. The CLI `emit_board.py` asks it.
 
 This is the last step of "I have these modules, wire them up". Everything before it — which board,
-what each module asks for, which pin each signal goes on — is settled by `boards.py`,
+what each module asks for, which pin each signal goes on — is settled by `board_records.py`,
 `parts.py` and `assign_pins.py`. This turns that into tscircuit.
 
 WHAT IT IS HONEST ABOUT
@@ -61,7 +61,7 @@ KNOWN_RAIL_NETS = {"logic": "V33", "ground": "GND", "motor": "MOTOR6V", "speaker
 def net_name_for_rail(rail):
     """
     The net a rail's name means. ANY rail name is allowed — a name, of letters, digits and _, which `parts.validate`,
-    `boards.validate` and `loader` hold a rail to: the board is written with it as code (P87's attribute half).
+    `board_records.validate` and `loader` hold a rail to: the board is written with it as code (P87's attribute half).
 
     This was a closed dictionary of four, and a rail outside it returned None — which the power
     loops turned into `continue`, so the connection was silently not emitted. An RC car with a 5 V

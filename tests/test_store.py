@@ -270,9 +270,9 @@ class TheLayersTest(unittest.TestCase):
         self.assertEqual(sorted(store.records("boards", self.library, self.project, skip={"active.json"})), ["x-board"])
 
     def test_a_project_s_board_choice_is_not_a_board(self):
-        import boards
+        from spark.records import board_records
         self.put(self.project / "boards", "active.json")
-        self.assertNotIn("active", boards.available(self.project))
+        self.assertNotIn("active", board_records.available(self.project))
 
 
 class ContainedWritesTest(unittest.TestCase):

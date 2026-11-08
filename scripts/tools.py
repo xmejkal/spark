@@ -36,7 +36,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 import records_codes  # noqa: E402
 from spark.records import store  # noqa: E402
 import versions  # noqa: E402
@@ -179,7 +179,7 @@ def locate(entry, project):
         return [str(path)] if path.is_file() else None
     exe = entry["exe"]
     if kind == "npm" and project:
-        for directory in boards.walk_up(Path(project).absolute()):
+        for directory in board_records.walk_up(Path(project).absolute()):
             local = directory / "node_modules" / ".bin" / exe
             if local.is_file():
                 return [str(local)]

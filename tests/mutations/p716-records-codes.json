@@ -1,5 +1,5 @@
 [
- {"file": "scripts/boards.py", "name": "a dotted path the board lacks is told as an unknown board", "find": "step, code=records_codes.NO_SUCH_FIELD)", "replace": "step, code=records_codes.NO_BOARD_DEFINITION)"},
+ {"file": "scripts/spark/records/board_records.py", "name": "a dotted path the board lacks is told as an unknown board", "find": "step, code=records_codes.NO_SUCH_FIELD)", "replace": "step, code=records_codes.NO_BOARD_DEFINITION)"},
  {"file": "scripts/tools.py", "name": "a swap to a tool that does not meet the role is told as an unknown tool", "find": "contract, code=records_codes.CONTRACT_NOT_MET)\n    return choose(", "replace": "contract, code=records_codes.UNKNOWN_TOOL)\n    return choose("},
  {"file": "scripts/spark/records/store.py", "name": "a key that is not plain is told as a store inside a repository", "find": "key, name, code=records_codes.KEY_NOT_PLAIN)", "replace": "key, name, code=records_codes.STORE_IN_REPOSITORY)"},
  {"file": "scripts/drawer.py", "name": "a field the drawer does not know is told as a URL it will not open", "find": "path, key, code=records_codes.RECORD_FILE_BROKEN)", "replace": "path, key, code=records_codes.URL_REFUSED)"},

@@ -16,7 +16,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 from spark.build import ai_files  # noqa: E402
-import boards  # noqa: E402
+from spark.design import footprint_emitter  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, boards_offered, design_in, find_circuit,  # noqa: E402
                                        nets_in, nulls_in, package_file, rules_for, why_board_refused,
@@ -76,7 +76,7 @@ def main(argv=None):
         did, note = write(project / "boards" / "active.json",
                           {"schema": 1, "board": args.board}, args.force)
         notes.append(note)
-        stop = boards.footprint_stop(args.board, project)  # F12: said where the board is chosen, never refused
+        stop = footprint_emitter.footprint_stop(args.board, project)  # F12: said where a board is chosen, never refused
         notes += ["board %s: %s" % (args.board, stop)] if stop else []
 
     print("spark init in %s" % project)

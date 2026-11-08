@@ -54,7 +54,7 @@
   "replace": "                 for where, cited in _citations(part) if False]"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "a board's documents are not read",
   "find": "    problems += parts.document_problems(board)\n",
   "replace": "\n"

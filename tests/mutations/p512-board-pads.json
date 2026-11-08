@@ -102,13 +102,13 @@
   "replace": "for one in first), 30000)"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "the validator reads no aliases",
   "find": "        aliases = board_pads.BoardPads.from_record(board).aliases",
   "replace": "        aliases = {}"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "an alias pad that is no name passes the validator",
   "find": "+ [(\"alias pad\", pad) for pad in sorted(board_pads.BoardPads.from_record(board).alias_pads(), key=str)]",
   "replace": "+ []"

@@ -470,7 +470,7 @@ class LookTest(LookCase):
 
     def test_a_record_without_flash_says_the_record_does_not_hold_it_and_a_silent_board_says_so(self):
         self.run_the_scenario()
-        with mock.patch.object(board_look.boards, "load", return_value={"chip": "esp32c6"}):
+        with mock.patch.object(board_look.board_records, "load", return_value={"chip": "esp32c6"}):
             self.assertEqual(self.look().unknown, {"flash": "the record does not hold it"})
         self.assertEqual(self.look(esptool="c6-flash-id-garbled.txt").unknown, {"flash": "the board did not say"})
 
@@ -876,7 +876,7 @@ class ReportLinesTest(LookCase):
         self.assertTrue(with_token[-1].startswith("  token  %s  for deploy.py --token" % report.token()))
 
     def test_two_unknown_fields_are_said_in_the_plural(self):
-        with mock.patch.object(board_look.boards, "load", return_value={"id": "x"}):
+        with mock.patch.object(board_look.board_records, "load", return_value={"id": "x"}):
             lines = board_look.report_lines(self.look(), token=False)
         self.assertIn("  2 fields unknown (chip: the record does not hold it, flash: the record does not hold it): "
                       "deploy.py will ask you to accept it.", lines)
@@ -982,9 +982,9 @@ class RenamesTest(unittest.TestCase):
 
 class TheRecordsTest(unittest.TestCase):
     def test_both_library_records_carry_their_flash(self):
-        import boards
-        self.assertEqual(boards.load(ROOT, "xiao-esp32-c6")["flash_mb"], 4)
-        self.assertEqual(boards.load(ROOT, "firebeetle2-esp32s3")["flash_mb"], [16, 4])
+        from spark.records import board_records
+        self.assertEqual(board_records.load(ROOT, "xiao-esp32-c6")["flash_mb"], 4)
+        self.assertEqual(board_records.load(ROOT, "firebeetle2-esp32s3")["flash_mb"], [16, 4])
 
 
 if __name__ == "__main__":
