@@ -5,7 +5,8 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 
 New names (proposed): the area name `sourcing` (`parts` already names the record folder and the CLI `parts.py`),
 `DrawerService`, `DatasheetService`, `RunCostService`, `UnknownMatcherError`, `NoTranscriptError`,
-`MatcherContract`, and the modules `datasheets`, `part_facts`, `run_cost`, `operations`.
+`MatcherContract`, and the modules `datasheets`, `part_facts`, `part_rules`, `run_cost` and `part_handlers` (the handlers of
+`parts.py` as functions, a stopgap until the "one module per Operation" card: C1 refuses a second `operations.py`, P710).
 
 ## Level 2: what sourcing does
 

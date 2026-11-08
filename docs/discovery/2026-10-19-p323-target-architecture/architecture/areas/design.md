@@ -4,7 +4,9 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): `PinAssigner`, `PinMap`, `BoardEmitter`, `NeedsService`, `ImpossibleError`, the modules
-`loader`, `pin_assigner`, `board_emitter`, `footprint_emitter`, `operations`, and the Operation names below.
+`loader`, `pin_assigner`, `board_emitter`, `footprint_emitter`, `goal_handlers` (the goal handlers of `parts.py` as
+functions, a stopgap until the "one module per Operation" card: C1 refuses a second `operations.py`, P710), and the
+Operation names below.
 
 ## Level 2: what design does
 

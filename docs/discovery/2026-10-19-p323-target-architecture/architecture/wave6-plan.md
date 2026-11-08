@@ -88,6 +88,15 @@ new `code` key, and the rows file `docs/observations/rows/p698-wave6-plan-design
 d5fe9864) held both blockers and added five fixes: `simulation_could_not_look`'s home, the `stages` name clash and
 import by name, the reference Case's store override, the one `part_shape` site, and the 20 patch sites as a done-item.
 
+P710 round 1 (2026-11-08, the refuter on Opus and an architecture lens on Sonnet, on a9cb0346). The coordinator decided:
+the handler modules are `part_handlers.py` and `goal_handlers.py` (C1 refuses two `operations.py`), `load`,
+`broken_problems` and `validate` go to `part_rules` and `_parse` to `record_kind` (the split made a cycle), the rows of
+`parts.py` are mapped by a script and the cut is W6-S3a with `matching` and `cost` (159 rows) and W6-S3b with `drawer`
+(269 rows), `PartError` stays in sourcing with its code, the band goes straight into `part_rules.py` in W6-S2,
+`_op_describe` and `_op_needs_drop` stay in the CLI, the net's guard test proves no `curl`, `python3`, `brew`, `npm` or
+`claude` in a child, the fake `pdftotext` exits 1 for `-f 2`, and the counts (`BoardError` 8, `ToolProblem` 23,
+`PartError` 7, `--get`, `cost.py`'s one argument) are corrected. Rows 13 to 20 of `p710-wave6-plan-records.md`.
+
 PR council (2026-11-07, PR #919: one Sonnet reviewer, the refuter on Opus). What changed:
 
 - W6-F1 opens with a guard line, and the token check lives in the temp-folder shim, not in `fake_wokwi_cli.py`,
@@ -1133,22 +1142,29 @@ seven PRs, none much bigger than W6-F3 (1,900 lines, 267 rows): a net, two codes
   `sellers` (`:1353`), and `Backends` are logic, so they are cards after the moves, as `BuildService` is. The moved
   modules take the page's names and hold today's functions, and each docstring says which class comes with its card.
 - The `parts.py` split is a move: each function goes whole to one module, by job group, and no line changes but imports
-  and the `__file__` paths. What the split cannot do without logic (the `_op_` prefix, the Operation classes on
-  `run_cli`, N19's `audit` and `board-list`) is a card.
+  and the `__file__` paths. An `ast` map of who calls what (the rows file, row 14) places each of the 126 top-level
+  names, and after it no module imports upward and no two make a cycle. What the split cannot do without logic (the
+  `_op_` prefix, the Operation classes on `run_cli`, N19's `audit` and `board-list`) is a card. The two handler modules,
+  `part_handlers.py` (sourcing) and `goal_handlers.py` (design), are stopgaps until the pages' "one module per
+  Operation" card, because C1 (`tools/measure.py:633`) refuses two `operations.py` basenames.
 - The pull-up band `PULLUP_MIN_OHM` and `PULLUP_MAX_OHM` (`spark/checks/rules_check.py:32`, `:33`) goes down into
-  sourcing, beside `i2c_pullup_problems` (`parts.py:484`), in W6-S2. The band judges a part record's fact
-  (`facts.module_has_i2c_pullups`, `:499`), and checks reads sourcing along its arrow. `parts.py:493` then imports
-  nothing upward, and `rules_check.py` imports the two names from `spark.sourcing.part_rules` (proposed).
+  sourcing in W6-S2, straight into `scripts/spark/sourcing/part_rules.py` (proposed), which that PR creates with the two
+  constants alone, and W6-S3a fills with `i2c_pullup_problems` (`parts.py:484`) and the other rules. The band judges a
+  part record's fact (`facts.module_has_i2c_pullups`, `:499`), and checks reads sourcing along its arrow (`areas/checks.md:47`
+  adds sourcing). `parts.py:493` and `rules_check.py:32` then import the two names from `spark.sourcing.part_rules`, and
+  no module imports the flat CLI for them.
 
-The eight lazy edges of section 5, at 8bfaeffa: `parts -> boards` is gone (`parts.py:220` is a top import). `parts ->
+The eight lazy edges of section 5, at 8bfaeffa (the counts of the two codes PRs: `BoardError` 8 sites, `ToolProblem`
+23, `PartError` 7, `StoreProblem` 17, `NoTranscript` 7, `UnknownMatcher` 1): `parts -> boards` is gone (`parts.py:220` is a top import). `parts ->
 drawer` (10 lazy lines, `:149` to `:2267`), `parts -> matching` (6) and `parts -> needs` (7) stay, because `drawer.py:18`,
 `matching.py:13` and `needs.py:21` import `parts` at the top for the record contract. `parts -> emit_footprint` (`:150`,
 in `audit`) and `parts -> tools` (`:1154`, in `read_datasheet`) stay. `boards -> parts` (`:830`, in `validate`, for
 `document_problems`, `SELECTOR_SAFE` and `VERBS`) and `boards -> emit_footprint` (`:255`, in `footprint_stop`) stay.
 Two edges are new: `parts -> spark.checks.rules_check` (`:493`, upward, P695) and `parts -> spark.idea.drop_need`
-(`:2125`, in `_op_needs_drop`). All ten are moves: the contract goes under records (W6-S3a), the handlers go into one
-module that imports `drawer`, `matching`, `needs`, `tools` and `spark.idea` at the top (W6-S3b), `footprint_stop` goes to
-design (W6-R3a), and the band goes to sourcing (W6-S2). No edge needs new logic.
+(`:2125`, in `_op_needs_drop`). All ten are moves: the contract goes under records (W6-S3a), the handlers go into two
+modules that import `drawer`, `matching`, `needs` and `tool_finder` at the top (W6-S3b), `footprint_stop` goes to design
+(W6-R3a), and the band goes to sourcing (W6-S2). `_op_needs_drop` stays in the CLI, because `spark/idea/drop_need.py`
+imports `needs` and `drawer`, and no page says whether idea sits below design (row 20). No edge needs new logic.
 
 ### W6-R1, the records-with-sourcing golden net
 
@@ -1160,37 +1176,42 @@ and a `PATH` of the fakes folder alone, with the fakes calling `/bin/mkdir`, `/b
 refused, and a web URL meets the closed proxy and fails in one connect. So `sources` and `fetch` are `could-not-run`
 Cases, and no child reaches a vendor site. `tools.py --install` runs `curl` through `run_checked` (`tools.py:403`,
 `:353`): the net runs it with `--dry-run` alone (`:600`), which prints the commands and runs nothing. `parts.py --read`
-runs the `pdf-text` tool (`parts.py:1144`): a fake `pdftotext` in the fakes folder prints one canned page. `cost.py`
-reads `~/.claude/projects` (`cost.py:97`): the empty `HOME` gives `could-not-run`, and one Case plants a fixture
-transcript under the child's `HOME` for `ok`. A test asserts that the child's `PATH` names the fakes folder alone.
+runs the `pdf-text` tool (`parts.py:1144`): a fake `pdftotext` in the fakes folder prints one canned page for `-f 1` and
+exits 1 for `-f 2`, because `datasheet_pages` (`:1139`) reads pages until a non-zero exit. `cost.py` takes one transcript
+path (`cost.py:281`), so its `ok` Case gives a fixture transcript and its `could-not-run` Case none. Safety: `tools.py
+--on` runs `install()` for real (`tools.py:628`) and `--off` runs `claude mcp remove` (`:636`). The net is safe only
+because the fakes folder holds no `curl`, `python3`, `brew`, `npm` or `claude`: a guard test runs `command -v` for each in
+a child and asserts none is found, and a mutation row plants a `curl` in the folder.
 
 Goal: what the four CLIs print, and what `--keep` and the write Operations write, stays byte-equal through the codes and
-the moves. Cases, est. 40, each `<op>-<status>[-<scenario>]`, one per `OPERATIONS` entry of `parts.py` (30 entries,
-`parts.py:1537` to `:1607`), per `boards.py` flag (`--path`, `--id`, `--list`, `--paths`, `--validate`, `--resolve`,
-`boards.py:917` to `:925`) and per `tools.py` flag (`--status`, `--install --dry-run`, `--on`, `--off`, `--use`,
-`--pin`, `--new`, `tools.py:590` to `:596`), plus `cost.py` `step` and `tally`. A write Operation's Case (`skeleton`,
-`drawer-set`, `fact-set`, `function-set`, `promote`, `keep`, `tool-on`, `tool-use`) lists the files it wrote under the
-project, scrubbed. The PR probes each and reports the real count.
+the moves. Cases, est. 45, each `<op>-<status>[-<scenario>]`, one per `OPERATIONS` entry of `parts.py` (30 entries,
+`parts.py:1537` to `:1607`, `step` and `tally` among them), per `boards.py` flag (`--path`, `--id`, `--list`, `--paths`,
+`--validate`, `--get`, `--resolve`, `boards.py:917` to `:925`) and per `tools.py` flag (`--status`, `--install --dry-run`,
+`--on`, `--off`, `--use`, `--pin`, `--new`, `tools.py:590` to `:596`), plus `cost.py` with and without a transcript. A
+write Operation's Case (`skeleton`, `drawer-set`, `drawer-import`, `fact-set`, `function-set`, `promote`, `keep`, `fetch`
+with the fake alone, `needs-set`, `needs-drop`, `pick`, `requirements`, `step`, `tool-on`, `tool-use`) lists the files it
+wrote under the project, scrubbed. The PR probes each and reports the real count.
 
 Files: `tests/golden_records.py` (proposed, the helper, named after the group's first area, and it holds both areas'
 Cases), `tests/test_golden_records.py`, the goldens in `tests/golden-records/`, `tests/mutations/p<card>-records-net.json`.
 Reuse: `golden_firmware.Case`, `plant`, `golden_checks.child_env`, `build_project`, `golden_design.make_fakes`,
 `fakes_named` (`tests/golden_design.py:190`, `:206`), and `golden_bench.scrub`, `check_golden`. `SPARK_ACCEPT=<op>`
-writes that op's goldens. Mutation (est. 8 rows): the proxies not set, `HOME` not emptied, the `PATH` with another folder,
-the scrub skipped, an exit code wrong, the fake `pdftotext` answers nothing, the written files not listed, the fixture
-transcript not planted. Proven with `--anchors`, run with `--copy`. Review: no product logic. One reviewer on the everyday
-model and the refuter on the strongest. Size est.: 150 helper lines, 130 test lines, 40 goldens. Tests only, so it can
+writes that op's goldens. Mutation (est. 9 rows): the proxies not set, `HOME` not emptied, the `PATH` with another folder,
+a `curl` in the fakes folder, the scrub skipped, an exit code wrong, the fake `pdftotext` never exits 1, the written files
+not listed, the fixture transcript not given. Proven with `--anchors`, run with `--copy`. Review: no product logic. One reviewer on the everyday
+model and the refuter on the strongest. Size est.: 160 helper lines, 140 test lines, 45 goldens. Tests only, so it can
 open while W6-U3 is open.
 
 ### W6-R2, the records codes (after W6-R1)
 
 Goal: each refusal of `boards.py`, `tools.py` and `store.py` has a code. Text and exit codes stay byte-equal.
 
-Files: `scripts/records_codes.py` (proposed, a leaf, as `firmware_codes`). The sites: `BoardError` at 7 `raise` sites
-(`boards.py`), `ToolProblem` at 22 (`tools.py`), `StoreProblem` at 11 in `store.py`, 3 in `drawer.py`, 1 in
-`deploy_record_store.py` and 2 in `parts.py`. One code per refusal an agent acts on differently (P692 row 13), so est.
+Files: `scripts/records_codes.py` (proposed, a leaf, as `firmware_codes`). The sites: `BoardError` at 8 `raise` sites
+(`boards.py:163` the first), `ToolProblem` at 23 (`tools.py`, 3 of them inside `main`, `:627`, `:650`, `:653`),
+`StoreProblem` at 11 in `store.py`, 3 in `drawer.py`, 1 in `deploy_record_store.py` and 2 in `parts.py`. One code per refusal an agent acts on differently (P692 row 13), so est.
 18 codes. Each class gains a `code` attribute, as `NotBuilt` did. `boards.main` (53 lines, `:911`) and `tools.main` (80,
-`:586`) are R1 keys that cannot grow (P684 row 28), so no line enters them. `missing_facts.py:31` reads
+`:586`) are R1 keys that cannot grow (P684 row 28), so no line enters them: the three `raise` sites in `tools.main` take
+their code as an argument on the line they have. `missing_facts.py:31` reads
 `board_codes.MISSING_FACT`: `records_codes` gains its own `MISSING_FACT`, one code shared by two leaves as `breadboard_codes`
 shares one with `board_codes` (P692, `test_self_confirmation.py:49`), so no records module imports the bench. `boards.py`
 (967) and `tools.py` (669) are over R1's 600, paid with prunes, else `--accept-new` with the reason. No function of the
@@ -1207,26 +1228,31 @@ the strongest, one mutation run. Size est.: 120 product lines, 100 test lines.
 
 Goal: each refusal of `parts.py`, `cost.py`, `drawer.py` and `matching.py` has a code. Text and JSON stay byte-equal.
 
-Files: `scripts/sourcing_codes.py` (proposed, a leaf). The sites: `PartError` at 6 `raise` sites, `_cannot` (`parts.py:242`,
-the `could-not-run` findings), `NoTranscript` at 7 (`cost.py`), `UnknownMatcher` at 1 (`matching.py`). Est. 12 codes.
+Files: `scripts/sourcing_codes.py` (proposed, a leaf). The sites: `PartError` at 7 `raise` sites (`parts.py:264`, `:272`, `:1299`,
+`:1339`, `:1343`, `:1765`, `:1971`), `_cannot` (`:242`, the `could-not-run` findings), `NoTranscript` at 7 (`cost.py`),
+`UnknownMatcher` at 1 (`matching.py`). `PartError` lands in `part_rules.py` (sourcing) in W6-S3a, so its code from
+`sourcing_codes` points up no arrow. Est. 12 codes.
 `parts.main` (23 lines, `:2358`) and `cost.main` (21, `:279`) are R1 keys, so the codes come from the handlers. Three
 extractions, so R1 catches nothing after the move: `simulation_problems` 56 (`:546`), `conflicts_of` 44 (`:1440`),
 `_op_requirements` 44 (`:2202`). `validate` (226, `:619`) keeps its key. Two X2 prunes: `_op_keep` (`:1780`) and
 `_op_needs_drop` (`:2130`) print, and a library function may not. Each returns its line and `_say` (`:2335`) prints it,
-goldens green. The band: `PULLUP_MIN_OHM` and `PULLUP_MAX_OHM` move from `rules_check.py:32` to beside
-`i2c_pullup_problems` (`parts.py:484`), `rules_check.py` imports them from `parts` until W6-S3a renames the home, and
-the lazy import at `parts.py:493` goes. `parts.py` (2,384) is over 600, paid as in W6-R2.
+goldens green. The band: this PR creates `scripts/spark/sourcing/__init__.py` (the index
+docstring alone) and `part_rules.py` with `PULLUP_MIN_OHM` and `PULLUP_MAX_OHM` from `rules_check.py:32`, `:33`.
+`rules_check.py` and `parts.py:493` import them from `spark.sourcing.part_rules` at the top, and `areas/checks.md:47`
+adds sourcing. `sourcing_codes` and `part_rules` join `TheSourcingAreaTest`'s module list. `parts.py` (2,384) is over 600, paid as in W6-R2.
 
 Tests, mutation (est. 8 rows: two codes swapped, `PartError` drops its code, `CODES` missing a constant, a sentence
 changed, an exit code changed, the band's bound off by one, a printed line dropped) and review as W6-R2. Docs:
-`areas/sourcing.md` (the leaf's row, the band). Size est.: 110 product lines, 100 test lines.
+`areas/sourcing.md` (the leaf's row, the `part_rules` row), `areas/checks.md`. Size est.: 120 product lines, 100 test lines.
 
 ### The four moves, W6-R3a, W6-R3b, W6-S3a and W6-S3b (what they share)
 
 Why four. 6,189 lines and 728 rows at 1.6 minutes is 19 hours of one serial mutation run. The order is bottom-up along
 the imports among the 15: `parts.py:219` to `:223` import `brief`, `boards`, `missing_facts`, `provenance` and `store` at
 the top, so records moves first. One temporary edge: `boards.py:830` stays a lazy `import parts` in `board_records.py`
-through W6-R3a and W6-R3b, and W6-S3a turns it into a top import of `record_kind`. Each PR is `git mv`, the page's
+through W6-R3a and W6-R3b, and W6-S3a turns it into a top import of `record_kind`. The rows of `parts.py` were mapped
+by a script (each row's `find`, its line, its function, its new module): 321 map, 12 have a `find` the source no
+longer holds (row 15), and the cut below keeps every PR under W6-F3's 1,900 lines and 270 rows. Each PR is `git mv`, the page's
 names, the import lines and the rows, one commit per module, goldens green after each commit. The CLIs stay in
 `scripts/` as a `main`, and no module re-exports an old name. Each PR extends `TheRecordsAreaTest` or
 `TheSourcingAreaTest` (proposed, the shape of `TheFirmwareAreaTest`, `tests/test_architecture.py:312`) and the
@@ -1241,12 +1267,16 @@ import-alone test (`:301`). The map is regenerated (`python3 tools/map.py --writ
 | R3a | `onboard_parts.py` (156), `missing_facts.py` (79) | `spark/records/onboard_parts.py`, `missing_facts.py` (proposed rows) | 5, 10 | 0 | whole, the row-357 split is a card |
 | R3a | `records_codes.py` | `spark/records/records_codes.py` | 0 | 0 | the leaf |
 | R3b | `tools.py` (669), `versions.py` (53) | `spark/records/tool_finder.py`, `versions.py` (proposed row), the CLI stays | 62, 5 | 10 | `tools.py:36` `SCRIPTS`, `:48` `PLUGIN` |
-| S3a | `parts.py:46` to `:845`, `:1435` to `:1500` | `spark/records/record_kind.py`, `spark/sourcing/part_rules.py` (proposed) | est. 200 | 9 | the contract, by hand |
-| S3b | the rest of `parts.py`, the CLI stays | `spark/sourcing/datasheets.py`, `part_facts.py`, `operations.py`, `spark/design/operations.py` | est. 133 | 8 | the handlers |
-| S3b | `drawer.py` (440), `matching.py` (230), `cost.py` (303) | `spark/sourcing/drawer.py`, `matching.py`, `run_cost.py`, the CLI `cost.py` stays | 54, 21, 55 | 14 | `cost.py:27` stays in the CLI |
-| S3b | `sourcing_codes.py` | `spark/sourcing/sourcing_codes.py` | 0 | 0 | the leaf |
+| S3a | `parts.py`, 31 names (132 lines) and 32 names (536) | `spark/records/record_kind.py`, `spark/sourcing/part_rules.py` | 11, 72 | 9 | the contract and the rules, by the map |
+| S3a | `matching.py` (230), `cost.py` (303) | `spark/sourcing/matching.py`, `run_cost.py`, the CLI `cost.py` stays | 21, 55 | 13 | `matching.py:13` imports `part_rules` |
+| S3a | `sourcing_codes.py` | `spark/sourcing/sourcing_codes.py` | 0 | 0 | the leaf |
+| S3b | `parts.py`, 33 names (336), 22 (233), 28 (279), 11 (238), the CLI keeps 10 (195) | `spark/sourcing/datasheets.py`, `part_facts.py`, `part_handlers.py`, `spark/design/goal_handlers.py` | 42, 46, 58, 69, and 23 stay | 8 | the handlers, by the map |
+| S3b | `drawer.py` (440) | `spark/sourcing/drawer.py` | 54 | 1 | `drawer.py:305`, `:321` read `shelvable`, `shelve` |
 
-Shared rules, checked at 8bfaeffa. R1: the three extractions are W6-S2's. The four `main` keys stay, and a moved key
+Shared rules, checked at 8bfaeffa. C1 (`tools/measure.py:633`): no two modules under `scripts/` share a basename, so
+the handler modules are `part_handlers.py` and `goal_handlers.py`, not two `operations.py`. R1: the three extractions
+are W6-S2's, and `part_rules.py` (536 lines of code, est. 580 with its header) sits near the 600 limit, so its PR body
+says so (P684's lesson). The four `main` keys stay, and a moved key
 moves with `--accept-new`. R6: each docstring gets its role word and its key goes (`R6` on `NoTranscript`, `Offer`, the
 four matchers, `UnknownMatcher`, `ListOf`, `MapOf`, `PartError`). X2: `boards._validate_all` (`:895` to `:907`) and
 `tools.print_status` (`:576` to `:582`) print, so both stay in their CLI, and `parts._say` too. No other `print` or
@@ -1256,7 +1286,7 @@ area that reads `os.environ`, `areas/records.md`), and `T4:scripts/store.py:sys.
 (`store.py:44`). U1: the two leaves are in `LEAVES` since the codes PRs, and `provenance` already is. `MAY_READ`
 (`tests/test_self_confirmation.py:43` to `:96`): the 9 `boards.*` keys become `board_records.*` (R3a), `tools.DOWNLOADS`
 becomes `tool_finder.DOWNLOADS` (R3b), `parts.BUSES` and `parts.CAPABILITIES` become `part_rules.*` and `parts.LIBRARY`
-becomes `record_kind.LIBRARY` (S3a), `parts.DEFAULT_VENDOR_ORDER` becomes `operations.DEFAULT_VENDOR_ORDER` (S3b), and
+becomes `record_kind.LIBRARY` (S3a), `parts.DEFAULT_VENDOR_ORDER` becomes `part_handlers.DEFAULT_VENDOR_ORDER` (S3b), and
 `board_codes.CODES` and `onboard_parts.ONBOARD_PARTS` keep their stem. Import lines: 230 outside and 39 among. The 51
 lazy ones in tests stay lazy. Patches: 54 `mock.patch.object(tools, ...)` sites, 30 of them on `find`, 10 on `boards`,
 8 on `parts`, 5 on `store`, and 16 `shutil.which` patches follow their function to the module that looks the name up,
@@ -1280,7 +1310,10 @@ the PR body for the PO, and the `board_records.py` split is a card. Keys: 11 (`C
 `os.environ` and `urllib` of `store`, `T4:sys.modules`, `C3:EXIT_INVALID`, `R1` `<module>`, `main` and `validate`,
 `R2:validate`, `T1:file-write` of `boards`). The `main` and `C3` keys stay. Tests: est. 40 test files, 70 import lines,
 and 60 in `scripts/`. Rows: 198. Docs: 10 agent-facing pages, `areas/records.md` (rows for `board_pads`, `onboard_parts`,
-`missing_facts`), `areas/bench.md`, `areas/design.md`. Size: 2,110 lines, est. 130 import lines, 198 rows, 11 keys. Done when
+`missing_facts`), `areas/bench.md` (`:32` says the two leaves wait for wave 6), `docs/guide/patterns-and-names.md:48`
+("five other areas import them"), `areas/design.md`, and the two CLI sentences that name `scripts/board_codes.py`
+(`deploy.py:91`, `look.py:42`). `.claude/agents/`, `skills/` and `commands/` name no moved module's path (grep), only the
+CLIs. Size: 2,110 lines, est. 130 import lines, 198 rows, 11 keys. Done when
 `ls scripts/*.py` shows `boards.py` alone of the ten, and `scripts/board_codes.py` is gone.
 
 ### W6-R3b, the tool finder move (after W6-R3a)
@@ -1298,112 +1331,52 @@ spark.records import tool_finder`. Tests: 46 importer files, the 54 patch sites.
 
 ### W6-S3a, the part contract (after W6-R3b)
 
-Files: the bands `parts.py:46` to `:845` and `:1435` to `:1500`, est. 870 lines, into two modules. `record_kind.py`
-(records) holds the record contract that `drawer.py:18`, `matching.py:13`, `needs.py:21` and `boards.py:830` import
-`parts` for: `LIBRARY`, `REQUIRED_KEYS`, `RETIRED`, `VERBS`, `_absent`, `owes`, `_shape_problems`, `broken_problems`,
-`PartError`, `_problem`, `_cannot`, `_note`, `available`, `definition_path`, `load`, `ListOf`, `MapOf`, `type_problems`,
-`document_problems`, `SELECTOR_SAFE`, `_citations` and `validate` (`:619`). Its docstring says `RecordKind` and
-`RecordFinder` come with P391's card. `part_rules.py` (sourcing, proposed) holds what a part asks of a board: `function_of`,
-`aliases`, `CAPABILITIES`, `BUSES`, `bus_line_of`, `footprint_pad_count`, `chip_folder`, `pin_order_problems`,
-`i2c_pullup_problems` with the band, `host_part_problems`, `simulation_problems`, `control_problems`, `pull_conflicts`,
-`conflicts_of`. `record_kind.validate` calls the rules, so `record_kind` imports `part_rules`: records would import
-sourcing, an upward edge. So `validate` goes to `part_rules.py` too, and `boards.py:830` and `drawer` read the shape
-functions from `record_kind`. The PR probes each name's importers with a scratch script and reports where each landed.
-`parts.py:46` `LIBRARY` takes `parents[3]`, and `:217` goes. The flat `parts.py` imports both modules at the top until
-W6-S3b. Keys: 9 (`R1:validate`, `R2` `validate`, `host_part_problems`, `simulation_problems`, `footprint_pad_count`,
-`R6` `ListOf`, `MapOf`, `PartError`, `T1:datetime` if it lands here). Rows: est. 200, by the scratch script. Docs:
-`areas/records.md`, `areas/sourcing.md` (the `part_rules` row). Size: est. 870 lines, est. 50 import lines, 200 rows, 9
-keys. Done when `boards.py:830`'s lazy import is a top import of `record_kind`, and `drawer.py` and `matching.py` import
-no `parts`.
+Files: 63 names of `parts.py` into two modules, by the `ast` map (row 14), plus `matching.py`, `cost.py` and the leaf:
+1,201 lines, 159 rows. `record_kind.py` (records, 31 names, 132 lines, 11 rows) holds the record contract that
+`drawer.py:23`, `:144`, `:199`, `:238`, `needs.py:151` and `boards.py:830` read: `LIBRARY`, `REQUIRED_KEYS`, `RETIRED`,
+`VERBS`, `CHAIN_FACTS`, `WRITE_BACK_HINT`, `_absent`, `owes`, `_shape_problems`, `SELECTOR_SAFE`, `_problem`, `_cannot`,
+`_note`, `_with_project`, `available`, `definition_path`, `ListOf`, `MapOf`, `type_problems`, `document_problems`,
+`_citations`, `_parse` (`:1314`), `record_home` and `Answer`. It imports `store`, `provenance` and core alone, and its
+docstring says `RecordKind` and `RecordFinder` come with P391's card. `part_rules.py` (sourcing, 32 names, 536 lines, 72
+rows) holds what a part asks of a board and the reading that checks it: `function_of`, `aliases`, `broken_problems`
+(`:137`), `load` (`:267`), `any_record`, `PartError`, `CAPABILITIES`, `BUSES`, `bus_line_of`, `footprint_pad_count`,
+`chip_folder`, `pin_order_problems`, `i2c_pullup_problems` with the band, `host_part_problems`, `simulation_problems`,
+`control_problems`, `validate` (`:619`), `pull_conflicts`, `conflicts_of`. `load` and `broken_problems` call `validate`,
+and `validate` calls the rules, so all three sit in `part_rules`, and `record_kind` imports nothing of sourcing (the
+refuter's cycle, row 13). `matching.py:84`, `:85` read `function_of` and `aliases` alone, so `matching` imports
+`part_rules` and moves here. `cost.py` moves whole to `run_cost.py` and keeps `main` and its `sys.path` line (`:27`) in
+the CLI. `parts.py:46` `LIBRARY` takes `parents[3]`, and `:217` goes. The flat `parts.py` imports both modules at the
+top until W6-S3b. The records page gives `validate` to `RecordKind`: that is P391's card's question (row 19). Keys: 22
+(`R1:validate`, `R2` `validate`, `host_part_problems`, `simulation_problems`, `footprint_pad_count`, `R6` `ListOf`,
+`MapOf`, `PartError` of `parts`, `C1`, `R3` and six `R6` of `matching`, `C1`, `R6`, `R1:main`, `T1` `datetime` and
+`os.environ` of `cost`). Tests: est. 20 test files. Docs: `areas/records.md`, `areas/sourcing.md`, 4 agent-facing pages.
+Size: 1,201 lines, est. 50 import lines, 159 rows, 22 keys. Done when `boards.py:830`'s lazy import is a top import of
+`record_kind`, `matching.py` imports no `parts`, and `ls scripts/*.py` shows `cost.py` of the two.
 
 ### W6-S3b, the sourcing move (after W6-S3a)
 
-Files: the rest of `parts.py` (est. 1,500 lines) and `drawer.py`, `matching.py`, `cost.py`, 2,473 lines in all.
-`datasheets.py` holds `:892` to `:940` (the catalog), `:1024` to `:1328` (`without_location` to `_download`), `:1407` to
-`:1434` (`cited_urls` to `sources_resolve`), and the `pdf-text` call (`:1141`) imports `tool_finder` at the top.
-`part_facts.py` holds `:847` to `:883` (`signals_for`, `unverified`), `:942` to `:1023` (`digest` to `any_record`,
-`shelve` until `ShelveRecord`'s card), `promote`, `need`, `skeleton`, `describe`, `_row`, and `:1898` to `:1993`
-(`_shelved_from` to `_set_in_home`). `operations.py` (sourcing) holds the handlers of the records, facts, datasheets,
-drawer and cost groups (`:1645` to `:2033`, `:2248` to `:2306`), with `vendor_order`, `sellers` and `DEFAULT_VENDOR_ORDER`
-until `Brief`'s card, and imports `drawer`, `matching`, `run_cost` and `tool_finder` at the top. `spark/design/operations.py`
-(the page's name, `areas/design.md:7`) holds the goal handlers `_op_need` (`:1710`), `_op_audit` to `_op_requirements`
-(`:2034` to `:2247`) and `audit` (`:142`), and imports `needs`, `footprint_emitter`, `matching` and `spark.idea.drop_need` at
-the top. `operations` is a local nowhere in the 15 (checked with grep), and each CLI imports it by area,
-`from spark.sourcing import operations`. The CLI `parts.py` keeps `OPERATIONS` (`:1537`), `_not_negative`, `_parser`,
-`_text_of`, `_say` and `main`, about 150 lines, and builds its handler table from the two modules. `cost.py` keeps `main`
-and its `sys.path` line. Keys: 22 (`C3:EXIT_INVALID` stays, `R1` `<module>` and `main` of `parts`, `R2` `find_kept` and `scan_datasheet`,
-`R3:_what_a_pick_wrote`, `T1` `file-write` and `subprocess` of `parts`, `R1:drawer.py:plan_import` with `--accept-new`, `C1`, `R3` and six `R6` of
-`matching`, `C1`, `R6`, `R1:main`, `T1` `datetime` and `os.environ` of `cost`). `R1:scripts/parts.py:<module>` goes when
-no piece is over 600, which the sizes above give. Tests: est. 25 test files, the 8 `parts` patches. Rows: est. 263. Docs:
-12 agent-facing pages, `areas/sourcing.md`, `areas/design.md`, `developing.md`. Size: 2,473 lines, est. 80 import lines,
-263 rows, 22 keys. Done when `ls scripts/*.py` prints only the CLIs, each a `main` that parses and prints,
+Files: the other 94 names of `parts.py` into four modules, and `drawer.py`: 1,526 lines, 269 rows. `datasheets.py` (33
+names, 336 lines, 42 rows) holds `need` (`:1361`) with `NEED_MATCHER` and `_found`, the catalog (`:892` to `:940`),
+`without_location` to `_download` (`:1024` to `:1328`) and `cited_urls` to `sources_resolve` (`:1407` to `:1434`). Its
+`pdf-text` call (`:1141`) imports `tool_finder` at the top, and `need` imports `matching` at the top. `part_facts.py` (22
+names, 233 lines, 46 rows) holds `signals_for` to `unverified` (`:847` to `:883`), `digest` to `shelve` (`:942` to
+`:1008`), `promote`, `skeleton`, `describe`, `_row` and `_shelved_from` to `_set_in_home` (`:1898` to `:1993`).
+`part_handlers.py` (sourcing, 28 names, 279 lines, 58 rows) holds the handlers of the records, facts, datasheets, drawer
+and cost groups, `vendor_order`, `sellers` and `DEFAULT_VENDOR_ORDER` until `Brief`'s card, and imports `drawer`,
+`run_cost` and `tool_finder` at the top. `goal_handlers.py` (design, 11 names, 238 lines, 69 rows) holds `audit`
+(`:142`), `_op_need` (`:1710`) and `_op_audit` to `_op_requirements` (`:2034` to `:2247`, `_op_needs_drop` excepted), and
+imports `needs`, `footprint_emitter` and `matching` at the top. The CLI `parts.py` keeps 10 names, 195 lines and 23 rows:
+`OPERATIONS` (`:1537`), `OPTIONS`, `_not_negative`, `_parser`, `_op_describe` (`:2295`, it reads `OPERATIONS` and
+`OPTIONS`), `_op_needs_drop` (`:2119`, it runs `spark.idea.drop_need` on the core), `_text_of`, `_say` and `main`, and
+builds its handler table from the two handler modules. `drawer.py:305`, `:321` read `shelvable` and `shelve`, so `drawer`
+moves here with `part_facts`, and imports `record_kind`, `part_rules` and `part_facts` at the top. Keys: 9
+(`C3:EXIT_INVALID` stays, `R1` `<module>` and `main` of `parts`, `R2` `find_kept` and `scan_datasheet`,
+`R3:_what_a_pick_wrote`, `T1` `file-write` and `subprocess` of `parts`, `R1:drawer.py:plan_import` with `--accept-new`).
+`R1:scripts/parts.py:<module>` goes, because no piece is over 600. Tests: est. 25 test files, the 8 `parts` patches.
+Docs: 12 agent-facing pages, `areas/sourcing.md`, `areas/design.md`, `developing.md`. Size: 1,526 lines, est. 80 import
+lines, 269 rows, 9 keys. Done when `ls scripts/*.py` prints only the CLIs, each a `main` that parses and prints,
 `scripts/spark/sourcing/__init__.py` imports nothing, no lazy import under `scripts/spark/` points up an arrow, and
 `TheSourcingAreaTest` passes.
-
-## Design and build after W6-U3 (the moved modules and their classes)
-
-```mermaid
-classDiagram
-  class Design { <<Value>> }
-  class DesignError { <<Error>> code }
-  class RestrictedPins { <<Value>> }
-  class Netlist { <<Value>> }
-  class Impossible { <<Error>> code }
-  class BoardInputs { <<Value>> }
-  class RefusedInput { <<Error>> stage code }
-  class design_codes { <<leaf>> CODES }
-  class Stage { <<Value>> name status detail code }
-  class AiFiles { <<Value>> }
-  class build_codes { <<leaf>> CODES }
-  class Refusal { <<Value>> code }
-  class footprint_emitter { <<module>> why_no_footprint() }
-  DesignError ..> design_codes
-  Impossible ..> design_codes
-  RefusedInput ..> design_codes
-  BoardInputs ..> Design
-  Stage ..> build_codes
-  footprint_emitter ..> Refusal
-```
-
-`Design` and `DesignError` (`loader.py`), `RestrictedPins`, `Netlist`, `Impossible` (`pin_assigner.py`), `BoardInputs`
-and `RefusedInput` (`board_emitter.py`), `Stage` (`stages.py`) and `AiFiles` exist today. `pin_assigner.py`,
-`board_emitter.py`, `footprint_emitter.py`, `needs.py`, `board_engine.py`, `kept_files.py` and `project_setup.py` hold
-functions, and the page's Services wait for their cards.
-
-## Breadboard and checks after W6-B3 and W6-C3 (the moved modules and their classes)
-
-```mermaid
-classDiagram
-  class BreadboardSteps { <<Service>> }
-  class BreadboardPlanner { <<Service>> plan() }
-  class PartPlacement { <<Strategy>> }
-  class NotDrawn { <<Error>> code subject }
-  class NotBuilt { <<Error>> code }
-  class NotKeptResult { <<Result>> code }
-  class TabbedHtmlPage { <<Renderer>> }
-  class breadboard_codes { <<leaf>> CODES }
-  BreadboardPlanner --> PartPlacement
-  BreadboardPlanner ..> NotDrawn
-  NotBuilt ..> breadboard_codes
-  class Check { <<Strategy>> run() }
-  class CheckedFolder { <<Value>> }
-  class CouldNotKeep { <<Error>> }
-  class check_codes { <<leaf>> CODES }
-  class Refusal { <<Value>> code }
-  Check <|-- RulesVsNetlist
-  Check <|-- Physics
-  Check <|-- Buildability
-  Check <|-- VendorTruth
-  Check <|-- TheOrder
-  Check ..> CheckedFolder
-  Check ..> Refusal
-  Check ..> check_codes
-```
-
-`BreadboardSteps` (`wiring_steps.py`), `BreadboardPlanner`, `PartPlacement` and `NotDrawn` (`drawing.py`), `NotBuilt`
-(`sheet.py`), `NotKeptResult` (`kept_moves.py`), `TabbedHtmlPage` (`tabbed_page.py`), `Check`, `CheckedFolder` and the
-five checks (`check.py`) and `CouldNotKeep` (`vendor_pins_check.py`) exist today. `Refusal` (`spark/core/result.py`) is the core's after W6-C2, and a check builds it as `Refusal(text, code)` with a code of `check_codes`.
-`CheckService` and the page's five `*Check` names wait for the Operation card.
 
 ## Records and sourcing after W6-S3b (the moved modules and their classes)
 
@@ -1447,7 +1420,7 @@ classDiagram
 `Brief` and `UnnamedMust` (`brief.py`), `DeployRecordStore` and `LastDeploy`, `ToolProblem` (`tool_finder.py`),
 `PartError`, `ListOf` and `MapOf` (`record_kind.py`), `Matcher`, its three subclasses, `Offer` and `UnknownMatcher`
 (`matching.py`) and `NoTranscript` (`run_cost.py`) exist today. `record_kind.py`, `part_rules.py`, `datasheets.py`,
-`part_facts.py`, `tool_finder.py`, `drawer.py` and the two `operations.py` hold functions, and the pages' `RecordKind`,
+`part_facts.py`, `tool_finder.py`, `drawer.py`, `part_handlers.py` and `goal_handlers.py` hold functions, and the pages' `RecordKind`,
 `RecordFinder`, `RecordFolders`, `ToolFinder`, `Backends`, `DrawerService`, `DatasheetService` and `RunCostService` wait
 for their cards.
 
