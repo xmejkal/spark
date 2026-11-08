@@ -418,6 +418,18 @@ def _change_lines(record, changes):
     return ["- " + line for line in CHANGE_LIST.render(changes)] or ["- Nothing to change on the bench."]
 
 
+def _drawn_or_not(paths, planned):
+    """([(path, renderer)] to write, [NotWritten]) for each drawing beside the sheet: a renderer that declines the
+    layout is not written, and with no layout none is, for what stopped the plan."""
+    layout = planned.layout
+    said = [(path, renderer, renderer.why_not_written(layout) if layout else None) for path, renderer in paths]
+    drawn = [(path, renderer) for path, renderer, why in said if layout and not why]
+    if layout:
+        return drawn, [why._replace(path=path) for path, _, why in said if why]
+    return drawn, [breadboard_drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
+                                                 str(planned.stopped)) for path, renderer, _ in said]
+
+
 def write(requirements_path, out, circuit_path=None):
     """Write the sheet to `out`, and each drawing beside it when the layout can be planned; what `check_spine --keep`
     calls beside the kept board. The layout is planned once. A drawing left from an earlier build is removed, since it
@@ -435,17 +447,10 @@ def write(requirements_path, out, circuit_path=None):
                if record and not record.why_unread else [])
     new_record = breadboard_changes.WiringRecord.from_build(seated, colors, record, _spark_jumpers(
         planned, earlier_path, record))
-    layout = planned.layout
-    said = [(path, renderer, renderer.why_not_written(layout) if layout else None) for path, renderer in paths]
-    drawn = [(path, renderer) for path, renderer, why in said if layout and not why]
-    if layout:
-        not_written = [why._replace(path=path) for path, _, why in said if why]
-    else:
-        not_written = [breadboard_drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
-                                                     str(planned.stopped)) for path, renderer, _ in said]
+    drawn, not_written = _drawn_or_not(paths, planned)
     try:
         # every text is rendered before any file is written, so a renderer that fails leaves no new sheet either
-        texts = [renderer.text(layout) for _, renderer in drawn]
+        texts = [renderer.text(planned.layout) for _, renderer in drawn]
     except Exception:
         for path, _ in paths:
             path.unlink(missing_ok=True)
@@ -461,10 +466,10 @@ def write(requirements_path, out, circuit_path=None):
         for path, _ in paths:
             path.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
         raise
-    if not layout:
+    if not planned.layout:
         return WriteResult(Path(out), [], not_written, [], changes)
     return WriteResult(Path(out), drawn, not_written, planned.not_kept, changes, planned.differs,
-                       breadboard_catalog.find_board_px(layout).get("source"))
+                       breadboard_catalog.find_board_px(planned.layout).get("source"))
 
 
 def main(argv=None):
