@@ -447,7 +447,6 @@ def onboard_lines(written, role, name, record):
     if not isinstance(gpio, list):
         return []
     labels = boards.pin_labels(record)
-    facts = record["facts"] if isinstance(record.get("facts"), dict) else {}
     level = provenance.read_value(record, "active_level")
     note = one_line("%s: %s" % (role, str(record.get("note", "")).rstrip(".")))
     named = []
@@ -465,17 +464,26 @@ def onboard_lines(written, role, name, record):
         origin = ("source: %s%s" % (one_line(str(held.get("source"))), "" if held.get("verified") is True else "; not verified")
                   if isinstance(held, dict) else "the source is on the line above")
         named.append((name + "_ON", "%d  # the active level in the board record, %s" % (level, origin)))
+    named += fact_lines(role, name, record)
+    taken = sorted(written & {each for each, _ in named})
+    if taken:
+        raise Impossible("%s is a name pins.py gives a signal and the board's own %s: rename the signal"
+                         % (taken[0], role.replace("onboard_", "")))
+    return ["%s = %s" % each for each in named]
+
+
+def fact_lines(role, name, record):
+    """(`<NAME>_<FACT>`, its value and comment) for each fact of an on-board part whose value is a finite number or a word,
+    with its source and "not verified" when it is not, for `onboard_lines`."""
+    facts = record["facts"] if isinstance(record.get("facts"), dict) else {}
+    named = []
     for fact, said in facts.items():
         value = said.get("value") if isinstance(said, dict) else None
         if boards.is_fact_value(value):
             source = one_line(str(said.get("source")))
             named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, source: %s%s" % (
                 value, role, fact, source, "" if said.get("verified") is True else "; not verified")))
-    taken = sorted(written & {each for each, _ in named})
-    if taken:
-        raise Impossible("%s is a name pins.py gives a signal and the board's own %s: rename the signal"
-                         % (taken[0], role.replace("onboard_", "")))
-    return ["%s = %s" % each for each in named]
+    return named
 
 
 #: What follows a signal's name in the line that sets its internal pull-up (P204).
