@@ -52,7 +52,7 @@ FAKE_WOKWI_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
 #: The image the build's wokwi.toml names once the harness names one: commands/build.md's flash-with-firmware.bin.
 FLASH_IMAGE = "flash-with-firmware.bin"
 #: The stand-in `machine` the firmware imports under, put first on the path of a process of its own (never this one's).
-STAND_IN = ROOT / "scripts" / "stand_in"
+STAND_IN = ROOT / "scripts" / "spark" / "firmware" / "stand_in"
 
 #: The spine's stages before the build: they need no board engine, so they run on every machine.
 BEFORE_THE_BUILD = ("board", "schematic", "footprint")

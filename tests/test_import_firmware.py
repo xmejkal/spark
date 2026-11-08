@@ -28,12 +28,13 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import import_child  # noqa: E402
+from spark.firmware import import_child  # noqa: E402
 import import_firmware  # noqa: E402
+from spark.firmware import import_probe  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 
 
-STAND_IN = ROOT / "scripts" / "stand_in" / "machine.py"
+STAND_IN = ROOT / "scripts" / "spark" / "firmware" / "stand_in" / "machine.py"
 #: framebuf.py and micropython.py live here: the check puts this folder after the firmware's own.
 FALLBACK = STAND_IN.parent / "fallback"
 SCRIPT = ROOT / "scripts" / "import_firmware.py"
@@ -135,7 +136,7 @@ class ThePinsRememberTheirLevelsTest(unittest.TestCase):
         detail = module_named(answer, "light")["detail"]
         self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
         self.assertTrue(detail.startswith("ImportError: "), detail)
-        self.assertIn("scripts/stand_in/machine.py", detail)
+        self.assertIn("scripts/spark/firmware/stand_in/machine.py", detail)
         self.assertIn("not UART", detail)
         self.assertIn("move the rest into a function that main.py calls", detail)
 
@@ -368,7 +369,7 @@ class TheDisplayDriverStandInsTest(unittest.TestCase):
                                       env={"PYTHONPATH": str(FALLBACK)})
                 self.assertNotEqual(done.returncode, 0)
                 self.assertIn("AttributeError", done.stderr)
-                self.assertIn("scripts/stand_in/fallback/%s.py" % module, done.stderr)
+                self.assertIn("scripts/spark/firmware/stand_in/fallback/%s.py" % module, done.stderr)
                 self.assertIn(have, done.stderr)
                 self.assertIn("move the rest into a function that main.py calls", done.stderr)
 
@@ -379,7 +380,7 @@ class TheDisplayDriverStandInsTest(unittest.TestCase):
                 detail = module_named(answer, "light")["detail"]
                 self.assertEqual(module_named(answer, "light")["status"], "raised", answer)
                 self.assertTrue(detail.startswith("ImportError: "), detail)
-                self.assertIn("scripts/stand_in/fallback/%s.py" % module, detail)
+                self.assertIn("scripts/spark/firmware/stand_in/fallback/%s.py" % module, detail)
                 self.assertIn(have, detail)
                 self.assertIn("not Nothing", detail)
 
@@ -600,7 +601,7 @@ class TheCommandRunsFromWhereTheyAreTest(unittest.TestCase):
 
 
 class TheChildIsAFileOfItsOwnTest(unittest.TestCase):
-    """P443: the child that imports one module is scripts/import_child.py, run with -I."""
+    """P443: the child that imports one module is scripts/spark/firmware/import_child.py, run with -I."""
 
     def test_a_firmware_cannot_import_the_child_file(self):
         project = a_project(light="import import_child\n")
@@ -610,7 +611,7 @@ class TheChildIsAFileOfItsOwnTest(unittest.TestCase):
 
     def test_the_child_imports_the_module_from_the_folders_given(self):
         project = a_project(light="import sys\nassert sys.path[0].endswith('first'), sys.path\n")
-        done = subprocess.run([sys.executable, "-I", "-B", str(ROOT / "scripts" / "import_child.py"), "light",
+        done = subprocess.run([sys.executable, "-I", "-B", str(ROOT / "scripts" / "spark" / "firmware" / "import_child.py"), "light",
                                str(project / "first"), str(project / "firmware")], capture_output=True, text=True)
         self.assertEqual(done.returncode, 0, done.stderr)
 
@@ -825,9 +826,9 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         self.assertEqual(sorted(module_named(answer, "broken")), ["code", "detail", "module", "status"])
 
     def test_nothing_to_import_and_no_folder_have_their_codes_in_the_library(self):
-        problems = import_firmware.look(a_project(main="while True:\n    pass\n"), 5)[1]
+        problems = import_probe.look(a_project(main="while True:\n    pass\n"), 5)[1]
         self.assertEqual([problem.code for problem in problems], ["nothing_to_import"])
-        unchecked = import_firmware.look(Path(tempfile.mkdtemp()), 5)[2]
+        unchecked = import_probe.look(Path(tempfile.mkdtemp()), 5)[2]
         self.assertEqual([gap.code for gap in unchecked], ["no_firmware_folder"])
 
 

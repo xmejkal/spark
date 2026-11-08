@@ -95,7 +95,7 @@ class TheSizeIsSaidTest(unittest.TestCase):
 
     def test_the_size_counts_a_package_under_scripts_but_not_the_micropython_stand_in(self):
         root = repo_with({"scripts/a.py": "x = 1\n", "scripts/spark/core/b.py": "y = 2\nz = 3\n",
-                          "scripts/stand_in/machine.py": "q = 1\n"})
+                          "scripts/spark/firmware/stand_in/machine.py": "q = 1\n"})
         self.assertEqual(check_commit.size_line(root, "HEAD", "no-such-base"), "scripts/: 3 code lines")
 
 

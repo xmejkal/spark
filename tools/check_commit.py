@@ -91,7 +91,7 @@ def scripts_size(root, rev):
         return None
     return sum(code_lines(subprocess.run(["git", "-C", str(root), "show", "%s:%s" % (rev, name)],
                                          capture_output=True, text=True).stdout)
-               for name in listed.stdout.split() if name.endswith(".py") and not name.startswith("scripts/stand_in/"))
+               for name in listed.stdout.split() if name.endswith(".py") and "stand_in" not in name.split("/"))
 
 
 def size_line(root, commit, base="origin/main"):

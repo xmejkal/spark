@@ -71,7 +71,7 @@ def words_of_stand_in(error):
     return missed[1]
 
 
-def main(argv):
+def import_named(argv):  # --- MVP --- (P685): not `main`, which X2 counts under scripts/spark/
     add_micropython_time(time)
     sys.path[:0] = argv[1:]
     try:
@@ -84,4 +84,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    import_named(sys.argv[1:])
