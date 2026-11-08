@@ -411,11 +411,19 @@ def signals_of(part_list, wanted, project):
     signals, unused = pin_part_signals(signals, sources, list(wanted.get("signals") or []))  # --- MVP --- (P513)
     signals += [entry for _, entry in unused]
     sources += ["signals[%d]" % index for index, _ in unused]  # its index in the file, so a refusal names the right one
-    # P163 (#100), the route the names compare above does not see: a `signals` entry written as OPENLID_BUTTON beside
-    # an instance called OpenLid — or two unnamed parts asking for BUTTON — is ONE signal to the assigner and the
-    # generator, which look a signal up by its exact name. The assigner placed it twice, the generator traced both
-    # pins to one pad, the build passed and the chain said "runs end to end". Refused here, where the signals are
-    # derived — `read` cannot, it has no part records — naming both sources; exact, because every lookup downstream is.
+    refuse_one_signal_twice(sources, signals)
+    return signals
+
+
+def refuse_one_signal_twice(sources, signals):
+    """
+    A DesignError naming both sources when two of `signals` share a name (P163, #100), the route the names compare in
+    `read` does not see: a `signals` entry written as OPENLID_BUTTON beside an instance called OpenLid — or two unnamed
+    parts asking for BUTTON — is ONE signal to the assigner and the generator, which look a signal up by its exact name.
+    The assigner placed it twice, the generator traced both pins to one pad, the build passed and the chain said "runs
+    end to end". Refused where the signals are derived — `read` cannot, it has no part records; exact, because every
+    lookup downstream is.
+    """
     placed = {}
     for source, signal in zip(sources, signals):
         if signal["name"] in placed:
@@ -423,7 +431,6 @@ def signals_of(part_list, wanted, project):
                               "generator trace to one pad from two pins; give one of them a name of its own",
                               placed[signal["name"]], source, signal["name"])
         placed[signal["name"]] = source
-    return signals
 
 
 def rules_in(project):
