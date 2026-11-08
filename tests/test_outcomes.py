@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT / "tools"))  # `mutate`, which test_every_script_ans
 import deploy_record_store  # noqa: E402
 import boards  # noqa: E402
 from spark.core import outcomes  # noqa: E402
-import run_scenario  # noqa: E402
+from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from test_boards import DEFINITION, kept_definition_board  # noqa: E402
 
@@ -97,7 +97,7 @@ def read_log(text):
     log = Path(tempfile.mkdtemp()) / "a.log"
     if text is not None:
         log.write_text(text)
-    return run_scenario.ScenarioSteps.from_log(log)
+    return scenario_steps.ScenarioSteps.from_log(log)
 
 
 def read_limits(text):
@@ -123,7 +123,7 @@ def read_firmware(case):
 
 def read_text(text):
     """ScenarioSteps.from_text with `text` as the scenario (None: an empty one)."""
-    return run_scenario.ScenarioSteps.from_text(text or "")
+    return scenario_steps.ScenarioSteps.from_text(text or "")
 
 
 def read_definition(case):

@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from spark.bench import board_look  # noqa: E402
 import boards  # noqa: E402
-import run_scenario  # noqa: E402
+from spark.firmware import scenario_run  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from micropython_fakes import fake_interpreter  # noqa: E402
 
@@ -152,7 +152,7 @@ def build_project(folder):
     told = {"FAKE_WOKWI_SERIAL": "ready\nLED on\n", "FAKE_WOKWI_EXIT": "0",
             "FAKE_WOKWI_OUT": '[s] Expected text matched: "ready"\n', "FAKE_WOKWI_ERR": ""}
     with mock.patch.dict(os.environ, told):
-        run_scenario.ScenarioRun(project, scenario, micropython=micropython).run(FAKE_WOKWI_CLI)
+        scenario_run.ScenarioRun(project, scenario, micropython=micropython).run(FAKE_WOKWI_CLI)
     newest = max(path.stat().st_mtime for path in project.rglob("*") if path.is_file()) + 10
     for image in sim.glob("*.bin"):
         os.utime(image, (newest, newest))

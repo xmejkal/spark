@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.firmware import project_image  # noqa: E402
-import run_scenario  # noqa: E402
+from spark.firmware import scenario_steps  # noqa: E402
 import store  # noqa: E402
 from spark.firmware.project_image import DeployError, ProjectImage  # noqa: E402
 
@@ -117,7 +117,7 @@ class TheImageTest(unittest.TestCase):
     def test_the_constructor_reads_no_log(self):
         project = project_with_image()
         write_log(project, "a.log", "passed")
-        with mock.patch.object(run_scenario, "run_record", side_effect=OSError("denied")):
+        with mock.patch.object(scenario_steps, "run_record", side_effect=OSError("denied")):
             ProjectImage(project)
 
     def test_the_error_is_an_exception_named_for_what_it_is(self):
@@ -140,7 +140,7 @@ class TheRunLogsTest(unittest.TestCase):
 
     def test_a_log_that_cannot_be_read_is_a_deploy_error(self):
         write_log(self.project, "a.log", "passed")
-        with mock.patch.object(run_scenario, "run_record", side_effect=OSError("denied")), \
+        with mock.patch.object(scenario_steps, "run_record", side_effect=OSError("denied")), \
                 self.assertRaises(DeployError) as said:
             self.image.read_run_logs()
         self.assertIn("cannot read", str(said.exception))

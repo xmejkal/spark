@@ -11,7 +11,7 @@ import hashlib
 from spark.firmware import firmware_codes
 from spark.firmware import image_builder
 from spark.core import outcomes
-import run_scenario
+from spark.firmware import scenario_steps
 from spark.firmware import sim_project
 
 
@@ -49,7 +49,7 @@ class ProjectImage:
         named = sim_project.firmware_in(toml)
         if named.state == outcomes.NOT_CHECKED:
             raise DeployError("sim/wokwi.toml %s%s" % (named.why, named.fix()), reason=firmware_codes.FIRMWARE_LINE_BAD)
-        self.path = toml.parent / (named.name or run_scenario.DEFAULT_IMAGE)
+        self.path = toml.parent / (named.name or sim_project.DEFAULT_IMAGE)
         outside = sim_project.why_outside_sim(toml.parent, self.path)
         if outside:
             raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)
@@ -76,7 +76,7 @@ class ProjectImage:
             if not log.is_file():
                 continue
             try:
-                records.append((log,) + run_scenario.run_record(log))
+                records.append((log,) + scenario_steps.run_record(log))
             except OSError as cannot:
                 raise DeployError("cannot read %s: %s" % (log, cannot), reason=firmware_codes.LOG_UNREADABLE)
         return records
@@ -87,7 +87,7 @@ class ProjectImage:
         Else why not.
         """
         named = [(log, verdict) for log, verdict, sha256 in self.read_run_logs() if sha256 == self.sha256]
-        failed = [(log, verdict) for log, verdict in named if verdict != run_scenario.PASSED]
+        failed = [(log, verdict) for log, verdict in named if verdict != scenario_steps.PASSED]
         if failed:
             return ("%s did not pass on this image (verdict: %s): deploy.py flashes only an image that passed"
                     % (failed[0][0].name, failed[0][1]))
@@ -99,7 +99,7 @@ class ProjectImage:
     # --- MVP ---
     def find_passed_logs(self):
         """Every log in the runs folder that passed on this image's sha256, in name order. DeployError when a log cannot be read."""
-        return [log for log, verdict, sha256 in self.read_run_logs() if sha256 == self.sha256 and verdict == run_scenario.PASSED]
+        return [log for log, verdict, sha256 in self.read_run_logs() if sha256 == self.sha256 and verdict == scenario_steps.PASSED]
     # --- end MVP ---
 
     def find_passed_log(self):

@@ -25,7 +25,8 @@ from spark.bench import deploy_service  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 from spark.firmware.project_image import DeployError  # noqa: E402
-import run_scenario  # noqa: E402
+from spark.firmware import scenario_run  # noqa: E402
+from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
@@ -81,7 +82,7 @@ class ProjectCase(unittest.TestCase):
         told = {"FAKE_WOKWI_SERIAL": "ready\nLED on\n", "FAKE_WOKWI_EXIT": str(exit_code), "FAKE_WOKWI_OUT": READY_MATCHED,
                 "FAKE_WOKWI_ERR": "" if exit_code == 0 else "Error: stuck\n"}
         with mock.patch.dict(os.environ, told):
-            run_scenario.ScenarioRun(self.project, scenario or self.scenario, micropython=self.micropython).run(FAKE_CLI)
+            scenario_run.ScenarioRun(self.project, scenario or self.scenario, micropython=self.micropython).run(FAKE_CLI)
 
     def plan(self, port=None, ignore_older_runs=False):
         """The DeployPlan of a DeployService over this project's MicroPython platform. tools.find must be patched."""
@@ -164,8 +165,8 @@ class TheNoSimulationDryRunTest(ProjectCase):
         code, _, problems, ran = self.deploy("--dry-run", "--no-simulation", find=real_littlefs)
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
         self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", problems)
-        status, sentence, log = run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
-        self.assertEqual((status, log), (run_scenario.COULD_NOT_RUN, None))
+        status, sentence, log = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
+        self.assertEqual((status, log), (scenario_run.COULD_NOT_RUN, None))
         self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", sentence)
         self.turn_littlefs(True)
         code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=real_littlefs)
@@ -377,7 +378,7 @@ class WhatDeployNeedsTest(ProjectCase):
 
     def test_a_log_that_cannot_be_read_is_a_sentence_not_a_traceback(self):
         self.run_the_scenario()
-        with mock.patch.object(run_scenario, "run_record", side_effect=PermissionError("denied")):
+        with mock.patch.object(scenario_steps, "run_record", side_effect=PermissionError("denied")):
             code, _, problems, ran = self.deploy("--dry-run")
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
         self.assertIn("cannot read ", problems)

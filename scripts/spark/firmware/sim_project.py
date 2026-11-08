@@ -20,6 +20,7 @@ import boards
 import emit_board
 from spark.core import outcomes
 import parts as parts_library
+from spark.firmware.scenario_steps import WHY_LOG_UNREADABLE
 import tools
 
 #: The converter's mapping from each component name to its Wokwi part, in the simulation project (`mapping_for`, P31).
@@ -149,8 +150,6 @@ def limits_in(note_text):
     return [limit for limit in found if limit.sentence]
 
 
-#: Why a run log's reader (ScenarioSteps, SimulationLimits) found nothing: the file cannot be read.
-WHY_LOG_UNREADABLE = "the log cannot be read"
 #: Why SimulationLimits is outcomes.NOT_CHECKED when the log has the section: it holds no limit line.
 WHY_NO_LIMIT_LINE = "the log's limits section has no limit line"
 #: Why SimulationLimits is outcomes.NOT_CHECKED when the section never reaches the scenario's section: the log is cut off.
@@ -390,8 +389,10 @@ def why_outside_sim(sim, image):
     return "wokwi.toml names %s, outside sim/, and a run writes its image only inside sim/" % image if outside else None
 
 
+#: The image named in wokwi.toml when the build named none (moved here from run_scenario.py, P685).
+DEFAULT_IMAGE = "flash-with-firmware.bin"
 #: The line wokwi_toml writes when no image is named yet. wokwi-cli refuses such a file, so run_scenario.py names one here.
-UNNAMED_FIRMWARE = '# firmware = "flash-with-firmware.bin"  # no image named yet: MicroPython plus the project\'s files'
+UNNAMED_FIRMWARE = '# firmware = "%s"  # no image named yet: MicroPython plus the project\'s files' % DEFAULT_IMAGE
 
 
 def firmware_lines(firmware):

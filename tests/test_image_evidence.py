@@ -29,7 +29,7 @@ import flash_image  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 import tools  # noqa: E402
 from spark.bench.image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
-from run_scenario import ScenarioSteps  # noqa: E402
+from spark.firmware.scenario_steps import ScenarioSteps  # noqa: E402
 from spark.firmware.project_image import DeployError, ProjectImage  # noqa: E402
 from test_project_image import project_with_image, write_log  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402

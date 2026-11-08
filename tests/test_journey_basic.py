@@ -39,7 +39,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import check_spine  # noqa: E402
 import deploy  # noqa: E402
 import design  # noqa: E402
-import run_scenario  # noqa: E402
+from spark.firmware import scenario_run  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 import tools  # noqa: E402
 
@@ -259,7 +259,7 @@ def run_the_scenario(project):
     interpreter = Path(tempfile.mkdtemp()) / "micropython.bin"
     interpreter.write_bytes(fake_interpreter())
     with unittest.mock.patch.dict(os.environ, {"FAKE_WOKWI_SERIAL": "ready\nLED on\nLED off\n"}):
-        return run_scenario.ScenarioRun(project, scenario, micropython=interpreter).run(FAKE_WOKWI_CLI)[1]
+        return scenario_run.ScenarioRun(project, scenario, micropython=interpreter).run(FAKE_WOKWI_CLI)[1]
 
 
 class TheFirmwareStageBitesTest(unittest.TestCase):

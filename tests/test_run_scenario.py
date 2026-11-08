@@ -21,6 +21,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_scenario  # noqa: E402
+
+from spark.firmware import scenario_run  # noqa: E402
+
+from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 import tools  # noqa: E402
@@ -43,9 +47,9 @@ READY_MATCHED = '[the button lights the LED] Expected text matched: "ready"\n'
 
 class TheReadyWaitTest(unittest.TestCase):
     def test_the_wait_goes_before_the_first_step_at_its_indent(self):
-        self.assertIn('steps:\n  - wait-serial: "ready"\n  - set-control:', run_scenario.with_ready_wait(SCENARIO))
+        self.assertIn('steps:\n  - wait-serial: "ready"\n  - set-control:', scenario_run.with_ready_wait(SCENARIO))
         flush = SCENARIO.replace("\n  - ", "\n- ")
-        self.assertIn('steps:\n- wait-serial: "ready"\n- set-control:', run_scenario.with_ready_wait(flush))
+        self.assertIn('steps:\n- wait-serial: "ready"\n- set-control:', scenario_run.with_ready_wait(flush))
 
     def test_a_scenario_that_already_waits_for_ready_text_before_its_first_input_is_left_as_it_is(self):
         # A second wait would never match: a wait sees only text that arrives after its step begins (WR1).
@@ -53,16 +57,16 @@ class TheReadyWaitTest(unittest.TestCase):
                       "- { wait-serial: ready }", '- delay: 500ms\n  - wait-serial: "ready"'):
             scenario = SCENARIO.replace("steps:\n", "steps:\n  %s\n" % first)
             with self.subTest(first=first):
-                self.assertEqual(run_scenario.with_ready_wait(scenario), scenario)
+                self.assertEqual(scenario_run.with_ready_wait(scenario), scenario)
 
     def test_a_ready_wait_after_the_first_input_still_gets_one_before(self):
         scenario = SCENARIO + '  - wait-serial: "ready"\n'
-        self.assertIn('steps:\n  - wait-serial: "ready"\n  - set-control:', run_scenario.with_ready_wait(scenario))
+        self.assertIn('steps:\n  - wait-serial: "ready"\n  - set-control:', scenario_run.with_ready_wait(scenario))
 
     def test_a_scenario_with_no_steps_is_refused(self):
         for text in ("name: x\nversion: 1\n", "name: x\nsteps:\n", "steps:\nversion: 1\n"):
             with self.subTest(text=text), self.assertRaisesRegex(ValueError, "steps"):
-                run_scenario.with_ready_wait(text)
+                scenario_run.with_ready_wait(text)
 
 
 class TheStepCountsTest(unittest.TestCase):
@@ -73,7 +77,7 @@ class TheStepCountsTest(unittest.TestCase):
         return "name: x\nversion: 1\nsteps:\n" + "".join("  %s\n" % item for item in items)
 
     def counted(self, *items):
-        return run_scenario.ScenarioSteps.from_text(self.steps(*items))
+        return scenario_steps.ScenarioSteps.from_text(self.steps(*items))
 
     def test_each_kind_is_counted_and_two_of_one_kind_are_two(self):
         steps = self.counted('- wait-serial: "ready"', "- set-control: { part-id: b, name: pressed, value: 1 }",
@@ -102,13 +106,13 @@ class TheStepCountsTest(unittest.TestCase):
 
     def test_a_nested_list_item_is_no_step(self):
         scenario = self.steps("- set-control:", "    part-id: b", "    values:", "      - 1", "      - 2", "- wait-serial: x")
-        steps = run_scenario.ScenarioSteps.from_text(scenario)
+        steps = scenario_steps.ScenarioSteps.from_text(scenario)
         self.assertEqual((steps.counts, steps.state), ({"set-control": 1, "wait-serial": 1}, "recorded"))
 
     def test_a_step_name_is_its_label_and_the_next_key_is_its_kind(self):
         # wokwi-cli lets a step carry `name:`, which it prints (TestScenario.ts, validStepKeys = ['name']).
         block = self.steps("- name: press the button", "  set-control:", "    part-id: b", '- wait-serial: "on"')
-        self.assertEqual(run_scenario.ScenarioSteps.from_text(block).counts, {"set-control": 1, "wait-serial": 1})
+        self.assertEqual(scenario_steps.ScenarioSteps.from_text(block).counts, {"set-control": 1, "wait-serial": 1})
         for item in ("- { name: press, set-control: { part-id: b } }", "- {name: press, expect-pin: {part-id: led}}"):
             with self.subTest(item=item):
                 self.assertEqual(self.counted(item).count("name"), 0)
@@ -120,7 +124,7 @@ class TheStepCountsTest(unittest.TestCase):
 
     def test_the_steps_end_at_a_key_of_the_scenario_at_their_own_indent(self):
         scenario = "name: x\nsteps:\n  - wait-serial: a\n  - set-control: {part-id: b}\nafter: 1\n  - expect-pin: c\n"
-        self.assertEqual(run_scenario.ScenarioSteps.from_text(scenario).counts, {"wait-serial": 1, "set-control": 1})
+        self.assertEqual(scenario_steps.ScenarioSteps.from_text(scenario).counts, {"wait-serial": 1, "set-control": 1})
 
     def test_an_item_with_no_key_makes_the_counts_not_checked(self):
         for item in ("- just-a-word", "- [a, b]", '- "two words": x', "- : x", "-"):
@@ -132,7 +136,7 @@ class TheStepCountsTest(unittest.TestCase):
     def test_a_text_with_no_steps_is_none_recorded(self):
         for text in ("", "name: x\n", "steps:\n"):
             with self.subTest(text=text):
-                steps = run_scenario.ScenarioSteps.from_text(text)
+                steps = scenario_steps.ScenarioSteps.from_text(text)
                 self.assertEqual((steps.state, steps.why, steps.line()), ("none-recorded", None, "step counts: not read"))
 
     def test_the_line_round_trips_through_a_log_header(self):
@@ -141,19 +145,19 @@ class TheStepCountsTest(unittest.TestCase):
                              (self.counted("- just-a-word"), "not-checked"), (self.counted(""), "not-checked")):
             log.write_text("# a, run 2026-10-24T10:00:00+02:00, timeout 1 ms\nverdict: passed\n%s\n\nbody\n" % steps.line())
             with self.subTest(line=steps.line(), written=steps.state):
-                read = run_scenario.ScenarioSteps.from_log(log)
+                read = scenario_steps.ScenarioSteps.from_log(log)
                 self.assertEqual((read.line(), read.state), (steps.line(), state))  # the log keeps no difference between the two non-recorded states
 
     def test_a_log_with_no_counts_line_is_none_recorded(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\nbody\n")
-        steps = run_scenario.ScenarioSteps.from_log(log)
+        steps = scenario_steps.ScenarioSteps.from_log(log)
         self.assertEqual((steps.state, steps.why, steps.counts), ("none-recorded", None, {}))
 
     def test_a_log_that_says_not_read_is_not_checked_with_its_reason(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\nstep counts: not read\n\nbody\n")
-        steps = run_scenario.ScenarioSteps.from_log(log)
+        steps = scenario_steps.ScenarioSteps.from_log(log)
         self.assertEqual((steps.state, steps.why), ("not-checked", "the log says its steps were not counted"))
 
     def test_a_malformed_counts_line_or_no_file_is_not_checked_with_its_reason(self):
@@ -164,29 +168,29 @@ class TheStepCountsTest(unittest.TestCase):
                      header + "step counts: set-control 1, set-control 2\n\n"):
             log.write_text(text)
             with self.subTest(text=text):
-                steps = run_scenario.ScenarioSteps.from_log(log)
+                steps = scenario_steps.ScenarioSteps.from_log(log)
                 self.assertEqual((steps.state, steps.why), ("not-checked", "the log's step counts line is malformed"))
-        steps = run_scenario.ScenarioSteps.from_log(log.with_name("none.log"))
+        steps = scenario_steps.ScenarioSteps.from_log(log.with_name("none.log"))
         self.assertEqual((steps.state, steps.why), ("not-checked", "the log cannot be read"))
 
     def test_merge_adds_the_counts_of_the_counted_steps(self):
-        merged = run_scenario.ScenarioSteps.merge([
-            run_scenario.ScenarioSteps({"set-control": 1, "wait-serial": 2}),
-            run_scenario.ScenarioSteps({}, "not-checked", "why"),
-            run_scenario.ScenarioSteps({"set-control": 2, "expect-pin": 1}),
-            run_scenario.ScenarioSteps({}, "none-recorded")])
+        merged = scenario_steps.ScenarioSteps.merge([
+            scenario_steps.ScenarioSteps({"set-control": 1, "wait-serial": 2}),
+            scenario_steps.ScenarioSteps({}, "not-checked", "why"),
+            scenario_steps.ScenarioSteps({"set-control": 2, "expect-pin": 1}),
+            scenario_steps.ScenarioSteps({}, "none-recorded")])
         self.assertEqual((merged.state, merged.counts), ("recorded", {"set-control": 3, "wait-serial": 2, "expect-pin": 1}))
 
     def test_merge_of_no_counted_steps_is_none_recorded(self):
-        for each in ([], [run_scenario.ScenarioSteps({}, "not-checked", "why"), run_scenario.ScenarioSteps({}, "none-recorded")]):
-            merged = run_scenario.ScenarioSteps.merge(each)
+        for each in ([], [scenario_steps.ScenarioSteps({}, "not-checked", "why"), scenario_steps.ScenarioSteps({}, "none-recorded")]):
+            merged = scenario_steps.ScenarioSteps.merge(each)
             with self.subTest(each=len(each)):
                 self.assertEqual((merged.state, merged.why, merged.counts), ("none-recorded", None, {}))
 
     def test_a_counts_line_after_the_header_is_not_read(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\n\nstep counts: set-control 3\n")
-        self.assertEqual(run_scenario.ScenarioSteps.from_log(log).state, "none-recorded")
+        self.assertEqual(scenario_steps.ScenarioSteps.from_log(log).state, "none-recorded")
 
 
 class TheStepNamesTest(unittest.TestCase):
@@ -194,7 +198,7 @@ class TheStepNamesTest(unittest.TestCase):
 
     @staticmethod
     def named(*items):
-        return run_scenario.ScenarioSteps.from_text("name: x\nsteps:\n" + "".join("  %s\n" % item for item in items))
+        return scenario_steps.ScenarioSteps.from_text("name: x\nsteps:\n" + "".join("  %s\n" % item for item in items))
 
     def test_plain_quoted_and_flow_steps_give_their_names_in_order(self):
         steps = self.named("- name: Pressing  the button lights the LED", "  set-control: { part-id: b, name: pressed, value: 1 }",
@@ -270,11 +274,11 @@ class TheStepNamesTest(unittest.TestCase):
         steps = self.named("- name: >", "    x", "  wait-serial: y")
         log.write_text("# a, run 2026-10-24T10:00:00+02:00, timeout 1 ms\nverdict: passed\n%s\n\nbody\n" % steps.log_lines())
         self.assertIn("step names: not read\n", log.read_text())
-        read = run_scenario.ScenarioSteps.from_log(log)
+        read = scenario_steps.ScenarioSteps.from_log(log)
         self.assertEqual((read.names_state, read.names_why), ("not-checked", "the log says its step names were not read"))
 
     def test_a_scenario_with_no_steps_has_recorded_zero_names(self):
-        steps = run_scenario.ScenarioSteps.from_text("name: x\n")
+        steps = scenario_steps.ScenarioSteps.from_text("name: x\n")
         self.assertEqual((steps.state, steps.names, steps.names_state), ("none-recorded", (), "recorded"))
         self.assertIn("step names: 0", steps.log_lines())
 
@@ -283,7 +287,7 @@ class TheStepNamesTest(unittest.TestCase):
         for items, number in (((("- name: a b", "  wait-serial: x"), 1)), ((("- wait-serial: x",), 0))):
             steps = self.named(*items)
             log.write_text("# a, run 2026-10-24T10:00:00+02:00, timeout 1 ms\nverdict: passed\n%s\n\nbody\n" % steps.log_lines())
-            read = run_scenario.ScenarioSteps.from_log(log)
+            read = scenario_steps.ScenarioSteps.from_log(log)
             with self.subTest(number=number):
                 self.assertIn("step names: %d\n" % number, log.read_text())
                 self.assertEqual((read.names, read.names_state, read.line()), (steps.names, "recorded", steps.line()))
@@ -291,7 +295,7 @@ class TheStepNamesTest(unittest.TestCase):
     def test_a_log_with_counts_and_no_marker_is_none_recorded_for_names(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\nstep counts: wait-serial 1\n\nbody\n")
-        read = run_scenario.ScenarioSteps.from_log(log)
+        read = scenario_steps.ScenarioSteps.from_log(log)
         self.assertEqual((read.state, read.names, read.names_state), ("recorded", (), "none-recorded"))
 
     def test_a_marker_whose_count_is_wrong_or_malformed_is_not_checked(self):
@@ -301,22 +305,22 @@ class TheStepNamesTest(unittest.TestCase):
                       "step names: \n", "step names: -1\n"):
             log.write_text(head + lines + "\nbody\n")
             with self.subTest(lines=lines):
-                read = run_scenario.ScenarioSteps.from_log(log)
+                read = scenario_steps.ScenarioSteps.from_log(log)
                 self.assertEqual((read.names, read.names_state, read.names_why),
                                  ((), "not-checked", "the log's step names do not match its step names count"))
 
     def test_a_log_that_cannot_be_read_is_not_checked_for_names_too(self):
-        read = run_scenario.ScenarioSteps.from_log(Path(tempfile.mkdtemp()) / "none.log")
+        read = scenario_steps.ScenarioSteps.from_log(Path(tempfile.mkdtemp()) / "none.log")
         self.assertEqual((read.names_state, read.names_why), ("not-checked", "the log cannot be read"))
 
     def test_a_name_line_after_the_header_is_not_read(self):
         log = Path(tempfile.mkdtemp()) / "a.log"
         log.write_text("# a, run 2026-10-24T10:00:00, timeout 1 ms\nverdict: passed\nstep names: 0\n\nstep name: forged\n")
-        read = run_scenario.ScenarioSteps.from_log(log)
+        read = scenario_steps.ScenarioSteps.from_log(log)
         self.assertEqual((read.names, read.names_state), ((), "recorded"))
 
     def test_merge_unions_the_names_of_the_logs_that_name_and_keeps_its_own_rule_for_counts(self):
-        steps, names = run_scenario.ScenarioSteps, run_scenario.StepNames
+        steps, names = scenario_steps.ScenarioSteps, scenario_steps.StepNames
         merged = steps.merge([steps({"set-control": 1}, named=names(("a", "b"), "recorded")),
                               steps({}, "not-checked", "why", names(("zz",), "not-checked", "why")),
                               steps({"wait-serial": 1}, named=names(("b", "c"), "recorded")),
@@ -325,38 +329,38 @@ class TheStepNamesTest(unittest.TestCase):
                                                                            {"set-control": 1, "wait-serial": 6}))
 
     def test_a_log_that_counts_but_names_nothing_still_counts_in_a_merge(self):
-        steps, names = run_scenario.ScenarioSteps, run_scenario.StepNames
+        steps, names = scenario_steps.ScenarioSteps, scenario_steps.StepNames
         merged = steps.merge([steps({"set-control": 1}), steps({}, "none-recorded", None, names(("a",), "recorded"))])
         self.assertEqual((merged.counts, merged.names, merged.names_state), ({"set-control": 1}, ("a",), "recorded"))
 
     def test_merge_of_logs_that_name_nothing_is_none_recorded_for_names(self):
-        steps, names = run_scenario.ScenarioSteps, run_scenario.StepNames
+        steps, names = scenario_steps.ScenarioSteps, scenario_steps.StepNames
         merged = steps.merge([steps({"set-control": 1}), steps({}, named=names((), "not-checked"))])
         self.assertEqual((merged.names, merged.names_state, merged.counts), ((), "none-recorded", {"set-control": 1}))
 
 
 class TheVerdictTest(unittest.TestCase):
     def test_the_reason_is_wokwi_cli_s_own_error_not_a_firmware_line_that_says_error(self):
-        status, said = run_scenario.verdict(1, "ready\nError: I2C not found\n", "ready\nError: I2C not found\n" + READY_MATCHED,
+        status, said = scenario_run.verdict(1, "ready\nError: I2C not found\n", "ready\nError: I2C not found\n" + READY_MATCHED,
                                             "Error: GPIO 4 expected to be 1 but was 0\n", 60000)
         self.assertEqual((status, said), (PROBLEMS, "failed (wokwi-cli exit 1): Error: GPIO 4 expected to be 1 but was 0"))
 
     def test_ready_with_a_prefix_counts_when_wokwi_cli_says_the_wait_matched(self):
         # RF1: the wait matches text containing ready, so "I ready" passes it, and a later failure must be named as such.
-        status, said = run_scenario.verdict(1, "I ready\n", "I ready\n" + READY_MATCHED, "Error: expect-pin failed\n", 60000)
+        status, said = scenario_run.verdict(1, "I ready\n", "I ready\n" + READY_MATCHED, "Error: expect-pin failed\n", 60000)
         self.assertEqual((status, said), (PROBLEMS, "failed (wokwi-cli exit 1): Error: expect-pin failed"))
 
     def test_the_ready_line_is_not_read_from_the_serial_file_which_joins_lines(self):
         # wokwi-cli 0.27.1 wrote "readyLED onLED off" into its serial log file; its stdout said the wait matched.
-        status, _ = run_scenario.verdict(42, "readyLED on", "ready\n", "", 60000)
+        status, _ = scenario_run.verdict(42, "readyLED on", "ready\n", "", 60000)
         self.assertEqual(status, PROBLEMS)
 
     def test_a_lost_simulator_could_not_run(self):
-        status, said = run_scenario.verdict(1, "ready\n", "ready\n" + READY_MATCHED, "API Error: connection closed\n", 60000)
+        status, said = scenario_run.verdict(1, "ready\n", "ready\n" + READY_MATCHED, "API Error: connection closed\n", 60000)
         self.assertEqual((status, said), (COULD_NOT_RUN, "wokwi-cli lost the simulator (exit 1): API Error: connection closed"))
 
     def test_a_board_silent_until_the_timeout_could_not_run_and_asks_about_the_serial_wires(self):
-        status, said = run_scenario.verdict(42, "", "", "Timeout\n", 60000)
+        status, said = scenario_run.verdict(42, "", "", "Timeout\n", 60000)
         self.assertEqual(status, COULD_NOT_RUN)
         self.assertIn("$serialMonitor", said)
 
@@ -389,7 +393,7 @@ class ProjectCase(unittest.TestCase):
         told = {"FAKE_WOKWI_SERIAL": serial, "FAKE_WOKWI_EXIT": str(exit_code), "FAKE_WOKWI_OUT": out,
                 "FAKE_WOKWI_ERR": err, "FAKE_WOKWI_SEEN": str(self.seen)}
         with mock.patch.dict(os.environ, told):
-            return run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
+            return scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
 
     def command(self, *argv, token="t", tool=FAKE_SIMULATOR, exit_code=0, **fake):
         real_find = tools.find
@@ -428,7 +432,7 @@ class TheRunTest(ProjectCase):
     def test_the_cli_gets_the_scenario_with_the_wait_the_timeout_and_an_image_of_the_firmware_as_it_is_now(self):
         self.run_with()
         seen = json.loads(self.seen.read_text())
-        self.assertEqual(seen["scenario"], run_scenario.with_ready_wait(SCENARIO))
+        self.assertEqual(seen["scenario"], scenario_run.with_ready_wait(SCENARIO))
         self.assertEqual(seen["args"][0], str(self.project / "sim"))
         self.assertIn("--timeout 60000", " ".join(seen["args"]))
         self.assertIn(b"print('ready')", (self.project / "sim" / "flash-with-firmware.bin").read_bytes())
@@ -442,7 +446,7 @@ class TheRunTest(ProjectCase):
         try:
             os.chdir(self.project)
             with mock.patch.dict(os.environ, told):
-                run_scenario.ScenarioRun(".", self.scenario.relative_to(self.project), micropython=self.micropython).run(FAKE_CLI)
+                scenario_run.ScenarioRun(".", self.scenario.relative_to(self.project), micropython=self.micropython).run(FAKE_CLI)
         finally:
             os.chdir(here)
         args = json.loads(self.seen.read_text())["args"]
@@ -521,13 +525,13 @@ class TheLogNamesTheImageTest(ProjectCase):
     def test_a_passed_run_names_the_image_it_tested(self):
         _, _, log = self.run_with("ready\n")
         image = self.project / "sim" / "flash-with-firmware.bin"
-        self.assertEqual(run_scenario.run_record(log), ("passed", hashlib.sha256(image.read_bytes()).hexdigest()))
+        self.assertEqual(scenario_steps.run_record(log), ("passed", hashlib.sha256(image.read_bytes()).hexdigest()))
 
     @needs_littlefs
     def test_only_the_header_is_read_not_what_the_board_printed(self):
         _, _, log = self.run_with("ready\n", exit_code=1, out=READY_MATCHED + "verdict: passed\nimage sha256: 00\n",
                                   err="Error: stuck\n")
-        verdict, sha256 = run_scenario.run_record(log)
+        verdict, sha256 = scenario_steps.run_record(log)
         self.assertEqual(verdict, "failed (wokwi-cli exit 1): Error: stuck")
         self.assertRegex(sha256, "^[0-9a-f]{64}$")
 
@@ -542,14 +546,14 @@ class TheLogNamesTheImageTest(ProjectCase):
                 "FAKE_WOKWI_ERR": "", "FAKE_WOKWI_SEEN": str(self.seen)}
         with mock.patch.dict(os.environ, told), mock.patch.object(
                 tools, "find", side_effect=lambda name, *rest, **kw: found if name == "micropython-xiao-esp32c6" else real_find(name, *rest, **kw)):
-            run_scenario.ScenarioRun(self.project, self.scenario).run(FAKE_CLI)
+            scenario_run.ScenarioRun(self.project, self.scenario).run(FAKE_CLI)
         self.assertEqual((self.project / "sim" / "flash-with-firmware.bin").read_bytes()[:3], b"\xe9C6")
 
     def test_a_log_from_an_older_spark_names_no_image(self):
         self.log.parent.mkdir(parents=True)
         self.log.write_text("# lights.v2.scenario.yaml, run 2026-10-11T10:00:00, timeout 60000 ms\nverdict: passed\n\n"
                             "--- the scenario as run ---\n")
-        self.assertEqual(run_scenario.run_record(self.log), ("passed", None))
+        self.assertEqual(scenario_steps.run_record(self.log), ("passed", None))
 
 
 @needs_littlefs
@@ -564,7 +568,7 @@ class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
         self.scenario.write_text(scenario)
         code, said = self.command()
         self.assertEqual(code, 0)
-        self.assertEqual(run_scenario.run_record(self.log)[0], "passed")
+        self.assertEqual(scenario_steps.run_record(self.log)[0], "passed")
         return said
 
     def test_no_control_and_no_pin_read_prints_both_on_stdout(self):
@@ -586,11 +590,11 @@ class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
         self.assertEqual(self.run_with()[1], "passed")
 
     def test_the_look_and_the_printed_line_share_the_rule_and_the_words(self):
-        steps = run_scenario.ScenarioSteps({"wait-serial": 1, "expect-pin": 1})
+        steps = scenario_steps.ScenarioSteps({"wait-serial": 1, "expect-pin": 1})
         self.assertEqual(steps.control_caveat("the passed runs (a, b) have"), "the passed runs (a, b) have no set-control step "
                          "(the step that presses a button or sets a sensor)")
-        self.assertIsNone(run_scenario.ScenarioSteps({"set-control": 1}).control_caveat("X has"))
-        self.assertIsNone(run_scenario.ScenarioSteps({}, "not-checked", "x").control_caveat("X has"))
+        self.assertIsNone(scenario_steps.ScenarioSteps({"set-control": 1}).control_caveat("X has"))
+        self.assertIsNone(scenario_steps.ScenarioSteps({}, "not-checked", "x").control_caveat("X has"))
 
 
 @needs_littlefs
@@ -611,11 +615,11 @@ class TheLogCountsTheStepsTest(ProjectCase):
         _, _, log = self.run_with("ready\n")
         header = log.read_text().split("\n\n", 1)[0].splitlines()
         self.assertEqual(header[3:5], ["step names: 1", "step name: Pressing the button lights the LED"])
-        self.assertEqual(run_scenario.ScenarioSteps.from_log(log).names, ("Pressing the button lights the LED",))
+        self.assertEqual(scenario_steps.ScenarioSteps.from_log(log).names, ("Pressing the button lights the LED",))
 
     def test_the_log_reads_back_as_the_counts_it_wrote(self):
         _, _, log = self.run_with("ready\n")
-        steps = run_scenario.ScenarioSteps.from_log(log)
+        steps = scenario_steps.ScenarioSteps.from_log(log)
         self.assertEqual((steps.counts, steps.state), ({"expect-pin": 0, "set-control": 1, "wait-serial": 2}, "recorded"))
 
     def test_a_limits_note_that_cannot_be_read_leaves_the_verdict_written(self):
@@ -630,7 +634,7 @@ class TheLogCountsTheStepsTest(ProjectCase):
 
         with mock.patch.object(Path, "read_text", unreadable):
             _, _, log = self.run_with("ready\n")
-        self.assertEqual(run_scenario.run_record(log)[0], "passed")
+        self.assertEqual(scenario_steps.run_record(log)[0], "passed")
         self.assertNotIn("--- what this simulation cannot show ---", log.read_text())
 
     def test_the_time_has_its_zone(self):
@@ -639,7 +643,7 @@ class TheLogCountsTheStepsTest(ProjectCase):
 
     def test_what_the_board_printed_cannot_set_the_counts(self):
         _, _, log = self.run_with("ready\n", out=READY_MATCHED + "step counts: set-control 9\n")
-        self.assertEqual(run_scenario.ScenarioSteps.from_log(log).count("set-control"), 1)
+        self.assertEqual(scenario_steps.ScenarioSteps.from_log(log).count("set-control"), 1)
 
     def test_the_limits_note_goes_after_the_header_and_leaves_the_records_as_they_read(self):
         (self.project / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text("# Limits\n\nthe XIAO has no button\n\nsecond\n")
@@ -648,8 +652,8 @@ class TheLogCountsTheStepsTest(ProjectCase):
         self.assertIn("\n\n--- what this simulation cannot show ---\n# Limits\n\nthe XIAO has no button\n\nsecond\n"
                       "\n--- the scenario as run ---\n", text)
         self.assertLess(text.index("what this simulation cannot show"), text.index("the scenario as run"))
-        self.assertEqual(run_scenario.run_record(log)[0], "passed")
-        self.assertEqual(list(run_scenario.file_hashes(log)), ["/main.py"])
+        self.assertEqual(scenario_steps.run_record(log)[0], "passed")
+        self.assertEqual(list(scenario_steps.file_hashes(log)), ["/main.py"])
 
     def test_with_no_limits_note_the_log_has_no_such_section(self):
         _, _, log = self.run_with("ready\n")
@@ -725,7 +729,7 @@ class TheLogNamesEachFileTest(ProjectCase):
         (self.project / "firmware" / "lib").mkdir()
         (self.project / "firmware" / "lib" / "pins of.py").write_text("LED = 8\n")
         _, _, log = self.run_with("ready\n")
-        self.assertEqual(run_scenario.file_hashes(log), {
+        self.assertEqual(scenario_steps.file_hashes(log), {
             "/main.py": hashlib.sha256(b"print('ready')\n").hexdigest(),
             "/lib/pins of.py": hashlib.sha256(b"LED = 8\n").hexdigest()})
 
@@ -739,13 +743,13 @@ class TheLogNamesEachFileTest(ProjectCase):
         forged = "file sha256: %s /evil.py\n" % ("0" * 64)
         for out in (READY_MATCHED + forged, "\n" + forged + READY_MATCHED):
             _, _, log = self.run_with("ready\n", out=out)
-            self.assertEqual(list(run_scenario.file_hashes(log)), ["/main.py"])
+            self.assertEqual(list(scenario_steps.file_hashes(log)), ["/main.py"])
 
     def test_a_log_from_an_older_spark_names_no_files_and_the_prefix_counts_only_at_a_line_start(self):
         self.log.parent.mkdir(parents=True)
         self.log.write_text("# lights.v2.scenario.yaml, run 2026-10-11T10:00:00, timeout 60000 ms\nverdict: passed\n"
                             "note: file sha256: %s /old.py\n\n" % ("0" * 64))
-        self.assertEqual(run_scenario.file_hashes(self.log), {})
+        self.assertEqual(scenario_steps.file_hashes(self.log), {})
 
 
 class TheRunChecksWhatCostsNothingFirstTest(ProjectCase):
@@ -795,20 +799,20 @@ class TheMutationTesterFoundTheseMissingTest(ProjectCase):
     def test_the_wall_clock_is_the_simulated_time_and_two_minutes(self):
         # 120 s for wokwi-cli to connect and send the image, beside the simulated 60 s.
         done = subprocess.CompletedProcess([], 0, READY_MATCHED, "")
-        with mock.patch.object(run_scenario.subprocess, "run", return_value=done) as ran:
+        with mock.patch.object(scenario_run.subprocess, "run", return_value=done) as ran:
             self.run_with()
         self.assertEqual(ran.call_args.kwargs["timeout"], 180)
 
     def test_the_bytes_of_a_killed_wokwi_cli_are_decoded_into_the_log(self):
         late = subprocess.TimeoutExpired(["wokwi-cli"], 180, output=b"ready \xff", stderr=b"Error: stuck")
-        with mock.patch.object(run_scenario.subprocess, "run", side_effect=late):
+        with mock.patch.object(scenario_run.subprocess, "run", side_effect=late):
             status, _, log = self.run_with()
         self.assertEqual(status, COULD_NOT_RUN)
         self.assertIn("ready \ufffd", log.read_text())
         self.assertIn("Error: stuck", log.read_text())
 
     def test_a_wokwi_cli_that_cannot_start_could_not_run_and_leaves_nothing(self):
-        status, said, log = run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(
+        status, said, log = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(
             ["/no/such/wokwi-cli"])
         self.assertEqual((status, log, said.code), (COULD_NOT_RUN, None, "simulator_cannot_start"))
         self.assertIn("could not start", said)
@@ -861,10 +865,10 @@ class TheRunLeavesAnOriginalScenarioAndALogTest(ProjectCase):
 
     def test_a_run_that_outlives_its_wall_clock_still_leaves_a_log(self):
         # The minutes were spent, so the log is written (RX1).
-        with mock.patch.object(run_scenario, "STARTUP_ALLOWANCE_S", 0):
+        with mock.patch.object(scenario_run, "STARTUP_ALLOWANCE_S", 0):
             told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_SEEN": str(self.seen)}
             with mock.patch.dict(os.environ, told):
-                status, said, log = run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
+                status, said, log = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
                                                               timeout_ms=1).run(FAKE_CLI)
         self.assertEqual((status, said.code), (COULD_NOT_RUN, "simulator_hung"))
         self.assertIn("did not finish", log.read_text())
@@ -957,11 +961,11 @@ class EachRefusalHasItsCodeTest(ProjectCase):
                            ((42, "ready\n", READY_MATCHED, ""), "step_timeout"),
                            ((1, "ready\n", READY_MATCHED, "Error: GPIO 4\n"), "step_failed")):
             with self.subTest(code=code):
-                self.assertEqual(run_scenario.verdict(*told, 60000)[1].code, code)
-        self.assertFalse(hasattr(run_scenario.verdict(0, "ready\n", READY_MATCHED, "", 60000)[1], "code"))
+                self.assertEqual(scenario_run.verdict(*told, 60000)[1].code, code)
+        self.assertFalse(hasattr(scenario_run.verdict(0, "ready\n", READY_MATCHED, "", 60000)[1], "code"))
 
     def test_a_refusal_is_the_text_a_person_reads(self):
-        said = run_scenario.verdict(1, "ready\n", READY_MATCHED, "Error: GPIO 4\n", 60000)[1]
+        said = scenario_run.verdict(1, "ready\n", READY_MATCHED, "Error: GPIO 4\n", 60000)[1]
         self.assertEqual((said, "%s" % said), ("failed (wokwi-cli exit 1): Error: GPIO 4",) * 2)
 
     def test_no_simulation_project_is_its_code(self):
@@ -997,13 +1001,13 @@ class EachRefusalHasItsCodeTest(ProjectCase):
         def missing(name, project):
             raise tools.ToolProblem("simulator (wokwi-cli) is not installed")
 
-        self.assertEqual(run_scenario.find_simulator(self.project, missing)[1].code, "tool_missing")
+        self.assertEqual(scenario_run.find_simulator(self.project, missing)[1].code, "tool_missing")
         with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": ""}):
-            simulator, refusal = run_scenario.find_simulator(self.project, lambda name, project: FAKE_SIMULATOR)
+            simulator, refusal = scenario_run.find_simulator(self.project, lambda name, project: FAKE_SIMULATOR)
         self.assertEqual((simulator, refusal.code), (None, "no_token"))
         self.assertTrue(refusal.startswith("WOKWI_CLI_TOKEN is not set: "), refusal)
         with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": "t"}):
-            self.assertEqual(run_scenario.find_simulator(self.project, lambda name, project: FAKE_SIMULATOR),
+            self.assertEqual(scenario_run.find_simulator(self.project, lambda name, project: FAKE_SIMULATOR),
                              (FAKE_SIMULATOR, None))
 
 
