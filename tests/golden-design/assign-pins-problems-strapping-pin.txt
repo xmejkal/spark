@@ -1,0 +1,3 @@
+cannot place every signal on this board:
+
+  X asks for D9 by name, and GPIO0 is strapping — a pin this never offers, because the chip reads it at reset; drop `pin` and spark picks another, or see P527 (#726) for a pin a connector fixes

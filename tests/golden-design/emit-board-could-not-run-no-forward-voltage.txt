@@ -1,0 +1,2 @@
+--- stderr ---
+cannot emit a board: led-red-5mm asks for 5 mA through a series resistor, but the record states no facts.forward_voltage_v — nothing to compute it from

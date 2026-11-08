@@ -1,0 +1,3 @@
+cannot place every signal on this board:
+
+  X is on bus 'can', which is not a bus this knows: i2c, spi, i2s

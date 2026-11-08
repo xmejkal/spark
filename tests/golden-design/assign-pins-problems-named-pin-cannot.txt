@@ -1,0 +1,3 @@
+cannot place every signal on this board:
+
+  X asks for D3 by name and needs wake, which GPIO38 cannot do

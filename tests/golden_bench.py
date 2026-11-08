@@ -159,10 +159,17 @@ def build_project(folder):
     return project
 
 
+#: The ends of a variable that holds a secret of the parent's (WOKWI_CLI_TOKEN, GH_TOKEN, an API key), which no child
+#: carries: a net that needs a token gives its child a fake one (P699).
+SECRET_ENDS = ("_TOKEN", "_API_KEY", "_SECRET")
+
+
 def child_env(store, flash_id_file, devs_file):
-    """The environment of a child: the parent's without SPARK_* (ACCEPT_VARIABLE too), then the fakes first on PYTHONPATH,
-    `store` as SPARK_HOME, and the canned flash id and device list."""
-    env = {name: value for name, value in os.environ.items() if not name.startswith("SPARK_")}
+    """The environment of a child: the parent's without SPARK_* (ACCEPT_VARIABLE too) and without a secret, then the fakes
+    first on PYTHONPATH, `store` as SPARK_HOME, and the canned flash id and device list. HOME stays the parent's: the
+    bench reads esptool's version from the person's own site-packages, under it."""
+    env = {name: value for name, value in os.environ.items()
+           if not name.startswith("SPARK_") and not name.upper().endswith(SECRET_ENDS)}
     env.update(PYTHONPATH=str(FAKE_MODULES), SPARK_HOME=str(store), TZ="UTC", PYTHONDONTWRITEBYTECODE="1",
                FAKE_ESPTOOL_FLASH_ID_FILE=str(CANNED / flash_id_file), FAKE_MPREMOTE_DEVS_FILE=str(CANNED / devs_file))
     return env

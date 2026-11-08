@@ -1,0 +1,3 @@
+cannot place every signal on this board:
+
+  SDA needs the I2C bus's SDA line and this board labels no SDA pin — add it to the board file's pins, or use another board

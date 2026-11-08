@@ -1,0 +1,3 @@
+--- stderr ---
+could-not-run: no board or rules to generate from: no board definition for 'no-such-board'.
+  available: firebeetle2-esp32s3, xiao-esp32-c6

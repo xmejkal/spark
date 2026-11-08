@@ -1,11 +1,11 @@
 [
 {"file": "tests/test_golden_checks.py", "name": "the scrub skipped", "find": "scrubbed = golden_bench.scrub(text, golden_bench.replacements_of(project, store))", "replace": "scrubbed = text"},
 {"file": "tests/golden_checks.py", "name": "a Case's exit code is wrong, so the check of the exit code must catch it", "find": "Case(\"check-all-ok.txt\", \"check_all.py\", [\"--project\", PROJECT], 0, NO_RULES)", "replace": "Case(\"check-all-ok.txt\", \"check_all.py\", [\"--project\", PROJECT], 1, NO_RULES)"},
-{"file": "tests/golden_checks.py", "name": "the proxies not set, so a child could open a URL", "find": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder))", "replace": "env.update(PATH=str(shim_folder))"},
-{"file": "tests/golden_checks.py", "name": "the child's PATH keeps another folder, where a real gh may be", "find": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder))", "replace": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder) + \":/usr/bin\")"},
+{"file": "tests/golden_checks.py", "name": "the proxies not set, so a child could open a URL", "find": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder), HOME=str(home))", "replace": "env.update(PATH=str(shim_folder), HOME=str(home))"},
+{"file": "tests/golden_checks.py", "name": "the child's PATH keeps another folder, where a real gh may be", "find": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder), HOME=str(home))", "replace": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder) + \":/usr/bin\", HOME=str(home))"},
 {"file": "tests/golden_checks.py", "name": "the parent's Wokwi token reaches the child", "find": "    for name in (\"WOKWI_CLI_TOKEN\", \"no_proxy\", \"NO_PROXY\"):", "replace": "    for name in (\"no_proxy\", \"NO_PROXY\"):"},
 {"file": "tests/golden_checks.py", "name": "the parent's no_proxy reaches the child, so every host bypasses the closed proxy", "find": "    for name in (\"WOKWI_CLI_TOKEN\", \"no_proxy\", \"NO_PROXY\"):", "replace": "    for name in (\"WOKWI_CLI_TOKEN\",):"},
 {"file": "tests/fake_gh.py", "name": "the fake gh ignores its exit code, so a failed fetch reads as a pass", "find": "    sys.exit(int(os.environ[\"FAKE_GH_EXIT\"]))", "replace": "    pass"},
 {"file": "tests/golden_checks.py", "name": "the floating rules keep the firmware's pull-up, so the problems Cases read ok", "find": "    rules[\"pulled_by_firmware\"] = []", "replace": "    pass"},
-{"file": "tests/golden_firmware.py", "name": "planted bytes written as text", "find": "        elif isinstance(text, bytes):", "replace": "        elif False:"}
+{"file": "tests/golden_firmware.py", "name": "planted bytes written as text", "find": "        if isinstance(text, bytes):", "replace": "        if False:"}
 ]

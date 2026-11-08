@@ -21,6 +21,7 @@ never staged: a chip's binary older than its source in a checkout would run `wok
 import json
 import shlex
 import shutil
+import subprocess
 import sys
 from collections import namedtuple
 from pathlib import Path
@@ -47,12 +48,15 @@ exec %s "$@"
 """
 #: What the fake tsci touches each time it builds, so a test can tell that it ran.
 BUILT_MARKER = "tsci-built"
-#: Placed in a Case's env: the folder that holds the fakes' folder, the canned circuits and the marker.
-FAKES = "{fakes}"
+#: A token in a Case's env, replaced by the folder that holds the fakes' folder, the canned circuits and the marker.
+FAKES_TOKEN = "{fakes}"
 #: The fixture keeps no copper: one pcb_trace per source_trace, which the fake tsci adds to what it builds.
 BUILD_TRACES = [{"type": "pcb_trace", "pcb_trace_id": "pcb_trace_%d" % n, "route": []} for n in range(9)]
 #: The built circuit with two errors added, which the fake tsci builds when FAKE_TSCI_CIRCUIT names it.
 ERRORED_CIRCUIT = "errored-circuit.json"
+BUILD_ERRORS = [{"type": "source_trace_not_connected_error", "message": "Could not find port",
+                 "selectors_not_found": [".BTN1 > .pin1"]},
+                {"type": "pcb_trace_error", "message": "a trace crosses another"}]
 #: What the fake tsci builds for the reference design (check_spine.REFERENCE): its three supplies, as
 #: emit_board.supply_inputs states them, each component grounded, and copper, so that no island stops the build.
 REFERENCE_CIRCUIT = "reference-circuit.json"
@@ -73,9 +77,7 @@ def fed_circuit(feeds):
                          {"type": "source_trace", "source_trace_id": "source_trace_%d_%s" % (n, port),
                           "connected_source_port_ids": [port_id], "connected_source_net_ids": [nets[on]]}]
     return elements + BUILD_TRACES
-BUILD_ERRORS = [{"type": "source_trace_not_connected_error", "message": "Could not find port",
-                 "selectors_not_found": [".BTN1 > .pin1"]},
-                {"type": "pcb_trace_error", "message": "a trace crosses another"}]
+
 
 #: The library's board record with no footprint to export, planted as the project's own.
 NO_FOOTPRINT_BOARD = json.loads((ROOT / golden_checks.BOARD_FILE).read_text())
@@ -84,9 +86,33 @@ NO_FOOTPRINT_BOARD["physical"] = {key: value for key, value in NO_FOOTPRINT_BOAR
 NO_FOOTPRINT = ((golden_checks.BOARD_FILE, json.dumps(NO_FOOTPRINT_BOARD, indent=2)),)
 
 
+def record_without(kind, record_id, *path):
+    """A library record (`kind` is boards or parts) with the field at `path` removed, planted as the project's own."""
+    record = json.loads((ROOT / kind / (record_id + ".json")).read_text())
+    held = record
+    for key in path[:-1]:
+        held = held[key]
+    del held[path[-1]]
+    return (("%s/%s.json" % (kind, record_id), json.dumps(record, indent=2)),)
+
+
+#: The board's header with one pad fewer than its second row's labels: a footprint that cannot be drawn, nothing missing.
+SHORT_HEADER_BOARD = json.loads((ROOT / golden_checks.BOARD_FILE).read_text())
+SHORT_HEADER_BOARD["physical"]["header"]["pins"] = [18, 13]
+SHORT_HEADER = ((golden_checks.BOARD_FILE, json.dumps(SHORT_HEADER_BOARD, indent=2)),)
+
+
 def requirements(**fields):
     """A requirements.json planted in the project: the firebeetle board and `fields`."""
     return ((REQUIREMENTS, json.dumps(dict({"board": BOARD_ID}, **fields), indent=2)),)
+
+
+def signals(*asked):
+    """A requirements.json planted in the project: no parts, and the signals `asked`."""
+    return requirements(parts=[], signals=list(asked))
+
+
+PIN_MAP = ["--emit-pins", "pins.py"]
 
 
 #: Value. golden_firmware's Case, and `fresh`: the Case runs in a bare copy of the fixture, before init_project.py;
@@ -98,30 +124,66 @@ CASES = [
     Case("assign-pins-problems-impossible.txt", "assign_pins.py", [REQUIREMENTS], 1,
          requirements(parts=[{"part": "led-red-5mm", "name": "Led%d" % n} for n in range(24)])),
     Case("assign-pins-could-not-run-no-requirements.txt", "assign_pins.py", ["missing.requirements.json"], 2),
+    # --- each Impossible a requirements file reaches (P699, for W6-D2's codes) ---
+    Case("assign-pins-problems-unknown-bus.txt", "assign_pins.py", [REQUIREMENTS], 1, signals({"name": "X", "bus": "can"})),
+    Case("assign-pins-problems-not-a-bus-line.txt", "assign_pins.py", [REQUIREMENTS], 1,
+         signals({"name": "FOO", "bus": "i2c"})),
+    Case("assign-pins-problems-unknown-need.txt", "assign_pins.py", [REQUIREMENTS], 1,
+         signals({"name": "X", "needs": ["teleport"]})),
+    Case("assign-pins-problems-bus-line-not-labelled.txt", "assign_pins.py", [REQUIREMENTS], 1,
+         signals({"name": "SDA", "bus": "i2c"}) + record_without("boards", BOARD_ID, "pins", "SDA")),
+    Case("assign-pins-problems-no-such-pin.txt", "assign_pins.py", [REQUIREMENTS], 1, signals({"name": "X", "pin": "D99"})),
+    Case("assign-pins-problems-strapping-pin.txt", "assign_pins.py", [REQUIREMENTS], 1, signals({"name": "X", "pin": "D9"})),
+    Case("assign-pins-problems-named-pin-cannot.txt", "assign_pins.py", [REQUIREMENTS], 1,
+         signals({"name": "X", "pin": "D3", "needs": ["wake"]})),
+    Case("assign-pins-problems-pin-taken.txt", "assign_pins.py", [REQUIREMENTS], 1,
+         signals({"name": "X", "pin": "A0"}, {"name": "Y", "pin": "A0"})),
+    Case("assign-pins-problems-not-a-python-name.txt", "assign_pins.py", [REQUIREMENTS] + PIN_MAP, 1,
+         signals({"name": "1X", "pin": "A0"})),
+    Case("assign-pins-problems-onboard-name.txt", "assign_pins.py", [REQUIREMENTS] + PIN_MAP, 1,
+         signals({"name": "ONBOARD_LED", "pin": "A0"})),
     Case("emit-board-ok.txt", "emit_board.py", [REQUIREMENTS], 0),
     Case("emit-board-could-not-run-no-footprint.txt", "emit_board.py", [REQUIREMENTS], 2, NO_FOOTPRINT),
     Case("emit-board-could-not-run-refused.txt", "emit_board.py", [REQUIREMENTS], 2,
          requirements(parts=[{"part": "tactile-button", "name": "Btn"}, {"part": "led-red-5mm", "name": "btn"}])),
+    # --- each refusal of emit_board.main after read_inputs (P699, for W6-D2's codes) ---
+    Case("emit-board-could-not-run-duplicate-name.txt", "emit_board.py", [REQUIREMENTS], 2,
+         requirements(parts=["jst-ph-2-power-inlet", "jst-ph-2-power-inlet"])),
+    Case("emit-board-could-not-run-no-part-footprint.txt", "emit_board.py", [REQUIREMENTS], 2,
+         record_without("parts", "led-red-5mm", "footprint")),
+    Case("emit-board-could-not-run-no-pin-order.txt", "emit_board.py", [REQUIREMENTS], 2,
+         record_without("parts", "led-red-5mm", "pin_order")),
+    Case("emit-board-could-not-run-no-outline.txt", "emit_board.py", [REQUIREMENTS], 2,
+         record_without("parts", "led-red-5mm", "body_mm")),
+    Case("emit-board-could-not-run-no-forward-voltage.txt", "emit_board.py", [REQUIREMENTS], 2,
+         record_without("parts", "led-red-5mm", "facts", "forward_voltage_v")),
     Case("emit-footprint-ok.json", "emit_footprint.py", ["--board", BOARD_ID, "--project", PROJECT, "-o", "fp.tsx",
                                                          "--json"], 0),
     Case("emit-footprint-could-not-run-no-footprint.txt", "emit_footprint.py", ["--board", BOARD_ID, "--project", PROJECT],
          2, NO_FOOTPRINT),
+    Case("emit-footprint-problems-header.txt", "emit_footprint.py", ["--board", BOARD_ID, "--project", PROJECT], 1,
+         SHORT_HEADER),
+    Case("emit-footprint-could-not-run-no-board.txt", "emit_footprint.py", ["--board", "no-such-board", "--project",
+                                                                           PROJECT], 2),
     Case("check-spine-ok.json", "check_spine.py", [REQUIREMENTS, "--json"], 0),
     Case("check-spine-ok-keep.txt", "check_spine.py", [REQUIREMENTS, "--keep", "."], 0,
          written=("firmware/pins.py", "sim/diagram.json", "sim/wokwi.toml")),
     Case("check-spine-problems-build.txt", "check_spine.py", [REQUIREMENTS], 1,
-         env={"FAKE_TSCI_CIRCUIT": FAKES + "/" + ERRORED_CIRCUIT}),
+         env={"FAKE_TSCI_CIRCUIT": FAKES_TOKEN + "/" + ERRORED_CIRCUIT}),
     Case("check-spine-could-not-run-no-tsci.txt", "check_spine.py", [REQUIREMENTS], 2,
          ((".spark/tools.json", json.dumps({"tscircuit": {"kind": "path", "exe": "tsci", "also": [], "needs": []}})),)),
     Case("check-spine-could-not-run-requirements.txt", "check_spine.py", [REQUIREMENTS], 2, ((REQUIREMENTS, "{not json"),)),
     Case("check-spine-ok-board-only.json", "check_spine.py", [REQUIREMENTS, "--json"], 0, requirements(board_only=True)),
     Case("check-spine-could-not-run-reference.json", "check_spine.py", ["--json"], 2,
-         env={"FAKE_TSCI_CIRCUIT": FAKES + "/" + REFERENCE_CIRCUIT}),
+         env={"FAKE_TSCI_CIRCUIT": FAKES_TOKEN + "/" + REFERENCE_CIRCUIT}),
     Case("init-project-ok.txt", "init_project.py", ["--project", PROJECT, "--board", BOARD_ID, "--circuit", CIRCUIT], 0,
          fresh=True),
     Case("init-project-nothing-to-do.txt", "init_project.py", ["--project", PROJECT], 1),
     Case("init-project-could-not-run-no-board.txt", "init_project.py", ["--project", PROJECT, "--board", "no-such-board"],
          2),
+    Case("init-project-could-not-run-no-directory.txt", "init_project.py", ["--project", "no-such-folder"], 2),
+    Case("init-project-could-not-run-tools-file.txt", "init_project.py", ["--project", PROJECT], 2,
+         ((".spark/tools.json", "{not json"),)),
 ]
 
 
@@ -149,6 +211,18 @@ def fakes_named(shims):
     return dict(named, **{"wokwi-cli": {"kind": "path", "exe": "wokwi-cli", "also": [], "fetch": None}})
 
 
+#: What a child runs to ask where wokwi-cli is, with no project, as sim_project.stage_chips asks.
+FIND_WOKWI_CLI = ("import sys; sys.path.insert(0, %r); from spark.firmware import sim_project; "
+                  "print(sim_project.find_wokwi_cli())" % str(ROOT / "scripts"))
+
+
+def wokwi_cli_found(env):
+    """None when a child with `env` finds no wokwi-cli, else what it found (or why it could not answer)."""
+    done = subprocess.run([sys.executable, "-c", FIND_WOKWI_CLI], env=env, stdin=subprocess.DEVNULL,
+                          capture_output=True, text=True, timeout=golden_bench.RUN_TIMEOUT_S)
+    return None if done.stdout == "None\n" else (done.stdout + done.stderr).strip()
+
+
 def build_project(folder, shims):
     """golden_checks' project, whose tools list names the fakes in `shims`. Returns the project's Path."""
     project = golden_checks.build_project(folder, shims)
@@ -167,7 +241,7 @@ def run_case(case, project, store, shims):
     """The text of `case` run in `project` (golden_firmware.run_script, with golden_checks' child env), then each of its
     `written` files after LOG_MARK, and its exit code."""
     fakes = str(Path(shims).parent)
-    case = case._replace(env={name: value.replace(FAKES, fakes) for name, value in case.env.items()})
+    case = case._replace(env={name: value.replace(FAKES_TOKEN, fakes) for name, value in case.env.items()})
     code, text = golden_firmware.run_script(case, project, store, golden_checks.child_env(store, shims))
     for name in case.written:
         text += LOG_MARK % name + (Path(project) / name).read_text()

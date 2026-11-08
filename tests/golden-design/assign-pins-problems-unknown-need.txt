@@ -1,0 +1,3 @@
+cannot place every signal on this board:
+
+  X asks for teleport, which is not something a pin can be asked for. Known: wake, adc, pwm

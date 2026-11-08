@@ -1,0 +1,3 @@
+cannot place every signal on this board:
+
+  X asks for pin 'D99', which this board does not bring out

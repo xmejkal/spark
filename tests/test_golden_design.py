@@ -37,7 +37,10 @@ def guard_holds(project, shims):
     if found != {role: [str(Path(shims) / exe)] for role, exe in ROLES.items()}:
         return "the tools found are not the fakes: %r" % found
     real = [name for name in REAL_TOOLS if shutil.which(name, path=path)]
-    return "a real tool is on a child's PATH: %s" % real if real else None
+    if real:
+        return "a real tool is on a child's PATH: %s" % real
+    found = golden_design.wokwi_cli_found(golden_checks.child_env(Path(shims).parent / "guard-store", shims))
+    return "a child finds a wokwi-cli: %s" % found if found else None
 
 
 class DesignGuardTest(unittest.TestCase):
@@ -62,6 +65,17 @@ class DesignGuardTest(unittest.TestCase):
         self.assertNotIn("WOKWI_CLI_TOKEN", env)
         self.assertEqual({name: env[name] for name in golden_checks.PROXIES},
                          dict.fromkeys(golden_checks.PROXIES, golden_checks.CLOSED_PROXY))
+
+    def test_a_child_finds_no_wokwi_cli(self):
+        # P699's refuter: with the parent's HOME, the defaults' `also` (~/.local/bin/wokwi-cli) found the PO's real one.
+        self.assertIsNone(golden_design.wokwi_cli_found(self.env()))
+
+    def test_a_child_carries_no_secret_of_the_parent(self):
+        secrets = {"GH_TOKEN": "gho_pretend", "ANTHROPIC_API_KEY": "sk-pretend", "WOKWI_CLI_TOKEN": "wok_pretend"}
+        with mock.patch.dict(os.environ, secrets):
+            env = self.env()
+        self.assertFalse(set(secrets) & set(env))
+        self.assertNotEqual(env["HOME"], os.environ["HOME"])
 
     def test_the_board_engine_and_the_converter_found_are_the_fakes(self):
         self.assertIsNone(guard_holds(self.project, self.shims))
