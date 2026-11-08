@@ -133,8 +133,8 @@ the diagnostics go to stderr, as text for a person. Decide on stdout only: read 
 - These inputs crash a script:
   - a circuit file that is not JSON (`check_footprints.py`, `check_physics.py`);
   - a board file that is not JSON or not there (`check_vendor_pins.py`);
-  - a fab package with no `bom.csv` or that is not a zip, or a `--circuit` that is missing or not JSON
-    (`check_bom.py`);
+  - a fab package that is not a zip, or a `--circuit` that is missing or not JSON (`check_bom.py`; a package with no
+    `bom.csv` exits 2, P693);
   - an `init_project.py --circuit` that is not JSON.
 - Two more crash too:
   - `check_vendor_pins.py` without `gh`, unless given `--offline` ([P119](https://github.com/xmejkal/spark/issues/53));

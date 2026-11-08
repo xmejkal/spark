@@ -33,7 +33,7 @@ Each CLI keeps its flags and positionals.
 | `checks/build_check.py` | `BuildCheck` and `check_footprints`'s logic |
 | `checks/vendor_pins_check.py` | `VendorPinsCheck`, `check_vendor_pins`'s logic, the Adapter `GhVendorHeaders` |
 | `checks/order_check.py` | `OrderCheck` and `check_bom`'s logic |
-| `checks/codes.py` | every code a check emits, with a one-line meaning |
+| `checks/check_codes.py` | the codes of the checks' refusals, with one sentence each (a leaf, P693). A finding keeps its `rule` |
 | `checks/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
 ### Its seams and adapters
@@ -131,6 +131,6 @@ sequenceDiagram
 ### How a new implementation is added
 
 - A new check is one `Check` subclass with `name`, `inputs`, `codes` and `run`, and one entry in `CHECKS`. Its codes
-  go in `checks/codes.py`. `check_all` runs it with no other change.
+  go in `checks/check_codes.py`. `check_all` runs it with no other change.
 - A SPICE rung (P136) is one such Check that calls a simulator Adapter. It waits for its card.
 
