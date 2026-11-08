@@ -53,7 +53,7 @@
  {"file": "scripts/check_spine.py", "name": "the build records the records as they are by the end",
   "find": "            parts.note_built(handed)",
   "replace": "            parts.note_built(loader.load(workdir / \"requirements.json\", project))"},
- {"file": "scripts/check_spine.py", "name": "a design nobody foresaw breaks the chain",
+ {"file": "scripts/spark/build/kept_files.py", "name": "a design nobody foresaw breaks the chain",
   "find": "    except Exception:  # noqa: BLE001 — whatever is wrong with the input, `run` names it; only the record of the build goes without",
   "replace": "    except loader.DesignError:  # noqa: BLE001"},
  {"file": "scripts/spark/design/needs.py", "name": "the generator's naming is copied wrongly",

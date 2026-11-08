@@ -3,7 +3,7 @@ The reasons a build stops or an init cannot finish, each a code with one sentenc
 init_project.py.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
-sentence (no magic strings, P260). Each stage of the build that does not end ok carries its `code` (check_spine.Stage),
+sentence (no magic strings, P260). Each stage of the build that does not end ok carries its `code` (stages.Stage),
 the design's own when a design error stopped it (design_codes); init_project returns a `Refusal` (`spark.core.result`).
 Only the breadboard sheet's `not written` entry writes its code into --json's `kept` today: the rest wait in the library
 for the Operation that comes later.

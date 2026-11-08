@@ -16,7 +16,7 @@
  {"file": "scripts/spark/breadboard/sheet.py", "name": "a pin that must not float is not said", "find": "        lines += [\"- %s %s: %s\" % (name, pin[\"pin\"], pin.get(\"note\", \"\")) for pin in part.get(\"unused_pins\") or []]", "replace": "        lines += []"},
  {"file": "scripts/breadboard.py", "name": "--out is ignored", "find": "    out = Path(args.out) if args.out else requirements.resolve().parent / SHEET", "replace": "    out = requirements.resolve().parent / SHEET"},
  {"file": "scripts/check_spine.py", "name": "--keep writes no breadboard sheet", "find": "        kept += keep_breadboard(Path(args.requirements), Path(args.keep), stages)", "replace": "        pass"},
- {"file": "scripts/check_spine.py", "name": "a build that did not finish still writes a sheet from an earlier dist", "find": "    why = why_not_built(stages, \"board only: nothing to wire\")\n", "replace": "    why = None\n"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "a build that did not finish still writes a sheet from an earlier dist", "find": "    why = why_not_built(stages, \"board only: nothing to wire\")\n", "replace": "    why = None\n"},
  {"file": "scripts/spark/breadboard/wiring_steps.py", "name": "board lines sort as text, D10 before D3", "find": "    said.sort(key=lambda one: (not one[0], _natural(one[1])))", "replace": "    said.sort(key=lambda one: (not one[0], one[1]))"},
  {"file": "scripts/spark/breadboard/wiring_steps.py", "name": "a supply from off the board is not named on its line", "find": "        line += \" · the %s supply, from off the board, not part of the parts list\" % supply\n", "replace": "        pass\n"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "a record's warnings repeat for each instance of the part", "find": "        if part[\"id\"] not in seen:", "replace": "        if True:"},
@@ -26,6 +26,6 @@
  {"file": "scripts/spark/breadboard/sheet.py", "name": "a signal the requirements add is not said", "find": "    lines += ([\"\", \"Not wired:\", \"\"] + unwired) if unwired else []", "replace": "    pass"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "equal resistors are not totalled", "find": "    rows += [\"| %d | %s resistor, through-hole | %s | %s |\" % (len(uses), value,", "replace": "    rows += [\"| %d | %s resistor, through-hole | %s | %s |\" % (1, value,"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "a supply from off the board is not said before power", "find": "              for net, users in supplies.items()]\n", "replace": "              for net, users in {}.items()]\n"},
- {"file": "scripts/check_spine.py", "name": "a sheet from an earlier build is left beside a build that did not finish", "find": "            sheet.unlink()", "replace": "            pass"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "a sheet from an earlier build is left beside a build that did not finish", "find": "            sheet.unlink()", "replace": "            pass"},
  {"file": "scripts/spark/breadboard/wiring_steps.py", "name": "a breadboard row is taken to hold six", "find": "ROW_HOLES = 5", "replace": "ROW_HOLES = 6"}
 ]

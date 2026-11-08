@@ -1,36 +1,36 @@
 [
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "must_not_float goes back to being written empty",
   "find": "        \"must_not_float\": declared_inputs(part_list),",
   "replace": "        \"must_not_float\": [],"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "every pin becomes a floating-input rule, not only the declared inputs",
   "find": "            if need.get(\"direction\") == \"in\" and need.get(\"pin\"):",
   "replace": "            if need.get(\"pin\"):"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "a module that carries its own pull-ups is seeded anyway, and cries wolf",
   "find": "            (host_pulls if need[\"pin\"] in pulled else carried).append(where)",
   "replace": "            host_pulls.append(where)"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "a pull-down counts as a pull-up when deciding who owns the bus",
   "find": "        pulled = {p[\"pin\"] for p in (part.get(\"host_parts\") or []) if p.get(\"kind\") == \"pullup\"}",
   "replace": "        pulled = {p[\"pin\"] for p in (part.get(\"host_parts\") or [])}"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "a requirements file that will not read is silently no rules at all",
   "find": "            notes.append(\"%s could not be read, so no rule was seeded from it: %s\"\n                         % (requirements.name, broken))",
   "replace": "            pass"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "a net actually called SDA stops being a bus",
   "find": "    buses += [net for net in nets if net.upper() in I2C_NAMES]",
   "replace": "    buses += []"

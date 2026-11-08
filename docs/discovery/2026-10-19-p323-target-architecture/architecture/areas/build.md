@@ -18,32 +18,32 @@ a new project with the files every check and reviewer needs.
 | Operation | CLI | Effects |
 |---|---|---|
 | `build` | `check_spine.py requirements.json`, `--keep DIR`, `--sim-dir`, `--firmware` (`check_spine.main`) | reads, runs `tsci` and the diagram converter, writes the kept build and, with `--keep`, the breadboard sheet |
-| `init` | `init_project.py --project --board --circuit --force` (`init_project.py:411-414`) | reads, writes the project's files |
+| `init` | `init_project.py --project --board --circuit --force` (`init_project.main`) | reads, writes the project's files |
 
 ### Its components
 
 | Module | Holds |
 |---|---|
-| `build/build_service.py` | `BuildService`, `BuildInputs` |
-| `build/stages.py` | `Stage` (one link's result, from `check_spine.py:121`), one `BuildStage` subclass per stage, under 600 lines, and `NO_FOOTPRINT_HINT` |
-| `build/board_engine.py` | the Adapters `TscircuitEngine` and `DiagramConverter`, today the tool functions of `check_spine.py` (W6-U3) |
-| `build/kept_files.py` | the files `--keep` writes into DIR and what an earlier build left there, from `check_spine.py:769` to `:1010` (W6-U3). `kept_` means what a run keeps between runs, as breadboard's `kept_moves.py` |
-| `build/project_setup.py` | `ProjectSetupService`, from `init_project.py` |
-| `build/build_codes.py` | the leaf of codes (P701): one per stage that stops the build and per refusal of init, today `scripts/build_codes.py`. A `Stage` carries a `code` (a design error's own when one stopped it), and `init_project`'s `why_project_refused`, `why_board_refused` and `find_circuit` return a `Refusal`. Only the sheet's `not written` entry in `kept` writes its code |
-| `build/ai_files.py` | `AiFiles`, moved as is (`ai_files.py:31`) |
-| `build/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
+| `build/build_service.py` | `run` as a function since W6-U3 (P705), with `board_alone`, `islands_in`, `verdict` and the stage sentences; later `BuildService`, `BuildInputs` |
+| `build/stages.py` | `Stage` (one link's result) and `NO_FOOTPRINT_HINT`, imported by name (P705); later one `BuildStage` subclass per stage, under 600 lines |
+| `build/board_engine.py` | the tool functions, `find_toolchain` to `convert` (P705); later the Adapters `TscircuitEngine` and `DiagramConverter` |
+| `build/kept_files.py` | the files `--keep` writes into DIR and what an earlier build left there (P705). `kept_` means what a run keeps between runs, as breadboard's `kept_moves.py` |
+| `build/project_setup.py` | `init_project.py`'s library (P705); later `ProjectSetupService` |
+| `build/build_codes.py` | the leaf of codes (P701): one per stage that stops the build and per refusal of init. A `Stage` carries a `code` (a design error's own when one stopped it), and `project_setup`'s `why_project_refused`, `why_board_refused` and `find_circuit` return a `Refusal`. Only the sheet's `not written` entry in `kept` writes its code |
+| `build/ai_files.py` | `AiFiles`, moved as is (P705) |
+| `build/__init__.py` | its index docstring, no import; later the area's `OPERATIONS`. One module per Operation, named after it |
 
 ### Its seams and adapters
 
 | Seam | Real adapter | Fake | Chosen by |
 |---|---|---|---|
 | `BuildStage` Strategy: `applies(inputs)`, `run(inputs) -> OperationResult`, `goes_on(result)` | six stages | a fake stage per area below | `BUILD_STAGES`, an ordered tuple, because order is the point |
-| board engine: `build(board_file) -> Circuit`, `version()` | `TscircuitEngine` over `tsci build` (the build stage of `check_spine.run`, `toolchain_can_build`, `tsci_version`) | a recording `run` with a canned `circuit.json` | the `board-engine` role (`data/tools.json:6`) |
-| diagram converter | `DiagramConverter` (`converter_command` and its run in `check_spine.run`) | the same | the `diagram-converter` role (`data/tools.json:7`) |
+| board engine: `build(board_file) -> Circuit`, `version()` | `TscircuitEngine` over `tsci build` (the build stage of `build_service.run`, `toolchain_can_build`, `tsci_version`) | a recording `run` with a canned `circuit.json` | the `board-engine` role (`data/tools.json:6`) |
+| diagram converter | `DiagramConverter` (`converter_command` and `convert` in `board_engine`) | the same | the `diagram-converter` role (`data/tools.json:7`) |
 
 Build imports breadboard, firmware, design, records and core, each reachable along the area map's arrows (rule U1).
 It calls each area's Service in process, so the board emitter no longer runs as a child process
-(the `emit_board.py` call in `check_spine.run`). The breadboard sheet stays a side output of `--keep`
+(`EMIT_BOARD_SCRIPT`, the call in `build_service.run`). The breadboard sheet stays a side output of `--keep`
 (`keep_breadboard`), not a stage.
 
 ## Level 3: how build is built
@@ -85,7 +85,7 @@ classDiagram
   CircuitStage --> TscircuitEngine
 ```
 
-Today one function, `check_spine.run` (204 lines, 6 parameters), runs every stage inline
+Today one function, `build_service.run` (186 lines, 6 parameters), runs every stage inline
 and returns `stages + [Stage(...)]` from 23 places. `Stage(name, status, detail)` holds each
 result. `BUILD_STAGES` keeps today's order and JSON names: `parts`, `board`, `schematic`, `schematic-notes`,
 `footprint`, `build`, `simulation`. `SchematicStage` runs the board emitter and adds `schematic-notes`. `FootprintStage` calls
@@ -123,7 +123,7 @@ sequenceDiagram
 
 - A fake stage per lower area: the test gives `BuildService` three stages and checks the stop rule and `skipped`.
 - Each real stage gets a `BuildInputs` from `tests/data/` and a recording `run` with a canned `circuit.json`.
-- The 6 patches of `check_spine.run` and the 7 of `find_toolchain` go when the engine Adapter takes `run`.
+- The 8 patches of `check_spine.run` and the 9 of `board_engine.find_toolchain` go when the engine Adapter takes `run`.
 - The golden of `check_spine.py --json` on the fixture project stays unchanged through the move. It is the net.
 - One real `tsci build` test is marked `@slow` (`tests/suite_runs.py`, P425), so the full run alone runs it, with `test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert` in `test_needs.py`.
 

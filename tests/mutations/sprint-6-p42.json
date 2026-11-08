@@ -12,7 +12,7 @@
   "replace": "STATUS_FOR = {code: OK for status, code in EXIT_FOR.items()}"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "the chain's verdict ignores a stage that could not run",
   "find": "        unchecked=[s for s in stages if s.status == COULD_NOT_RUN])]",
   "replace": "        unchecked=[])]"

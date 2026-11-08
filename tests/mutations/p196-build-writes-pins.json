@@ -6,43 +6,43 @@
   "replace": ""
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "P196: a pins.py spark did not write is overwritten",
   "find": "    if target.exists() and not ours:",
   "replace": "    if False:"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "P196: spark's pin map from an earlier design stays when the pins cannot be placed",
   "find": "        if ours:\n            target.unlink()",
   "replace": "        if False:\n            target.unlink()"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "P196 refuter: pins no pin can take crash the report again",
   "find": "PIN_MAP_REFUSALS = (pin_assigner.Impossible, loader.DesignError, store.StoreProblem, OSError, ValueError)",
   "replace": "PIN_MAP_REFUSALS = (loader.DesignError, store.StoreProblem, OSError, ValueError)"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "P196 refuter: a firmware path that cannot be written crashes the report again",
   "find": "        return keep_pins(requirements, destination)\n    except OSError as refused:",
   "replace": "        return keep_pins(requirements, destination)\n    except ZeroDivisionError as refused:"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "P196 refuter: a pins.py in another encoding crashes the report again",
   "find": "target.read_bytes().startswith(pin_assigner.PIN_MODULE_HEADER.encode())",
   "replace": "target.read_text().startswith(pin_assigner.PIN_MODULE_HEADER)"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "JB1/P116: --keep keeps no simulation project again",
   "find": "    return Path(args.keep) / \"sim\" if getattr(args, \"keep\", None) else None",
   "replace": "    return None"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "P196 refuter: a sim/ that cannot be written crashes the report again",
   "find": "    except OSError as refused:  # shutil.Error is one",
   "replace": "    except ZeroDivisionError as refused:"

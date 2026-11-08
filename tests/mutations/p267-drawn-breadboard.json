@@ -60,7 +60,7 @@
   "replace": "        return WriteResult(Path(out), [], planned.why)"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "stale file kept by _left_from_earlier",
   "find": "    if path.exists():\n        path.unlink()",
   "replace": "    if path.exists():\n        pass"

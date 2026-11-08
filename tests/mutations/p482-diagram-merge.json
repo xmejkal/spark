@@ -1,12 +1,12 @@
 [
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/board_engine.py",
   "name": "the build never copies the kept diagram in, so the converter overwrites it",
   "find": "    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)",
   "replace": "    bad_kept = \"\""
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/board_engine.py",
   "name": "a converter that exits non-zero beside a copied diagram passes the stage",
   "find": "    if made.returncode or not diagram_path.is_file():",
   "replace": "    if not diagram_path.is_file():"

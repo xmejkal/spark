@@ -60,19 +60,19 @@
   "replace": "a[\"pin\"]"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "the verdict leaves the selectors out",
   "find": "for element in errors})), first), build_codes.DESIGN_NOT_BUILT)]",
   "replace": "for element in errors})), \"\"), build_codes.DESIGN_NOT_BUILT)]"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "the verdict names every error",
   "find": "for error in errors[:2]]",
   "replace": "for error in errors]"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "an error with no selector says nothing",
   "find": " or error.get(\"message\", \"\") for error",
   "replace": " for error"
@@ -84,19 +84,19 @@
   "replace": ""
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "the verdict names only an error's first selector",
   "find": "\", \".join(map(str, one))",
   "replace": "str(one[0])"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "a field that is no list is spelt out letter by letter",
   "find": "if isinstance(one, list) else str(one)",
   "replace": "if True else str(one)"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "the verdict is not capped",
   "find": "for one in first), 300)",
   "replace": "for one in first), 30000)"
@@ -114,7 +114,7 @@
   "replace": "+ []"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "a selector that is no string breaks the verdict",
   "find": "\", \".join(map(str, one))",
   "replace": "\", \".join(one)"

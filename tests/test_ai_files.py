@@ -21,7 +21,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import ai_files  # noqa: E402
+from spark.build import ai_files  # noqa: E402
 
 #: The markers, spelled out: a person's file keeps them across spark versions, so the test does not read them from
 #: the code.

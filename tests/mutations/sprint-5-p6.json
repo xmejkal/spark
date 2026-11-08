@@ -36,13 +36,13 @@
   "replace": "    pass"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "a pull-up is an island again",
   "find": "    findings = [\"%s reaches no ground\" % names.get(owner, \"?\")\n                for owner in present - grounded if owner not in passives]",
   "replace": "    findings = [\"%s reaches no ground\" % names.get(owner, \"?\")\n                for owner in present - grounded]"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "a passive's dangling terminal is not reported",
   "find": "                 for port_id, port in board.ports.items()\n                 if port.get(\"source_component_id\") in present & passives\n                 and port_id not in board.nets_of_port]",
   "replace": "                 for port_id, port in []\n                 if port.get(\"source_component_id\") in present & passives\n                 and port_id not in board.nets_of_port]"

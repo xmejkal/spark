@@ -30,7 +30,7 @@
   "replace": "problems += [] and provenance.fact_problems(\"pin_roles[%r].%s\""
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "the missing_facts key is left off the pin map entry",
   "find": ", **{\"missing_facts\": missing} if missing else {})",
   "replace": ")"
@@ -72,7 +72,7 @@
   "replace": "\"source: %s%s\" % (\"\","
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "the stderr line does not say a fact is missing",
   "find": "\"\\n  missing fact: %s. %s\"",
   "replace": "\"\\n  %s. %s\""

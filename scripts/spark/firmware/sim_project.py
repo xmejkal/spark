@@ -224,7 +224,7 @@ def write_limits(sim_dir, design, board, wired=None):
     Put the note beside the diagram and hand back what it said, or [] when there is nothing. The design's records and the
     board's own GPIOs both count (P396). A board-only build passes no design, and its wired GPIOs as `wired` (P484,
     `onboard_parts.say_wired_gpios`). `board` has no default: no test reaches the full build's simulation stage
-    (`check_spine.simulation_detail`), so a call that drops it fails at once.
+    (`build_service.simulation_detail`), so a call that drops it fails at once.
     """
     limits = (limits_of(design) if design is not None else []) + boards.onboard_limits(board, wired)
     if limits:

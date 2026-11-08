@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
 import check_spine  # noqa: E402
+from spark.build import board_engine  # noqa: E402
 from spark.design import loader  # noqa: E402
 import drawer  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
@@ -1978,7 +1979,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         # F11 (the review's probe; P87's emitter half): a name is not refused — product names carry inch marks — so this
         # one is shelved and built, and the board keeps it in a comment it cannot end. `tsci build` printed REVIEW-INJECTED-42
         # (the name in one comment, as the review's record had it: no host requirements to repeat it in).
-        toolchain = check_spine.find_toolchain(Path(tempfile.mkdtemp()))
+        toolchain = board_engine.find_toolchain(Path(tempfile.mkdtemp()))
         if toolchain is None:
             self.skipTest("no tsci to build with: a project's own, or one on PATH")
         home, project = self.project([self.BOARD, ("light", [{"part": "x-led"}])])

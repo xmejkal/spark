@@ -27,6 +27,7 @@ import breadboard  # noqa: E402
 from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import bench_changes  # noqa: E402
 import check_spine  # noqa: E402
+from spark.build.stages import Stage  # noqa: E402
 from test_breadboard_keep import BUTTON_ONLY, FULL, LED_ONLY, build, change_requirements, new_project  # noqa: E402
 
 SECTION = "### Changes since the last build"
@@ -166,7 +167,7 @@ class CheckSpineTest(unittest.TestCase):
         (work / "dist" / "board").mkdir(parents=True)
         shutil.copy(variant / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
         args = argparse.Namespace(json=as_json, keep=project, requirements=str(project / "requirements.json"))
-        stages = stages or [check_spine.Stage("build", check_spine.OK, "fine")]
+        stages = stages or [Stage("build", check_spine.OK, "fine")]
         with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}), contextlib.redirect_stdout(
                 io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
             check_spine.report(stages, args, work)
@@ -202,7 +203,7 @@ class CheckSpineTest(unittest.TestCase):
     def test_a_build_that_did_not_finish_keeps_the_record(self):
         project = self.rebuilt()
         earlier = (project / bench_changes.WiringRecord.FILE_NAME).read_text()
-        self.keep(project, FULL, [check_spine.Stage("build", check_spine.PROBLEMS, "1 error")])
+        self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error")])
         self.assertFalse((project / "breadboard.md").exists())
         self.assertEqual((project / bench_changes.WiringRecord.FILE_NAME).read_text(), earlier)
 

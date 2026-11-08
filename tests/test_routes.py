@@ -142,11 +142,13 @@ class TheDocumentedExampleRunsTest(unittest.TestCase):
         import tempfile
         from unittest import mock
         import check_spine
+        from spark.build import board_engine
+        from spark.build import build_service
         requirements = self.example(BUILD_COMMAND)
         workdir = Path(tempfile.mkdtemp())
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
-            stages = check_spine.run(requirements, workdir)
+        with mock.patch.object(board_engine, "find_toolchain", return_value=None):
+            stages = build_service.run(requirements, workdir)
         names = [stage.name for stage in stages]
         self.assertNotIn("schematic-notes", names, [s.detail for s in stages])
         self.assertEqual(names, ["board", "schematic", "footprint", "build"], names)
@@ -159,14 +161,15 @@ class TheDocumentedExampleRunsTest(unittest.TestCase):
         import json
         import tempfile
         from unittest import mock
-        import check_spine
+        from spark.build import board_engine
+        from spark.build import build_service
         shown = re.search(r"\[ok  \] schematic\s+(\d+) trace\(s\) written", BUILD_COMMAND.read_text())
         self.assertIsNotNone(shown, "the document shows the schematic line")
         requirements = self.example(BUILD_COMMAND)
         workdir = Path(tempfile.mkdtemp())
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
-            stages = check_spine.run(requirements, workdir)
+        with mock.patch.object(board_engine, "find_toolchain", return_value=None):
+            stages = build_service.run(requirements, workdir)
         schematic = next(s for s in stages if s.name == "schematic")
         self.assertIn("%s trace(s) written" % shown.group(1), schematic.detail,
                       "the document says %s, the example prints %s" % (shown.group(1), schematic.detail))

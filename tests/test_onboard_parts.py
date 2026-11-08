@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import boards  # noqa: E402
 from spark.breadboard import sheet  # noqa: E402
 import check_spine  # noqa: E402
+from spark.build import build_service  # noqa: E402
 import onboard_parts  # noqa: E402
 import store  # noqa: E402
 from onboard_parts import OnboardPartReader  # noqa: E402
@@ -143,7 +144,7 @@ class ABoardOnlyBuildWiresThemTest(unittest.TestCase):
         workdir = workdir or Path(tempfile.mkdtemp())
         requirements = {"board": board_id, "parts": [], "board_only": True}
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        return workdir, check_spine.run(requirements, workdir, toolchain=Path("/nonexistent/tsci"))
+        return workdir, build_service.run(requirements, workdir, toolchain=Path("/nonexistent/tsci"))
 
     def test_walk_3_s_requirements_give_the_led_and_the_button_wired_to_the_board(self):
         if not shutil.which("node"):
