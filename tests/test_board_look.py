@@ -17,7 +17,7 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import deploy_record_store  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
 from fakes import FakeFirmwarePlatform, pin_time_zone  # noqa: E402
 from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import board_look  # noqa: E402

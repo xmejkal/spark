@@ -24,8 +24,8 @@ from dataclasses import dataclass
 
 from spark.bench import board_codes
 import boards
-import brief
-import deploy_record_store
+from spark.records import brief
+from spark.records import deploy_record_store
 from spark.bench import flasher
 from spark.core import outcomes
 from spark.firmware import project_image

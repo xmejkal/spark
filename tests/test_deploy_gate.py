@@ -26,7 +26,7 @@ from spark.bench import board_console  # noqa: E402
 from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_facts  # noqa: E402
 from spark.bench import board_look  # noqa: E402
-import deploy_record_store  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
 import deploy  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import board_grant  # noqa: E402

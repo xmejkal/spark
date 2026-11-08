@@ -18,7 +18,7 @@ import boards
 from spark.bench import board_look
 from spark.bench import board_start
 from spark.bench import deploy_gate
-import deploy_record_store
+from spark.records import deploy_record_store
 from spark.bench import download_mode
 from spark.bench import ready_probe
 from spark.firmware.project_image import DeployError, ProjectImage

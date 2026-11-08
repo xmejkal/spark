@@ -1,18 +1,18 @@
 [
  {
-  "file": "scripts/brief.py",
+  "file": "scripts/spark/records/brief.py",
   "name": "Brief keeps a string must",
   "find": "if isinstance(must, list) else ()",
   "replace": "if isinstance(must, (list, str)) else ()"
  },
  {
-  "file": "scripts/brief.py",
+  "file": "scripts/spark/records/brief.py",
   "name": "an unreadable project.json reads as an empty brief",
   "find": "        except ValueError:\n            return cls(problem=PROBLEM_BAD_JSON)",
   "replace": "        except (OSError, ValueError):\n            return cls(problem=PROBLEM_BAD_JSON)"
  },
  {
-  "file": "scripts/brief.py",
+  "file": "scripts/spark/records/brief.py",
   "name": "a fifo at project.json is read",
   "find": "if not path.is_file():",
   "replace": "if not path.exists():"
@@ -132,25 +132,25 @@
   "replace": "caveats += list(unnamed.caveats) + (['%d must lines were not named by any scenario (see the look)' % len(unnamed.lines)] if unnamed.lines else [])\n"
  },
  {
-  "file": "scripts/brief.py",
+  "file": "scripts/spark/records/brief.py",
   "name": "C: bad JSON in the brief reads as no brief",
   "find": "            return cls(problem=PROBLEM_BAD_JSON)",
   "replace": "            return cls()"
  },
  {
-  "file": "scripts/brief.py",
+  "file": "scripts/spark/records/brief.py",
   "name": "C: a brief that is not an object reads as no brief",
   "find": "            return cls(problem=PROBLEM_NOT_OBJECT)",
   "replace": "            return cls()"
  },
  {
-  "file": "scripts/brief.py",
+  "file": "scripts/spark/records/brief.py",
   "name": "C: a must that is not a list gives no problem",
   "find": "problem=PROBLEM_MUST_NOT_LIST if \"must\" in data and not isinstance(must, list) else None,",
   "replace": "problem=None,"
  },
  {
-  "file": "scripts/brief.py",
+  "file": "scripts/spark/records/brief.py",
   "name": "C: a missing brief has a problem",
   "find": "        if not path.is_file():\n            return cls()",
   "replace": "        if not path.is_file():\n            return cls(problem=PROBLEM_BAD_JSON)"

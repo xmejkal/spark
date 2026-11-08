@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tools"))  # `mutate`, which test_every_script_answers_in_the_one_vocabulary imports
 
-import deploy_record_store  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
 import boards  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.firmware import scenario_steps  # noqa: E402
