@@ -364,5 +364,37 @@ class TheBreadboardAreaTest(unittest.TestCase):
 # --- end MVP ---
 
 
+# --- MVP ---
+class TheChecksAreaTest(unittest.TestCase):
+    """W6-C3 (P695): the checks' modules live in `scripts/spark/checks/`, its `__init__.py` imports nothing, and each
+    module imports alone. `scripts/` keeps the six CLIs and `check_spine.py`, and each CLI defines `main` only."""
+    CHECKS = ROOT / "scripts" / "spark" / "checks"
+    #: The seven modules of the area, by the names of its page (`areas/checks.md`).
+    MODULES = ["build_check", "check", "check_codes", "order_check", "physics_check", "rules_check", "vendor_pins_check"]
+    CLIS = ["check_all.py", "check_bom.py", "check_footprints.py", "check_physics.py", "check_vendor_pins.py",
+            "compare_design.py"]
+
+    def test_scripts_holds_the_six_clis_and_no_checks_library_module(self):
+        self.assertEqual(sorted(path.stem for path in self.CHECKS.glob("*.py") if path.name != "__init__.py"), self.MODULES)
+        scripts = ROOT / "scripts"
+        self.assertEqual(sorted(path.name for path in [*scripts.glob("check_*.py"), *scripts.glob("compare_design.py")]),
+                         sorted(self.CLIS + ["check_spine.py"]))
+        self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in scripts.glob("*.py")}), [])
+        for cli in self.CLIS:
+            with self.subTest(cli=cli):
+                tree = ast.parse((scripts / cli).read_text())
+                self.assertEqual([node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))],
+                                 ["main"])
+
+    def test_the_area_s_init_imports_nothing(self):
+        # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)
+        tree = ast.parse((self.CHECKS / "__init__.py").read_text())
+        self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
+
+    def test_each_checks_module_imports_alone(self):
+        each_module_imports_alone(self, "checks")
+# --- end MVP ---
+
+
 if __name__ == "__main__":
     unittest.main()
