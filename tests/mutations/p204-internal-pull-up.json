@@ -30,7 +30,7 @@
   "replace": "                      unmeasured=[] and [\"%s: held up by the board"
  },
  {
-  "file": "scripts/breadboard_steps.py",
+  "file": "scripts/spark/breadboard/wiring_steps.py",
   "name": "a lone board pad is a wiring line",
   "find": "    if on_board and len(ends) == 1:",
   "replace": "    if False:"
@@ -42,7 +42,7 @@
   "replace": "netlist, [tuple(pair) for pair in rules[\"must_not_float\"]],"
  },
  {
-  "file": "scripts/breadboard.py",
+  "file": "scripts/spark/breadboard/sheet.py",
   "name": "the sheet does not say the firmware must pull the button up",
   "find": "% (name, pin) for pin in part.get(\"_firmware_pulls\", [])]",
   "replace": "% (name, pin) for pin in []]"

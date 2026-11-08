@@ -1,60 +1,60 @@
 [
  {
-  "file": "scripts/breadboard_drawing.py",
+  "file": "scripts/spark/breadboard/drawing.py",
   "name": "rotate counter-clockwise",
   "find": "x, y = cx + cy - y, cy - cx + x",
   "replace": "x, y = cx - cy + y, cy + cx - x"
  },
  {
-  "file": "scripts/breadboard_drawing.py",
+  "file": "scripts/spark/breadboard/drawing.py",
   "name": "rail blocks ignored in x",
   "find": " + (number - 1) // board[\"rail_block\"])",
   "replace": ")"
  },
  {
-  "file": "scripts/breadboard_drawing.py",
+  "file": "scripts/spark/breadboard/drawing.py",
   "name": "claim_free_group may reuse column after",
   "find": "hole.column > after and self.group_is_free",
   "replace": "hole.column >= after and self.group_is_free"
  },
  {
-  "file": "scripts/breadboard_drawing.py",
+  "file": "scripts/spark/breadboard/drawing.py",
   "name": "pins may share a group",
   "find": "or hole.group in {one.group for one in holes.values()}",
   "replace": "or False"
  },
  {
-  "file": "scripts/breadboard_drawing.py",
+  "file": "scripts/spark/breadboard/drawing.py",
   "name": "covered box not turned",
   "find": "(cy, cx) if degrees % 180",
   "replace": "(cx, cy) if degrees % 180"
  },
  {
-  "file": "scripts/breadboard_drawing.py",
+  "file": "scripts/spark/breadboard/drawing.py",
   "name": "no empty column between parts",
   "find": "+ self.SPACING_COLUMNS",
   "replace": "+ 1"
  },
  {
-  "file": "scripts/breadboard_drawing.py",
+  "file": "scripts/spark/breadboard/drawing.py",
   "name": "both-ends resistor allowed",
   "find": "if len(pinned) > 1:",
   "replace": "if len(pinned) > 5:"
  },
  {
-  "file": "scripts/breadboard_drawing.py",
+  "file": "scripts/spark/breadboard/drawing.py",
   "name": "resistor not kept right of after",
   "find": "after if not joined else 0",
   "replace": "0"
  },
  {
-  "file": "scripts/breadboard_catalog.py",
+  "file": "scripts/spark/breadboard/drawing_catalog.py",
   "name": "M is thousand",
   "find": "\"M\": 1000000}",
   "replace": "\"M\": 1000}"
  },
  {
-  "file": "scripts/breadboard.py",
+  "file": "scripts/spark/breadboard/sheet.py",
   "name": "stale drawing kept",
   "find": "        for path, _ in paths:\n            path.unlink(missing_ok=True)\n        return WriteResult(Path(out), [], planned.why)",
   "replace": "        return WriteResult(Path(out), [], planned.why)"
@@ -66,19 +66,19 @@
   "replace": "    if path.exists():\n        pass"
  },
  {
-  "file": "scripts/breadboard_steps.py",
+  "file": "scripts/spark/breadboard/wiring_steps.py",
   "name": "color palette off by one",
   "find": "self.PALETTE[(number - 1) % len(self.PALETTE)]",
   "replace": "self.PALETTE[number % len(self.PALETTE)]"
  },
  {
-  "file": "scripts/breadboard.py",
+  "file": "scripts/spark/breadboard/sheet.py",
   "name": "the sheet plans a second time",
   "find": "    planned = planned or _plan_once(read)",
   "replace": "    planned = _plan_once(read)"
  },
  {
-  "file": "scripts/breadboard_drawing.py",
+  "file": "scripts/spark/breadboard/drawing.py",
   "name": "below and above the gap swapped",
   "find": "rank = {letter: (index, 1) for index, letter in enumerate(reversed(top))}",
   "replace": "rank = {letter: (index, 0) for index, letter in enumerate(reversed(top))}"

@@ -42,19 +42,19 @@
   "replace": "frozenset()"
  },
  {
-  "file": "scripts/breadboard_steps.py",
+  "file": "scripts/spark/breadboard/wiring_steps.py",
   "name": "a printed label skips the alias",
   "find": "(pads.pad_of(hint) for hint in hints if hint in known)",
   "replace": "(hint for hint in hints if hint in known)"
  },
  {
-  "file": "scripts/breadboard_steps.py",
+  "file": "scripts/spark/breadboard/wiring_steps.py",
   "name": "the alias pads are not known labels",
   "find": "| pads.alias_pads()",
   "replace": "| set()"
  },
  {
-  "file": "scripts/breadboard.py",
+  "file": "scripts/spark/breadboard/sheet.py",
   "name": "an unwired signal is said by its pin",
   "find": "pads.pad_of(a[\"pin\"])",
   "replace": "a[\"pin\"]"
@@ -78,7 +78,7 @@
   "replace": " for error"
  },
  {
-  "file": "scripts/breadboard_steps.py",
+  "file": "scripts/spark/breadboard/wiring_steps.py",
   "name": "a printed label forgets an alias that is no pin (the XIAO's TX)",
   "find": " | set(pads.aliases)",
   "replace": ""

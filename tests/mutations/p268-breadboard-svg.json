@@ -1,7 +1,7 @@
 [
- {"file": "scripts/breadboard_drawing.py", "name": "jumper bends on a hole", "find": "        across = other.y - half if other.y > one.y else other.y + half", "replace": "        across = other.y"},
- {"file": "scripts/breadboard_drawing.py", "name": "a part is not turned", "find": "_round_px(part.top), part.rotate,", "replace": "_round_px(part.top), 0,"},
- {"file": "scripts/breadboard_drawing.py", "name": "a jumper in the wrong color", "find": "        color = self.colors.color(jumper.step)\n        one, other = jumper.one, jumper.other\n        half", "replace": "        color = self.colors.color(jumper.step + 1)\n        one, other = jumper.one, jumper.other\n        half"},
- {"file": "scripts/part_pictures.py", "name": "no fallback pictogram", "find": "self.folder / (\"%s.svg\" % FALLBACK)", "replace": "path"},
- {"file": "scripts/breadboard.py", "name": "the picture shown though not drawn", "find": "                                              planned.stopped)]\n", "replace": "                                              planned.stopped)] + [\"\", DRAWING_RENDERERS[-1].SHEET_MESSAGE]\n"}
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "jumper bends on a hole", "find": "        across = other.y - half if other.y > one.y else other.y + half", "replace": "        across = other.y"},
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "a part is not turned", "find": "_round_px(part.top), part.rotate,", "replace": "_round_px(part.top), 0,"},
+ {"file": "scripts/spark/breadboard/drawing.py", "name": "a jumper in the wrong color", "find": "        color = self.colors.color(jumper.step)\n        one, other = jumper.one, jumper.other\n        half", "replace": "        color = self.colors.color(jumper.step + 1)\n        one, other = jumper.one, jumper.other\n        half"},
+ {"file": "scripts/spark/breadboard/part_pictures.py", "name": "no fallback pictogram", "find": "self.folder / (\"%s.svg\" % FALLBACK)", "replace": "path"},
+ {"file": "scripts/spark/breadboard/sheet.py", "name": "the picture shown though not drawn", "find": "                                              planned.stopped)]\n", "replace": "                                              planned.stopped)] + [\"\", DRAWING_RENDERERS[-1].SHEET_MESSAGE]\n"}
 ]
