@@ -112,7 +112,7 @@ Each by its name in check_all's answer:
 
 ### The chain
 
-- `check_spine.py`: the one thing that has to work, a module list in and a board that builds out.
+- `check_spine.py`: the one thing that has to work, a module list in and a board that builds out. Its libraries are in `spark/build/`.
 - `assign_pins.py`: which pin each signal should go on, and why. Scarce pins are spent last. `--emit-pins` writes the
   map for the firmware.
 - `emit_board.py`: a pin map and a module list, as a board file you can build (here, `board.tsx`).
@@ -136,7 +136,7 @@ Each by its name in check_all's answer:
   value, a source and whether anyone checked; `--unverified` lists what nobody has. It also keeps the drawer and the
   needs, writes the picks and the requirements file from them, and marks a project's steps and tallies what they cost
   (`--step`, `--tally`; `cost.py` below does the counting).
-- `init_project.py`: everything a project needs before any check can run, with nothing guessed.
+- `init_project.py`: everything a project needs before any check can run, with nothing guessed. Its library is `spark/build/project_setup.py`.
 - `tools.py`: the tools spark depends on, found from one merged list. It is what `/spark:setup` runs.
 
 ### The libraries
