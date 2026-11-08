@@ -16,7 +16,7 @@ not stick either, for want of a forcing function. This is the forcing function.
 
 THE TABLE
 
-    [{"file": "scripts/copper.py",
+    [{"file": "scripts/spark/design/copper.py",
       "name": "drop the width margin",
       "find": "TRACE_WIDTH_MARGIN = 1.15",
       "replace": "TRACE_WIDTH_MARGIN = 1.0"}, ...]

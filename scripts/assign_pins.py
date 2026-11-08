@@ -33,7 +33,7 @@ def main(argv=None):
                         help="also write the map as a module the firmware imports (P36), with ONBOARD_LED, ONBOARD_BUTTON and ONBOARD_BATTERY_SENSE for a part on one pin, ONBOARD_<PART>_<LABEL> per label (ONBOARD_BUTTON_S1), ONBOARD_<PART>_<FACT> per fact (ONBOARD_DISPLAY_WIDTH) and the _ON levels, when the board record names them")
     args = parser.parse_args(argv)
 
-    # One loader for the whole chain (`design.py`): the project is the requirements FILE's, the
+    # One loader for the whole chain (`spark/design/loader.py`): the project is the requirements FILE's, the
     # parts are instances, and the signals are derived once and named per instance — the same
     # list `emit_board` traces. This used to read the JSON outside any try, resolve the project
     # from the current directory, and hand the raw `parts` entries to the library, so the first

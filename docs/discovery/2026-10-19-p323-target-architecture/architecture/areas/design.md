@@ -32,17 +32,17 @@ into records and sourcing would be a parameter with one value.
 
 | Module | Holds |
 |---|---|
-| `design/loader.py` | `load` and the `Design` Value, moved from `design.py` (the name avoids `design/design.py`) |
+| `design/loader.py` | `load` and the `Design` Value, moved from `design.py` in P702 (the name avoids `design/design.py`) |
 | `design/needs.py` | a goal's needs, matched against the store, the pick, moved from `scripts/needs.py` |
-| `design/restricted_pins.py` | `RestrictedPins`, moved as is |
-| `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` |
-| `design/netlist.py` | `Netlist`, moved as is |
+| `design/restricted_pins.py` | `RestrictedPins`, moved as is in P702 |
+| `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` in P702. The CLI `assign_pins.py` stays in `scripts/` and defines `main` only |
+| `design/netlist.py` | `Netlist`, moved as is in P702 |
 | `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `BoardInputs`, `RefusedInput`, `REFUSED_INPUT_MESSAGE` and the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE` |
 | `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, and `footprint_stop`, moved from `emit_footprint.py` and `boards.py` |
-| `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is |
+| `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is in P702 |
 | `design/design_codes.py` | the leaf of codes (P700): one per refusal of `load`, `assign_pins`, `emit_board` and `emit_footprint`, today `scripts/design_codes.py`. A `DesignError`, an `Impossible` and a `RefusedInput` carry a `code`, and `why_no_footprint`, `why_wrong_kind`, `why_header_disagrees`, `board_file` and `board_to_draw` return a `Refusal`. No CLI writes a code yet |
 | not here: `part_shape.py` | it goes to `breadboard/part_shape.py` (P698, the U1 edge) |
-| `design/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
+| `design/__init__.py` | the index docstring alone since P702: it imports nothing. The area's `OPERATIONS` come with the N19 card, one module per Operation, named after it |
 
 ### Its seams
 
