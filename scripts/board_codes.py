@@ -12,6 +12,8 @@ site names its code in `reason`, and `CODES` says in one sentence what each code
     deploy's own           a DeployError's `reason`, and what deploy.py reports when the flash or the board's start fails
 
 The codes every Operation can write (`bad_argument`, `crash`) are the core's, in `spark.core.codes` (P442).
+NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE, LOG_UNREADABLE and TOOL_MISSING are also firmware_codes', as equal literals in two
+leaves (P684), until W6-F3 moves their readers there.
 """
 
 # --- MVP ---

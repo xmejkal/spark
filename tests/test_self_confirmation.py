@@ -85,6 +85,7 @@ MAY_READ = {
     "board_grant.CODE_FOR_WHY": STRUCTURE + ": the map the test checks the raise sites against",
     "board_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and against the codes the bench scripts raise and write",
     "codes.CODES": AGREEMENT + ": its keys against the module's own constants (the core's codes, P442)",
+    "firmware_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the five it shares with board_codes (P684)",
     "part_pictures.PICTOGRAMS": STRUCTURE,
     "breadboard_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
     "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",

@@ -218,6 +218,46 @@ Docs: `docs/guide/agents/json.md` (the three ops and their codes), `agents.md`, 
 Review: it holds logic. The lenses on the everyday model, the refuter on the strongest, one mutation run. Size est.:
 80 product lines, 80 test lines, the 8 goldens unchanged.
 
+The build's check of this section (P684, 2026-11-08, rows 8 to 17 of `docs/observations/rows/p684-firmware-codes.md`)
+changed three things before any code:
+
+- One code per refusal site, not per cause. A site whose one `except` catches several causes gets one code that names
+  what they share: `ScenarioRun.problem()`'s `try` and `flash_image`'s `ToolProblem`. No `try` is split and no reason
+  is added to `ToolProblem`. A split is a card when an agent needs to tell the causes apart. The one exception is
+  `flash_image`'s bad `--config`, which today shares the damaged interpreter's `except`: it gets its own `except` and
+  its own code, because the shared code would be wrong. The PR reports the real count.
+- In `import_firmware.py --json`, only a `modules` entry that was not imported gains a `code` key. `problems` and
+  `unchecked` stay plain strings, and "nothing to import" and "no `firmware/` folder" keep their codes in the library
+  only. So `import-firmware-problems.json` is accepted again with the new key, and the other 7 goldens stay unchanged.
+  The test asserts a `code` on each such entry. `import_firmware.py` prints no envelope.
+- `firmware_codes` is a leaf, and `board_codes` stays one (U1). `board_codes` keeps its four names, and
+  `TOOL_MISSING`, as equal literals, not imports. A test asserts that the five are equal in both modules, and the
+  table test that keeps code tables apart lists these five as the one allowed overlap, until W6-F3.
+  `firmware_codes` joins `measure.LEAVES` (`tools/measure.py:247`) and `planted_tree.LEAF_NAMES`
+  (`tests/planted_tree.py:11`) in the same commit.
+
+The refuter's plan check of this delta (rows 18 to 23) added four things:
+
+- `flash_image.py`'s `except ValueError` (`:303`) catches six "use the build for the board's chip" errors and two
+  "damaged" ones, so its code is `interpreter_unusable`, not `interpreter_damaged`. `ScenarioRun.problem()`'s last
+  return (`why_outside_sim`, `run_scenario.py:466`) is the same cause as `project_image.py:55`, so it takes
+  `FIRMWARE_LINE_BAD`. A `LittleFSError` that escapes `:303` as a traceback is a bug for a card, not this PR, because
+  its fix changes the output.
+- How a code travels: a refusal that raises gives its exception a `code` attribute. A refusal that returns a sentence
+  returns a `Refusal`, a `str` subclass in `firmware_codes` with a `code` attribute. So no return shape changes, and
+  the callers in `test_run_scenario.py`, `golden_bench.py:155` and `test_journey_basic.py:262` stay as they are.
+- The mutation row "the alias in `board_codes` broken" becomes "a literal in `board_codes` differs from its
+  `firmware_codes` twin". `sprint-10-p82-5.json:4` anchors on `flash_image.py`'s `except ToolProblem` print: the
+  print stays byte-equal, and the row is proven again with `--anchors`. `json.md:191` names the new key.
+- Size est.: 100 product lines, 100 test lines, one golden accepted again.
+
+The second plan check (row 24) added one rule. A `%` format or a `.strip()` turns a `Refusal` back into a plain
+`str`, so a site builds its `Refusal` from the final text. Four refusals never pass through a library function: the
+missing simulator and the unset token in `run_scenario.main` (`:575`, `:578`), and `no_interpreter` and
+`files_not_folder` in `flash_image.main` (`:291`-`:297`). Their codes are named in `main` only in this PR, and they
+reach the library with the Operation in W6-F3 or later. The `Refusal` docstring starts with its role word ("Value:"),
+as `Interpreter`'s does (R6).
+
 ### W6-F3, the firmware move (after #915)
 
 Goal: `ls scripts/*.py` prints no firmware library module. `scripts/spark/firmware/` holds the area under the

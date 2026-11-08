@@ -116,7 +116,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "run_scenario's refusal line is printed without the guard",
-  "find": "print(guard_lines(\"run_scenario.py: %s\" % problem), file=sys.stderr)",
-  "replace": "print(\"run_scenario.py: %s\" % problem, file=sys.stderr)"
+  "find": "print(guard_lines(\"run_scenario.py: %s\" % refusal), file=sys.stderr)",
+  "replace": "print(\"run_scenario.py: %s\" % refusal, file=sys.stderr)"
  }
 ]

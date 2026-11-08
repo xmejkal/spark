@@ -26,7 +26,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a steps: line with nothing under it is accepted",
-  "find": "if first is None or not lines[first].lstrip().startswith(\"- \"):",
+  "find": "if first is None or not lines[first].lstrip().startswith(STEP_ITEM):",
   "replace": "if first is None:"
  },
  {
@@ -56,7 +56,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a lost simulator reads as a firmware fault",
-  "find": "if \"API Error\" in why:",
+  "find": "if API_ERROR in why:",
   "replace": "if False:"
  },
  {
@@ -80,7 +80,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "the reason is wokwi-cli's last line even when an Error line says more",
-  "find": "why = next((line for line in errors if \"Error\" in line), errors[-1] if errors else \"no reason given\")",
+  "find": "why = next((line for line in errors if ERROR_WORD in line), errors[-1] if errors else \"no reason given\")",
   "replace": "why = errors[-1] if errors else \"no reason given\""
  },
  {

@@ -810,7 +810,7 @@ class TheMutationTesterFoundTheseMissingTest(ProjectCase):
     def test_a_wokwi_cli_that_cannot_start_could_not_run_and_leaves_nothing(self):
         status, said, log = run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(
             ["/no/such/wokwi-cli"])
-        self.assertEqual((status, log), (COULD_NOT_RUN, None))
+        self.assertEqual((status, log, said.code), (COULD_NOT_RUN, None, "simulator_cannot_start"))
         self.assertIn("could not start", said)
         self.assertEqual(list(self.scenario.parent.glob(".as-run.*")), [])
 
@@ -866,7 +866,7 @@ class TheRunLeavesAnOriginalScenarioAndALogTest(ProjectCase):
             with mock.patch.dict(os.environ, told):
                 status, said, log = run_scenario.ScenarioRun(self.project, self.scenario, micropython=self.micropython,
                                                               timeout_ms=1).run(FAKE_CLI)
-        self.assertEqual(status, COULD_NOT_RUN)
+        self.assertEqual((status, said.code), (COULD_NOT_RUN, "simulator_hung"))
         self.assertIn("did not finish", log.read_text())
 
 
@@ -944,6 +944,67 @@ class TheCommandTest(ProjectCase):
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("/spark:build --keep .", said)
         self.assertNotIn("WOKWI_CLI_TOKEN", said)
+
+
+class EachRefusalHasItsCodeTest(ProjectCase):
+    """P684 (W6-F2): each refusal carries its code beside the text a person reads, so an agent decides on the code (P260)."""
+
+    def test_each_verdict_but_a_pass_has_its_code(self):
+        for told, code in (((1, "ready\n", "ready\n" + READY_MATCHED, "API Error: connection closed\n"), "simulator_lost"),
+                           ((42, "", "", "Timeout\n"), "board_silent"),
+                           ((1, "", "", "Error: no firmware\n"), "board_not_started"),
+                           ((1, "boot\n", "", "Error: x\n"), "never_ready"),
+                           ((42, "ready\n", READY_MATCHED, ""), "step_timeout"),
+                           ((1, "ready\n", READY_MATCHED, "Error: GPIO 4\n"), "step_failed")):
+            with self.subTest(code=code):
+                self.assertEqual(run_scenario.verdict(*told, 60000)[1].code, code)
+        self.assertFalse(hasattr(run_scenario.verdict(0, "ready\n", READY_MATCHED, "", 60000)[1], "code"))
+
+    def test_a_refusal_is_the_text_a_person_reads(self):
+        said = run_scenario.verdict(1, "ready\n", READY_MATCHED, "Error: GPIO 4\n", 60000)[1]
+        self.assertEqual((said, "%s" % said), ("failed (wokwi-cli exit 1): Error: GPIO 4",) * 2)
+
+    def test_no_simulation_project_is_its_code(self):
+        (self.project / "sim" / "diagram.json").unlink()
+        self.assertEqual(self.run_with()[1].code, "no_sim_project")
+
+    def test_no_main_py_is_its_code(self):
+        (self.project / "firmware" / "main.py").unlink()
+        self.assertEqual(self.run_with()[1].code, "no_main_py")
+
+    def test_a_scenario_with_no_steps_is_an_input_the_run_cannot_use(self):
+        self.scenario.write_text("name: none\nversion: 1\n")
+        status, said, _ = self.run_with()
+        self.assertEqual((status, said.code), (COULD_NOT_RUN, "run_input_unusable"))
+
+    @needs_littlefs
+    def test_an_image_named_outside_sim_is_a_bad_firmware_line(self):
+        (self.project / "sim" / "wokwi.toml").write_text(sim_project.wokwi_toml([], "../build/app.bin"))
+        self.assertEqual(self.run_with()[1].code, "firmware_line_bad")
+
+    def test_littlefs_turned_off_is_a_missing_tool_as_in_flash_image(self):
+        (self.project / ".spark").mkdir(exist_ok=True)
+        (self.project / ".spark" / "tools.json").write_text(json.dumps({"littlefs-python": {"on": False}}))
+        self.assertEqual(self.run_with()[1].code, "tool_missing")
+
+    @needs_littlefs
+    def test_a_damaged_build_is_an_unusable_interpreter_as_in_flash_image(self):
+        self.micropython.write_bytes(b"\x00" * 64)
+        status, said, _ = self.run_with()
+        self.assertEqual((status, said.code), (COULD_NOT_RUN, "interpreter_unusable"))
+
+    def test_a_missing_simulator_and_an_unset_token_are_their_codes(self):
+        def missing(name, project):
+            raise tools.ToolProblem("simulator (wokwi-cli) is not installed")
+
+        self.assertEqual(run_scenario.find_simulator(self.project, missing)[1].code, "tool_missing")
+        with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": ""}):
+            simulator, refusal = run_scenario.find_simulator(self.project, lambda name, project: FAKE_SIMULATOR)
+        self.assertEqual((simulator, refusal.code), (None, "no_token"))
+        self.assertTrue(refusal.startswith("WOKWI_CLI_TOKEN is not set: "), refusal)
+        with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": "t"}):
+            self.assertEqual(run_scenario.find_simulator(self.project, lambda name, project: FAKE_SIMULATOR),
+                             (FAKE_SIMULATOR, None))
 
 
 if __name__ == "__main__":

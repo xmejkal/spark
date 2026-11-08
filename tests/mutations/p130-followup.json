@@ -2,14 +2,14 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "main asks for the token before the free checks (a missing build is hidden by the token message)",
-  "find": "        problem = run.problem()\n",
-  "replace": "        problem = None\n"
+  "find": "    refusal = run.problem()  # what costs nothing first",
+  "replace": "    refusal = None  # what costs nothing first"
  },
  {
   "file": "scripts/run_scenario.py",
   "name": "the token's name is hard-coded, so the tool entry's account_env is ignored",
-  "find": "token = simulator.entry.get(\"account_env\", \"WOKWI_CLI_TOKEN\") if simulator else None",
-  "replace": "token = \"WOKWI_CLI_TOKEN\" if simulator else None"
+  "find": "token = simulator.entry.get(\"account_env\", \"WOKWI_CLI_TOKEN\")\n",
+  "replace": "token = \"WOKWI_CLI_TOKEN\"\n"
  },
  {
   "file": "scripts/run_scenario.py",
@@ -38,7 +38,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "a run that outlives its wall clock leaves no log",
-  "find": "return COULD_NOT_RUN, sentence, self.write_log(sentence, \"\\n\".join(map(_text, (late.stdout, late.stderr))))",
+  "find": "return COULD_NOT_RUN, sentence, self.write_log(sentence, \"\\n\".join(map(printed_text, (late.stdout, late.stderr))))",
   "replace": "return COULD_NOT_RUN, sentence, None"
  },
  {
@@ -68,7 +68,7 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "the scenario copy is written in sim/, so a step's own relative path resolves from the wrong folder",
-  "find": "as_run = self.scenario.parent / (\".as-run.\" + self.scenario.name)",
+  "find": "as_run = self.scenario.absolute().parent / (\".as-run.\" + self.scenario.name)",
   "replace": "as_run = self.sim / (\".as-run.\" + self.scenario.name)"
  }
 ]

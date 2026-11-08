@@ -1,6 +1,6 @@
 [
  {"file": "scripts/flash_image.py", "name": "the list's MicroPython build is not used", "find": "    return Interpreter(Path(found.command[0]), offset_of(found.entry))", "replace": "    return Interpreter(Path(\"micropython.bin\"), 0)"},
- {"file": "scripts/flash_image.py", "name": "a missing littlefs is a traceback again", "find": "        tools.find(\"littlefs\", args.project or project_here())  # P457: a project's tools file that turns it off is named\n", "replace": ""},
- {"file": "scripts/flash_image.py", "name": "a missing build is a traceback again", "find": "    except tools.ToolProblem as missing:\n        print(\"flash_image.py: %s\" % missing, file=sys.stderr)", "replace": "    except KeyError as missing:\n        print(\"flash_image.py: %s\" % missing, file=sys.stderr)"},
+ {"file": "scripts/flash_image.py", "name": "a missing littlefs is a traceback again", "find": "        tools.find(\"littlefs\", project)  # P457: a project's tools file that turns it off is named\n", "replace": ""},
+ {"file": "scripts/flash_image.py", "name": "a missing build is a traceback again", "find": "    except tools.ToolProblem as missing:\n        return None, Refusal(str(missing), firmware_codes.TOOL_MISSING)", "replace": "    except KeyError as missing:\n        return None, Refusal(str(missing), firmware_codes.TOOL_MISSING)"},
  {"file": "scripts/tools.py", "name": "a missing download says only 'see its entry'", "find": ", (\"download\", None), (\"apt\"", "replace": ", (\"apt\""}
 ]
