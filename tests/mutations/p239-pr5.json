@@ -20,7 +20,7 @@
  {
   "file": "scripts/project_image.py",
   "name": "an unreadable log is skipped",
-  "find": "raise DeployError(\"cannot read %s: %s\" % (log, cannot), reason=board_codes.LOG_UNREADABLE)",
+  "find": "raise DeployError(\"cannot read %s: %s\" % (log, cannot), reason=firmware_codes.LOG_UNREADABLE)",
   "replace": "continue"
  },
  {
