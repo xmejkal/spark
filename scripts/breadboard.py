@@ -74,9 +74,6 @@ SHEET = "breadboard.md"
 #: What the drawn breadboard is, as the build and this script say it beside its path.
 #: The component every generated design calls its dev board (emit_board, the converter's BOARD mapping).
 BOARD_COMPONENT = "Mcu"
-#: The holes of one breadboard row on one side of the gap: a point with more ends goes on a rail. The board covers the
-#: rows beside its own pins, so a board pin's point is a jumper to a free row, which takes one of its holes.
-ROW_HOLES = 5
 #: What each kind of passive a part asks for does, said the way a person reads it.
 PURPOSE = {"pullup": "pull-up on", "pulldown": "pull-down on", "series": "in series with", "divider": "divider on"}
 LEGEND = ("*have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · "
@@ -101,59 +98,10 @@ CHANGE_LIST = breadboard_changes.ChangeList()
 EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
                         if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
 
-#: One connection point: the (component, port) pairs it joins, and the names of the nets on it.
-Point = collections.namedtuple("Point", "members nets")
 
 
 class NotBuilt(Exception):
     """There is no built circuit to read, or it is not this design's."""
-
-
-def points(circuit):
-    """
-    Every connection point of the built circuit. Traces join ports and nets; a point is what they join, followed through
-    both (netlist.py keeps a pin-to-pin trace's net apart from a named one on purpose; a breadboard row does not). A port
-    alone on a named net is a point too: a supply that comes from off the board.
-    """
-    parent = {}
-
-    def find(node):
-        parent.setdefault(node, node)
-        while parent[node] != node:
-            parent[node] = parent[parent[node]]
-            node = parent[node]
-        return node
-
-    for element in circuit:
-        if element.get("type") == "source_trace":
-            joined = (["port:" + p for p in element.get("connected_source_port_ids") or []]
-                      + ["net:" + n for n in element.get("connected_source_net_ids") or []])
-            for other in joined[1:]:
-                parent[find(other)] = find(joined[0])
-    components = {e["source_component_id"]: e for e in circuit if e.get("type") == "source_component"}
-    members, nets = collections.defaultdict(list), collections.defaultdict(list)
-    for port in (e for e in circuit if e.get("type") == "source_port"):
-        if "port:" + port["source_port_id"] in parent:
-            members[find("port:" + port["source_port_id"])].append((components[port["source_component_id"]], port))
-    for net in (e for e in circuit if e.get("type") == "source_net"):
-        if "net:" + net["source_net_id"] in parent and net.get("name"):
-            nets[find("net:" + net["source_net_id"])].append(net["name"])
-    return [Point(found, sorted(nets[root])) for root, found in members.items() if len(found) > 1 or nets[root]]
-
-
-def printed_label(board, port):
-    """
-    What the board's silkscreen prints beside one of its pads: a label its header rows list, a pad or power pad of its
-    file, or the printed spelling of an alias (MISO is printed MI); never a bare pin number. Every ground pad is GND.
-    """
-    physical = board.get("physical") or {}
-    rows = [label for row in (physical.get("header_order") or {}).values() if isinstance(row, list) for label in row]
-    pads = board_pads.BoardPads.from_record(board)  # --- MVP --- (P512)
-    known = set(rows) | set(board.get("pins") or {}) | set(board.get("power_pads") or {}) | pads.alias_pads() | set(pads.aliases)
-    hints = port.get("port_hints") or []
-    label = next((pads.pad_of(hint) for hint in hints if hint in known), None) or next(
-        (hint for hint in hints if not re.fullmatch(r"pin\d+|\d+", hint)), port.get("name"))
-    return "GND" if re.fullmatch(r"GND\d*", label) else label
 
 
 def _passives(design_parts):
@@ -225,11 +173,6 @@ def _have(requirements_path, record_ids):
     return said
 
 
-def _natural(text):
-    """D3 before D10: digits compared as numbers."""
-    return [int(piece) if piece.isdigit() else piece for piece in re.split(r"(\d+)", text)]
-
-
 def _parts_table(board, design_parts, resistors, supplies, have):
     """The parts to buy or take from the drawer, as Markdown rows: equal parts and equal resistors totalled."""
     status = (lambda record_id: have.get(record_id, HAVE_TO_GET)) if have is not None else (lambda record_id: "")
@@ -253,58 +196,11 @@ def _parts_table(board, design_parts, resistors, supplies, have):
 def _supplies(circuit):
     """{net name: the parts on it} for each point that carries a named net and no board pin: a supply from off the board."""
     found = {}
-    for point in points(circuit):
+    for point in breadboard_steps.points(circuit):
         if point.nets and not any(component["name"] == BOARD_COMPONENT for component, _ in point.members):
             for net in point.nets:
                 found.setdefault(net, set()).update(component["name"] for component, _ in point.members)
     return found
-
-
-def _wiring(board, circuit, design_parts, resistors):
-    """The wiring: one numbered line per connection point, board labels first, and the same points as steps."""
-    records = {emit_board.component_name(part): part for part in design_parts}
-
-    def end(component, port):
-        """One end of a connection, as a person finds it on the bench. Every end of a part or a resistor reads
-        differently (a resistor by its tag), so the board's ground pads are the only ends that read the same, and they
-        are one."""
-        if component["name"] == BOARD_COMPONENT:
-            pad = printed_label(board, port)
-            label = "board %s" % pad
-            return breadboard_steps.End(breadboard_steps.BOARD, breadboard_steps.THE_BOARD, label, label, pad)
-        if component["name"] in resistors:
-            tag, value, purpose = resistors[component["name"]]
-            number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
-            return breadboard_steps.End(breadboard_steps.RESISTOR, tag, "%s end %s" % (tag, number),
-                                        "%s (%s %s), end %s" % (tag, value, purpose, number), number,
-                                        purpose, value)
-        leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
-        short = "%s %s" % (component["name"], port.get("name"))
-        return breadboard_steps.End(breadboard_steps.PART, component["name"], short,
-                                    short + (" (%s)" % leg if leg else ""), port.get("name"))
-
-    said = []
-    for point in points(circuit):
-        ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
-        ends.sort(key=lambda one: (one.kind != breadboard_steps.BOARD, _natural(one.words)))
-        line = " · ".join(one.words for one in ends)
-        on_board = ends[0].kind == breadboard_steps.BOARD
-        if on_board and len(ends) == 1:
-            continue  # a board pad nothing else joins is no wire: 3V3, once the firmware pulls the button up (P204)
-        supply = " / ".join(point.nets) if point.nets and not on_board else None
-        if supply:
-            line += " · the %s supply, from off the board, not part of the parts list" % supply
-        # a board pin's end is its jumper's end, in a hole of the free row; a supply's wire takes a hole too
-        rail = len(ends) + bool(supply) > ROW_HOLES
-        if rail:
-            line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
-                     % ends[0].words if on_board else " — put these ends on one rail")
-        said.append((on_board, line, breadboard_steps.StepPoint(ends, supply, rail)))
-    said.sort(key=lambda one: (not one[0], _natural(one[1])))
-    placed = {one.component for _, _, step_point in said for one in step_point.ends}
-    steps = breadboard_steps.BreadboardSteps(
-        [breadboard_steps.THE_BOARD] + [name for name in records if name in placed], [step_point for _, _, step_point in said])
-    return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
 
 
 def _unwired(board, design):
@@ -360,7 +256,7 @@ def _read_build(requirements_path, circuit_path=None):
         (c["name"], ("R%d" % number, c.get("display_resistance") or "", passives.get(c["name"], "")))
         for number, c in enumerate((c for c in circuit if c.get("type") == "source_component"
                                     and c.get("ftype") == "simple_resistor"), 1))
-    point_lines, steps = _wiring(built.board, circuit, built.parts, resistors)
+    point_lines, steps = breadboard_steps.wiring(built.board, circuit, built.parts, resistors, BOARD_COMPONENT)
     return Read(built, circuit, resistors, point_lines, steps)
 
 

@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
+import breadboard_steps  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
 
@@ -213,7 +214,7 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
         for hints, label in ((["pin11", "MI", "11"], "MI"), (["pin18", "RST", "18"], "RST"), (["pin14", "GND1", "14"], "GND"),
                              (["pin4", "D3", "4"], "D3")):
             with self.subTest(hints=hints):
-                self.assertEqual(breadboard.printed_label(board, {"name": hints[0], "port_hints": hints}), label)
+                self.assertEqual(breadboard_steps.printed_label(board, {"name": hints[0], "port_hints": hints}), label)
 
     def test_a_signal_the_requirements_add_is_said_with_its_pin_though_nothing_is_wired(self):
         # The refuter: irrigation's STATUS_LED got pin MO and the sheet never said it.
@@ -232,9 +233,9 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
         for hints, label in ((["SDA"], "D4"), (["pin22", "SDA", "22"], "D4"), (["D4"], "D4"), (["TX"], "D6"),
                              (["pin16", "TX"], "D6"), (["RX"], "D7")):
             with self.subTest(hints=hints):
-                self.assertEqual(breadboard.printed_label(xiao, {"name": hints[0], "port_hints": hints}), label)
+                self.assertEqual(breadboard_steps.printed_label(xiao, {"name": hints[0], "port_hints": hints}), label)
         bare = {"pins": {"MOSI": 15}, "physical": {"pad_aliases": {"MOSI": "MO"}}}  # no header rows: the alias says MO
-        self.assertEqual(breadboard.printed_label(bare, {"name": "IO15", "port_hints": ["IO15", "MO"]}), "MO")
+        self.assertEqual(breadboard_steps.printed_label(bare, {"name": "IO15", "port_hints": ["IO15", "MO"]}), "MO")
 
     def test_a_signal_the_requirements_put_on_an_aliased_pin_is_said_with_its_pad(self):
         folder = Path(tempfile.mkdtemp())
@@ -256,9 +257,9 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
             circuit += [{"type": "source_component", "source_component_id": "c%d" % n, "name": "Part%d" % n},
                         {"type": "source_port", "source_port_id": "p%d" % n, "source_component_id": "c%d" % n, "name": "A"}]
         joined = {"type": "source_trace", "connected_source_port_ids": ["d3", "p1", "p2", "p3", "p4"]}
-        self.assertNotIn("rail", breadboard._wiring(board, circuit + [joined], [], {})[0][0])
+        self.assertNotIn("rail", breadboard_steps.wiring(board, circuit + [joined], [], {}, breadboard.BOARD_COMPONENT)[0][0])
         joined["connected_source_port_ids"].append("p5")
-        self.assertIn("join board D3 to a rail", breadboard._wiring(board, circuit + [joined], [], {})[0][0])
+        self.assertIn("join board D3 to a rail", breadboard_steps.wiring(board, circuit + [joined], [], {}, breadboard.BOARD_COMPONENT)[0][0])
 
     def test_a_supply_s_wire_takes_a_hole_so_five_ends_and_a_supply_need_a_rail(self):
         circuit = [{"type": "source_net", "source_net_id": "n1", "name": "VBUS"}]
@@ -268,16 +269,16 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
         joined = {"type": "source_trace", "connected_source_port_ids": ["p1", "p2", "p3", "p4"],
                   "connected_source_net_ids": ["n1"]}
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        self.assertNotIn("rail", breadboard._wiring(board, circuit + [joined], [], {})[0][0])
+        self.assertNotIn("rail", breadboard_steps.wiring(board, circuit + [joined], [], {}, breadboard.BOARD_COMPONENT)[0][0])
         joined["connected_source_port_ids"].append("p5")
-        self.assertIn("put these ends on one rail", breadboard._wiring(board, circuit + [joined], [], {})[0][0])
+        self.assertIn("put these ends on one rail", breadboard_steps.wiring(board, circuit + [joined], [], {}, breadboard.BOARD_COMPONENT)[0][0])
 
     def test_a_port_alone_on_a_supply_is_a_point_that_names_the_supply(self):
         circuit = [{"type": "source_component", "source_component_id": "c1", "name": "L9110sModule"},
                    {"type": "source_port", "source_port_id": "p1", "source_component_id": "c1", "name": "VCC"},
                    {"type": "source_net", "source_net_id": "n1", "name": "MOTOR6V"},
                    {"type": "source_trace", "connected_source_port_ids": ["p1"], "connected_source_net_ids": ["n1"]}]
-        found = breadboard.points(circuit)
+        found = breadboard_steps.points(circuit)
         self.assertEqual([(len(point.members), point.nets) for point in found], [(1, ["MOTOR6V"])])
 
 

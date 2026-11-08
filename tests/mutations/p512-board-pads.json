@@ -42,13 +42,13 @@
   "replace": "frozenset()"
  },
  {
-  "file": "scripts/breadboard.py",
+  "file": "scripts/breadboard_steps.py",
   "name": "a printed label skips the alias",
   "find": "(pads.pad_of(hint) for hint in hints if hint in known)",
   "replace": "(hint for hint in hints if hint in known)"
  },
  {
-  "file": "scripts/breadboard.py",
+  "file": "scripts/breadboard_steps.py",
   "name": "the alias pads are not known labels",
   "find": "| pads.alias_pads()",
   "replace": "| set()"
@@ -78,7 +78,7 @@
   "replace": " for error"
  },
  {
-  "file": "scripts/breadboard.py",
+  "file": "scripts/breadboard_steps.py",
   "name": "a printed label forgets an alias that is no pin (the XIAO's TX)",
   "find": " | set(pads.aliases)",
   "replace": ""

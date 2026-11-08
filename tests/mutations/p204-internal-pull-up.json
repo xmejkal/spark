@@ -30,7 +30,7 @@
   "replace": "                      unmeasured=[] and [\"%s: held up by the board"
  },
  {
-  "file": "scripts/breadboard.py",
+  "file": "scripts/breadboard_steps.py",
   "name": "a lone board pad is a wiring line",
   "find": "        if on_board and len(ends) == 1:",
   "replace": "        if False:"
