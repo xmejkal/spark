@@ -3,7 +3,7 @@ The reasons a record, a tool or the store refuses, each a code with one sentence
 tools.py's ToolProblem and store.py's StoreProblem, wherever they are raised.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
-sentence (no magic strings, P260). The three errors are `text_guards.CodedMessageError`s, so a raise cannot leave its
+sentence (no magic strings, P260). The three errors are `errors.CodedMessageError`s, so a raise cannot leave its
 code out, and every text and exit code stays byte-equal. No records CLI writes a code yet: the codes wait in the library
 for the Operation that comes later.
 

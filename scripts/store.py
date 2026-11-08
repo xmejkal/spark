@@ -27,7 +27,8 @@ from pathlib import Path
 
 import records_codes
 from spark.core import outcomes
-from spark.core.text_guards import CONTROL, CodedMessageError
+from spark.core.errors import CodedMessageError
+from spark.core.text_guards import CONTROL
 
 try:
     import fcntl

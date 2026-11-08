@@ -1396,7 +1396,7 @@ there by W6-D3c), and `ToolProblem` is raised outside `tools.py` at 4 sites in `
 classes at 34 lines in 17 files, and 24 mutation tables name one. The breadboard leaf's shared code is
 `test_self_confirmation.py:89`, not `:49`. The way taken: the `code` keyword is required, so every one of these raises
 names a code (the firmware's from `firmware_codes`, the bench's from `board_codes`). One base class,
-`text_guards.CodedMessageError`, holds it, so no class body grows in `boards.py` or `tools.py`. The `import
+`errors.CodedMessageError` (`spark/core/errors.py`, beside `SparkError`, which inherits it), holds it, so no class body grows in `boards.py` or `tools.py`. The `import
 records_codes` line of `boards.py`, `tools.py`, `parts.py` and `needs.py` is paid by one pruned line in each.
 
 ### W6-S2, the sourcing codes (after W6-R2)

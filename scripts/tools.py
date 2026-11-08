@@ -41,7 +41,8 @@ import records_codes  # noqa: E402
 import store  # noqa: E402
 import versions  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
-from spark.core.text_guards import CodedMessageError, flat_line  # noqa: E402
+from spark.core.errors import CodedMessageError  # noqa: E402
+from spark.core.text_guards import flat_line  # noqa: E402
 
 #: What spark says of a tool whose `--version` said nothing; check_spine writes it, and both modules read it.
 UNKNOWN_VERSION = "unknown version"
@@ -63,7 +64,7 @@ Tool = namedtuple("Tool", "name role entry command")
 
 
 class ToolProblem(CodedMessageError):
-    """Error: a tool spark cannot use — missing, refused, turned off, or a list it cannot read. The message is the whole sentence; its values are flattened (P444), and its `code` is records_codes'."""
+    """Error: a tool spark cannot use — missing, refused, turned off, or a list it cannot read. The message is the whole sentence; its values are flattened (P444), and its `code` is a code of the area that raises it (records_codes, firmware_codes)."""
 
 
 def _read(path):
@@ -508,8 +509,7 @@ def use(role, tool_name, project=None, personal=None):
 
 
 #: What each kind of entry must say for spark to find or run it.
-KIND_NEEDS = {"path": ("exe",), "npm": ("exe",), "python": ("module",), "download": ("file", "url", "sha256"),
-              "bundled": ("file",), "mcp": ()}
+KIND_NEEDS = {"path": ("exe",), "npm": ("exe",), "python": ("module",), "download": ("file", "url", "sha256"), "bundled": ("file",), "mcp": ()}
 
 
 def entry_problem(entry):
