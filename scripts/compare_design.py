@@ -138,19 +138,7 @@ def check_i2c_pullups(netlist, buses):
                     sorted(n.get("name", "?") for n in netlist.nets.values()))))
             continue
 
-        pulled_up = []
-        for component_name, _ in sum((netlist.members[net_id] for net_id in net_ids), []):
-            component = netlist.component(component_name)
-            if not component or component.get("ftype") != "simple_resistor":
-                continue
-            # A resistor is a pull-up only if its other end is on a power rail. One sitting
-            # between two signals is a series resistor and does not hold anything high.
-            other_ends = set()
-            for port_name in ("pin1", "pin2"):
-                other_ends |= netlist.nets_of(component_name, port_name)
-            if other_ends & netlist.power_nets():
-                pulled_up.append((component_name, component.get("resistance")))
-
+        pulled_up = pull_ups_on(netlist, net_ids)
         if not pulled_up:
             on_the_net = sorted({name for net_id in net_ids
                                  for name, _ in netlist.members[net_id]})
@@ -160,20 +148,37 @@ def check_i2c_pullups(netlist, buses):
                 "on this net: %s. Add a resistor from %s to a supply."
                 % (", ".join(on_the_net) or "nothing", line)))
             continue
-
-        for name, ohms in pulled_up:
-            if ohms is None:
-                continue
-            if not PULLUP_MIN_OHM <= ohms <= PULLUP_MAX_OHM:
-                failures.append(Failure(
-                    "i2c-pullups", line,
-                    "%s is %g ohm, outside the %g-%g band a pull-up usually wants"
-                    % (name, ohms, PULLUP_MIN_OHM, PULLUP_MAX_OHM),
-                    "too weak and the bus never rises; too strong and a device cannot pull it "
-                    "down. Worth checking against the bus capacitance rather than taking this "
-                    "band as the answer."))
-
+        failures += out_of_band(line, pulled_up)
     return failures
+
+
+def pull_ups_on(netlist, net_ids):
+    """Value: (name, resistance) of each resistor on the nets `net_ids` whose other end is on a power net."""
+    pulled_up = []
+    for component_name, _ in sum((netlist.members[net_id] for net_id in net_ids), []):
+        component = netlist.component(component_name)
+        if not component or component.get("ftype") != "simple_resistor":
+            continue
+        # A resistor is a pull-up only if its other end is on a power rail. One sitting
+        # between two signals is a series resistor and does not hold anything high.
+        other_ends = set()
+        for port_name in ("pin1", "pin2"):
+            other_ends |= netlist.nets_of(component_name, port_name)
+        if other_ends & netlist.power_nets():
+            pulled_up.append((component_name, component.get("resistance")))
+    return pulled_up
+
+
+def out_of_band(line, pulled_up):
+    """Value: a Failure for each pull-up of `line` with a stated value outside the band a pull-up usually wants."""
+    return [Failure(
+        "i2c-pullups", line,
+        "%s is %g ohm, outside the %g-%g band a pull-up usually wants"
+        % (name, ohms, PULLUP_MIN_OHM, PULLUP_MAX_OHM),
+        "too weak and the bus never rises; too strong and a device cannot pull it "
+        "down. Worth checking against the bus capacitance rather than taking this "
+        "band as the answer.")
+        for name, ohms in pulled_up if ohms is not None and not PULLUP_MIN_OHM <= ohms <= PULLUP_MAX_OHM]
 
 
 def check_floating_inputs(netlist, watch, rails=()):
