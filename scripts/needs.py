@@ -782,42 +782,6 @@ def _how_to_fill(path):
     return "fill it in its own home with --fact-set"
 
 
-def _part_picks(picks, known):
-    """(the records to shelve, the (need id, key) placed, the picks at a placeholder outline, the problems) of the part picks
-    among `picks`, for `requirements`."""
-    shelve, wanted, placeholder, problems = [], [], [], []
-    for need_id, (kind, key) in picks:
-        if kind != "part":
-            continue
-        _, _, where, path = known.get(("part", key), (None, None, None, None))
-        record = parts._parse(path) if path else None
-        owed = parts.owes(record) if isinstance(record, dict) else []
-        wrong = (["no record called %s any more" % key] if path is None else
-                 ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
-                 ["owes %s — %s" % (", ".join(owed), _how_to_fill(path))] if set(owed) - set(LAYOUT_FACTS)
-                 else parts.broken_problems(record, path))
-        problems += [parts._problem(key, sentence) for sentence in wrong]
-        shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []
-        placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []
-        wanted.append((need_id, key))
-    return shelve, wanted, placeholder, problems
-
-
-def _held_file(project):
-    """(the project's requirements file as a dict, its `parts` list), {} and [] when there is none; a StoreProblem when
-    either is no JSON of its kind, for `requirements`."""
-    file = Path(project) / REQUIREMENTS
-    try:
-        held = json.loads(file.read_text(encoding="utf-8")) if file.is_file() else {}
-    except ValueError as broken:
-        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand", file, broken)
-    held = held if isinstance(held, dict) else {}
-    existing = held.get("parts") or []
-    if not isinstance(existing, list):
-        raise store.StoreProblem("%s: `parts` is not a list — fix it by hand", file)
-    return held, existing
-
-
 def requirements(project):
     """
     The picks read into the project's requirements file (§5.3, §8 L): a `Requirements` of (the file as it would be, the records
@@ -833,9 +797,30 @@ def requirements(project):
     picks = [(need["id"], next(iter(_as_record(pick, known, entries).items()))) for need in needs for pick in need.get("pick") or []]
     board_picks = sorted({key for _, (kind, key) in picks if kind == "board"})
     problems = _board_problems(board_picks, _unfiled_boards(needs, known, entries), project)
-    shelve, wanted, placeholder, wrong = _part_picks(picks, known)
-    problems += wrong
-    held, existing = _held_file(project)
+    shelve, wanted, placeholder = [], [], []
+    for need_id, (kind, key) in picks:
+        if kind != "part":
+            continue
+        _, _, where, path = known.get(("part", key), (None, None, None, None))
+        record = parts._parse(path) if path else None
+        owed = parts.owes(record) if isinstance(record, dict) else []
+        wrong = (["no record called %s any more" % key] if path is None else
+                 ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
+                 ["owes %s — %s" % (", ".join(owed), _how_to_fill(path))] if set(owed) - set(LAYOUT_FACTS)
+                 else parts.broken_problems(record, path))
+        problems += [parts._problem(key, sentence) for sentence in wrong]
+        shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []
+        placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []
+        wanted.append((need_id, key))
+    file = Path(project) / REQUIREMENTS
+    try:
+        held = json.loads(file.read_text(encoding="utf-8")) if file.is_file() else {}
+    except ValueError as broken:
+        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand", file, broken)
+    held = held if isinstance(held, dict) else {}
+    existing = held.get("parts") or []
+    if not isinstance(existing, list):
+        raise store.StoreProblem("%s: `parts` is not a list — fix it by hand", file)
     after, kept, naming = _merge_parts(existing, wanted)
     content = dict(held, board=board_picks[0] if board_picks else None, parts=after)
     unserved = _unserved(needs, known, entries)
