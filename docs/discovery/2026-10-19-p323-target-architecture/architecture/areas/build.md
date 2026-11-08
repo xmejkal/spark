@@ -25,8 +25,9 @@ a new project with the files every check and reviewer needs.
 | Module | Holds |
 |---|---|
 | `build/build_service.py` | `BuildService`, `BuildInputs` |
-| `build/stages.py` | one `BuildStage` subclass per stage, under 600 lines, and `NO_FOOTPRINT_HINT` |
-| `build/board_engine.py` | the Adapters `TscircuitEngine` and `DiagramConverter` |
+| `build/stages.py` | `Stage` (one link's result, from `check_spine.py:121`), one `BuildStage` subclass per stage, under 600 lines, and `NO_FOOTPRINT_HINT` |
+| `build/board_engine.py` | the Adapters `TscircuitEngine` and `DiagramConverter`, today the tool functions of `check_spine.py` (W6-U3) |
+| `build/kept_files.py` | the files `--keep` writes into DIR and what an earlier build left there, from `check_spine.py:769` to `:1010` (W6-U3). `kept_` means what a run keeps between runs, as breadboard's `kept_moves.py` |
 | `build/project_setup.py` | `ProjectSetupService`, from `init_project.py` |
 | `build/ai_files.py` | `AiFiles`, moved as is (`ai_files.py:31`) |
 | `build/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
