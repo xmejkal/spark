@@ -1106,42 +1106,32 @@ def read_inputs(path, project, board_id=None):
 PART_GAPS = (
     (duplicate_component_names, design_codes.NAME_USED_TWICE,
      "two or more components would be called: %s\n"
-     "  A name written twice: `tsci build` keeps ONE of them, so every pin assigned to the "
-     "others is wired to the survivor — five identical buttons became one component with "
-     "five GPIOs shorted to a single port, and nothing said so. Two spellings (OpenLid / "
-     "Openlid): spark's own naming puts an instance in capitals before its signals, so they "
-     "are one signal, placed twice and traced to one pad from two GPIOs.\n"
-     "  Name each instance in the requirements file: "
-     "{\"part\": \"tactile-button\", \"name\": \"BtnForward\"}."),
+     "  A name written twice: `tsci build` keeps ONE of them, so every pin assigned to the others is wired to the "
+     "survivor — five identical buttons became one component with five GPIOs shorted to a single port, and nothing "
+     "said so. Two spellings (OpenLid / Openlid): spark's own naming puts an instance in capitals before its "
+     "signals, so they are one signal, placed twice and traced to one pad from two GPIOs.\n  Name each instance in "
+     "the requirements file: {\"part\": \"tactile-button\", \"name\": \"BtnForward\"}."),
     (parts_without_a_footprint, design_codes.NO_PART_FOOTPRINT,
      "no footprint recorded for: %s\n"
-     "  Until 2026-09-25 these were emitted as `pinrow4`. A twelve-pad module on four "
-     "pads is not a rough draft: the pads past the fourth have no position, so every "
-     "trace to them is unroutable and the board comes out with no copper at all.\n"
-     "  Record it in the part file — a footprinter string, a converted .kicad_mod, or "
-     "jlcpcb:C<lcsc>."),
+     "  Until 2026-09-25 these were emitted as `pinrow4`. A twelve-pad module on four pads is not a rough draft: the "
+     "pads past the fourth have no position, so every trace to them is unroutable and the board comes out with no "
+     "copper at all.\n  Record it in the part file — a footprinter string, a converted .kicad_mod, or jlcpcb:C<lcsc>."),
     (parts_without_a_pinout, design_codes.NO_PIN_ORDER,
      "no pin_order recorded for: %s\n"
-     "  Pads would be numbered from the order the pins appear in the part file, which "
-     "is not a fact about the module. Every trace would land on whichever pad that "
-     "order happened to choose.\n"
-     "  Record pad 1..N by name, with a source — the silkscreen or the vendor drawing."),
+     "  Pads would be numbered from the order the pins appear in the part file, which is not a fact about the "
+     "module. Every trace would land on whichever pad that order happened to choose.\n  Record pad 1..N by name, "
+     "with a source — the silkscreen or the vendor drawing."),
     (parts_without_an_outline, design_codes.NO_OUTLINE,
      "no outline recorded for: %s\n"
-     "  Every placement below would be arranged around an invented size, and the board "
-     "would then be declared not to overlap on the strength of it.\n"
-     "  Measure them and put width/height in the part file with a source, or pass "
+     "  Every placement below would be arranged around an invented size, and the board would then be declared not to "
+     "overlap on the strength of it.\n  Measure them and put width/height in the part file with a source, or pass "
      "--assume-missing-sizes to proceed with the guess declared in the output."),
 )
 
 
 def board_file(inputs, assume_missing_sizes=False):
-    """
-    Value: (the board file's text, None), or (None, the Refusal that stops it): the first gap of PART_GAPS (a missing
-    outline only without `assume_missing_sizes`), else a resistor `series_ohms` cannot size. The rules come with the
-    design, from the project it was resolved to: looked up by the raw `--project` flag, they were None without the flag,
-    so the documented invocation emitted every power trace unsized, exit 0, and called the widths unjustified.
-    """
+    """Value: (the board file's text, None), or (None, the Refusal that stops it): the first gap of PART_GAPS (no outline
+    only without `assume_missing_sizes`), else a resistor `series_ohms` cannot size. The rules are the design's (A2)."""
     design, part_list = inputs.design, inputs.design.parts
     for find, code, sentence in PART_GAPS:
         found = find(part_list)
@@ -1151,8 +1141,7 @@ def board_file(inputs, assume_missing_sizes=False):
     try:
         return emit(design.board, part_list, inputs.assignments, placements, width, height, design.rules), None
     except ValueError as refused:
-        # `series_ohms`: a number the resistor needs is missing, or the pin cannot light the part. The input's, so
-        # could-not-run like every refusal above — it was a traceback and exit 1, which the chain read as a defect (F9).
+        # a number the resistor needs is missing, or the pin cannot light it: the input's, not a traceback and exit 1 (F9)
         return None, Refusal(REFUSED_INPUT_MESSAGE % refused, design_codes.SERIES_RESISTOR_UNSIZED)
 # --- end MVP ---
 
