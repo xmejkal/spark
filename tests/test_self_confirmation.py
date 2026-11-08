@@ -78,6 +78,7 @@ MAY_READ = {
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
     "check_spine.CONVERTER_PATHS": STRUCTURE,
     "init_project.PROJECT_TEMPLATE": STRUCTURE,
+    "init_project.NOTHING_TO_DO": "the Refusal under test: its code is compared with a literal, never read as the expectation (P701)",
     "wiring_steps.JOIN": "a kind of step, which picks the steps the test counts: vocabulary, not a value",
     "wiring_steps.RESISTOR": "a kind of end, which picks the steps the test counts: vocabulary, not a value",
     "sheet.DRAWING_RENDERERS": STRUCTURE,
