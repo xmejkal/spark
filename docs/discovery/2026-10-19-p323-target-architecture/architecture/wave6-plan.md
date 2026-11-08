@@ -62,6 +62,12 @@ the rest of the W6-F3 list holds). What changed:
 - One more W6-F3 site: `tools/check_commit.py:94` leaves out only paths that start with `scripts/stand_in/`. After the
   move it tests for `stand_in` in the path's parts, as `measure.py:238` does.
 
+P690 round 1 (2026-11-08, the refuter on Opus and an architecture lens on Sonnet, on f6cbf0f1). The PO decided: P688's
+`SystemExit` folds into W6-C2 (X2 counts a `raise SystemExit`, `measure.py:509`), the nine Extract Functions go into
+the codes PRs so the moves stay `git mv`, and the two-PR move is open question 1's proposal. The rest: the codes an
+agent can receive, the diagram's arrow, `Refusal`'s home, the `MAY_READ` keys, the rows by hand, the `NotDrawn` sites,
+`--accept-new`, the area page's C1 note, the table test's tuple and the `check_spine` arrow.
+
 PR council (2026-11-07, PR #919: one Sonnet reviewer, the refuter on Opus). What changed:
 
 - W6-F1 opens with a guard line, and the token check lives in the temp-folder shim, not in `fake_wokwi_cli.py`,
@@ -83,10 +89,12 @@ Only the PO answers these. Until he does, the plan takes the default.
    if it does not take too long, else a continuous version. Once an area's golden net exists, its move is a mechanical PR
    with no new logic. When the files of two areas do not overlap, their moves can share one PR: breadboard with
    checks, and design with build (the page already pairs them). Records with sourcing stays its own PR, because it
-   splits `parts.py`. Default: the golden net and the codes stay one PR per area. The moves go in three batches:
-   firmware alone, breadboard with checks, design with build. Records with sourcing follows. One move PR is open at a
-   time, so a broken main is one revert away. A later area's golden net PR holds tests only, so it can open while a
-   move PR is open, in its own worktree.
+   splits `parts.py`. Default: the golden net and the codes stay one PR per area. The moves go in batches: firmware
+   alone, then design with build. Records with sourcing follows. One move PR is open at a time, so a broken main is one
+   revert away. A later area's golden net PR holds tests only, so it can open while a move PR is open, in its own
+   worktree. P690's fact: breadboard with checks is 4,909 lines, 284 rows (about 7.6 hours of one serial mutation run)
+   and 44 keys, three times W6-F3. Proposal: two move PRs, W6-B3 then W6-C3, decision 4's "else a continuous version".
+   The cards are filed as two. Only W6-B3's start waits on the PO. If he says one PR, the two branches become one.
 
 ## What the refactor plan said, and what the tree says
 
@@ -460,8 +468,11 @@ Goal: each refusal of `breadboard.py` has a code. The text stays byte-equal to t
 What exists. Four code tables already sit in the area, each beside the Result or Value it decides for:
 `breadboard_drawing.CODES` (`:44`, a dict with sentences, P412), `breadboard_keep.CODES` (`:39`, with `MESSAGES`),
 `breadboard_changes.CODES` (`:28`) and `breadboard_match.CODES` (`:21`). `NotDrawn` carries a `code` (`breadboard_drawing.py:66`).
-They stay where they are: each is read inside the area, and `check_spine.py` imports `breadboard` anyway (`:64`). The one
-refusal with no code is `NotBuilt` (`breadboard.py:108`), raised at eight sites (`:183`, `:188`, `:190`, `:192`, `:195`,
+They stay where they are: each is read inside the area, and `check_spine.py` (design) imports `breadboard` anyway
+(`:64`), a downward arrow of the overview. Twelve `NotDrawn` sites in `breadboard_drawing.py` (`:142` to `:392`) and
+five in `part_shape.py` (design, `:145` to `:226`) raise with `code=None`. They end as a `NotWritten` with exit 0
+(`breadboard.py:404`, "an older refusal", `breadboard_drawing.py:55`), not as a refusal of the run, so they are out of
+scope and a card. The one refusal of the run with no code is `NotBuilt` (`breadboard.py:108`), raised at eight sites (`:183`, `:188`, `:190`, `:192`, `:195`,
 `:201`, `:350`, `:356`), and `main`'s one `except` (`:581`), which also catches
 `design.DesignError`, `store.StoreProblem` and `OSError`.
 
@@ -471,14 +482,18 @@ the sites: `not_built` (`:183`, `:350`), `built_from_other_requirements` (`:190`
 `build_unreadable` (`:188`, `:192`, `:356`) and `input_unreadable` for the three outside exceptions, named in `main`
 only, as W6-F2's four. The PR reports the real count. `breadboard_codes` joins `measure.LEAVES` (`tools/measure.py:247`),
 `planted_tree.LEAF_NAMES` (`tests/planted_tree.py:11`) and the tuple of `TheBenchCodesTableTest`
-(`tests/test_json_contracts.py:265`). No `Refusal`: every breadboard refusal raises.
+(`tests/test_json_contracts.py:265`). No `Refusal`: every breadboard refusal raises. The page's "no module name repeats the area's name" yields to C1's basename
+uniqueness, as `firmware_codes` did, and the page says so. This PR also extracts the three functions of 41 to 60 lines
+that R1's 40-line limit would catch after the move (`_wiring` 45, `sheet` 42, `write` 47), one commit each, goldens
+green, so W6-B3 stays a move.
 
 Tests: in `tests/test_breadboard.py`. Each site's code as a literal (P677 row 26), `CODES` names every constant once,
 the 7 goldens unchanged. Mutation (`p<card>-breadboard-codes.json`, est. 6 rows): two sites with one code swapped,
 `NotBuilt` drops its code, `CODES` missing a constant, the sentence changed, the exit code changed.
 
-Docs: `docs/guide/agents/json.md` gains the table, and `areas/breadboard.md` gains the module row. Review: it holds
-logic. One reviewer and the refuter on the strongest, one mutation run. Size est.: 50 product lines, 50 test lines.
+Docs: `areas/breadboard.md` gains the module row. `json.md` gains nothing: `breadboard.py` has no `--json`, so the table
+is library-only until the Operation. Review: it holds logic. One reviewer and the refuter on the strongest, one mutation
+run. Size est.: 80 product lines, 60 test lines.
 It touches no file of P685 but `measure.py:247`, `planted_tree.py:11` and `test_json_contracts.py`, one line each.
 
 ### W6-C2, the checks codes (after P685)
@@ -490,7 +505,7 @@ basename, which C1 counts (`tools/measure.py:633`), so the name is `check_codes`
 `spark/idea/idea_codes.py` are named. The findings of a check keep their `rule` key: a Finding's `code` is the page's
 target shape, not a refusal, and waits for the Operation card.
 
-The sites, 19, and their codes, 13, read at 46bca725. The PR reports the real count.
+The sites, 20, and their codes, 14, read at 46bca725. The PR reports the real count.
 
 | CLI | Sites | Codes |
 |---|---|---|
@@ -499,7 +514,7 @@ The sites, 19, and their codes, 13, read at 46bca725. The PR reports the real co
 | `check_footprints.py` | `main` `:562` no circuit, `rules_asked` `:542`, `:546` | `no_circuit`, `no_rules_file`, `rules_refused` |
 | `compare_design.py` | `compare` `:241`, `:246`, `:254`, `:258`, `:267` | `no_circuit`, `no_rules_file`, `rules_refused`, `circuit_not_json`, `no_rule_stated` |
 | `check_vendor_pins.py` | `check_board` `:207`, `:217`, `:223`, `:228` | `no_vendor_variant`, `no_cached_header`, `header_not_fetched`, `header_has_no_pins` |
-| `check_bom.py` | `main` `:166` | `no_package` |
+| `check_bom.py` | `main` `:166`, `read_bom` `:58` (P688's item 3) | `no_package`, `no_bom_in_package` |
 
 How a code travels. Every site but three returns its sentence in a dict's `reason` or `unchecked`, or in a
 `(None, why)` pair, so each sentence becomes a `Refusal`: a `str`, so `json.dumps` and every caller print the same
@@ -507,29 +522,43 @@ bytes. `Refusal` moves from `firmware_codes.py:17` to `spark/core/codes.py`, the
 firmware import lines follow (`flash_image.py:35`, `import_firmware.py:49`, `run_scenario.py:47`, under their W6-F3
 paths). No re-export stays. That is why this PR waits for P685. The three sites that print in `main`
 (`check_footprints.py:562`, `check_bom.py:166`, `check_all.py:532`) name their code in `main` only, as W6-F2's four.
-`skipped` (`check_all.py:88`) is a status, not a refusal, and gets no code.
+`skipped` (`check_all.py:88`) is a status, not a refusal, and gets no code. No code reaches a JSON in this PR: a `reason`
+stays the same string, so `json.md` gains nothing and every table is library-only until an Operation writes codes.
 
-P688 (#926) stays apart. Its three fixes change text, exit codes and a JSON shape, and each needs a new golden Case. W6-C2
-is codes, text unchanged. P688 reads its codes from `check_codes` and runs after W6-C3, so no logic PR is open on a
-file a move PR moves. It stays a bug under #94.
+`Refusal` goes to `spark/core/result.py`, the home of what an Operation returns (`Finding`, `NextStep`), not to
+`codes.py`, whose docstring says it is a table. `result.py`'s docstring gains one sentence: a `Refusal` is the sentence
+with its code a refusal returns before there is an `OperationResult`. Nothing deep-copies a refusal: the five
+`copy.deepcopy` calls in the tree are tests on board dicts, so `Refusal` gets no `__reduce__`, and the refuter's
+`TypeError` is a row.
+
+P688 (#926): item 3 folds in here, by the PO. `read_bom` (`check_bom.py:58`) raises `PackageUnreadable` (proposed, an
+`Error` with a `code`) instead of `SystemExit`, which X2 counts (`measure.py:509`). `check_bom.main` catches it, prints
+its sentence and exits 2, and `TheOrder.call` (`check_all.py:271`) catches it and answers `unchecked` with its
+`Refusal`, so `:95`'s `check_crashed` stays for defects only. One golden Case each, `check-bom-could-not-run-no-bom.txt`
+and its `check-all` twin. Items 1 and 2 stay apart in P688, after W6-C3: they change text and a JSON shape, and a logic
+PR must not be open on a file a move PR moves. This PR also extracts the six functions of 41 to 60 lines that R1 would
+catch after the move (`discover` 57 and `render` 45 in `check_all.py`, `check_trace_currents` 60 and
+`Board.narrowest_by_net` 49 in `check_physics.py`, `check_i2c_pullups` 58 and `compare` 43 in `compare_design.py`), one
+commit each, goldens green.
 
 Tests: in the six test files. Each site's code as a literal, `CODES` names every constant once, the tables share no
-code (`TheBenchCodesTableTest` gains `check_codes` and `codes.Refusal`), the 17 goldens unchanged. `check_codes` joins
+code (`TheBenchCodesTableTest`'s tuple of modules gains `check_codes`), the 17 goldens unchanged and 2 added. `check_codes` joins
 `measure.LEAVES` and `planted_tree.LEAF_NAMES`. Mutation (`p<card>-check-codes.json`, est. 10 rows): three sites with one
 code swapped, a `Refusal` turned back into a plain `str`, `CODES` missing a constant, a sentence changed, an exit code
 changed, the loop's tuple with its codes swapped, the `Refusal` import in one firmware module broken.
 
 Docs: `docs/guide/agents/json.md` (the six ops), `docs/guide/journey/checks.md`, `areas/checks.md` (`check_codes`, not
 `codes`). Review: it holds logic. The lenses on the everyday model, the refuter on the strongest, one mutation run. Size
-est.: 90 product lines, 90 test lines.
+est.: 140 product lines, 110 test lines.
 
 ### W6-BC3, the breadboard and checks move (after W6-C2)
 
 Too big for one PR. The two areas are 4,909 lines in 15 modules, 284 mutation rows in 38 tables, 44 baseline keys and
 86 import lines: three times W6-F3 in lines and keys. 284 rows at 1.6 minutes is 7.6 hours of one mutation run. So the
 move is two PRs, W6-B3 then W6-C3, each about W6-F3's size, and open question 1's default changes for this batch. One
-move PR is open at a time. Both follow W6-F3's shape: `git mv`, then the page's names, one commit per module, the goldens
-green after each commit, the CLIs stay in `scripts/` as a `main`, and no module re-exports an old name.
+move PR is open at a time. Both are `git mv`, the page's names and the import lines, one commit per module, the goldens green
+after each commit. The CLIs stay in `scripts/` as a `main`, and no module re-exports an old name. The R1 extractions
+are the codes PRs', so nothing but a move is in either.
 
 Where each file goes. A name not on its area page is marked proposed.
 
@@ -568,31 +597,34 @@ The `__file__` paths that break, each fixed in its PR:
 
 What the rules do at the move, checked at 46bca725:
 
-- R1: the limit is 40 lines under `scripts/spark/` and 60 elsewhere (`tools/measure.py:241`). Nine functions between
-  41 and 60 lines have no `R1` key today and would breach after the move: `_wiring` (45), `sheet` (42) and `write` (47)
-  in `breadboard.py`, `discover` (57) and `render` (45) in `check_all.py`, `check_trace_currents` (60) and
-  `Board.narrowest_by_net` (49, an `R2` key) in `check_physics.py`, `check_i2c_pullups` (58) and `compare` (43) in
-  `compare_design.py`. The baseline only shrinks, so
-  each gets an Extract Function in its own commit before its `git mv`, goldens green. Of the 11 `R1` keys, the 7 `main`
-  keys stay, and `check_cross_pluggable_connectors`, `check_resistor_power`, `run` and `<module>` follow their file.
+- R1: the limit is 40 lines under `scripts/spark/` and 60 elsewhere (`tools/measure.py:241`). The nine functions of
+  41 to 60 lines were extracted in W6-B2 and W6-C2, so no new breach. Of the 11 `R1` keys, the 7 `main` keys stay, and
+  `check_cross_pluggable_connectors`, `check_resistor_power`, `run` and `<module>` follow their file. A moved key is
+  accepted with `measure.py --accept-new` (`:707`), because `--accept` refuses a new key (P679, commit 86f74c84).
 - R6: 21 keys. Each docstring that has no role word gets one, and its key goes, as `ScenarioRun`'s did.
 - X2: no `print` or `sys.exit` sits outside a `main` (checked with `ast`), so the moved libraries print nothing.
 - T1: the 4 keys (`breadboard.py:file-write`, `breadboard_changes.py:file-write`, `check_vendor_pins.py:file-write`
   and `:subprocess`) follow their file. T2: no key names these files. C1 and C3: the 4 keys follow their file.
   R2 and R3: the 4 keys follow their file.
-- U1: `breadboard_codes` and `check_codes` are in `LEAVES` and `LEAF_NAMES` since the codes PRs. In
-  `tests/test_self_confirmation.py:43` `MAY_READ`, four keys take the new module name: `breadboard_drawing.CODES`,
-  `check_footprints.PACKAGE_POWER_W`, `check_physics.PACKAGE_POWER_W` and `check_all.CONVENTIONS`.
+- U1: `breadboard_codes` and `check_codes` are in `LEAVES` and `LEAF_NAMES` since the codes PRs. `MAY_READ`
+  (`tests/test_self_confirmation.py:43`-`:91`) has 16 keys on the fifteen, and 14 take the new module name (the two
+  `part_pictures` keys stay). `constant_reads` keys on the import's alias (`:101`), so a test imports a moved module
+  as `from spark.breadboard import drawing`, never `as breadboard_drawing`: a key no read matches fails at `:120`.
 - The 86 import lines: 65 outside the fifteen (7 under `scripts/`: `onboard_parts.py:10`, `part_shape.py:24` and
   `:26`, `check_spine.py:64`, `:65` and `:75`, `parts.py:493`, and 58 in 24 test files) and 21 among them. The 8 lazy
   ones of `check_all.py` and `parts.py` stay lazy: a move changes no import shape.
 - The 284 rows move with `tools/mutate.py --retarget`, which rewrites a row's `file` and nothing else
-  (`tools/mutate.py:272`). 16 rows in 12 tables also name an old module in `find` or `replace`
-  (`breadboard_keep.NO_ROOM` in `p273-keep-moves.json`, and the like). Those are rewritten by hand, and `--anchors`
-  proves each `find` occurs once. No row is dropped. Each PR runs its retargeted tables once, in parallel `--copy` shards.
+  (`tools/mutate.py:272`). Two kinds of rows are then moved by hand, as W6-F3's were. 17 rows find text inside a `main`
+  that stays in `scripts/`: `check_vendor_pins` 5 (`p179-vendor-cache`, `p181-p179-docs`, `sprint-6-p42`), `breadboard` 4
+  (`p191-breadboard`, `p273-keep-moves`, `p279-drawing-check`, `p686-breadboard-net`), `check_all` 3 (`p197-clean-check`,
+  `p319-one-project`), `check_footprints` 3 (`p434-rule-kinds`, `sprint-6-p42`, `sprint-8-p57`), `check_physics` 2
+  (`sprint-6-p34`, `sprint-6-p41`). They go back to the CLI's file. 9 rows in 7 tables name an old module as
+  `module.name` or `import module` in `find` or `replace` (`check_all.py` 3, `check_spine.py` 2, `breadboard.py` 2,
+  `part_shape.py` 1, `check_physics.py` 1). They take the new name. `--anchors` proves each `find` occurs once. No row
+  is dropped. Each PR runs its retargeted tables once, in parallel `--copy` shards.
 
-W6-B3: 2,324 lines, 166 rows, 17 keys, 3 `__file__` fixes, 3 extracted functions, 40 outside import lines. W6-C3:
-2,585 lines, 118 rows, 27 keys, 2 `SCRIPTS` lines, 6 extracted functions, 25 outside import lines.
+W6-B3: 2,324 lines, 166 rows, 17 keys, 3 `__file__` fixes, 40 outside import lines. W6-C3: 2,585 lines, 118 rows, 27
+keys, 2 `SCRIPTS` lines, 25 outside import lines.
 
 Tests: the 16 test files keep their names and import from `spark.breadboard` and `spark.checks`. The import-alone
 test of W5-3a extends to each moved module. `test_architecture.py` gains the closing `ls` check. The map is regenerated
@@ -632,12 +664,12 @@ classDiagram
   Check <|-- TheOrder
   Check ..> CheckedFolder
   Check ..> Refusal
-  Refusal ..> check_codes
+  Check ..> check_codes
 ```
 
 `BreadboardSteps` (`wiring_steps.py`), `BreadboardPlanner`, `PartPlacement` and `NotDrawn` (`drawing.py`), `NotBuilt`
 (`sheet.py`), `NotKeptResult` (`kept_moves.py`), `TabbedHtmlPage` (`tabbed_page.py`), `Check`, `CheckedFolder` and the
-five checks (`check.py`) and `CouldNotKeep` (`vendor_pins_check.py`) exist today. `Refusal` is the core's after W6-C2.
+five checks (`check.py`) and `CouldNotKeep` (`vendor_pins_check.py`) exist today. `Refusal` (`spark/core/result.py`) is the core's after W6-C2, and a check builds it as `Refusal(text, code)` with a code of `check_codes`.
 `CheckService` and the page's five `*Check` names wait for the Operation card.
 
 ## The later groups
@@ -711,9 +743,9 @@ bench reaches `scenario_steps` and `project_image` along its arrow, and nothing 
   the strongest, one mutation run of est. 8 rows.
 - W6-F3: 1,656 lines moved, 52 import lines, 228 rows, 15 keys, no new logic. One reviewer on the everyday model, the
   refuter on the strongest, the retargeted tables as the one mutation run, and a whole-branch review before the PR.
-- W6-B2: about 50 product lines and 50 test lines, 5 codes. It holds logic: one reviewer and the refuter on the
+- W6-B2: about 80 product lines and 60 test lines, 5 codes, 3 extracted functions. It holds logic: one reviewer and the refuter on the
   strongest, one mutation run of est. 6 rows.
-- W6-C2: about 90 product lines and 90 test lines, 13 codes, `Refusal` to the core. It holds logic: the lenses on the
+- W6-C2: about 140 product lines and 110 test lines, 14 codes, `Refusal` to the core, 6 extracted functions, P688's item 3. It holds logic: the lenses on the
   everyday model, the refuter on the strongest, one mutation run of est. 10 rows.
-- W6-B3: 2,324 lines moved, 40 import lines, 166 rows, 17 keys, 3 extracted functions. W6-C3: 2,585 lines moved, 25
-  import lines, 118 rows, 27 keys, 6 extracted functions. Each as W6-F3 is reviewed.
+- W6-B3: 2,324 lines moved, 40 import lines, 166 rows, 17 keys. W6-C3: 2,585 lines moved, 25 import lines, 118 rows,
+  27 keys. No new logic. Each as W6-F3 is reviewed.
