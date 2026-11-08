@@ -1870,7 +1870,7 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
         return out.getvalue() + err.getvalue()
 
     def test_each_answer_field_reaches_both_the_text_and_the_envelope(self):
-        for field in set(parts.Answer._fields) - {"data", "lines", "truncated"}:
+        for field in set(parts.Answer._fields) - {"data", "lines", "truncated", "diagnostics"}:
             item = self.SAMPLES[field]
             with self.subTest(field=field):
                 answer = parts.Answer({"x": 1}, ["  a line of the answer"], **{field: [item]})
@@ -1881,6 +1881,15 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
                                            item.get("upgrade"))):
                     self.assertIn(words, text)
         self.assertIn("could not check: could not read", self.say(parts.Answer({}, ["  a line"], unchecked=[self.SAMPLES["unchecked"]]), False))
+
+    def test_the_diagnostics_go_to_stderr_with_json_or_without_and_never_into_the_envelope(self):
+        # P717 (X2): a handler returns its stderr lines and `_say` prints them, so no handler prints
+        for as_json in (True, False):
+            with self.subTest(as_json=as_json):
+                with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+                    parts._say("show", parts.Answer({"x": 1}, ["  a line"], diagnostics=["a crash's line", "its traceback"]), as_json)
+                self.assertEqual(err.getvalue(), "a crash's line\nits traceback\n")
+                self.assertNotIn("traceback", out.getvalue())
 
     def test_an_answer_with_no_lines_says_its_problems_and_fixes_on_stderr(self):
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:

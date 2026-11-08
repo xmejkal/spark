@@ -34,7 +34,7 @@
 "R1:scripts/init_project.py:main": 79,
 "R1:scripts/parts.py:<module>": 2384,
 "R1:scripts/parts.py:main": 23,
-"R1:scripts/parts.py:validate": 214,
+"R1:scripts/parts.py:validate": 213,
 "R1:scripts/run_scenario.py:main": 21,
 "R1:scripts/spark/build/build_service.py:run": 186,
 "R1:scripts/spark/build/project_setup.py:rules_for": 70,

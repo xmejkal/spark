@@ -7,24 +7,22 @@ What a part asks of the board it plugs into, and what is actually known about it
     parts.py --validate
     parts.py --unverified <part> [part ...]   what nobody has checked yet about those parts
 
-A part library is easy to get wrong in a way that is worse than not having one. The temptation is
-a schema covering everything a part might have — and since a motor driver's facts (input
-thresholds, current) have nothing in common with a rangefinder's (an I2C address, a calibration),
-that schema degenerates into `{"name": ..., "notes": ...}`: a directory of documentation
-pretending to be configuration.
+A part library is easy to get wrong in a way that is worse than not having one. The temptation is a schema covering
+everything a part might have — and since a motor driver's facts (input thresholds, current) have nothing in common with
+a rangefinder's (an I2C address, a calibration), that schema degenerates into `{"name": ..., "notes": ...}`: a directory
+of documentation pretending to be configuration.
 
 So this splits them.
 
-**`needs` is a real schema**, because it IS uniform: every part asks its host for some pins, and
-each pin either needs a capability or does not. That is exactly what `assign_pins.py` consumes,
-and it is the reason this file exists rather than a folder of markdown.
+**`needs` is a real schema**, because it IS uniform: every part asks its host for some pins, and each pin either needs a
+capability or does not. That is exactly what `assign_pins.py` consumes, and it is the reason this file exists rather
+than a folder of markdown.
 
-**`facts` is deliberately open**, and every entry carries three things: a value, where it came
-from, and whether anyone has actually checked. A fact with `verified: false` is not a defect —
-most parts arrive with several — but it must be VISIBLE, because the unverified ones are what
-decide whether a design works. On the project this came from, the single most consequential
-number in the whole build was an audio module's idle current, which nobody had measured and
-every document quietly assumed.
+**`facts` is deliberately open**, and every entry carries three things: a value, where it came from, and whether anyone
+has actually checked. A fact with `verified: false` is not a defect — most parts arrive with several — but it must be
+VISIBLE, because the unverified ones are what decide whether a design works. On the project this came from, the single
+most consequential number in the whole build was an audio module's idle current, which nobody had measured and every
+document quietly assumed.
 """
 
 import argparse
@@ -666,8 +664,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
             # rightly, since a silently dropped requirement produces a board wrong in exactly the way the requirement
             # existed to prevent — but it did so long after this file had pronounced the record good.
             problems.append("%s asks a pin for %s, which is not something a pin can be asked "
-                            "for. Known: %s"
-                            % (where, ", ".join(unknown), ", ".join(CAPABILITIES)))
+                            "for. Known: %s" % (where, ", ".join(unknown), ", ".join(CAPABILITIES)))
 
     # Every list of pins, in one place. Only `needs` entries were checked for a pin, and then
     # `power` and `unused_pins` were read with `entry["pin"]` in four places — so an entry missing
@@ -1771,9 +1768,12 @@ def _op_keep(args, project):
     if not path.is_file():
         return Answer(unchecked=[_cannot("--keep: no file at %s" % path)])
     located = path.name.lower().endswith((".jpg", ".jpeg")) and without_location(path.read_bytes())[1]
-    entry = keep_local(path, args.url, dry_run=args.dry_run)
-    return Answer({"document": entry, "location_removed": located, "written": not args.dry_run}, [json.dumps(entry, indent=2, ensure_ascii=False)],
-                  diagnostics=["  removed the location (EXIF GPS) from %s before keeping it" % printable(path.name)] if located and not args.json else ())
+    said = ["  removed the location (EXIF GPS) from %s before keeping it" % printable(path.name)] if located and not args.json else ()
+    try:  # P423: a name the store refuses is refused after the line was said
+        entry = keep_local(path, args.url, dry_run=args.dry_run)
+    except store.StoreProblem as refused:
+        return Answer(unchecked=[_cannot(str(refused))], diagnostics=said)
+    return Answer({"document": entry, "location_removed": located, "written": not args.dry_run}, [json.dumps(entry, indent=2, ensure_ascii=False)], diagnostics=said)
 
 
 def _op_read(args, project):
