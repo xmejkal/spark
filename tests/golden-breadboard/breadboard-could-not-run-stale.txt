@@ -1,0 +1,2 @@
+--- stderr ---
+breadboard.py: could not run — <project-dir>/dist/board/circuit.json was built from other requirements than requirements.json: build again: `check_spine.py requirements.json --keep .`
