@@ -1093,6 +1093,37 @@ Keys: 11 (`C1` and `R6` `Impossible`, `C3:EXIT_IMPOSSIBLE`, `R1:assign`, two `R1
 test files, 24 import lines, and 28 in `scripts/`. Rows: 121. Docs: 9 agent-facing pages and `areas/design.md`. Size:
 1,500 lines, 52 import lines, 121 rows, 11 keys. Done when `ls scripts/*.py` shows `assign_pins.py` alone of the six.
 
+P702 claims check (2026-11-08, against 2d131ffd). Each claim above was read in the code. None changes a decision. These
+are wrong or stale:
+
+1. Lines (P700): `design.py` 477, not 450, and `assign_pins.py` 589, not 575. The six hold 1,541.
+2. Keys: 10, not 11. `R6:Impossible` went in P700. `R1:assign` (116), `C1:Impossible`, `R2:onboard_lines`,
+   `R2:rails_requested`, `R2:Netlist.__init__` and `R6:Netlist` follow their file. `R1:main` (62), `R2:main`,
+   `C3:EXIT_IMPOSSIBLE` (the CLI's `outcomes` import, read by `main` alone) and `T1:file-write` (`:550`, in `main`) stay.
+   No function of 41 to 60 lines is moved (`assign` 116 and `main` 62 are the only ones over 40), and no `print` or
+   `sys.exit` sits outside `main` but the `__main__` line (`ast`).
+3. Rows: 127 in 33 tables, not 121: `design.py` 55, `assign_pins.py` 43, `fab.py` 21, `netlist.py` 6, `copper.py` 2.
+   `--anchors` refuses 5 of them on main (all `fab.py`, P434), 114 in all. 3 rows sit in `assign_pins.main`
+   (`p699-design-net` 12, `sprint-4-p20` 1, `sprint-8-p36` 7) and go back to the CLI. 17 rows of 11 tables name a moved
+   module in `find` or `replace` (`design.`, `design_library.`, `assign_pins.` in an importer) and follow its new name.
+4. Import lines: 56, not 52: 3 among the six, 29 in `scripts/` (not 28; 2 lazy, `init_project.py:73`,
+   `spark/checks/check.py:173`), 24 in 16 test files (4 lazy).
+5. Name clashes: no importer or moved module binds `loader` or `pin_assigner`, so no rename commit. But `design` is
+   also a local `Design` value in `emit_board.py`, `check_spine.py` and the tests (`design.board`, `design.signals`),
+   so the module's reads are renamed by scope (`symtable`), never by text.
+6. MAY_READ: 11 keys on the six, 6 take the new name (`assign_pins.*` 5 to `pin_assigner`, `design.CIRCUIT_PATHS` to
+   `loader`). The 3 `copper` and 2 `fab` keys keep their stem.
+7. Patch sites: 2, both on a module attribute read through the module at call time (`test_check_all.py:951`,
+   `design.parts_of`; `test_check_spine.py:2224`, `check_spine.design.load`). They name `loader`.
+8. Docs: 3 agent-facing pages name a moved path or name, not 9 (the rest name the CLI `assign_pins.py`, which stays):
+   `how-it-works.md:125`, `:127`, `:146` to `:149`, `patterns-and-names.md:241`, `:243`, `developing.md:303`.
+   `areas/design.md` and the docstring example of `tools/mutate.py:19` follow.
+
+These hold: `fab.py:30` takes `parents[3]`. `design.py:38` and `assign_pins.py:41` are `SCRIPTS` lines, each with its
+`sys.path.insert`, and go from the library. No cycle: `copper` imports `fab`, `loader` imports `fab`, `pin_assigner`
+imports `loader`, and no flat module they import (`boards`, `parts`, `provenance`, `board_pads`, `missing_facts`,
+`design_codes`) imports one of the six at its top. `design_codes` stays flat until W6-D3b.
+
 ### W6-D3b, the emitters (after W6-D3a and W6-B3)
 
 Files: the four D3b rows, 1,784 lines. The `SCRIPTS` lines of `emit_board.py:36`, `emit_footprint.py:45` and
