@@ -17,7 +17,7 @@ import suite_temp  # noqa: E402,F401
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-import breadboard_changes as changes  # noqa: E402
+from spark.breadboard import bench_changes as changes  # noqa: E402
 from spark.breadboard.wiring_steps import BOARD, PART, RESISTOR, BreadboardSteps, End, StepColors, StepPoint  # noqa: E402
 
 

@@ -53,7 +53,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import assign_pins  # noqa: E402
 import board_pads  # noqa: E402
 import breadboard_catalog  # noqa: E402
-import breadboard_changes  # noqa: E402
+from spark.breadboard import bench_changes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import kept_moves  # noqa: E402
@@ -93,7 +93,7 @@ STEP_COLORS = wiring_steps.StepColors()
 DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(STEP_COLORS),
                      drawing.SvgBreadboardDiagram(STEP_COLORS))
 #: What the sheet says of the bench: one line per change since the last build, in these words.
-CHANGE_LIST = breadboard_changes.ChangeList()
+CHANGE_LIST = bench_changes.ChangeList()
 #: The drawing a person edits in Wokwi, whose moves a rebuild keeps (P273).
 EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
                         if isinstance(renderer, drawing.WokwiBreadboardDiagram))
@@ -438,7 +438,7 @@ def _change_lines(record, changes):
         return None
     if record.why_unread:
         return ["- Changes cannot be compared with the last build: %s %s. The steps below are the whole wiring."
-                % (breadboard_changes.WiringRecord.FILE_NAME, record.why_unread)]
+                % (bench_changes.WiringRecord.FILE_NAME, record.why_unread)]
     return ["- " + line for line in CHANGE_LIST.render(changes)] or ["- Nothing to change on the bench."]
 
 
@@ -460,16 +460,16 @@ def write(requirements_path, out, circuit_path=None):
     describes another one."""
     read = _read_build(requirements_path, circuit_path)
     paths = [(Path(out).parent / renderer.FILE_NAME, renderer) for renderer in DRAWING_RENDERERS]
-    record_path = Path(out).parent / breadboard_changes.WiringRecord.FILE_NAME
+    record_path = Path(out).parent / bench_changes.WiringRecord.FILE_NAME
     # the earlier breadboard.json and record are read here, before the new ones overwrite them
     earlier_path = Path(out).parent / EDITABLE_DRAWING.FILE_NAME
-    record = breadboard_changes.WiringRecord.read(record_path)
+    record = bench_changes.WiringRecord.read(record_path)
     planned = _plan_once(read, earlier_path, record)
     seated = read.steps.anchored()
     colors = {jumper.step: STEP_COLORS.color(jumper.step) for jumper in planned.layout.jumpers} if planned.layout else {}
-    changes = (breadboard_changes.changes_between(record, seated, colors)
+    changes = (bench_changes.changes_between(record, seated, colors)
                if record and not record.why_unread else [])
-    new_record = breadboard_changes.WiringRecord.from_build(seated, colors, record, _spark_jumpers(
+    new_record = bench_changes.WiringRecord.from_build(seated, colors, record, _spark_jumpers(
         planned, earlier_path, record))
     drawn, not_written = _drawn_or_not(paths, planned)
     try:
