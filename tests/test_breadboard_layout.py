@@ -191,7 +191,7 @@ class TheXiaoLayoutTest(unittest.TestCase):
         # The screenshot in docs/discovery/2026-10-16-p267-wokwi-holes/ shows exactly these bytes (P267, PR #303).
         # A refactor must not move a part by a rounding step: P270 changes the units inside, never the file.
         with in_store():
-            text = breadboard.drawing(XIAO / "requirements.json")
+            text = breadboard.drawing_text(XIAO / "requirements.json")
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
                          "cf3f8e5384d50a1d496be66784679810f8932b1576566ca6f8a9d8f59646c32d")
 

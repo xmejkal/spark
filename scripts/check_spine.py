@@ -831,17 +831,17 @@ def keep_breadboard(requirements, destination, stages=()):
     breadboard.py to compare; a sheet or a drawing left from an earlier build is removed, since it describes another
     board.
     """
-    sheet = Path(destination) / breadboard.SHEET
+    sheet_path = Path(destination) / breadboard.SHEET
     drawings = [(Path(destination) / renderer.FILE_NAME, renderer) for renderer in breadboard.DRAWING_RENDERERS]
     why = why_not_built(stages, "board only: nothing to wire")
     if why:
-        return [_left_from_earlier(sheet, "breadboard sheet", why)] + [
+        return [_left_from_earlier(sheet_path, "breadboard sheet", why)] + [
             _left_from_earlier_drawing(path, renderer, why) for path, renderer in drawings]
     try:
         breadboard.record_built_from(requirements, Path(destination) / breadboard.BUILT_FROM)
-        written = breadboard.write(requirements, sheet, Path(destination) / breadboard.CIRCUIT)
+        written = breadboard.write(requirements, sheet_path, Path(destination) / breadboard.CIRCUIT)
     except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
-        return [{"file": str(sheet), "did": "not written", "why": str(stopped),
+        return [{"file": str(sheet_path), "did": "not written", "why": str(stopped),
                  "line": "no breadboard sheet: %s" % stopped}] + [
             _left_from_earlier_drawing(path, renderer, "the sheet was not written") for path, renderer in drawings]
     why = "the parts and how to wire them on a breadboard"

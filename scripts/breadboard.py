@@ -299,7 +299,7 @@ def _plan_layout(read):
     return breadboard_drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
 
 
-def drawing(requirements_path, circuit_path=None, read=None):
+def drawing_text(requirements_path, circuit_path=None, read=None):
     """The Wokwi diagram's text, or NotDrawn with what stopped it."""
     return EDITABLE_DRAWING.text(_plan_layout(read or _read_build(requirements_path, circuit_path)))
 
