@@ -19,6 +19,8 @@ class Refusal(str):
     as they were. A `%` format or a `.strip()` gives a plain str back, so a site builds its Refusal from the final text.
     """
 
+    code: str
+
     def __new__(cls, text, code):
         refusal = super().__new__(cls, text)
         refusal.code = code
