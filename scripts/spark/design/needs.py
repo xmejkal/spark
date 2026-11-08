@@ -20,7 +20,7 @@ from spark.design import footprint_emitter
 import matching
 import parts
 import store
-from spark.core.text_guards import clean, printable
+from spark.core.text_guards import clean, kept_reason, printable
 
 #: How a need stands against the store (§3).
 MARKS = ("have", "have-unknown", "know", "gap")
@@ -472,21 +472,9 @@ def dropped_holds(name, current, after, entries):
     return changes, released
 
 
-def plan_pick(project, given, passed_over=()):
-    """
-    What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
-    [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
-    from every need's picks — one piece per pick, one board however many needs pick it — on the entries that hold them,
-    never past what is owned or what another project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
-    longer picks. A pick no entry holds is to get, not reserved. A drawer entry of a record spark knows, picked by its key, is
-    a pick of that record, and says so. A `reused` event is written for each pick except a record the project keeps in its
-    own parts/ or boards/: that was not there before the project. A reason a part was passed over is kept in the person's
-    words, without any URL or price in them (`kept_reason`), and said when one was taken out. Nothing is written here.
-    """
-    name, current, entries = store.plan_listed_name(project), read(project), drawer.entries()
-    rows = drawer.linkable(project)
-    known, ids, problems, picked = {row[:2]: row[2] for row in rows}, {need["id"] for need in current}, [], {}
-    notes = []
+def _picks_given(given, known, entries, ids):
+    """(each need's picks, notes, problems) of the [(need id, id)] a `--pick` gives, for `plan_pick`; a key that is not plain raises."""
+    picked, notes, problems = {}, [], []
     for need_id, pick_id in given:
         pick = _resolve(pick_id, known, entries)
         named = next(iter(pick.values())) if pick else None
@@ -502,6 +490,24 @@ def plan_pick(project, given, passed_over=()):
             picked[need_id].append(pick)
             renamed = "%s: the drawer entry of %s — picked as that record" % (pick_id, named)
             notes += [renamed] if named != pick_id and renamed not in notes else []
+    return picked, notes, problems
+
+
+def plan_pick(project, given, passed_over=()):
+    """
+    What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
+    [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
+    from every need's picks — one piece per pick, one board however many needs pick it — on the entries that hold them,
+    never past what is owned or what another project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
+    longer picks. A pick no entry holds is to get, not reserved. A drawer entry of a record spark knows, picked by its key, is
+    a pick of that record, and says so. A `reused` event is written for each pick except a record the project keeps in its
+    own parts/ or boards/: that was not there before the project. A reason a part was passed over is kept in the person's
+    words, without any URL or price in them (`kept_reason`), and said when one was taken out. Nothing is written here.
+    """
+    name, current, entries = store.plan_listed_name(project), read(project), drawer.entries()
+    rows = drawer.linkable(project)
+    known, ids = {row[:2]: row[2] for row in rows}, {need["id"] for need in current}
+    picked, notes, problems = _picks_given(given, known, entries, ids)
     after = [dict(need, pick=picked[need["id"]]) if need["id"] in picked else need for need in current]
     changes, hold_notes, hold_problems = plan_holds(name, after, entries)
     notes += hold_notes
@@ -516,6 +522,14 @@ def plan_pick(project, given, passed_over=()):
     events = [dict({"event": "reused", "project": name, "need": need_id}, **pick) for need_id in picked for pick in picked[need_id]]
     # a record the project keeps in its own parts/ or boards/ was not there before the project: it is no reuse of the store (§6.7)
     events = [event for event in events if not any(known.get((kind, event.get(kind))) == "project" for kind in ("part", "board"))]
+    told, said, refused = _passed_over(passed_over, name, known, entries, ids)
+    return after, changes, events + told, notes + said, problems + refused
+
+
+def _passed_over(passed_over, name, known, entries, ids):
+    """(events, notes, problems) of each part `--pick` was told was passed over, for `plan_pick`: a `passed_over` event, a
+    note when its reason lost a URL or a price, or a problem."""
+    events, notes, problems = [], [], []
     for number, item in enumerate(passed_over if isinstance(passed_over, (list, tuple)) else [None], 1):
         pick = _resolve(item.get("id"), known, entries) if isinstance(item, dict) and isinstance(item.get("id"), str) else None
         why, cut = kept_reason(item["why"]) if pick and isinstance(item.get("why"), str) else ("", False)
@@ -528,38 +542,7 @@ def plan_pick(project, given, passed_over=()):
         events.append(dict({"event": "passed_over", "project": name, "need": item["need"]}, **pick, why=why, by=item.get("by", "person")))
         notes += ["%s: the reason is kept without the URL or price in it — your history keeps words, never a URL or a price"
                   % item["id"]] if cut else []
-    return after, changes, events, notes, problems
-
-
-#: What a passed-over reason never keeps (§5.7, W21: "never a URL … a price"): a web address — any scheme, `www.`, or a bare
-#: host with a path whose last label is a common top-level domain (TLDS), so `3.3/5V`, `v1.1/v1.2` and `pinout.png/page 2`
-#: stay — with a bracket around it; and an amount of money — a currency symbol before a number, glued or spaced, a code
-#: before it only spaced (`EUR 12`; `EUR12` and `KC868` are part numbers), a symbol or a code after it, glued or spaced,
-#: thousands spaced with a space or a no-break space, a Czech `,-` with or without its crowns (F14).
-TLDS = "com|org|net|io|cz|sk|de|eu|co|uk|pl|at|ch|fr|it|es|nl|info|shop|dev|app"
-#: A URL's own characters: none a space or a bracket, but a bracketed run inside it (`…/wiki/Foo_(bar)`) is its own too.
-URL_CHAR = r"(?:[^\s<>()\[\]]|\([^\s<>()\[\]]*\))"
-#: A bracket around a URL goes with it only when the URL is opened by it (the re-check: `(see aliexpress.com/x)` lost its
-#: `)` to the URL and kept its `(`), so the text's own brackets stay as balanced as they were.
-URL_IN_WORDS = re.compile(r"(?:(<)|(\()|(\[))?"
-                          r"(?:(?:[a-z][a-z0-9+.-]*://|www\.)%s+|\b[\w-]+(?:\.[\w-]+)*\.(?:%s)(?::\d+)?/%s*)"
-                          r"(?(1)>?)(?(2)\)?)(?(3)\]?)" % (URL_CHAR, TLDS, URL_CHAR), re.IGNORECASE)
-CODES = r"(?:eur|euros?|usd|dollars?|czk|kč|kc|gbp|chf|pln|zł|cny|rmb|yuan|jpy|yen)"
-AMOUNT = r"\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d+)?|\d[\d.,]*"
-PRICE_IN_WORDS = re.compile(r"(?:[$€£¥]\s?|\b%s\s)(?:%s)|(?:%s)(?:,-)?\s?(?:[$€£¥]|%s\b)|\b\d[\d. ]*,-(?!\w)" % (CODES, AMOUNT, AMOUNT, CODES),
-                            re.IGNORECASE)
-
-
-def kept_reason(text):
-    """
-    A passed-over reason as the history keeps it (§5.7, W21; C-17): cleaned as a label is, and with every URL and every price
-    taken out — (the reason, whether anything was taken out). The person's words stay; what the history never keeps does not.
-    """
-    said = clean(text)
-    kept = PRICE_IN_WORDS.sub("", URL_IN_WORDS.sub("", said))
-    if kept == said:
-        return said, False
-    return re.sub(r"\s+([,;:.)\]>])", r"\1", re.sub(r"\s{2,}", " ", kept)).strip(" ,;:.-—"), True
+    return events, notes, problems
 
 
 REQUIREMENTS = "requirements.json"
@@ -768,6 +751,42 @@ def _how_to_fill(path):
     return "fill it in its own home with --fact-set"
 
 
+def _part_picks(picks, known):
+    """(the records to shelve, the (need id, key) placed, the picks at a placeholder outline, the problems) of the part picks
+    among `picks`, for `requirements`."""
+    shelve, wanted, placeholder, problems = [], [], [], []
+    for need_id, (kind, key) in picks:
+        if kind != "part":
+            continue
+        _, _, where, path = known.get(("part", key), (None, None, None, None))
+        record = parts._parse(path) if path else None
+        owed = parts.owes(record) if isinstance(record, dict) else []
+        wrong = (["no record called %s any more" % key] if path is None else
+                 ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
+                 ["owes %s — %s" % (", ".join(owed), _how_to_fill(path))] if set(owed) - set(LAYOUT_FACTS)
+                 else parts.broken_problems(record, path))
+        problems += [parts._problem(key, sentence) for sentence in wrong]
+        shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []
+        placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []
+        wanted.append((need_id, key))
+    return shelve, wanted, placeholder, problems
+
+
+def _held_file(project):
+    """(the project's requirements file as a dict, its `parts` list), {} and [] when there is none; a StoreProblem when
+    either is no JSON of its kind, for `requirements`."""
+    file = Path(project) / REQUIREMENTS
+    try:
+        held = json.loads(file.read_text(encoding="utf-8")) if file.is_file() else {}
+    except ValueError as broken:
+        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand", file, broken)
+    held = held if isinstance(held, dict) else {}
+    existing = held.get("parts") or []
+    if not isinstance(existing, list):
+        raise store.StoreProblem("%s: `parts` is not a list — fix it by hand", file)
+    return held, existing
+
+
 def requirements(project):
     """
     The picks read into the project's requirements file (§5.3, §8 L): a `Requirements` of (the file as it would be, the records
@@ -783,30 +802,9 @@ def requirements(project):
     picks = [(need["id"], next(iter(_as_record(pick, known, entries).items()))) for need in needs for pick in need.get("pick") or []]
     board_picks = sorted({key for _, (kind, key) in picks if kind == "board"})
     problems = _board_problems(board_picks, _unfiled_boards(needs, known, entries), project)
-    shelve, wanted, placeholder = [], [], []
-    for need_id, (kind, key) in picks:
-        if kind != "part":
-            continue
-        _, _, where, path = known.get(("part", key), (None, None, None, None))
-        record = parts._parse(path) if path else None
-        owed = parts.owes(record) if isinstance(record, dict) else []
-        wrong = (["no record called %s any more" % key] if path is None else
-                 ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
-                 ["owes %s — %s" % (", ".join(owed), _how_to_fill(path))] if set(owed) - set(LAYOUT_FACTS)
-                 else parts.broken_problems(record, path))
-        problems += [parts._problem(key, sentence) for sentence in wrong]
-        shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []
-        placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []
-        wanted.append((need_id, key))
-    file = Path(project) / REQUIREMENTS
-    try:
-        held = json.loads(file.read_text(encoding="utf-8")) if file.is_file() else {}
-    except ValueError as broken:
-        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand", file, broken)
-    held = held if isinstance(held, dict) else {}
-    existing = held.get("parts") or []
-    if not isinstance(existing, list):
-        raise store.StoreProblem("%s: `parts` is not a list — fix it by hand", file)
+    shelve, wanted, placeholder, wrong = _part_picks(picks, known)
+    problems += wrong
+    held, existing = _held_file(project)
     after, kept, naming = _merge_parts(existing, wanted)
     content = dict(held, board=board_picks[0] if board_picks else None, parts=after)
     unserved = _unserved(needs, known, entries)

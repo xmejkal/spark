@@ -1,48 +1,48 @@
 [
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "needs.read accepts a stray field",
   "find": "    extra = sorted(set(need) - set(NEED_FIELDS) - {\"id\"})\n    return ([\"%s",
   "replace": "    extra = []\n    return ([\"%s"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "needs.read accepts a bad id",
   "find": "if not store.PLAIN.fullmatch(need[\"id\"]) else [])",
   "replace": "if False else [])"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "needs.read accepts a duplicate id",
   "find": "if ids.count(need[\"id\"]) > 1 else []",
   "replace": "if False else []"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "needs.read accepts a what that is not words",
   "find": "\"what\": (drawer._words,",
   "replace": "\"what\": (lambda v: True,"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "needs.read accepts a condition that is not words",
   "find": "\"condition\": (lambda v: v is None or drawer._words(v),",
   "replace": "\"condition\": (lambda v: True,"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "needs.read accepts a mark outside the four",
   "find": "\"mark\": (lambda v: v is None or v in MARKS,",
   "replace": "\"mark\": (lambda v: True,"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "needs.read accepts schema 2",
   "find": "    if data.get(\"schema\", 1) != 1:",
   "replace": "    if False:"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "match matches a need with no what",
   "find": "        if not need.get(\"what\"):",
   "replace": "        if False:"
@@ -66,13 +66,13 @@
   "replace": "    pass\n"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "a record that does not parse is known anyway",
   "find": "        known_keys.add((kind, record_id))\n",
   "replace": "        pass\n"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "a dead entry's function counts for its record",
   "find": "        if not entry.get(\"skip\") and isinstance(entry.get(\"is\"), dict)",
   "replace": "        if isinstance(entry.get(\"is\"), dict)"

@@ -66,7 +66,7 @@ from spark.breadboard import drawing, sheet, tabbed_page  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 import init_project  # noqa: E402
-import needs  # noqa: E402
+from spark.design import needs  # noqa: E402
 from spark.design import netlist  # noqa: E402
 import onboard_parts  # noqa: E402
 import parts  # noqa: E402

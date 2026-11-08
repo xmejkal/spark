@@ -24,7 +24,7 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 | `core/events.py` | `Event` (`kind`, `code`, `text`; kinds `LINE` and `BEGIN`), the `Reporter` base, `TerminalReporter` (P507) |
 | `core/cli.py` | `run_operation(operation, values, outside)`, `run_cli(text, operation, argv, *, outside_builder, outside=None)`, `HelpText`, `TextReport`, `JsonEnvelope`; `trace` waits. `core/privacy.py`: `Privacy.of(project, store, home, secrets, pasted)` and `MaskingReporter` (P677), used by each Operation that names a `privacy_for` |
 | `core/zone_time.py` | the leaf `zone_time`: times with their zone |
-| `core/text_guards.py` | the leaf `text_guards` (once `screen_text`, renamed in P418): the guards where text leaves spark |
+| `core/text_guards.py` | the leaf `text_guards` (once `screen_text`, renamed in P418): the guards where text leaves spark, and `kept_reason` (from `needs` in P704) |
 
 | Seam | Kind | Who fills it |
 |---|---|---|
