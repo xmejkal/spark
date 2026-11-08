@@ -287,33 +287,35 @@ def wiring(board, circuit, design_parts, resistors, board_component):
         if component["name"] in resistors:
             tag, value, purpose = resistors[component["name"]]
             number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
-            return End(RESISTOR, tag, "%s end %s" % (tag, number),
-                                        "%s (%s %s), end %s" % (tag, value, purpose, number), number,
-                                        purpose, value)
+            return End(RESISTOR, tag, "%s end %s" % (tag, number), "%s (%s %s), end %s" % (tag, value, purpose, number),
+                       number, purpose, value)
         leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
         short = "%s %s" % (component["name"], port.get("name"))
-        return End(PART, component["name"], short,
-                                    short + (" (%s)" % leg if leg else ""), port.get("name"))
+        return End(PART, component["name"], short, short + (" (%s)" % leg if leg else ""), port.get("name"))
 
-    said = []
-    for point in points(circuit):
-        ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
-        ends.sort(key=lambda one: (one.kind != BOARD, _natural(one.words)))
-        line = " · ".join(one.words for one in ends)
-        on_board = ends[0].kind == BOARD
-        if on_board and len(ends) == 1:
-            continue  # a board pad nothing else joins is no wire: 3V3, once the firmware pulls the button up (P204)
-        supply = " / ".join(point.nets) if point.nets and not on_board else None
-        if supply:
-            line += " · the %s supply, from off the board, not part of the parts list" % supply
-        # a board pin's end is its jumper's end, in a hole of the free row; a supply's wire takes a hole too
-        rail = len(ends) + bool(supply) > ROW_HOLES
-        if rail:
-            line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
-                     % ends[0].words if on_board else " — put these ends on one rail")
-        said.append((on_board, line, StepPoint(ends, supply, rail)))
+    said = [one for one in (_said(point, end) for point in points(circuit)) if one]
     said.sort(key=lambda one: (not one[0], _natural(one[1])))
     placed = {one.component for _, _, step_point in said for one in step_point.ends}
     steps = BreadboardSteps(
         [THE_BOARD] + [name for name in records if name in placed], [step_point for _, _, step_point in said])
     return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
+
+
+def _said(point, end):
+    """(whether it starts at the board, its wiring line, its StepPoint) for one point, each end named by `end`; None for
+    a board pad nothing else joins, which is no wire: 3V3, once the firmware pulls the button up (P204)."""
+    ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
+    ends.sort(key=lambda one: (one.kind != BOARD, _natural(one.words)))
+    line = " · ".join(one.words for one in ends)
+    on_board = ends[0].kind == BOARD
+    if on_board and len(ends) == 1:
+        return None
+    supply = " / ".join(point.nets) if point.nets and not on_board else None
+    if supply:
+        line += " · the %s supply, from off the board, not part of the parts list" % supply
+    # a board pin's end is its jumper's end, in a hole of the free row; a supply's wire takes a hole too
+    rail = len(ends) + bool(supply) > ROW_HOLES
+    if rail:
+        line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
+                 % ends[0].words if on_board else " — put these ends on one rail")
+    return on_board, line, StepPoint(ends, supply, rail)

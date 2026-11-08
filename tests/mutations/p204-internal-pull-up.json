@@ -32,8 +32,8 @@
  {
   "file": "scripts/breadboard_steps.py",
   "name": "a lone board pad is a wiring line",
-  "find": "        if on_board and len(ends) == 1:",
-  "replace": "        if False:"
+  "find": "    if on_board and len(ends) == 1:",
+  "replace": "    if False:"
  },
  {
   "file": "scripts/compare_design.py",
