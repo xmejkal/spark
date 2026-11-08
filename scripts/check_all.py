@@ -445,22 +445,26 @@ def run(inputs, ambiguous=None):
     return [check.run(inputs, ambiguous) for check in CHECKS]
 
 
+def result_lines(result):
+    """Value: the lines a person reads for one check's result: its marker line, then its reason and items, unless skipped."""
+    marker = {OK: "ok  ", PROBLEMS: "FAIL", COULD_NOT_RUN: "????",
+              SKIPPED: "--  "}[result["status"]]
+    lines = ["  [%s] %-18s %s" % (marker, result["check"], result["what"])]
+    if result["status"] == SKIPPED:
+        return lines
+    if result.get("reason"):
+        lines.append("           %s" % result["reason"])
+    for problem in result.get("problems", []):
+        lines.append("           - %s" % problem)
+    for note in result.get("unchecked", []):
+        lines.append("           ! %s" % note)
+    for note in result.get("unmeasured", []):
+        lines.append("           ? %s" % note)
+    return lines
+
+
 def render(results):
-    lines = []
-    for result in results:
-        marker = {OK: "ok  ", PROBLEMS: "FAIL", COULD_NOT_RUN: "????",
-                  SKIPPED: "--  "}[result["status"]]
-        lines.append("  [%s] %-18s %s" % (marker, result["check"], result["what"]))
-        if result["status"] == SKIPPED:
-            continue
-        if result.get("reason"):
-            lines.append("           %s" % result["reason"])
-        for problem in result.get("problems", []):
-            lines.append("           - %s" % problem)
-        for note in result.get("unchecked", []):
-            lines.append("           ! %s" % note)
-        for note in result.get("unmeasured", []):
-            lines.append("           ? %s" % note)
+    lines = [line for result in results for line in result_lines(result)]
 
     problems = sum(len(r.get("problems", [])) for r in results)
     # A check that could not look is one whatever it carries: a could-not-run with only a reason
