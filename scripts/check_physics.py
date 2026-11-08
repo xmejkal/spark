@@ -171,17 +171,7 @@ class Board(netlist.Netlist):
         for element in self.elements:
             if element["type"] != "pcb_trace":
                 continue
-            route = element.get("route", [])
-            measured = []
-            for index, step in enumerate(route):
-                if "width" not in step:
-                    continue
-                length = None
-                if index + 1 < len(route):
-                    nxt = route[index + 1]
-                    if None not in (step.get("x"), step.get("y"), nxt.get("x"), nxt.get("y")):
-                        length = math.dist((step["x"], step["y"]), (nxt["x"], nxt["y"]))
-                measured.append((step["width"], length))
+            measured = measured_route(element.get("route", []))
             for net_name in nets_of_trace.get(element.get("source_trace_id"), []):
                 segments.setdefault(net_name, []).extend(measured)
 
@@ -199,6 +189,21 @@ class Board(netlist.Netlist):
                 sustained = min(widths)
             narrowest[net_name] = sustained
         return narrowest
+
+
+def measured_route(route):
+    """Value: (width, length or None) of each step of a trace's `route` that has a width; the length runs to the next step."""
+    measured = []
+    for index, step in enumerate(route):
+        if "width" not in step:
+            continue
+        length = None
+        if index + 1 < len(route):
+            nxt = route[index + 1]
+            if None not in (step.get("x"), step.get("y"), nxt.get("x"), nxt.get("y")):
+                length = math.dist((step["x"], step["y"]), (nxt["x"], nxt["y"]))
+        measured.append((step["width"], length))
+    return measured
 
 
 def check_trace_currents(board, rails, rise_c, loads=None):
