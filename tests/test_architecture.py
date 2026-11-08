@@ -342,13 +342,13 @@ class TheBreadboardAreaTest(unittest.TestCase):
     """W6-B3 (P694): the breadboard's modules live in `scripts/spark/breadboard/`, its `__init__.py` imports nothing, and
     each module imports alone. `scripts/` keeps the CLI `breadboard.py`, which defines `main` only."""
     BREADBOARD = ROOT / "scripts" / "spark" / "breadboard"
-    #: The ten modules of the area, by the names of its page (`areas/breadboard.md`).
+    #: The eleven modules of the area, by the names of its page (`areas/breadboard.md`); `part_shape` came in W6-D3b.
     MODULES = ["bench_changes", "breadboard_codes", "drawing", "drawing_catalog", "drawing_match", "kept_moves",
-               "part_pictures", "sheet", "tabbed_page", "wiring_steps"]
+               "part_pictures", "part_shape", "sheet", "tabbed_page", "wiring_steps"]
 
     def test_scripts_holds_the_cli_and_no_breadboard_library_module(self):
         self.assertEqual(sorted(path.stem for path in self.BREADBOARD.glob("*.py") if path.name != "__init__.py"), self.MODULES)
-        old = ["part_pictures.py", "tabbed_page.py"] + [path.name for path in (ROOT / "scripts").glob("breadboard*.py")]
+        old = ["part_pictures.py", "part_shape.py", "tabbed_page.py"] + [path.name for path in (ROOT / "scripts").glob("breadboard*.py")]
         self.assertEqual(sorted(name for name in old if (ROOT / "scripts" / name).exists()), ["breadboard.py"])
         self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in (ROOT / "scripts").glob("*.py")}), [])
         tree = ast.parse((ROOT / "scripts" / "breadboard.py").read_text())
@@ -398,25 +398,29 @@ class TheChecksAreaTest(unittest.TestCase):
 
 # --- MVP ---
 class TheDesignAreaTest(unittest.TestCase):
-    """W6-D3a (P702): the design values live in `scripts/spark/design/`, its `__init__.py` imports nothing, and each
-    module imports alone. `scripts/` keeps the CLI `assign_pins.py`, which defines `main` only. W6-D3b and W6-D3c add
-    the emitters and the needs."""
+    """W6-D3a (P702) and W6-D3b (P703): the design values and the emitters live in `scripts/spark/design/`, its
+    `__init__.py` imports nothing, and each module imports alone. `scripts/` keeps the three CLIs. W6-D3c adds the
+    needs."""
     DESIGN = ROOT / "scripts" / "spark" / "design"
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
-    MODULES = ["copper", "fab", "loader", "netlist", "pin_assigner", "restricted_pins"]
-    CLIS = ["assign_pins.py"]
+    MODULES = ["board_emitter", "copper", "design_codes", "fab", "footprint_emitter", "loader", "netlist", "pin_assigner",
+               "restricted_pins"]
+    #: Each CLI's own top-level functions: `main` and what only it uses to print. A library function back in a CLI, under
+    #: any name, fails the check.
+    CLIS = {"assign_pins.py": ["main"], "emit_board.py": ["main"], "emit_footprint.py": ["_report", "main"]}
 
     def test_scripts_holds_the_cli_and_no_design_library_module(self):
         self.assertEqual(sorted(path.stem for path in self.DESIGN.glob("*.py") if path.name != "__init__.py"), self.MODULES)
         scripts = ROOT / "scripts"
-        old = ["assign_pins.py", "copper.py", "design.py", "fab.py", "netlist.py", "restricted_pins.py"]
-        self.assertEqual([name for name in old if (scripts / name).exists()], self.CLIS)
+        old = ["assign_pins.py", "copper.py", "design.py", "design_codes.py", "emit_board.py", "emit_footprint.py", "fab.py",
+               "netlist.py", "restricted_pins.py"]
+        self.assertEqual([name for name in old if (scripts / name).exists()], sorted(self.CLIS))
         self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in scripts.glob("*.py")}), [])
-        for cli in self.CLIS:
+        for cli, own in self.CLIS.items():
             with self.subTest(cli=cli):
                 tree = ast.parse((scripts / cli).read_text())
-                self.assertEqual([node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))],
-                                 ["main"])
+                self.assertEqual(sorted(node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))),
+                                 own)
 
     def test_the_area_s_init_imports_nothing(self):
         # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)
