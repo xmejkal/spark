@@ -107,11 +107,23 @@ def islands_in(circuit, claims=(), across=()):
     private copies of it gave three different answers (backlog P35).
     """
     board = netlist.Netlist(circuit)
-    ground_ids = {net_id for net_id, net in board.nets.items()
-                  if (net.get("name") or "").upper() in GROUND_NETS}
     names = {cid: element.get("name") or "?" for cid, element in board.components.items()}
     passives = {cid for cid, element in board.components.items()
                 if element.get("ftype") in PASSIVE_FTYPES or element.get("name") in across}
+    findings, present = _reaches_no_ground(board, names, passives)
+    findings += ["%s.%s (a terminal connected to nothing)"
+                 % (names.get(port.get("source_component_id"), "?"), port.get("name") or port_id)
+                 for port_id, port in board.ports.items()
+                 if port.get("source_component_id") in present & passives
+                 and port_id not in board.nets_of_port]
+    return sorted(findings + _unfed(board, claims))
+
+
+def _reaches_no_ground(board, names, passives):
+    """`islands_in`'s first question: each chip wired to something and to no ground, as a finding, and every
+    component wired at all."""
+    ground_ids = {net_id for net_id, net in board.nets.items()
+                  if (net.get("name") or "").upper() in GROUND_NETS}
     grounded, present = set(), set()
     for port_id, net_ids in board.nets_of_port.items():
         owner = board.ports[port_id].get("source_component_id")
@@ -122,17 +134,19 @@ def islands_in(circuit, claims=(), across=()):
     # refuse to emit. Report only those that are wired to something and to no ground — for a chip.
     findings = ["%s reaches no ground" % names.get(owner, "?")
                 for owner in present - grounded if owner not in passives]
-    findings += ["%s.%s (a terminal connected to nothing)"
-                 % (names.get(port.get("source_component_id"), "?"), port.get("name") or port_id)
-                 for port_id, port in board.ports.items()
-                 if port.get("source_component_id") in present & passives
-                 and port_id not in board.nets_of_port]
+    return findings, present
+
+
+def _unfed(board, claims):
+    """`islands_in`'s third question: each supply pin the design says a net feeds, which the built board does not put
+    on that net (P29)."""
+    findings = []
     for component, pin, net in claims:
         wanted = board.net_named(net)
         if wanted is None or wanted not in board.nets_of(component, pin):
             findings.append("%s.%s is fed by net.%s in this design and is not on it"
                             % (component, pin, net))
-    return sorted(findings)
+    return findings
 
 
 def core_note(version):
