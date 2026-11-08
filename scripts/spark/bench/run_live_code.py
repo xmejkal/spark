@@ -14,7 +14,7 @@ from spark.bench import board_look
 import boards
 import tools
 from spark.bench.firmware_platform import MicroPythonPlatform
-from restricted_pins import BrokenRecordError
+from spark.design.restricted_pins import BrokenRecordError
 from spark.bench import bench_privacy
 from spark.bench import stops
 from spark.core import outcomes
