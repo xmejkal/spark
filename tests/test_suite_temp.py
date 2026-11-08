@@ -31,9 +31,18 @@ TESTS = Path(__file__).resolve().parent
 PATH_LINE = "sys.path.insert(0, str(Path(__file__).resolve().parent))"
 
 
+#: The stems of the modules in spark's area packages (`scripts/spark/<area>/`): `import store` still names spark's own
+#: since the records move (P718), though only `from spark.records import store` imports it.
+AREA_STEMS = {path.stem for path in (TESTS.parent / "scripts" / "spark").rglob("*.py") if path.name != "__init__.py"}
+
+
 def is_sparks(name):
-    """Whether a top-level module name is spark's own: `scripts/`, `tools/` or `tests/` holds `<name>.py`."""
-    return any((TESTS.parent / folder / (name + ".py")).is_file() for folder in ("scripts", "tools", "tests"))
+    """
+    Whether a top-level module name is spark's own: `scripts/`, `tools/` or `tests/` holds `<name>.py`, `scripts/` holds
+    the package `<name>/` (`spark`), or an area package holds `<name>.py`.
+    """
+    return (any((TESTS.parent / folder / (name + ".py")).is_file() for folder in ("scripts", "tools", "tests"))
+            or (TESTS.parent / "scripts" / name / "__init__.py").is_file() or name in AREA_STEMS)
 
 
 def asks_first(source):
@@ -68,6 +77,9 @@ class EveryTestModuleAsksForItFirstTest(unittest.TestCase):
     def test_the_reading_tells_first_from_late(self):
         self.assertTrue(asks_first('"""doc"""\nimport os\n' + PATH_LINE + "\nimport suite_temp\nimport store\n"))
         self.assertFalse(asks_first("import os\n" + PATH_LINE + "\nimport store\nimport suite_temp\n"))
+        self.assertFalse(asks_first("import os\n" + PATH_LINE + "\nfrom spark.records import store\n"
+                                    "import suite_temp\n"))
+        self.assertFalse(asks_first("import os\n" + PATH_LINE + "\nimport boards\nimport suite_temp\n"))
         self.assertFalse(asks_first("import os\n" + PATH_LINE + "\nX = os.getcwd()\nimport suite_temp\n"))
         self.assertFalse(asks_first("import os\n"))
 
