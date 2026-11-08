@@ -30,49 +30,49 @@
 "replace": "raise NotDrawn(\"%s does not fit on the breadboard\" % part_id)"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the x flip is dropped",
 "find": "pins[label] = (round(x + width / 2, 4), round(height / 2 - y, 4))",
 "replace": "pins[label] = (round(x, 4), round(height / 2 - y, 4))"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the y flip is dropped",
 "find": "pins[label] = (round(x + width / 2, 4), round(height / 2 - y, 4))",
 "replace": "pins[label] = (round(x + width / 2, 4), round(y, 4))"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the source order is swapped",
 "find": "return (WokwiGeometryShapeSource(parts), RecordShapeSource())",
 "replace": "return (RecordShapeSource(), WokwiGeometryShapeSource(parts))"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a stand-in is drawn from Wokwi's entry",
 "find": "return None if board.get(\"wokwi_is_stand_in\") else self._measured(board)",
 "replace": "return self._measured(board)"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the silkscreen guard is dropped",
 "find": "if measured is None or board.get(\"wokwi_pin_naming\") != self.PIN_NAMING_SILKSCREEN:",
 "replace": "if measured is None:"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a doubtful ground is picked",
 "find": "and pad.get(\"rail\") == \"ground\" and name not in doubtful]",
 "replace": "and pad.get(\"rail\") == \"ground\"]"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a duplicate pad label is accepted",
 "find": "            if label in pins:",
 "replace": "            if False:"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a record without doubtful_pads is drawn",
 "find": "        if not isinstance(doubtful, list):",
 "replace": "        if False:"
@@ -96,67 +96,67 @@
 "replace": "if earlier_path is None:"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "an edge other than +y is drawn",
 "find": "(\"flush_edge\", header.get(\"flush_edge\") == FLUSH_EDGE)",
 "replace": "(\"flush_edge\", True)"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a row count that disagrees is drawn",
 "find": "type(rows) is int and rows == len(header[\"pins\"])",
 "replace": "True"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a third header row is drawn",
 "find": "(\"pins\", len(header[\"pins\"]) <= 2)",
 "replace": "(\"pins\", True)"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a size of zero is drawn",
 "find": "or value <= 0:",
 "replace": "or value < 0:"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "two pads at one place are drawn",
 "find": "if len(set(pins.values())) != len(pins):",
 "replace": "if False:"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a step to a doubtful pad finds its pin",
 "find": "if label not in doubtful}, GND=shape.ground)",
 "replace": "}, GND=shape.ground)"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the record part says Wokwi has a part",
 "find": "\"wokwi_part\": False,",
 "replace": "\"wokwi_part\": True,"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the record part has no pad labels",
 "find": "\"pad_labels\": True,",
 "replace": "\"pad_labels\": False,"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the record part keeps the half breadboard",
 "find": "\"full_surface\": True}",
 "replace": "\"full_surface\": False}"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the subject of a missing fact is lost",
 "find": "drawing.NO_HEADER_FACT, missing[0][0])",
 "replace": "drawing.NO_HEADER_FACT)"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the pads are marked verified",
 "find": "\"pads\": {\"value\": pad_count, \"verified\": False,",
 "replace": "\"pads\": {\"value\": pad_count, \"verified\": True,"
@@ -174,31 +174,31 @@
 "replace": "    if False:"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a negative or non-finite size is drawn",
 "find": "if not math.isfinite(value) or value <= 0:",
 "replace": "if False:"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a pad outside the outline is drawn",
 "find": "        self._refuse_pads_outside(physical, placed)\n",
 "replace": "        pass\n"
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "rows as a flag is accepted",
 "find": "type(rows) is int and ",
 "replace": ""
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "the pad-outside field is always the pitch",
 "find": "(\"first_pad_from_edge_mm\" if first > height else \"pitch_mm\")",
 "replace": "\"pitch_mm\""
 },
  {
-"file": "scripts/part_shape.py",
+"file": "scripts/spark/breadboard/part_shape.py",
 "name": "a meeting pair names no dimension",
 "find": "(\"pitch_mm\" if along else \"row_spacing_mm\")",
 "replace": "\"header_order\""

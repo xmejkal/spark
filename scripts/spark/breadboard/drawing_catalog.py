@@ -6,7 +6,7 @@ name the steps use, and what a planned layout says of its board. It writes no fi
 import re
 
 from spark.design import board_emitter
-import part_shape
+from spark.breadboard import part_shape
 from spark.breadboard import drawing
 from spark.breadboard import wiring_steps
 

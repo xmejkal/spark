@@ -16,14 +16,11 @@ there never shows a board it is not.
 import collections
 import json
 import math
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from spark.breadboard import drawing  # noqa: E402
-from spark.design import footprint_emitter  # noqa: E402
-from spark.breadboard.drawing import NotDrawn  # noqa: E402
+from spark.breadboard import drawing
+from spark.design import footprint_emitter
+from spark.breadboard.drawing import NotDrawn
 
 #: Pixels per millimetre: Wokwi draws 96 px to the inch.
 PX_PER_MM = 96 / 25.4

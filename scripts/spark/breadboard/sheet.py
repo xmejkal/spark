@@ -14,7 +14,7 @@ import board_pads
 from spark.design import loader
 import drawer
 from spark.design import board_emitter
-import part_shape
+from spark.breadboard import part_shape
 import parts
 import store
 from spark.breadboard import bench_changes
