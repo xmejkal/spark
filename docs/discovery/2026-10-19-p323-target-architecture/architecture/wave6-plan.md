@@ -111,6 +111,7 @@ Only the PO answers these. Until he does, the plan takes the default.
    worktree. P690's fact: breadboard with checks is 4,909 lines, 284 rows (about 7.6 hours of one serial mutation run)
    and 44 keys, three times W6-F3. Proposal: two move PRs, W6-B3 then W6-C3, decision 4's "else a continuous version".
    The cards are filed as two. Only W6-B3's start waits on the PO. If he says one PR, the two branches become one.
+   Answered: the PO, 2026-11-08, "yes, nice, go on". Two move PRs, W6-B3 then W6-C3.
 
 ## What the refactor plan said, and what the tree says
 
