@@ -223,6 +223,7 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
         self.assertEqual(emit_footprint.why_no_footprint(board),
                          "firebeetle2-esp32s3 cannot have a footprint generated — these are not recorded, and none of them can be "
                          "derived from the rest:\n  physical.width_mm\n  physical.header_order (which label is on which pad — not derivable)")
+        self.assertEqual(emit_footprint.why_no_footprint(board).code, "board_lacks_footprint")  # P700
         self.assertIsNone(emit_footprint.why_no_footprint(firebeetle()))
 
     def test_the_geometry_gaps_leave_out_the_modules_name_and_the_footprint_gaps_keep_it(self):
@@ -256,6 +257,7 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
         self.assertEqual(emit_footprint.why_header_disagrees(board),
                          "the board definition disagrees with itself: physical.header.pins lists 1 rows and header_order has 2 (%s)"
                          % ", ".join(key for key in board["physical"]["header_order"] if not key.startswith("//")))
+        self.assertEqual(emit_footprint.why_header_disagrees(board).code, "board_disagrees")  # P700
         self.assertIsNone(emit_footprint.why_header_disagrees(firebeetle()))
 
     def test_a_value_of_the_wrong_kind_is_a_disagreement_that_names_the_field(self):
@@ -275,6 +277,13 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
                 board = firebeetle()
                 (board["physical"][where] if where else board["physical"])[field] = value
                 self.assertEqual(emit_footprint.why_header_disagrees(board), "the board definition disagrees with itself: " + said)
+                self.assertEqual(emit_footprint.why_wrong_kind(board).code, "board_disagrees")  # P700
+
+    def test_a_type_error_while_drawing_is_said_not_raised(self):
+        # P411: a caller may hand rules no reader checked; a text drill step is a TypeError in `render`, said, never raised
+        said = emit_footprint.why_header_disagrees(firebeetle(), {"fabrication": {"drill_step_mm": "0.1"}})
+        self.assertTrue(said.startswith("the board definition disagrees with itself: unsupported operand"), said)
+        self.assertEqual(said.code, "board_disagrees")
 
     def test_nothing_is_said_of_a_disagreement_when_something_is_missing_or_the_board_is_no_object(self):
         board = firebeetle()
@@ -361,3 +370,40 @@ class TheCommandLineTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --- MVP --- (P700)
+class TheBoardToDrawTest(unittest.TestCase):
+    """P700: `board_to_draw` returns what `main` refuses with, a Refusal whose text `main` printed before and whose code says
+    which: a board that cannot be loaded, or the rules file's own."""
+
+    def test_a_board_and_its_rules(self):
+        board, rules, refused = emit_footprint.board_to_draw(None, "firebeetle2-esp32s3")
+        self.assertEqual((board["id"], refused), ("firebeetle2-esp32s3", None))
+
+    def test_an_unknown_board(self):
+        board, rules, refused = emit_footprint.board_to_draw(None, "no-such-board")
+        self.assertEqual((board, rules, refused.code), (None, None, "board_unusable"))
+        self.assertTrue(refused.startswith("no board or rules to generate from: no board definition for 'no-such-board'"), refused)
+
+    def test_no_folder_to_look_for_a_project_from(self):
+        import os
+        import tempfile
+        gone = tempfile.mkdtemp()
+        here = os.getcwd()
+        self.addCleanup(os.chdir, here)
+        os.chdir(gone)
+        os.rmdir(gone)
+        _, _, refused = emit_footprint.board_to_draw(None, "firebeetle2-esp32s3")
+        self.assertEqual(refused.code, "no_project_folder")
+        self.assertTrue(refused.startswith("no board or rules to generate from: "), refused)
+
+    def test_a_refused_rules_file_keeps_its_own_code(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / ".spark" / "rules.json").write_text("{not json")
+        _, _, refused = emit_footprint.board_to_draw(str(root), "firebeetle2-esp32s3")
+        self.assertEqual(refused.code, "rules_refused")
+        self.assertTrue(refused.startswith("no board or rules to generate from: "), refused)
+# --- end MVP ---

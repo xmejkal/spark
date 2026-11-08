@@ -1022,6 +1022,7 @@ class ReadInputsTest(unittest.TestCase):
         self.assertTrue(str(caught.exception).startswith("cannot emit a board: "), str(caught.exception))
         self.assertIn("X asks for teleport", str(caught.exception))
         self.assertEqual(str(caught.exception), "cannot emit a board: " + caught.exception.why)
+        self.assertEqual(caught.exception.code, "unknown_need")  # P700: the Impossible's own code
 
     def test_a_footprint_gap_is_refused_under_footprint_in_its_own_words(self):
         from board_library import board_missing
@@ -1032,6 +1033,7 @@ class ReadInputsTest(unittest.TestCase):
         self.assertEqual(str(caught.exception),
                          "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of them "
                          "can be derived from the rest:\n  physical.header_order (which label is on which pad — not derivable)")
+        self.assertEqual(caught.exception.code, "board_lacks_footprint")  # P700
 
     def test_a_fault_in_the_design_is_said_before_the_footprint_gap(self):
         from board_library import board_missing
@@ -1048,6 +1050,7 @@ class ReadInputsTest(unittest.TestCase):
             emit_board.read_inputs(root / "requirements.json", root)
         self.assertEqual(caught.exception.stage, "schematic")
         self.assertIn("not JSON", str(caught.exception))
+        self.assertEqual(caught.exception.code, "requirements_unreadable")  # P700: the DesignError's own code
 
     def main_on_a_loose_file(self, requirements):
         """`main` on a requirements file in no project, so the plugin's library is the project: (code, stderr)."""
@@ -1093,6 +1096,65 @@ class ReadInputsTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
             emit_board.read_inputs(root / "requirements.json", root)
         self.assertEqual((out.getvalue(), err.getvalue()), ("", ""))
+
+
+# --- MVP --- (P700)
+class EachBoardRefusalCarriesItsCodeTest(unittest.TestCase):
+    """P700: each refusal after the input is read is a Refusal from `board_file`, its text what `main` printed, with its code."""
+
+    def inputs(self, board_id, part_id, **changed):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "requirements.json").write_text(json.dumps({"board": board_id, "parts": [part_id]}))
+        inputs = emit_board.read_inputs(root / "requirements.json", root)
+        parts_now = [dict(part, **changed) for part in inputs.design.parts]
+        return emit_board.BoardInputs(inputs.design._replace(parts=parts_now), inputs.assignments)
+
+    def test_a_design_that_emits_has_no_refusal(self):
+        text, refused = emit_board.board_file(self.inputs("firebeetle2-esp32s3", "l9110s-module"))
+        self.assertIsNone(refused)
+        self.assertIn("<board", text)
+
+    def test_each_gap_in_the_part_records(self):
+        inputs = self.inputs("firebeetle2-esp32s3", "l9110s-module")
+        twice = emit_board.BoardInputs(inputs.design._replace(parts=inputs.design.parts * 2), inputs.assignments)
+        for given, code, start in ((twice, "name_used_twice", "two or more components would be called: "),
+                                   (self.inputs("firebeetle2-esp32s3", "l9110s-module", footprint=None), "no_part_footprint",
+                                    "no footprint recorded for: "),
+                                   (self.inputs("firebeetle2-esp32s3", "l9110s-module", pin_order=None), "no_pin_order",
+                                    "no pin_order recorded for: "),
+                                   (self.inputs("firebeetle2-esp32s3", "l9110s-module", body_mm=None), "no_outline",
+                                    "no outline recorded for: ")):
+            with self.subTest(code=code):
+                text, refused = emit_board.board_file(given)
+                self.assertIsNone(text)
+                self.assertEqual(refused.code, code)
+                self.assertTrue(refused.startswith(start), refused)
+
+    def test_a_missing_outline_is_no_refusal_when_a_size_may_be_assumed(self):
+        text, refused = emit_board.board_file(self.inputs("firebeetle2-esp32s3", "l9110s-module", body_mm=None), True)
+        self.assertIsNone(refused)
+        self.assertIn("NOBODY HAS MEASURED", text)
+
+    def test_a_resistor_that_cannot_be_sized(self):
+        inputs = self.inputs("xiao-esp32-c6", "led-red-5mm")
+        led = inputs.design.parts[0]
+        facts = {name: fact for name, fact in led["facts"].items() if name != "forward_voltage_v"}
+        text, refused = emit_board.board_file(self.inputs("xiao-esp32-c6", "led-red-5mm", facts=facts))
+        self.assertEqual(refused.code, "series_resistor_unsized")
+        self.assertTrue(refused.startswith("cannot emit a board: led-red-5mm asks for "), refused)
+
+    def test_main_prints_the_refusal_board_file_returns(self):
+        # the golden net pins every sentence byte for byte; here, that `main` prints what `board_file` returned
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [
+            "jst-ph-2-power-inlet", "jst-ph-2-power-inlet"]}))
+        _, refused = emit_board.board_file(emit_board.read_inputs(root / "requirements.json", root))
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            code = emit_board.main([str(root / "requirements.json")])
+        self.assertEqual((code, err.getvalue(), refused.code), (emit_board.EXIT_COULD_NOT_RUN, refused + "\n", "name_used_twice"))
+# --- end MVP ---
 
 
 class EachSectionStandsAloneTest(unittest.TestCase):

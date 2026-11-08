@@ -984,6 +984,19 @@ function lets a refusal through. Docs: `areas/design.md` (the leaf's row). `json
 JSON. Review: logic. The lenses on the everyday model, the refuter on the strongest, one mutation run. Size est.: 150
 product lines, 120 test lines.
 
+P700 claims check (at 2746d0e8). Every cited line holds: 30 `DesignError` raises (`design.py:118` to `:447`), 11
+`Impossible` (`assign_pins.py:193` to `:476`), `RefusedInput` at `emit_board.py:1093` and `:1096`, `emit_board.main`'s
+six refusal returns (`:1115`, `:1135`, `:1145`, `:1155`, `:1165`, `:1177`) and `emit_footprint.main`'s three (`:315`,
+`:319`, `:323`): nine `main` returns, not eight. The eight spans hold, and `assign` is 116, `LEAVES` at `measure.py:247`,
+`LEAF_NAMES` at `planted_tree.py:11`. Three corrections, none changes a decision. A 31st `DesignError` is raised outside
+`design.py` (`check_all.py:339`), and two tests build one (`test_breadboard.py:256`, `test_check_all.py:956`): the
+`code` is a required keyword, so each names one. `emit_board.main`'s first refusal is `read_inputs`'s `RefusedInput`,
+already a library function shared with the spine, so it carries its code there; the other five move into one function.
+The extractions in `needs.py` (831, a module key) add a `def` each, paid by prunes in that module. P700's review: they
+broke no rule today (60 lines outside `scripts/spark/`), and a module key may not rise for them, so the four in
+`needs.py` and `emit_board.py` were reverted and go with the moves (W6-D3b, W6-D3c). `emit_board.py` paid its codes by
+rewrapping `PART_GAPS`' sentences and two comments: 1207.
+
 ### W6-U2, the build codes (after W6-D2)
 
 Goal: each refusal of `check_spine.py` and `init_project.py` has a code. Text and JSON stay byte-equal.
@@ -1078,7 +1091,9 @@ Keys: 8 (`C1` and `R6` `RefusedInput`, `R1:<module>`, two `R1` `main` keys, `R2:
 `R3:power_trace`, `T1:file-write` of `emit_footprint`). Tests: 9 test files, 11 import lines, and 18 in `scripts/`.
 Rows: 110. Docs: 7 agent-facing pages, `areas/design.md`, `areas/breadboard.md`. Size: 1,784 lines, 29 import lines,
 110 rows, 8 keys. Done when `ls scripts/*.py` shows `emit_board.py` and `emit_footprint.py` of the three, and
-`part_shape.py` is under `spark/breadboard/`.
+`part_shape.py` is under `spark/breadboard/`. Done-item 3 (P700): the extractions W6-D2 left, `emit_board.rail_loads`
+(60) and `header_lines` (46), each its own commit after the `git mv`, where R1's 40 lines apply. `R6:RefusedInput` went
+in P700, so the keys are 7.
 
 ### W6-D3c, the needs (after W6-D3b)
 
@@ -1087,6 +1102,8 @@ Files: `needs.py` alone, 831 lines, to `spark/design/needs.py`. It has no `main`
 `scripts/` (`parts.py`'s 7 lazy ones stay lazy, `check_spine.py:69`, `spark/idea/drop_need.py:8`). Rows: 221, the
 group's biggest run, in shards. Docs: 2 agent-facing pages and `areas/design.md`. Size: 831 lines, 11 import lines,
 221 rows, 2 keys. Done when `ls scripts/*.py` shows no design library module and `TheDesignAreaTest` passes whole.
+Done-item (P700): the extractions W6-D2 left, `plan_pick` (57) and `requirements` (55), each its own commit after the
+`git mv`, where R1's 40 lines apply.
 
 ### W6-U3, the build move (after W6-D3c)
 

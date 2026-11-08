@@ -874,3 +874,51 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --- MVP --- (P700)
+class EachImpossibleCarriesItsCodeTest(unittest.TestCase):
+    """P700: every Impossible carries its code (design_codes) beside its sentence, and an agent decides on the code."""
+
+    def setUp(self):
+        import json
+        self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+
+    def code_of(self, on, signals):
+        with self.assertRaises(assign_pins.Impossible) as caught:
+            assign_pins.assign(on, signals)
+        return caught.exception.code
+
+    def test_a_bus(self):
+        self.assertEqual(self.code_of(self.board, [{"name": "X", "bus": "can", "needs": []}]), "unknown_bus")
+        self.assertEqual(self.code_of(self.board, [{"name": "XYZ", "bus": "spi", "needs": []}]), "not_a_bus_line")
+        unlabelled = dict(self.board, pins={k: v for k, v in self.board["pins"].items() if k not in ("SDA", "SCL")})
+        self.assertEqual(self.code_of(unlabelled, [{"name": "SDA", "bus": "i2c", "needs": []}]), "bus_line_not_on_board")
+
+    def test_a_need_and_a_named_pin(self):
+        self.assertEqual(self.code_of(board(), [{"name": "X", "needs": ["waek"]}]), "unknown_need")
+        self.assertEqual(self.code_of(board(), [{"name": "SDA", "pin": "NOPE"}]), "no_such_pin")
+        self.assertEqual(self.code_of(self.board, [{"name": "BTN_BOOT", "pin": "D9", "needs": []}]), "named_pin_unsuitable")
+        self.assertEqual(self.code_of(self.board, [{"name": "SENSE", "pin": "D3", "needs": ["adc"]}]), "named_pin_unsuitable")
+        self.assertEqual(self.code_of(board(), [{"name": "A", "pin": "P0"}, {"name": "B", "pin": "P0"}]), "pin_taken")
+        self.assertEqual(self.code_of(board(), [{"name": "W%d" % n, "needs": ["wake"]} for n in range(4)]), "no_pin_left")
+
+    def test_a_signal_name_the_pin_map_cannot_write(self):
+        with self.assertRaises(assign_pins.Impossible) as caught:
+            assign_pins.pin_module(board(), [{"signal": "1X", "pin": "P0", "gpio": 0, "why": "", "roles": []}], "r.json")
+        self.assertEqual(caught.exception.code, "signal_name_unusable")
+        with self.assertRaises(assign_pins.Impossible) as caught:
+            assign_pins.onboard_lines({"ONBOARD_LED"}, "onboard_led", "ONBOARD_LED", {"gpio": [5], "note": "x"})
+        self.assertEqual(caught.exception.code, "signal_name_unusable")
+
+    def test_a_real_requirements_file_that_cannot_be_placed_gives_its_code(self):
+        import json
+        import tempfile
+        path = Path(tempfile.mkdtemp()) / "car.requirements.json"
+        path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [],
+                                    "signals": [{"name": "BTN_BOOT", "pin": "D9", "needs": []}]}))
+        with self.assertRaises(assign_pins.Impossible) as caught:
+            assign_pins.pin_module_for(path)
+        self.assertEqual(caught.exception.code, "named_pin_unsuitable")
+        self.assertIn("BTN_BOOT", str(caught.exception))
+# --- end MVP ---

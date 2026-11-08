@@ -45,8 +45,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import design  # noqa: E402
+import design_codes  # noqa: E402
 import fab  # noqa: E402
 import boards  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 from spark.core.text_guards import one_line  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, STATUS_FOR  # noqa: E402
@@ -155,8 +157,9 @@ def why_no_footprint(board):
     gaps = footprint_gaps(board)
     if not gaps:
         return None
-    return ("%s cannot have a footprint generated — these are not recorded, and none of them can be derived from the "
-            "rest:\n  %s" % (board.get("id") if isinstance(board, dict) else None, "\n  ".join(gaps)))
+    return Refusal("%s cannot have a footprint generated — these are not recorded, and none of them can be derived from the "
+                   "rest:\n  %s" % (board.get("id") if isinstance(board, dict) else None, "\n  ".join(gaps)),
+                   design_codes.BOARD_LACKS_FOOTPRINT)
 
 
 def footprint_stop_line(board):
@@ -192,7 +195,7 @@ def kind_problem(physical):
 def why_wrong_kind(board):
     """The board's disagreement with itself, said, when a field holds a value of the wrong kind, or None. Ask it of a board with no `footprint_gaps`."""
     found = kind_problem(board["physical"])
-    return DISAGREES_MESSAGE % found[1] if found else None
+    return Refusal(DISAGREES_MESSAGE % found[1], design_codes.BOARD_DISAGREES) if found else None
 
 
 def why_header_disagrees(board, rules=None):
@@ -209,7 +212,7 @@ def why_header_disagrees(board, rules=None):
     try:
         render(board, rules)
     except (ValueError, KeyError, TypeError) as exc:
-        return DISAGREES_MESSAGE % exc
+        return Refusal(DISAGREES_MESSAGE % exc, design_codes.BOARD_DISAGREES)
     return None
 
 
@@ -250,6 +253,17 @@ def pads(board):
     return placed
 
 
+def outline_lines(half_w, half_h):
+    """The four silkscreen sides of a board `2 * half_w` by `2 * half_h` mm, for `render`."""
+    lines = []
+    for (x1, y1), (x2, y2) in zip(
+            [(-half_w, half_h), (half_w, half_h), (half_w, -half_h), (-half_w, -half_h)],
+            [(half_w, half_h), (half_w, -half_h), (-half_w, -half_h), (-half_w, half_h)]):
+        lines.append('      <silkscreenpath route={[{"x":%g,"y":%g},{"x":%g,"y":%g}]} />'
+                     % (x1, y1, x2, y2))
+    return lines
+
+
 def render(board, rules=None):
     """The footprint module, as TSX, sized for the process the project states."""
     physical = board["physical"]
@@ -281,11 +295,7 @@ def render(board, rules=None):
         lines.append(
             '      <platedhole portHints={[%s]} pcbX="%gmm" pcbY="%gmm" '
             'outerDiameter="%gmm" holeDiameter="%gmm" shape="circle" />' % (json.dumps(label), x, y, pad, hole))
-    for (x1, y1), (x2, y2) in zip(
-            [(-half_w, half_h), (half_w, half_h), (half_w, -half_h), (-half_w, -half_h)],
-            [(half_w, half_h), (half_w, -half_h), (-half_w, -half_h), (-half_w, half_h)]):
-        lines.append('      <silkscreenpath route={[{"x":%g,"y":%g},{"x":%g,"y":%g}]} />'
-                     % (x1, y1, x2, y2))
+    lines += outline_lines(half_w, half_h)
     lines += [
         "    </footprint>}",
         "    {...props}",
@@ -296,6 +306,27 @@ def render(board, rules=None):
     return "\n".join(lines)
 
 
+# --- MVP --- (P700)
+def board_to_draw(project_flag, board_id):
+    """
+    Value: (the board, the project's rules, None), or (None, None, the Refusal that says why there is none). The project is
+    resolved INSIDE the guard: it raises when there is no project around, and outside it that escaped `main` as a traceback,
+    so a caller asking for an exit code got an exception, and whoever called it reported the crash as a verdict. A rules file
+    that is refused carries its own code (P434: its fault is named, not blamed on the board).
+    """
+    project = None
+    try:
+        project = Path(project_flag) if project_flag else boards.project_or_library()
+        board = boards.load(project, board_id)
+        rules = design.rules_in(project)
+    except Exception as exc:  # noqa: BLE001 — the message is the product
+        code = (exc.code if isinstance(exc, design.DesignError) else design_codes.BOARD_UNUSABLE if project
+                else design_codes.NO_PROJECT_FOLDER)  # no project: the folder it is looked for from is gone
+        return None, None, Refusal("no board or rules to generate from: %s" % exc, code)
+    return board, rules, None
+# --- end MVP ---
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("--board", required=True, help="board id, as in boards/<id>.json")
@@ -304,15 +335,9 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true", help="machine-readable result")
     args = parser.parse_args(argv)
 
-    # --- MVP --- (P434: so does the rules file, whose fault is named, not blamed on the board) Resolving the project has to sit INSIDE the guard. It raises when there is no project
-    # around, and outside the try that escaped `main` as a traceback — so a caller asking for an
-    # exit code got an exception instead, and whoever called it reported the crash as a verdict.
-    try:
-        project = Path(args.project) if args.project else boards.project_or_library()
-        board = boards.load(project, args.board)
-        rules = design.rules_in(project)
-    except Exception as exc:  # noqa: BLE001 — the message is the product
-        return _report(args, EXIT_COULD_NOT_RUN, "no board or rules to generate from: %s" % exc)
+    board, rules, refused = board_to_draw(args.project, args.board)
+    if refused:
+        return _report(args, EXIT_COULD_NOT_RUN, refused)
 
     refusal = why_no_footprint(board)
     if refusal:

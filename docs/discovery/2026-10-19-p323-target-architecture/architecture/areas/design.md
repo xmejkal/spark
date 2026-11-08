@@ -40,6 +40,7 @@ into records and sourcing would be a parameter with one value.
 | `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `BoardInputs`, `RefusedInput`, `REFUSED_INPUT_MESSAGE` and the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE` |
 | `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, and `footprint_stop`, moved from `emit_footprint.py` and `boards.py` |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is |
+| `design/design_codes.py` | the leaf of codes (P700): one per refusal of `load`, `assign_pins`, `emit_board` and `emit_footprint`, today `scripts/design_codes.py`. A `DesignError`, an `Impossible` and a `RefusedInput` carry a `code`, and `why_no_footprint`, `why_wrong_kind`, `why_header_disagrees`, `board_file` and `board_to_draw` return a `Refusal`. No CLI writes a code yet |
 | not here: `part_shape.py` | it goes to `breadboard/part_shape.py` (P698, the U1 edge) |
 | `design/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 

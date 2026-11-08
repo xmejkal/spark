@@ -74,9 +74,9 @@ class ValueMessageError(Exception):
         return cls("\n".join(["%s"] * len(lines)), *lines, **keywords)
 
     @classmethod
-    def of_error(cls, error):
+    def of_error(cls, error, **keywords):
         """The error that says what another error says, line by line: each line of `str(error)` is a value, and its line breaks stay (P451)."""
-        return cls.of_lines(str(error).split("\n"))
+        return cls.of_lines(str(error).split("\n"), **keywords)
 
 
 def flat_line(template, *values):

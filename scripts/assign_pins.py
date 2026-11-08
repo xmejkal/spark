@@ -43,6 +43,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import board_pads  # noqa: E402
 import boards  # noqa: E402
+import design_codes  # noqa: E402
 import design as design_library  # noqa: E402
 import missing_facts  # noqa: E402
 import parts as parts_library  # noqa: E402
@@ -124,7 +125,11 @@ CAPABILITY_COST = 8
 
 
 class Impossible(Exception):
-    """A requirement no pin on this board can satisfy, with the reason."""
+    """Error: a requirement no pin on this board can satisfy, with the reason. `code` (design_codes) says which (P700)."""
+
+    def __init__(self, message, code):
+        super().__init__(message)
+        self.code = code
 
 
 def capability_of(board, gpio):
@@ -191,12 +196,13 @@ def bus_line(signal):
     lines = BUS_LINES.get(signal["bus"])
     if lines is None:
         raise Impossible("%s is on bus %r, which is not a bus this knows: %s"
-                         % (signal["name"], signal["bus"], ", ".join(BUS_LINES)))
+                         % (signal["name"], signal["bus"], ", ".join(BUS_LINES)), design_codes.UNKNOWN_BUS)
     line = parts_library.bus_line_of(signal["bus"], signal.get("line") or signal["name"])
     if line is None:
         raise Impossible("%s is on the %s bus but %r is not one of its lines: %s"
                          % (signal["name"], signal["bus"].upper(), signal.get("line") or signal["name"],
-                            ", ".join("%s (%s)" % (line_name, "/".join(names)) for line_name, names in lines.items())))
+                            ", ".join("%s (%s)" % (line_name, "/".join(names)) for line_name, names in lines.items())),
+                         design_codes.NOT_A_BUS_LINE)
     return line
 
 
@@ -219,9 +225,8 @@ def assign(board, signals):
     for signal in signals:
         unknown = set(signal.get("needs", [])) - set(CAPABILITIES)
         if unknown:
-            raise Impossible(
-                "%s asks for %s, which is not something a pin can be asked for. Known: %s"
-                % (signal["name"], ", ".join(sorted(unknown)), ", ".join(CAPABILITIES)))
+            raise Impossible("%s asks for %s, which is not something a pin can be asked for. Known: %s"
+                             % (signal["name"], ", ".join(sorted(unknown)), ", ".join(CAPABILITIES)), design_codes.UNKNOWN_NEED)
 
     # A signal on a named bus is dedicated hardware: the board's pin for that line of that bus,
     # shared with every other device on the bus, and no optimisation applies. Without this the
@@ -244,7 +249,7 @@ def assign(board, signals):
         else:
             raise Impossible("%s needs the %s bus's %s line and this board labels no %s pin — "
                              "add it to the board file's pins, or use another board"
-                             % (signal["name"], signal["bus"].upper(), line, line))
+                             % (signal["name"], signal["bus"].upper(), line, line), design_codes.BUS_LINE_NOT_ON_BOARD)
 
     # A signal that names its own pin is honoured first and without argument.
     assignments, taken_gpio, bus_holders = [], set(), {}
@@ -252,7 +257,7 @@ def assign(board, signals):
         label = signal["pin"]
         if label not in board["pins"]:
             raise Impossible("%s asks for pin %r, which this board does not bring out"
-                             % (signal["name"], label))
+                             % (signal["name"], label), design_codes.NO_SUCH_PIN)
         gpio = board["pins"][label]
         # Named is not exempt. A signal that names its pin was honoured without a look at what it
         # asked for or what the pin is: a wake button on GPIO47 (not wake-capable), an ADC sense on
@@ -262,11 +267,12 @@ def assign(board, signals):
         roles = roles_of(board, gpio)
         blocked = [role for role in roles if role in UNAVAILABLE_ROLES]
         if blocked:
-            raise Impossible(NAMED_STRAP_REFUSAL % (signal["name"], label, gpio, ", ".join(blocked)))
+            raise Impossible(NAMED_STRAP_REFUSAL % (signal["name"], label, gpio, ", ".join(blocked)),
+                             design_codes.NAMED_PIN_UNSUITABLE)
         cannot = needs - capability_of(board, gpio)
         if cannot:
             raise Impossible("%s asks for %s by name and needs %s, which GPIO%d cannot do"
-                             % (signal["name"], label, ", ".join(sorted(cannot)), gpio))
+                             % (signal["name"], label, ", ".join(sorted(cannot)), gpio), design_codes.NAMED_PIN_UNSUITABLE)
         line = signal.get("line") if signal.get("bus") else None
         if gpio in taken_gpio:
             if line in SHARED_LINES and bus_holders.get(gpio) == (signal["bus"], line):
@@ -281,7 +287,7 @@ def assign(board, signals):
                 to_place.append(dict(signal, pin=None))
                 continue
             raise Impossible("%s asks for %s (GPIO%d), which is already taken"
-                             % (signal["name"], label, gpio))
+                             % (signal["name"], label, gpio), design_codes.PIN_TAKEN)
         taken_gpio.add(gpio)
         if line in SHARED_LINES:
             bus_holders[gpio] = (signal["bus"], line)
@@ -302,7 +308,7 @@ def assign(board, signals):
         usable = {label: pin for label, pin in available.items()
                   if pin["gpio"] not in taken_gpio and needs <= pin["can"]}
         if not usable:
-            raise Impossible(_why_not(board, signal, needs, available, taken_gpio))
+            raise Impossible(_why_not(board, signal, needs, available, taken_gpio), design_codes.NO_PIN_LEFT)
 
         # The least capable, least encumbered pin that still does the job — so abilities stay
         # available for the signals that need them, and pins with another job stay free for as
@@ -417,7 +423,7 @@ def pin_module(board, assignments, source, pulled_up=()):
     for entry in assignments:
         if not entry["signal"].isidentifier():
             raise Impossible("signal %r is not a Python name, so no firmware could import it"
-                             % entry["signal"])
+                             % entry["signal"], design_codes.SIGNAL_NAME_UNUSABLE)
         pad = board_pads.BoardPads.from_record(board).pad_of(entry["pin"])  # --- MVP --- (P512)
         said = ["pad %s" % pad, entry["why"]] + [role_note(board, role)
                                                           for role in entry["roles"]]
@@ -447,7 +453,6 @@ def onboard_lines(written, role, name, record):
     if not isinstance(gpio, list):
         return []
     labels = boards.pin_labels(record)
-    facts = record["facts"] if isinstance(record.get("facts"), dict) else {}
     level = provenance.read_value(record, "active_level")
     note = one_line("%s: %s" % (role, str(record.get("note", "")).rstrip(".")))
     named = []
@@ -465,17 +470,26 @@ def onboard_lines(written, role, name, record):
         origin = ("source: %s%s" % (one_line(str(held.get("source"))), "" if held.get("verified") is True else "; not verified")
                   if isinstance(held, dict) else "the source is on the line above")
         named.append((name + "_ON", "%d  # the active level in the board record, %s" % (level, origin)))
+    named += fact_lines(role, name, record)
+    taken = sorted(written & {each for each, _ in named})
+    if taken:
+        raise Impossible("%s is a name pins.py gives a signal and the board's own %s: rename the signal"
+                         % (taken[0], role.replace("onboard_", "")), design_codes.SIGNAL_NAME_UNUSABLE)
+    return ["%s = %s" % each for each in named]
+
+
+def fact_lines(role, name, record):
+    """(`<NAME>_<FACT>`, its value and comment) for each fact of an on-board part whose value is a finite number or a word,
+    with its source and "not verified" when it is not, for `onboard_lines`."""
+    facts = record["facts"] if isinstance(record.get("facts"), dict) else {}
+    named = []
     for fact, said in facts.items():
         value = said.get("value") if isinstance(said, dict) else None
         if boards.is_fact_value(value):
             source = one_line(str(said.get("source")))
             named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, source: %s%s" % (
                 value, role, fact, source, "" if said.get("verified") is True else "; not verified")))
-    taken = sorted(written & {each for each, _ in named})
-    if taken:
-        raise Impossible("%s is a name pins.py gives a signal and the board's own %s: rename the signal"
-                         % (taken[0], role.replace("onboard_", "")))
-    return ["%s = %s" % each for each in named]
+    return named
 
 
 #: What follows a signal's name in the line that sets its internal pull-up (P204).
