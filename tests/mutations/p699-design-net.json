@@ -1,0 +1,15 @@
+[
+{"file": "tests/test_golden_design.py", "name": "the scrub skipped", "find": "scrubbed = golden_bench.scrub(text, golden_design.places(project, store, self.shims))", "replace": "scrubbed = text"},
+{"file": "tests/golden_design.py", "name": "a Case's exit code is wrong, so the check of the exit code must catch it", "find": "Case(\"assign-pins-problems-impossible.txt\", \"assign_pins.py\", [REQUIREMENTS], 1,", "replace": "Case(\"assign-pins-problems-impossible.txt\", \"assign_pins.py\", [REQUIREMENTS], 0,"},
+{"file": "tests/golden_checks.py", "name": "the proxies not set, so a design child could open a URL", "find": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder))", "replace": "env.update(PATH=str(shim_folder))"},
+{"file": "tests/golden_checks.py", "name": "the child's PATH keeps another folder, where a real tsci or node may be", "find": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder))", "replace": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder) + \":/usr/bin\")"},
+{"file": "tests/fakes.py", "name": "the fake tsci answers --version wrong", "find": "[ \\\"$1\\\" = \\\"--version\\\" ] && { echo 0.0.0-fake; exit 0; }", "replace": "[ \\\"$1\\\" = \\\"--version\\\" ] && { echo 0.0.1-fake; exit 0; }"},
+{"file": "tests/fakes.py", "name": "the fake tsci calls cp by its name, which a PATH of the fakes' folder alone does not hold", "find": "/bin/cp \\\"$circuit\\\" dist/board/circuit.json", "replace": "cp \\\"$circuit\\\" dist/board/circuit.json"},
+{"file": "tests/golden_design.py", "name": "the written files not appended, so what --keep writes is guarded by nothing", "find": "    for name in case.written:", "replace": "    for name in ():"},
+{"file": "tests/fake_converter.py", "name": "the fake converter writes no diagram", "find": "with open(args[args.index(\"--out\") + 1], \"w\") as out:", "replace": "with open(\"/dev/null\", \"w\") as out:"},
+{"file": "tests/golden_design.py", "name": "the fakes keep their needs, so tools.find looks for bun and node and refuses them", "find": "\"also\": [], \"fetch\": None, \"needs\": []}", "replace": "\"also\": [], \"fetch\": None}"},
+{"file": "tests/golden_design.py", "name": "a Case's FAKE_TSCI_CIRCUIT keeps its placeholder, so the fake builds no circuit it was told", "find": "value.replace(FAKES, fakes)", "replace": "value"},
+{"file": "tests/golden_design.py", "name": "the fake tsci touches no marker, so nothing shows that it built", "find": "\": >> %s\" % shlex.quote(str(folder / BUILT_MARKER))", "replace": "\"true\""},
+{"file": "scripts/assign_pins.py", "name": "a design CLI's refusal sentence changed", "find": "print(\"could not load the design: %s\" % broken)", "replace": "print(\"could not read the design: %s\" % broken)"},
+{"file": "scripts/emit_board.py", "name": "a design CLI's exit code changed for a refused input", "find": "        print(refused, file=sys.stderr)\n        return EXIT_COULD_NOT_RUN", "replace": "        print(refused, file=sys.stderr)\n        return 1"}
+]
