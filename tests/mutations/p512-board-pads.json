@@ -62,8 +62,8 @@
  {
   "file": "scripts/check_spine.py",
   "name": "the verdict leaves the selectors out",
-  "find": "for element in errors})), first))]",
-  "replace": "for element in errors})), \"\"))]"
+  "find": "for element in errors})), first), build_codes.DESIGN_NOT_BUILT)]",
+  "replace": "for element in errors})), \"\"), build_codes.DESIGN_NOT_BUILT)]"
  },
  {
   "file": "scripts/check_spine.py",

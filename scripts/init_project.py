@@ -37,11 +37,13 @@ sys.path.insert(0, str(SCRIPTS))
 
 import ai_files  # noqa: E402
 import boards  # noqa: E402
+import build_codes  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
 from design import CIRCUIT_PATHS, one_board_message  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 
 #: Where a built netlist usually is, so the rails can be named from the design rather than typed.
 
@@ -404,6 +406,63 @@ def boards_offered(project):
     return "; ".join(part for part in said if part) or "none"
 
 
+# --- MVP --- main's refusals, each a Refusal with its code (build_codes, P701)
+#: What init says when every file it writes is there already.
+NOTHING_TO_DO = Refusal("\nnothing to do — everything already exists. --force merges what is derived into rules.json and "
+                        "keeps your answers.", build_codes.NOTHING_TO_DO)
+
+
+def why_project_refused(project):
+    """Value: why `project` cannot be set up, said before anything is written: no folder, or a tools file that cannot be
+    read. A Refusal, or None when it can."""
+    if not project.is_dir():
+        return Refusal("no directory at %s" % project, build_codes.NO_PROJECT_FOLDER)
+    try:
+        tools.merged(project)
+    except tools.ToolProblem as broken:
+        return Refusal("init_project.py: %s" % broken, build_codes.TOOLS_FILE_UNREADABLE)
+    return None
+
+
+def why_board_refused(board, project):
+    """Value: why `board` cannot be made active, as a Refusal: neither the project nor spark has it. None when one has."""
+    if board in boards.available(project):
+        return None
+    return Refusal("no board called %r. Available: %s" % (board, boards_offered(project)), build_codes.UNKNOWN_BOARD)
+
+
+def find_circuit(project):
+    """
+    Value: the built netlist the rails are named from, the first of CIRCUIT_PATHS that matches, as (path, None), or (None, None)
+    when none does. Two that match one pattern give (None, a Refusal): the rails are not seeded, the rest is.
+    """
+    for pattern in CIRCUIT_PATHS:
+        matches = sorted(project.glob(pattern))
+        if len(matches) > 1:
+            # `matches[0]` — the first in sorted order — until 2026-09-29. On a two-board
+            # project that silently seeded the rules from whichever design sorted first and
+            # reported "named N rail(s) from circuit.json", naming no path. The rails of one
+            # board then became the rules for both.
+            #
+            # `check_all` calls the same two matches ambiguous and refuses. Two halves of one
+            # tool disagreeing about whether choosing is allowed is worse than either answer.
+            # The RAILS cannot be chosen between; everything derived from the part
+            # RECORDS can, because a record says the same thing whichever board was built.
+            # This used to refuse outright and write nothing, so a two-board project could
+            # never get its floating-input rules at all — and the RC car, which carries the
+            # canonical example of one in its L9110S, had `must_not_float: []` for two
+            # sprints (backlog P53).
+            return None, Refusal("%d built designs here, so the rails were NOT seeded — the rails of one board are not "
+                                 "the rules for both:\n    %s\n  %s. Everything that comes from the part records was "
+                                 "seeded." % (len(matches), "\n    ".join(str(m.relative_to(project)) for m in matches),
+                                              one_board_message([str(m) for m in matches], "--force")),
+                                 build_codes.INPUT_AMBIGUOUS)
+        if matches:
+            return str(matches[0]), None
+    return None, None
+# --- end MVP ---
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="init_project.py",
@@ -418,47 +477,15 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     project = Path(args.project).resolve()
-    if not project.is_dir():
-        print("no directory at %s" % project, file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    try:
-        tools.merged(project)  # before anything is written: a tools file that cannot be read is named
-    except tools.ToolProblem as broken:
-        print("init_project.py: %s" % broken, file=sys.stderr)
+    if (refused := why_project_refused(project)):
+        print(refused, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     try:
         listed = "on your projects list as %r" % store.add_project(project)
     except store.StoreProblem as refused:
         listed = "not on your projects list: %s" % refused
 
-    circuit, ambiguous = args.circuit, None
-    if not circuit:
-        for pattern in CIRCUIT_PATHS:
-            matches = sorted(project.glob(pattern))
-            if len(matches) > 1:
-                # `matches[0]` — the first in sorted order — until 2026-09-29. On a two-board
-                # project that silently seeded the rules from whichever design sorted first and
-                # reported "named N rail(s) from circuit.json", naming no path. The rails of one
-                # board then became the rules for both.
-                #
-                # `check_all` calls the same two matches ambiguous and refuses. Two halves of one
-                # tool disagreeing about whether choosing is allowed is worse than either answer.
-                # The RAILS cannot be chosen between; everything derived from the part
-                # RECORDS can, because a record says the same thing whichever board was built.
-                # This used to refuse outright and write nothing, so a two-board project could
-                # never get its floating-input rules at all — and the RC car, which carries the
-                # canonical example of one in its L9110S, had `must_not_float: []` for two
-                # sprints (backlog P53).
-                ambiguous = ("%d built designs here, so the rails were NOT seeded — the rails of "
-                             "one board are not the rules for both:\n    %s\n  %s. Everything "
-                             "that comes from the part records was seeded."
-                             % (len(matches), "\n    ".join(str(m.relative_to(project)) for m in matches),
-                                one_board_message([str(m) for m in matches], "--force")))
-                circuit = None
-                break
-            if matches:
-                circuit = str(matches[0])
-                break
+    circuit, ambiguous = (args.circuit, None) if args.circuit else find_circuit(project)
 
     nets = nets_in(circuit)
     part_list, notes = design_in(project)
@@ -481,8 +508,8 @@ def main(argv=None):
     notes.extend(ai_notes)
 
     if args.board:
-        if args.board not in boards.available(project):
-            print("no board called %r. Available: %s" % (args.board, boards_offered(project)), file=sys.stderr)
+        if (refused := why_board_refused(args.board, project)):
+            print(refused, file=sys.stderr)
             return EXIT_COULD_NOT_RUN
         did, note = write(project / "boards" / "active.json",
                           {"schema": 1, "board": args.board}, args.force)
@@ -510,8 +537,7 @@ def main(argv=None):
                 print("  %s  %s" % (path.name, field))
 
     if not written and not args.board and not ai_did:
-        print("\nnothing to do — everything already exists. "
-              "--force merges what is derived into rules.json and keeps your answers.")
+        print(NOTHING_TO_DO)
         return EXIT_NOTHING_TO_DO
     # Part of the job could not be done, and W1 applies to this tool as much as to a check: the
     # rails are unseeded and the exit code says so, even though everything else was written.

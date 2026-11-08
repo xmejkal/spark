@@ -1020,6 +1020,23 @@ the 12 `NotDrawn` sites of `drawing.py` and the one of `part_shape.py`, and lose
 Tests, mutation (est. 7 rows: two codes swapped, `Stage` drops its code, `CODES` missing a constant, the `kept` entry's
 code dropped, an exit code changed, a sentence changed) and review as W6-D2. Size est.: 90 product lines, 80 test lines.
 
+**P701 claims check** (main 05179935, before any code). No claim changes a decision; the corrections:
+
+- The lines moved. `Stage` is `:118`, `report` `:1010`, its stage dict `:1028`. `run`'s refusals are `:377` to `:541`:
+  19, and the `schematic-notes` problems stage (`:430`) is the 20th. `convert` `:564`, `:566`;
+  `converter_stage_problem` `:233`; `main` `:716`, `:743`, `:748`. `board_alone` has 2 (`:579`, and `given.why` at
+  `:582`). `init_project.main` `:423`, `:428`, `:486`, `:515`, and a fifth exit, `:518`: two built designs, so no rail
+  was seeded (could-not-run).
+- `check_spine.py` is 1,046 lines, its R1 module key 1046 (P700 lowered it). No R1 key may rise
+  (`patterns-and-names.md:183`, P700 row 17). `islands_in` (56) breaks no rule today (60 outside `scripts/spark/`), so
+  its extraction goes to W6-U3, after the `git mv`, as P700 moved its eight to W6-D3.
+- The prunes are `:841` and `:960`. `sheet.REFUSALS` is `(NotBuilt, DesignError, StoreProblem, OSError)`, so
+  `sheet.REFUSALS + (ValueError,)` equals the hand-written tuple. `sheet.refusal_code` has no code for a `ValueError`
+  (it raises `StopIteration`): that entry takes the build's `stage_crashed`, an error the step did not expect.
+- No W6-D1 golden runs `--keep` with `--json` (`check-spine-ok-keep.txt` is text, and the three `.json` goldens have no
+  `kept`), so every golden stays byte-equal and none is accepted. A test in `test_check_spine.py` pins `kept[].code`.
+- P691 (#933) losing its `:843` sentence is an issue edit, for the session that runs `gh`.
+
 ### The four moves, W6-D3a, W6-D3b, W6-D3c and W6-U3 (what they share)
 
 Why four. 5,808 lines and 605 rows at 1.6 minutes is 16 hours of one serial mutation run. Four PRs keep each under

@@ -61,6 +61,7 @@ sys.path.insert(0, str(SCRIPTS))
 import assign_pins  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
+import build_codes  # noqa: E402
 from spark.breadboard import drawing, sheet, tabbed_page  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
@@ -92,6 +93,8 @@ CONVERTER_TIMEOUT_S = 120
 
 #: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
 PIN_MODULE = Path("firmware") / "pins.py"
+#: What stops the pin map from being written: no pin can be placed, or the design, the store or a file cannot be read.
+PIN_MAP_REFUSALS = (assign_pins.Impossible, design.DesignError, store.StoreProblem, OSError, ValueError)
 
 #: The stage that reads the requirements file; its detail is why a refused file built nothing (P280).
 REQUIREMENTS_STAGE = "requirements"
@@ -117,10 +120,10 @@ def said_of_a_crash(program, crash):
 
 
 class Stage:
-    """One link, and what became of it."""
+    """Value: one link, what became of it, and the `code` (build_codes, or the design's own) of one that did not end ok."""
 
-    def __init__(self, name, status, detail=""):
-        self.name, self.status, self.detail = name, status, detail
+    def __init__(self, name, status, detail="", code=None):
+        self.name, self.status, self.detail, self.code = name, status, detail, code
 
     def __repr__(self):
         return "Stage(%r, %r)" % (self.name, self.status)
@@ -230,7 +233,7 @@ def converter_stage_problem(project, own=None):
     try:
         converter_command(project, own)
     except tools.ToolProblem as missing:
-        return Stage("simulation", COULD_NOT_RUN, str(missing))
+        return Stage("simulation", COULD_NOT_RUN, str(missing), build_codes.TOOL_MISSING)
     return None
 
 
@@ -374,7 +377,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     try:
         board = boards.load(project, requirements.get("board"))
     except Exception as exc:  # noqa: BLE001
-        return stages + [Stage("board", COULD_NOT_RUN, str(exc))]
+        return stages + [Stage("board", COULD_NOT_RUN, str(exc), build_codes.BOARD_UNUSABLE)]
     stages.append(Stage("board", OK, board["name"] + (
         " — from the plugin's library; no project up from the requirements file, so no rules"
         if from_library else "")))
@@ -383,20 +386,20 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # nothing about the chain and reads as though it did. Intake row M3 had it as `problems` on 09-25; both were wrong.
     if requirements.get(needs.BOARD_ONLY) is True:
         if requirements.get("parts"):
-            return stages + [Stage("parts", COULD_NOT_RUN, "the requirements say board_only and name parts: say one")]
+            return stages + [Stage("parts", COULD_NOT_RUN, "the requirements say board_only and name parts: say one", build_codes.BOARD_ONLY_WITH_PARTS)]
         return stages + board_alone(board, workdir, firmware, project)
     if not requirements.get("parts"):
         return stages + [Stage("parts", COULD_NOT_RUN,
                                "the requirements name no parts, so there is nothing to build; a "
                                "board holding only the microcontroller proves nothing. A project that runs "
-                               'on the board alone says "%s": true' % needs.BOARD_ONLY)]
+                               'on the board alone says "%s": true' % needs.BOARD_ONLY, build_codes.NO_PARTS)]
 
     # The design's own part records, so the build stage below can ask whether the circuit honoured what they state.
     # `emit_board` reads the same records; if that succeeded, this cannot fail for a reason not already told.
     try:
         part_list = design.parts_of(requirements, project)
     except design.DesignError as broken:
-        return stages + [Stage("parts", COULD_NOT_RUN, str(broken))]
+        return stages + [Stage("parts", COULD_NOT_RUN, str(broken), broken.code)]
 
     # --- MVP --- the input is read, the pins are placed and the footprint is asked for, in the one order `emit_board.read_inputs`
     # gives (P407, P432): a fault in the requirements is said before a gap in the board record, and the schematic imports
@@ -405,9 +408,9 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         inputs = emit_board.read_inputs(workdir / "requirements.json", project)
     except emit_board.RefusedInput as refused:
         hint = "\n" + NO_FOOTPRINT_HINT if refused.stage == emit_board.FOOTPRINT_STAGE else ""
-        return stages + [Stage(refused.stage, COULD_NOT_RUN, str(refused) + hint)]
+        return stages + [Stage(refused.stage, COULD_NOT_RUN, str(refused) + hint, refused.code)]
     except Exception as crash:  # noqa: BLE001 -- emit_board ran in a child until P432, so a crash was a stage (F5), not a lost run
-        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_board.py", crash))]
+        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_board.py", crash), build_codes.STAGE_CRASHED)]
 
     board_file = workdir / "board.tsx"
     emitted = subprocess.run(
@@ -416,18 +419,18 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         capture_output=True, text=True)
     if emitted.returncode == emit_board.EXIT_COULD_NOT_RUN:
         # It refused the input — a part with no measured outline, a resistor nothing sizes — in its own words.
-        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, emitted.stderr.strip())]
+        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, emitted.stderr.strip(), build_codes.SCHEMATIC_REFUSED)]
     if emitted.returncode != 0:
         # emit_board exits 0 or 2 on purpose, so anything else is a crash: could-not-run, as `main` says of anything
         # unforeseen, with the traceback's last line. Read as problems, it sent people to debug a design nobody examined (F5).
         said = emitted.stderr.strip().splitlines()
         return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, "emit_board.py crashed: %s" % (
-            said[-1] if said else "exit %d, and nothing said" % emitted.returncode))]
+            said[-1] if said else "exit %d, and nothing said" % emitted.returncode), build_codes.STAGE_CRASHED)]
     board_file.write_text(emitted.stdout)
     traces_asked = emitted.stdout.count(emit_board.TRACE_TAG)
     stages.append(Stage(emit_board.SCHEMATIC_STAGE, OK, "%d trace(s) written" % traces_asked))
     if emitted.stderr.strip():
-        stages.append(Stage("schematic-notes", PROBLEMS, emitted.stderr.strip()))
+        stages.append(Stage("schematic-notes", PROBLEMS, emitted.stderr.strip(), build_codes.SCHEMATIC_NOTED))
 
     # --- the footprint the schematic imports ---
     # --- MVP --- drawn here with the design's rules; `read_inputs` already refused a rules file that cannot be read (P432, OC2).
@@ -437,10 +440,10 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     try:
         disagreement = emit_footprint.why_header_disagrees(footprint_board, rules)
         if disagreement:
-            return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, disagreement)]
+            return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, disagreement, disagreement.code)]
         text = emit_footprint.render(footprint_board, rules)
     except Exception as crash:  # noqa: BLE001 -- the footprint script ran apart from this run until P432, so a crash was a stage
-        return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_footprint.py", crash))]
+        return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_footprint.py", crash), build_codes.STAGE_CRASHED)]
     (workdir / ("%s.tsx" % export)).write_text(text)
     stages.append(Stage(emit_board.FOOTPRINT_STAGE, OK, "%s.tsx" % export))
 
@@ -454,7 +457,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         except tools.ToolProblem as missing:
             said = str(missing)  # the tools list's own sentence, with what installs it (P82)
         return stages + [Stage("build", COULD_NOT_RUN,
-                               "%s — so the chain was not exercised; /spark:setup installs it" % said)]
+                               "%s — so the chain was not exercised; /spark:setup installs it" % said, build_codes.TOOL_MISSING)]
 
     built = subprocess.run([str(toolchain), "build", "board.tsx"],
                            cwd=str(workdir), capture_output=True, text=True,
@@ -470,11 +473,11 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                    "%s (%s) cannot build even a trivial board from here, so this "
                                    "is the toolchain, not the design. Use the project's own tsci "
                                    "(npm i @tscircuit/cli in the project) or one that builds on "
-                                   "its own.\n%s" % (toolchain, version, last_words))]
+                                   "its own.\n%s" % (toolchain, version, last_words), build_codes.TOOL_CANNOT_BUILD)]
         return stages + [Stage("build", PROBLEMS,
                                "no circuit.json was produced by %s (%s), which does build a "
                                "trivial board\n%s" % (toolchain, version,
-                                                      built.stderr.strip()[-800:]))]
+                                                      built.stderr.strip()[-800:]), build_codes.DESIGN_NOT_BUILT)]
 
     traces, errors = count_in(json.loads(circuit_path.read_text()))
     # NOT a trace count. Comparing connections asked for against `pcb_trace`s is wrong twice
@@ -491,21 +494,19 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                          emit_board.supply_inputs(board, part_list),
                          across=emit_board.loads_across_a_pair(part_list))
     if islands:
-        return stages + [Stage("build", PROBLEMS,
-                               "%s. A board builds, routes and reports no error with a component "
-                               "joined to nothing — the parts around it are wired to nets it is "
-                               "simply not on" % "; ".join(islands))]
+        return stages + [Stage("build", PROBLEMS, "%s. A board builds, routes and reports no error with a component joined "
+                               "to nothing — the parts around it are wired to nets it is simply not on" % "; ".join(islands),
+                               build_codes.PART_STRANDED)]
     if errors:
         first = [error.get("selectors_not_found") or error.get("message", "") for error in errors[:2]]
         first = clean("; ".join(", ".join(map(str, one)) if isinstance(one, list) else str(one) for one in first), 300)
         return stages + [Stage("build", PROBLEMS, "%d error(s): %s; first: %s" % (  # --- MVP --- (P512) names the trace
-            len(errors), ", ".join(sorted({element["type"] for element in errors})), first))]
+            len(errors), ", ".join(sorted({element["type"] for element in errors})), first), build_codes.DESIGN_NOT_BUILT)]
     if traces == 0:
         # The failure this file was written for: everything is placed, nothing is connected, and nothing raised.
-        return stages + [Stage("build", PROBLEMS,
-                               "built with 0 pcb_traces — every component is placed and no "
-                               "copper joins any of them. tscircuit skips routing entirely when "
-                               "one net is unroutable, and that does not raise")]
+        return stages + [Stage("build", PROBLEMS, "built with 0 pcb_traces — every component is placed and no copper joins "
+                               "any of them. tscircuit skips routing entirely when one net is unroutable, and that does not "
+                               "raise", build_codes.NOT_ROUTED)]
     stages.append(Stage("build", OK, "%d trace(s), 0 errors, tsci %s%s"
                         % (traces, version, core_note(version))))
 
@@ -522,14 +523,14 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     loaded = design.load(workdir / "requirements.json", None if from_library else project)
     mapping, chips, unmapped = sim_project.mapping_for(loaded)
     if unmapped:
-        return stages + [Stage("simulation", COULD_NOT_RUN, sim_project.unmapped_detail(unmapped))]
+        return stages + [Stage("simulation", COULD_NOT_RUN, sim_project.unmapped_detail(unmapped), build_codes.SIMULATION_FACT_MISSING)]
     sim_dir = workdir / "sim"
     sim_dir.mkdir(exist_ok=True)
     (sim_dir / sim_project.MAPPING_FILE).write_text(json.dumps(mapping, indent=2) + "\n")
     (sim_dir / "board.json").write_text(json.dumps(board, indent=2) + "\n")
     staged, chip_problems = sim_project.stage_chips(chips, sim_dir)
     if chip_problems:
-        return stages + [Stage("simulation", COULD_NOT_RUN, "\n".join(chip_problems))]
+        return stages + [Stage("simulation", COULD_NOT_RUN, "\n".join(chip_problems), build_codes.CHIP_NOT_COMPILED)]
     (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, firmware))
 
     diagram, stopped, notes = convert(project, own, ["--circuit", str(circuit_path)], sim_dir, workdir)
@@ -538,10 +539,9 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     wires = wires_in(diagram)
     if wires == 0:
         # The same failure shape as a board with no copper: every part placed, nothing joined.
-        return stages + [Stage("simulation", PROBLEMS,
-                               "a diagram with 0 connections. Every part is placed and none is "
-                               "wired, which is what an unmapped component looks like once the "
-                               "converter has given up on it")]
+        return stages + [Stage("simulation", PROBLEMS, "a diagram with 0 connections. Every part is placed and none is wired, "
+                               "which is what an unmapped component looks like once the converter has given up on it",
+                               build_codes.DIAGRAM_UNWIRED)]
     compiled = sum(1 for how in staged.values() if how == "compiled")
     # What the simulation cannot show, in the records' own words, said and kept beside the diagram (P37).
     limits = sim_project.write_limits(sim_dir, loaded, board)
@@ -562,8 +562,8 @@ def convert(project, own, source, sim_dir, workdir):
         said = (made.stderr or made.stdout)[-800:]
         if simulation_could_not_look(said):
             return None, Stage("simulation", COULD_NOT_RUN, "the converter has no Wokwi part for a component on this board — a mapping "
-                               "to add to its lib/mapping.ts, not a defect in the design, which built\n" + said), ""
-        return None, Stage("simulation", PROBLEMS, "no diagram was produced\n" + said), ""
+                               "to add to its lib/mapping.ts, not a defect in the design, which built\n" + said, build_codes.CONVERTER_LACKS_PART), ""
+        return None, Stage("simulation", PROBLEMS, "no diagram was produced\n" + said, build_codes.NO_DIAGRAM), ""
     notes = "".join("\n           " + note for note in (bad_kept, sim_project.kept_note(made.stdout), *sim_project.converter_warnings(made.stdout)) if note)
     return json.loads(diagram_path.read_text()), None, notes
 
@@ -576,10 +576,10 @@ def board_alone(board, workdir, firmware=None, project=None):
     """
     skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", emit_board.SCHEMATIC_STAGE, emit_board.FOOTPRINT_STAGE, "build")]
     if not board.get("wokwi_part_type"):
-        return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type")]
+        return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type", build_codes.SIMULATION_FACT_MISSING)]
     sim_dir, project = workdir / "sim", project or SCRIPTS.parent
     given, own = onboard_parts.read_board_alone(board, project), find_converter(project)
-    stopped = given.wired and (converter_stage_problem(project, own) or (Stage("simulation", COULD_NOT_RUN, given.why) if given.why else None))
+    stopped = given.wired and (converter_stage_problem(project, own) or (Stage("simulation", COULD_NOT_RUN, given.why, build_codes.SIMULATION_FACT_MISSING) if given.why else None))
     if stopped:
         return skipped + [stopped]
     sim_dir.mkdir(exist_ok=True)
@@ -713,7 +713,7 @@ def main(argv=None):
     try:
         requirements = design.read(source) if source else dict(REFERENCE)
     except design.DesignError as broken:
-        return report([Stage(REQUIREMENTS_STAGE, COULD_NOT_RUN, str(broken))], args)
+        return report([Stage(REQUIREMENTS_STAGE, COULD_NOT_RUN, str(broken), broken.code)], args)
     # A file in no project is built from the plugin's library, and the board stage says so.
     project = design.project_for(source) if source else None
     from_library = bool(source) and design.is_library(project)
@@ -740,13 +740,13 @@ def main(argv=None):
     try:
         stages = run(requirements, workdir, toolchain, project, from_library, firmware=firmware)
     except subprocess.TimeoutExpired as late:
-        stages = [Stage("build", COULD_NOT_RUN, timed_out_sentence(late))]
+        stages = [Stage("build", COULD_NOT_RUN, timed_out_sentence(late), build_codes.STAGE_TIMED_OUT)]
     except Exception as exc:  # noqa: BLE001
         # Anything unforeseen is could-not-run, never problems. An exception says this tool
         # failed, which is not the same as the chain failing, and reporting one as the other
         # sends somebody to debug a design that was never examined.
         stages = [Stage("check_spine", COULD_NOT_RUN,
-                        "%s: %s" % (type(exc).__name__, exc))]
+                        "%s: %s" % (type(exc).__name__, exc), build_codes.STAGE_CRASHED)]
 
     # P429: a line this could not read goes with the file the build writes again, so that is said, but only when it did.
     if kept is not None and kept.state == NOT_CHECKED and (workdir / "sim" / "wokwi.toml").is_file():
@@ -838,8 +838,8 @@ def keep_breadboard(requirements, destination, stages=()):
     try:
         sheet.record_built_from(requirements, Path(destination) / sheet.BUILT_FROM)
         written = sheet.write(requirements, sheet_path, Path(destination) / sheet.CIRCUIT)
-    except (sheet.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
-        return [{"file": str(sheet_path), "did": "not written", "why": str(stopped),
+    except sheet.REFUSALS + (ValueError,) as stopped:
+        return [{"file": str(sheet_path), "did": "not written", "why": str(stopped), "code": sheet.refusal_code(stopped) if isinstance(stopped, sheet.REFUSALS) else build_codes.STAGE_CRASHED,
                  "line": "no breadboard sheet: %s" % stopped}] + [
             _left_from_earlier_drawing(path, renderer, "the sheet was not written") for path, renderer in drawings]
     why = "the parts and how to wire them on a breadboard"
@@ -957,7 +957,7 @@ def keep_pins(requirements, destination):
         return {"file": str(target), "did": "left alone", "why": why, "line": "left alone: %s (%s)" % (target, why)}
     try:
         module = assign_pins.pin_module_for(str(requirements))
-    except (assign_pins.Impossible, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
+    except PIN_MAP_REFUSALS as stopped:
         if ours:
             target.unlink()
             return {"file": str(target), "did": "removed", "why": "%s, and it described an earlier design" % stopped,

@@ -14,6 +14,7 @@ raise?" calls it a pass.
 """
 
 import argparse
+import ast
 import contextlib
 import hashlib
 import io
@@ -39,6 +40,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
 import boards  # noqa: E402
+import build_codes  # noqa: E402
 import check_spine  # noqa: E402
 from suite_runs import slow  # noqa: E402
 import design  # noqa: E402
@@ -2511,6 +2513,63 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         stages = check_spine.run(requirements, workdir, toolchain=check_spine.find_toolchain(ROOT), project=ROOT)
         self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.PROBLEMS))
         self.assertIn("no diagram was produced", stages[-1].detail)
+
+
+# --- MVP ---
+class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
+    """P701: every Stage that does not end ok names its code (build_codes, or the design error's own), and the sheet's
+    `not written` entry carries its code into --json's `kept`. The codes are literals here."""
+
+    #: Each Stage that is not ok, in the order check_spine.py builds them: converter_stage_problem, run, convert,
+    #: board_alone, main. A code a design error carries is named by the expression that passes it on.
+    CODES_IN_ORDER = [
+        "tool_missing",
+        "board_unusable", "board_only_with_parts", "no_parts", "broken.code", "refused.code", "stage_crashed",
+        "schematic_refused", "stage_crashed", "schematic_noted", "disagreement.code", "stage_crashed", "tool_missing",
+        "tool_cannot_build", "design_not_built", "part_stranded", "design_not_built", "not_routed",
+        "simulation_fact_missing", "chip_not_compiled", "diagram_unwired",
+        "converter_lacks_part", "no_diagram",
+        "simulation_fact_missing", "simulation_fact_missing",
+        "broken.code", "stage_timed_out", "stage_crashed",
+    ]
+
+    def test_each_stage_that_is_not_ok_names_its_code(self):
+        tree = ast.parse((ROOT / "scripts" / "check_spine.py").read_text())
+        stops = sorted((node.lineno, node.col_offset, node) for node in ast.walk(tree)
+                       if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "Stage" and len(node.args) > 1
+                       and getattr(node.args[1], "id", None) in ("COULD_NOT_RUN", "PROBLEMS"))
+
+        def code(call):
+            if len(call.args) < 4:
+                return None
+            named = call.args[3]
+            if isinstance(named, ast.Attribute) and getattr(named.value, "id", None) == "build_codes":
+                return getattr(build_codes, named.attr)
+            return ast.unparse(named)
+        self.assertEqual([code(call) for _, _, call in stops], self.CODES_IN_ORDER)
+
+    def test_a_board_nobody_has_parts_said_twice_and_no_parts_are_caught_with_their_codes(self):
+        workdir = Path(tempfile.mkdtemp())
+        for requirements, wanted in (({"board": "no-such-board", "parts": ["x"]}, ("board", "board_unusable")),
+                                     ({"board": "firebeetle2-esp32s3", "board_only": True, "parts": ["x"]},
+                                      ("parts", "board_only_with_parts")),
+                                     ({"board": "firebeetle2-esp32s3"}, ("parts", "no_parts")),
+                                     ({"board": "firebeetle2-esp32s3", "parts": ["no-such-part"]}, ("parts", "part_unusable"))):
+            last = check_spine.run(requirements, workdir)[-1]
+            self.assertEqual((last.name, last.code), wanted, requirements)
+        self.assertIsNone(check_spine.run({"board": "firebeetle2-esp32s3"}, workdir)[0].code)  # the board stage, ok
+
+    def test_a_sheet_not_written_carries_its_code_into_the_json(self):
+        project = Path(tempfile.mkdtemp())
+        (project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": []}))
+        built = [check_spine.Stage("build", check_spine.OK)]
+        entry = check_spine.keep_breadboard(project / "requirements.json", project, built)[0]
+        self.assertEqual((entry["did"], entry["code"]), ("not written", "file_unusable"))  # no dist/board to record in
+        (project / "dist" / "board").mkdir(parents=True)
+        entry = check_spine.keep_breadboard(project / "requirements.json", project, built)[0]
+        self.assertEqual((entry["did"], entry["code"]), ("not written", "not_built"))
+        self.assertTrue(entry["line"].startswith("no breadboard sheet: nothing is built at "), entry["line"])
+# --- end MVP ---
 
 
 if __name__ == "__main__":

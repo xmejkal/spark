@@ -579,5 +579,41 @@ class TheProjectsListTest(unittest.TestCase):
         self.assertIn("on your projects list as %r" % project.name, out.getvalue())
 
 
+# --- MVP ---
+class EachRefusalOfInitCarriesItsCodeTest(unittest.TestCase):
+    """P701: each refusal of init is a Refusal with its code (build_codes), as a literal here, and its text unchanged."""
+
+    def test_a_folder_that_is_not_there(self):
+        gone = Path(tempfile.mkdtemp()) / "no-such-folder"
+        said = init_project.why_project_refused(gone)
+        self.assertEqual((said.code, said), ("no_project_folder", "no directory at %s" % gone))
+
+    def test_a_tools_file_that_cannot_be_read_is_caught_with_its_code(self):
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / ".spark" / "tools.json").write_text("{not json")
+        said = init_project.why_project_refused(root)
+        self.assertEqual(said.code, "tools_file_unreadable")
+        self.assertTrue(said.startswith("init_project.py: "), said)
+        self.assertIsNone(init_project.why_project_refused(Path(tempfile.mkdtemp())))
+
+    def test_a_board_nobody_has(self):
+        said = init_project.why_board_refused("no-such-board", Path(tempfile.mkdtemp()))
+        self.assertEqual(said.code, "unknown_board")
+        self.assertTrue(said.startswith("no board called 'no-such-board'. Available: "), said)
+        self.assertIsNone(init_project.why_board_refused("firebeetle2-esp32s3", Path(tempfile.mkdtemp())))
+
+    def test_two_built_designs_and_nothing_to_do(self):
+        root = TwoBuiltDesignsTest._with("dist/car/circuit.json", "dist/remote/circuit.json")
+        circuit, said = init_project.find_circuit(root)
+        self.assertEqual((circuit, said.code), (None, "input_ambiguous"))
+        self.assertTrue(said.startswith("2 built designs here, so the rails were NOT seeded"), said)
+        one = TwoBuiltDesignsTest._with("dist/car/circuit.json")
+        self.assertEqual(init_project.find_circuit(one), (str(one / "dist/car/circuit.json"), None))
+        self.assertEqual(init_project.find_circuit(Path(tempfile.mkdtemp())), (None, None))
+        self.assertEqual(init_project.NOTHING_TO_DO.code, "nothing_to_do")
+# --- end MVP ---
+
+
 if __name__ == "__main__":
     unittest.main()

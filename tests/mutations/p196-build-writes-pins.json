@@ -20,8 +20,8 @@
  {
   "file": "scripts/check_spine.py",
   "name": "P196 refuter: pins no pin can take crash the report again",
-  "find": "    except (assign_pins.Impossible, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:",
-  "replace": "    except (design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:"
+  "find": "PIN_MAP_REFUSALS = (assign_pins.Impossible, design.DesignError, store.StoreProblem, OSError, ValueError)",
+  "replace": "PIN_MAP_REFUSALS = (design.DesignError, store.StoreProblem, OSError, ValueError)"
  },
  {
   "file": "scripts/check_spine.py",
