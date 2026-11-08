@@ -1,0 +1,11 @@
+  promoted to <project-dir>/parts/golden-led.json
+--- parts/golden-led.json ---
+{
+  "schema": 1,
+  "id": "golden-led",
+  "name": "golden led",
+  "kind": "indicator",
+  "sources": [
+    "http://127.0.0.1:9/datasheet.pdf"
+  ]
+}

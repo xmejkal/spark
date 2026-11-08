@@ -1,0 +1,2 @@
+--- stderr ---
+boards.py: no 'no.such.key' in this board definition (stopped at 'no')

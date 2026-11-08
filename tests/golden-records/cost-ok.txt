@@ -1,0 +1,6 @@
+requests  1
+by_tool   {'WebSearch': 1}
+runs      {'part-finder': 1}
+documents 0
+tokens    22
+minutes   3

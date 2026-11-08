@@ -4,6 +4,7 @@ runs an installer: RecordsGuardTest proves the guard, and RecordsGoldenTest runs
 golden_records.GUARDED and finds the fake pdftotext."""
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,6 +18,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 import golden_bench  # noqa: E402
 import golden_checks  # noqa: E402
 import golden_records  # noqa: E402
+import parts  # noqa: E402
 import tools  # noqa: E402
 
 
@@ -90,6 +92,62 @@ class RecordsGuardTest(unittest.TestCase):
                              text=True, timeout=golden_bench.RUN_TIMEOUT_S)
         self.assertEqual((one.returncode, two.returncode), (0, 1))
         self.assertIn("Forward voltage", one.stdout)
+
+
+
+class RecordsOpTest(unittest.TestCase):
+    """Each golden's name starts with its op, the script's name with dashes, so an accept run names it."""
+
+    def test_each_golden_starts_with_its_op(self):
+        for case in golden_records.CASES:
+            self.assertTrue(case.golden.startswith(golden_bench.op_of(case) + "-"), case.golden)
+
+    def test_every_operation_of_parts_has_a_case(self):
+        named = {case.argv[0].lstrip("-") for case in golden_records.CASES if case.script == "parts.py"}
+        self.assertEqual({name for name, *_ in parts.OPERATIONS} - named, set())
+
+
+class RecordsGoldenTest(unittest.TestCase):
+    """Each Case of golden_records.CASES is one test, named after its golden, run in its own copy of one project with
+    its own store."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.folder = Path(tempfile.mkdtemp())
+        cls.shims = golden_records.make_fakes(cls.folder)
+        cls.project = golden_records.build_project(cls.folder)
+        # The guard holds before any child runs. A raise, not an assert, which python -O strips.
+        broken = guard_holds(cls.folder, cls.shims)
+        if broken:
+            raise RuntimeError("%s, so no records golden runs" % broken)
+
+    def run_case(self, case):
+        work = Path(tempfile.mkdtemp(dir=self.folder))
+        store = work / "store"
+        project = work / self.project.name
+        shutil.copytree(self.project, project)
+        code, text = golden_records.run_case(case, project, store, self.shims)
+        self.assertEqual(code, case.exit_code, text)
+        scrubbed = golden_bench.scrub(text, golden_records.replacements_of(project, store, self.shims))
+        self.assertIsNone(golden_bench.check_golden(case, scrubbed, golden_dir=golden_records.GOLDEN_DIR))
+
+    def test_no_golden_holds_a_path_of_this_machine_or_a_token(self):
+        secrets = tuple(value for name, value in os.environ.items()
+                        if name.upper().endswith(golden_bench.SECRET_ENDS) and len(value) > 3)
+        for golden in sorted(golden_records.GOLDEN_DIR.iterdir()):
+            text = golden.read_text()
+            for path in (str(Path.home()), "/Users/", "/private/", tempfile.gettempdir(), str(golden_bench.ROOT),
+                         golden_records.SESSION + "-") + secrets:
+                self.assertNotIn(path, text, golden.name)
+
+    def test_every_golden_has_its_case(self):
+        written = {golden.name for golden in golden_records.GOLDEN_DIR.iterdir()}
+        self.assertEqual(written, {case.golden for case in golden_records.CASES})
+
+
+for _case in golden_records.CASES:
+    setattr(RecordsGoldenTest, "test_" + _case.golden.replace("-", "_").replace(".", "_"),
+            lambda self, case=_case: self.run_case(case))
 
 
 if __name__ == "__main__":

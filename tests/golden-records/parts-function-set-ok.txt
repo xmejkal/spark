@@ -1,0 +1,17 @@
+  set golden-led (<project-dir>/parts/golden-led.json): function null → [{"does": "indicate", "what": "status"}]
+--- parts/golden-led.json ---
+{
+  "schema": 1,
+  "id": "golden-led",
+  "name": "golden led",
+  "kind": "indicator",
+  "sources": [
+    "http://127.0.0.1:9/datasheet.pdf"
+  ],
+  "function": [
+    {
+      "does": "indicate",
+      "what": "status"
+    }
+  ]
+}

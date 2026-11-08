@@ -1,0 +1,2 @@
+--- stderr ---
+parts.py: no record and no live drawer entry called 'nosuch' — `--need` and `--drawer` list what exists

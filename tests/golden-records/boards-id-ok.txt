@@ -1,0 +1,1 @@
+firebeetle2-esp32s3

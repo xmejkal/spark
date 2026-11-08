@@ -1,0 +1,11 @@
+  my-sim written (<project-dir>/.spark/tools.json); point a job at it: /spark:setup use <role>=my-sim
+--- .spark/tools.json ---
+{
+  "my-sim": {
+    "kind": "path",
+    "exe": "my-sim",
+    "meets": [
+      "wokwi-project"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+  wrote <project-dir>/requirements.json: board firebeetle2-esp32s3; parts led-red-5mm
+--- requirements.json ---
+{
+  "board": "firebeetle2-esp32s3",
+  "parts": [
+    "led-red-5mm"
+  ]
+}

@@ -1,0 +1,35 @@
+  new dfrobot-dfr0954: MAX98357 I2S Amplifier × 2 — is part max98357a-dfr0954
+--- {store}/drawer/dfrobot-dfr0954.json ---
+{
+  "schema": 1,
+  "label": "MAX98357 I2S Amplifier",
+  "count": 2,
+  "part_number": {
+    "maker": "dfrobot",
+    "number": "DFR0954"
+  },
+  "is": {
+    "part": "max98357a-dfr0954"
+  },
+  "from": {
+    "seller": "dfrobot",
+    "product": "DFR0954"
+  },
+  "bought": {
+    "dfrobot": 2
+  },
+  "unsure": false
+}
+--- {store}/drawer-import/dfrobot.json ---
+{
+  "source": "dfrobot",
+  "lines": 1,
+  "stated": 1,
+  "items": [
+    {
+      "sku": "DFR0954",
+      "name": "MAX98357 I2S Amplifier",
+      "count": 2
+    }
+  ]
+}

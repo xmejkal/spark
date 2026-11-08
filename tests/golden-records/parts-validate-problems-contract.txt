@@ -1,0 +1,10 @@
+  dfr0534-module               ok
+  golden-led                   1 problem(s)
+      - missing required key 'needs'
+  jst-ph-2-power-inlet         ok
+  l9110s-module                ok
+  led-red-5mm                  ok
+  max98357a-dfr0954            ok
+  speaker-terminal             ok
+  tactile-button               ok
+  vl6180x-breakout             ok

@@ -1,0 +1,6 @@
+  light — indicate / status
+                 firebeetle2-esp32s3 (library)                  onboard LED light [other words]
+                 led-red-5mm (library)                          light [other words]
+                 xiao-esp32-c6 (library)                        onboard LED light [other words]
+  press — sense / button
+                 vl6180x-breakout (library)                     distance [other words]

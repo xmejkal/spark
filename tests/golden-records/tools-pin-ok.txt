@@ -1,0 +1,7 @@
+  pdftotext version pinned to 24.02.0 (<project-dir>/.spark/tools.json); to install it: tools.py --install pdftotext --project <project-dir>
+--- .spark/tools.json ---
+{
+  "pdftotext": {
+    "version": "24.02.0"
+  }
+}

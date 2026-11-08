@@ -1,0 +1,2 @@
+--- stderr ---
+boards.py: no board selection at <project-dir>/boards/active.json

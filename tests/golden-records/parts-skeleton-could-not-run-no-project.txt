@@ -1,0 +1,2 @@
+--- stderr ---
+parts.py: --skeleton needs --project (the record belongs to a project's parts/) and --kind

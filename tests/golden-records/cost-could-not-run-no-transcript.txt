@@ -1,0 +1,2 @@
+--- stderr ---
+usage: cost.py <transcript.jsonl> — what one run cost, from its transcript

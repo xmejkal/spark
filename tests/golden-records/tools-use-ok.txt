@@ -1,0 +1,7 @@
+  pdf-text → pdftotext (<project-dir>/.spark/tools.json)
+--- .spark/tools.json ---
+{
+  "roles": {
+    "pdf-text": "pdftotext"
+  }
+}

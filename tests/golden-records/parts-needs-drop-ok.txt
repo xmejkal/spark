@@ -1,0 +1,12 @@
+  dropped press: sense button
+--- .spark/needs.json ---
+{
+  "schema": 1,
+  "needs": [
+    {
+      "id": "light",
+      "does": "indicate",
+      "what": "status"
+    }
+  ]
+}

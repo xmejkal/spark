@@ -1209,6 +1209,16 @@ open while W6-U3 is open. After it: the four CLIs have goldens, and a change to 
 Done when every Case of the four CLIs passes on main with the fakes alone, the guard test passes, and the mutation run
 caught every planted row.
 
+P715 claims check (at 89be2adb, no decision changed). Holds: `store.py:378`, `:385`, `:403`; `parts.py:1139`,
+`:1537` to `:1607` (30 entries); `boards.py:917` to `:925`; `tools.py:59`, `:590` to `:600`, `:628`, `:636`;
+`cost.py:281`; `golden_checks.py:33`, `:34`; `golden_design.py:190`, `:206`. Corrections: `run_checked` is at
+`tools.py:351` and the `curl` argv at `:403` is in `plan()`; `parts.py:1144` is the page loop, `tools.find("pdf-text")` is
+`:1156`; `--get` is `boards.py:923`. `--sources` on an unreachable URL is `problems` (exit 1), and `--fetch` skips an
+unreachable document and exits 0, so neither is `could-not-run`; both ask a URL at the closed port itself. `--fetch`'s
+write Case rewrites the record with no document. A gap: `--promote` of a project's record writes into the plugin's
+`parts/`, the repository, so the net runs it with `--dry-run` alone (a probe wrote `parts/golden-led.json` once, deleted).
+The `CLAUDE_CODE_SESSION_ID` the plan names comes from `store.py:47` in the parent, and the net sets it too. 70 Cases.
+
 ### W6-R2, the records codes (after W6-R1)
 
 Goal: each refusal of `boards.py`, `tools.py` and `store.py` has a code. Text and exit codes stay byte-equal.
