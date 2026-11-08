@@ -45,6 +45,7 @@ import check_spine  # noqa: E402
 from suite_runs import slow  # noqa: E402
 from spark.design import loader  # noqa: E402
 import emit_board  # noqa: E402
+import emit_footprint  # noqa: E402
 import missing_facts  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
@@ -1794,7 +1795,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
     # --- MVP --- (P432, OC2)
     def test_the_spine_writes_the_footprint_without_calling_the_footprint_cli(self):
         project, wanted = self.project_without("physical.header.drill_mm")
-        with mock.patch.object(check_spine.emit_footprint, "main", side_effect=AssertionError("the footprint CLI ran")):
+        with mock.patch.object(emit_footprint, "main", side_effect=AssertionError("the footprint CLI ran")):
             workdir, stages = self.run_to_the_footprint(project, wanted)
         footprint = [stage for stage in stages if stage.name == "footprint"]
         self.assertEqual([stage.status for stage in footprint], [check_spine.OK])
@@ -1806,9 +1807,9 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         (project / ".spark" / "rules.json").write_text(json.dumps({"fabrication": {"drill_step_mm": 0.3}}))
         workdir, stages = self.run_to_the_footprint(project, wanted)
         written = (workdir / [stage for stage in stages if stage.name == "footprint"][0].detail).read_text()
-        self.assertNotEqual(written, check_spine.emit_footprint.render(boards.load(project, "xiao-esp32-c6"), None))
+        self.assertNotEqual(written, check_spine.footprint_emitter.render(boards.load(project, "xiao-esp32-c6"), None))
         with contextlib.redirect_stdout(io.StringIO()) as printed:
-            code = check_spine.emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(project)])
+            code = emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(project)])
         self.assertEqual(code, 0)
         self.assertEqual(written, printed.getvalue())
 
@@ -1906,7 +1907,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
 
     def test_a_crash_in_drawing_the_footprint_is_a_stage_and_keeps_the_stages_before_it(self):
         project, wanted = self.project_without("physical.header.drill_mm")
-        with mock.patch.object(check_spine.emit_footprint, "render", side_effect=ZeroDivisionError("a fault of its own")):
+        with mock.patch.object(check_spine.footprint_emitter, "render", side_effect=ZeroDivisionError("a fault of its own")):
             workdir, stages = self.run_to_the_footprint(project, wanted)
         self.assertEqual([(s.name, s.status) for s in stages],
                          [("board", "ok"), ("schematic", "ok"), ("footprint", check_spine.COULD_NOT_RUN)])
@@ -1922,7 +1923,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
     # --- MVP --- (P430, #569) a crash's text is stored raw and guarded where it is printed
     def test_a_crash_in_drawing_the_footprint_keeps_its_text_raw_and_the_screen_shows_it_guarded(self):
         project, wanted = self.project_without("physical.header.drill_mm")
-        with mock.patch.object(check_spine.emit_footprint, "render", side_effect=RuntimeError("a\u202e\x1bb")):
+        with mock.patch.object(check_spine.footprint_emitter, "render", side_effect=RuntimeError("a\u202e\x1bb")):
             _, stages = self.run_to_the_footprint(project, wanted)
         self.assertEqual(stages[-1].detail, "emit_footprint.py crashed: RuntimeError: a\u202e\x1bb")
         self.assertEqual(self.said_by_report(stages, True)["stages"][-1]["detail"], stages[-1].detail)
@@ -1940,7 +1941,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         # The decided residual (P430): the text keeps a message's own newlines, so a second line can look like a stage.
         # Only a --json reader gets one detail, whole.
         project, wanted = self.project_without("physical.header.drill_mm")
-        with mock.patch.object(check_spine.emit_footprint, "render", side_effect=RuntimeError("a\nb")):
+        with mock.patch.object(check_spine.footprint_emitter, "render", side_effect=RuntimeError("a\nb")):
             _, stages = self.run_to_the_footprint(project, wanted)
         self.assertIn("crashed: RuntimeError: a\nb\n", self.said_by_report(stages, False))
         self.assertEqual(self.said_by_report(stages, True)["stages"][-1]["detail"], "emit_footprint.py crashed: RuntimeError: a\nb")

@@ -73,7 +73,7 @@ import parts  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
-import emit_footprint  # noqa: E402
+from spark.design import footprint_emitter  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, NOT_CHECKED, OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, STATUS_FOR, status_of  # noqa: E402
 from spark.core.result import envelope_item  # noqa: E402
@@ -105,7 +105,7 @@ CHANGED = "changed"
 #: The `did` of a kept entry for one end the drawn breadboard joins differently from circuit.json's points (P279).
 DRAWING_DIFFERS = "drawing differs"
 # --- MVP ---
-#: What a build stopped at the footprint stage still gives, after the gaps `emit_footprint.why_no_footprint` lists (P407).
+#: What a build stopped at the footprint stage still gives, after the gaps `footprint_emitter.why_no_footprint` lists (P407).
 NO_FOOTPRINT_HINT = ("The schematic was not tried. The pin map needs no footprint: with --keep, the kept lines say "
                      "whether firmware/pins.py was written. The breadboard sheet and the simulation read the built "
                      "board, so they wait for the footprint.")
@@ -438,10 +438,10 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     export = (footprint_board.get("physical") or {}).get("footprint_export")
     rules = inputs.design.rules
     try:
-        disagreement = emit_footprint.why_header_disagrees(footprint_board, rules)
+        disagreement = footprint_emitter.why_header_disagrees(footprint_board, rules)
         if disagreement:
             return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, disagreement, disagreement.code)]
-        text = emit_footprint.render(footprint_board, rules)
+        text = footprint_emitter.render(footprint_board, rules)
     except Exception as crash:  # noqa: BLE001 -- the footprint script ran apart from this run until P432, so a crash was a stage
         return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_footprint.py", crash), build_codes.STAGE_CRASHED)]
     (workdir / ("%s.tsx" % export)).write_text(text)

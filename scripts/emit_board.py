@@ -42,7 +42,7 @@ from spark.design import fab  # noqa: E402
 from spark.design import copper  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.design import design_codes  # noqa: E402
-import emit_footprint  # noqa: E402
+from spark.design import footprint_emitter  # noqa: E402
 import parts as parts_library  # noqa: E402
 import provenance  # noqa: E402
 
@@ -1108,7 +1108,7 @@ def read_inputs(path, project, board_id=None):
         # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
         # which reads as "problems found" to anything that knows three outcomes.
         raise RefusedInput(SCHEMATIC_STAGE, str(broken), broken.code) from broken
-    no_footprint = emit_footprint.why_no_footprint(board) or emit_footprint.why_wrong_kind(board)  # --- MVP --- (P434): `place` does arithmetic on them
+    no_footprint = footprint_emitter.why_no_footprint(board) or footprint_emitter.why_wrong_kind(board)  # --- MVP --- (P434): `place` does arithmetic on them
     if no_footprint:
         raise RefusedInput(FOOTPRINT_STAGE, no_footprint, no_footprint.code)
     return BoardInputs(design, assignments)

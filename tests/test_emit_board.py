@@ -33,7 +33,7 @@ from spark.design import copper  # noqa: E402
 from spark.design import loader  # noqa: E402
 import board_pads  # noqa: E402
 import emit_board  # noqa: E402
-import emit_footprint  # noqa: E402
+from spark.design import footprint_emitter  # noqa: E402
 import parts  # noqa: E402
 
 PARTS = ["l9110s-module", "vl6180x-breakout", "dfr0534-module"]
@@ -65,7 +65,7 @@ class EveryTraceReachesAFootprintPadTest(unittest.TestCase):
         part_list = [parts.load("tactile-button")]
         for path in sorted((ROOT / "boards").glob("*.json")):
             board = json.loads(path.read_text())
-            pads = {label for label, _, _ in emit_footprint.pads(board)}
+            pads = {label for label, _, _ in footprint_emitter.pads(board)}
             placements, width, height = emit_board.place(board, part_list)
             for label, gpio in sorted(board["pins"].items()):
                 with self.subTest(board=path.stem, label=label):

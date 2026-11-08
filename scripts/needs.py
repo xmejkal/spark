@@ -16,7 +16,7 @@ import boards
 from spark.design import loader
 import drawer
 import emit_board
-import emit_footprint
+from spark.design import footprint_emitter
 import matching
 import parts
 import store
@@ -225,10 +225,10 @@ def _candidate(need, fit, context, mine=None):
                 "broken": bool(parts._shape_problems(boards.validate, record, context["path"], "board definition"))
                 if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
         if offer.kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
-            said["stops_at"] = "footprint" if emit_footprint.footprint_gaps(record) else None
+            said["stops_at"] = "footprint" if footprint_emitter.footprint_gaps(record) else None
             if said["stops_at"]:  # P411: a board that builds gains no key
-                said["stops_why"] = emit_footprint.why_no_footprint(record)  # the list, for Claude
-                said["stop_line"] = emit_footprint.footprint_stop_line(record)  # the text shows it; `--match` drops it from the JSON
+                said["stops_why"] = footprint_emitter.why_no_footprint(record)  # the list, for Claude
+                said["stop_line"] = footprint_emitter.footprint_stop_line(record)  # the text shows it; `--match` drops it from the JSON
     return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": [], "limits": []}, **said,
                 what=sorted({f["what"] for f in offer.functions if f.get("does") == need["does"]}),
                 what_matches=fit.exact, score=fit.score, why=fit.why, about=offer.about,
@@ -699,7 +699,7 @@ def _board_problems(board_picks, unfiled, project):
         return []
     if unfiled and not board_picks:
         filed = boards.records(project)
-        stopping = {board_id: emit_footprint.footprint_stop_line(parts._parse(path)) for board_id, (_, path) in filed.items()}
+        stopping = {board_id: footprint_emitter.footprint_stop_line(parts._parse(path)) for board_id, (_, path) in filed.items()}
         builds = [board_id for board_id in filed if not stopping[board_id]]  # C-7: a board that stops is never suggested
         said = "; ".join(["spark has one that builds for %s" % ", ".join(builds) if builds else "spark has no board file that builds"]
                          + ["%s %s" % (board_id, line) for board_id, line in stopping.items() if line])
