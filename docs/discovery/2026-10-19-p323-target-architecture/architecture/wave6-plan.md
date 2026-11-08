@@ -984,6 +984,16 @@ function lets a refusal through. Docs: `areas/design.md` (the leaf's row). `json
 JSON. Review: logic. The lenses on the everyday model, the refuter on the strongest, one mutation run. Size est.: 150
 product lines, 120 test lines.
 
+P700 claims check (at 2746d0e8). Every cited line holds: 30 `DesignError` raises (`design.py:118` to `:447`), 11
+`Impossible` (`assign_pins.py:193` to `:476`), `RefusedInput` at `emit_board.py:1093` and `:1096`, `emit_board.main`'s
+six refusal returns (`:1115`, `:1135`, `:1145`, `:1155`, `:1165`, `:1177`) and `emit_footprint.main`'s three (`:315`,
+`:319`, `:323`): nine `main` returns, not eight. The eight spans hold, and `assign` is 116, `LEAVES` at `measure.py:247`,
+`LEAF_NAMES` at `planted_tree.py:11`. Three corrections, none changes a decision. A 31st `DesignError` is raised outside
+`design.py` (`check_all.py:339`), and two tests build one (`test_breadboard.py:256`, `test_check_all.py:956`): the
+`code` is a required keyword, so each names one. `emit_board.main`'s first refusal is `read_inputs`'s `RefusedInput`,
+already a library function shared with the spine, so it carries its code there; the other five move into one function.
+The extractions in `needs.py` (831, a module key) add a `def` each, paid by prunes in that module.
+
 ### W6-U2, the build codes (after W6-D2)
 
 Goal: each refusal of `check_spine.py` and `init_project.py` has a code. Text and JSON stay byte-equal.
