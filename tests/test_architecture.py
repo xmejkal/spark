@@ -360,12 +360,7 @@ class TheBreadboardAreaTest(unittest.TestCase):
         self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
 
     def test_each_breadboard_module_imports_alone(self):
-        # a child Python per module: an import cycle shows as "partially initialized module", which a warm process hides
-        for module in self.MODULES:
-            with self.subTest(module=module):
-                run = subprocess.run([sys.executable, "-c", "import spark.breadboard.%s" % module], cwd=ROOT / "scripts",
-                                     capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-                self.assertEqual(run.returncode, 0, run.stderr)
+        each_module_imports_alone(self, "breadboard")
 # --- end MVP ---
 
 
