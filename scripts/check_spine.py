@@ -61,7 +61,7 @@ sys.path.insert(0, str(SCRIPTS))
 from spark.design import pin_assigner  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
-import build_codes  # noqa: E402
+from spark.build import build_codes  # noqa: E402
 from spark.breadboard import drawing, sheet, tabbed_page  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.design import board_emitter  # noqa: E402

@@ -37,7 +37,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import ai_files  # noqa: E402
 import boards  # noqa: E402
-import build_codes  # noqa: E402
+from spark.build import build_codes  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
 from spark.design.loader import CIRCUIT_PATHS, one_board_message  # noqa: E402

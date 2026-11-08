@@ -39,7 +39,7 @@ import check_footprints  # noqa: E402
 import check_physics  # noqa: E402
 import check_spine  # noqa: E402
 import board_codes  # noqa: E402
-import build_codes  # noqa: E402
+from spark.build import build_codes  # noqa: E402
 from spark.checks import check_codes  # noqa: E402
 from spark.design import design_codes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
