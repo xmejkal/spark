@@ -35,7 +35,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
-import ai_files  # noqa: E402
+from spark.build import ai_files  # noqa: E402
 import boards  # noqa: E402
 from spark.build import build_codes  # noqa: E402
 import store  # noqa: E402

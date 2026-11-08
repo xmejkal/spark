@@ -22,14 +22,14 @@ END = "<!-- spark:end -->"
 #: A marker counts only at the start of a line, never named inside a sentence.
 BEGIN_AT = re.compile("^" + re.escape(BEGIN), re.M)
 END_AT = re.compile("^" + re.escape(END), re.M)
-SECTION = (Path(__file__).resolve().parent.parent / "data" / "agents-section.md").read_text()
+SECTION = (Path(__file__).resolve().parents[3] / "data" / "agents-section.md").read_text()
 IMPORT = "@AGENTS.md"
 CLAUDE_MD = "<!-- /spark:init wrote this file. It is yours now: spark never rewrites it. -->\n%s\n" % IMPORT
 LOCAL = "CLAUDE.local.md"
 
 
 class AiFiles:
-    """The three files for one project. `write()` returns whether anything changed, and one note per file."""
+    """Service: the three files for one project. `write()` returns whether anything changed, and one note per file."""
 
     def __init__(self, project, store_home=None):
         self.project = Path(project)
