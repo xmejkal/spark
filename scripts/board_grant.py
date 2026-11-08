@@ -76,6 +76,8 @@ WHY_LOOK_NOT_MATCH, WHY_IGNORE_OLDER_RUNS = "look not a match", "ignore older ru
 WHY_LAST_DEPLOY_NOT_CHECKED = "last deploy not checked"
 WHY_NO_SIMULATION = "no simulation"
 WHY_BAD_SCOPE = "bad scope"
+#: Why a deploy grant is refused for a yes that cannot open the erase, a relayed one (P675).
+WHY_RELAYED_YES = "relayed yes"
 #: grant.py --check --json's `why` when it could not look: no board, two boards, a port not listed, no mpremote.
 WHY_COULD_NOT_RUN = "could not run"
 #: The command a person types for a grant, by grant.py's whole path, so it runs from any folder (P283).
@@ -105,6 +107,8 @@ MESSAGE_FOR = {
                                  "not cover this deploy: the person types yes",
     WHY_IGNORE_OLDER_RUNS: "--ignore-older-runs is never covered by a deploy grant: the person types yes",
     WHY_NO_SIMULATION: "--no-simulation is never covered by a deploy grant: the person types yes",
+    WHY_RELAYED_YES: "no deploy grant: a yes given through another program makes a live grant only. The person runs %s "
+                     "in their own terminal" % DEPLOY_GRANT_COMMAND,
 }
 #: The sentences for a missing, ended or untrusted deploy grant: they name the deploy grant's command, not the live one.
 DEPLOY_MESSAGE_FOR = {
@@ -119,7 +123,8 @@ DEPLOY_MESSAGE_FOR = {
 CODE_FOR_WHY = {WHY_NO_GRANT: board_codes.NO_GRANT, WHY_EXPIRED: board_codes.GRANT_EXPIRED, WHY_NO_ZONE: board_codes.GRANT_NO_ZONE,
                 WHY_NOT_A_GRANT: board_codes.NOT_A_GRANT, WHY_BAD_MINUTES: board_codes.BAD_MINUTES,
                 WHY_BAD_SCOPE: board_codes.BAD_SCOPE, WHY_NO_MAC: board_codes.NO_MAC,
-                WHY_SERIAL_NOT_MAC: board_codes.SERIAL_NOT_MAC, WHY_ANSWERED_NO: board_codes.ANSWERED_NO}
+                WHY_SERIAL_NOT_MAC: board_codes.SERIAL_NOT_MAC, WHY_ANSWERED_NO: board_codes.ANSWERED_NO,
+                WHY_RELAYED_YES: board_codes.RELAYED_YES_REFUSED}
 #: The exit code for a code that is no refusal but a run that could not finish: 2, as outcomes.py says.
 COULD_NOT_RUN_WHYS = (WHY_NO_MAC, WHY_BAD_MINUTES, WHY_BAD_SCOPE)
 
@@ -176,6 +181,7 @@ class StandingConsentStrategy(ConsentStrategy):
     GateClosedError, so the erase never runs on a stale yes."""
 
     yes_kind = GRANT
+    opens_erase = True
 
     def __init__(self, grant, now=board_console.SystemClock.now):
         self.grant, self.now = grant, now
@@ -220,6 +226,8 @@ class GrantService:
             raise GrantRefusedError(WHY_BAD_MINUTES)
         if scope not in SCOPES:
             raise GrantRefusedError(WHY_BAD_SCOPE)
+        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched
+            raise GrantRefusedError(WHY_RELAYED_YES)
         board = self.finder.require_one_board(script, port)
         consent.require_ready()
         before_look()
@@ -233,7 +241,7 @@ class GrantService:
         if not consent.ask(question):
             raise GrantRefusedError(WHY_ANSWERED_NO)
         now = self.now()
-        grant = Grant(mac, token, self.user_name(), stamp(now), stamp(now + datetime.timedelta(minutes=minutes)), scope)
+        grant = Grant(mac, token, consent.granted_by(self.user_name), stamp(now), stamp(now + datetime.timedelta(minutes=minutes)), scope)
         self.grants.save(grant)
         return grant
 

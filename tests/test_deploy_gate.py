@@ -222,6 +222,35 @@ class TheGateTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("not flashed: you answered no.", problems)
 
+    def test_a_relayed_yes_never_opens_the_erase_and_its_program_is_never_asked(self):
+        # P675 (W4-4): the PO's decision 6, a yes another program collected makes a live grant only
+        self.run_the_scenario()
+        asked = []
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: asked.append(question) or True)
+        code, said, problems = self.deploy("--token", self.token(), "--json", consent=relayed)
+        envelope = json.loads(said)
+        self.assertEqual((code, self.flashed(), asked), (2, [], []))
+        self.assertIn("a yes given through another program cannot open the erase", problems)
+        self.assertEqual([item["code"] for item in envelope["unchecked"]], ["relayed_yes_refused"])
+        self.assertIsNone(envelope["data"]["yes"])
+        argv = envelope["next"][0]["argv"]
+        self.assertEqual((envelope["next"][0]["op"], argv[argv.index("--token") + 1]), ("deploy", self.token()))
+
+    def test_a_relayed_yes_with_no_token_still_says_to_run_the_look_first(self):
+        self.run_the_scenario()
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        code, _, problems = self.deploy(consent=relayed)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("run look.py first", problems)
+
+    def test_a_relayed_yes_with_a_stale_token_says_to_look_again(self):
+        self.run_the_scenario()
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        code, _, problems = self.deploy("--token", "0000-" + self.token().split("-")[1], consent=relayed)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("the board changed since the look", problems)
+        self.assertNotIn("another program", problems)
+
     def test_a_token_for_another_board_names_the_board(self):
         self.run_the_scenario()
         image = self.token().split("-")[1]

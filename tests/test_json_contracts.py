@@ -289,7 +289,8 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
     def test_a_grant_refusal_has_the_reason_and_the_exit_code_of_its_why(self):
         for why, reason, code in (("not a grant", "not_a_grant", 1), ("answered no", "answered_no", 1), ("bad minutes", "bad_minutes", 2),
-                                  ("bad scope", "bad_scope", 2), ("no mac", "no_mac", 2), ("serial not mac", "serial_not_mac", 1)):
+                                  ("bad scope", "bad_scope", 2), ("no mac", "no_mac", 2), ("serial not mac", "serial_not_mac", 1),
+                                  ("relayed yes", "relayed_yes_refused", 1)):
             refusal = board_grant.GrantRefusedError(why)
             self.assertEqual((refusal.reason, refusal.code, reason in board_codes.CODES), (reason, code, True), why)
 
