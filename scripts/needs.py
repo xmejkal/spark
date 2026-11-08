@@ -472,21 +472,9 @@ def dropped_holds(name, current, after, entries):
     return changes, released
 
 
-def plan_pick(project, given, passed_over=()):
-    """
-    What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
-    [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
-    from every need's picks — one piece per pick, one board however many needs pick it — on the entries that hold them,
-    never past what is owned or what another project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
-    longer picks. A pick no entry holds is to get, not reserved. A drawer entry of a record spark knows, picked by its key, is
-    a pick of that record, and says so. A `reused` event is written for each pick except a record the project keeps in its
-    own parts/ or boards/: that was not there before the project. A reason a part was passed over is kept in the person's
-    words, without any URL or price in them (`kept_reason`), and said when one was taken out. Nothing is written here.
-    """
-    name, current, entries = store.plan_listed_name(project), read(project), drawer.entries()
-    rows = drawer.linkable(project)
-    known, ids, problems, picked = {row[:2]: row[2] for row in rows}, {need["id"] for need in current}, [], {}
-    notes = []
+def _picks_given(given, known, entries, ids):
+    """(each need's picks, notes, problems) of the [(need id, id)] a `--pick` gives, for `plan_pick`; a key that is not plain raises."""
+    picked, notes, problems = {}, [], []
     for need_id, pick_id in given:
         pick = _resolve(pick_id, known, entries)
         named = next(iter(pick.values())) if pick else None
@@ -502,6 +490,24 @@ def plan_pick(project, given, passed_over=()):
             picked[need_id].append(pick)
             renamed = "%s: the drawer entry of %s — picked as that record" % (pick_id, named)
             notes += [renamed] if named != pick_id and renamed not in notes else []
+    return picked, notes, problems
+
+
+def plan_pick(project, given, passed_over=()):
+    """
+    What a `--pick` would do (§8 C): (the needs after, drawer changes, history events, notes, problems). `given` is
+    [(need id, id)], and each need it names gets exactly those picks. Then the project's reservations are worked out again
+    from every need's picks — one piece per pick, one board however many needs pick it — on the entries that hold them,
+    never past what is owned or what another project holds (C2; a record and its drawer entry are one stock, however it is picked), so a re-pick frees what it no
+    longer picks. A pick no entry holds is to get, not reserved. A drawer entry of a record spark knows, picked by its key, is
+    a pick of that record, and says so. A `reused` event is written for each pick except a record the project keeps in its
+    own parts/ or boards/: that was not there before the project. A reason a part was passed over is kept in the person's
+    words, without any URL or price in them (`kept_reason`), and said when one was taken out. Nothing is written here.
+    """
+    name, current, entries = store.plan_listed_name(project), read(project), drawer.entries()
+    rows = drawer.linkable(project)
+    known, ids = {row[:2]: row[2] for row in rows}, {need["id"] for need in current}
+    picked, notes, problems = _picks_given(given, known, entries, ids)
     after = [dict(need, pick=picked[need["id"]]) if need["id"] in picked else need for need in current]
     changes, hold_notes, hold_problems = plan_holds(name, after, entries)
     notes += hold_notes
@@ -516,6 +522,14 @@ def plan_pick(project, given, passed_over=()):
     events = [dict({"event": "reused", "project": name, "need": need_id}, **pick) for need_id in picked for pick in picked[need_id]]
     # a record the project keeps in its own parts/ or boards/ was not there before the project: it is no reuse of the store (§6.7)
     events = [event for event in events if not any(known.get((kind, event.get(kind))) == "project" for kind in ("part", "board"))]
+    told, said, refused = _passed_over(passed_over, name, known, entries, ids)
+    return after, changes, events + told, notes + said, problems + refused
+
+
+def _passed_over(passed_over, name, known, entries, ids):
+    """(events, notes, problems) of each part `--pick` was told was passed over, for `plan_pick`: a `passed_over` event, a
+    note when its reason lost a URL or a price, or a problem."""
+    events, notes, problems = [], [], []
     for number, item in enumerate(passed_over if isinstance(passed_over, (list, tuple)) else [None], 1):
         pick = _resolve(item.get("id"), known, entries) if isinstance(item, dict) and isinstance(item.get("id"), str) else None
         why, cut = kept_reason(item["why"]) if pick and isinstance(item.get("why"), str) else ("", False)
@@ -528,7 +542,7 @@ def plan_pick(project, given, passed_over=()):
         events.append(dict({"event": "passed_over", "project": name, "need": item["need"]}, **pick, why=why, by=item.get("by", "person")))
         notes += ["%s: the reason is kept without the URL or price in it — your history keeps words, never a URL or a price"
                   % item["id"]] if cut else []
-    return after, changes, events, notes, problems
+    return events, notes, problems
 
 
 #: What a passed-over reason never keeps (§5.7, W21: "never a URL … a price"): a web address — any scheme, `www.`, or a bare
