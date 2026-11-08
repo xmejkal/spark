@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_footprints  # noqa: E402
 from spark.checks import build_check  # noqa: E402
-import fab  # noqa: E402
+from spark.design import fab  # noqa: E402
 
 
 def holes(component, drill, pad, positions):

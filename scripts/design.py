@@ -40,7 +40,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
 import design_codes  # noqa: E402
-import fab  # noqa: E402
+from spark.design import fab  # noqa: E402
 import parts as parts_library  # noqa: E402
 import provenance  # noqa: E402
 from spark.core.text_guards import ValueMessageError  # noqa: E402

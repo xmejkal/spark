@@ -20,7 +20,7 @@ of the board rather than of somebody's description of the board.
 import json
 from pathlib import Path
 
-import fab
+from spark.design import fab
 import netlist
 from spark.checks import check_codes
 from spark.core.outcomes import OK, COULD_NOT_RUN, status_of

@@ -46,7 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import design  # noqa: E402
 import design_codes  # noqa: E402
-import fab  # noqa: E402
+from spark.design import fab  # noqa: E402
 import boards  # noqa: E402
 from spark.core.result import Refusal  # noqa: E402
 from spark.core.text_guards import one_line  # noqa: E402

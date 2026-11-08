@@ -23,7 +23,7 @@ from spark.checks import build_check, physics_check  # noqa: E402
 import copper  # noqa: E402
 import emit_board  # noqa: E402
 import emit_footprint  # noqa: E402
-import fab  # noqa: E402
+from spark.design import fab  # noqa: E402
 
 
 class TheDataIsInTheFileNotInTheCodeTest(unittest.TestCase):

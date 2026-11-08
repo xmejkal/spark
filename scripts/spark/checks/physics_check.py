@@ -31,7 +31,7 @@ whose worst risk is an unmeasured number should be told that, not given a green 
 import math
 
 import copper
-import fab
+from spark.design import fab
 import netlist
 from emit_board import GROUND_NETS
 from spark.checks import check_codes

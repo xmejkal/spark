@@ -26,7 +26,7 @@ is a lump of copper bonded to a barrel and it sinks the heat — which is why `s
 exists rather than simply taking the narrowest segment anywhere.
 """
 
-import fab
+from spark.design import fab
 
 #: IPC-2221 external-layer constants: I = k * dT^0.44 * A^0.725, with A in square mils. These stay
 #: here, beside the arithmetic: a published standard is not a project's to override, and the

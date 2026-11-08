@@ -30,7 +30,7 @@ import math
 from collections import defaultdict
 from pathlib import Path
 
-import fab
+from spark.design import fab
 from spark.checks import check_codes
 from spark.core.outcomes import COULD_NOT_RUN
 from spark.core.result import Refusal
