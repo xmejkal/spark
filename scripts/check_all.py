@@ -126,9 +126,9 @@ def circuit_of(inputs):
 
 class RulesVsNetlist(Check):
     def call(self, inputs):
-        import compare_design
+        from spark.checks import rules_check
         circuit_of(inputs)  # refuse an empty netlist before comparing anything against it
-        result = compare_design.compare(inputs["circuit"], inputs["rules"])
+        result = rules_check.compare(inputs["circuit"], inputs["rules"])
         if result["status"] == "could-not-run":
             return answer(unchecked=[result.get("reason") or "no reason given"])
         # The subject is the finding: "connects to nothing" four times over named nothing a

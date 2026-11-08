@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_all  # noqa: E402
 import compare_design  # noqa: E402
+from spark.checks import rules_check  # noqa: E402
 
 
 def circuit(components, pin_to_pin=(), to_net=(), resistors=()):
@@ -55,21 +56,21 @@ class APinWiredPinToPinIsNotFloatingTest(unittest.TestCase):
     def test_a_pin_to_pin_trace_counts_as_a_connection(self):
         # B13: the fixture carries the pull-down a "must not float" input needs; P8's point —
         # a pin-to-pin trace is a net, unnamed — is the connectivity asserted below.
-        netlist = compare_design.Netlist(circuit(
+        netlist = rules_check.Netlist(circuit(
             {"Mcu": ["D3", "GND"], "Valve1": ["SIGNAL", "VCC", "GND"], "Rpd": ["pin1", "pin2"]},
             pin_to_pin=[("Mcu.D3", "Valve1.SIGNAL"), ("Valve1.SIGNAL", "Rpd.pin1")],
             to_net=[("V33", "Valve1.VCC"), ("GND", "Valve1.GND"), ("GND", "Mcu.GND"), ("GND", "Rpd.pin2")],
             resistors=("Rpd",)))
-        self.assertEqual(compare_design.check_floating_inputs(netlist, [("Valve1", "SIGNAL")]), [])
+        self.assertEqual(rules_check.check_floating_inputs(netlist, [("Valve1", "SIGNAL")]), [])
         self.assertTrue(netlist.nets_of("Valve1", "SIGNAL"), "the trace is a net, unnamed")
         self.assertTrue(netlist.nets_of("Valve1", "SIGNAL") & netlist.nets_of("Mcu", "D3"), "both ends share the wire")
 
     def test_a_pin_joined_only_to_a_gpio_floats_all_the_same(self):
         # B13: the quickstart's buttons read [ok] with no pull resistor at all.
-        netlist = compare_design.Netlist(circuit(
+        netlist = rules_check.Netlist(circuit(
             {"Mcu": ["D3"], "BtnOpen": ["A", "B"]},
             pin_to_pin=[("Mcu.D3", "BtnOpen.A")], to_net=[("GND", "BtnOpen.B")]))
-        failures = compare_design.check_floating_inputs(netlist, [("BtnOpen", "A")])
+        failures = rules_check.check_floating_inputs(netlist, [("BtnOpen", "A")])
         self.assertEqual([f.subject for f in failures], ["BtnOpen.A"])
         self.assertIn("no resistor to a rail", failures[0].detail)
 
@@ -80,33 +81,33 @@ class APinWiredPinToPinIsNotFloatingTest(unittest.TestCase):
         for element in elements:
             if element["type"] == "source_port" and element["name"] == "pin20":
                 element["port_hints"] = ["pin20", "D11", "20"]
-        failures = compare_design.check_floating_inputs(compare_design.Netlist(elements), [("BtnOpen", "A")])
+        failures = rules_check.check_floating_inputs(rules_check.Netlist(elements), [("BtnOpen", "A")])
         self.assertIn("Mcu.D11", failures[0].detail)
 
     def test_the_rules_files_rails_reach_the_check(self):
         elements = circuit({"Mcu": ["D3"], "Drv": ["IN"], "Rpu": ["pin1", "pin2"]},
                            pin_to_pin=[("Mcu.D3", "Drv.IN"), ("Drv.IN", "Rpu.pin1")], to_net=[("MOTOR6V", "Rpu.pin2")], resistors=("Rpu",))
         rules = {"must_not_float": [["Drv", "IN"]], "physics": {"rails": {"MOTOR6V": {}}}}
-        self.assertEqual(compare_design.run(elements, rules), [])
+        self.assertEqual(rules_check.run(elements, rules), [])
 
     def test_a_series_resistor_is_not_a_pull(self):
-        netlist = compare_design.Netlist(circuit(
+        netlist = rules_check.Netlist(circuit(
             {"Mcu": ["D3"], "Rs": ["pin1", "pin2"], "Led": ["A", "K"]},
             pin_to_pin=[("Mcu.D3", "Rs.pin1"), ("Rs.pin2", "Led.A")], to_net=[("GND", "Led.K")], resistors=("Rs",)))
-        self.assertTrue(compare_design.check_floating_inputs(netlist, [("Led", "A")]))
+        self.assertTrue(rules_check.check_floating_inputs(netlist, [("Led", "A")]))
 
     def test_a_rail_named_only_in_the_rules_counts(self):
         # tscircuit flags neither power nor ground on MOTOR6V; the rules file names it a rail.
-        netlist = compare_design.Netlist(circuit(
+        netlist = rules_check.Netlist(circuit(
             {"Mcu": ["D3"], "Drv": ["IN"], "Rpu": ["pin1", "pin2"]},
             pin_to_pin=[("Mcu.D3", "Drv.IN"), ("Drv.IN", "Rpu.pin1")], to_net=[("MOTOR6V", "Rpu.pin2")], resistors=("Rpu",)))
-        self.assertTrue(compare_design.check_floating_inputs(netlist, [("Drv", "IN")]))
-        self.assertEqual(compare_design.check_floating_inputs(netlist, [("Drv", "IN")], rails=["MOTOR6V"]), [])
+        self.assertTrue(rules_check.check_floating_inputs(netlist, [("Drv", "IN")]))
+        self.assertEqual(rules_check.check_floating_inputs(netlist, [("Drv", "IN")], rails=["MOTOR6V"]), [])
 
     def test_a_pin_on_no_trace_at_all_is_still_reported_by_name(self):
-        netlist = compare_design.Netlist(circuit(
+        netlist = rules_check.Netlist(circuit(
             {"Mcu": ["D3"], "Valve1": ["SIGNAL", "GND"]}, to_net=[("GND", "Valve1.GND")]))
-        failures = compare_design.check_floating_inputs(netlist, [("Valve1", "SIGNAL")])
+        failures = rules_check.check_floating_inputs(netlist, [("Valve1", "SIGNAL")])
         self.assertEqual([f.subject for f in failures], ["Valve1.SIGNAL"])
 
     def test_two_traces_of_one_wire_share_their_connectivity_key(self):
@@ -114,7 +115,7 @@ class APinWiredPinToPinIsNotFloatingTest(unittest.TestCase):
         for element in elements:
             if element["type"] == "source_trace":
                 element["subcircuit_connectivity_map_key"] = "wire_7"
-        netlist = compare_design.Netlist(elements)
+        netlist = rules_check.Netlist(elements)
         self.assertEqual(netlist.nets_of("A", "IN"), netlist.nets_of("B", "IN"), "one wire, one net")
 
 
@@ -166,8 +167,8 @@ class ABusLineNamedByItsPinTest(unittest.TestCase):
         return elements
 
     def failures(self, buses, **kwargs):
-        netlist = compare_design.Netlist(self.circuit(**kwargs))
-        return compare_design.check_i2c_pullups(netlist, buses)
+        netlist = rules_check.Netlist(self.circuit(**kwargs))
+        return rules_check.check_i2c_pullups(netlist, buses)
 
     def test_a_pulled_up_line_named_by_a_pin_passes(self):
         self.assertEqual(self.failures(["Sensor.SDA"]), [])
@@ -196,9 +197,9 @@ class ABusLineNamedByItsPinTest(unittest.TestCase):
             {"type": "source_trace", "source_trace_id": "t5",
              "connected_source_port_ids": ["p_s"], "connected_source_net_ids": ["n_sda"]},
         ]
-        netlist = compare_design.Netlist(circuit)
+        netlist = rules_check.Netlist(circuit)
         self.assertGreater(len(netlist.nets_of("Sensor", "SDA")), 1, "the fixture must span two nets")
-        self.assertEqual(compare_design.check_i2c_pullups(netlist, ["Sensor.SDA"]), [])
+        self.assertEqual(rules_check.check_i2c_pullups(netlist, ["Sensor.SDA"]), [])
 
     def test_a_net_name_still_works(self):
         # Both forms, because a hand-written board.tsx names its nets and the smart bin's does.
@@ -208,7 +209,7 @@ class ABusLineNamedByItsPinTest(unittest.TestCase):
             {"type": "source_trace", "source_trace_id": "t4",
              "connected_source_port_ids": ["p_s2"], "connected_source_net_ids": ["n_bus"]},
         ]
-        failures = compare_design.check_i2c_pullups(compare_design.Netlist(circuit), ["SCL"])
+        failures = rules_check.check_i2c_pullups(rules_check.Netlist(circuit), ["SCL"])
         self.assertIn("nothing pulls it up", failures[0].detail)
 
 
@@ -227,7 +228,7 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
         for make, code in steps:
             make()
             with self.subTest(code=code):
-                result = compare_design.compare(circuit, rules)
+                result = rules_check.compare(circuit, rules)
                 self.assertEqual((result["status"], result["reason"].code), ("could-not-run", code))
         self.assertEqual(json.loads(json.dumps(result))["reason"], result["reason"], "the JSON holds the sentence alone")
 
@@ -259,12 +260,12 @@ class ARulesFileThatIsRefusedIsCouldNotRunTest(unittest.TestCase):
                                 "%s: fabrication.drill_step_mm must be above 0; write a larger number, or remove the key to use the default")):
             with self.subTest(text=text):
                 circuit_path, rules = self.refused(text)
-                result = compare_design.compare(circuit_path, rules)
+                result = rules_check.compare(circuit_path, rules)
                 self.assertEqual((result["status"], result["reason"]), ("could-not-run", sentence % rules))
 
     def test_a_file_nobody_can_read_names_the_file(self):
         circuit_path, rules = self.refused("{}", unreadable=True)
-        result = compare_design.compare(circuit_path, rules)
+        result = rules_check.compare(circuit_path, rules)
         self.assertEqual(result["status"], "could-not-run")
         self.assertTrue(result["reason"].startswith("%s could not be read" % rules), result)
 
@@ -284,7 +285,7 @@ class APinTheFirmwarePullsUpTest(unittest.TestCase):
     def failures(self, wired):
         elements = circuit({"Mcu": ["D3"], "Btn": ["A", "B"]},
                            pin_to_pin=[("Mcu.D3", "Btn.A")] if wired else [], to_net=[("GND", "Btn.B")])
-        return compare_design.run(elements, {"pulled_by_firmware": [["Btn", "A"]]})
+        return rules_check.run(elements, {"pulled_by_firmware": [["Btn", "A"]]})
 
     def test_a_wired_pin_the_firmware_pulls_up_holds(self):
         self.assertEqual(self.failures(wired=True), [])
@@ -293,7 +294,7 @@ class APinTheFirmwarePullsUpTest(unittest.TestCase):
         # A project initialised before P204 still lists the pin under must_not_float; init --force adds, never removes.
         elements = circuit({"Mcu": ["D3"], "Btn": ["A", "B"]}, pin_to_pin=[("Mcu.D3", "Btn.A")], to_net=[("GND", "Btn.B")])
         rules = {"must_not_float": [["Btn", "A"]], "pulled_by_firmware": [["Btn", "A"]]}
-        self.assertEqual(compare_design.run(elements, rules), [])
+        self.assertEqual(rules_check.run(elements, rules), [])
 
     def test_a_pin_the_firmware_pulls_up_still_must_be_wired(self):
         self.assertEqual([(f.subject, f.detail) for f in self.failures(wired=False)], [("Btn.A", "connects to nothing")])

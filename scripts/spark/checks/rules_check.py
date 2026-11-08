@@ -1,0 +1,288 @@
+"""
+Compare a written rule against the design that was actually built.
+
+    compare_design.py dist/board/circuit.json
+
+Exit 0 if every rule holds, 1 if one does not. Each failure names the net, the parts on it, and
+what to add.
+
+This exists because of a pattern that showed up three times in one project, always the same shape:
+a rule written down, an artifact that did not implement it, and nothing comparing the two. A
+design-rules document required I2C pull-ups; the board carried six resistors and not one was a
+pull-up; the two disagreed from the day the rule was written and no check could see it, because
+the rule lived in prose and the truth lived in a netlist.
+
+The other checks in this plugin read a design description. This one reads `circuit.json` — the
+compiled output of the thing that will actually be fabricated — so what it reports is a property
+of the board rather than of somebody's description of the board.
+"""
+
+import json
+from pathlib import Path
+
+import fab
+import netlist
+from spark.checks import check_codes
+from spark.core.outcomes import OK, COULD_NOT_RUN, status_of
+from spark.core.result import Refusal
+
+#: A pull-up weaker than this cannot hold a bus high against its own capacitance; stronger than
+#: this and the driving pin cannot pull it down. Wide on purpose — this is a sanity band, not a
+#: design calculation, and saying which is which matters.
+PULLUP_MIN_OHM = 1000
+PULLUP_MAX_OHM = 10000
+
+
+#: The three answers a caller must be able to tell apart.
+#:
+#: An autonomous caller cannot act on prose, and it especially cannot act on an exit code that
+#: conflates "I looked and everything is fine" with "I could not look". That conflation already
+#: cost this project once: an eval scored zero on every run because the files were outside the
+#: sandbox, and a zero that means "found nothing" is indistinguishable from a zero that means
+#: "could not read the board" — so the obvious reading was that the reviewer did not work.
+
+
+class Failure:
+    """One rule that the built design does not satisfy."""
+
+    def __init__(self, rule, subject, detail, fix=None):
+        self.rule = rule
+        self.subject = subject
+        self.detail = detail
+        self.fix = fix
+
+    def as_data(self):
+        return {"rule": self.rule, "subject": self.subject,
+                "detail": self.detail, "fix": self.fix}
+
+    def __str__(self):
+        text = "  [%s] %s: %s" % (self.rule, self.subject, self.detail)
+        if self.fix:
+            text += "\n      %s" % self.fix
+        return text
+
+
+def could_not_run(reason, code, **detail):
+    """A refusal a caller can act on, rather than a message a caller has to read: its `reason` is a Refusal with `code`
+    (check_codes)."""
+    return dict({"tool": "compare_design", "status": COULD_NOT_RUN, "reason": Refusal(reason, code)}, **detail)
+
+
+def render(result):
+    """
+    The human view, built from the result rather than beside it.
+
+    Two code paths would drift, the same way a rule in prose drifts from the board it describes —
+    which is the failure this whole script exists to catch.
+    """
+    if result["status"] == COULD_NOT_RUN:
+        return "could not run: %s" % result["reason"]
+
+    lines = ["%s: %d rule(s) checked against the built design"
+             % (result["design"], result["checked"])]
+    if result["status"] == OK:
+        lines.append("\nevery rule holds.")
+        return "\n".join(lines)
+
+    lines.append("\n%d rule(s) the board does not satisfy:\n" % len(result["problems"]))
+    for problem in result["problems"]:
+        line = "  [%s] %s: %s" % (problem["rule"], problem["subject"], problem["detail"])
+        if problem.get("fix"):
+            line += "\n      %s" % problem["fix"]
+        lines.append(line)
+    return "\n".join(lines)
+
+
+#: The one walk over a built netlist (P35). This file's own class was the only one of three that
+#: had learned a trace may name no net; `netlist.Netlist` is that class, moved, so the other
+#: callers inherit the lesson instead of each rediscovering it.
+Netlist = netlist.Netlist
+
+
+def nets_for_line(netlist, line):
+    """
+    Which nets a bus line names: a net by its name, or a pin by `Component.PIN`.
+
+    Both, because a bus is written down two ways and neither covers the other. A hand-written
+    board.tsx wires SDA to a net actually called SDA — the smart bin does. spark's own generator
+    wires every signal PIN TO PIN, so on a board it produced no net is called SDA at all and a
+    rule naming one could only ever report "no net of that name" (backlog P45). The pin form
+    resolves through the shared walker, which since P29 knows a pad by every name it answers to.
+    """
+    named = netlist.net_named(line)
+    if named is not None:
+        return [named]
+    component, _, pin = line.partition(".")
+    return sorted(netlist.nets_of(component, pin)) if pin else []
+
+
+def check_i2c_pullups(netlist, buses):
+    """
+    Every I2C line has a pull-up to a power rail, of a plausible value.
+
+    I2C has no push-pull high side: every device only ever pulls down, so without a pull-up the
+    bus never leaves logic 0 and nothing answers. Breakout boards often carry their own, which is
+    exactly why this gets left off a board — it works on the bench with one module and fails when
+    that module is swapped for one without them.
+
+    `buses` names the nets to check, because no netlist format records that a net is an I2C line.
+    """
+    failures = []
+
+    for line in buses:
+        net_ids = nets_for_line(netlist, line)
+        if not net_ids:
+            failures.append(Failure(
+                "i2c-pullups", line, "nothing of that name in the built design",
+                "nets present: %s" % ", ".join(
+                    sorted(n.get("name", "?") for n in netlist.nets.values()))))
+            continue
+
+        pulled_up = pull_ups_on(netlist, net_ids)
+        if not pulled_up:
+            on_the_net = sorted({name for net_id in net_ids
+                                 for name, _ in netlist.members[net_id]})
+            failures.append(Failure(
+                "i2c-pullups", line,
+                "nothing pulls it up: no resistor on it reaches a power net",
+                "on this net: %s. Add a resistor from %s to a supply."
+                % (", ".join(on_the_net) or "nothing", line)))
+            continue
+        failures += out_of_band(line, pulled_up)
+    return failures
+
+
+def pull_ups_on(netlist, net_ids):
+    """Value: (name, resistance) of each resistor on the nets `net_ids` whose other end is on a power net."""
+    pulled_up = []
+    for component_name, _ in sum((netlist.members[net_id] for net_id in net_ids), []):
+        component = netlist.component(component_name)
+        if not component or component.get("ftype") != "simple_resistor":
+            continue
+        # A resistor is a pull-up only if its other end is on a power rail. One sitting
+        # between two signals is a series resistor and does not hold anything high.
+        other_ends = set()
+        for port_name in ("pin1", "pin2"):
+            other_ends |= netlist.nets_of(component_name, port_name)
+        if other_ends & netlist.power_nets():
+            pulled_up.append((component_name, component.get("resistance")))
+    return pulled_up
+
+
+def out_of_band(line, pulled_up):
+    """Value: a Failure for each pull-up of `line` with a stated value outside the band a pull-up usually wants."""
+    return [Failure(
+        "i2c-pullups", line,
+        "%s is %g ohm, outside the %g-%g band a pull-up usually wants"
+        % (name, ohms, PULLUP_MIN_OHM, PULLUP_MAX_OHM),
+        "too weak and the bus never rises; too strong and a device cannot pull it "
+        "down. Worth checking against the bus capacitance rather than taking this "
+        "band as the answer.")
+        for name, ohms in pulled_up if ohms is not None and not PULLUP_MIN_OHM <= ohms <= PULLUP_MAX_OHM]
+
+
+def check_floating_inputs(netlist, watch, rails=()):
+    """
+    A named pin with no defined level: joined to nothing, or joined only to things that do not
+    hold it — a GPIO lets go at reset, a series resistor leads nowhere fixed.
+
+    A floating CMOS input drifts, and on a motor driver both halves of a bridge can conduct. This
+    asked only "is it connected", so the quickstart's two buttons — each wired to a GPIO and to
+    nothing else — read [ok] (B13). A pin holds when its net is a rail, or a resistor on its net
+    reaches one. `rails` are the rule file's rail names; tscircuit flags only some nets as power or
+    ground (it leaves MOTOR6V unflagged). `watch` names the pins worth caring about.
+    """
+    rail_ids = {net_id for net_id, net in netlist.nets.items()
+                if net.get("is_power") or net.get("is_ground") or net.get("name") in set(rails)}
+    failures = []
+    for component_name, port_name in watch:
+        if netlist.component(component_name) is None:
+            continue
+        nets = netlist.nets_of(component_name, port_name)
+        if not nets:
+            failures.append(Failure(
+                "floating-input", "%s.%s" % (component_name, port_name),
+                "connects to nothing",
+                "an input left floating has no defined level; tie it, or say in the design why "
+                "it is deliberately open"))
+        elif not nets & rail_ids and not any(
+                (netlist.component(member) or {}).get("ftype") == "simple_resistor"
+                and {n for n, members in netlist.members.items() if any(m[0] == member for m in members)} & rail_ids
+                for net_id in nets for member, _ in netlist.members.get(net_id, [])):
+            joined = sorted({"%s.%s" % (owner, netlist.printed_name(owner, pad)) for net_id in nets
+                             for owner, pad in netlist.members.get(net_id, [])} - {"%s.%s" % (component_name, port_name)})
+            failures.append(Failure(
+                "floating-input", "%s.%s" % (component_name, port_name),
+                "joined to %s and no resistor to a rail" % (", ".join(joined) or "nothing else"),
+                "it has no defined level at reset or whenever its driver lets go; add a pull-up or "
+                "pull-down, or remove the rule if the part pulls it itself. If pins.py pulls it up "
+                "(P204), run init_project.py --force"))
+    return failures
+
+
+def run(circuit, rules):
+    netlist = Netlist(circuit)
+    failures = []
+    if rules.get("i2c_buses"):
+        failures += check_i2c_pullups(netlist, rules["i2c_buses"])
+    pulled = {tuple(pair) for pair in rules.get("pulled_by_firmware") or []}
+    if rules.get("must_not_float"):
+        failures += check_floating_inputs(  # a pin the firmware pulls up has no resistor to find (P204)
+            netlist, [tuple(pair) for pair in rules["must_not_float"] if tuple(pair) not in pulled],
+            rails=((rules.get("physics") or {}).get("rails") or {}).keys())
+    # P204: the board's internal pull-up holds these, set by the firmware. A netlist cannot show that, only that the
+    # pin reaches something at all.
+    for component_name, port_name in sorted(pulled):
+        if netlist.component(component_name) is not None and not netlist.nets_of(component_name, port_name):
+            failures.append(Failure("floating-input", "%s.%s" % (component_name, port_name), "connects to nothing",
+                                    "the firmware can pull up only a pin that is wired to the board"))
+    return failures
+
+
+def read_inputs(circuit_path, rules_path):
+    """Value: ((the circuit, the rules), None), or (None, the could-not-run answer that says which of the two cannot be read)."""
+    if not circuit_path.is_file():
+        return None, could_not_run("no built design at %s" % circuit_path, check_codes.NO_CIRCUIT,
+                                   fix="build it first: `make`, or `tsci build`")
+    if not rules_path.is_file():
+        return None, could_not_run(
+            "no rules at %s" % rules_path, check_codes.NO_RULES_FILE,
+            fix="a rules file says which nets are an I2C bus and which pins must not float — "
+                "things no netlist format records")
+    try:
+        rules = fab.read_rules(rules_path)  # --- MVP --- (P455): the one reader, so a refused file is a sentence naming it
+    except fab.RulesError as refused:
+        return None, could_not_run(str(refused), check_codes.RULES_REFUSED)
+    try:
+        return (json.loads(circuit_path.read_text()), rules), None
+    except ValueError as broken:
+        return None, could_not_run("not valid JSON: %s" % broken, check_codes.CIRCUIT_NOT_JSON)
+
+
+def compare(circuit_path, rules_path):
+    """Everything main() does except deciding how to say it."""
+    circuit_path = Path(circuit_path)
+    read, refused = read_inputs(circuit_path, Path(rules_path))
+    if refused:
+        return refused
+    circuit, rules = read
+    failures = run(circuit, rules)
+    checked = len(rules.get("i2c_buses", [])) + len(rules.get("must_not_float", []))
+    if not checked:
+        # "0 rule(s) checked against the built design" and then "every rule holds", exit 0 —
+        # printed over the RC car, whose H-bridge's floating inputs are this project's canonical
+        # defect, by the tool written because "a rule written down, an artifact that did not
+        # implement it, and nothing comparing the two". Comparing nothing is not agreement.
+        return could_not_run(
+            "the rules file states no rule to compare: i2c_buses and must_not_float are both "
+            "empty, which is what `/spark:init` writes and where they have stayed", check_codes.NO_RULE_STATED,
+            design=circuit_path.name, checked=0,
+            fix="name the I2C lines and the pins that must never float — a netlist records "
+                "neither, which is why this file exists")
+    return {
+        "tool": "compare_design",
+        "status": status_of(failures),
+        "design": circuit_path.name,
+        "checked": checked,
+        "problems": [f.as_data() for f in failures],
+    }
