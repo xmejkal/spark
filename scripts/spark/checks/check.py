@@ -44,7 +44,7 @@ from pathlib import Path
 
 import boards
 from spark.design import loader
-import design_codes
+from spark.design import design_codes
 from spark.design import fab
 from spark.checks import check_codes
 from spark.core.outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, answer

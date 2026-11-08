@@ -33,7 +33,7 @@ from pathlib import Path
 
 import board_pads
 import boards
-import design_codes
+from spark.design import design_codes
 from spark.design import loader
 import missing_facts
 import parts as parts_library

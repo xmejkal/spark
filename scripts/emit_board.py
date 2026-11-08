@@ -41,7 +41,7 @@ import board_pads  # noqa: E402
 from spark.design import fab  # noqa: E402
 from spark.design import copper  # noqa: E402
 from spark.design import loader  # noqa: E402
-import design_codes  # noqa: E402
+from spark.design import design_codes  # noqa: E402
 import emit_footprint  # noqa: E402
 import parts as parts_library  # noqa: E402
 import provenance  # noqa: E402

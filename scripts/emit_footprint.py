@@ -45,7 +45,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from spark.design import loader  # noqa: E402
-import design_codes  # noqa: E402
+from spark.design import design_codes  # noqa: E402
 from spark.design import fab  # noqa: E402
 import boards  # noqa: E402
 from spark.core.result import Refusal  # noqa: E402

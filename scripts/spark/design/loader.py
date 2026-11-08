@@ -35,7 +35,7 @@ from collections import namedtuple
 from pathlib import Path
 
 import boards
-import design_codes
+from spark.design import design_codes
 from spark.design import fab
 import parts as parts_library
 import provenance
