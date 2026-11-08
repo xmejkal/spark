@@ -342,38 +342,38 @@ P685 claims check (2026-11-08, against 46bca725). Each claim above was read in t
 
 1. The split table makes a cycle. `ScenarioSteps.passed_sentence` reads `PASSED`, `PASSED_WITH_CAVEAT` and the caveat
    sentences (`run_scenario.py:363`), and `from_log`, `run_record` and `file_hashes` share `_header` (`:534`).
-   Decision: the second module holds the run log's words and their reader, so it is `run_log.py`, not
-   `scenario_steps.py`. It holds `ScenarioSteps`, `StepNames`, the step kinds, `READY` and the header lines. It also
+   Decision: `scenario_steps.py` keeps its name (`run_log` is the file in `sim/runs/`, the refuter) and holds the run
+   log's words and their reader: `ScenarioSteps`, `StepNames`, the step kinds, `READY` and the header lines. It also
    holds the `WHY_*`, `PASSED`, the caveats, `NO_MAIN`, `_header`, `run_record`, `file_hashes` and `printed_text`.
    `scenario_run.py` holds the rest, with `find_simulator` (the table misses it). The docstring and `EPILOG` stay.
 2. It is false that the steps module imports nothing of firmware. `from_log` reads `sim_project.WHY_LOG_UNREADABLE`
-   (`:316`), and `sim_project` imports `emit_board` and `parts`. Decision: the sentence moves to `run_log.py`, and
-   `sim_project.py:184` and `image_evidence.py:23` read it there. `run_log.py` then imports only `spark.core.outcomes`.
+   (`:316`), and `sim_project` imports `emit_board` and `parts`. Decision: the sentence moves to `scenario_steps.py`,
+   and `sim_project.py:184` and `image_evidence.py:23` read it there. `scenario_steps.py` then imports only `spark.core`.
 3. `project_image.py:52` reads `run_scenario.DEFAULT_IMAGE`. Decision: it moves to `sim_project` beside
-   `UNNAMED_FIRMWARE`, so `project_image` never imports `scenario_run`, as the class diagram draws it.
+   `UNNAMED_FIRMWARE`, which is built from it, so `project_image` never imports `scenario_run`.
 4. No `ready_check` exists. The bench readers are `board_connection`, `board_console`, `download_mode`, `ready_probe`
-   and `image_evidence` (also `NO_MAIN`, `ONE_RUN_MESSAGE`, `PASSED`). After 1 to 3, all read `run_log` only.
+   and `image_evidence` (also `NO_MAIN`, `ONE_RUN_MESSAGE`, `PASSED`). After 1 to 3, all read `scenario_steps` only.
 5. `build_command` (`flash_image.py:233`) is called by `project_image.py:57` and `image_evidence.py:415`, not by the
    CLI. Decision: `image_builder` names the CLI as `deploy_image.py:40` does (`parents[2]`), with a test.
 6. `import_one` is taken (`import_firmware.py:70`). Decision: `import_child.main` becomes `import_named` (3 rows).
 7. The CLIs keep `sys.path.insert` (`test_scripts_isolated.py:31` runs them with `-I`). Its `EXEMPT` (`:22`) goes.
 8. Missed paths: `pyproject.toml:15`, `test_journey_basic.py:55`, `import_firmware.py:13` (help text),
    `tools/measure.py:8`, `tools/mutate.py:48,128` (docstrings) and `test_check_commit.py:98` (a planted path).
-9. 15 test files import a firmware module, not five. Six `mock.patch.object` sites patch `run_record` or `subprocess`
-   through `run_scenario` (`test_board_look.py:465`, `test_deploy.py:380`, `test_project_image.py:120,143`,
-   `test_run_scenario.py:798,804`). Each must patch the module that holds the name now, or it patches nothing. The
-   `interpreter_for` patches go to `image_builder`.
+9. 15 test files import a firmware module, not five. Seven patches name `run_scenario`: `run_record` (3 sites, and
+   `project_image` calls `scenario_steps.run_record` through the module), `subprocess` (2, global) and
+   `STARTUP_ALLOWANCE_S` (`test_run_scenario.py:864`, to `scenario_run`). T2 counts stay.
 10. Counts: 2,087 lines in the files, about 1,900 move. 59 import lines. 267 rows: run_scenario 74, flash_image 68,
     sim_project 46, stand_in 27, import_firmware 25, project_image 15, import_child 10, firmware_codes 2. 11 baseline
     keys name an old path: 2 R1, 1 R6, 8 T1.
 11. `--retarget` moves every row of a file, but the CLIs stay. Decision: `--retarget` the 7 files that move whole (100
     rows). 16 rows stay on a CLI path (the three `main`s, `project_here`, `DEFAULT_TIMEOUT_S`, the import_firmware
-    docstring). Of run_scenario's other 69, 26 go to `run_log` and 43 to `scenario_run`. 4 rows name a renamed
-    module. `--anchors` refuses one `sim_project` row today (`p97-council.json`, "re-check 1"), not this PR's miss.
+    docstring). A scratch script gives each other run_scenario row to the one file that holds its `find` once.
+    7 rows change their text. `--anchors` refuses one `sim_project` row today (`p97-council.json`, "re-check 1"),
+    not this PR's miss.
 12. 7 T1 keys move. `T1:scripts/flash_image.py:file-write` (`:329`, in `main`) and the two R1 `main` keys stay. So
     check 5 reads "no key of a moved library names an old path".
-13. P684 did U1 (`LEAVES`, `LEAF_NAMES`). `MAY_READ` keys are stems and stay. Risk 5 is stale: no script reads the
-    four firmware literals of `board_codes` (`test_json_contracts.py:257` pins them). Decision: they stay, a row asks.
+13. P684 did U1 (`LEAVES`, `LEAF_NAMES`). `MAY_READ` keys are stems and stay. Risk 5 is stale: five codes are shared, and
+    they stay. `board_codes.py:15` and `test_json_contracts.py:255` say what is true now.
 14. 6 guide pages name a moved file, not 14 (`agents/firmware-codes.md`, `agents/scripts.md`, `developing.md`,
     `how-it-works.md`, `journey/firmware.md`, `patterns-and-names.md`). The area page is under `docs/discovery/`.
 
