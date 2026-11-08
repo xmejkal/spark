@@ -849,7 +849,8 @@ refuses `tscircuit` ("needs bun") and `circuit-to-wokwi` ("needs node") even wit
 project's override sets `"needs": []` on both entries (entries merge field by field, and `meets` is kept). Three tests
 prove it: `tools.find("board-engine", project).command[0]` is the fake, the same for `diagram-converter`, and a Case
 whose fake `tsci` writes a marker file passes only when the marker exists. The real tools never run, because the child's
-`PATH` holds no other folder and the tools list names no other command.
+`PATH` holds no other folder, the tools list names no other command, and its `HOME` is an empty folder, so the
+defaults' `~/.local/bin/wokwi-cli` (which `sim_project.find_wokwi_cli` reads with no project) is not the person's (P699).
 
 Goal: what the five CLIs print, and what `--keep` writes, stays byte-equal through the codes and the moves. Two fakes,
 no copy. The fake `tsci` is `test_check_spine.fake_tsci` (`tests/test_check_spine.py:1234`). It answers `--version`
@@ -881,6 +882,19 @@ fake `tsci` answers `--version` wrong, the written files not appended, the fake 
 with `--anchors`, run with `--copy`. Review: no product logic. One reviewer on the everyday model and the refuter on the
 strongest. Size est.: 130 helper lines, 120 test lines, 30 lines of the fake converter, 19 goldens. Tests only, so it
 can open while a move PR is open.
+
+P699 claims check (at b716bd87). Each cited line holds: `check_spine.py:183`, `:191`, `:461` (tsci), `:415` (the
+`emit_board.py` child), `:560` (the converter), `:373` and `:582` (`SCRIPTS.parent`), `converter_stage_problem`
+(`:230`), `fake_tsci` (`test_check_spine.py:1234`), `FakeTscircuitExport` (`fakes.py:267`), and the merge field by
+field (`tools.py:80`). `tools.find` refuses both fakes without `"needs": []` and finds them with it (reproduced). Two
+corrections: `init_project.py:426` reads the tools list (`tools.merged`) and finds no tool, and `--keep` runs the fake
+`tsci` a third time, as `tsci export` for the page (`tabbed_page.py:46`). So the lifted fake answers `--version` and
+`build` alone, and refuses any other command. The build made `ok-reference.json` into
+`check-spine-could-not-run-reference.json`: a passed build stages the reference design's two chips, and a chip's binary
+older than its source runs `wokwi-cli chip compile`. So that Case writes no store override, and the converter, read
+from the plugin's folder, is refused before any chip (`docs/observations/rows/p699-design-net.md`, row 6). The PR's
+refuter (#957) added a Case for each refusal W6-D2 moves that a CLI reaches, 38 in all, and an empty `HOME` for
+every child (rows 17 to 21).
 
 ### W6-D2, the design codes (after W6-D1 and P693)
 

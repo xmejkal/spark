@@ -1,0 +1,4 @@
+--- stderr ---
+no pin_order recorded for: Kingbright L-7113ID 5 mm red LED
+  Pads would be numbered from the order the pins appear in the part file, which is not a fact about the module. Every trace would land on whichever pad that order happened to choose.
+  Record pad 1..N by name, with a source — the silkscreen or the vendor drawing.

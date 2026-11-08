@@ -1,0 +1,27 @@
+spark init in <project-dir>
+  on your projects list as 'button light'
+  wrote rules.json
+  wrote project.json
+  wrote package.json
+  wrote AGENTS.md with spark's section
+  wrote CLAUDE.md: @AGENTS.md
+  no rules file at <spark-home>/rules.md, so no CLAUDE.local.md: write your rules for spark projects there and run init again
+  wrote active.json
+  named 2 rail(s) from circuit.json
+
+13 field(s) nobody has answered. Nothing here is guessed, and a check reading a null
+reports it as unverifiable rather than passing it:
+
+  rules.json  physics.i2c_hz
+  rules.json  physics.i2c_bus_capacitance_pf
+  rules.json  physics.rails.GND.nominal_volts
+  rules.json  physics.rails.GND.max_current_a
+  rules.json  physics.rails.GND.capacitor_chemistry
+  rules.json  physics.rails.GND.served_by_pour
+  rules.json  physics.rails.V33.nominal_volts
+  rules.json  physics.rails.V33.max_current_a
+  rules.json  physics.rails.V33.capacitor_chemistry
+  rules.json  physics.rails.V33.served_by_pour
+  project.json  goal
+  project.json  prefer
+  project.json  sellers

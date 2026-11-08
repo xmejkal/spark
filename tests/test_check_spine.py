@@ -48,7 +48,7 @@ import parts  # noqa: E402
 import store  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
 import test_converter  # noqa: E402
-from fakes import FakeTscircuitExport  # noqa: E402
+from fakes import FakeTscircuitExport, fake_tsci  # noqa: E402
 
 
 def stage(name, status):
@@ -1229,24 +1229,6 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         self.assertIn("[ok  ] schematic", out)
         self.assertIn("[????] build", out)
         self.assertEqual(code, check_spine.EXIT_COULD_NOT_RUN)
-
-
-def fake_tsci(root, builds_when, circuit=(), binary=None):
-    """
-    A `tsci` (at `binary`, or root/fake-tsci) that answers `--version` and builds — writes a circuit.json holding the
-    elements of `circuit` — only when `builds_when` (a shell test on the working directory) holds. Instant, so the
-    build stage can be driven without tscircuit installed.
-    """
-    binary = binary or root / "fake-tsci"
-    binary.parent.mkdir(parents=True, exist_ok=True)
-    (root / "canned-circuit.json").write_text(json.dumps(list(circuit)))
-    binary.write_text("#!/bin/sh\n"
-                      "[ \"$1\" = \"--version\" ] && { echo 0.0.0-fake; exit 0; }\n"
-                      "if %s; then mkdir -p dist/board; cp '%s' dist/board/circuit.json; exit 0; fi\n"
-                      "echo \"Cannot find package 'react'\" >&2\n"
-                      "exit 1\n" % (builds_when, root / "canned-circuit.json"))
-    binary.chmod(0o755)
-    return binary
 
 
 # --- MVP --- (P512, #708) a broken trace is named in the verdict, in the text and in --json

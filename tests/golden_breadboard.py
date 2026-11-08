@@ -47,11 +47,9 @@ CASES = [
 
 
 def child_env(store):
-    """The bench's child environment with `store` as SPARK_HOME, without WOKWI_CLI_TOKEN, which golden_bench.child_env
-    passes on. The canned flash id and device list are the bench's own: breadboard.py never reads them."""
-    env = golden_bench.child_env(store, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
-    env.pop("WOKWI_CLI_TOKEN", None)
-    return env
+    """The bench's child environment with `store` as SPARK_HOME, which drops WOKWI_CLI_TOKEN with every secret (P699). The
+    canned flash id and device list are the bench's own: breadboard.py never reads them."""
+    return golden_bench.child_env(store, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
 
 
 def copy_project(case, folder):

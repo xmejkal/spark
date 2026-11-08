@@ -1,0 +1,3 @@
+--- stderr ---
+could-not-run: firebeetle2-esp32s3 cannot have a footprint generated — these are not recorded, and none of them can be derived from the rest:
+  physical.footprint_export (what the module should be called)

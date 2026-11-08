@@ -1,0 +1,4 @@
+--- stderr ---
+two or more components would be called: JstPh2PowerInlet
+  A name written twice: `tsci build` keeps ONE of them, so every pin assigned to the others is wired to the survivor — five identical buttons became one component with five GPIOs shorted to a single port, and nothing said so. Two spellings (OpenLid / Openlid): spark's own naming puts an instance in capitals before its signals, so they are one signal, placed twice and traced to one pad from two GPIOs.
+  Name each instance in the requirements file: {"part": "tactile-button", "name": "BtnForward"}.

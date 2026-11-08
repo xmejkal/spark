@@ -1,0 +1,2 @@
+--- stderr ---
+no directory at <project-dir>/no-such-folder

@@ -30,12 +30,6 @@
   "replace": "rebuild_as(project, case.then)"
  },
  {
-  "file": "tests/golden_breadboard.py",
-  "name": "the parent's WOKWI_CLI_TOKEN reaches the child",
-  "find": "env.pop(\"WOKWI_CLI_TOKEN\", None)",
-  "replace": "pass"
- },
- {
   "file": "scripts/breadboard.py",
   "name": "breadboard.py stops printing its not kept: lines",
   "find": "print(\"not kept: %s\" % named.line, file=sys.stderr)",

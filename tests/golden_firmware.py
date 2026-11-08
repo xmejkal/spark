@@ -95,11 +95,14 @@ def child_env(store):
 
 
 def plant(case, project):
-    """Write or remove each of `case`'s planted files in `project`: text as text, bytes as bytes (P687's fab packages)."""
+    """Write or remove each of `case`'s planted files in `project`: text as text, bytes as bytes (P687's fab packages), in
+    a folder made when it is missing (P699's part records)."""
     for place, text in case.plant:
         if text is None:
             (Path(project) / place).unlink()
-        elif isinstance(text, bytes):
+            continue
+        (Path(project) / place).parent.mkdir(parents=True, exist_ok=True)
+        if isinstance(text, bytes):
             (Path(project) / place).write_bytes(text)
         else:
             (Path(project) / place).write_text(text)

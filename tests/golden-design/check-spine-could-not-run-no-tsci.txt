@@ -1,0 +1,9 @@
+
+  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
+
+  [ok  ] board            DFRobot FireBeetle 2 ESP32-S3
+  [ok  ] schematic        9 trace(s) written
+  [ok  ] footprint        FireBeetle2Esp32S3.tsx
+  [????] build            board-engine (tscircuit) is not installed — install: npm install --save-dev --save-exact @tscircuit/cli@0.1.2113 tscircuit@0.0.2600 — needs Node (nodejs.org) first — so the chain was not exercised; /spark:setup installs it
+
+  the chain was NOT exercised — this is not a pass

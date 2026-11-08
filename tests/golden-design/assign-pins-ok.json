@@ -1,0 +1,287 @@
+{
+  "tool": "assign_pins",
+  "board": "firebeetle2-esp32s3",
+  "unverified": [
+    {
+      "part": "tactile-button",
+      "fact": "debounce_ms_typical",
+      "assumed": 40,
+      "why_it_matters": "too short double-fires a control, too long makes a remote feel broken. On a driving remote it is the difference between steering and twitching.",
+      "source": "the conventional figure for a tactile dome switch; not measured on any specific part",
+      "write": "facts.debounce_ms_typical"
+    },
+    {
+      "part": "tactile-button",
+      "fact": "cap_height_mm",
+      "assumed": null,
+      "why_it_matters": "the only dimension that decides whether the enclosure closes",
+      "source": "a variant, not a fact about the family",
+      "write": "facts.cap_height_mm"
+    },
+    {
+      "part": "tactile-button",
+      "fact": "pin_order",
+      "assumed": [
+        "A",
+        "B"
+      ],
+      "why_it_matters": "a pin order read wrong reverses a supply or swaps a signal",
+      "source": "A 6x6 tactile switch has four legs in two pairs, and each pair is one terminal \u2014 so a 2-pin footprint is the electrical truth and a 4-pad footprint is the mechanical one. `pushbutton` in footprinter gives four pads wired as two nets, which is what a board wants; this record describes the two terminals.",
+      "write": "pin_order_proof"
+    }
+  ],
+  "assignments": [
+    {
+      "signal": "BUTTON",
+      "pin": "D3",
+      "gpio": 38,
+      "why": "needs nothing special; the cheapest pin left could still pwm, which is spent here",
+      "roles": [
+        "not_wake_capable"
+      ]
+    },
+    {
+      "signal": "STATUS_LED",
+      "pin": "A5",
+      "gpio": 11,
+      "why": "needs nothing special; the cheapest pin left could still pwm and wake, which is spent here",
+      "roles": [
+        "adc2_unusable_with_wifi"
+      ]
+    }
+  ],
+  "free": [
+    {
+      "pin": "SDA",
+      "gpio": 1,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "i2c"
+      ]
+    },
+    {
+      "pin": "SCL",
+      "gpio": 2,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "i2c"
+      ]
+    },
+    {
+      "pin": "A0",
+      "gpio": 4,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": []
+    },
+    {
+      "pin": "A1",
+      "gpio": 5,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": []
+    },
+    {
+      "pin": "A2",
+      "gpio": 6,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": []
+    },
+    {
+      "pin": "D5",
+      "gpio": 7,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": []
+    },
+    {
+      "pin": "A3",
+      "gpio": 8,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": []
+    },
+    {
+      "pin": "D7",
+      "gpio": 9,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": []
+    },
+    {
+      "pin": "A4",
+      "gpio": 10,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "spi"
+      ]
+    },
+    {
+      "pin": "SS",
+      "gpio": 10,
+      "can": [
+        "adc",
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "spi"
+      ]
+    },
+    {
+      "pin": "D12",
+      "gpio": 12,
+      "can": [
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "adc2_unusable_with_wifi"
+      ]
+    },
+    {
+      "pin": "D11",
+      "gpio": 13,
+      "can": [
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "adc2_unusable_with_wifi"
+      ]
+    },
+    {
+      "pin": "D10",
+      "gpio": 14,
+      "can": [
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "adc2_unusable_with_wifi"
+      ]
+    },
+    {
+      "pin": "MOSI",
+      "gpio": 15,
+      "can": [
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "adc2_unusable_with_wifi",
+        "spi"
+      ]
+    },
+    {
+      "pin": "MISO",
+      "gpio": 16,
+      "can": [
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "adc2_unusable_with_wifi",
+        "spi"
+      ]
+    },
+    {
+      "pin": "SCK",
+      "gpio": 17,
+      "can": [
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "adc2_unusable_with_wifi",
+        "spi"
+      ]
+    },
+    {
+      "pin": "D6",
+      "gpio": 18,
+      "can": [
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "adc2_unusable_with_wifi"
+      ]
+    },
+    {
+      "pin": "D13",
+      "gpio": 21,
+      "can": [
+        "pwm",
+        "wake"
+      ],
+      "roles": [
+        "onboard_led"
+      ]
+    },
+    {
+      "pin": "TX",
+      "gpio": 43,
+      "can": [
+        "pwm"
+      ],
+      "roles": [
+        "console_uart",
+        "not_wake_capable"
+      ]
+    },
+    {
+      "pin": "RX",
+      "gpio": 44,
+      "can": [
+        "pwm"
+      ],
+      "roles": [
+        "console_uart",
+        "not_wake_capable"
+      ]
+    },
+    {
+      "pin": "D14",
+      "gpio": 47,
+      "can": [
+        "pwm"
+      ],
+      "roles": [
+        "not_wake_capable",
+        "onboard_button"
+      ]
+    }
+  ]
+}

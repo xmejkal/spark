@@ -82,23 +82,23 @@ fixture of `tests/data/breadboard/`, and the golden adds the files written besid
 runs one script as a child process in an S3 project that `tests/golden_bench.py` builds. The fake esptool, mpremote and
 serial in `tests/fake_modules/` come first on the child's `PYTHONPATH`, and the child runs with `TZ=UTC` and a store of
 its own. The scripts mask their own paths (P677: `<project>`, `sim/...`, `<store>`, `~/...`), and the test puts
-placeholders for what is left of the run's paths, the image hash and the time. The harness's `<spark-home>` and
-`<project-dir>` show only in a line that a person pastes or opens. A golden's name is the op, the status and the
-scenario: `look-could-not-run-two-boards.json`. A bench Case may name a stderr golden (`.stderr` added), and a firmware
-Case puts its stderr in the same golden, after `--- stderr ---`. A bench Case may also plant a file in the store, such
-as a deploy grant that takes `deploy.py` past the gate ([P508](https://github.com/xmejkal/spark/issues/703)).
+placeholders for the rest: `<spark-home>`, `<project-dir>`, the image hash and the time. A golden's name is the op, the
+status and the scenario: `look-could-not-run-two-boards.json`. A bench Case may name a stderr golden (`.stderr` added);
+the other nets add stderr after `--- stderr ---`. A bench Case may also plant a file in the store, such as a deploy
+grant that takes `deploy.py` past the gate ([P508](https://github.com/xmejkal/spark/issues/703)).
 `tests/test_golden_checks.py` keeps those of the six check CLIs in `tests/golden-checks/`
-([P687](https://github.com/xmejkal/spark/issues/925)), run in `tests/data/breadboard/button-light`: the child's `PATH`
-is a `gh` shim that runs `tests/fake_gh.py`, and its proxies are a closed port. A new board or part record changes these
-goldens. If you change what a script prints on purpose, write that op's goldens again, read the diff, and run once more.
-An accept run writes only the goldens of the op it names:
+([P687](https://github.com/xmejkal/spark/issues/925)), run in the button-light fixture: the child's `PATH` holds a `gh`
+shim that runs `tests/fake_gh.py`, its proxies a closed port. `tests/test_golden_design.py` keeps those of the five
+design and build CLIs in `tests/golden-design/` ([P699](https://github.com/xmejkal/spark/issues/946)), with a fake
+`tsci` and converter on that `PATH`. A new board or part record changes these goldens. To change what a script prints,
+write that op's goldens again (an accept run writes no other op's), read `git diff tests/golden*`, and run again:
 
 ```sh
 SPARK_ACCEPT=look python3 -m unittest tests.test_golden_bench   # writes look's goldens, then fails
 SPARK_ACCEPT=run-scenario python3 -m unittest tests.test_golden_firmware   # or flash-image, import-firmware
 SPARK_ACCEPT=breadboard python3 -m unittest tests.test_golden_breadboard
 SPARK_ACCEPT=check-all python3 -m unittest tests.test_golden_checks   # or the op of another check CLI
-git diff tests/golden tests/golden-firmware tests/golden-breadboard tests/golden-checks
+SPARK_ACCEPT=check-spine python3 -m unittest tests.test_golden_design   # or assign-pins, emit-board, emit-footprint, init-project
 ```
 
 **The second rule: every fix that holds logic is mutation-tested.** Before the pull request, the council's mutation

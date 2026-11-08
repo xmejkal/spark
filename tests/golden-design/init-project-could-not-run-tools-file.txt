@@ -1,0 +1,2 @@
+--- stderr ---
+init_project.py: <project-dir>/.spark/tools.json is not JSON (Expecting property name enclosed in double quotes: line 1 column 2 (char 1)) — fix it or delete it

@@ -1,0 +1,3 @@
+cannot write the pin map:
+
+  signal '1X' is not a Python name, so no firmware could import it

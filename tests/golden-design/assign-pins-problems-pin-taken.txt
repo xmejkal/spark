@@ -1,0 +1,3 @@
+cannot place every signal on this board:
+
+  Y asks for A0 (GPIO4), which is already taken

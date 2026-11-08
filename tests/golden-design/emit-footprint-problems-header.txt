@@ -1,0 +1,2 @@
+--- stderr ---
+problems: the board definition disagrees with itself: header_order.row_14 has 14 labels but physical.header.pins says 13 — one of the two is wrong, and guessing which would shift every pad after the disagreement

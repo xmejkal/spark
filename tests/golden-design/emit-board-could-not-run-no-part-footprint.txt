@@ -1,0 +1,4 @@
+--- stderr ---
+no footprint recorded for: Kingbright L-7113ID 5 mm red LED
+  Until 2026-09-25 these were emitted as `pinrow4`. A twelve-pad module on four pads is not a rough draft: the pads past the fourth have no position, so every trace to them is unroutable and the board comes out with no copper at all.
+  Record it in the part file — a footprinter string, a converted .kicad_mod, or jlcpcb:C<lcsc>.

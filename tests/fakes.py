@@ -1,7 +1,9 @@
 """P239 PR 2 (#238): the fakes of the deploy area's swappable parts, one per part of spark's core."""
 
 import datetime
+import json
 import os
+import shlex
 import sys
 import time
 from pathlib import Path
@@ -262,6 +264,27 @@ class FakePartPictures:
         from spark.breadboard import part_pictures
         return part_pictures.Picture('<rect width="10" height="10" fill="#123456"/>', (0.0, 0.0, 10.0, 10.0),
                                      "fake picture of %s" % wokwi_type)
+
+
+def fake_tsci(root, builds_when, circuit=(), binary=None):
+    """
+    A `tsci` (at `binary`, or root/fake-tsci) that answers `--version` and builds — writes a circuit.json holding the
+    elements of `circuit`, or the file FAKE_TSCI_CIRCUIT names — only when `builds_when` (a shell test on the working
+    directory) holds. Any other command (`export`) fails. Instant, so the build stage can be driven without tscircuit
+    installed. It calls /bin/mkdir and /bin/cp by their absolute paths, so it builds on a PATH that names neither (P699).
+    """
+    binary = binary or root / "fake-tsci"
+    binary.parent.mkdir(parents=True, exist_ok=True)
+    (root / "canned-circuit.json").write_text(json.dumps(list(circuit)))
+    binary.write_text("#!/bin/sh\n"
+                      "[ \"$1\" = \"--version\" ] && { echo 0.0.0-fake; exit 0; }\n"
+                      "[ \"$1\" = build ] || { echo \"fake tsci: only --version and build\" >&2; exit 1; }\n"
+                      "circuit=${FAKE_TSCI_CIRCUIT:-%s}\n"
+                      "if %s; then /bin/mkdir -p dist/board; /bin/cp \"$circuit\" dist/board/circuit.json; exit 0; fi\n"
+                      "echo \"Cannot find package 'react'\" >&2\n"
+                      "exit 1\n" % (shlex.quote(str(root / "canned-circuit.json")), builds_when))
+    binary.chmod(0o755)
+    return binary
 
 
 class FakeTscircuitExport:

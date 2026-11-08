@@ -1,0 +1,9 @@
+
+  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
+
+  [ok  ] board            DFRobot FireBeetle 2 ESP32-S3
+  [ok  ] schematic        9 trace(s) written
+  [ok  ] footprint        FireBeetle2Esp32S3.tsx
+  [!!  ] build            2 error(s): pcb_trace_error, source_trace_not_connected_error; first: .BTN1 > .pin1; a trace crosses another
+
+  the chain is broken

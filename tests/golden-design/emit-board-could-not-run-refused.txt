@@ -1,0 +1,2 @@
+--- stderr ---
+cannot emit a board: requirements.json: parts[0] is called Btn and parts[1] btn — the build refuses two components of one name, and capitals do not make two names; give one of them a name of its own, {"part": "led-red-5mm", "name": …}

@@ -1,0 +1,3 @@
+cannot place every signal on this board:
+
+  FOO is on the I2C bus but 'FOO' is not one of its lines: SDA (SDA), SCL (SCL)

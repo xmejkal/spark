@@ -1,0 +1,12 @@
+spark init in <project-dir>
+  on your projects list as 'button light'
+  rules.json already exists, left alone
+  project.json already exists, left alone
+  package.json already exists, left alone
+  AGENTS.md already has spark's section
+  CLAUDE.md already imports AGENTS.md
+  no rules file at <spark-home>/rules.md, so no CLAUDE.local.md: write your rules for spark projects there and run init again
+  named 2 rail(s) from circuit.json
+  no board chosen. Available: firebeetle2-esp32s3, xiao-esp32-c6
+
+nothing to do — everything already exists. --force merges what is derived into rules.json and keeps your answers.

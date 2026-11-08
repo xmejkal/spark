@@ -1,0 +1,35 @@
+DFRobot FireBeetle 2 ESP32-S3 — 2 signal(s) placed
+
+  BUTTON      D3    GPIO38  needs nothing special; the cheapest pin left could still pwm, which is spent here  [not_wake_capable]
+  STATUS_LED  A5    GPIO11  needs nothing special; the cheapest pin left could still pwm and wake, which is spent here  [adc2_unusable_with_wifi]
+
+  still free:
+    SDA   GPIO1   adc, pwm, wake
+    SCL   GPIO2   adc, pwm, wake
+    A0    GPIO4   adc, pwm, wake
+    A1    GPIO5   adc, pwm, wake
+    A2    GPIO6   adc, pwm, wake
+    D5    GPIO7   adc, pwm, wake
+    A3    GPIO8   adc, pwm, wake
+    D7    GPIO9   adc, pwm, wake
+    A4    GPIO10  adc, pwm, wake
+    SS    GPIO10  adc, pwm, wake
+    D12   GPIO12  pwm, wake
+    D11   GPIO13  pwm, wake
+    D10   GPIO14  pwm, wake
+    MOSI  GPIO15  pwm, wake
+    MISO  GPIO16  pwm, wake
+    SCK   GPIO17  pwm, wake
+    D6    GPIO18  pwm, wake
+    D13   GPIO21  pwm, wake
+    TX    GPIO43  pwm
+    RX    GPIO44  pwm
+    D14   GPIO47  pwm
+
+  still unverified about these parts:
+    tactile-button.debounce_ms_typical
+      too short double-fires a control, too long makes a remote feel broken. On a driving remote it is the difference between steering and twitching.
+    tactile-button.cap_height_mm
+      the only dimension that decides whether the enclosure closes
+    tactile-button.pin_order
+      a pin order read wrong reverses a supply or swaps a signal
