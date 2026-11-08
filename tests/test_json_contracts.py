@@ -39,6 +39,7 @@ import check_footprints  # noqa: E402
 import check_physics  # noqa: E402
 import check_spine  # noqa: E402
 import board_codes  # noqa: E402
+import breadboard_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import board_look  # noqa: E402
@@ -259,10 +260,11 @@ SHARED_CODES = ("NO_SIM_TOML", "FIRMWARE_LINE_BAD", "NO_IMAGE", "LOG_UNREADABLE"
 
 class TheBenchCodesTableTest(unittest.TestCase):
     """P433: every code that look.py and deploy.py write is in board_codes.CODES or the core's codes.CODES (P442), which say
-    it in one sentence. P684: the firmware's are in firmware_codes.CODES."""
+    it in one sentence. P684: the firmware's are in firmware_codes.CODES. P692: the breadboard sheet's in
+    breadboard_codes.CODES."""
 
     def test_the_tables_hold_each_constant_of_their_module_once_with_a_sentence_and_share_no_code(self):
-        for module in (board_codes, codes, firmware_codes):
+        for module in (board_codes, codes, firmware_codes, breadboard_codes):
             constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)}
             self.assertEqual(sorted(constants.values()), sorted(module.CODES))
             sentences = list(module.CODES.values())
@@ -270,6 +272,10 @@ class TheBenchCodesTableTest(unittest.TestCase):
             self.assertEqual(len(set(sentences)), len(sentences))
         self.assertEqual(set(board_codes.CODES) & set(codes.CODES), set())
         self.assertEqual(set(firmware_codes.CODES) & set(codes.CODES), set())
+        self.assertEqual(set(breadboard_codes.CODES) & (set(codes.CODES) | set(firmware_codes.CODES)), set())
+        # P692: a store problem is one code in both leaves, an equal literal with the same meaning
+        self.assertEqual(sorted(set(breadboard_codes.CODES) & set(board_codes.CODES)), ["store_problem"])
+        self.assertEqual(breadboard_codes.CODES["store_problem"], board_codes.CODES["store_problem"])
         self.assertEqual(sorted(set(firmware_codes.CODES) & set(board_codes.CODES)),
                          sorted(getattr(firmware_codes, name) for name in SHARED_CODES))
 

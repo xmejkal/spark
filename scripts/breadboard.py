@@ -53,6 +53,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import assign_pins  # noqa: E402
 import board_pads  # noqa: E402
 import breadboard_catalog  # noqa: E402
+import breadboard_codes  # noqa: E402
 import breadboard_changes  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
@@ -100,7 +101,26 @@ EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
 
 
 class NotBuilt(Exception):
-    """There is no built circuit to read, or it is not this design's."""
+    """Error: there is no built circuit to read, or it is not this design's. `code` (breadboard_codes) says which."""
+
+    def __init__(self, message, code):
+        super().__init__(message)
+        self.code = code
+
+
+# --- MVP ---
+#: Each error from outside that stops the sheet, with its code: the errors `main` catches, after a NotBuilt.
+OUTSIDE_CODES = {design.DesignError: breadboard_codes.REQUIREMENTS_UNUSABLE, store.StoreProblem: breadboard_codes.STORE_PROBLEM,
+                 OSError: breadboard_codes.FILE_UNUSABLE}
+REFUSALS = (NotBuilt, *OUTSIDE_CODES)
+
+
+def refusal_code(stopped):
+    """The code of one of REFUSALS: a NotBuilt's own, else its outside error's."""
+    if isinstance(stopped, NotBuilt):
+        return stopped.code
+    return next(code for kind, code in OUTSIDE_CODES.items() if isinstance(stopped, kind))
+# --- end MVP ---
 
 
 def _passives(design_parts):
@@ -125,19 +145,22 @@ def _check_fresh(circuit, design_parts, circuit_path, requirements_path):
     again = "build again: `check_spine.py %s --keep .`" % requirements_path.name
     built_from = circuit_path.parent / BUILT_FROM.name
     if not built_from.is_file():
-        raise NotBuilt("%s records no finished build (no %s beside it): %s" % (circuit_path, BUILT_FROM.name, again))
+        raise NotBuilt("%s records no finished build (no %s beside it): %s" % (circuit_path, BUILT_FROM.name, again),
+                       breadboard_codes.NOT_BUILT)
     try:
         recorded = json.loads(built_from.read_text()).get("requirements")
         current = json.loads(requirements_path.read_text())
     except (ValueError, AttributeError) as broken:
-        raise NotBuilt("%s cannot be read (%s): %s" % (built_from, broken, again)) from broken
+        raise NotBuilt("%s cannot be read (%s): %s" % (built_from, broken, again),
+                       breadboard_codes.BUILD_UNREADABLE) from broken
     if recorded != current:
-        raise NotBuilt("%s was built from other requirements than %s: %s" % (circuit_path, requirements_path.name, again))
+        raise NotBuilt("%s was built from other requirements than %s: %s" % (circuit_path, requirements_path.name, again),
+                       breadboard_codes.BUILT_FROM_OTHER_REQUIREMENTS)
     if not isinstance(circuit, list) or not all(isinstance(element, dict) for element in circuit):
-        raise NotBuilt("%s is not a built circuit: %s" % (circuit_path, again))
+        raise NotBuilt("%s is not a built circuit: %s" % (circuit_path, again), breadboard_codes.BUILD_UNREADABLE)
     failed = sorted({e["type"] for e in circuit if re.fullmatch(r"source_\w+_error", e.get("type") or "")})
     if failed:
-        raise NotBuilt("the last build failed (%s): %s" % (", ".join(failed), again))
+        raise NotBuilt("the last build failed (%s): %s" % (", ".join(failed), again), breadboard_codes.BUILD_FAILED)
     wanted = ({BOARD_COMPONENT} | {emit_board.component_name(part) for part in design_parts}
               | set(_passives(design_parts)))
     built = {e["name"] for e in circuit if e.get("type") == "source_component"
@@ -145,7 +168,8 @@ def _check_fresh(circuit, design_parts, circuit_path, requirements_path):
     if wanted != built:
         raise NotBuilt("%s was built from other requirements (in the build only: %s; in the file only: %s): %s"
                        % (circuit_path, ", ".join(sorted(built - wanted)) or "nothing",
-                          ", ".join(sorted(wanted - built)) or "nothing", again))
+                          ", ".join(sorted(wanted - built)) or "nothing", again),
+                       breadboard_codes.BUILT_FROM_OTHER_REQUIREMENTS)
 
 
 #: What the parts table's `have` column says of a part: the words the sheet prints, and the codes `_have` decides on.
@@ -241,12 +265,12 @@ def _read_build(requirements_path, circuit_path=None):
     circuit_path = Path(circuit_path) if circuit_path else requirements_path.resolve().parent / CIRCUIT
     if not circuit_path.is_file():
         raise NotBuilt("nothing is built at %s yet: run `check_spine.py %s --keep .` first"
-                       % (circuit_path, requirements_path.name))
+                       % (circuit_path, requirements_path.name), breadboard_codes.NOT_BUILT)
     built = design.load(requirements_path)
     try:
         circuit = json.loads(circuit_path.read_text())
     except ValueError as broken:
-        raise NotBuilt("%s is not JSON (%s): build again" % (circuit_path, broken)) from broken
+        raise NotBuilt("%s is not JSON (%s): build again" % (circuit_path, broken), breadboard_codes.BUILD_UNREADABLE) from broken
     _check_fresh(circuit, built.parts, circuit_path, requirements_path)
     passives = _passives(built.parts)
     resistors = collections.OrderedDict(
@@ -482,7 +506,7 @@ def main(argv=None):
     out = Path(args.out) if args.out else requirements.resolve().parent / SHEET
     try:
         written = write(requirements, out)
-    except (NotBuilt, design.DesignError, store.StoreProblem, OSError) as stopped:
+    except REFUSALS as stopped:  # each with its code: refusal_code(stopped)
         print("breadboard.py: could not run — %s" % stopped, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print(written.sheet.read_text(), end="")

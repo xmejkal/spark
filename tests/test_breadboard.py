@@ -28,6 +28,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
 import breadboard_steps  # noqa: E402
+import design  # noqa: E402
+import store  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
 
@@ -206,6 +208,56 @@ class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):
         (project / "dist" / "board" / "circuit.json").write_text("{}")
         with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt):
             breadboard.sheet(project / "requirements.json")
+
+
+class EachRefusalHasItsCodeTest(unittest.TestCase):
+    """P692: each refusal of the sheet names its code from breadboard_codes, as a literal here (P677 row 26)."""
+
+    def code_of(self, project):
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt) as said:
+            breadboard.sheet(project / "requirements.json")
+        return said.exception.code
+
+    def test_each_site_of_a_stale_failed_or_missing_build(self):
+        changes = {
+            "not_built": lambda project: (project / "dist" / "board" / "circuit.json").unlink(),
+            "built_from_other_requirements": lambda project: (project / "requirements.json").write_text(
+                json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]})),
+            "build_failed": lambda project: (project / "dist" / "board" / "circuit.json").write_text(
+                json.dumps([{"type": "source_trace_not_connected_error"}])),
+            "build_unreadable": lambda project: (project / "dist" / "board" / "circuit.json").write_text("{"),
+        }
+        for code, change in changes.items():
+            with self.subTest(code):
+                project = a_copy()
+                change(project)
+                self.assertEqual(self.code_of(project), code)
+
+    def test_the_record_of_what_was_built(self):
+        project = a_copy()
+        (project / "dist" / "board" / "built-from.json").unlink()
+        self.assertEqual(self.code_of(project), "not_built")
+        (project / "dist" / "board" / "built-from.json").write_text("[]")
+        self.assertEqual(self.code_of(project), "build_unreadable")
+
+    def test_a_circuit_that_is_no_list_or_names_other_parts(self):
+        project = a_copy()
+        circuit = project / "dist" / "board" / "circuit.json"
+        built = json.loads(circuit.read_text())
+        circuit.write_text("{}")
+        self.assertEqual(self.code_of(project), "build_unreadable")
+        circuit.write_text(json.dumps([e for e in built if e.get("name") != "TactileButton"]))
+        self.assertEqual(self.code_of(project), "built_from_other_requirements")
+
+    def test_the_errors_from_outside_each_have_their_own(self):
+        self.assertEqual(breadboard.refusal_code(breadboard.NotBuilt("not built", "build_failed")), "build_failed")
+        self.assertEqual(breadboard.refusal_code(design.DesignError("no part %s", "x")), "requirements_unusable")
+        self.assertEqual(breadboard.refusal_code(store.StoreProblem("the store")), "store_problem")
+        self.assertEqual(breadboard.refusal_code(PermissionError("breadboard.md")), "file_unusable")
+
+    def test_main_catches_exactly_the_errors_that_have_a_code(self):
+        self.assertEqual(set(breadboard.REFUSALS),
+                         {breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError})
 
 
 class APadIsNamedAsItIsPrintedTest(unittest.TestCase):

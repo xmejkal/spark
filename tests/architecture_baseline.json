@@ -86,7 +86,6 @@
 "R3:scripts/spark/core/outcomes.py:step": 6,
 "R6:scripts/ai_files.py:AiFiles": 1,
 "R6:scripts/assign_pins.py:Impossible": 1,
-"R6:scripts/breadboard.py:NotBuilt": 1,
 "R6:scripts/breadboard_drawing.py:BreadboardPlanner": 1,
 "R6:scripts/breadboard_drawing.py:FirstFitPartPlacement": 1,
 "R6:scripts/breadboard_drawing.py:HoleLedger": 1,
