@@ -16,7 +16,7 @@ P267) takes the steps and gives lines; it never decides the wiring again, and a 
 import collections
 import re
 
-import board_pads
+from spark.records import board_pads
 from spark.design import board_emitter
 
 #: What an end is: a pad of the board, a pin of a part, or one end of a resistor a part asks for.

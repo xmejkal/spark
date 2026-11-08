@@ -3,7 +3,7 @@ The stops of the bench Operations (P657, W4-3): the board_codes code that a refu
 and deploy name one stop by one code, and the result of a stop before the board answered. An Operation puts the code in its Finding.
 """
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_envelope
 from spark.bench import board_look
 import boards

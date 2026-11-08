@@ -5,7 +5,7 @@ the LiveTryResult and the port, so no golden changed. The status comes from `boa
 stays exit 2 whatever the answer was; a stop has the same fields, empty, with the answer `could-not-run`.
 """
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_envelope
 from spark.bench import board_grant

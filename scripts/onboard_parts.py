@@ -9,7 +9,7 @@ from typing import NamedTuple, Optional
 import boards
 from spark.breadboard import sheet
 from spark.design import loader
-import provenance
+from spark.records import provenance
 from spark.firmware import sim_project
 
 

@@ -38,7 +38,7 @@ import boards
 from spark.design import design_codes
 from spark.design import fab
 import parts as parts_library
-import provenance
+from spark.records import provenance
 from spark.core.errors import CodedMessageError
 
 #: What `load` returns. `parts` are the requested instances: each a copy of its record, with

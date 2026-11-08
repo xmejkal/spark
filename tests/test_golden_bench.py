@@ -20,7 +20,7 @@ import golden_bench  # noqa: E402
 import boards  # noqa: E402
 import tools  # noqa: E402
 from micropython_fakes import fake_interpreter  # noqa: E402
-import board_codes  # noqa: E402
+from spark.bench import board_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
 
 

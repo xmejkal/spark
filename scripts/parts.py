@@ -215,7 +215,7 @@ from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK
 from brief import Brief  # noqa: E402
 import boards  # noqa: E402
 import missing_facts  # noqa: E402
-import provenance  # noqa: E402
+from spark.records import provenance  # noqa: E402
 import records_codes  # noqa: E402
 import sourcing_codes  # noqa: E402
 import store  # noqa: E402

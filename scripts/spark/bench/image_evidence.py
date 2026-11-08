@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_grant
 from brief import UnnamedMust
 from spark.firmware import image_builder

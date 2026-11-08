@@ -11,7 +11,7 @@ import hashlib
 import shlex
 import subprocess
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench.deploy_stages import DeployPhase
 from spark.bench import board_facts
 import boards

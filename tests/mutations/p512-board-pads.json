@@ -18,25 +18,25 @@
   "replace": "import board_pads\nPAD_KEY = \"pad_aliases\""
  },
  {
-  "file": "scripts/board_pads.py",
+  "file": "scripts/spark/records/board_pads.py",
   "name": "the aliases are ignored",
   "find": "        return self.aliases.get(label, label)",
   "replace": "        return label"
  },
  {
-  "file": "scripts/board_pads.py",
+  "file": "scripts/spark/records/board_pads.py",
   "name": "an unaliased label has no pad",
   "find": "        return self.aliases.get(label, label)",
   "replace": "        return self.aliases.get(label)"
  },
  {
-  "file": "scripts/board_pads.py",
+  "file": "scripts/spark/records/board_pads.py",
   "name": "the record's key is misspelt",
   "find": "physical.get(\"pad_aliases\")",
   "replace": "physical.get(\"pad_alias\")"
  },
  {
-  "file": "scripts/board_pads.py",
+  "file": "scripts/spark/records/board_pads.py",
   "name": "the alias pads are empty",
   "find": "frozenset(self.aliases.values())",
   "replace": "frozenset()"

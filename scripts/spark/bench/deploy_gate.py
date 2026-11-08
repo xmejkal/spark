@@ -13,7 +13,7 @@ import abc
 import getpass
 import sys
 
-import board_codes
+from spark.bench import board_codes
 from store import format_rerun_line  # noqa: F401  (board_grant, grant and deploy take it from here)
 from spark.core import outcomes
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS

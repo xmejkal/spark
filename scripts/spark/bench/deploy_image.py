@@ -9,7 +9,7 @@ import shlex
 from collections import namedtuple
 from pathlib import Path
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_envelope
 from spark.bench import board_grant

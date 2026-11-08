@@ -31,13 +31,13 @@ was never actually satisfiable.
 from collections import namedtuple
 from pathlib import Path
 
-import board_pads
+from spark.records import board_pads
 import boards
 from spark.design import design_codes
 from spark.design import loader
 import missing_facts
 import parts as parts_library
-import provenance
+from spark.records import provenance
 from spark.core.text_guards import one_line
 
 #: What a signal can ask a pin for, from the contract that validates parts. Anything else in

@@ -10,7 +10,7 @@ restart left that board in download mode, with the port gone and back as for a r
 
 import collections
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench.deploy_stages import DeployPhase
 from spark.bench import board_look
 from spark.bench import download_mode

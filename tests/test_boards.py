@@ -30,7 +30,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_pads  # noqa: E402
+from spark.records import board_pads  # noqa: E402
 import boards  # noqa: E402
 import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
@@ -273,12 +273,12 @@ class AnAliasIsWrittenAsCodeTest(unittest.TestCase):
 class OnlyBoardPadsReadsThePadAliasesTest(unittest.TestCase):
     """
     P512: the alias lookup was written in four places and missing in the fifth, the emitter. Python files under
-    scripts/ and tools/ may read the key only in board_pads.py. tests/ are outside this test, and the converter's
-    TypeScript copies (tools/circuit-to-wokwi/lib/*.ts) are not guarded.
+    scripts/ and tools/ may read the key only in spark/records/board_pads.py. tests/ are outside this test, and the
+    converter's TypeScript copies (tools/circuit-to-wokwi/lib/*.ts) are not guarded.
     """
 
     def test_no_other_python_file_reads_the_key(self):
-        allowed = {ROOT / "scripts" / "board_pads.py"}
+        allowed = {ROOT / "scripts" / "spark" / "records" / "board_pads.py"}
         readers = [str(source.relative_to(ROOT)) for folder in ("scripts", "tools") for source in (ROOT / folder).rglob("*.py")
                    if source not in allowed and re.search(r"[\"']pad_aliases[\"']", source.read_text())]
         self.assertEqual(readers, [])

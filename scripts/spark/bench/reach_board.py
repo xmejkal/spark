@@ -4,7 +4,7 @@ power-on, and say whether the board answered. reach.py is its CLI, and its `--js
 (`FlatJsonLine`), so no golden changed. The time of `at` is the outside's clock, and a stop has no data, so no line.
 """
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_look
 from spark.bench import board_reach

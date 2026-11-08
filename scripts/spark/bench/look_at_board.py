@@ -5,7 +5,7 @@ look.py printed before it (board_look.report_lines and board_envelope's look ite
 `crash` envelope and exit 2, is the one new output.
 """
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_envelope
 from spark.bench import board_look

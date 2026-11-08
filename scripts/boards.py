@@ -33,8 +33,8 @@ from dataclasses import dataclass
 from typing import Optional
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import board_pads
-import provenance
+from spark.records import board_pads
+from spark.records import provenance
 import records_codes
 import store
 

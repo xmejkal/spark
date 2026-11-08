@@ -31,7 +31,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.design import pin_assigner  # noqa: E402
 from spark.design import copper  # noqa: E402
 from spark.design import loader  # noqa: E402
-import board_pads  # noqa: E402
+from spark.records import board_pads  # noqa: E402
 import emit_board  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402

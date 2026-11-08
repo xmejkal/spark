@@ -15,7 +15,7 @@ import boards
 from spark.bench import flasher
 from spark.bench import ready_probe
 import tools
-import board_codes
+from spark.bench import board_codes
 from spark.firmware.project_image import DeployError
 
 

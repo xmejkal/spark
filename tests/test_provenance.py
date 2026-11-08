@@ -10,7 +10,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import provenance  # noqa: E402
+from spark.records import provenance  # noqa: E402
 
 
 class ReadValueTest(unittest.TestCase):

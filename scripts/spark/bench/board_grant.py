@@ -25,7 +25,7 @@ import json
 from collections import namedtuple
 from pathlib import Path
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_console
 from spark.bench import board_look
 import store

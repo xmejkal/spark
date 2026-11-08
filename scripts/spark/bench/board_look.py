@@ -22,7 +22,7 @@ import subprocess
 from collections import namedtuple
 from dataclasses import dataclass
 
-import board_codes
+from spark.bench import board_codes
 import boards
 import brief
 import deploy_record_store
