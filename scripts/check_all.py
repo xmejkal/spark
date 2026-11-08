@@ -269,13 +269,13 @@ class VendorTruth(Check):
 
 class TheOrder(Check):
     def call(self, inputs):
-        import check_bom
+        from spark.checks import order_check
         try:
-            rows = check_bom.read_bom(Path(inputs["package"]))
-        except check_bom.PackageError as unreadable:  # --- MVP --- (P693): a package with no order is unchecked, not a crash
+            rows = order_check.read_bom(Path(inputs["package"]))
+        except order_check.PackageError as unreadable:  # --- MVP --- (P693): a package with no order is unchecked, not a crash
             return answer(unchecked=[Refusal(str(unreadable), unreadable.code)])
-        problems = (check_bom.check_duplicate_parts(rows)
-                    + check_bom.check_missing_parts(rows))
+        problems = (order_check.check_duplicate_parts(rows)
+                    + order_check.check_missing_parts(rows))
         unchecked = []
         if inputs.get("circuit"):
             circuit = Path(inputs["circuit"])
@@ -283,7 +283,7 @@ class TheOrder(Check):
             # reader returned [] for a file it never opened.
             if circuit.is_file():
                 circuit_of(inputs)
-                problems += check_bom.check_design_warnings(circuit)
+                problems += order_check.check_design_warnings(circuit)
             else:
                 unchecked.append("no circuit at %s, so the design's own fab warnings were never "
                                  "read" % circuit)

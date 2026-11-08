@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_bom  # noqa: E402
+from spark.checks import order_check  # noqa: E402
 
 COLUMNS = ["Designator", "Comment", "Value", "Footprint", "JLCPCB Part #"]
 
@@ -60,7 +61,7 @@ class DuplicateSupplierPartTest(unittest.TestCase):
     """One part number standing for two values is a contradiction on its face."""
 
     def test_the_same_part_for_two_values_is_caught(self):
-        problems = check_bom.check_duplicate_parts(rows(
+        problems = order_check.check_duplicate_parts(rows(
             ("C1", "100n", "C14663"), ("C2", "100n", "C14663"), ("C3", "1u", "C14663")))
         self.assertEqual(len(problems), 1)
         self.assertIn("C14663", problems[0])
@@ -69,16 +70,16 @@ class DuplicateSupplierPartTest(unittest.TestCase):
         self.assertIn("C3", problems[0])
 
     def test_the_same_part_for_the_same_value_many_times_is_normal(self):
-        self.assertEqual(check_bom.check_duplicate_parts(rows(
+        self.assertEqual(order_check.check_duplicate_parts(rows(
             ("C1", "100n", "C14663"), ("C2", "100n", "C14663"))), [])
 
     def test_different_parts_for_different_values_are_fine(self):
-        self.assertEqual(check_bom.check_duplicate_parts(rows(
+        self.assertEqual(order_check.check_duplicate_parts(rows(
             ("C1", "100n", "C14663"), ("C2", "1u", "C5199872"))), [])
 
     def test_lines_with_no_supplier_part_are_not_compared(self):
         # A hand-fitted module has neither, and must not collide with another hand-fitted module.
-        self.assertEqual(check_bom.check_duplicate_parts(rows(
+        self.assertEqual(order_check.check_duplicate_parts(rows(
             ("U1", "", ""), ("U2", "", ""))), [])
 
 
@@ -92,18 +93,18 @@ class UnbuildableLineTest(unittest.TestCase):
     """
 
     def test_a_value_with_no_supplier_part_is_caught(self):
-        problems = check_bom.check_missing_parts(rows(("R1", "10k", "")))
+        problems = order_check.check_missing_parts(rows(("R1", "10k", "")))
         self.assertEqual(len(problems), 1)
         self.assertIn("cannot be ordered", problems[0])
 
     def test_a_hand_fitted_part_with_no_value_is_not_a_problem(self):
         # Modules, connectors and headers carry no value and are fitted by a person.
-        self.assertEqual(check_bom.check_missing_parts(rows(("U1", "", ""))), [])
+        self.assertEqual(order_check.check_missing_parts(rows(("U1", "", ""))), [])
 
     def test_a_part_the_designer_excluded_is_simply_absent(self):
         # `doNotPlace` removes the line from the BOM entirely, so there is nothing to report and
         # no project-specific list to maintain.
-        self.assertEqual(check_bom.check_missing_parts([]), [])
+        self.assertEqual(order_check.check_missing_parts([]), [])
 
 
 class DesignWarningsBecomeFatalAtFabTest(unittest.TestCase):
@@ -117,20 +118,20 @@ class DesignWarningsBecomeFatalAtFabTest(unittest.TestCase):
         # footprint drawn. That is a warning while designing and a scrapped part once ordered.
         path = self._circuit({"type": "supplier_footprint_mismatch_warning",
                               "message": "0805 does not match supplier footprint"})
-        problems = check_bom.check_design_warnings(path)
+        problems = order_check.check_design_warnings(path)
         self.assertEqual(len(problems), 1)
         self.assertIn("supplier footprint", problems[0])
 
     def test_other_warnings_are_left_alone(self):
         path = self._circuit({"type": "source_refdes_convention_warning", "message": "meh"})
-        self.assertEqual(check_bom.check_design_warnings(path), [])
+        self.assertEqual(order_check.check_design_warnings(path), [])
 
     def test_a_missing_circuit_is_not_treated_as_clean(self):
         # Asked for a file that is not there, it must not report zero problems as if it looked.
         # This asserted `== []` — that exact failure — under this exact comment. The name and the
         # comment were both right and only the assertion disagreed with them, so it stayed green.
         with self.assertRaises(FileNotFoundError):
-            check_bom.check_design_warnings(Path("/nonexistent/circuit.json"))
+            order_check.check_design_warnings(Path("/nonexistent/circuit.json"))
 
 
 class EndToEndTest(unittest.TestCase):
@@ -160,13 +161,13 @@ class APartWhoseFootprintCannotSayWhichPadIsWhichTest(unittest.TestCase):
     """
 
     def test_a_semiconductor_with_no_part_number_is_caught(self):
-        problems = check_bom.check_missing_parts(
+        problems = order_check.check_missing_parts(
             [{"Designator": "Q1", "Value": "", "Footprint": "sot23", "JLCPCB Part #": ""}])
         self.assertEqual(len(problems), 1)
         self.assertIn("does not say which pad", problems[0])
 
     def test_a_semiconductor_with_a_part_number_is_fine(self):
-        self.assertEqual(check_bom.check_missing_parts(
+        self.assertEqual(order_check.check_missing_parts(
             [{"Designator": "Q1", "Value": "", "Footprint": "sot23",
               "JLCPCB Part #": "C15127"}]), [])
 
@@ -174,12 +175,12 @@ class APartWhoseFootprintCannotSayWhichPadIsWhichTest(unittest.TestCase):
         # The exemption has to survive, or every hand-fitted module and connector cries wolf.
         for footprint in ("headermodule6", "jst_ph_2", "pinrow5"):
             with self.subTest(footprint=footprint):
-                self.assertEqual(check_bom.check_missing_parts(
+                self.assertEqual(order_check.check_missing_parts(
                     [{"Designator": "J1", "Value": "", "Footprint": footprint,
                       "JLCPCB Part #": ""}]), [])
 
     def test_a_passive_with_a_value_is_still_caught_by_the_original_rule(self):
-        problems = check_bom.check_missing_parts(
+        problems = order_check.check_missing_parts(
             [{"Designator": "C1", "Value": "100nF", "Footprint": "0603", "JLCPCB Part #": ""}])
         self.assertIn("has a value", problems[0])
 
@@ -196,16 +197,16 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
 
     def test_no_package_is_no_package(self):
         missing = Path(tempfile.mkdtemp()) / "none.zip"
-        rows, refusal = check_bom.order_rows(missing)
+        rows, refusal = order_check.order_rows(missing)
         self.assertEqual((rows, refusal, refusal.code), (None, "no fab package at %s — export it first" % missing, "no_package"))
 
     def test_a_package_with_no_bom_raises_its_code(self):
-        with self.assertRaises(check_bom.PackageError) as raised:
-            check_bom.read_bom(self.no_bom())
+        with self.assertRaises(order_check.PackageError) as raised:
+            order_check.read_bom(self.no_bom())
         self.assertEqual((str(raised.exception), raised.exception.code), ("no bom.csv in fab-gerbers.zip", "no_bom_in_package"))
 
     def test_a_package_with_no_bom_is_a_sentence_and_exit_2(self):
-        rows, refusal = check_bom.order_rows(self.no_bom())
+        rows, refusal = order_check.order_rows(self.no_bom())
         self.assertEqual((rows, refusal, refusal.code), (None, "no bom.csv in fab-gerbers.zip", "no_bom_in_package"))
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
