@@ -38,7 +38,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import assign_pins  # noqa: E402
+from spark.design import pin_assigner  # noqa: E402
 import boards  # noqa: E402
 import build_codes  # noqa: E402
 import check_spine  # noqa: E402
@@ -1143,7 +1143,7 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         for name in self.EARLIER_BUILD:
             (project / name).write_text("from an earlier build")
         (project / "firmware").mkdir()
-        (project / "firmware" / "pins.py").write_text(check_spine.assign_pins.PIN_MODULE_HEADER + "\n")
+        (project / "firmware" / "pins.py").write_text(check_spine.pin_assigner.PIN_MODULE_HEADER + "\n")
         if requirements_text is not None:
             (project / "requirements.json").write_text(requirements_text)
         return project
@@ -1314,7 +1314,7 @@ class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
         self.assertEqual(build["status"], check_spine.OK, build["detail"])
         self.assertIn(", 0 errors", build["detail"])
         # DC is not pinned (D2 is a strap pin, P527 #726), so it lands on A5, GPIO11 — not the GDI cable's GPIO3.
-        self.assertRegex(assign_pins.pin_module_for(self.requirements).module, r"(?m)^TFT_DC = 11\b")
+        self.assertRegex(pin_assigner.pin_module_for(self.requirements).module, r"(?m)^TFT_DC = 11\b")
 
 
 class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):

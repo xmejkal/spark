@@ -58,7 +58,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
-import assign_pins  # noqa: E402
+from spark.design import pin_assigner  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
 import build_codes  # noqa: E402
@@ -94,7 +94,7 @@ CONVERTER_TIMEOUT_S = 120
 #: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
 PIN_MODULE = Path("firmware") / "pins.py"
 #: What stops the pin map from being written: no pin can be placed, or the design, the store or a file cannot be read.
-PIN_MAP_REFUSALS = (assign_pins.Impossible, loader.DesignError, store.StoreProblem, OSError, ValueError)
+PIN_MAP_REFUSALS = (pin_assigner.Impossible, loader.DesignError, store.StoreProblem, OSError, ValueError)
 
 #: The stage that reads the requirements file; its detail is why a refused file built nothing (P280).
 REQUIREMENTS_STAGE = "requirements"
@@ -951,12 +951,12 @@ def keep_pins(requirements, destination):
     cannot be placed: it describes another design. A `pins.py` spark did not write is left alone, as `board.tsx` is.
     """
     target = Path(destination) / PIN_MODULE
-    ours = target.is_file() and target.read_bytes().startswith(assign_pins.PIN_MODULE_HEADER.encode())
+    ours = target.is_file() and target.read_bytes().startswith(pin_assigner.PIN_MODULE_HEADER.encode())
     if target.exists() and not ours:
         why = "spark did not write it; delete it to have it written"
         return {"file": str(target), "did": "left alone", "why": why, "line": "left alone: %s (%s)" % (target, why)}
     try:
-        module = assign_pins.pin_module_for(str(requirements))
+        module = pin_assigner.pin_module_for(str(requirements))
     except PIN_MAP_REFUSALS as stopped:
         if ours:
             target.unlink()

@@ -9,7 +9,7 @@ import json
 import re
 from pathlib import Path
 
-import assign_pins
+from spark.design import pin_assigner
 import board_pads
 from spark.design import loader
 import drawer
@@ -187,7 +187,7 @@ def _unwired(board, design):
     own = [signal for signal in design.signals if not signal.get("from")]
     if not own:
         return []
-    assignments, _ = assign_pins.assign(design.board, design.signals)
+    assignments, _ = pin_assigner.assign(design.board, design.signals)
     pads = board_pads.BoardPads.from_record(board)  # --- MVP --- (P512)
     return ["- %s: board %s, nothing wired to it yet (the requirements add this signal)"
             % (a["signal"], pads.pad_of(a["pin"])) for a in assignments if a["signal"] in {s["name"] for s in own}]

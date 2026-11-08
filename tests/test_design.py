@@ -24,7 +24,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import assign_pins  # noqa: E402
+from spark.design import pin_assigner  # noqa: E402
 from spark.design import loader  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -586,8 +586,8 @@ class APartSignalIsPinnedByNameTest(unittest.TestCase):
 
     def test_a_pin_the_board_lacks_is_refused_by_name(self):
         loaded = loader.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D99"}]))
-        with self.assertRaises(assign_pins.Impossible) as caught:
-            assign_pins.assign(loaded.board, loaded.signals)
+        with self.assertRaises(pin_assigner.Impossible) as caught:
+            pin_assigner.assign(loaded.board, loaded.signals)
         self.assertEqual(str(caught.exception), "TFT_BL asks for pin 'D99', which this board does not bring out")
 
     def test_the_four_gdi_pins_place_and_the_pin_map_names_them(self):
@@ -595,7 +595,7 @@ class APartSignalIsPinnedByNameTest(unittest.TestCase):
         # land on the cable's GPIO 17, 15 and 16. DC is not pinned, so it lands on A5 (GPIO11), NOT the cable's GPIO3:
         # the GDI display does not work through spark until P527 (#726).
         path = self.load(["dfr0664-tft-2in"], [{"name": name, "pin": pin} for name, pin in self.GDI_PINS.items()])
-        module = assign_pins.pin_module_for(path).module
+        module = pin_assigner.pin_module_for(path).module
         for name, gpio in (("TFT_BL", 21), ("TFT_CS", 18), ("TFT_RST", 38), ("SD_CS", 9), ("SCLK", 17), ("MOSI", 15),
                            ("MISO", 16), ("TFT_DC", 11)):
             with self.subTest(signal=name):
@@ -604,8 +604,8 @@ class APartSignalIsPinnedByNameTest(unittest.TestCase):
     def test_dc_on_the_cables_strap_pin_is_refused_with_the_way_out(self):
         # Close audit C4 stays (the PO, 2026-11-02): D2 is GPIO3, read at reset. The refusal says what to do.
         signals = [{"name": name, "pin": pin} for name, pin in dict(self.GDI_PINS, TFT_DC="D2").items()]
-        with self.assertRaises(assign_pins.Impossible) as caught:
-            assign_pins.pin_module_for(self.load(["dfr0664-tft-2in"], signals))
+        with self.assertRaises(pin_assigner.Impossible) as caught:
+            pin_assigner.pin_module_for(self.load(["dfr0664-tft-2in"], signals))
         self.assertEqual(str(caught.exception),
                          "TFT_DC asks for D2 by name, and GPIO3 is strapping — a pin this never offers, because the chip "
                          "reads it at reset; drop `pin` and spark picks another, or see P527 (#726) for a pin a connector "

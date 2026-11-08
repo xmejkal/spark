@@ -580,8 +580,8 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
         # The other half of the same drift: a penalty keyed on a name no board file may carry is
         # a penalty that never fires, and it looks identical to one that does.
         sys.path.insert(0, str(ROOT / "scripts"))
-        import assign_pins  # noqa: E402,PLC0415 - here so this file stays standalone
-        priced = set(assign_pins.ROLE_PENALTY) | set(assign_pins.CONFLICTING_ROLES)
+        from spark.design import pin_assigner  # noqa: E402,PLC0415 - here so this file stays standalone
+        priced = set(pin_assigner.ROLE_PENALTY) | set(pin_assigner.CONFLICTING_ROLES)
         self.assertEqual(priced - set(boards.PIN_ROLES), set())
 
     def test_every_onboard_role_is_one_a_board_may_use(self):

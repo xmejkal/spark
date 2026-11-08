@@ -36,7 +36,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
-import assign_pins  # noqa: E402
+from spark.design import pin_assigner  # noqa: E402
 import board_pads  # noqa: E402
 from spark.design import fab  # noqa: E402
 from spark.design import copper  # noqa: E402
@@ -1089,8 +1089,8 @@ def read_inputs(path, project, board_id=None):
         board = design.board
         # The signals are the loader's — derived once, named per instance — so `assign_pins.py`
         # and this file cannot disagree about which signals a design has.
-        assignments, _ = assign_pins.assign(board, design.signals)
-    except (loader.DesignError, assign_pins.Impossible) as broken:
+        assignments, _ = pin_assigner.assign(board, design.signals)
+    except (loader.DesignError, pin_assigner.Impossible) as broken:
         # Everything wrong with the INPUT is could-not-run: the file was never a design. Reading
         # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
         # which reads as "problems found" to anything that knows three outcomes.
