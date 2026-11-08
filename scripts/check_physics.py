@@ -218,10 +218,8 @@ def check_trace_currents(board, rails, rise_c, loads=None):
     narrowest = board.narrowest_by_net()
     loads = loads or {}
 
-    # Deliberately no early return when nothing is routed. An earlier version bailed out here,
-    # which preempted every per-rail rule below — so a board whose returns are all poured, or
-    # one checked before routing, reported "could not run" instead of what is actually known
-    # about each rail. Absence of copper is a fact about a rail, not a reason to stop.
+    # No early return when nothing is routed: a board whose returns are all poured, or one checked before routing, is
+    # told what is known about each rail, not "could not run". Absence of copper is a fact about a rail.
     for rail, spec in sorted(rails.items()):
         current, summed, origin = spec.get("max_current_a"), loads.get(rail), ""
         if current is None and summed and summed["complete"]:
@@ -236,9 +234,8 @@ def check_trace_currents(board, rails, rise_c, loads=None):
                 fix="measure it, then put it in the rules file as max_current_a"))
             continue
         if spec.get("served_by_pour"):
-            # A pour is not sized by trace width, so this check does not apply. It is recorded
-            # rather than silently skipped, because "no finding" and "not checked" are different
-            # answers and only one of them is reassuring.
+            # A pour is not sized by trace width, so this check does not apply. It is recorded, not skipped:
+            # "no finding" and "not checked" are different answers, and only one of them is reassuring.
             findings.append(Finding(
                 "trace-current", rail,
                 "carries up to %.2f A%s and is served by a copper pour, which this check cannot "
@@ -247,25 +244,27 @@ def check_trace_currents(board, rails, rise_c, loads=None):
                 fix="confirm the pour actually reaches every return on a 2-layer board with "
                     "components on top — a pour broken into islands by traces is not a plane"))
             continue
-
-        width = narrowest.get(rail)
-        if width is None:
-            findings.append(Finding(
-                "trace-current", rail,
-                "carries up to %.2f A%s but has no routed trace of its own — if it is served by "
-                "a copper pour, say so in the rules file" % (current, origin),
-                severity="needs-measurement"))
-            continue
-        capacity = trace_current_capacity_a(width, rise_c)
-        if current <= capacity:
-            continue
-        needed = width_for_current_mm(current, rise_c)
-        findings.append(Finding(
-            "trace-current", rail,
-            "carries up to %.2f A%s, but its narrowest segment is %.2f mm, good for %.2f A at a "
-            "%g C rise" % (current, origin, width, capacity, rise_c),
-            fix="widen this net to at least %.2f mm, or pour it" % needed))
+        findings += copper_findings(rail, current, origin, narrowest.get(rail), rise_c)
     return findings
+
+
+def copper_findings(rail, current, origin, width, rise_c):
+    """Value: the Finding of a rail's routed copper, `width` its narrowest segment or None, carrying `current`; [] when it can."""
+    if width is None:
+        return [Finding(
+            "trace-current", rail,
+            "carries up to %.2f A%s but has no routed trace of its own — if it is served by "
+            "a copper pour, say so in the rules file" % (current, origin),
+            severity="needs-measurement")]
+    capacity = trace_current_capacity_a(width, rise_c)
+    if current <= capacity:
+        return []
+    needed = width_for_current_mm(current, rise_c)
+    return [Finding(
+        "trace-current", rail,
+        "carries up to %.2f A%s, but its narrowest segment is %.2f mm, good for %.2f A at a "
+        "%g C rise" % (current, origin, width, capacity, rise_c),
+        fix="widen this net to at least %.2f mm, or pour it" % needed)]
 
 
 def current_text(amps):
