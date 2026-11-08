@@ -53,8 +53,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import assign_pins  # noqa: E402
 import board_pads  # noqa: E402
 import breadboard_catalog  # noqa: E402
-import breadboard_codes  # noqa: E402
 import breadboard_changes  # noqa: E402
+import breadboard_codes  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
 import breadboard_match  # noqa: E402
@@ -99,7 +99,6 @@ EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
                         if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
 
 
-
 class NotBuilt(Exception):
     """Error: there is no built circuit to read, or it is not this design's. `code` (breadboard_codes) says which."""
 
@@ -116,7 +115,8 @@ REFUSALS = (NotBuilt, *OUTSIDE_CODES)
 
 
 def refusal_code(stopped):
-    """The code of one of REFUSALS: a NotBuilt's own, else its outside error's."""
+    """Value: the code (breadboard_codes) of one of REFUSALS: a NotBuilt's own, else its outside error's. It never reads
+    the message."""
     if isinstance(stopped, NotBuilt):
         return stopped.code
     return next(code for kind, code in OUTSIDE_CODES.items() if isinstance(stopped, kind))
@@ -506,7 +506,7 @@ def main(argv=None):
     out = Path(args.out) if args.out else requirements.resolve().parent / SHEET
     try:
         written = write(requirements, out)
-    except REFUSALS as stopped:  # each with its code: refusal_code(stopped)
+    except REFUSALS as stopped:  # each has a code (refusal_code), library-only until an Operation writes JSON
         print("breadboard.py: could not run — %s" % stopped, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print(written.sheet.read_text(), end="")

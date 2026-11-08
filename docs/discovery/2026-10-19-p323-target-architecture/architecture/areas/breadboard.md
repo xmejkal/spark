@@ -30,7 +30,7 @@ The build runs the same Service as its breadboard stage.
 | `breadboard/part_pictures.py` | `PartPictures`, moved as is |
 | `breadboard/tabbed_page.py` | `TabbedHtmlPage`, `TscircuitExport`, moved as is |
 | `breadboard/sheet.py` | the sheet flow, moved from `breadboard.py` |
-| `breadboard/breadboard_codes.py` | the codes of a sheet not written, with one sentence each (a leaf, P692), from `breadboard_codes.py` |
+| `breadboard/breadboard_codes.py` | the codes of the refusals of the run, with one sentence each (a leaf, P692); a drawing not written has its codes in `drawing.py`'s `CODES`, from `breadboard_codes.py` |
 | `breadboard/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
 No module name repeats the area's name (rule C1), but for `breadboard_codes`: C1 counts basenames, and `codes` is the

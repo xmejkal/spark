@@ -302,8 +302,8 @@ def wiring(board, circuit, design_parts, resistors, board_component):
 
 
 def _said(point, end):
-    """(whether it starts at the board, its wiring line, its StepPoint) for one point, each end named by `end`; None for
-    a board pad nothing else joins, which is no wire: 3V3, once the firmware pulls the button up (P204)."""
+    """Value: (whether it starts at the board, its wiring line, its StepPoint) for one point, each end named by `end`;
+    None for a board pad nothing else joins, which is no wire: 3V3, once the firmware pulls the button up (P204)."""
     ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
     ends.sort(key=lambda one: (one.kind != BOARD, _natural(one.words)))
     line = " · ".join(one.words for one in ends)

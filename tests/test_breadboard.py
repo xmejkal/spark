@@ -255,6 +255,15 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
         self.assertEqual(breadboard.refusal_code(store.StoreProblem("the store")), "store_problem")
         self.assertEqual(breadboard.refusal_code(PermissionError("breadboard.md")), "file_unusable")
 
+    def test_a_broken_list_of_projects_stops_the_sheet_as_a_store_problem(self):
+        # a real error from outside, caught as main catches it
+        home = Path(tempfile.mkdtemp())
+        (home / "projects.json").write_text("{")
+        project = a_copy()
+        with in_store(home), self.assertRaises(breadboard.REFUSALS) as said:
+            breadboard.write(project / "requirements.json", project / "breadboard.md")
+        self.assertEqual(breadboard.refusal_code(said.exception), "store_problem")
+
     def test_main_catches_exactly_the_errors_that_have_a_code(self):
         self.assertEqual(set(breadboard.REFUSALS),
                          {breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError})
