@@ -1,0 +1,6 @@
+
+  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
+
+  [????] requirements     <project-dir>/requirements.json is not JSON: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+
+  the chain was NOT exercised — this is not a pass

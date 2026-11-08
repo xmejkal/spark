@@ -1,0 +1,69 @@
+import { FireBeetle2Esp32S3 } from "./FireBeetle2Esp32S3"
+
+/**
+ * DFRobot FireBeetle 2 ESP32-S3 — generated from a module list.
+ *
+ * The CONNECTIONS are derived and checked: every trace comes from a pin assignment
+ * validated against this board's own wake, ADC and strapping constraints, and every
+ * module pin comes from a part definition whose facts carry sources.
+ *
+ * The PLACEMENT is a first draft and nothing more. Modules sit in a column because that
+ * does not overlap, not because it is right. Nothing here knows which cable should exit
+ * where, what a person has to reach with a soldering iron once the tall parts are in, or
+ * what a slamming lid does to a hand-made lead. Lay it out properly before ordering.
+ *
+ * Not decided here, and it must be: mounting holes, connector keying, and trace widths for
+ * anything carrying real current.
+ */
+export default () => (
+  <board width="54.6mm" height="72mm" autorouter="auto"
+      thickness="1.6mm"
+      minViaHoleDiameter="0.3mm" minViaPadDiameter="0.6mm"
+      automaticPoursEnabled>
+    <FireBeetle2Esp32S3 name="Mcu" pcbX={-8.6} pcbY={0} />
+
+    {/* 6x6 mm tactile push button */}
+    <chip name="TactileButton" footprint="pushbutton" pcbX={11.1} pcbY={27}
+      pinLabels={{ pin1: "A", pin2: "B" }} />
+    {/* Kingbright L-7113ID 5 mm red LED */}
+    <chip name="LedRed5mm" footprint="pinrow2" pcbX={11.1} pcbY={17.05}
+      pinLabels={{ pin1: "A", pin2: "K" }} />
+
+    {/* What the parts demand of this board as components, from their records' host_parts — done here. */}
+    {/* in series with LedRed5mm.A: limits the LED's current from a 3.3 V GPIO; 5 mA is bright enough for an indicator, well under the DC maximum — (3.3 V - 1.9 V) / 5 mA = 280 ohm; next E12 value up: 330 ohm, about 4.2 mA */}
+    <resistor name="LedRed5mmSeriesA" resistance="330" footprint="0603" pcbX={19.7} pcbY={29.2} />
+    <trace from=".LedRed5mmSeriesA > .pin2" to=".LedRed5mm > .A" />
+
+    {/* Signals, each on the pin assign_pins.py chose and for the reason it gave. */}
+    <trace from=".Mcu > .D3" to=".TactileButton > .A" />  {/* BUTTON: needs nothing special; the cheapest pin left could still pwm, which is spent here */}
+    <trace from=".Mcu > .A5" to=".LedRed5mmSeriesA > .pin1" />  {/* STATUS_LED: needs nothing special; the cheapest pin left could still pwm and wake, which is spent here */}
+
+    {/* Power. Which rail each module pin belongs to comes from its part file. */}
+    <trace from=".Mcu > .3V3" to="net.V33" />
+    <trace from=".Mcu > .GND1" to="net.GND" />
+    <trace from=".Mcu > .GND2" to="net.GND" />
+    <trace from=".Mcu > .GND3" to="net.GND" />
+    {/* Mcu.VCC receives net.V5V and NOTHING ON THIS BOARD DRIVES that
+        rail, so it is left open — on this module that pad is then a
+        source, carrying USB power out. Add a regulator or an inlet
+        whose record declares an output on that rail to feed it. */}
+    <trace from=".TactileButton > .B" to="net.GND" />  {/* Pressed pulls the GPIO to ground, so the pin idles HIGH on a pull-up and reads 0 when pressed. THIS IS A DESIGN DECISION WITH A CONSEQUENCE: see host_requirements. */}
+    <trace from=".LedRed5mm > .K" to="net.GND" />  {/* Cathode to the board's ground. The current through it is the series resistor's, at most a few mA here; this pin is the return, not a supply input. */}
+    {/* THE WIDTH OF THE TRACES ABOVE ON net.GND, net.V33 IS UNJUSTIFIED.
+        They take the router's default, which is about 0.15 mm and good
+        for roughly 0.6 A. Nobody has stated what these rails carry, so
+        nothing here could size them. Name each load's figure in its part
+        record (`draws` or `can_supply` on the power pin), or state
+        `max_current_a` in .spark/rules.json, and regenerate; `check_physics`
+        judges the result by the same arithmetic that would have set it. */}
+
+    {/* What these parts require of this board, from their part files.
+        Beyond the 1 passive(s) placed above, none of it is done here — each one is a design decision:
+          - 6x6 mm tactile push button: Decide the polarity against deep sleep, not convenience. MicroPython's esp32.wake_on_ext1(pins, level) takes ONE level for every pin in the mask, on every chip (ports/esp32/modesp32.c, v1.29.0), so a board with two wake sources must have them assert in the same direction. Both directions are an OR on the S3 and C6: WAKEUP_ALL_LOW is a true AND only on the original ESP32, and ESP-IDF aliases it to ANY_LOW on every later chip (components/esp_hw_support/include/esp_sleep.h, v5.5.2). Prefer wiring a wake button to 3V3 behind a pull-down and arming WAKEUP_ANY_HIGH: low-level wake has an open MicroPython bug, micropython#17334 ('stuck pin', reported on a C6, v1.25.0). Corrected 2026-10-01 (spark P63): this line used to say ALL_LOW is an AND here, which is false on these chips.
+          - 6x6 mm tactile push button: Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin's first edge is the one that matters and it is not debounced by anything.
+          - Kingbright L-7113ID 5 mm red LED: A series resistor between the GPIO and the anode, always: without it the LED's current is set only by the pin's drive strength, and it either runs far past 30 mA or droops the pin's level.
+          - Kingbright L-7113ID 5 mm red LED: Keep it off the chip's strapping pins: an LED and resistor to ground load the pin while the chip samples its straps at reset, and can change how it boots. (Reasoned from the circuit, not from this datasheet.)
+          - Kingbright L-7113ID 5 mm red LED: On a breadboard: the LONG lead (anode) goes to the resistor; the short lead, on the side of the flat in the rim, goes to ground. Once the leads are trimmed equal, the flat is the mark that survives.
+     */}
+  </board>
+)

@@ -1,0 +1,2 @@
+--- stderr ---
+no board called 'no-such-board'. Available: firebeetle2-esp32s3, xiao-esp32-c6

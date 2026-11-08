@@ -1,0 +1,3 @@
+cannot place every signal on this board:
+
+  LED22_STATUS_LED needs a pin. 23 pin(s) could have served it — A0, A1, A2, A3, A4, A5, D10, D11, D12, D13, D14, D3, D5, D6, D7, MISO, MOSI, RX, SCK, SCL, SDA, SS, TX — and every one is already taken. Free a pin, or move this signal to a board with more of them.

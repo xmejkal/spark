@@ -1,0 +1,110 @@
+
+  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation
+
+  [ok  ] board            DFRobot FireBeetle 2 ESP32-S3
+  [ok  ] schematic        9 trace(s) written
+  [ok  ] footprint        FireBeetle2Esp32S3.tsx
+  [ok  ] build            9 trace(s), 0 errors, tsci 0.0.0-fake; the documents were measured on core 0.0.2600
+  [ok  ] simulation       4 wire(s) in the diagram
+           what it cannot show (3):
+             LedRed5mm: Wokwi's LED: lights on current; its forward voltage and brightness are not this part's
+             TactileButton: Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled
+             onboard GPIOs: not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 differs, or it does not parse
+
+  the chain runs end to end
+  next: SPARK_HOME=<spark-home> <repo>/scripts/look.py --project <project-dir> — first write firmware/main.py from pins.py
+--- stderr ---
+  wrote FireBeetle2Esp32S3.tsx
+  wrote board.tsx
+  wrote dist — this is what every check reads
+  wrote breadboard.md — the parts and how to wire them on a breadboard
+  wrote breadboard.svg — a picture of the same layout, which breadboard.md shows
+  no drawn breadboard: Wokwi has no part with this board's pins
+  wrote firmware/pins.py — the pins the firmware imports
+  wrote page.html — the breadboard, schematic and PCB in three tabs: open it in a browser, and Claude can publish it as an Artifact
+  wrote sim — the simulation project: diagram.json, wokwi.toml and the chips
+--- firmware/pins.py ---
+# The pin map: written by spark's assign_pins.py from requirements.json
+# for the DFRobot FireBeetle 2 ESP32-S3. Regenerate it; do not edit it.
+
+BUTTON = 38  # pad D3; needs nothing special; the cheapest pin left could still pwm, which is spent here; not_wake_capable: outside the RTC domain, so these cannot wake the chip however they are configured
+BUTTON_PULL = "up"  # no resistor: Pin(BUTTON, Pin.IN, Pin.PULL_UP) uses the board's internal one
+STATUS_LED = 11  # pad A5; needs nothing special; the cheapest pin left could still pwm and wake, which is spent here; adc2_unusable_with_wifi: on ADC2, which shares hardware with the radio
+ONBOARD_LED = 21  # onboard_led: the on-board user LED, silkscreened D13, lit by a 1: measured on the PO's own DFR0975 on 2026-10-31 (walk 3 rehearsal, P470 #639; revision not recorded, its buttons sat where DFRobot's V1.2 overview shows them), the LED lit while the firmware wrote 1. Usable, but it will blink whatever you put on it
+ONBOARD_LED_ON = 1  # the active level in the board record, the source is on the line above
+ONBOARD_BUTTON = 47  # onboard_button: the on-board user button, silkscreened D14, reads 0 when pressed: measured on the PO's own DFR0975 on 2026-10-31 (walk 3 rehearsal, P470 #639; revision not recorded, its buttons sat where DFRobot's V1.2 overview shows them), it idled at 1 and read 0 while held, with the internal pull-up. The older revision in hardware_revisions reads about 0.7 V pressed, not 0 V. Already has a button on it, and cannot wake the chip from deep sleep
+ONBOARD_BUTTON_ON = 0  # the active level in the board record, the source is on the line above
+--- sim/diagram.json ---
+{
+  "version": 1,
+  "author": "spark's fake converter",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-s3-devkitc-1",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "LED1",
+      "top": -60,
+      "left": 120,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "BTN1",
+      "top": 60,
+      "left": 120,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "esp:13",
+      "LED1:A",
+      "green",
+      []
+    ],
+    [
+      "LED1:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "esp:4",
+      "BTN1:1.l",
+      "green",
+      []
+    ],
+    [
+      "BTN1:2.l",
+      "esp:GND.2",
+      "black",
+      []
+    ]
+  ]
+}
+--- sim/wokwi.toml ---
+# Written by spark from the part records. The chips stand in for parts Wokwi has no model of.
+[wokwi]
+version = 1
+# firmware = "flash-with-firmware.bin"  # no image named yet: MicroPython plus the project's files
