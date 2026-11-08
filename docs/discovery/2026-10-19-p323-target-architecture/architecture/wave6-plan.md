@@ -1386,6 +1386,19 @@ the strongest, one mutation run. Size est.: 120 product lines, 100 test lines. D
 `tools.py` and `store.py` carries a code that `records_codes.CODES` names, `missing_facts` reads `MISSING_FACT` from
 `records_codes`, and the goldens of W6-R1 are byte-equal.
 
+P716 claims check (at 15be9ea9, no decision changed). Holds: `BoardError` 8 raises (`boards.py:163`, `:190`, `:194`,
+`:219`, `:221`, `:240`, `:270`, `:882`); `ToolProblem` 23 in `tools.py`, 3 in `main` (`:627`, `:650`, `:653`);
+`StoreProblem` 11 in `store.py`, 3 in `drawer.py`, 1 in `deploy_record_store.py`, 2 in `parts.py` (`:1077`, `:1285`);
+`boards.main` 53 lines at `:911`, `tools.main` 80 at `:586`; `missing_facts.py:31`; `measure.py:247`; `planted_tree.py:11`.
+Corrections: 8 more `StoreProblem` raises sit in `spark/design/needs.py` (`:50` to `:64`, `:486`, `:782`, `:786`, moved
+there by W6-D3c), and `ToolProblem` is raised outside `tools.py` at 4 sites in `spark/firmware/image_builder.py` (`:168`,
+`:175`, `:190`, `:255`) and once through `cannot_check` (`spark/bench/image_evidence.py:404`). The tests build the three
+classes at 34 lines in 17 files, and 24 mutation tables name one. The breadboard leaf's shared code is
+`test_self_confirmation.py:89`, not `:49`. The way taken: the `code` keyword is required, so every one of these raises
+names a code (the firmware's from `firmware_codes`, the bench's from `board_codes`). One base class,
+`text_guards.CodedMessageError`, holds it, so no class body grows in `boards.py` or `tools.py`. The `import
+records_codes` line of `boards.py`, `tools.py`, `parts.py` and `needs.py` is paid by one pruned line in each.
+
 ### W6-S2, the sourcing codes (after W6-R2)
 
 Goal: each refusal of `parts.py`, `cost.py`, `drawer.py` and `matching.py` has a code. Text and JSON stay byte-equal.
