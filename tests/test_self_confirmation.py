@@ -90,6 +90,7 @@ MAY_READ = {
     "firmware_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the five it shares with board_codes (P684)",
     "check_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and no code shared with another table (P693)",
     "design_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the one it shares with check_codes (P700)",
+    "build_codes.CODES": AGREEMENT + ": its keys against the module's own constants, and the four it shares with other tables (P701)",
     "part_pictures.PICTOGRAMS": STRUCTURE,
     "wiring_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
     "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",

@@ -146,8 +146,10 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed.
 - `kept`, with `--keep` or `--sim-dir`, lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`,
   `removed`, `not written` or `not kept`) and `why`. A `not written` entry of a drawing has `code` (`null` for an older
-  refusal), `subject` and `expected` (`true` means by design, so do not retry). A `wrote` entry for `breadboard.svg` may
-  have `drawn_from` (`record`).
+  refusal), `subject` and `expected` (`true` means by design, so do not retry). The `not written` entry of
+  `breadboard.md` has `code` too (new in P701): `not_built`, `built_from_other_requirements`, `build_failed`,
+  `build_unreadable`, `requirements_unusable`, `store_problem` or `file_unusable` (`spark/breadboard/breadboard_codes.py`
+  says each), or `stage_crashed` (`build_codes.py`). A `wrote` entry for `breadboard.svg` may have `drawn_from` (`record`).
 - `next`: one look step, only for `ok` in a project; its `why` is `first write firmware/main.py from pins.py` (P517), the pin map that `--keep` writes.
 - `unserved` is there when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board.
 - `missing_facts` is a top-level list, with `--keep` only, when spark writes `firmware/pins.py` and the board record
