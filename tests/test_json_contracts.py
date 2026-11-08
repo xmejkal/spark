@@ -40,11 +40,11 @@ import check_physics  # noqa: E402
 import check_spine  # noqa: E402
 import board_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
-import board_grant  # noqa: E402
-import board_look  # noqa: E402
+from spark.bench import board_grant  # noqa: E402
+from spark.bench import board_look  # noqa: E402
 import check_vendor_pins  # noqa: E402
 import compare_design  # noqa: E402
-import deploy_gate  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
 import grant  # noqa: E402
 import import_firmware  # noqa: E402
@@ -268,7 +268,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
         for name in ("test_board_look", "test_board_doctor", "test_board_grant"):
             suite.addTests(unittest.defaultTestLoader.loadTestsFromName(name))
         suite.addTests(unittest.defaultTestLoader.loadTestsFromName("TheGateTest", test_deploy_gate))
-        with mock.patch.object(board_look.LookStop, "__init__", spying(board_look.LookStop.__init__)), \
+        with mock.patch.object(board_look.LookStopError, "__init__", spying(board_look.LookStopError.__init__)), \
                 mock.patch.object(deploy_gate.GateClosedError, "__init__", spying(deploy_gate.GateClosedError.__init__)):
             result = unittest.TextTestRunner(stream=io.StringIO()).run(suite)
         self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
@@ -289,7 +289,8 @@ class TheBenchCodesTableTest(unittest.TestCase):
 
     def test_a_grant_refusal_has_the_reason_and_the_exit_code_of_its_why(self):
         for why, reason, code in (("not a grant", "not_a_grant", 1), ("answered no", "answered_no", 1), ("bad minutes", "bad_minutes", 2),
-                                  ("bad scope", "bad_scope", 2), ("no mac", "no_mac", 2), ("serial not mac", "serial_not_mac", 1)):
+                                  ("bad scope", "bad_scope", 2), ("no mac", "no_mac", 2), ("serial not mac", "serial_not_mac", 1),
+                                  ("relayed yes", "relayed_yes_refused", 1)):
             refusal = board_grant.GrantRefusedError(why)
             self.assertEqual((refusal.reason, refusal.code, reason in board_codes.CODES), (reason, code, True), why)
 

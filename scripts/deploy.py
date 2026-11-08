@@ -12,7 +12,7 @@ a scenario run writes it, the image is sim/flash-with-firmware.bin. run_scenario
 flash image, and tests it: each run's log names the image's sha256. This flashes the image only when a run that passed
 names it and no run with another verdict does. esptool erases the flash and writes the image at 0x0, where the
 simulator loaded it. Then deploy.py copies a facts file, spark.json, to the board and reads it back (board_facts.py,
-P215), and reads the board with mpremote (ready_check.py): each file's sha256, then the firmware's start, which prints
+P215), and reads the board with mpremote (ready_probe.py): each file's sha256, then the firmware's start, which prints
 `ready` (the ready contract, commands/build.md). The board's log goes to sim/runs/board/, and the store keeps a record
 of the board by its MAC.
 
@@ -27,9 +27,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import download_mode
-import ready_check
-from image_evidence import NO_SIMULATION_CAVEAT
+from spark.bench import download_mode
+from spark.bench import ready_probe
+from spark.bench.image_evidence import NO_SIMULATION_CAVEAT
 from spark.bench import build_project_outside_world
 from spark.bench.deploy_image import DeployImage
 from spark.core.cli import HelpText, run_cli
@@ -93,7 +93,7 @@ code's. Every `problems` and `unchecked` item has a `code` (scripts/board_codes.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
 came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
-    NO_SIMULATION_CAVEAT, ready_check.READY_WAIT_S, download_mode.RESET_WAIT_S)
+    NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 
 

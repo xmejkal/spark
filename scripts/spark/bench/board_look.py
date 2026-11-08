@@ -26,7 +26,7 @@ import board_codes
 import boards
 import brief
 import deploy_record_store
-import flasher
+from spark.bench import flasher
 from spark.core import outcomes
 import project_image
 import sim_project
@@ -77,7 +77,7 @@ ESPTOOL_ERROR = "ERROR: "
 
 
 # --- MVP ---
-class LookStop(ValueMessageError):
+class LookStopError(ValueMessageError):
     """Error: the look cannot go on. The message is the whole sentence, its values flattened (P444). `reason` is the board_codes code that names why, a
     required keyword, so no raise site goes without one (P433). When esptool could not read the board, `port` is its
     port and `tool_said` esptool's own line of the failure, shown to the person and never decided on (P282)."""
@@ -109,39 +109,39 @@ class PortFinder:
         try:
             done = self.run(self.command, capture_output=True, text=True, timeout=LIST_TIMEOUT_S)
         except OSError as cannot:
-            raise LookStop("could not list the boards on USB: %s", cannot, reason=board_codes.LIST_FAILED)
+            raise LookStopError("could not list the boards on USB: %s", cannot, reason=board_codes.LIST_FAILED)
         except subprocess.TimeoutExpired:
-            raise LookStop("could not list the boards on USB: mpremote took more than %d s. %s",
+            raise LookStopError("could not list the boards on USB: mpremote took more than %d s. %s",
                            LIST_TIMEOUT_S, flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY),
                            reason=board_codes.LIST_TIMEOUT)
         if done.returncode:
             lines = (done.stderr or "").strip().splitlines()
-            raise LookStop("could not list the boards on USB: %s", lines[-1] if lines else "mpremote exited with %d" % done.returncode,
+            raise LookStopError("could not list the boards on USB: %s", lines[-1] if lines else "mpremote exited with %d" % done.returncode,
                            reason=board_codes.LIST_FAILED)
         rows = [line.split(None, 3) for line in done.stdout.splitlines()]
         return [Port(*(row + [""])[:4]) for row in rows if len(row) >= 3 and row[2] != NOT_A_BOARD]
 
     def require_one_port(self, script):
-        """The port of the one board on USB. LookStop when there is none, or when there are two or more: it lists them
+        """The port of the one board on USB. LookStopError when there is none, or when there are two or more: it lists them
         and names `script`'s --port (P218's D25)."""
         return self.require_one_board(script).device
 
     def require_one_board(self, script, port=None):
-        """The Port row of the one board on USB, or of `port` when it is given. LookStop as require_one_port says, and
+        """The Port row of the one board on USB, or of `port` when it is given. LookStopError as require_one_port says, and
         when `port` is not in the list."""
         found = self.nodes()
         if port:
             named = [each for each in found if each.device == port]
             if not named:
-                raise LookStop("no board on %s: mpremote devs does not list it.", port, reason=board_codes.PORT_NOT_LISTED)
+                raise LookStopError("no board on %s: mpremote devs does not list it.", port, reason=board_codes.PORT_NOT_LISTED)
             return named[0]
         on_usb = boards_of(found)
         if not on_usb:
-            raise LookStop("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only. "
+            raise LookStopError("no board found. Plug it straight into the computer with a data cable, not a hub that gives power only. "
                            "If the plug is USB-C, turn it around, or use a USB-A to USB-C cable.", reason=board_codes.NO_PORT)
         if len(on_usb) > 1:
             lines = [_listed(board) for board in on_usb]
-            raise LookStop.of_lines(["%d boards on USB:" % len(on_usb)] + lines
+            raise LookStopError.of_lines(["%d boards on USB:" % len(on_usb)] + lines
                                      + ["%s --port %s  (unplug one to tell them apart)" % (script, port_of(on_usb[0]).device)],
                                      reason=board_codes.TWO_BOARDS)
         return port_of(on_usb[0])
@@ -177,7 +177,7 @@ def _listed(board):
 
 
 class BoardReader:
-    """How a board is read. `read(port)` returns a BoardReading, or raises LookStop when the board cannot be read."""
+    """How a board is read. `read(port)` returns a BoardReading, or raises LookStopError when the board cannot be read."""
 
     def read(self, port):
         raise NotImplementedError
@@ -191,18 +191,18 @@ class EsptoolReader(BoardReader):
 
     def read(self, port):
         if self.flasher_tool.name != "esptool":
-            raise LookStop("could not read: the look reads only esptool, and the flasher is %s", self.flasher_tool.name,
+            raise LookStopError("could not read: the look reads only esptool, and the flasher is %s", self.flasher_tool.name,
                            reason=board_codes.FLASHER_NOT_ESPTOOL)
         command = flasher.build_esptool_prefix(self.flasher_tool, port) + ["flash-id"]
         try:
             done = self.run(command, capture_output=True, text=True, timeout=READ_TIMEOUT_S)
         except OSError as cannot:
-            raise LookStop("could not read the board on %s: %s", port, cannot, port=port, reason=board_codes.BOARD_NOT_READ)
+            raise LookStopError("could not read the board on %s: %s", port, cannot, port=port, reason=board_codes.BOARD_NOT_READ)
         except subprocess.TimeoutExpired:
-            raise LookStop("could not read the board on %s: esptool took more than %d s. %s",
+            raise LookStopError("could not read the board on %s: esptool took more than %d s. %s",
                            port, READ_TIMEOUT_S, self.boot_hint, port=port, reason=board_codes.READ_TIMEOUT)
         if done.returncode:
-            raise LookStop("could not read the board on %s. %s", port, self.boot_hint, port=port,
+            raise LookStopError("could not read the board on %s. %s", port, self.boot_hint, port=port,
                            tool_said=esptool_said(done.stderr), reason=board_codes.BOARD_NOT_READ)
         return self.parse(done.stdout)
 
@@ -425,7 +425,7 @@ class LookService:
         self.finder, self.reader = finder, reader
 
     def run(self, project, port, evidence):
-        """A LookReport. LookStop says why not: no record, no board, two boards without a port, a read that failed."""
+        """A LookReport. LookStopError says why not: no record, no board, two boards without a port, a read that failed."""
         record = self.record_of(project)
         listed = None if port else self.finder.require_one_board("look.py")
         port = port or listed.device
@@ -466,24 +466,24 @@ class LookService:
 
     @staticmethod
     def record_of(project):
-        """The board record requirements.json names, or a LookStop pointing to P230 (D36: two records only)."""
+        """The board record requirements.json names, or a LookStopError pointing to P230 (D36: two records only)."""
         try:
             name = json.loads((project / "requirements.json").read_text()).get("board")
         except (OSError, ValueError, AttributeError):
             name = None
         if not name:
-            raise LookStop("requirements.json names no board", reason=board_codes.NO_BOARD_NAMED)
+            raise LookStopError("requirements.json names no board", reason=board_codes.NO_BOARD_NAMED)
         try:
             return boards.load(project, name)
         except boards.BoardError:
-            raise LookStop("no board record for %s: P230 will research one.", name, reason=board_codes.NO_BOARD_RECORD)
+            raise LookStopError("no board record for %s: P230 will research one.", name, reason=board_codes.NO_BOARD_RECORD)
 
 
 def looker(platform, run=subprocess.run):
     """A LookService with the platform's port finder and board reader, whose hint names the project's buttons.
-    tools.ToolProblem becomes a LookStop."""
+    tools.ToolProblem becomes a LookStopError."""
     try:
         hint = flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.of_project(platform.project))
         return LookService(platform.make_port_finder(run), platform.make_board_reader(run, hint))
     except tools.ToolProblem as cannot:
-        raise LookStop("%s", cannot, reason=board_codes.TOOL_MISSING)
+        raise LookStopError("%s", cannot, reason=board_codes.TOOL_MISSING)

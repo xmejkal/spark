@@ -6,9 +6,9 @@ the person does that (the PO's split, 2026-10-17).
 A library. look.py and grant.py call it when esptool's read failed, reach.py and live.py when mpremote never got into
 the board. The steps and their sources are in docs/discovery/2026-10-17-p282-troubleshoot/research.md.
 
-    BoardCheckStrategy     one named check: run(port, silent_step) -> CheckResult.
-    PortListedBoardCheck   `mpremote devs` lists the port, with its USB serial.
-    ConsoleBoardCheck      two seconds of the console, opened with the port's lock: busy, download mode, a boot, or
+    DoctorProbe            one named check: run(port, silent_step) -> CheckResult.
+    PortListedDoctorProbe  `mpremote devs` lists the port, with its USB serial.
+    ConsoleDoctorProbe     two seconds of the console, opened with the port's lock: busy, download mode, a boot, or
                            silence. The open itself can restart a C6 (P251, AT187), so a boot is said as such.
     BoardDoctorService     runs BOARD_CHECKS in order and stops at the first that names a step.
 
@@ -20,9 +20,9 @@ from collections import namedtuple
 
 import boards
 import tools
-from board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
-from board_look import LookStop
-from download_mode import DOWNLOAD_MODE
+from spark.bench.board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
+from spark.bench.board_look import LookStopError
+from spark.bench.download_mode import DOWNLOAD_MODE
 
 #: The next steps, one code each. The sources are in MESSAGE_FOR's comments.
 NEXT_PLUG_IN, NEXT_CLOSE_OTHER, NEXT_PRESS_RESET = "plug_in", "close_other", "press_reset"
@@ -56,7 +56,7 @@ IF_NOT_HELPED = {NEXT_PRESS_RESET: NEXT_REPLUG}
 CheckResult = namedtuple("CheckResult", "name passed fact next_step")
 #: Result: each CheckResult in order, `tool_said` (the tool's own line of the failure, or None), the `next_step` code
 #: (None when no check could look), and `if_not_helped`, the step after it, or None. Never a pass.
-BoardDoctorResult = namedtuple("BoardDoctorResult", "checks tool_said next_step if_not_helped")
+DoctorProbeResult = namedtuple("DoctorProbeResult", "checks tool_said next_step if_not_helped")
 
 
 class UnknownStepError(ValueError):
@@ -73,7 +73,7 @@ def silent_step_of(tool):
     return step
 
 
-class BoardCheckStrategy:
+class DoctorProbe:
     """Strategy: one named check of a board that did not answer. `run` returns a CheckResult."""
 
     name = None
@@ -82,8 +82,8 @@ class BoardCheckStrategy:
         raise NotImplementedError
 
 
-class PortListedBoardCheck(BoardCheckStrategy):
-    """`mpremote devs` lists the port. It never opens the port. `finder` is a board_look.PortFinder."""
+class PortListedDoctorProbe(DoctorProbe):
+    """Strategy: `mpremote devs` lists the port. It never opens the port. `finder` is a board_look.PortFinder."""
 
     name = "port-listed"
 
@@ -93,7 +93,7 @@ class PortListedBoardCheck(BoardCheckStrategy):
     def run(self, port, silent_step):
         try:
             boards = self.finder.nodes()
-        except LookStop as cannot:
+        except LookStopError as cannot:
             return CheckResult(self.name, False, "could not list the boards: %s" % cannot, None)
         listed = [board for board in boards if board.device == port]
         if not listed:
@@ -103,8 +103,8 @@ class PortListedBoardCheck(BoardCheckStrategy):
         return CheckResult(self.name, True, "mpremote devs lists %s, USB serial %s" % (port, listed[0].serial), None)
 
 
-class ConsoleBoardCheck(BoardCheckStrategy):
-    """Two seconds of the console, with the port's lock. `probe` is a board_console.ConsoleProbe, or None when
+class ConsoleDoctorProbe(DoctorProbe):
+    """Strategy: two seconds of the console, with the port's lock. `probe` is a board_console.ConsoleProbe, or None when
     mpremote is not a Python package here: then the console is not read, and the step is the tool's silent step."""
 
     name = "console"
@@ -140,10 +140,10 @@ class BoardDoctorService:
     @classmethod
     def for_board(cls, finder, probe):
         """The doctor with BOARD_CHECKS: the port first, then the console."""
-        return cls((PortListedBoardCheck(finder), ConsoleBoardCheck(probe)))
+        return cls((PortListedDoctorProbe(finder), ConsoleDoctorProbe(probe)))
 
     def examine(self, port, tool, tool_said=None):
-        """The BoardDoctorResult for the board on `port` after `tool` (a tools.Tool) failed and said `tool_said`.
+        """The DoctorProbeResult for the board on `port` after `tool` (a tools.Tool) failed and said `tool_said`.
         UnknownStepError when the tools list gives the tool no known silent_step."""
         silent_step, results = silent_step_of(tool), []
         for check in self.checks:
@@ -151,11 +151,11 @@ class BoardDoctorService:
             if results[-1].next_step:
                 break
         step = results[-1].next_step if results else None
-        return BoardDoctorResult(tuple(results), tool_said, step, IF_NOT_HELPED.get(step))
+        return DoctorProbeResult(tuple(results), tool_said, step, IF_NOT_HELPED.get(step))
 
 
 def after_esptool(stop, platform, run):
-    """The BoardDoctorResult for a board_look.LookStop from esptool's read, or None when the stop names no port (it
+    """The DoctorProbeResult for a board_look.LookStopError from esptool's read, or None when the stop names no port (it
     was no failed read). The tools come from the FirmwarePlatform `platform`. tools.ToolProblem and UnknownStepError pass up."""
     if stop.port is None:
         return None
@@ -169,7 +169,7 @@ def step_sentence(code, places=boards.ButtonPlaces.EMPTY):
 
 
 def stop_answer(script, stop, platform, run):
-    """(the lines a script prints, the BoardDoctorResult or None) when esptool's look stopped with `stop`. After a failed
+    """(the lines a script prints, the DoctorProbeResult or None) when esptool's look stopped with `stop`. After a failed
     read, the board doctor's facts and next step follow, and the next step is the last line. `platform` as `after_esptool`."""
     try:
         result = after_esptool(stop, platform, run)
@@ -187,7 +187,7 @@ def stop_lines(script, stop, platform, run):
 
 
 def describe(result, places=boards.ButtonPlaces.EMPTY):
-    """The lines a person reads for a BoardDoctorResult, without indent. `places` names the buttons the steps mention."""
+    """The lines a person reads for a DoctorProbeResult, without indent. `places` names the buttons the steps mention."""
     out = ["said    %s" % result.tool_said] if result.tool_said else []
     out += ["check   %s: %s" % (check.name, check.fact) for check in result.checks]
     out.append("next    %s" % (step_sentence(result.next_step, places) if result.next_step else "no step: the doctor could not look"))
@@ -197,5 +197,5 @@ def describe(result, places=boards.ButtonPlaces.EMPTY):
 
 
 def as_dict(result):
-    """A BoardDoctorResult as plain JSON values."""
+    """A DoctorProbeResult as plain JSON values."""
     return dict(result._asdict(), checks=[check._asdict() for check in result.checks])

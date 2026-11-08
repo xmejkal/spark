@@ -8,12 +8,12 @@ so a test swaps the board tools without a patch.
 
 import json
 
-import board_connection
-import board_console
-import board_look
+from spark.bench import board_connection
+from spark.bench import board_console
+from spark.bench import board_look
 import boards
-import flasher
-import ready_check
+from spark.bench import flasher
+from spark.bench import ready_probe
 import tools
 import board_codes
 from project_image import DeployError
@@ -66,8 +66,8 @@ class FirmwarePlatform:
         """The connection to the board on `port`, through the shell's `command`."""
         raise NotImplementedError
 
-    def make_ready_check(self, connection):
-        """The ReadyCheck that reads the board through `connection`."""
+    def make_ready_probe(self, connection):
+        """The ReadyProbe that reads the board through `connection`."""
         raise NotImplementedError
 
     def make_console_probe(self, port, run):
@@ -107,8 +107,8 @@ class MicroPythonPlatform(FirmwarePlatform):
     def make_connection(self, command, port, run):
         return board_connection.BoardConnection(command, port, run)
 
-    def make_ready_check(self, connection):
-        return ready_check.ReadyCheck(connection)
+    def make_ready_probe(self, connection):
+        return ready_probe.ReadyProbe(connection)
 
     def make_console_probe(self, port, run):
         return board_console.ConsoleProbe.for_tool(self.find_tool("board-shell"), port, run)

@@ -36,25 +36,25 @@
   "replace": "format_rerun_line(\"grant.py\", ([\"--scope\""
  },
  {
-  "file": "scripts/board_grant.py",
+  "file": "scripts/spark/bench/board_grant.py",
   "name": "cmd-no-minutes",
   "find": "[\"--minutes\", \"N\"]",
   "replace": "[]"
  },
  {
-  "file": "scripts/board_grant.py",
+  "file": "scripts/spark/bench/board_grant.py",
   "name": "cmd-parent",
-  "find": "\nGRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parent / \"grant.py\"",
+  "find": "\nGRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parents[2] / \"grant.py\"",
   "replace": "\nGRANT_COMMAND = format_rerun_line(Path(\"grant.py\")"
  },
  {
-  "file": "scripts/board_grant.py",
+  "file": "scripts/spark/bench/board_grant.py",
   "name": "expired-no-cmd",
   "find": "the person runs %s again\" % GRANT_COMMAND,\n    WHY_NO_ZONE",
   "replace": "the person runs grant.py --minutes N again\",\n    WHY_NO_ZONE"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "deploy-drop-ignore",
   "find": "return [IGNORE_OLDER_RUNS_FLAG] if self.ignore_older_runs else []",
   "replace": "[]"

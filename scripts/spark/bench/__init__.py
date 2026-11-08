@@ -3,7 +3,7 @@ The bench area: the Operations on a board on USB, and the outside they reach. `l
 W3-3), `deploy` the second (P655, W4-2), the grant, live and reach Operations (`issue-grant`, `check-grant`, `live`, `reach`) the rest (P657). `OPERATIONS` maps each printed `op` to its class, for the frontends.
 """
 
-import deploy_gate
+from spark.bench import deploy_gate
 import tools
 from spark.bench.deploy_image import DeployImage
 from spark.bench.check_grant import CheckGrant

@@ -6,12 +6,13 @@ look.py printed before it (board_look.report_lines and board_envelope's look ite
 """
 
 import board_codes
-import board_doctor
-import board_envelope
-import board_look
+from spark.bench import board_doctor
+from spark.bench import board_envelope
+from spark.bench import board_look
+from spark.bench.deploy_stages import DeployPhase
 import boards
-from firmware_platform import MicroPythonPlatform
-from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
+from spark.bench.firmware_platform import MicroPythonPlatform
+from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from spark.bench import bench_privacy
 from spark.core import outcomes
 from spark.core.events import Event
@@ -31,7 +32,7 @@ class LookAtBoard(Operation):
     """
     Operation: the look. It builds the evidence (image_evidence), the LookService (board_look.looker) and runs it, and
     returns the LookReport as an OperationResult: its stops and warnings are problems, its unknown fields, a missing token
-    and a last deploy it could not check are unchecked, and a token brings the deploy step. A LookStop is one unchecked
+    and a last deploy it could not check are unchecked, and a token brings the deploy step. A LookStopError is one unchecked
     Finding with the stop's reason, and the board doctor's lines are the diagnostics. It writes nothing on the board. It
     reports one BEGIN of the look, before the read (P507).
     """
@@ -51,10 +52,10 @@ class LookAtBoard(Operation):
         evidence = evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)
         platform = MicroPythonPlatform(project, outside.find_tool)
         # P507: after the evidence and the platform, which touch no board, and right before the esptool read
-        outside.report(Event.begin(board_envelope.STAGE_LOOK))
+        outside.report(Event.begin(DeployPhase.LOOK))
         try:
             report = board_look.looker(platform, outside.run).run(project, port, evidence)
-        except board_look.LookStop as stop:
+        except board_look.LookStopError as stop:
             return self._stopped(stop, platform, port, outside)
         return self._found(report, project.resolve(), evidence)
 
@@ -80,7 +81,7 @@ class LookAtBoard(Operation):
 
     @staticmethod
     def _stopped(stop, platform, port, outside):
-        """The result of a LookStop: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
+        """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
         lines, doctor = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
         places = boards.ButtonPlaces.of_project(platform.project)
         # the port and the button words, each on one line (P430); a tool problem's path is flat already (P444)

@@ -7,16 +7,16 @@ yes comes through the outside's `make_consent` (it declares ASKS), and a closed 
 import shlex
 from pathlib import Path
 
-import board_doctor
-import board_grant
-import board_look
+from spark.bench import board_doctor
+from spark.bench import board_grant
+from spark.bench import board_look
 import boards
-import flasher
+from spark.bench import flasher
 import store
 import tools
-from deploy_gate import GateClosedError, format_rerun_line
-from deploy_stages import STAGE_LOOK
-from firmware_platform import MicroPythonPlatform
+from spark.bench.deploy_gate import GateClosedError, format_rerun_line
+from spark.bench.deploy_stages import DeployPhase
+from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
@@ -73,7 +73,7 @@ class IssueGrant(Operation):
             # P430: the closed gate's sentence holds the rerun line: the project path and the port, quoted as that line quotes them
             said = guard_sentence("%s: %s" % (SCRIPT, closed), shlex.quote(str(project.resolve())), shlex.quote(port) if port else None)
             return OperationResult(None, [Finding(outcomes.STATUS_FOR[closed.code], None, closed.reason, str(closed), "")], diagnostics=[said])
-        except (tools.ToolProblem, board_look.LookStop, store.StoreProblem) as cannot:  # P499: a store that refuses
+        except (tools.ToolProblem, board_look.LookStopError, store.StoreProblem) as cannot:  # P499: a store that refuses
             return stop_result(cannot, SCRIPT, project, port, lambda stop: board_doctor.stop_answer(SCRIPT, stop, platform, outside.run))
         lines = [guard_lines("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))]
         if grant.scope == board_grant.SCOPE_DEPLOY:
@@ -90,7 +90,7 @@ class IssueGrant(Operation):
     @staticmethod
     def _tell_restart(outside, places):
         """The look begins, and the person reads that the board restarts (an Event, so the terminal indents it)."""
-        outside.report(Event.begin(STAGE_LOOK))
+        outside.report(Event.begin(DeployPhase.LOOK))
         text = RESTART % {"reset": places.reset, "orientation": places.orientation}
-        outside.report(Event.line(STAGE_LOOK, guard_sentence(text, places.reset, places.orientation)))  # P430: button words are data
+        outside.report(Event.line(DeployPhase.LOOK, guard_sentence(text, places.reset, places.orientation)))  # P430: button words are data
 # --- end MVP ---

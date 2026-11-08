@@ -36,7 +36,7 @@
   "replace": "return tool.command + [tool.entry[\"module\"]]"
  },
  {
-  "file": "scripts/board_look.py",
+  "file": "scripts/spark/bench/board_look.py",
   "name": "LookService.run loses the image on an unreadable log",
   "find": "            why, code = str(cannot), cannot.reason  # image stays set",
   "replace": "            image = None\n            why, code = str(cannot), cannot.reason  # image stays set"

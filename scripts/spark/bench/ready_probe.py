@@ -1,7 +1,7 @@
 """
 After a flash: do the board's files match the expected hashes, and does the firmware print `ready`? (P215, D33)
 
-A library. `ReadyCheck` runs code on the board twice, through its BoardConnection. First it hashes each file that
+A library. `ReadyProbe` runs code on the board twice, through its BoardConnection. First it hashes each file that
 the evidence names (a passed run's log, or firmware/), on the board itself. Then it imports `main`, as the board does
 at boot, and reads its output for READY_WAIT_S seconds. Ready is seen only when both agree. When mpremote cannot reach
 the board, it is unknown, never seen. So is a passed run's log from before P215, which names no files.
@@ -9,13 +9,13 @@ the board, it is unknown, never seen. So is a passed run's log from before P215,
 
 import collections
 
-from board_connection import BoardUnreachableError, BoardCodeError
+from spark.bench.board_connection import BoardUnreachableError, BoardCodeError
 from run_scenario import READY
 
 #: How long the board's output is read for `ready`, in seconds. The firmware keeps running after it, so mpremote is
 #: stopped at the end, and what it printed until then is the board's log.
 READY_WAIT_S = 20
-#: The first word of each line HASH_FILES prints, and `ReadyCheck` reads the hashes by it.
+#: The first word of each line HASH_FILES prints, and `ReadyProbe` reads the hashes by it.
 HASH_LINE = "file"
 #: Run on the board: one line per file, `file <sha256 or missing> <path>`. %r is the list of paths.
 HASH_FILES = """import hashlib, binascii
@@ -35,13 +35,13 @@ for p in %%r:
 
 SEEN, NOT_SEEN, UNKNOWN = "ready seen", "ready not seen", "ready unknown"
 
-#: Result: what `ReadyCheck.check` returns. `verdict` is SEEN, NOT_SEEN or UNKNOWN, `sentence` says why, and `log` is
+#: Result: what `ReadyProbe.check` returns. `verdict` is SEEN, NOT_SEEN or UNKNOWN, `sentence` says why, and `log` is
 #: what the board printed (the board's log).
 ReadyResult = collections.namedtuple("ReadyResult", "verdict sentence log")
 
 
-class ReadyCheck:
-    """The two reads on one board, through its BoardConnection (board_connection.py)."""
+class ReadyProbe:
+    """Adapter: the two reads on one board, through its BoardConnection (board_connection.py)."""
 
     def __init__(self, connection):
         self.connection = connection

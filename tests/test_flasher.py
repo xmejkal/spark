@@ -13,9 +13,9 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_look  # noqa: E402
+from spark.bench import board_look  # noqa: E402
 import boards  # noqa: E402
-import flasher  # noqa: E402
+from spark.bench import flasher  # noqa: E402
 import tools  # noqa: E402
 
 PYTHON = "/opt/python3"
@@ -76,17 +76,17 @@ class TheEsptoolFlasherTest(unittest.TestCase):
     def test_the_look_prints_the_hint_it_is_given(self):
         failed = types.SimpleNamespace(returncode=1, stdout="", stderr="")
         hint = flasher.EsptoolFlasher.boot_hint_for(self.PLACES)
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             board_look.EsptoolReader(ESPTOOL, lambda argv, **kw: failed, boot_hint=hint).read(PORT)
         self.assertTrue(str(stop.exception).endswith(hint), str(stop.exception))
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             board_look.EsptoolReader(ESPTOOL, lambda argv, **kw: failed).read(PORT)
         self.assertIn(flasher.EsptoolFlasher(ESPTOOL, "esp32s3").boot_hint, str(stop.exception))
 
     def test_the_port_finder_prints_the_plain_hint_when_mpremote_times_out(self):
         def timed_out(argv, **kw):
             raise subprocess.TimeoutExpired(argv, 15)
-        with self.assertRaises(board_look.LookStop) as stop:
+        with self.assertRaises(board_look.LookStopError) as stop:
             board_look.PortFinder(ESPTOOL, timed_out).nodes()
         self.assertIn(flasher.EsptoolFlasher(ESPTOOL, "esp32s3").boot_hint, str(stop.exception))
 

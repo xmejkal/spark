@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import reach  # noqa: E402
 import tools  # noqa: E402
-from board_console import Cure  # noqa: E402
+from spark.bench.board_console import Cure  # noqa: E402
 from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
 from spark.bench.reach_board import ReachBoard  # noqa: E402
 from test_board_look import C6_PORT, data, done, found  # noqa: E402
