@@ -16,7 +16,7 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 | Module | Holds |
 |---|---|
 | `core/outcomes.py` | the status words, `EXIT_FOR`, `status_of`, `envelope`, `step`, `page`, moved from `scripts/outcomes.py` |
-| `core/result.py` | `OperationResult`, `Finding`, `NextStep` |
+| `core/result.py` | `OperationResult`, `Finding`, `NextStep`, and `Refusal`, the sentence with its code a refusal returns before there is an `OperationResult` (P693) |
 | `core/operation.py` | the `Operation` base class, `Argument`, `COMMON_ARGUMENTS` (`--project`, `--json`, `--port`; `--dry-run`, `--out`, `--timeout` and `schema()` wait for their first user), the effects `READS`, `RUNS`, `BOARD` |
 | `core/errors.py` | `SparkError` |
 | `core/codes.py` | the codes the core writes for every Operation: `bad_argument`, `crash`, `undeclared_effect` (`tool_missing` stays the bench's) |
