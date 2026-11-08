@@ -375,11 +375,7 @@ def discover(checked):
         notes.append("%-12s %s (the project up from here, the one the build reads)" % (PROJECT, project))
     for name, (where, patterns) in CONVENTIONS.items():
         root = checked.root(where)
-        matches = []
-        for pattern in patterns:
-            matches = sorted(root.glob(pattern))
-            if matches:
-                break
+        matches = first_matches(root, patterns)
         if len(matches) == 1:
             found[name] = str(matches[0])
             notes.append("%-12s %s" % (name, matches[0].relative_to(checked.folder) if root == checked.folder else matches[0]))
@@ -396,9 +392,25 @@ def discover(checked):
                             how_to_choose(name, ambiguous[name])))
         else:
             notes.append("%-12s not found (looked for %s)" % (name, ", ".join(patterns)))
+    discover_boards(project, found, notes)
+    return found, notes, ambiguous
 
-    # The board library knows where board definitions are; a glob does not, and guessing is how
-    # the selection file ended up being checked against a vendor header it does not have.
+
+def first_matches(root, patterns):
+    """Value: the files under `root` that the first pattern matching anything finds, sorted, or [] for none."""
+    for pattern in patterns:
+        matches = sorted(root.glob(pattern))
+        if matches:
+            return matches
+    return []
+
+
+def discover_boards(project, found, notes):
+    """
+    Add the board definitions of `project` to `found` and say them in `notes`, both in place. The board library knows
+    where board definitions are; a glob does not, and guessing is how the selection file ended up being checked against
+    a vendor header it does not have.
+    """
     try:
         definitions = [str(boards.definition_path(project, board_id))
                        for board_id in boards.available(project)]
@@ -410,8 +422,6 @@ def discover(checked):
         boards.definition_path(project)
     except Exception as broken:  # noqa: BLE001 - a project with no board chosen is a normal state
         notes.append("%-12s not resolved (%s)" % ("boards", broken))
-
-    return found, notes, ambiguous
 
 
 def inputs_for(args, checked=None):
