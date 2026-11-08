@@ -1349,12 +1349,13 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         home = self._home()
         home.chmod(0o500)  # read-only: no sources folder can be made
         self.addCleanup(home.chmod, 0o700)
-        with in_store(home), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+        err = io.StringIO()
+        with in_store(home), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
             code = parts.main(["--keep", str(local)])
         said = err.getvalue()
         self.assertEqual(code, 2, said)
-        self.assertTrue(said.startswith("  removed the location (EXIF GPS) from module.jpg before keeping it\nparts.py: --keep: "),
-                        said)
+        location_went = "  removed the location (EXIF GPS) from module.jpg before keeping it\n"
+        self.assertTrue(said.startswith(location_went + "parts.py: --keep: "), said)
 
     def test_a_photo_with_no_location_and_any_other_file_are_kept_unchanged(self):
         photo, _ = self._photo_with_location()
