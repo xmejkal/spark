@@ -955,7 +955,7 @@ class EachRefusalHasItsCodeTest(ProjectCase):
                            ((1, "", "", "Error: no firmware\n"), "board_not_started"),
                            ((1, "boot\n", "", "Error: x\n"), "never_ready"),
                            ((42, "ready\n", READY_MATCHED, ""), "step_timeout"),
-                           ((1, "ready\n", READY_MATCHED, "Error: GPIO 4\n"), "simulator_failed")):
+                           ((1, "ready\n", READY_MATCHED, "Error: GPIO 4\n"), "step_failed")):
             with self.subTest(code=code):
                 self.assertEqual(run_scenario.verdict(*told, 60000)[1].code, code)
         self.assertFalse(hasattr(run_scenario.verdict(0, "ready\n", READY_MATCHED, "", 60000)[1], "code"))
@@ -981,6 +981,17 @@ class EachRefusalHasItsCodeTest(ProjectCase):
     def test_an_image_named_outside_sim_is_a_bad_firmware_line(self):
         (self.project / "sim" / "wokwi.toml").write_text(sim_project.wokwi_toml([], "../build/app.bin"))
         self.assertEqual(self.run_with()[1].code, "firmware_line_bad")
+
+    def test_littlefs_turned_off_is_a_missing_tool_as_in_flash_image(self):
+        (self.project / ".spark").mkdir(exist_ok=True)
+        (self.project / ".spark" / "tools.json").write_text(json.dumps({"littlefs-python": {"on": False}}))
+        self.assertEqual(self.run_with()[1].code, "tool_missing")
+
+    @needs_littlefs
+    def test_a_damaged_build_is_an_unusable_interpreter_as_in_flash_image(self):
+        self.micropython.write_bytes(b"\x00" * 64)
+        status, said, _ = self.run_with()
+        self.assertEqual((status, said.code), (COULD_NOT_RUN, "interpreter_unusable"))
 
     def test_a_missing_simulator_and_an_unset_token_are_their_codes(self):
         def missing(name, project):

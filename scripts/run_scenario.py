@@ -15,13 +15,13 @@ run puts MicroPython and the project's firmware/ into a new flash image, so a ru
 build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
 wokwi-cli refuses a wokwi.toml that names none.
 
-A step's own `name:` key may hold a must line of the brief (copied exactly): the log's header names every step (P345), and the look lists the
-must lines that no passed scenario named.
+A step's own `name:` key may hold a must line of the brief (copied exactly): the log's header names every step (P345),
+and the look lists the must lines that no passed scenario named.
 
-The log goes to sim/runs/<name>.log: the date with its zone, the verdict, the step counts by kind and the step names (P345), the sha256 of
-the image it tested and of each file in that image, what the simulation cannot show, the scenario as run, and what
-wokwi-cli printed, which is the board's serial output among the scenario's
-progress. deploy.py reads the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
+The log goes to sim/runs/<name>.log: the date with its zone, the verdict, the step counts by kind and the step names
+(P345), the sha256 of the image it tested and of each file in that image, what the simulation cannot show, the scenario
+as run, and what wokwi-cli printed, which is the board's serial output among the scenario's progress. deploy.py reads
+the verdict and the sha256s from the log's header (run_record, file_hashes). The tests use a fake wokwi-cli.
 
 A pass whose scenario has no set-control step prints the look's rule in its own words, "passed, but it has no set-control
 step (...)", and one whose steps cannot be counted prints "passed, but its steps were not counted: <why>" (P485). The log's
@@ -43,8 +43,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import flash_image
 from firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRMWARE_LINE_BAD, NEVER_READY, NO_MAIN_PY, NO_SIM_PROJECT, NO_TOKEN,
-                            RUN_INPUT_UNUSABLE, SIMULATOR_CANNOT_START, SIMULATOR_FAILED, SIMULATOR_HUNG, SIMULATOR_LOST,
-                            STEP_TIMEOUT, TOOL_MISSING, Refusal)
+                            RUN_INPUT_UNUSABLE, SIMULATOR_CANNOT_START, SIMULATOR_HUNG, SIMULATOR_LOST,
+                            STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING, Refusal)
 from spark.core import outcomes
 import sim_project
 import tools
@@ -420,10 +420,8 @@ def image_in(toml):
 
 
 def verdict(code, serial, out, err, timeout_ms):
-    """
-    (status, sentence) for one finished run, from wokwi-cli's exit code, the board's serial log, its stdout (the serial
-    output line by line, among the scenario's progress) and its stderr (wokwi-cli's own errors).
-    """
+    """(status, sentence) for one finished run, from wokwi-cli's exit code, the board's serial log, its stdout (the serial
+    output line by line, among the scenario's progress) and its stderr (wokwi-cli's own errors)."""
     if code == 0:
         return OK, PASSED
     errors = err.strip().splitlines()
@@ -442,7 +440,7 @@ def verdict(code, serial, out, err, timeout_ms):
                                  "commands/build.md)" % READY, NEVER_READY)
     if code == TIMEOUT_EXIT:
         return PROBLEMS, Refusal("timed out after %d ms: a step waited for something that never came" % timeout_ms, STEP_TIMEOUT)
-    return PROBLEMS, Refusal("failed (wokwi-cli exit %d): %s" % (code, why), SIMULATOR_FAILED)
+    return PROBLEMS, Refusal("failed (wokwi-cli exit %d): %s" % (code, why), STEP_FAILED)
 
 
 class ScenarioRun:
@@ -471,8 +469,9 @@ class ScenarioRun:
             self.image = image_in(self.sim / "wokwi.toml")
             self.files = flash_image.files_under(self.project / "firmware")
             self.flash = flash_image.interpreter_for(self.micropython, self.project).image(self.files)
-        except (OSError, ValueError, tools.ToolProblem) as cannot:
-            return Refusal("%s: %s" % (self.scenario.name, cannot), RUN_INPUT_UNUSABLE)
+        except (OSError, ValueError, tools.ToolProblem) as cannot:  # a missing tool or a bad build: flash_image's codes
+            code = TOOL_MISSING if isinstance(cannot, tools.ToolProblem) else getattr(cannot, "code", RUN_INPUT_UNUSABLE)
+            return Refusal("%s: %s" % (self.scenario.name, cannot), code)
         outside = sim_project.why_outside_sim(self.sim, self.image)
         return Refusal(outside, FIRMWARE_LINE_BAD) if outside else None
 
@@ -585,10 +584,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms)
     run.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here
-    problem = run.problem()  # what costs nothing first, then the tool, then the token: a missing build before an account
-    simulator, problem = (None, problem) if problem else find_simulator(args.project)
-    if problem:
-        print(guard_lines("run_scenario.py: %s" % problem), file=sys.stderr)
+    refusal = run.problem()  # what costs nothing first, then the tool, then the token: a missing build before an account
+    simulator, refusal = (None, refusal) if refusal else find_simulator(args.project)
+    if refusal:
+        print(guard_lines("run_scenario.py: %s" % refusal), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     status, sentence, log = run.run(simulator.command)
     print(guard_lines("%s: %s%s" % (args.scenario.name, sentence, "\nlog: %s" % log if log else "")),

@@ -2,8 +2,8 @@
  {
   "file": "scripts/run_scenario.py",
   "name": "main asks for the token before the free checks (a missing build is hidden by the token message)",
-  "find": "    problem = run.problem()  # what costs nothing first",
-  "replace": "    problem = None  # what costs nothing first"
+  "find": "    refusal = run.problem()  # what costs nothing first",
+  "replace": "    refusal = None  # what costs nothing first"
  },
  {
   "file": "scripts/run_scenario.py",

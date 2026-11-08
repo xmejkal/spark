@@ -35,7 +35,7 @@ NO_SIM_PROJECT, NO_MAIN_PY, RUN_INPUT_UNUSABLE, NO_TOKEN = "no_sim_project", "no
 #: run_scenario.py: wokwi-cli and the board, during the run.
 SIMULATOR_CANNOT_START, SIMULATOR_HUNG, SIMULATOR_LOST = "simulator_cannot_start", "simulator_hung", "simulator_lost"
 BOARD_SILENT, BOARD_NOT_STARTED, NEVER_READY = "board_silent", "board_not_started", "never_ready"
-STEP_TIMEOUT, SIMULATOR_FAILED = "step_timeout", "simulator_failed"
+STEP_TIMEOUT, STEP_FAILED = "step_timeout", "step_failed"
 #: flash_image.py.
 NO_INTERPRETER, INTERPRETER_UNUSABLE = "no_interpreter", "interpreter_unusable"
 FILES_NOT_FOLDER, CONFIG_NOT_JSON = "files_not_folder", "config_not_json"
@@ -52,8 +52,8 @@ CODES = {
     TOOL_MISSING: "a tool the step needs is missing or cannot be used",
     NO_SIM_PROJECT: "sim/ holds no diagram.json or no wokwi.toml, so there is nothing to simulate",
     NO_MAIN_PY: "firmware/ has no main.py, so the board would boot to a bare prompt and never print ready",
-    RUN_INPUT_UNUSABLE: "the scenario, littlefs, the firmware line, the firmware's files or the MicroPython build cannot be "
-                        "used, so the run cannot make its image",
+    RUN_INPUT_UNUSABLE: "the scenario, the firmware line or the firmware's files cannot be read, so the run cannot make "
+                        "its image",
     NO_TOKEN: "the simulator's account token is not set, and a run spends Wokwi CI minutes",
     SIMULATOR_CANNOT_START: "wokwi-cli could not be started",
     SIMULATOR_HUNG: "wokwi-cli did not finish within the simulated time and the startup allowance, so it was stopped",
@@ -62,7 +62,7 @@ CODES = {
     BOARD_NOT_STARTED: "wokwi-cli stopped before the board printed anything",
     NEVER_READY: "the firmware never printed ready, so no step was tested",
     STEP_TIMEOUT: "a step waited for something that never came before the timeout",
-    SIMULATOR_FAILED: "a step of the scenario failed",
+    STEP_FAILED: "a step of the scenario failed",
     NO_INTERPRETER: "the MicroPython build file is not there",
     INTERPRETER_UNUSABLE: "the MicroPython build is damaged, too large, or not the build for the board's chip",
     FILES_NOT_FOLDER: "--files names no folder",

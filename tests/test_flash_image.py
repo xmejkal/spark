@@ -622,7 +622,7 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
 
     def refusal_of(self, micropython="micropython.bin", files="fw", config=None, project=None):
         given = self.root / micropython if micropython else None
-        refusal, made = flash_image.make_image(given, project or self.root, self.root / files, config)
+        made, refusal = flash_image.make_image(given, project or self.root, self.root / files, config)
         self.assertIsNone(made)
         return refusal
 
@@ -651,7 +651,7 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
         self.assertEqual(self.refusal_of(micropython=None, project=project).code, "tool_missing")
 
     def test_an_image_is_made_with_no_refusal(self):
-        refusal, (interpreter, _, files, flash) = flash_image.make_image(self.root / "micropython.bin", self.root,
+        (interpreter, _, files, flash), refusal = flash_image.make_image(self.root / "micropython.bin", self.root,
                                                                          self.root / "fw")
         self.assertEqual((refusal, interpreter.offset, [name for name, _ in files], len(flash)),
                          (None, 0, ["/main.py"], MICROPYTHON_FLASH_SIZE))

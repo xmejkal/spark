@@ -284,29 +284,29 @@ MICROPYTHON_HELP = ("the interpreter .bin from micropython.org for the board's c
 # --- MVP ---
 def make_image(given, project, folder, config_text=None):
     """
-    The image of the files under `folder`, with the MicroPython build `given` or the project's (P684): (None, (the
-    interpreter, its bytes, the files, the flash)), or (a Refusal, None) whose code names why not. `config_text` is the
-    JSON written as /config.json. A bad --config is said before a bad build, as when one except caught both.
+    The image of the files under `folder`, with the MicroPython build `given` or the project's (P684): ((the
+    interpreter, its bytes, the files, the flash), None), or (None, a Refusal) whose code names why not. `config_text`
+    is the JSON written as /config.json. A bad --config is said before a bad build, as when one except caught both.
     """
     try:
         tools.find("littlefs", project)  # P457: a project's tools file that turns it off is named
         interpreter = interpreter_for(given, project)
     except tools.ToolProblem as missing:
-        return Refusal(str(missing), firmware_codes.TOOL_MISSING), None
+        return None, Refusal(str(missing), firmware_codes.TOOL_MISSING)
     if not interpreter.path.is_file():
-        return Refusal("no interpreter at %s — download a build from micropython.org/download for the board's chip"
-                       % interpreter.path, firmware_codes.NO_INTERPRETER), None
+        return None, Refusal("no interpreter at %s — download a build from micropython.org/download for the board's chip"
+                             % interpreter.path, firmware_codes.NO_INTERPRETER)
     if not Path(folder).is_dir():
-        return Refusal("%s is not a directory" % folder, firmware_codes.FILES_NOT_FOLDER), None
+        return None, Refusal("%s is not a directory" % folder, firmware_codes.FILES_NOT_FOLDER)
     files, micropython = files_under(folder), interpreter.path.read_bytes()
     try:
         config = json.loads(config_text) if config_text else None
     except ValueError as broken:
-        return Refusal(str(broken), firmware_codes.CONFIG_NOT_JSON), None
+        return None, Refusal(str(broken), firmware_codes.CONFIG_NOT_JSON)
     try:
-        return None, (interpreter, micropython, files, image(micropython, files, config, interpreter.offset))
-    except ValueError as broken:  # an InterpreterError; any other ValueError is said as before
-        return Refusal(str(broken), firmware_codes.INTERPRETER_UNUSABLE), None
+        return (interpreter, micropython, files, image(micropython, files, config, interpreter.offset)), None
+    except ValueError as broken:  # an InterpreterError; another keeps its text and this code, as one except gave it
+        return None, Refusal(str(broken), firmware_codes.INTERPRETER_UNUSABLE)
 # --- end MVP ---
 
 
@@ -321,7 +321,7 @@ def main(argv=None):
     parser.add_argument("--config", help="JSON written as /config.json into the image")
     parser.add_argument("-o", "--output", required=True, type=Path)
     args = parser.parse_args(argv)
-    refusal, made = make_image(args.micropython, args.project or project_here(), args.files, args.config)
+    made, refusal = make_image(args.micropython, args.project or project_here(), args.files, args.config)
     if refusal:
         print("flash_image.py: %s" % refusal, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
