@@ -1,7 +1,7 @@
 # The firmware codes, for AI agents
 
 Each refusal of `run_scenario.py`, `flash_image.py` and `import_firmware.py` has a code
-([P684](https://github.com/xmejkal/spark/issues/921)). The codes and one sentence each are in `scripts/firmware_codes.py`.
+([P684](https://github.com/xmejkal/spark/issues/921)). The codes and one sentence each are in `scripts/spark/firmware/firmware_codes.py`.
 Decide on a code, never on the English sentence.
 
 Where a code shows today: `import_firmware.py --json` writes `code` on each item of `modules` that was not imported

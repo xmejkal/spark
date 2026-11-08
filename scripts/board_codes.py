@@ -13,7 +13,7 @@ site names its code in `reason`, and `CODES` says in one sentence what each code
 
 The codes every Operation can write (`bad_argument`, `crash`) are the core's, in `spark.core.codes` (P442).
 NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE, LOG_UNREADABLE and TOOL_MISSING are also firmware_codes', as equal literals in two
-leaves (P684), until W6-F3 moves their readers there.
+leaves (P684). Deploy reports a DeployError's reason with these words, and the bench raises TOOL_MISSING itself (P685).
 """
 
 # --- MVP ---

@@ -28,7 +28,7 @@ integers. The firmware does `import pins`; it never types a GPIO number.
 
 The firmware imports on a Mac before any hardware ([P59](https://github.com/xmejkal/spark/issues/7)).
 `import_firmware.py` imports each file and each package in `firmware/`, except the boot files `main.py` and `boot.py`.
-Each import is a process of its own. Every import uses spark's stand-ins for MicroPython's modules, unless the firmware ships its own `framebuf` or `micropython`. They live in `scripts/stand_in/`. `machine` has a
+Each import is a process of its own. Every import uses spark's stand-ins for MicroPython's modules, unless the firmware ships its own `framebuf` or `micropython`. They live in `scripts/spark/firmware/stand_in/`. `machine` has a
 `Pin` that remembers its level, and a `PWM` that keeps its last frequency and duty but makes no signal
 ([P352](https://github.com/xmejkal/spark/issues/450)). It has an `ADC`, an `SPI` and `SoftSPI`, an `I2C` and `SoftI2C`,
 and an `I2S` too ([P421](https://github.com/xmejkal/spark/issues/551)): each keeps its arguments and returns a fixed

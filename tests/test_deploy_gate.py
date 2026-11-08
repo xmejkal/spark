@@ -31,7 +31,7 @@ import deploy  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
-import flash_image  # noqa: E402
+from spark.firmware import image_builder  # noqa: E402
 from spark.bench import flasher  # noqa: E402
 import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
@@ -105,7 +105,7 @@ class GateCase(LookCase):
             return done(self.prints)
         if self.unread:
             raise self.unread
-        files = self.files_on_board if self.files_on_board is not None else dict(flash_image.files_under(self.project / "firmware"))
+        files = self.files_on_board if self.files_on_board is not None else dict(image_builder.files_under(self.project / "firmware"))
         return done("".join("file %s %s\n" % (hashlib.sha256(data).hexdigest(), path) for path, data in files.items()))
 
     def deploy(self, *argv, consent=None, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, probe=None, clock=None, grant_service=None, look_fails=False, platform=None, reporter=None):
@@ -1289,14 +1289,14 @@ class TheNoSimulationDeployTest(GateCase):
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
         patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch.object(flash_image, "interpreter_for",
-                                    side_effect=lambda given, project=None, find_tool=None: flash_image.Interpreter(self.micropython, 0))
+        patcher = mock.patch.object(image_builder, "interpreter_for",
+                                    side_effect=lambda given, project=None, find_tool=None: image_builder.Interpreter(self.micropython, 0))
         patcher.start()
         self.addCleanup(patcher.stop)
         self.build_image()
 
     def build_image(self):
-        self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
+        self.image.write_bytes(image_builder.image(self.micropython.read_bytes(), image_builder.files_under(self.project / "firmware")))
 
     def evidence(self):
         return image_evidence.NoSimulationEvidence(self.project)

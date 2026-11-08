@@ -520,7 +520,7 @@ class APackageModuleTest(unittest.TestCase):
                          ["test_among_names", "test_dotted", "test_from_module", "test_from_package", "test_look_alike"])
 
     def test_a_script_in_a_folder_without_an_init_is_near_the_tests_that_import_its_stem(self):
-        # scripts/stand_in/ is no package: tests/test_journey_basic.py does `import machine`.
+        # a stand_in/ folder (spark's is scripts/spark/firmware/stand_in/) is no package: tests/test_journey_basic.py does `import machine`.
         root = tiny_project()
         (root / "scripts" / "stand_in").mkdir(parents=True)
         (root / "scripts" / "stand_in" / "machine.py").write_text("ONE = 1\n")

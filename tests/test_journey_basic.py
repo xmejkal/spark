@@ -39,8 +39,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import check_spine  # noqa: E402
 import deploy  # noqa: E402
 import design  # noqa: E402
-import run_scenario  # noqa: E402
-import sim_project  # noqa: E402
+from spark.firmware import scenario_run  # noqa: E402
+from spark.firmware import sim_project  # noqa: E402
 import tools  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
@@ -52,7 +52,7 @@ FAKE_WOKWI_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
 #: The image the build's wokwi.toml names once the harness names one: commands/build.md's flash-with-firmware.bin.
 FLASH_IMAGE = "flash-with-firmware.bin"
 #: The stand-in `machine` the firmware imports under, put first on the path of a process of its own (never this one's).
-STAND_IN = ROOT / "scripts" / "stand_in"
+STAND_IN = ROOT / "scripts" / "spark" / "firmware" / "stand_in"
 
 #: The spine's stages before the build: they need no board engine, so they run on every machine.
 BEFORE_THE_BUILD = ("board", "schematic", "footprint")
@@ -259,7 +259,7 @@ def run_the_scenario(project):
     interpreter = Path(tempfile.mkdtemp()) / "micropython.bin"
     interpreter.write_bytes(fake_interpreter())
     with unittest.mock.patch.dict(os.environ, {"FAKE_WOKWI_SERIAL": "ready\nLED on\nLED off\n"}):
-        return run_scenario.ScenarioRun(project, scenario, micropython=interpreter).run(FAKE_WOKWI_CLI)[1]
+        return scenario_run.ScenarioRun(project, scenario, micropython=interpreter).run(FAKE_WOKWI_CLI)[1]
 
 
 class TheFirmwareStageBitesTest(unittest.TestCase):

@@ -13,7 +13,7 @@ import subprocess
 from collections import namedtuple
 
 from spark.bench.download_mode import DOWNLOAD_MODE
-from run_scenario import printed_text
+from spark.firmware.scenario_steps import printed_text
 from spark.core.clock import SystemClock
 
 #: How long the console is read, and how often the port is looked at, in seconds.

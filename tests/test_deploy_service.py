@@ -20,9 +20,9 @@ from spark.bench import board_connection  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
-import flash_image  # noqa: E402
+from spark.firmware import image_builder  # noqa: E402
 from spark.bench import flasher  # noqa: E402
-import project_image  # noqa: E402
+from spark.firmware import project_image  # noqa: E402
 from spark.bench import ready_probe  # noqa: E402
 import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
@@ -159,13 +159,13 @@ class TheNoSimulationServiceTest(ServiceCase):
                                             image_evidence.NoSimulationEvidence(self.project), self.service_outside(), **kwargs)
 
     def build(self):
-        patcher = mock.patch.object(flash_image, "interpreter_for",
-                                    side_effect=lambda given, project=None, find_tool=None: flash_image.Interpreter(self.micropython, 0))
+        patcher = mock.patch.object(image_builder, "interpreter_for",
+                                    side_effect=lambda given, project=None, find_tool=None: image_builder.Interpreter(self.micropython, 0))
         patcher.start()
         self.addCleanup(patcher.stop)
         for log in (self.project / "sim" / "runs").glob("*.log"):
             log.unlink()
-        self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
+        self.image.write_bytes(image_builder.image(self.micropython.read_bytes(), image_builder.files_under(self.project / "firmware")))
 
     def test_the_gate_question_starts_with_the_caveat_and_the_plan_has_no_notes(self):
         self.build()

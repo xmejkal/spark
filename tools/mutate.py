@@ -45,7 +45,7 @@ A COPY (--copy) is deleted after the run, so the run does not run the whole suit
 check cost 207 s on 2026-10-28 (P424), and a copy has nothing to restore. `--retarget OLD NEW` edits the text of the
 tables and moves no other row; run `--anchors` after it. It exits 2 when no row names OLD, and runs alone. Both `near_tests` and the import check name a module under
 `scripts/` by its dotted name when every folder on the way has an `__init__.py`, so a package module (`spark.core.outcomes`)
-meets the tests that import it; `scripts/stand_in/machine.py` stays `machine`. Rows do not run
+meets the tests that import it; `scripts/spark/firmware/stand_in/machine.py` stays `machine`. Rows do not run
 in parallel: `--jobs 4` saved 24 s on 8 rows (rows file of P440), under the minute that would pay for the flag.
 
 WHAT PASSING MEANS
@@ -125,7 +125,7 @@ def import_spec(root, file):
     Where to import the module at `file` from and by what name, as (folder for sys.path, dotted name) (P440). A path under
     `scripts/` is imported by its path below it (`scripts/spark/core/outcomes.py` is `spark.core.outcomes`, an `__init__.py`
     is its package) only when every folder between `scripts/` and the file has an `__init__.py`. Any other path, such as
-    `scripts/stand_in/machine.py`, is imported by its stem from its own folder.
+    `scripts/spark/firmware/stand_in/machine.py`, is imported by its stem from its own folder.
     """
     parts = Path(file).parts
     if parts[:1] == ("scripts",) and all((Path(root).joinpath(*parts[:i + 1]) / "__init__.py").is_file() for i in range(1, len(parts) - 1)):

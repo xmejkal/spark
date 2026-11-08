@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "from_log: a malformed counts line reads as RECORDED",
   "find": "return cls({}, outcomes.NOT_CHECKED, WHY_BAD_COUNTS)",
   "replace": "return cls(counts)"
@@ -18,7 +18,7 @@
   "replace": "except (OSError, ValueError, RecursionError):\n            return LastDeploy(outcomes.NONE_RECORDED)"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "line() prints counts for a state that is not RECORDED",
   "find": "        if self.state != outcomes.RECORDED:\n            return STEP_COUNTS_LINE + STEPS_NOT_READ",
   "replace": "        if self.state == outcomes.NOT_CHECKED:\n            return STEP_COUNTS_LINE + STEPS_NOT_READ"

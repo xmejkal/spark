@@ -13,6 +13,7 @@ Fake per Strategy) and enters with the slice that first needs it.
     python3 -m unittest discover -s tests
 """
 
+import ast
 import subprocess
 import sys
 import unittest
@@ -294,12 +295,46 @@ class TheBenchAreaTest(unittest.TestCase):
         self.assertIn(str(ROOT / "scripts" / "look.py"), run.stdout, run.stderr)
 
     def test_each_bench_module_imports_alone(self):
-        # a child Python per module: an import cycle shows as "partially initialized module", which a warm process hides
-        for module in sorted(path.stem for path in self.BENCH.glob("*.py") if path.name != "__init__.py"):
-            with self.subTest(module=module):
-                run = subprocess.run([sys.executable, "-c", "import spark.bench.%s" % module], cwd=ROOT / "scripts",
-                                     capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-                self.assertEqual(run.returncode, 0, run.stderr)
+        each_module_imports_alone(self, "bench")
+
+
+def each_module_imports_alone(test, area):
+    """A child Python per module of `scripts/spark/<area>/`: an import cycle shows as "partially initialized module", which
+    a warm process hides."""
+    for module in sorted(path.stem for path in (ROOT / "scripts" / "spark" / area).glob("*.py") if path.name != "__init__.py"):
+        with test.subTest(module=module):
+            run = subprocess.run([sys.executable, "-c", "import spark.%s.%s" % (area, module)], cwd=ROOT / "scripts",
+                                 capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+            test.assertEqual(run.returncode, 0, run.stderr)
+
+
+# --- MVP ---
+class TheFirmwareAreaTest(unittest.TestCase):
+    """W6-F3 (P685): the firmware's modules live in `scripts/spark/firmware/`, its `__init__.py` imports nothing, and each
+    module imports alone. `scripts/` keeps the three CLIs only."""
+    FIRMWARE = ROOT / "scripts" / "spark" / "firmware"
+
+    #: Each CLI's own top-level functions: `main` and what only it uses to parse and print. A library function back in a
+    #: CLI, under any name, fails the check.
+    CLIS = {"flash_image.py": ["main", "project_here"], "import_firmware.py": ["main", "render"], "run_scenario.py": ["main"]}
+
+    def test_scripts_holds_the_three_clis_and_no_firmware_library_module(self):
+        names = {path.stem for path in self.FIRMWARE.glob("*.py") if path.name != "__init__.py"}
+        self.assertEqual(sorted(names & {path.stem for path in (ROOT / "scripts").glob("*.py")}), [])
+        self.assertFalse((ROOT / "scripts" / "stand_in").exists())
+        for cli, own in self.CLIS.items():
+            with self.subTest(cli=cli):
+                tree = ast.parse((ROOT / "scripts" / cli).read_text())
+                self.assertEqual(sorted(node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))), own)
+
+    def test_the_area_s_init_imports_nothing(self):
+        # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)
+        tree = ast.parse((self.FIRMWARE / "__init__.py").read_text())
+        self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
+
+    def test_each_firmware_module_imports_alone(self):
+        each_module_imports_alone(self, "firmware")
+# --- end MVP ---
 
 
 if __name__ == "__main__":

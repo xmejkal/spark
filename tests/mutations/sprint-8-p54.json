@@ -1,36 +1,36 @@
 [
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "the filesystem is written where MicroPython does not look",
   "find": "FILESYSTEM_OFFSET = 0x200000",
   "replace": "FILESYSTEM_OFFSET = 0x100000"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "the image is sized for a different flash",
   "find": "FLASH_SIZE = 4 * 1024 * 1024",
   "replace": "FLASH_SIZE = 8 * 1024 * 1024"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "littlefs blocks that are not the flash sector MicroPython mounts",
   "find": "BLOCK_SIZE = 4096",
   "replace": "BLOCK_SIZE = 512"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "an interpreter that overwrites the filesystem is accepted",
   "find": "    if offset + len(interpreter) > FILESYSTEM_OFFSET:",
   "replace": "    if False:"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "/config.json is not written",
   "find": "    if overrides:\n        files = list(files) + [(\"/config.json\", json.dumps(overrides).encode())]",
   "replace": "    if False:\n        files = list(files) + [(\"/config.json\", json.dumps(overrides).encode())]"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "a file in a folder lands at the root",
   "find": "    return [(\"/\" + str(path.relative_to(root)), path.read_bytes())",
   "replace": "    return [(\"/\" + path.name, path.read_bytes())"

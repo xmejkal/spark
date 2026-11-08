@@ -47,7 +47,7 @@ import check_vendor_pins  # noqa: E402
 import compare_design  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
-import firmware_codes  # noqa: E402
+from spark.firmware import firmware_codes  # noqa: E402
 import grant  # noqa: E402
 import import_firmware  # noqa: E402
 from spark.core import outcomes  # noqa: E402
@@ -253,8 +253,8 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         self.assertEqual(sorted(payload), ENVELOPE)
 
 
-#: P684: the codes board_codes and firmware_codes both hold, as equal literals in two leaves, until W6-F3 moves the bench's
-#: readers to firmware_codes.
+#: P684: the codes board_codes and firmware_codes both hold, as equal literals in two leaves. project_image raises the
+#: first four from firmware_codes, deploy reports them, and the bench raises TOOL_MISSING itself (P685).
 SHARED_CODES = ("NO_SIM_TOML", "FIRMWARE_LINE_BAD", "NO_IMAGE", "LOG_UNREADABLE", "TOOL_MISSING")
 
 

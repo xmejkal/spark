@@ -21,8 +21,8 @@ import deploy_record_store  # noqa: E402
 from fakes import FakeFirmwarePlatform, pin_time_zone  # noqa: E402
 from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import board_look  # noqa: E402
-import project_image  # noqa: E402
-import sim_project  # noqa: E402
+from spark.firmware import project_image  # noqa: E402
+from spark.firmware import sim_project  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
@@ -462,7 +462,7 @@ class LookTest(LookCase):
     def test_a_log_that_cannot_be_read_still_lets_the_fit_check_run(self):
         self.run_the_scenario()
         self.image.write_bytes(self.image.read_bytes() + b"x")  # 4 MB + 1 byte on a 4 MB flash
-        with mock.patch.object(project_image.run_scenario, "run_record", side_effect=OSError("denied")):
+        with mock.patch.object(project_image.scenario_steps, "run_record", side_effect=OSError("denied")):
             report = self.look()
         self.assertEqual(report.stops, [board_look.Stop("flash_too_small", "the flash is 4 MB, the image needs 5 MB")])
         self.assertIn("cannot read", report.image_why)

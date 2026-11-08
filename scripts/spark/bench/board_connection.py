@@ -10,7 +10,7 @@ changes one class.
 
 import subprocess
 
-from run_scenario import printed_text
+from spark.firmware.scenario_steps import printed_text
 
 #: How MicroPython starts the report of an exception that the board's code raised. mpremote 1.29.0 prints that report
 #: to stdout and exits 1, and its own failures to stderr (mpremote/commands.py:489-492, read 2026-10-14).

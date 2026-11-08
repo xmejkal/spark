@@ -23,7 +23,7 @@ from spark.bench.deploy_stages import DeployPhase
 from spark.bench.deploy_service import DeployService, FlashError
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
-from project_image import DeployError
+from spark.firmware.project_image import DeployError
 from spark.bench import bench_privacy
 from spark.bench.stops import reason_of
 from spark.core import codes, outcomes

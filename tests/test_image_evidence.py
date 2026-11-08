@@ -23,13 +23,14 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import image_evidence  # noqa: E402
-import sim_project  # noqa: E402
+from spark.firmware import sim_project  # noqa: E402
 import store  # noqa: E402
 import flash_image  # noqa: E402
+from spark.firmware import image_builder  # noqa: E402
 import tools  # noqa: E402
 from spark.bench.image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
-from run_scenario import ScenarioSteps  # noqa: E402
-from project_image import DeployError, ProjectImage  # noqa: E402
+from spark.firmware.scenario_steps import ScenarioSteps  # noqa: E402
+from spark.firmware.project_image import DeployError, ProjectImage  # noqa: E402
 from test_project_image import project_with_image, write_log  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -405,7 +406,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.firmware = self.project / "firmware"
         self.firmware.mkdir()
         (self.firmware / "main.py").write_text("import machine\nmachine.PWM(machine.Pin(1))\nprint('ready')\n")
-        patcher = mock.patch.object(flash_image, "interpreter_for", side_effect=self.find_interpreter)
+        patcher = mock.patch.object(image_builder, "interpreter_for", side_effect=self.find_interpreter)
         patcher.start()
         self.addCleanup(patcher.stop)
         self.offset = 0
@@ -418,12 +419,12 @@ class NoSimulationEvidenceTest(unittest.TestCase):
     def find_interpreter(self, given, project=None, find_tool=None):
         if self.raising:
             raise self.raising
-        return flash_image.Interpreter(self.interpreter, self.offset)
+        return image_builder.Interpreter(self.interpreter, self.offset)
 
     def build(self, offset=None):
         offset = self.offset if offset is None else offset
         (self.project / "sim" / "flash-with-firmware.bin").write_bytes(
-            flash_image.image(fake_interpreter(offset=offset), flash_image.files_under(self.firmware), offset=offset))
+            image_builder.image(fake_interpreter(offset=offset), image_builder.files_under(self.firmware), offset=offset))
         self.image = ProjectImage(self.project)
 
     def why(self):

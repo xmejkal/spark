@@ -5,7 +5,7 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 
 New names (proposed): `SimulationEngine`, `WokwiCliEngine`, `ENGINES`, `RunLog`, `FlashImageBuilder`, `status_of_run`, `SimulationEngineContract`, the modules `image_builder`, `import_probe`, `scenario_run`, `scenario_steps`, `simulation_engine`, `operations`, and the Operation names below.
 
-P345 added `ScenarioSteps` (the counts of a scenario's step kinds, in `run_scenario`) and `ImageEvidence.caveats(image)`, a list of sentences. `RunLog` will own the counts line.
+P345 added `ScenarioSteps` (the counts of a scenario's step kinds, in `scenario_steps` since P685) and `ImageEvidence.caveats(image)`, a list of sentences. `RunLog` will own the counts line.
 
 ## Level 2: what firmware does
 
@@ -30,11 +30,13 @@ The build calls the simulation project step (`sim_project.py`) as one of its sta
 | `firmware/import_probe.py` | imports each firmware module on the computer without `main.py`, moved from `import_firmware.py` |
 | `firmware/project_image.py` | `ProjectImage` and the run logs that tested it, moved as is |
 | `firmware/sim_project.py` | the Wokwi project a design implies: the part mapping, the limits note (`write_limits`), the chips, `wokwi.toml` |
-| `firmware/scenario_run.py` | `ScenarioRun` and `RunLog`, moved from `run_scenario.py` |
-| `firmware/scenario_steps.py` | `ScenarioSteps`, the step constants, and `component_ids` after P399, moved from `run_scenario.py` |
-| `firmware/simulation_engine.py` | `SimulationEngine`, `WokwiCliEngine`, `ENGINES` |
-| `firmware/stand_in/machine.py` | MicroPython's `machine` stand-in for the import check, moved as is: not spark code |
-| `firmware/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
+| `firmware/scenario_run.py` | `ScenarioRun`, `verdict`, `image_in`, `with_ready_wait` and `find_simulator`, moved from `run_scenario.py` (P685). `RunLog` waits |
+| `firmware/scenario_steps.py` | the run log's words and their reader: `ScenarioSteps`, the step constants, `READY`, the header lines, `PASSED`, `run_record`, `file_hashes`, moved from `run_scenario.py` (P685). It imports only `spark.core`. `component_ids` after P399 |
+| `firmware/simulation_engine.py` | `SimulationEngine`, `WokwiCliEngine`, `ENGINES`: they wait for a second simulator |
+| `firmware/firmware_codes.py` | the area's leaf: its codes and `Refusal` (P684), moved as is (P685) |
+| `firmware/import_child.py` | the child Python that imports one module, run by path; its function is `import_named` (P685) |
+| `firmware/stand_in/` | MicroPython's `machine`, `framebuf` and `micropython` stand-ins for the import check, moved as is: not spark code |
+| `firmware/__init__.py` | the index docstring only, and no imports (P685). `OPERATIONS` waits for the firmware Operations |
 
 ### Its seams and adapters
 
@@ -127,13 +129,13 @@ sequenceDiagram
 - A `SimulationEngineContract` test runs every engine on one tiny scenario with a recording `run`.
 - `ProjectImage` reads run logs from `tests/data/`. No board, no USB.
 - The patches of `find_toolchain` and `subprocess` go when each Adapter takes `run` (the `wokwi-cli` run in
-  `ScenarioRun`, `sim_project.stage_chips`, `import_firmware.py:58`).
+  `ScenarioRun`, `sim_project.stage_chips`, `import_probe.import_one`).
 
 ### How a new implementation is added
 
 - A new simulator is one `SimulationEngine` subclass, one entry in `ENGINES` and one tool row for the `simulator`
   role. Its engine facts then move under `simulation.<engine>` in the part records.
 - A new firmware platform builds its image with its own builder. That waits for the second platform: today the image
-  is MicroPython plus LittleFS (`flash_image.py:33`), and the board's `micropython_port` picks the build
-  (`flash_image.py:89`).
+  is MicroPython plus LittleFS (`image_builder.filesystem`), and the board's `micropython_port` picks the build
+  (`image_builder.board_build`).
 

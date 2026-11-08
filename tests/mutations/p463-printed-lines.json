@@ -18,13 +18,13 @@
   "replace": "shlex.quote(str(Path(given)))"
  },
  {
-  "file": "scripts/project_image.py",
+  "file": "scripts/spark/firmware/project_image.py",
   "name": "no-image-hint-dropped",
   "find": "+ NO_SIMULATION_HINT % (build + \", then \"), reason",
   "replace": "+ \"run a scenario\", reason"
  },
  {
-  "file": "scripts/project_image.py",
+  "file": "scripts/spark/firmware/project_image.py",
   "name": "untested-hint-dropped",
   "find": "% self.path.name + NO_SIMULATION_HINT % \"\")",
   "replace": "% self.path.name + \"\")"
@@ -36,7 +36,7 @@
   "replace": "\"\"))"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "no-entry-refusal-hint-dropped",
   "find": "own_build_hint_for(project, build, None))",
   "replace": "\"\")"
@@ -48,43 +48,43 @@
   "replace": "return (shlex.join([str(Path(script).resolve())]"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "entry-name-lost",
   "find": "[\"--project\", Path(project).resolve()], name or \"<name>\"",
   "replace": "[\"--project\", Path(project).resolve()], \"<name>\""
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "fields-that-tie-dropped",
   "find": "    if not name:\n        entry.update(",
   "replace": "    if False:\n        entry.update("
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "install-line-bare",
   "find": "store.format_rerun_line(tools_py, where + [\"--install\", name])",
   "replace": "\" \".join([\"tools.py\"] + [str(part) for part in where] + [\"--install\", name])"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "new-line-bare",
   "find": "store.format_rerun_line(tools_py, where + [\"--new\", \"%s=%s\" % (name, json.dumps(entry))])",
   "replace": "\" \".join([\"tools.py\"] + [str(part) for part in where] + [\"--new\", \"%s=%s\" % (name, json.dumps(entry))])"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "build-again-dropped",
   "find": "build_command(project, image) if image else BUILD_AGAIN",
   "replace": "BUILD_AGAIN"
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "build-line-not-whole-path",
-  "find": "store.format_rerun_line(Path(__file__), [\"--project\", project, \"--files\", project / \"firmware\"",
+  "find": "store.format_rerun_line(FLASH_IMAGE_SCRIPT, [\"--project\", project, \"--files\", project / \"firmware\"",
   "replace": "store.format_rerun_line(Path(\"flash_image.py\"), [\"--project\", project, \"--files\", project / \"firmware\""
  },
  {
-  "file": "scripts/flash_image.py",
+  "file": "scripts/spark/firmware/image_builder.py",
   "name": "build-line-firmware-relative",
   "find": "\"--files\", project / \"firmware\"",
   "replace": "\"--files\", \"firmware\""

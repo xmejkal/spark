@@ -37,7 +37,7 @@ In words:
 | schematic-notes | reported only when the generator printed a note: a pin no part claims, an output nothing receives, a rail nothing sources, one side of a driven pair (a speaker terminal's) that nothing drives, or a rail two supplies drive. It counts as a problem, so the run exits 1 even when the board builds |
 | footprint | the dev board's footprint is made from its board definition ([`emit_footprint.py`](../../scripts/emit_footprint.py)) |
 | build | tscircuit builds it, and copper is counted: a build with no copper is not a pass |
-| simulation | the Wokwi diagram and chips are generated ([`sim_project.py`](../../scripts/sim_project.py) and the converter in [`tools/circuit-to-wokwi/`](../../tools/circuit-to-wokwi/)), and kept with `--keep` or `--sim-dir`. No simulation runs |
+| simulation | the Wokwi diagram and chips are generated ([`sim_project.py`](../../scripts/spark/firmware/sim_project.py) and the converter in [`tools/circuit-to-wokwi/`](../../tools/circuit-to-wokwi/)), and kept with `--keep` or `--sim-dir`. No simulation runs |
 
 Two more names can appear, each as could-not-run: `requirements`, for a file that is not a design, and `check_spine`,
 for an error the script did not expect.
@@ -154,7 +154,7 @@ Imported by the scripts above, and not run on their own, except `cost.py`:
 - `cost.py`: what a project's run cost, read from the Claude Code transcripts of the sessions its steps ran in, tool
   names and counts only. `parts.py --step` and `--tally` use it. On one transcript it runs on its own:
   `cost.py <transcript.jsonl>` says what that run cost;
-- `sim_project.py`: the simulation project a design implies, written by `check_spine.py`'s simulation stage.
+- `spark/firmware/sim_project.py`: the simulation project a design implies, written by `check_spine.py`'s simulation stage.
 
 ## The data
 

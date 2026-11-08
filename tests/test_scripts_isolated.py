@@ -18,8 +18,6 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 
 ROOT = Path(__file__).resolve().parent.parent
 
-#: Exempt entry scripts, with the reason.
-EXEMPT = {"import_child.py": "it keeps its own folder off sys.path, so a firmware cannot import that file (P443); its first argument is a module"}
 #: `--help` of these exits with a code other than 0: cost.py prints its own usage and exits 2.
 HELP_EXIT = {"cost.py": 2}
 
@@ -27,7 +25,7 @@ HELP_EXIT = {"cost.py": 2}
 class EveryScriptRunsIsolatedTest(unittest.TestCase):
     def test_help_starts_under_isolated_mode(self):
         scripts = [p for p in sorted((ROOT / "scripts").glob("*.py"))
-                   if p.name not in EXEMPT and 'if __name__ == "__main__"' in p.read_text(encoding="utf-8")]
+                   if 'if __name__ == "__main__"' in p.read_text(encoding="utf-8")]
         self.assertGreater(len(scripts), 20)
         for script in scripts:
             with self.subTest(script=script.name):

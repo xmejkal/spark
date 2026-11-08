@@ -8,7 +8,7 @@ them. board_console.py's `ConsoleProbe` reads the console and waits for the pres
 """
 
 import boards
-from run_scenario import READY
+from spark.firmware.scenario_steps import READY
 
 #: What the ESP32 ROM prints when it boots into download mode, as the XIAO C6 printed it on 2026-10-14 (AT157).
 DOWNLOAD_MODE = "waiting for download"

@@ -70,7 +70,7 @@ import needs  # noqa: E402
 import netlist  # noqa: E402
 import onboard_parts  # noqa: E402
 import parts  # noqa: E402
-import sim_project  # noqa: E402
+from spark.firmware import sim_project  # noqa: E402
 import store  # noqa: E402
 import tabbed_page  # noqa: E402
 import tools  # noqa: E402

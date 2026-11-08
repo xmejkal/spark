@@ -5,7 +5,7 @@
     python3 tools/measure.py --rules --accept # lower tests/architecture_baseline.json: values that fell, entries that are gone
     python3 tools/measure.py --rules --accept-new   # write it whatever it holds, new and risen breaches too (say why in the PR)
 
-Stdlib only. It reads `scripts/` (every folder under it, but `scripts/stand_in/`, the MicroPython stand-in that is not
+Stdlib only. It reads `scripts/` (every folder under it, but `scripts/spark/firmware/stand_in/`, the MicroPython stand-in that is not
 spark's code) and `tests/`. Only `--accept` and `--accept-new` write, and only the baseline. `tests/test_architecture.py` holds each
 breach against that baseline, which may only shrink (P440). The rules are the table in
 `docs/discovery/2026-10-19-p323-target-architecture/architecture/notes.md`.
