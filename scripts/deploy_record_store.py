@@ -14,7 +14,7 @@ import json
 
 from spark.core import outcomes
 import records_codes
-import store
+from spark.records import store
 from spark.core import zone_time
 
 

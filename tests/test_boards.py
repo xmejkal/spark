@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.records import board_pads  # noqa: E402
 import boards  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 LIBRARY_BOARD = "firebeetle2-esp32s3"

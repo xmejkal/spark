@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 
 #: Where the person's store is when nothing says otherwise.
 PERSONS = Path.home() / ".local" / "share" / "spark"
@@ -33,8 +33,8 @@ def home_in(env):
     `-B`: Apple's Python 3.9 writes its bytecode cache under `$HOME/Library/Caches` even when `-c` imports nothing to
     cache, and with `HOME=/nowhere` and the cwd `scripts/` that made `scripts/nowhere/` (P435).
     """
-    done = subprocess.run([sys.executable, "-B", "-c", "import store; print(store.home())"], cwd=SCRIPTS, env=env,
-                          capture_output=True, text=True, timeout=30)
+    done = subprocess.run([sys.executable, "-B", "-c", "from spark.records import store; print(store.home())"],
+                          cwd=SCRIPTS, env=env, capture_output=True, text=True, timeout=30)
     return Path(done.stdout.strip())
 
 
@@ -208,7 +208,8 @@ class TheSuiteStaysOutOfThePersonsStoreTest(unittest.TestCase):
         # forgets tests/suite_temp.py must still leave no store, so store.py removes the one it made — only that one.
         fresh, inherited = tempfile.mkdtemp(), Path(tempfile.mkdtemp())
         (inherited / "kept").write_text("an inherited store\n")
-        done = subprocess.run([sys.executable, "-c", "import unittest, sys; sys.path.insert(0, %r); import store; print(store.home())"
+        done = subprocess.run([sys.executable, "-c", "import unittest, sys; sys.path.insert(0, %r); "
+                               "from spark.records import store; print(store.home())"
                                % str(SCRIPTS)], env=dict(os.environ, TMPDIR=fresh, SPARK_HOME=str(inherited)),
                               capture_output=True, text=True, timeout=30)
         self.assertEqual(done.returncode, 0, done.stderr)
@@ -434,7 +435,8 @@ class OneWriterAtATimeTest(unittest.TestCase):
         self.assertEqual(reader.returncode, 0, reader.stderr)
 
     def test_a_lock_taken_inside_a_lock_does_not_wait_for_itself(self):
-        nesting = "import store\nwith store.locked():\n    with store.locked():\n        print('twice')"
+        nesting = ("from spark.records import store\n"
+                   "with store.locked():\n    with store.locked():\n        print('twice')")
         try:
             nested = subprocess.run([sys.executable, "-c", nesting], cwd=SCRIPTS, env=dict(os.environ),
                                     capture_output=True, text=True, timeout=20)
@@ -767,7 +769,8 @@ class TheOneDoorTest(unittest.TestCase):
         # The suite fetches file:// URLs of temp files (no network). A run of spark itself, with no unittest in the process,
         # must not read the person's files on the word of a cited URL.
         uri = self.a_file(b"%PDF drawing").as_uri()
-        probe = "import store\ntry:\n    print(len(store.fetch(%r)))\nexcept store.StoreProblem as refused:\n    print(refused)\n" % uri
+        probe = ("from spark.records import store\ntry:\n    print(len(store.fetch(%r)))\n"
+                 "except store.StoreProblem as refused:\n    print(refused)\n" % uri)
         done = subprocess.run([sys.executable, "-c", probe], cwd=SCRIPTS, env=dict(os.environ), capture_output=True, text=True, timeout=30)
         self.assertEqual(done.stdout.strip(), uri + " is not fetched: its scheme is file, and spark opens only http and https", done.stderr)
 

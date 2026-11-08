@@ -23,7 +23,7 @@ from spark.bench import firmware_platform  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from spark.core import outcomes  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
 from test_board_look import done  # noqa: E402
 import test_deploy_gate  # noqa: E402
@@ -441,7 +441,7 @@ class DeployJsonTest(JsonCase, GateCase):
 
     @needs_littlefs
     def test_a_store_record_that_was_not_written_is_said_beside_the_null(self):
-        import store
+        from spark.records import store
         with mock.patch.object(deploy_service.DeployService, "record", side_effect=store.StoreProblem("no", code="store_not_writable")):
             code, said, _ = self.ready()
         said = self.one(code, said, "deploy", "deploy")

@@ -30,7 +30,7 @@
   "replace": "self.platform.board_of(), None, image.path"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "boards not private",
   "find": "\"projects\", \"history\", \"boards\")",
   "replace": "\"projects\", \"history\")"

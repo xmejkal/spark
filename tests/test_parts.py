@@ -41,7 +41,7 @@ from spark.design import pin_assigner  # noqa: E402
 import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 

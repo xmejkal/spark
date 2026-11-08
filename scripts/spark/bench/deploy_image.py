@@ -16,7 +16,7 @@ from spark.bench import board_grant
 from spark.bench import board_look
 from spark.bench import deploy_gate
 from spark.bench import ready_probe
-import store
+from spark.records import store
 import tools
 from spark.bench.board_console import LEAVE_CONSOLE
 from spark.bench.deploy_stages import DeployPhase

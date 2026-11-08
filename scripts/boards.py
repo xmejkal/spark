@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.records import board_pads
 from spark.records import provenance
 import records_codes
-import store
+from spark.records import store
 
 #: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one
 #: without copying a file it would then have to maintain. A project may still keep its own in

@@ -36,13 +36,13 @@
   "replace": "or False"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "a file name with a lone surrogate is accepted",
   "find": "if CONTROL.search(name):",
   "replace": "if False:"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "the projects list path enters its sentence raw",
   "find": "in each project\", path, broken, code=records_codes.RECORD_FILE_BROKEN)",
   "replace": "in each project\" % (path, broken), code=records_codes.RECORD_FILE_BROKEN)"

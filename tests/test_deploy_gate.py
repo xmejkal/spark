@@ -33,7 +33,7 @@ from spark.bench import board_grant  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 from spark.bench import flasher  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform, FakeReporter,  # noqa: E402

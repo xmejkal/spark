@@ -1,18 +1,18 @@
 [
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "no-resolve",
   "find": "shlex.join([str(Path(script).resolve())]",
   "replace": "shlex.join([str(Path(script))]"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "drop-args",
   "find": "+ [str(argument) for argument in arguments])",
   "replace": ")"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "join-not-quote",
   "find": "return prefix_home(shlex.join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))",
   "replace": "return prefix_home(\" \".join([str(Path(script).resolve())] + [str(argument) for argument in arguments]))"

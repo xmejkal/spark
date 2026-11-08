@@ -12,7 +12,7 @@ from spark.bench import board_grant
 from spark.bench import board_look
 import boards
 from spark.bench import flasher
-import store
+from spark.records import store
 import tools
 from spark.bench.deploy_gate import GateClosedError, format_rerun_line
 from spark.bench.deploy_stages import DeployPhase

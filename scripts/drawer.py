@@ -17,7 +17,7 @@ from collections import namedtuple
 import boards
 import parts
 import records_codes
-import store
+from spark.records import store
 from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems, printable
 
 #: What a part does (§5.6) — one list, in parts.py.

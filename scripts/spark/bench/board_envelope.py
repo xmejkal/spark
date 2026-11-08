@@ -18,7 +18,7 @@ from spark.design import loader
 from spark.core import outcomes
 from spark.core.result import Finding, NextStep, OperationResult
 from spark.bench import ready_probe
-import store
+from spark.records import store
 from spark.bench.deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 
 #: What the person must do first, said in a step's `why`.

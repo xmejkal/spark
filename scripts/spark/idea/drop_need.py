@@ -6,7 +6,7 @@ are not touched: when requirements.json still lists the dropped part, a note say
 
 import drawer
 from spark.design import needs
-import store
+from spark.records import store
 from spark.core import outcomes
 from spark.core.errors import SparkError
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Argument, Operation

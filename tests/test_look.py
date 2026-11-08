@@ -24,7 +24,7 @@ import look  # noqa: E402
 from spark.bench import look_at_board  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeConsent, FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import outcomes  # noqa: E402

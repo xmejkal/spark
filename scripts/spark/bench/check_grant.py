@@ -8,7 +8,7 @@ could not look is one unchecked item, with `why` "could not run" in the data.
 from spark.bench import board_doctor
 from spark.bench import board_grant
 from spark.bench import board_look
-import store
+from spark.records import store
 import tools
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy

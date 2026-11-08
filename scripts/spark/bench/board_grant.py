@@ -28,7 +28,7 @@ from pathlib import Path
 from spark.bench import board_codes
 from spark.bench import board_console
 from spark.bench import board_look
-import store
+from spark.records import store
 from spark.core.zone_time import say_in_local_zone, stamp  # the grant's times (P401 moved them out, to break an import cycle)
 from spark.bench.deploy_gate import GRANT, ConsentStrategy, GateClosedError, format_rerun_line
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS

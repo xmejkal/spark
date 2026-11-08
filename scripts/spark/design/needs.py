@@ -20,7 +20,7 @@ from spark.design import footprint_emitter
 import matching
 import parts
 import records_codes
-import store
+from spark.records import store
 from spark.core.text_guards import clean, kept_reason, printable
 
 #: How a need stands against the store (§3).

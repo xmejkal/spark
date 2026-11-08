@@ -24,7 +24,7 @@ from pathlib import Path
 import boards
 from spark.core.result import Refusal
 from spark.firmware import firmware_codes
-import store
+from spark.records import store
 import tools
 
 

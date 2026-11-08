@@ -16,7 +16,7 @@ import drawer
 from spark.design import board_emitter
 from spark.breadboard import part_shape
 import parts
-import store
+from spark.records import store
 from spark.breadboard import bench_changes
 from spark.breadboard import breadboard_codes
 from spark.breadboard import drawing

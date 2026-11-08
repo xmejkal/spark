@@ -30,7 +30,7 @@ import drawer  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.design import needs  # noqa: E402
 import parts  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core import text_guards  # noqa: E402
 from spark.idea.drop_need import DropNeed  # noqa: E402

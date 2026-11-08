@@ -33,7 +33,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.checks import physics_check  # noqa: E402
 import init_project  # noqa: E402
 from spark.build import project_setup  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 
 
 def a_project(nets=("V33", "GND", "MOTOR6V", "SDA", "SCL")):

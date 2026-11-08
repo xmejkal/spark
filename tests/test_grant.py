@@ -28,7 +28,7 @@ from spark.bench import board_grant  # noqa: E402
 import boards  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 import grant  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeClock, FakeConsent, FakeOutsideWorld, FakeProbePlatform, line_made_at_import, pin_time_zone  # noqa: E402
 from spark.bench.check_grant import CheckGrant  # noqa: E402

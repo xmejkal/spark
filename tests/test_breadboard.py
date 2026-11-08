@@ -31,7 +31,7 @@ import breadboard  # noqa: E402
 from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 from spark.design import loader  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
 

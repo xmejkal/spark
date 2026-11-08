@@ -13,7 +13,7 @@ import os
 import re
 from pathlib import Path
 
-import store
+from spark.records import store
 
 #: The markers in a person's AGENTS.md are a contract: an old section is found by these, whatever its first line says.
 BEGIN = "<!-- spark:begin"

@@ -405,7 +405,7 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
                                     "a vendor-check pattern pre-approves only `--offline`")
 
     def test_a_line_naming_a_network_operation_after_an_allowed_one_runs_neither(self):
-        import store
+        from spark.records import store
         import tools
         out = io.StringIO()
         with mock.patch.object(store, "fetch", side_effect=AssertionError("the network was reached")), \

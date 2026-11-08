@@ -24,7 +24,7 @@ from spark.breadboard import sheet  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import build_service  # noqa: E402
 import onboard_parts  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from onboard_parts import OnboardPartReader  # noqa: E402
 
 LED = {"id": "led-red-5mm", "onboard": "firebeetle2-esp32s3", "_instance": "onboard_led", "gpio": 21, "pin": "D13"}

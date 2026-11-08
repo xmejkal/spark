@@ -17,7 +17,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 from spark.build import ai_files  # noqa: E402
 import boards  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, boards_offered, design_in, find_circuit,  # noqa: E402
                                        nets_in, nulls_in, package_file, rules_for, why_board_refused,
                                        why_project_refused, write)

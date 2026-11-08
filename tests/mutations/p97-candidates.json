@@ -26,10 +26,10 @@
  {"file": "scripts/spark/design/needs.py", "name": "an entry with no record forgets whose project asks",
   "find": "{\"entry\": entry_id, \"in\": \"drawer\", \"label\": entry.get(\"label\")}, mine))",
   "replace": "{\"entry\": entry_id, \"in\": \"drawer\", \"label\": entry.get(\"label\")}))"},
- {"file": "scripts/store.py", "name": "a project is taken for the first on the list",
+ {"file": "scripts/spark/records/store.py", "name": "a project is taken for the first on the list",
   "find": "if where.resolve() == folder)", "replace": "if True)"},
- {"file": "scripts/store.py", "name": "a folder on the list is not resolved",
+ {"file": "scripts/spark/records/store.py", "name": "a folder on the list is not resolved",
   "find": "if where.resolve() == folder)", "replace": "if where == folder)"},
- {"file": "scripts/store.py", "name": "the asking folder is not resolved",
+ {"file": "scripts/spark/records/store.py", "name": "the asking folder is not resolved",
   "find": "    folder = Path(folder).resolve()\n    return next(", "replace": "    folder = Path(folder)\n    return next("}
 ]

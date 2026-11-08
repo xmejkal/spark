@@ -70,7 +70,7 @@ from spark.build.stages import Stage  # noqa: E402
 from spark.design import loader  # noqa: E402
 import parts  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, NOT_CHECKED, OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, STATUS_FOR  # noqa: E402
 from spark.core.text_guards import guard_lines  # noqa: E402

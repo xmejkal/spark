@@ -7,7 +7,7 @@ from spark.bench import board_codes
 from spark.bench import board_envelope
 from spark.bench import board_look
 import boards
-import store
+from spark.records import store
 import tools
 from spark.design.restricted_pins import BrokenRecordError
 from spark.core import outcomes

@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from spark.bench.firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
 from spark.core.outside import OutsideWorld  # noqa: E402

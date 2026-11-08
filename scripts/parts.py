@@ -218,7 +218,7 @@ import missing_facts  # noqa: E402
 from spark.records import provenance  # noqa: E402
 import records_codes  # noqa: E402
 import sourcing_codes  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from spark.core.errors import CodedMessageError  # noqa: E402
 from spark.core.text_guards import guard_lines, printable  # noqa: E402
 from spark.sourcing.part_rules import PULLUP_MAX_OHM, PULLUP_MIN_OHM  # noqa: E402
