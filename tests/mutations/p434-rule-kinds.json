@@ -14,6 +14,6 @@
  {"file": "scripts/spark/checks/build_check.py", "name": "P434: check_footprints reads the rules raw again", "find": "        return fab.read_rules(argument), None", "replace": "        return json.loads(Path(argument).read_text()), None"},
  {"file": "scripts/spark/design/footprint_emitter.py", "name": "P434: main reads no rules", "find": "        rules = loader.rules_in(project)", "replace": "        rules = {}"},
  {"file": "scripts/spark/checks/check.py", "name": "P434: buildability reads the rules raw again", "find": "rules = fab.read_rules(stated) if stated else None", "replace": "rules = json.loads(Path(stated).read_text()) if stated else None"},
- {"file": "scripts/emit_board.py", "name": "P434: read_inputs lets a board number of the wrong kind through", "find": " or footprint_emitter.why_wrong_kind(board)  #", "replace": "  #"},
+ {"file": "scripts/spark/design/board_emitter.py", "name": "P434: read_inputs lets a board number of the wrong kind through", "find": " or footprint_emitter.why_wrong_kind(board)  #", "replace": "  #"},
  {"file": "scripts/check_footprints.py", "name": "P434: a rules refusal with --json is bare text", "find": "print(json.dumps({\"tool\": \"check_footprints\", \"status\": COULD_NOT_RUN, \"message\": why}) if args.json else why)", "replace": "print(why)"}
 ]

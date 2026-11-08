@@ -91,7 +91,7 @@ def names_that_are_one(wanted):
     The first pair of `parts` entries whose names are one name, as (index, name, index, name), or None.
 
     On the names the file GIVES: an entry's shape is `requested_parts`' to refuse, and what an unnamed entry is called
-    is the generator's (`emit_board.component_name`), whose own compare stays as the independent net.
+    is the generator's (`board_emitter.component_name`), whose own compare stays as the independent net.
     """
     seen = {}
     for index, entry in enumerate(wanted.get("parts") or []):

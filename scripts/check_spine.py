@@ -64,7 +64,7 @@ import boards  # noqa: E402
 import build_codes  # noqa: E402
 from spark.breadboard import drawing, sheet, tabbed_page  # noqa: E402
 from spark.design import loader  # noqa: E402
-import emit_board  # noqa: E402
+from spark.design import board_emitter  # noqa: E402
 import init_project  # noqa: E402
 import needs  # noqa: E402
 from spark.design import netlist  # noqa: E402
@@ -278,7 +278,7 @@ def count_in(circuit):
 
 
 #: Nets that are a ground: the generator's list, so this rule and its supply rule agree.
-GROUND_NETS = emit_board.GROUND_NETS
+GROUND_NETS = board_emitter.GROUND_NETS
 #: tscircuit's types for the two-terminal parts a generated board places between a pin and a rail.
 PASSIVE_FTYPES = ("simple_resistor", "simple_capacitor", "simple_inductor", "simple_diode")
 
@@ -286,7 +286,7 @@ PASSIVE_FTYPES = ("simple_resistor", "simple_capacitor", "simple_inductor", "sim
 def islands_in(circuit, claims=(), across=()):
     """
     Every component the board leaves on an island, said in its own words. `across` names the
-    components that sit across a driven pair (`emit_board.loads_across_a_pair`: a speaker
+    components that sit across a driven pair (`board_emitter.loads_across_a_pair`: a speaker
     terminal, C-3) — asked, as a passive is, whether an end dangles, never whether they reach ground.
 
     Three questions, because a component can be stranded in three ways and a board builds,
@@ -299,7 +299,7 @@ def islands_in(circuit, claims=(), across=()):
       or the top of a divider, sits between a pin and a rail and reaches no ground BY DESIGN, and
       was reported here as an island the evening P6 placed the first ones. What must hold for it
       is that neither end dangles.
-    * **an unfed supply pin** (`claims`, from `emit_board.supply_inputs`). This is P29's half. The
+    * **an unfed supply pin** (`claims`, from `board_emitter.supply_inputs`). This is P29's half. The
       irrigation controller's buck record says "Feeds the FireBeetle's 5 V/VCC input and the
       sensors"; net.V5V joined the buck to a flow meter, the processor was on no 5 V net at all,
       and the stage read `[ok]`. `claims` is what the design STATES, so this compares the built
@@ -401,34 +401,34 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     except loader.DesignError as broken:
         return stages + [Stage("parts", COULD_NOT_RUN, str(broken), broken.code)]
 
-    # --- MVP --- the input is read, the pins are placed and the footprint is asked for, in the one order `emit_board.read_inputs`
+    # --- MVP --- the input is read, the pins are placed and the footprint is asked for, in the one order `board_emitter.read_inputs`
     # gives (P407, P432): a fault in the requirements is said before a gap in the board record, and the schematic imports
     # the board's footprint, so a record that cannot give one stops here, before emit_board is asked.
     try:
-        inputs = emit_board.read_inputs(workdir / "requirements.json", project)
-    except emit_board.RefusedInput as refused:
-        hint = "\n" + NO_FOOTPRINT_HINT if refused.stage == emit_board.FOOTPRINT_STAGE else ""
+        inputs = board_emitter.read_inputs(workdir / "requirements.json", project)
+    except board_emitter.RefusedInput as refused:
+        hint = "\n" + NO_FOOTPRINT_HINT if refused.stage == board_emitter.FOOTPRINT_STAGE else ""
         return stages + [Stage(refused.stage, COULD_NOT_RUN, str(refused) + hint, refused.code)]
     except Exception as crash:  # noqa: BLE001 -- emit_board ran in a child until P432, so a crash was a stage (F5), not a lost run
-        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_board.py", crash), build_codes.STAGE_CRASHED)]
+        return stages + [Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_board.py", crash), build_codes.STAGE_CRASHED)]
 
     board_file = workdir / "board.tsx"
     emitted = subprocess.run(
         [sys.executable, str(SCRIPTS / "emit_board.py"), str(workdir / "requirements.json"),
          "--project", str(project), "--assume-missing-sizes"],
         capture_output=True, text=True)
-    if emitted.returncode == emit_board.EXIT_COULD_NOT_RUN:
+    if emitted.returncode == EXIT_COULD_NOT_RUN:
         # It refused the input — a part with no measured outline, a resistor nothing sizes — in its own words.
-        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, emitted.stderr.strip(), build_codes.SCHEMATIC_REFUSED)]
+        return stages + [Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, emitted.stderr.strip(), build_codes.SCHEMATIC_REFUSED)]
     if emitted.returncode != 0:
         # emit_board exits 0 or 2 on purpose, so anything else is a crash: could-not-run, as `main` says of anything
         # unforeseen, with the traceback's last line. Read as problems, it sent people to debug a design nobody examined (F5).
         said = emitted.stderr.strip().splitlines()
-        return stages + [Stage(emit_board.SCHEMATIC_STAGE, COULD_NOT_RUN, "emit_board.py crashed: %s" % (
+        return stages + [Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, "emit_board.py crashed: %s" % (
             said[-1] if said else "exit %d, and nothing said" % emitted.returncode), build_codes.STAGE_CRASHED)]
     board_file.write_text(emitted.stdout)
-    traces_asked = emitted.stdout.count(emit_board.TRACE_TAG)
-    stages.append(Stage(emit_board.SCHEMATIC_STAGE, OK, "%d trace(s) written" % traces_asked))
+    traces_asked = emitted.stdout.count(board_emitter.TRACE_TAG)
+    stages.append(Stage(board_emitter.SCHEMATIC_STAGE, OK, "%d trace(s) written" % traces_asked))
     if emitted.stderr.strip():
         stages.append(Stage("schematic-notes", PROBLEMS, emitted.stderr.strip(), build_codes.SCHEMATIC_NOTED))
 
@@ -440,12 +440,12 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     try:
         disagreement = footprint_emitter.why_header_disagrees(footprint_board, rules)
         if disagreement:
-            return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, disagreement, disagreement.code)]
+            return stages + [Stage(board_emitter.FOOTPRINT_STAGE, COULD_NOT_RUN, disagreement, disagreement.code)]
         text = footprint_emitter.render(footprint_board, rules)
     except Exception as crash:  # noqa: BLE001 -- the footprint script ran apart from this run until P432, so a crash was a stage
-        return stages + [Stage(emit_board.FOOTPRINT_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_footprint.py", crash), build_codes.STAGE_CRASHED)]
+        return stages + [Stage(board_emitter.FOOTPRINT_STAGE, COULD_NOT_RUN, said_of_a_crash("emit_footprint.py", crash), build_codes.STAGE_CRASHED)]
     (workdir / ("%s.tsx" % export)).write_text(text)
-    stages.append(Stage(emit_board.FOOTPRINT_STAGE, OK, "%s.tsx" % export))
+    stages.append(Stage(board_emitter.FOOTPRINT_STAGE, OK, "%s.tsx" % export))
 
     # --- the build, which is the only stage that can prove any of the above ---
     # The project's tools file, not the scratch directory's: a broken or pinned project file must be read.
@@ -491,8 +491,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # routed and reported zero errors, while every module around it was correctly wired to a
     # ground the processor was not on.
     islands = islands_in(json.loads(circuit_path.read_text()),
-                         emit_board.supply_inputs(board, part_list),
-                         across=emit_board.loads_across_a_pair(part_list))
+                         board_emitter.supply_inputs(board, part_list),
+                         across=board_emitter.loads_across_a_pair(part_list))
     if islands:
         return stages + [Stage("build", PROBLEMS, "%s. A board builds, routes and reports no error with a component joined "
                                "to nothing — the parts around it are wired to nets it is simply not on" % "; ".join(islands),
@@ -574,7 +574,7 @@ def board_alone(board, workdir, firmware=None, project=None):
     SKIPPED, never ok. The converter wires the board's own LED and button that `onboard_parts` gives (P484), as `run` does;
     with none, the diagram holds the board's part alone. A limit "not checked" stays a limit in an ok stage (P396, P37).
     """
-    skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", emit_board.SCHEMATIC_STAGE, emit_board.FOOTPRINT_STAGE, "build")]
+    skipped = [Stage(name, SKIPPED, "board only: nothing to wire") for name in ("parts", board_emitter.SCHEMATIC_STAGE, board_emitter.FOOTPRINT_STAGE, "build")]
     if not board.get("wokwi_part_type"):
         return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type", build_codes.SIMULATION_FACT_MISSING)]
     sim_dir, project = workdir / "sim", project or SCRIPTS.parent

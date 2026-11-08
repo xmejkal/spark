@@ -60,7 +60,7 @@
   "replace": "            fix=(\"state nominal_volts in the rules file"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "a supply's voltage is not carried to physics",
   "find": "                                         volts=volts_of(part, supply.get(\"volts\"))))",
   "replace": "                                         volts=volts_of(part, None)))"

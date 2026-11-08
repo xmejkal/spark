@@ -5,7 +5,7 @@ name the steps use, and what a planned layout says of its board. It writes no fi
 
 import re
 
-import emit_board
+from spark.design import board_emitter
 import part_shape
 from spark.breadboard import drawing
 from spark.breadboard import wiring_steps
@@ -34,7 +34,7 @@ def describe_parts(read, geometry):
     for part in read.built.parts:
         wokwi = (part.get("simulation") or {}).get("wokwi") or {}
         if wokwi.get("part"):
-            catalog[emit_board.component_name(part)] = drawing.DrawnPart(
+            catalog[board_emitter.component_name(part)] = drawing.DrawnPart(
                 wokwi["part"], wokwi.get("attrs") or {}, wokwi.get("pins") or {})
     for tag, value, _ in read.resistors.values():
         catalog[tag] = drawing.DrawnPart("wokwi-resistor", {"value": to_ohms(value)}, {"1": "1", "2": "2"})

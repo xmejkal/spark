@@ -631,7 +631,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
         problems.append("id is %r but the file is named %r; they must match"
                         % (part.get("id"), path.stem))
     elif isinstance(part.get("id"), str) and not store.PLAIN.fullmatch(part["id"]):
-        # P87's attribute half: `emit_board.component_name` capitalises the id's words and strips nothing, so the id is
+        # P87's attribute half: `board_emitter.component_name` capitalises the id's words and strips nothing, so the id is
         # what keeps `<chip name="…">` a name — a plain key, as every key of the store is
         problems.append(NOT_A_PLAIN_ID % part["id"])
     wrong_types = type_problems({key: value for key, value in part.items() if key not in owed})
@@ -2223,7 +2223,7 @@ def _op_requirements(args, project):
     said += ["  board %s: %s" % (content["board"], stop)] if stop else []
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
     said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
-             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.emit_board.DEFAULT_BODY_MM + (how,))
+             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.board_emitter.DEFAULT_BODY_MM + (how,))
              for part_id, how in ([] if problems else placeholder)]
     said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
     said += ["  kept, not from a pick: %s" % ", ".join(needs.entry_label(entry) for entry in kept)] if kept and not problems else []

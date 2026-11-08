@@ -44,7 +44,7 @@ import build_codes  # noqa: E402
 import check_spine  # noqa: E402
 from suite_runs import slow  # noqa: E402
 from spark.design import loader  # noqa: E402
-import emit_board  # noqa: E402
+from spark.design import board_emitter  # noqa: E402
 import emit_footprint  # noqa: E402
 import missing_facts  # noqa: E402
 import parts  # noqa: E402
@@ -260,25 +260,25 @@ class WhichOfTheModulesOwnPadsGetWiredTest(unittest.TestCase):
         return {"id": "psu", "name": "Psu", "power": [{"pin": "VOUT", "rail": rail, "direction": direction}]}
 
     def test_a_receiving_pad_is_left_open_when_nothing_drives_its_rail(self):
-        wired = {pad: on for pad, _, on in emit_board.mcu_power_nets(self.BOARD, [])}
+        wired = {pad: on for pad, _, on in board_emitter.mcu_power_nets(self.BOARD, [])}
         self.assertEqual(wired, {"GND1": True, "3V3": True, "VCC": False})
 
     def test_a_supply_on_that_rail_wires_it(self):
         wired = dict((pad, on) for pad, _, on in
-                     emit_board.mcu_power_nets(self.BOARD, [self.part("out", "5v")]))
+                     board_emitter.mcu_power_nets(self.BOARD, [self.part("out", "5v")]))
         self.assertTrue(wired["VCC"])
 
     def test_another_consumer_of_the_rail_does_not_count_as_a_source(self):
         # Two sinks and no source is a rail nobody drives, which is the state this exists to
         # refuse to paper over.
         wired = dict((pad, on) for pad, _, on in
-                     emit_board.mcu_power_nets(self.BOARD, [self.part("in", "5v")]))
+                     board_emitter.mcu_power_nets(self.BOARD, [self.part("in", "5v")]))
         self.assertFalse(wired["VCC"])
 
     def test_the_generated_file_says_why_a_pad_was_left_open(self):
         # W1's shape: a connection that was reasoned about and one that was forgotten must not
         # look the same in the output.
-        lines = "\n".join(emit_board.mcu_power_lines(self.BOARD, [], {}, set()))
+        lines = "\n".join(board_emitter.mcu_power_lines(self.BOARD, [], {}, set()))
         self.assertIn("Mcu.VCC receives net.V5V and NOTHING ON THIS BOARD DRIVES", lines)
         self.assertNotIn('from=".Mcu > .VCC"', lines)
 
@@ -286,16 +286,16 @@ class WhichOfTheModulesOwnPadsGetWiredTest(unittest.TestCase):
         # One home: if these two could disagree the check would be worthless, and three defects
         # in this file's history are exactly that disagreement.
         parts = [self.part("out", "5v")]
-        lines = "\n".join(emit_board.mcu_power_lines(self.BOARD, parts, {}, set()))
+        lines = "\n".join(board_emitter.mcu_power_lines(self.BOARD, parts, {}, set()))
         self.assertIn('from=".Mcu > .VCC" to="net.V5V"', lines)
-        self.assertIn(("Mcu", "VCC", "V5V"), emit_board.supply_inputs(self.BOARD, parts))
+        self.assertIn(("Mcu", "VCC", "V5V"), board_emitter.supply_inputs(self.BOARD, parts))
 
     def test_a_grounds_direction_is_never_asked_about(self):
         # A connector declares its GND as `out` and a module declares its GND as `in`; neither is
         # a rail anybody drives, and making ground conditional would unwire every board.
         board = {"power_pads": {"GND1": {"rail": "ground", "direction": "in"}}}
-        self.assertEqual([on for _, _, on in emit_board.mcu_power_nets(board, [])], [True])
-        self.assertEqual(emit_board.supply_inputs(board, []), [])
+        self.assertEqual([on for _, _, on in board_emitter.mcu_power_nets(board, [])], [True])
+        self.assertEqual(board_emitter.supply_inputs(board, []), [])
 
 
 class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
@@ -1769,7 +1769,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
 
     # --- MVP ---
     def test_a_huge_width_stops_the_footprint_stage_naming_the_field(self):
-        # P434: a 400-digit width was an OverflowError out of `emit_board.place`, a "crashed" schematic stage
+        # P434: a 400-digit width was an OverflowError out of `board_emitter.place`, a "crashed" schematic stage
         project, wanted = self.project_without("physical.header.drill_mm")
         self.edit_record(project, lambda record: record["physical"].update(width_mm=10 ** 400))
         stages = self.run_spine(project, wanted)
@@ -1885,8 +1885,8 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
             with self.subTest(fields=fields, extra=extra):
                 project, wanted = self.project_without(*fields, requirements=dict(
                     {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}, **extra))
-                with self.assertRaises(emit_board.RefusedInput) as refused:
-                    emit_board.read_inputs(project / "requirements.json", project)
+                with self.assertRaises(board_emitter.RefusedInput) as refused:
+                    board_emitter.read_inputs(project / "requirements.json", project)
                 self.assertTrue(str(refused.exception).startswith(first), str(refused.exception))
                 stages = self.run_spine(project, wanted)
                 self.assertEqual(stages[-1].name, refused.exception.stage)
@@ -1931,7 +1931,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
 
     def test_a_crash_in_reading_the_input_keeps_its_text_raw_and_the_screen_shows_it_guarded(self):
         project, wanted = self.project_without("physical.header.drill_mm")
-        with mock.patch.object(check_spine.emit_board, "read_inputs", side_effect=ValueError("a\u202e\x1bb")):
+        with mock.patch.object(check_spine.board_emitter, "read_inputs", side_effect=ValueError("a\u202e\x1bb")):
             stages = self.run_spine(project, wanted)
         self.assertEqual(stages[-1].detail, "emit_board.py crashed: ValueError: a\u202e\x1bb")
         self.assertEqual(self.said_by_report(stages, True)["stages"][-1]["detail"], stages[-1].detail)

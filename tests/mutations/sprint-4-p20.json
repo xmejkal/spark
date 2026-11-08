@@ -6,7 +6,7 @@
   "replace": "        assignments, leftover = assign(board, list(loaded.requirements.get(\"signals\") or []))"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "emit_board traces no signal",
   "find": "        assignments, _ = pin_assigner.assign(board, design.signals)",
   "replace": "        assignments, _ = pin_assigner.assign(board, [])"

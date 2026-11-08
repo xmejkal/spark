@@ -33,7 +33,7 @@ import math
 from spark.design import copper
 from spark.design import fab
 from spark.design import netlist
-from emit_board import GROUND_NETS
+from spark.design.board_emitter import GROUND_NETS
 from spark.checks import check_codes
 from spark.checks.build_check import package_of
 from spark.core.outcomes import COULD_NOT_RUN
@@ -263,7 +263,7 @@ def check_rail_supply(loads):
     Can each rail's source deliver what its members draw? (P52)
 
     P29 answered *does a trace reach a supply*; nothing asked *can that supply carry what is on
-    it*. `loads` is `emit_board.rail_loads`: the figures each power pin's record names, summed. A
+    it*. `loads` is `board_emitter.rail_loads`: the figures each power pin's record names, summed. A
     load nobody stated is named rather than taken as zero; a sum that fits on figures nobody
     verified says what it rests on. A rail with no single source is the generator's to report.
     """
