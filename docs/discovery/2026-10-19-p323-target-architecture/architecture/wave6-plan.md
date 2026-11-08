@@ -497,6 +497,26 @@ is library-only until the Operation. Review: it holds logic. One reviewer and th
 run. Size est.: 80 product lines, 60 test lines.
 It touches no file of P685 but `measure.py:247`, `planted_tree.py:11` and `test_json_contracts.py`, one line each.
 
+P692 claims check (2026-11-08, on main 6338f89e). Stopped before any code, for one decision:
+
+- Decision needed. `breadboard.py` is 600 lines, R1's module limit (`tools/measure.py:242`, counted by
+  `splitlines`, `:449`). Every line the card adds there is the new key `R1:scripts/breadboard.py:<module>`, and the
+  baseline may only shrink. The card adds about 20: the import 1, `NotBuilt.__init__` 4, the three extractions about
+  2, 5 and 5, wrapped raise lines about 3, and 5 more for a library function that gives the three outside exceptions
+  their code (`main` is the R1 key at 26 and cannot grow, as P684 row 28 found). Prunes that lose no words give about 8:
+  the orphan comment at `:74`, and three docstrings whose `"""` sit on their own lines (`points`, `printed_label`,
+  `_check_fresh`). About 12 lines more must go: cut the module docstring, which is the `--help` text (43 lines); move
+  code out to another module (for example `points` and `_wiring` to `breadboard_steps.py`, which holds the step rule),
+  which changes W6-B3's table; or leave the outside exceptions' code to the Operation card.
+- Counts: `LEAVES` is at `measure.py:245`, not `:247`. `NotDrawn` is at `breadboard_drawing.py:62`. In `part_shape.py`
+  one `NotDrawn` site has no code (`:226`), not five: `:145`, `:161`, `:168` and `:173` pass one. P691's scope is 13
+  sites, not 17.
+- For a card: `check_spine.py:843` writes the sheet's `not written` entry with no `code`, while each drawing's entry has
+  one, and it also catches `ValueError`, which `breadboard.main` does not.
+- The rest holds: the four tables, `check_spine.py:64`, the 12 sites in `breadboard_drawing.py`, `:404`, `:55`,
+  `NotBuilt` at `:108` with its eight sites, `main`'s `except` at `:581`, the three spans (45, 42 and 47 lines), and
+  `planted_tree.py:11`.
+
 ### W6-C2, the checks codes (after P685)
 
 Goal: each refusal of the six check CLIs has a code. The text and the JSON stay byte-equal to the 17 W6-C1 goldens.
