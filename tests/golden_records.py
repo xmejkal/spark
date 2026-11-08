@@ -3,9 +3,9 @@ The records-with-sourcing goldens (P715, #966, W6-R1): what parts.py, boards.py,
 what each write Operation writes, kept in tests/golden-records/.
 
 A helper module beside golden_design.py, no tests in it: tests/test_golden_records.py runs each Case with
-golden_firmware's run_script, in its own copy of one project (a bare copy of golden_checks' button-light fixture) and its
-own store. `SPARK_ACCEPT=parts python3 -m unittest tests.test_golden_records` writes parts.py's goldens from today's
-output and fails, so that a person reads `git diff tests/golden-records`.
+golden_firmware's run_script, in its own copy of one project (a bare copy of golden_checks' button-light fixture)
+and its own store. `SPARK_ACCEPT=parts python3 -m unittest tests.test_golden_records` writes parts.py's goldens from
+today's output and fails, so that a person reads `git diff tests/golden-records`.
 
 No golden reaches the network, a vendor site, an installer or a package manager. A child's PATH is the fakes' folder
 alone, which holds a fake pdftotext and nothing else, so no curl, claude or install manager of tools.MANAGERS is found
@@ -27,6 +27,7 @@ import golden_checks  # noqa: E402
 import golden_design  # noqa: E402
 import golden_firmware  # noqa: E402
 import tools  # noqa: E402
+from fakes import fake_pdftotext  # noqa: E402
 from golden_firmware import LOG_MARK  # noqa: E402
 
 ROOT = golden_bench.ROOT
@@ -38,15 +39,10 @@ GUARDED = tuple(program for _, program in tools.MANAGERS if program) + ("curl", 
 SESSION = "spark-suite"
 #: A `written` name that starts with STORE is read from the run's store, not its project.
 STORE = "{store}/"
-#: The fake pdf-text tool: one canned page for `-f 1`, and exit 1 for any other page, so a read stops after page 1.
-PDFTOTEXT = """#!/bin/sh
-# The golden net's pdftotext (P715): page 1 is a canned table, every other page is past the end.
-[ "$1" = "-v" ] && { echo "pdftotext version 0.0.0-fake" >&2; exit 0; }
-case " $* " in
-  *" -f 1 "*) printf 'Forward voltage   VF   2.0 V\nForward current   IF   20 mA\n'; exit 0 ;;
-esac
-exit 1
-"""
+#: Python modules a records child finds first: a fake littlefs, so `tools.py --status` reads the same on any machine.
+FAKE_MODULES = ROOT / "tests" / "fake_records_modules"
+#: The repository's folders a Case could write to (`--promote` of a project's record writes the plugin's parts/).
+REPO_FOLDERS = ("parts", "boards", "data")
 #: Where `--sources` and `--fetch` look: the closed port itself, so even a child with no proxy reaches nothing.
 CLOSED_URL = golden_checks.CLOSED_PROXY + "/datasheet.pdf"
 #: The errno of a refused connection differs by platform (61 on macOS, 111 on Linux).
@@ -59,15 +55,21 @@ def make_fakes(folder):
     """The fake pdftotext in a `bin` folder in `folder`. Returns the `bin` folder, a child's whole PATH."""
     shims = Path(folder) / "bin"
     shims.mkdir(parents=True, exist_ok=True)
-    (shims / "pdftotext").write_text(PDFTOTEXT)
-    (shims / "pdftotext").chmod(0o755)
+    fake_pdftotext(shims / "pdftotext")
     return shims
 
 
 def child_env(store, shims):
     """golden_checks' child environment (PATH the fakes' folder alone, proxies closed, empty HOME, no secret) in the
-    suite's session."""
-    return dict(golden_checks.child_env(store, shims), CLAUDE_CODE_SESSION_ID=SESSION)
+    suite's session, with FAKE_MODULES first on its PYTHONPATH."""
+    env = golden_checks.child_env(store, shims)
+    return dict(env, PYTHONPATH="%s:%s" % (FAKE_MODULES, env["PYTHONPATH"]), CLAUDE_CODE_SESSION_ID=SESSION)
+
+
+def repo_files():
+    """{path under ROOT: (size, mtime)} of every file in REPO_FOLDERS, so a test can tell that a Case wrote none."""
+    return {str(found.relative_to(ROOT)): (found.stat().st_size, found.stat().st_mtime_ns)
+            for folder in REPO_FOLDERS for found in (ROOT / folder).rglob("*") if found.is_file()}
 
 
 #: What a child runs to say which of GUARDED it finds, one path a line.
@@ -104,8 +106,8 @@ PICKED = planted(".spark/needs.json", {"schema": 1, "needs": [
     {"id": "light", "does": "indicate", "what": "status", "pick": [{"part": "led-red-5mm"}]}]})
 #: The project on the store's list, with one step marked in the suite's session, whose transcript no child finds.
 LISTED = planted(STORE + "projects.json", {"button light": PROJECT})
-STEPPED = (STORE + "history.jsonl", json.dumps({"event": "step", "project": "button light", "step": "S", "session": SESSION,
-                                                "start": "2026-11-08T09:00:00+00:00"}) + "\n")
+STEPPED = (STORE + "history.jsonl", json.dumps({"event": "step", "project": "button light", "step": "S",
+                                                "session": SESSION, "start": "2026-11-08T09:00:00+00:00"}) + "\n")
 DRAWER = planted(STORE + "drawer/red-leds.json", {"label": "red leds", "count": 5, "is": {"part": "led-red-5mm"}})
 CATALOG = planted(STORE + "catalog/golden-led.json", GOLDEN_LED)
 SHEET = ("sheet.pdf", "%PDF-1.4 golden\n")
@@ -137,14 +139,16 @@ CASES = [
     Case("parts-need-could-not-run-unknown-matcher.txt", "parts.py", ["--need", "button", "--matcher", "nosuch"], 2),
     Case("parts-skeleton-ok.txt", "parts.py", ["--skeleton", "golden-sensor", "--kind", "sensor", "--vendor", "nobody"]
          + WITH, 0, written=("parts/golden-sensor.json",)),
-    Case("parts-skeleton-could-not-run-no-project.txt", "parts.py", ["--skeleton", "golden-sensor", "--kind", "sensor"], 2),
+    Case("parts-skeleton-could-not-run-no-project.txt", "parts.py", ["--skeleton", "golden-sensor", "--kind", "sensor"],
+         2),
     Case("parts-sources-problems-unreachable.txt", "parts.py", ["--sources", "golden-led"] + WITH, 1, (LOCAL_LED,)),
     Case("parts-sources-ok-dry-run.txt", "parts.py", ["--sources", "golden-led", "--dry-run"] + WITH, 0, (LOCAL_LED,)),
     Case("parts-fetch-ok-unreachable.txt", "parts.py", ["--fetch", "golden-led"] + WITH, 0, (SMALL_LED,),
          written=("parts/golden-led.json",)),
     Case("parts-fetch-ok-dry-run.txt", "parts.py", ["--fetch", "golden-led", "--dry-run"] + WITH, 0, (SMALL_LED,)),
     Case("parts-fetch-problems-no-record.json", "parts.py", ["--fetch", "no-such-part", "--json"] + WITH, 1),
-    Case("parts-keep-ok.txt", "parts.py", ["--keep", "sheet.pdf", "--url", CLOSED_URL], 0, (SHEET,), written=(SHEET_KEPT,)),
+    Case("parts-keep-ok.txt", "parts.py", ["--keep", "sheet.pdf", "--url", CLOSED_URL], 0, (SHEET,),
+         written=(SHEET_KEPT,)),
     Case("parts-keep-could-not-run-no-file.txt", "parts.py", ["--keep", "missing.pdf"], 2),
     Case("parts-read-ok.txt", "parts.py", ["--read", "sheet.pdf", "--want", "forward_voltage_v"], 0, (SHEET,)),
     Case("parts-read-problems-not-found.txt", "parts.py", ["--read", "sheet.pdf", "--want", "peak_wavelength_nm"], 1,
@@ -175,7 +179,8 @@ CASES = [
     Case("parts-audit-ok.txt", "parts.py", ["--audit"] + WITH, 0),
     Case("parts-needs-ok.txt", "parts.py", ["--needs", PROJECT], 0, (NEEDS,)),
     Case("parts-needs-set-ok.txt", "parts.py", ["--needs-set", PROJECT, "in.json"], 0,
-         (planted("in.json", [{"id": "light", "does": "indicate", "what": "status"}]),), written=(".spark/needs.json",)),
+         (planted("in.json", [{"id": "light", "does": "indicate", "what": "status"}]),),
+         written=(".spark/needs.json",)),
     Case("parts-needs-set-could-not-run-unreadable.txt", "parts.py", ["--needs-set", PROJECT, "in.json"], 2,
          (("in.json", "{not json"),)),
     Case("parts-match-ok.txt", "parts.py", ["--match", PROJECT], 0, (NEEDS,)),
@@ -208,14 +213,15 @@ CASES = [
     Case("boards-resolve-ok.txt", "boards.py", ["--resolve"] + WITH, 0),
     # --- tools.py: one Case per flag; --install only with --dry-run ---
     Case("tools-status-could-not-run.txt", "tools.py", ["--status"] + WITH, 2),
-    Case("tools-install-ok-dry-run.txt", "tools.py", ["--install", "pdftotext", "micropython-esp32s3", "--dry-run"] + WITH,
-         0),
+    Case("tools-install-ok-dry-run.txt", "tools.py",
+         ["--install", "pdftotext", "micropython-esp32s3", "--dry-run"] + WITH, 0),
     Case("tools-on-ok.txt", "tools.py", ["--on", "pdftotext"] + WITH, 0, written=(TOOLS,)),
     Case("tools-off-ok.txt", "tools.py", ["--off", "pdftotext"] + WITH, 0, written=(TOOLS,)),
     Case("tools-use-ok.txt", "tools.py", ["--use", "pdf-text=pdftotext"] + WITH, 0, written=(TOOLS,)),
     Case("tools-pin-ok.txt", "tools.py", ["--pin", "pdftotext=24.02.0"] + WITH, 0, written=(TOOLS,)),
-    Case("tools-new-ok.txt", "tools.py", ["--new", 'my-sim={"kind": "path", "exe": "my-sim", "meets": ["wokwi-project"]}']
-         + WITH, 0, written=(TOOLS,)),
+    Case("tools-new-ok.txt", "tools.py",
+         ["--new", 'my-sim={"kind": "path", "exe": "my-sim", "meets": ["wokwi-project"]}'] + WITH, 0,
+         written=(TOOLS,)),
     Case("tools-new-could-not-run-not-json.txt", "tools.py", ["--new", "my-sim={not json"] + WITH, 2),
     # --- cost.py: with its one transcript, and with none ---
     Case("cost-ok.txt", "cost.py", ["run.jsonl"], 0, (TRANSCRIPT,)),
@@ -249,7 +255,8 @@ def placed(name, project, store):
 
 def run_case(case, project, store, shims):
     """The text of `case` run in `project` with `store` (its STORE files planted there first), then each of its
-    `written` files after LOG_MARK, and its exit code. A day's date and a refused connection's errno are placeholders."""
+    `written` files after LOG_MARK, and its exit code. A day's date and a refused connection's errno are
+    placeholders."""
     case = case._replace(plant=tuple((name, text if text is None else text.replace(PROJECT, str(project)))
                                      for name, text in case.plant))
     for name, text in case.plant:
