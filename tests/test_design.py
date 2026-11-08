@@ -668,3 +668,86 @@ class TheBoardsOwnPullUpTest(unittest.TestCase):
     def test_a_board_that_states_no_internal_pull_up_keeps_every_resistor(self):
         self.assertEqual(design.firmware_pulls(self.button(), {"power": {}}), self.button())
         self.assertEqual(design.firmware_pulls(self.button(), None), self.button())
+
+
+# --- MVP --- (P700)
+class EachDesignRefusalCarriesItsCodeTest(unittest.TestCase):
+    """P700: every DesignError carries its code (design_codes) beside its sentence, and an agent decides on the code."""
+
+    def code_of(self, call, *args):
+        with self.assertRaises(design.DesignError) as caught:
+            call(*args)
+        return caught.exception.code
+
+    def read_code(self, text):
+        path = Path(tempfile.mkdtemp()) / "car.requirements.json"
+        path.write_text(text if isinstance(text, str) else json.dumps(text))
+        return self.code_of(design.read, path)
+
+    def record_folder(self, body):
+        """A project whose parts/x.json holds `body`, or is a folder when `body` is None."""
+        root = Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir()
+        (root / "parts").mkdir()
+        if body is None:
+            (root / "parts" / "x.json").mkdir()
+        else:
+            (root / "parts" / "x.json").write_text(body)
+        return root
+
+    def test_the_requirements_file_itself(self):
+        self.assertEqual(self.code_of(design.read, Path(tempfile.mkdtemp()) / "nope.json"), "no_requirements")
+        self.assertEqual(self.read_code("{not json"), "requirements_unreadable")
+        self.assertEqual(self.read_code([1, 2]), "requirements_field_wrong")
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads a file whatever its mode")
+    def test_a_requirements_file_nobody_may_read(self):
+        path = Path(tempfile.mkdtemp()) / "car.requirements.json"
+        path.write_text("{}")
+        path.chmod(0)
+        self.addCleanup(path.chmod, 0o600)
+        self.assertEqual(self.code_of(design.read, path), "requirements_unreadable")
+
+    def test_each_field_of_the_wrong_kind(self):
+        for wanted in ({"signals": 5}, {"parts": 5}, {"signals": [{}]}, {"signals": [{"name": "X", "needs": 5}]},
+                       {"signals": [{"name": "X", "pin": 4}]}, {"signals": [{"name": "X", "pin": ""}]},
+                       {"signals": [{"name": "X-1"}]}):
+            with self.subTest(wanted=wanted):
+                self.assertEqual(self.read_code(wanted), "requirements_field_wrong")
+        for wanted in ({"parts": [{"name": "X"}]}, {"parts": [{"part": "p", "name": "X-1"}]}, {"parts": [42]}):
+            with self.subTest(wanted=wanted):
+                self.assertEqual(self.code_of(design.requested_parts, wanted), "requirements_field_wrong")
+        for rails in ({"VCC": 5}, {"VCC": "a-b"}):
+            with self.subTest(rails=rails):
+                self.assertEqual(self.code_of(design.rails_requested, {"parts": [{"part": "p", "rails": rails}]}),
+                                 "requirements_field_wrong")
+        self.assertEqual(self.code_of(design.on_rails, {"id": "p", "power": []}, {"VCC": "motor"}), "requirements_field_wrong")
+
+    def test_a_pin_entry_for_a_part_signal(self):
+        signals, sources = [{"name": "SDA", "bus": "i2c"}, {"name": "LED"}], ["a's SDA", "b's LED"]
+        for entry in ({"name": "led", "pin": "D0"}, {"name": "SDA", "pin": "D0"}, {"name": "LED", "pin": "D0", "needs": []}):
+            with self.subTest(entry=entry):
+                self.assertEqual(self.code_of(design.pin_part_signals, signals, sources, [entry]), "requirements_field_wrong")
+
+    def test_one_name_twice(self):
+        self.assertEqual(self.read_code({"parts": [{"part": "p", "name": "Btn"}, {"part": "p", "name": "btn"}]}),
+                         "name_used_twice")
+        self.assertEqual(self.code_of(design.refuse_one_signal_twice, ["a", "b"], [{"name": "X"}, {"name": "X"}]),
+                         "name_used_twice")
+
+    def test_the_project_and_its_records(self):
+        self.assertEqual(self.code_of(design.project_for, "r.json", Path(tempfile.mkdtemp()) / "nope"), "no_project_folder")
+        root = self.record_folder("{not json")
+        self.assertEqual(self.code_of(design.record, "no-such-part", root), "part_unusable")
+        self.assertEqual(self.code_of(design.record, "x", root), "part_unusable")
+        self.assertEqual(self.code_of(design.record, "x", self.record_folder(None)), "part_unusable")
+        self.assertEqual(self.code_of(design.signals_of, [{"id": "no-such-part"}], {}, root), "part_unusable")
+        self.assertEqual(self.code_of(design.signals_of, [{"id": "x"}], {}, root), "part_unusable")
+        self.assertEqual(self.code_of(design.signals_of, [{"id": "x"}], {}, self.record_folder(None)), "part_unusable")
+
+    def test_the_rules_and_the_board(self):
+        root, path = project(requirements={"board": "no-such-board", "parts": []})
+        self.assertEqual(self.code_of(design.load, path), "board_unusable")
+        (root / ".spark" / "rules.json").write_text("{not json")
+        self.assertEqual(self.code_of(design.rules_in, root), "rules_refused")
+# --- end MVP ---

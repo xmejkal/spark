@@ -40,6 +40,7 @@ import check_physics  # noqa: E402
 import check_spine  # noqa: E402
 import board_codes  # noqa: E402
 from spark.checks import check_codes  # noqa: E402
+import design_codes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
@@ -263,10 +264,10 @@ SHARED_CODES = ("NO_SIM_TOML", "FIRMWARE_LINE_BAD", "NO_IMAGE", "LOG_UNREADABLE"
 class TheBenchCodesTableTest(unittest.TestCase):
     """P433: every code that look.py and deploy.py write is in board_codes.CODES or the core's codes.CODES (P442), which say
     it in one sentence. P684: the firmware's are in firmware_codes.CODES. P692: the breadboard sheet's in
-    breadboard_codes.CODES. P693: the checks' in check_codes.CODES."""
+    breadboard_codes.CODES. P693: the checks' in check_codes.CODES. P700: the design's in design_codes.CODES."""
 
     def test_the_tables_hold_each_constant_of_their_module_once_with_a_sentence_and_share_no_code(self):
-        for module in (board_codes, codes, firmware_codes, breadboard_codes, check_codes):
+        for module in (board_codes, codes, firmware_codes, breadboard_codes, check_codes, design_codes):
             constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)}
             self.assertEqual(sorted(constants.values()), sorted(module.CODES))
             sentences = list(module.CODES.values())
@@ -277,6 +278,11 @@ class TheBenchCodesTableTest(unittest.TestCase):
         self.assertEqual(set(breadboard_codes.CODES) & (set(codes.CODES) | set(firmware_codes.CODES)), set())
         self.assertEqual(set(check_codes.CODES) & (set(board_codes.CODES) | set(codes.CODES) | set(firmware_codes.CODES)
                                                    | set(breadboard_codes.CODES)), set())
+        self.assertEqual(set(design_codes.CODES) & (set(board_codes.CODES) | set(codes.CODES) | set(firmware_codes.CODES)
+                                                    | set(breadboard_codes.CODES)), set())
+        # P700: a refused rules file is one code in design_codes and check_codes, an equal literal with the same meaning
+        self.assertEqual(sorted(set(design_codes.CODES) & set(check_codes.CODES)), ["rules_refused"])
+        self.assertEqual(design_codes.CODES["rules_refused"], check_codes.CODES["rules_refused"])
         # P692: a store problem is one code in both leaves, an equal literal with the same meaning
         self.assertEqual(sorted(set(breadboard_codes.CODES) & set(board_codes.CODES)), ["store_problem"])
         self.assertEqual(breadboard_codes.CODES["store_problem"], board_codes.CODES["store_problem"])

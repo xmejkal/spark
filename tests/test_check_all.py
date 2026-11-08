@@ -948,7 +948,7 @@ class OneModulePerProcessTest(unittest.TestCase):
     def test_the_placeholder_list_uses_the_design_module_everyone_else_imports(self):
         root = Path(tempfile.mkdtemp())
         (root / "car.requirements.json").write_text(json.dumps({"parts": []}))
-        with mock.patch.object(design, "parts_of", side_effect=design.DesignError("patched")):
+        with mock.patch.object(design, "parts_of", side_effect=design.DesignError("patched", code="part_unusable")):
             names, notes = check.placeholder_components_in(root)
         self.assertEqual(names, ())
         self.assertEqual(len(notes), 1, notes)

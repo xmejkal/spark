@@ -253,7 +253,7 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
 
     def test_the_errors_from_outside_each_have_their_own(self):
         self.assertEqual(sheet.refusal_code(sheet.NotBuilt("not built", "build_failed")), "build_failed")
-        self.assertEqual(sheet.refusal_code(design.DesignError("no part %s", "x")), "requirements_unusable")
+        self.assertEqual(sheet.refusal_code(design.DesignError("no part %s", "x", code="part_unusable")), "requirements_unusable")
         self.assertEqual(sheet.refusal_code(store.StoreProblem("the store")), "store_problem")
         self.assertEqual(sheet.refusal_code(PermissionError("breadboard.md")), "file_unusable")
 
