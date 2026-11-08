@@ -907,7 +907,7 @@ class TheCheckListItselfTest(unittest.TestCase):
         #                 it is about this repository, not about any design.
         #   check_codes — the leaf of the checks' refusal codes (P693): a table, not a check.
         NOT_A_CHECK = {"check_all", "check_spine", "check_commit", "check_codes"}
-        MOVED = {"check_footprints": "build_check"}
+        MOVED = {"check_footprints": "build_check", "check_physics": "physics_check"}
         on_disk = {MOVED.get(path.stem, path.stem) for path in (ROOT / "scripts").glob("check_*.py")} - NOT_A_CHECK
         on_disk |= {"compare_design"}
 

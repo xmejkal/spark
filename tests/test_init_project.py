@@ -30,7 +30,7 @@ from board_library import board_missing  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import check_physics  # noqa: E402
+from spark.checks import physics_check  # noqa: E402
 import init_project  # noqa: E402
 import store  # noqa: E402
 
@@ -195,7 +195,7 @@ class WhatItRefusesToGuessTest(unittest.TestCase):
         # The reason nulls are safe, asserted rather than assumed. If a null ever became a pass,
         # this whole design would be worse than writing a plausible number.
         circuit = json.loads((self.root / "dist" / "board" / "circuit.json").read_text())
-        findings = check_physics.run(circuit, self.rules)
+        findings = physics_check.run(circuit, self.rules)
         self.assertTrue(findings, "a design with no stated currents was reported as fine")
         self.assertTrue(all(f.severity != "problem" for f in findings))
 

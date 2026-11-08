@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.checks import build_check  # noqa: E402
 import check_physics  # noqa: E402
+from spark.checks import physics_check  # noqa: E402
 
 
 def component(name, ftype, **fields):
@@ -69,26 +70,26 @@ class TheArithmeticItself(unittest.TestCase):
 
     def test_the_i2c_rise_constant_is_measured_between_0_3_and_0_7_of_the_supply(self):
         # NOT ln(1/(1-0.7)) = 1.204, which measures from zero and overstates every rise by 42%.
-        self.assertAlmostEqual(check_physics.I2C_RISE_CONSTANT, math.log(0.7 / 0.3), places=6)
-        self.assertAlmostEqual(check_physics.I2C_RISE_CONSTANT, 0.8473, places=3)
+        self.assertAlmostEqual(physics_check.I2C_RISE_CONSTANT, math.log(0.7 / 0.3), places=6)
+        self.assertAlmostEqual(physics_check.I2C_RISE_CONSTANT, 0.8473, places=3)
 
     def test_trace_capacity_and_required_width_are_inverses(self):
         for current in (0.25, 1.0, 2.5):
-            width = check_physics.width_for_current_mm(current, 10)
+            width = physics_check.width_for_current_mm(current, 10)
             self.assertAlmostEqual(
-                check_physics.trace_current_capacity_a(width, 10), current, places=4,
+                physics_check.trace_current_capacity_a(width, 10), current, places=4,
                 msg="width_for_current_mm(%s) does not carry %s A" % (current, current))
 
     def test_a_wider_trace_carries_more_and_a_hotter_one_carries_more(self):
-        self.assertGreater(check_physics.trace_current_capacity_a(1.0, 10),
-                           check_physics.trace_current_capacity_a(0.15, 10))
-        self.assertGreater(check_physics.trace_current_capacity_a(0.5, 20),
-                           check_physics.trace_current_capacity_a(0.5, 10))
+        self.assertGreater(physics_check.trace_current_capacity_a(1.0, 10),
+                           physics_check.trace_current_capacity_a(0.15, 10))
+        self.assertGreater(physics_check.trace_current_capacity_a(0.5, 20),
+                           physics_check.trace_current_capacity_a(0.5, 10))
 
     def test_the_default_trace_width_carries_well_under_an_amp(self):
         # 0.15 mm is what an autorouter leaves you if nobody says otherwise, and the whole point
         # of this check is that it is not a motor supply. IPC-2221 puts it near 0.6 A.
-        self.assertLess(check_physics.trace_current_capacity_a(0.15, 10), 0.7)
+        self.assertLess(physics_check.trace_current_capacity_a(0.15, 10), 0.7)
 
 
 class TraceCurrentTest(unittest.TestCase):
@@ -96,7 +97,7 @@ class TraceCurrentTest(unittest.TestCase):
         circuit = [net("MOTOR6V"), port("Load", "VCC"), component("Load", "simple_chip")]
         circuit += trace("MOTOR6V", ["Load.VCC"], widths)
         rules = {"physics": {"rails": {"MOTOR6V": dict({"max_current_a": current}, **rail)}}}
-        return check_physics.run(circuit, rules)
+        return physics_check.run(circuit, rules)
 
     def test_a_rail_thinner_than_its_current_is_caught(self):
         findings = self._board([0.15], 1.5)
@@ -127,7 +128,7 @@ class ARefusalIsNotAPass(unittest.TestCase):
 
     def test_an_unmeasured_rail_is_reported_rather_than_assumed_safe(self):
         circuit = [net("MOTOR6V")] + trace("MOTOR6V", [], [0.15])
-        findings = check_physics.run(
+        findings = physics_check.run(
             circuit, {"physics": {"rails": {"MOTOR6V": {"max_current_a": None}}}})
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].severity, "needs-measurement")
@@ -135,7 +136,7 @@ class ARefusalIsNotAPass(unittest.TestCase):
 
     def test_a_rail_with_no_copper_at_all_is_still_reported_per_rail(self):
         # Nothing routed used to abandon the whole check, which preempted every rule below it.
-        findings = check_physics.run(
+        findings = physics_check.run(
             [net("MOTOR6V")], {"physics": {"rails": {"MOTOR6V": {"max_current_a": 1.0}}}})
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].severity, "needs-measurement")
@@ -143,13 +144,13 @@ class ARefusalIsNotAPass(unittest.TestCase):
 
     def test_an_unmeasured_rail_does_not_fail_the_build(self):
         circuit = [net("MOTOR6V")] + trace("MOTOR6V", [], [0.15])
-        findings = check_physics.run(
+        findings = physics_check.run(
             circuit, {"physics": {"rails": {"MOTOR6V": {"max_current_a": None}}}})
         self.assertEqual([f for f in findings if f.severity == "problem"], [])
 
     def test_a_rail_served_by_a_pour_is_recorded_as_unchecked_not_as_clean(self):
         circuit = [net("GND")]
-        findings = check_physics.run(circuit, {"physics": {"rails": {
+        findings = physics_check.run(circuit, {"physics": {"rails": {
             "GND": {"max_current_a": 1.5, "served_by_pour": True}}}})
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].severity, "needs-measurement")
@@ -167,7 +168,7 @@ class CapacitorVoltageTest(unittest.TestCase):
         circuit = [net("MOTOR6V"), component("Bulk", "simple_capacitor", **fields),
                    port("Bulk", "pin1")]
         circuit += trace("MOTOR6V", ["Bulk.pin1"])
-        findings = check_physics.run(circuit, {"physics": {"rails": {"MOTOR6V": {
+        findings = physics_check.run(circuit, {"physics": {"rails": {"MOTOR6V": {
             "nominal_volts": volts, "capacitor_chemistry": chemistry}}}})
         return [f for f in findings if f.rule == "capacitor-voltage"]
 
@@ -186,8 +187,8 @@ class CapacitorVoltageTest(unittest.TestCase):
 
     def test_a_tantalum_is_derated_harder_than_a_ceramic(self):
         # A tantalum above its rating fails SHORT, which across a battery pack is a fire.
-        self.assertGreater(check_physics.VOLTAGE_DERATING["tantalum"],
-                           check_physics.VOLTAGE_DERATING["ceramic"])
+        self.assertGreater(physics_check.VOLTAGE_DERATING["tantalum"],
+                           physics_check.VOLTAGE_DERATING["ceramic"])
         self.assertEqual(self._rail_with_cap(10.0, chemistry="ceramic"), [])
         self.assertEqual(len(self._rail_with_cap(10.0, chemistry="tantalum")), 1)
 
@@ -223,7 +224,7 @@ class ResistorPowerTest(unittest.TestCase):
         rail = {"max_current_a": current}
         if state_it:
             rail["resistor_currents"] = {"Shunt": current}
-        return check_physics.run(circuit, {"physics": {"rails": {"MOTOR6V": rail}}})
+        return physics_check.run(circuit, {"physics": {"rails": {"MOTOR6V": rail}}})
 
     def test_a_shunt_beyond_its_package_rating_is_caught(self):
         findings = [f for f in self._shunt(0.33, "res0805", 2.0) if f.rule == "resistor-power"]
@@ -249,12 +250,12 @@ class ResistorPowerTest(unittest.TestCase):
         circuit = [component("R1", "simple_resistor", resistance=100),
                    {"type": "cad_component", "source_component_id": "R1",
                     "footprinter_string": "res0603"}]
-        self.assertEqual(check_physics.Board(circuit).footprint_of("R1"), "res0603")
+        self.assertEqual(physics_check.Board(circuit).footprint_of("R1"), "res0603")
 
     def test_the_package_table_matches_what_the_engine_emits(self):
         # Keyed "0603" and matched with startswith against "res0603", which can never be true.
-        self.assertEqual(check_physics.package_of("res0603"), "0603")
-        self.assertIn(check_physics.package_of("res0603"), check_physics.PACKAGE_POWER_W)
+        self.assertEqual(physics_check.package_of("res0603"), "0603")
+        self.assertIn(physics_check.package_of("res0603"), physics_check.PACKAGE_POWER_W)
 
 
 def rail_held_at(volts, verified=True, who="Mcu.3V3"):
@@ -280,8 +281,8 @@ class TheWholeRailAcrossAResistorTest(unittest.TestCase):
                     "footprinter_string": footprint}]
         circuit += trace("V33", ["Pullup.pin1"], [0.25])
         circuit += list(more)
-        board = check_physics.Board(circuit)
-        return check_physics.check_resistor_power(board, rails, loads, bus_nets)
+        board = physics_check.Board(circuit)
+        return physics_check.check_resistor_power(board, rails, loads, bus_nets)
 
     def severities(self, findings):
         return [f.severity for f in findings]
@@ -360,7 +361,7 @@ class TheWholeRailAcrossAResistorTest(unittest.TestCase):
         circuit = [net("GND"), component("Shunt", "simple_resistor", resistance=1), port("Shunt", "pin1"),
                    {"type": "cad_component", "source_component_id": "Shunt", "footprinter_string": "res0603"}]
         circuit += trace("GND", ["Shunt.pin1"], [0.25])
-        findings = check_physics.check_resistor_power(check_physics.Board(circuit), {"GND": {}}, {})
+        findings = physics_check.check_resistor_power(physics_check.Board(circuit), {"GND": {}}, {})
         self.assertEqual(self.severities(findings), ["could-not-run"])
 
     def test_a_resistor_between_two_rails_is_judged_once(self):
@@ -412,14 +413,14 @@ class AnEmptyRulesFileIsNotACleanBoardTest(unittest.TestCase):
     """
 
     def test_no_rails_stated_is_reported_not_passed(self):
-        findings = check_physics.run([net("V33")], {"physics": {"rails": {}}})
+        findings = physics_check.run([net("V33")], {"physics": {"rails": {}}})
         rails = [f for f in findings if f.rule == "rails-not-stated"]
         self.assertEqual(len(rails), 1, findings)
         self.assertEqual(rails[0].severity, "could-not-run")
         self.assertIn("three of this tool's five rules", rails[0].detail)
 
     def test_a_board_with_an_i2c_bus_and_no_clock_is_reported(self):
-        findings = check_physics.run([net("SDA"), net("SCL")], {"physics": {"rails": {}}})
+        findings = physics_check.run([net("SDA"), net("SCL")], {"physics": {"rails": {}}})
         i2c = [f for f in findings if f.rule == "i2c-rise-time"]
         self.assertEqual(len(i2c), 1, findings)
         self.assertEqual(i2c[0].severity, "could-not-run")
@@ -428,7 +429,7 @@ class AnEmptyRulesFileIsNotACleanBoardTest(unittest.TestCase):
         # The first version of this fix asked every board about I2C, including boards with none
         # — while its own remedy text said an empty list should stop it asking. A check that
         # nags about what is not there is how a check earns a reputation for noise.
-        findings = check_physics.run([net("V33")], {"physics": {"rails": {}}})
+        findings = physics_check.run([net("V33")], {"physics": {"rails": {}}})
         self.assertEqual([f for f in findings if f.rule == "i2c-rise-time"], [])
 
 
@@ -439,7 +440,7 @@ class I2cRiseTimeTest(unittest.TestCase):
             name = "Pullup%d" % index
             circuit += [component(name, "simple_resistor", resistance=value), port(name, "pin1")]
             circuit += trace("SDA", ["%s.pin1" % name], trace_id="t%d" % index)
-        findings = check_physics.run(circuit, {"i2c_buses": ["SDA"], "physics": {
+        findings = physics_check.run(circuit, {"i2c_buses": ["SDA"], "physics": {
             "i2c_hz": bus_hz, "i2c_bus_capacitance_pf": capacitance_pf, "rails": {}}})
         return [f for f in findings if f.rule == "i2c-rise-time"]
 
@@ -463,7 +464,7 @@ class OneCopyOfPackageOfTest(unittest.TestCase):
     def test_package_of_is_check_footprints_own_function_not_a_copy(self):
         # Audit A7: loaded by file path, `check_footprints` was instantiated a second time and
         # `package_of` here was a different function object from the one every test of it runs.
-        self.assertIs(check_physics.package_of, build_check.package_of)
+        self.assertIs(physics_check.package_of, build_check.package_of)
 
 
 class EachRuleHasANameTest(unittest.TestCase):
@@ -474,25 +475,25 @@ class EachRuleHasANameTest(unittest.TestCase):
     """
 
     def test_i2c_rise_time_with_a_bus_speed_it_has_no_limit_for_is_could_not_run(self):
-        findings = check_physics.check_i2c_rise_time(check_physics.Board([]), {}, 123456, 100)
+        findings = physics_check.check_i2c_rise_time(physics_check.Board([]), {}, 123456, 100)
         self.assertEqual([f.severity for f in findings], ["could-not-run"])
         self.assertIn("no rise-time limit known", findings[0].detail)
 
     def test_trace_currents_with_no_rails_stated_finds_nothing_and_says_nothing(self):
         # Nothing was asked, so nothing is answered — `check_all` reports the unasked separately.
-        self.assertEqual(check_physics.check_trace_currents(check_physics.Board([]), {}, 10), [])
+        self.assertEqual(physics_check.check_trace_currents(physics_check.Board([]), {}, 10), [])
 
     def test_trace_currents_for_a_rail_with_no_trace_does_not_pass_it(self):
         rails = {"X": {"max_current_a": 1.0}}
-        findings = check_physics.check_trace_currents(check_physics.Board([]), rails, 10)
+        findings = physics_check.check_trace_currents(physics_check.Board([]), rails, 10)
         self.assertTrue(findings, "a rail with a stated current and no copper was passed in silence")
         self.assertNotEqual(findings[0].severity, "problem")   # it could not measure, it did not fail it
 
     def test_capacitor_voltages_with_no_rails_finds_nothing(self):
-        self.assertEqual(check_physics.check_capacitor_voltages(check_physics.Board([]), {}), [])
+        self.assertEqual(physics_check.check_capacitor_voltages(physics_check.Board([]), {}), [])
 
     def test_resistor_power_with_no_resistors_finds_nothing(self):
-        self.assertEqual(check_physics.check_resistor_power(check_physics.Board([]), {}), [])
+        self.assertEqual(physics_check.check_resistor_power(physics_check.Board([]), {}), [])
 
 
 class TheExitCodeFollowsTheFindingsTest(unittest.TestCase):
@@ -564,31 +565,31 @@ class CanTheSupplyCarryItTest(unittest.TestCase):
     """
 
     def test_a_rail_drawing_more_than_its_source_is_rated_for_is_a_problem(self):
-        findings = check_physics.check_rail_supply({"SERVO": summed(3.4)})
+        findings = physics_check.check_rail_supply({"SERVO": summed(3.4)})
         self.assertEqual([f.severity for f in findings], ["problem"])
         self.assertIn("3.40 A", findings[0].detail)
         self.assertIn("3.00 A", findings[0].detail)
         self.assertIn("Buck.VOUT", findings[0].detail)
 
     def test_a_load_nobody_stated_is_named_and_the_rest_is_still_summed(self):
-        findings = check_physics.check_rail_supply(
+        findings = physics_check.check_rail_supply(
             {"V33": summed(0.37, missing=["Soil1.VCC: operating_current_ma is not stated"])})
         self.assertEqual([f.severity for f in findings], ["could-not-run"])
         self.assertIn("Soil1.VCC", findings[0].detail)
         self.assertIn("at least 370 mA", findings[0].detail, "under an amp, in milliamps")
 
     def test_an_open_rail_already_over_its_rating_is_still_a_problem(self):
-        findings = check_physics.check_rail_supply(
+        findings = physics_check.check_rail_supply(
             {"SERVO": summed(3.4, missing=["Mute.VCC: names no fact for its current"])})
         self.assertEqual(findings[0].severity, "problem", "the unknown can only make it worse")
 
     def test_a_source_with_no_stated_rating_cannot_be_judged(self):
-        findings = check_physics.check_rail_supply({"SERVO": summed(0.7, rating=None)})
+        findings = physics_check.check_rail_supply({"SERVO": summed(0.7, rating=None)})
         self.assertEqual([f.severity for f in findings], ["could-not-run"])
         self.assertIn("Buck.VOUT", findings[0].detail)
 
     def test_a_sum_that_fits_on_figures_nobody_verified_says_what_it_rests_on(self):
-        findings = check_physics.check_rail_supply(
+        findings = physics_check.check_rail_supply(
             {"SERVO": summed(1.06, unverified=["Sg90Servo.VCC: stall_current_ma"],
                              rating_verified=False)})
         self.assertEqual([f.severity for f in findings], ["needs-measurement"])
@@ -597,26 +598,26 @@ class CanTheSupplyCarryItTest(unittest.TestCase):
         self.assertIn("1.06 A of 3.00 A", findings[0].detail)
 
     def test_a_verified_sum_within_a_verified_rating_says_nothing(self):
-        self.assertEqual(check_physics.check_rail_supply({"V5V": summed(0.4)}), [])
+        self.assertEqual(physics_check.check_rail_supply({"V5V": summed(0.4)}), [])
 
     def test_a_rail_with_no_single_source_is_left_to_the_generator_that_reports_it(self):
         rail = dict(summed(0.4), supply=None)
-        self.assertEqual(check_physics.check_rail_supply({"MOTOR6V": rail}), [])
+        self.assertEqual(physics_check.check_rail_supply({"MOTOR6V": rail}), [])
 
     def test_run_judges_the_records_when_it_is_given_them_and_not_otherwise(self):
         rules = {"physics": {"rails": {"SERVO": {"max_current_a": 1.0}}}}
         circuit = [net("SERVO")]
-        with_records = check_physics.run(circuit, rules, loads={"SERVO": summed(3.4)})
+        with_records = physics_check.run(circuit, rules, loads={"SERVO": summed(3.4)})
         self.assertIn("rail-supply", [f.rule for f in with_records])
-        self.assertNotIn("rail-supply", [f.rule for f in check_physics.run(circuit, rules)])
+        self.assertNotIn("rail-supply", [f.rule for f in physics_check.run(circuit, rules)])
 
 
 class CurrentIsWrittenSoASmallOneIsReadableTest(unittest.TestCase):
     def test_under_an_amp_is_milliamps_and_over_is_amps(self):
         # "0.01 A" was a 15 mA flow meter on the irrigation board's first run.
-        self.assertEqual(check_physics.current_text(0.015), "15 mA")
-        self.assertEqual(check_physics.current_text(0.355), "355 mA")
-        self.assertEqual(check_physics.current_text(3.4), "3.40 A")
+        self.assertEqual(physics_check.current_text(0.015), "15 mA")
+        self.assertEqual(physics_check.current_text(0.355), "355 mA")
+        self.assertEqual(physics_check.current_text(3.4), "3.40 A")
 
 
 class TheRecordsFillAnUnstatedRailTest(unittest.TestCase):
@@ -626,7 +627,7 @@ class TheRecordsFillAnUnstatedRailTest(unittest.TestCase):
         circuit = [net("SERVO"), port("Load", "VCC"), component("Load", "simple_chip")]
         circuit += trace("SERVO", ["Load.VCC"], [0.15])
         rails = {"SERVO": {"max_current_a": stated}}
-        return check_physics.check_trace_currents(check_physics.Board(circuit), rails, 10, loads)
+        return physics_check.check_trace_currents(physics_check.Board(circuit), rails, 10, loads)
 
     def test_a_null_rail_is_judged_by_the_sum_its_records_give(self):
         findings = self._judge(None, {"SERVO": summed(1.5)})
@@ -655,25 +656,25 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
     """
 
     def _misspelt(self):
-        return check_physics.Finding("rail-current", "V33", "too thin", severity="problems")
+        return physics_check.Finding("rail-current", "V33", "too thin", severity="problems")
 
     def test_a_misspelt_severity_becomes_could_not_run_naming_the_rule_and_the_word(self):
         finding = self._misspelt()
-        self.assertEqual(finding.severity, check_physics.COULD_NOT_RUN)
+        self.assertEqual(finding.severity, physics_check.COULD_NOT_RUN)
         self.assertIn("rail-current", finding.detail)
         self.assertIn("'problems'", finding.detail)
 
     def test_the_rendered_text_shows_the_misspelt_finding_under_could_not_run(self):
         result = {"status": "could-not-run", "design": "d",
                   "findings": [self._misspelt().as_data()]}
-        rendered = check_physics.render(result)
+        rendered = physics_check.render(result)
         self.assertIn("1 could-not-run", rendered)
         self.assertIn("rail-current", rendered)
 
     def test_the_rendered_text_has_a_section_for_each_of_the_three_severities(self):
-        findings = [check_physics.Finding("r%d" % i, "s", "d", severity=word).as_data()
+        findings = [physics_check.Finding("r%d" % i, "s", "d", severity=word).as_data()
                     for i, word in enumerate(("problem", "needs-measurement", "could-not-run"))]
-        rendered = check_physics.render({"status": "problems", "design": "d", "findings": findings})
+        rendered = physics_check.render({"status": "problems", "design": "d", "findings": findings})
         for word in ("1 problem:", "1 needs-measurement:", "1 could-not-run:"):
             self.assertIn(word, rendered)
 
@@ -737,20 +738,20 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
         root = Path(tempfile.mkdtemp())
         (root / "circuit.json").write_text(json_module.dumps([net("V33")]))
         (root / "rules.json").write_text("{}")
-        original = check_physics.run
-        check_physics.run = lambda circuit, rules, loads=None: [self._misspelt()]
+        original = physics_check.run
+        physics_check.run = lambda circuit, rules, loads=None: [self._misspelt()]
         try:
             chosen = next(c for c in check_all.CHECKS if c.name == "physics")
             result = chosen.run({"circuit": str(root / "circuit.json"),
                                 "rules": str(root / "rules.json")})
         finally:
-            check_physics.run = original
+            physics_check.run = original
         self.assertEqual(result["status"], "could-not-run", result)
         self.assertIn("rail-current", json_module.dumps(result["unchecked"]))
 
     def test_every_severity_written_at_a_call_site_is_one_of_the_three(self):
         import re
-        source = (ROOT / "scripts" / "check_physics.py").read_text()
+        source = (ROOT / "scripts" / "spark" / "checks" / "physics_check.py").read_text()
         written = [m.group(2) for m in re.finditer(r"""severity=(["'])(.*?)\1""", source)]
         self.assertTrue(written, "the scan found no call site, so it checks nothing")
         for word in written:
@@ -765,12 +766,12 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
         import tempfile
         root = Path(tempfile.mkdtemp())
         circuit, rules = root / "circuit.json", root / "rules.json"
-        self.assertEqual(check_physics.rules_or_reason(circuit, rules)[1].code, "no_circuit")
+        self.assertEqual(physics_check.rules_or_reason(circuit, rules)[1].code, "no_circuit")
         circuit.write_text("[]")
-        _, missing = check_physics.rules_or_reason(circuit, rules)
+        _, missing = physics_check.rules_or_reason(circuit, rules)
         self.assertEqual((missing, missing.code), ("no rules at %s" % rules, "no_rules_file"))
         rules.write_text("[]")
-        _, refused = check_physics.rules_or_reason(circuit, rules)
+        _, refused = physics_check.rules_or_reason(circuit, rules)
         self.assertEqual((refused, refused.code), ("%s: (top level) is not an object" % rules, "rules_refused"))
 
 

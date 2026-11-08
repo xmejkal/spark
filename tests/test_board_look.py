@@ -964,8 +964,8 @@ class RenamesTest(unittest.TestCase):
             for node in ast.walk(ast.parse(each.read_text())):
                 named = node.name if isinstance(node, ast.ClassDef) else node.attr if isinstance(node, ast.Attribute) else \
                     node.id if isinstance(node, ast.Name) else None
-                # check_physics.py has a local variable named Reading, no class
-                if named in old and not (isinstance(node, ast.Name) and each.name == "check_physics.py"):
+                # physics_check.py has a local variable named Reading, no class
+                if named in old and not (isinstance(node, ast.Name) and each.name == "physics_check.py"):
                     self.fail("%s:%d still names %s" % (each.name, node.lineno, named))
         self.assertFalse(hasattr(board_look, "Report") or hasattr(board_look, "Look") or hasattr(board_look, "Reading"))
 

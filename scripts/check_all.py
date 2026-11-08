@@ -142,11 +142,11 @@ class RulesVsNetlist(Check):
 
 class Physics(Check):
     def call(self, inputs):
-        import check_physics
-        from check_physics import PROBLEM, NEEDS_MEASUREMENT
+        from spark.checks import physics_check
+        from spark.checks.physics_check import PROBLEM, NEEDS_MEASUREMENT
         circuit = circuit_of(inputs)
         loads, notes = rail_loads_in(inputs.get("project"), circuit)
-        findings = check_physics.run(circuit, fab.read_rules(inputs["rules"]), loads)  # --- MVP --- (P455)
+        findings = physics_check.run(circuit, fab.read_rules(inputs["rules"]), loads)  # --- MVP --- (P455)
 
         def of(severity):
             return ["%s: %s" % (f.subject, f.detail)

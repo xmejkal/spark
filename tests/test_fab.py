@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_footprints  # noqa: E402
 from spark.checks import build_check  # noqa: E402
-import check_physics  # noqa: E402
+from spark.checks import physics_check  # noqa: E402
 import copper  # noqa: E402
 import emit_board  # noqa: E402
 import emit_footprint  # noqa: E402
@@ -58,7 +58,7 @@ class OneTableNotTwoCopiesTest(unittest.TestCase):
     def test_both_checkers_judge_by_the_same_package_ratings(self):
         # They were two separate dicts. A package added to one was missing from the other and
         # nothing said so.
-        self.assertIs(build_check.PACKAGE_POWER_W, check_physics.PACKAGE_POWER_W)
+        self.assertIs(build_check.PACKAGE_POWER_W, physics_check.PACKAGE_POWER_W)
 
     def test_the_generator_and_the_checker_agree_about_vias(self):
         self.assertEqual((emit_board.VIA_HOLE_MM, emit_board.VIA_PAD_MM),
