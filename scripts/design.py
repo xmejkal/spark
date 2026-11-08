@@ -132,9 +132,24 @@ def read(path):
     parts = wanted.get("parts")  # --- MVP --- (P438): the same for `parts`, before any entry is walked
     if parts is not None and not isinstance(parts, list):
         raise DesignError('%s: parts is %s; write a list of part ids or {"part", "name"}', path, json_word(parts))
-    for index, signal in enumerate(signals or []):
-        # A signal with no name was a KeyError through both mains and "the chain is broken"
-        # through the spine (close audit C7). Checked where the file is read, like `parts`.
+    refuse_bad_signals(path, signals or [])
+    clash = names_that_are_one(wanted)
+    if clash:
+        # P163: OpenLid and Openlid are one signal to the build, so the generator traced two GPIOs to one pad with exit 0.
+        # Refused HERE, so the chain's first stage says so and nothing is emitted; both spellings, as the person wrote them.
+        first, first_name, second, second_name = clash
+        part = (wanted["parts"][second].get("part") if isinstance(wanted["parts"][second], dict) else None) or "…"
+        rule = ONE_NAME_RULE if first_name != second_name else SAME_NAME_RULE  # BtnLeft twice is not about capitals
+        raise DesignError('%s: parts[%d] is called %s and parts[%d] %s — %s; give one of them a name of its own, '
+                          '{"part": "%s", "name": …}', path, first, first_name, second, second_name, rule, part)
+    return wanted
+
+
+def refuse_bad_signals(path, signals):
+    """Each entry of `signals` as the file gives it: a DesignError for the first that is no signal with a name, needs that
+    are words, and a pin that is a name. A signal with no name was a KeyError through both mains and "the chain is broken"
+    through the spine (close audit C7), so it is checked where the file is read, like `parts`."""
+    for index, signal in enumerate(signals):
         if not isinstance(signal, dict) or not isinstance(signal.get("name"), str) or not signal["name"]:
             raise DesignError("%s: signals[%d] needs a `name`; a signal is {name, needs, pin?, bus?}",
                               path, index)
@@ -152,16 +167,6 @@ def read(path):
         if not re.fullmatch(parts_library.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
             raise DesignError("%s: signals[%d] is named %r, but a signal is a name — letters, digits and _ (LED_STATUS): the "
                               "pin map and the board name it, and firmware is written against it", path, index, signal["name"])
-    clash = names_that_are_one(wanted)
-    if clash:
-        # P163: OpenLid and Openlid are one signal to the build, so the generator traced two GPIOs to one pad with exit 0.
-        # Refused HERE, so the chain's first stage says so and nothing is emitted; both spellings, as the person wrote them.
-        first, first_name, second, second_name = clash
-        part = (wanted["parts"][second].get("part") if isinstance(wanted["parts"][second], dict) else None) or "…"
-        rule = ONE_NAME_RULE if first_name != second_name else SAME_NAME_RULE  # BtnLeft twice is not about capitals
-        raise DesignError('%s: parts[%d] is called %s and parts[%d] %s — %s; give one of them a name of its own, '
-                          '{"part": "%s", "name": …}', path, first, first_name, second, second_name, rule, part)
-    return wanted
 
 
 def project_for(path, project=None):
