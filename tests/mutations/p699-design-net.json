@@ -19,6 +19,6 @@
 {"file": "scripts/emit_board.py", "name": "emit_board.main's no-pin_order sentence changed", "find": "\"no pin_order recorded for: %s\\n\"", "replace": "\"no pin order recorded for: %s\\n\""},
 {"file": "scripts/emit_footprint.py", "name": "emit_footprint's problems exit becomes could-not-run", "find": "return _report(args, EXIT_PROBLEMS, disagreement)", "replace": "return _report(args, EXIT_COULD_NOT_RUN, disagreement)"},
 {"file": "scripts/init_project.py", "name": "init_project's unreadable tools list sentence changed", "find": "return Refusal(\"init_project.py: %s\" % broken, build_codes.TOOLS_FILE_UNREADABLE)", "replace": "return Refusal(\"init_project.py: the tools list: %s\" % broken, build_codes.TOOLS_FILE_UNREADABLE)"},
-{"file": "scripts/assign_pins.py", "name": "an Impossible sentence changed (a pin the board does not bring out)", "find": "which this board does not bring out\"", "replace": "which this board lacks\""},
+{"file": "scripts/spark/design/pin_assigner.py", "name": "an Impossible sentence changed (a pin the board does not bring out)", "find": "which this board does not bring out\"", "replace": "which this board lacks\""},
 {"file": "scripts/emit_board.py", "name": "emit_board.main's duplicate-name sentence changed", "find": "\"two or more components would be called: %s\\n\"", "replace": "\"two components would be called: %s\\n\""}
 ]

@@ -17,7 +17,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import netlist  # noqa: E402
+from spark.design import netlist  # noqa: E402
 
 
 def circuit(*, key="k1", name_the_trace=False):

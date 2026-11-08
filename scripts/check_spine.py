@@ -58,16 +58,16 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
-import assign_pins  # noqa: E402
+from spark.design import pin_assigner  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
 import build_codes  # noqa: E402
 from spark.breadboard import drawing, sheet, tabbed_page  # noqa: E402
-import design  # noqa: E402
+from spark.design import loader  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
 import needs  # noqa: E402
-import netlist  # noqa: E402
+from spark.design import netlist  # noqa: E402
 import onboard_parts  # noqa: E402
 import parts  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
@@ -94,7 +94,7 @@ CONVERTER_TIMEOUT_S = 120
 #: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
 PIN_MODULE = Path("firmware") / "pins.py"
 #: What stops the pin map from being written: no pin can be placed, or the design, the store or a file cannot be read.
-PIN_MAP_REFUSALS = (assign_pins.Impossible, design.DesignError, store.StoreProblem, OSError, ValueError)
+PIN_MAP_REFUSALS = (pin_assigner.Impossible, loader.DesignError, store.StoreProblem, OSError, ValueError)
 
 #: The stage that reads the requirements file; its detail is why a refused file built nothing (P280).
 REQUIREMENTS_STAGE = "requirements"
@@ -397,8 +397,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # The design's own part records, so the build stage below can ask whether the circuit honoured what they state.
     # `emit_board` reads the same records; if that succeeded, this cannot fail for a reason not already told.
     try:
-        part_list = design.parts_of(requirements, project)
-    except design.DesignError as broken:
+        part_list = loader.parts_of(requirements, project)
+    except loader.DesignError as broken:
         return stages + [Stage("parts", COULD_NOT_RUN, str(broken), broken.code)]
 
     # --- MVP --- the input is read, the pins are placed and the footprint is asked for, in the one order `emit_board.read_inputs`
@@ -520,7 +520,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
 
     # What stands in for each part comes from the records (P31), not from a table in the
     # converter's repo: a record that says nothing stops here, naming itself.
-    loaded = design.load(workdir / "requirements.json", None if from_library else project)
+    loaded = loader.load(workdir / "requirements.json", None if from_library else project)
     mapping, chips, unmapped = sim_project.mapping_for(loaded)
     if unmapped:
         return stages + [Stage("simulation", COULD_NOT_RUN, sim_project.unmapped_detail(unmapped), build_codes.SIMULATION_FACT_MISSING)]
@@ -660,7 +660,7 @@ def design_handed_to(workdir, project):
     chain that did not run end to end records nothing.
     """
     try:
-        return design.load(workdir / "requirements.json", project)
+        return loader.load(workdir / "requirements.json", project)
     except Exception:  # noqa: BLE001 — whatever is wrong with the input, `run` names it; only the record of the build goes without
         return None
 
@@ -711,12 +711,12 @@ def main(argv=None):
     # design belongs to its parts wherever it is typed; a file in no project is built from the plugin's library.
     source = Path(args.requirements).resolve() if args.requirements else None
     try:
-        requirements = design.read(source) if source else dict(REFERENCE)
-    except design.DesignError as broken:
+        requirements = loader.read(source) if source else dict(REFERENCE)
+    except loader.DesignError as broken:
         return report([Stage(REQUIREMENTS_STAGE, COULD_NOT_RUN, str(broken), broken.code)], args)
     # A file in no project is built from the plugin's library, and the board stage says so.
-    project = design.project_for(source) if source else None
-    from_library = bool(source) and design.is_library(project)
+    project = loader.project_for(source) if source else None
+    from_library = bool(source) and loader.is_library(project)
 
     workdir = Path(tempfile.mkdtemp(prefix="spark-spine-"))
     (workdir / "requirements.json").write_text(json.dumps(requirements))
@@ -951,12 +951,12 @@ def keep_pins(requirements, destination):
     cannot be placed: it describes another design. A `pins.py` spark did not write is left alone, as `board.tsx` is.
     """
     target = Path(destination) / PIN_MODULE
-    ours = target.is_file() and target.read_bytes().startswith(assign_pins.PIN_MODULE_HEADER.encode())
+    ours = target.is_file() and target.read_bytes().startswith(pin_assigner.PIN_MODULE_HEADER.encode())
     if target.exists() and not ours:
         why = "spark did not write it; delete it to have it written"
         return {"file": str(target), "did": "left alone", "why": why, "line": "left alone: %s (%s)" % (target, why)}
     try:
-        module = assign_pins.pin_module_for(str(requirements))
+        module = pin_assigner.pin_module_for(str(requirements))
     except PIN_MAP_REFUSALS as stopped:
         if ours:
             target.unlink()

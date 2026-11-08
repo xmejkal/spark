@@ -32,17 +32,17 @@ into records and sourcing would be a parameter with one value.
 
 | Module | Holds |
 |---|---|
-| `design/loader.py` | `load` and the `Design` Value, moved from `design.py` (the name avoids `design/design.py`) |
+| `design/loader.py` | `load` and the `Design` Value, moved from `design.py` in P702 (the name avoids `design/design.py`) |
 | `design/needs.py` | a goal's needs, matched against the store, the pick, moved from `scripts/needs.py` |
-| `design/restricted_pins.py` | `RestrictedPins`, moved as is |
-| `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` |
-| `design/netlist.py` | `Netlist`, moved as is |
+| `design/restricted_pins.py` | `RestrictedPins`, moved as is in P702 |
+| `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` in P702. The CLI `assign_pins.py` stays in `scripts/` and defines `main` only |
+| `design/netlist.py` | `Netlist`, moved as is in P702 |
 | `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `BoardInputs`, `RefusedInput`, `REFUSED_INPUT_MESSAGE` and the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE` |
 | `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, and `footprint_stop`, moved from `emit_footprint.py` and `boards.py` |
-| `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is |
+| `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is in P702 |
 | `design/design_codes.py` | the leaf of codes (P700): one per refusal of `load`, `assign_pins`, `emit_board` and `emit_footprint`, today `scripts/design_codes.py`. A `DesignError`, an `Impossible` and a `RefusedInput` carry a `code`, and `why_no_footprint`, `why_wrong_kind`, `why_header_disagrees`, `board_file` and `board_to_draw` return a `Refusal`. No CLI writes a code yet |
 | not here: `part_shape.py` | it goes to `breadboard/part_shape.py` (P698, the U1 edge) |
-| `design/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
+| `design/__init__.py` | the index docstring alone since P702: it imports nothing. The area's `OPERATIONS` come with the N19 card, one module per Operation, named after it |
 
 ### Its seams
 
@@ -110,10 +110,10 @@ classDiagram
   NeedsService ..> Design
 ```
 
-`Design` exists as a namedtuple (`design.Design`). `ImpossibleError` is today's `Impossible` (in `assign_pins.py`), and its class
+`Design` exists as a namedtuple (`loader.Design`). `ImpossibleError` is today's `Impossible` (in `pin_assigner.py`), and its class
 attribute `status` is `problems`, because the design asks for something the board cannot do.
 
-The pin map is written as MicroPython's `pins.py` today (`assign_pins.pin_module`). It stays in design until a second
+The pin map is written as MicroPython's `pins.py` today (`pin_assigner.pin_module`). It stays in design until a second
 platform exists. Then the text form moves behind a Renderer per platform, chosen by `Backends.platform`.
 
 ### The main flow: requirements to board file
@@ -149,4 +149,4 @@ sequenceDiagram
 - A new part is one record in `parts/`. The design reads its facts and needs no code.
 - A pin map for a second platform is a Renderer of `PinMap`, added with that platform.
 
-`assign_pins.ROLE_PENALTY` stays a named constant in `assign_pins.py` (the PO, epic #94, 2026-10-26: *"leta go with a then"*). The onboard roles live once in `boards.ONBOARD_ROLES`.
+`pin_assigner.ROLE_PENALTY` stays a named constant in `pin_assigner.py` (the PO, epic #94, 2026-10-26: *"leta go with a then"*). The onboard roles live once in `boards.ONBOARD_ROLES`.

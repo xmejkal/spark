@@ -60,13 +60,13 @@
   "replace": "sorted(set(boards.validate(record, path))"
  },
  {
-  "file": "scripts/assign_pins.py",
+  "file": "scripts/spark/design/pin_assigner.py",
   "name": "a level of a fact is written without saying it is not verified",
   "find": "\"\" if held.get(\"verified\") is True else \"; not verified\")\n                  if isinstance(held, dict)",
   "replace": "\"\")\n                  if isinstance(held, dict)"
  },
  {
-  "file": "scripts/assign_pins.py",
+  "file": "scripts/spark/design/pin_assigner.py",
   "name": "a level of a fact is written without its source",
   "find": "\"source: %s%s\" % (one_line(str(held.get(\"source\"))),",
   "replace": "\"source: %s%s\" % (\"\","

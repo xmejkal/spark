@@ -27,7 +27,7 @@ from pathlib import Path
 
 from spark.core.text_guards import ValueMessageError
 
-FILE = Path(__file__).resolve().parent.parent / "data" / "fabrication.json"
+FILE = Path(__file__).resolve().parents[3] / "data" / "fabrication.json"
 
 #: Keys beginning `//` are the prose beside each number — the repository's JSON comment
 #: convention, used by every board and part file — and are not values.

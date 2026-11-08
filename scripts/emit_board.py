@@ -36,11 +36,11 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
-import assign_pins  # noqa: E402
+from spark.design import pin_assigner  # noqa: E402
 import board_pads  # noqa: E402
-import fab  # noqa: E402
-import copper  # noqa: E402
-import design as design_library  # noqa: E402
+from spark.design import fab  # noqa: E402
+from spark.design import copper  # noqa: E402
+from spark.design import loader  # noqa: E402
 import design_codes  # noqa: E402
 import emit_footprint  # noqa: E402
 import parts as parts_library  # noqa: E402
@@ -75,7 +75,7 @@ KNOWN_RAIL_NETS = {"logic": "V33", "ground": "GND", "motor": "MOTOR6V", "speaker
 def net_name_for_rail(rail):
     """
     The net a rail's name means. ANY rail name is allowed — a name, of letters, digits and _, which `parts.validate`,
-    `boards.validate` and `design` hold a rail to: the board is written with it as code (P87's attribute half).
+    `boards.validate` and `loader` hold a rail to: the board is written with it as code (P87's attribute half).
 
     This was a closed dictionary of four, and a rail outside it returned None — which the power
     loops turned into `continue`, so the connection was silently not emitted. An RC car with a 5 V
@@ -340,15 +340,15 @@ def duplicate_component_names(part_list):
 
     The independent safety net for the defect above: whatever route a design takes to two components of one name, this
     catches it before anything is emitted. Two ways to be one name, two merges: an exact repeat is merged by
-    `tsci build`, which keeps one component; two spellings are merged by spark's own `design.signal_name`, which puts
+    `tsci build`, which keeps one component; two spellings are merged by spark's own `loader.signal_name`, which puts
     the instance in capitals, so `OpenLid` and `Openlid` were one signal, placed twice, and the generator traced two
     GPIOs to one pad — both chips emitted, exit 0 — while this compare, exact, saw two names (P163, #100). Compared as
-    the build tells names apart, `design.one_name`.
+    the build tells names apart, `loader.one_name`.
     """
     written, repeated = {}, set()  # {one name: [each spelling, once, as the design wrote it]}; the one names used twice
     for part in part_list:
         name = component_name(part)
-        one = design_library.one_name(name)
+        one = loader.one_name(name)
         if one in written:
             repeated.add(one)
             if name not in written[one]:
@@ -800,7 +800,7 @@ def signal_lines(part_list, assignments, pads):  # --- MVP --- (P512, #708) `pad
     wants = {}
     for part in part_list:
         for need in part.get("needs") or []:
-            wants[design_library.signal_name(part, need)] = signal_target(part, need)
+            wants[loader.signal_name(part, need)] = signal_target(part, need)
 
     lines = ["    {/* Signals, each on the pin assign_pins.py chose and for the reason it gave. */}"]
     unclaimed = []
@@ -1085,12 +1085,12 @@ def read_inputs(path, project, board_id=None):
     the board record, because a person who fixed the board would meet the typo next (P407). Prints nothing.
     """
     try:
-        design = design_library.load(path, project, board_id)
+        design = loader.load(path, project, board_id)
         board = design.board
         # The signals are the loader's — derived once, named per instance — so `assign_pins.py`
         # and this file cannot disagree about which signals a design has.
-        assignments, _ = assign_pins.assign(board, design.signals)
-    except (design_library.DesignError, assign_pins.Impossible) as broken:
+        assignments, _ = pin_assigner.assign(board, design.signals)
+    except (loader.DesignError, pin_assigner.Impossible) as broken:
         # Everything wrong with the INPUT is could-not-run: the file was never a design. Reading
         # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
         # which reads as "problems found" to anything that knows three outcomes.
@@ -1167,8 +1167,8 @@ def main(argv=None):
     # Said only when the library was fallen into, not asked for: `check_spine` passes
     # `--project` to build the reference design from it on purpose, and it reads every
     # line here as a note about the design.
-    if not args.project and design_library.is_library(design.project):
-        print(design_library.LIBRARY_NOTE, file=sys.stderr)
+    if not args.project and loader.is_library(design.project):
+        print(loader.LIBRARY_NOTE, file=sys.stderr)
 
     text, refused = board_file(inputs, args.assume_missing_sizes)
     if refused:
@@ -1178,7 +1178,7 @@ def main(argv=None):
 
     # To stderr, so it is visible even when stdout is being redirected into a file.
     placed = {entry["signal"] for entry in assignments}
-    claimed = {design_library.signal_name(part, need)
+    claimed = {loader.signal_name(part, need)
                for part in part_list for need in part.get("needs") or []}
     for signal in sorted(placed - claimed):
         print("note: %s was assigned a pin and no part claims it, so nothing in the emitted "

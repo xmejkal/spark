@@ -37,7 +37,7 @@ from board_library import board_missing  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import assign_pins  # noqa: E402
+from spark.design import pin_assigner  # noqa: E402
 import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
@@ -130,8 +130,8 @@ class TheContractTest(unittest.TestCase):
 
     def test_the_assigner_reads_the_same_vocabulary_this_file_validates(self):
         # The disagreement is gone structurally, not by keeping two lists in step.
-        import assign_pins
-        self.assertIs(assign_pins.CAPABILITIES, parts.CAPABILITIES)
+        from spark.design import pin_assigner
+        self.assertIs(pin_assigner.CAPABILITIES, parts.CAPABILITIES)
 
     def test_a_placeholder_footprint_must_say_what_the_real_one_is(self):
         """
@@ -378,7 +378,7 @@ class FromPartsToAPinMapTest(unittest.TestCase):
             ["l9110s-module", "vl6180x-breakout", "dfr0534-module"])
 
     def test_every_signal_the_parts_ask_for_is_placed(self):
-        assignments, _ = assign_pins.assign(self.board, self.signals)
+        assignments, _ = pin_assigner.assign(self.board, self.signals)
         self.assertEqual({a["signal"] for a in assignments},
                          {s["name"] for s in self.signals})
 
@@ -386,18 +386,18 @@ class FromPartsToAPinMapTest(unittest.TestCase):
         # It went to two arbitrary GPIOs once, while the pin actually labelled SDA was given to
         # an analogue input. That is wrong twice: the bus loses its hardware peripheral, and the
         # silkscreen now lies about what is connected to it.
-        assignments, _ = assign_pins.assign(self.board, self.signals)
+        assignments, _ = pin_assigner.assign(self.board, self.signals)
         placed = {a["signal"]: a["pin"] for a in assignments}
         self.assertEqual(placed["SDA"], "SDA")
         self.assertEqual(placed["SCL"], "SCL")
 
     def test_the_sensor_interrupt_lands_somewhere_that_can_wake_the_chip(self):
-        assignments, _ = assign_pins.assign(self.board, self.signals)
+        assignments, _ = pin_assigner.assign(self.board, self.signals)
         interrupt = next(a for a in assignments if a["signal"] == "TOF_INT")
         self.assertIn(interrupt["gpio"], self.board["wake_capable_gpio"])
 
     def test_nothing_lands_on_a_strapping_pin(self):
-        assignments, _ = assign_pins.assign(self.board, self.signals)
+        assignments, _ = pin_assigner.assign(self.board, self.signals)
         strapping = set(self.board["pin_roles"]["strapping"]["gpio"])
         self.assertEqual([a for a in assignments if a["gpio"] in strapping], [])
 
@@ -409,19 +409,19 @@ class APwmPinTest(unittest.TestCase):
         self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
 
     def test_a_pwm_signal_is_placed_on_this_board(self):
-        placed, _ = assign_pins.assign(self.board, [{"name": "STEER", "needs": ["pwm"]}])
+        placed, _ = pin_assigner.assign(self.board, [{"name": "STEER", "needs": ["pwm"]}])
         self.assertEqual(len(placed), 1)
 
     def test_every_pin_offers_pwm_when_the_board_does_not_say_otherwise(self):
         # Deliberate: an ESP32 routes LEDC through a GPIO matrix, so any output pin can do it.
         # The default is a statement about the chips this tool targets, not an omission.
-        self.assertIn("pwm", assign_pins.capability_of(self.board, self.board["pins"]["D3"]))
+        self.assertIn("pwm", pin_assigner.capability_of(self.board, self.board["pins"]["D3"]))
 
     def test_a_board_that_LISTS_its_pwm_pins_is_believed_instead(self):
         # Most STM32 parts have a fixed timer map, and a servo must not land off it.
         limited = dict(self.board, pwm_gpio=[self.board["pins"]["D3"]])
-        self.assertIn("pwm", assign_pins.capability_of(limited, limited["pins"]["D3"]))
-        self.assertNotIn("pwm", assign_pins.capability_of(limited, limited["pins"]["D5"]))
+        self.assertIn("pwm", pin_assigner.capability_of(limited, limited["pins"]["D3"]))
+        self.assertNotIn("pwm", pin_assigner.capability_of(limited, limited["pins"]["D5"]))
 
 
 class ABusIsSpentLastTest(unittest.TestCase):
@@ -453,7 +453,7 @@ class ABusIsSpentLastTest(unittest.TestCase):
         three LEDs, never reached the tie, and passed with the penalty at zero.
         """
         signals = [{"name": "S%d" % i, "needs": []} for i in range(6)]
-        placed, _ = assign_pins.assign(self.board, signals)
+        placed, _ = pin_assigner.assign(self.board, signals)
         landed = {a["gpio"] for a in placed}
         self.assertEqual(len(placed), 6)
         self.assertEqual(landed & self.spi, set(), "a plain signal took a bus pin: %s" % placed)
@@ -467,7 +467,7 @@ class ABusIsSpentLastTest(unittest.TestCase):
         is cheaper than a scarce pin, by design), and the tenth must choose among the ADC1 pins.
         """
         ten = [{"name": "S%d" % i, "needs": []} for i in range(10)]
-        placed, _ = assign_pins.assign(self.board, ten)
+        placed, _ = pin_assigner.assign(self.board, ten)
         landed = {a["gpio"] for a in placed}
         self.assertEqual(len(placed), 10)
         self.assertTrue(landed & set(self.board["adc_gpio"]),
@@ -479,12 +479,12 @@ class ABusIsSpentLastTest(unittest.TestCase):
         # never make a plain signal waste an ability to avoid a bus. 15 broke this — two plain
         # signals sent onto ADC1 — and the ordering test below caught it; this pins the reason.
         for bus in ("spi", "i2c"):
-            self.assertGreater(assign_pins.ROLE_PENALTY[bus], 0, bus)
-            self.assertLess(assign_pins.ROLE_PENALTY[bus], assign_pins.CAPABILITY_COST, bus)
+            self.assertGreater(pin_assigner.ROLE_PENALTY[bus], 0, bus)
+            self.assertLess(pin_assigner.ROLE_PENALTY[bus], pin_assigner.CAPABILITY_COST, bus)
 
     def test_a_bus_signal_still_lands_on_its_own_pin(self):
         # The penalty must not push a real SPI signal off the pin it exists for.
-        placed, _ = assign_pins.assign(self.board, [{"name": "SCK", "bus": "spi", "needs": []}])
+        placed, _ = pin_assigner.assign(self.board, [{"name": "SCK", "bus": "spi", "needs": []}])
         self.assertEqual(placed[0]["pin"], "SCK")
 
     def test_a_bus_pin_is_still_available_when_nothing_else_is(self):
@@ -494,7 +494,7 @@ class ABusIsSpentLastTest(unittest.TestCase):
         # request is satisfiable. (My first version asked for 24 of a 23-pin board and blamed
         # the penalty for the refusal.)
         many = [{"name": "S%d" % i, "needs": []} for i in range(20)]
-        placed, _ = assign_pins.assign(self.board, many)
+        placed, _ = pin_assigner.assign(self.board, many)
         self.assertEqual(len(placed), 20)
         self.assertTrue({a["gpio"] for a in placed} & (self.spi | self.i2c),
                         "twenty plain signals were placed without touching a bus pin, which "
@@ -509,10 +509,10 @@ class ABusIsSpentLastTest(unittest.TestCase):
         pins and sent three LEDs onto the board's scarcest inputs; a test pinning the number
         against other roles passed throughout. This one would not have.
         """
-        pins = assign_pins.candidates(self.board)
+        pins = pin_assigner.candidates(self.board)
         plain, bus, scarce = pins["D3"], pins["SCK"], pins["A1"]
         def cost(pin):
-            return assign_pins._cost(pin, frozenset())
+            return pin_assigner._cost(pin, frozenset())
 
         self.assertLess(cost(plain), cost(bus))
         self.assertLess(cost(bus), cost(scarce))
@@ -528,7 +528,7 @@ class ABusIsSpentLastTest(unittest.TestCase):
         """
         signals = parts.signals_for(["l9110s-module", "vl6180x-breakout"]) + [
             {"name": "LED_%d" % i, "needs": []} for i in range(3)]
-        placed, _ = assign_pins.assign(self.board, signals)
+        placed, _ = pin_assigner.assign(self.board, signals)
         adc1 = set(self.board["adc_gpio"])
         plain = {s["name"] for s in signals if not s.get("bus") and not s.get("needs")}
         self.assertEqual({"MOTOR_IA", "MOTOR_IB", "LED_0", "LED_1", "LED_2"}, plain)

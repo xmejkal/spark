@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
 import check_spine  # noqa: E402
-import design  # noqa: E402
+from spark.design import loader  # noqa: E402
 import drawer  # noqa: E402
 import emit_board  # noqa: E402
 import needs  # noqa: E402
@@ -2138,7 +2138,7 @@ class TheRequirementsFileTest(unittest.TestCase):
                 said, _ = run(["--requirements", str(project)])
                 self.assertEqual((self.written(project)["parts"], said["data"]["kept"]),
                                  ([held, {"part": "tactile-button", "name": "Mode"}], []))
-                self.assertEqual(emit_board.duplicate_component_names(design.parts_of(self.written(project), project)), [])
+                self.assertEqual(emit_board.duplicate_component_names(loader.parts_of(self.written(project), project)), [])
 
     def test_an_entry_named_after_a_need_is_that_need_s_own(self):
         _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}])])

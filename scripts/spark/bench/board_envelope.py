@@ -14,7 +14,7 @@ from pathlib import Path
 from spark.bench import board_doctor
 import boards
 from spark.bench.deploy_stages import DeployPhase
-import design
+from spark.design import loader
 from spark.core import outcomes
 from spark.core.result import Finding, NextStep, OperationResult
 from spark.bench import ready_probe
@@ -63,8 +63,8 @@ WHY_FIRMWARE_NEXT = "first write firmware/main.py from pins.py"
 
 def firmware_next_steps(code_ok, requirements_file):
     """The `next` of a build's verdict: the look step with the firmware to write, or [] unless the build is ok in a real project."""
-    project = design.project_for(requirements_file) if requirements_file else None
-    return [look_step(project, None, why=WHY_FIRMWARE_NEXT)] if code_ok and project and not design.is_library(project) else []
+    project = loader.project_for(requirements_file) if requirements_file else None
+    return [look_step(project, None, why=WHY_FIRMWARE_NEXT)] if code_ok and project and not loader.is_library(project) else []
 
 
 def next_text(steps):

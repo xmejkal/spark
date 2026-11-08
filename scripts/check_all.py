@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import design  # noqa: E402
+from spark.design import loader  # noqa: E402
 from spark.checks.check import CheckedFolder, inputs_for, render, run, unmeasured_in, verdict  # noqa: E402
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_FOR  # noqa: E402
@@ -53,9 +53,9 @@ def main(argv=None):
         answer_json = {"tool": "check_all", "status": overall, "unmeasured": unmeasured_in(results),
                        "resolved": resolved, "results": results}
         if checked:
-            # the project the build reads (P319), resolved as `design.project_for` resolves it; null for none, never
+            # the project the build reads (P319), resolved as `loader.project_for` resolves it; null for none, never
             # the plugin's own folder
-            answer_json["project"] = None if design.is_library(checked.project) else str(checked.project.resolve())
+            answer_json["project"] = None if loader.is_library(checked.project) else str(checked.project.resolve())
         print(json.dumps(answer_json, indent=2))
     else:
         if resolved:

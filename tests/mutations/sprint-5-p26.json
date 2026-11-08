@@ -18,13 +18,13 @@
   "replace": "        if False:"
  },
  {
-  "file": "scripts/assign_pins.py",
+  "file": "scripts/spark/design/pin_assigner.py",
   "name": "a matrix-routed bus is refused again",
   "find": "        elif line == \"SS\" or not board_dedicates_pins_to(board, signal[\"bus\"]):",
   "replace": "        elif line == \"SS\":"
  },
  {
-  "file": "scripts/assign_pins.py",
+  "file": "scripts/spark/design/pin_assigner.py",
   "name": "the matrix is not mentioned in the reason",
   "find": "            why = (\"on the %s bus, which this board routes through its GPIO matrix rather than \"\n                   \"to labelled pins, so any pin serves; \" % signal[\"bus\"].upper()) + why",
   "replace": "            why = why"

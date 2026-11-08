@@ -177,7 +177,7 @@ def project_or_library(start: Path = None) -> Path:
 
     Every script raised "no project here" from a fresh directory while `check_spine` alone fell
     back to the library, so the documented steps could not be followed from nowhere (sprint-4
-    audit B5). Callers say so when they land on the library — see `design.is_library`.
+    audit B5). Callers say so when they land on the library — see `loader.is_library`.
     """
     try:
         return project_root(start)

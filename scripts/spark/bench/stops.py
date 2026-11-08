@@ -9,7 +9,7 @@ from spark.bench import board_look
 import boards
 import store
 import tools
-from restricted_pins import BrokenRecordError
+from spark.design.restricted_pins import BrokenRecordError
 from spark.core import outcomes
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_sentence

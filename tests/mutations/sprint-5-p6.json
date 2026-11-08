@@ -14,8 +14,8 @@
  {
   "file": "scripts/emit_board.py",
   "name": "the host's trace ignores the divider and lands on the pad",
-  "find": "            wants[design_library.signal_name(part, need)] = signal_target(part, need)",
-  "replace": "            wants[design_library.signal_name(part, need)] = (component_name(part), need[\"pin\"])"
+  "find": "            wants[loader.signal_name(part, need)] = signal_target(part, need)",
+  "replace": "            wants[loader.signal_name(part, need)] = (component_name(part), need[\"pin\"])"
  },
  {
   "file": "scripts/emit_board.py",

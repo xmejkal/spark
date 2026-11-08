@@ -28,9 +28,9 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import assign_pins  # noqa: E402
-import copper  # noqa: E402
-import design  # noqa: E402
+from spark.design import pin_assigner  # noqa: E402
+from spark.design import copper  # noqa: E402
+from spark.design import loader  # noqa: E402
 import board_pads  # noqa: E402
 import emit_board  # noqa: E402
 import emit_footprint  # noqa: E402
@@ -43,7 +43,7 @@ def generated():
     board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
     part_list = [parts.load(part_id) for part_id in PARTS]
     signals = parts.signals_for(PARTS)
-    assignments, _ = assign_pins.assign(board, signals)
+    assignments, _ = pin_assigner.assign(board, signals)
     placements, width, height = emit_board.place(board, part_list)
     return emit_board.emit(board, part_list, assignments, placements, width, height)
 
@@ -241,7 +241,7 @@ class ARecordsTextStaysInsideItsCommentTest(unittest.TestCase):
         led = parts.load("led-red-5mm")
         place(led, board)
         signals = [{"name": need["signal"], "needs": need.get("needs", []), "from": led["id"]} for need in led["needs"]]
-        assignments, _ = assign_pins.assign(board, signals)
+        assignments, _ = pin_assigner.assign(board, signals)
         placements, width, height = emit_board.place(board, [led])
         return emit_board.emit(board, [led], assignments, placements, width, height, {})
 
@@ -428,7 +428,7 @@ class ManyOfOnePartTest(unittest.TestCase):
             [self.button("BtnLeft"), self.button("BtnLeft")]), ["BtnLeft"])
 
     def test_two_names_that_differ_only_in_capitals_are_one_name_and_both_spellings_are_said(self):
-        # P163: `design.signal_name` puts the instance in capitals, so OpenLid and Openlid are one signal — two GPIOs were
+        # P163: `loader.signal_name` puts the instance in capitals, so OpenLid and Openlid are one signal — two GPIOs were
         # traced to one pad, exit 0. The refusal names what the person wrote, both ways.
         self.assertEqual(emit_board.duplicate_component_names(
             [self.button("OpenLid"), self.button("Openlid"), self.button("BtnMode")]), ["OpenLid / Openlid"])
@@ -441,16 +441,16 @@ class ManyOfOnePartTest(unittest.TestCase):
         # keyed by name then collapsed to whichever came last.
         left = self.button("BtnLeft")
         right = self.button("BtnRight")
-        self.assertEqual(design.signal_name(left, left["needs"][0]), "BTNLEFT_BUTTON")
-        self.assertEqual(design.signal_name(right, right["needs"][0]), "BTNRIGHT_BUTTON")
+        self.assertEqual(loader.signal_name(left, left["needs"][0]), "BTNLEFT_BUTTON")
+        self.assertEqual(loader.signal_name(right, right["needs"][0]), "BTNRIGHT_BUTTON")
 
     def test_an_unnamed_part_keeps_its_bare_signal_name(self):
         plain = self.button()
-        self.assertEqual(design.signal_name(plain, plain["needs"][0]), "BUTTON")
+        self.assertEqual(loader.signal_name(plain, plain["needs"][0]), "BUTTON")
 
     def test_a_bare_string_and_an_object_are_both_valid_entries(self):
         self.assertEqual(
-            design.requested_parts({"parts": ["l9110s-module",
+            loader.requested_parts({"parts": ["l9110s-module",
                                                   {"part": "tactile-button", "name": "BtnLeft"}]}),
             [("l9110s-module", None), ("tactile-button", "BtnLeft")])
 
@@ -551,7 +551,7 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
     def _emit(self, part_ids):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         part_list = [parts.load(part_id) for part_id in part_ids]
-        assignments, _ = assign_pins.assign(board, parts.signals_for(part_ids))
+        assignments, _ = pin_assigner.assign(board, parts.signals_for(part_ids))
         placements, width, height = emit_board.place(board, part_list)
         return emit_board.emit(board, part_list, assignments, placements, width, height)
 
@@ -607,7 +607,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
     def test_pads_are_numbered_from_the_module_not_from_the_file(self):
         part = parts.load("l9110s-module")
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        assignments, _ = assign_pins.assign(board, parts.signals_for(["l9110s-module"]))
+        assignments, _ = pin_assigner.assign(board, parts.signals_for(["l9110s-module"]))
         placements, width, height = emit_board.place(board, [part])
         tsx = emit_board.emit(board, [part], assignments, placements, width, height)
         # Off the silkscreen, confirmed four independent ways.
@@ -618,7 +618,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
         # The audio module has ten pads and wires five. Closing the gaps would put SPKN on pad 4.
         part = parts.load("dfr0534-module")
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        assignments, _ = assign_pins.assign(board, parts.signals_for(["dfr0534-module"]))
+        assignments, _ = pin_assigner.assign(board, parts.signals_for(["dfr0534-module"]))
         placements, width, height = emit_board.place(board, [part])
         tsx = emit_board.emit(board, [part], assignments, placements, width, height)
         self.assertIn('pin9: "SPKN", pin10: "SPKP"', tsx)
@@ -678,7 +678,7 @@ class EveryUnroutableNetIsPredictedTest(unittest.TestCase):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         ids = ["l9110s-module", "dfr0534-module"]
         part_list = [parts.load(part_id) for part_id in ids]
-        assignments, _ = assign_pins.assign(board, parts.signals_for(ids))
+        assignments, _ = pin_assigner.assign(board, parts.signals_for(ids))
         placements, width, height = emit_board.place(board, part_list)
         tsx = emit_board.emit(board, part_list, assignments, placements, width, height)
         self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", tsx)
@@ -707,7 +707,7 @@ class EverySignalTheAssignerPlacedIsAccountedForTest(unittest.TestCase):
         part_list = [parts.load("l9110s-module")]
         signals = parts.signals_for(["l9110s-module"]) + [
             {"name": "BTN_OPEN", "needs": ["wake"]}, {"name": "LED_RED", "needs": []}]
-        assignments, _ = assign_pins.assign(board, signals)
+        assignments, _ = pin_assigner.assign(board, signals)
         placements, width, height = emit_board.place(board, part_list)
         return assignments, emit_board.emit(
             board, part_list, assignments, placements, width, height)
@@ -903,7 +903,7 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertIn("Rails this design INVENTED", tsx)
 
     def test_the_signals_the_loader_derives_are_the_ones_traced(self):
-        # P20: the signals come from `design.load`, the same list `assign_pins.py` prints. A main
+        # P20: the signals come from `loader.load`, the same list `assign_pins.py` prints. A main
         # that traced anything else — or nothing — would still emit a file that builds.
         code, tsx, _ = self._main(["requirements.json"], self._project())
         self.assertEqual(code, emit_board.EXIT_OK)
@@ -1009,7 +1009,7 @@ class ReadInputsTest(unittest.TestCase):
         root = self.project({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]})
         inputs = emit_board.read_inputs(root / "requirements.json", root)
         self.assertEqual(inputs.design.board["id"], "firebeetle2-esp32s3")
-        expected, _ = assign_pins.assign(inputs.design.board, inputs.design.signals)
+        expected, _ = pin_assigner.assign(inputs.design.board, inputs.design.signals)
         self.assertEqual(inputs.assignments, expected)
         self.assertIn("MOTOR_IA", [entry["signal"] for entry in inputs.assignments])
 
@@ -1173,7 +1173,7 @@ class EachSectionStandsAloneTest(unittest.TestCase):
         board = self.BOARD
         part_list = [parts.load(part_id) for part_id in PARTS]
         part_list[1] = dict(part_list[1], footprint_placeholder=True, footprint_note="stand-in")
-        assignments, _ = assign_pins.assign(board, parts.signals_for(PARTS))
+        assignments, _ = pin_assigner.assign(board, parts.signals_for(PARTS))
         placements, width, height = emit_board.place(board, part_list)
         self.assertTrue(emit_board.stand_in_lines(part_list), "the fixture must have a stand-in")
         self.assertTrue(emit_board.host_requirement_lines(part_list),
@@ -1356,7 +1356,7 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
 
     def _emit(self, part, signals=()):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        assignments, _ = assign_pins.assign(board, list(signals))
+        assignments, _ = pin_assigner.assign(board, list(signals))
         placements, width, height = emit_board.place(board, [part])
         return emit_board.emit(board, [part], assignments, placements, width, height, {}), placements
 

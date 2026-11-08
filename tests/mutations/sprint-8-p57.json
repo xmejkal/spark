@@ -42,13 +42,13 @@
   "replace": "                      unmeasured=[])"
  },
  {
-  "file": "scripts/fab.py",
+  "file": "scripts/spark/design/fab.py",
   "name": "the generator draws to the bare minimum",
   "find": "    aim = max(process(\"recommended_annular_ring_mm\", rules), process(\"min_annular_ring_mm\", rules))",
   "replace": "    aim = process(\"min_annular_ring_mm\", rules)"
  },
  {
-  "file": "scripts/fab.py",
+  "file": "scripts/spark/design/fab.py",
   "name": "a project's stricter minimum is not what gets drawn",
   "find": "    aim = max(process(\"recommended_annular_ring_mm\", rules), process(\"min_annular_ring_mm\", rules))",
   "replace": "    aim = process(\"recommended_annular_ring_mm\", rules)"

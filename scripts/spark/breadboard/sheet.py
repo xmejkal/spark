@@ -9,9 +9,9 @@ import json
 import re
 from pathlib import Path
 
-import assign_pins
+from spark.design import pin_assigner
 import board_pads
-import design
+from spark.design import loader
 import drawer
 import emit_board
 import part_shape
@@ -67,7 +67,7 @@ class NotBuilt(Exception):
 
 # --- MVP ---
 #: Each error from outside that stops the sheet, with its code: the errors `main` catches, after a NotBuilt.
-OUTSIDE_CODES = {design.DesignError: breadboard_codes.REQUIREMENTS_UNUSABLE, store.StoreProblem: breadboard_codes.STORE_PROBLEM,
+OUTSIDE_CODES = {loader.DesignError: breadboard_codes.REQUIREMENTS_UNUSABLE, store.StoreProblem: breadboard_codes.STORE_PROBLEM,
                  OSError: breadboard_codes.FILE_UNUSABLE}
 REFUSALS = (NotBuilt, *OUTSIDE_CODES)
 
@@ -187,7 +187,7 @@ def _unwired(board, design):
     own = [signal for signal in design.signals if not signal.get("from")]
     if not own:
         return []
-    assignments, _ = assign_pins.assign(design.board, design.signals)
+    assignments, _ = pin_assigner.assign(design.board, design.signals)
     pads = board_pads.BoardPads.from_record(board)  # --- MVP --- (P512)
     return ["- %s: board %s, nothing wired to it yet (the requirements add this signal)"
             % (a["signal"], pads.pad_of(a["pin"])) for a in assignments if a["signal"] in {s["name"] for s in own}]
@@ -224,7 +224,7 @@ def _read_build(requirements_path, circuit_path=None):
     if not circuit_path.is_file():
         raise NotBuilt("nothing is built at %s yet: run `check_spine.py %s --keep .` first"
                        % (circuit_path, requirements_path.name), breadboard_codes.NOT_BUILT)
-    built = design.load(requirements_path)
+    built = loader.load(requirements_path)
     try:
         circuit = json.loads(circuit_path.read_text())
     except ValueError as broken:

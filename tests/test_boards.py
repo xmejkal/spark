@@ -580,8 +580,8 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
         # The other half of the same drift: a penalty keyed on a name no board file may carry is
         # a penalty that never fires, and it looks identical to one that does.
         sys.path.insert(0, str(ROOT / "scripts"))
-        import assign_pins  # noqa: E402,PLC0415 - here so this file stays standalone
-        priced = set(assign_pins.ROLE_PENALTY) | set(assign_pins.CONFLICTING_ROLES)
+        from spark.design import pin_assigner  # noqa: E402,PLC0415 - here so this file stays standalone
+        priced = set(pin_assigner.ROLE_PENALTY) | set(pin_assigner.CONFLICTING_ROLES)
         self.assertEqual(priced - set(boards.PIN_ROLES), set())
 
     def test_every_onboard_role_is_one_a_board_may_use(self):
@@ -854,7 +854,7 @@ class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
 
     def test_the_line_comes_from_the_footprint_module_and_asks_nothing_of_parts(self):
         # P411: footprint_stop imported `parts` for a sentence that now lives in emit_footprint; the edge to parts that remains is validate's.
-        # emit_footprint loads parts itself, through design (design.py:41), so it is loaded first: the test asks only whether footprint_stop imports parts
+        # emit_footprint loads parts itself, through loader (loader.py:40), so it is loaded first: the test asks only whether footprint_stop imports parts
         import emit_footprint  # noqa: F401
         from board_library import board_missing
         with board_missing("physical.header_order"), mock.patch.dict(sys.modules, {"parts": None}):

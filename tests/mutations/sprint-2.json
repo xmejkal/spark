@@ -1,12 +1,12 @@
 [
  {
-  "file": "scripts/copper.py",
+  "file": "scripts/spark/design/copper.py",
   "name": "drop the width margin",
   "find": "TRACE_WIDTH_MARGIN = 1.15",
   "replace": "TRACE_WIDTH_MARGIN = 1.0"
  },
  {
-  "file": "scripts/copper.py",
+  "file": "scripts/spark/design/copper.py",
   "name": "judge a pad neck as a trace",
   "find": "            if width and length is not None and length >= NECK_LENGTH_MM]",
   "replace": "            if width]"

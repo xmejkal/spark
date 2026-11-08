@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 #: Modules that are imported, never run: they earn their place by being imported.
-LIBRARIES = {"copper", "outcomes", "design", "store", "drawer", "needs"}
+LIBRARIES = {"copper", "outcomes", "loader", "store", "drawer", "needs"}
 
 def routes():
     """Every document a user or a project is routed by: commands, skills, agents, README, Makefiles."""

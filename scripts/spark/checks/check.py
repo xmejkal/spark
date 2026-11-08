@@ -43,9 +43,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import boards
-import design
+from spark.design import loader
 import design_codes
-import fab
+from spark.design import fab
 from spark.checks import check_codes
 from spark.core.outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, answer
 from spark.core.result import Refusal
@@ -162,7 +162,7 @@ def placeholder_components_in(project):
     which requirements produced it. A name from another board simply matches nothing in this
     netlist, so the union is safe.
 
-    Returns (names, notes). Each file is read on its own, through `design` — the loader the
+    Returns (names, notes). Each file is read on its own, through `loader` — the one the
     generator itself uses — and a file that cannot be read is a NOTE, not a reason to empty the
     list: before, one unreadable file made this return `()` under `except Exception`, and the
     check then measured every placeholder as if it were real without a word. A stand-in the
@@ -170,15 +170,15 @@ def placeholder_components_in(project):
     """
     if not project:
         return (), []
-    import design
+    from spark.design import loader
     import emit_board
     names, notes = set(), []
     for requirements in sorted(Path(project).glob("*requirements.json")):
         try:
             # the file's own project, the one the build reads (P319)
-            part_list = design.parts_of(design.read(requirements), design.project_for(requirements))
+            part_list = loader.parts_of(loader.read(requirements), loader.project_for(requirements))
             names |= set(emit_board.placeholder_components(part_list))
-        except design.DesignError as broken:
+        except loader.DesignError as broken:
             notes.append("%s could not be read, so any stand-in footprint it names was "
                          "measured as if real: %s" % (requirements.name, broken))
     return tuple(sorted(names)), notes
@@ -200,8 +200,8 @@ def rail_loads_in(project, circuit):
     matched, notes = [], []
     for requirements in sorted(Path(project).glob("*requirements.json")):
         try:
-            made = design.load(requirements)  # the file's own project, the one the build reads (P319)
-        except design.DesignError as broken:
+            made = loader.load(requirements)  # the file's own project, the one the build reads (P319)
+        except loader.DesignError as broken:
             notes.append("%s could not be read: %s" % (requirements.name, broken))
             continue
         names = {emit_board.component_name(part) for part in made.parts}
@@ -304,8 +304,8 @@ CHECKS = [
 #: are, or the PROJECT the build reads, where the records are.
 FOLDER, PROJECT = "folder", "project"
 CONVENTIONS = {
-    "circuit": (FOLDER, list(design.CIRCUIT_PATHS)),
-    "rules": (PROJECT, [str(design.RULES_PATH)]),
+    "circuit": (FOLDER, list(loader.CIRCUIT_PATHS)),
+    "rules": (PROJECT, [str(loader.RULES_PATH)]),
     "package": (FOLDER, ["*-gerbers.zip", "fab/*.zip"]),
 }
 
@@ -321,11 +321,11 @@ class CheckedFolder:
 
     @classmethod
     def at(cls, folder):
-        """The folder and its project, found the way `design.project_for` finds a requirements file's."""
+        """The folder and its project, found the way `loader.project_for` finds a requirements file's."""
         folder = Path(folder)
         if not folder.is_dir():
             # a folder that is not there walked up to a project nobody named
-            raise design.DesignError("no directory at %s — `--project` names a project directory", folder,
+            raise loader.DesignError("no directory at %s — `--project` names a project directory", folder,
                                      code=design_codes.NO_PROJECT_FOLDER)
         project = boards.project_or_library(folder.resolve())
         return cls(folder, folder if project == folder.resolve() else project)  # the folder as given, when it is one
@@ -336,7 +336,7 @@ class CheckedFolder:
         says why the folder cannot be read)."""
         try:
             return (cls.at(project) if project else None), None
-        except design.DesignError as broken:
+        except loader.DesignError as broken:
             return None, Refusal(str(broken), check_codes.PROJECT_UNUSABLE)
 
     def root(self, where):
@@ -350,7 +350,7 @@ class CheckedFolder:
 
 #: {input: the sentence that says how to choose between its matches}. An input not here gets "name one with --<it>".
 #: Two circuits are two boards, and spark handles one board per project today (P223, P318).
-CHOOSING = {"circuit": design.one_board_message}
+CHOOSING = {"circuit": loader.one_board_message}
 
 
 def how_to_choose(need, matches):
@@ -372,7 +372,7 @@ def discover(checked):
     """
     found, notes, ambiguous = {}, [], {}
     project = checked.project
-    if design.is_library(project):
+    if loader.is_library(project):
         notes.append("%-12s none up from here, so the parts and boards come from the plugin's library and there are "
                      "no rules" % PROJECT)
     elif checked.elsewhere():

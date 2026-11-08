@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_footprints  # noqa: E402
 from spark.checks import build_check  # noqa: E402
-import fab  # noqa: E402
+from spark.design import fab  # noqa: E402
 
 
 def holes(component, drill, pad, positions):
@@ -534,8 +534,8 @@ class TheExitCodeFollowsTheStatusTest(unittest.TestCase):
         self.assertEqual((code, found["tool"], found["status"]), (check_footprints.EXIT_COULD_NOT_RUN, "check_footprints", "could-not-run"))
         self.assertIn("fabrication.min_annular_ring_mm", found["message"])
 
-    def test_it_imports_fab_and_not_design(self):
-        self.assertFalse(hasattr(build_check, "design"))
+    def test_it_imports_fab_and_not_the_loader(self):
+        self.assertFalse(hasattr(build_check, "loader"))
         self.assertTrue(hasattr(build_check, "fab"))
 
     def test_a_shape_it_cannot_read_exits_could_not_run(self):

@@ -8,7 +8,7 @@ from typing import NamedTuple, Optional
 
 import boards
 from spark.breadboard import sheet
-import design
+from spark.design import loader
 import provenance
 from spark.firmware import sim_project
 
@@ -138,8 +138,8 @@ def make_converter_input(parts, ground, project):
     for part in parts:
         role = part["_instance"]
         try:
-            record = design.record(part["id"], project)
-        except design.DesignError as broken:
+            record = loader.record(part["id"], project)
+        except loader.DesignError as broken:
             return None, str(broken)
         signal = next((need.get("pin") for need in record.get("needs") or [] if isinstance(need, dict)), None)
         returns = next((rail.get("pin") for rail in record.get("power") or [] if isinstance(rail, dict) and rail.get("rail") == "ground"), None)

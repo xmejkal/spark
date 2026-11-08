@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 
 import boards
-import design
+from spark.design import loader
 import drawer
 import emit_board
 import emit_footprint
@@ -626,8 +626,8 @@ def _called(part_id, name):
     return name or "".join(word.capitalize() for word in part_id.replace("_", "-").split("-"))
 
 
-#: A name as the build tells names apart — `design.one_name`, the one definition (P163, W16); this was a second copy of it.
-_one_name = design.one_name
+#: A name as the build tells names apart — `loader.one_name`, the one definition (P163, W16); this was a second copy of it.
+_one_name = loader.one_name
 
 
 def _serve_picks(existing, picked_by):
@@ -681,7 +681,7 @@ def _merge_parts(existing, wanted):
             holder, its_name = held_by[_one_name(called)]
             problems.append(parts._problem(need_id, 'its %s would be called %s, and %s is called %s — %s; give one of them a name of '
                                            'your own in requirements.json, {"part": "%s", "name": …}, and run this again'
-                                           % (part_id, called, holder, its_name, design.ONE_NAME_RULE, part_id)))
+                                           % (part_id, called, holder, its_name, loader.ONE_NAME_RULE, part_id)))
             continue
         held_by[_one_name(called)] = ("need %s's %s" % (need_id, part_id), called)
         added.append(part_id if name is None else {"part": part_id, "name": name})
@@ -748,8 +748,8 @@ def _power_gaps(listed, known):
         rails = entry.get("rails") if isinstance(entry, dict) and isinstance(entry.get("rails"), dict) else None
         try:
             # named by its id here, so what is said names what was picked rather than the record's long name
-            part_list.append(dict(design.on_rails(record, rails) if rails else record, name=part_id))
-        except (design.DesignError, TypeError, AttributeError):
+            part_list.append(dict(loader.on_rails(record, rails) if rails else record, name=part_id))
+        except (loader.DesignError, TypeError, AttributeError):
             continue  # a rail given to a pin the part does not have: the build names it
     no_supply = [{"rail": net, "drawn_by": sorted({"%s.%s" % (part["name"], supply["pin"])
                                                    for part, supply, on in emit_board.power_connections(part_list)

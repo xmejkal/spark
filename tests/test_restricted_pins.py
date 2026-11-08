@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
-from restricted_pins import RestrictedPins, whole_numbers_in  # noqa: E402
+from spark.design.restricted_pins import RestrictedPins, whole_numbers_in  # noqa: E402
 
 C6 = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
 

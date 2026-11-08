@@ -40,7 +40,7 @@ import boards  # noqa: E402
 import build_codes  # noqa: E402
 import store  # noqa: E402
 import tools  # noqa: E402
-from design import CIRCUIT_PATHS, one_board_message  # noqa: E402
+from spark.design.loader import CIRCUIT_PATHS, one_board_message  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
 from spark.core.result import Refusal  # noqa: E402
@@ -70,12 +70,12 @@ def design_in(project):
     A file that cannot be read is a NOTE rather than an empty list — silence here is how a rules
     file comes out blank and looks deliberate.
     """
-    import design
+    from spark.design import loader
     part_list, notes = [], []
     for requirements in sorted(Path(project).glob("*requirements.json")):
         try:
-            part_list += design.parts_of(design.read(requirements), Path(project))
-        except design.DesignError as broken:
+            part_list += loader.parts_of(loader.read(requirements), Path(project))
+        except loader.DesignError as broken:
             notes.append("%s could not be read, so no rule was seeded from it: %s"
                          % (requirements.name, broken))
     return part_list, notes

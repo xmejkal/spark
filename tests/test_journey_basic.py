@@ -38,7 +38,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
 import deploy  # noqa: E402
-import design  # noqa: E402
+from spark.design import loader  # noqa: E402
 from spark.firmware import scenario_run  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 import tools  # noqa: E402
@@ -70,7 +70,7 @@ COMMAND_TIMEOUT_S = 300
 
 
 def _requirements(path):
-    wanted = design.read(path)
+    wanted = loader.read(path)
     if wanted.get("board") != "firebeetle2-esp32s3" or wanted.get("parts") != ["tactile-button", "led-red-5mm"]:
         return "it no longer asks for the FireBeetle with a button and an LED"
     return None
@@ -203,7 +203,7 @@ def broken_stages(project):
         try:
             why = holds(path)
         except (OSError, ValueError, KeyError, AttributeError, TypeError, zipfile.BadZipFile,
-                design.DesignError) as unreadable:
+                loader.DesignError) as unreadable:
             why = "%s cannot be read: %s" % (output, unreadable)
         if why:
             broken.append("%s: %s" % (stage, why))

@@ -122,9 +122,9 @@ Each by its name in check_all's answer:
 - `deploy.py`: puts the flash image that passed the simulation onto the board, with esptool ([P192](https://github.com/xmejkal/spark/issues/144)). It looks at the board first and asks the person's yes in their terminal. `deploy_gate.py` is that gate ([P219](https://github.com/xmejkal/spark/issues/201)). After the flash, `board_facts.py` copies a facts file to the board and reads it back, and `ready_probe.py` checks the board's files against the passed run's sha256s and reads `ready` ([P215](https://github.com/xmejkal/spark/issues/196)). Both talk to the board through `board_connection.py`, the one mpremote connection, which keeps mpremote's own error text.
 - `look.py`: reads the board on USB with esptool, without changing it, and compares it with its board record; the board restarts. `board_look.py` is its library ([P219](https://github.com/xmejkal/spark/issues/201)).
 - `grant.py`: the live grant, one yes the person types in their own terminal for one board and a time limit, after one look with esptool; `--check` finds it with `mpremote devs` only. The store keeps it as one file per board, named by the MAC with dashes, under `grants/`. `board_grant.py` is its library ([P253](https://github.com/xmejkal/spark/issues/265)). `--scope deploy` gives a deploy grant, a second file (`<MAC>-deploy.json`) that `deploy.py` reads as the yes, through `StandingConsentStrategy`, for a look that matched and not for `--ignore-older-runs` ([P242](https://github.com/xmejkal/spark/issues/249)). A yes that another program collected (a relayed yes) can make a live grant, never a deploy grant, and `deploy_gate.py` refuses it for the erase ([P675](https://github.com/xmejkal/spark/issues/905)).
-- `live.py`: the live try. Inside a grant, it runs a short piece of code on the running board with mpremote and restarts the chip at the end. `board_live.py` is its library, and it calls `board_grant.py` and `restricted_pins.py` before it sends anything ([P247](https://github.com/xmejkal/spark/issues/267)).
+- `live.py`: the live try. Inside a grant, it runs a short piece of code on the running board with mpremote and restarts the chip at the end. `board_live.py` is its library, and it calls `board_grant.py` and `spark/design/restricted_pins.py` before it sends anything ([P247](https://github.com/xmejkal/spark/issues/267)).
 - `board_doctor.py`: the board doctor. When esptool or mpremote cannot get into the board, it checks that the port is listed and reads the console with the port's lock, and it names one next step for the person's hands. Each tool's `silent_step` in the tools list sets the step for a silent board ([P282](https://github.com/xmejkal/spark/issues/326)).
-- `restricted_pins.py`: a library that `board_live.py` calls before a live try. It reads a board record's `usb` and `flash` pin roles and refuses code that writes one of their numbers anywhere, with the pin, its role and the record's sources ([P254](https://github.com/xmejkal/spark/issues/266)).
+- `spark/design/restricted_pins.py`: a library that `board_live.py` calls before a live try. It reads a board record's `usb` and `flash` pin roles and refuses code that writes one of their numbers anywhere, with the pin, its role and the record's sources ([P254](https://github.com/xmejkal/spark/issues/266)).
 - `breadboard.py`: the built board as a breadboard sheet: the parts, each resistor they ask for, numbered wiring steps and a mermaid diagram of them by the
   board's printed labels and the parts' legs ([P202](https://github.com/xmejkal/spark/issues/161)), and what each record says to check before power ([P191](https://github.com/xmejkal/spark/issues/143)).
 
@@ -143,10 +143,10 @@ Each by its name in check_all's answer:
 
 Imported by the scripts above, and not run on their own, except `cost.py`:
 
-- `design.py`: a design, loaded once: the requirements file, its project, the board, the parts and the rules;
-- `netlist.py`: the built design, as connectivity;
-- `copper.py`: how much current a piece of copper carries;
-- `fab.py`: what a board house can make;
+- `spark/design/loader.py`: a design, loaded once: the requirements file, its project, the board, the parts and the rules;
+- `spark/design/netlist.py`: the built design, as connectivity;
+- `spark/design/copper.py`: how much current a piece of copper carries;
+- `spark/design/fab.py`: what a board house can make;
 - `spark/core/outcomes.py`: the exit codes and the three outcomes, defined once;
 - `store.py`: where spark keeps what it keeps;
 - `drawer.py`: what you own;
