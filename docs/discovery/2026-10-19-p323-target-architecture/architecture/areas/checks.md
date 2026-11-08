@@ -21,27 +21,28 @@ header and the order list. Each check says what it found and what it did not loo
 | `check-vendor-pins` | `check_vendor_pins.py` | reads, runs `gh`, network |
 | `compare-design` | `compare_design.py` | reads |
 
-Each CLI keeps its flags and positionals.
+Each CLI keeps its flags and positionals. Since P695 the six CLIs stay in `scripts/` and define `main` only, and their
+libraries live in `scripts/spark/checks/`.
 
 ### Its components
 
 | Module | Holds |
 |---|---|
-| `checks/check.py` | `Check`, `CHECKS`, `CheckedFolder`, from `check_all.py` |
+| `checks/check.py` | `Check`, `CHECKS`, `CheckedFolder` and the five checks (`RulesVsNetlist`, `Physics`, `Buildability`, `VendorTruth`, `TheOrder`), the library of `check_all.py` (P695) |
 | `checks/rules_check.py` | `RulesCheck` and `compare_design`'s logic |
 | `checks/physics_check.py` | `PhysicsCheck` and `check_physics`'s logic, `CircuitBoard` |
 | `checks/build_check.py` | `BuildCheck` and `check_footprints`'s logic |
 | `checks/vendor_pins_check.py` | `VendorPinsCheck`, `check_vendor_pins`'s logic, the Adapter `GhVendorHeaders` |
 | `checks/order_check.py` | `OrderCheck` and `check_bom`'s logic |
 | `checks/check_codes.py` | the codes of the checks' refusals, with one sentence each (a leaf, P693). A finding keeps its `rule` |
-| `checks/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
+| `checks/__init__.py` | the index docstring alone, and it imports nothing. `OPERATIONS` and one module per Operation, named after it, come with the Operation card |
 
 ### Its seams and adapters
 
 | Seam | Real adapter | Fake | Registry |
 |---|---|---|---|
 | `Check` Strategy: `run(inputs) -> OperationResult` | the five checks | a toy `Check` in the test | `CHECKS` |
-| vendor headers: `header(variant) -> str` | `GhVendorHeaders` over `gh api` (`check_vendor_pins.py:67`) | a dict from variant to header text | none |
+| vendor headers: `header(variant) -> str` | `GhVendorHeaders` over `gh api` (`vendor_pins_check.py:61`) | a dict from variant to header text | none |
 
 Checks imports design (the `Design` Value and `Netlist`), records and core.
 
@@ -89,11 +90,11 @@ classDiagram
   Check ..> Finding
 ```
 
-`Check` (`check_all.py:63`) and `CheckedFolder` (`check_all.py:316`) exist. Today a check is an instance with
-`name`, `needs` and `what` given in `__init__` (`check_all.py:71`), and `run` returns a dict with a `reason` key. In
+`Check` (`check.py:57`) and `CheckedFolder` (`check.py:313`) exist. Today a check is an instance with
+`name`, `needs` and `what` given in `__init__` (`check.py:65`), and `run` returns a dict with a `reason` key. In
 the target, `name`, `inputs` and `codes` are class attributes, and `run` returns an `OperationResult` with Findings.
 `CheckService` runs the asked checks, marks a missing input `skipped` and an ambiguous one
-`could-not-run`, as `check_all.py:76-89` does now. `check_all`'s `codes` are the union of each check's `codes`.
+`could-not-run`, as `check.py:68-81` does now. `check_all`'s `codes` are the union of each check's `codes`.
 
 ### The main flow: check-all
 
