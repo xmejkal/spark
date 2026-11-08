@@ -45,6 +45,7 @@ from spark.core import codes  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 import check_vendor_pins  # noqa: E402
+from spark.checks import vendor_pins_check  # noqa: E402
 import compare_design  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
@@ -186,8 +187,8 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         # spark's folder is a stand-in too: were the P179 bug back, the write would land there,
         # not in the real tracked header (the refuter showed this test rewrote it under that mutation).
         stand_in = Path(tempfile.mkdtemp())
-        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=header), \
-                mock.patch.object(check_vendor_pins, "PLUGIN_ROOT", stand_in):
+        with mock.patch.object(vendor_pins_check, "fetch_variant_header", return_value=header), \
+                mock.patch.object(vendor_pins_check, "PLUGIN_ROOT", stand_in):
             code, payload = payload_of(lambda: check_vendor_pins.main(["--json", str(board)]))
         self.assertEqual(sorted(payload[0]),
                          ["board", "compared", "not_recorded", "problems", "source", "status", "wrote"])
@@ -202,8 +203,8 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         board.write_text(json.dumps({"pins": {"D3": 38}, "vendor": {"arduino_variant": "p181_unshipped"}}))
         stand_in = Path(tempfile.mkdtemp())
         for argv in (["--offline", "--json", str(board)], ["--json", str(board)]):
-            with self.subTest(argv=argv), mock.patch.object(check_vendor_pins, "PLUGIN_ROOT", stand_in), \
-                    mock.patch.object(check_vendor_pins, "fetch_variant_header", side_effect=AssertionError("fetched")):
+            with self.subTest(argv=argv), mock.patch.object(vendor_pins_check, "PLUGIN_ROOT", stand_in), \
+                    mock.patch.object(vendor_pins_check, "fetch_variant_header", side_effect=AssertionError("fetched")):
                 code, payload = payload_of(lambda: check_vendor_pins.main(argv))
             self.assertEqual(sorted(payload[0]), ["board", "reason", "status"])
             self.assertEqual(code, outcomes.EXIT_COULD_NOT_RUN)

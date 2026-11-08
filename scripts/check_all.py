@@ -252,10 +252,10 @@ class Buildability(Check):
 
 class VendorTruth(Check):
     def call(self, inputs):
-        import check_vendor_pins
+        from spark.checks import vendor_pins_check
         problems, unchecked = [], []
         for path in inputs["boards"]:
-            result = check_vendor_pins.check_board(Path(path), offline=True, repo="")
+            result = vendor_pins_check.check_board(Path(path), offline=True, repo="")
             if result["status"] == "could-not-run":
                 unchecked.append(Refusal("%s: %s" % (result["board"], result["reason"]), result["reason"].code))
             else:

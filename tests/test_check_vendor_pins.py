@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_vendor_pins  # noqa: E402
+from spark.checks import vendor_pins_check  # noqa: E402
 import golden_checks  # noqa: E402
 
 #: A believable fragment of an Espressif variant header, including the forms that are NOT
@@ -51,7 +52,7 @@ static const uint8_t T2 = 2;
 
 class ParsingTest(unittest.TestCase):
     def test_it_reads_the_pin_aliases_and_ignores_the_rest(self):
-        pins = check_vendor_pins.parse_pins(HEADER)
+        pins = vendor_pins_check.parse_pins(HEADER)
         self.assertEqual(pins["D3"], 38)
         self.assertEqual(pins["D13"], 21)
         self.assertEqual(pins["SDA"], 1)
@@ -60,35 +61,35 @@ class ParsingTest(unittest.TestCase):
         self.assertNotIn("LED_BUILTIN", pins)
 
     def test_a_header_it_cannot_parse_yields_nothing_rather_than_a_guess(self):
-        self.assertEqual(check_vendor_pins.parse_pins("/* no pins here */"), {})
+        self.assertEqual(vendor_pins_check.parse_pins("/* no pins here */"), {})
 
 
 class ComparisonTest(unittest.TestCase):
     def setUp(self):
-        self.vendor = check_vendor_pins.parse_pins(HEADER)
+        self.vendor = vendor_pins_check.parse_pins(HEADER)
 
     def test_the_silkscreen_read_as_a_gpio_number_is_caught(self):
         # The whole reason this check exists. D3 is GPIO38; reading the label as the number
         # gives GPIO3, which is a real pin on a real chip and therefore silent everywhere else.
-        problems, compared, _ = check_vendor_pins.compare({"pins": {"D3": 3}}, self.vendor)
+        problems, compared, _ = vendor_pins_check.compare({"pins": {"D3": 3}}, self.vendor)
         self.assertEqual(len(problems), 1)
         self.assertIn("GPIO3 in the board file but GPIO38", problems[0])
         self.assertEqual(compared, 1)
 
     def test_a_correct_map_is_silent(self):
-        problems, compared, _ = check_vendor_pins.compare(
+        problems, compared, _ = vendor_pins_check.compare(
             {"pins": {"D3": 38, "D13": 21, "SDA": 1}}, self.vendor)
         self.assertEqual(problems, [])
         self.assertEqual(compared, 3)
 
     def test_a_label_the_vendor_never_defines_is_caught(self):
-        problems, _, _ = check_vendor_pins.compare({"pins": {"INVENTED": 15}}, self.vendor)
+        problems, _, _ = vendor_pins_check.compare({"pins": {"INVENTED": 15}}, self.vendor)
         self.assertEqual(len(problems), 1)
         self.assertIn("defines no pin called", problems[0])
 
     def test_an_unrecorded_vendor_pin_is_noted_but_is_not_a_failure(self):
         # Not knowing about a pin is worth reporting; it is not a wrong pin map.
-        problems, _, missing = check_vendor_pins.compare({"pins": {"D3": 38}}, self.vendor)
+        problems, _, missing = vendor_pins_check.compare({"pins": {"D3": 38}}, self.vendor)
         self.assertEqual(problems, [])
         self.assertIn("SDA", missing)
         # Touch-sensor aliases and LED_BUILTIN are not silkscreen labels; demanding them would
@@ -115,14 +116,14 @@ class ARefusalIsNotAPass(unittest.TestCase):
 
     def test_a_board_that_names_no_vendor_source_cannot_be_checked(self):
         path = self._board_file({"pins": {"D3": 38}})
-        result = check_vendor_pins.check_board(path, offline=True, repo="x/y")
+        result = vendor_pins_check.check_board(path, offline=True, repo="x/y")
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn("arduino_variant", result["reason"])
         self.assertEqual(result["reason"].code, "no_vendor_variant")  # P693
 
     def test_offline_with_no_cache_refuses_rather_than_passing(self):
         path = self._board_file({"pins": {"D3": 38}, "vendor": {"arduino_variant": "nope"}})
-        result = check_vendor_pins.check_board(path, offline=True, repo="x/y")
+        result = vendor_pins_check.check_board(path, offline=True, repo="x/y")
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn("no cached header", result["reason"])
         self.assertEqual(result["reason"].code, "no_cached_header")  # P693
@@ -132,11 +133,11 @@ class ARefusalIsNotAPass(unittest.TestCase):
         # itself and switched the check off. The irrigation project, 2026-09-29: `????`.
         shipped = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         path = self._board_file(shipped)
-        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        result = vendor_pins_check.check_board(path, offline=True, repo="")
         self.assertEqual(result["status"], "ok", result.get("reason"))
         self.assertIn("cache", result["source"])
         wrong = dict(shipped, pins=dict(shipped["pins"], D3=3))
-        self.assertEqual(check_vendor_pins.check_board(self._board_file(wrong), offline=True, repo="")["status"], "mismatch",
+        self.assertEqual(vendor_pins_check.check_board(self._board_file(wrong), offline=True, repo="")["status"], "mismatch",
                          "and a wrong pin in the copy is still caught")
 
     def test_a_cached_header_is_used_and_said_so(self):
@@ -145,7 +146,7 @@ class ARefusalIsNotAPass(unittest.TestCase):
         cache.mkdir(parents=True)
         (cache / "v.pins_arduino.h").write_text(HEADER)
 
-        result = check_vendor_pins.check_board(path, offline=True, repo="x/y")
+        result = vendor_pins_check.check_board(path, offline=True, repo="x/y")
         self.assertEqual(result["status"], "ok")
         self.assertIn("cache", result["source"])
 
@@ -155,7 +156,7 @@ class ARefusalIsNotAPass(unittest.TestCase):
         cache.mkdir(parents=True)
         (cache / "v.pins_arduino.h").write_text(HEADER)
 
-        result = check_vendor_pins.check_board(path, offline=True, repo="x/y")
+        result = vendor_pins_check.check_board(path, offline=True, repo="x/y")
         self.assertEqual(result["status"], "mismatch")
 
     def test_the_exit_codes_tell_the_three_outcomes_apart(self):
@@ -173,7 +174,7 @@ class TheRealBoardsAgreeWithTheirVendors(unittest.TestCase):
             if not (board.get("vendor") or {}).get("arduino_variant"):
                 continue
             with self.subTest(board=path.stem):
-                result = check_vendor_pins.check_board(path, offline=True, repo="x/y")
+                result = vendor_pins_check.check_board(path, offline=True, repo="x/y")
                 if result["status"] == "could-not-run":
                     self.skipTest("no cached header for %s" % path.stem)
                 self.assertEqual(result["status"], "ok", result.get("problems"))
@@ -238,7 +239,7 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         for header in shipped_cache.glob("*.pins_arduino.h"):
             (self.plugin / ".spark" / "cache" / header.name).write_bytes(header.read_bytes())
         self.seeded = self._plugin_files()
-        patcher = mock.patch.object(check_vendor_pins, "PLUGIN_ROOT", self.plugin)
+        patcher = mock.patch.object(vendor_pins_check, "PLUGIN_ROOT", self.plugin)
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -258,12 +259,12 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         return {"pins": {"D3": d3}, "vendor": {"arduino_variant": variant}}
 
     def _live(self, path, fetched=HEADER):
-        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=fetched):
-            return check_vendor_pins.check_board(path, offline=False, repo="x/y")
+        with mock.patch.object(vendor_pins_check, "fetch_variant_header", return_value=fetched):
+            return vendor_pins_check.check_board(path, offline=False, repo="x/y")
 
     def _line(self, path, fetched=HEADER):
         out = io.StringIO()
-        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=fetched), \
+        with mock.patch.object(vendor_pins_check, "fetch_variant_header", return_value=fetched), \
                 contextlib.redirect_stdout(out):
             check_vendor_pins.main([str(path)])
         return out.getvalue()
@@ -308,8 +309,8 @@ class WhereTheHeaderIsKept(unittest.TestCase):
 
     def test_a_board_file_in_no_project_is_refused_live_and_nothing_is_written(self):
         loose, path = self._loose("p179_loose")
-        with mock.patch.object(check_vendor_pins, "fetch_variant_header", return_value=HEADER) as fetch:
-            result = check_vendor_pins.check_board(path, offline=False, repo="x/y")
+        with mock.patch.object(vendor_pins_check, "fetch_variant_header", return_value=HEADER) as fetch:
+            result = vendor_pins_check.check_board(path, offline=False, repo="x/y")
         fetch.assert_not_called()  # no network call is spent on a refusal (refuter B9)
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn("no project", result["reason"])
@@ -338,7 +339,7 @@ class WhereTheHeaderIsKept(unittest.TestCase):
 
     def test_an_offline_refusal_names_both_places_it_looked(self):
         project, path = self._project(self._board("p179_nowhere"))
-        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        result = vendor_pins_check.check_board(path, offline=True, repo="")
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn(str(self._kept(project, "p179_nowhere")), result["reason"], "the project's place")
         self.assertIn(str(self.plugin / ".spark" / "cache"), result["reason"], "and spark's")
@@ -347,7 +348,7 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         loose = Path(tempfile.mkdtemp()).resolve()
         path = loose / "someboard.json"
         path.write_text(json.dumps(self._board("p179_nowhere")))
-        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        result = vendor_pins_check.check_board(path, offline=True, repo="")
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn("no project owns %s" % path, result["reason"])
         self.assertIn(str(self.plugin / ".spark" / "cache"), result["reason"])
@@ -357,7 +358,7 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         project, path = self._project(self._board("p693_unfetched"))
         shim = golden_checks.name_the_gh(Path(tempfile.mkdtemp()))
         with mock.patch.dict(os.environ, {"PATH": str(shim), "FAKE_GH_EXIT": "1"}):
-            result = check_vendor_pins.check_board(path, offline=False, repo="x/y")
+            result = vendor_pins_check.check_board(path, offline=False, repo="x/y")
         self.assertEqual((result["status"], result["reason"].code), ("could-not-run", "header_not_fetched"))
         self.assertIn("could not fetch", result["reason"])
         self.assertFalse(self._kept(project, "p693_unfetched").exists())
@@ -377,7 +378,7 @@ class WhereTheHeaderIsKept(unittest.TestCase):
     def test_an_offline_read_says_spark_answered_when_the_project_has_no_copy(self):
         shipped = json.loads((ROOT / "boards" / (self.SHIPPED + ".json")).read_text())
         _, path = self._project(shipped)
-        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        result = vendor_pins_check.check_board(path, offline=True, repo="")
         self.assertEqual(result["status"], "ok", result.get("reason"))
         self.assertTrue(result["source"].startswith("spark's cache"), result["source"])
 
@@ -388,14 +389,14 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         project, path = self._project(self._board("p179_both"))
         self._kept(project, "p179_both").parent.mkdir(parents=True)
         self._kept(project, "p179_both").write_text(HEADER)
-        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        result = vendor_pins_check.check_board(path, offline=True, repo="")
         self.assertEqual(result["status"], "ok", result.get("problems"))
         self.assertTrue(result["source"].startswith("the project's cache"), result["source"])
 
     def test_what_a_live_check_wrote_is_what_a_later_offline_check_reads(self):
         project, path = self._project(self._board("p179_again"))
         self._live(path)
-        result = check_vendor_pins.check_board(path, offline=True, repo="")
+        result = vendor_pins_check.check_board(path, offline=True, repo="")
         self.assertEqual(result["status"], "ok", result.get("reason"))
         self.assertTrue(result["source"].startswith("the project's cache"), result["source"])
 
