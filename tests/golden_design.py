@@ -173,10 +173,3 @@ def run_case(case, project, store, shims):
         text += LOG_MARK % name + (Path(project) / name).read_text()
     return code, text
 
-
-def places(project, store, shims):
-    """What a run's text is scrubbed of: golden_bench's places and the fakes' folder, longest first."""
-    found = dict(golden_bench.replacements_of(project, store))
-    for form in (str(Path(shims).parent), str(Path(shims).parent.resolve())):
-        found[form] = "<fakes>"
-    return dict(sorted(found.items(), key=lambda item: -len(item[0])))

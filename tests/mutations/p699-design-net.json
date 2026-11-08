@@ -1,5 +1,5 @@
 [
-{"file": "tests/test_golden_design.py", "name": "the scrub skipped", "find": "scrubbed = golden_bench.scrub(text, golden_design.places(project, store, self.shims))", "replace": "scrubbed = text"},
+{"file": "tests/test_golden_design.py", "name": "the scrub skipped", "find": "scrubbed = golden_bench.scrub(text, golden_bench.replacements_of(project, store))", "replace": "scrubbed = text"},
 {"file": "tests/golden_design.py", "name": "a Case's exit code is wrong, so the check of the exit code must catch it", "find": "Case(\"assign-pins-problems-impossible.txt\", \"assign_pins.py\", [REQUIREMENTS], 1,", "replace": "Case(\"assign-pins-problems-impossible.txt\", \"assign_pins.py\", [REQUIREMENTS], 0,"},
 {"file": "tests/golden_checks.py", "name": "the proxies not set, so a design child could open a URL", "find": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder))", "replace": "env.update(PATH=str(shim_folder))"},
 {"file": "tests/golden_checks.py", "name": "the child's PATH keeps another folder, where a real tsci or node may be", "find": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder))", "replace": "env.update(dict.fromkeys(PROXIES, CLOSED_PROXY), PATH=str(shim_folder) + \":/usr/bin\")"},

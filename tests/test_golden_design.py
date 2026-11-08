@@ -126,7 +126,7 @@ class DesignGoldenTest(unittest.TestCase):
         project = golden_design.copy_project(case, self.project, work)
         code, text = golden_design.run_case(case, project, store, self.shims)
         self.assertEqual(code, case.exit_code, text)
-        scrubbed = golden_bench.scrub(text, golden_design.places(project, store, self.shims))
+        scrubbed = golden_bench.scrub(text, golden_bench.replacements_of(project, store))
         self.assertIsNone(golden_bench.check_golden(case, scrubbed, golden_dir=golden_design.GOLDEN_DIR))
 
     def test_the_fake_tsci_built_the_board(self):
