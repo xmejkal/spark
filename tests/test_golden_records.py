@@ -18,7 +18,6 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 import golden_bench  # noqa: E402
 import golden_checks  # noqa: E402
 import golden_records  # noqa: E402
-import parts  # noqa: E402
 import tools  # noqa: E402
 
 
@@ -62,8 +61,7 @@ class RecordsGuardTest(unittest.TestCase):
     def test_the_guard_finds_a_program_on_a_wider_path(self):
         # The guard can fail: /bin/sh is found by `command -v` on a PATH that names /bin.
         env = dict(self.env(), PATH="%s:/bin" % self.shims)
-        with mock.patch.object(golden_records, "GUARDED", ("sh",)):
-            self.assertEqual(golden_records.guarded_found(env), ["/bin/sh"])
+        self.assertEqual(golden_records.guarded_found(env, ("sh",)), ["/bin/sh"])
 
     def test_a_curl_in_the_fakes_folder_is_found(self):
         folder = Path(tempfile.mkdtemp(dir=self.folder))
@@ -103,8 +101,10 @@ class RecordsOpTest(unittest.TestCase):
             self.assertTrue(case.golden.startswith(golden_bench.op_of(case) + "-"), case.golden)
 
     def test_every_operation_of_parts_has_a_case(self):
+        # The operations as parts-describe-ok.txt, the golden of --describe, lists them.
+        described = (golden_records.GOLDEN_DIR / "parts-describe-ok.txt").read_text().splitlines()
         named = {case.argv[0].lstrip("-") for case in golden_records.CASES if case.script == "parts.py"}
-        self.assertEqual({name for name, *_ in parts.OPERATIONS} - named, set())
+        self.assertEqual({line.split()[0].lstrip("-") for line in described if line.startswith("  --")} - named, set())
 
 
 class RecordsGoldenTest(unittest.TestCase):

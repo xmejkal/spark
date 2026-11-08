@@ -74,10 +74,11 @@ def child_env(store, shims):
 FIND_GUARDED = 'for name in "$@"; do command -v "$name"; done; exit 0'
 
 
-def guarded_found(env):
-    """The paths of GUARDED programs a child with `env` finds: [] when none."""
+def guarded_found(env, names=None):
+    """The paths of the programs `names` (default GUARDED) a child with `env` finds: [] when none."""
     import subprocess
-    done = subprocess.run(["/bin/sh", "-c", FIND_GUARDED, "sh", *GUARDED], env=env, stdin=subprocess.DEVNULL,
+    asked = GUARDED if names is None else names
+    done = subprocess.run(["/bin/sh", "-c", FIND_GUARDED, "sh", *asked], env=env, stdin=subprocess.DEVNULL,
                           capture_output=True, text=True, timeout=golden_bench.RUN_TIMEOUT_S)
     return done.stdout.split()
 
