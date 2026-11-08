@@ -1,7 +1,7 @@
 """
 The guards for text that spark shows, stores or writes into a file (P403, OC8): `printable` for the screen, `clean`
-for the store, `kept_reason` for a passed-over reason the history keeps (moved from `needs` in P704), `one_line` for a
-generated file's comment. It imports nothing of spark, so every reader can use it (rule U1 of `tests/test_architecture.py`).
+for the store, `kept_reason` for a passed-over reason the history keeps, `one_line` for a generated file's comment.
+It imports nothing of spark, so every reader can use it (rule U1 of `tests/test_architecture.py`).
 """
 
 import re
