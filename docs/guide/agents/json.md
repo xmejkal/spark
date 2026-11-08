@@ -188,7 +188,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 
 ### import_firmware.py
 
-- Each item of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`.
+- Each item of `modules` has `module`, `status` (`imported`, `raised` or `timed out`) and `detail`. One not imported also has `code`, `import_failed` or `import_timeout`: decide on it, never on `detail` ([the firmware codes](firmware-codes.md)).
 - A project with no `firmware/` folder is `could-not-run`.
 - A project with nothing to import but `main.py`, `boot.py` and `pins.py` is `problems`. Its firmware cannot be imported
   without running `main.py`.
