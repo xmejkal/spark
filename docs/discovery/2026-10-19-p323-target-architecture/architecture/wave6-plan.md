@@ -348,7 +348,7 @@ P685 claims check (2026-11-08, against 46bca725). Each claim above was read in t
    `scenario_run.py` holds the rest, with `find_simulator` (the table misses it). The docstring and `EPILOG` stay.
 2. It is false that the steps module imports nothing of firmware. `from_log` reads `sim_project.WHY_LOG_UNREADABLE`
    (`:316`), and `sim_project` imports `emit_board` and `parts`. Decision: the sentence moves to `scenario_steps.py`,
-   and `sim_project.py:184` and `image_evidence.py:23` read it there. `scenario_steps.py` then imports only `spark.core`.
+   and `sim_project.py:184` and `image_evidence.py:23` read it there. It then imports only `spark.core`.
 3. `project_image.py:52` reads `run_scenario.DEFAULT_IMAGE`. Decision: it moves to `sim_project` beside
    `UNNAMED_FIRMWARE`, which is built from it, so `project_image` never imports `scenario_run`.
 4. No `ready_check` exists. The bench readers are `board_connection`, `board_console`, `download_mode`, `ready_probe`
@@ -372,8 +372,8 @@ P685 claims check (2026-11-08, against 46bca725). Each claim above was read in t
     not this PR's miss.
 12. 7 T1 keys move. `T1:scripts/flash_image.py:file-write` (`:329`, in `main`) and the two R1 `main` keys stay. So
     check 5 reads "no key of a moved library names an old path".
-13. P684 did U1 (`LEAVES`, `LEAF_NAMES`). `MAY_READ` keys are stems and stay. Risk 5 is stale: five codes are shared, and
-    they stay. `board_codes.py:15` and `test_json_contracts.py:255` say what is true now.
+13. P684 did U1 (`LEAVES`, `LEAF_NAMES`). `MAY_READ` keys are stems and stay. Risk 5 is stale: five codes are
+    shared, and they stay. `board_codes.py:15` and `test_json_contracts.py:255` say what is true now.
 14. 6 guide pages name a moved file, not 14 (`agents/firmware-codes.md`, `agents/scripts.md`, `developing.md`,
     `how-it-works.md`, `journey/firmware.md`, `patterns-and-names.md`). The area page is under `docs/discovery/`.
 
