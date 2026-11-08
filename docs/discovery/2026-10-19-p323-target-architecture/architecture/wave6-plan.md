@@ -497,7 +497,17 @@ is library-only until the Operation. Review: it holds logic. One reviewer and th
 run. Size est.: 80 product lines, 60 test lines.
 It touches no file of P685 but `measure.py:247`, `planted_tree.py:11` and `test_json_contracts.py`, one line each.
 
-P692 claims check (2026-11-08, on main 6338f89e). Stopped before any code, for one decision:
+P692 claims check (2026-11-08, on main 6338f89e). The check stopped before any code, for one decision. The
+coordinator decided it on the same day:
+
+- Choice 2. `points`, `_wiring` and what they alone need (`Point`, `ROW_HOLES`, `_natural`, `printed_label`) move to
+  `breadboard_steps.py` in one Move Function commit, before the code commits. W6-B3's table changes: they move
+  with `breadboard_steps.py` to `wiring_steps.py`. The free lines are taken too. The module docstring stays.
+- The three outside exceptions get three codes, because each asks for another action (P684's rule). A store
+  problem reuses `board_codes.STORE_PROBLEM`'s literal. A small function maps them.
+- P691 (#933) is corrected to 13 sites and takes the `check_spine.py:843` finding.
+
+What the check found:
 
 - Decision needed. `breadboard.py` is 600 lines, R1's module limit (`tools/measure.py:242`, counted by
   `splitlines`, `:449`). Every line the card adds there is the new key `R1:scripts/breadboard.py:<module>`, and the
