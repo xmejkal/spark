@@ -1189,7 +1189,7 @@ are wrong or stale:
    function is a new R1 breach at the move. They are P700's, reverted there: `_picks_given` and `_passed_over` from
    `plan_pick` (57, `:475`), `_part_picks` and `_held_file` from `requirements` (55, `:771`), and `p97-cost`'s layer
    row that follows `plan_pick`'s shorter line. They add lines, and the module has no `main` to lose at the move, so
-   the module key (831) is paid by prunes in `needs.py` before the move.
+   the module key (831) is paid before the move: by `kept_reason` to `text_guards` (P704 row 2), 829.
 2. Rows: 221 in 22 tables. `--anchors` refuses 114 on main, 13 of them in the 221. 7 rows of 5 tables name the module
    in an importer's text (`needs.write`, `needs.entry_keys`, `needs.REQUIREMENTS`, `needs.unserved_keys`): the bound
    name stays `needs`, so they stay.
