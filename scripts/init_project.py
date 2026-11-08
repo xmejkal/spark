@@ -413,8 +413,8 @@ NOTHING_TO_DO = Refusal("\nnothing to do — everything already exists. --force 
 
 
 def why_project_refused(project):
-    """Why `project` cannot be set up, said before anything is written: no folder, or a tools file that cannot be read.
-    A Refusal, or None when it can."""
+    """Value: why `project` cannot be set up, said before anything is written: no folder, or a tools file that cannot be
+    read. A Refusal, or None when it can."""
     if not project.is_dir():
         return Refusal("no directory at %s" % project, build_codes.NO_PROJECT_FOLDER)
     try:
@@ -425,7 +425,7 @@ def why_project_refused(project):
 
 
 def why_board_refused(board, project):
-    """Why `board` cannot be made active, as a Refusal: neither the project nor spark has it. None when one has."""
+    """Value: why `board` cannot be made active, as a Refusal: neither the project nor spark has it. None when one has."""
     if board in boards.available(project):
         return None
     return Refusal("no board called %r. Available: %s" % (board, boards_offered(project)), build_codes.UNKNOWN_BOARD)
@@ -433,7 +433,7 @@ def why_board_refused(board, project):
 
 def find_circuit(project):
     """
-    The built netlist the rails are named from, the first of CIRCUIT_PATHS that matches, as (path, None), or (None, None)
+    Value: the built netlist the rails are named from, the first of CIRCUIT_PATHS that matches, as (path, None), or (None, None)
     when none does. Two that match one pattern give (None, a Refusal): the rails are not seeded, the rest is.
     """
     for pattern in CIRCUIT_PATHS:
