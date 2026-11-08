@@ -28,6 +28,7 @@ The build runs the same Service as its breadboard stage.
 | `breadboard/bench_changes.py` | what a rebuild asks the person to change, from `breadboard_changes.py` |
 | `breadboard/drawing_match.py` | the drawing check against `circuit.json`, from `breadboard_match.py` |
 | `breadboard/part_pictures.py` | `PartPictures`, moved as is |
+| `breadboard/part_shape.py` | `PartShape`, `ShapeSource`, `find_part_px`, a part's pixel shape in the Wokwi drawing, moved as is in W6-D3b (P698). It raises `NotDrawn` and imports design's `emit_footprint`, a downward arrow |
 | `breadboard/tabbed_page.py` | `TabbedHtmlPage`, `TscircuitExport`, moved as is |
 | `breadboard/sheet.py` | the sheet flow, moved from `breadboard.py` |
 | `breadboard/breadboard_codes.py` | the codes of the refusals of the run, with one sentence each (a leaf, P692); a drawing not written has its codes in `drawing.py`'s `CODES`, from `breadboard_codes.py` |
