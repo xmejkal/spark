@@ -1,24 +1,24 @@
 [
  {
-  "file": "scripts/assign_pins.py",
+  "file": "scripts/spark/design/pin_assigner.py",
   "name": "a named pin's needs go unchecked again (C4)",
   "find": "        cannot = needs - capability_of(board, gpio)\n        if cannot:",
   "replace": "        cannot = needs - capability_of(board, gpio)\n        if False:"
  },
  {
-  "file": "scripts/assign_pins.py",
+  "file": "scripts/spark/design/pin_assigner.py",
   "name": "a named strap is honoured again (C4)",
   "find": "        if blocked:\n            raise Impossible(",
   "replace": "        if False:\n            raise Impossible("
  },
  {
-  "file": "scripts/design.py",
+  "file": "scripts/spark/design/loader.py",
   "name": "a --project that does not exist is resolved unchecked again (C5)",
   "find": "        if not chosen.is_dir():",
   "replace": "        if False:"
  },
  {
-  "file": "scripts/design.py",
+  "file": "scripts/spark/design/loader.py",
   "name": "a nameless signal is a KeyError again (C7)",
   "find": "        if not isinstance(signal, dict) or not isinstance(signal.get(\"name\"), str) or not signal[\"name\"]:",
   "replace": "        if False:"

@@ -20,8 +20,8 @@
  {
   "file": "scripts/check_spine.py",
   "name": "P196 refuter: pins no pin can take crash the report again",
-  "find": "PIN_MAP_REFUSALS = (assign_pins.Impossible, design.DesignError, store.StoreProblem, OSError, ValueError)",
-  "replace": "PIN_MAP_REFUSALS = (design.DesignError, store.StoreProblem, OSError, ValueError)"
+  "find": "PIN_MAP_REFUSALS = (pin_assigner.Impossible, loader.DesignError, store.StoreProblem, OSError, ValueError)",
+  "replace": "PIN_MAP_REFUSALS = (loader.DesignError, store.StoreProblem, OSError, ValueError)"
  },
  {
   "file": "scripts/check_spine.py",
@@ -32,8 +32,8 @@
  {
   "file": "scripts/check_spine.py",
   "name": "P196 refuter: a pins.py in another encoding crashes the report again",
-  "find": "target.read_bytes().startswith(assign_pins.PIN_MODULE_HEADER.encode())",
-  "replace": "target.read_text().startswith(assign_pins.PIN_MODULE_HEADER)"
+  "find": "target.read_bytes().startswith(pin_assigner.PIN_MODULE_HEADER.encode())",
+  "replace": "target.read_text().startswith(pin_assigner.PIN_MODULE_HEADER)"
  },
  {
   "file": "scripts/check_spine.py",
@@ -54,7 +54,7 @@
   "replace": "        firmware = None\n"
  },
  {
-  "file": "scripts/design.py",
+  "file": "scripts/spark/design/loader.py",
   "name": "P196 refuter: a need that is not a word passes the reader again",
   "find": "not all(isinstance(need, str) for need in needs)",
   "replace": "False"

@@ -1,12 +1,12 @@
 [
  {
-  "file": "scripts/netlist.py",
+  "file": "scripts/spark/design/netlist.py",
   "name": "a pin-to-pin trace is skipped again (P8)",
   "find": "            if not net_ids:\n                net_ids = [self.trace_net_id(element)]",
   "replace": "            if False:\n                net_ids = [self.trace_net_id(element)]"
  },
  {
-  "file": "scripts/netlist.py",
+  "file": "scripts/spark/design/netlist.py",
   "name": "every pin-to-pin trace is its own net even when the key says one wire",
   "find": "        return \"trace:\" + (trace.get(\"subcircuit_connectivity_map_key\") or trace[\"source_trace_id\"])",
   "replace": "        return \"trace:\" + trace[\"source_trace_id\"]"

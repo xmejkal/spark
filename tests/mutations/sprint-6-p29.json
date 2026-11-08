@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/netlist.py",
+  "file": "scripts/spark/design/netlist.py",
   "name": "a port answers only to its own name again, so every rule about the module's pads misses",
   "find": "        names = [port.get(\"name\")] + list(port.get(\"port_hints\") or [])",
   "replace": "        names = [port.get(\"name\")]"

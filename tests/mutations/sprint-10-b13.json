@@ -7,6 +7,6 @@
   "find": "if net.get(\"is_power\") or net.get(\"is_ground\") or net.get(\"name\") in set(rails)}", "replace": "if net.get(\"is_power\") or net.get(\"is_ground\")}"},
  {"file": "scripts/spark/checks/rules_check.py", "name": "the rules file's rails never reach the check",
   "find": "            rails=((rules.get(\"physics\") or {}).get(\"rails\") or {}).keys())", "replace": "            rails=())"},
- {"file": "scripts/netlist.py", "name": "a pad is named by its footprint number again",
+ {"file": "scripts/spark/design/netlist.py", "name": "a pad is named by its footprint number again",
   "find": "                return printed[0] if printed else port_name", "replace": "                return port_name"}
 ]

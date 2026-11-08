@@ -8,17 +8,17 @@
  {
   "file": "scripts/emit_board.py",
   "name": "emit_board traces no signal",
-  "find": "        assignments, _ = assign_pins.assign(board, design.signals)",
-  "replace": "        assignments, _ = assign_pins.assign(board, [])"
+  "find": "        assignments, _ = pin_assigner.assign(board, design.signals)",
+  "replace": "        assignments, _ = pin_assigner.assign(board, [])"
  },
  {
-  "file": "scripts/design.py",
+  "file": "scripts/spark/design/loader.py",
   "name": "a malformed record escapes as a traceback (B10)",
   "find": "    except ValueError as broken:\n        raise DesignError(\"the record for %r is not JSON: %s\", part_id, broken, code=design_codes.PART_UNUSABLE) from broken",
   "replace": "    except ImportError as broken:\n        raise DesignError(\"the record for %r is not JSON: %s\", part_id, broken, code=design_codes.PART_UNUSABLE) from broken"
  },
  {
-  "file": "scripts/design.py",
+  "file": "scripts/spark/design/loader.py",
   "name": "instances lose their own signal names",
   "find": "            signals.append(dict(signal, name=signal_name(part, {\"signal\": signal[\"name\"]})))",
   "replace": "            signals.append(dict(signal))"

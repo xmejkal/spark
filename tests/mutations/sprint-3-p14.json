@@ -36,7 +36,7 @@
   "replace": "        if False:"
  },
  {
-  "file": "scripts/design.py",
+  "file": "scripts/spark/design/loader.py",
   "name": "the multi-board circuit path dropped from the one convention",
   "find": "CIRCUIT_PATHS = (\"dist/board/circuit.json\", \"dist/*/circuit.json\")",
   "replace": "CIRCUIT_PATHS = (\"dist/board/circuit.json\",)"

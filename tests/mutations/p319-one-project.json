@@ -44,7 +44,7 @@
  {
   "file": "scripts/spark/checks/check.py",
   "name": "library note dropped",
-  "find": "    if design.is_library(project):",
+  "find": "    if loader.is_library(project):",
   "replace": "    if False:"
  },
  {
@@ -56,19 +56,19 @@
  {
   "file": "scripts/spark/checks/check.py",
   "name": "requirements read with the folder as project",
-  "find": "design.parts_of(design.read(requirements), design.project_for(requirements))",
-  "replace": "design.parts_of(design.read(requirements), Path(project))"
+  "find": "loader.parts_of(loader.read(requirements), loader.project_for(requirements))",
+  "replace": "loader.parts_of(loader.read(requirements), Path(project))"
  },
  {
   "file": "scripts/spark/checks/check.py",
   "name": "rail loads read with the folder as project",
-  "find": "made = design.load(requirements)  #",
-  "replace": "made = design.load(requirements, Path(project))  #"
+  "find": "made = loader.load(requirements)  #",
+  "replace": "made = loader.load(requirements, Path(project))  #"
  },
  {
   "file": "scripts/check_all.py",
   "name": "main omits the project key",
-  "find": "            answer_json[\"project\"] = None if design.is_library(checked.project) else str(checked.project.resolve())",
+  "find": "            answer_json[\"project\"] = None if loader.is_library(checked.project) else str(checked.project.resolve())",
   "replace": "            pass"
  },
  {
