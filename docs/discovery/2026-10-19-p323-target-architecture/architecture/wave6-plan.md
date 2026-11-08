@@ -765,6 +765,9 @@ P694 claims check (2026-11-08, against dac6d4d2). Each claim above was read in t
     (`breadboard.py:575`, `:96`, `:86`) and puts `OPERATIONS` in `__init__.py`. Decision: the docstring alone, as above.
 11. The closing check is a test, as P685's `TheFirmwareAreaTest` (`breadboard.py` defines `main` only), not `ls`, which
     exits 2 when two of its files are gone.
+12. Missed (the refuter): `tools/map.py:32`-`:33` register `WIRING_VIEWS` and `DRAWING_RENDERERS` under `breadboard`, so
+    they name `spark.breadboard.sheet` and `map.py --write` follows. Comments at `spark/core/outcomes.py:45` and
+    `onboard_parts.py:42`, `:130` name the new homes. The 12th patch site is `os.replace`, global.
 
 These hold: the three `__file__` paths take `parents[3]`, and `breadboard_catalog.py:10` goes. The import graph has no
 cycle, and no moved module builds a format string at import. `LEAVES` and `LEAF_NAMES` hold `breadboard_codes`. Note:
