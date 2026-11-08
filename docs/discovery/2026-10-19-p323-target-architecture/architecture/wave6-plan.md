@@ -503,19 +503,21 @@ P692 claims check (2026-11-08, on main 6338f89e). Stopped before any code, for o
   `splitlines`, `:449`). Every line the card adds there is the new key `R1:scripts/breadboard.py:<module>`, and the
   baseline may only shrink. The card adds about 20: the import 1, `NotBuilt.__init__` 4, the three extractions about
   2, 5 and 5, wrapped raise lines about 3, and 5 more for a library function that gives the three outside exceptions
-  their code (`main` is the R1 key at 26 and cannot grow, as P684 row 28 found). Prunes that lose no words give about 8:
-  the orphan comment at `:74`, and three docstrings whose `"""` sit on their own lines (`points`, `printed_label`,
-  `_check_fresh`). About 12 lines more must go: cut the module docstring, which is the `--help` text (43 lines); move
-  code out to another module (for example `points` and `_wiring` to `breadboard_steps.py`, which holds the step rule),
-  which changes W6-B3's table; or leave the outside exceptions' code to the Operation card.
+  their code (`main` is the R1 key at 26 and cannot grow, as P684 row 28 found). Prunes that lose no words give about 8.
+  They are the orphan comment at `:74` and three docstrings whose `"""` sit on their own lines. About 12 lines more
+  must go, by one of three choices:
+  - Cut the module docstring, which is the `--help` text (43 lines).
+  - Move code to another module, for example `points` and `_wiring` to `breadboard_steps.py`, which holds the step
+    rule. This changes W6-B3's table.
+  - Leave the code of the three outside exceptions to the Operation card.
 - Counts: `LEAVES` is at `measure.py:245`, not `:247`. `NotDrawn` is at `breadboard_drawing.py:62`. In `part_shape.py`
   one `NotDrawn` site has no code (`:226`), not five: `:145`, `:161`, `:168` and `:173` pass one. P691's scope is 13
   sites, not 17.
 - For a card: `check_spine.py:843` writes the sheet's `not written` entry with no `code`, while each drawing's entry has
   one, and it also catches `ValueError`, which `breadboard.main` does not.
-- The rest holds: the four tables, `check_spine.py:64`, the 12 sites in `breadboard_drawing.py`, `:404`, `:55`,
-  `NotBuilt` at `:108` with its eight sites, `main`'s `except` at `:581`, the three spans (45, 42 and 47 lines), and
-  `planted_tree.py:11`.
+- The rest holds. That is the four tables, `check_spine.py:64`, the 12 sites in `breadboard_drawing.py`, `:404` and
+  `:55`. It is also `NotBuilt` at `:108` and its eight sites, the `except` at `:581`, and the three spans (45, 42 and
+  47 lines).
 
 ### W6-C2, the checks codes (after P685)
 
