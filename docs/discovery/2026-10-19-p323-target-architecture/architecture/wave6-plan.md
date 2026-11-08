@@ -251,6 +251,13 @@ The refuter's plan check of this delta (rows 18 to 23) added four things:
   print stays byte-equal, and the row is proven again with `--anchors`. `json.md:191` names the new key.
 - Size est.: 100 product lines, 100 test lines, one golden accepted again.
 
+The second plan check (row 24) added one rule. A `%` format or a `.strip()` turns a `Refusal` back into a plain
+`str`, so a site builds its `Refusal` from the final text. Four refusals never pass through a library function: the
+missing simulator and the unset token in `run_scenario.main` (`:575`, `:578`), and `no_interpreter` and
+`files_not_folder` in `flash_image.main` (`:291`-`:297`). Their codes are named in `main` only in this PR, and they
+reach the library with the Operation in W6-F3 or later. The `Refusal` docstring starts with its role word ("Value:"),
+as `Interpreter`'s does (R6).
+
 ### W6-F3, the firmware move (after #915)
 
 Goal: `ls scripts/*.py` prints no firmware library module. `scripts/spark/firmware/` holds the area under the
