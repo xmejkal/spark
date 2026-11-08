@@ -35,7 +35,7 @@ from spark.records import board_pads
 from spark.records import board_records
 from spark.design import design_codes
 from spark.design import loader
-import missing_facts
+from spark.records import missing_facts
 import parts as parts_library
 from spark.records import provenance
 from spark.core.text_guards import one_line

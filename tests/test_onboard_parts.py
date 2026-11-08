@@ -23,9 +23,9 @@ from spark.records import board_records  # noqa: E402
 from spark.breadboard import sheet  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import build_service  # noqa: E402
-import onboard_parts  # noqa: E402
+from spark.records import onboard_parts  # noqa: E402
 from spark.records import store  # noqa: E402
-from onboard_parts import OnboardPartReader  # noqa: E402
+from spark.records.onboard_parts import OnboardPartReader  # noqa: E402
 
 LED = {"id": "led-red-5mm", "onboard": "firebeetle2-esp32s3", "_instance": "onboard_led", "gpio": 21, "pin": "D13"}
 BUTTON = {"id": "tactile-button", "onboard": "firebeetle2-esp32s3", "_instance": "onboard_button", "gpio": 47, "pin": "D14"}

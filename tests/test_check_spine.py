@@ -50,7 +50,7 @@ from suite_runs import slow  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 import emit_footprint  # noqa: E402
-import missing_facts  # noqa: E402
+from spark.records import missing_facts  # noqa: E402
 import parts  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402

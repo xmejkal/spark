@@ -215,7 +215,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, add_env, envelope, step as next_step  # noqa: E402, F401
 from spark.records.brief import Brief  # noqa: E402
 from spark.records import board_records  # noqa: E402
-import missing_facts  # noqa: E402
+from spark.records import missing_facts  # noqa: E402
 from spark.records import provenance  # noqa: E402
 import records_codes  # noqa: E402
 import sourcing_codes  # noqa: E402

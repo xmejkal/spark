@@ -20,7 +20,7 @@ from spark.design import footprint_emitter
 from spark.design import loader
 from spark.design import needs
 from spark.design import netlist
-import onboard_parts
+from spark.records import onboard_parts
 from spark.firmware import sim_project
 import tools
 
