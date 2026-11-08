@@ -106,10 +106,10 @@ def name_the_gh(folder):
 
 def child_env(store, shim_folder):
     """The bench's child environment with `store` as SPARK_HOME, `shim_folder` as the whole PATH, every proxy a closed
-    port, no Wokwi token, and an empty HOME beside the store: a tools list's `~/...` place (wokwi-cli's `also`, which
+    port, no Wokwi token (golden_bench.child_env drops every secret), and an empty HOME beside the store: a tools list's `~/...` place (wokwi-cli's `also`, which
     `sim_project.find_wokwi_cli` reads with no project) finds no real tool there (P699)."""
     env = golden_bench.child_env(store, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
-    for name in ("WOKWI_CLI_TOKEN", "no_proxy", "NO_PROXY"):
+    for name in ("no_proxy", "NO_PROXY"):
         env.pop(name, None)
     home = Path(store).parent / "home"
     home.mkdir(parents=True, exist_ok=True)
