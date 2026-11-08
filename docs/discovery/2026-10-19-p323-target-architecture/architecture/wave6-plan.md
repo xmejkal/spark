@@ -233,6 +233,23 @@ changed three things before any code:
 - `firmware_codes` is a leaf, and `board_codes` stays one (U1). `board_codes` keeps its four names, and
   `TOOL_MISSING`, as equal literals, not imports. A test asserts that the five are equal in both modules, and the
   table test that keeps code tables apart lists these five as the one allowed overlap, until W6-F3.
+  `firmware_codes` joins `measure.LEAVES` (`tools/measure.py:247`) and `planted_tree.LEAF_NAMES`
+  (`tests/planted_tree.py:11`) in the same commit.
+
+The refuter's plan check of this delta (rows 18 to 23) added four things:
+
+- `flash_image.py`'s `except ValueError` (`:303`) catches six "use the build for the board's chip" errors and two
+  "damaged" ones, so its code is `interpreter_unusable`, not `interpreter_damaged`. `ScenarioRun.problem()`'s last
+  return (`why_outside_sim`, `run_scenario.py:466`) is the same cause as `project_image.py:55`, so it takes
+  `FIRMWARE_LINE_BAD`. A `LittleFSError` that escapes `:303` as a traceback is a bug for a card, not this PR, because
+  its fix changes the output.
+- How a code travels: a refusal that raises gives its exception a `code` attribute. A refusal that returns a sentence
+  returns a `Refusal`, a `str` subclass in `firmware_codes` with a `code` attribute. So no return shape changes, and
+  the callers in `test_run_scenario.py`, `golden_bench.py:155` and `test_journey_basic.py:262` stay as they are.
+- The mutation row "the alias in `board_codes` broken" becomes "a literal in `board_codes` differs from its
+  `firmware_codes` twin". `sprint-10-p82-5.json:4` anchors on `flash_image.py`'s `except ToolProblem` print: the
+  print stays byte-equal, and the row is proven again with `--anchors`. `json.md:191` names the new key.
+- Size est.: 100 product lines, 100 test lines, one golden accepted again.
 
 ### W6-F3, the firmware move (after #915)
 
