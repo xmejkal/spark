@@ -25,3 +25,8 @@ check"). They were checked against main fd967e0f before any code, then the build
 | 16 | the split keeps each file's mode | build | verified | the CLIs are 755, `board_emitter.py`, `footprint_emitter.py`, `design_codes.py` and `part_shape.py` 644 |
 | 17 | `--anchors` refuses only what main refused | build | verified | 114 refused, the same names as main fd967e0f, none new |
 | 18 | 7 agent-facing pages name a moved path | plan | rejected | they name the CLIs `emit_board.py` and `emit_footprint.py`, which stay. `map.py --write` added the four modules to their areas |
+| 19 | review: comments and docstrings name `emit_board` and `emit_footprint` where the library is meant | review | acted | they name `board_emitter` and `footprint_emitter` (`check_spine.py:398`, `footprint_emitter.py:145`, `loader.py:7`, `:25`, `:402`, `design_codes.py:3`, `:24`, `:27`, `copper.py:6`, `fab.py:7`, `areas/build.md:92`, `areas/sourcing.md:29`, `:30`), and `emit_board.py` where the CLI is (`check_spine.py:406`, `:424`, `loader.py:287`). `wave6-plan.md:962` says `design_codes` moved |
+| 20 | review: `refactor-plan.md:217`, `:300`, `:303`, `:314`, `:328`, `:329` name the old modules | review | rejected | history: each row says where a name stood when the plan was written |
+| 21 | review: `part_shape.py`'s imports are not sorted | review | acted | sorted: no row anchors on them |
+| 22 | refuter: the three `footprint_emitter.render` patch sites (`test_check_spine.py:1910`, `:1926`, `:1944`) do not guard `check_spine`'s own call | refuter | raised | the same on main fd967e0f, so not this move's: for a later card |
+| 23 | the review's fixes keep the anchors | review fixes | verified | `--anchors` refuses 114, the same names as main fd967e0f |
