@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
-import breadboard_keep  # noqa: E402
+from spark.breadboard import kept_moves  # noqa: E402
 import check_spine  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
@@ -265,7 +265,7 @@ class OtherEditsTest(unittest.TestCase):
         edit(project, move("TactileButton", dx=12 * PITCH_PX))
         moved = place_of(project, "TactileButton")
         change_requirements(project, FULL)
-        with mock.patch.object(breadboard_keep.KeepMovesFirstFitPartPlacement, "place",
+        with mock.patch.object(kept_moves.KeepMovesFirstFitPartPlacement, "place",
                                side_effect=drawing.NotDrawn("no room")):
             written = build(project)
         self.assertEqual(codes(written), {"TactileButton": "no-room"})
@@ -291,8 +291,8 @@ class OtherEditsTest(unittest.TestCase):
         self.assertEqual(codes(build(project)), {"breadboard.json": "unreadable"})
 
     def test_every_code_has_a_message(self):
-        self.assertEqual(set(breadboard_keep.MESSAGES), set(breadboard_keep.CODES))
-        self.assertEqual(len(breadboard_keep.CODES), len(set(breadboard_keep.CODES)))
+        self.assertEqual(set(kept_moves.MESSAGES), set(kept_moves.CODES))
+        self.assertEqual(len(kept_moves.CODES), len(set(kept_moves.CODES)))
 
     def test_the_picture_shows_the_kept_place(self):
         project = new_project(FULL)

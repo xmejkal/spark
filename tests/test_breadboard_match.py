@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import breadboard  # noqa: E402
 import breadboard_catalog  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
-import breadboard_keep  # noqa: E402
+from spark.breadboard import kept_moves  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 import check_spine  # noqa: E402
 from spark.breadboard.drawing import Jumper, WokwiGeometry  # noqa: E402
@@ -152,12 +152,12 @@ class TheBuildSaysItTest(unittest.TestCase):
         self.plan.stop()  # the first build plans for real, so the second one keeps its layout
         with in_store():
             breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
-        keep = breadboard_keep.KeepMovesJumperPlacement.place_jumpers
+        keep = kept_moves.KeepMovesJumperPlacement.place_jumpers
 
         def keep_then_move(placement, layout, ledger):
             return moved(keep(placement, layout, ledger), 5, "29b.f")
 
-        with in_store(), mock.patch.object(breadboard_keep.KeepMovesJumperPlacement, "place_jumpers", keep_then_move):
+        with in_store(), mock.patch.object(kept_moves.KeepMovesJumperPlacement, "place_jumpers", keep_then_move):
             written = breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
         self.assertEqual([(one.code, one.subject) for one in written.differs], [(NOT_JOINED, "R1 end 1")])
 

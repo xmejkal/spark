@@ -56,7 +56,7 @@ import breadboard_catalog  # noqa: E402
 import breadboard_changes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
-import breadboard_keep  # noqa: E402
+from spark.breadboard import kept_moves  # noqa: E402
 from spark.breadboard import drawing_match  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 import design  # noqa: E402
@@ -328,30 +328,30 @@ def _plan_once(read, earlier_path=None, record=None):
 
     if earlier_path is None or EDITABLE_DRAWING.why_not_written(fresh):
         return checked(fresh, [])  # no Wokwi diagram is written, so no earlier one is kept
-    earlier = breadboard_keep.EarlierDiagram.read(earlier_path, geometry.surface.type)
+    earlier = kept_moves.EarlierDiagram.read(earlier_path, geometry.surface.type)
     if earlier is None:
         return checked(fresh, [])
     if earlier.why_unread:
-        return checked(fresh, [breadboard_keep.NotKeptResult(
-            Path(earlier_path).name, breadboard_keep.UNREADABLE,
-            breadboard_keep.MESSAGES[breadboard_keep.UNREADABLE] % earlier.why_unread)])
-    placement = breadboard_keep.KeepMovesFirstFitPartPlacement(geometry, earlier, catalog)
-    jumpers = breadboard_keep.KeepMovesJumperPlacement(geometry, earlier)
+        return checked(fresh, [kept_moves.NotKeptResult(
+            Path(earlier_path).name, kept_moves.UNREADABLE,
+            kept_moves.MESSAGES[kept_moves.UNREADABLE] % earlier.why_unread)])
+    placement = kept_moves.KeepMovesFirstFitPartPlacement(geometry, earlier, catalog)
+    jumpers = kept_moves.KeepMovesJumperPlacement(geometry, earlier)
     try:
         layout = drawing.BreadboardPlanner(geometry, catalog, placement, jumpers).plan(read.steps)
         default = None
     except drawing.NotDrawn:
-        layout, default = fresh, breadboard_keep.NO_ROOM
+        layout, default = fresh, kept_moves.NO_ROOM
     drawn = record.drawn_jumpers if record and not record.why_unread else None
-    named = breadboard_keep.name_parts_not_kept(earlier, layout, fresh, placement.reasons, default)
-    named += breadboard_keep.name_jumpers_not_kept(earlier, layout, fresh, jumpers.reasons, geometry, drawn, default)
+    named = kept_moves.name_parts_not_kept(earlier, layout, fresh, placement.reasons, default)
+    named += kept_moves.name_jumpers_not_kept(earlier, layout, fresh, jumpers.reasons, geometry, drawn, default)
     return checked(layout, named)
 
 
 def holds_parts(path):
     """True when `path` is a breadboard.json of spark's kind with at least one part on it: a diagram that may hold a
     person's moves (P273), which a build that did not finish leaves alone."""
-    earlier = breadboard_keep.EarlierDiagram.read(path, drawing.WokwiGeometry.load().surface.type)
+    earlier = kept_moves.EarlierDiagram.read(path, drawing.WokwiGeometry.load().surface.type)
     return bool(earlier and earlier.parts)
 
 
@@ -422,7 +422,7 @@ def _spark_jumpers(planned, earlier_path, record):
     if not layout:
         return []
     geometry = drawing.WokwiGeometry.load()
-    earlier = breadboard_keep.EarlierDiagram.read(earlier_path, geometry.surface.type)
+    earlier = kept_moves.EarlierDiagram.read(earlier_path, geometry.surface.type)
     person = {frozenset((wire.one, wire.other)) for wire in earlier.jumpers} if earlier else set()
     pairs = [frozenset((jumper.one.name, jumper.other.name)) for jumper in layout.jumpers]
     if record and not record.why_unread:
