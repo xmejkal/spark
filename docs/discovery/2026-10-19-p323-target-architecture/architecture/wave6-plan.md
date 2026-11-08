@@ -841,6 +841,14 @@ with `--anchors`, run with `--copy`. Review: no product logic. One reviewer on t
 strongest. Size est.: 130 helper lines, 120 test lines, 30 lines of the fake converter, 19 goldens. Tests only, so it
 can open while a move PR is open.
 
+P699 claims check (at b716bd87). Each cited line holds: `check_spine.py:183`, `:191`, `:461` (tsci), `:415` (the
+`emit_board.py` child), `:560` (the converter), `:373` and `:582` (`SCRIPTS.parent`), `converter_stage_problem`
+(`:230`), `fake_tsci` (`test_check_spine.py:1234`), `FakeTscircuitExport` (`fakes.py:267`), and the merge field by
+field (`tools.py:80`). `tools.find` refuses both fakes without `"needs": []` and finds them with it (reproduced). Two
+corrections: `init_project.py:426` reads the tools list (`tools.merged`) and finds no tool, and `--keep` runs the fake
+`tsci` a third time, as `tsci export` for the page (`tabbed_page.py:46`). So the lifted fake answers `--version` and
+`build` alone, and refuses any other command.
+
 ### W6-D2, the design codes (after W6-D1 and P693)
 
 Goal: each refusal of the four design CLIs and of `design.load` has a code. Text and exit codes stay byte-equal.
