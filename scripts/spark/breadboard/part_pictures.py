@@ -14,7 +14,7 @@ import re
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
-PICTOGRAMS = Path(__file__).resolve().parent.parent / "data" / "pictograms"
+PICTOGRAMS = Path(__file__).resolve().parents[3] / "data" / "pictograms"
 #: The pictogram of a part type spark has no picture for.
 FALLBACK = "module"
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"

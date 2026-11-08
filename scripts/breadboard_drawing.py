@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
 import breadboard_steps
-import part_pictures
+from spark.breadboard import part_pictures
 
 WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
 BREADBOARDS_FILE = Path(__file__).resolve().parent.parent / "data" / "breadboards.json"

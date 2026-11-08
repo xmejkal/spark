@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import breadboard  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_steps  # noqa: E402
-import part_pictures  # noqa: E402
+from spark.breadboard import part_pictures  # noqa: E402
 from test_breadboard_layout import RECORD_BOARD, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
