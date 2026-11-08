@@ -33,7 +33,7 @@ The build calls the simulation project step (`sim_project.py`) as one of its sta
 | `firmware/scenario_run.py` | `ScenarioRun`, `verdict`, `image_in`, `with_ready_wait` and `find_simulator`, moved from `run_scenario.py` (P685). `RunLog` waits |
 | `firmware/scenario_steps.py` | the run log's words and their reader: `ScenarioSteps`, the step constants, `READY`, the header lines, `PASSED`, `run_record`, `file_hashes`, moved from `run_scenario.py` (P685). It imports only `spark.core`. `component_ids` after P399 |
 | `firmware/simulation_engine.py` | `SimulationEngine`, `WokwiCliEngine`, `ENGINES`: they wait for a second simulator |
-| `firmware/firmware_codes.py` | the area's leaf: its codes and `Refusal` (P684), moved as is (P685) |
+| `firmware/firmware_codes.py` | the area's leaf: its codes (P684), moved as is (P685). `Refusal` is the core's since P693 |
 | `firmware/import_child.py` | the child Python that imports one module, run by path; its function is `import_named` (P685) |
 | `firmware/stand_in/` | MicroPython's `machine`, `framebuf` and `micropython` stand-ins for the import check, moved as is: not spark code |
 | `firmware/__init__.py` | the index docstring only, and no imports (P685). `OPERATIONS` waits for the firmware Operations |

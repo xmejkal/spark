@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_vendor_pins  # noqa: E402
+import golden_checks  # noqa: E402
 
 #: A believable fragment of an Espressif variant header, including the forms that are NOT
 #: silkscreen labels and must not be demanded of a board file.
@@ -117,12 +118,14 @@ class ARefusalIsNotAPass(unittest.TestCase):
         result = check_vendor_pins.check_board(path, offline=True, repo="x/y")
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn("arduino_variant", result["reason"])
+        self.assertEqual(result["reason"].code, "no_vendor_variant")  # P693
 
     def test_offline_with_no_cache_refuses_rather_than_passing(self):
         path = self._board_file({"pins": {"D3": 38}, "vendor": {"arduino_variant": "nope"}})
         result = check_vendor_pins.check_board(path, offline=True, repo="x/y")
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn("no cached header", result["reason"])
+        self.assertEqual(result["reason"].code, "no_cached_header")  # P693
 
     def test_a_projects_own_copy_of_a_shipped_board_is_checked_against_the_plugins_cache(self):
         # P10: the override you are told to make for a verified board found no cache beside
@@ -311,6 +314,7 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn("no project", result["reason"])
         self.assertIn(str(path), result["reason"], "and names the board file it could not place")
+        self.assertEqual(result["reason"].code, "board_has_no_project")  # P693
         self.assertFalse((loose / ".spark").exists() or (loose.parent / ".spark").exists())
         self.assertEqual(self._plugin_files(), self.seeded)
 
@@ -322,6 +326,7 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         result = self._live(path)
         self.assertEqual(result["status"], "could-not-run")
         self.assertIn(str(self._kept(project, "p179_locked")), result["reason"])
+        self.assertEqual(result["reason"].code, "header_not_kept")  # P693
 
     def test_the_live_refusal_offers_offline_only_when_spark_keeps_the_header(self):
         # Refuter B8: "or use --offline" for a header spark does not keep was a second refusal.
@@ -347,6 +352,16 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         self.assertIn("no project owns %s" % path, result["reason"])
         self.assertIn(str(self.plugin / ".spark" / "cache"), result["reason"])
 
+    def test_a_fetch_that_fails_is_told_by_its_code(self):
+        # P693: the fake gh of the golden net, alone on PATH, fails as gh does on a 404; no network is reached.
+        project, path = self._project(self._board("p693_unfetched"))
+        shim = golden_checks.name_the_gh(Path(tempfile.mkdtemp()))
+        with mock.patch.dict(os.environ, {"PATH": str(shim), "FAKE_GH_EXIT": "1"}):
+            result = check_vendor_pins.check_board(path, offline=False, repo="x/y")
+        self.assertEqual((result["status"], result["reason"].code), ("could-not-run", "header_not_fetched"))
+        self.assertIn("could not fetch", result["reason"])
+        self.assertFalse(self._kept(project, "p693_unfetched").exists())
+
     def test_the_live_line_says_which_file_it_wrote(self):
         project, path = self._project(self._board("p179_said"))
         self.assertIn("wrote %s" % self._kept(project, "p179_said"), self._line(path))
@@ -356,6 +371,7 @@ class WhereTheHeaderIsKept(unittest.TestCase):
         result = self._live(path, "/* no pins here */")
         self.assertEqual(result["status"], "could-not-run")
         self.assertEqual(result["wrote"], str(self._kept(project, "p179_empty")))
+        self.assertEqual(result["reason"].code, "header_has_no_pins")  # P693
         self.assertIn("wrote %s" % self._kept(project, "p179_empty"), self._line(path, "/* no pins here */"))
 
     def test_an_offline_read_says_spark_answered_when_the_project_has_no_copy(self):

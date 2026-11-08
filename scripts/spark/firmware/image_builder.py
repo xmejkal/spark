@@ -22,8 +22,8 @@ from collections import namedtuple
 from pathlib import Path
 
 import boards
+from spark.core.result import Refusal
 from spark.firmware import firmware_codes
-from spark.firmware.firmware_codes import Refusal
 import store
 import tools
 

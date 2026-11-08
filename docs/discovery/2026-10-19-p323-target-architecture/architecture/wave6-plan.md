@@ -632,6 +632,24 @@ Docs: `docs/guide/agents/json.md` (the six ops), `docs/guide/journey/checks.md`,
 `codes`). Review: it holds logic. The lenses on the everyday model, the refuter on the strongest, one mutation run. Size
 est.: 140 product lines, 110 test lines.
 
+P693 claims check (2026-11-08, on main 924e48a4). Each claim was read in the code. No decision changes. These are
+wrong or stale, and the build takes the corrections:
+
+- R1 room. `check_physics.py` is 659 lines, a baseline key (`R1:scripts/check_physics.py:<module>`) that cannot rise,
+  so its two extractions and the import are paid for by free lines in the same file. `check_footprints.py` is 582.
+  Every `main` of the six is a key that cannot grow (`check_all` 48, `check_bom` 29, `check_footprints` 30,
+  `check_physics` 32, `check_vendor_pins` 45, `compare_design` 17).
+- The three `main` sites name their code in the library, not in `main`, as P684 (row 28) and P692 (row 14) did: a
+  small function returns the refusal (`check_all.CheckedFolder.named`, `check_bom.order_rows`, `check_footprints.built_design`),
+  so each code is testable with no `mock.patch` and no `main` grows.
+- `check_vendor_pins.py:223`'s `CouldNotKeep` has three causes (`:189` no project owns the board file, `:193` the fetch,
+  `:198` the write), each with its own fix, so it carries a code: `board_has_no_project`, `header_not_fetched`,
+  `header_not_kept`. 16 codes, not 14.
+- The `Refusal` importers after P685 are `spark/firmware/image_builder.py:26`, `spark/firmware/import_probe.py:11` and
+  `spark/firmware/scenario_run.py:19`; `import_firmware.py` and `run_scenario.py` import none.
+- Confirmed: the 20 sites at the stated lines (`check_physics.py:621` for `:620`), the six spans, the mutation row
+  `p684-firmware-codes.json:10`, `firmware_codes.py:7`, `test_check_all.py:132`, no code shared with another table.
+
 ### W6-B3, the breadboard move (after W6-B2)
 
 Why two move PRs, not one. Breadboard with checks is 4,909 lines in 15 modules, 284 mutation rows in 38 tables, 44

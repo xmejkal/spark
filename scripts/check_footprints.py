@@ -35,8 +35,10 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import check_codes  # noqa: E402
 import fab  # noqa: E402
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, COULD_NOT_RUN, status_of  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 
 #: Every number below comes from `data/fabrication.json` through `fab`, so the generator that
 #: draws a footprint and the check that judges it cannot hold different values. See that file's
@@ -535,15 +537,22 @@ def render(findings, design):
 
 # --- MVP --- (P434)
 def rules_asked(argument):
-    """(the rules of `--rules`, None), or (None, why they cannot be read): a missing file, or a value of the wrong kind."""
+    """(the rules of `--rules`, None), or (None, the Refusal that says why they cannot be read): a missing file, or a
+    value of the wrong kind."""
     if not argument:
         return None, None
     if not Path(argument).is_file():
-        return None, "no rules file at %s" % argument
+        return None, Refusal("no rules file at %s" % argument, check_codes.NO_RULES_FILE)
     try:
         return fab.read_rules(argument), None
     except fab.RulesError as refused:
-        return None, str(refused)
+        return None, Refusal(str(refused), check_codes.RULES_REFUSED)
+
+
+def built_design(argument):
+    """Value: (the path of the built design `argument` names, None), or (that path, the Refusal that says it is not there)."""
+    path = Path(argument)
+    return path, None if path.is_file() else Refusal("no built design at %s — build it first" % path, check_codes.NO_CIRCUIT)
 
 
 def main(argv=None):
@@ -557,9 +566,9 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
-    path = Path(args.circuit)
-    if not path.is_file():
-        print("no built design at %s — build it first" % path)
+    path, missing = built_design(args.circuit)
+    if missing:
+        print(missing)
         return EXIT_COULD_NOT_RUN
 
     rules, why = rules_asked(args.rules)

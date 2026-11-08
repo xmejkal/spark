@@ -41,8 +41,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import boards  # the one project walk the scripts share (boards.project_root), and spark's root
+import check_codes  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, EXIT_PROBLEMS as EXIT_MISMATCH, status_of  # noqa: F401
+from spark.core.result import Refusal  # noqa: E402
 
 #: Where the vendor's own header lives. Only Espressif's Arduino core is understood today; a
 #: board from another vendor would need its own fetcher, which is why this is a named constant
@@ -174,7 +176,12 @@ def no_project_for_live(path: Path, variant: str) -> str:
 
 
 class CouldNotKeep(Exception):
-    """A live check could not fetch the vendor's header or keep it; the message names the place and the cause."""
+    """A live check could not fetch the vendor's header or keep it; the message names the place and the cause, and
+    `code` (check_codes) says which."""
+
+    def __init__(self, message, code):  # --- MVP --- (P693)
+        super().__init__(message)
+        self.code = code
 
 
 def keep_live_header(path: Path, variant: str, repo: str):
@@ -186,17 +193,17 @@ def keep_live_header(path: Path, variant: str, repo: str):
     try:
         target = project_header(path, variant)
     except boards.BoardError:
-        raise CouldNotKeep(no_project_for_live(path, variant)) from None
+        raise CouldNotKeep(no_project_for_live(path, variant), check_codes.BOARD_HAS_NO_PROJECT) from None
     try:
         header = fetch_variant_header(variant, repo)
     except RuntimeError as broken:
-        raise CouldNotKeep(str(broken)) from None
+        raise CouldNotKeep(str(broken), check_codes.HEADER_NOT_FETCHED) from None
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(header)
     except OSError as refused:
         raise CouldNotKeep("fetched the header but could not keep it at %s: %s"
-                           % (target, refused.strerror or refused)) from None
+                           % (target, refused.strerror or refused), check_codes.HEADER_NOT_KEPT) from None
     return header, target
 
 
@@ -206,27 +213,29 @@ def check_board(path: Path, offline: bool, repo: str):
     if not variant:
         return {
             "board": path.stem, "status": "could-not-run",
-            "reason": "no vendor.arduino_variant in %s, so there is nothing to check it against. "
-                      "Add it, or say in the file why this board has no vendor header." % path.name,
+            "reason": Refusal("no vendor.arduino_variant in %s, so there is nothing to check it against. "
+                              "Add it, or say in the file why this board has no vendor header." % path.name,
+                              check_codes.NO_VENDOR_VARIANT),
         }
 
     wrote = None  # the file this run wrote, said in the answer so nobody has to guess (P179)
     if offline:
         header_file = header_to_read(path, variant)
         if not header_file.is_file():
-            return {"board": path.stem, "status": "could-not-run", "reason": no_cached_header(path, variant)}
+            return {"board": path.stem, "status": "could-not-run", "reason": Refusal(no_cached_header(path, variant),
+                                                                                      check_codes.NO_CACHED_HEADER)}
         header, source = header_file.read_text(), "%s cache (%s)" % (whose(header_file), header_file.name)
     else:
         try:
             header, wrote = keep_live_header(path, variant, repo)
         except CouldNotKeep as refused:
-            return {"board": path.stem, "status": "could-not-run", "reason": str(refused)}
+            return {"board": path.stem, "status": "could-not-run", "reason": Refusal(str(refused), refused.code)}
         source = "%s %s" % (repo, VARIANT_PATH % variant)
 
     vendor_pins = parse_pins(header)
     if not vendor_pins:
         result = {"board": path.stem, "status": "could-not-run",
-                  "reason": "parsed no pin definitions out of %s" % source}
+                  "reason": Refusal("parsed no pin definitions out of %s" % source, check_codes.HEADER_HAS_NO_PINS)}
     else:
         problems, compared, missing = compare(board, vendor_pins)
         result = {"board": path.stem, "status": "mismatch" if problems else "ok",

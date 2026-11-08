@@ -7,8 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from spark.core.result import Refusal
 from spark.firmware import firmware_codes
-from spark.firmware.firmware_codes import Refusal
 
 STAND_IN = Path(__file__).resolve().parent / "stand_in"
 #: framebuf and micropython, which a driver may ship itself: they come after the firmware's own folders on sys.path.

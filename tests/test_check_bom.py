@@ -15,6 +15,7 @@ fails is worse than no check.
     python3 -m unittest discover -s tests
 """
 
+import contextlib
 import csv
 import io
 import json
@@ -181,6 +182,35 @@ class APartWhoseFootprintCannotSayWhichPadIsWhichTest(unittest.TestCase):
         problems = check_bom.check_missing_parts(
             [{"Designator": "C1", "Value": "100nF", "Footprint": "0603", "JLCPCB Part #": ""}])
         self.assertIn("has a value", problems[0])
+
+
+
+class EachRefusalHasItsCodeTest(unittest.TestCase):
+    """P693, P688's item 3: no package and a package with no bom.csv are each a sentence with its code and exit 2, not
+    a SystemExit."""
+
+    def no_bom(self):
+        package = Path(tempfile.mkdtemp()) / "fab-gerbers.zip"
+        zipfile.ZipFile(package, "w").writestr("board.gtl", "G04*")
+        return package
+
+    def test_no_package_is_no_package(self):
+        missing = Path(tempfile.mkdtemp()) / "none.zip"
+        rows, refusal = check_bom.order_rows(missing)
+        self.assertEqual((rows, refusal, refusal.code), (None, "no fab package at %s — export it first" % missing, "no_package"))
+
+    def test_a_package_with_no_bom_raises_its_code(self):
+        with self.assertRaises(check_bom.PackageError) as raised:
+            check_bom.read_bom(self.no_bom())
+        self.assertEqual((str(raised.exception), raised.exception.code), ("no bom.csv in fab-gerbers.zip", "no_bom_in_package"))
+
+    def test_a_package_with_no_bom_is_a_sentence_and_exit_2(self):
+        rows, refusal = check_bom.order_rows(self.no_bom())
+        self.assertEqual((rows, refusal, refusal.code), (None, "no bom.csv in fab-gerbers.zip", "no_bom_in_package"))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = check_bom.main([str(self.no_bom())])
+        self.assertEqual((code, out.getvalue()), (2, "no bom.csv in fab-gerbers.zip\n"))
 
 
 if __name__ == "__main__":

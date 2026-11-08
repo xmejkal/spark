@@ -38,21 +38,20 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
+import check_codes  # noqa: E402
 import fab  # noqa: E402
 import copper  # noqa: E402
 
 
-#: `res0603` -> `0603`. check_footprints already works this out, and the package table here was
-#: keyed on the bare size while the engine emits the prefixed form — so even with the footprint
-#: resolved, nothing matched. One copy, imported — plainly, under the `sys.path` line that already
-#: made that possible; the file-path loader it replaced made a second copy of the module every
-#: time (audit A7).
+#: `res0603` -> `0603`, check_footprints' one copy: the package table here was keyed on the bare size while the engine
+#: emits the prefixed form, so nothing matched (audit A7).
 from check_footprints import package_of  # noqa: E402
 
 import netlist  # noqa: E402
 from emit_board import GROUND_NETS  # noqa: E402
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, status_of  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 
 #: The copper arithmetic lives in its own module, because `emit_board` sizes traces by exactly
 #: the formula this file judges them with. Two copies is how a board passes its own tool and
@@ -81,7 +80,6 @@ PACKAGE_POWER_W = fab.part("package_power_w")
 #: The resistor bound (P197) clears a resistor only at half its package rating: the usual derating, and room for a
 #: supply above its typical voltage. VDD33 is 3.6 V at most against 3.3 V typical, which is 19% more power.
 RESISTOR_POWER_DERATING = 2.0
-
 
 #: The only severities a finding may carry. Free text let "problems" vanish: nothing rendered,
 #: counted or filtered it (P143). `could-not-run` is the outcome word of the same name.
@@ -171,17 +169,7 @@ class Board(netlist.Netlist):
         for element in self.elements:
             if element["type"] != "pcb_trace":
                 continue
-            route = element.get("route", [])
-            measured = []
-            for index, step in enumerate(route):
-                if "width" not in step:
-                    continue
-                length = None
-                if index + 1 < len(route):
-                    nxt = route[index + 1]
-                    if None not in (step.get("x"), step.get("y"), nxt.get("x"), nxt.get("y")):
-                        length = math.dist((step["x"], step["y"]), (nxt["x"], nxt["y"]))
-                measured.append((step["width"], length))
+            measured = measured_route(element.get("route", []))
             for net_name in nets_of_trace.get(element.get("source_trace_id"), []):
                 segments.setdefault(net_name, []).extend(measured)
 
@@ -201,6 +189,21 @@ class Board(netlist.Netlist):
         return narrowest
 
 
+def measured_route(route):
+    """Value: (width, length or None) of each step of a trace's `route` that has a width; the length runs to the next step."""
+    measured = []
+    for index, step in enumerate(route):
+        if "width" not in step:
+            continue
+        length = None
+        if index + 1 < len(route):
+            nxt = route[index + 1]
+            if None not in (step.get("x"), step.get("y"), nxt.get("x"), nxt.get("y")):
+                length = math.dist((step["x"], step["y"]), (nxt["x"], nxt["y"]))
+        measured.append((step["width"], length))
+    return measured
+
+
 def check_trace_currents(board, rails, rise_c, loads=None):
     """
     Can the copper carry what the rail is expected to carry?
@@ -213,10 +216,8 @@ def check_trace_currents(board, rails, rise_c, loads=None):
     narrowest = board.narrowest_by_net()
     loads = loads or {}
 
-    # Deliberately no early return when nothing is routed. An earlier version bailed out here,
-    # which preempted every per-rail rule below — so a board whose returns are all poured, or
-    # one checked before routing, reported "could not run" instead of what is actually known
-    # about each rail. Absence of copper is a fact about a rail, not a reason to stop.
+    # No early return when nothing is routed: a board whose returns are all poured, or one checked before routing, is
+    # told what is known about each rail, not "could not run". Absence of copper is a fact about a rail.
     for rail, spec in sorted(rails.items()):
         current, summed, origin = spec.get("max_current_a"), loads.get(rail), ""
         if current is None and summed and summed["complete"]:
@@ -231,9 +232,8 @@ def check_trace_currents(board, rails, rise_c, loads=None):
                 fix="measure it, then put it in the rules file as max_current_a"))
             continue
         if spec.get("served_by_pour"):
-            # A pour is not sized by trace width, so this check does not apply. It is recorded
-            # rather than silently skipped, because "no finding" and "not checked" are different
-            # answers and only one of them is reassuring.
+            # A pour is not sized by trace width, so this check does not apply. It is recorded, not skipped:
+            # "no finding" and "not checked" are different answers, and only one of them is reassuring.
             findings.append(Finding(
                 "trace-current", rail,
                 "carries up to %.2f A%s and is served by a copper pour, which this check cannot "
@@ -242,25 +242,27 @@ def check_trace_currents(board, rails, rise_c, loads=None):
                 fix="confirm the pour actually reaches every return on a 2-layer board with "
                     "components on top — a pour broken into islands by traces is not a plane"))
             continue
-
-        width = narrowest.get(rail)
-        if width is None:
-            findings.append(Finding(
-                "trace-current", rail,
-                "carries up to %.2f A%s but has no routed trace of its own — if it is served by "
-                "a copper pour, say so in the rules file" % (current, origin),
-                severity="needs-measurement"))
-            continue
-        capacity = trace_current_capacity_a(width, rise_c)
-        if current <= capacity:
-            continue
-        needed = width_for_current_mm(current, rise_c)
-        findings.append(Finding(
-            "trace-current", rail,
-            "carries up to %.2f A%s, but its narrowest segment is %.2f mm, good for %.2f A at a "
-            "%g C rise" % (current, origin, width, capacity, rise_c),
-            fix="widen this net to at least %.2f mm, or pour it" % needed))
+        findings += copper_findings(rail, current, origin, narrowest.get(rail), rise_c)
     return findings
+
+
+def copper_findings(rail, current, origin, width, rise_c):
+    """Value: the Finding of a rail's routed copper, `width` its narrowest segment or None, carrying `current`; [] when it can."""
+    if width is None:
+        return [Finding(
+            "trace-current", rail,
+            "carries up to %.2f A%s but has no routed trace of its own — if it is served by "
+            "a copper pour, say so in the rules file" % (current, origin),
+            severity="needs-measurement")]
+    capacity = trace_current_capacity_a(width, rise_c)
+    if current <= capacity:
+        return []
+    needed = width_for_current_mm(current, rise_c)
+    return [Finding(
+        "trace-current", rail,
+        "carries up to %.2f A%s, but its narrowest segment is %.2f mm, good for %.2f A at a "
+        "%g C rise" % (current, origin, width, capacity, rise_c),
+        fix="widen this net to at least %.2f mm, or pour it" % needed)]
 
 
 def current_text(amps):
@@ -354,10 +356,6 @@ def check_resistor_power(board, rails, loads=None, bus_nets=()):
     depend on topology the design does not state. So this rule cannot decide, and the honest
     answer is to say how many it could not assess rather than to compute a number that is wrong
     in one direction or the other.
-
-    It never fired, in either direction, because `footprint_of` returned None for every component
-    and the package table was keyed `0603` while the engine emits `res0603`. Three independent
-    faults, and being broken is the only reason nobody noticed the arithmetic was wrong.
 
     To make this a real check, a design has to state the current through a resistor — which is a
     thing a person knows and a netlist does not.
@@ -611,14 +609,16 @@ def render(result):
 
 # --- MVP --- (P455, #616) the rules go through `fab.read_rules`, so a refusal is a sentence and exit 2, not a traceback
 def rules_or_reason(circuit_path, rules_path):
-    """`(rules, None)`, or `(None, why nothing can run)`: a file that is missing, or rules that fab.read_rules refuses."""
-    for path, what in ((circuit_path, "built design"), (rules_path, "rules")):
+    """`(rules, None)`, or `(None, the Refusal that says why nothing can run)`: a file that is missing, or rules that
+    fab.read_rules refuses."""
+    for path, what, code in ((circuit_path, "built design", check_codes.NO_CIRCUIT),
+                             (rules_path, "rules", check_codes.NO_RULES_FILE)):
         if not path.is_file():
-            return None, "no %s at %s" % (what, path)
+            return None, Refusal("no %s at %s" % (what, path), code)
     try:
         return fab.read_rules(rules_path), None
     except fab.RulesError as refused:
-        return None, str(refused)
+        return None, Refusal(str(refused), check_codes.RULES_REFUSED)
 
 
 def main(argv=None):

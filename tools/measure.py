@@ -244,7 +244,7 @@ MAIN_LINES = 15                             # R1: a `main`, which only parses an
 NESTING = 3                                 # R2
 PARAMETERS = 5                              # R3, without self or cls
 #: U1: the modules that import nothing of spark, so that every reader can use them without importing another reader.
-LEAVES = ("board_codes", "breadboard_codes", "firmware_codes", "outcomes", "provenance", "text_guards", "zone_time")
+LEAVES = ("board_codes", "breadboard_codes", "check_codes", "firmware_codes", "outcomes", "provenance", "text_guards", "zone_time")
 #: U1: the names OC8 (P418) moved into `text_guards`, by the module that held them. No script reads them from there again.
 MOVED_GUARDS = {"drawer": {"clean", "CONTROL", "LABEL_MAX", "TEXT_MAX", "TAGS_MAX"}, "parts": {"one_line", "COMMENT_UNSAFE"}}
 #: X2: a class that may print, read and exit in `scripts/spark/`: the Renderers (by role word), the terminal consent and the terminal reporter (P507).

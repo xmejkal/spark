@@ -4,7 +4,7 @@ import_firmware.py and the image a deploy reads (project_image.py).
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
 sentence (no magic strings, P260). A refusal that raises gives its exception a `code`; one that returns a sentence returns
-a Refusal. `import_firmware.py --json` writes the code of each module not imported. The two text CLIs print the sentence
+a Refusal (`spark.core.result`). `import_firmware.py --json` writes the code of each module not imported. The two text CLIs print the sentence
 alone, and their codes wait in the library for the Operation that comes later.
 
 Five codes are also board_codes' (NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE, LOG_UNREADABLE, TOOL_MISSING), as equal
@@ -13,20 +13,6 @@ literals in two leaves: project_image raises the first four from here, and the b
 
 
 # --- MVP ---
-class Refusal(str):
-    """
-    Value: a refusal's sentence, the text a person reads, with its `code`. It is a str, so the text and every caller stay
-    as they were. A `%` format or a `.strip()` gives a plain str back, so a site builds its Refusal from the final text.
-    """
-
-    code: str
-
-    def __new__(cls, text, code):
-        refusal = super().__new__(cls, text)
-        refusal.code = code
-        return refusal
-
-
 #: The image a deploy reads, and the firmware line a run reads (equal to board_codes').
 NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE = "no_sim_toml", "firmware_line_bad", "no_image"
 LOG_UNREADABLE, TOOL_MISSING = "log_unreadable", "tool_missing"

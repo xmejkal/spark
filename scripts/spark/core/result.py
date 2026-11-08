@@ -2,6 +2,7 @@
 What an Operation returns (P442, W3-3): a Finding per thing it found, a NextStep per step an agent may take, and the
 OperationResult that holds them with the data, the lines a person reads and the diagnostics. The status is never
 declared: `OperationResult.status()` asks `outcomes.status_of`, so `ok` stays unreachable while anything is unchecked.
+A Refusal is the sentence with its code that a refusal returns before there is an OperationResult (P684, P693).
 """
 
 from collections import namedtuple
@@ -16,6 +17,20 @@ Finding = namedtuple("Finding", "severity subject code sentence fix")
 #: Value: a step an agent may take next, with the fields of `outcomes.step`, which prints it. `needs_person` is None
 #: unless the person's hands come first. `env` is None unless the step needs variables set, such as the store (P473).
 NextStep = namedtuple("NextStep", "op argv why effects needs_yes needs_person env", defaults=((), False, None, None))
+
+
+class Refusal(str):
+    """
+    Value: a refusal's sentence, the text a person reads, with its `code`. It is a str, so the text and every caller stay
+    as they were. A `%` format or a `.strip()` gives a plain str back, so a site builds its Refusal from the final text.
+    """
+
+    code: str
+
+    def __new__(cls, text, code):
+        refusal = super().__new__(cls, text)
+        refusal.code = code
+        return refusal
 
 
 def envelope_item(finding):

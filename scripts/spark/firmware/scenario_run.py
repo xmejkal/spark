@@ -13,10 +13,11 @@ from pathlib import Path
 
 from spark.core import outcomes
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
+from spark.core.result import Refusal
 from spark.firmware import image_builder, sim_project
 from spark.firmware.firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRMWARE_LINE_BAD, NEVER_READY, NO_MAIN_PY,
                                            NO_SIM_PROJECT, NO_TOKEN, RUN_INPUT_UNUSABLE, SIMULATOR_CANNOT_START,
-                                           SIMULATOR_HUNG, SIMULATOR_LOST, STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING, Refusal)
+                                           SIMULATOR_HUNG, SIMULATOR_LOST, STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING)
 from spark.firmware.scenario_steps import (FILE_LINE, IMAGE_LINE, NO_MAIN, PASSED, READY, READY_STEP, SET_CONTROL, WAIT_SERIAL,
                                            ScenarioSteps, printed_text)
 import tools

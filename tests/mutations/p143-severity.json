@@ -2,8 +2,8 @@
  {
   "file": "scripts/check_physics.py",
   "name": "a needs-measurement call site misspells its severity",
-  "find": "                severity=\"needs-measurement\"))",
-  "replace": "                severity=\"needs-measurements\"))"
+  "find": "            severity=\"needs-measurement\")]",
+  "replace": "            severity=\"needs-measurements\")]"
  },
  {
   "file": "scripts/check_physics.py",

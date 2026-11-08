@@ -50,7 +50,7 @@
  {
   "file": "scripts/compare_design.py",
   "name": "only the first of a pin's nets is searched for a pull-up",
-  "find": "        for component_name, _ in sum((netlist.members[net_id] for net_id in net_ids), []):",
-  "replace": "        for component_name, _ in netlist.members[net_ids[0]]:"
+  "find": "    for component_name, _ in sum((netlist.members[net_id] for net_id in net_ids), []):",
+  "replace": "    for component_name, _ in netlist.members[net_ids[0]]:"
  }
 ]

@@ -23,9 +23,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import check_codes  # noqa: E402
 import fab  # noqa: E402
 import netlist  # noqa: E402
 from spark.core.outcomes import EXIT_FOR, OK, COULD_NOT_RUN, status_of  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 
 #: A pull-up weaker than this cannot hold a bus high against its own capacitance; stronger than
 #: this and the driving pin cannot pull it down. Wide on purpose — this is a sanity band, not a
@@ -63,9 +65,10 @@ class Failure:
         return text
 
 
-def could_not_run(reason, **detail):
-    """A refusal a caller can act on, rather than a message a caller has to read."""
-    return dict({"tool": "compare_design", "status": COULD_NOT_RUN, "reason": reason}, **detail)
+def could_not_run(reason, code, **detail):
+    """A refusal a caller can act on, rather than a message a caller has to read: its `reason` is a Refusal with `code`
+    (check_codes)."""
+    return dict({"tool": "compare_design", "status": COULD_NOT_RUN, "reason": Refusal(reason, code)}, **detail)
 
 
 def render(result):
@@ -138,19 +141,7 @@ def check_i2c_pullups(netlist, buses):
                     sorted(n.get("name", "?") for n in netlist.nets.values()))))
             continue
 
-        pulled_up = []
-        for component_name, _ in sum((netlist.members[net_id] for net_id in net_ids), []):
-            component = netlist.component(component_name)
-            if not component or component.get("ftype") != "simple_resistor":
-                continue
-            # A resistor is a pull-up only if its other end is on a power rail. One sitting
-            # between two signals is a series resistor and does not hold anything high.
-            other_ends = set()
-            for port_name in ("pin1", "pin2"):
-                other_ends |= netlist.nets_of(component_name, port_name)
-            if other_ends & netlist.power_nets():
-                pulled_up.append((component_name, component.get("resistance")))
-
+        pulled_up = pull_ups_on(netlist, net_ids)
         if not pulled_up:
             on_the_net = sorted({name for net_id in net_ids
                                  for name, _ in netlist.members[net_id]})
@@ -160,20 +151,37 @@ def check_i2c_pullups(netlist, buses):
                 "on this net: %s. Add a resistor from %s to a supply."
                 % (", ".join(on_the_net) or "nothing", line)))
             continue
-
-        for name, ohms in pulled_up:
-            if ohms is None:
-                continue
-            if not PULLUP_MIN_OHM <= ohms <= PULLUP_MAX_OHM:
-                failures.append(Failure(
-                    "i2c-pullups", line,
-                    "%s is %g ohm, outside the %g-%g band a pull-up usually wants"
-                    % (name, ohms, PULLUP_MIN_OHM, PULLUP_MAX_OHM),
-                    "too weak and the bus never rises; too strong and a device cannot pull it "
-                    "down. Worth checking against the bus capacitance rather than taking this "
-                    "band as the answer."))
-
+        failures += out_of_band(line, pulled_up)
     return failures
+
+
+def pull_ups_on(netlist, net_ids):
+    """Value: (name, resistance) of each resistor on the nets `net_ids` whose other end is on a power net."""
+    pulled_up = []
+    for component_name, _ in sum((netlist.members[net_id] for net_id in net_ids), []):
+        component = netlist.component(component_name)
+        if not component or component.get("ftype") != "simple_resistor":
+            continue
+        # A resistor is a pull-up only if its other end is on a power rail. One sitting
+        # between two signals is a series resistor and does not hold anything high.
+        other_ends = set()
+        for port_name in ("pin1", "pin2"):
+            other_ends |= netlist.nets_of(component_name, port_name)
+        if other_ends & netlist.power_nets():
+            pulled_up.append((component_name, component.get("resistance")))
+    return pulled_up
+
+
+def out_of_band(line, pulled_up):
+    """Value: a Failure for each pull-up of `line` with a stated value outside the band a pull-up usually wants."""
+    return [Failure(
+        "i2c-pullups", line,
+        "%s is %g ohm, outside the %g-%g band a pull-up usually wants"
+        % (name, ohms, PULLUP_MIN_OHM, PULLUP_MAX_OHM),
+        "too weak and the bus never rises; too strong and a device cannot pull it "
+        "down. Worth checking against the bus capacitance rather than taking this "
+        "band as the answer.")
+        for name, ohms in pulled_up if ohms is not None and not PULLUP_MIN_OHM <= ohms <= PULLUP_MAX_OHM]
 
 
 def check_floating_inputs(netlist, watch, rails=()):
@@ -234,29 +242,33 @@ def run(circuit, rules):
     return failures
 
 
-def compare(circuit_path, rules_path):
-    """Everything main() does except deciding how to say it."""
-    circuit_path = Path(circuit_path)
+def read_inputs(circuit_path, rules_path):
+    """Value: ((the circuit, the rules), None), or (None, the could-not-run answer that says which of the two cannot be read)."""
     if not circuit_path.is_file():
-        return could_not_run("no built design at %s" % circuit_path,
-                             fix="build it first: `make`, or `tsci build`")
-
-    rules_path = Path(rules_path)
+        return None, could_not_run("no built design at %s" % circuit_path, check_codes.NO_CIRCUIT,
+                                   fix="build it first: `make`, or `tsci build`")
     if not rules_path.is_file():
-        return could_not_run(
-            "no rules at %s" % rules_path,
+        return None, could_not_run(
+            "no rules at %s" % rules_path, check_codes.NO_RULES_FILE,
             fix="a rules file says which nets are an I2C bus and which pins must not float — "
                 "things no netlist format records")
-
     try:
         rules = fab.read_rules(rules_path)  # --- MVP --- (P455): the one reader, so a refused file is a sentence naming it
     except fab.RulesError as refused:
-        return could_not_run(str(refused))
+        return None, could_not_run(str(refused), check_codes.RULES_REFUSED)
     try:
-        circuit = json.loads(circuit_path.read_text())
+        return (json.loads(circuit_path.read_text()), rules), None
     except ValueError as broken:
-        return could_not_run("not valid JSON: %s" % broken)
+        return None, could_not_run("not valid JSON: %s" % broken, check_codes.CIRCUIT_NOT_JSON)
 
+
+def compare(circuit_path, rules_path):
+    """Everything main() does except deciding how to say it."""
+    circuit_path = Path(circuit_path)
+    read, refused = read_inputs(circuit_path, Path(rules_path))
+    if refused:
+        return refused
+    circuit, rules = read
     failures = run(circuit, rules)
     checked = len(rules.get("i2c_buses", [])) + len(rules.get("must_not_float", []))
     if not checked:
@@ -266,7 +278,7 @@ def compare(circuit_path, rules_path):
         # implement it, and nothing comparing the two". Comparing nothing is not agreement.
         return could_not_run(
             "the rules file states no rule to compare: i2c_buses and must_not_float are both "
-            "empty, which is what `/spark:init` writes and where they have stayed",
+            "empty, which is what `/spark:init` writes and where they have stayed", check_codes.NO_RULE_STATED,
             design=circuit_path.name, checked=0,
             fix="name the I2C lines and the pins that must never float — a netlist records "
                 "neither, which is why this file exists")

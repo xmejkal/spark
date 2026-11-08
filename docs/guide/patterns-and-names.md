@@ -16,7 +16,7 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Strategy | a base class that a caller can swap for another | ends in `Strategy` when the noun alone does not say it does something | `ConsentStrategy`; `BoardReader`, `Flasher` and `Reporter` stay plain, and their docstrings say Strategy |
 | Adapter | wraps an outside program behind spark's own interface | a plain noun; the docstring says Adapter | `BoardConnection` wraps mpremote, the tool that talks to MicroPython on a board |
 | Result | what a method returns, as a namedtuple | ends in `Result` | `ReadyResult`, `DeployResult` |
-| Error | an exception | ends in `Error` (the deploy area only, for now) | `GateClosedError`, `DeployError` |
+| Error | an exception | ends in `Error` (the deploy and checks areas only, for now) | `GateClosedError`, `DeployError`, `PackageError` |
 | Value | facts with no actions. A method can calculate from the facts (`token()`, `to_dict()`; `token()` reads the image file), and a `why_` or `find_` method can answer a question about them, reading the project's files if it must. None changes anything | a plain noun; the docstring says Value | `Port`, `BoardReading`, `LookReport`, `RestrictedPins`, `ProjectImage` |
 | Store | reads and writes one place in the person's store, as JSON files | the noun of what it keeps, then `Store` | `GrantStore` keeps one grant file per board in `grants/` |
 | Decorator | wraps an object of another class, has the same methods, and adds one behaviour around them | what it adds, then the whole name of what it wraps | `RetryingBoardConnection` cures the board once and runs the code again |
