@@ -41,7 +41,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import boards  # the one project walk the scripts share (boards.project_root), and spark's root
-import check_codes  # noqa: E402
+from spark.checks import check_codes  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, EXIT_PROBLEMS as EXIT_MISMATCH, status_of  # noqa: F401
 from spark.core.result import Refusal  # noqa: E402

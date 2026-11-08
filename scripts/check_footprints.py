@@ -35,7 +35,7 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import check_codes  # noqa: E402
+from spark.checks import check_codes  # noqa: E402
 import fab  # noqa: E402
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, COULD_NOT_RUN, status_of  # noqa: E402
 from spark.core.result import Refusal  # noqa: E402

@@ -53,7 +53,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
-import check_codes  # noqa: E402
+from spark.checks import check_codes  # noqa: E402
 import design  # noqa: E402
 import fab  # noqa: E402
 

@@ -45,7 +45,7 @@ from pathlib import Path
 BOM_NAME = "bom.csv"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import check_codes  # noqa: E402
+from spark.checks import check_codes  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 from spark.core.result import Refusal  # noqa: E402
 

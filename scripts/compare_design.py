@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import check_codes  # noqa: E402
+from spark.checks import check_codes  # noqa: E402
 import fab  # noqa: E402
 import netlist  # noqa: E402
 from spark.core.outcomes import EXIT_FOR, OK, COULD_NOT_RUN, status_of  # noqa: E402
