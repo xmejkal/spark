@@ -218,6 +218,22 @@ Docs: `docs/guide/agents/json.md` (the three ops and their codes), `agents.md`, 
 Review: it holds logic. The lenses on the everyday model, the refuter on the strongest, one mutation run. Size est.:
 80 product lines, 80 test lines, the 8 goldens unchanged.
 
+The build's check of this section (P684, 2026-11-08, rows 8 to 17 of `docs/observations/rows/p684-firmware-codes.md`)
+changed three things before any code:
+
+- One code per refusal site, not per cause. A site whose one `except` catches several causes gets one code that names
+  what they share: `ScenarioRun.problem()`'s `try` and `flash_image`'s `ToolProblem`. No `try` is split and no reason
+  is added to `ToolProblem`. A split is a card when an agent needs to tell the causes apart. The one exception is
+  `flash_image`'s bad `--config`, which today shares the damaged interpreter's `except`: it gets its own `except` and
+  its own code, because the shared code would be wrong. The PR reports the real count.
+- In `import_firmware.py --json`, only a `modules` entry that was not imported gains a `code` key. `problems` and
+  `unchecked` stay plain strings, and "nothing to import" and "no `firmware/` folder" keep their codes in the library
+  only. So `import-firmware-problems.json` is accepted again with the new key, and the other 7 goldens stay unchanged.
+  The test asserts a `code` on each such entry. `import_firmware.py` prints no envelope.
+- `firmware_codes` is a leaf, and `board_codes` stays one (U1). `board_codes` keeps its four names, and
+  `TOOL_MISSING`, as equal literals, not imports. A test asserts that the five are equal in both modules, and the
+  table test that keeps code tables apart lists these five as the one allowed overlap, until W6-F3.
+
 ### W6-F3, the firmware move (after #915)
 
 Goal: `ls scripts/*.py` prints no firmware library module. `scripts/spark/firmware/` holds the area under the
