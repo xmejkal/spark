@@ -42,10 +42,6 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-# Siblings are IMPORTED, inside the check that needs them so nothing loads until it runs. They
-# were loaded by file path with `importlib`, which registers nothing in `sys.modules`: in one
-# process this file's `parts` was not `emit_board`'s `parts`, and their `PartError` classes
-# were different objects, so an `except` for one could not catch the other. Audit A7.
 import boards
 import design
 import fab
@@ -112,6 +108,10 @@ def circuit_of(inputs):
     return elements
 
 
+# Siblings are IMPORTED, inside the check that needs them so nothing loads until it runs. They
+# were loaded by file path with `importlib`, which registers nothing in `sys.modules`: in one
+# process this file's `parts` was not `emit_board`'s `parts`, and their `PartError` classes
+# were different objects, so an `except` for one could not catch the other. Audit A7.
 class RulesVsNetlist(Check):
     def call(self, inputs):
         from spark.checks import rules_check

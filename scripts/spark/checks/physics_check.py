@@ -35,11 +35,12 @@ import fab
 import netlist
 from emit_board import GROUND_NETS
 from spark.checks import check_codes
-#: `res0603` -> `0603`, check_footprints' one copy: the package table here was keyed on the bare size while the engine
-#: emits the prefixed form, so nothing matched (audit A7).
 from spark.checks.build_check import package_of
 from spark.core.outcomes import COULD_NOT_RUN
 from spark.core.result import Refusal
+
+# `package_of` (`res0603` -> `0603`) is build_check's one copy: the package table here was keyed on the bare size while
+# the engine emits the prefixed form, so nothing matched (audit A7).
 
 #: The copper arithmetic lives in its own module, because `emit_board` sizes traces by exactly
 #: the formula this file judges them with. Two copies is how a board passes its own tool and
@@ -60,7 +61,7 @@ I2C_MAX_RISE_NS = {100_000: 1000, 400_000: 300, 1_000_000: 120}
 #: derated hard because a tantalum above its rating fails short rather than open.
 VOLTAGE_DERATING = {"tantalum": 2.0, "electrolytic": 1.5, "ceramic": 1.5, "unknown": 2.0}
 
-#: What a chip resistor of each size can dissipate. THE SAME table `check_footprints` judges by:
+#: What a chip resistor of each size can dissipate. THE SAME table `build_check` judges by:
 #: it was a second copy here, so a package added to one checker was missing from the other and
 #: nothing said so.
 PACKAGE_POWER_W = fab.part("package_power_w")
@@ -119,7 +120,7 @@ class Board(netlist.Netlist):
         Read from `cad_component` first, falling back to `pcb_component` for older netlists. This
         looked only at `pcb_component`, where the engine no longer puts it: measured against the
         reference board it resolved 0 of 28 components, so every rule downstream of it examined
-        nothing. Exactly the defect fixed in check_footprints, in a second file, which is why
+        nothing. Exactly the defect fixed in build_check, in a second file, which is why
         that fix needed to be an audit rather than a patch.
         """
         source = self.named(component_name)
@@ -164,7 +165,7 @@ class Board(netlist.Netlist):
         # The width a net SUSTAINS, not the narrowest copper anywhere on it. On a generated board, six segments 0.12 to 0.85 mm
         # long at 1.20 mm wide were the last step into a 1.2 mm pad; judged as a long uniform trace, a correctly sized 2.9 A rail
         # was called unbuildable. A neck that short is bonded to a pad and a plated barrel, both heatsinks, and belongs to the PAD
-        # (`check_footprints`' subject). A net that is ALL necks falls back to the absolute minimum, so it cannot pass unjudged.
+        # (`build_check`'s subject). A net that is ALL necks falls back to the absolute minimum, so it cannot pass unjudged.
         narrowest = {}
         for net_name, measured in segments.items():
             sustained = copper.sustained_width_mm(measured)

@@ -13,7 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from spark.checks.order_check import BOM_NAME, check_design_warnings, check_duplicate_parts, check_missing_parts, order_rows  # noqa: E402
+from spark.checks.order_check import (BOM_NAME, check_design_warnings, check_duplicate_parts, check_missing_parts,  # noqa: E402
+                                      order_rows)
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
 
 

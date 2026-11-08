@@ -9,7 +9,7 @@
   "file": "scripts/spark/checks/check.py",
   "name": "design loaded by path again",
   "find": "    import design\n    import emit_board\n",
-  "replace": "    import importlib.util as _u; _s = _u.spec_from_file_location(\"design\", SCRIPTS / \"design.py\"); design = _u.module_from_spec(_s); _s.loader.exec_module(design)\n    import emit_board\n"
+  "replace": "    import importlib.util as _u; _s = _u.spec_from_file_location(\"design\", Path(__file__).resolve().parents[2] / \"design.py\"); design = _u.module_from_spec(_s); _s.loader.exec_module(design)\n    import emit_board\n"
  },
  {
   "file": "scripts/spark/checks/physics_check.py",
