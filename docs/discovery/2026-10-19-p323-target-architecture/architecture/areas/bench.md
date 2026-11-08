@@ -29,8 +29,10 @@ it. It never writes or erases without a gate that the person opened, and it says
 One module per Operation, named after it: `look_at_board.py` (`LookAtBoard`, op `look`), `deploy_image.py`,
 `issue_grant.py`, `check_grant.py`, `run_live_code.py`, `reach_board.py`. `bench/__init__.py` holds `OPERATIONS` and
 `build_project_outside_world`, the area's builder of core's `OutsideWorld` (P442: `look_at_board.py` exists, the look's
-findings and lines are its own, and `board_envelope.py` keeps deploy's envelope and the shared steps). The modules keep today's `board_` and `deploy_` prefixes, so no name repeats a CLI's name (rule C1). Since W5-3a (P679) they live in `scripts/spark/bench/`, all but the leaves `board_codes.py` and `board_pads.py`: five other areas import them, so they stay in `scripts/` until wave 6 picks their home. An
-arrow in the diagram is an import at `d064a65`, read with `ast`.
+findings and lines are its own, and `board_envelope.py` keeps deploy's envelope and the shared steps). The modules keep
+today's `board_` and `deploy_` prefixes, so no name repeats a CLI's name (rule C1). Since W5-3a (P679) they live in
+`scripts/spark/bench/`, and since W6-R3a (P718) the leaf `board_codes.py` too, which only bench modules read;
+`board_pads.py` is the records area's. An arrow in the diagram is an import at `d064a65`, read with `ast`.
 
 ```mermaid
 flowchart TB
