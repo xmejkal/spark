@@ -67,7 +67,7 @@ import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
 import needs  # noqa: E402
-import netlist  # noqa: E402
+from spark.design import netlist  # noqa: E402
 import onboard_parts  # noqa: E402
 import parts  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402

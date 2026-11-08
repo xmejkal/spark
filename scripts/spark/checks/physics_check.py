@@ -32,7 +32,7 @@ import math
 
 from spark.design import copper
 from spark.design import fab
-import netlist
+from spark.design import netlist
 from emit_board import GROUND_NETS
 from spark.checks import check_codes
 from spark.checks.build_check import package_of
