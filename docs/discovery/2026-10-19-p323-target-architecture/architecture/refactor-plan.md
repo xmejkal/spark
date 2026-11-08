@@ -556,7 +556,7 @@ today 2,266 lines that 35 files import. It retargets the 217 mutation rows. It a
 `LookStopError`, `ReadyProbe`, `DoctorProbe`, `DeployPhase`, `ReadingFile`. It moves the Fakes into `tests/fakes.py`.
 `board_facts.py` moves as the bench's `ReadingFile`. `deploy_record_store.py` (OC5) stays in `scripts/`
 until the records move. S12, the map: `tools/map.py` writes `docs/guide/map.md`. When the page is stale, a test fails. S13,
-the quick run and the full run. S13 is done in P425 (the order of work in section 10). One check closes the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints nothing.
+the quick run and the full run. S13 is done in P425 (the order of work in section 10). One check closes the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints only `board_codes.py`, `board_pads.py` and `deploy_record_store.py` (W5-3a, P679, moved the other 18 modules; the two leaves wait for wave 6, `test_architecture.TheBenchAreaTest` holds it).
 
 ### Wave 6: the other areas
 

@@ -12,9 +12,9 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_connection  # noqa: E402
-import board_facts  # noqa: E402
-import ready_check  # noqa: E402
+from spark.bench import board_connection  # noqa: E402
+from spark.bench import board_facts  # noqa: E402
+from spark.bench import ready_check  # noqa: E402
 from fakes import FakeBoardConnection  # noqa: E402
 
 MAIN = {"/main.py": hashlib.sha256(b"print('ready')\n").hexdigest()}

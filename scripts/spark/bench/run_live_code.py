@@ -6,14 +6,14 @@ stays exit 2 whatever the answer was; a stop has the same fields, empty, with th
 """
 
 import board_codes
-import board_doctor
-import board_envelope
-import board_grant
-import board_live
-import board_look
+from spark.bench import board_doctor
+from spark.bench import board_envelope
+from spark.bench import board_grant
+from spark.bench import board_live
+from spark.bench import board_look
 import boards
 import tools
-from firmware_platform import MicroPythonPlatform
+from spark.bench.firmware_platform import MicroPythonPlatform
 from restricted_pins import BrokenRecordError
 from spark.bench import bench_privacy
 from spark.bench import stops

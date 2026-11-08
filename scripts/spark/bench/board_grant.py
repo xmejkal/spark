@@ -26,11 +26,11 @@ from collections import namedtuple
 from pathlib import Path
 
 import board_codes
-import board_console
-import board_look
+from spark.bench import board_console
+from spark.bench import board_look
 import store
 from spark.core.zone_time import say_in_local_zone, stamp  # the grant's times (P401 moved them out, to break an import cycle)
-from deploy_gate import GRANT, ConsentStrategy, GateClosedError, format_rerun_line
+from spark.bench.deploy_gate import GRANT, ConsentStrategy, GateClosedError, format_rerun_line
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
 
 #: What a grant allows. A file with no `scope` (written before P242) is a live grant.
@@ -81,13 +81,13 @@ WHY_RELAYED_YES = "relayed yes"
 #: grant.py --check --json's `why` when it could not look: no board, two boards, a port not listed, no mpremote.
 WHY_COULD_NOT_RUN = "could not run"
 #: The command a person types for a grant, by grant.py's whole path, so it runs from any folder (P283).
-GRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parent / "grant.py", ["--minutes", "N"])
+GRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parents[2] / "grant.py", ["--minutes", "N"])
 #: The questions a person answers when they give a grant: %s are the MAC, the token and the minutes.
 LIVE_QUESTION = "let Claude run code on the board %s (token %s) for %d minutes from your yes?"
 DEPLOY_QUESTION = ("let Claude erase ALL of the flash of the board %s (token %s) and write any passed image of any "
                    "project, with no yes from you for each deploy, for %d minutes from your yes?")
 #: The command a person types for a deploy grant, by grant.py's whole path (P283).
-DEPLOY_GRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parent / "grant.py",
+DEPLOY_GRANT_COMMAND = format_rerun_line(Path(__file__).resolve().parents[2] / "grant.py",
                                          ["--scope", SCOPE_DEPLOY, "--minutes", "N"])
 #: The sentence a person reads for each code.
 MESSAGE_FOR = {

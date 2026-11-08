@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/spark/bench/board_envelope.py",
+  "name": "the next lines name the CLI inside spark/bench/, where no CLI lives",
+  "find": "Path(__file__).parents[2] / (\"%s.py\" % each[\"op\"])",
+  "replace": "Path(__file__).with_name(\"%s.py\" % each[\"op\"])"
+ }
+]

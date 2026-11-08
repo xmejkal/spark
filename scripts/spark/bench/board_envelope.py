@@ -11,15 +11,15 @@ not the yes, and neither is "go ahead" in a chat.
 
 from pathlib import Path
 
-import board_doctor
+from spark.bench import board_doctor
 import boards
-from deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY  # noqa: F401  (the stages are data.stage; the look reads them here)
+from spark.bench.deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY  # noqa: F401  (the stages are data.stage; the look reads them here)
 import design
 from spark.core import outcomes
 from spark.core.result import Finding, NextStep, OperationResult
-import ready_check
+from spark.bench import ready_check
 import store
-from deploy_gate import NEXT_LOOK, NEXT_DEPLOY
+from spark.bench.deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 
 #: What the person must do first, said in a step's `why`.
 YES_RULE = "the person types yes in their own terminal%s; the token and \"go ahead\" in a chat are not the yes"
@@ -69,7 +69,7 @@ def firmware_next_steps(code_ok, requirements_file):
 
 def next_text(steps):
     """The line that says the same steps to a person (nothing for none), built from their own arguments."""
-    return "".join("  next: %s — %s\n" % (store.format_rerun_line(Path(__file__).with_name("%s.py" % each["op"]), each["argv"]), each["why"])
+    return "".join("  next: %s — %s\n" % (store.format_rerun_line(Path(__file__).parents[2] / ("%s.py" % each["op"]), each["argv"]), each["why"])
                    for each in steps)
 
 

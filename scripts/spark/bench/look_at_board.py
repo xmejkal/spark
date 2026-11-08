@@ -6,12 +6,12 @@ look.py printed before it (board_look.report_lines and board_envelope's look ite
 """
 
 import board_codes
-import board_doctor
-import board_envelope
-import board_look
+from spark.bench import board_doctor
+from spark.bench import board_envelope
+from spark.bench import board_look
 import boards
-from firmware_platform import MicroPythonPlatform
-from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
+from spark.bench.firmware_platform import MicroPythonPlatform
+from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from spark.bench import bench_privacy
 from spark.core import outcomes
 from spark.core.events import Event

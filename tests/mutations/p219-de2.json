@@ -1,24 +1,24 @@
 [
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "refuse-never",
   "find": "if why or self.ignore_older_runs:",
   "replace": "if why or True:"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "refuse-always",
   "find": "if why or self.ignore_older_runs:",
   "replace": "if why:"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "inverted-flag",
   "find": "if why or self.ignore_older_runs:",
   "replace": "if why or not self.ignore_older_runs:"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "note-dropped",
   "find": "return notes + [other] if other else notes",
   "replace": "return notes"
@@ -30,7 +30,7 @@
   "replace": "evidence_for(project, no_simulation, False, outside.find_tool)"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "flag-default-true",
   "find": "def __init__(self, ignore_older_runs=False):",
   "replace": "def __init__(self, ignore_older_runs=True):"
@@ -42,19 +42,19 @@
   "replace": "\"ignore_older_runs\", str,"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "way-out-dropped",
   "find": "return OLDER_RUNS_WAY_OUT if refused_for_other_runs else \"\"",
   "replace": "return \"\""
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "way-out-no-flag",
   "find": "IGNORE_OLDER_RUNS_FLAG = \"--ignore-older-runs\"",
   "replace": "IGNORE_OLDER_RUNS_FLAG = \"\""
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/spark/bench/deploy_service.py",
   "name": "check-after-tools",
   "find": "        why = self.evidence.why_not_ready(image)\n        if why:\n            raise DeployError(why + self.evidence.way_out(image), reason=board_codes.EVIDENCE_REFUSES)\n        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n",
   "replace": "        project_flasher = self.platform.make_flasher()\n        shell_command = self.platform.make_shell_command()\n        why = self.evidence.why_not_ready(image)\n        if why:\n            raise DeployError(why + self.evidence.way_out(image), reason=board_codes.EVIDENCE_REFUSES)\n"

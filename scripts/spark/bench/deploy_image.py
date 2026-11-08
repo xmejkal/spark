@@ -10,19 +10,19 @@ from collections import namedtuple
 from pathlib import Path
 
 import board_codes
-import board_doctor
-import board_envelope
-import board_grant
-import board_look
-import deploy_gate
-import ready_check
+from spark.bench import board_doctor
+from spark.bench import board_envelope
+from spark.bench import board_grant
+from spark.bench import board_look
+from spark.bench import deploy_gate
+from spark.bench import ready_check
 import store
 import tools
-from board_console import LEAVE_CONSOLE
-from deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY
-from deploy_service import DeployService, FlashError
-from firmware_platform import MicroPythonPlatform
-from image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
+from spark.bench.board_console import LEAVE_CONSOLE
+from spark.bench.deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY
+from spark.bench.deploy_service import DeployService, FlashError
+from spark.bench.firmware_platform import MicroPythonPlatform
+from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from project_image import DeployError
 from spark.bench import bench_privacy
 from spark.bench.stops import reason_of

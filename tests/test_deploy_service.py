@@ -16,16 +16,16 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_connection  # noqa: E402
-import deploy_gate  # noqa: E402
-import deploy_service  # noqa: E402
-import firmware_platform  # noqa: E402
+from spark.bench import board_connection  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
+from spark.bench import deploy_service  # noqa: E402
+from spark.bench import firmware_platform  # noqa: E402
 import flash_image  # noqa: E402
-import flasher  # noqa: E402
+from spark.bench import flasher  # noqa: E402
 import project_image  # noqa: E402
-import ready_check  # noqa: E402
+from spark.bench import ready_check  # noqa: E402
 import store  # noqa: E402
-import image_evidence  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld  # noqa: E402
 from spark.core.events import LINE  # noqa: E402
@@ -323,7 +323,7 @@ class TheServiceHoldsNoPrintTest(unittest.TestCase):
 
     def test_no_print_and_no_exit(self):
         for name in self.MODULES:
-            tree = ast.parse((ROOT / "scripts" / name).read_text())
+            tree = ast.parse((ROOT / "scripts" / "spark" / "bench" / name).read_text())
             for node in ast.walk(tree):
                 if isinstance(node, ast.Call):
                     function = node.func
@@ -332,10 +332,12 @@ class TheServiceHoldsNoPrintTest(unittest.TestCase):
                     self.assertNotIn(called, ("print", "exit"), "%s:%d" % (name, node.lineno))
 
     def test_the_platform_does_not_import_the_service(self):
-        tree = ast.parse((ROOT / "scripts" / "firmware_platform.py").read_text())
+        tree = ast.parse((ROOT / "scripts" / "spark" / "bench" / "firmware_platform.py").read_text())
         imported = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
         imported |= {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+        imported |= {alias.name for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) for alias in node.names}  # from spark.bench import x
         self.assertNotIn("deploy_service", imported)
+        self.assertNotIn("spark.bench.deploy_service", imported)
 
 
 if __name__ == "__main__":

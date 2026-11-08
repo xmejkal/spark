@@ -17,10 +17,10 @@ A Ctrl-C during the run stops live.py before the reset.
 from collections import namedtuple
 
 import board_codes
-import board_doctor
-import board_reach
-from board_connection import BoardUnreachableError
-from board_grant import MESSAGE_FOR
+from spark.bench import board_doctor
+from spark.bench import board_reach
+from spark.bench.board_connection import BoardUnreachableError
+from spark.bench.board_grant import MESSAGE_FOR
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS
 from restricted_pins import RestrictedPins, whole_numbers_in
 

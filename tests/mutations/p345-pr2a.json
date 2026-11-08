@@ -6,7 +6,7 @@
   "replace": "if verdict == run_scenario.PASSED]"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "caveats reads only the first passed log",
   "find": "logs = image.find_passed_logs()\n        read = [(log, ",
   "replace": "logs = image.find_passed_logs()[:1]\n        read = [(log, "
@@ -18,19 +18,19 @@
   "replace": "        for each in counted[:1]:\n"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "a control in a later log does not clear the no-control caveat",
   "find": "if not logs or merged.count(SET_CONTROL):",
   "replace": "if not logs or read[0][1].count(SET_CONTROL):"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "an uncounted log still allows the no-control claim",
   "find": "        if uncounted:\n            return uncounted\n",
   "replace": "        if uncounted and False:\n            return uncounted\n"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "the no-control subject is always the singular",
   "find": "if len(logs) > 1 else ONE_RUN_MESSAGE",
   "replace": "if False else ONE_RUN_MESSAGE"
@@ -48,7 +48,7 @@
   "replace": "return cls(limits)"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "find_limits keeps repeats",
   "find": "return list(dict.fromkeys(found))",
   "replace": "return found"
@@ -60,19 +60,19 @@
   "replace": "        elif False:"
  },
  {
-  "file": "scripts/board_look.py",
+  "file": "scripts/spark/bench/board_look.py",
   "name": "report_lines prints the limits after the token",
   "find": "    # --- MVP ---\n    if report.limits:\n        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]\n    # --- end MVP ---\n    # --- MVP ---\n    if report.unnamed_must:\n        out += [MUST_UNNAMED_HEADING_MESSAGE] + [sim_project.LIMIT_PREFIX + line for line in report.unnamed_must]\n    # --- end MVP ---\n    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n",
   "replace": "    if report.verdict == VERDICT_MATCH:\n        out.append(\"all fields match the board record %s.\" % name)\n    if token:\n        mine = report.token()\n        out.append(TOKEN_LINE % mine if mine else \"no token: %s\" % report.no_token_reason().sentence)\n    if report.limits:\n        out += [LIMITS_HEADING_MESSAGE] + [say_limit(limit) for limit in report.limits]\n"
  },
  {
-  "file": "scripts/board_look.py",
+  "file": "scripts/spark/bench/board_look.py",
   "name": "LookService.run asks a refused image for its limits",
   "find": "            why = evidence.why_not_ready(found)\n",
   "replace": "            why = evidence.why_not_ready(found)\n            limits = evidence.find_limits(found)\n"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "an unreadable log also gets the limits hint",
   "find": "if each.state == outcomes.NOT_CHECKED and not (said_unreadable and each.why == WHY_LOG_UNREADABLE)]",
   "replace": "if each.state == outcomes.NOT_CHECKED]"
@@ -96,7 +96,7 @@
   "replace": "        elif not line.strip():\n            pass\n"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "an unreadable log's limits sentence is skipped although a control hides its steps sentence",
   "find": "said_unreadable=not merged.count(SET_CONTROL))",
   "replace": "said_unreadable=True)"

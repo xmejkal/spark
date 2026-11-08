@@ -7,16 +7,16 @@ yes comes through the outside's `make_consent` (it declares ASKS), and a closed 
 import shlex
 from pathlib import Path
 
-import board_doctor
-import board_grant
-import board_look
+from spark.bench import board_doctor
+from spark.bench import board_grant
+from spark.bench import board_look
 import boards
-import flasher
+from spark.bench import flasher
 import store
 import tools
-from deploy_gate import GateClosedError, format_rerun_line
-from deploy_stages import STAGE_LOOK
-from firmware_platform import MicroPythonPlatform
+from spark.bench.deploy_gate import GateClosedError, format_rerun_line
+from spark.bench.deploy_stages import STAGE_LOOK
+from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes

@@ -26,7 +26,7 @@ import board_codes
 import boards
 import brief
 import deploy_record_store
-import flasher
+from spark.bench import flasher
 from spark.core import outcomes
 import project_image
 import sim_project

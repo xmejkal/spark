@@ -9,7 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import store  # noqa: E402
-from firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
+from spark.bench.firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
 from spark.core.outside import OutsideWorld  # noqa: E402
 
@@ -146,14 +146,14 @@ class FakeConsoleProbe:
     def console(self):
         """The board doctor's read: `printed`, read with the port's lock."""
         self.asked.append("console")
-        from board_console import ConsoleReadResult  # scripts/ is on the path once a test imports spark
+        from spark.bench.board_console import ConsoleReadResult  # scripts/ is on the path once a test imports spark
         return ConsoleReadResult("read", self.printed, None)
 
     def waits_in_download_mode(self):
         self.asked.append("console")
         if self.on_console:
             self.on_console()
-        from download_mode import DOWNLOAD_MODE  # scripts/ is on the path once a test imports spark
+        from spark.bench.download_mode import DOWNLOAD_MODE  # scripts/ is on the path once a test imports spark
         return DOWNLOAD_MODE in self.printed, self.printed
 
     def cure(self):

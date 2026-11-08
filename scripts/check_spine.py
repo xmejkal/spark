@@ -59,7 +59,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import assign_pins  # noqa: E402
-import board_envelope  # noqa: E402
+from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
 import breadboard  # noqa: E402
 import breadboard_drawing  # noqa: E402

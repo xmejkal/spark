@@ -22,24 +22,24 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_console  # noqa: E402
-import board_doctor  # noqa: E402
-import board_facts  # noqa: E402
-import board_look  # noqa: E402
+from spark.bench import board_console  # noqa: E402
+from spark.bench import board_doctor  # noqa: E402
+from spark.bench import board_facts  # noqa: E402
+from spark.bench import board_look  # noqa: E402
 import deploy_record_store  # noqa: E402
 import deploy  # noqa: E402
-import deploy_service  # noqa: E402
-import board_grant  # noqa: E402
-import deploy_gate  # noqa: E402
+from spark.bench import deploy_service  # noqa: E402
+from spark.bench import board_grant  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
-import flasher  # noqa: E402
+from spark.bench import flasher  # noqa: E402
 import store  # noqa: E402
-import image_evidence  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform, FakeReporter,  # noqa: E402
                    FakeOutsideWorld, FakeProbePlatform,
                    line_made_at_import, pin_time_zone)
-from firmware_platform import MicroPythonPlatform  # noqa: E402
+from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import build_project_outside_world, deploy_image  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
@@ -1131,7 +1131,7 @@ class TheStandingYesTest(GateCase):
     def test_an_ended_deploy_grant_asks_in_the_terminal_and_names_the_grant_line_by_its_whole_path(self):
         self.give()
         self.clock.advance(minutes=30)
-        grant_py = str(Path(board_grant.__file__).with_name("grant.py").resolve())
+        grant_py = str((ROOT / "scripts" / "grant.py").resolve())
         self.assertAsksInTheTerminal("the deploy grant for this board ended: the person runs %s --scope deploy "
                                      "--minutes N again" % line_made_at_import(grant_py))
 
@@ -1271,7 +1271,7 @@ class TheStandingYesTest(GateCase):
     @needs_littlefs
     def test_the_no_terminal_line_adds_the_deploy_grant_line_for_a_clean_look_only(self):
         _, _, problems = self.flash()
-        grant_line = store.prefix_home(shlex.join([str(Path(board_grant.__file__).with_name("grant.py").resolve()), "--scope",
+        grant_line = store.prefix_home(shlex.join([str((ROOT / "scripts" / "grant.py").resolve()), "--scope",
                                                    "deploy", "--minutes", "N", "--project", str(self.project.resolve()),
                                                    "--port", "/dev/cu.usbmodem101"]))
         self.assertIn("\n  %s\n" % grant_line, problems + "\n")

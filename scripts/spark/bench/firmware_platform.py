@@ -8,12 +8,12 @@ so a test swaps the board tools without a patch.
 
 import json
 
-import board_connection
-import board_console
-import board_look
+from spark.bench import board_connection
+from spark.bench import board_console
+from spark.bench import board_look
 import boards
-import flasher
-import ready_check
+from spark.bench import flasher
+from spark.bench import ready_check
 import tools
 import board_codes
 from project_image import DeployError

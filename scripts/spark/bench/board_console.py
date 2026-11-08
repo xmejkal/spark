@@ -12,7 +12,7 @@ import re
 import subprocess
 from collections import namedtuple
 
-from download_mode import DOWNLOAD_MODE
+from spark.bench.download_mode import DOWNLOAD_MODE
 from run_scenario import printed_text
 from spark.core.clock import SystemClock
 

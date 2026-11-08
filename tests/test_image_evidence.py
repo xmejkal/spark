@@ -22,12 +22,12 @@ from micropython_fakes import fake_interpreter  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import image_evidence  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 import sim_project  # noqa: E402
 import store  # noqa: E402
 import flash_image  # noqa: E402
 import tools  # noqa: E402
-from image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
+from spark.bench.image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
 from run_scenario import ScenarioSteps  # noqa: E402
 from project_image import DeployError, ProjectImage  # noqa: E402
 from test_project_image import project_with_image, write_log  # noqa: E402

@@ -4,8 +4,8 @@ and deploy name one stop by one code, and the result of a stop before the board 
 """
 
 import board_codes
-import board_envelope
-import board_look
+from spark.bench import board_envelope
+from spark.bench import board_look
 import boards
 import store
 import tools

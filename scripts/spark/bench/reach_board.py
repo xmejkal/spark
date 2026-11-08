@@ -5,12 +5,12 @@ power-on, and say whether the board answered. reach.py is its CLI, and its `--js
 """
 
 import board_codes
-import board_doctor
-import board_look
-import board_reach
+from spark.bench import board_doctor
+from spark.bench import board_look
+from spark.bench import board_reach
 import boards
 import tools
-from firmware_platform import MicroPythonPlatform
+from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes

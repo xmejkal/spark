@@ -19,12 +19,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import deploy_record_store  # noqa: E402
 from fakes import FakeFirmwarePlatform, pin_time_zone  # noqa: E402
-from firmware_platform import MicroPythonPlatform  # noqa: E402
-import board_look  # noqa: E402
+from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
+from spark.bench import board_look  # noqa: E402
 import project_image  # noqa: E402
 import sim_project  # noqa: E402
 from spark.core import outcomes  # noqa: E402
-import image_evidence  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from test_deploy import FOUND, ProjectCase, found  # noqa: E402
 
