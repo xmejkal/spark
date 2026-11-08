@@ -734,14 +734,14 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
     def test_check_all_lists_a_misspelt_finding_as_unchecked(self):
         import json as json_module
         import tempfile
-        import check_all
+        from spark.checks import check
         root = Path(tempfile.mkdtemp())
         (root / "circuit.json").write_text(json_module.dumps([net("V33")]))
         (root / "rules.json").write_text("{}")
         original = physics_check.run
         physics_check.run = lambda circuit, rules, loads=None: [self._misspelt()]
         try:
-            chosen = next(c for c in check_all.CHECKS if c.name == "physics")
+            chosen = next(c for c in check.CHECKS if c.name == "physics")
             result = chosen.run({"circuit": str(root / "circuit.json"),
                                 "rules": str(root / "rules.json")})
         finally:

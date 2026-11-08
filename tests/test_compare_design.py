@@ -17,7 +17,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import check_all  # noqa: E402
+from spark.checks import check  # noqa: E402
 import compare_design  # noqa: E402
 from spark.checks import rules_check  # noqa: E402
 
@@ -124,9 +124,9 @@ class TheFindingNamesItsPinTest(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         (tmp / "c.json").write_text(json.dumps(circuit({"Mcu": ["D3"], "Valve1": ["SIGNAL", "GND"]}, to_net=[("GND", "Valve1.GND")])))
         (tmp / "r.json").write_text(json.dumps({"must_not_float": [["Valve1", "SIGNAL"]]}))
-        chosen = next(c for c in check_all.CHECKS if c.name == "rules-vs-netlist")
+        chosen = next(c for c in check.CHECKS if c.name == "rules-vs-netlist")
         result = chosen.run({"circuit": str(tmp / "c.json"), "rules": str(tmp / "r.json")})
-        self.assertEqual(result["status"], check_all.PROBLEMS)
+        self.assertEqual(result["status"], check.PROBLEMS)
         self.assertIn("Valve1.SIGNAL", result["problems"][0], result["problems"])
 
 

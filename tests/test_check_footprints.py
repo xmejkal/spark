@@ -588,11 +588,11 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
 
     def test_check_all_lists_a_misspelt_finding_as_unchecked(self):
         import tempfile
-        import check_all
+        from spark.checks import check
         self._patched_run(build_check)
         path = Path(tempfile.mkdtemp()) / "circuit.json"
         path.write_text(json.dumps([{"type": "source_net", "source_net_id": "n", "name": "V33"}]))
-        chosen = next(c for c in check_all.CHECKS if c.name == "buildability")
+        chosen = next(c for c in check.CHECKS if c.name == "buildability")
         result = chosen.run({"circuit": str(path)})
         self.assertEqual(result["status"], "could-not-run", result)
         self.assertIn("drill-fit", json.dumps(result["unchecked"]))
