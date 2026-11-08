@@ -1,0 +1,6 @@
+circuit.json: 1 rule(s) checked against the built design
+
+1 rule(s) the board does not satisfy:
+
+  [floating-input] TactileButton.A: joined to Mcu.D3 and no resistor to a rail
+      it has no defined level at reset or whenever its driver lets go; add a pull-up or pull-down, or remove the rule if the part pulls it itself. If pins.py pulls it up (P204), run init_project.py --force

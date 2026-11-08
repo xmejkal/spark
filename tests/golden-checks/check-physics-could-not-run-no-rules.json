@@ -1,0 +1,5 @@
+{
+  "tool": "check_physics",
+  "status": "could-not-run",
+  "reason": "no rules at .spark/rules.json"
+}

@@ -1,0 +1,11 @@
+[
+  {
+    "board": "firebeetle2-esp32s3",
+    "status": "ok",
+    "source": "espressif/arduino-esp32 variants/dfrobot_firebeetle2_esp32s3/pins_arduino.h",
+    "compared": 25,
+    "problems": [],
+    "not_recorded": [],
+    "wrote": "<project-dir>/.spark/cache/dfrobot_firebeetle2_esp32s3.pins_arduino.h"
+  }
+]

@@ -1,0 +1,1 @@
+  firebeetle2-esp32s3      ok  (25 pins against spark's cache (dfrobot_firebeetle2_esp32s3.pins_arduino.h))

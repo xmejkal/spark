@@ -1,0 +1,7 @@
+{
+  "tool": "compare_design",
+  "status": "ok",
+  "design": "circuit.json",
+  "checked": 1,
+  "problems": []
+}

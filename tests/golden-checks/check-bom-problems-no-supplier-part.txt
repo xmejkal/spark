@@ -1,0 +1,5 @@
+bom.csv: 1 line(s) checked against the design
+
+1 problem(s) — this package would build a different circuit:
+
+  - R1 has a value (220) but no supplier part, so it cannot be ordered or placed

@@ -353,6 +353,63 @@ row: `breadboard.py` stops printing its `not kept:` lines.
 Review: no new product logic. One reviewer on the everyday model, the refuter on the strongest, one mutation run.
 Size est.: 110 test lines and 7 goldens.
 
+### W6-C1, the checks golden net
+
+Goal: what the six check CLIs print today stays what they print, so the checks move breaks nothing. Tests only. It
+edits no file of #906, #915 or #917.
+
+Guard, do not skip. Only `check_vendor_pins.py` starts a child, `gh` (`check_vendor_pins.py:68`), and only without
+`--offline`. The vendor-truth check of `check_all.py` reads offline (`check_all.py:256`). So `gh` is faked. A shim
+named `gh` is W6-F1's shape: `#!/bin/sh`, then `exec` of the absolute `sys.executable` on `tests/fake_gh.py`
+(proposed, the shape of `fake_wokwi_cli.py`). A bare `python3` fails on a `PATH` this short. The fake prints spark's kept header
+(`.spark/cache/dfrobot_firebeetle2_esp32s3.pins_arduino.h`) in base64. A Case can change one pin in it. A Case can
+also give an exit code, and then the fake fails. The child's `PATH` is the shim's folder alone. A test asserts that
+it equals that folder and that the `gh` found on it is the shim. Why alone: in a probe for this plan, the interpreter of a shim did not start.
+The search went on, and the real `gh` ran (a free public read). No Case runs `wokwi-cli`, KiCad or `tsci`. The six
+call no `urlopen`, but `store.fetch` (`store.py:400`) can be reached through `boards.py`. So every child sets
+`http_proxy`, `https_proxy`, `HTTP_PROXY` and `HTTPS_PROXY` to `http://127.0.0.1:9` and has no `WOKWI_CLI_TOKEN`, and
+a test checks the child env. The live Cases check a board file copied into the project. So the header is kept in the
+project's cache, not in spark's (`project_header`, `check_vendor_pins.py:117`). A test asserts that spark's cache is
+unchanged.
+
+The project: `build_project` (proposed) copies `tests/data/breadboard/button-light`, which holds a built
+`dist/board/circuit.json`. It runs `init_project.py --board firebeetle2-esp32s3 --circuit dist/board/circuit.json`
+as a child with its own store. It also writes `floating-rules.json`: the same rules with `pulled_by_firmware` empty.
+
+Cases, est. 17. Each golden is `<op>-<name>`, and each exit code was seen in a probe run, except the one marked "read":
+- `check-all`: `ok.txt` (rules removed, 0), `problems-floating-input.json` (`--rules floating-rules.json`, 1),
+  `could-not-run.txt` (physics cannot assess the LED's series resistor, 2).
+- `check-physics`: `could-not-run.txt` (2), `could-not-run-no-rules.json` (2, read: `check_physics.py:637-641`). No
+  ok Case: run alone, physics reads no part records, so the LED's resistor cannot clear (`check_physics.py:629-630`).
+- `check-footprints`: `ok.json` (0), `could-not-run-no-circuit.txt` (2).
+- `compare-design`: `ok.json` (0), `problems-floating-input.txt` (1), `could-not-run-no-rules.txt` (2).
+- `check-bom`: `ok.txt` (0), `problems-no-supplier-part.txt` (1), `could-not-run-no-package.txt` (2). The two zips
+  are planted as bytes.
+- `check-vendor-pins`: `ok-offline.txt` (spark's kept header, 0), `ok-live.json` (0), `problems-mismatch.txt` (1),
+  `could-not-run-fetch-failed.txt` (2).
+
+Folder: `tests/golden-checks/`. Files: `tests/golden_checks.py` (proposed, the helper) and
+`tests/test_golden_checks.py`. Reuse, no copy: `golden_bench.op_of`, `scrub`, `replacements_of`, `RUN_TIMEOUT_S` and
+`check_golden(golden_dir=...)`, and `golden_firmware.Case`, `plant` and `run_script`. Two small changes go into
+`golden_firmware.py`: `plant` writes bytes as bytes, and `run_script` takes the child's `env` (the checks' env: no
+token, the proxies, the shim's `PATH`). `golden_bench.py` is not edited, because #915 edits it. None of the six runs through `run_cli`, so a path in
+the text is scrubbed, not masked.
+
+Tests: one test per Case. `SPARK_ACCEPT=<op>` writes that op's goldens and fails. No golden holds a path of this
+machine, and every golden has its Case. The guard tests are above. No `needs_littlefs`.
+
+Mutation (`p687-checks-net.json`, 9 rows as built). The scrub skipped. A Case's exit code wrong. The proxies not set (the
+child env test). The fake `gh` ignores its exit code. `floating-rules.json` keeps `pulled_by_firmware`. The child's `PATH` keeps
+another folder. The token or `no_proxy` reaches the child. Planted bytes are written as text. Proven
+with `--anchors`, run with `--copy` in parallel shards.
+
+Not pinned, rows for the PR's rows file and proposed cards. `check_vendor_pins.py` on a missing board file ends in a
+traceback with exit 1, which reads as a mismatch (`:204`). `check_bom.py` on a zip with no `bom.csv` exits 1 by
+`SystemExit` (`:58`). For a missing circuit, `check_footprints.py --json` prints text (`:561-563`).
+
+Review: no new product logic. One reviewer on the everyday model and the refuter on the strongest. Size est.: 110
+helper lines, 110 test lines, 20 lines of the fake, 17 goldens.
+
 ## The later groups
 
 Each group follows the same three PRs. The order is the plan's. Open question 1 says which moves share a PR.

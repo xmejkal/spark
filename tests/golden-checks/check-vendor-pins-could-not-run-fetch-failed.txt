@@ -1,0 +1,1 @@
+  firebeetle2-esp32s3      could not run: could not fetch variants/dfrobot_firebeetle2_esp32s3/pins_arduino.h from espressif/arduino-esp32: HTTP 404: Not Found (fake gh)

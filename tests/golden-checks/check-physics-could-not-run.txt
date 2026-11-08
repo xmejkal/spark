@@ -1,0 +1,11 @@
+circuit.json: checked against physics, not against itself
+
+2 needs-measurement:
+  [trace-current] GND: no maximum current stated, so nothing here can be verified
+      measure it, then put it in the rules file as max_current_a
+  [trace-current] V33: no maximum current stated, so nothing here can be verified
+      measure it, then put it in the rules file as max_current_a
+
+1 could-not-run:
+  [resistor-power] 1 resistor(s): could not be assessed: LedRed5mmSeriesA. A netlist records neither the current through a resistor nor the voltage across it, and both depend on topology the design does not state
+      state the current in the rules file under any rail's `resistor_currents`, for any resistor whose dissipation actually matters — a shunt, an LED series resistor, a bleeder. A pull-up almost never does.

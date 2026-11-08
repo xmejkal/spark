@@ -1,0 +1,20 @@
+  resolved from <project-dir>:
+    circuit      dist/board/circuit.json
+    rules        .spark/rules.json
+    package      not found (looked for *-gerbers.zip, fab/*.zip)
+    boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6
+
+  [ok  ] vendor-truth       the board definition matches the vendor's own pin header
+  [ok  ] buildability       holes take their pins, packages hold their values
+  [--  ] the-order          the fab package orders the parts the schematic specifies
+  [????] physics            the board obeys physics, not just itself
+           ! 1 resistor(s): could not be assessed: LedRed5mmSeriesA. A netlist records neither the current through a resistor nor the voltage across it, and both depend on topology the design does not state
+           ? V33: draws 355 mA of 1.50 A, resting on figures nobody has verified: Mcu.3V3: regulator_3v3_a
+           ? GND: no maximum current stated, so nothing here can be verified
+           ? V33: carries up to 0.35 A (summed from the part records) but has no routed trace of its own — if it is served by a copper pour, say so in the rules file
+  [ok  ] rules-vs-netlist   written rules hold in the design that was built
+           ? TactileButton.A: held up by the board's internal pull-up, which the firmware sets and no netlist shows
+
+  1 check(s) could not look: physics
+  1 not asked for: the-order
+  nothing found by the 3 check(s) that completed, of 5, resting on 1 ? line(s)
