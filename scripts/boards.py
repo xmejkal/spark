@@ -12,7 +12,7 @@ Which board this project is built around — resolved in one place, and checked 
                                             also require what the PCB needs, not just the firmware
 
 The command `/spark:init`, `/spark:build` and the review skill call. The library is `spark/records/board_records.py`
-(P718), and `--list` says each board that stops at the footprint by `footprint_emitter.footprint_stop`.
+(P718), and `--list` says each board that stops at the footprint by `footprint_emitter.footprint_stop`, read lazily.
 """
 
 import sys
@@ -20,11 +20,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from spark.design.footprint_emitter import footprint_stop  # noqa: E402
-from spark.records import board_records  # noqa: E402
-from spark.records.board_records import (BoardError, _read_json, active_id, available, definition_path, get,  # noqa: E402
-                                         project_or_library, project_root, resolve, validate)
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
+from spark.records import board_records  # noqa: E402
+from spark.records.board_records import (BoardError, _read_json, active_id, available, definition_path,  # noqa: E402
+                                         get, project_or_library, project_root, resolve, validate)
+
+
+def _footprint_stop(board_id: str, project: Path) -> str:
+    """`footprint_emitter.footprint_stop`, imported here as before the move: only `--list` needs the design area, which
+    loads the parts library and the fabrication data, so `--id`, `--path` and `--get` do not."""
+    from spark.design import footprint_emitter
+    return footprint_emitter.footprint_stop(board_id, project)
 
 
 def _validate_all(project: Path, for_fab: bool) -> int:
@@ -96,7 +102,7 @@ def main(argv=None) -> int:
             for board_id in available(project):
                 where = "library" if definition_path(project, board_id).parent == board_records.LIBRARY \
                     else "project"
-                stop = footprint_stop(board_id, project)
+                stop = _footprint_stop(board_id, project)
                 print(f"  {'*' if board_id == current else ' '} {board_id} ({where}){' ' + stop if stop else ''}")
         else:
             return _validate_all(project, for_fab=args.for_fab)

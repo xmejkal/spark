@@ -31,8 +31,8 @@ gave `ReadyResult`, `DeployPlan` and `BoardLog`. PR 5 gave `ProjectImage`, `Depl
 `board_look.BOOT_HINT` (PR 7 moved it to the flasher, and P213 b2 made it `boot_hint`). PR 6 gave `LookReport` (with `to_dict()`), `LookService`,
 `BoardReading` and `board_look.report_lines`. PR 7 gave `flasher.Flasher`, `flasher.EsptoolFlasher` (which holds `ERASE`, `WRITE`,
 `IMAGE_OFFSET` and `BOOT_HINT_TEMPLATE`) and `flasher.build_esptool_prefix`. P213 b2 replaced the constant: `boot_hint` is the
-sentence an `EsptoolFlasher` holds, `boot_hint_for(places)` builds it, and `boards.ButtonPlaces` (a Value) names the
-buttons from the record's `physical.buttons`. `board_doctor.step_sentence` does the same for the doctor's steps.
+sentence an `EsptoolFlasher` holds, `boot_hint_for(places)` builds it, and `board_records.ButtonPlaces` (a Value) names
+the buttons from the record's `physical.buttons`. `board_doctor.step_sentence` does the same for the doctor's steps.
 PR 8 gave `deploy_service.DeployService` (`plan`, `look`, `deploy`, `verify`), `deploy_service.DeployResult` and
 `firmware_platform.FirmwarePlatform`. P475 made that class the base of `MicroPythonPlatform`, gave it the board reader and the port finder, and made `SystemClock` the one clock (`now`, `monotonic`, `sleep`), in `spark.core.clock` since P605 and re-imported by `board_console`. `deploy.py` only parses, prints and maps the exit code.
 

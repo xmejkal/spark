@@ -482,9 +482,9 @@ class TheRecordsAreaTest(unittest.TestCase):
     #: The modules of the area so far, by the names of its page (`areas/records.md`).
     MODULES = ["board_pads", "board_records", "brief", "deploy_record_store", "missing_facts", "onboard_parts",
                "provenance", "records_codes", "store"]
-    #: The CLI's own top-level functions: `main` and what only it uses to print (`_validate_all` prints). A library
-    #: function back in the CLI, under any name, fails the check.
-    CLIS = {"boards.py": ["_validate_all", "main"]}
+    #: The CLI's own top-level functions: `main`, what only it uses to print (`_validate_all` prints) and the lazy read
+    #: of design's `footprint_stop`. A library function back in the CLI, under any name, fails the check.
+    CLIS = {"boards.py": ["_footprint_stop", "_validate_all", "main"]}
 
     def test_scripts_holds_the_cli_and_no_records_library_module(self):
         modules = sorted(path.stem for path in self.RECORDS.glob("*.py") if path.name != "__init__.py")

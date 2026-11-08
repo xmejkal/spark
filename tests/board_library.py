@@ -42,6 +42,6 @@ def library_without(field):
 
 @contextlib.contextmanager
 def board_missing(field):
-    """boards.LIBRARY is a scratch copy in which the XIAO lacks `field`, for the length of the block."""
+    """board_records.LIBRARY is a scratch copy in which the XIAO lacks `field`, for the length of the block."""
     with mock.patch.object(board_records, "LIBRARY", library_without(field)):
         yield

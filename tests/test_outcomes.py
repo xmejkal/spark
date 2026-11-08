@@ -164,7 +164,7 @@ READERS = {
         "older, with no section": (LOG_HEADER + "\nbody\n", "none-recorded"),
         "good": (LOG_HEADER + "\n--- what this simulation cannot show ---\n- **A** — no part\n\n--- the scenario as run ---\n",
                  "recorded")}),
-    "boards.read_simulated_part": (read_definition, {
+    "board_records.read_simulated_part": (read_definition, {
         "missing": (None, "none-recorded"),
         "malformed": ('{"pins": ', "not-checked"),
         "wrong shape": ('{"pins": [1]}', "not-checked"),
