@@ -314,12 +314,14 @@ def board_to_draw(project_flag, board_id):
     so a caller asking for an exit code got an exception, and whoever called it reported the crash as a verdict. A rules file
     that is refused carries its own code (P434: its fault is named, not blamed on the board).
     """
+    project = None
     try:
         project = Path(project_flag) if project_flag else boards.project_or_library()
         board = boards.load(project, board_id)
         rules = design.rules_in(project)
     except Exception as exc:  # noqa: BLE001 — the message is the product
-        code = exc.code if isinstance(exc, design.DesignError) else design_codes.BOARD_UNUSABLE
+        code = (exc.code if isinstance(exc, design.DesignError) else design_codes.BOARD_UNUSABLE if project
+                else design_codes.NO_PROJECT_FOLDER)  # no project: the folder it is looked for from is gone
         return None, None, Refusal("no board or rules to generate from: %s" % exc, code)
     return board, rules, None
 # --- end MVP ---

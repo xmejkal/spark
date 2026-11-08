@@ -33,7 +33,7 @@ CODES = {
     REQUIREMENTS_UNREADABLE: "the requirements file is not JSON, or it cannot be read",
     REQUIREMENTS_FIELD_WRONG: "a field of the requirements file is of the wrong kind, or names what no part or board has",
     NAME_USED_TWICE: "two parts or two signals of the design have one name, so the build would make them one",
-    NO_PROJECT_FOLDER: "--project names no folder",
+    NO_PROJECT_FOLDER: "--project names no folder, or the folder a project is looked for from is gone",
     PART_UNUSABLE: "a part the design names is unknown, or its record cannot be read or breaks the part contract",
     BOARD_UNUSABLE: "the board the design names is unknown, or its record cannot be read or breaks the board contract",
     RULES_REFUSED: "the rules file cannot be used: it is not JSON, or a value is of the wrong kind or below its lowest",

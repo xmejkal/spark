@@ -380,6 +380,18 @@ class TheBoardToDrawTest(unittest.TestCase):
         self.assertEqual((board, rules, refused.code), (None, None, "board_unusable"))
         self.assertTrue(refused.startswith("no board or rules to generate from: no board definition for 'no-such-board'"), refused)
 
+    def test_no_folder_to_look_for_a_project_from(self):
+        import os
+        import tempfile
+        gone = tempfile.mkdtemp()
+        here = os.getcwd()
+        self.addCleanup(os.chdir, here)
+        os.chdir(gone)
+        os.rmdir(gone)
+        _, _, refused = emit_footprint.board_to_draw(None, "firebeetle2-esp32s3")
+        self.assertEqual(refused.code, "no_project_folder")
+        self.assertTrue(refused.startswith("no board or rules to generate from: "), refused)
+
     def test_a_refused_rules_file_keeps_its_own_code(self):
         import tempfile
         root = Path(tempfile.mkdtemp())
