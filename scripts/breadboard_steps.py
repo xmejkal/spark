@@ -224,11 +224,9 @@ ROW_HOLES = 5
 
 
 def points(circuit):
-    """
-    Every connection point of the built circuit. Traces join ports and nets; a point is what they join, followed through
+    """Every connection point of the built circuit. Traces join ports and nets; a point is what they join, followed through
     both (netlist.py keeps a pin-to-pin trace's net apart from a named one on purpose; a breadboard row does not). A port
-    alone on a named net is a point too: a supply that comes from off the board.
-    """
+    alone on a named net is a point too: a supply that comes from off the board."""
     parent = {}
 
     def find(node):
@@ -256,10 +254,8 @@ def points(circuit):
 
 
 def printed_label(board, port):
-    """
-    What the board's silkscreen prints beside one of its pads: a label its header rows list, a pad or power pad of its
-    file, or the printed spelling of an alias (MISO is printed MI); never a bare pin number. Every ground pad is GND.
-    """
+    """What the board's silkscreen prints beside one of its pads: a label its header rows list, a pad or power pad of its
+    file, or the printed spelling of an alias (MISO is printed MI); never a bare pin number. Every ground pad is GND."""
     physical = board.get("physical") or {}
     rows = [label for row in (physical.get("header_order") or {}).values() if isinstance(row, list) for label in row]
     pads = board_pads.BoardPads.from_record(board)  # --- MVP --- (P512)

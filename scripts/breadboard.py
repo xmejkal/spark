@@ -71,7 +71,6 @@ CIRCUIT = Path("dist") / "board" / "circuit.json"
 #: What a build that finished was built from, written beside its circuit by `check_spine --keep` (the refuter, P191).
 BUILT_FROM = CIRCUIT.parent / "built-from.json"
 SHEET = "breadboard.md"
-#: What the drawn breadboard is, as the build and this script say it beside its path.
 #: The component every generated design calls its dev board (emit_board, the converter's BOARD mapping).
 BOARD_COMPONENT = "Mcu"
 #: What each kind of passive a part asks for does, said the way a person reads it.
@@ -121,10 +120,8 @@ def record_built_from(requirements_path, out):
 
 
 def _check_fresh(circuit, design_parts, circuit_path, requirements_path):
-    """
-    Refuse a circuit that is not a finished build of this design: not a circuit, a failed build, a build of other
-    requirements (the board swapped, a part added), or one that never recorded what it was built from.
-    """
+    """Refuse a circuit that is not a finished build of this design: not a circuit, a failed build, a build of other
+    requirements (the board swapped, a part added), or one that never recorded what it was built from."""
     again = "build again: `check_spine.py %s --keep .`" % requirements_path.name
     built_from = circuit_path.parent / BUILT_FROM.name
     if not built_from.is_file():
