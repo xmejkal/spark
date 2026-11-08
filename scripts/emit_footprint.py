@@ -44,7 +44,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import design  # noqa: E402
+from spark.design import loader  # noqa: E402
 import design_codes  # noqa: E402
 from spark.design import fab  # noqa: E402
 import boards  # noqa: E402
@@ -318,9 +318,9 @@ def board_to_draw(project_flag, board_id):
     try:
         project = Path(project_flag) if project_flag else boards.project_or_library()
         board = boards.load(project, board_id)
-        rules = design.rules_in(project)
+        rules = loader.rules_in(project)
     except Exception as exc:  # noqa: BLE001 — the message is the product
-        code = (exc.code if isinstance(exc, design.DesignError) else design_codes.BOARD_UNUSABLE if project
+        code = (exc.code if isinstance(exc, loader.DesignError) else design_codes.BOARD_UNUSABLE if project
                 else design_codes.NO_PROJECT_FOLDER)  # no project: the folder it is looked for from is gone
         return None, None, Refusal("no board or rules to generate from: %s" % exc, code)
     return board, rules, None

@@ -858,7 +858,7 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
     def test_a_record_with_bad_labels_never_reaches_the_pin_map(self):
         import json
         import tempfile
-        import design
+        from spark.design import loader
         root = Path(tempfile.mkdtemp())
         (root / ".spark").mkdir()
         (root / "boards").mkdir()
@@ -866,7 +866,7 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
         record["pin_roles"]["onboard_display"]["labels"]["mosi"] = 19
         (root / "boards" / "lilygo-t-display.json").write_text(json.dumps(record))
         (root / "requirements.json").write_text(json.dumps({"board": "lilygo-t-display", "parts": []}))
-        with self.assertRaises(design.DesignError) as caught:
+        with self.assertRaises(loader.DesignError) as caught:
             assign_pins.pin_module_for(root / "requirements.json")
         self.assertIn("has the label 'mosi'", str(caught.exception))
 # --- end MVP ---

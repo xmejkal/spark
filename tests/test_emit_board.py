@@ -30,7 +30,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
 from spark.design import copper  # noqa: E402
-import design  # noqa: E402
+from spark.design import loader  # noqa: E402
 import board_pads  # noqa: E402
 import emit_board  # noqa: E402
 import emit_footprint  # noqa: E402
@@ -441,16 +441,16 @@ class ManyOfOnePartTest(unittest.TestCase):
         # keyed by name then collapsed to whichever came last.
         left = self.button("BtnLeft")
         right = self.button("BtnRight")
-        self.assertEqual(design.signal_name(left, left["needs"][0]), "BTNLEFT_BUTTON")
-        self.assertEqual(design.signal_name(right, right["needs"][0]), "BTNRIGHT_BUTTON")
+        self.assertEqual(loader.signal_name(left, left["needs"][0]), "BTNLEFT_BUTTON")
+        self.assertEqual(loader.signal_name(right, right["needs"][0]), "BTNRIGHT_BUTTON")
 
     def test_an_unnamed_part_keeps_its_bare_signal_name(self):
         plain = self.button()
-        self.assertEqual(design.signal_name(plain, plain["needs"][0]), "BUTTON")
+        self.assertEqual(loader.signal_name(plain, plain["needs"][0]), "BUTTON")
 
     def test_a_bare_string_and_an_object_are_both_valid_entries(self):
         self.assertEqual(
-            design.requested_parts({"parts": ["l9110s-module",
+            loader.requested_parts({"parts": ["l9110s-module",
                                                   {"part": "tactile-button", "name": "BtnLeft"}]}),
             [("l9110s-module", None), ("tactile-button", "BtnLeft")])
 

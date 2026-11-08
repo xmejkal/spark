@@ -30,7 +30,7 @@ import breadboard  # noqa: E402
 
 from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
-import design  # noqa: E402
+from spark.design import loader  # noqa: E402
 import store  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
@@ -253,7 +253,7 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
 
     def test_the_errors_from_outside_each_have_their_own(self):
         self.assertEqual(sheet.refusal_code(sheet.NotBuilt("not built", "build_failed")), "build_failed")
-        self.assertEqual(sheet.refusal_code(design.DesignError("no part %s", "x", code="part_unusable")), "requirements_unusable")
+        self.assertEqual(sheet.refusal_code(loader.DesignError("no part %s", "x", code="part_unusable")), "requirements_unusable")
         self.assertEqual(sheet.refusal_code(store.StoreProblem("the store")), "store_problem")
         self.assertEqual(sheet.refusal_code(PermissionError("breadboard.md")), "file_unusable")
 
@@ -268,7 +268,7 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
 
     def test_main_catches_exactly_the_errors_that_have_a_code(self):
         self.assertEqual(set(sheet.REFUSALS),
-                         {sheet.NotBuilt, design.DesignError, store.StoreProblem, OSError})
+                         {sheet.NotBuilt, loader.DesignError, store.StoreProblem, OSError})
 
 
 class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
@@ -285,7 +285,7 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
         (folder / "requirements.json").write_text(json.dumps(
             {"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "signals": [{"name": "STATUS_LED", "needs": []}]}))
         with in_store(Path(tempfile.mkdtemp())):
-            built = sheet.design.load(folder / "requirements.json")
+            built = sheet.loader.load(folder / "requirements.json")
             said = sheet._unwired(built.board, built)
         self.assertEqual(said, ["- STATUS_LED: board A5, nothing wired to it yet (the requirements add this signal)"])
 
@@ -306,7 +306,7 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
             {"board": "firebeetle2-esp32s3", "parts": ["tactile-button"],
              "signals": [{"name": "STATUS_LED", "pin": "MOSI", "needs": []}]}))
         with in_store(Path(tempfile.mkdtemp())):
-            built = sheet.design.load(folder / "requirements.json")
+            built = sheet.loader.load(folder / "requirements.json")
             said = sheet._unwired(built.board, built)
         self.assertEqual(said, ["- STATUS_LED: board MO, nothing wired to it yet (the requirements add this signal)"])
 

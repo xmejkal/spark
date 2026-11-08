@@ -33,7 +33,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_all  # noqa: E402
 from spark.checks import build_check, check  # noqa: E402
-import design  # noqa: E402
+from spark.design import loader  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 
@@ -245,7 +245,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
 
     def test_a_newline_in_the_folder_gives_one_line_in_checked_folder(self):
         folder = Path(tempfile.mkdtemp()) / NASTY
-        with self.assertRaises(design.DesignError) as caught:
+        with self.assertRaises(loader.DesignError) as caught:
             check.CheckedFolder.at(folder)
         assert_flat(self, caught.exception, folder)
 
@@ -640,7 +640,7 @@ class TheBuildsProjectIsCheckedTest(unittest.TestCase):
 
     def test_the_checks_read_the_project_the_build_reads(self):
         _, answer = self._answer()
-        self.assertEqual(answer["project"], str(design.project_for(self.car / "requirements.json")))
+        self.assertEqual(answer["project"], str(loader.project_for(self.car / "requirements.json")))
         inputs = self._inputs()
         self.assertEqual(Path(inputs["rules"]).resolve(), (self.parent / ".spark" / "rules.json").resolve())
         self.assertEqual(inputs["circuit"], str(self.car / "dist" / "board" / "circuit.json"))
@@ -948,7 +948,7 @@ class OneModulePerProcessTest(unittest.TestCase):
     def test_the_placeholder_list_uses_the_design_module_everyone_else_imports(self):
         root = Path(tempfile.mkdtemp())
         (root / "car.requirements.json").write_text(json.dumps({"parts": []}))
-        with mock.patch.object(design, "parts_of", side_effect=design.DesignError("patched", code="part_unusable")):
+        with mock.patch.object(loader, "parts_of", side_effect=loader.DesignError("patched", code="part_unusable")):
             names, notes = check.placeholder_components_in(root)
         self.assertEqual(names, ())
         self.assertEqual(len(notes), 1, notes)
@@ -964,8 +964,8 @@ class OneCircuitConventionTest(unittest.TestCase):
         # A6). G10's fix made both refuse two matches; a third path added to one would not have
         # reached the other.
         import init_project
-        self.assertEqual(check.CONVENTIONS["circuit"], ("folder", list(design.CIRCUIT_PATHS)))
-        self.assertIs(init_project.CIRCUIT_PATHS, design.CIRCUIT_PATHS)
+        self.assertEqual(check.CONVENTIONS["circuit"], ("folder", list(loader.CIRCUIT_PATHS)))
+        self.assertIs(init_project.CIRCUIT_PATHS, loader.CIRCUIT_PATHS)
 
 if __name__ == "__main__":
     unittest.main()

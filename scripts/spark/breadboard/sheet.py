@@ -11,7 +11,7 @@ from pathlib import Path
 
 import assign_pins
 import board_pads
-import design
+from spark.design import loader
 import drawer
 import emit_board
 import part_shape
@@ -67,7 +67,7 @@ class NotBuilt(Exception):
 
 # --- MVP ---
 #: Each error from outside that stops the sheet, with its code: the errors `main` catches, after a NotBuilt.
-OUTSIDE_CODES = {design.DesignError: breadboard_codes.REQUIREMENTS_UNUSABLE, store.StoreProblem: breadboard_codes.STORE_PROBLEM,
+OUTSIDE_CODES = {loader.DesignError: breadboard_codes.REQUIREMENTS_UNUSABLE, store.StoreProblem: breadboard_codes.STORE_PROBLEM,
                  OSError: breadboard_codes.FILE_UNUSABLE}
 REFUSALS = (NotBuilt, *OUTSIDE_CODES)
 
@@ -224,7 +224,7 @@ def _read_build(requirements_path, circuit_path=None):
     if not circuit_path.is_file():
         raise NotBuilt("nothing is built at %s yet: run `check_spine.py %s --keep .` first"
                        % (circuit_path, requirements_path.name), breadboard_codes.NOT_BUILT)
-    built = design.load(requirements_path)
+    built = loader.load(requirements_path)
     try:
         circuit = json.loads(circuit_path.read_text())
     except ValueError as broken:

@@ -44,7 +44,7 @@ sys.path.insert(0, str(SCRIPTS))
 import board_pads  # noqa: E402
 import boards  # noqa: E402
 import design_codes  # noqa: E402
-import design as design_library  # noqa: E402
+from spark.design import loader  # noqa: E402
 import missing_facts  # noqa: E402
 import parts as parts_library  # noqa: E402
 import provenance  # noqa: E402
@@ -509,7 +509,7 @@ def pin_module_for(requirements):
     as the command resolves them (P196: the build keeps it beside the board), and what the board record lacks that a stage
     needs (P464). Raises DesignError or Impossible, each saying why.
     """
-    loaded = design_library.load(requirements, None, None)
+    loaded = loader.load(requirements, None, None)
     assignments, _ = assign(loaded.board, loaded.signals)
     return PinModuleResult(pin_module(loaded.board, assignments, Path(requirements).name, pulled_up(loaded.parts)),
                            missing_facts.list_missing_facts(loaded.board))
@@ -517,7 +517,7 @@ def pin_module_for(requirements):
 
 def pulled_up(part_list):
     """The signals whose pull-up the board's internal one does, set by the firmware (P204)."""
-    return {design_library.signal_name(part, need) for part in part_list for need in part.get("needs") or []
+    return {loader.signal_name(part, need) for part in part_list for need in part.get("needs") or []
             if need.get("pin") in part.get("_firmware_pulls", [])}
 
 
@@ -539,13 +539,13 @@ def main(argv=None):
     # from the current directory, and hand the raw `parts` entries to the library, so the first
     # step every document names crashed on the `{part, name}` form every document shows (B1).
     try:
-        loaded = design_library.load(args.requirements, args.project, args.board)
-    except design_library.DesignError as broken:
+        loaded = loader.load(args.requirements, args.project, args.board)
+    except loader.DesignError as broken:
         print("could not load the design: %s" % broken)
         return EXIT_COULD_NOT_RUN
     board = loaded.board
-    if not args.project and design_library.is_library(loaded.project):
-        print(design_library.LIBRARY_NOTE)
+    if not args.project and loader.is_library(loaded.project):
+        print(loader.LIBRARY_NOTE)
 
     try:
         assignments, leftover = assign(board, loaded.signals)

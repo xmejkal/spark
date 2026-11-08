@@ -43,7 +43,7 @@ import boards  # noqa: E402
 import build_codes  # noqa: E402
 import check_spine  # noqa: E402
 from suite_runs import slow  # noqa: E402
-import design  # noqa: E402
+from spark.design import loader  # noqa: E402
 import emit_board  # noqa: E402
 import missing_facts  # noqa: E402
 import parts  # noqa: E402
@@ -702,8 +702,8 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         wanted = Path(tempfile.mkdtemp()) / "requirements.json"
         wanted.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"],
                                       "signals": [{"name": "X", "needs": [["wake"]]}]}))
-        with self.assertRaises(design.DesignError):
-            design.read(wanted)
+        with self.assertRaises(loader.DesignError):
+            loader.read(wanted)
 
     def test_a_rebuild_runs_the_flash_image_the_kept_simulation_already_names(self):
         # The refuter: `--keep .` after the simulate steps rewrote wokwi.toml with its firmware line commented out.
@@ -2192,7 +2192,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
         built = self.spine(check_spine.OK)[0]
-        handed = design.firmware_pulls(button, board)  # P204: the part as the chain was handed it, on this board
+        handed = loader.firmware_pulls(button, board)  # P204: the part as the chain was handed it, on this board
         self.assertEqual((built["board"]["digest"], built["parts"][0]["digest"]),
                          (self.digest_of(board, ("pins", "power_pads", "physical")),
                           self.digest_of(handed, ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))))
@@ -2213,7 +2213,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         button = json.loads((ROOT / "parts" / "tactile-button.json").read_text())
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         self.assertEqual([e["parts"][0]["digest"] for e in built],
-                         [self.digest_of(design.firmware_pulls(button, board),
+                         [self.digest_of(loader.firmware_pulls(button, board),
                                          ("needs", "power", "unused_pins", "pin_order", "footprint", "host_parts"))])
 
     def test_a_design_that_cannot_be_loaded_records_nothing_and_breaks_nothing(self):
@@ -2221,7 +2221,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         code, said, _ = self.answer()
         self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
         (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
-        with mock.patch.object(check_spine.design, "load", side_effect=TypeError("a record of a shape nobody foresaw")):
+        with mock.patch.object(check_spine.loader, "load", side_effect=TypeError("a record of a shape nobody foresaw")):
             code, said, _ = self.answer()
         self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
 
@@ -2244,7 +2244,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         self.assertEqual((code, (self.home / "history.jsonl").exists()), (0, False))
 
     def test_the_line_waits_while_another_holds_the_store(self):
-        loaded = design.load(self.project / "requirements.json", self.project)
+        loaded = loader.load(self.project / "requirements.json", self.project)
         recorder = threading.Thread(target=parts.note_built, args=(loaded,))
         with store.locked():
             recorder.start()

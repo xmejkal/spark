@@ -31,19 +31,15 @@ name where the signals are derived (`signals_of`, which is the first to hold the
 import json
 import math
 import re
-import sys
 from collections import namedtuple
 from pathlib import Path
 
-SCRIPTS = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPTS))
-
-import boards  # noqa: E402
-import design_codes  # noqa: E402
-from spark.design import fab  # noqa: E402
-import parts as parts_library  # noqa: E402
-import provenance  # noqa: E402
-from spark.core.text_guards import ValueMessageError  # noqa: E402
+import boards
+import design_codes
+from spark.design import fab
+import parts as parts_library
+import provenance
+from spark.core.text_guards import ValueMessageError
 
 #: What `load` returns. `parts` are the requested instances: each a copy of its record, with
 #: `_instance` set when the requirements named it.
