@@ -37,11 +37,11 @@ into records and sourcing would be a parameter with one value.
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is in P702 |
 | `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` in P702. The CLI `assign_pins.py` stays in `scripts/` and defines `main` only |
 | `design/netlist.py` | `Netlist`, moved as is in P702 |
-| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` (1176 lines), with `read_inputs`, `BoardInputs`, `RefusedInput`, `REFUSED_INPUT_MESSAGE` and the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE` |
-| `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, and `footprint_stop`, moved from `emit_footprint.py` and `boards.py` |
+| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` in P703 (1145 lines), with `read_inputs`, `BoardInputs`, `RefusedInput`, `REFUSED_INPUT_MESSAGE` and the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE`. The CLI `emit_board.py` stays in `scripts/` and defines `main` only |
+| `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, moved from `emit_footprint.py` in P703. The CLI `emit_footprint.py` stays in `scripts/` with `main` and `_report`, which prints. `footprint_stop` comes from `boards.py` in W6-R3a |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is in P702 |
-| `design/design_codes.py` | the leaf of codes (P700): one per refusal of `load`, `assign_pins`, `emit_board` and `emit_footprint`, today `scripts/design_codes.py`. A `DesignError`, an `Impossible` and a `RefusedInput` carry a `code`, and `why_no_footprint`, `why_wrong_kind`, `why_header_disagrees`, `board_file` and `board_to_draw` return a `Refusal`. No CLI writes a code yet |
-| not here: `part_shape.py` | it goes to `breadboard/part_shape.py` (P698, the U1 edge) |
+| `design/design_codes.py` | the leaf of codes (P700): one per refusal of `load`, `assign_pins`, `emit_board` and `emit_footprint`, moved as it is in P703. A `DesignError`, an `Impossible` and a `RefusedInput` carry a `code`, and `why_no_footprint`, `why_wrong_kind`, `why_header_disagrees`, `board_file` and `board_to_draw` return a `Refusal`. No CLI writes a code yet |
+| not here: `part_shape.py` | it went to `breadboard/part_shape.py` in P703 (P698, the U1 edge) |
 | `design/__init__.py` | the index docstring alone since P702: it imports nothing. The area's `OPERATIONS` come with the N19 card, one module per Operation, named after it |
 
 ### Its seams
@@ -50,9 +50,8 @@ Design runs no outside program, so it has no Adapter. Its only effect is `Outsid
 board records through records, and offers through sourcing's `Matcher`.
 
 Design imports sourcing, records and core.
-One edge goes up, since P694: `part_shape` imports `spark.breadboard.drawing` for `NotDrawn`, five codes and
-`WOKWI_GEOMETRY_FILE`, and `drawing_catalog` imports `part_shape`. The design wave removes it
-([P698 #943](https://github.com/xmejkal/spark/issues/943) plans it).
+No edge goes up since P703: `part_shape`, which imported `spark.breadboard.drawing`, moved to breadboard
+([P698 #943](https://github.com/xmejkal/spark/issues/943) planned it).
 
 ## Level 3: how design is built
 

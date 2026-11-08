@@ -29,7 +29,7 @@ The build runs the same Service as its breadboard stage.
 | `breadboard/drawing_match.py` | the drawing check against `circuit.json`, from `breadboard_match.py` (P694) |
 | `breadboard/drawing_catalog.py` | what the drawn breadboard draws each component as, the catalog of a build, from `breadboard_catalog.py` (P694) |
 | `breadboard/part_pictures.py` | `PartPictures`, moved as is |
-| `breadboard/part_shape.py` | `PartShape`, `ShapeSource`, `find_part_px`, a part's pixel shape in the Wokwi drawing, moved as is in W6-D3b (P698). It raises `NotDrawn` and imports design's `emit_footprint`, a downward arrow |
+| `breadboard/part_shape.py` | `PartShape`, `ShapeSource`, `find_part_px`, a part's pixel shape in the Wokwi drawing, moved as is in W6-D3b (P703, planned in P698). It raises `NotDrawn` and imports design's `footprint_emitter`, a downward arrow |
 | `breadboard/tabbed_page.py` | `TabbedHtmlPage`, `TscircuitExport`, moved as is |
 | `breadboard/sheet.py` | the sheet flow, from `breadboard.py`, whose `main` stays in `scripts/` as the CLI (P694) |
 | `breadboard/breadboard_codes.py` | the codes of the refusals of the run, with one sentence each (a leaf, P692); a drawing not written has its codes in `drawing.py`'s `CODES`. Moved as it is (P694) |
@@ -50,8 +50,8 @@ core's, as `firmware_codes` is named.
 | the circuit export | `TscircuitExport` over `tsci` | `FakeTscircuitExport` (`tests/fakes.py:267`) | none |
 
 Breadboard imports design (the `Design` Value and `Netlist`), records and core.
-One edge goes back up from design, since P694: `part_shape` imports `drawing`, and `drawing_catalog` imports
-`part_shape`. The design wave removes it ([P698 #943](https://github.com/xmejkal/spark/issues/943)).
+No edge goes back up from design since P703: `part_shape`, which imports `drawing`, is breadboard's
+([P698 #943](https://github.com/xmejkal/spark/issues/943)).
 
 ## Level 3: how breadboard is built
 
