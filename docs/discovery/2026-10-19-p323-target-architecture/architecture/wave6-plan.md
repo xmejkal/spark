@@ -1160,7 +1160,7 @@ are wrong or stale:
    R1 breach at the move. `rail_loads` (60, `:514`) and `header_lines` (46, `:600`) hold. The module key rises by
    their few lines between those commits and falls at the move, where `main` leaves for the CLI.
 6. Name clashes: no importer binds `board_emitter`, `footprint_emitter`, `part_shape` or `design_codes` (`symtable`).
-7. Patch sites: 6, all `mock.patch.object` on `check_spine.emit_board` or `.emit_footprint` (`test_check_spine.py:1797`
+7. Patch sites: 5, all `mock.patch.object` on `check_spine.emit_board` or `.emit_footprint` (`test_check_spine.py:1797`
    to `:1943`). `:1797` patches the CLI's `main` to prove the spine never runs it, and `:1811` runs it: both name the
    CLI `emit_footprint`, the rest `check_spine.footprint_emitter` and `check_spine.board_emitter`.
 8. MAY_READ: 5 keys on the four, 4 take the new name (`emit_board.VIA_*` 2, `emit_footprint.*` 2); `design_codes.CODES`
