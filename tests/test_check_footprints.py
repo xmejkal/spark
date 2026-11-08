@@ -590,8 +590,8 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
         self._patched_run()
         path = Path(tempfile.mkdtemp()) / "circuit.json"
         path.write_text(json.dumps([{"type": "source_net", "source_net_id": "n", "name": "V33"}]))
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
-        result = check.run({"circuit": str(path)})
+        chosen = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = chosen.run({"circuit": str(path)})
         self.assertEqual(result["status"], "could-not-run", result)
         self.assertIn("drill-fit", json.dumps(result["unchecked"]))
 

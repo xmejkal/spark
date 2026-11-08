@@ -123,8 +123,8 @@ class TheFindingNamesItsPinTest(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         (tmp / "c.json").write_text(json.dumps(circuit({"Mcu": ["D3"], "Valve1": ["SIGNAL", "GND"]}, to_net=[("GND", "Valve1.GND")])))
         (tmp / "r.json").write_text(json.dumps({"must_not_float": [["Valve1", "SIGNAL"]]}))
-        check = next(c for c in check_all.CHECKS if c.name == "rules-vs-netlist")
-        result = check.run({"circuit": str(tmp / "c.json"), "rules": str(tmp / "r.json")})
+        chosen = next(c for c in check_all.CHECKS if c.name == "rules-vs-netlist")
+        result = chosen.run({"circuit": str(tmp / "c.json"), "rules": str(tmp / "r.json")})
         self.assertEqual(result["status"], check_all.PROBLEMS)
         self.assertIn("Valve1.SIGNAL", result["problems"][0], result["problems"])
 

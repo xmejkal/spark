@@ -149,28 +149,28 @@ class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
         }
 
     def test_each_check_answers_what_it_is_given(self):
-        for check in check_all.CHECKS:
-            inputs, expected, why = self.cases[check.name]
-            with self.subTest(check=check.name, given=why):
-                result = check.run(inputs)
+        for each in check_all.CHECKS:
+            inputs, expected, why = self.cases[each.name]
+            with self.subTest(check=each.name, given=why):
+                result = each.run(inputs)
                 self.assertEqual(
                     result["status"], expected,
                     "%s, given %s, answered %s: %s"
-                    % (check.name, why, result["status"],
+                    % (each.name, why, result["status"],
                        result.get("unchecked") or result.get("problems")))
 
     def test_no_check_is_broken_at_the_seam(self):
         # The narrow version of the defect, stated on its own so a regression names itself: a
         # check handed exactly what it asked for must never come back "I could not look" for a
         # reason that is really "this plugin does not work".
-        for check in check_all.CHECKS:
-            inputs, expected, why = self.cases[check.name]
+        for each in check_all.CHECKS:
+            inputs, expected, why = self.cases[each.name]
             if expected == check_all.COULD_NOT_RUN:
                 continue  # these cases are deliberately unanswerable; see `why`
-            with self.subTest(check=check.name):
-                broken = [u for u in check.run(inputs).get("unchecked", [])
+            with self.subTest(check=each.name):
+                broken = [u for u in each.run(inputs).get("unchecked", [])
                           if "Error" in u or "Exception" in u]
-                self.assertEqual(broken, [], "%s raised inside the runner" % check.name)
+                self.assertEqual(broken, [], "%s raised inside the runner" % each.name)
 
     def test_every_check_in_the_runner_has_a_case_here(self):
         # The mechanism. Without it, adding a check silently adds an untested one — which is the
@@ -388,8 +388,8 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
                      "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
                      "outer_height": 1.05, "x": i * 2.0, "y": 0.0} for i in range(2)]
         (root / "circuit.json").write_text(json.dumps(circuit))
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
-        result = check.run({"circuit": str(root / "circuit.json"), "project": str(root)})
+        chosen = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = chosen.run({"circuit": str(root / "circuit.json"), "project": str(root)})
         self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
 
     def test_and_without_a_project_the_same_netlist_is_measured(self):
@@ -401,8 +401,8 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
                      "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
                      "outer_height": 1.05, "x": i * 2.0, "y": 0.0} for i in range(2)]
         (root / "circuit.json").write_text(json.dumps(circuit))
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
-        result = check.run({"circuit": str(root / "circuit.json")})
+        chosen = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = chosen.run({"circuit": str(root / "circuit.json")})
         self.assertEqual(result["status"], check_all.PROBLEMS, result)
 
     def test_a_broken_requirements_file_is_reported_and_the_others_still_count(self):
@@ -427,8 +427,8 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         circuit = [{"type": "source_component", "source_component_id": "c", "name": "PackIn"},
                    {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
         (root / "circuit.json").write_text(json.dumps(circuit))
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
-        result = check.run({"circuit": str(root / "circuit.json"), "project": str(root)})
+        chosen = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = chosen.run({"circuit": str(root / "circuit.json"), "project": str(root)})
         self.assertNotEqual(result["status"], check_all.OK, result)
         self.assertIn("broken.requirements.json", json.dumps(result))
 
@@ -438,11 +438,11 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         # P434: the raw read gave a TypeError for text and a silent ok for NaN
         root = self._project(True)
         (root / "circuit.json").write_text("[]")
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        chosen = next(c for c in check_all.CHECKS if c.name == "buildability")
         for value in ("0.1", float("nan")):
             with self.subTest(value=str(value)):
                 (root / "rules.json").write_text(json.dumps({"fabrication": {"plating_thickness_mm": value}}))
-                result = check.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(root / "rules.json")})
+                result = chosen.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(root / "rules.json")})
                 self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
                 self.assertEqual(result["unchecked"], ["%s: fabrication.plating_thickness_mm is not a finite number; write a number, "
                                                        "or remove the key to use the default" % (root / "rules.json")])
@@ -465,8 +465,8 @@ class ARulesFileThatIsRefusedIsOneSentenceTest(unittest.TestCase):
                 self.skipTest("root reads any file")
             rules.chmod(0)
         self.addCleanup(rules.chmod, 0o644)
-        check = next(c for c in check_all.CHECKS if c.name == name)
-        return rules, check.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(rules)})
+        chosen = next(c for c in check_all.CHECKS if c.name == name)
+        return rules, chosen.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(rules)})
 
     def test_each_of_the_three_says_the_sentence_and_nothing_else(self):
         for name in ("physics", "rules-vs-netlist", "buildability"):
@@ -540,8 +540,8 @@ class AnAdvisoryIsSaidAndDoesNotFailTest(unittest.TestCase):
                      "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
                      "outer_height": 1.2, "x": i * 2.0, "y": 0.0} for i in range(2)]
         (root / "circuit.json").write_text(json.dumps(circuit))
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
-        result = check.run({"circuit": str(root / "circuit.json")})
+        chosen = next(c for c in check_all.CHECKS if c.name == "buildability")
+        result = chosen.run({"circuit": str(root / "circuit.json")})
         self.assertEqual(result["status"], check_all.OK, result)
         self.assertIn("Inlet", json.dumps(result.get("unmeasured", [])), result)
 
@@ -592,8 +592,8 @@ class TheRecordsReachPhysicsTest(unittest.TestCase):
     def test_physics_names_the_load_nobody_stated(self):
         root, _ = self._project()
         (root / "rules.json").write_text(json.dumps({"physics": {"rails": {}}}))
-        check = next(c for c in check_all.CHECKS if c.name == "physics")
-        result = check.run({"circuit": str(root / "circuit.json"), "rules": str(root / "rules.json"),
+        chosen = next(c for c in check_all.CHECKS if c.name == "physics")
+        result = chosen.run({"circuit": str(root / "circuit.json"), "rules": str(root / "rules.json"),
                             "project": str(root)})
         self.assertIn("Soil1.VCC", json.dumps(result), result)
 
@@ -703,16 +703,16 @@ class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
     """
 
     @staticmethod
-    def check():
+    def demo_check():
         return check_all.Check("demo", ["circuit"], "a demo check")
 
     def test_an_ambiguous_input_is_could_not_run_not_skipped(self):
-        result = self.check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
+        result = self.demo_check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
         self.assertEqual(result["status"], check_all.COULD_NOT_RUN)
 
     def test_it_names_both_candidates_and_how_to_choose(self):
         # A could-not-run nobody can act on is only marginally better than a false pass.
-        result = self.check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
+        result = self.demo_check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
         self.assertIn("dist/a.json", result["reason"])
         self.assertIn("dist/b.json", result["reason"])
         self.assertIn("--circuit", result["reason"])
@@ -720,12 +720,12 @@ class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
     def test_a_genuinely_absent_input_is_still_skipped(self):
         # The distinction has to cut both ways, or every project without firmware reports a
         # could-not-run it can do nothing about.
-        result = self.check().run({}, {})
+        result = self.demo_check().run({}, {})
         self.assertEqual(result["status"], check_all.SKIPPED)
 
     def test_the_verdict_is_not_ok_when_something_was_ambiguous(self):
         # `verdict` answers with a STATUS, not an exit code — the exit code is mapped from it.
-        results = [self.check().run({}, {"circuit": ["a", "b"]})]
+        results = [self.demo_check().run({}, {"circuit": ["a", "b"]})]
         self.assertEqual(check_all.verdict(results), check_all.COULD_NOT_RUN)
         self.assertNotEqual(check_all.verdict(results), check_all.OK)
 
@@ -869,13 +869,13 @@ class TheCheckListItselfTest(unittest.TestCase):
     """
 
     def test_every_check_has_a_name_and_says_what_it_owns(self):
-        for check in check_all.CHECKS:
-            self.assertTrue(check.name)
-            self.assertTrue(check.what, "%s does not say what it is for" % check.name)
-            self.assertTrue(check.needs, "%s claims to need no input" % check.name)
+        for each in check_all.CHECKS:
+            self.assertTrue(each.name)
+            self.assertTrue(each.what, "%s does not say what it is for" % each.name)
+            self.assertTrue(each.needs, "%s claims to need no input" % each.name)
 
     def test_check_names_are_unique(self):
-        names = [check.name for check in check_all.CHECKS]
+        names = [each.name for each in check_all.CHECKS]
         self.assertEqual(len(names), len(set(names)))
 
     def test_every_check_script_on_disk_is_wired_into_the_runner(self):
@@ -911,8 +911,8 @@ class TheCheckListItselfTest(unittest.TestCase):
         on_disk |= {"compare_design"}
 
         wired = set()
-        for check in check_all.CHECKS:
-            wired |= set(check.call.__code__.co_names)
+        for each in check_all.CHECKS:
+            wired |= set(each.call.__code__.co_names)
         unwired = sorted(name for name in on_disk if name not in wired)
         self.assertEqual(
             unwired, [],
@@ -943,12 +943,12 @@ class OneModulePerProcessTest(unittest.TestCase):
     def test_buildability_runs_the_check_footprints_everyone_else_imports(self):
         root = Path(tempfile.mkdtemp())
         circuit = self._measured_circuit(root)
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        chosen = next(c for c in check_all.CHECKS if c.name == "buildability")
         # Unpatched, the rings are under the minimum: a problem.
-        self.assertEqual(check.run({"circuit": circuit})["status"], check_all.PROBLEMS)
+        self.assertEqual(chosen.run({"circuit": circuit})["status"], check_all.PROBLEMS)
         # Patched on the shared module, the check sees no findings at all.
         with mock.patch.object(check_footprints, "run", return_value=[]):
-            self.assertEqual(check.run({"circuit": circuit})["status"], check_all.OK)
+            self.assertEqual(chosen.run({"circuit": circuit})["status"], check_all.OK)
 
     def test_the_placeholder_list_uses_the_design_module_everyone_else_imports(self):
         root = Path(tempfile.mkdtemp())

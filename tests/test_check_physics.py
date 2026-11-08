@@ -740,8 +740,8 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
         original = check_physics.run
         check_physics.run = lambda circuit, rules, loads=None: [self._misspelt()]
         try:
-            check = next(c for c in check_all.CHECKS if c.name == "physics")
-            result = check.run({"circuit": str(root / "circuit.json"),
+            chosen = next(c for c in check_all.CHECKS if c.name == "physics")
+            result = chosen.run({"circuit": str(root / "circuit.json"),
                                 "rules": str(root / "rules.json")})
         finally:
             check_physics.run = original
