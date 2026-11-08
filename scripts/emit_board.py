@@ -604,6 +604,23 @@ def outputs_with_nothing_on_them(part_list):
     return sorted(entry for entry in driven if entry[0] not in received)
 
 
+def unmeasured_lines(part_list):
+    """The header's lines for the parts whose size was invented, or none."""
+    # A warning on stderr is gone the moment the shell scrolls; the file is what someone opens in
+    # six weeks. If a size was invented, the artifact says so where it cannot be missed.
+    unsized = parts_without_an_outline(part_list)
+    if unsized:
+        return [
+            " *",
+            " * NOBODY HAS MEASURED: %s." % inert(", ".join(unsized)),
+            " * Each is drawn as a placeholder %g x %g mm and everything else is arranged around"
+            % DEFAULT_BODY_MM,
+            " * that, so 'nothing overlaps' here is evidence of nothing at all. Measure them, put",
+            " * width and height in the part file with a source, and regenerate.",
+        ]
+    return []
+
+
 def header_lines(board, part_list, placements, width, height):
     """The import, the file's account of itself, and the board with the microcontroller on it."""
     lines = [
@@ -625,18 +642,7 @@ def header_lines(board, part_list, placements, width, height):
         " * anything carrying real current.",
     ]
 
-    # A warning on stderr is gone the moment the shell scrolls; the file is what someone opens in
-    # six weeks. If a size was invented, the artifact says so where it cannot be missed.
-    unsized = parts_without_an_outline(part_list)
-    if unsized:
-        lines += [
-            " *",
-            " * NOBODY HAS MEASURED: %s." % inert(", ".join(unsized)),
-            " * Each is drawn as a placeholder %g x %g mm and everything else is arranged around"
-            % DEFAULT_BODY_MM,
-            " * that, so 'nothing overlaps' here is evidence of nothing at all. Measure them, put",
-            " * width and height in the part file with a source, and regenerate.",
-        ]
+    lines += unmeasured_lines(part_list)
 
     lines += [
         " */",
