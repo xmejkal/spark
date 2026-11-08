@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_all  # noqa: E402
-import check_footprints  # noqa: E402
+from spark.checks import build_check, check  # noqa: E402
 import design  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -45,13 +45,13 @@ def written(name, payload):
 
 class NothingAskedForTest(unittest.TestCase):
     def test_with_no_inputs_every_check_is_skipped_and_none_claims_to_have_looked(self):
-        results = check_all.run({})
+        results = check.run({})
         self.assertTrue(results, "the runner knows about no checks at all")
-        self.assertTrue(all(r["status"] == check_all.SKIPPED for r in results))
+        self.assertTrue(all(r["status"] == check.SKIPPED for r in results))
         self.assertTrue(all(not r.get("problems") for r in results))
 
     def test_skipped_says_which_input_was_missing(self):
-        results = check_all.run({})
+        results = check.run({})
         self.assertTrue(all("not given" in r["reason"] for r in results))
 
     def test_asking_for_nothing_at_all_does_not_exit_zero(self):
@@ -65,12 +65,12 @@ class NothingAskedForTest(unittest.TestCase):
     def test_asking_for_some_and_getting_a_clean_answer_still_exits_zero(self):
         # The other half of the same decision, so the fix above cannot quietly grow into
         # "any skipped check fails the run", which would make the runner useless piecemeal.
-        clean = [{"check": "a", "status": check_all.OK, "problems": [], "unchecked": []},
-                 {"check": "b", "status": check_all.SKIPPED, "reason": "not given circuit"}]
-        self.assertEqual(check_all.verdict(clean), check_all.OK)
+        clean = [{"check": "a", "status": check.OK, "problems": [], "unchecked": []},
+                 {"check": "b", "status": check.SKIPPED, "reason": "not given circuit"}]
+        self.assertEqual(check.verdict(clean), check.OK)
 
     def test_but_the_rendering_says_so_out_loud(self):
-        rendered = check_all.render(check_all.run({}))
+        rendered = check.render(check.run({}))
         self.assertIn("not asked for", rendered)
         # It said "nothing found by the checks that ran" — true, useless, and read as a clean
         # bill when the number of checks that ran was zero.
@@ -80,10 +80,10 @@ class NothingAskedForTest(unittest.TestCase):
     def test_a_check_that_could_not_run_is_never_counted_as_completed(self):
         # B9: the RC car printed three [????] and then "nothing found by the 4 check(s) that
         # completed, of 5" — a could-not-run carrying only a reason was counted as completed.
-        results = [{"check": "a", "what": "x", "status": check_all.OK, "problems": [], "unchecked": []},
-                   {"check": "b", "what": "x", "status": check_all.COULD_NOT_RUN, "reason": "circuit is ambiguous"},
-                   {"check": "c", "what": "x", "status": check_all.SKIPPED, "reason": "not asked"}]
-        rendered = check_all.render(results)
+        results = [{"check": "a", "what": "x", "status": check.OK, "problems": [], "unchecked": []},
+                   {"check": "b", "what": "x", "status": check.COULD_NOT_RUN, "reason": "circuit is ambiguous"},
+                   {"check": "c", "what": "x", "status": check.SKIPPED, "reason": "not asked"}]
+        rendered = check.render(results)
         self.assertIn("nothing found by the 1 check(s) that completed, of 3", rendered)
         self.assertIn("could not look: b", rendered)
 
@@ -123,13 +123,13 @@ class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
             # check name: (inputs, the status it must come back with, why)
             "vendor-truth": (
                 {"boards": [written("active.json", {"board": "xiao-esp32-c6"})]},
-                check_all.COULD_NOT_RUN, "a selection file, which carries no vendor header"),
+                check.COULD_NOT_RUN, "a selection file, which carries no vendor header"),
             "buildability": (
                 {"circuit": written("bad-drill.json", a_header_drilled_too_small())},
-                check_all.PROBLEMS, "a header drilled too small for its own pins"),
+                check.PROBLEMS, "a header drilled too small for its own pins"),
             "the-order": (
                 {"package": str(no_bom)},
-                check_all.COULD_NOT_RUN, "a fab package with no bom.csv (check_bom.PackageError, P688's item 3)"),
+                check.COULD_NOT_RUN, "a fab package with no bom.csv (check_bom.PackageError, P688's item 3)"),
             "physics": (
                 {"circuit": written("ok.json", a_header_drilled_too_small()),
                  "rules": written("rules.json", {})},
@@ -137,7 +137,7 @@ class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
                 # an empty rules file is what `spark init` writes, so every new project got
                 # `[ok  ] physics` about a board whose rails nothing had described. Three of the
                 # four rules had not run.
-                check_all.COULD_NOT_RUN, "a real netlist and a rules file stating no rails"),
+                check.COULD_NOT_RUN, "a real netlist and a rules file stating no rails"),
             "rules-vs-netlist": (
                 {"circuit": written("ok2.json", a_header_drilled_too_small()),
                  "rules": written("rules2.json", {})},
@@ -145,37 +145,37 @@ class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
                 # defect, the same shape as physics's above. An empty rules file is what `spark
                 # init` writes, so the RC car's H-bridge got `[ok] rules-vs-netlist` from a run
                 # that compared zero rules. Nothing was broken because nothing was looked at.
-                check_all.COULD_NOT_RUN, "a real netlist and a rules file naming no rule to compare"),
+                check.COULD_NOT_RUN, "a real netlist and a rules file naming no rule to compare"),
         }
 
     def test_each_check_answers_what_it_is_given(self):
-        for check in check_all.CHECKS:
-            inputs, expected, why = self.cases[check.name]
-            with self.subTest(check=check.name, given=why):
-                result = check.run(inputs)
+        for each in check.CHECKS:
+            inputs, expected, why = self.cases[each.name]
+            with self.subTest(check=each.name, given=why):
+                result = each.run(inputs)
                 self.assertEqual(
                     result["status"], expected,
                     "%s, given %s, answered %s: %s"
-                    % (check.name, why, result["status"],
+                    % (each.name, why, result["status"],
                        result.get("unchecked") or result.get("problems")))
 
     def test_no_check_is_broken_at_the_seam(self):
         # The narrow version of the defect, stated on its own so a regression names itself: a
         # check handed exactly what it asked for must never come back "I could not look" for a
         # reason that is really "this plugin does not work".
-        for check in check_all.CHECKS:
-            inputs, expected, why = self.cases[check.name]
-            if expected == check_all.COULD_NOT_RUN:
+        for each in check.CHECKS:
+            inputs, expected, why = self.cases[each.name]
+            if expected == check.COULD_NOT_RUN:
                 continue  # these cases are deliberately unanswerable; see `why`
-            with self.subTest(check=check.name):
-                broken = [u for u in check.run(inputs).get("unchecked", [])
+            with self.subTest(check=each.name):
+                broken = [u for u in each.run(inputs).get("unchecked", [])
                           if "Error" in u or "Exception" in u]
-                self.assertEqual(broken, [], "%s raised inside the runner" % check.name)
+                self.assertEqual(broken, [], "%s raised inside the runner" % each.name)
 
     def test_every_check_in_the_runner_has_a_case_here(self):
         # The mechanism. Without it, adding a check silently adds an untested one — which is the
         # shape of the original bug.
-        self.assertEqual(sorted(self.cases), sorted(c.name for c in check_all.CHECKS))
+        self.assertEqual(sorted(self.cases), sorted(c.name for c in check.CHECKS))
 
 
 class OkIsUnreachableWhileAnythingWentUncheckedTest(unittest.TestCase):
@@ -185,43 +185,43 @@ class OkIsUnreachableWhileAnythingWentUncheckedTest(unittest.TestCase):
     """
 
     def test_an_unchecked_entry_alone_is_not_ok(self):
-        self.assertEqual(check_all.answer(unchecked=["no cached vendor header"])["status"],
-                         check_all.COULD_NOT_RUN)
+        self.assertEqual(check.answer(unchecked=["no cached vendor header"])["status"],
+                         check.COULD_NOT_RUN)
 
     def test_an_unmeasured_note_alone_is_still_ok(self):
         # The distinction that was lost: `unmeasured` is a real finding about the BOARD, and the
         # check did its job. `unchecked` is a property of the RUN. Conflating them cost a tick.
-        self.assertEqual(check_all.answer(unmeasured=["GND: nobody sized the pour"])["status"],
-                         check_all.OK)
+        self.assertEqual(check.answer(unmeasured=["GND: nobody sized the pour"])["status"],
+                         check.OK)
 
     def test_nothing_at_all_is_ok(self):
-        self.assertEqual(check_all.answer()["status"], check_all.OK)
+        self.assertEqual(check.answer()["status"], check.OK)
 
     def test_a_check_that_says_could_not_run_without_saying_why_still_sinks_the_verdict(self):
         # `verdict` reads both the status and the field, because reading one trusts every call
         # site to have filled in the other — and the reason this function exists is that a call
         # site did not. No check produces this shape today; the next one written might.
         self.assertEqual(
-            check_all.verdict([{"check": "a", "status": check_all.COULD_NOT_RUN,
+            check.verdict([{"check": "a", "status": check.COULD_NOT_RUN,
                                 "problems": [], "unchecked": []}]),
-            check_all.COULD_NOT_RUN)
+            check.COULD_NOT_RUN)
 
     def test_the_verdict_is_could_not_run_if_any_check_could_not_look(self):
-        results = [{"check": "a", "status": check_all.OK, "problems": [], "unchecked": []},
-                   {"check": "b", "status": check_all.COULD_NOT_RUN, "problems": [],
+        results = [{"check": "a", "status": check.OK, "problems": [], "unchecked": []},
+                   {"check": "b", "status": check.COULD_NOT_RUN, "problems": [],
                     "unchecked": ["no cached header"]}]
-        self.assertEqual(check_all.verdict(results), check_all.COULD_NOT_RUN)
+        self.assertEqual(check.verdict(results), check.COULD_NOT_RUN)
 
     def test_an_empty_netlist_is_not_a_clean_board(self):
         # A build that failed part way leaves `[]`. Every check downstream then examined nothing,
         # found nothing, and said ok.
-        results = check_all.run({"circuit": written("empty.json", []),
+        results = check.run({"circuit": written("empty.json", []),
                                  "rules": written("norules.json", {})})
-        looked = [r for r in results if r["status"] != check_all.SKIPPED]
+        looked = [r for r in results if r["status"] != check.SKIPPED]
         self.assertTrue(looked, "no check even tried")
-        self.assertTrue(all(r["status"] == check_all.COULD_NOT_RUN for r in looked),
+        self.assertTrue(all(r["status"] == check.COULD_NOT_RUN for r in looked),
                         "a check reported on a board that was never built")
-        self.assertEqual(check_all.verdict(results), check_all.COULD_NOT_RUN)
+        self.assertEqual(check.verdict(results), check.COULD_NOT_RUN)
 
 
 class OneArgumentFindsTheInputsTest(unittest.TestCase):
@@ -246,12 +246,12 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
     def test_a_newline_in_the_folder_gives_one_line_in_checked_folder(self):
         folder = Path(tempfile.mkdtemp()) / NASTY
         with self.assertRaises(design.DesignError) as caught:
-            check_all.CheckedFolder.at(folder)
+            check.CheckedFolder.at(folder)
         assert_flat(self, caught.exception, folder)
 
     def test_it_finds_what_a_usual_layout_holds(self):
         root = self._project("dist/board/circuit.json", ".spark/rules.json", "board-gerbers.zip")
-        found, _, _ = check_all.discover(check_all.CheckedFolder.at(root))
+        found, _, _ = check.discover(check.CheckedFolder.at(root))
         self.assertEqual(found["circuit"], str(root / "dist/board/circuit.json"))
         self.assertEqual(found["rules"], str(root / ".spark/rules.json"))
         self.assertEqual(found["package"], str(root / "board-gerbers.zip"))
@@ -259,15 +259,15 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
     def test_two_candidates_are_ambiguous_rather_than_a_coin_toss(self):
         # Two fab packages in one directory is exactly when checking the wrong one costs money.
         root = self._project("old-gerbers.zip", "new-gerbers.zip")
-        found, notes, _ = check_all.discover(check_all.CheckedFolder.at(root))
+        found, notes, _ = check.discover(check.CheckedFolder.at(root))
         self.assertNotIn("package", found)
         self.assertTrue(any("AMBIGUOUS" in note for note in notes), notes)
 
     def test_two_circuits_say_one_board_per_project_and_name_a_path_that_works_anywhere(self):
         # P223, P318: two built designs are two boards, and spark handles one board per project today
         root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
-        found, notes, ambiguous = check_all.discover(check_all.CheckedFolder.at(root))
-        reasons = [result["reason"] for result in check_all.run(found, ambiguous)
+        found, notes, ambiguous = check.discover(check.CheckedFolder.at(root))
+        reasons = [result["reason"] for result in check.run(found, ambiguous)
                    if result["status"] == "could-not-run"]
         self.assertTrue(reasons)
         car = str((root / "dist" / "car" / "circuit.json").resolve())
@@ -283,7 +283,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         cwd = os.getcwd()
         os.chdir(root.parent)
         try:
-            _, _, ambiguous = check_all.discover(check_all.CheckedFolder.at(root.name))
+            _, _, ambiguous = check.discover(check.CheckedFolder.at(root.name))
         finally:
             os.chdir(cwd)
         self.assertTrue(all(Path(path).is_absolute() for path in ambiguous["circuit"]), ambiguous)
@@ -298,12 +298,12 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
 
     def test_two_packages_still_say_name_one_with_the_flag(self):
         root = self._project("old-gerbers.zip", "new-gerbers.zip")
-        found, _, ambiguous = check_all.discover(check_all.CheckedFolder.at(root))
-        reasons = [result.get("reason", "") for result in check_all.run(found, ambiguous)]
+        found, _, ambiguous = check.discover(check.CheckedFolder.at(root))
+        reasons = [result.get("reason", "") for result in check.run(found, ambiguous)]
         self.assertTrue(any("name one with --package" in reason for reason in reasons), reasons)
 
     def test_what_is_missing_says_where_it_looked(self):
-        found, notes, _ = check_all.discover(check_all.CheckedFolder.at(self._project()))
+        found, notes, _ = check.discover(check.CheckedFolder.at(self._project()))
         self.assertNotIn("circuit", found)
         self.assertTrue(any("circuit" in n and "dist/board/circuit.json" in n for n in notes))
 
@@ -311,7 +311,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         # The one way discovery is worse than five explicit paths is by silently picking up a
         # stale artifact, so nothing may be used without being named.
         root = self._project("dist/board/circuit.json", ".spark/rules.json")
-        found, notes, _ = check_all.discover(check_all.CheckedFolder.at(root))
+        found, notes, _ = check.discover(check.CheckedFolder.at(root))
         for name in found:
             with self.subTest(input=name):
                 self.assertTrue(any(note.startswith(name) for note in notes))
@@ -322,14 +322,14 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         args = argparse.Namespace(project=str(root), circuit=chosen, rules=None,
                                   boards=None,
                                   package=None, json=False)
-        inputs, _, _ = check_all.inputs_for(args)
+        inputs, _, _ = check.inputs_for(args)
         self.assertEqual(inputs["circuit"], chosen, "the convention overrode an explicit path")
         self.assertEqual(inputs["rules"], str(root / ".spark/rules.json"),
                          "an input nobody named should still come from the project")
 
     def test_without_a_project_nothing_is_discovered(self):
         args = argparse.Namespace(project=None, circuit="given.json", json=False)
-        inputs, resolved, ambiguous = check_all.inputs_for(args)
+        inputs, resolved, ambiguous = check.inputs_for(args)
         self.assertEqual(resolved, [])
         self.assertEqual(ambiguous, {})
         self.assertEqual(inputs["circuit"], "given.json")
@@ -364,13 +364,13 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         return root
 
     def test_a_placeholder_in_the_project_is_found_by_its_instance_name(self):
-        self.assertEqual(check_all.placeholder_components_in(self._project(True)), (("PackIn",), []))
+        self.assertEqual(check.placeholder_components_in(self._project(True)), (("PackIn",), []))
 
     def test_a_real_footprint_yields_nothing(self):
-        self.assertEqual(check_all.placeholder_components_in(self._project(False)), ((), []))
+        self.assertEqual(check.placeholder_components_in(self._project(False)), ((), []))
 
     def test_no_project_yields_nothing(self):
-        self.assertEqual(check_all.placeholder_components_in(None), ((), []))
+        self.assertEqual(check.placeholder_components_in(None), ((), []))
 
     def test_buildability_actually_uses_the_list(self):
         """
@@ -388,9 +388,9 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
                      "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
                      "outer_height": 1.05, "x": i * 2.0, "y": 0.0} for i in range(2)]
         (root / "circuit.json").write_text(json.dumps(circuit))
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
-        result = check.run({"circuit": str(root / "circuit.json"), "project": str(root)})
-        self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
+        chosen = next(c for c in check.CHECKS if c.name == "buildability")
+        result = chosen.run({"circuit": str(root / "circuit.json"), "project": str(root)})
+        self.assertEqual(result["status"], check.COULD_NOT_RUN, result)
 
     def test_and_without_a_project_the_same_netlist_is_measured(self):
         # The control for the test above: same geometry, no way to know it is a stand-in.
@@ -401,9 +401,9 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
                      "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
                      "outer_height": 1.05, "x": i * 2.0, "y": 0.0} for i in range(2)]
         (root / "circuit.json").write_text(json.dumps(circuit))
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
-        result = check.run({"circuit": str(root / "circuit.json")})
-        self.assertEqual(result["status"], check_all.PROBLEMS, result)
+        chosen = next(c for c in check.CHECKS if c.name == "buildability")
+        result = chosen.run({"circuit": str(root / "circuit.json")})
+        self.assertEqual(result["status"], check.PROBLEMS, result)
 
     def test_a_broken_requirements_file_is_reported_and_the_others_still_count(self):
         """
@@ -415,7 +415,7 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         """
         root = self._project(True)
         (root / "broken.requirements.json").write_text("{not json")
-        names, notes = check_all.placeholder_components_in(root)
+        names, notes = check.placeholder_components_in(root)
         self.assertEqual(names, ("PackIn",))
         self.assertEqual(len(notes), 1, notes)
         self.assertIn("broken.requirements.json", notes[0])
@@ -427,9 +427,9 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         circuit = [{"type": "source_component", "source_component_id": "c", "name": "PackIn"},
                    {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
         (root / "circuit.json").write_text(json.dumps(circuit))
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
-        result = check.run({"circuit": str(root / "circuit.json"), "project": str(root)})
-        self.assertNotEqual(result["status"], check_all.OK, result)
+        chosen = next(c for c in check.CHECKS if c.name == "buildability")
+        result = chosen.run({"circuit": str(root / "circuit.json"), "project": str(root)})
+        self.assertNotEqual(result["status"], check.OK, result)
         self.assertIn("broken.requirements.json", json.dumps(result))
 
 
@@ -438,12 +438,12 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
         # P434: the raw read gave a TypeError for text and a silent ok for NaN
         root = self._project(True)
         (root / "circuit.json").write_text("[]")
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        chosen = next(c for c in check.CHECKS if c.name == "buildability")
         for value in ("0.1", float("nan")):
             with self.subTest(value=str(value)):
                 (root / "rules.json").write_text(json.dumps({"fabrication": {"plating_thickness_mm": value}}))
-                result = check.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(root / "rules.json")})
-                self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
+                result = chosen.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(root / "rules.json")})
+                self.assertEqual(result["status"], check.COULD_NOT_RUN, result)
                 self.assertEqual(result["unchecked"], ["%s: fabrication.plating_thickness_mm is not a finite number; write a number, "
                                                        "or remove the key to use the default" % (root / "rules.json")])
 
@@ -465,8 +465,8 @@ class ARulesFileThatIsRefusedIsOneSentenceTest(unittest.TestCase):
                 self.skipTest("root reads any file")
             rules.chmod(0)
         self.addCleanup(rules.chmod, 0o644)
-        check = next(c for c in check_all.CHECKS if c.name == name)
-        return rules, check.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(rules)})
+        chosen = next(c for c in check.CHECKS if c.name == name)
+        return rules, chosen.run({"circuit": str(root / "circuit.json"), "project": str(root), "rules": str(rules)})
 
     def test_each_of_the_three_says_the_sentence_and_nothing_else(self):
         for name in ("physics", "rules-vs-netlist", "buildability"):
@@ -475,7 +475,7 @@ class ARulesFileThatIsRefusedIsOneSentenceTest(unittest.TestCase):
                                     "%s: fabrication.drill_step_mm must be above 0; write a larger number, or remove the key to use the default")):
                 with self.subTest(check=name, text=text):
                     rules, result = self.run_check(name, text)
-                    self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
+                    self.assertEqual(result["status"], check.COULD_NOT_RUN, result)
                     self.assertEqual((result["unchecked"], result["problems"]), ([sentence % rules], []))
                     self.assertEqual(result["unchecked"][0].code, "rules_refused")  # P693
 
@@ -483,7 +483,7 @@ class ARulesFileThatIsRefusedIsOneSentenceTest(unittest.TestCase):
         for name in ("physics", "rules-vs-netlist", "buildability"):
             with self.subTest(check=name):
                 rules, result = self.run_check(name, "{}", unreadable=True)
-                self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
+                self.assertEqual(result["status"], check.COULD_NOT_RUN, result)
                 self.assertTrue(result["unchecked"][0].startswith("%s could not be read" % rules), result)
 
 
@@ -492,12 +492,12 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
     was."""
 
     def test_an_ambiguous_input_is_input_ambiguous(self):
-        result = check_all.Check("two-of", ["package"], "x").run({}, {"package": ["/a.zip", "/b.zip"]})
-        self.assertEqual((result["status"], result["reason"].code), (check_all.COULD_NOT_RUN, "input_ambiguous"))
+        result = check.Check("two-of", ["package"], "x").run({}, {"package": ["/a.zip", "/b.zip"]})
+        self.assertEqual((result["status"], result["reason"].code), (check.COULD_NOT_RUN, "input_ambiguous"))
         self.assertTrue(result["reason"].startswith("package is ambiguous: /a.zip, /b.zip"), result["reason"])
 
     def test_a_check_that_raises_is_check_crashed(self):
-        class Raising(check_all.Check):
+        class Raising(check.Check):
             def call(self, inputs):
                 return {}["missing"]
         result = Raising("raising", ["circuit"], "x").run({"circuit": "c.json"})
@@ -507,26 +507,26 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
     def test_a_package_with_no_bom_is_unchecked_with_its_code_not_a_crash(self):
         package = Path(tempfile.mkdtemp()) / "fab-gerbers.zip"
         zipfile.ZipFile(package, "w").writestr("board.gtl", "G04*")
-        order = next(c for c in check_all.CHECKS if c.name == "the-order")
+        order = next(c for c in check.CHECKS if c.name == "the-order")
         result = order.run({"package": str(package)})
-        self.assertEqual((result["status"], result["unchecked"]), (check_all.COULD_NOT_RUN, ["no bom.csv in fab-gerbers.zip"]))
+        self.assertEqual((result["status"], result["unchecked"]), (check.COULD_NOT_RUN, ["no bom.csv in fab-gerbers.zip"]))
         self.assertEqual(result["unchecked"][0].code, "no_bom_in_package")
 
     def test_a_board_the_vendor_check_cannot_compare_keeps_its_code(self):
         board = written("noboard.json", {"pins": {"D3": 38}})
-        vendor = next(c for c in check_all.CHECKS if c.name == "vendor-truth")
+        vendor = next(c for c in check.CHECKS if c.name == "vendor-truth")
         result = vendor.run({"boards": [board]})
-        self.assertEqual(result["status"], check_all.COULD_NOT_RUN)
+        self.assertEqual(result["status"], check.COULD_NOT_RUN)
         self.assertTrue(result["unchecked"][0].startswith("noboard: no vendor.arduino_variant in noboard.json"), result)
         self.assertEqual(result["unchecked"][0].code, "no_vendor_variant")
 
     def test_a_project_folder_that_is_not_there_is_project_unusable(self):
         missing = Path(tempfile.mkdtemp()) / "nowhere"
-        checked, refusal = check_all.CheckedFolder.named(str(missing))
+        checked, refusal = check.CheckedFolder.named(str(missing))
         self.assertIsNone(checked)
         self.assertEqual(refusal.code, "project_unusable")
         self.assertIn("no directory at %s" % missing, refusal)
-        self.assertEqual(check_all.CheckedFolder.named(None), (None, None))
+        self.assertEqual(check.CheckedFolder.named(None), (None, None))
 
 
 class AnAdvisoryIsSaidAndDoesNotFailTest(unittest.TestCase):
@@ -540,9 +540,9 @@ class AnAdvisoryIsSaidAndDoesNotFailTest(unittest.TestCase):
                      "hole_width": 1.6, "hole_height": 0.75, "outer_width": 2.4,
                      "outer_height": 1.2, "x": i * 2.0, "y": 0.0} for i in range(2)]
         (root / "circuit.json").write_text(json.dumps(circuit))
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
-        result = check.run({"circuit": str(root / "circuit.json")})
-        self.assertEqual(result["status"], check_all.OK, result)
+        chosen = next(c for c in check.CHECKS if c.name == "buildability")
+        result = chosen.run({"circuit": str(root / "circuit.json")})
+        self.assertEqual(result["status"], check.OK, result)
         self.assertIn("Inlet", json.dumps(result.get("unmeasured", [])), result)
 
 
@@ -579,21 +579,21 @@ class TheRecordsReachPhysicsTest(unittest.TestCase):
 
     def test_the_design_behind_this_circuit_is_the_one_summed(self):
         root, circuit = self._project()
-        loads, _ = check_all.rail_loads_in(root, circuit)
+        loads, _ = check.rail_loads_in(root, circuit)
         self.assertIn("Soil1.VCC", " ".join(loads["V33"]["missing"]))
         self.assertNotIn("Elsewhere", json.dumps(loads), "the other design is another board")
 
     def test_a_circuit_no_design_explains_is_said_rather_than_summed(self):
         root, _ = self._project()
-        loads, notes = check_all.rail_loads_in(root, [{"type": "source_component", "name": "X"}])
+        loads, notes = check.rail_loads_in(root, [{"type": "source_component", "name": "X"}])
         self.assertIsNone(loads)
         self.assertTrue(notes)
 
     def test_physics_names_the_load_nobody_stated(self):
         root, _ = self._project()
         (root / "rules.json").write_text(json.dumps({"physics": {"rails": {}}}))
-        check = next(c for c in check_all.CHECKS if c.name == "physics")
-        result = check.run({"circuit": str(root / "circuit.json"), "rules": str(root / "rules.json"),
+        chosen = next(c for c in check.CHECKS if c.name == "physics")
+        result = chosen.run({"circuit": str(root / "circuit.json"), "rules": str(root / "rules.json"),
                             "project": str(root)})
         self.assertIn("Soil1.VCC", json.dumps(result), result)
 
@@ -636,7 +636,7 @@ class TheBuildsProjectIsCheckedTest(unittest.TestCase):
     def _inputs(self, **flags):
         args = argparse.Namespace(**dict(dict(project=str(self.car), circuit=None, rules=None, boards=None,
                                               package=None, json=False), **flags))
-        return check_all.inputs_for(args)[0]
+        return check.inputs_for(args)[0]
 
     def test_the_checks_read_the_project_the_build_reads(self):
         _, answer = self._answer()
@@ -646,9 +646,9 @@ class TheBuildsProjectIsCheckedTest(unittest.TestCase):
         self.assertEqual(inputs["circuit"], str(self.car / "dist" / "board" / "circuit.json"))
 
     def test_the_parts_come_from_the_parent_and_the_requirements_from_the_folder(self):
-        loads, notes = check_all.rail_loads_in(str(self.car), self.circuit)
+        loads, notes = check.rail_loads_in(str(self.car), self.circuit)
         self.assertIsNotNone(loads, notes)
-        self.assertEqual(check_all.placeholder_components_in(str(self.car)), ((), []))
+        self.assertEqual(check.placeholder_components_in(str(self.car)), ((), []))
 
     def test_the_nearest_project_wins(self):
         (self.car / ".spark").mkdir()
@@ -658,13 +658,13 @@ class TheBuildsProjectIsCheckedTest(unittest.TestCase):
         self.assertEqual(self._inputs()["rules"], str(self.car / ".spark" / "rules.json"))
 
     def test_the_notes_name_the_parent(self):
-        _, notes, _ = check_all.discover(check_all.CheckedFolder.at(self.car))
+        _, notes, _ = check.discover(check.CheckedFolder.at(self.car))
         self.assertIn("project      %s (the project up from here, the one the build reads)"
                       % self.parent.resolve(), notes)
 
     def test_a_folder_in_no_project_says_so_and_names_none(self):
         bare = Path(tempfile.mkdtemp())
-        _, notes, _ = check_all.discover(check_all.CheckedFolder.at(bare))
+        _, notes, _ = check.discover(check.CheckedFolder.at(bare))
         self.assertIn("project      none up from here, so the parts and boards come from the plugin's library and "
                       "there are no rules", notes)
         self.assertTrue(any(note.startswith("rules        not found") for note in notes), notes)
@@ -683,7 +683,7 @@ class TheBuildsProjectIsCheckedTest(unittest.TestCase):
             code = check_all.main(["--project", str(self.car / "nowhere"), "--json"])
         answer = json.loads(out.getvalue())
         self.assertEqual(code, check_all.EXIT_COULD_NOT_RUN)
-        self.assertEqual(answer["status"], check_all.COULD_NOT_RUN)
+        self.assertEqual(answer["status"], check.COULD_NOT_RUN)
         self.assertNotIn("project", answer)
 
 
@@ -703,16 +703,16 @@ class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
     """
 
     @staticmethod
-    def check():
-        return check_all.Check("demo", ["circuit"], "a demo check")
+    def demo_check():
+        return check.Check("demo", ["circuit"], "a demo check")
 
     def test_an_ambiguous_input_is_could_not_run_not_skipped(self):
-        result = self.check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
-        self.assertEqual(result["status"], check_all.COULD_NOT_RUN)
+        result = self.demo_check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
+        self.assertEqual(result["status"], check.COULD_NOT_RUN)
 
     def test_it_names_both_candidates_and_how_to_choose(self):
         # A could-not-run nobody can act on is only marginally better than a false pass.
-        result = self.check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
+        result = self.demo_check().run({}, {"circuit": ["dist/a.json", "dist/b.json"]})
         self.assertIn("dist/a.json", result["reason"])
         self.assertIn("dist/b.json", result["reason"])
         self.assertIn("--circuit", result["reason"])
@@ -720,14 +720,14 @@ class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
     def test_a_genuinely_absent_input_is_still_skipped(self):
         # The distinction has to cut both ways, or every project without firmware reports a
         # could-not-run it can do nothing about.
-        result = self.check().run({}, {})
-        self.assertEqual(result["status"], check_all.SKIPPED)
+        result = self.demo_check().run({}, {})
+        self.assertEqual(result["status"], check.SKIPPED)
 
     def test_the_verdict_is_not_ok_when_something_was_ambiguous(self):
         # `verdict` answers with a STATUS, not an exit code — the exit code is mapped from it.
-        results = [self.check().run({}, {"circuit": ["a", "b"]})]
-        self.assertEqual(check_all.verdict(results), check_all.COULD_NOT_RUN)
-        self.assertNotEqual(check_all.verdict(results), check_all.OK)
+        results = [self.demo_check().run({}, {"circuit": ["a", "b"]})]
+        self.assertEqual(check.verdict(results), check.COULD_NOT_RUN)
+        self.assertNotEqual(check.verdict(results), check.OK)
 
     def test_naming_one_explicitly_settles_it(self):
         # `--circuit` exists precisely to resolve this, so it must clear the ambiguity rather than
@@ -736,12 +736,12 @@ class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
         args = argparse.Namespace(project=str(root), circuit="dist/car/circuit.json", rules=None,
                                   firmware=None,
                                   boards=None, package=None, json=False)
-        _, _, ambiguous = check_all.inputs_for(args)
+        _, _, ambiguous = check.inputs_for(args)
         self.assertNotIn("circuit", ambiguous)
 
     def test_two_circuits_with_no_choice_made_are_reported_ambiguous(self):
         root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
-        _, _, ambiguous = check_all.discover(check_all.CheckedFolder.at(root))
+        _, _, ambiguous = check.discover(check.CheckedFolder.at(root))
         self.assertEqual(len(ambiguous.get("circuit", [])), 2)
 
     @staticmethod
@@ -756,11 +756,11 @@ class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
 
 class ABrokenCheckDoesNotHideTheOthers(unittest.TestCase):
     def test_an_unreadable_input_is_could_not_run_not_ok(self):
-        results = check_all.run({"circuit": "/nonexistent/circuit.json",
+        results = check.run({"circuit": "/nonexistent/circuit.json",
                                  "rules": "/nonexistent/rules.json"})
         statuses = {r["check"]: r["status"] for r in results}
-        self.assertIn(check_all.COULD_NOT_RUN, statuses.values())
-        self.assertNotIn(check_all.OK, [statuses[name] for name in statuses
+        self.assertIn(check.COULD_NOT_RUN, statuses.values())
+        self.assertNotIn(check.OK, [statuses[name] for name in statuses
                                         if name in ("physics", "buildability")])
 
     def test_one_exploding_check_still_lets_the_rest_report(self):
@@ -770,12 +770,12 @@ class ABrokenCheckDoesNotHideTheOthers(unittest.TestCase):
         # check which blew up did not stop another check from answering.
         no_bom = Path(tempfile.mkdtemp()) / "nobom.zip"
         zipfile.ZipFile(no_bom, "w").writestr("readme.txt", "no bill of materials here")
-        results = {r["check"]: r for r in check_all.run({
+        results = {r["check"]: r for r in check.run({
             "package": str(no_bom),
             "circuit": written("exploding.json", a_header_drilled_too_small()),
         })}
-        self.assertEqual(results["the-order"]["status"], check_all.COULD_NOT_RUN)
-        self.assertEqual(results["buildability"]["status"], check_all.PROBLEMS,
+        self.assertEqual(results["the-order"]["status"], check.COULD_NOT_RUN)
+        self.assertEqual(results["buildability"]["status"], check.PROBLEMS,
                          "a check that exploded stopped another check from answering")
 
     def test_could_not_run_is_not_the_same_exit_code_as_clean(self):
@@ -787,9 +787,9 @@ class RealFindingsTest(unittest.TestCase):
     def test_a_board_with_a_defect_fails(self):
         circuit = written("circuit.json", [
             {"type": "pcb_via", "hole_diameter": 0.2, "outer_diameter": 0.3}])
-        results = check_all.run({"circuit": circuit})
+        results = check.run({"circuit": circuit})
         buildability = next(r for r in results if r["check"] == "buildability")
-        self.assertEqual(buildability["status"], check_all.PROBLEMS)
+        self.assertEqual(buildability["status"], check.PROBLEMS)
         self.assertEqual(check_all.main(["--circuit", circuit]), check_all.EXIT_PROBLEMS)
 
     def test_an_unmeasured_rail_is_reported_without_failing_the_run(self):
@@ -797,11 +797,11 @@ class RealFindingsTest(unittest.TestCase):
             {"type": "source_net", "source_net_id": "GND", "name": "GND"}])
         rules = written("rules.json", {"physics": {"rails": {
             "GND": {"max_current_a": 1.5, "served_by_pour": True}}}})
-        results = check_all.run({"circuit": circuit, "rules": rules})
+        results = check.run({"circuit": circuit, "rules": rules})
         physics = next(r for r in results if r["check"] == "physics")
-        self.assertEqual(physics["status"], check_all.OK)
+        self.assertEqual(physics["status"], check.OK)
         self.assertTrue(physics["unmeasured"], "an unmeasured rail must still be said out loud")
-        self.assertIn("?", check_all.render(results))
+        self.assertIn("?", check.render(results))
 
 
 class TheAnswerCountsWhatNobodyMeasuredTest(unittest.TestCase):
@@ -821,20 +821,20 @@ class TheAnswerCountsWhatNobodyMeasuredTest(unittest.TestCase):
 
     def test_the_last_line_counts_the_values_its_answer_rests_on(self):
         circuit, rules = self._three_nulls()
-        rendered = check_all.render(check_all.run({"circuit": circuit, "rules": rules}))
+        rendered = check.render(check.run({"circuit": circuit, "rules": rules}))
         self.assertIn("resting on 3 ? line(s)", rendered.splitlines()[-1])
 
     def test_every_last_line_that_reports_a_run_carries_the_count(self):
         # Each branch of the last line: every check ran, a problem, and a run with a check not asked for.
-        ran = {"check": "a", "status": check_all.OK, "what": "x", "unmeasured": ["u1", "u2"]}
+        ran = {"check": "a", "status": check.OK, "what": "x", "unmeasured": ["u1", "u2"]}
         cases = {
-            "every check ran": [ran, {"check": "b", "status": check_all.OK, "what": "y"}],
-            "a problem": [dict(ran, status=check_all.PROBLEMS, problems=["p"])],
-            "one not asked for": [ran, {"check": "b", "status": check_all.SKIPPED, "what": "y"}],
+            "every check ran": [ran, {"check": "b", "status": check.OK, "what": "y"}],
+            "a problem": [dict(ran, status=check.PROBLEMS, problems=["p"])],
+            "one not asked for": [ran, {"check": "b", "status": check.SKIPPED, "what": "y"}],
         }
         for case, results in cases.items():
             with self.subTest(case=case):
-                self.assertIn("resting on 2 ? line(s)", check_all.render(results).splitlines()[-1])
+                self.assertIn("resting on 2 ? line(s)", check.render(results).splitlines()[-1])
 
     def test_the_json_carries_the_count_beside_the_status(self):
         circuit, rules = self._three_nulls()
@@ -845,20 +845,20 @@ class TheAnswerCountsWhatNobodyMeasuredTest(unittest.TestCase):
         self.assertEqual(answer["unmeasured"], 3, answer)
 
     def test_a_check_that_could_not_look_rests_nothing_on_its_lines(self):
-        results = [{"check": "a", "status": check_all.COULD_NOT_RUN, "what": "x", "unchecked": ["!"],
+        results = [{"check": "a", "status": check.COULD_NOT_RUN, "what": "x", "unchecked": ["!"],
                     "unmeasured": ["u1"]},
-                   {"check": "b", "status": check_all.OK, "what": "y", "unmeasured": ["u2"]}]
-        self.assertIn("resting on 1 ? line(s)", check_all.render(results).splitlines()[-1])
+                   {"check": "b", "status": check.OK, "what": "y", "unmeasured": ["u2"]}]
+        self.assertIn("resting on 1 ? line(s)", check.render(results).splitlines()[-1])
 
     def test_a_check_with_problems_and_an_unchecked_line_rests_nothing_on_its_lines(self):
-        results = [{"check": "a", "status": check_all.PROBLEMS, "what": "x", "problems": ["p"],
+        results = [{"check": "a", "status": check.PROBLEMS, "what": "x", "problems": ["p"],
                     "unchecked": ["!"], "unmeasured": ["u1"]},
-                   {"check": "b", "status": check_all.OK, "what": "y", "unmeasured": ["u2"]}]
-        self.assertIn("resting on 1 ? line(s)", check_all.render(results).splitlines()[-1])
+                   {"check": "b", "status": check.OK, "what": "y", "unmeasured": ["u2"]}]
+        self.assertIn("resting on 1 ? line(s)", check.render(results).splitlines()[-1])
 
     def test_an_answer_resting_on_nothing_unmeasured_says_nothing_about_it(self):
         circuit = written("circuit.json", [{"type": "source_net", "source_net_id": "V33", "name": "V33"}])
-        rendered = check_all.render(check_all.run({"circuit": circuit}))
+        rendered = check.render(check.run({"circuit": circuit}))
         self.assertNotIn("?", rendered, "the fixture must rest on nothing unmeasured")
         self.assertNotIn("resting on", rendered)
 
@@ -869,13 +869,13 @@ class TheCheckListItselfTest(unittest.TestCase):
     """
 
     def test_every_check_has_a_name_and_says_what_it_owns(self):
-        for check in check_all.CHECKS:
-            self.assertTrue(check.name)
-            self.assertTrue(check.what, "%s does not say what it is for" % check.name)
-            self.assertTrue(check.needs, "%s claims to need no input" % check.name)
+        for each in check.CHECKS:
+            self.assertTrue(each.name)
+            self.assertTrue(each.what, "%s does not say what it is for" % each.name)
+            self.assertTrue(each.needs, "%s claims to need no input" % each.name)
 
     def test_check_names_are_unique(self):
-        names = [check.name for check in check_all.CHECKS]
+        names = [each.name for each in check.CHECKS]
         self.assertEqual(len(names), len(set(names)))
 
     def test_every_check_script_on_disk_is_wired_into_the_runner(self):
@@ -896,27 +896,22 @@ class TheCheckListItselfTest(unittest.TestCase):
         claim was found to be untrue. Found 2026-09-29, under audit A7.) Nothing in this file may
         assert on source text.
         """
-        # Scripts that are not checks OF A BUILT DESIGN, which is the only thing this runner
-        # knows how to feed. Each needs a reason, because an exclusion list is also how a check
-        # gets quietly switched off.
-        #   check_all   — the runner itself.
-        #   check_spine — takes a requirements.json and BUILDS a design; every other check reads
-        #                 one that already exists. Wiring it in would make every design review
-        #                 regenerate and rebuild spark's own reference board.
-        #   check_commit — takes a COMMIT and measures the tree it holds (the suite);
-        #                 it is about this repository, not about any design.
+        # The modules of the checks area (P695) that are not checks OF A BUILT DESIGN, which is the only thing this
+        # runner knows how to feed. Each needs a reason, because an exclusion list is also how a check gets quietly
+        # switched off.
+        #   check       — the runner itself.
         #   check_codes — the leaf of the checks' refusal codes (P693): a table, not a check.
-        NOT_A_CHECK = {"check_all", "check_spine", "check_commit", "check_codes"}
-        on_disk = {path.stem for path in (ROOT / "scripts").glob("check_*.py")} - NOT_A_CHECK
-        on_disk |= {"compare_design"}
+        # `check_spine` (it BUILDS a design) and `check_commit` (it measures a commit) are not in the area.
+        NOT_A_CHECK = {"__init__", "check", "check_codes"}
+        on_disk = {path.stem for path in (ROOT / "scripts" / "spark" / "checks").glob("*.py")} - NOT_A_CHECK
 
         wired = set()
-        for check in check_all.CHECKS:
-            wired |= set(check.call.__code__.co_names)
+        for each in check.CHECKS:
+            wired |= set(each.call.__code__.co_names)
         unwired = sorted(name for name in on_disk if name not in wired)
         self.assertEqual(
             unwired, [],
-            "these check scripts exist but no check in check_all.py imports them: %s" % unwired)
+            "these check modules exist but no check in check.py imports them: %s" % unwired)
 
 
 
@@ -943,24 +938,24 @@ class OneModulePerProcessTest(unittest.TestCase):
     def test_buildability_runs_the_check_footprints_everyone_else_imports(self):
         root = Path(tempfile.mkdtemp())
         circuit = self._measured_circuit(root)
-        check = next(c for c in check_all.CHECKS if c.name == "buildability")
+        chosen = next(c for c in check.CHECKS if c.name == "buildability")
         # Unpatched, the rings are under the minimum: a problem.
-        self.assertEqual(check.run({"circuit": circuit})["status"], check_all.PROBLEMS)
+        self.assertEqual(chosen.run({"circuit": circuit})["status"], check.PROBLEMS)
         # Patched on the shared module, the check sees no findings at all.
-        with mock.patch.object(check_footprints, "run", return_value=[]):
-            self.assertEqual(check.run({"circuit": circuit})["status"], check_all.OK)
+        with mock.patch.object(build_check, "run", return_value=[]):
+            self.assertEqual(chosen.run({"circuit": circuit})["status"], check.OK)
 
     def test_the_placeholder_list_uses_the_design_module_everyone_else_imports(self):
         root = Path(tempfile.mkdtemp())
         (root / "car.requirements.json").write_text(json.dumps({"parts": []}))
         with mock.patch.object(design, "parts_of", side_effect=design.DesignError("patched")):
-            names, notes = check_all.placeholder_components_in(root)
+            names, notes = check.placeholder_components_in(root)
         self.assertEqual(names, ())
         self.assertEqual(len(notes), 1, notes)
         self.assertIn("patched", notes[0])
 
     def test_there_is_no_path_loader_left_to_reach_for(self):
-        self.assertFalse(hasattr(check_all, "load"))
+        self.assertFalse(hasattr(check, "load"))
 
 
 class OneCircuitConventionTest(unittest.TestCase):
@@ -969,7 +964,7 @@ class OneCircuitConventionTest(unittest.TestCase):
         # A6). G10's fix made both refuse two matches; a third path added to one would not have
         # reached the other.
         import init_project
-        self.assertEqual(check_all.CONVENTIONS["circuit"], ("folder", list(design.CIRCUIT_PATHS)))
+        self.assertEqual(check.CONVENTIONS["circuit"], ("folder", list(design.CIRCUIT_PATHS)))
         self.assertIs(init_project.CIRCUIT_PATHS, design.CIRCUIT_PATHS)
 
 if __name__ == "__main__":

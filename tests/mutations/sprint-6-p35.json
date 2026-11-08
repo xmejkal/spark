@@ -12,7 +12,7 @@
   "replace": "        return sorted({name for name, _ in self.members.get(net_name, [])})"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "the physics checker walks the netlist its own way again",
   "find": "class Board(netlist.Netlist):",
   "replace": "class Board:"

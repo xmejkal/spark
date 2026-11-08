@@ -42,13 +42,13 @@
   "replace": "CAPABILITIES = (\"wake\", \"adc\")"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "placeholder wiring passes nothing (escaped once)",
-  "find": "        findings = check_footprints.run(circuit_of(inputs), placeholders, rules=rules)",
-  "replace": "        findings = check_footprints.run(circuit_of(inputs), (), rules=rules)"
+  "find": "        findings = build_check.run(circuit_of(inputs), placeholders, rules=rules)",
+  "replace": "        findings = build_check.run(circuit_of(inputs), (), rules=rules)"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "ambiguity back to a silent skip",
   "find": "        unchosen = [need for need in self.needs if need in ambiguous]",
   "replace": "        unchosen = []"

@@ -1,66 +1,66 @@
 [
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "a non-directory is accepted",
   "find": "        if not folder.is_dir():",
   "replace": "        if False:"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "the folder as given is never kept",
   "find": "folder if project == folder.resolve() else project)",
   "replace": "project)"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "the folder is compared by the wrong test",
   "find": "folder if project == folder.resolve() else project)",
   "replace": "folder if project != folder.resolve() else project)"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "root always the folder",
   "find": "return self.project if where == PROJECT else self.folder",
   "replace": "return self.folder"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "root always the project",
   "find": "return self.project if where == PROJECT else self.folder",
   "replace": "return self.project"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "elsewhere always false",
   "find": "return self.project != self.folder",
   "replace": "return False"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "rules read from the folder",
   "find": "\"rules\": (PROJECT,",
   "replace": "\"rules\": (FOLDER,"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "library note dropped",
   "find": "    if design.is_library(project):",
   "replace": "    if False:"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "project note dropped",
   "find": "    elif checked.elsewhere():",
   "replace": "    elif False:"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "requirements read with the folder as project",
   "find": "design.parts_of(design.read(requirements), design.project_for(requirements))",
   "replace": "design.parts_of(design.read(requirements), Path(project))"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "rail loads read with the folder as project",
   "find": "made = design.load(requirements)  #",
   "replace": "made = design.load(requirements, Path(project))  #"

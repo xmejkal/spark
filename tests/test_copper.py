@@ -125,16 +125,16 @@ class TheGeneratorAndTheCheckerAgreeTest(unittest.TestCase):
     """The whole reason this module exists, stated as an assertion."""
 
     def test_what_the_generator_asks_for_passes_what_the_checker_demands(self):
-        import check_physics
+        from spark.checks import physics_check
         for current in (0.7, 1.2, 2.9, 4.5):
             with self.subTest(current=current):
                 asked = copper.width_to_emit_mm(current)
-                self.assertGreaterEqual(check_physics.trace_current_capacity_a(asked, 10), current)
+                self.assertGreaterEqual(physics_check.trace_current_capacity_a(asked, 10), current)
 
     def test_both_modules_use_one_formula_not_two_copies(self):
-        import check_physics
-        self.assertIs(check_physics.trace_current_capacity_a, copper.current_capacity_a)
-        self.assertIs(check_physics.width_for_current_mm, copper.width_for_current_mm)
+        from spark.checks import physics_check
+        self.assertIs(physics_check.trace_current_capacity_a, copper.current_capacity_a)
+        self.assertIs(physics_check.width_for_current_mm, copper.width_for_current_mm)
 
 
 if __name__ == "__main__":

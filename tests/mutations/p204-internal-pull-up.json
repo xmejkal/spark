@@ -18,13 +18,13 @@
   "replace": "        if False:"
  },
  {
-  "file": "scripts/compare_design.py",
+  "file": "scripts/spark/checks/rules_check.py",
   "name": "an unwired firmware-pulled pin passes",
   "find": "        if netlist.component(component_name) is not None and not netlist.nets_of(component_name, port_name):",
   "replace": "        if False:"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "the firmware's pull-up is not said",
   "find": "                      unmeasured=[\"%s: held up by the board",
   "replace": "                      unmeasured=[] and [\"%s: held up by the board"
@@ -36,7 +36,7 @@
   "replace": "    if False:"
  },
  {
-  "file": "scripts/compare_design.py",
+  "file": "scripts/spark/checks/rules_check.py",
   "name": "a rule written before the firmware pulled the pin still fails it",
   "find": "netlist, [tuple(pair) for pair in rules[\"must_not_float\"] if tuple(pair) not in pulled],",
   "replace": "netlist, [tuple(pair) for pair in rules[\"must_not_float\"]],"

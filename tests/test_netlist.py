@@ -165,20 +165,20 @@ class APadHasOneIdentityAndSeveralSpellingsTest(unittest.TestCase):
 
     def test_the_rules_checker_stops_calling_a_wired_pad_floating(self):
         # The false alarm itself, through the caller that raised it.
-        import compare_design
-        n = compare_design.Netlist(self.circuit_with_a_footprint_module())
+        from spark.checks import rules_check
+        n = rules_check.Netlist(self.circuit_with_a_footprint_module())
         self.assertTrue(n.nets_of("Mcu", "3V3"), "a wired pad read as floating again")
 
 
 class TheTwoCallersShareIt(unittest.TestCase):
     def test_the_rules_checker_and_the_physics_checker_answer_alike(self):
-        import check_physics
-        import compare_design
+        from spark.checks import physics_check
+        from spark.checks import rules_check
         elements = circuit()
-        self.assertIs(compare_design.Netlist, netlist.Netlist)
-        self.assertTrue(issubclass(check_physics.Board, netlist.Netlist))
-        self.assertEqual(compare_design.Netlist(elements).nets_of("U1", "GND"),
-                         check_physics.Board(elements).nets_of("U1", "GND"))
+        self.assertIs(rules_check.Netlist, netlist.Netlist)
+        self.assertTrue(issubclass(physics_check.Board, netlist.Netlist))
+        self.assertEqual(rules_check.Netlist(elements).nets_of("U1", "GND"),
+                         physics_check.Board(elements).nets_of("U1", "GND"))
 
 
 if __name__ == "__main__":

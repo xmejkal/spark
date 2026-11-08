@@ -490,7 +490,7 @@ def i2c_pullup_problems(part: dict) -> list:
     (`host_parts` pull-ups on every bus line); saying neither is how a bus floats. A module
     pull-up must also be one that can hold a bus: the same band `compare_design` judges by.
     """
-    from compare_design import PULLUP_MIN_OHM, PULLUP_MAX_OHM
+    from spark.checks.rules_check import PULLUP_MIN_OHM, PULLUP_MAX_OHM
     lines = [need.get("pin") for need in part.get("needs") or [] if need.get("bus") == "i2c" and need.get("pin")]
     if not lines:
         return []

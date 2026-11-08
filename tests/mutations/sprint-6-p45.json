@@ -36,19 +36,19 @@
   "replace": "    buses += []"
  },
  {
-  "file": "scripts/compare_design.py",
+  "file": "scripts/spark/checks/rules_check.py",
   "name": "a bus line named by a pin resolves to nothing again",
   "find": "    component, _, pin = line.partition(\".\")\n    return sorted(netlist.nets_of(component, pin)) if pin else []",
   "replace": "    return []"
  },
  {
-  "file": "scripts/compare_design.py",
+  "file": "scripts/spark/checks/rules_check.py",
   "name": "a bus line named by a net name stops resolving",
   "find": "    named = netlist.net_named(line)\n    if named is not None:\n        return [named]",
   "replace": "    named = None"
  },
  {
-  "file": "scripts/compare_design.py",
+  "file": "scripts/spark/checks/rules_check.py",
   "name": "only the first of a pin's nets is searched for a pull-up",
   "find": "    for component_name, _ in sum((netlist.members[net_id] for net_id in net_ids), []):",
   "replace": "    for component_name, _ in netlist.members[net_ids[0]]:"
