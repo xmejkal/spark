@@ -820,6 +820,48 @@ files in all name a path of the fifteen. `areas/checks.md` follows. History keep
 
 Review: as W6-B3. Size: 2,585 lines moved, 25 import lines, 118 rows, 27 keys, 2 `SCRIPTS` lines.
 
+P695 claims check (2026-11-08, against 087ae1a4). Each claim above was read in the code. These are wrong or stale:
+
+1. Lines (P693): `check_all.py` 590, `compare_design.py` 314, `check_physics.py` 659, `check_footprints.py` 591,
+   `check_vendor_pins.py` 302, `check_bom.py` 208, `check_codes.py` 44. The seven hold 2,708. `package_of` is
+   imported at `check_physics.py:48`, not `:50`.
+2. Rows: 132 in 27 tables, not 118. `check_all.py` 44, `check_physics.py` 32, `check_vendor_pins.py` 21,
+   `check_footprints.py` 14, `compare_design.py` 12, `check_bom.py` 8, `check_codes.py` 1. `--anchors` refuses 1 of them
+   on main (`sprint-8-p52` 21, `check_all.py`).
+3. 15 rows sit in a `main` that stays, not 14: `p693-check-codes` 11 (`check_bom`) joins. As W6-B3: `--retarget` the
+   seven files, then a scratch script gives the 15 back to the CLIs. Each CLI imports the names its `main` reads by
+   name from its library, so the six `main`s, their rows and their R1 keys stay byte-equal.
+4. 5 rows change text, not 4: `p693-check-codes` 3 (`check_bom.PackageError`), `sprint-2` 8, `sprint-3-p13` 1 and
+   `sprint-8-p52` 21 (refused on main) in `check_all.py`, `sprint-3-p13` 3 in `check_physics.py`. The two
+   `sprint-3-p13` rows load a second copy by `SCRIPTS / "check_footprints.py"`. `SCRIPTS` goes, so their `replace`
+   loads `Path(__file__).resolve().parent / "build_check.py"`. `check_codes` keeps its name, so its rows keep their text.
+5. Name clashes break the move. Tests bind a local `check` 16 times in functions that read `check_all.`
+   (`test_check_all.py` 13, `test_check_footprints.py:593`, `test_check_physics.py:743`, `test_compare_design.py:126`),
+   so `check.CHECKS` raises `UnboundLocalError`. Decision: Rename Variable, `each` in a loop and `chosen` for a
+   `next(…)`, and the static method `check` (`test_check_all.py:706`) becomes `demo_check`, in their own commit. No
+   row anchors on them. No other new name (`rules_check`, `physics_check`, `build_check`, `vendor_pins_check`,
+   `order_check`) is bound in an importer or a moved module.
+6. Baseline: 26 keys name a moved file, not 27 (R2 0, not 1: no `R2` key names them). C1 1, R1 4 (two functions over
+   60, `run` and `<module>`), R6 12 and T1 2 follow their file, 19 keys. The 6 `main` R1 keys and
+   `C3:check_vendor_pins.py:EXIT_MISMATCH` stay: `test_outcomes.py:38` reads `EXIT_MISMATCH` from the CLI. The moved
+   code holds no function of 41 to 60 lines and no `print`, `sys.exit` or `sys.stderr` outside a `main` (`ast`).
+   `<module>` falls with the CLI's docstring and `main`, so it may go.
+7. MAY_READ: 7 keys, not 6. 6 take the new name (`physics_check` 3, `check` 2, `build_check` 1).
+   `check_codes.CODES` stays.
+8. Import lines: 26 outside the seven, not 25 (`parts.py:493`, lazy, and 25 in 11 test files, 7 of them lazy), and
+   14 among them (8 in `check_all.py`, 7 lazy; 5 of `check_codes`; `check_physics.py:48`).
+9. Patch sites: `_patched_run` (`test_check_footprints.py:564`) and two direct assignments of `check_physics.run`
+   (`test_check_physics.py:685`, `:741`) replace `run`. Two tests then call `main`, which looks `run` up in the CLI, so
+   they patch the CLI. The rest call a `Check` of `check.py`, which looks it up in the library. The 8 `patch.object`
+   sites on `check_vendor_pins` and the 1 on `check_footprints` (`test_check_all.py:950`) name the library.
+10. Missed: `test_check_all.py:913`-`:916` find the checks by `scripts/check_*.py` and match them against each
+    `Check`'s `co_names`, so they read `scripts/spark/checks/`. `test_board_look.py:968` exempts `check_physics.py` by
+    name, and `test_check_footprints.py:600` and `test_check_physics.py:753` read the moved source by path. Each follows.
+
+These hold: the two `SCRIPTS` lines and the four `sys.path.insert` lines go with the libraries, and the CLIs keep
+theirs. The import graph has no cycle (`physics_check` imports `build_check`, `check` imports the five lazily). The 19
+goldens call the CLIs by path. `LEAVES` and `LEAF_NAMES` hold `check_codes`. `tools/map.py` registers no checks table.
+
 ### The design-with-build group (P698, at 924e48a4)
 
 The group is 13 flat modules, 5,808 lines: the ten of `areas/design.md` and the three of `areas/build.md`. The first
