@@ -38,8 +38,8 @@
  {
   "file": "scripts/emit_board.py",
   "name": "a converter's input takes a partial sum as its draw",
-  "find": "            \"amps\": inner[\"amps\"] if inner and inner[\"complete\"] else None,",
-  "replace": "            \"amps\": inner[\"amps\"] if inner else None,"
+  "find": "                        \"amps\": inner[\"amps\"] if inner and inner[\"complete\"] else None,",
+  "replace": "                        \"amps\": inner[\"amps\"] if inner else None,"
  },
  {
   "file": "scripts/emit_board.py",
