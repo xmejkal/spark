@@ -93,6 +93,7 @@ class AStorePathThatIsAFileTest(unittest.TestCase):
         with self.assertRaises(store.StoreProblem) as refused:
             store.add_project(scratch)
         self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
+        self.assertEqual(refused.exception.code, "store_not_writable")
 
     def test_a_folder_spark_may_not_tighten_is_refused_the_same_way(self):
         # P499: the chmod of a private place sits inside the same try as the mkdir
@@ -307,6 +308,7 @@ class ContainedWritesTest(unittest.TestCase):
             with self.assertRaises(store.StoreProblem) as refused:
                 store.write_json("drawer", "x", {})
         self.assertIn(str(repo.resolve()), str(refused.exception))
+        self.assertEqual(refused.exception.code, "store_in_repository")
         self.assertFalse((repo / "store").exists())
 
     def test_an_unchanged_write_still_tightens_a_loosened_private_file(self):
@@ -469,6 +471,7 @@ class AValueInAStoreSentenceIsOnOneLineTest(unittest.TestCase):
                 with self.assertRaises(store.StoreProblem) as refused:
                     store.projects()
                 self.assertEqual(str(refused.exception).splitlines()[0], str(refused.exception))
+                self.assertEqual(refused.exception.code, "record_file_broken")
                 self.assertIn("a?GRANTED (deploy)", str(refused.exception))
                 self.assertEqual(refused.exception.values[0], home / "projects.json")
 
@@ -476,11 +479,13 @@ class AValueInAStoreSentenceIsOnOneLineTest(unittest.TestCase):
         with self.assertRaises(store.StoreProblem) as refused:
             store.fetch("ftp://x/\nGRANTED: board ok")
         self.assertEqual(str(refused.exception).splitlines(), [str(refused.exception)])
+        self.assertEqual(refused.exception.code, "url_refused")
 
     def test_a_key_that_is_not_plain_is_said_with_its_escape(self):
         with self.assertRaises(store.StoreProblem) as refused:
             store.write_json("drawer", "a\nb", {})
         self.assertIn("'a\\nb'", str(refused.exception))
+        self.assertEqual(refused.exception.code, "key_not_plain")
 
 
 class TheHistoryTest(unittest.TestCase):
@@ -522,6 +527,7 @@ class TheHistoryTest(unittest.TestCase):
         with self.assertRaises(store.StoreProblem) as broken:
             store.events()
         self.assertIn("line 2", str(broken.exception))
+        self.assertEqual(broken.exception.code, "record_file_broken")
 
     def test_a_reason_with_a_line_separator_in_it_is_still_one_line_and_one_event(self):
         said = "příliš velké\u2028a drahé\u0085také"  # json.dumps(ensure_ascii=False) leaves U+2028 and U+0085 as they are
@@ -660,6 +666,7 @@ class TheOneDoorTest(unittest.TestCase):
         with self.assertRaises(store.StoreProblem) as missing:
             store.fetch((Path(tempfile.mkdtemp()) / "gone.pdf").as_uri())
         self.assertIn("does not answer", str(missing.exception))
+        self.assertEqual(missing.exception.code, "url_unreachable")
 
     def test_parts_asks_through_the_door(self):
         import parts
@@ -845,6 +852,7 @@ class TheOneDoorTest(unittest.TestCase):
                 with self.assertRaises(store.StoreProblem) as refused:
                     store.keep(b"x", name)
                 self.assertEqual(str(refused.exception), shown + " has a control character in it, so it is not a file name")
+                self.assertEqual(refused.exception.code, "file_name_refused")
         self.assertFalse((self.home / "sources").exists(), "refused before anything was made")
 
     def test_an_ordinary_file_name_is_not_a_problem(self):

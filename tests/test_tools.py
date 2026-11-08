@@ -62,6 +62,7 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
         with self.assertRaises(tools.ToolProblem) as refused:
             tools.merged(None, layer("{not json"))
         self.assertIn("is not JSON", str(refused.exception))
+        self.assertEqual(refused.exception.code, "tools_list_broken")
 
     def test_a_path_with_a_newline_is_said_on_one_line_and_its_raw_value_stays(self):
         # P444 (#592): the path of a broken tools file is a value of the sentence
@@ -78,6 +79,7 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
         with self.assertRaises(tools.ToolProblem) as refused:
             tools.merged(None, layer({"mpre\nGRANTED: board ok": {"kind": "command"}}))
         self.assertIn("'mpre\\nGRANTED: board ok'", str(refused.exception))
+        self.assertEqual(refused.exception.code, "tools_list_broken")
         self.assertNotIn("\n", str(refused.exception))
 
     def test_a_name_in_needs_with_a_newline_is_refused_too(self):
@@ -96,6 +98,7 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
         with self.assertRaises(tools.ToolProblem) as refused:
             tools.merged(None, layer("[1, 2]"))
         self.assertIn("a tools file is an object", str(refused.exception))
+        self.assertEqual(refused.exception.code, "tools_list_broken")
 
     def test_contracts_are_spark_s_to_state(self):
         personal = layer({"contracts": {"pdf-text": "anything"}})
@@ -109,6 +112,21 @@ class FindingAToolTest(unittest.TestCase):
         self.addCleanup(patcher.stop)
         self.nobody = Path(tempfile.mkdtemp()) / "absent.json"
 
+    def code_of(self, call, *args):
+        with self.assertRaises(tools.ToolProblem) as refused:
+            call(*args)
+        return refused.exception.code
+
+    def test_each_refusal_the_other_tests_do_not_reach_names_its_records_code(self):
+        # P716: each literal is the records_codes code of one raise; a need's refusal keeps the need's own code
+        self.assertEqual(self.code_of(tools.find, "no-such-tool", None, self.nobody), "unknown_tool")
+        off_need = layer({"a": {"kind": "path", "exe": "a", "needs": ["b"]}, "b": {"kind": "path", "exe": "b", "on": False}})
+        self.assertEqual(self.code_of(tools.find, "a", None, off_need), "tool_off")
+        self.assertEqual(self.code_of(tools.use, "pdf-text", "no-such-tool", None, self.nobody), "contract_not_met")
+        self.assertEqual(self.code_of(tools.fetch_of, {"fetch": {"file": "f", "platforms": {}}}), "no_build_for_platform")
+        oldest = project_with({"pt": {"kind": "path", "exe": "pt", "oldest_version": "5.0"}})
+        self.assertEqual(self.code_of(tools.pin, "pt", "4.0", oldest, oldest / ".spark" / "tools.json"), "pin_refused")
+
     def test_a_role_leads_to_its_tool_and_its_command(self):
         with mock.patch.object(tools.shutil, "which", return_value="/opt/bin/pdftotext"):
             found = tools.find("pdf-text", None, self.nobody)
@@ -120,6 +138,7 @@ class FindingAToolTest(unittest.TestCase):
                 tools.find("pdf-text", None, self.nobody)
         said = str(missing.exception)
         self.assertIn("pdf-text (pdftotext) is not installed", said)
+        self.assertEqual(missing.exception.code, "tool_missing")
         self.assertIn("brew install poppler", said)
         self.assertNotIn("sudo", said)
 
@@ -129,18 +148,21 @@ class FindingAToolTest(unittest.TestCase):
         with self.assertRaises(tools.ToolProblem) as refused:
             tools.find("pdf-text", None, personal)
         self.assertIn("my-reader does not say it meets 'page-text'", str(refused.exception))
+        self.assertEqual(refused.exception.code, "contract_not_met")
 
     def test_a_tool_turned_off_in_the_project_says_how_to_turn_it_on(self):
         project = project_with({"pdftotext": {"on": False}})
         with self.assertRaises(tools.ToolProblem) as off:
             tools.find("pdf-text", project, self.nobody)
         self.assertIn("/spark:setup add pdftotext", str(off.exception))
+        self.assertEqual(off.exception.code, "tool_off")
 
     def test_an_entry_with_no_way_to_find_it_is_refused_by_name(self):
         personal = layer({"mystery": {"for": "something"}})
         with self.assertRaises(tools.ToolProblem) as refused:
             tools.find("mystery", None, personal)
         self.assertIn("no way to find it", str(refused.exception))
+        self.assertEqual(refused.exception.code, "tool_entry_broken")
 
     def test_a_flash_offset_is_a_string_with_a_number_on_a_download_only(self):
         download = {"kind": "download", "file": "mp.bin", "url": "https://example.org/mp.bin", "sha256": "00"}
@@ -182,6 +204,7 @@ class FindingAToolTest(unittest.TestCase):
             with self.assertRaises(tools.ToolProblem) as missing:
                 tools.find("tscircuit", None, personal)
         self.assertIn("tscircuit needs bun", str(missing.exception))
+        self.assertEqual(missing.exception.code, "tool_missing")
         self.assertIn("npm install -g bun", str(missing.exception))
 
     def test_with_no_install_manager_here_the_line_still_says_what_to_get(self):
@@ -301,6 +324,7 @@ class SetupTest(unittest.TestCase):
                 tools.install(["pdftotext"], None, self.personal, run=self.run_fake)
         self.assertEqual(self.ran, [])
         self.assertIn("sudo apt install poppler-utils", str(told.exception))
+        self.assertEqual(told.exception.code, "install_failed")
 
     def test_a_tool_already_here_is_not_installed_again(self):
         with mock.patch.object(tools.shutil, "which", side_effect=which_all_but()):
@@ -317,6 +341,7 @@ class SetupTest(unittest.TestCase):
         with self.assertRaises(tools.ToolProblem) as refused:
             tools.install(["mp"], None, self.personal, run=curl(b"not foo"))
         self.assertIn("checksum", str(refused.exception))
+        self.assertEqual(refused.exception.code, "install_failed")
         self.assertFalse((tools.DOWNLOADS / "mp.bin").exists(), "a file with the wrong checksum is not left to be used")
 
     def test_a_server_s_needs_install_first_and_it_registers_at_user_scope(self):
@@ -378,6 +403,14 @@ class SetupCommandTest(unittest.TestCase):
                 contextlib.redirect_stderr(out):
             code = tools.main(list(argv), run=lambda argv, **kw: self.ran.append(argv))
         return code, out.getvalue()
+
+    def test_a_refusal_prints_the_sentence_of_the_error_and_its_code_is_the_records_one(self):
+        # P716: the error main catches for --use names its code; main prints its sentence and exits 2
+        with self.assertRaises(tools.ToolProblem) as refused:
+            tools.use("pdf-text", "no-such-tool", None, self.personal)
+        self.assertEqual(refused.exception.code, "contract_not_met")
+        self.assertEqual(self.cli("--use", "pdf-text=no-such-tool"), (tools.EXIT_COULD_NOT_RUN, "tools.py: %s\n" % refused.exception))
+        self.assertFalse(self.personal.exists(), "nothing written")
 
     def test_status_marks_each_row_and_says_could_not_run_while_something_is_missing(self):
         code, said = self.cli("--status", which=which_all_but("pdftotext"))
@@ -569,11 +602,13 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
         with self.assertRaises(tools.ToolProblem) as looped:
             tools.find("a", None, loop)
         self.assertIn("loop", str(looped.exception))
+        self.assertEqual(looped.exception.code, "needs_loop")
         odd = layer({"pdftotext": {"install": {"brew": "brew install poppler@{release}"}}})
         with mock.patch.object(tools.shutil, "which", side_effect=lambda exe: None if exe == "pdftotext" else "/usr/bin/" + exe):
             with self.assertRaises(tools.ToolProblem) as placeholder:
                 tools.find("pdf-text", None, odd)
         self.assertIn("{release}", str(placeholder.exception))
+        self.assertEqual(placeholder.exception.code, "tool_entry_broken")
         with self.assertRaises(tools.ToolProblem):
             tools.merged(None, layer({"roles": ["pdf-text"]}))
 
@@ -821,6 +856,7 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
             tools.find("flasher")
         self.assertEqual(str(told.exception), "pt 4.12.0 is too old: spark needs 5.0 or newer. "
                          "Install: python3 -m pip install --user pt==5.5.0")
+        self.assertEqual(told.exception.code, "tool_too_old")
 
     def test_the_floor_and_newer_are_kept(self):
         self.floor()
@@ -910,6 +946,7 @@ class AnNpmInstallNeedsThePackageJsonTest(unittest.TestCase):
             self.install("engine")
         self.assertEqual(self.ran, [], "npm never ran, so the parent's package.json is untouched")
         self.assertIn("package.json", str(refused.exception))
+        self.assertEqual(refused.exception.code, "install_failed")
         self.assertIn("/spark:init", str(refused.exception))
         self.assertEqual((self.parent / "package.json").read_text(), "{}\n")
 

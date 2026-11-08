@@ -82,6 +82,7 @@ class WhereABoardComesFromTest(unittest.TestCase):
         with self.assertRaises(boards.BoardError) as refused:
             boards.load(project(active="no-such-board"))
         self.assertIn("no board definition", str(refused.exception))
+        self.assertEqual(refused.exception.code, "no_board_definition")
         self.assertIn(LIBRARY_BOARD, str(refused.exception))
 
     def test_a_selection_naming_nothing_is_refused(self):
@@ -106,6 +107,7 @@ class WhereABoardComesFromTest(unittest.TestCase):
         with self.assertRaises(boards.BoardError) as caught:
             boards.active_id(root)
         self.assertIn("ONE board", str(caught.exception))
+        self.assertEqual(caught.exception.code, "no_board_selected")
 
     def test_the_refusal_says_what_to_do_with_two_boards(self):
         # A refusal nobody can act on is only marginally better than a wrong answer, and "two
@@ -136,6 +138,18 @@ def with_buttons(buttons):
     return {"physical": {"buttons": buttons}}
 
 
+class EachRefusalNamesItsCodeTest(unittest.TestCase):
+    """P716: the refusals of boards.py the other tests do not reach, each with its records_codes code as a literal."""
+
+    def test_no_project_and_a_selection_with_no_board_name_their_codes(self):
+        with self.assertRaises(boards.BoardError) as refused:
+            boards.project_root(Path(tempfile.mkdtemp()))
+        self.assertEqual(refused.exception.code, "no_project_here")
+        with self.assertRaises(boards.BoardError) as refused:
+            boards.active_id(project(active=""))
+        self.assertEqual(refused.exception.code, "no_board_selected")
+
+
 class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
     def test_a_newline_in_a_path_gives_one_line_in_a_board_file_that_is_no_json(self):
         folder = Path(tempfile.mkdtemp()) / NASTY
@@ -144,9 +158,11 @@ class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
         with self.assertRaises(boards.BoardError) as caught:
             boards._read_json(folder / "bad.json", "board definition")
         assert_flat(self, caught.exception, folder / "bad.json")
+        self.assertEqual(caught.exception.code, "record_file_broken")
         with self.assertRaises(boards.BoardError) as caught:
             boards._read_json(folder / "nope.json", NASTY)
         assert_flat(self, caught.exception, NASTY)
+        self.assertEqual(caught.exception.code, "board_file_missing")
 
     def test_a_contract_with_problems_keeps_its_lines_and_a_path_with_a_newline_gives_one_line(self):
         root = Path(tempfile.mkdtemp()) / NASTY
@@ -156,6 +172,7 @@ class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
         with self.assertRaises(boards.BoardError) as caught:
             boards.load(root)
         assert_flat(self, caught.exception)
+        self.assertEqual(caught.exception.code, "board_contract_broken")
         self.assertGreater(len(str(caught.exception).split("\n")), 2, "the problem lines stay lines")
 
     def test_an_id_with_a_newline_is_shown_escaped_with_the_available_boards_on_a_line_of_their_own(self):
@@ -777,6 +794,13 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = boards.main([*argv, "--project", str(self.project)])
         return code, out.getvalue().strip(), err.getvalue().strip()
+
+    def test_a_refusal_prints_the_sentence_of_the_error_and_its_code_is_the_records_one(self):
+        # P716: the error main catches for --get names its code; main prints its sentence and exits 1
+        with self.assertRaises(boards.BoardError) as refused:
+            boards.get(self.project, "physical.no_such_field")
+        self.assertEqual(refused.exception.code, "no_such_field")
+        self.assertEqual(self._run("--get", "physical.no_such_field"), (1, "", "boards.py: " + str(refused.exception)))
 
     def test_path_prints_one_readable_board_file(self):
         code, said, err = self._run("--path")

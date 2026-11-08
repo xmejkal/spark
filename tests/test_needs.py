@@ -66,6 +66,7 @@ class TheNeedsFileTest(unittest.TestCase):
         with self.assertRaises(store.StoreProblem) as caught:
             needs.read(project)
         assert_flat(self, caught.exception)
+        self.assertEqual(caught.exception.code, "record_file_broken")
 
     def test_a_retried_needs_set_is_carried_out_with_nothing_to_change(self):
         given = a_file([{"id": "soil", "does": "sense", "what": "soil-moisture"}])

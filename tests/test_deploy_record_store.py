@@ -96,6 +96,7 @@ class ReadLastDeployTest(LastDeployCase):
             with self.assertRaises(store.StoreProblem) as caught:
                 STORE.write_deploy(said(), "ready seen", "yes")
         assert_flat(self, caught.exception, caught.exception.values[0])
+        self.assertEqual(caught.exception.code, "not_a_board_record")
 
     def test_a_round_trip_gives_the_project_verdict_and_time_that_write_deploy_wrote(self):
         STORE.write_deploy(said(), "ready seen", "a test")
