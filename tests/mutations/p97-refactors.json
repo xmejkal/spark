@@ -1,7 +1,7 @@
 [
- {"file": "scripts/needs.py", "name": "a candidate's words never match",
+ {"file": "scripts/spark/design/needs.py", "name": "a candidate's words never match",
   "find": "what_matches=_what_matches(need, functions, names), owned=owned", "replace": "what_matches=False, owned=owned"},
- {"file": "scripts/needs.py", "name": "a candidate's counts are lost",
+ {"file": "scripts/spark/design/needs.py", "name": "a candidate's counts are lost",
   "find": "owned=owned, free=free, unsure=unsure)", "replace": "owned=0, free=0, unsure=unsure)"},
  {"file": "scripts/parts.py", "name": "a needs write hides what each value was",
   "find": "\"%s %s → %s\" % (key, json.dumps(change[\"was\"].get(key), ensure_ascii=False), json.dumps(value, ensure_ascii=False))",

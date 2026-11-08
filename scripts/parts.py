@@ -2049,7 +2049,7 @@ def _op_audit(args, project):
 
 
 def _op_needs(args, project):
-    import needs
+    from spark.design import needs
     listed = needs.read(args.needs)
     return Answer({"needs": listed}, ["  %-10s %s / %s%s%s" % (n["id"], n.get("does"), n.get("what"),
                                                                "  (%s)" % n["condition"] if n.get("condition") else "",
@@ -2059,7 +2059,7 @@ def _op_needs(args, project):
 
 def _op_match(args, project):
     import matching
-    import needs
+    from spark.design import needs
     try:
         chosen = matching.matcher(args.matcher or needs.MATCHER, "match")
     except matching.UnknownMatcher as wrong:
@@ -2095,7 +2095,7 @@ def _op_match(args, project):
 
 def _op_offer(args, project):
     """`--offer KEY`: the whole text of one offer, for a chooser to read (P211) — or a problem when nothing live has that key."""
-    import needs
+    from spark.design import needs
     found = needs.offer(args.offer, project)
     if found is None:
         return Answer(problems=[_problem(args.offer, "no record and no live drawer entry called %r — `--need` and "
@@ -2104,7 +2104,7 @@ def _op_offer(args, project):
 
 
 def _op_needs_set(args, project):
-    import needs
+    from spark.design import needs
     target, name = args.needs_set
     items, unreadable = _read_json_input(name)
     if unreadable:
@@ -2135,7 +2135,7 @@ def _op_needs_drop(args, project):
 
 def _op_pick(args, project):
     import drawer
-    import needs
+    from spark.design import needs
     target, given = args.pick[0], args.pick[1:]
     pairs = [tuple(one.split("=", 1)) for one in given if "=" in one]
     if not pairs or len(pairs) != len(given):
@@ -2200,7 +2200,7 @@ def _names_your_entries(file_name, new_keys, dry_run):
 
 
 def _op_requirements(args, project):
-    import needs
+    from spark.design import needs
     content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver = needs.requirements(
         args.requirements)
     path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
@@ -2265,7 +2265,7 @@ def _op_step(args, project):
 def _op_tally(args, project):
     import cost
     import drawer
-    import needs
+    from spark.design import needs
     name = store.find_listed_name(args.tally)
     if name is None:
         return Answer(unchecked=[_cannot("%s is not on your list of projects, so no step of it was marked" % args.tally,

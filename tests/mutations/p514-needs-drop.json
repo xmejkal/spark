@@ -24,7 +24,7 @@
   "replace": "Finding(\"ok\", need,"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "a hold that stays the same counts as released",
   "find": "if now < was]",
   "replace": "if now != was]"
@@ -42,13 +42,13 @@
   "replace": "                self.needs.write(project, after)\n                self.drawer.apply(changes)\n"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "the requirements note compares the entry key, not the record a pick is",
   "find": "[next(iter(_as_record(pick, known, entries).items()))]\n                if kind == \"part\"}",
   "replace": "[next(iter(pick.items()))]\n                if kind == \"part\"}"
  },
  {
-  "file": "scripts/needs.py",
+  "file": "scripts/spark/design/needs.py",
   "name": "a drop releases every entry whose hold falls in the plan, not only the dropped pick's fall",
   "find": "fall = before.get(entry_id, has) - later.get(entry_id, has)",
   "replace": "fall = has - later.get(entry_id, has)"

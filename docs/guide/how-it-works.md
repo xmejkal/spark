@@ -150,7 +150,7 @@ Imported by the scripts above, and not run on their own, except `cost.py`:
 - `spark/core/outcomes.py`: the exit codes and the three outcomes, defined once;
 - `store.py`: where spark keeps what it keeps;
 - `drawer.py`: what you own;
-- `needs.py`: what a goal needs, and what the store offers for each;
+- `spark/design/needs.py`: what a goal needs, and what the store offers for each;
 - `cost.py`: what a project's run cost, read from the Claude Code transcripts of the sessions its steps ran in, tool
   names and counts only. `parts.py --step` and `--tally` use it. On one transcript it runs on its own:
   `cost.py <transcript.jsonl>` says what that run cost;

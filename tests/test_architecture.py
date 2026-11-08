@@ -398,13 +398,13 @@ class TheChecksAreaTest(unittest.TestCase):
 
 # --- MVP ---
 class TheDesignAreaTest(unittest.TestCase):
-    """W6-D3a (P702) and W6-D3b (P703): the design values and the emitters live in `scripts/spark/design/`, its
-    `__init__.py` imports nothing, and each module imports alone. `scripts/` keeps the three CLIs. W6-D3c adds the
-    needs."""
+    """W6-D3a (P702), W6-D3b (P703) and W6-D3c (P704): the design values, the emitters and the needs live in
+    `scripts/spark/design/`, its `__init__.py` imports nothing, and each module imports alone. `scripts/` keeps the three
+    CLIs."""
     DESIGN = ROOT / "scripts" / "spark" / "design"
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
-    MODULES = ["board_emitter", "copper", "design_codes", "fab", "footprint_emitter", "loader", "netlist", "pin_assigner",
-               "restricted_pins"]
+    MODULES = ["board_emitter", "copper", "design_codes", "fab", "footprint_emitter", "loader", "needs", "netlist",
+               "pin_assigner", "restricted_pins"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print. A library function back in a CLI, under
     #: any name, fails the check.
     CLIS = {"assign_pins.py": ["main"], "emit_board.py": ["main"], "emit_footprint.py": ["_report", "main"]}
@@ -413,7 +413,7 @@ class TheDesignAreaTest(unittest.TestCase):
         self.assertEqual(sorted(path.stem for path in self.DESIGN.glob("*.py") if path.name != "__init__.py"), self.MODULES)
         scripts = ROOT / "scripts"
         old = ["assign_pins.py", "copper.py", "design.py", "design_codes.py", "emit_board.py", "emit_footprint.py", "fab.py",
-               "netlist.py", "restricted_pins.py"]
+               "needs.py", "netlist.py", "restricted_pins.py"]
         self.assertEqual([name for name in old if (scripts / name).exists()], sorted(self.CLIS))
         self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in scripts.glob("*.py")}), [])
         for cli, own in self.CLIS.items():
