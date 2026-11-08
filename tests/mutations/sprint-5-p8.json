@@ -12,7 +12,7 @@
   "replace": "        return \"trace:\" + trace[\"source_trace_id\"]"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "the finding names nothing again (I10)",
   "find": "        return answer(problems=[\"[%s] %s: %s\" % (p[\"rule\"], p[\"subject\"], p[\"detail\"]) for p in result.get(\"problems\", [])],",
   "replace": "        return answer(problems=[p[\"detail\"] for p in result.get(\"problems\", [])],"

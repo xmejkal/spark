@@ -72,57 +72,57 @@
   "replace": "    rules = rules"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "a rail over its supply's rating is not a problem",
   "find": "        if rated is not None and drawn > rated:",
   "replace": "        if False:"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "a load nobody stated is not reported",
   "find": "        elif load[\"missing\"] or rated is None:",
   "replace": "        elif rated is None:"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "a sum resting on unverified figures passes in silence",
   "find": "        elif load[\"unverified\"] or not supply[\"verified\"]:",
   "replace": "        elif False:"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "the trace check ignores the records' sum",
   "find": "        if current is None and summed and summed[\"complete\"]:",
   "replace": "        if False:"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "the trace check sizes from an open sum",
   "find": "        if current is None and summed and summed[\"complete\"]:",
   "replace": "        if current is None and summed:"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "run never asks whether the supply can carry it",
   "find": "        findings += check_rail_supply(loads)",
   "replace": "        findings += []"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "a 15 mA load is written as 0.01 A again",
   "find": "    return \"%.2f A\" % amps if amps >= 1 else \"%.0f mA\" % (amps * 1000)",
   "replace": "    return \"%.2f A\" % amps"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "every design in the project is summed, not the one behind this circuit",
   "find": "        if names and names <= present:",
   "replace": "        if names:"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "the physics check is never handed the records",
-  "find": "        findings = check_physics.run(circuit, json.loads(Path(inputs[\"rules\"]).read_text()), loads)",
-  "replace": "        findings = check_physics.run(circuit, json.loads(Path(inputs[\"rules\"]).read_text()))"
+  "find": "        findings = physics_check.run(circuit, json.loads(Path(inputs[\"rules\"]).read_text()), loads)",
+  "replace": "        findings = physics_check.run(circuit, json.loads(Path(inputs[\"rules\"]).read_text()))"
  }
 ]

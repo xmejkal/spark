@@ -12,13 +12,13 @@
   "replace": "    return EXIT_PROBLEMS if problems else EXIT_OK"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "a could-not-run run is rendered as a missing reason",
   "find": "    if result[\"status\"] == COULD_NOT_RUN and \"reason\" in result:",
   "replace": "    if result[\"status\"] == COULD_NOT_RUN:"
  },
  {
-  "file": "scripts/compare_design.py",
+  "file": "scripts/spark/checks/rules_check.py",
   "name": "comparing nothing passes again",
   "find": "    if not checked:",
   "replace": "    if False:"

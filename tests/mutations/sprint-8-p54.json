@@ -36,31 +36,31 @@
   "replace": "    return [(\"/\" + path.name, path.read_bytes())"
  },
  {
-  "file": "scripts/check_bom.py",
+  "file": "scripts/spark/checks/order_check.py",
   "name": "one part number for two values passes",
   "find": "        if len(by_value) > 1:",
   "replace": "        if len(by_value) > 2:"
  },
  {
-  "file": "scripts/check_bom.py",
+  "file": "scripts/spark/checks/order_check.py",
   "name": "a value nobody can source passes",
   "find": "        if value and not supplier:",
   "replace": "        if False:"
  },
  {
-  "file": "scripts/check_bom.py",
+  "file": "scripts/spark/checks/order_check.py",
   "name": "a semiconductor with no part number passes",
   "find": "        elif not supplier and any(package in footprint for package in SEMICONDUCTOR_PACKAGES):",
   "replace": "        elif False:"
  },
  {
-  "file": "scripts/check_bom.py",
+  "file": "scripts/spark/checks/order_check.py",
   "name": "a missing circuit reads as no warnings",
   "find": "    if not circuit_path.is_file():\n        raise FileNotFoundError(",
   "replace": "    if not circuit_path.is_file():\n        return []\n        raise FileNotFoundError("
  },
  {
-  "file": "scripts/check_bom.py",
+  "file": "scripts/spark/checks/order_check.py",
   "name": "the design's own fatal warnings are not read",
   "find": "        if element.get(\"type\") in FATAL_AT_FAB:",
   "replace": "        if False:"

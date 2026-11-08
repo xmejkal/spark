@@ -1,20 +1,20 @@
 [
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "check_footprints loaded by path again (a second copy)",
-  "find": "        import check_footprints\n",
-  "replace": "        import importlib.util as _u; _s = _u.spec_from_file_location(\"check_footprints\", SCRIPTS / \"check_footprints.py\"); check_footprints = _u.module_from_spec(_s); _s.loader.exec_module(check_footprints)\n"
+  "find": "        from spark.checks import build_check\n",
+  "replace": "        import importlib.util as _u; _s = _u.spec_from_file_location(\"build_check\", Path(__file__).resolve().parent / \"build_check.py\"); build_check = _u.module_from_spec(_s); _s.loader.exec_module(build_check)\n"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "design loaded by path again",
   "find": "    import design\n    import emit_board\n",
   "replace": "    import importlib.util as _u; _s = _u.spec_from_file_location(\"design\", SCRIPTS / \"design.py\"); design = _u.module_from_spec(_s); _s.loader.exec_module(design)\n    import emit_board\n"
  },
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "package_of taken from a second copy of check_footprints",
-  "find": "from check_footprints import package_of  # noqa: E402\n",
-  "replace": "import importlib.util as _u; _s = _u.spec_from_file_location(\"check_footprints\", SCRIPTS / \"check_footprints.py\"); _m = _u.module_from_spec(_s); _s.loader.exec_module(_m); package_of = _m.package_of\n"
+  "find": "from spark.checks.build_check import package_of\n",
+  "replace": "import importlib.util as _u; _s = _u.spec_from_file_location(\"build_check\", __file__.replace(\"physics_check.py\", \"build_check.py\")); _m = _u.module_from_spec(_s); _s.loader.exec_module(_m); package_of = _m.package_of\n"
  }
 ]
