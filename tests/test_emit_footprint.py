@@ -279,6 +279,12 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
                 self.assertEqual(emit_footprint.why_header_disagrees(board), "the board definition disagrees with itself: " + said)
                 self.assertEqual(emit_footprint.why_wrong_kind(board).code, "board_disagrees")  # P700
 
+    def test_a_type_error_while_drawing_is_said_not_raised(self):
+        # P411: a caller may hand rules no reader checked; a text drill step is a TypeError in `render`, said, never raised
+        said = emit_footprint.why_header_disagrees(firebeetle(), {"fabrication": {"drill_step_mm": "0.1"}})
+        self.assertTrue(said.startswith("the board definition disagrees with itself: unsupported operand"), said)
+        self.assertEqual(said.code, "board_disagrees")
+
     def test_nothing_is_said_of_a_disagreement_when_something_is_missing_or_the_board_is_no_object(self):
         board = firebeetle()
         del board["physical"]["header_order"]
