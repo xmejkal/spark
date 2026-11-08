@@ -4,15 +4,11 @@ name the steps use, and what a planned layout says of its board. It writes no fi
 """
 
 import re
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from spark.breadboard import drawing  # noqa: E402
-from spark.breadboard import wiring_steps  # noqa: E402
-import emit_board  # noqa: E402
-import part_shape  # noqa: E402
+import emit_board
+import part_shape
+from spark.breadboard import drawing
+from spark.breadboard import wiring_steps
 
 #: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
 OHMS = {"": 1, "k": 1000, "M": 1000000}

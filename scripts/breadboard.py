@@ -52,7 +52,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import assign_pins  # noqa: E402
 import board_pads  # noqa: E402
-import breadboard_catalog  # noqa: E402
+from spark.breadboard import drawing_catalog  # noqa: E402
 from spark.breadboard import bench_changes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
@@ -285,7 +285,7 @@ def _drawing_inputs(read):
     """(geometry, catalog) the layout is planned on. Wokwi's own geometry for a board it measured; for a board drawn
     from its own record, a copy that holds its part_px and spark's 63-column breadboard (P412)."""
     wokwi = drawing.WokwiGeometry.load()
-    catalog = breadboard_catalog.describe_parts(read, wokwi)
+    catalog = drawing_catalog.describe_parts(read, wokwi)
     board = read.built.board
     part_px, _ = part_shape.find_part_px(board, part_shape.sources_for(wokwi.data["parts"]))
     if not part_px.get("full_surface"):
@@ -369,7 +369,7 @@ def _drawing_lines(planned):
     lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
     if len(drawn) < len(DRAWING_RENDERERS):
         lines += ["", drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
-    lines += [line for one in breadboard_catalog.board_lines(planned.layout) for line in ("", one)]
+    lines += [line for one in drawing_catalog.board_lines(planned.layout) for line in ("", one)]
     if planned.differs:
         more = len(planned.differs) - 1
         lines += ["", "The drawing does not join the points the same way: %s%s. Wire from the steps above."
@@ -493,7 +493,7 @@ def write(requirements_path, out, circuit_path=None):
     if not planned.layout:
         return WriteResult(Path(out), [], not_written, [], changes)
     return WriteResult(Path(out), drawn, not_written, planned.not_kept, changes, planned.differs,
-                       breadboard_catalog.find_board_px(planned.layout).get("source"))
+                       drawing_catalog.find_board_px(planned.layout).get("source"))
 
 
 def main(argv=None):

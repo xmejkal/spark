@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
-import breadboard_catalog  # noqa: E402
+from spark.breadboard import drawing_catalog  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import kept_moves  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
@@ -58,7 +58,7 @@ class TheCheckTest(unittest.TestCase):
         with in_store():
             cls.read = breadboard._read_build(XIAO / "requirements.json")
         cls.layout = breadboard._plan_layout(cls.read)
-        cls.catalog = breadboard_catalog.describe_parts(cls.read, GEOMETRY)
+        cls.catalog = drawing_catalog.describe_parts(cls.read, GEOMETRY)
         cls.points = cls.read.steps.points
 
     def differences(self, layout, points=None):
