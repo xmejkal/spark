@@ -1,0 +1,9 @@
+led-red-5mm l-7113id-ver29a: L-7113ID T-1 3/4 (5mm) Solid State Lamp Rev V.29A, 09/04/2020 (Spec No DSAA6645)
+    <spark-home>/sources/7564b2b9d091065136b2710e29814f53392f596d8e6483ea7690ca0a3569e26a/L-7113ID(Ver.29A).pdf  MISSING
+    cited by led-red-5mm pin_order_proof — Package Dimensions, page 1
+    cited by led-red-5mm body_mm — Package Dimensions, page 1
+    cited by led-red-5mm facts.forward_voltage_v — Electrical / Optical Characteristics, page 2
+    cited by led-red-5mm facts.forward_voltage_max_v — Electrical / Optical Characteristics, page 2
+    cited by led-red-5mm facts.max_continuous_current_ma — Absolute Maximum Ratings, page 2
+    cited by led-red-5mm facts.peak_wavelength_nm — Electrical / Optical Characteristics, page 2
+    cited by led-red-5mm facts.viewing_angle_deg — Selection Guide, page 1

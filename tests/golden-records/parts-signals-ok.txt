@@ -1,0 +1,14 @@
+{
+  "signals": [
+    {
+      "name": "BUTTON",
+      "needs": [],
+      "from": "tactile-button"
+    },
+    {
+      "name": "STATUS_LED",
+      "needs": [],
+      "from": "led-red-5mm"
+    }
+  ]
+}

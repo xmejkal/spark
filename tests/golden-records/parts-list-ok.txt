@@ -1,0 +1,8 @@
+  dfr0534-module               audio          library   DFRobot DFR0534 voice module
+  jst-ph-2-power-inlet         connector      library   JST PH 2-pin power inlet
+  l9110s-module                motor-driver   library   L9110S dual motor driver module
+  led-red-5mm                  indicator      library   Kingbright L-7113ID 5 mm red LED
+  max98357a-dfr0954            audio-amplifier library   DFRobot DFR0954 MAX98357A I2S amplifier
+  speaker-terminal             connector      library   2-pin speaker terminal (JST PH)
+  tactile-button               button         library   6x6 mm tactile push button
+  vl6180x-breakout             rangefinder    library   VL6180X time-of-flight rangefinder breakout

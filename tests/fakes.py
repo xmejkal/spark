@@ -287,6 +287,25 @@ def fake_tsci(root, builds_when, circuit=(), binary=None):
     return binary
 
 
+#: The fake pdf-text tool: one canned page for `-f 1`, and exit 1 for any other page, so a read stops after page 1.
+PDFTOTEXT = """#!/bin/sh
+# A fake pdftotext (P715): page 1 is a canned table, every other page is past the end.
+[ "$1" = "-v" ] && { echo "pdftotext version 0.0.0-fake" >&2; exit 0; }
+case " $* " in
+  *" -f 1 "*) printf 'Forward voltage   VF   2.0 V\nForward current   IF   20 mA\n'; exit 0 ;;
+esac
+exit 1
+"""
+
+
+def fake_pdftotext(binary):
+    """A `pdftotext` at `binary` that prints one canned page and ends at page 2, with shell builtins alone, so it runs
+    on a PATH that holds nothing else (P715). Returns `binary`."""
+    Path(binary).write_text(PDFTOTEXT)
+    Path(binary).chmod(0o755)
+    return binary
+
+
 class FakeTscircuitExport:
     """Fake: stands in for tabbed_page.TscircuitExport, giving each form the result a test sets, or a small marked SVG,
     and keeping the circuit paths it was asked for."""

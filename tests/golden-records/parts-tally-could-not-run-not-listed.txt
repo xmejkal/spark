@@ -1,0 +1,2 @@
+--- stderr ---
+parts.py: <project-dir> is not on your list of projects, so no step of it was marked — mark a step with parts.py --step <project> <step> in a Claude Code session: that puts it on the list

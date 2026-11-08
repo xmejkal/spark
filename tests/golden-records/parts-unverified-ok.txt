@@ -1,0 +1,7 @@
+  2 thing(s) nobody has checked:
+
+  vl6180x-breakout.idle_current_ma = None
+      It free-runs while the host sleeps, so on a battery design it is one of the two or three loads that decide the answer.
+  vl6180x-breakout.pin_order = [None, 'VIN', 'GND', 'SDA', 'SCL', None, 'GPIO1']
+      a pin order read wrong reverses a supply or swaps a signal
+  next: parts.py --fact-set vl6180x-breakout <file> — write a checked result back with its source

@@ -1,0 +1,2 @@
+  active  firebeetle2-esp32s3 (library): ok
+         xiao-esp32-c6 (library): ok

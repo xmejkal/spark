@@ -1,0 +1,12 @@
+  set light: does null → "indicate"; what null → "status"
+--- .spark/needs.json ---
+{
+  "schema": 1,
+  "needs": [
+    {
+      "id": "light",
+      "does": "indicate",
+      "what": "status"
+    }
+  ]
+}

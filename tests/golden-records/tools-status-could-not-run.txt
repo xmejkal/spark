@@ -1,0 +1,19 @@
+  spark's tools — personal: <spark-home>/tools.json · project: <project-dir>/.spark/tools.json
+
+  [off ] bench             sigrok is off unless you turn it on — /spark:setup add sigrok
+  [????] board-engine      tscircuit needs bun: bun (bun) is not installed — install: npm install -g bun — needs Node (nodejs.org) first
+  [ok  ] board-shell       mpremote — <python>
+  [????] chip-docs         espressif-docs needs node: node (node) is not installed — install: brew install node — needs Homebrew (brew.sh) first
+  [????] diagram-converter circuit-to-wokwi needs node: node (node) is not installed — install: brew install node — needs Homebrew (brew.sh) first
+  [????] firmware-image    firmware-image (micropython-esp32s3) is not installed — install: /spark:setup add micropython-esp32s3
+  [????] flasher           esptool 3.3 is too old: spark needs 5.0 or newer. Install: python3 -m pip install --user esptool==5.5.0 — needs Python 3 first
+  [????] js-runtime        js-runtime (node) is not installed — install: brew install node — needs Homebrew (brew.sh) first
+  [ok  ] littlefs          littlefs-python — <python>
+  [????] parts-search      jlcpcb needs node: node (node) is not installed — install: brew install node — needs Homebrew (brew.sh) first
+  [ok  ] pdf-text          pdftotext — <fakes>/bin/pdftotext
+  [????] simulator         simulator (wokwi-cli) is not installed — install: /spark:setup — wokwi-cli 0.28.0 from github.com/wokwi/wokwi-cli/releases, its checksum checked
+  [!   ] simulator         needs a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci
+  [????] ts-runtime        ts-runtime (bun) is not installed — install: npm install -g bun — needs Node (nodejs.org) first
+  [off ] wokwi-mcp         wokwi-mcp is off unless you turn it on — /spark:setup add wokwi-mcp
+
+  6 to install: wokwi-cli bun tscircuit node micropython-esp32s3 esptool

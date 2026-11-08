@@ -1,0 +1,7 @@
+  new red-leds: red leds × 5
+--- {store}/drawer/red-leds.json ---
+{
+  "schema": 1,
+  "label": "red leds",
+  "count": 5
+}

@@ -1,0 +1,2 @@
+  * firebeetle2-esp32s3 (library)
+    xiao-esp32-c6 (library)

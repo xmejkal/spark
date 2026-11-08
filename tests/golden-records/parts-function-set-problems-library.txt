@@ -1,0 +1,2 @@
+--- stderr ---
+parts.py: led-red-5mm is in spark's own library, which is changed in spark's repository, not by parts.py

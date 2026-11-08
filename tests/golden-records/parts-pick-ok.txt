@@ -1,0 +1,36 @@
+  light: led-red-5mm
+  press: tactile-button
+  led-red-5mm: to get — known, not owned
+  tactile-button: to get — known, not owned
+  listed button light on your projects
+  wrote to your history: 2 reused
+--- .spark/needs.json ---
+{
+  "schema": 1,
+  "needs": [
+    {
+      "id": "light",
+      "does": "indicate",
+      "what": "status",
+      "pick": [
+        {
+          "part": "led-red-5mm"
+        }
+      ]
+    },
+    {
+      "id": "press",
+      "does": "sense",
+      "what": "button",
+      "pick": [
+        {
+          "part": "tactile-button"
+        }
+      ]
+    }
+  ]
+}
+--- {store}/projects.json ---
+{
+  "button light": "<project-dir>"
+}

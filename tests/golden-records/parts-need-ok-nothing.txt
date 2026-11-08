@@ -1,0 +1,2 @@
+  nothing in the library matches 'teleporter'.
+  Research it: /spark:research "teleporter"  — vendors in order: dfrobot, seeed; sellers: none named in the brief

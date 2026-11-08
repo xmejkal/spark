@@ -1,0 +1,30 @@
+  --list             every record a project can build with, and where it comes from
+  --show             one record, wherever it lives, and its CONFLICT lines: on verified facts a problem (exit 1), on unverified ones an assumption
+  --validate         every record a project can build with, against the contract
+  --signals          the signals these parts ask for, as assign_pins.py input
+  --unverified       what nobody has checked about these parts, one assumption a fact
+  --need             what exists for a need, before researching: words matched in id, name, kind, alias; --matcher picks the matcher
+  --skeleton         write a record to fill in, to the project's parts/  [writes]
+  --sources          ask every URL a record cites whether it answers  [network]
+  --fetch            download the datasheets and images a record cites, into your store  [network, writes]
+  --keep             put a file you already have into your store; answers its documents entry  [writes]
+  --read             read a datasheet page by page and stop where every --want fact is on a table row
+  --kept             find a kept document by every word, with no network, and every fact resting on it
+  --promote          catalog → the project's parts/, or the project's parts/ → the plugin's library  [writes]
+  --catalog          every record research has kept, chosen or not
+  --drawer           what you own: label, count, the record it is, unsure, skip — 20 at a time
+  --drawer-set       set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds; with --project, an `is` may name a record in that project, such as one /spark:research just wrote; an entry may also say its about, description and tags  [writes]
+  --drawer-import    apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule  [writes]
+  --function-set     set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library  [writes]
+  --fact-set         fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how; a text in it has its control characters turned into a space and is cut at 1000 characters, and a key with a control character is refused), or its about, description and tags, or a board's onboard LED or button level, `pin_roles` {onboard_led|onboard_button: {active_level: {value, verified, source}}} (a board of the project's own, merged role by role), in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library  [writes]
+  --audit            every record in every layer and every drawer link: what owes facts, what is broken
+  --needs            a project's needs: what each does, its condition, its mark
+  --needs-set        set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds  [writes]
+  --match            each of a project's needs with the store's candidates: owned first, what each owes, each with its score and why; --matcher picks the matcher that ranks them; a board that serves a need through its own LED, button or display has `limits`, the sentences for what a passed run does not test of it
+  --offer            what one offer says of itself, for the chooser to read: a record's id or a drawer entry's key — about, description, tags, what it does, its names, power and size. --project reads the project's own records
+  --pick             set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; what it notes is under `notes`: a board given a need that its own part serves says what a run does not test of the part, and the other choice  [writes]
+  --needs-drop       drop a need and its pick from .spark/needs.json and release only the holds of the dropped pick (every other hold stays); --dry-run says what it would do; history stays, and requirements.json is not changed: a note says when it still lists the part  [writes]
+  --requirements     the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; board_only when the board itself serves every need  [writes]
+  --step             a spine step of a project starts now, in this Claude Code session — the cost line counts its transcript from here  [writes]
+  --tally            the cost line: the picks, how many came from the store (known to spark before the project: its library, your store, your projects) and how many you own, and what the project's steps cost
+  --describe         every operation, its arguments, effects and output — this list

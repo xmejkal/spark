@@ -75,23 +75,23 @@ A golden is a file with the expected output of one script run. `tests/test_golde
 `tests/golden/`, for `look.py`, `deploy.py`, `grant.py --check`, `live.py` and `reach.py`
 ([P380](https://github.com/xmejkal/spark/issues/487)), and `tests/test_golden_firmware.py` those of `run_scenario.py`,
 `flash_image.py` and `import_firmware.py` in `tests/golden-firmware/`
-([P683](https://github.com/xmejkal/spark/issues/920)): its `wokwi-cli` is a shim that runs `tests/fake_wokwi_cli.py`
-only with a fake token, so no golden spends a Wokwi minute. `tests/test_golden_breadboard.py` keeps those of
-`breadboard.py` in `tests/golden-breadboard/` ([P686](https://github.com/xmejkal/spark/issues/924)): each Case copies a
-fixture of `tests/data/breadboard/`, and the golden adds the files written beside the sheet. Each bench or firmware test
-runs one script as a child process in an S3 project that `tests/golden_bench.py` builds. The fake esptool, mpremote and
-serial in `tests/fake_modules/` come first on the child's `PYTHONPATH`, and the child runs with `TZ=UTC` and a store of
-its own. The scripts mask their own paths (P677: `<project>`, `sim/...`, `<store>`, `~/...`), and the test puts
-placeholders for the rest: `<spark-home>`, `<project-dir>`, the image hash and the time. A golden's name is the op, the
-status and the scenario: `look-could-not-run-two-boards.json`. A bench Case may name a stderr golden (`.stderr` added);
-the other nets add stderr after `--- stderr ---`. A bench Case may also plant a file in the store, such as a deploy
-grant that takes `deploy.py` past the gate ([P508](https://github.com/xmejkal/spark/issues/703)).
-`tests/test_golden_checks.py` keeps those of the six check CLIs in `tests/golden-checks/`
+([P683](https://github.com/xmejkal/spark/issues/920)): its `wokwi-cli` shim runs `tests/fake_wokwi_cli.py` with a fake
+token only, so no golden spends a Wokwi minute. `tests/test_golden_breadboard.py` keeps those of `breadboard.py` in
+`tests/golden-breadboard/` ([P686](https://github.com/xmejkal/spark/issues/924)): each Case copies a fixture of
+`tests/data/breadboard/`, and the golden adds the files written beside the sheet. A bench or firmware test runs one
+script as a child in an S3 project that `tests/golden_bench.py` builds. The fake esptool, mpremote and serial of
+`tests/fake_modules/` lead the child's `PYTHONPATH`, and it runs with `TZ=UTC` and its own store. The scripts mask their
+own paths (P677: `<project>`, `sim/...`, `<store>`, `~/...`), the test the rest: `<spark-home>`, `<project-dir>`, the
+image hash and the time. A golden's name is the op, status and scenario: `look-could-not-run-two-boards.json`. A bench
+Case may name a stderr golden (`.stderr`); the others add stderr after `--- stderr ---`. A bench or records Case may
+plant a file in the store, such as a deploy grant ([P508](https://github.com/xmejkal/spark/issues/703)).
+`tests/test_golden_checks.py` keeps the six check CLIs' in `tests/golden-checks/`
 ([P687](https://github.com/xmejkal/spark/issues/925)), run in the button-light fixture: the child's `PATH` holds a `gh`
-shim that runs `tests/fake_gh.py`, its proxies a closed port. `tests/test_golden_design.py` keeps those of the five
-design and build CLIs in `tests/golden-design/` ([P699](https://github.com/xmejkal/spark/issues/946)), with a fake
-`tsci` and converter on that `PATH`. A new board or part record changes these goldens. To change what a script prints,
-write that op's goldens again (an accept run writes no other op's), read `git diff tests/golden*`, and run again:
+shim that runs `tests/fake_gh.py`, its proxies a closed port. `tests/test_golden_design.py` keeps the five design and
+build CLIs' in `tests/golden-design/` ([P699](https://github.com/xmejkal/spark/issues/946)), with a fake `tsci` and
+converter on that `PATH`. `tests/test_golden_records.py` (P715) keeps those of `parts.py`, `boards.py`, `tools.py` and
+`cost.py`, with a fake `pdftotext` alone on that `PATH`. A new board, part or tool record changes these goldens. To
+change what a script prints, write that op's goldens again, read `git diff tests/golden*`, and run again:
 
 ```sh
 SPARK_ACCEPT=look python3 -m unittest tests.test_golden_bench   # writes look's goldens, then fails
@@ -99,6 +99,7 @@ SPARK_ACCEPT=run-scenario python3 -m unittest tests.test_golden_firmware   # or 
 SPARK_ACCEPT=breadboard python3 -m unittest tests.test_golden_breadboard
 SPARK_ACCEPT=check-all python3 -m unittest tests.test_golden_checks   # or the op of another check CLI
 SPARK_ACCEPT=check-spine python3 -m unittest tests.test_golden_design   # or assign-pins, emit-board, emit-footprint, init-project
+SPARK_ACCEPT=parts python3 -m unittest tests.test_golden_records   # or boards, tools, cost
 ```
 
 **The second rule: every fix that holds logic is mutation-tested.** Before the pull request, the council's mutation
@@ -298,11 +299,10 @@ role words (Operation, Strategy, Adapter, Value, Renderer and the rest) live in 
 Spark handles one board per project folder today. A gadget with two boards, such as rc-car's car and remote, is two
 project folders, each with its own `init_project.py` run and its own `parts/`. Until a board folder has its own
 `.spark/`, the build and `check_all.py --project` both read its parent's rules and parts
-([P319](https://github.com/xmejkal/spark/issues/403)). When `check_all.py --project` or
-`init_project.py` finds two built designs, `design.one_board_message` says so and names a `--circuit` path. Many
-boards in one project come with v0.13 ([#94](https://github.com/xmejkal/spark/issues/94)): a board is a folder, and
-the project lists the folders. The decision and its costs are in the P318 finding, in
-[PR #404](https://github.com/xmejkal/spark/pull/404).
+([P319](https://github.com/xmejkal/spark/issues/403)). When `check_all.py --project` or `init_project.py` finds two
+built designs, `design.one_board_message` says so and names a `--circuit` path. Many boards in one project come with
+v0.13 ([#94](https://github.com/xmejkal/spark/issues/94)): a board is a folder, and the project lists the folders. The
+decision and its costs are in the P318 finding, in [PR #404](https://github.com/xmejkal/spark/pull/404).
 
 ## The docs name only what is there
 

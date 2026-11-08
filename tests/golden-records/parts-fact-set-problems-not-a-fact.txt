@@ -1,0 +1,2 @@
+--- stderr ---
+parts.py: a fact write is a JSON object of facts the chain reads: footprint, pin_order, pin_order_proof, body_mm, simulation, or `facts` entries by name; or of what a record says of itself: about, description, tags

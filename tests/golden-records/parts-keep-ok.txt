@@ -1,0 +1,10 @@
+{
+  "url": "http://127.0.0.1:9/datasheet.pdf",
+  "sha256": "52d4d0818e899676cc5d6b002096ebd21d4108b2df2bb7d7cc4717d38325a0b3",
+  "file": "sheet.pdf",
+  "retrieved": "<day>",
+  "title": null,
+  "version": null
+}
+--- {store}/sources/52d4d0818e899676cc5d6b002096ebd21d4108b2df2bb7d7cc4717d38325a0b3/sheet.pdf ---
+%PDF-1.4 golden

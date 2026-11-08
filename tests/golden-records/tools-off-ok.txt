@@ -1,0 +1,7 @@
+  pdftotext is off (<project-dir>/.spark/tools.json)
+--- .spark/tools.json ---
+{
+  "pdftotext": {
+    "on": false
+  }
+}

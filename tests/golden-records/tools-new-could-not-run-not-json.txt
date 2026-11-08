@@ -1,0 +1,2 @@
+--- stderr ---
+tools.py: my-sim: the entry is not JSON (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))

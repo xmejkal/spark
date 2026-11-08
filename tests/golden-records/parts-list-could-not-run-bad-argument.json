@@ -1,0 +1,1 @@
+{"envelope":1,"tool":"parts","op":"list","status":"could-not-run","data":null,"problems":[],"unchecked":[{"sentence":"argument --from: -1 is below 0","fix":"parts.py --describe --json lists every operation and its arguments"}],"next":[],"truncated":null,"notes":[],"assumptions":[]}
