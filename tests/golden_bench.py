@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from spark.bench import board_look  # noqa: E402
 import boards  # noqa: E402
 import run_scenario  # noqa: E402
-import sim_project  # noqa: E402
+from spark.firmware import sim_project  # noqa: E402
 from micropython_fakes import fake_interpreter  # noqa: E402
 
 GOLDEN_DIR = ROOT / "tests" / "golden"

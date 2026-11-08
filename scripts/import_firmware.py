@@ -45,8 +45,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import firmware_codes  # noqa: E402
-from firmware_codes import Refusal  # noqa: E402
+from spark.firmware import firmware_codes  # noqa: E402
+from spark.firmware.firmware_codes import Refusal  # noqa: E402
 from spark.core.outcomes import EXIT_FOR, answer  # noqa: E402
 
 STAND_IN = Path(__file__).resolve().parent / "stand_in"

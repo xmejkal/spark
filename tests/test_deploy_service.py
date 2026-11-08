@@ -22,7 +22,7 @@ from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 import flash_image  # noqa: E402
 from spark.bench import flasher  # noqa: E402
-import project_image  # noqa: E402
+from spark.firmware import project_image  # noqa: E402
 from spark.bench import ready_probe  # noqa: E402
 import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402

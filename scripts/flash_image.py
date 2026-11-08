@@ -31,8 +31,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 import boards
-import firmware_codes
-from firmware_codes import Refusal
+from spark.firmware import firmware_codes
+from spark.firmware.firmware_codes import Refusal
 import store
 import tools
 

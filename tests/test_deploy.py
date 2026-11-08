@@ -24,9 +24,9 @@ import deploy  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 import flash_image  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
-from project_image import DeployError  # noqa: E402
+from spark.firmware.project_image import DeployError  # noqa: E402
 import run_scenario  # noqa: E402
-import sim_project  # noqa: E402
+from spark.firmware import sim_project  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeOutsideWorld  # noqa: E402

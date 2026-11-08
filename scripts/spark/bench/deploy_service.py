@@ -21,7 +21,7 @@ from spark.bench import deploy_gate
 import deploy_record_store
 from spark.bench import download_mode
 from spark.bench import ready_probe
-from project_image import DeployError, ProjectImage
+from spark.firmware.project_image import DeployError, ProjectImage
 from spark.core.events import Event
 
 #: Value: what `plan` returns. `flasher` is the Flasher, `commands` are the flash commands it builds, `mpremote` is

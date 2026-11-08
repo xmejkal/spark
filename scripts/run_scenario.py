@@ -42,11 +42,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import flash_image
-from firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRMWARE_LINE_BAD, NEVER_READY, NO_MAIN_PY, NO_SIM_PROJECT, NO_TOKEN,
+from spark.firmware.firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRMWARE_LINE_BAD, NEVER_READY, NO_MAIN_PY, NO_SIM_PROJECT, NO_TOKEN,
                             RUN_INPUT_UNUSABLE, SIMULATOR_CANNOT_START, SIMULATOR_HUNG, SIMULATOR_LOST,
                             STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING, Refusal)
 from spark.core import outcomes
-import sim_project
+from spark.firmware import sim_project
 import tools
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_FOR, OK, PROBLEMS
 from spark.core.text_guards import guard_lines

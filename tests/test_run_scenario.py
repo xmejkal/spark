@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_scenario  # noqa: E402
-import sim_project  # noqa: E402
+from spark.firmware import sim_project  # noqa: E402
 import flash_image  # noqa: E402
 import tools  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, OK, PROBLEMS  # noqa: E402

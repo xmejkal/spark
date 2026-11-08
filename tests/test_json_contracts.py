@@ -46,7 +46,7 @@ import check_vendor_pins  # noqa: E402
 import compare_design  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
-import firmware_codes  # noqa: E402
+from spark.firmware import firmware_codes  # noqa: E402
 import grant  # noqa: E402
 import import_firmware  # noqa: E402
 from spark.core import outcomes  # noqa: E402

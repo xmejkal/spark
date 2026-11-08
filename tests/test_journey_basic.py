@@ -40,7 +40,7 @@ import check_spine  # noqa: E402
 import deploy  # noqa: E402
 import design  # noqa: E402
 import run_scenario  # noqa: E402
-import sim_project  # noqa: E402
+from spark.firmware import sim_project  # noqa: E402
 import tools  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"

@@ -28,8 +28,8 @@ import brief
 import deploy_record_store
 from spark.bench import flasher
 from spark.core import outcomes
-import project_image
-import sim_project
+from spark.firmware import project_image
+from spark.firmware import sim_project
 import tools
 from spark.core.events import INDENT
 from spark.core.text_guards import ValueMessageError, printable

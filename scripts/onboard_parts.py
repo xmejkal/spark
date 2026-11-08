@@ -10,7 +10,7 @@ import boards
 import breadboard
 import design
 import provenance
-import sim_project
+from spark.firmware import sim_project
 
 
 # --- MVP ---

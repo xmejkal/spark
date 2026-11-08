@@ -13,10 +13,10 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import project_image  # noqa: E402
+from spark.firmware import project_image  # noqa: E402
 import run_scenario  # noqa: E402
 import store  # noqa: E402
-from project_image import DeployError, ProjectImage  # noqa: E402
+from spark.firmware.project_image import DeployError, ProjectImage  # noqa: E402
 
 IMAGE = b"image"
 DIGEST = hashlib.sha256(IMAGE).hexdigest()

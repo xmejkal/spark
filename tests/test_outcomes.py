@@ -25,7 +25,7 @@ import deploy_record_store  # noqa: E402
 import boards  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import run_scenario  # noqa: E402
-import sim_project  # noqa: E402
+from spark.firmware import sim_project  # noqa: E402
 from test_boards import DEFINITION, kept_definition_board  # noqa: E402
 
 MAC = "8c:bf:ea:00:00:01"
