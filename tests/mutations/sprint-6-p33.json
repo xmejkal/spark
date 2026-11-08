@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "the toolchain is unpinned again (P33)",
   "find": "\"dependencies\": {\"@tscircuit/cli\": pinned[\"version\"], \"tscircuit\": pinned[\"core\"]}",
   "replace": "\"dependencies\": {\"@tscircuit/cli\": \"*\", \"tscircuit\": \"*\"}"

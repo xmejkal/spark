@@ -6,7 +6,7 @@
   "replace": "    if False:\n        return stages + [Stage(\"parts\", COULD_NOT_RUN,"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "--force destroys an answered brief again (R13)",
   "find": "        if brief and has_answers(path, payload):",
   "replace": "        if False:"

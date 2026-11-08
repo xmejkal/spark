@@ -65,7 +65,7 @@ from spark.build import build_codes  # noqa: E402
 from spark.breadboard import drawing, sheet, tabbed_page  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
-import init_project  # noqa: E402
+from spark.build import project_setup  # noqa: E402
 from spark.design import needs  # noqa: E402
 from spark.design import netlist  # noqa: E402
 import onboard_parts  # noqa: E402
@@ -355,9 +355,9 @@ def core_note(version):
     Silence means they agree. A build is never failed for this — a newer core may be perfectly
     good — but it is never passed in silence either.
     """
-    if version in (tools.UNKNOWN_VERSION, init_project.PINNED_CORE):
+    if version in (tools.UNKNOWN_VERSION, project_setup.PINNED_CORE):
         return ""
-    return "; the documents were measured on core %s" % init_project.PINNED_CORE
+    return "; the documents were measured on core %s" % project_setup.PINNED_CORE
 
 
 def run(requirements, workdir, toolchain=None, project=None, from_library=False, firmware=None):

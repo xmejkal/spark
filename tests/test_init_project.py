@@ -32,6 +32,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.checks import physics_check  # noqa: E402
 import init_project  # noqa: E402
+from spark.build import project_setup  # noqa: E402
 import store  # noqa: E402
 
 
@@ -52,13 +53,13 @@ class WhatItWritesTest(unittest.TestCase):
         root = Path(tempfile.mkdtemp())
         (root / ".spark").mkdir()
         (root / ".spark" / "tools.json").write_text(json.dumps({"tscircuit": {"version": "0.1.2200", "core": "0.0.2700"}}))
-        dependencies = init_project.package_file(root)["dependencies"]
+        dependencies = project_setup.package_file(root)["dependencies"]
         self.assertEqual(dependencies, {"@tscircuit/cli": "0.1.2200", "tscircuit": "0.0.2700"})
 
     def test_the_pins_are_the_tools_list_s(self):
         import tools
         entry = tools.merged()["tools"]["tscircuit"]
-        self.assertEqual((init_project.PINNED_TSCI, init_project.PINNED_CORE), (entry["version"], entry["core"]))
+        self.assertEqual((project_setup.PINNED_TSCI, project_setup.PINNED_CORE), (entry["version"], entry["core"]))
 
     def setUp(self):
         self.root = a_project()
@@ -90,24 +91,24 @@ class WhatItWritesTest(unittest.TestCase):
         import re
         pinned = json.loads((self.root / "package.json").read_text())["dependencies"]["@tscircuit/cli"]
         self.assertRegex(pinned, r"^\d+\.\d+\.\d+$", "an exact version, not a range: %r" % pinned)
-        self.assertEqual(pinned, init_project.PINNED_TSCI)
+        self.assertEqual(pinned, project_setup.PINNED_TSCI)
         documented = re.search(r"tsci (\d+\.\d+\.\d+)", (ROOT / "commands" / "build.md").read_text())
         self.assertIsNotNone(documented, "build.md's example output names the core it was run with")
-        self.assertEqual(documented.group(1), init_project.PINNED_CORE,
+        self.assertEqual(documented.group(1), project_setup.PINNED_CORE,
                          "the documents show core %s and the pinned CLI carries %s"
-                         % (documented.group(1), init_project.PINNED_CORE))
+                         % (documented.group(1), project_setup.PINNED_CORE))
 
     def test_the_two_version_numbers_are_not_the_same_kind_of_thing(self):
         # The guard against re-conflating them. `@tscircuit/cli` numbers its releases 0.1.2xxx and
         # its 0.0.x line stopped at 0.0.394; `tscircuit` is on 0.0.2xxx. A pin that looks like a
         # core version is the defect P51 fixed, and it is invisible without a network call.
-        self.assertNotEqual(init_project.PINNED_TSCI, init_project.PINNED_CORE)
-        self.assertTrue(init_project.PINNED_TSCI.startswith("0.1."),
+        self.assertNotEqual(project_setup.PINNED_TSCI, project_setup.PINNED_CORE)
+        self.assertTrue(project_setup.PINNED_TSCI.startswith("0.1."),
                         "the CLI's own line is 0.1.x; %r looks like a core version"
-                        % init_project.PINNED_TSCI)
-        self.assertTrue(init_project.PINNED_CORE.startswith("0.0."),
+                        % project_setup.PINNED_TSCI)
+        self.assertTrue(project_setup.PINNED_CORE.startswith("0.0."),
                         "the core's line is 0.0.2xxx; %r looks like a CLI version"
-                        % init_project.PINNED_CORE)
+                        % project_setup.PINNED_CORE)
 
     def test_the_core_is_pinned_too_because_the_cli_takes_it_as_a_wildcard_peer(self):
         # THE DEFECT P51 FIXED. `@tscircuit/cli` declares `tscircuit: "*"` as a peerDependency, so
@@ -116,7 +117,7 @@ class WhatItWritesTest(unittest.TestCase):
         # 0.0.2687, the same CLI version installed here weeks ago reports 0.0.2600. `tscircuit` was
         # never in the package file at all, so every project spark ever made took the newest core.
         deps = json.loads((self.root / "package.json").read_text())["dependencies"]
-        self.assertEqual(deps.get("tscircuit"), init_project.PINNED_CORE,
+        self.assertEqual(deps.get("tscircuit"), project_setup.PINNED_CORE,
                          "the core is unpinned, so a new project gets whatever npm has newest")
         self.assertRegex(deps["tscircuit"], r"^\d+\.\d+\.\d+$", "an exact version, not a range")
 
@@ -124,8 +125,8 @@ class WhatItWritesTest(unittest.TestCase):
         # W1's shape, for the toolchain: a build on a different core is not failed — a newer core
         # may be perfectly good — but it is never passed in silence either.
         import check_spine
-        self.assertEqual(check_spine.core_note(init_project.PINNED_CORE), "")
-        self.assertIn(init_project.PINNED_CORE, check_spine.core_note("0.0.9999"))
+        self.assertEqual(check_spine.core_note(project_setup.PINNED_CORE), "")
+        self.assertIn(project_setup.PINNED_CORE, check_spine.core_note("0.0.9999"))
         self.assertEqual(check_spine.core_note("unknown version"), "",
                          "a version nobody could read is not a drift claim")
 
@@ -155,12 +156,12 @@ class TheThreeFunctionsTheAuditFoundUnnamedTest(unittest.TestCase):
 
     def test_nets_in_reads_the_nets_that_exist_and_nothing_from_nowhere(self):
         root = a_project(nets=("GND", "V33", "SDA"))
-        self.assertEqual(init_project.nets_in(root / "dist" / "board" / "circuit.json"), ["GND", "SDA", "V33"])
-        self.assertEqual(init_project.nets_in(root / "nowhere.json"), [])
-        self.assertEqual(init_project.nets_in(None), [])
+        self.assertEqual(project_setup.nets_in(root / "dist" / "board" / "circuit.json"), ["GND", "SDA", "V33"])
+        self.assertEqual(project_setup.nets_in(root / "nowhere.json"), [])
+        self.assertEqual(project_setup.nets_in(None), [])
 
     def test_rules_for_puts_rails_and_buses_where_they_belong_with_nothing_measured(self):
-        rules = init_project.rules_for(["GND", "V33", "SDA", "SCL"])
+        rules = project_setup.rules_for(["GND", "V33", "SDA", "SCL"])
         self.assertEqual(set(rules["physics"]["rails"]), {"GND", "V33"})
         self.assertEqual(set(rules["i2c_buses"]), {"SDA", "SCL"})
         self.assertTrue(all(rail.get("max_current_a") is None for rail in rules["physics"]["rails"].values()),
@@ -169,12 +170,12 @@ class TheThreeFunctionsTheAuditFoundUnnamedTest(unittest.TestCase):
     def test_has_answers_tells_a_filled_brief_from_the_template(self):
         root = Path(tempfile.mkdtemp())
         blank, filled, broken = root / "blank.json", root / "filled.json", root / "broken.json"
-        blank.write_text(json.dumps(init_project.PROJECT_TEMPLATE))
-        filled.write_text(json.dumps(dict(init_project.PROJECT_TEMPLATE, goal="water the beds")))
+        blank.write_text(json.dumps(project_setup.PROJECT_TEMPLATE))
+        filled.write_text(json.dumps(dict(project_setup.PROJECT_TEMPLATE, goal="water the beds")))
         broken.write_text("{not json")
-        self.assertFalse(init_project.has_answers(blank, init_project.PROJECT_TEMPLATE))
-        self.assertTrue(init_project.has_answers(filled, init_project.PROJECT_TEMPLATE))
-        self.assertTrue(init_project.has_answers(broken, init_project.PROJECT_TEMPLATE), "whatever is in it, it is not ours to replace")
+        self.assertFalse(project_setup.has_answers(blank, project_setup.PROJECT_TEMPLATE))
+        self.assertTrue(project_setup.has_answers(filled, project_setup.PROJECT_TEMPLATE))
+        self.assertTrue(project_setup.has_answers(broken, project_setup.PROJECT_TEMPLATE), "whatever is in it, it is not ours to replace")
 
 
 class WhatItRefusesToGuessTest(unittest.TestCase):
@@ -200,7 +201,7 @@ class WhatItRefusesToGuessTest(unittest.TestCase):
         self.assertTrue(all(f.severity != "problem" for f in findings))
 
     def test_it_lists_every_field_nobody_answered(self):
-        unanswered = init_project.nulls_in(self.rules)
+        unanswered = project_setup.nulls_in(self.rules)
         self.assertIn("physics.rails.V33.max_current_a", unanswered)
         self.assertIn("physics.i2c_hz", unanswered)
 
@@ -266,51 +267,51 @@ class ForceMustNotEatWhatSomebodyMeasuredTest(unittest.TestCase):
     """
 
     def test_a_stated_value_beats_a_derived_null(self):
-        self.assertEqual(init_project.merged({"i2c_hz": 400000}, {"i2c_hz": None}),
+        self.assertEqual(project_setup.merged({"i2c_hz": 400000}, {"i2c_hz": None}),
                          {"i2c_hz": 400000})
 
     def test_a_missing_key_is_filled_in(self):
-        self.assertEqual(init_project.merged({}, {"i2c_hz": None}), {"i2c_hz": None})
+        self.assertEqual(project_setup.merged({}, {"i2c_hz": None}), {"i2c_hz": None})
 
     def test_a_null_somebody_left_is_filled_in(self):
-        self.assertEqual(init_project.merged({"rails": None}, {"rails": {"V33": {}}}),
+        self.assertEqual(project_setup.merged({"rails": None}, {"rails": {"V33": {}}}),
                          {"rails": {"V33": {}}})
 
     def test_nested_answers_merge_rather_than_being_replaced(self):
         was = {"physics": {"i2c_hz": 400000, "rails": {"V33": {"max_current_a": 0.5}}}}
         now = {"physics": {"i2c_hz": None, "rails": {"GND": {"max_current_a": None}}}}
-        after = init_project.merged(was, now)
+        after = project_setup.merged(was, now)
         self.assertEqual(after["physics"]["i2c_hz"], 400000)
         self.assertEqual(after["physics"]["rails"]["V33"]["max_current_a"], 0.5)
         self.assertIn("GND", after["physics"]["rails"], "a new rail was not added")
 
     def test_an_empty_list_is_seeded(self):
         # Exactly where P45's lists stayed: empty and indistinguishable from "nobody looked".
-        self.assertEqual(init_project.merged({"must_not_float": []},
+        self.assertEqual(project_setup.merged({"must_not_float": []},
                                              {"must_not_float": [["U1", "IN"]]}),
                          {"must_not_float": [["U1", "IN"]]})
 
     def test_a_list_somebody_filled_in_is_theirs(self):
         # A rule they deleted stays deleted.
-        self.assertEqual(init_project.merged({"must_not_float": [["U1", "IN"]]},
+        self.assertEqual(project_setup.merged({"must_not_float": [["U1", "IN"]]},
                                              {"must_not_float": [["U2", "IN"]]}),
                          {"must_not_float": [["U1", "IN"]]})
 
     def test_a_key_this_tool_knows_nothing_about_is_kept(self):
-        self.assertEqual(init_project.merged({"mine": 1}, {})["mine"], 1)
+        self.assertEqual(project_setup.merged({"mine": 1}, {})["mine"], 1)
 
     def test_the_notes_take_the_derived_text_because_they_are_ours(self):
-        self.assertEqual(init_project.merged({"//x": "old"}, {"//x": "new"}), {"//x": "new"})
+        self.assertEqual(project_setup.merged({"//x": "old"}, {"//x": "new"}), {"//x": "new"})
 
     def test_what_the_records_add_to_a_filled_list_is_named(self):
-        said = init_project.not_yet_stated(
+        said = project_setup.not_yet_stated(
             {"must_not_float": [["Valve1", "SIGNAL"]]},
             {"must_not_float": [["Valve1", "SIGNAL"], ["BtnMode", "A"]]})
         self.assertEqual(len(said), 1)
         self.assertIn("BtnMode.A", said[0])
 
     def test_an_empty_list_says_nothing_because_the_merge_filled_it(self):
-        self.assertEqual(init_project.not_yet_stated({"must_not_float": []},
+        self.assertEqual(project_setup.not_yet_stated({"must_not_float": []},
                                                      {"must_not_float": [["U1", "IN"]]}), [])
 
     def test_force_through_the_command_line_keeps_the_answers(self):
@@ -473,7 +474,7 @@ class TheRulesAreSeededFromTheDesignTest(unittest.TestCase):
                              {"signal": "SCL", "pin": "SCL", "direction": "in", "bus": "i2c"}]}
 
     def test_every_declared_input_becomes_a_rule(self):
-        self.assertEqual(init_project.declared_inputs([self.L9110S]),
+        self.assertEqual(project_setup.declared_inputs([self.L9110S]),
                          [["L9110sModule", "AIA"], ["L9110sModule", "AIB"]])
 
     def test_the_rules_file_actually_carries_them(self):
@@ -481,7 +482,7 @@ class TheRulesAreSeededFromTheDesignTest(unittest.TestCase):
         # and a mutation setting `must_not_float` back to `[]` escaped a green suite because of
         # it. The defect being guarded against is the FILE coming out empty, not the function
         # returning nothing.
-        self.assertEqual(init_project.rules_for([], [self.L9110S])["must_not_float"],
+        self.assertEqual(project_setup.rules_for([], [self.L9110S])["must_not_float"],
                          [["L9110sModule", "AIA"], ["L9110sModule", "AIB"]])
 
     def test_and_the_written_file_does_too(self):
@@ -496,10 +497,10 @@ class TheRulesAreSeededFromTheDesignTest(unittest.TestCase):
     def test_a_pin_that_is_not_an_input_is_not_one(self):
         # A bidirectional bus line and an interrupt output are not floating-input rules; naming
         # every pin is how a check becomes noise.
-        self.assertEqual(init_project.declared_inputs([self.NEEDY]), [])
+        self.assertEqual(project_setup.declared_inputs([self.NEEDY]), [])
 
     def test_a_bus_the_host_must_pull_up_is_seeded(self):
-        self.assertEqual(init_project.i2c_lines([self.NEEDY])[0],
+        self.assertEqual(project_setup.i2c_lines([self.NEEDY])[0],
                          ["Vl6180xBreakout.SCL", "Vl6180xBreakout.SDA"])
 
     def test_only_a_pull_up_makes_the_bus_the_hosts(self):
@@ -508,7 +509,7 @@ class TheRulesAreSeededFromTheDesignTest(unittest.TestCase):
         # record; counting it here would hide that mistake behind a rule that passes.
         wrong = dict(self.SELF_PULLED,
                      host_parts=[{"kind": "pulldown", "pin": "SDA", "ohms": 10000, "why": "x"}])
-        host, carried = init_project.i2c_lines([wrong])
+        host, carried = project_setup.i2c_lines([wrong])
         self.assertEqual(host, [])
         self.assertIn("Ds3231.SDA", carried)
 
@@ -516,12 +517,12 @@ class TheRulesAreSeededFromTheDesignTest(unittest.TestCase):
         # The false alarm this avoids, reproduced from a real record: the irrigation DS3231's
         # own text is "Add NO pull-ups: the module carries 4.7 k on SDA and SCL". Seeding its
         # lines would report a bus nothing pulls up, on a bus that is pulled up.
-        host, carried = init_project.i2c_lines([self.SELF_PULLED])
+        host, carried = project_setup.i2c_lines([self.SELF_PULLED])
         self.assertEqual(host, [])
         self.assertEqual(carried, ["Ds3231.SCL", "Ds3231.SDA"])
 
     def test_an_empty_list_says_why_it_is_empty(self):
-        rules = init_project.rules_for([], [self.SELF_PULLED])
+        rules = project_setup.rules_for([], [self.SELF_PULLED])
         self.assertEqual(rules["i2c_buses"], [])
         self.assertIn("carries its own pull-ups", rules["//i2c_buses"])
         # the note names the MODULE, not every line of it
@@ -530,17 +531,17 @@ class TheRulesAreSeededFromTheDesignTest(unittest.TestCase):
     def test_a_bus_is_named_by_a_pin_because_no_generated_net_is_called_sda(self):
         # spark's generator wires every signal pin-to-pin. A rule naming the net SDA could only
         # ever report "no net of that name" on a board this tool produced.
-        self.assertTrue(all("." in line for line in init_project.i2c_lines([self.NEEDY])[0]))
+        self.assertTrue(all("." in line for line in project_setup.i2c_lines([self.NEEDY])[0]))
 
     def test_a_net_actually_called_sda_is_still_a_bus(self):
         # A hand-written board.tsx has one. The smart bin's does.
-        self.assertEqual(init_project.rules_for(["SDA", "SCL", "V33"], [])["i2c_buses"],
+        self.assertEqual(project_setup.rules_for(["SDA", "SCL", "V33"], [])["i2c_buses"],
                          ["SCL", "SDA"])
 
     def test_a_requirements_file_that_will_not_read_is_a_note_not_a_silence(self):
         work = Path(tempfile.mkdtemp())
         (work / "broken.requirements.json").write_text("{ not json")
-        part_list, notes = init_project.design_in(work)
+        part_list, notes = project_setup.design_in(work)
         self.assertEqual(part_list, [])
         self.assertEqual(len(notes), 1)
         self.assertIn("no rule was seeded from it", notes[0])
@@ -558,17 +559,17 @@ class TheMeasuredPinsAreSparkSTest(unittest.TestCase):
         defaults = json.loads((ROOT / "data" / "tools.json").read_text())["tscircuit"]
         try:
             with mock.patch.object(tools, "PERSONAL", personal):
-                importlib.reload(init_project)
-                self.assertEqual((init_project.PINNED_TSCI, init_project.PINNED_CORE), (defaults["version"], defaults["core"]))
+                importlib.reload(project_setup)
+                self.assertEqual((project_setup.PINNED_TSCI, project_setup.PINNED_CORE), (defaults["version"], defaults["core"]))
         finally:
-            importlib.reload(init_project)
+            importlib.reload(project_setup)
 
 class TheProjectsListTest(unittest.TestCase):
     """P95 (§5.5): /spark:init puts the project on the person's projects list, so spark finds its records."""
 
     def test_the_brief_no_longer_asks_what_you_own(self):
         """P95 (W16): what you own is the drawer's to say — /spark:drawer — not each project's."""
-        self.assertNotIn("parts_on_hand", json.dumps(init_project.PROJECT_TEMPLATE))
+        self.assertNotIn("parts_on_hand", json.dumps(project_setup.PROJECT_TEMPLATE))
 
     def test_init_puts_the_project_on_the_list(self):
         home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
@@ -585,33 +586,33 @@ class EachRefusalOfInitCarriesItsCodeTest(unittest.TestCase):
 
     def test_a_folder_that_is_not_there(self):
         gone = Path(tempfile.mkdtemp()) / "no-such-folder"
-        said = init_project.why_project_refused(gone)
+        said = project_setup.why_project_refused(gone)
         self.assertEqual((said.code, said), ("no_project_folder", "no directory at %s" % gone))
 
     def test_a_tools_file_that_cannot_be_read_is_caught_with_its_code(self):
         root = Path(tempfile.mkdtemp())
         (root / ".spark").mkdir()
         (root / ".spark" / "tools.json").write_text("{not json")
-        said = init_project.why_project_refused(root)
+        said = project_setup.why_project_refused(root)
         self.assertEqual(said.code, "tools_file_unreadable")
         self.assertTrue(said.startswith("init_project.py: "), said)
-        self.assertIsNone(init_project.why_project_refused(Path(tempfile.mkdtemp())))
+        self.assertIsNone(project_setup.why_project_refused(Path(tempfile.mkdtemp())))
 
     def test_a_board_nobody_has(self):
-        said = init_project.why_board_refused("no-such-board", Path(tempfile.mkdtemp()))
+        said = project_setup.why_board_refused("no-such-board", Path(tempfile.mkdtemp()))
         self.assertEqual(said.code, "unknown_board")
         self.assertTrue(said.startswith("no board called 'no-such-board'. Available: "), said)
-        self.assertIsNone(init_project.why_board_refused("firebeetle2-esp32s3", Path(tempfile.mkdtemp())))
+        self.assertIsNone(project_setup.why_board_refused("firebeetle2-esp32s3", Path(tempfile.mkdtemp())))
 
     def test_two_built_designs_and_nothing_to_do(self):
         root = TwoBuiltDesignsTest._with("dist/car/circuit.json", "dist/remote/circuit.json")
-        circuit, said = init_project.find_circuit(root)
+        circuit, said = project_setup.find_circuit(root)
         self.assertEqual((circuit, said.code), (None, "input_ambiguous"))
         self.assertTrue(said.startswith("2 built designs here, so the rails were NOT seeded"), said)
         one = TwoBuiltDesignsTest._with("dist/car/circuit.json")
-        self.assertEqual(init_project.find_circuit(one), (str(one / "dist/car/circuit.json"), None))
-        self.assertEqual(init_project.find_circuit(Path(tempfile.mkdtemp())), (None, None))
-        self.assertEqual(init_project.NOTHING_TO_DO.code, "nothing_to_do")
+        self.assertEqual(project_setup.find_circuit(one), (str(one / "dist/car/circuit.json"), None))
+        self.assertEqual(project_setup.find_circuit(Path(tempfile.mkdtemp())), (None, None))
+        self.assertEqual(project_setup.NOTHING_TO_DO.code, "nothing_to_do")
 # --- end MVP ---
 
 

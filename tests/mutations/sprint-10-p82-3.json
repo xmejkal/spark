@@ -18,7 +18,7 @@
   "replace": "or False:"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "a project's own pin never reaches the package file",
   "find": "    pinned = tools.merged(project)[\"tools\"][\"tscircuit\"]  # a project's own pin wins (P82)",
   "replace": "    pinned = {\"version\": PINNED_TSCI, \"core\": PINNED_CORE}"

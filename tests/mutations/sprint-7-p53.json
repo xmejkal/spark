@@ -1,24 +1,24 @@
 [
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "--force destroys a hand-filled rules file again",
   "find": "        if merge:\n            was = json.loads(path.read_text())",
   "replace": "        if False:\n            was = json.loads(path.read_text())"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "a value somebody stated is overwritten by a derived null",
   "find": "        elif key not in result or result[key] is None:",
   "replace": "        elif True:"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "a nested answer is replaced wholesale instead of merged",
   "find": "        elif isinstance(result[key], dict) and isinstance(value, dict):\n            result[key] = merged(result[key], value)",
   "replace": "        elif isinstance(result[key], dict) and isinstance(value, dict):\n            result[key] = value"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "an empty rule list is left empty, which is where P45's lists stayed",
   "find": "        elif isinstance(result[key], list) and not result[key] and value:",
   "replace": "        elif False:"
@@ -30,13 +30,13 @@
   "replace": "    circuit, ambiguous = (args.circuit, None) if args.circuit else find_circuit(project)\n    if ambiguous:\n        return EXIT_COULD_NOT_RUN\n"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "the rails get seeded from whichever design sorts first",
   "find": "            return None, Refusal(\"%d built designs here",
   "replace": "            return str(matches[0]), Refusal(\"%d built designs here"
  },
  {
-  "file": "scripts/init_project.py",
+  "file": "scripts/spark/build/project_setup.py",
   "name": "a partly-filled list never learns what the records add",
   "find": "        missing = [entry for entry in (derived.get(key) or []) if entry not in have]",
   "replace": "        missing = []"

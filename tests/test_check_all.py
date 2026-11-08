@@ -963,9 +963,9 @@ class OneCircuitConventionTest(unittest.TestCase):
         # Two copies of the glob pair, in two files, neither knowing the other existed (audit
         # A6). G10's fix made both refuse two matches; a third path added to one would not have
         # reached the other.
-        import init_project
+        from spark.build import project_setup
         self.assertEqual(check.CONVENTIONS["circuit"], ("folder", list(loader.CIRCUIT_PATHS)))
-        self.assertIs(init_project.CIRCUIT_PATHS, loader.CIRCUIT_PATHS)
+        self.assertIs(project_setup.CIRCUIT_PATHS, loader.CIRCUIT_PATHS)
 
 if __name__ == "__main__":
     unittest.main()
