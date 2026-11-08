@@ -12,7 +12,7 @@ button-and-LED board) is checked too: a point joined to it is a short.
 
 import collections
 
-import breadboard_drawing
+from spark.breadboard import drawing
 
 #: The codes of DrawingDiffersResult. A code decides; the message beside it in MESSAGES is what a person reads.
 NOT_JOINED = "not-joined"
@@ -68,7 +68,7 @@ class DrawnNets:
         so every end has a hole; `end_group` raises NotDrawn if one does not."""
         found, owner, said = [], {}, set()
         for number, point in enumerate(points):
-            ends = [(end, self.net_of(breadboard_drawing.end_group(end, self._placed, catalog))) for end in point.ends]
+            ends = [(end, self.net_of(drawing.end_group(end, self._placed, catalog))) for end in point.ends]
             if not ends:
                 continue
             first, first_net = ends[0]
@@ -80,7 +80,7 @@ class DrawnNets:
                     said.add((other, number))
                     found.append(DrawingDiffersResult(end.name, JOINED_TO_OTHER,
                                                       MESSAGES[JOINED_TO_OTHER] % (end.name, other_end.name)))
-        named = {(end.component, breadboard_drawing.end_pin(end, catalog)) for point in points for end in point.ends}
+        named = {(end.component, drawing.end_pin(end, catalog)) for point in points for end in point.ends}
         for part in self._placed.values():
             for pin, hole in part.holes.items():
                 if named & {(part.id, one) for one in self._contact.get((part.id, pin), {pin})}:

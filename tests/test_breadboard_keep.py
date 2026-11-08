@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
-import breadboard_drawing  # noqa: E402
+from spark.breadboard import drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
 import check_spine  # noqa: E402
 
@@ -29,7 +29,7 @@ DATA = ROOT / "tests" / "data" / "breadboard"
 FULL = DATA / "button-light-xiao"
 BUTTON_ONLY = DATA / "button-only-xiao"
 LED_ONLY = DATA / "led-only-xiao"
-GEOMETRY = breadboard_drawing.WokwiGeometry.load()
+GEOMETRY = drawing.WokwiGeometry.load()
 PITCH_PX = GEOMETRY.data["breadboard"]["pitch"]
 
 
@@ -85,7 +85,7 @@ def holes_of(project, part_id):
     """{Wokwi pin: Hole} of one part as the diagram holds it."""
     found = part(project, part_id)
     shape = GEOMETRY.part(found["type"])
-    turned = breadboard_drawing.rotate(shape["pins"], shape["center"], found.get("rotate", 0))
+    turned = drawing.rotate(shape["pins"], shape["center"], found.get("rotate", 0))
     return {pin: GEOMETRY.hole_at(found["left"] + x, found["top"] + y) for pin, (x, y) in turned.items()}
 
 
@@ -219,7 +219,7 @@ class OtherEditsTest(unittest.TestCase):
         build(project)
         board = part(project, "board")
         shape = GEOMETRY.part(board["type"])
-        covered = breadboard_drawing.FirstFitPartPlacement(GEOMETRY)._covered(
+        covered = drawing.FirstFitPartPlacement(GEOMETRY)._covered(
             shape, board["rotate"], board["left"], board["top"], holes_of(project, "board"))
         under = next((one, two) for one in covered for two in covered
                      if abs(two.x - one.x - PITCH_PX) < 0.5 and one.y == two.y)
@@ -266,7 +266,7 @@ class OtherEditsTest(unittest.TestCase):
         moved = place_of(project, "TactileButton")
         change_requirements(project, FULL)
         with mock.patch.object(breadboard_keep.KeepMovesFirstFitPartPlacement, "place",
-                               side_effect=breadboard_drawing.NotDrawn("no room")):
+                               side_effect=drawing.NotDrawn("no room")):
             written = build(project)
         self.assertEqual(codes(written), {"TactileButton": "no-room"})
         self.assertNotEqual(place_of(project, "TactileButton"), moved)

@@ -17,7 +17,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import breadboard_drawing  # noqa: E402
+from spark.breadboard import drawing  # noqa: E402
 import part_shape  # noqa: E402
 import provenance  # noqa: E402
 
@@ -35,7 +35,7 @@ def xiao():
 
 def refusal(board):
     """(code, subject) of the refusal that RecordShapeSource gives the board."""
-    with unittest.TestCase().assertRaises(breadboard_drawing.NotDrawn) as caught:
+    with unittest.TestCase().assertRaises(drawing.NotDrawn) as caught:
         RECORD.find_shape(board)
     return caught.exception.code, caught.exception.subject
 
@@ -189,17 +189,17 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
         self.assertEqual(refusal(board)[0], "no_header_fact")
 
     def test_every_code_has_one_sentence(self):
-        self.assertEqual(sorted(breadboard_drawing.CODES), sorted([
+        self.assertEqual(sorted(drawing.CODES), sorted([
             "no_header_fact", "header_disagrees", "no_doubtful_pad_fact", "ground_not_one", "duplicate_pad_label",
             "no_hole_left", "no_wokwi_part"]))
-        self.assertTrue(all(sentence and "\n" not in sentence for sentence in breadboard_drawing.CODES.values()))
+        self.assertTrue(all(sentence and "\n" not in sentence for sentence in drawing.CODES.values()))
 
 
 class TheGuideNamesEveryCodeTest(unittest.TestCase):
     def test_agents_md_names_every_code_and_the_kept_fields(self):
         guide = ROOT / "docs" / "guide"
         text = "".join(page.read_text() for page in [guide / "agents.md"] + sorted((guide / "agents").glob("*.md")))
-        self.assertEqual([code for code in breadboard_drawing.CODES if "`%s`" % code not in text], [])
+        self.assertEqual([code for code in drawing.CODES if "`%s`" % code not in text], [])
         for field in ("code", "subject", "expected", "drawn_from"):
             self.assertIn("`%s`" % field, text)
 
@@ -228,7 +228,7 @@ class TheSourcesAreAskedInOrderTest(unittest.TestCase):
         board = firebeetle()
         del board["physical"]["header"]
         parts = {board["wokwi_part_type"]: GEOMETRY["parts"]["board-xiao-esp32-c6"]}
-        with self.assertRaises(breadboard_drawing.NotDrawn):
+        with self.assertRaises(drawing.NotDrawn):
             part_shape.find_part_px(board, (part_shape.WokwiGeometryShapeSource(parts), RECORD))
 
     def test_a_wokwi_board_names_pins_only_when_its_wokwi_pins_are_the_printed_labels(self):
@@ -256,7 +256,7 @@ class EveryShapeSourceKeepsTheContractTest(unittest.TestCase):
                 with self.subTest(board=board["id"], source=source.NAME):
                     try:
                         part_px = source.describe_part(copy.deepcopy(board))
-                    except breadboard_drawing.NotDrawn as refused:
+                    except drawing.NotDrawn as refused:
                         self.assertEqual(refused.code, "no_doubtful_pad_fact")  # the XIAO's record does not say yet
                         continue
                     if part_px is None:

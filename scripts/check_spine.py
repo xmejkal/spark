@@ -62,7 +62,7 @@ import assign_pins  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
 import breadboard  # noqa: E402
-import breadboard_drawing  # noqa: E402
+from spark.breadboard import drawing  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
@@ -849,7 +849,7 @@ def keep_breadboard(requirements, destination, stages=()):
     kept += [{"file": str(path), "did": "wrote", "why": renderer.PURPOSE_MESSAGE, "line": "wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE),
               **({"drawn_from": written.drawn_from} if written.drawn_from else {})} for path, renderer in written.drawings]
     kept += [{"file": str(one.path), "did": "not written", "code": one.code, "subject": one.subject,
-              "expected": one.code in breadboard_drawing.BY_DESIGN, "why": one.why,
+              "expected": one.code in drawing.BY_DESIGN, "why": one.why,
               "line": "no %s: %s" % (one.renderer.NOUN, one.why)} for one in written.not_written]
     # what the person changes on the bench since the last sheet (P300)
     kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,
@@ -916,7 +916,7 @@ def keep_tabbed_page(destination, stages, kept, exporter):
 
 def _breadboard_tab(destination, kept):
     """The breadboard tab: the picture this run wrote, or why it did not."""
-    picture = str(Path(destination) / breadboard_drawing.SvgBreadboardDiagram.FILE_NAME)
+    picture = str(Path(destination) / drawing.SvgBreadboardDiagram.FILE_NAME)
     entry = next((entry for entry in kept if entry["file"] == picture), None)
     if entry is not None and entry["did"] == "wrote":
         try:

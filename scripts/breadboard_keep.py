@@ -22,7 +22,7 @@ import json
 import math
 from pathlib import Path
 
-import breadboard_drawing
+from spark.breadboard import drawing
 
 #: The codes of NotKeptResult. A code decides; the message beside it in MESSAGES is what a person reads.
 NOT_IN_CIRCUIT = "not-in-circuit"
@@ -151,11 +151,11 @@ def _jumper_of(item, surface_id):
 
 def pin_holes(geometry, part_px, turn, left, top):
     """{Wokwi pin: the Hole under it, or None} for a part of this size turned and placed so."""
-    turned = breadboard_drawing.rotate(part_px["pins"], part_px["center"], turn)
+    turned = drawing.rotate(part_px["pins"], part_px["center"], turn)
     return {pin: geometry.hole_at(left + x, top + y) for pin, (x, y) in turned.items()}
 
 
-class KeepMovesFirstFitPartPlacement(breadboard_drawing.FirstFitPartPlacement):
+class KeepMovesFirstFitPartPlacement(drawing.FirstFitPartPlacement):
     """
     Strategy: an earlier part keeps its place when it still fits, else spark's first fit. Built for one plan: it holds
     the reserved parts and the reasons until that plan ends. `reserve_first` claims each earlier part, in file order,
@@ -212,7 +212,7 @@ class KeepMovesFirstFitPartPlacement(breadboard_drawing.FirstFitPartPlacement):
             ledger.claim(hole, "%s %s" % (part_id, pin))
         for hole in covered:
             ledger.claim(hole, "%s, which covers it" % part_id)
-        return breadboard_drawing.PlacedPart(part_id, drawn.type, drawn.attrs, left, top, turn, holes), None
+        return drawing.PlacedPart(part_id, drawn.type, drawn.attrs, left, top, turn, holes), None
 
     def place(self, part_id, drawn, ledger, after=0, pinned=None):
         kept = self.reserved.pop(part_id, None)
@@ -224,7 +224,7 @@ class KeepMovesFirstFitPartPlacement(breadboard_drawing.FirstFitPartPlacement):
             return kept
         try:
             return super().place(part_id, drawn, ledger, after, pinned)
-        except breadboard_drawing.NotDrawn:
+        except drawing.NotDrawn:
             if not after:
                 raise
             return super().place(part_id, drawn, ledger, 0, pinned)
@@ -259,7 +259,7 @@ def _place(left, top, turn):
     return round(float(left), PLACE_DIGITS), round(float(top), PLACE_DIGITS), turn
 
 
-class KeepMovesJumperPlacement(breadboard_drawing.JumperPlacement):
+class KeepMovesJumperPlacement(drawing.JumperPlacement):
     """
     Strategy: an earlier jumper keeps its holes, route and direction when its two rows are the two rows of a planned
     jumper that no earlier jumper has taken yet and both its holes are free. The first in the file wins a pair of rows

@@ -24,11 +24,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
 import breadboard_catalog  # noqa: E402
-import breadboard_drawing  # noqa: E402
+from spark.breadboard import drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 import check_spine  # noqa: E402
-from breadboard_drawing import Jumper, WokwiGeometry  # noqa: E402
+from spark.breadboard.drawing import Jumper, WokwiGeometry  # noqa: E402
 from breadboard_match import JOINED_TO_OTHER, JOINED_TO_UNUSED, NOT_JOINED, DrawnNets  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -98,8 +98,8 @@ class TheCheckTest(unittest.TestCase):
         board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
         end = wiring_steps.End("board", board.id, "board D8", "board D8", "D8")
         placed = {board.id: board}
-        self.assertEqual(breadboard_drawing.end_group(end, placed, self.catalog, {"board D8": "28t"}), "28t")
-        self.assertEqual(breadboard_drawing.end_group(end, placed, self.catalog), board.holes["D8"].group)
+        self.assertEqual(drawing.end_group(end, placed, self.catalog, {"board D8": "28t"}), "28t")
+        self.assertEqual(drawing.end_group(end, placed, self.catalog), board.holes["D8"].group)
 
     def test_board_pads_joined_through_a_free_row_match_and_a_moved_setup_jumper_does_not(self):
         named = {end.pin for point in self.points for end in point.ends if end.component == wiring_steps.THE_BOARD}

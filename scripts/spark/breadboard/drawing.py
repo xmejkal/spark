@@ -19,8 +19,8 @@ from pathlib import Path
 from spark.breadboard import wiring_steps
 from spark.breadboard import part_pictures
 
-WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
-BREADBOARDS_FILE = Path(__file__).resolve().parent.parent / "data" / "breadboards.json"
+WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parents[3] / "data" / "wokwi-geometry.json"
+BREADBOARDS_FILE = Path(__file__).resolve().parents[3] / "data" / "breadboards.json"
 
 #: Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, its group (the holes joined with it inside the
 #: board: a breadboard row such as 12t, or a rail such as tp), and its column (from 1; a rail hole has none, 0).

@@ -55,7 +55,7 @@ import board_pads  # noqa: E402
 import breadboard_catalog  # noqa: E402
 import breadboard_changes  # noqa: E402
 from spark.breadboard import breadboard_codes  # noqa: E402
-import breadboard_drawing  # noqa: E402
+from spark.breadboard import drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
 import breadboard_match  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
@@ -90,13 +90,13 @@ WIRING_VIEWS = (
 STEP_COLORS = wiring_steps.StepColors()
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
 #: new entry here, and nothing else changes.
-DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),
-                     breadboard_drawing.SvgBreadboardDiagram(STEP_COLORS))
+DRAWING_RENDERERS = (drawing.WokwiBreadboardDiagram(STEP_COLORS),
+                     drawing.SvgBreadboardDiagram(STEP_COLORS))
 #: What the sheet says of the bench: one line per change since the last build, in these words.
 CHANGE_LIST = breadboard_changes.ChangeList()
 #: The drawing a person edits in Wokwi, whose moves a rebuild keeps (P273).
 EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
-                        if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
+                        if isinstance(renderer, drawing.WokwiBreadboardDiagram))
 
 
 class NotBuilt(Exception):
@@ -284,19 +284,19 @@ def _read_build(requirements_path, circuit_path=None):
 def _drawing_inputs(read):
     """(geometry, catalog) the layout is planned on. Wokwi's own geometry for a board it measured; for a board drawn
     from its own record, a copy that holds its part_px and spark's 63-column breadboard (P412)."""
-    wokwi = breadboard_drawing.WokwiGeometry.load()
+    wokwi = drawing.WokwiGeometry.load()
     catalog = breadboard_catalog.describe_parts(read, wokwi)
     board = read.built.board
     part_px, _ = part_shape.find_part_px(board, part_shape.sources_for(wokwi.data["parts"]))
     if not part_px.get("full_surface"):
         return wokwi, catalog
     geometry = wokwi.with_part(catalog[wiring_steps.THE_BOARD].type, part_px)
-    return geometry.with_surface(breadboard_drawing.Surface.load_full()), catalog
+    return geometry.with_surface(drawing.Surface.load_full()), catalog
 
 
 def _plan_layout(read):
     geometry, catalog = _drawing_inputs(read)
-    return breadboard_drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
+    return drawing.BreadboardPlanner(geometry, catalog).plan(read.steps)
 
 
 def drawing_text(requirements_path, circuit_path=None, read=None):
@@ -318,7 +318,7 @@ def _plan_once(read, earlier_path=None, record=None):
     points (P279)."""
     try:
         fresh = _plan_layout(read)
-    except breadboard_drawing.NotDrawn as stopped:
+    except drawing.NotDrawn as stopped:
         return PlannedLayout(None, stopped, [])
     geometry, catalog = _drawing_inputs(read)
 
@@ -338,9 +338,9 @@ def _plan_once(read, earlier_path=None, record=None):
     placement = breadboard_keep.KeepMovesFirstFitPartPlacement(geometry, earlier, catalog)
     jumpers = breadboard_keep.KeepMovesJumperPlacement(geometry, earlier)
     try:
-        layout = breadboard_drawing.BreadboardPlanner(geometry, catalog, placement, jumpers).plan(read.steps)
+        layout = drawing.BreadboardPlanner(geometry, catalog, placement, jumpers).plan(read.steps)
         default = None
-    except breadboard_drawing.NotDrawn:
+    except drawing.NotDrawn:
         layout, default = fresh, breadboard_keep.NO_ROOM
     drawn = record.drawn_jumpers if record and not record.why_unread else None
     named = breadboard_keep.name_parts_not_kept(earlier, layout, fresh, placement.reasons, default)
@@ -351,7 +351,7 @@ def _plan_once(read, earlier_path=None, record=None):
 def holds_parts(path):
     """True when `path` is a breadboard.json of spark's kind with at least one part on it: a diagram that may hold a
     person's moves (P273), which a build that did not finish leaves alone."""
-    earlier = breadboard_keep.EarlierDiagram.read(path, breadboard_drawing.WokwiGeometry.load().surface.type)
+    earlier = breadboard_keep.EarlierDiagram.read(path, drawing.WokwiGeometry.load().surface.type)
     return bool(earlier and earlier.parts)
 
 
@@ -368,7 +368,7 @@ def _drawing_lines(planned):
     lines = ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
     lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
     if len(drawn) < len(DRAWING_RENDERERS):
-        lines += ["", breadboard_drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
+        lines += ["", drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
     lines += [line for one in breadboard_catalog.board_lines(planned.layout) for line in ("", one)]
     if planned.differs:
         more = len(planned.differs) - 1
@@ -421,7 +421,7 @@ def _spark_jumpers(planned, earlier_path, record):
     layout = planned.layout
     if not layout:
         return []
-    geometry = breadboard_drawing.WokwiGeometry.load()
+    geometry = drawing.WokwiGeometry.load()
     earlier = breadboard_keep.EarlierDiagram.read(earlier_path, geometry.surface.type)
     person = {frozenset((wire.one, wire.other)) for wire in earlier.jumpers} if earlier else set()
     pairs = [frozenset((jumper.one.name, jumper.other.name)) for jumper in layout.jumpers]
@@ -450,7 +450,7 @@ def _drawn_or_not(paths, planned):
     drawn = [(path, renderer) for path, renderer, why in said if layout and not why]
     if layout:
         return drawn, [why._replace(path=path) for path, _, why in said if why]
-    return drawn, [breadboard_drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
+    return drawn, [drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
                                                  str(planned.stopped)) for path, renderer, _ in said]
 
 

@@ -151,7 +151,7 @@ class WriteOrderTest(unittest.TestCase):
 
     def test_a_circuit_that_cannot_be_drawn_still_keeps_a_record_without_colors(self):
         project = new_project(LED_ONLY)
-        with mock.patch.object(breadboard, "_plan_layout", side_effect=breadboard.breadboard_drawing.NotDrawn("no room")):
+        with mock.patch.object(breadboard, "_plan_layout", side_effect=breadboard.drawing.NotDrawn("no room")):
             build(project)
         self.assertTrue(all(step["color"] is None for step in record(project)["steps"]))
 
