@@ -1182,6 +1182,29 @@ group's biggest run, in shards. Docs: 2 agent-facing pages and `areas/design.md`
 Done-item (P700): the extractions W6-D2 left, `plan_pick` (57) and `requirements` (55), each its own commit after the
 `git mv`, where R1's 40 lines apply.
 
+P704 claims check (2026-11-08, against 508798dc). Each claim above was read in the code. None changes a decision. These
+are wrong or stale:
+
+1. The extractions go before the `git mv` (the brief, P703's claim 5), not after: under `scripts/spark/` a 57-line
+   function is a new R1 breach at the move. They are P700's, reverted there: `_picks_given` and `_passed_over` from
+   `plan_pick` (57, `:475`), `_part_picks` and `_held_file` from `requirements` (55, `:771`), and `p97-cost`'s layer
+   row that follows `plan_pick`'s shorter line. They add lines, and the module has no `main` to lose at the move, so
+   the module key (831) is paid by prunes in `needs.py` before the move.
+2. Rows: 221 in 22 tables. `--anchors` refuses 114 on main, 13 of them in the 221. 7 rows of 5 tables name the module
+   in an importer's text (`needs.write`, `needs.entry_keys`, `needs.REQUIREMENTS`, `needs.unserved_keys`): the bound
+   name stays `needs`, so they stay.
+3. Name clashes: every importer binds `needs` by `from spark.design import needs`, the same name as `import needs`
+   (`symtable`): `check_spine.py` and `drop_need.py` at the top, 7 functions of `parts.py`, `test_needs.py` at the top
+   and `test_design.py:449`. The one other binding, a local `needs` in
+   `test_a_board_whose_file_has_no_header_geometry_says_it_stops_at_the_footprint`, reads no module attribute. No
+   rename commit.
+4. Patch sites: none names `needs`. `MAY_READ` has no key on it.
+
+These hold: 831 lines, no `main`, no `__file__`, no `SCRIPTS` line. Keys 2 (`R1:<module>` 831, `R3:candidates` 6).
+11 import lines: 9 in `scripts/` (`parts.py`'s 7 lazy, `check_spine.py:69`, `drop_need.py:8`), 2 in 2 test files
+(`test_needs.py:30`, `test_design.py:449` lazy). No flat module `needs.py` imports imports it back at its top. The 2
+agent-facing pages are `developing.md:238` and `how-it-works.md:153`.
+
 ### W6-U3, the build move (after W6-D3c)
 
 Files: the four U3 rows, 1,693 lines, into `scripts/spark/build/`. `ai_files.py:25` takes `parents[3]`, and the
