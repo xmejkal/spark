@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import board_grant
+from spark.bench import board_grant
 from spark.bench import build_project_outside_world
 from spark.bench.run_live_code import RunLiveCode
 from spark.core.cli import HelpText, run_cli

@@ -7,8 +7,8 @@ board answered, what it printed, whether the first try failed, and the Cure when
 
 from collections import namedtuple
 
-from board_console import PORT_BACK_S
-from board_connection import (PORT_NOT_OPENED, RAW_REPL_REFUSED, BoardCodeError, BoardUnreachableError,
+from spark.bench.board_console import PORT_BACK_S
+from spark.bench.board_connection import (PORT_NOT_OPENED, RAW_REPL_REFUSED, BoardCodeError, BoardUnreachableError,
                               RetryingBoardConnection)
 
 #: The code a reach runs when it is given none: one line that prints `reached`.

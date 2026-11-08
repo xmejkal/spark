@@ -45,7 +45,7 @@ names the rule. A library needs no such line. `scripts/spark/core/` holds the co
 section) and the leaf modules every script shares: `outcomes` (the exit codes and the three outcomes), `text_guards`,
 `zone_time`, `codes`, `clock` (the one `SystemClock`) and `privacy` (the Privacy step). The leaves import nothing of spark. A script writes `from spark.core import outcomes` and then
 `outcomes.EXIT_OK`, or `from spark.core.outcomes import EXIT_OK`. `scripts/spark/bench/` is the first area package: one
-module per Operation (`look_at_board`), and `OPERATIONS` and the area's `build_project_outside_world` in its `__init__.py`. `scripts/spark/idea/` is the second, named for the idea stage: `drop_need` (`DropNeed`, P514), its `idea_codes.py` and its `OPERATIONS`.
+module per Operation (`look_at_board`), and `OPERATIONS` and the area's `build_project_outside_world` in its `__init__.py`. Since P679 it holds the bench's 18 libraries too (`board_look`, `deploy_gate`, `flasher` and the rest, imported as `from spark.bench import board_look`). `board_codes.py` and `board_pads.py` stay in `scripts/`: other areas import these leaves, and from inside the package each would make an import cycle. `deploy_record_store.py` waits for the records. `scripts/spark/idea/` is the second, named for the idea stage: `drop_need` (`DropNeed`, P514), its `idea_codes.py` and its `OPERATIONS`.
 The other scripts stay flat in `scripts/` until their own card moves them. A tool that lists the scripts
 (`tools/inventory.py`, `tools/measure.py`, the tests that read every script) looks in the folders under `scripts/` too.
 Most of them leave out `scripts/stand_in/`, but `test_no_magic_strings` reads it too. `test_orphans`,
@@ -229,6 +229,7 @@ to the rules we set". New code follows them now. Today's names change in the nam
    script with two modes names its mode: `issue-grant`, `check-grant` (`grant.py`, `grant.py --check`).
 5. A class that only reads says so in its name: `Reader`, `Finder` or `Probe`. A class or a method that changes a
    board, a file or a port has a verb that names the change: `write`, `erase`, `cure`, `save`.
+   A `Probe` asks the board or the port one question: an Adapter, or a Strategy when several answer it (`DoctorProbe`).
 
 The role table above still applies. Its role words end a name, and `Fake` starts one. A Service, a Store or an
 Adapter from that table is a helper with its role word, and an Operation calls it.

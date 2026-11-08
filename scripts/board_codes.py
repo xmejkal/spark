@@ -5,7 +5,7 @@ A leaf: it imports nothing of spark. `look.py --json` and `deploy.py --json` wri
 `unchecked` item, so an agent decides on the code and never on the English sentence (no magic strings, P260). A raise
 site names its code in `reason`, and `CODES` says in one sentence what each code means.
 
-    the look's stops       a LookStop's `reason`: the look could not go on
+    the look's stops       a LookStopError's `reason`: the look could not go on
     the look's findings    a Stop's code, and the code of a warning or an unchecked item of a LookReport
     the gate's refusals    a GateClosedError's `reason`: the deploy gate stays shut
     the grant's refusals   a GrantRefusedError's `reason`, from its WHY_ word (board_grant.CODE_FOR_WHY)
@@ -15,7 +15,7 @@ The codes every Operation can write (`bad_argument`, `crash`) are the core's, in
 """
 
 # --- MVP ---
-#: A LookStop's reason: the look could not go on.
+#: A LookStopError's reason: the look could not go on.
 LIST_FAILED, LIST_TIMEOUT = "list_failed", "list_timeout"
 NO_PORT, PORT_NOT_LISTED, TWO_BOARDS = "no_port", "port_not_listed", "two_boards"
 FLASHER_NOT_ESPTOOL, BOARD_NOT_READ, READ_TIMEOUT = "flasher_not_esptool", "board_not_read", "read_timeout"
@@ -31,6 +31,8 @@ STOP_FOUND, NO_MAC = "stop_found", "no_mac"
 #: A GateClosedError's reason: the deploy gate stays shut.
 NO_TERMINAL, TOKEN_MISSING, TOKEN_STALE = "no_terminal", "token_missing", "token_stale"
 ANSWERED_NO, GRANT_ENDED = "answered_no", "grant_ended"
+#: The gate's and the grant's refusal of a relayed yes (P675): one rule, one code.
+RELAYED_YES_REFUSED = "relayed_yes_refused"
 #: A DeployError's reason: the image cannot go on the board, and what the agent does about it.
 NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE = "no_sim_toml", "firmware_line_bad", "no_image"
 LOG_UNREADABLE, CHIP_UNKNOWN = "log_unreadable", "chip_unknown"
@@ -77,6 +79,7 @@ CODES = {
     TOKEN_STALE: "the board or the image is not the one the token names",
     ANSWERED_NO: "the person answered no",
     GRANT_ENDED: "the deploy grant ended before the erase",
+    RELAYED_YES_REFUSED: "a yes relayed by another program cannot open an erase or make a deploy grant",
     NO_SIM_TOML: "the project has no sim/wokwi.toml",
     FIRMWARE_LINE_BAD: "the firmware line of sim/wokwi.toml cannot be read, or names an image outside sim/",
     NO_IMAGE: "the image that sim/wokwi.toml names is not there yet",

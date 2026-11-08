@@ -1,8 +1,8 @@
 # Wave 4 plan: the bench on the core (P474, #649)
 
 > Four PRs. W4-1 gives every board tool and clock one seam. W4-2 puts deploy on the core. W4-3 puts grant, live and
-> reach on the core. W4-4 adds the relayed yes, which the PO merges in every mode. Status 2026-11-06: W4-1 and W4-2 are merged; W4-3 is
-> built as P657 #883 (PR C), with P383's three goldens; W4-4 waits for the PO.
+> reach on the core. W4-4 adds the relayed yes, which the PO merges in every mode. Status 2026-11-07: W4-1 and W4-2 are merged; W4-3 is
+> built as P657 #883 (PR C), with P383's three goldens; W4-4 is built as P675 #905 (PR D), and the PO merges it.
 
 Fable 5.1 wrote this plan on 2026-11-01 in auto mode, with one council of two rounds inside. It was planned on
 `origin/main` 67c37600 with PR #648 (P462) read as merged. On 2026-11-06 the line numbers of W4-2 and W4-3, and of the
@@ -66,7 +66,7 @@ Round 2:
 
 ## The PRs
 
-Status, 2026-11-06:
+Status, 2026-11-07:
 
 - W4-1 (P475): done in https://github.com/xmejkal/spark/pull/654.
 - E1 (P507, the event seam's probe on the look): done in https://github.com/xmejkal/spark/pull/724.
@@ -75,7 +75,7 @@ Status, 2026-11-06:
 - PR A (P605 #807, the schemas, the trace hook and the Privacy step): done in https://github.com/xmejkal/spark/pull/880.
 - W4-2 (P655 #879): built on branch `p655-deploy-core`, with E2 and P457 (the littlefs lookup asks with the project).
 - W4-3 with P383 #491 (PR C): no card yet. Its Operations take their collaborators as W4-2's does: `IssueGrant(platform_for=None)`, None for the MicroPython platform.
-- W4-4 (PR D): no card yet.
+- W4-4 (PR D): P675 #905. Three claims below were refreshed on 2026-11-07, see the note under W4-4.
 
 ### W4-1, the seams (S7a and S8)
 
@@ -162,7 +162,7 @@ rows: the renderer swapped, the exit 1 path as `COULD_NOT_RUN`. Docs: the agents
 
 ### W4-4, the relayed yes (S9b, the full council, the PO merges it in every mode)
 
-Goal: a yes that another program collected is a third kind. It can make a live grant, and it never opens the erase.
+The plan as written on 2026-11-01. The build changed three parts of it, as the note below says. Goal: a yes that another program collected is a third kind. It can make a live grant, and it never opens the erase.
 
 Classes: `RelayedConsentStrategy(who, program)`, a Strategy in deploy_gate.py, with `kind=RELAYED` and `who` as "relayed
 by %s through %s". `require_open_gate` (:97-122) refuses `RELAYED` first, with the reason
@@ -170,6 +170,14 @@ by %s through %s". `require_open_gate` (:97-122) refuses `RELAYED` first, with t
 :218 and accepts it for a live grant. No CLI flag carries it, only `outside.consent`.
 
 Tests: the two S9b checks, a relayed live grant that round-trips through `check`, and an empty `who` that is refused.
+
+Built as P675 #905 (2026-11-07), after two plan-council rounds, with three changes. The yes comes through
+`outside.make_consent(line)` (P657), not `outside.consent`. One attribute, `opens_erase` (False for the relayed
+kind), is what the gate and `issue` read, so a later kind needs no change in either. The constructor is
+`RelayedConsentStrategy(person, program, ask_in_program)`, and `ConsentStrategy.granted_by(user_name)` names the
+person and the program in the grant, not the machine's login. The gate refuses after the token checks, so the line
+to rerun holds a token that passes them. Of the docs above, agents.md lists no kinds of yes, so never-assume.md
+section 7 and json.md's code table took the rule, and the plan council dropped the developing.md example as bloat.
 Mutation: the refusal inverted, the scope check dropped, the `kind` constant wrong. Docs: the agents.md yes kinds,
 refactor-plan sections 4 and 10 marked done, and a developing.md example.
 

@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import board_grant
+from spark.bench import board_grant
 from brief import UnnamedMust
 import flash_image
 from project_image import BUILD_IMAGE_HINT, NO_SIMULATION_FLAG

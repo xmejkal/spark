@@ -19,11 +19,11 @@ ROOT = Path(__file__).resolve().parent.parent
 GRANT_SCRIPT = str(ROOT / "scripts" / "grant.py")
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_console  # noqa: E402
-import board_grant  # noqa: E402
-import board_look  # noqa: E402
-import deploy_gate  # noqa: E402
-import image_evidence  # noqa: E402
+from spark.bench import board_console  # noqa: E402
+from spark.bench import board_grant  # noqa: E402
+from spark.bench import board_look  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 from fakes import FakeClock, FakeConsent, pin_time_zone  # noqa: E402
 
 
@@ -139,6 +139,13 @@ class ConsentForDeployTest(unittest.TestCase):
         self.assertTrue(chosen.consent.ask("erase ALL?"))
         self.assertEqual(chosen.consent.who,
                          "standing yes typed by ada at 2026-10-17T11:00:00+02:00, until 2026-10-17T11:30:00+02:00")
+
+    def test_a_valid_deploy_grant_wins_over_a_relayed_yes(self):
+        # P675: every erase needs the person's own terminal; the deploy grant was typed there
+        board_grant.GrantStore().save(a_grant())
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        chosen = self.service.consent_for_deploy(a_report(), image_evidence.PassedRunEvidence(False), relayed)
+        self.assertIsInstance(chosen.consent, board_grant.StandingConsentStrategy)
 
     def test_a_grant_kept_in_utc_says_its_times_in_the_machines_zone(self):
         board_grant.GrantStore().save(a_grant())  # a_grant keeps START as UTC, as a grant written before P291 did

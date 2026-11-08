@@ -4,7 +4,7 @@ The one mpremote connection to a board (P215, the bench council's step 1).
 A library. `BoardConnection` runs mpremote on one port: code on the board, a file copied to it, a file read back, and
 the line that opens its REPL. Its two errors keep mpremote's own words. `BoardUnreachableError`: mpremote could not
 talk to the board, for example "could not enter raw repl" (docs/observations/2026-10-14-p215-bench.md).
-`BoardCodeError`: the board answered, and the code raised there. board_facts.py and ready_check.py use it, so a later reconnect strategy
+`BoardCodeError`: the board answered, and the code raised there. board_facts.py and ready_probe.py use it, so a later reconnect strategy
 changes one class.
 """
 

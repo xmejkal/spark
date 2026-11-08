@@ -5,12 +5,12 @@ The grant check as an Operation on the core (P657, W4-3): say whether the board 
 could not look is one unchecked item, with `why` "could not run" in the data.
 """
 
-import board_doctor
-import board_grant
-import board_look
+from spark.bench import board_doctor
+from spark.bench import board_grant
+from spark.bench import board_look
 import store
 import tools
-from firmware_platform import MicroPythonPlatform
+from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
 from spark.bench.stops import stop_result
 from spark.core import outcomes
@@ -61,7 +61,7 @@ class CheckGrant(Operation):
         try:
             finder = platform.make_port_finder(outside.run)
             result = board_grant.GrantService(finder, now=outside.clock.now).check(port)
-        except (tools.ToolProblem, board_look.LookStop, store.StoreProblem) as cannot:
+        except (tools.ToolProblem, board_look.LookStopError, store.StoreProblem) as cannot:
             doctor_for = lambda stop: board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)  # noqa: E731
             return stop_result(cannot, SCRIPT, project, port, doctor_for)._replace(data=dict(COULD_NOT_RUN_DATA))
         findings = [] if result.granted else [Finding(outcomes.PROBLEMS, None, board_grant.CODE_FOR_WHY[result.why],

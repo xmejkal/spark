@@ -1,7 +1,7 @@
 """
 What spark put on a board (P215 step 3, D22, D23, D44).
 
-A library. `FactsFile` copies a small facts file, FACTS_FILE, with mpremote after the flash and reads it back, so the image
+A library. `ReadingFile` copies a small facts file, FACTS_FILE, with mpremote after the flash and reads it back, so the image
 stays the one that passed. It names spark's version, the project, the board type, the MAC, the image's sha256, each file's
 sha256 and what tested the image (`simulation`). The person's store keeps its own record of each board:
 `deploy_record_store.py`.
@@ -13,11 +13,11 @@ import tempfile
 import time
 from pathlib import Path
 
-from board_connection import RAW_REPL_REFUSED, BoardUnreachableError, BoardCodeError
+from spark.bench.board_connection import RAW_REPL_REFUSED, BoardUnreachableError, BoardCodeError
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).
 FACTS_FILE = "spark.json"
-PLUGIN_JSON = Path(__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json"
+PLUGIN_JSON = Path(__file__).resolve().parents[3] / ".claude-plugin" / "plugin.json"
 
 
 def facts(project, board, mac, image, files, moment, simulation):
@@ -38,8 +38,9 @@ def facts_text(said):
 FACTS_RETRY_WAIT_S = 2
 
 
-class FactsFile:
-    """The facts file on one board, through its BoardConnection (board_connection.py). `sleep` waits before the retry."""
+class ReadingFile:
+    """Adapter: the facts file on one board, through its BoardConnection (board_connection.py). `sleep` waits
+    before the retry."""
 
     def __init__(self, connection, sleep=time.sleep):
         self.connection, self.sleep, self.first_failure = connection, sleep, None

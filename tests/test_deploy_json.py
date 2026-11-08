@@ -15,12 +15,12 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_doctor  # noqa: E402
-import board_envelope  # noqa: E402
+from spark.bench import board_doctor  # noqa: E402
+from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
-import deploy_service  # noqa: E402
-import firmware_platform  # noqa: E402
-import image_evidence  # noqa: E402
+from spark.bench import deploy_service  # noqa: E402
+from spark.bench import firmware_platform  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import store  # noqa: E402
@@ -139,7 +139,7 @@ class LookJsonTest(JsonCase, LookScriptCase):
         self.assertIn("no board found", err)  # the text still goes to stderr
 
     def test_a_failed_read_gives_the_doctor_s_result_and_its_step_as_the_fix(self):
-        result = board_doctor.BoardDoctorResult((), "boom", "hold_boot", None)
+        result = board_doctor.DoctorProbeResult((), "boom", "hold_boot", None)
         with mock.patch.object(board_doctor, "after_esptool", return_value=result):
             code, said, err = self.go("--json", text="x", esptool="c6-flash-id.txt", fail=True)
         said = self.one(code, said, "look", "look")

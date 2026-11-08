@@ -1,24 +1,24 @@
 [
  {
-  "file": "scripts/board_connection.py",
+  "file": "scripts/spark/bench/board_connection.py",
   "name": "a failure with no board traceback is the code raising",
   "find": "if ran_code and not err.strip() and BOARD_TRACEBACK in out:",
   "replace": "if ran_code and not err.strip():"
  },
  {
-  "file": "scripts/ready_check.py",
+  "file": "scripts/spark/bench/ready_probe.py",
   "name": "hash code raising escapes the check",
   "find": "        except (BoardUnreachable, CodeRaisedOnBoard) as cannot:\n            return UNKNOWN, \"mpremote could not read",
   "replace": "        except BoardUnreachable as cannot:\n            return UNKNOWN, \"mpremote could not read"
  },
  {
-  "file": "scripts/ready_check.py",
+  "file": "scripts/spark/bench/ready_probe.py",
   "name": "unreachable after the hashes is not unknown",
   "find": "        except BoardUnreachable as cannot:\n            return UNKNOWN, \"mpremote could not start",
   "replace": "        except ValueError as cannot:\n            return UNKNOWN, \"mpremote could not start"
  },
  {
-  "file": "scripts/board_facts.py",
+  "file": "scripts/spark/bench/board_facts.py",
   "name": "facts copy that raises on the board escapes write",
   "find": "except (BoardUnreachable, CodeRaisedOnBoard) as cannot:",
   "replace": "except BoardUnreachable as cannot:"

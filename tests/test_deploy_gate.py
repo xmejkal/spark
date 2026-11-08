@@ -22,24 +22,24 @@ from suite_runs import needs_littlefs  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_console  # noqa: E402
-import board_doctor  # noqa: E402
-import board_facts  # noqa: E402
-import board_look  # noqa: E402
+from spark.bench import board_console  # noqa: E402
+from spark.bench import board_doctor  # noqa: E402
+from spark.bench import board_facts  # noqa: E402
+from spark.bench import board_look  # noqa: E402
 import deploy_record_store  # noqa: E402
 import deploy  # noqa: E402
-import deploy_service  # noqa: E402
-import board_grant  # noqa: E402
-import deploy_gate  # noqa: E402
+from spark.bench import deploy_service  # noqa: E402
+from spark.bench import board_grant  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
 import flash_image  # noqa: E402
-import flasher  # noqa: E402
+from spark.bench import flasher  # noqa: E402
 import store  # noqa: E402
-import image_evidence  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform, FakeReporter,  # noqa: E402
                    FakeOutsideWorld, FakeProbePlatform,
                    line_made_at_import, pin_time_zone)
-from firmware_platform import MicroPythonPlatform  # noqa: E402
+from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import build_project_outside_world, deploy_image  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
@@ -222,6 +222,35 @@ class TheGateTest(GateCase):
         self.assertEqual((code, self.flashed()), (2, []))
         self.assertIn("not flashed: you answered no.", problems)
 
+    def test_a_relayed_yes_never_opens_the_erase_and_its_program_is_never_asked(self):
+        # P675 (W4-4): the PO's decision 6, a yes another program collected makes a live grant only
+        self.run_the_scenario()
+        asked = []
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: asked.append(question) or True)
+        code, said, problems = self.deploy("--token", self.token(), "--json", consent=relayed)
+        envelope = json.loads(said)
+        self.assertEqual((code, self.flashed(), asked), (2, [], []))
+        self.assertIn("a yes given through another program cannot open the erase", problems)
+        self.assertEqual([item["code"] for item in envelope["unchecked"]], ["relayed_yes_refused"])
+        self.assertIsNone(envelope["data"]["yes"])
+        argv = envelope["next"][0]["argv"]
+        self.assertEqual((envelope["next"][0]["op"], argv[argv.index("--token") + 1]), ("deploy", self.token()))
+
+    def test_a_relayed_yes_with_no_token_still_says_to_run_the_look_first(self):
+        self.run_the_scenario()
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        code, _, problems = self.deploy(consent=relayed)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("run look.py first", problems)
+
+    def test_a_relayed_yes_with_a_stale_token_says_to_look_again(self):
+        self.run_the_scenario()
+        relayed = deploy_gate.RelayedConsentStrategy("ada", "test-ui", lambda question: True)
+        code, _, problems = self.deploy("--token", "0000-" + self.token().split("-")[1], consent=relayed)
+        self.assertEqual((code, self.flashed()), (2, []))
+        self.assertIn("the board changed since the look", problems)
+        self.assertNotIn("another program", problems)
+
     def test_a_token_for_another_board_names_the_board(self):
         self.run_the_scenario()
         image = self.token().split("-")[1]
@@ -396,7 +425,7 @@ class TheBusyPortTest(GateCase):
     """P354: a console left open holds the port, so esptool's look fails. The doctor says so, as look.py's does."""
 
     #: The doctor's result for a port that another program holds (test_deploy_json builds its envelope from it).
-    BUSY = board_doctor.BoardDoctorResult(
+    BUSY = board_doctor.DoctorProbeResult(
         (board_doctor.CheckResult("console", False, "another program holds the port: locked", "close_other"),),
         None, "close_other", None)
 
@@ -425,7 +454,7 @@ class TheBusyPortTest(GateCase):
 
     def test_a_stop_the_doctor_gives_no_result_for_prints_its_own_line_with_the_port_as_a_question_mark(self):
         port = "/dev/cu.usb\u202emodem"
-        stop = board_look.LookStop("could not read the board on %s.", port, reason="board_not_read")  # no port: no doctor
+        stop = board_look.LookStopError("could not read the board on %s.", port, reason="board_not_read")  # no port: no doctor
         real = MicroPythonPlatform(self.project, lambda role: found(role))
         platform = FakeFirmwarePlatform(self.project, flasher=real.make_flasher(), shell_command=real.make_shell_command(), port_finder=object(),
                                         board_reader=FakeBoardReader(stop))
@@ -1102,7 +1131,7 @@ class TheStandingYesTest(GateCase):
     def test_an_ended_deploy_grant_asks_in_the_terminal_and_names_the_grant_line_by_its_whole_path(self):
         self.give()
         self.clock.advance(minutes=30)
-        grant_py = str(Path(board_grant.__file__).with_name("grant.py").resolve())
+        grant_py = str((ROOT / "scripts" / "grant.py").resolve())
         self.assertAsksInTheTerminal("the deploy grant for this board ended: the person runs %s --scope deploy "
                                      "--minutes N again" % line_made_at_import(grant_py))
 
@@ -1242,7 +1271,7 @@ class TheStandingYesTest(GateCase):
     @needs_littlefs
     def test_the_no_terminal_line_adds_the_deploy_grant_line_for_a_clean_look_only(self):
         _, _, problems = self.flash()
-        grant_line = store.prefix_home(shlex.join([str(Path(board_grant.__file__).with_name("grant.py").resolve()), "--scope",
+        grant_line = store.prefix_home(shlex.join([str((ROOT / "scripts" / "grant.py").resolve()), "--scope",
                                                    "deploy", "--minutes", "N", "--project", str(self.project.resolve()),
                                                    "--port", "/dev/cu.usbmodem101"]))
         self.assertIn("\n  %s\n" % grant_line, problems + "\n")

@@ -17,7 +17,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import deploy_gate  # noqa: E402
+from spark.bench import deploy_gate  # noqa: E402
 import boards  # noqa: E402
 import flash_image  # noqa: E402
 import look  # noqa: E402

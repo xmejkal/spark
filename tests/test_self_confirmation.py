@@ -46,7 +46,7 @@ MAY_READ = {
     "breadboard_drawing.CODES": PINNED,
     "board_live.EXIT_FOR_ANSWER": STRUCTURE, "board_live.RAN": STRUCTURE,
     "board_console.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
-    "ready_check.HASH_FILES": "the board code under test, rendered; the words it must print are literals in the test (P260)",
+    "ready_probe.HASH_FILES": "the board code under test, rendered; the words it must print are literals in the test (P260)",
     "assign_pins.BUS_LINES": SAMENESS, "parts.BUSES": SAMENESS,
     "assign_pins.CAPABILITIES": SAMENESS, "parts.CAPABILITIES": SAMENESS,
     "check_footprints.PACKAGE_POWER_W": SAMENESS, "check_physics.PACKAGE_POWER_W": SAMENESS,

@@ -165,7 +165,7 @@ classDiagram
 
 `DeployService`, `FirmwarePlatform`, `ConsentStrategy` and `GateClosedError` exist (`deploy_service.py`,
 `firmware_platform.py`, `deploy_gate.py`). `DeployRecordStore` exists too (`deploy_record_store.py`, P431), and the Operation is proposed. So are `make_board_reader`
-(S8) and `make_ready_probe`, which is `make_ready_check` today (S11). `LastDeploy` lives in `deploy_record_store.py`. It holds the reasons and the zone note of a time, and no line or question words. The look says it with
+(S8) and `make_ready_probe`, which was `make_ready_check` until S11 (P680). `LastDeploy` lives in `deploy_record_store.py`. It holds the reasons and the zone note of a time, and no line or question words. The look says it with
 `board_look.say_last_deploy` and the deploy question with `deploy_gate.say_last_deploy_in_question` (OC5, P431). The result types are today's: `plan` and `deploy` return
 a `DeployPlan`, `verify` a `DeployResult` whose `ready` is a `ReadyResult`.
 
@@ -224,11 +224,11 @@ section 3).
 | limit, caveat | `boards.onboard_limits` returns `(component, sentence)` pairs. `ImageEvidence.caveats` is a list of sentences. P397 PR 2's `limits` key on a `--match` candidate is plain sentences, with no component. "limits" is also the WIP word in `docs/guide/developing.md` and on the board | two words, set in P345 PR 2a [#440](https://github.com/xmejkal/spark/issues/440). `limits` means what no simulation can show of the project, one note per project (the glossary word, the file `WHAT-THIS-CANNOT-SHOW.md`, the log's limits section, `write_limits`, `data.limits`). `caveats` means what this passed run did not test, one list per run (`data.caveats`, `PassedRunEvidence.caveats`). No JSON key is renamed | three shapes stay and are named: a pair (`onboard_limits`), a sentence (the `--match` `limits` key, `caveats`) and an object with a component and a sentence (`data.limits` of the look). A WIP limit is "a WIP limit" in prose, never bare "limits". Done in P397 PR 2: the docstrings of `boards.role_limits` and `needs.board_limits` say which shape each returns, and `--match --json`'s `limits` key holds sentences. |
 | why | `SimulatedPart.why` (what stopped the reader), `SimulatedPart.why_not_simulated(gpio)` (why a scenario cannot reach a GPIO), `Fit.why` (the places a candidate matched a need's words) | three meanings, no rename in P397: each is a field or a method of its own class, and none is passed to another | revisit if a fourth appears. |
 | deploy entry | `DeployEntry` in comments 4 and 5 | none. `LastDeploy` is the Value, and `DeployRecordStore.write_deploy` writes a dict | the name is out of the plan (comment 5). |
-| look stop | `LookStop` (`board_look.py`) | `LookStopError` | renamed in S11, with `ReadyCheck` to `ReadyProbe`, `make_ready_check` to `make_ready_probe`, `FactsFile` to `ReadingFile` (glossary) and `assign_pins.Impossible` to `ImpossibleError` (wave 6). |
+| look stop | `LookStop` (`board_look.py`) | `LookStopError` | renamed in S11 (P680), with `ReadyCheck` to `ReadyProbe`, `make_ready_check` to `make_ready_probe`, `FactsFile` to `ReadingFile` (glossary) and `assign_pins.Impossible` to `ImpossibleError` (wave 6). |
 | Operation | the glossary and the standard say a class named verb + object with `run()`. `core.md` said a Value holding a function. The plan drew `class deploy` | one model: an Operation is a class with one public method `run()`, whose keyword parameters are its arguments' `dest` names (N6 keeps that half). Its module is named after it. The area's `OPERATIONS` sits in its `__init__.py`, so no file is named `operations.py` twice (rule C1) | bench: `LookAtBoard` (`look_at_board.py`), `DeployImage`, `IssueGrant`, `CheckGrant`, `RunLiveCode`, `ReachBoard`. 31 ops print today: the 29 of `parts.py`'s `OPERATIONS`, `look` and `deploy`. `grant`, `live` and `reach` print flat JSON with no `op`, and `grant-check` is in no script. Decision 5 settles the spellings. |
 | clock | `board_console.SystemClock` (`now` with its zone, `monotonic`, `sleep`, an Adapter), and in tests one `FakeClock` | `SystemClock` is the one clock: `now`, `monotonic`, `sleep`. `OutsideWorld.clock` holds it | Done in P475 (S7a): `read_local_time` and `FakeLocalClock` are gone. |
 | port, seam | the board's serial device (`--port`, `Port`), and the "port" of ports and adapters | port is the serial device. The architecture's port is a seam: a Strategy base or a Value that a backend fills | the pages' "ports and adapters" become "seams and adapters". The `Retriever` is a Strategy. |
-| stage, wave | a build stage (`check_spine.Stage`, JSON `stages`), deploy's `STAGE_*`, the plan's units, P391's units | stage is a build stage only. The plan's units are waves. `RefusedInput(stage, why)` names a build stage | the plan says wave. P391's units keep its own word, stage. `STAGE_*` becomes `DeployPhase` (S11). |
+| stage, wave | a build stage (`check_spine.Stage`, JSON `stages`), deploy's `STAGE_*`, the plan's units, P391's units | stage is a build stage only. The plan's units are waves. `RefusedInput(stage, why)` names a build stage | the plan says wave. P391's units keep its own word, stage. `STAGE_*` became `DeployPhase` (S11, P680). |
 
 ## 4. The core contract for other interfaces
 
@@ -265,7 +265,7 @@ restarts the board twice. A yes stays `typed` or `grant`, as `data.yes.kind` say
 collected. It names `who` and the program. The gate refuses it for the erase. It can make a `live` grant only, never a
 `deploy` grant. So every erase still needs a yes typed in the person's own terminal, or a deploy grant made there.
 Claude never supplies a yes (`docs/guide/agents.md` stays). The PO chose the third kind (decision 6, epic #94,
-2026-10-26). The `live`-only guard is a recorded reading of his answer, and he can change it. Slice S9b builds it.
+2026-10-26). The `live`-only guard is a recorded reading of his answer, and he can change it. Slice S9b built it (P675 #905).
 
 The `Retriever` Strategy (comment 2's fourth rule) enters in wave 6 with the sourcing move, not in S5. Its
 `search(words, project)` fits `parts.need` today. `scan_datasheet` reads pages, so the datasheet adapter and a vector
@@ -364,7 +364,7 @@ the code at `d064a65` under this name.
 | `zone_time`, `text_guards`, `provenance` | P401, P403, P389 | `core/zone_time.py`, `core/text_guards.py`, `records/provenance.py` | leaves | exist (`text_guards` was `screen_text`, renamed in P418) |
 | `why_no_footprint`, `footprint_gaps` | P407 | `design/footprint_emitter.py` | functions | exists |
 | `NO_FOOTPRINT_HINT`, `REFUSED_INPUT_MESSAGE` | P407 | `build/stages.py`, `design/board_emitter.py` | constants | exists |
-| `LookStopError` | plan v1 | `bench/board_look.py` | Error | exists as `LookStop` |
+| `LookStopError` | plan v1 | `bench/board_look.py` | Error | exists (renamed from `LookStop` in W5-3b, P680) |
 | `RunLog`, `status_of_run` | plan v1 | `firmware/scenario_run.py` | Value, a function | not built yet (`run_record` builds a tuple, `verdict` stays) |
 | `Brief` | comment 4 | `records/brief.py` | Value | not built yet (exists as `parts.vendor_order` and `parts.sellers`) |
 | `OutsideWorld`, `Backends` | plan v1 | `core/outside.py`, `records/backends.py` | Values | `OutsideWorld` exists (P442, `run` and `find_tool`); `Backends` is not built, `find_tool` serves the look |
@@ -449,7 +449,7 @@ All are answered now. The Recommendation column stays as history, and the Answer
 | 2 | The shape | (a) thin CLIs over `scripts/spark/`, one Operation per job, one rules test (v1). (b) Operations inside today's flat `scripts/`, no package. (c) a `src/spark` package with `pyproject`. | (a). The package is what a LangGraph node or an MCP tool imports (section 4), and (b) cannot give one `OPERATIONS` per area without a folder. (c) is on the "not do" list: it installs something, and spark installs nothing heavy. | (a), in his words *"yes, option a please"* (epic #94, 2026-10-26). | question 2 |
 | 4 | When the area moves start | (a) a story pulls its area (v1's decision 4). (b) now, the bench first, one PR at a time. (c) all areas in one pass. | (b). The PO pulled the refactor on 10-25, the bench's net exists (S1), and walk 2 ran on the bench. (c) broke the "one PR at a time" rule of decision 3. The 2026-10-27 change to decision 3 (a PR holds the slices of one kind) removes that reason against (c); the nets still decide when a move can start. | (b), back to back, one PR at a time. His words: *"I think for question 3 ideally we'd go all in one, so option c, but if it would take too much time, we can do continuous version"* (epic #94, 2026-10-26). Recorded as (b) because only the bench has a net today (S1's 13 goldens) and (c) went against decision 3 (the 2026-10-27 change to decision 3 removed that reason). If he still wants one pass once the nets exist, the last moves can go in one PR. The PO can change this. | question 3 |
 | 5 | The printed names of the Operations | The standard (P381, rule 4) prints an Operation's words as its `op`: `show-part`. Today 31 ops print: the 29 in `parts.py`'s `OPERATIONS` (`audit` and `need` among them), `look` and `deploy`. A script that prints no envelope (`grant`, `live`, `reach`) prints no `op`. The goldens and command pages pin the spellings. (a) keep every op in a golden or a command page as a named exception, and only a new Operation follows rule 4. (b) rename each op to its class's words (`look-at-board`) in its area's output slice, a public change. | (a). The class names pass the rule now, and a public rename costs every page and habit (glossary, section 3). (b) can follow in a card of its own when the PO wants one spelling everywhere. | (a), in his words *"ok leta pick a, if you think its better"* (epic #94, 2026-10-26). Every op that a golden or a command page pins keeps its spelling. Only a new Operation prints its class's words. | question 6 |
-| 6 | A yes relayed by another program | `data.yes.kind` is `typed` or `grant` today, and `agents.md` says Claude never supplies the yes. A graph's UI or an MCP client can collect a yes itself. (a) no third kind: a graph pauses, and the person gives the yes in their own terminal (section 4). (b) a third kind, `relayed`, with `who` and the program that collected it, refused by the gate for the erase and allowed for a grant. | (a). It needs no new rule and keeps the erase in the person's terminal. (b) is a safety change for the PO alone. | (b), in his words *"question 4 : option b"* (epic #94, 2026-10-26), against the recommended (a). The guard is a recorded reading, and the PO can change it. A relayed yes makes a `live` grant only, never a `deploy` grant (section 4). Slice S9b builds it. | question 4 |
+| 6 | A yes relayed by another program | `data.yes.kind` is `typed` or `grant` today, and `agents.md` says Claude never supplies the yes. A graph's UI or an MCP client can collect a yes itself. (a) no third kind: a graph pauses, and the person gives the yes in their own terminal (section 4). (b) a third kind, `relayed`, with `who` and the program that collected it, refused by the gate for the erase and allowed for a grant. | (a). It needs no new rule and keeps the erase in the person's terminal. (b) is a safety change for the PO alone. | (b), in his words *"question 4 : option b"* (epic #94, 2026-10-26), against the recommended (a). The guard is a recorded reading, and the PO can change it. A relayed yes makes a `live` grant only, never a `deploy` grant (section 4). Slice S9b built it (P675 #905). | question 4 |
 
 ### Wave 1: the bench net
 
@@ -534,12 +534,12 @@ case (rule T3). What the swap covers: flashing, reading and the ready probe. `De
 cure and the reset-button places (`download_mode`, `boards.ButtonPlaces`) are MicroPython's and move behind the
 platform when a second one exists. S9, `grant`, `live` and `reach` on the core (P657, built; `GrantService` is built per run by each Operation, not once).
 
-S9b, the relayed yes (proposed): it builds decision 6's third kind of yes (section 4) on `GrantService`, which S9
+S9b, the relayed yes, is built (P675 #905). wave4-plan.md, W4-4, names its three changes. It built decision 6's third kind of yes (section 4) on `GrantService`, which S9
 builds once. The gate refuses a `relayed` yes for the erase. `GrantService.issue` accepts it for a `live` grant and
-refuses it for a `deploy` grant. A `relayed` yes names `who` and the program that collected it. This placement after
-S9 is the plan's reading, and the PO can change it. S9b changes a safety rule, so it runs the full council, and the
-PO merges it in every mode. `docs/guide/agents.md` stays true: a relayed yes comes from a program's UI, never from
-Claude. Its size is an estimate of 150 lines.
+refuses it for a `deploy` grant. A `relayed` yes names the person and the program that collected it. This placement after
+S9 is the plan's reading, and the PO can change it. S9b changed a safety rule, so the PO merges it in every mode.
+`docs/guide/agents.md` stays true: a relayed yes comes from a program's UI, never from Claude. It came to about
+70 product lines.
 
 Four checks close the wave. Each bench `main` is at most 15 lines. No golden changed. No `mock.patch`
 line remains in `tests/test_deploy_gate.py`. S9b's tests show that the gate refuses a `relayed` yes for the erase
@@ -556,7 +556,7 @@ today 2,266 lines that 35 files import. It retargets the 217 mutation rows. It a
 `LookStopError`, `ReadyProbe`, `DoctorProbe`, `DeployPhase`, `ReadingFile`. It moves the Fakes into `tests/fakes.py`.
 `board_facts.py` moves as the bench's `ReadingFile`. `deploy_record_store.py` (OC5) stays in `scripts/`
 until the records move. S12, the map: `tools/map.py` writes `docs/guide/map.md`. When the page is stale, a test fails. S13,
-the quick run and the full run. S13 is done in P425 (the order of work in section 10). One check closes the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints nothing.
+the quick run and the full run. S13 is done in P425 (the order of work in section 10). One check closes the wave: `ls scripts/board_*.py scripts/deploy_*.py` prints only `board_codes.py`, `board_pads.py` and `deploy_record_store.py` (W5-3a, P679, moved the other 18 modules; the two leaves wait for wave 6, `test_architecture.TheBenchAreaTest` holds it).
 
 ### Wave 6: the other areas
 

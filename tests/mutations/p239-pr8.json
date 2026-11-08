@@ -1,54 +1,54 @@
 [
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/spark/bench/deploy_service.py",
   "name": "deploy-returns-none",
   "find": "        return planned\n",
   "replace": "        return None\n"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/spark/bench/deploy_service.py",
   "name": "flash-error-drops-hint",
   "find": "\": \" + hint if hint else \"\"",
   "replace": "\"\""
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/spark/bench/deploy_service.py",
   "name": "verify-no-expected",
   "find": "expected = self.evidence.expected_files(image)",
   "replace": "expected = {}"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/spark/bench/deploy_service.py",
   "name": "record-who-lost",
   "find": "result.ready.verdict, consent.who)",
   "replace": "result.ready.verdict, None)"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/spark/bench/deploy_service.py",
   "name": "deploy-no-show-running",
-  "find": "self.report(Event.line(deploy_stages.STAGE_FLASH, \"running: %s\" % shlex.join(command)))",
+  "find": "self.report(Event.line(DeployPhase.FLASH, \"running: %s\" % shlex.join(command), raw=True))",
   "replace": "pass"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/spark/bench/deploy_service.py",
   "name": "deploy-token-recheck-off",
   "find": "if look.token() != token:",
   "replace": "if False:"
  },
  {
-  "file": "scripts/deploy_service.py",
+  "file": "scripts/spark/bench/deploy_service.py",
   "name": "deploy-require-ready-off",
   "find": "consent.require_ready()  #",
   "replace": "pass  #"
  },
  {
-  "file": "scripts/image_evidence.py",
+  "file": "scripts/spark/bench/image_evidence.py",
   "name": "plan-older-runs-always-refuse",
   "find": "if why or self.ignore_older_runs:",
   "replace": "if why:"
  },
  {
-  "file": "scripts/firmware_platform.py",
+  "file": "scripts/spark/bench/firmware_platform.py",
   "name": "chip-after-tool",
   "find": "    chip = chip_of(project)\n    return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip)",
   "replace": "    return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip_of(project))"
@@ -62,7 +62,7 @@
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "main-exit-ok-always",
-  "find": "return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS",
+  "find": "return EXIT_OK if ready.verdict == ready_probe.SEEN else EXIT_PROBLEMS",
   "replace": "return EXIT_OK"
  },
  {

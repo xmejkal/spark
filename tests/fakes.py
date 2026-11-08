@@ -9,7 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import store  # noqa: E402
-from firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
+from spark.bench.firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
 from spark.core.outside import OutsideWorld  # noqa: E402
 
@@ -65,12 +65,18 @@ class FakeConsent:
     who = "a test"
     #: The kind of yes the envelope says: a typed one (deploy_gate.TYPED).
     yes_kind = "typed"
+    #: A typed yes can open the erase (deploy_gate.ConsentStrategy.opens_erase).
+    opens_erase = True
 
     def __init__(self, answer):
         self.answer, self.asked = answer, []
 
     def require_ready(self):
         """The fake can always ask."""
+
+    def granted_by(self, user_name):
+        """The login, as deploy_gate.ConsentStrategy's default."""
+        return user_name()
 
     def ask(self, question):
         self.asked.append(question)
@@ -101,7 +107,7 @@ class FakeClock:
 
 
 class FakePortFinder:
-    """A fake board_look.PortFinder: each `nodes` call gives the next of `looks`, a list of Ports (or a LookStop to raise),
+    """A fake board_look.PortFinder: each `nodes` call gives the next of `looks`, a list of Ports (or a LookStopError to raise),
     and the last one for good."""
 
     def __init__(self, *looks):
@@ -140,14 +146,14 @@ class FakeConsoleProbe:
     def console(self):
         """The board doctor's read: `printed`, read with the port's lock."""
         self.asked.append("console")
-        from board_console import ConsoleReadResult  # scripts/ is on the path once a test imports spark
+        from spark.bench.board_console import ConsoleReadResult  # scripts/ is on the path once a test imports spark
         return ConsoleReadResult("read", self.printed, None)
 
     def waits_in_download_mode(self):
         self.asked.append("console")
         if self.on_console:
             self.on_console()
-        from download_mode import DOWNLOAD_MODE  # scripts/ is on the path once a test imports spark
+        from spark.bench.download_mode import DOWNLOAD_MODE  # scripts/ is on the path once a test imports spark
         return DOWNLOAD_MODE in self.printed, self.printed
 
     def cure(self):
@@ -158,7 +164,7 @@ class FakeConsoleProbe:
 
 
 class FakeBoardReader:
-    """A fake board_look.BoardReader: each `read` gives the next of `readings` (a BoardReading, or a LookStop to raise), and
+    """A fake board_look.BoardReader: each `read` gives the next of `readings` (a BoardReading, or a LookStopError to raise), and
     the last one for good. Keeps each port it was asked for in `read_ports`."""
 
     def __init__(self, *readings):
@@ -178,10 +184,10 @@ class FakeFirmwarePlatform(FirmwarePlatform):
     `roles` the role of each `find_tool`."""
 
     def __init__(self, project=Path("."), flasher=None, shell_command=None, port_finder=None, board_reader=None,
-                 connection=None, ready_check=None, console_probe=None, tool=None):
+                 connection=None, ready_probe=None, console_probe=None, tool=None):
         super().__init__(project)
         self.parts = {"flasher": flasher, "shell_command": shell_command, "port_finder": port_finder,
-                      "board_reader": board_reader, "connection": connection, "ready_check": ready_check,
+                      "board_reader": board_reader, "connection": connection, "ready_probe": ready_probe,
                       "console_probe": console_probe, "tool": tool}
         self.hints, self.roles = [], []
 
@@ -212,8 +218,8 @@ class FakeFirmwarePlatform(FirmwarePlatform):
     def make_connection(self, command, port, run):
         return self._part("connection")
 
-    def make_ready_check(self, connection):
-        return self._part("ready_check")
+    def make_ready_probe(self, connection):
+        return self._part("ready_probe")
 
     def make_console_probe(self, port, run):
         return self._part("console_probe")

@@ -2,7 +2,7 @@
 The flow of a deploy, without a terminal (P239 PR 8): plan, look, gate, flash, then the facts, ready and the log.
 
 `DeployService` prints nothing and never exits. A line the person must see while a step runs is an Event it reports
-through `outside.report` (E2, P655); the rest comes back in a `DeployResult`; a refusal is an exception (`LookStop`,
+through `outside.report` (E2, P655); the rest comes back in a `DeployResult`; a refusal is an exception (`LookStopError`,
 `DeployError`, `tools.ToolProblem`, `deploy_gate.GateClosedError`). The DeployImage Operation chooses the yes and builds the result.
 """
 
@@ -12,15 +12,15 @@ import shlex
 import subprocess
 
 import board_codes
-import deploy_stages
-import board_facts
+from spark.bench.deploy_stages import DeployPhase
+from spark.bench import board_facts
 import boards
-import board_look
-import board_start
-import deploy_gate
+from spark.bench import board_look
+from spark.bench import board_start
+from spark.bench import deploy_gate
 import deploy_record_store
-import download_mode
-import ready_check
+from spark.bench import download_mode
+from spark.bench import ready_probe
 from project_image import DeployError, ProjectImage
 from spark.core.events import Event
 
@@ -63,7 +63,7 @@ class DeployService:
     """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `outside` is the OutsideWorld: its `run` runs a
     command, its `clock` has `now`, `monotonic` and `sleep`, and its `report` takes each Event a person reads while a step
     runs. `records` keeps the deploy (default: the store's DeployRecordStore). `evidence` (an ImageEvidence) holds for every
-    step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStop` or `deploy_gate.GateClosedError` to
+    step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStopError` or `deploy_gate.GateClosedError` to
     say why a step cannot go on; they never print and never exit."""
 
     def __init__(self, project, platform, evidence, outside, records=None):
@@ -87,7 +87,7 @@ class DeployService:
         return DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), shell_command, notes)
 
     def look(self, port=None):
-        """The LookReport of the board on USB. Raises LookStop to say why not."""
+        """The LookReport of the board on USB. Raises LookStopError to say why not."""
         return board_look.looker(self.platform, self.run).run(self.project, port, self.evidence)
 
     def deploy(self, look, token, consent):
@@ -99,14 +99,14 @@ class DeployService:
         image_path = ProjectImage(self.project).path.relative_to(self.project)
         deploy_gate.require_open_gate(look, token, consent, image_path, look.question_caveats())
         if consent.yes_kind == deploy_gate.GRANT:
-            self.report(Event.line(deploy_stages.STAGE_GATE, "yes: %s" % consent.who))
+            self.report(Event.line(DeployPhase.GATE, "yes: %s" % consent.who))
         planned = self.plan(look.port)
         if look.token() != token:  # AT116: the image changed while the person answered
             raise DeployError("the image changed after your yes: run look.py again. not flashed.", reason=board_codes.IMAGE_CHANGED)
         consent.require_ready()  # a deploy grant can end while the plan reads the image
-        self.report(Event.begin(deploy_stages.STAGE_FLASH))
+        self.report(Event.begin(DeployPhase.FLASH))
         for index, command in enumerate(planned.commands):
-            self.report(Event.line(deploy_stages.STAGE_FLASH, "running: %s" % shlex.join(command), raw=True))  # P677: a command
+            self.report(Event.line(DeployPhase.FLASH, "running: %s" % shlex.join(command), raw=True))  # P677: a command
             try:
                 self._run_flash(command, planned.flasher, consent, retry=index == 0)
             except (OSError, subprocess.CalledProcessError) as failed:
@@ -124,7 +124,7 @@ class DeployService:
         except subprocess.CalledProcessError as failed:
             if not retry or failed.returncode != flasher.RETRY_EXIT_CODE:
                 raise
-            self.report(Event.line(deploy_stages.STAGE_FLASH, flasher.RETRY_LINE % {
+            self.report(Event.line(DeployPhase.FLASH, flasher.RETRY_LINE % {
                 "wait": flasher.RETRY_WAIT_S, "command": shlex.join(command), "code": failed.returncode}))
             self.clock.sleep(flasher.RETRY_WAIT_S)
             try:
@@ -155,7 +155,7 @@ class DeployService:
         board, start = read(port), None
         if port is None:
             start = starter.gone_result()
-        elif (board[2].verdict == ready_check.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
+        elif (board[2].verdict == ready_probe.UNKNOWN and expected  # P243: silent after the flash, maybe in download mode
               and board_start.console_may_be_read(row, look.port)):
             board, start = self._after_silence(starter, row, board, read)
         facts, facts_line, ready = board
@@ -180,9 +180,9 @@ class DeployService:
         waits, console = probe.waits_in_download_mode()
         starter.note("console with DTR and RTS off: %s\n" % (console.strip() or "nothing"))
         if waits:
-            self.report(Event.line(deploy_stages.STAGE_VERIFY, download_mode.press_reset(starter.places)))
+            self.report(Event.line(DeployPhase.VERIFY, download_mode.press_reset(starter.places)))
             latest = [board]
-            start = starter.wait_for_start(port, lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_check.UNKNOWN,
+            start = starter.wait_for_start(port, lambda on: latest.append(read(on)) or latest[-1][2].verdict != ready_probe.UNKNOWN,
                                            self.report, usb=row.usb)
             return latest[-1], start
         if download_mode.booted(console):  # P245: mpremote asked while the board still restarted
@@ -200,9 +200,9 @@ class DeployService:
         none (the port is gone) nothing is read, because mpremote would choose a board of its own: the facts are made and not written."""
         if connection is None:
             return (self._facts_of(image, report, expected, moment), "facts file: not written: the board's port is gone",
-                    ready_check.ReadyResult(ready_check.UNKNOWN, "", ""))
+                    ready_probe.ReadyResult(ready_probe.UNKNOWN, "", ""))
         facts, facts_line = self._put_facts(image, report, connection, expected, moment)
-        return facts, facts_line, self.platform.make_ready_check(connection).check(expected)
+        return facts, facts_line, self.platform.make_ready_probe(connection).check(expected)
 
     def _facts_of(self, image, report, expected, moment):
         """The facts that spark puts on the board (D22)."""
@@ -212,7 +212,7 @@ class DeployService:
     def _put_facts(self, image, report, connection, expected, moment):
         """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
         said = self._facts_of(image, report, expected, moment)
-        facts_file = board_facts.FactsFile(connection, self.clock.sleep)
+        facts_file = board_facts.ReadingFile(connection, self.clock.sleep)
         why = facts_file.write(said)
         if why:
             return said, "facts file: not written: %s" % why

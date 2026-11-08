@@ -66,7 +66,7 @@
   "replace": "print(\"  spark's tools — personal: %s · project: %s\\n\" % (personal or PERSONAL, Path(project) / PROJECT_FILE if project else \"(none)\"))"
  },
  {
-  "file": "scripts/board_look.py",
+  "file": "scripts/spark/bench/board_look.py",
   "name": "the board name enters the look's stop raw",
   "find": "P230 will research one.\", name, reason",
   "replace": "P230 will research one.\" % name, reason"

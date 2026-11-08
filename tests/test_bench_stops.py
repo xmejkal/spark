@@ -14,7 +14,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_look  # noqa: E402
+from spark.bench import board_look  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeOutsideWorld  # noqa: E402
 from spark.bench.check_grant import CheckGrant  # noqa: E402
@@ -44,7 +44,7 @@ class AStopKeepsEachTypedValueOnOneLineTest(unittest.TestCase):
 
     def test_a_newline_in_the_port_of_the_doctor_s_lines_fakes_no_line(self):
         port = "/dev/x\nGRANTED"
-        stop = board_look.LookStop("esptool could not read the board", reason="esptool_failed")
+        stop = board_look.LookStopError("esptool could not read the board", reason="esptool_failed")
         doctor_for = lambda cannot: (["grant.py: esptool could not read the board on %s" % port], None)  # noqa: E731
         said = stop_result(stop, "grant.py", self.project, port, doctor_for)
         self.assertEqual((said.diagnostics, self.faked_lines(said)),

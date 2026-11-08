@@ -2,7 +2,7 @@
 
 `devs` prints the canned list that FAKE_MPREMOTE_DEVS_FILE names. `exec` of reach's one line prints `reached`, and `reset`
 exits 0. With FAKE_BOARD (a folder) it is also a board that was just flashed: `fs cp` keeps a file in the folder and `fs cat`
-reads it back, `exec` of the hash script (ready_check.HASH_FILES) hashes `<cwd>/firmware/<path>`, which is what the image
+reads it back, `exec` of the hash script (ready_probe.HASH_FILES) hashes `<cwd>/firmware/<path>`, which is what the image
 holds, and `exec import main` prints `ready`. Any other command fails, so a golden never records an answer this fake made up.
 """
 
