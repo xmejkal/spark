@@ -54,7 +54,7 @@ import assign_pins  # noqa: E402
 import board_pads  # noqa: E402
 import breadboard_catalog  # noqa: E402
 import breadboard_changes  # noqa: E402
-import breadboard_codes  # noqa: E402
+from spark.breadboard import breadboard_codes  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
 import breadboard_match  # noqa: E402
