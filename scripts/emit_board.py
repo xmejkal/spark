@@ -509,21 +509,9 @@ def module_as_part(board):
             "power": [dict(entry, pin=pad) for pad, entry in (board.get("power_pads") or {}).items()]}
 
 
-def rail_loads(part_list, board=None):
-    """
-    What each rail carries, summed from the facts its members' power pins name (P52).
-
-    `{net: {amps, complete, missing, unverified, supply}}`. A pin names its figure — `draws` on an
-    input, `can_supply` on an output, `own_draw` where a module takes from the rail it makes —
-    because a servo has a stall AND an idle current and only the record can say which one its
-    pin draws. `amps` is what IS stated, so an open rail still says what it carries at least;
-    `missing` names every load the records leave open, where a total would be a guess.
-
-    A converter's input `feeds` an output and draws at most what that output delivers: an upper
-    bound for a step-down converter, and the only figure its record can honestly give. An output
-    may also name the fact that states the voltage it holds its rail at, as `volts` (P197).
-    """
-    members = list(part_list) + ([module_as_part(board)] if board else [])
+def rail_members(members):
+    """({net: {loads, supplies}}, {(the part's id, its output pin): net}) of every power pin of `members` off ground, for
+    `rail_loads`: an output supplies its rail and may draw its own, an input that `feeds` an output is settled later."""
     rails, outputs = {}, {}
     for part, supply, net in power_connections(members):
         if net in GROUND_NETS:
@@ -540,7 +528,34 @@ def rail_loads(part_list, board=None):
             rail["loads"].append({"who": who, "part": part, "feeds": supply["feeds"]})
         else:
             rail["loads"].append(dict(current_of(part, supply.get("draws")), who=who))
+    return rails, outputs
 
+
+def fed_load(who, fed, inner):
+    """The load of a converter's input that feeds the rail `fed`, whose settled figures are `inner` (None when it cannot be
+    settled): it carries what that rail carries, for `rail_loads`."""
+    return {"who": who,
+            "why": "carries what %s carries%s" % (fed, "" if inner and inner["complete"] else ", which is not fully stated"),
+            "amps": inner["amps"] if inner and inner["complete"] else None,
+            "verified": bool(inner) and not inner["unverified"]}
+
+
+def rail_loads(part_list, board=None):
+    """
+    What each rail carries, summed from the facts its members' power pins name (P52).
+
+    `{net: {amps, complete, missing, unverified, supply}}`. A pin names its figure — `draws` on an
+    input, `can_supply` on an output, `own_draw` where a module takes from the rail it makes —
+    because a servo has a stall AND an idle current and only the record can say which one its
+    pin draws. `amps` is what IS stated, so an open rail still says what it carries at least;
+    `missing` names every load the records leave open, where a total would be a guess.
+
+    A converter's input `feeds` an output and draws at most what that output delivers: an upper
+    bound for a step-down converter, and the only figure its record can honestly give. An output
+    may also name the fact that states the voltage it holds its rail at, as `volts` (P197).
+    """
+    members = list(part_list) + ([module_as_part(board)] if board else [])
+    rails, outputs = rail_members(members)
     settled = {}
 
     def settle(net, through=()):
@@ -551,11 +566,7 @@ def rail_loads(part_list, board=None):
             if "feeds" in load:
                 fed = outputs.get((id(load["part"]), load["feeds"]))
                 inner = settle(fed, through + (net,)) if fed and fed not in through + (net,) else None
-                load = {"who": load["who"],
-                        "why": "carries what %s carries%s" % (
-                            fed, "" if inner and inner["complete"] else ", which is not fully stated"),
-                        "amps": inner["amps"] if inner and inner["complete"] else None,
-                        "verified": bool(inner) and not inner["unverified"]}
+                load = fed_load(load["who"], fed, inner)
             if load["amps"] is None:
                 missing.append("%s: %s" % (load["who"], load["why"]))
                 continue
