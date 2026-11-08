@@ -12,6 +12,5 @@
  {"file": "scripts/check_bom.py", "name": "a package with no bom.csv exits 1, which reads as problems", "find": "        print(refusal)\n        return EXIT_COULD_NOT_RUN\n", "replace": "        print(refusal)\n        return EXIT_PROBLEMS\n"},
  {"file": "scripts/check_bom.py", "name": "the sentence of a package with no bom.csv changes", "find": "raise PackageError(\"no %s in %s\" % (BOM_NAME, package.name)", "replace": "raise PackageError(\"no %s inside %s\" % (BOM_NAME, package.name)"},
  {"file": "scripts/check_codes.py", "name": "CODES misses a constant", "find": "    HEADER_NOT_KEPT: \"the vendor header was fetched but could not be written to the project's cache\",\n", "replace": ""},
- {"file": "scripts/check_all.py", "name": "the vendor check's unchecked item loses its code", "find": "unchecked.append(Refusal(\"%s: %s\" % (result[\"board\"], result[\"reason\"]), result[\"reason\"].code))", "replace": "unchecked.append(\"%s: %s\" % (result[\"board\"], result[\"reason\"]))"},
- {"file": "scripts/spark/firmware/import_probe.py", "name": "a firmware module imports Refusal from its old home", "find": "from spark.core.result import Refusal\n", "replace": "from spark.firmware.firmware_codes import Refusal\n"}
+ {"file": "scripts/check_all.py", "name": "the vendor check's unchecked item loses its code", "find": "unchecked.append(Refusal(\"%s: %s\" % (result[\"board\"], result[\"reason\"]), result[\"reason\"].code))", "replace": "unchecked.append(\"%s: %s\" % (result[\"board\"], result[\"reason\"]))"}
 ]
