@@ -45,19 +45,42 @@ from pathlib import Path
 BOM_NAME = "bom.csv"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import check_codes  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 
 #: Design warnings that stop being warnings once the package is an order.
 FATAL_AT_FAB = ("supplier_footprint_mismatch_warning",)
 
 
+# --- MVP --- (P693)
+class PackageError(Exception):
+    """Error: a fab package this check cannot read an order from. `code` (check_codes) says why."""
+
+    def __init__(self, message, code):
+        super().__init__(message)
+        self.code = code
+
+
 def read_bom(package: Path):
+    """Value: the rows of the package's bom.csv. Raises PackageError when it holds none (P688's item 3)."""
     with zipfile.ZipFile(package) as archive:
         names = [n for n in archive.namelist() if n.endswith(BOM_NAME)]
         if not names:
-            raise SystemExit("no %s in %s" % (BOM_NAME, package.name))
+            raise PackageError("no %s in %s" % (BOM_NAME, package.name), check_codes.NO_BOM_IN_PACKAGE)
         text = archive.read(names[0]).decode()
     return list(csv.DictReader(io.StringIO(text)))
+
+
+def order_rows(package: Path):
+    """Value: (the rows of the package's bom.csv, None), or (None, the Refusal that says why there are none)."""
+    if not package.is_file():
+        return None, Refusal("no fab package at %s — export it first" % package, check_codes.NO_PACKAGE)
+    try:
+        return read_bom(package), None
+    except PackageError as unreadable:
+        return None, Refusal(str(unreadable), unreadable.code)
+# --- end MVP ---
 
 
 def check_duplicate_parts(rows):
@@ -161,12 +184,11 @@ def main(argv=None):
     parser.add_argument("--circuit", help="the built netlist, for warnings that are fatal at fab")
     args = parser.parse_args(argv)
 
-    package = Path(args.package)
-    if not package.is_file():
-        print("no fab package at %s — export it first" % package)
+    rows, refusal = order_rows(Path(args.package))
+    if refusal:
+        print(refusal)
         return EXIT_COULD_NOT_RUN
 
-    rows = read_bom(package)
     problems = check_duplicate_parts(rows) + check_missing_parts(rows)
     if args.circuit:
         problems += check_design_warnings(Path(args.circuit))

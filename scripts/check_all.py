@@ -53,12 +53,14 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+import check_codes  # noqa: E402
 import design  # noqa: E402
 import fab  # noqa: E402
 
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN  # noqa: E402
 
 from spark.core.outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, EXIT_FOR, answer  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 
 
 class Check:
@@ -80,9 +82,9 @@ class Check:
             # check did not look. Saying "not asked" would be a check that could not look reading
             # as one that was never wanted.
             return {"check": self.name, "status": COULD_NOT_RUN, "what": self.what,
-                    "reason": "; ".join("%s is ambiguous: %s — %s" % (need, ", ".join(ambiguous[need]),
-                                                                       how_to_choose(need, ambiguous[need]))
-                                        for need in unchosen)}
+                    "reason": Refusal("; ".join("%s is ambiguous: %s — %s" % (need, ", ".join(ambiguous[need]),
+                                                                               how_to_choose(need, ambiguous[need]))
+                                                for need in unchosen), check_codes.INPUT_AMBIGUOUS)}
         missing = [need for need in self.needs if not inputs.get(need)]
         if missing:
             return {"check": self.name, "status": SKIPPED, "what": self.what,
@@ -91,13 +93,13 @@ class Check:
             return dict({"check": self.name, "what": self.what}, **self.call(inputs))
         except fab.RulesError as refused:  # --- MVP --- (P455): one refusal of a rules file for every check that reads it
             return {"check": self.name, "status": COULD_NOT_RUN, "what": self.what,
-                    "problems": [], "unchecked": [str(refused)]}
+                    "problems": [], "unchecked": [Refusal(str(refused), check_codes.RULES_REFUSED)]}
         except (Exception, SystemExit) as broken:  # noqa: BLE001
             # SystemExit is a BaseException, so `except Exception` let it straight past: one
             # check's missing file killed the other six and exited 1, which reads as "problems
             # found" — the opposite of what happened.
             return {"check": self.name, "status": COULD_NOT_RUN, "what": self.what,
-                    "problems": [], "unchecked": ["%s: %s" % (type(broken).__name__, broken)]}
+                    "problems": [], "unchecked": [Refusal("%s: %s" % (type(broken).__name__, broken), check_codes.CHECK_CRASHED)]}
 
 
 #: `answer` and `status_of` live in `outcomes` since P42, imported above: the rule they hold was
@@ -268,7 +270,10 @@ class VendorTruth(Check):
 class TheOrder(Check):
     def call(self, inputs):
         import check_bom
-        rows = check_bom.read_bom(Path(inputs["package"]))
+        try:
+            rows = check_bom.read_bom(Path(inputs["package"]))
+        except check_bom.PackageError as unreadable:  # --- MVP --- (P693): a package with no order is unchecked, not a crash
+            return answer(unchecked=[Refusal(str(unreadable), unreadable.code)])
         problems = (check_bom.check_duplicate_parts(rows)
                     + check_bom.check_missing_parts(rows))
         unchecked = []
@@ -334,6 +339,15 @@ class CheckedFolder:
             raise design.DesignError("no directory at %s — `--project` names a project directory", folder)
         project = boards.project_or_library(folder.resolve())
         return cls(folder, folder if project == folder.resolve() else project)  # the folder as given, when it is one
+
+    @classmethod
+    def named(cls, project):
+        """Value: (the CheckedFolder of `--project`, None), (None, None) when none is named, or (None, the Refusal that
+        says why the folder cannot be read)."""
+        try:
+            return (cls.at(project) if project else None), None
+        except design.DesignError as broken:
+            return None, Refusal(str(broken), check_codes.PROJECT_UNUSABLE)
 
     def root(self, where):
         """The root a `CONVENTIONS` entry is read in."""
@@ -541,13 +555,12 @@ def main(argv=None):
                              "`unmeasured` (how many ? lines the answer rests on) and each check's result")
     args = parser.parse_args(argv)
 
-    try:
-        checked = CheckedFolder.at(args.project) if args.project else None
-    except design.DesignError as broken:
+    checked, refusal = CheckedFolder.named(args.project)
+    if refusal:
         if args.json:
-            print(json.dumps({"tool": "check_all", "status": COULD_NOT_RUN, "reason": str(broken)}, indent=2))
+            print(json.dumps({"tool": "check_all", "status": COULD_NOT_RUN, "reason": refusal}, indent=2))
         else:
-            print("  [????] check_all          %s" % broken)
+            print("  [????] check_all          %s" % refusal)
         return EXIT_FOR[COULD_NOT_RUN]
     inputs, resolved, ambiguous = inputs_for(args, checked)
     results = run(inputs, ambiguous)

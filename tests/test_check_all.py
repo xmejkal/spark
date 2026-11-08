@@ -129,7 +129,7 @@ class EveryCheckActuallyRunsThroughTheRunnerTest(unittest.TestCase):
                 check_all.PROBLEMS, "a header drilled too small for its own pins"),
             "the-order": (
                 {"package": str(no_bom)},
-                check_all.COULD_NOT_RUN, "a fab package with no bom.csv (raises SystemExit)"),
+                check_all.COULD_NOT_RUN, "a fab package with no bom.csv (check_bom.PackageError, P688's item 3)"),
             "physics": (
                 {"circuit": written("ok.json", a_header_drilled_too_small()),
                  "rules": written("rules.json", {})},
@@ -477,6 +477,7 @@ class ARulesFileThatIsRefusedIsOneSentenceTest(unittest.TestCase):
                     rules, result = self.run_check(name, text)
                     self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
                     self.assertEqual((result["unchecked"], result["problems"]), ([sentence % rules], []))
+                    self.assertEqual(result["unchecked"][0].code, "rules_refused")  # P693
 
     def test_a_file_nobody_can_read_starts_with_the_path(self):
         for name in ("physics", "rules-vs-netlist", "buildability"):
@@ -484,6 +485,40 @@ class ARulesFileThatIsRefusedIsOneSentenceTest(unittest.TestCase):
                 rules, result = self.run_check(name, "{}", unreadable=True)
                 self.assertEqual(result["status"], check_all.COULD_NOT_RUN, result)
                 self.assertTrue(result["unchecked"][0].startswith("%s could not be read" % rules), result)
+
+
+class EachRefusalHasItsCodeTest(unittest.TestCase):
+    """P693: each way check_all or one of its checks cannot look carries its code (check_codes), and its text is what it
+    was."""
+
+    def test_an_ambiguous_input_is_input_ambiguous(self):
+        result = check_all.Check("two-of", ["package"], "x").run({}, {"package": ["/a.zip", "/b.zip"]})
+        self.assertEqual((result["status"], result["reason"].code), (check_all.COULD_NOT_RUN, "input_ambiguous"))
+        self.assertTrue(result["reason"].startswith("package is ambiguous: /a.zip, /b.zip"), result["reason"])
+
+    def test_a_check_that_raises_is_check_crashed(self):
+        class Raising(check_all.Check):
+            def call(self, inputs):
+                return {}["missing"]
+        result = Raising("raising", ["circuit"], "x").run({"circuit": "c.json"})
+        self.assertEqual(result["unchecked"], ["KeyError: 'missing'"])
+        self.assertEqual(result["unchecked"][0].code, "check_crashed")
+
+    def test_a_package_with_no_bom_is_unchecked_with_its_code_not_a_crash(self):
+        package = Path(tempfile.mkdtemp()) / "fab-gerbers.zip"
+        zipfile.ZipFile(package, "w").writestr("board.gtl", "G04*")
+        order = next(c for c in check_all.CHECKS if c.name == "the-order")
+        result = order.run({"package": str(package)})
+        self.assertEqual((result["status"], result["unchecked"]), (check_all.COULD_NOT_RUN, ["no bom.csv in fab-gerbers.zip"]))
+        self.assertEqual(result["unchecked"][0].code, "no_bom_in_package")
+
+    def test_a_project_folder_that_is_not_there_is_project_unusable(self):
+        missing = Path(tempfile.mkdtemp()) / "nowhere"
+        checked, refusal = check_all.CheckedFolder.named(str(missing))
+        self.assertIsNone(checked)
+        self.assertEqual(refusal.code, "project_unusable")
+        self.assertIn("no directory at %s" % missing, refusal)
+        self.assertEqual(check_all.CheckedFolder.named(None), (None, None))
 
 
 class AnAdvisoryIsSaidAndDoesNotFailTest(unittest.TestCase):
@@ -862,7 +897,8 @@ class TheCheckListItselfTest(unittest.TestCase):
         #                 regenerate and rebuild spark's own reference board.
         #   check_commit — takes a COMMIT and measures the tree it holds (the suite);
         #                 it is about this repository, not about any design.
-        NOT_A_CHECK = {"check_all", "check_spine", "check_commit"}
+        #   check_codes — the leaf of the checks' refusal codes (P693): a table, not a check.
+        NOT_A_CHECK = {"check_all", "check_spine", "check_commit", "check_codes"}
         on_disk = {path.stem for path in (ROOT / "scripts").glob("check_*.py")} - NOT_A_CHECK
         on_disk |= {"compare_design"}
 

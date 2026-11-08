@@ -47,12 +47,21 @@ NO_RULES = ((".spark/rules.json", None),)
 PROJECT = golden_firmware.PROJECT
 
 
-def fab_package(*rows):
-    """The bytes of a fab package whose bom.csv holds `rows`, in check_bom.py's columns."""
+def zipped(name, text):
+    """The bytes of a zip that holds one file, `name`, with `text`."""
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
-        archive.writestr("bom.csv", "Designator,Comment,Value,Footprint,JLCPCB Part #\n" + "".join(r + "\n" for r in rows))
+        archive.writestr(name, text)
     return buffer.getvalue()
+
+
+def fab_package(*rows):
+    """The bytes of a fab package whose bom.csv holds `rows`, in check_bom.py's columns."""
+    return zipped("bom.csv", "Designator,Comment,Value,Footprint,JLCPCB Part #\n" + "".join(r + "\n" for r in rows))
+
+
+#: A fab package with no bom.csv (P688's item 3): a sentence and exit 2, not a SystemExit.
+NO_BOM = (("fab-gerbers.zip", zipped("board.gtl", "G04 copper*\n")),)
 
 
 Case = golden_firmware.Case
@@ -73,6 +82,8 @@ CASES = [
     Case("check-bom-problems-no-supplier-part.txt", "check_bom.py", ["fab-gerbers.zip"], 1,
          (("fab-gerbers.zip", fab_package("R1,220,220,0603,")),)),
     Case("check-bom-could-not-run-no-package.txt", "check_bom.py", ["fab-gerbers.zip"], 2),
+    Case("check-bom-could-not-run-no-bom.txt", "check_bom.py", ["fab-gerbers.zip"], 2, NO_BOM),
+    Case("check-all-could-not-run-no-bom.txt", "check_all.py", ["--project", PROJECT], 2, NO_BOM),
     Case("check-vendor-pins-ok-offline.txt", "check_vendor_pins.py", ["--offline", BOARD_FILE], 0, OWN_BOARD),
     Case("check-vendor-pins-ok-live.json", "check_vendor_pins.py", [BOARD_FILE, "--json"], 0, OWN_BOARD),
     Case("check-vendor-pins-problems-mismatch.txt", "check_vendor_pins.py", [BOARD_FILE], 1, OWN_BOARD,

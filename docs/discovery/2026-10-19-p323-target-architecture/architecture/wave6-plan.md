@@ -640,7 +640,7 @@ wrong or stale, and the build takes the corrections:
   Every `main` of the six is a key that cannot grow (`check_all` 48, `check_bom` 29, `check_footprints` 30,
   `check_physics` 32, `check_vendor_pins` 45, `compare_design` 17).
 - The three `main` sites name their code in the library, not in `main`, as P684 (row 28) and P692 (row 14) did: a
-  small function returns the refusal (`check_all.checked_folder`, `check_bom.order_rows`, `check_footprints.circuit_missing`),
+  small function returns the refusal (`check_all.CheckedFolder.named`, `check_bom.order_rows`, `check_footprints.built_design`),
   so each code is testable with no `mock.patch` and no `main` grows.
 - `check_vendor_pins.py:223`'s `CouldNotKeep` has three causes (`:189` no project owns the board file, `:193` the fetch,
   `:198` the write), each with its own fix, so it carries a code: `board_has_no_project`, `header_not_fetched`,

@@ -38,21 +38,20 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
+import check_codes  # noqa: E402
 import fab  # noqa: E402
 import copper  # noqa: E402
 
 
-#: `res0603` -> `0603`. check_footprints already works this out, and the package table here was
-#: keyed on the bare size while the engine emits the prefixed form — so even with the footprint
-#: resolved, nothing matched. One copy, imported — plainly, under the `sys.path` line that already
-#: made that possible; the file-path loader it replaced made a second copy of the module every
-#: time (audit A7).
+#: `res0603` -> `0603`, check_footprints' one copy: the package table here was keyed on the bare size while the engine
+#: emits the prefixed form, so nothing matched (audit A7).
 from check_footprints import package_of  # noqa: E402
 
 import netlist  # noqa: E402
 from emit_board import GROUND_NETS  # noqa: E402
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, status_of  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 
 #: The copper arithmetic lives in its own module, because `emit_board` sizes traces by exactly
 #: the formula this file judges them with. Two copies is how a board passes its own tool and
@@ -81,7 +80,6 @@ PACKAGE_POWER_W = fab.part("package_power_w")
 #: The resistor bound (P197) clears a resistor only at half its package rating: the usual derating, and room for a
 #: supply above its typical voltage. VDD33 is 3.6 V at most against 3.3 V typical, which is 19% more power.
 RESISTOR_POWER_DERATING = 2.0
-
 
 #: The only severities a finding may carry. Free text let "problems" vanish: nothing rendered,
 #: counted or filtered it (P143). `could-not-run` is the outcome word of the same name.
@@ -359,10 +357,6 @@ def check_resistor_power(board, rails, loads=None, bus_nets=()):
     answer is to say how many it could not assess rather than to compute a number that is wrong
     in one direction or the other.
 
-    It never fired, in either direction, because `footprint_of` returned None for every component
-    and the package table was keyed `0603` while the engine emits `res0603`. Three independent
-    faults, and being broken is the only reason nobody noticed the arithmetic was wrong.
-
     To make this a real check, a design has to state the current through a resistor — which is a
     thing a person knows and a netlist does not.
 
@@ -615,14 +609,16 @@ def render(result):
 
 # --- MVP --- (P455, #616) the rules go through `fab.read_rules`, so a refusal is a sentence and exit 2, not a traceback
 def rules_or_reason(circuit_path, rules_path):
-    """`(rules, None)`, or `(None, why nothing can run)`: a file that is missing, or rules that fab.read_rules refuses."""
-    for path, what in ((circuit_path, "built design"), (rules_path, "rules")):
+    """`(rules, None)`, or `(None, the Refusal that says why nothing can run)`: a file that is missing, or rules that
+    fab.read_rules refuses."""
+    for path, what, code in ((circuit_path, "built design", check_codes.NO_CIRCUIT),
+                             (rules_path, "rules", check_codes.NO_RULES_FILE)):
         if not path.is_file():
-            return None, "no %s at %s" % (what, path)
+            return None, Refusal("no %s at %s" % (what, path), code)
     try:
         return fab.read_rules(rules_path), None
     except fab.RulesError as refused:
-        return None, str(refused)
+        return None, Refusal(str(refused), check_codes.RULES_REFUSED)
 
 
 def main(argv=None):

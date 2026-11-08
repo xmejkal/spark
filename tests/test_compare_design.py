@@ -212,6 +212,26 @@ class ABusLineNamedByItsPinTest(unittest.TestCase):
         self.assertIn("nothing pulls it up", failures[0].detail)
 
 
+
+class EachRefusalHasItsCodeTest(unittest.TestCase):
+    """P693: each could-not-run of compare carries its code (check_codes) in its reason, and the reason is the same str."""
+
+    def test_each_reason_has_its_code(self):
+        root = Path(tempfile.mkdtemp())
+        circuit, rules = root / "circuit.json", root / "rules.json"
+        steps = [(lambda: None, "no_circuit"),
+                 (lambda: circuit.write_text("not json"), "no_rules_file"),
+                 (lambda: rules.write_text("[]"), "rules_refused"),
+                 (lambda: rules.write_text("{}"), "circuit_not_json"),
+                 (lambda: circuit.write_text("[]"), "no_rule_stated")]
+        for make, code in steps:
+            make()
+            with self.subTest(code=code):
+                result = compare_design.compare(circuit, rules)
+                self.assertEqual((result["status"], result["reason"].code), ("could-not-run", code))
+        self.assertEqual(json.loads(json.dumps(result))["reason"], result["reason"], "the JSON holds the sentence alone")
+
+
 if __name__ == "__main__":
     unittest.main()
 

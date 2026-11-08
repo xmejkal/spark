@@ -757,5 +757,22 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
             self.assertIn(word, ("problem", "needs-measurement", "could-not-run"))
 
 
+
+class EachRefusalHasItsCodeTest(unittest.TestCase):
+    """P693: each reason nothing can run carries its code (check_codes), and its text is what it was."""
+
+    def test_the_circuit_the_rules_and_a_refused_file_each_have_their_code(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        circuit, rules = root / "circuit.json", root / "rules.json"
+        self.assertEqual(check_physics.rules_or_reason(circuit, rules)[1].code, "no_circuit")
+        circuit.write_text("[]")
+        _, missing = check_physics.rules_or_reason(circuit, rules)
+        self.assertEqual((missing, missing.code), ("no rules at %s" % rules, "no_rules_file"))
+        rules.write_text("[]")
+        _, refused = check_physics.rules_or_reason(circuit, rules)
+        self.assertEqual((refused, refused.code), ("%s: (top level) is not an object" % rules, "rules_refused"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -604,5 +604,24 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
             self.assertIn(word, ("problem", "could-not-run", "advisory"))
 
 
+
+class EachRefusalHasItsCodeTest(unittest.TestCase):
+    """P693: no circuit, no rules file and a refused one each carry their code (check_codes), with the same text."""
+
+    def test_each_refusal_has_its_code(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        path, missing = check_footprints.built_design(str(root / "circuit.json"))
+        self.assertEqual((missing, missing.code), ("no built design at %s — build it first" % path, "no_circuit"))
+        self.assertEqual(check_footprints.built_design(str(ROOT / "tests"))[1].code, "no_circuit", "a folder is no circuit")
+        _, no_rules = check_footprints.rules_asked(str(root / "rules.json"))
+        self.assertEqual((no_rules, no_rules.code), ("no rules file at %s" % (root / "rules.json"), "no_rules_file"))
+        (root / "rules.json").write_text("[]")
+        _, refused = check_footprints.rules_asked(str(root / "rules.json"))
+        self.assertEqual(refused.code, "rules_refused")
+        (root / "circuit.json").write_text("[]")
+        self.assertEqual(check_footprints.built_design(str(root / "circuit.json")), (root / "circuit.json", None))
+
+
 if __name__ == "__main__":
     unittest.main()
