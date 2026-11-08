@@ -501,9 +501,9 @@ P692 claims check (2026-11-08, on main 6338f89e). Stopped before any code, for o
 
 - Decision needed. `breadboard.py` is 600 lines, R1's module limit (`tools/measure.py:242`, counted by
   `splitlines`, `:449`). Every line the card adds there is the new key `R1:scripts/breadboard.py:<module>`, and the
-  baseline may only shrink. The card adds about 20: the import 1, `NotBuilt.__init__` 4, the three extractions about
-  2, 5 and 5, wrapped raise lines about 3, and 5 more for a library function that gives the three outside exceptions
-  their code (`main` is the R1 key at 26 and cannot grow, as P684 row 28 found). Prunes that lose no words give about 8.
+  baseline can only shrink. The card adds about 20 lines. The import is 1, `NotBuilt.__init__` 4, the three
+  extractions about 2, 5 and 5, and the wrapped raise lines about 3. A library function that gives the three outside
+  exceptions their code adds 5 more, because `main` is the R1 key at 26 and cannot grow (P684 row 28). Prunes that lose no words give about 8.
   They are the orphan comment at `:74` and three docstrings whose `"""` sit on their own lines. About 12 lines more
   must go, by one of three choices:
   - Cut the module docstring, which is the `--help` text (43 lines).
