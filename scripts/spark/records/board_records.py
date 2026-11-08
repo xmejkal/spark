@@ -24,7 +24,7 @@ from typing import Optional
 from pathlib import Path
 from spark.records import board_pads
 from spark.records import provenance
-import records_codes
+from spark.records import records_codes
 from spark.records import store
 
 #: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one

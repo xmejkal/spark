@@ -37,7 +37,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 from spark.records import board_records  # noqa: E402
-import records_codes  # noqa: E402
+from spark.records import records_codes  # noqa: E402
 from spark.records import store  # noqa: E402
 import versions  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402

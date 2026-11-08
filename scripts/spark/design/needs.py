@@ -19,7 +19,7 @@ from spark.design import board_emitter
 from spark.design import footprint_emitter
 import matching
 import parts
-import records_codes
+from spark.records import records_codes
 from spark.records import store
 from spark.core.text_guards import clean, kept_reason, printable
 

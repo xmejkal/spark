@@ -40,7 +40,7 @@ import check_physics  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.bench import board_codes  # noqa: E402
-import records_codes  # noqa: E402
+from spark.records import records_codes  # noqa: E402
 import sourcing_codes  # noqa: E402
 from spark.build import build_codes  # noqa: E402
 from spark.checks import check_codes  # noqa: E402

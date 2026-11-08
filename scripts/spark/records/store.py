@@ -25,7 +25,7 @@ import threading
 import urllib.parse
 from pathlib import Path
 
-import records_codes
+from spark.records import records_codes
 from spark.core import outcomes
 from spark.core.errors import CodedMessageError
 from spark.core.text_guards import CONTROL

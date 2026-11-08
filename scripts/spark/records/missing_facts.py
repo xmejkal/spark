@@ -7,7 +7,7 @@ or a bench measures it; `level_write_problems` is the rule for what that write m
 
 from spark.records import board_records
 from spark.records import provenance
-import records_codes
+from spark.records import records_codes
 from spark.core import outcomes
 from spark.core.result import Finding
 

@@ -13,7 +13,7 @@ import datetime
 import json
 
 from spark.core import outcomes
-import records_codes
+from spark.records import records_codes
 from spark.records import store
 from spark.core import zone_time
 

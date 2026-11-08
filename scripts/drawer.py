@@ -16,7 +16,7 @@ from collections import namedtuple
 
 from spark.records import board_records
 import parts
-import records_codes
+from spark.records import records_codes
 from spark.records import store
 from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems, printable
 
