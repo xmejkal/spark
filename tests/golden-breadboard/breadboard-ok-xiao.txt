@@ -1,0 +1,380 @@
+# Breadboard: button-light-xiao, on a Seeed Studio XIAO ESP32-C6
+
+## Parts
+
+| qty | part | for | have |
+| --- | --- | --- | --- |
+| 1 | Seeed Studio XIAO ESP32-C6 | the board |  |
+| 1 | 6x6 mm tactile push button | TactileButton |  |
+| 1 | Kingbright L-7113ID 5 mm red LED | LedRed5mm |  |
+| 1 | 330Ω resistor, through-hole | R1 in series with LedRed5mm A |  |
+| | a breadboard and jumper wires | |  |
+
+*have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · to get = not in your drawer · blank = this project is not on your list (`/spark:init` puts it there)
+
+## Wiring
+
+### Steps
+
+One connection per step. The board's pins take the rows beside them, so a board pin always gets a jumper.
+
+1. Put the board in the breadboard, each pin in its own row.
+2. Put TactileButton in the breadboard, each pin in its own row.
+3. Put LedRed5mm in the breadboard, each pin in its own row.
+4. Put R1 (330Ω in series with LedRed5mm A), end 1, in a free row.
+5. Run a jumper from board D8 to the row of R1 end 1.
+6. Run a jumper from board D10 to the row of TactileButton A.
+7. Run a jumper from board GND to the row of LedRed5mm K.
+8. Run a jumper from the row of TactileButton B (either leg of the other pair) to the row of LedRed5mm K.
+9. Put R1 (330Ω in series with LedRed5mm A), end 2, in the row of LedRed5mm A.
+
+### Diagram
+
+Each line is one step, with its number.
+
+```mermaid
+flowchart LR
+  subgraph g1["board"]
+    n1["board D8"]
+    n2["board D10"]
+    n3["board GND"]
+  end
+  subgraph g2["R1"]
+    n4["R1 end 1"]
+    n5["R1 end 2"]
+  end
+  subgraph g3["TactileButton"]
+    n6["TactileButton A"]
+    n7["TactileButton B"]
+  end
+  subgraph g4["LedRed5mm"]
+    n8["LedRed5mm K"]
+    n9["LedRed5mm A"]
+  end
+  n1 ---|"5"| n4
+  n2 ---|"6"| n6
+  n3 ---|"7"| n8
+  n7 ---|"8"| n8
+  n5 ---|"9"| n9
+```
+
+An example layout is in breadboard.json: paste it into the diagram.json of a new project on wokwi.com. Each jumper has its step's color: 5 cyan, 6 blue, 7 purple, 8 magenta.
+
+![The layout on a breadboard](breadboard.svg)
+
+### Points
+
+After the steps, each line is one point: its ends must be joined, and nothing else.
+
+1. board D8 · R1 (330Ω in series with LedRed5mm A), end 1
+2. board D10 · TactileButton A (either leg of one joined pair; a meter on continuity shows which legs are joined)
+3. board GND · LedRed5mm K (the cathode, the shorter leg, by the flat of the rim) · TactileButton B (either leg of the other pair)
+4. LedRed5mm A (the anode, the longer leg) · R1 (330Ω in series with LedRed5mm A), end 2
+
+## Before you power it
+
+- TactileButton A has no resistor: the firmware must pull it up with Pin.PULL_UP, as `pins.py` says (P204)
+- 6x6 mm tactile push button: Decide the polarity against deep sleep, not convenience. MicroPython's esp32.wake_on_ext1(pins, level) takes ONE level for every pin in the mask, on every chip (ports/esp32/modesp32.c, v1.29.0), so a board with two wake sources must have them assert in the same direction. Both directions are an OR on the S3 and C6: WAKEUP_ALL_LOW is a true AND only on the original ESP32, and ESP-IDF aliases it to ANY_LOW on every later chip (components/esp_hw_support/include/esp_sleep.h, v5.5.2). Prefer wiring a wake button to 3V3 behind a pull-down and arming WAKEUP_ANY_HIGH: low-level wake has an open MicroPython bug, micropython#17334 ('stuck pin', reported on a C6, v1.25.0). Corrected 2026-10-01 (spark P63): this line used to say ALL_LOW is an AND here, which is false on these chips.
+- 6x6 mm tactile push button: Debounce in firmware, not hardware, unless the button is also a wake source — a wake pin's first edge is the one that matters and it is not debounced by anything.
+- Kingbright L-7113ID 5 mm red LED: A series resistor between the GPIO and the anode, always: without it the LED's current is set only by the pin's drive strength, and it either runs far past 30 mA or droops the pin's level.
+- Kingbright L-7113ID 5 mm red LED: Keep it off the chip's strapping pins: an LED and resistor to ground load the pin while the chip samples its straps at reset, and can change how it boots. (Reasoned from the circuit, not from this datasheet.)
+- Kingbright L-7113ID 5 mm red LED: On a breadboard: the LONG lead (anode) goes to the resistor; the short lead, on the side of the flat in the rim, goes to ground. Once the leads are trimmed equal, the flat is the mark that survives.
+
+Each record whole, with what it asks of the board: `parts.py --show led-red-5mm`, `parts.py --show tactile-button`.
+--- stderr ---
+wrote <project-dir>/breadboard.md
+wrote <project-dir>/breadboard.json — an example layout of the steps on a breadboard: paste it into a new project on wokwi.com
+wrote <project-dir>/breadboard.svg — a picture of the same layout, which breadboard.md shows
+--- breadboard.json ---
+{
+  "version": 1,
+  "author": "spark",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-breadboard-half",
+      "id": "bb1",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "board-xiao-esp32-c6",
+      "id": "board",
+      "top": 73.982,
+      "left": 43.435,
+      "rotate": 90,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "TactileButton",
+      "top": 98.4,
+      "left": 105.8,
+      "rotate": 90,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "LedRed5mm",
+      "top": 76.2,
+      "left": 164.2,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "R1",
+      "top": 122.45,
+      "left": 189,
+      "rotate": 180,
+      "attrs": {
+        "value": "330"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "bb1:4b.j",
+      "bb1:24b.f",
+      "cyan",
+      []
+    ],
+    [
+      "bb1:6b.j",
+      "bb1:14t.a",
+      "blue",
+      []
+    ],
+    [
+      "bb1:8b.j",
+      "bb1:17b.g",
+      "purple",
+      []
+    ],
+    [
+      "bb1:12t.a",
+      "bb1:17b.h",
+      "magenta",
+      []
+    ]
+  ],
+  "dependencies": {}
+}
+--- breadboard.svg ---
+<svg xmlns="http://www.w3.org/2000/svg" width="332.4" height="210.3" viewBox="0 0 332.4 210.3"><rect width="332.4" height="210.3" rx="6" fill="#f4f4f4" /><path d="M26 51h0M26 60.6h0M26 70.2h0M26 79.8h0M26 89.4h0M26 118.2h0M26 127.8h0M26 137.4h0M26 147h0M26 156.6h0M35.6 51h0M35.6 60.6h0M35.6 70.2h0M35.6 79.8h0M35.6 89.4h0M35.6 118.2h0M35.6 127.8h0M35.6 137.4h0M35.6 147h0M35.6 156.6h0M45.2 51h0M45.2 60.6h0M45.2 70.2h0M45.2 79.8h0M45.2 89.4h0M45.2 118.2h0M45.2 127.8h0M45.2 137.4h0M45.2 147h0M45.2 156.6h0M54.8 51h0M54.8 60.6h0M54.8 70.2h0M54.8 79.8h0M54.8 89.4h0M54.8 118.2h0M54.8 127.8h0M54.8 137.4h0M54.8 147h0M54.8 156.6h0M64.4 51h0M64.4 60.6h0M64.4 70.2h0M64.4 79.8h0M64.4 89.4h0M64.4 118.2h0M64.4 127.8h0M64.4 137.4h0M64.4 147h0M64.4 156.6h0M74 51h0M74 60.6h0M74 70.2h0M74 79.8h0M74 89.4h0M74 118.2h0M74 127.8h0M74 137.4h0M74 147h0M74 156.6h0M83.6 51h0M83.6 60.6h0M83.6 70.2h0M83.6 79.8h0M83.6 89.4h0M83.6 118.2h0M83.6 127.8h0M83.6 137.4h0M83.6 147h0M83.6 156.6h0M93.2 51h0M93.2 60.6h0M93.2 70.2h0M93.2 79.8h0M93.2 89.4h0M93.2 118.2h0M93.2 127.8h0M93.2 137.4h0M93.2 147h0M93.2 156.6h0M102.8 51h0M102.8 60.6h0M102.8 70.2h0M102.8 79.8h0M102.8 89.4h0M102.8 118.2h0M102.8 127.8h0M102.8 137.4h0M102.8 147h0M102.8 156.6h0M112.4 51h0M112.4 60.6h0M112.4 70.2h0M112.4 79.8h0M112.4 89.4h0M112.4 118.2h0M112.4 127.8h0M112.4 137.4h0M112.4 147h0M112.4 156.6h0M122 51h0M122 60.6h0M122 70.2h0M122 79.8h0M122 89.4h0M122 118.2h0M122 127.8h0M122 137.4h0M122 147h0M122 156.6h0M131.6 51h0M131.6 60.6h0M131.6 70.2h0M131.6 79.8h0M131.6 89.4h0M131.6 118.2h0M131.6 127.8h0M131.6 137.4h0M131.6 147h0M131.6 156.6h0M141.2 51h0M141.2 60.6h0M141.2 70.2h0M141.2 79.8h0M141.2 89.4h0M141.2 118.2h0M141.2 127.8h0M141.2 137.4h0M141.2 147h0M141.2 156.6h0M150.8 51h0M150.8 60.6h0M150.8 70.2h0M150.8 79.8h0M150.8 89.4h0M150.8 118.2h0M150.8 127.8h0M150.8 137.4h0M150.8 147h0M150.8 156.6h0M160.4 51h0M160.4 60.6h0M160.4 70.2h0M160.4 79.8h0M160.4 89.4h0M160.4 118.2h0M160.4 127.8h0M160.4 137.4h0M160.4 147h0M160.4 156.6h0M170 51h0M170 60.6h0M170 70.2h0M170 79.8h0M170 89.4h0M170 118.2h0M170 127.8h0M170 137.4h0M170 147h0M170 156.6h0M179.6 51h0M179.6 60.6h0M179.6 70.2h0M179.6 79.8h0M179.6 89.4h0M179.6 118.2h0M179.6 127.8h0M179.6 137.4h0M179.6 147h0M179.6 156.6h0M189.2 51h0M189.2 60.6h0M189.2 70.2h0M189.2 79.8h0M189.2 89.4h0M189.2 118.2h0M189.2 127.8h0M189.2 137.4h0M189.2 147h0M189.2 156.6h0M198.8 51h0M198.8 60.6h0M198.8 70.2h0M198.8 79.8h0M198.8 89.4h0M198.8 118.2h0M198.8 127.8h0M198.8 137.4h0M198.8 147h0M198.8 156.6h0M208.4 51h0M208.4 60.6h0M208.4 70.2h0M208.4 79.8h0M208.4 89.4h0M208.4 118.2h0M208.4 127.8h0M208.4 137.4h0M208.4 147h0M208.4 156.6h0M218 51h0M218 60.6h0M218 70.2h0M218 79.8h0M218 89.4h0M218 118.2h0M218 127.8h0M218 137.4h0M218 147h0M218 156.6h0M227.6 51h0M227.6 60.6h0M227.6 70.2h0M227.6 79.8h0M227.6 89.4h0M227.6 118.2h0M227.6 127.8h0M227.6 137.4h0M227.6 147h0M227.6 156.6h0M237.2 51h0M237.2 60.6h0M237.2 70.2h0M237.2 79.8h0M237.2 89.4h0M237.2 118.2h0M237.2 127.8h0M237.2 137.4h0M237.2 147h0M237.2 156.6h0M246.8 51h0M246.8 60.6h0M246.8 70.2h0M246.8 79.8h0M246.8 89.4h0M246.8 118.2h0M246.8 127.8h0M246.8 137.4h0M246.8 147h0M246.8 156.6h0M256.4 51h0M256.4 60.6h0M256.4 70.2h0M256.4 79.8h0M256.4 89.4h0M256.4 118.2h0M256.4 127.8h0M256.4 137.4h0M256.4 147h0M256.4 156.6h0M266 51h0M266 60.6h0M266 70.2h0M266 79.8h0M266 89.4h0M266 118.2h0M266 127.8h0M266 137.4h0M266 147h0M266 156.6h0M275.6 51h0M275.6 60.6h0M275.6 70.2h0M275.6 79.8h0M275.6 89.4h0M275.6 118.2h0M275.6 127.8h0M275.6 137.4h0M275.6 147h0M275.6 156.6h0M285.2 51h0M285.2 60.6h0M285.2 70.2h0M285.2 79.8h0M285.2 89.4h0M285.2 118.2h0M285.2 127.8h0M285.2 137.4h0M285.2 147h0M285.2 156.6h0M294.8 51h0M294.8 60.6h0M294.8 70.2h0M294.8 79.8h0M294.8 89.4h0M294.8 118.2h0M294.8 127.8h0M294.8 137.4h0M294.8 147h0M294.8 156.6h0M304.4 51h0M304.4 60.6h0M304.4 70.2h0M304.4 79.8h0M304.4 89.4h0M304.4 118.2h0M304.4 127.8h0M304.4 137.4h0M304.4 147h0M304.4 156.6h0M34 12.3h0M43.6 12.3h0M53.2 12.3h0M62.8 12.3h0M72.4 12.3h0M91.6 12.3h0M101.2 12.3h0M110.8 12.3h0M120.4 12.3h0M130 12.3h0M149.2 12.3h0M158.8 12.3h0M168.4 12.3h0M178 12.3h0M187.6 12.3h0M206.8 12.3h0M216.4 12.3h0M226 12.3h0M235.6 12.3h0M245.2 12.3h0M264.4 12.3h0M274 12.3h0M283.6 12.3h0M293.2 12.3h0M302.8 12.3h0M34 22.3h0M43.6 22.3h0M53.2 22.3h0M62.8 22.3h0M72.4 22.3h0M91.6 22.3h0M101.2 22.3h0M110.8 22.3h0M120.4 22.3h0M130 22.3h0M149.2 22.3h0M158.8 22.3h0M168.4 22.3h0M178 22.3h0M187.6 22.3h0M206.8 22.3h0M216.4 22.3h0M226 22.3h0M235.6 22.3h0M245.2 22.3h0M264.4 22.3h0M274 22.3h0M283.6 22.3h0M293.2 22.3h0M302.8 22.3h0M34 186.3h0M43.6 186.3h0M53.2 186.3h0M62.8 186.3h0M72.4 186.3h0M91.6 186.3h0M101.2 186.3h0M110.8 186.3h0M120.4 186.3h0M130 186.3h0M149.2 186.3h0M158.8 186.3h0M168.4 186.3h0M178 186.3h0M187.6 186.3h0M206.8 186.3h0M216.4 186.3h0M226 186.3h0M235.6 186.3h0M245.2 186.3h0M264.4 186.3h0M274 186.3h0M283.6 186.3h0M293.2 186.3h0M302.8 186.3h0M34 196.3h0M43.6 196.3h0M53.2 196.3h0M62.8 196.3h0M72.4 196.3h0M91.6 196.3h0M101.2 196.3h0M110.8 196.3h0M120.4 196.3h0M130 196.3h0M149.2 196.3h0M158.8 196.3h0M168.4 196.3h0M178 196.3h0M187.6 196.3h0M206.8 196.3h0M216.4 196.3h0M226 196.3h0M235.6 196.3h0M245.2 196.3h0M264.4 196.3h0M274 196.3h0M283.6 196.3h0M293.2 196.3h0M302.8 196.3h0" stroke="#a8a8a8" stroke-width="3.5" stroke-linecap="round" /><line x1="34" y1="7.3" x2="302.8" y2="7.3" stroke-width="1" stroke="#e53935" /><line x1="34" y1="27.3" x2="302.8" y2="27.3" stroke-width="1" stroke="#1e88e5" /><line x1="34" y1="181.3" x2="302.8" y2="181.3" stroke-width="1" stroke="#e53935" /><line x1="34" y1="201.3" x2="302.8" y2="201.3" stroke-width="1" stroke="#1e88e5" /><g transform="translate(43.435 73.982) rotate(90 34 44)"><g transform="scale(1 1) translate(0 0)"><rect x="2" y="8" width="64" height="78" rx="6" fill="#1f1f1f" />
+  <rect x="22" y="0" width="24" height="14" rx="2" fill="#b8b8b8" />
+  <rect x="16" y="30" width="36" height="34" rx="2" fill="#d9d9d9" />
+  <g fill="#e0b040">
+    <circle cx="5.4" cy="18.6" r="3" /><circle cx="5.4" cy="28.2" r="3" /><circle cx="5.4" cy="37.8" r="3" />
+    <circle cx="5.4" cy="47.4" r="3" /><circle cx="5.4" cy="57" r="3" /><circle cx="5.4" cy="66.6" r="3" />
+    <circle cx="5.4" cy="76.2" r="3" /><circle cx="62.4" cy="18.6" r="3" /><circle cx="62.4" cy="28.2" r="3" />
+    <circle cx="62.4" cy="37.8" r="3" /><circle cx="62.4" cy="47.4" r="3" /><circle cx="62.4" cy="57" r="3" />
+    <circle cx="62.4" cy="66.6" r="3" /><circle cx="62.4" cy="76.2" r="3" />
+  </g>
+</g></g><g transform="translate(105.8 98.4) rotate(90 33.5 24.5)"><g transform="scale(1 1) translate(0 0)"><rect x="10" y="1" width="47.28" height="43.35" rx="3" fill="#3c3c3c" />
+  <rect x="0" y="11.5" width="10" height="3" fill="#8c8c8c" />
+  <rect x="0" y="30.5" width="10" height="3" fill="#8c8c8c" />
+  <rect x="57.28" y="11.5" width="10" height="3" fill="#8c8c8c" />
+  <rect x="57.28" y="30.5" width="10" height="3" fill="#8c8c8c" />
+  <circle cx="33.64" cy="22.68" r="13" fill="#43a047" />
+</g></g><g transform="translate(164.2 76.2) rotate(0 20 25)"><g transform="scale(1 1) translate(0 0)"><rect x="14" y="26" width="2" height="16" fill="#8c8c8c" />
+  <rect x="24" y="26" width="2" height="16" fill="#8c8c8c" />
+  <path d="M8 28 V14 A12 12 0 0 1 32 14 V28 Z" fill="#e53935" />
+  <rect x="6" y="26" width="28" height="4" fill="#c62828" />
+  <path d="M8 26 H14 V30 H8 Z" fill="#8e1b1b" />
+</g></g><g transform="translate(189 122.45) rotate(180 29.5 5.5)"><g transform="scale(1.002 1.031) translate(0 0)"><rect x="0" y="4.6" width="59" height="2" fill="#8c8c8c" />
+  <rect x="15" y="1" width="29" height="9" rx="4" fill="#d7b98e" />
+  <rect x="20" y="1" width="3" height="9" fill="#8d6e63" />
+  <rect x="27" y="1" width="3" height="9" fill="#212121" />
+  <rect x="34" y="1" width="3" height="9" fill="#c9a227" />
+</g></g><path d="M54.8 156.6L54.8 123L246.8 123L246.8 118.2" fill="none" stroke="cyan" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="57.8" y="121" font-size="9" font-family="sans-serif" font-weight="bold" fill="cyan">5</text><path d="M74 156.6L74 55.8L150.8 55.8L150.8 51" fill="none" stroke="blue" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="77" y="53.8" font-size="9" font-family="sans-serif" font-weight="bold" fill="blue">6</text><path d="M93.2 156.6L93.2 132.6L179.6 132.6L179.6 127.8" fill="none" stroke="purple" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="96.2" y="130.6" font-size="9" font-family="sans-serif" font-weight="bold" fill="purple">7</text><path d="M131.6 51L131.6 132.6L179.6 132.6L179.6 137.4" fill="none" stroke="magenta" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /><text x="134.6" y="130.6" font-size="9" font-family="sans-serif" font-weight="bold" fill="magenta">8</text><circle cx="102.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="74" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="45.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="54.8" cy="147" r="2.5" fill="#2e7d32" /><circle cx="64.4" cy="147" r="2.5" fill="#2e7d32" /><circle cx="74" cy="147" r="2.5" fill="#2e7d32" /><circle cx="83.6" cy="147" r="2.5" fill="#2e7d32" /><circle cx="93.2" cy="147" r="2.5" fill="#2e7d32" /><circle cx="102.8" cy="147" r="2.5" fill="#2e7d32" /><text x="77.435" y="117.982" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">board</text><circle cx="150.8" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="89.4" r="2.5" fill="#2e7d32" /><circle cx="150.8" cy="156.6" r="2.5" fill="#2e7d32" /><circle cx="131.6" cy="156.6" r="2.5" fill="#2e7d32" /><text x="139.3" y="122.9" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">TactileButton</text><circle cx="189.2" cy="118.2" r="2.5" fill="#2e7d32" /><circle cx="179.6" cy="118.2" r="2.5" fill="#2e7d32" /><text x="184.2" y="101.2" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">LedRed5mm</text><circle cx="246.8" cy="127.8" r="2.5" fill="#2e7d32" /><circle cx="189.2" cy="127.8" r="2.5" fill="#2e7d32" /><text x="218.5" y="127.95" font-size="8" font-family="sans-serif" text-anchor="middle" fill="#1a1a1a" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">R1</text></svg>
+--- wiring-record.json ---
+{
+ "steps": [
+  {
+   "key": [
+    "place",
+    "board"
+   ],
+   "anchor": null,
+   "kind": "place",
+   "source": "the board",
+   "to": "",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "place",
+    "TactileButton"
+   ],
+   "anchor": null,
+   "kind": "place",
+   "source": "TactileButton",
+   "to": "",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "place",
+    "LedRed5mm"
+   ],
+   "anchor": null,
+   "kind": "place",
+   "source": "LedRed5mm",
+   "to": "",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "resistor",
+    "in series with LedRed5mm A",
+    "1"
+   ],
+   "anchor": [
+    "row",
+    "resistor",
+    "in series with LedRed5mm A",
+    "1"
+   ],
+   "kind": "leg",
+   "source": "R1 end 1 (in series with LedRed5mm A)",
+   "to": "a free row",
+   "tag": "R1",
+   "value": "330\u03a9",
+   "job": "in series with LedRed5mm A",
+   "color": null,
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board D8"
+   ],
+   "anchor": [
+    "row",
+    "resistor",
+    "in series with LedRed5mm A",
+    "1"
+   ],
+   "kind": "jumper",
+   "source": "board D8",
+   "to": "the row of R1 end 1 (in series with LedRed5mm A)",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "cyan",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board D10"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "TactileButton A (either leg of one joined pair; a meter on continuity shows which legs are joined)"
+   ],
+   "kind": "jumper",
+   "source": "board D10",
+   "to": "the row of TactileButton A",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "blue",
+   "marks": ""
+  },
+  {
+   "key": [
+    "board",
+    "board GND"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "LedRed5mm K (the cathode, the shorter leg, by the flat of the rim)"
+   ],
+   "kind": "jumper",
+   "source": "board GND",
+   "to": "the row of LedRed5mm K",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "purple",
+   "marks": ""
+  },
+  {
+   "key": [
+    "part",
+    "TactileButton B (either leg of the other pair)"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "LedRed5mm K (the cathode, the shorter leg, by the flat of the rim)"
+   ],
+   "kind": "jumper",
+   "source": "the row of TactileButton B",
+   "to": "the row of LedRed5mm K",
+   "tag": "",
+   "value": "",
+   "job": "",
+   "color": "magenta",
+   "marks": ""
+  },
+  {
+   "key": [
+    "resistor",
+    "in series with LedRed5mm A",
+    "2"
+   ],
+   "anchor": [
+    "row",
+    "part",
+    "LedRed5mm A (the anode, the longer leg)"
+   ],
+   "kind": "leg",
+   "source": "R1 end 2 (in series with LedRed5mm A)",
+   "to": "the row of LedRed5mm A",
+   "tag": "R1",
+   "value": "330\u03a9",
+   "job": "in series with LedRed5mm A",
+   "color": null,
+   "marks": ""
+  }
+ ],
+ "drawn_jumpers": [
+  [
+   "12t.a",
+   "17b.h"
+  ],
+  [
+   "14t.a",
+   "6b.j"
+  ],
+  [
+   "17b.g",
+   "8b.j"
+  ],
+  [
+   "24b.f",
+   "4b.j"
+  ]
+ ]
+}

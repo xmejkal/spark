@@ -1,0 +1,2 @@
+--- stderr ---
+breadboard.py: could not run — [Errno 2] No such file or directory: 'no/such/x.md'
