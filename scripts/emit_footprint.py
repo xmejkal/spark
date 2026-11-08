@@ -250,6 +250,17 @@ def pads(board):
     return placed
 
 
+def outline_lines(half_w, half_h):
+    """The four silkscreen sides of a board `2 * half_w` by `2 * half_h` mm, for `render`."""
+    lines = []
+    for (x1, y1), (x2, y2) in zip(
+            [(-half_w, half_h), (half_w, half_h), (half_w, -half_h), (-half_w, -half_h)],
+            [(half_w, half_h), (half_w, -half_h), (-half_w, -half_h), (-half_w, half_h)]):
+        lines.append('      <silkscreenpath route={[{"x":%g,"y":%g},{"x":%g,"y":%g}]} />'
+                     % (x1, y1, x2, y2))
+    return lines
+
+
 def render(board, rules=None):
     """The footprint module, as TSX, sized for the process the project states."""
     physical = board["physical"]
@@ -281,11 +292,7 @@ def render(board, rules=None):
         lines.append(
             '      <platedhole portHints={[%s]} pcbX="%gmm" pcbY="%gmm" '
             'outerDiameter="%gmm" holeDiameter="%gmm" shape="circle" />' % (json.dumps(label), x, y, pad, hole))
-    for (x1, y1), (x2, y2) in zip(
-            [(-half_w, half_h), (half_w, half_h), (half_w, -half_h), (-half_w, -half_h)],
-            [(half_w, half_h), (half_w, -half_h), (-half_w, -half_h), (-half_w, half_h)]):
-        lines.append('      <silkscreenpath route={[{"x":%g,"y":%g},{"x":%g,"y":%g}]} />'
-                     % (x1, y1, x2, y2))
+    lines += outline_lines(half_w, half_h)
     lines += [
         "    </footprint>}",
         "    {...props}",
