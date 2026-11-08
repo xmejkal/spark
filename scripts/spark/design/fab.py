@@ -4,7 +4,7 @@ What a board house can make and what a part is: read from `data/fabrication.json
 Every number here used to be a literal in one to three scripts. Three of them were genuinely two
 copies — the chip package power table, the square header pin, the hole plating — so a change to
 one was silently missing from the other. One pair was worse than a copy: `check_footprints`
-demanded at least 0.25 mm of annular ring and `emit_footprint` drew 0.35, related only by a
+demanded at least 0.25 mm of annular ring and `footprint_emitter` drew 0.35, related only by a
 sentence in a comment, so raising the checker's minimum would have left the generator emitting
 footprints that fail its own check. That relationship is arithmetic now.
 

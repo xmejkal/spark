@@ -959,7 +959,7 @@ every child (rows 17 to 21).
 
 Goal: each refusal of the four design CLIs and of `design.load` has a code. Text and exit codes stay byte-equal.
 
-Files: `scripts/design_codes.py` (proposed, a leaf, as `firmware_codes`. C1 refuses `codes.py`). The sites, read at
+Files: `scripts/design_codes.py` (moved to `scripts/spark/design/design_codes.py` in P703; a leaf, as `firmware_codes`. C1 refuses `codes.py`). The sites, read at
 924e48a4: `DesignError` at 30 `raise` sites (`design.py:118` to `:447`), `Impossible` at 11 (`assign_pins.py:193` to
 `:476`), `RefusedInput` at 2 (`emit_board.py:1093`, `:1096`), `emit_board.main`'s 6 returns (`:1115` to `:1177`),
 `emit_footprint.main`'s 3 (`:315`, `:319`, `:323`). One code per refusal an agent acts on differently (P684, P692 row 13),

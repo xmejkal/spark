@@ -395,7 +395,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
                                'on the board alone says "%s": true' % needs.BOARD_ONLY, build_codes.NO_PARTS)]
 
     # The design's own part records, so the build stage below can ask whether the circuit honoured what they state.
-    # `emit_board` reads the same records; if that succeeded, this cannot fail for a reason not already told.
+    # `board_emitter` reads the same records; if that succeeded, this cannot fail for a reason not already told.
     try:
         part_list = loader.parts_of(requirements, project)
     except loader.DesignError as broken:
@@ -403,7 +403,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
 
     # --- MVP --- the input is read, the pins are placed and the footprint is asked for, in the one order `board_emitter.read_inputs`
     # gives (P407, P432): a fault in the requirements is said before a gap in the board record, and the schematic imports
-    # the board's footprint, so a record that cannot give one stops here, before emit_board is asked.
+    # the board's footprint, so a record that cannot give one stops here, before the CLI `emit_board.py` is asked.
     try:
         inputs = board_emitter.read_inputs(workdir / "requirements.json", project)
     except board_emitter.RefusedInput as refused:
@@ -421,7 +421,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         # It refused the input — a part with no measured outline, a resistor nothing sizes — in its own words.
         return stages + [Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, emitted.stderr.strip(), build_codes.SCHEMATIC_REFUSED)]
     if emitted.returncode != 0:
-        # emit_board exits 0 or 2 on purpose, so anything else is a crash: could-not-run, as `main` says of anything
+        # `emit_board.py` exits 0 or 2 on purpose, so anything else is a crash: could-not-run, as `main` says of anything
         # unforeseen, with the traceback's last line. Read as problems, it sent people to debug a design nobody examined (F5).
         said = emitted.stderr.strip().splitlines()
         return stages + [Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, "emit_board.py crashed: %s" % (

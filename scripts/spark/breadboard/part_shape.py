@@ -19,8 +19,8 @@ import math
 from pathlib import Path
 
 from spark.breadboard import drawing
-from spark.design import footprint_emitter
 from spark.breadboard.drawing import NotDrawn
+from spark.design import footprint_emitter
 
 #: Pixels per millimetre: Wokwi draws 96 px to the inch.
 PX_PER_MM = 96 / 25.4

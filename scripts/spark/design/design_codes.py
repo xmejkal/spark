@@ -1,6 +1,6 @@
 """
-The reasons a design cannot be loaded, placed or emitted, each a code with one sentence (P700, W6-D2): design.load,
-assign_pins.py, emit_board.py and emit_footprint.py.
+The reasons a design cannot be loaded, placed or emitted, each a code with one sentence (P700, W6-D2): loader.load,
+pin_assigner, board_emitter and footprint_emitter.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
 sentence (no magic strings, P260). A refusal that raises gives its error a `code` (DesignError, Impossible, RefusedInput);
@@ -21,10 +21,10 @@ RULES_REFUSED = "rules_refused"
 UNKNOWN_BUS, NOT_A_BUS_LINE, BUS_LINE_NOT_ON_BOARD = "unknown_bus", "not_a_bus_line", "bus_line_not_on_board"
 UNKNOWN_NEED, NO_SUCH_PIN, NAMED_PIN_UNSUITABLE = "unknown_need", "no_such_pin", "named_pin_unsuitable"
 PIN_TAKEN, NO_PIN_LEFT, SIGNAL_NAME_UNUSABLE = "pin_taken", "no_pin_left", "signal_name_unusable"
-#: emit_board: a part record lacks what a board is placed and traced from.
+#: board_emitter: a part record lacks what a board is placed and traced from.
 NO_PART_FOOTPRINT, NO_PIN_ORDER, NO_OUTLINE = "no_part_footprint", "no_pin_order", "no_outline"
 SERIES_RESISTOR_UNSIZED = "series_resistor_unsized"
-#: emit_footprint, and emit_board's footprint stage: the board record cannot give a footprint.
+#: footprint_emitter, and board_emitter's footprint stage: the board record cannot give a footprint.
 BOARD_LACKS_FOOTPRINT, BOARD_DISAGREES = "board_lacks_footprint", "board_disagrees"
 
 #: Each code and the one sentence that says what it means.

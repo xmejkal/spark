@@ -142,7 +142,7 @@ STOP_LINE_MESSAGE = "stops at the footprint stage (P121): its board file lacks %
 
 def why_no_footprint(board):
     """The list: why no footprint can be generated for `board`, naming each gap of `footprint_gaps` with its note, or None when
-    one can. The sentence of this refusal for this script, `emit_board` and the spine's footprint stage, and the `stops_why` of
+    one can. The sentence of this refusal for the CLI `emit_footprint.py`, `board_emitter` and the spine's footprint stage, and the `stops_why` of
     a `--match` candidate and an `--audit` row."""
     gaps = footprint_gaps(board)
     if not gaps:
