@@ -860,7 +860,7 @@ def signals_for(part_ids, project: Path = None) -> list:
                 # A bus signal means dedicated hardware: the board's pin for that line of that
                 # bus, found by `assign_pins.bus_line`. `line` is the part's own name for the
                 # line — SDA, or a vendor's DIN — and it has to survive the instance rename that
-                # `design.signals_of` gives `name`, or the assigner cannot find the pin (P21).
+                # `loader.signals_of` gives `name`, or the assigner cannot find the pin (P21).
                 entry["bus"] = need["bus"]
                 entry["line"] = need["signal"]
             entry["from"] = part_id

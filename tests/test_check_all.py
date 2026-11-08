@@ -600,7 +600,7 @@ class TheRecordsReachPhysicsTest(unittest.TestCase):
 
 class TheBuildsProjectIsCheckedTest(unittest.TestCase):
     """
-    P319: a board folder with no `.spark/` builds with its parent's records (`design.project_for` walks up), and
+    P319: a board folder with no `.spark/` builds with its parent's records (`loader.project_for` walks up), and
     `check_all --project` read the folder alone, so one build and its checks read two projects. Now the folder holds
     the build and the requirements, and the project the build reads holds the rules, the parts and the boards.
     """

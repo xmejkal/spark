@@ -110,10 +110,10 @@ classDiagram
   NeedsService ..> Design
 ```
 
-`Design` exists as a namedtuple (`design.Design`). `ImpossibleError` is today's `Impossible` (in `assign_pins.py`), and its class
+`Design` exists as a namedtuple (`loader.Design`). `ImpossibleError` is today's `Impossible` (in `pin_assigner.py`), and its class
 attribute `status` is `problems`, because the design asks for something the board cannot do.
 
-The pin map is written as MicroPython's `pins.py` today (`assign_pins.pin_module`). It stays in design until a second
+The pin map is written as MicroPython's `pins.py` today (`pin_assigner.pin_module`). It stays in design until a second
 platform exists. Then the text form moves behind a Renderer per platform, chosen by `Backends.platform`.
 
 ### The main flow: requirements to board file
@@ -149,4 +149,4 @@ sequenceDiagram
 - A new part is one record in `parts/`. The design reads its facts and needs no code.
 - A pin map for a second platform is a Renderer of `PinMap`, added with that platform.
 
-`assign_pins.ROLE_PENALTY` stays a named constant in `assign_pins.py` (the PO, epic #94, 2026-10-26: *"leta go with a then"*). The onboard roles live once in `boards.ONBOARD_ROLES`.
+`pin_assigner.ROLE_PENALTY` stays a named constant in `pin_assigner.py` (the PO, epic #94, 2026-10-26: *"leta go with a then"*). The onboard roles live once in `boards.ONBOARD_ROLES`.

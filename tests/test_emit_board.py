@@ -428,7 +428,7 @@ class ManyOfOnePartTest(unittest.TestCase):
             [self.button("BtnLeft"), self.button("BtnLeft")]), ["BtnLeft"])
 
     def test_two_names_that_differ_only_in_capitals_are_one_name_and_both_spellings_are_said(self):
-        # P163: `design.signal_name` puts the instance in capitals, so OpenLid and Openlid are one signal — two GPIOs were
+        # P163: `loader.signal_name` puts the instance in capitals, so OpenLid and Openlid are one signal — two GPIOs were
         # traced to one pad, exit 0. The refusal names what the person wrote, both ways.
         self.assertEqual(emit_board.duplicate_component_names(
             [self.button("OpenLid"), self.button("Openlid"), self.button("BtnMode")]), ["OpenLid / Openlid"])
@@ -903,7 +903,7 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertIn("Rails this design INVENTED", tsx)
 
     def test_the_signals_the_loader_derives_are_the_ones_traced(self):
-        # P20: the signals come from `design.load`, the same list `assign_pins.py` prints. A main
+        # P20: the signals come from `loader.load`, the same list `assign_pins.py` prints. A main
         # that traced anything else — or nothing — would still emit a file that builds.
         code, tsx, _ = self._main(["requirements.json"], self._project())
         self.assertEqual(code, emit_board.EXIT_OK)

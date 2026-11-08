@@ -1,8 +1,5 @@
 """
-Which pin should each signal go on, and why?
-
-    assign_pins.py requirements.json
-    assign_pins.py requirements.json --board firebeetle2-esp32s3 --json
+Which pin should each signal go on, and why? The CLI `assign_pins.py` asks it.
 
 A check on a finished pin assignment can tell you it is wrong. This works out a right one, and — the
 part that matters more — says what each choice cost, so a person can disagree with it.

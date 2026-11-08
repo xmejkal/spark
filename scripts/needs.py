@@ -626,7 +626,7 @@ def _called(part_id, name):
     return name or "".join(word.capitalize() for word in part_id.replace("_", "-").split("-"))
 
 
-#: A name as the build tells names apart — `design.one_name`, the one definition (P163, W16); this was a second copy of it.
+#: A name as the build tells names apart — `loader.one_name`, the one definition (P163, W16); this was a second copy of it.
 _one_name = loader.one_name
 
 

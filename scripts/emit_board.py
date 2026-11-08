@@ -75,7 +75,7 @@ KNOWN_RAIL_NETS = {"logic": "V33", "ground": "GND", "motor": "MOTOR6V", "speaker
 def net_name_for_rail(rail):
     """
     The net a rail's name means. ANY rail name is allowed — a name, of letters, digits and _, which `parts.validate`,
-    `boards.validate` and `design` hold a rail to: the board is written with it as code (P87's attribute half).
+    `boards.validate` and `loader` hold a rail to: the board is written with it as code (P87's attribute half).
 
     This was a closed dictionary of four, and a rail outside it returned None — which the power
     loops turned into `continue`, so the connection was silently not emitted. An RC car with a 5 V
@@ -340,10 +340,10 @@ def duplicate_component_names(part_list):
 
     The independent safety net for the defect above: whatever route a design takes to two components of one name, this
     catches it before anything is emitted. Two ways to be one name, two merges: an exact repeat is merged by
-    `tsci build`, which keeps one component; two spellings are merged by spark's own `design.signal_name`, which puts
+    `tsci build`, which keeps one component; two spellings are merged by spark's own `loader.signal_name`, which puts
     the instance in capitals, so `OpenLid` and `Openlid` were one signal, placed twice, and the generator traced two
     GPIOs to one pad — both chips emitted, exit 0 — while this compare, exact, saw two names (P163, #100). Compared as
-    the build tells names apart, `design.one_name`.
+    the build tells names apart, `loader.one_name`.
     """
     written, repeated = {}, set()  # {one name: [each spelling, once, as the design wrote it]}; the one names used twice
     for part in part_list:

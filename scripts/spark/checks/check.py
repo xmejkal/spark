@@ -162,7 +162,7 @@ def placeholder_components_in(project):
     which requirements produced it. A name from another board simply matches nothing in this
     netlist, so the union is safe.
 
-    Returns (names, notes). Each file is read on its own, through `design` — the loader the
+    Returns (names, notes). Each file is read on its own, through `loader` — the one the
     generator itself uses — and a file that cannot be read is a NOTE, not a reason to empty the
     list: before, one unreadable file made this return `()` under `except Exception`, and the
     check then measured every placeholder as if it were real without a word. A stand-in the
@@ -321,7 +321,7 @@ class CheckedFolder:
 
     @classmethod
     def at(cls, folder):
-        """The folder and its project, found the way `design.project_for` finds a requirements file's."""
+        """The folder and its project, found the way `loader.project_for` finds a requirements file's."""
         folder = Path(folder)
         if not folder.is_dir():
             # a folder that is not there walked up to a project nobody named

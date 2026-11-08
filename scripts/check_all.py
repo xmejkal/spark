@@ -53,7 +53,7 @@ def main(argv=None):
         answer_json = {"tool": "check_all", "status": overall, "unmeasured": unmeasured_in(results),
                        "resolved": resolved, "results": results}
         if checked:
-            # the project the build reads (P319), resolved as `design.project_for` resolves it; null for none, never
+            # the project the build reads (P319), resolved as `loader.project_for` resolves it; null for none, never
             # the plugin's own folder
             answer_json["project"] = None if loader.is_library(checked.project) else str(checked.project.resolve())
         print(json.dumps(answer_json, indent=2))
