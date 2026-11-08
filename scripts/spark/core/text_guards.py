@@ -1,7 +1,7 @@
 """
 The guards for text that spark shows, stores or writes into a file (P403, OC8): `printable` for the screen, `clean`
-for the store, `one_line` for a generated file's comment. It imports nothing of spark, so every reader can use it
-(rule U1 of `tests/test_architecture.py`).
+for the store, `kept_reason` for a passed-over reason the history keeps (moved from `needs` in P704), `one_line` for a
+generated file's comment. It imports nothing of spark, so every reader can use it (rule U1 of `tests/test_architecture.py`).
 """
 
 import re
@@ -141,3 +141,34 @@ def one_line(text):
     and what followed was code.
     """
     return COMMENT_UNSAFE.sub(" ", str(text))
+
+
+#: What a passed-over reason never keeps (§5.7, W21: "never a URL … a price"): a web address — any scheme, `www.`, or a bare
+#: host with a path whose last label is a common top-level domain (TLDS), so `3.3/5V`, `v1.1/v1.2` and `pinout.png/page 2`
+#: stay — with a bracket around it; and an amount of money — a currency symbol before a number, glued or spaced, a code
+#: before it only spaced (`EUR 12`; `EUR12` and `KC868` are part numbers), a symbol or a code after it, glued or spaced,
+#: thousands spaced with a space or a no-break space, a Czech `,-` with or without its crowns (F14).
+TLDS = "com|org|net|io|cz|sk|de|eu|co|uk|pl|at|ch|fr|it|es|nl|info|shop|dev|app"
+#: A URL's own characters: none a space or a bracket, but a bracketed run inside it (`…/wiki/Foo_(bar)`) is its own too.
+URL_CHAR = r"(?:[^\s<>()\[\]]|\([^\s<>()\[\]]*\))"
+#: A bracket around a URL goes with it only when the URL is opened by it (the re-check: `(see aliexpress.com/x)` lost its
+#: `)` to the URL and kept its `(`), so the text's own brackets stay as balanced as they were.
+URL_IN_WORDS = re.compile(r"(?:(<)|(\()|(\[))?"
+                          r"(?:(?:[a-z][a-z0-9+.-]*://|www\.)%s+|\b[\w-]+(?:\.[\w-]+)*\.(?:%s)(?::\d+)?/%s*)"
+                          r"(?(1)>?)(?(2)\)?)(?(3)\]?)" % (URL_CHAR, TLDS, URL_CHAR), re.IGNORECASE)
+CODES = r"(?:eur|euros?|usd|dollars?|czk|kč|kc|gbp|chf|pln|zł|cny|rmb|yuan|jpy|yen)"
+AMOUNT = r"\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d+)?|\d[\d.,]*"
+PRICE_IN_WORDS = re.compile(r"(?:[$€£¥]\s?|\b%s\s)(?:%s)|(?:%s)(?:,-)?\s?(?:[$€£¥]|%s\b)|\b\d[\d. ]*,-(?!\w)" % (CODES, AMOUNT, AMOUNT, CODES),
+                            re.IGNORECASE)
+
+
+def kept_reason(text):
+    """
+    A passed-over reason as the history keeps it (§5.7, W21; C-17): cleaned as a label is, and with every URL and every price
+    taken out — (the reason, whether anything was taken out). The person's words stay; what the history never keeps does not.
+    """
+    said = clean(text)
+    kept = PRICE_IN_WORDS.sub("", URL_IN_WORDS.sub("", said))
+    if kept == said:
+        return said, False
+    return re.sub(r"\s+([,;:.)\]>])", r"\1", re.sub(r"\s{2,}", " ", kept)).strip(" ,;:.-—"), True

@@ -31,6 +31,7 @@ import needs  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
+from spark.core import text_guards  # noqa: E402
 from spark.idea.drop_need import DropNeed  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -946,7 +947,7 @@ class ThePicksTest(unittest.TestCase):
                             ("(see aliexpress.com/x)", "(see)"), ("a (b aliexpress.com/x) c", "a (b) c"),
                             ("see https://en.wikipedia.org/wiki/Foo_(bar) there", "see there")):
             with self.subTest(given=given):
-                self.assertEqual(needs.kept_reason(given), (kept, True))
+                self.assertEqual(text_guards.kept_reason(given), (kept, True))
         for given in ("a 3 W speaker is loud enough", "it senses distance, not moisture.", "2 of them are dead",
                       "it runs at 3.3/5V only", "board v1.1/v1.2 differ",
                       # a currency code glued before a number is a part number, not a price; a bare host is a URL only
@@ -954,7 +955,7 @@ class ThePicksTest(unittest.TestCase):
                       "the KC868 has no free pins", "not the GBP10 variant", "pinout.png/page 2",
                       "EUR12 is too much", "USD5", "kč300"):
             with self.subTest(given=given):
-                self.assertEqual(needs.kept_reason(given), (given, False))
+                self.assertEqual(text_guards.kept_reason(given), (given, False))
 
     def test_a_reason_s_url_and_price_never_reach_the_history_and_the_pick_says_so(self):
         reasons = a_file([{"need": "soil", "id": "x-other", "why": "a gas sensor does not sense soil — 12 EUR at https://shop.example/x",
