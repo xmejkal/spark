@@ -733,6 +733,43 @@ Review: no new logic. One reviewer on the everyday model and the refuter on the 
 one mutation run, a whole-branch review before the PR. Size: 2,324 lines moved, 40 import lines, 166 rows, 17 keys,
 3 `__file__` fixes.
 
+P694 claims check (2026-11-08, against dac6d4d2). Each claim above was read in the code. These are wrong or stale:
+
+1. Lines: `breadboard.py` is 528, not 600, and `breadboard_steps.py` 321, not 211 (P692). The ten files hold 2,393.
+2. Rows: 175 in 14 tables, not 166. `breadboard.py` 47, `breadboard_steps.py` 15, `breadboard_drawing.py` 22,
+   `breadboard_keep.py` 47, `_changes` 8, `_match` 8, `_catalog` 2, `part_pictures.py` 1, `tabbed_page.py` 23,
+   `breadboard_codes.py` 2. `--anchors` refuses 13 of them on main (`breadboard.py` 5, `breadboard_keep.py` 8).
+3. 5 rows sit in the `main` that stays, not 4 (`p692-breadboard-codes` row 6 joins). Decision: `--retarget` the ten
+   files, then a scratch script gives the 5 back to the CLI. The CLI imports `CHANGE_LIST`, `REFUSALS`, `SHEET` and
+   `write` by name from `sheet`, as P685's CLIs do, so `main`, the 5 rows and its R1 key (26) stay byte-equal.
+4. 4 rows change text, not 5: `p273-keep-moves` 15, `p287-keep-jumpers` 30, `p273-keep-moves` 24 (`check_spine.py`)
+   and `p412-record-board` 25 (`part_shape.py`). `tabbed_page` and `breadboard_codes` keep their names.
+5. Two name clashes break the move. `breadboard.py:302` defines a function `drawing`, which in `sheet.py` hides the
+   module `drawing` that `_plan_layout` reads (`:298`). `check_spine.py:834` binds a local `sheet` in a function that
+   reads `breadboard.SHEET`, so `sheet.SHEET` raises `UnboundLocalError`. Decision: Rename Function `drawing` to
+   `drawing_text` (one caller, `test_breadboard_layout.py:194`) and the local to `sheet_path` (`:834` to `:844`).
+   No row anchors on either.
+6. Baseline: 16 keys name a moved file, not 17 (R6 8, not 9). C1 2, R2 1, R3 2, R6 8 and T1 2 follow their file, and
+   the R1 `main` key stays. The move done in a copy gives no new R1 key (`write` is 40, the limit) and no X2 key.
+7. MAY_READ: 12 keys, not 10 (`breadboard_codes.CODES` and `breadboard.REFUSALS` are new). 9 take the new module name
+   (`drawing`, `kept_moves` 2, `wiring_steps` 3, `sheet` 3). `breadboard_codes.CODES` and the two `part_pictures` stay.
+8. Import lines: 56, not 53. 14 among the ten, 6 in `scripts/` as listed, 36 in 14 test files. 4 are lazy and stay so
+   (`fakes.py:262`, `:276`, `test_check_spine.py:470`, `:1488`). 10 reads go through a module (`base.breadboard_keep`
+   and `base.breadboard_drawing` 7, `breadboard.breadboard_drawing` 1, `breadboard.design` 2). 15 test files change.
+9. mock.patch: 11 `patch.object` sites. 4 patch `breadboard._plan_layout`, looked up in `sheet`, so they name `sheet`
+   (`test_breadboard_layout.py:395`, `test_breadboard_match.py:128`, `:145`, `test_breadboard_record.py:154`). 5 patch
+   an object and 2 `tabbed_page.subprocess` (global). No test patches a name the CLI imports.
+10. Docs: `commands/build.md` and `recorded-run.md` name the CLI, which stays. To change: `agents/scripts.md:204` to
+    `:240`, `patterns-and-names.md:47`, `data/wokwi-geometry.json:2`, the CLI's help (`breadboard.py:21`) and the moved
+    docstrings that name `breadboard.py`. `areas/breadboard.md` lacks `drawing_catalog`, cites stale lines
+    (`breadboard.py:575`, `:96`, `:86`) and puts `OPERATIONS` in `__init__.py`. Decision: the docstring alone, as above.
+11. The closing check is a test, as P685's `TheFirmwareAreaTest` (`breadboard.py` defines `main` only), not `ls`, which
+    exits 2 when two of its files are gone.
+
+These hold: the three `__file__` paths take `parents[3]`, and `breadboard_catalog.py:10` goes. The import graph has no
+cycle, and no moved module builds a format string at import. `LEAVES` and `LEAF_NAMES` hold `breadboard_codes`. Note:
+`part_shape` (design) imports `drawing`, and `drawing_catalog` imports `part_shape`, a two-way edge for the design wave.
+
 ### W6-C3, the checks move (after W6-C2 and W6-B3)
 
 Goal: `ls scripts/check_*.py scripts/compare_design.py` prints the six CLIs and `check_spine.py` only, and
