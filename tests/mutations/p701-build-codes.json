@@ -1,0 +1,10 @@
+[
+ {"file": "scripts/check_spine.py", "name": "a board with no copper is told as a design the engine did not build", "find": "\"raise\", build_codes.NOT_ROUTED)]", "replace": "\"raise\", build_codes.DESIGN_NOT_BUILT)]"},
+ {"file": "scripts/init_project.py", "name": "a project folder that is not there is told as a tools file that cannot be read", "find": "Refusal(\"no directory at %s\" % project, build_codes.NO_PROJECT_FOLDER)", "replace": "Refusal(\"no directory at %s\" % project, build_codes.TOOLS_FILE_UNREADABLE)"},
+ {"file": "scripts/check_spine.py", "name": "the parts stage drops the code its design error carries", "find": "return stages + [Stage(\"parts\", COULD_NOT_RUN, str(broken), broken.code)]", "replace": "return stages + [Stage(\"parts\", COULD_NOT_RUN, str(broken), build_codes.NO_PARTS)]"},
+ {"file": "scripts/check_spine.py", "name": "Stage drops its code", "find": "self.name, self.status, self.detail, self.code = name, status, detail, code", "replace": "self.name, self.status, self.detail, self.code = name, status, detail, None"},
+ {"file": "scripts/build_codes.py", "name": "CODES misses a constant", "find": "    NO_DIAGRAM: \"the diagram converter wrote no diagram\",\n", "replace": ""},
+ {"file": "scripts/check_spine.py", "name": "the sheet's not written entry drops its code", "find": "\"code\": sheet.refusal_code(stopped) if isinstance(stopped, sheet.REFUSALS) else build_codes.STAGE_CRASHED,", "replace": "\"code\": None,"},
+ {"file": "scripts/init_project.py", "name": "a project folder that is not there exits as nothing to do", "find": "    if (refused := why_project_refused(project)):\n        print(refused, file=sys.stderr)\n        return EXIT_COULD_NOT_RUN\n", "replace": "    if (refused := why_project_refused(project)):\n        print(refused, file=sys.stderr)\n        return EXIT_NOTHING_TO_DO\n"},
+ {"file": "scripts/build_codes.py", "name": "the shared tool_missing says another sentence", "find": "    TOOL_MISSING: \"a tool the step needs is missing or cannot be used\",", "replace": "    TOOL_MISSING: \"a tool the build needs is missing\","}
+]

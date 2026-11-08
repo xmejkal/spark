@@ -26,14 +26,14 @@
  {
   "file": "scripts/init_project.py",
   "name": "two built designs block the rules the part records give",
-  "find": "                ambiguous = (\"%d built designs here, so the rails were NOT seeded",
-  "replace": "                return EXIT_COULD_NOT_RUN\n                ambiguous = (\"%d built designs here, so the rails were NOT seeded"
+  "find": "    circuit, ambiguous = (args.circuit, None) if args.circuit else find_circuit(project)\n",
+  "replace": "    circuit, ambiguous = (args.circuit, None) if args.circuit else find_circuit(project)\n    if ambiguous:\n        return EXIT_COULD_NOT_RUN\n"
  },
  {
   "file": "scripts/init_project.py",
   "name": "the rails get seeded from whichever design sorts first",
-  "find": "                circuit = None\n                break",
-  "replace": "                circuit = str(matches[0])\n                break"
+  "find": "            return None, Refusal(\"%d built designs here",
+  "replace": "            return str(matches[0]), Refusal(\"%d built designs here"
  },
  {
   "file": "scripts/init_project.py",
