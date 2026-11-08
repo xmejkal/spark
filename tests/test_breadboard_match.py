@@ -23,6 +23,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
+
+from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import drawing_catalog  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import kept_moves  # noqa: E402
@@ -56,8 +58,8 @@ class TheCheckTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         with in_store():
-            cls.read = breadboard._read_build(XIAO / "requirements.json")
-        cls.layout = breadboard._plan_layout(cls.read)
+            cls.read = sheet._read_build(XIAO / "requirements.json")
+        cls.layout = sheet._plan_layout(cls.read)
         cls.catalog = drawing_catalog.describe_parts(cls.read, GEOMETRY)
         cls.points = cls.read.steps.points
 
@@ -123,9 +125,9 @@ class TheBuildSaysItTest(unittest.TestCase):
         self.project = Path(tempfile.mkdtemp()) / "xiao"
         shutil.copytree(XIAO, self.project)
         with in_store():
-            layout = breadboard._plan_layout(breadboard._read_build(XIAO / "requirements.json"))
+            layout = sheet._plan_layout(sheet._read_build(XIAO / "requirements.json"))
         self.planted = moved(layout, 5, "29b.f")
-        self.plan = mock.patch.object(breadboard, "_plan_layout", return_value=self.planted)
+        self.plan = mock.patch.object(sheet, "_plan_layout", return_value=self.planted)
         self.plan.start()
         self.addCleanup(mock.patch.stopall)
 
@@ -142,8 +144,8 @@ class TheBuildSaysItTest(unittest.TestCase):
 
     def test_two_differences_give_the_first_and_a_count_on_the_sheet(self):
         both = moved(self.planted, 6, "30b.f")
-        with in_store(), mock.patch.object(breadboard, "_plan_layout", return_value=both):
-            written = breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
+        with in_store(), mock.patch.object(sheet, "_plan_layout", return_value=both):
+            written = sheet.write(self.project / "requirements.json", self.project / "breadboard.md")
         self.assertEqual([one.subject for one in written.differs], ["R1 end 1", "TactileButton A"])
         self.assertIn("in the drawing, and 1 more. Wire from the steps above.",
                       (self.project / "breadboard.md").read_text())
@@ -151,14 +153,14 @@ class TheBuildSaysItTest(unittest.TestCase):
     def test_a_kept_layout_is_checked_not_the_fresh_one(self):
         self.plan.stop()  # the first build plans for real, so the second one keeps its layout
         with in_store():
-            breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
+            sheet.write(self.project / "requirements.json", self.project / "breadboard.md")
         keep = kept_moves.KeepMovesJumperPlacement.place_jumpers
 
         def keep_then_move(placement, layout, ledger):
             return moved(keep(placement, layout, ledger), 5, "29b.f")
 
         with in_store(), mock.patch.object(kept_moves.KeepMovesJumperPlacement, "place_jumpers", keep_then_move):
-            written = breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
+            written = sheet.write(self.project / "requirements.json", self.project / "breadboard.md")
         self.assertEqual([(one.code, one.subject) for one in written.differs], [(NOT_JOINED, "R1 end 1")])
 
     def test_the_kept_entry_carries_its_code(self):

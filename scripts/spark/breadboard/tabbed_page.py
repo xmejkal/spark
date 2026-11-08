@@ -66,7 +66,7 @@ class TscircuitExport:
 class TabbedHtmlPage:
     """
     Renderer: tabs as one self-contained HTML page, each SVG in an <img> as a data URI, the tabs switched by CSS
-    alone. A missing tab shows why. The same tabs give the same bytes. It is not in `breadboard.DRAWING_RENDERERS`,
+    alone. A missing tab shows why. The same tabs give the same bytes. It is not in `sheet.DRAWING_RENDERERS`,
     because those render a layout and this renders tabs; it keeps their `NOUN` and `PURPOSE_MESSAGE` for the lines the
     build prints about the file.
     """

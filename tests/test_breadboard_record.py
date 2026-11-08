@@ -1,5 +1,5 @@
 """
-The sheet lists what to change on the bench after a rebuild (P300, #366): `breadboard.write()` keeps a wiring record
+The sheet lists what to change on the bench after a rebuild (P300, #366): `sheet.write()` keeps a wiring record
 beside the sheet, compares it with the new steps, and says each difference in the sheet and on stderr.
 
     python3 -m unittest tests.test_breadboard_record
@@ -23,6 +23,8 @@ import suite_temp  # noqa: E402,F401
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import breadboard  # noqa: E402
+
+from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import bench_changes  # noqa: E402
 import check_spine  # noqa: E402
 from test_breadboard_keep import BUTTON_ONLY, FULL, LED_ONLY, build, change_requirements, new_project  # noqa: E402
@@ -144,14 +146,14 @@ class WriteOrderTest(unittest.TestCase):
         build(project)
         change_requirements(project, FULL)
         earlier = (project / bench_changes.WiringRecord.FILE_NAME).read_text()
-        with mock.patch.object(breadboard.DRAWING_RENDERERS[1], "text", side_effect=RuntimeError("boom")):
+        with mock.patch.object(sheet.DRAWING_RENDERERS[1], "text", side_effect=RuntimeError("boom")):
             with self.assertRaises(RuntimeError):
                 build(project)
         self.assertEqual((project / bench_changes.WiringRecord.FILE_NAME).read_text(), earlier)
 
     def test_a_circuit_that_cannot_be_drawn_still_keeps_a_record_without_colors(self):
         project = new_project(LED_ONLY)
-        with mock.patch.object(breadboard, "_plan_layout", side_effect=breadboard.drawing.NotDrawn("no room")):
+        with mock.patch.object(sheet, "_plan_layout", side_effect=sheet.drawing.NotDrawn("no room")):
             build(project)
         self.assertTrue(all(step["color"] is None for step in record(project)["steps"]))
 

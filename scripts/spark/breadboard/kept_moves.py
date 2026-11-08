@@ -1,7 +1,7 @@
 """
 A person's moves, kept across a rebuild (P273, #309). The drawn breadboard (`breadboard.json`) is a layout the person
 may edit in Wokwi. This library reads the earlier file before the build writes the new one, keeps each part where the
-person put it when it still fits, and names each part it could not keep and why. `breadboard.py` calls it; nothing
+person put it when it still fits, and names each part it could not keep and why. `sheet` calls it; nothing
 here writes a file.
 
     EarlierDiagram.read(path, surface_type)                         the file as parts and jumpers by id

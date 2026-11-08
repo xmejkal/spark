@@ -2,7 +2,7 @@
 What a rebuild asks a person to change on the bench (P300, #366). The earlier sheet told the person to wire some steps.
 This library keeps what that sheet said in `wiring-record.json`, compares it with the new steps, and says each
 difference as one bench action. It names jumpers by their ends and colors, never by holes: the person picks their own
-free rows. `breadboard.py` calls it; nothing here knows a circuit.
+free rows. `sheet` calls it; nothing here knows a circuit.
 
     describe(seated, colors)                       [RecordedStep], one per step of a sheet
     WiringRecord.from_build(seated, colors, earlier, drawn)   the record of a sheet; kept connections keep their color

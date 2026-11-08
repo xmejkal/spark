@@ -1,7 +1,7 @@
 """
 The drawing check (P279, #317): the drawn breadboard joins the points of circuit.json, and no other pin. The planner
 draws from the steps, and since P273 it keeps the moves a person made, so the build asks the drawing it is about to
-write which holes it joins, and names each end that differs. `breadboard.py` calls it; nothing here writes a file.
+write which holes it joins, and names each end that differs. `sheet` calls it; nothing here writes a file.
 
     DrawnNets(layout, geometry).differences(points, catalog)    [DrawingDiffersResult], empty when they match
 

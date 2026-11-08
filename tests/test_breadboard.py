@@ -27,6 +27,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
+
+from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 import design  # noqa: E402
 import store  # noqa: E402
@@ -56,7 +58,7 @@ class TheSheetTest(unittest.TestCase):
         self.project = a_copy()
         self.home = Path(tempfile.mkdtemp())
         with in_store(self.home):
-            self.text = breadboard.sheet(self.project / "requirements.json")
+            self.text = sheet.sheet(self.project / "requirements.json")
 
     def connections(self):
         return point_lines(self.text)
@@ -110,7 +112,7 @@ class TheMotorExampleTest(unittest.TestCase):
         self.project = Path(tempfile.mkdtemp()) / "motor"
         shutil.copytree(MOTOR, self.project)
         with in_store(Path(tempfile.mkdtemp())):
-            self.text = breadboard.sheet(self.project / "requirements.json")
+            self.text = sheet.sheet(self.project / "requirements.json")
         self.wiring = point_lines(self.text)
 
     def test_every_resistor_end_is_on_the_sheet_once(self):
@@ -162,7 +164,7 @@ class TheXiaoExampleTest(unittest.TestCase):
 
     def test_its_steps_read_as_built(self):
         with in_store(Path(tempfile.mkdtemp())):
-            text = breadboard.sheet(XIAO / "requirements.json")
+            text = sheet.sheet(XIAO / "requirements.json")
         steps = [line for line in text.split("### Steps", 1)[1].split("### Diagram", 1)[0].splitlines()
                  if re.match(r"^\d+\. ", line)]
         self.assertEqual(len(steps), 9, text)
@@ -175,8 +177,8 @@ class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):
         project = a_copy()
         (project / "requirements.json").write_text(json.dumps(
             {"board": "firebeetle2-esp32s3", "parts": ["tactile-button", "led-red-5mm", "jst-ph-2-power-inlet"]}))
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt) as said:
-            breadboard.sheet(project / "requirements.json")
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+            sheet.sheet(project / "requirements.json")
         self.assertIn("build again", str(said.exception))
 
     def test_a_board_swapped_without_a_rebuild_is_refused(self):
@@ -184,38 +186,38 @@ class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):
         project = a_copy()
         wanted = json.loads((project / "requirements.json").read_text())
         (project / "requirements.json").write_text(json.dumps(dict(wanted, board="xiao-esp32-c6")))
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt) as said:
-            breadboard.sheet(project / "requirements.json")
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+            sheet.sheet(project / "requirements.json")
         self.assertIn("built from other requirements", str(said.exception))
 
     def test_a_build_that_recorded_nothing_is_refused(self):
         project = a_copy()
         (project / "dist" / "board" / "built-from.json").unlink()
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt) as said:
-            breadboard.sheet(project / "requirements.json")
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+            sheet.sheet(project / "requirements.json")
         self.assertIn("records no finished build", str(said.exception))
 
     def test_a_failed_build_is_refused(self):
         project = a_copy()
         circuit = project / "dist" / "board" / "circuit.json"
         circuit.write_text(json.dumps(json.loads(circuit.read_text()) + [{"type": "source_trace_not_connected_error"}]))
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt) as said:
-            breadboard.sheet(project / "requirements.json")
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+            sheet.sheet(project / "requirements.json")
         self.assertIn("the last build failed", str(said.exception))
 
     def test_a_circuit_that_is_not_a_list_of_elements_is_refused(self):
         project = a_copy()
         (project / "dist" / "board" / "circuit.json").write_text("{}")
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt):
-            breadboard.sheet(project / "requirements.json")
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt):
+            sheet.sheet(project / "requirements.json")
 
 
 class EachRefusalHasItsCodeTest(unittest.TestCase):
     """P692: each refusal of the sheet names its code from breadboard_codes, as a literal here (P677 row 26)."""
 
     def code_of(self, project):
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(breadboard.NotBuilt) as said:
-            breadboard.sheet(project / "requirements.json")
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+            sheet.sheet(project / "requirements.json")
         return said.exception.code
 
     def test_each_site_of_a_stale_failed_or_missing_build(self):
@@ -250,23 +252,23 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
         self.assertEqual(self.code_of(project), "built_from_other_requirements")
 
     def test_the_errors_from_outside_each_have_their_own(self):
-        self.assertEqual(breadboard.refusal_code(breadboard.NotBuilt("not built", "build_failed")), "build_failed")
-        self.assertEqual(breadboard.refusal_code(design.DesignError("no part %s", "x")), "requirements_unusable")
-        self.assertEqual(breadboard.refusal_code(store.StoreProblem("the store")), "store_problem")
-        self.assertEqual(breadboard.refusal_code(PermissionError("breadboard.md")), "file_unusable")
+        self.assertEqual(sheet.refusal_code(sheet.NotBuilt("not built", "build_failed")), "build_failed")
+        self.assertEqual(sheet.refusal_code(design.DesignError("no part %s", "x")), "requirements_unusable")
+        self.assertEqual(sheet.refusal_code(store.StoreProblem("the store")), "store_problem")
+        self.assertEqual(sheet.refusal_code(PermissionError("breadboard.md")), "file_unusable")
 
     def test_a_broken_list_of_projects_stops_the_sheet_as_a_store_problem(self):
         # a real error from outside, caught as main catches it
         home = Path(tempfile.mkdtemp())
         (home / "projects.json").write_text("{")
         project = a_copy()
-        with in_store(home), self.assertRaises(breadboard.REFUSALS) as said:
-            breadboard.write(project / "requirements.json", project / "breadboard.md")
-        self.assertEqual(breadboard.refusal_code(said.exception), "store_problem")
+        with in_store(home), self.assertRaises(sheet.REFUSALS) as said:
+            sheet.write(project / "requirements.json", project / "breadboard.md")
+        self.assertEqual(sheet.refusal_code(said.exception), "store_problem")
 
     def test_main_catches_exactly_the_errors_that_have_a_code(self):
-        self.assertEqual(set(breadboard.REFUSALS),
-                         {breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError})
+        self.assertEqual(set(sheet.REFUSALS),
+                         {sheet.NotBuilt, design.DesignError, store.StoreProblem, OSError})
 
 
 class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
@@ -283,8 +285,8 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
         (folder / "requirements.json").write_text(json.dumps(
             {"board": "firebeetle2-esp32s3", "parts": ["tactile-button"], "signals": [{"name": "STATUS_LED", "needs": []}]}))
         with in_store(Path(tempfile.mkdtemp())):
-            built = breadboard.design.load(folder / "requirements.json")
-            said = breadboard._unwired(built.board, built)
+            built = sheet.design.load(folder / "requirements.json")
+            said = sheet._unwired(built.board, built)
         self.assertEqual(said, ["- STATUS_LED: board A5, nothing wired to it yet (the requirements add this signal)"])
 
     # --- MVP --- (P512, #708) the alias is read, not answered by the fallback
@@ -304,8 +306,8 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
             {"board": "firebeetle2-esp32s3", "parts": ["tactile-button"],
              "signals": [{"name": "STATUS_LED", "pin": "MOSI", "needs": []}]}))
         with in_store(Path(tempfile.mkdtemp())):
-            built = breadboard.design.load(folder / "requirements.json")
-            said = breadboard._unwired(built.board, built)
+            built = sheet.design.load(folder / "requirements.json")
+            said = sheet._unwired(built.board, built)
         self.assertEqual(said, ["- STATUS_LED: board MO, nothing wired to it yet (the requirements add this signal)"])
 
     def test_a_board_pin_s_jumper_takes_a_hole_so_four_other_ends_need_a_rail(self):
@@ -318,9 +320,9 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
             circuit += [{"type": "source_component", "source_component_id": "c%d" % n, "name": "Part%d" % n},
                         {"type": "source_port", "source_port_id": "p%d" % n, "source_component_id": "c%d" % n, "name": "A"}]
         joined = {"type": "source_trace", "connected_source_port_ids": ["d3", "p1", "p2", "p3", "p4"]}
-        self.assertNotIn("rail", wiring_steps.wiring(board, circuit + [joined], [], {}, breadboard.BOARD_COMPONENT)[0][0])
+        self.assertNotIn("rail", wiring_steps.wiring(board, circuit + [joined], [], {}, sheet.BOARD_COMPONENT)[0][0])
         joined["connected_source_port_ids"].append("p5")
-        self.assertIn("join board D3 to a rail", wiring_steps.wiring(board, circuit + [joined], [], {}, breadboard.BOARD_COMPONENT)[0][0])
+        self.assertIn("join board D3 to a rail", wiring_steps.wiring(board, circuit + [joined], [], {}, sheet.BOARD_COMPONENT)[0][0])
 
     def test_a_supply_s_wire_takes_a_hole_so_five_ends_and_a_supply_need_a_rail(self):
         circuit = [{"type": "source_net", "source_net_id": "n1", "name": "VBUS"}]
@@ -330,9 +332,9 @@ class APadIsNamedAsItIsPrintedTest(unittest.TestCase):
         joined = {"type": "source_trace", "connected_source_port_ids": ["p1", "p2", "p3", "p4"],
                   "connected_source_net_ids": ["n1"]}
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        self.assertNotIn("rail", wiring_steps.wiring(board, circuit + [joined], [], {}, breadboard.BOARD_COMPONENT)[0][0])
+        self.assertNotIn("rail", wiring_steps.wiring(board, circuit + [joined], [], {}, sheet.BOARD_COMPONENT)[0][0])
         joined["connected_source_port_ids"].append("p5")
-        self.assertIn("put these ends on one rail", wiring_steps.wiring(board, circuit + [joined], [], {}, breadboard.BOARD_COMPONENT)[0][0])
+        self.assertIn("put these ends on one rail", wiring_steps.wiring(board, circuit + [joined], [], {}, sheet.BOARD_COMPONENT)[0][0])
 
     def test_a_port_alone_on_a_supply_is_a_point_that_names_the_supply(self):
         circuit = [{"type": "source_component", "source_component_id": "c1", "name": "L9110sModule"},
@@ -350,7 +352,7 @@ class ASignalNothingTakesTest(unittest.TestCase):
         (project / "requirements.json").write_text(json.dumps(wanted))
         (project / "dist" / "board" / "built-from.json").write_text(json.dumps({"requirements": wanted}))
         with in_store(Path(tempfile.mkdtemp())):
-            text = breadboard.sheet(project / "requirements.json")
+            text = sheet.sheet(project / "requirements.json")
         self.assertIn("Not wired:", text)
         self.assertRegex(text, r"- BUZZER: board \S+, nothing wired to it yet")
 
@@ -364,7 +366,7 @@ class WhatYouOwnTest(unittest.TestCase):
              "used_in": {"button-light": 1}}))
         (home / "projects.json").write_text(json.dumps({"button-light": str(project)}))
         with in_store(home):
-            text = breadboard.sheet(project / "requirements.json")
+            text = sheet.sheet(project / "requirements.json")
         board = next(line for line in text.splitlines() if "DFRobot FireBeetle 2 ESP32-S3" in line and "|" in line)
         self.assertIn("yours", board)
         led = next(line for line in text.splitlines() if "L-7113ID" in line and "|" in line)
@@ -380,7 +382,7 @@ class WhatYouOwnTest(unittest.TestCase):
              "used_in": {"button-light": 1}}))
         (home / "projects.json").write_text(json.dumps({"button-light": str(project)}))
         with in_store(home):
-            text = breadboard.sheet(project / "requirements.json")
+            text = sheet.sheet(project / "requirements.json")
         rows = {line.split("|")[2].strip(): line.split("|")[4].strip() for line in text.splitlines() if line.startswith("| ")}
         self.assertEqual(rows["6x6 mm tactile push button"], "in your drawer")
         self.assertEqual(rows["Kingbright L-7113ID 5 mm red LED"], "to get")

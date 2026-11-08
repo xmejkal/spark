@@ -20,7 +20,7 @@ import suite_temp  # noqa: E402,F401
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import breadboard  # noqa: E402
+from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import drawing_catalog  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
@@ -38,7 +38,7 @@ def in_store():
 
 def xiao_read():
     with in_store():
-        return breadboard._read_build(XIAO / "requirements.json")
+        return sheet._read_build(XIAO / "requirements.json")
 
 
 class TheTurnTest(unittest.TestCase):
@@ -129,7 +129,7 @@ class TheXiaoLayoutTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.read = xiao_read()
-        cls.layout = breadboard._plan_layout(cls.read)
+        cls.layout = sheet._plan_layout(cls.read)
 
     def test_every_pin_lies_within_the_tolerance_of_its_hole(self):
         for part in self.layout.parts:
@@ -185,13 +185,13 @@ class TheXiaoLayoutTest(unittest.TestCase):
 
     def test_the_same_build_gives_the_same_bytes(self):
         once = drawing.WokwiBreadboardDiagram().text(self.layout)
-        self.assertEqual(once, drawing.WokwiBreadboardDiagram().text(breadboard._plan_layout(xiao_read())))
+        self.assertEqual(once, drawing.WokwiBreadboardDiagram().text(sheet._plan_layout(xiao_read())))
 
     def test_the_drawing_keeps_the_bytes_wokwi_showed(self):
         # The screenshot in docs/discovery/2026-10-16-p267-wokwi-holes/ shows exactly these bytes (P267, PR #303).
         # A refactor must not move a part by a rounding step: P270 changes the units inside, never the file.
         with in_store():
-            text = breadboard.drawing_text(XIAO / "requirements.json")
+            text = sheet.drawing_text(XIAO / "requirements.json")
         self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
                          "cf3f8e5384d50a1d496be66784679810f8932b1576566ca6f8a9d8f59646c32d")
 
@@ -233,7 +233,7 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         with in_store():
-            cls.read = breadboard._read_build(RECORD_BOARD / "requirements.json")
+            cls.read = sheet._read_build(RECORD_BOARD / "requirements.json")
         cls.geometry, cls.catalog = record_inputs(cls.read)
         cls.layout = drawing.BreadboardPlanner(cls.geometry, cls.catalog).plan(cls.read.steps)
 
@@ -333,7 +333,7 @@ class AnOldDrawingTest(unittest.TestCase):
         shutil.copytree(ROOT / "tests" / "data" / "breadboard" / "motor", project)
         (project / "breadboard.json").write_text("{}")
         with in_store():
-            written = breadboard.write(project / "requirements.json", project / "breadboard.md")
+            written = sheet.write(project / "requirements.json", project / "breadboard.md")
         self.assertEqual(written.drawings, [])
         # the board is drawn from its record now, so the plan stops at the module nothing says how to draw (an older refusal: no code)
         self.assertEqual([(one.path.name, one.code, one.subject) for one in written.not_written],
@@ -354,7 +354,7 @@ class ABoardWhoseRecordLacksAFactIsRefusedWithItsCodeTest(unittest.TestCase):
         (project / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "firebeetle2-esp32s3"}))
         (project / "breadboard.svg").write_text("<svg/>")
         with in_store():
-            written = breadboard.write(project / "requirements.json", project / "breadboard.md")
+            written = sheet.write(project / "requirements.json", project / "breadboard.md")
         self.assertEqual([(one.path.name, one.code, one.subject) for one in written.not_written],
                          [("breadboard.json", "no_header_fact", "physical.header"), ("breadboard.svg", "no_header_fact", "physical.header")])
         self.assertEqual(written.drawings, [])
@@ -371,14 +371,14 @@ class AXiaoBuildOverAnOldDrawingTest(unittest.TestCase):
             shutil.copy(XIAO / "requirements.json", project / "requirements.json")
             shutil.copytree(XIAO / "dist", project / "dist", dirs_exist_ok=True)
             shutil.copytree(XIAO / "boards", project / "boards", dirs_exist_ok=True) if (XIAO / "boards").exists() else None
-            breadboard.write(project / "requirements.json", project / "breadboard.md")
+            sheet.write(project / "requirements.json", project / "breadboard.md")
         self.assertTrue((project / "breadboard.json").is_file())
         shutil.rmtree(project / "dist")
         shutil.copytree(RECORD_BOARD / "dist", project / "dist")
         shutil.copy(RECORD_BOARD / "requirements.json", project / "requirements.json")
         shutil.rmtree(project / "boards", ignore_errors=True)
         with in_store():
-            written = breadboard.write(project / "requirements.json", project / "breadboard.md")
+            written = sheet.write(project / "requirements.json", project / "breadboard.md")
         self.assertEqual(written.not_kept, [])
         self.assertEqual([one.code for one in written.not_written], ["no_wokwi_part"])
         self.assertFalse((project / "breadboard.json").exists())
@@ -392,11 +392,11 @@ class OnePlanPerWriteTest(unittest.TestCase):
         import shutil
         project = Path(tempfile.mkdtemp()) / "xiao"
         shutil.copytree(XIAO, project)
-        with in_store(), mock.patch.object(breadboard, "_plan_layout", wraps=breadboard._plan_layout) as planned:
-            written = breadboard.write(project / "requirements.json", project / "breadboard.md")
+        with in_store(), mock.patch.object(sheet, "_plan_layout", wraps=sheet._plan_layout) as planned:
+            written = sheet.write(project / "requirements.json", project / "breadboard.md")
         self.assertEqual(planned.call_count, 1)
         self.assertEqual([path.name for path, _ in written.drawings],
-                         [renderer.FILE_NAME for renderer in breadboard.DRAWING_RENDERERS])
+                         [renderer.FILE_NAME for renderer in sheet.DRAWING_RENDERERS])
 
 
 class WhatIsNotDrawnTest(unittest.TestCase):

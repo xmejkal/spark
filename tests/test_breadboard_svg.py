@@ -24,7 +24,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import breadboard  # noqa: E402
+from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 from spark.breadboard import part_pictures  # noqa: E402
@@ -41,8 +41,8 @@ def in_store():
 
 def xiao_svg(pictures=None):
     with in_store():
-        read = breadboard._read_build(XIAO / "requirements.json")
-        layout = breadboard._plan_layout(read)
+        read = sheet._read_build(XIAO / "requirements.json")
+        layout = sheet._plan_layout(read)
     return drawing.SvgBreadboardDiagram(pictures=pictures).text(layout), layout
 
 
@@ -142,7 +142,7 @@ def without_pictures(text):
 
 def record_svg():
     with in_store():
-        read = breadboard._read_build(RECORD_BOARD / "requirements.json")
+        read = sheet._read_build(RECORD_BOARD / "requirements.json")
     layout = drawing.BreadboardPlanner(*record_inputs(read)).plan(read.steps)
     return drawing.SvgBreadboardDiagram().text(layout), layout
 
@@ -198,7 +198,7 @@ class TheSheetShowsItTest(unittest.TestCase):
         project = Path(tempfile.mkdtemp()) / "xiao"
         shutil.copytree(XIAO, project)
         with in_store():
-            breadboard.write(project / "requirements.json", project / "breadboard.md")
+            sheet.write(project / "requirements.json", project / "breadboard.md")
         link = re.search(r"!\[[^\]]*\]\(([^)]+)\)", (project / "breadboard.md").read_text()).group(1)
         self.assertTrue((project / link).is_file())
 
@@ -207,7 +207,7 @@ class TheSheetShowsItTest(unittest.TestCase):
         shutil.copytree(MOTOR, project)
         (project / "breadboard.svg").write_text("<svg/>")
         with in_store():
-            breadboard.write(project / "requirements.json", project / "breadboard.md")
+            sheet.write(project / "requirements.json", project / "breadboard.md")
         self.assertNotIn("![", (project / "breadboard.md").read_text())
         self.assertIn("breadboard.json and breadboard.svg not written: ", (project / "breadboard.md").read_text())
         self.assertFalse((project / "breadboard.svg").exists())

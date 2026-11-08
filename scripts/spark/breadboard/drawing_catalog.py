@@ -1,6 +1,6 @@
 """
 What the drawn breadboard draws each component as: the catalog of a build, from the records, as `DrawnPart`s keyed by the
-name the steps use, and what a planned layout says of its board. It writes no file. `breadboard.py` plans with it (P267).
+name the steps use, and what a planned layout says of its board. It writes no file. `sheet` plans with it (P267).
 """
 
 import re

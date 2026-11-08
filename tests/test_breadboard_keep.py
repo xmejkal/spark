@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
+
+from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import kept_moves  # noqa: E402
 import check_spine  # noqa: E402
@@ -50,7 +52,7 @@ def change_requirements(project, variant):
 
 def build(project):
     with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
-        return breadboard.write(project / "requirements.json", project / "breadboard.md")
+        return sheet.write(project / "requirements.json", project / "breadboard.md")
 
 
 def diagram(project):

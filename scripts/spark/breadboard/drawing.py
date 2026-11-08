@@ -396,7 +396,7 @@ def end_group(end, placed, catalog, groups=None):
 class WokwiBreadboardDiagram:
     """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color. Its constructor takes the
     colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
-    below, `text(layout)` and `why_not_written(layout)`, which `breadboard.DRAWING_RENDERERS` and the build read."""
+    below, `text(layout)` and `why_not_written(layout)`, which `sheet.DRAWING_RENDERERS` and the build read."""
 
     #: The file it writes, beside the sheet.
     FILE_NAME = "breadboard.json"

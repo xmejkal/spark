@@ -2,7 +2,7 @@
 The reasons breadboard.py writes no sheet, each a code with one sentence (P692, W6-B2).
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
-sentence (no magic strings, P260). A NotBuilt carries its code, and `breadboard.refusal_code` gives the code of each error
+sentence (no magic strings, P260). A NotBuilt carries its code, and `sheet.refusal_code` gives the code of each error
 `main` catches. breadboard.py has no `--json`, so the codes wait in the library for the Operation that comes later. A
 drawing not written has its own codes, in drawing.CODES.
 

@@ -61,7 +61,7 @@ sys.path.insert(0, str(SCRIPTS))
 import assign_pins  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
-import breadboard  # noqa: E402
+from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
@@ -831,16 +831,16 @@ def keep_breadboard(requirements, destination, stages=()):
     breadboard.py to compare; a sheet or a drawing left from an earlier build is removed, since it describes another
     board.
     """
-    sheet_path = Path(destination) / breadboard.SHEET
-    drawings = [(Path(destination) / renderer.FILE_NAME, renderer) for renderer in breadboard.DRAWING_RENDERERS]
+    sheet_path = Path(destination) / sheet.SHEET
+    drawings = [(Path(destination) / renderer.FILE_NAME, renderer) for renderer in sheet.DRAWING_RENDERERS]
     why = why_not_built(stages, "board only: nothing to wire")
     if why:
         return [_left_from_earlier(sheet_path, "breadboard sheet", why)] + [
             _left_from_earlier_drawing(path, renderer, why) for path, renderer in drawings]
     try:
-        breadboard.record_built_from(requirements, Path(destination) / breadboard.BUILT_FROM)
-        written = breadboard.write(requirements, sheet_path, Path(destination) / breadboard.CIRCUIT)
-    except (breadboard.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
+        sheet.record_built_from(requirements, Path(destination) / sheet.BUILT_FROM)
+        written = sheet.write(requirements, sheet_path, Path(destination) / sheet.CIRCUIT)
+    except (sheet.NotBuilt, design.DesignError, store.StoreProblem, OSError, ValueError) as stopped:
         return [{"file": str(sheet_path), "did": "not written", "why": str(stopped),
                  "line": "no breadboard sheet: %s" % stopped}] + [
             _left_from_earlier_drawing(path, renderer, "the sheet was not written") for path, renderer in drawings]
@@ -853,14 +853,14 @@ def keep_breadboard(requirements, destination, stages=()):
               "line": "no %s: %s" % (one.renderer.NOUN, one.why)} for one in written.not_written]
     # what the person changes on the bench since the last sheet (P300)
     kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,
-              "color": change.color, "why": breadboard.CHANGE_LIST.line(change),
-              "line": "%s: %s" % (CHANGED, breadboard.CHANGE_LIST.line(change))} for change in written.changes]
+              "color": change.color, "why": sheet.CHANGE_LIST.line(change),
+              "line": "%s: %s" % (CHANGED, sheet.CHANGE_LIST.line(change))} for change in written.changes]
     # a part the person moved in breadboard.json that the build could not keep (P273)
-    kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
+    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": MOVE_NOT_KEPT,
               "subject": named.subject, "code": named.code, "why": named.why,
               "line": "move not kept: %s" % named.line} for named in written.not_kept]
     # an end the drawing joins differently from the points (P279): the sheet's steps stand, the drawing is wrong
-    kept += [{"file": str(Path(destination) / breadboard.EDITABLE_DRAWING.FILE_NAME), "did": DRAWING_DIFFERS,
+    kept += [{"file": str(Path(destination) / sheet.EDITABLE_DRAWING.FILE_NAME), "did": DRAWING_DIFFERS,
               "subject": differs.subject, "code": differs.code, "why": differs.why,
               "line": "%s: %s" % (DRAWING_DIFFERS, differs.why)} for differs in written.differs]
     return kept
@@ -901,7 +901,7 @@ def keep_tabbed_page(destination, stages, kept, exporter):
     why = why_no_page(destination, stages, kept)
     if why:
         return _left_from_earlier(page, tabbed_page.TabbedHtmlPage.NOUN, why)
-    circuit = Path(destination) / breadboard.CIRCUIT
+    circuit = Path(destination) / sheet.CIRCUIT
     tabs = [_breadboard_tab(destination, kept),
             tabbed_page.exported_tab("Schematic", exporter.export_svg(circuit, "schematic-svg")),
             tabbed_page.exported_tab("PCB", exporter.export_svg(circuit, "pcb-svg"))]
@@ -929,7 +929,7 @@ def _breadboard_tab(destination, kept):
 def _left_from_earlier_drawing(path, renderer, why):
     """`_left_from_earlier` for a drawing, except the one a person edits: breadboard.json is left in place when it holds
     parts, since it may hold their moves, which the next build that finishes keeps where they still fit (P273)."""
-    if renderer is breadboard.EDITABLE_DRAWING and path.exists() and breadboard.holds_parts(path):
+    if renderer is sheet.EDITABLE_DRAWING and path.exists() and sheet.holds_parts(path):
         return {"file": str(path), "did": "left alone", "why": "no %s: %s; it may hold your moves, which the next build "
                 "keeps where they fit" % (renderer.NOUN, why),
                 "line": "left alone: %s (it may hold your moves; no %s: %s)" % (path, renderer.NOUN, why)}
