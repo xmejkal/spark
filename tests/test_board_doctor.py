@@ -140,7 +140,7 @@ class EsptoolStopTest(unittest.TestCase):
 
     def test_a_tools_list_it_cannot_use_keeps_the_stop_and_says_no_doctor(self):
         stop = LookStopError("could not read the board on %s", PORT, port=PORT, tool_said=SAID, reason="board_not_read")
-        platform = FakeFirmwarePlatform(port_finder=tools.ToolProblem("mpremote is not installed"))
+        platform = FakeFirmwarePlatform(port_finder=tools.ToolProblem("mpremote is not installed", code="tool_missing"))
         lines = board_doctor.stop_lines("grant.py", stop, platform, None)
         self.assertEqual(lines, ["grant.py: could not read the board on %s (no doctor: mpremote is not installed)" % PORT])
 

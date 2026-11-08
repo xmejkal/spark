@@ -490,7 +490,7 @@ class LookTest(LookCase):
         self.assertEqual(stop.exception.reason, "no_board_record")
 
     def test_a_tool_that_cannot_be_used_stops_the_look_with_its_sentence(self):
-        platform = FakeFirmwarePlatform(self.project, port_finder=tools.ToolProblem("mpremote is not installed"))
+        platform = FakeFirmwarePlatform(self.project, port_finder=tools.ToolProblem("mpremote is not installed", code="tool_missing"))
         with self.assertRaises(board_look.LookStopError) as stop:
             board_look.looker(platform)
         self.assertEqual((str(stop.exception), stop.exception.reason), ("mpremote is not installed", "tool_missing"))
@@ -811,7 +811,7 @@ class TheLookCodesTheImageRefusalTest(LookCase):
 
     def test_a_missing_image_tool_is_tool_missing_with_no_token_and_the_image_kept(self):
         self.run_the_scenario()
-        problem = tools.ToolProblem("cannot check flash-with-firmware.bin against firmware/: no tool holds it")
+        problem = tools.ToolProblem("cannot check flash-with-firmware.bin against firmware/: no tool holds it", code="tool_missing")
         report = self.look(evidence=self.RefusingEvidence(problem=problem))
         self.assertEqual((report.no_token_reason().code, report.token(), report.image_code), ("tool_missing", None, "tool_missing"))
         self.assertEqual(report.image_why, "cannot check flash-with-firmware.bin against firmware/: no tool holds it")

@@ -1349,7 +1349,7 @@ class ThePicksTest(unittest.TestCase):
 
         def refuse_the_history(name, target):
             if name == "history":
-                raise store.StoreProblem("%s would be inside the git work tree — what you own stays out of every repository" % target)
+                raise store.StoreProblem("%s would be inside the git work tree — what you own stays out of every repository" % target, code="store_in_repository")
             return real(name, target)
         with mock.patch.object(store, "_make_ready", side_effect=refuse_the_history):
             said, code = run(["--pick", str(self.project), "soil=x-soil"])

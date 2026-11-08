@@ -317,7 +317,7 @@ class DeployJsonTest(JsonCase, GateCase):
 
     def test_a_tool_that_cannot_be_used_is_tool_missing(self):
         self.run_the_scenario()
-        with mock.patch.object(deploy_service.DeployService, "plan", side_effect=tools.ToolProblem("esptool is not installed")):
+        with mock.patch.object(deploy_service.DeployService, "plan", side_effect=tools.ToolProblem("esptool is not installed", code="tool_missing")):
             code, said, _ = self.go("--token", "aaaa-bbbb")
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["data"]["stage"], said["unchecked"][0]["code"]), (2, "plan", "tool_missing"))
@@ -442,7 +442,7 @@ class DeployJsonTest(JsonCase, GateCase):
     @needs_littlefs
     def test_a_store_record_that_was_not_written_is_said_beside_the_null(self):
         import store
-        with mock.patch.object(deploy_service.DeployService, "record", side_effect=store.StoreProblem("no")):
+        with mock.patch.object(deploy_service.DeployService, "record", side_effect=store.StoreProblem("no", code="store_not_writable")):
             code, said, _ = self.ready()
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["data"]["store_record"], said["data"]["store_record_error"]), (0, None, "no"))

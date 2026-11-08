@@ -512,7 +512,7 @@ class GuardedPrintsTest(GrantCase):
 
     def test_a_tool_problem_with_a_bidi_character_is_told_guarded(self):
         def missing(name, **where):
-            raise tools.ToolProblem("no \u202e mpremote")
+            raise tools.ToolProblem("no \u202e mpremote", code="tool_missing")
         code, _, err = self.grant("--check", find_tool=missing)
         self.assertEqual((code, err), (2, "grant.py: no ? mpremote\n"))
 
@@ -650,7 +650,7 @@ class GrantModesTest(GrantCase):
 
     def test_a_stop_of_the_issue_is_one_finding_of_the_status_of_its_exit_code(self):
         def missing(name, **where):
-            raise tools.ToolProblem("no mpremote")
+            raise tools.ToolProblem("no mpremote", code="tool_missing")
         for result, status, code in ((self.issued(FakeConsent(False)), "problems", "answered_no"),
                                      (self.issued(minutes=0), "could-not-run", "bad_minutes"),
                                      (self.issued(find_tool=missing), "could-not-run", "tool_missing")):

@@ -931,13 +931,13 @@ class TheCommandTest(ProjectCase):
     @needs_littlefs
     def test_a_problem_with_an_override_and_a_carriage_return_shows_as_question_marks(self):
         # P423: the refusal line goes through the guard too
-        code, said = self.command(tool=tools.ToolProblem("simulator is not installed\u202e\r THE LINE"))
+        code, said = self.command(tool=tools.ToolProblem("simulator is not installed\u202e\r THE LINE", code="tool_missing"))
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("run_scenario.py: simulator is not installed?? THE LINE", said)
 
     @needs_littlefs
     def test_a_missing_tool_could_not_run_with_its_install_line(self):
-        code, said = self.command(tool=tools.ToolProblem("simulator (wokwi-cli) is not installed — install: THE LINE"))
+        code, said = self.command(tool=tools.ToolProblem("simulator (wokwi-cli) is not installed — install: THE LINE", code="tool_missing"))
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("THE LINE", said)
 
@@ -999,7 +999,7 @@ class EachRefusalHasItsCodeTest(ProjectCase):
 
     def test_a_missing_simulator_and_an_unset_token_are_their_codes(self):
         def missing(name, project):
-            raise tools.ToolProblem("simulator (wokwi-cli) is not installed")
+            raise tools.ToolProblem("simulator (wokwi-cli) is not installed", code="tool_missing")
 
         self.assertEqual(scenario_run.find_simulator(self.project, missing)[1].code, "tool_missing")
         with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": ""}):

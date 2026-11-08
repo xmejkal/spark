@@ -220,6 +220,7 @@ from brief import Brief  # noqa: E402
 import boards  # noqa: E402
 import missing_facts  # noqa: E402
 import provenance  # noqa: E402
+import records_codes  # noqa: E402
 import store  # noqa: E402
 from spark.core.text_guards import ValueMessageError, guard_lines, printable  # noqa: E402
 
@@ -767,8 +768,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
             # was written to catch: `needs[0] has no pin` was appended, then this line raised
             # KeyError three lines later. Every real part has a pin_order, so any part broken in
             # that way took the whole run down instead of being reported.
-            named = {entry.get("pin") for group in PIN_LISTS
-                     for entry in part.get(group) or []} - {None}
+            named = {entry.get("pin") for group in PIN_LISTS for entry in part.get(group) or []} - {None}
             for position, pad in enumerate(order, start=1):
                 if pad is not None and pad not in named:
                     problems.append(
@@ -1074,7 +1074,7 @@ def keep_in_store(payload, name, dry_run=False):
         return store.keep(payload, name)
     problem = store.file_name_problem(name)
     if problem:
-        raise store.StoreProblem("%s", problem)
+        raise store.StoreProblem("%s", problem, code=records_codes.FILE_NAME_REFUSED)
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -1282,7 +1282,7 @@ def fetch_plan(record):
     for url, name in plan:
         problem = store.file_name_problem(name)
         if problem:
-            raise store.StoreProblem("%s: %s — nothing was fetched", url, problem)
+            raise store.StoreProblem("%s: %s — nothing was fetched", url, problem, code=records_codes.FILE_NAME_REFUSED)
     return plan
 
 

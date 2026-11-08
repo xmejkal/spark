@@ -16,6 +16,7 @@ from collections import namedtuple
 
 import boards
 import parts
+import records_codes
 import store
 from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems, printable
 
@@ -125,12 +126,12 @@ def entries():
             if not isinstance(found[path.stem], dict):
                 raise ValueError("an entry is a JSON object")
         except ValueError as broken:
-            raise store.StoreProblem("%s is not JSON (%s) — fix it by hand; the drawer is read whole or not at all", path, broken)
+            raise store.StoreProblem("%s is not JSON (%s) — fix it by hand; the drawer is read whole or not at all", path, broken, code=records_codes.RECORD_FILE_BROKEN)
         for key, value in found[path.stem].items():
             if key != "schema" and key not in FIELDS:
-                raise store.StoreProblem("%s: `%s` is not a drawer field — fix it by hand; the drawer is read whole or not at all", path, key)
+                raise store.StoreProblem("%s: `%s` is not a drawer field — fix it by hand; the drawer is read whole or not at all", path, key, code=records_codes.RECORD_FILE_BROKEN)
             if key != "schema" and not CHECKS[key][0](value):
-                raise store.StoreProblem("%s: `%s`: %s — fix it by hand; the drawer is read whole or not at all", path, key, CHECKS[key][1])
+                raise store.StoreProblem("%s: `%s`: %s — fix it by hand; the drawer is read whole or not at all", path, key, CHECKS[key][1], code=records_codes.RECORD_FILE_BROKEN)
     return found
 
 

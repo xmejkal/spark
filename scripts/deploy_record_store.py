@@ -13,6 +13,7 @@ import datetime
 import json
 
 from spark.core import outcomes
+import records_codes
 import store
 from spark.core import zone_time
 
@@ -95,7 +96,7 @@ class DeployRecordStore:
             except ValueError:
                 record = None
             if not isinstance(record, dict) or not isinstance(record.get("deploys"), list):
-                raise store.StoreProblem("%s is not a board record, so it was left as it is", path)
+                raise store.StoreProblem("%s is not a board record, so it was left as it is", path, code=records_codes.NOT_A_BOARD_RECORD)
             record["board"] = facts["board"]
             record["deploys"].append(deploy)
             store.write_json("boards", self._key(facts["mac"]), record)

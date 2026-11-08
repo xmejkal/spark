@@ -5,9 +5,9 @@ renders through `spark.core.result.envelope_item`. A person tells the fact (`par
 or a bench measures it; `level_write_problems` is the rule for what that write may hold.
 """
 
-import board_codes
 import boards
 import provenance
+import records_codes
 from spark.core import outcomes
 from spark.core.result import Finding
 
@@ -28,7 +28,7 @@ def list_missing_facts(board):
     One Finding per onboard part of the board whose level a stage needs and whose record names no level, in table order.
     A part with no names for its pins gets none (pins.py writes no line for it), and a null level is missing.
     """
-    return [Finding(outcomes.COULD_NOT_RUN, "pin_roles.%s.%s" % (role, LEVEL_FACT), board_codes.MISSING_FACT,
+    return [Finding(outcomes.COULD_NOT_RUN, "pin_roles.%s.%s" % (role, LEVEL_FACT), records_codes.MISSING_FACT,
                     SENTENCE % (spec.what, LEVEL_FACT.replace("_", " "), ACTIVE_LEVEL_MEANING[role]),
                     FIX % board.get("id", "<board>"))
             for role, spec, entry in boards.onboard_entries(board)

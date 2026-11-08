@@ -12,6 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import board_codes
 from spark.bench import board_grant
 from brief import UnnamedMust
 from spark.firmware import image_builder
@@ -44,10 +45,10 @@ MANY_RUNS_MESSAGE = "the passed runs (%s) have"
 CANNOT_CHECK_MESSAGE = "cannot check %s against firmware/: %s"
 
 
-def cannot_check(name, cause, error=text_guards.ValueMessageError):
-    """The error of CANNOT_CHECK_MESSAGE for this name and cause: each line of the cause is a value, so its line breaks stay (P451)."""
+def cannot_check(name, cause, error=text_guards.ValueMessageError, **keywords):
+    """The error of CANNOT_CHECK_MESSAGE for this name and cause: each line of the cause is a value, so its line breaks stay (P451). `keywords` go to `error`: a ToolProblem's `code`."""
     lines = str(cause).split("\n")
-    return error("\n".join([CANNOT_CHECK_MESSAGE] + ["%s"] * (len(lines) - 1)), name, *lines)
+    return error("\n".join([CANNOT_CHECK_MESSAGE] + ["%s"] * (len(lines) - 1)), name, *lines, **keywords)
 
 
 #: The flag that turns a run of another image from a refusal into a note.
@@ -401,7 +402,7 @@ class NoSimulationEvidence(ImageEvidence):
             built = image_builder.interpreter_for(None, self.project, self.find_tool).image(image_builder.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tools.ToolProblem, ImportError) as cannot:
-            raise cannot_check(image.path.name, cannot, tools.ToolProblem)
+            raise cannot_check(image.path.name, cannot, tools.ToolProblem, code=getattr(cannot, "code", board_codes.TOOL_MISSING))
         except (OSError, ValueError) as cannot:
             return str(cannot_check(image.path.name, cannot))
         except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as image_builder does

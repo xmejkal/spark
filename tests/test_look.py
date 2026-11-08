@@ -494,7 +494,7 @@ class WhatStopsTheLookTest(LookScriptCase):
 
     def test_a_tool_that_is_missing(self):
         def missing(name):
-            raise tools.ToolProblem("no esptool")
+            raise tools.ToolProblem("no esptool", code="tool_missing")
         code, said, problems = self.go_with(FakeOutsideWorld(find_tool=missing))
         self.assertEqual((code, said, problems), (2, [], "look.py: no esptool\n"))
 

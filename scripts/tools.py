@@ -37,10 +37,11 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 import boards  # noqa: E402
+import records_codes  # noqa: E402
 import store  # noqa: E402
 import versions  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
-from spark.core.text_guards import ValueMessageError, flat_line  # noqa: E402
+from spark.core.text_guards import CodedMessageError, flat_line  # noqa: E402
 
 #: What spark says of a tool whose `--version` said nothing; check_spine writes it, and both modules read it.
 UNKNOWN_VERSION = "unknown version"
@@ -61,8 +62,8 @@ MANAGERS = (("npm", "npm"), ("pip", "python3"), ("brew", "brew"), ("download", N
 Tool = namedtuple("Tool", "name role entry command")
 
 
-class ToolProblem(ValueMessageError):
-    """Error: a tool spark cannot use — missing, refused, turned off, or a list it cannot read. The message is the whole sentence; its values are flattened (P444)."""
+class ToolProblem(CodedMessageError):
+    """Error: a tool spark cannot use — missing, refused, turned off, or a list it cannot read. The message is the whole sentence; its values are flattened (P444), and its `code` is records_codes'."""
 
 
 def _read(path):
@@ -71,9 +72,9 @@ def _read(path):
     try:
         data = json.loads(path.read_text())
     except ValueError as broken:
-        raise ToolProblem("%s is not JSON (%s) — fix it or delete it", path, broken)
+        raise ToolProblem("%s is not JSON (%s) — fix it or delete it", path, broken, code=records_codes.TOOLS_LIST_BROKEN)
     if not isinstance(data, dict):
-        raise ToolProblem("%s holds a %s; a tools file is an object", path, type(data).__name__)
+        raise ToolProblem("%s holds a %s; a tools file is an object", path, type(data).__name__, code=records_codes.TOOLS_LIST_BROKEN)
     return data
 
 
@@ -89,15 +90,15 @@ def merged(project=None, personal=None):
             if key.startswith("//") or key in RESERVED:
                 continue
             if not isinstance(value, dict):
-                raise ToolProblem("%s: the entry %r is not an object", path, key)
+                raise ToolProblem("%s: the entry %r is not an object", path, key, code=records_codes.TOOLS_LIST_BROKEN)
             # --- MVP --- a tool's name, and each name in its `needs`, is put into sentences that scripts print, one line each (P430)
             needs = value.get("needs")
             hidden = [name for name in [key] + (needs if isinstance(needs, list) else []) if isinstance(name, str) and not name.isprintable()]
             if hidden:
-                raise ToolProblem("%s: the entry %r has a name with a character a terminal cannot print: %r", path, key, hidden[0])
+                raise ToolProblem("%s: the entry %r has a name with a character a terminal cannot print: %r", path, key, hidden[0], code=records_codes.TOOLS_LIST_BROKEN)
             lists["tools"].setdefault(key, {}).update(value)
         if not isinstance(data.get("roles") or {}, dict):
-            raise ToolProblem("%s: `roles` is not an object — it maps a job to a tool, e.g. {\"pdf-text\": \"pdftotext\"}", path)
+            raise ToolProblem("%s: `roles` is not an object — it maps a job to a tool, e.g. {\"pdf-text\": \"pdftotext\"}", path, code=records_codes.TOOLS_LIST_BROKEN)
         lists["roles"].update(data.get("roles") or {})
         if path == DEFAULTS:
             lists["contracts"].update(data.get("contracts") or {})
@@ -109,7 +110,7 @@ def _filled(line, entry):
     try:
         return line.format(version=entry.get("version", ""), core=entry.get("core", ""))
     except (KeyError, IndexError, ValueError) as unknown:
-        raise ToolProblem("the install line %r names %s; only {version} and {core} are filled", line, unknown)
+        raise ToolProblem("the install line %r names %s; only {version} and {core} are filled", line, unknown, code=records_codes.TOOL_ENTRY_BROKEN)
 
 
 def install_line(entry):
@@ -158,7 +159,7 @@ def fetch_of(entry):
     build = fetch["platforms"].get(platform_key())
     if not build:
         raise ToolProblem("there is no build of it for %s — its list has %s",
-                          platform_key() or "this machine", ", ".join(sorted(fetch["platforms"])))
+                          platform_key() or "this machine", ", ".join(sorted(fetch["platforms"])), code=records_codes.NO_BUILD_FOR_PLATFORM)
     return fetch["file"], build["url"], build["sha256"], bool(fetch.get("executable"))
 
 
@@ -266,30 +267,30 @@ def find(name, project=None, personal=None, _seen=()):
     tool_name = lists["roles"].get(name, name)
     entry = lists["tools"].get(tool_name)
     if entry is None:
-        raise ToolProblem("%s: no tool called %r in any tools file", name, tool_name)
+        raise ToolProblem("%s: no tool called %r in any tools file", name, tool_name, code=records_codes.UNKNOWN_TOOL)
     contract = lists["contracts"].get(role) if role else None
     if contract and contract not in (entry.get("meets") or []):
-        raise ToolProblem("%s: %s does not say it meets %r, so this step will not use it", role, tool_name, contract)
+        raise ToolProblem("%s: %s does not say it meets %r, so this step will not use it", role, tool_name, contract, code=records_codes.CONTRACT_NOT_MET)
     problem = entry_problem(entry)
     if problem:
-        raise ToolProblem("%s: %s", tool_name, problem)
+        raise ToolProblem("%s: %s", tool_name, problem, code=records_codes.TOOL_ENTRY_BROKEN)
     if entry.get("on") is False:
-        raise ToolProblem("%s", off_sentence(tool_name, project, personal))
+        raise ToolProblem("%s", off_sentence(tool_name, project, personal), code=records_codes.TOOL_OFF)
     if tool_name in _seen:
-        raise ToolProblem("%s: its needs go round in a loop — %s", tool_name, " → ".join(_seen + (tool_name,)))
+        raise ToolProblem("%s: its needs go round in a loop — %s", tool_name, " → ".join(_seen + (tool_name,)), code=records_codes.NEEDS_LOOP)
     for need in entry.get("needs") or []:
         try:
             find(need, project, personal, _seen + (tool_name,))
         except ToolProblem as inner:
-            raise ToolProblem("%s needs %s: %s", tool_name, need, inner)
+            raise ToolProblem("%s needs %s: %s", tool_name, need, inner, code=inner.code)
     command = locate(entry, project)
     if command is None:
         raise ToolProblem("%s (%s) is not installed — install: %s",
-                          role or tool_name, tool_name, install_hint(entry) or "see its entry in %s" % DEFAULTS)
+                          role or tool_name, tool_name, install_hint(entry) or "see its entry in %s" % DEFAULTS, code=records_codes.TOOL_MISSING)
     here = versions.too_old(entry)
     if here:
         raise ToolProblem("%s %s is too old: spark needs %s or newer. Install: %s", tool_name, here,
-                          entry["oldest_version"], install_hint(entry) or "see its entry in %s" % DEFAULTS)
+                          entry["oldest_version"], install_hint(entry) or "see its entry in %s" % DEFAULTS, code=records_codes.TOOL_TOO_OLD)
     return Tool(tool_name, role, entry, command)
 
 
@@ -314,7 +315,7 @@ def status(project=None, personal=None):
                     try:
                         find(need, project, personal)
                     except ToolProblem as inner:
-                        raise ToolProblem("%s needs %s: %s", name, need, inner)
+                        raise ToolProblem("%s needs %s: %s", name, need, inner, code=inner.code)
                 rows.append(("ok", label, "%s (MCP%s)" % (name, ", spark's own" if entry.get("owner") == "spark" else "")))
             else:
                 found = find(label, project, personal)
@@ -370,8 +371,7 @@ def plan(names, project=None, personal=None):
                 order.append(wanted)
     steps = []
     for name in order:
-        step = {"name": name, "argv": None, "problem": None, "fetch": None, "here": None,
-                "from_project": name in project_file}
+        step = {"name": name, "argv": None, "problem": None, "fetch": None, "here": None, "from_project": name in project_file}
         steps.append(step)
         entry = lists["tools"].get(name)
         problem = "no tool called that in any tools file" if entry is None else entry_problem(entry)
@@ -455,7 +455,7 @@ def install(names, project=None, personal=None, run=None):
             except ToolProblem as wrong:
                 problems.append(str(wrong))
     if problems:
-        raise ToolProblem.of_lines(problems)
+        raise ToolProblem.of_lines(problems, code=records_codes.INSTALL_FAILED)
     return ran
 
 
@@ -468,7 +468,7 @@ def settle_download(file, url, sha256, executable=False):
         if part.exists():
             part.unlink()
         raise ToolProblem("%s: the download's checksum %s is not the %s its entry states — deleted",
-                          file, digest[:12], str(sha256)[:12])
+                          file, digest[:12], str(sha256)[:12], code=records_codes.INSTALL_FAILED)
     if executable:
         part.chmod(0o755)
     part.replace(DOWNLOADS / file)
@@ -493,7 +493,7 @@ def pin(target, value, project, where):
     field = field or "version"
     oldest = merged(project)["tools"].get(name, {}).get("oldest_version")
     if field == "version" and oldest and (versions.release_tuple(value) is None or versions.is_older(value, oldest)):
-        raise ToolProblem("%s: %s is not %s or newer, the oldest spark runs — nothing written", name, value, oldest)
+        raise ToolProblem("%s: %s is not %s or newer, the oldest spark runs — nothing written", name, value, oldest, code=records_codes.PIN_REFUSED)
     return name, field, choose([name, field], value, where)
 
 
@@ -503,7 +503,7 @@ def use(role, tool_name, project=None, personal=None):
     entry = lists["tools"].get(tool_name)
     contract = lists["contracts"].get(role)
     if entry is None or (contract and contract not in (entry.get("meets") or [])):
-        raise ToolProblem("%s: %s does not say it meets %r, so this step will not use it", role, tool_name, contract)
+        raise ToolProblem("%s: %s does not say it meets %r, so this step will not use it", role, tool_name, contract, code=records_codes.CONTRACT_NOT_MET)
     return choose(["roles", role], tool_name, Path(project) / PROJECT_FILE if project else (personal or PERSONAL))
 
 
@@ -624,7 +624,7 @@ def main(argv=None, run=None):
         elif args.on:
             choose([args.on, "on"], True, where)
             if merged(project)["tools"].get(args.on, {}).get("on") is False:
-                raise ToolProblem("%s is still off: %s", args.on, off_sentence(args.on, project))
+                raise ToolProblem("%s is still off: %s", args.on, off_sentence(args.on, project), code=records_codes.TOOL_OFF)
             for argv_ran in install([args.on], project if scope == "project" else None, None, run):
                 print(flat_line("  ran: %s", " ".join(argv_ran)))
             print(flat_line("  %s is on (%s)", args.on, where))
@@ -647,10 +647,10 @@ def main(argv=None, run=None):
             try:
                 entry = json.loads(text)
             except ValueError as broken:
-                raise ToolProblem("%s: the entry is not JSON (%s)", name, broken)
+                raise ToolProblem("%s: the entry is not JSON (%s)", name, broken, code=records_codes.TOOL_ENTRY_BROKEN)
             problem = new_entry_problem(entry)
             if problem:
-                raise ToolProblem("%s: %s — nothing written", name, problem)
+                raise ToolProblem("%s: %s — nothing written", name, problem, code=records_codes.TOOL_ENTRY_BROKEN)
             print(flat_line("  %s written (%s); point a job at it: /spark:setup use <role>=%s", name, choose([name], entry, where), name))
         elif args.pin:
             target, _, value = args.pin.partition("=")

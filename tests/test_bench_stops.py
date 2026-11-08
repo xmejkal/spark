@@ -33,12 +33,12 @@ class AStopKeepsEachTypedValueOnOneLineTest(unittest.TestCase):
 
     def test_a_newline_in_the_port_of_a_tool_problem_fakes_no_line(self):
         port = "/dev/x\nGRANTED"
-        said = stop_result(tools.ToolProblem("no board on %s" % port), "live.py", self.project, port)
+        said = stop_result(tools.ToolProblem("no board on %s" % port, code="tool_missing"), "live.py", self.project, port)
         self.assertEqual((said.diagnostics, self.faked_lines(said)), (["live.py: no board on /dev/x?GRANTED"], []))
 
     def test_a_newline_in_the_project_of_a_tool_problem_fakes_no_line(self):
         project = self.project / "a\nGRANTED: board ok"
-        said = stop_result(tools.ToolProblem("no tools list in %s" % project), "reach.py", project, None)
+        said = stop_result(tools.ToolProblem("no tools list in %s" % project, code="tool_missing"), "reach.py", project, None)
         self.assertEqual(len(said.diagnostics), 1, said.diagnostics)
         self.assertEqual(self.faked_lines(said), [])
 
@@ -60,7 +60,7 @@ class AStopsDataIsItsOwnTest(unittest.TestCase):
                 pass
 
             def make_port_finder(self, run):
-                raise tools.ToolProblem("no mpremote")
+                raise tools.ToolProblem("no mpremote", code="tool_missing")
         project = Path(tempfile.mkdtemp())
         check = CheckGrant(platform_for=NoMpremote)
         first = check.run(project, None, outside=FakeOutsideWorld())

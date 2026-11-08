@@ -254,7 +254,7 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
     def test_the_errors_from_outside_each_have_their_own(self):
         self.assertEqual(sheet.refusal_code(sheet.NotBuilt("not built", "build_failed")), "build_failed")
         self.assertEqual(sheet.refusal_code(loader.DesignError("no part %s", "x", code="part_unusable")), "requirements_unusable")
-        self.assertEqual(sheet.refusal_code(store.StoreProblem("the store")), "store_problem")
+        self.assertEqual(sheet.refusal_code(store.StoreProblem("the store", code="record_file_broken")), "store_problem")
         self.assertEqual(sheet.refusal_code(PermissionError("breadboard.md")), "file_unusable")
 
     def test_a_broken_list_of_projects_stops_the_sheet_as_a_store_problem(self):

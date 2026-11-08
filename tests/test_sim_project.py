@@ -374,7 +374,7 @@ class WokwiCliComesFromTheToolsListTest(unittest.TestCase):
         import tools
         said = "simulator (wokwi-cli) is not installed — install: SENTENCE FROM THE LIST"
         root, chip = a_project()
-        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem(said)):
+        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem(said, code="tool_missing")):
             self.assertIsNone(sim_project.find_wokwi_cli())
             staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim")
         self.assertIn("SENTENCE FROM THE LIST", problems[0])
