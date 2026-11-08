@@ -497,6 +497,38 @@ is library-only until the Operation. Review: it holds logic. One reviewer and th
 run. Size est.: 80 product lines, 60 test lines.
 It touches no file of P685 but `measure.py:247`, `planted_tree.py:11` and `test_json_contracts.py`, one line each.
 
+P692 claims check (2026-11-08, on main 6338f89e). The check stopped before any code, for one decision. The
+coordinator decided it on the same day:
+
+- Choice 2. `points`, `_wiring` and what they alone need (`Point`, `ROW_HOLES`, `_natural`, `printed_label`) move to
+  `breadboard_steps.py` in one Move Function commit, before the code commits. W6-B3's table changes: they move
+  with `breadboard_steps.py` to `wiring_steps.py`. The free lines are taken too. The module docstring stays.
+- The three outside exceptions get three codes, because each asks for another action (P684's rule). A store
+  problem reuses `board_codes.STORE_PROBLEM`'s literal. A small function maps them.
+- P691 (#933) is corrected to 13 sites and takes the `check_spine.py:843` finding.
+
+What the check found:
+
+- Decision needed. `breadboard.py` is 600 lines, R1's module limit (`tools/measure.py:242`, counted by
+  `splitlines`, `:449`). Every line the card adds there is the new key `R1:scripts/breadboard.py:<module>`, and the
+  baseline can only shrink. The card adds about 20 lines. The import is 1, `NotBuilt.__init__` 4, the three
+  extractions about 2, 5 and 5, and the wrapped raise lines about 3. A library function that gives the three outside
+  exceptions their code adds 5 more, because `main` is the R1 key at 26 and cannot grow (P684 row 28). Prunes that lose no words give about 8.
+  They are the orphan comment at `:74` and three docstrings whose `"""` sit on their own lines. About 12 lines more
+  must go, by one of three choices:
+  - Cut the module docstring, which is the `--help` text (43 lines).
+  - Move code to another module, for example `points` and `_wiring` to `breadboard_steps.py`, which holds the step
+    rule. This changes W6-B3's table.
+  - Leave the code of the three outside exceptions to the Operation card.
+- Counts: `LEAVES` is at `measure.py:245`, not `:247`. `NotDrawn` is at `breadboard_drawing.py:62`. In `part_shape.py`
+  one `NotDrawn` site has no code (`:226`), not five: `:145`, `:161`, `:168` and `:173` pass one. P691's scope is 13
+  sites, not 17.
+- For a card: `check_spine.py:843` writes the sheet's `not written` entry with no `code`, while each drawing's entry has
+  one, and it also catches `ValueError`, which `breadboard.main` does not.
+- The rest holds. That is the four tables, `check_spine.py:64`, the 12 sites in `breadboard_drawing.py`, `:404` and
+  `:55`. It is also `NotBuilt` at `:108` and its eight sites, the `except` at `:581`, and the three spans (45, 42 and
+  47 lines).
+
 ### W6-C2, the checks codes (after P685)
 
 Goal: each refusal of the six check CLIs has a code. The text and the JSON stay byte-equal to the 17 W6-C1 goldens.

@@ -22,7 +22,7 @@ The build runs the same Service as its breadboard stage.
 
 | Module | Holds |
 |---|---|
-| `breadboard/wiring_steps.py` | `BreadboardSteps`, the anchors, `NumberedList`, `MermaidDiagram`, from `breadboard_steps.py` |
+| `breadboard/wiring_steps.py` | `BreadboardSteps`, the anchors, `NumberedList`, `MermaidDiagram`, and since P692 the circuit's `points`, `wiring` and `printed_label`, from `breadboard_steps.py` |
 | `breadboard/drawing.py` | `BreadboardPlanner`, the placements, the two drawing Renderers, from `breadboard_drawing.py` |
 | `breadboard/kept_moves.py` | the person's moves kept across a rebuild, from `breadboard_keep.py` |
 | `breadboard/bench_changes.py` | what a rebuild asks the person to change, from `breadboard_changes.py` |
@@ -30,9 +30,11 @@ The build runs the same Service as its breadboard stage.
 | `breadboard/part_pictures.py` | `PartPictures`, moved as is |
 | `breadboard/tabbed_page.py` | `TabbedHtmlPage`, `TscircuitExport`, moved as is |
 | `breadboard/sheet.py` | the sheet flow, moved from `breadboard.py` |
+| `breadboard/breadboard_codes.py` | the codes of the refusals of the run, with one sentence each (a leaf, P692); a drawing not written has its codes in `drawing.py`'s `CODES`, from `breadboard_codes.py` |
 | `breadboard/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
-No module name repeats the area's name (rule C1).
+No module name repeats the area's name (rule C1), but for `breadboard_codes`: C1 counts basenames, and `codes` is the
+core's, as `firmware_codes` is named.
 
 ### Its seams and adapters
 

@@ -70,7 +70,7 @@ class TheShapeIsReadFromTheRecordTest(unittest.TestCase):
         self.assertIn("GND1", RECORD.describe_part(firebeetle())["pins"])
 
     def test_a_pad_the_steps_print_under_an_alias_is_a_pad_of_the_shape(self):
-        # the steps print MISO as MI (breadboard.printed_label), the label the shape's pad has
+        # the steps print MISO as MI (breadboard_steps.printed_label), the label the shape's pad has
         self.assertEqual(RECORD.find_pin_names(firebeetle())["MI"], "MI")
 
     def test_each_fact_group_holds_under_the_provenance_rule(self):

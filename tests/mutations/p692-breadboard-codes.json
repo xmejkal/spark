@@ -1,0 +1,11 @@
+[
+ {"file": "scripts/breadboard.py", "name": "a failed build is told as nothing built", "find": "again), breadboard_codes.BUILD_FAILED)", "replace": "again), breadboard_codes.NOT_BUILT)"},
+ {"file": "scripts/breadboard.py", "name": "a circuit with other parts is told as unreadable", "find": "\"nothing\", again),\n                       breadboard_codes.BUILT_FROM_OTHER_REQUIREMENTS)", "replace": "\"nothing\", again),\n                       breadboard_codes.BUILD_UNREADABLE)"},
+ {"file": "scripts/breadboard.py", "name": "no circuit at all is told as unreadable", "find": "% (circuit_path, requirements_path.name), breadboard_codes.NOT_BUILT)", "replace": "% (circuit_path, requirements_path.name), breadboard_codes.BUILD_UNREADABLE)"},
+ {"file": "scripts/breadboard.py", "name": "NotBuilt drops its code", "find": "        self.code = code\n", "replace": "        self.code = None\n"},
+ {"file": "scripts/breadboard.py", "name": "a store problem is told as a file that cannot be opened", "find": "store.StoreProblem: breadboard_codes.STORE_PROBLEM", "replace": "store.StoreProblem: breadboard_codes.FILE_UNUSABLE"},
+ {"file": "scripts/breadboard.py", "name": "main stops catching the outside errors", "find": "REFUSALS = (NotBuilt, *OUTSIDE_CODES)", "replace": "REFUSALS = (NotBuilt,)"},
+ {"file": "scripts/breadboard.py", "name": "a refusal exits 1, not 2", "find": "        print(\"breadboard.py: could not run — %s\" % stopped, file=sys.stderr)\n        return EXIT_COULD_NOT_RUN\n", "replace": "        print(\"breadboard.py: could not run — %s\" % stopped, file=sys.stderr)\n        return 1\n"},
+ {"file": "scripts/breadboard_codes.py", "name": "CODES misses a constant", "find": "    FILE_UNUSABLE: \"a file the sheet reads or writes cannot be opened: its path, its folder or its permissions\",\n", "replace": ""},
+ {"file": "scripts/breadboard_codes.py", "name": "the shared store code says another thing than board_codes'", "find": "    STORE_PROBLEM: \"spark's store cannot be read or written\",", "replace": "    STORE_PROBLEM: \"spark's store cannot be read\","}
+]

@@ -54,6 +54,7 @@ import assign_pins  # noqa: E402
 import board_pads  # noqa: E402
 import breadboard_catalog  # noqa: E402
 import breadboard_changes  # noqa: E402
+import breadboard_codes  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
 import breadboard_match  # noqa: E402
@@ -71,12 +72,8 @@ CIRCUIT = Path("dist") / "board" / "circuit.json"
 #: What a build that finished was built from, written beside its circuit by `check_spine --keep` (the refuter, P191).
 BUILT_FROM = CIRCUIT.parent / "built-from.json"
 SHEET = "breadboard.md"
-#: What the drawn breadboard is, as the build and this script say it beside its path.
 #: The component every generated design calls its dev board (emit_board, the converter's BOARD mapping).
 BOARD_COMPONENT = "Mcu"
-#: The holes of one breadboard row on one side of the gap: a point with more ends goes on a rail. The board covers the
-#: rows beside its own pins, so a board pin's point is a jumper to a free row, which takes one of its holes.
-ROW_HOLES = 5
 #: What each kind of passive a part asks for does, said the way a person reads it.
 PURPOSE = {"pullup": "pull-up on", "pulldown": "pull-down on", "series": "in series with", "divider": "divider on"}
 LEGEND = ("*have*: yours = your drawer holds it for this project · in your drawer = you own it, not held here · "
@@ -101,59 +98,29 @@ CHANGE_LIST = breadboard_changes.ChangeList()
 EDITABLE_DRAWING = next(renderer for renderer in DRAWING_RENDERERS
                         if isinstance(renderer, breadboard_drawing.WokwiBreadboardDiagram))
 
-#: One connection point: the (component, port) pairs it joins, and the names of the nets on it.
-Point = collections.namedtuple("Point", "members nets")
-
 
 class NotBuilt(Exception):
-    """There is no built circuit to read, or it is not this design's."""
+    """Error: there is no built circuit to read, or it is not this design's. `code` (breadboard_codes) says which."""
+
+    def __init__(self, message, code):
+        super().__init__(message)
+        self.code = code
 
 
-def points(circuit):
-    """
-    Every connection point of the built circuit. Traces join ports and nets; a point is what they join, followed through
-    both (netlist.py keeps a pin-to-pin trace's net apart from a named one on purpose; a breadboard row does not). A port
-    alone on a named net is a point too: a supply that comes from off the board.
-    """
-    parent = {}
-
-    def find(node):
-        parent.setdefault(node, node)
-        while parent[node] != node:
-            parent[node] = parent[parent[node]]
-            node = parent[node]
-        return node
-
-    for element in circuit:
-        if element.get("type") == "source_trace":
-            joined = (["port:" + p for p in element.get("connected_source_port_ids") or []]
-                      + ["net:" + n for n in element.get("connected_source_net_ids") or []])
-            for other in joined[1:]:
-                parent[find(other)] = find(joined[0])
-    components = {e["source_component_id"]: e for e in circuit if e.get("type") == "source_component"}
-    members, nets = collections.defaultdict(list), collections.defaultdict(list)
-    for port in (e for e in circuit if e.get("type") == "source_port"):
-        if "port:" + port["source_port_id"] in parent:
-            members[find("port:" + port["source_port_id"])].append((components[port["source_component_id"]], port))
-    for net in (e for e in circuit if e.get("type") == "source_net"):
-        if "net:" + net["source_net_id"] in parent and net.get("name"):
-            nets[find("net:" + net["source_net_id"])].append(net["name"])
-    return [Point(found, sorted(nets[root])) for root, found in members.items() if len(found) > 1 or nets[root]]
+# --- MVP ---
+#: Each error from outside that stops the sheet, with its code: the errors `main` catches, after a NotBuilt.
+OUTSIDE_CODES = {design.DesignError: breadboard_codes.REQUIREMENTS_UNUSABLE, store.StoreProblem: breadboard_codes.STORE_PROBLEM,
+                 OSError: breadboard_codes.FILE_UNUSABLE}
+REFUSALS = (NotBuilt, *OUTSIDE_CODES)
 
 
-def printed_label(board, port):
-    """
-    What the board's silkscreen prints beside one of its pads: a label its header rows list, a pad or power pad of its
-    file, or the printed spelling of an alias (MISO is printed MI); never a bare pin number. Every ground pad is GND.
-    """
-    physical = board.get("physical") or {}
-    rows = [label for row in (physical.get("header_order") or {}).values() if isinstance(row, list) for label in row]
-    pads = board_pads.BoardPads.from_record(board)  # --- MVP --- (P512)
-    known = set(rows) | set(board.get("pins") or {}) | set(board.get("power_pads") or {}) | pads.alias_pads() | set(pads.aliases)
-    hints = port.get("port_hints") or []
-    label = next((pads.pad_of(hint) for hint in hints if hint in known), None) or next(
-        (hint for hint in hints if not re.fullmatch(r"pin\d+|\d+", hint)), port.get("name"))
-    return "GND" if re.fullmatch(r"GND\d*", label) else label
+def refusal_code(stopped):
+    """Value: the code (breadboard_codes) of one of REFUSALS: a NotBuilt's own, else its outside error's. It never reads
+    the message."""
+    if isinstance(stopped, NotBuilt):
+        return stopped.code
+    return next(code for kind, code in OUTSIDE_CODES.items() if isinstance(stopped, kind))
+# --- end MVP ---
 
 
 def _passives(design_parts):
@@ -173,26 +140,27 @@ def record_built_from(requirements_path, out):
 
 
 def _check_fresh(circuit, design_parts, circuit_path, requirements_path):
-    """
-    Refuse a circuit that is not a finished build of this design: not a circuit, a failed build, a build of other
-    requirements (the board swapped, a part added), or one that never recorded what it was built from.
-    """
+    """Refuse a circuit that is not a finished build of this design: not a circuit, a failed build, a build of other
+    requirements (the board swapped, a part added), or one that never recorded what it was built from."""
     again = "build again: `check_spine.py %s --keep .`" % requirements_path.name
     built_from = circuit_path.parent / BUILT_FROM.name
     if not built_from.is_file():
-        raise NotBuilt("%s records no finished build (no %s beside it): %s" % (circuit_path, BUILT_FROM.name, again))
+        raise NotBuilt("%s records no finished build (no %s beside it): %s" % (circuit_path, BUILT_FROM.name, again),
+                       breadboard_codes.NOT_BUILT)
     try:
         recorded = json.loads(built_from.read_text()).get("requirements")
         current = json.loads(requirements_path.read_text())
     except (ValueError, AttributeError) as broken:
-        raise NotBuilt("%s cannot be read (%s): %s" % (built_from, broken, again)) from broken
+        raise NotBuilt("%s cannot be read (%s): %s" % (built_from, broken, again),
+                       breadboard_codes.BUILD_UNREADABLE) from broken
     if recorded != current:
-        raise NotBuilt("%s was built from other requirements than %s: %s" % (circuit_path, requirements_path.name, again))
+        raise NotBuilt("%s was built from other requirements than %s: %s" % (circuit_path, requirements_path.name, again),
+                       breadboard_codes.BUILT_FROM_OTHER_REQUIREMENTS)
     if not isinstance(circuit, list) or not all(isinstance(element, dict) for element in circuit):
-        raise NotBuilt("%s is not a built circuit: %s" % (circuit_path, again))
+        raise NotBuilt("%s is not a built circuit: %s" % (circuit_path, again), breadboard_codes.BUILD_UNREADABLE)
     failed = sorted({e["type"] for e in circuit if re.fullmatch(r"source_\w+_error", e.get("type") or "")})
     if failed:
-        raise NotBuilt("the last build failed (%s): %s" % (", ".join(failed), again))
+        raise NotBuilt("the last build failed (%s): %s" % (", ".join(failed), again), breadboard_codes.BUILD_FAILED)
     wanted = ({BOARD_COMPONENT} | {emit_board.component_name(part) for part in design_parts}
               | set(_passives(design_parts)))
     built = {e["name"] for e in circuit if e.get("type") == "source_component"
@@ -200,7 +168,8 @@ def _check_fresh(circuit, design_parts, circuit_path, requirements_path):
     if wanted != built:
         raise NotBuilt("%s was built from other requirements (in the build only: %s; in the file only: %s): %s"
                        % (circuit_path, ", ".join(sorted(built - wanted)) or "nothing",
-                          ", ".join(sorted(wanted - built)) or "nothing", again))
+                          ", ".join(sorted(wanted - built)) or "nothing", again),
+                       breadboard_codes.BUILT_FROM_OTHER_REQUIREMENTS)
 
 
 #: What the parts table's `have` column says of a part: the words the sheet prints, and the codes `_have` decides on.
@@ -223,11 +192,6 @@ def _have(requirements_path, record_ids):
             elif said[record_id] == HAVE_TO_GET and entry.get("count", 1):
                 said[record_id] = HAVE_IN_DRAWER
     return said
-
-
-def _natural(text):
-    """D3 before D10: digits compared as numbers."""
-    return [int(piece) if piece.isdigit() else piece for piece in re.split(r"(\d+)", text)]
 
 
 def _parts_table(board, design_parts, resistors, supplies, have):
@@ -253,58 +217,11 @@ def _parts_table(board, design_parts, resistors, supplies, have):
 def _supplies(circuit):
     """{net name: the parts on it} for each point that carries a named net and no board pin: a supply from off the board."""
     found = {}
-    for point in points(circuit):
+    for point in breadboard_steps.points(circuit):
         if point.nets and not any(component["name"] == BOARD_COMPONENT for component, _ in point.members):
             for net in point.nets:
                 found.setdefault(net, set()).update(component["name"] for component, _ in point.members)
     return found
-
-
-def _wiring(board, circuit, design_parts, resistors):
-    """The wiring: one numbered line per connection point, board labels first, and the same points as steps."""
-    records = {emit_board.component_name(part): part for part in design_parts}
-
-    def end(component, port):
-        """One end of a connection, as a person finds it on the bench. Every end of a part or a resistor reads
-        differently (a resistor by its tag), so the board's ground pads are the only ends that read the same, and they
-        are one."""
-        if component["name"] == BOARD_COMPONENT:
-            pad = printed_label(board, port)
-            label = "board %s" % pad
-            return breadboard_steps.End(breadboard_steps.BOARD, breadboard_steps.THE_BOARD, label, label, pad)
-        if component["name"] in resistors:
-            tag, value, purpose = resistors[component["name"]]
-            number = re.sub(r"\D", "", port.get("name") or "") or port.get("name")
-            return breadboard_steps.End(breadboard_steps.RESISTOR, tag, "%s end %s" % (tag, number),
-                                        "%s (%s %s), end %s" % (tag, value, purpose, number), number,
-                                        purpose, value)
-        leg = (records.get(component["name"]) or {}).get("legs", {}).get(port.get("name"))
-        short = "%s %s" % (component["name"], port.get("name"))
-        return breadboard_steps.End(breadboard_steps.PART, component["name"], short,
-                                    short + (" (%s)" % leg if leg else ""), port.get("name"))
-
-    said = []
-    for point in points(circuit):
-        ends = list(dict.fromkeys(end(component, port) for component, port in point.members))
-        ends.sort(key=lambda one: (one.kind != breadboard_steps.BOARD, _natural(one.words)))
-        line = " · ".join(one.words for one in ends)
-        on_board = ends[0].kind == breadboard_steps.BOARD
-        if on_board and len(ends) == 1:
-            continue  # a board pad nothing else joins is no wire: 3V3, once the firmware pulls the button up (P204)
-        supply = " / ".join(point.nets) if point.nets and not on_board else None
-        if supply:
-            line += " · the %s supply, from off the board, not part of the parts list" % supply
-        # a board pin's end is its jumper's end, in a hole of the free row; a supply's wire takes a hole too
-        rail = len(ends) + bool(supply) > ROW_HOLES
-        if rail:
-            line += (" — more ends than one breadboard row holds: join %s to a rail and put the others on that rail"
-                     % ends[0].words if on_board else " — put these ends on one rail")
-        said.append((on_board, line, breadboard_steps.StepPoint(ends, supply, rail)))
-    said.sort(key=lambda one: (not one[0], _natural(one[1])))
-    placed = {one.component for _, _, step_point in said for one in step_point.ends}
-    steps = breadboard_steps.BreadboardSteps(
-        [breadboard_steps.THE_BOARD] + [name for name in records if name in placed], [step_point for _, _, step_point in said])
-    return ["%d. %s" % (number, line) for number, (_, line, _) in enumerate(said, 1)], steps
 
 
 def _unwired(board, design):
@@ -348,19 +265,19 @@ def _read_build(requirements_path, circuit_path=None):
     circuit_path = Path(circuit_path) if circuit_path else requirements_path.resolve().parent / CIRCUIT
     if not circuit_path.is_file():
         raise NotBuilt("nothing is built at %s yet: run `check_spine.py %s --keep .` first"
-                       % (circuit_path, requirements_path.name))
+                       % (circuit_path, requirements_path.name), breadboard_codes.NOT_BUILT)
     built = design.load(requirements_path)
     try:
         circuit = json.loads(circuit_path.read_text())
     except ValueError as broken:
-        raise NotBuilt("%s is not JSON (%s): build again" % (circuit_path, broken)) from broken
+        raise NotBuilt("%s is not JSON (%s): build again" % (circuit_path, broken), breadboard_codes.BUILD_UNREADABLE) from broken
     _check_fresh(circuit, built.parts, circuit_path, requirements_path)
     passives = _passives(built.parts)
     resistors = collections.OrderedDict(
         (c["name"], ("R%d" % number, c.get("display_resistance") or "", passives.get(c["name"], "")))
         for number, c in enumerate((c for c in circuit if c.get("type") == "source_component"
                                     and c.get("ftype") == "simple_resistor"), 1))
-    point_lines, steps = _wiring(built.board, circuit, built.parts, resistors)
+    point_lines, steps = breadboard_steps.wiring(built.board, circuit, built.parts, resistors, BOARD_COMPONENT)
     return Read(built, circuit, resistors, point_lines, steps)
 
 
@@ -438,6 +355,28 @@ def holds_parts(path):
     return bool(earlier and earlier.parts)
 
 
+def _drawing_lines(planned):
+    """The sheet's lines on the drawings beside it: the jumper colors, each drawing, the board it was drawn from and any
+    point it joins differently; or why none is written."""
+    if not planned.layout:
+        return ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
+                                              planned.stopped)]
+    colors = "Each jumper has its step's color: %s." % ", ".join(
+        "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step)) for jumper in planned.layout.jumpers)
+    drawn = [renderer for renderer in DRAWING_RENDERERS if not renderer.why_not_written(planned.layout)]
+    first, *others = drawn
+    lines = ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
+    lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
+    if len(drawn) < len(DRAWING_RENDERERS):
+        lines += ["", breadboard_drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
+    lines += [line for one in breadboard_catalog.board_lines(planned.layout) for line in ("", one)]
+    if planned.differs:
+        more = len(planned.differs) - 1
+        lines += ["", "The drawing does not join the points the same way: %s%s. Wire from the steps above."
+                  % (planned.differs[0].why, ", and %d more" % more if more else "")]
+    return lines
+
+
 def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_lines=None):
     """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit).
     `planned` is the layout `write()` already planned, so the sheet says what the drawings show. `change_lines` is the
@@ -456,23 +395,7 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
         lines += ["", "### Changes since the last build", ""] + change_lines
     for heading, intro, renderer in WIRING_VIEWS:
         lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps)
-    if planned.layout:
-        colors = "Each jumper has its step's color: %s." % ", ".join(
-            "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step)) for jumper in planned.layout.jumpers)
-        drawn = [renderer for renderer in DRAWING_RENDERERS if not renderer.why_not_written(planned.layout)]
-        first, *others = drawn
-        lines += ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
-        lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
-        if len(drawn) < len(DRAWING_RENDERERS):
-            lines += ["", breadboard_drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
-        lines += [line for one in breadboard_catalog.board_lines(planned.layout) for line in ("", one)]
-        if planned.differs:
-            more = len(planned.differs) - 1
-            lines += ["", "The drawing does not join the points the same way: %s%s. Wire from the steps above."
-                      % (planned.differs[0].why, ", and %d more" % more if more else "")]
-    else:
-        lines += ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
-                                                planned.stopped)]
+    lines += _drawing_lines(planned)
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
     lines += read.point_lines
@@ -519,6 +442,18 @@ def _change_lines(record, changes):
     return ["- " + line for line in CHANGE_LIST.render(changes)] or ["- Nothing to change on the bench."]
 
 
+def _drawn_or_not(paths, planned):
+    """([(path, renderer)] to write, [NotWritten]) for each drawing beside the sheet: a renderer that declines the
+    layout is not written, and with no layout none is, for what stopped the plan."""
+    layout = planned.layout
+    said = [(path, renderer, renderer.why_not_written(layout) if layout else None) for path, renderer in paths]
+    drawn = [(path, renderer) for path, renderer, why in said if layout and not why]
+    if layout:
+        return drawn, [why._replace(path=path) for path, _, why in said if why]
+    return drawn, [breadboard_drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
+                                                 str(planned.stopped)) for path, renderer, _ in said]
+
+
 def write(requirements_path, out, circuit_path=None):
     """Write the sheet to `out`, and each drawing beside it when the layout can be planned; what `check_spine --keep`
     calls beside the kept board. The layout is planned once. A drawing left from an earlier build is removed, since it
@@ -536,17 +471,10 @@ def write(requirements_path, out, circuit_path=None):
                if record and not record.why_unread else [])
     new_record = breadboard_changes.WiringRecord.from_build(seated, colors, record, _spark_jumpers(
         planned, earlier_path, record))
-    layout = planned.layout
-    said = [(path, renderer, renderer.why_not_written(layout) if layout else None) for path, renderer in paths]
-    drawn = [(path, renderer) for path, renderer, why in said if layout and not why]
-    if layout:
-        not_written = [why._replace(path=path) for path, _, why in said if why]
-    else:
-        not_written = [breadboard_drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
-                                                     str(planned.stopped)) for path, renderer, _ in said]
+    drawn, not_written = _drawn_or_not(paths, planned)
     try:
         # every text is rendered before any file is written, so a renderer that fails leaves no new sheet either
-        texts = [renderer.text(layout) for _, renderer in drawn]
+        texts = [renderer.text(planned.layout) for _, renderer in drawn]
     except Exception:
         for path, _ in paths:
             path.unlink(missing_ok=True)
@@ -562,10 +490,10 @@ def write(requirements_path, out, circuit_path=None):
         for path, _ in paths:
             path.unlink(missing_ok=True)  # an old drawing describes another build: never leave it beside a new sheet
         raise
-    if not layout:
+    if not planned.layout:
         return WriteResult(Path(out), [], not_written, [], changes)
     return WriteResult(Path(out), drawn, not_written, planned.not_kept, changes, planned.differs,
-                       breadboard_catalog.find_board_px(layout).get("source"))
+                       breadboard_catalog.find_board_px(planned.layout).get("source"))
 
 
 def main(argv=None):
@@ -578,7 +506,7 @@ def main(argv=None):
     out = Path(args.out) if args.out else requirements.resolve().parent / SHEET
     try:
         written = write(requirements, out)
-    except (NotBuilt, design.DesignError, store.StoreProblem, OSError) as stopped:
+    except REFUSALS as stopped:  # each has a code (refusal_code), library-only until an Operation writes JSON
         print("breadboard.py: could not run — %s" % stopped, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     print(written.sheet.read_text(), end="")
