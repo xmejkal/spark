@@ -1,7 +1,7 @@
 """
 Library for the board's own LED and button as wired parts of a board-only build's Wokwi diagram (P484, #663): which rows
 of the board record's `pin_roles` spark wires, the netlist and mapping the converter reads for them (`--netlist`), and
-the sentence each wired GPIO gives the limits. `check_spine.board_alone` calls it.
+the sentence each wired GPIO gives the limits. `build_service.board_alone` calls it.
 """
 
 from typing import NamedTuple, Optional
@@ -106,7 +106,7 @@ class BoardAloneResult(NamedTuple):
 def read_board_alone(board, project):
     """
     The BoardAloneResult for a board-only build of `board`, reading the wired parts' records from `project`. Writes
-    nothing and runs nothing: `check_spine.board_alone` writes the files and runs the converter on the netlist.
+    nothing and runs nothing: `build_service.board_alone` writes the files and runs the converter on the netlist.
     """
     reader = OnboardPartReader(board)
     wired = reader.parts()
