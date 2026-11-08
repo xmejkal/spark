@@ -39,8 +39,7 @@ from spark.checks.build_check import package_of
 from spark.core.outcomes import COULD_NOT_RUN
 from spark.core.result import Refusal
 
-# `package_of` (`res0603` -> `0603`) is build_check's one copy: the package table here was keyed on the bare size while
-# the engine emits the prefixed form, so nothing matched (audit A7).
+# `package_of` (`res0603` -> `0603`) is build_check's one copy: a table keyed on the bare size matched nothing (A7).
 
 #: The copper arithmetic lives in its own module, because `emit_board` sizes traces by exactly
 #: the formula this file judges them with. Two copies is how a board passes its own tool and
