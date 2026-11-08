@@ -80,7 +80,9 @@ The fakes call `/bin/mkdir`, `/bin/cp` and an absolute Python, and the tools ove
 `PATH` of the shim folder alone broke both (reproduced). The rest: `boards.PLUGIN_ROOT` for `SCRIPTS.parent`, a
 reference-design Case, the counts (20 refusal Stages in `run`, 30 `DesignError` and 11 `Impossible` sites, 21 `MAY_READ`
 keys, six `NotDrawn` sites in `part_shape.py`), `part_shape`'s move as a done-item with its page edits, `json.md` for the
-new `code` key, and the rows file `docs/observations/rows/p698-wave6-plan-design.md`.
+new `code` key, and the rows file `docs/observations/rows/p698-wave6-plan-design.md`. Round 2 (the refuter on Opus, on
+d5fe9864) held both blockers and added five fixes: `simulation_could_not_look`'s home, the `stages` name clash and
+import by name, the reference Case's store override, the one `part_shape` site, and the 20 patch sites as a done-item.
 
 PR council (2026-11-07, PR #919: one Sonnet reviewer, the refuter on Opus). What changed:
 
@@ -526,7 +528,7 @@ What exists. Four code tables already sit in the area, each beside the Result or
 `breadboard_changes.CODES` (`:28`) and `breadboard_match.CODES` (`:21`). `NotDrawn` carries a `code` (`breadboard_drawing.py:66`).
 They stay where they are: each is read inside the area, and `check_spine.py` (design) imports `breadboard` anyway
 (`:64`), a downward arrow of the overview. Twelve `NotDrawn` sites in `breadboard_drawing.py` (`:142` to `:392`) and
-five in `part_shape.py` (`:145` to `:226`, breadboard's after W6-D3b) raise with `code=None`. They end as a `NotWritten` with exit 0
+one in `part_shape.py` (`:226`, breadboard's after W6-D3b) raises with `code=None`. They end as a `NotWritten` with exit 0
 (`breadboard.py:404`, "an older refusal", `breadboard_drawing.py:55`), not as a refusal of the run, so they are out of
 scope and a card. The one refusal of the run with no code is `NotBuilt` (`breadboard.py:108`), raised at eight sites (`:183`, `:188`, `:190`, `:192`, `:195`,
 `:201`, `:350`, `:356`), and `main`'s one `except` (`:581`), which also catches
@@ -803,7 +805,9 @@ Cases, est. 16, each `<op>-<status>[-<scenario>]`. `assign-pins`: `ok.json`, `ok
 `could-not-run-no-footprint.txt`, `could-not-run-refused.txt`. `emit-footprint`: `ok.json`,
 `could-not-run-no-footprint.txt`. `check-spine`: `ok.json`, `ok-keep.txt` (the `kept` lines), `problems-build.txt` (the
 fake `tsci` with errors), `could-not-run-no-tsci.txt`, `could-not-run-requirements.txt`, `board-only.json`,
-`ok-reference.json` (no argument, the reference design, `check_spine.py:373`).
+`ok-reference.json` (no argument, the reference design, `check_spine.py:373`). With no argument,
+`converter_stage_problem` reads the plugin folder, where the project's override does not apply, so this Case also writes
+the override into the child store's `tools.json` (the refuter proved the converter then resolves to the fake).
 `init-project`: `ok.txt`, `nothing-to-do.txt` (`EXIT_NOTHING_TO_DO`), `could-not-run-no-board.txt`. The PR probes each
 and reports the real count. A Case that reaches the `simulation` stage holds the fake converter's diagram.
 
@@ -908,9 +912,13 @@ This is a named done-item of W6-D3b, after W6-B3 (P694) has made the folder. `pa
 
 The `check_spine.py` split, as W6-F3's, its own commit before the `git mv`, with the page's names. `stages.py` holds
 `Stage` (`:121`) and `NO_FOOTPRINT_HINT`, a small module the other two import, so `convert` (`:566`, `:568`) and
-`converter_stage_problem` (`:233`) make no cycle. `board_engine.py` holds the tool adapters: `find_toolchain`,
+`converter_stage_problem` (`:233`) make no cycle. The name clashes (P694's lesson): `stages` is a local in `run` (`:372`)
+and `main` (`:743`), a parameter of 7 functions, and `stages =` 46 times in `test_check_spine.py`. The module keeps the
+page's name, and every importer imports by name, `from spark.build.stages import Stage, NO_FOOTPRINT_HINT`, never the
+module. `REFERENCE` (`:86`) is read by `main` alone (`:716`), so it stays in the CLI and `check_spine.REFERENCE` keeps
+its `MAY_READ` key. `CONVERTER_PATHS` goes to `board_engine`. `board_engine.py` holds the tool adapters: `find_toolchain`,
 `modules_for`, `toolchain_can_build`, `tsci_version`, `find_converter`, `converter_command`, `converter_stage_problem`,
-`convert` and their constants (`:131` to `:243`, `:553`). `kept_files.py` holds the files `--keep` writes into DIR and
+`simulation_could_not_look` (`:246`, called by `convert` alone), `convert` and their constants (`:131` to `:250`, `:553`). `kept_files.py` holds the files `--keep` writes into DIR and
 what an earlier build left there: `kept_into` to `keep_simulation` (`:769` to `:1010`), `left_off` and
 `design_handed_to`. One meaning of `kept_`: the noun after it is what a run keeps between runs, as `kept_moves.py`'s
 moves. `build_service.py` holds `run` as a function, `said_of_a_crash` (`:113`, which `run` calls at `:412`, `:445`),
@@ -921,7 +929,11 @@ paths break. `SCRIPTS.parent` (`:373`, `:582`) is the plugin folder, and under `
 `scripts/spark`: both read `boards.PLUGIN_ROOT` (`boards.py:171`). The `emit_board.py` child (`:416`) gets an
 `EMIT_BOARD_SCRIPT` with `parents[2]`, as `image_builder.FLASH_IMAGE_SCRIPT` does (P685 row 5), with a test. It is the
 one logic-adjacent change of the move. `find_converter`'s `scripts/check_spine.py` test (`:214`) holds, because the CLI
-stays.
+stays. A done-item of W6-U3: the 20 `mock.patch.object(check_spine, ...)` sites in `test_check_spine.py`,
+`test_json_contracts.py` and `test_routes.py` (`find_toolchain` 9, `run` 8, `islands_in`, `converter_command` and
+`_kept` 1 each) follow their function to the module that looks the name up. A missed `find_toolchain` patch lets the
+tests at `test_check_spine.py:1807` and `:2004` find a real `tsci` on `PATH`. The proof is P685 row 9's: plant an
+early binding (`from ... import find_toolchain`) in a scratch copy and see those tests go red.
 
 The rules, checked at 924e48a4. R1: the nine extractions are the codes PRs', so the only new breach is none. The
 `main` keys stay (five), `R1:assign`, `rules_for`, `run` and the two `<module>` keys move with `--accept-new`. R6: 5 keys
@@ -930,9 +942,9 @@ The rules, checked at 924e48a4. R1: the nine extractions are the codes PRs', so 
 sits outside a `main` (checked with `ast`). T1: 6 keys, the two `file-write` keys of `assign_pins` (`:550`) and
 `emit_footprint` (`:327`) sit in `main` and stay, `check_spine`'s three and `init_project`'s one follow their code.
 C1 2, C3 2 (both in a `main`, stay), R2 5, R3 5. U1: the two leaves are in `LEAVES` since the codes PRs. `MAY_READ`
-(`tests/test_self_confirmation.py:50` to `:80`) has 21 keys on the 13, and 16 take the new module name
-(`emit_footprint.*` becomes `footprint_emitter.*`, and the `copper`, `fab`, `netlist` and `ai_files` keys keep their
-stem). Import lines: 90 outside and 27 among. The 26 lazy ones (12 in `scripts/`, 14 in tests) stay lazy. `sim_project.py:20` (firmware) and `board_envelope.py:17` (bench) read design along their arrows.
+(`tests/test_self_confirmation.py:50` to `:80`) has 21 keys on the 13, and 15 take the new module name
+(`emit_footprint.*` becomes `footprint_emitter.*`, `check_spine.CONVERTER_PATHS` becomes `board_engine.*`, and the
+`copper`, `fab`, `netlist`, `ai_files` and `check_spine.REFERENCE` keys keep their stem). Import lines: 90 outside and 27 among. The 26 lazy ones (12 in `scripts/`, 14 in tests) stay lazy. `sim_project.py:20` (firmware) and `board_envelope.py:17` (bench) read design along their arrows.
 Rows: `--retarget` for each file that moves whole. The rows of a CLI's `main` go back to the CLI's file by a scratch
 script, as P685 row 11 did. `--anchors` proves each `find` occurs once. No row is dropped. Each PR's retargeted tables
 run once, in parallel `--copy` shards.
