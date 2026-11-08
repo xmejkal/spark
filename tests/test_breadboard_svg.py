@@ -24,10 +24,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.breadboard import sheet  # noqa: E402
-from spark.breadboard import drawing  # noqa: E402
-from spark.breadboard import wiring_steps  # noqa: E402
-from spark.breadboard import part_pictures  # noqa: E402
+from spark.breadboard import drawing, part_pictures, sheet, wiring_steps  # noqa: E402
 from test_breadboard_layout import RECORD_BOARD, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"

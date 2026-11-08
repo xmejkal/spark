@@ -61,8 +61,7 @@ sys.path.insert(0, str(SCRIPTS))
 import assign_pins  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
 import boards  # noqa: E402
-from spark.breadboard import sheet  # noqa: E402
-from spark.breadboard import drawing  # noqa: E402
+from spark.breadboard import drawing, sheet, tabbed_page  # noqa: E402
 import design  # noqa: E402
 import emit_board  # noqa: E402
 import init_project  # noqa: E402
@@ -72,7 +71,6 @@ import onboard_parts  # noqa: E402
 import parts  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 import store  # noqa: E402
-from spark.breadboard import tabbed_page  # noqa: E402
 import tools  # noqa: E402
 import emit_footprint  # noqa: E402
 

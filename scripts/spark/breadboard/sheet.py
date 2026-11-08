@@ -1,7 +1,7 @@
 """
 The breadboard sheet from a built design (P191): the parts, each resistor they ask for, the numbered wiring steps, the
-drawings and the changes on the bench, written beside the requirements file. Moved from `breadboard.py` (W6-B3, P694),
-whose `main` calls `write`. Its refusals carry the codes of `breadboard_codes`.
+drawings and the changes on the bench, written beside the requirements file. The CLI `breadboard.py` calls `write`.
+Its refusals carry the codes of `breadboard_codes`.
 """
 
 import collections
@@ -409,7 +409,7 @@ def _drawn_or_not(paths, planned):
     if layout:
         return drawn, [why._replace(path=path) for path, _, why in said if why]
     return drawn, [drawing.NotWritten(path, renderer, planned.stopped.code, planned.stopped.subject,
-                                                 str(planned.stopped)) for path, renderer, _ in said]
+                                      str(planned.stopped)) for path, renderer, _ in said]
 
 
 def write(requirements_path, out, circuit_path=None):
