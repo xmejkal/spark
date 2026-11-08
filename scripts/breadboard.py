@@ -331,6 +331,28 @@ def holds_parts(path):
     return bool(earlier and earlier.parts)
 
 
+def _drawing_lines(planned):
+    """The sheet's lines on the drawings beside it: the jumper colors, each drawing, the board it was drawn from and any
+    point it joins differently; or why none is written."""
+    if not planned.layout:
+        return ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
+                                              planned.stopped)]
+    colors = "Each jumper has its step's color: %s." % ", ".join(
+        "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step)) for jumper in planned.layout.jumpers)
+    drawn = [renderer for renderer in DRAWING_RENDERERS if not renderer.why_not_written(planned.layout)]
+    first, *others = drawn
+    lines = ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
+    lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
+    if len(drawn) < len(DRAWING_RENDERERS):
+        lines += ["", breadboard_drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
+    lines += [line for one in breadboard_catalog.board_lines(planned.layout) for line in ("", one)]
+    if planned.differs:
+        more = len(planned.differs) - 1
+        lines += ["", "The drawing does not join the points the same way: %s%s. Wire from the steps above."
+                  % (planned.differs[0].why, ", and %d more" % more if more else "")]
+    return lines
+
+
 def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_lines=None):
     """The sheet, as Markdown, for a requirements file whose project has been built with --keep (or its circuit).
     `planned` is the layout `write()` already planned, so the sheet says what the drawings show. `change_lines` is the
@@ -349,23 +371,7 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
         lines += ["", "### Changes since the last build", ""] + change_lines
     for heading, intro, renderer in WIRING_VIEWS:
         lines += ["", "### " + heading, "", intro, ""] + renderer.render(steps)
-    if planned.layout:
-        colors = "Each jumper has its step's color: %s." % ", ".join(
-            "%d %s" % (jumper.step, STEP_COLORS.color(jumper.step)) for jumper in planned.layout.jumpers)
-        drawn = [renderer for renderer in DRAWING_RENDERERS if not renderer.why_not_written(planned.layout)]
-        first, *others = drawn
-        lines += ["", "%s %s" % (first.SHEET_MESSAGE, colors)]
-        lines += [line for renderer in others for line in ("", renderer.SHEET_MESSAGE)]
-        if len(drawn) < len(DRAWING_RENDERERS):
-            lines += ["", breadboard_drawing.WokwiBreadboardDiagram.SHEET_DECLINED_MESSAGE]
-        lines += [line for one in breadboard_catalog.board_lines(planned.layout) for line in ("", one)]
-        if planned.differs:
-            more = len(planned.differs) - 1
-            lines += ["", "The drawing does not join the points the same way: %s%s. Wire from the steps above."
-                      % (planned.differs[0].why, ", and %d more" % more if more else "")]
-    else:
-        lines += ["", "%s not written: %s." % (" and ".join(renderer.FILE_NAME for renderer in DRAWING_RENDERERS),
-                                                planned.stopped)]
+    lines += _drawing_lines(planned)
     lines += ["", "### Points", "", "After the steps, each line is one point: its ends must be joined, and nothing else.",
               ""]
     lines += read.point_lines
