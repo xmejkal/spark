@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
-import copper  # noqa: E402
+from spark.design import copper  # noqa: E402
 import design  # noqa: E402
 import board_pads  # noqa: E402
 import emit_board  # noqa: E402

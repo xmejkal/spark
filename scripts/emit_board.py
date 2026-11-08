@@ -39,7 +39,7 @@ sys.path.insert(0, str(SCRIPTS))
 import assign_pins  # noqa: E402
 import board_pads  # noqa: E402
 from spark.design import fab  # noqa: E402
-import copper  # noqa: E402
+from spark.design import copper  # noqa: E402
 import design as design_library  # noqa: E402
 import design_codes  # noqa: E402
 import emit_footprint  # noqa: E402
