@@ -511,6 +511,39 @@ def module_as_part(board):
             "power": [dict(entry, pin=pad) for pad, entry in (board.get("power_pads") or {}).items()]}
 
 
+def rail_settler(rails, outputs):
+    """`settle(net)`: the sum of one rail of `rail_loads`, each rail settled once, a converter's input through the
+    output it feeds."""
+    settled = {}
+
+    def settle(net, through=()):
+        if net in settled:
+            return settled[net]
+        amps, missing, unverified = 0.0, [], []
+        for load in rails[net]["loads"]:
+            if "feeds" in load:
+                fed = outputs.get((id(load["part"]), load["feeds"]))
+                inner = settle(fed, through + (net,)) if fed and fed not in through + (net,) else None
+                load = {"who": load["who"],
+                        "why": "carries what %s carries%s" % (
+                            fed, "" if inner and inner["complete"] else ", which is not fully stated"),
+                        "amps": inner["amps"] if inner and inner["complete"] else None,
+                        "verified": bool(inner) and not inner["unverified"]}
+            if load["amps"] is None:
+                missing.append("%s: %s" % (load["who"], load["why"]))
+                continue
+            amps += load["amps"]
+            if not load["verified"]:
+                unverified.append("%s: %s" % (load["who"], load["why"]))
+        supplies = rails[net]["supplies"]
+        settled[net] = {"amps": amps, "complete": not missing, "missing": missing,
+                        "unverified": unverified,
+                        "supply": supplies[0] if len(supplies) == 1 else None}
+        return settled[net]
+
+    return settle
+
+
 def rail_loads(part_list, board=None):
     """
     What each rail carries, summed from the facts its members' power pins name (P52).
@@ -543,33 +576,7 @@ def rail_loads(part_list, board=None):
         else:
             rail["loads"].append(dict(current_of(part, supply.get("draws")), who=who))
 
-    settled = {}
-
-    def settle(net, through=()):
-        if net in settled:
-            return settled[net]
-        amps, missing, unverified = 0.0, [], []
-        for load in rails[net]["loads"]:
-            if "feeds" in load:
-                fed = outputs.get((id(load["part"]), load["feeds"]))
-                inner = settle(fed, through + (net,)) if fed and fed not in through + (net,) else None
-                load = {"who": load["who"],
-                        "why": "carries what %s carries%s" % (
-                            fed, "" if inner and inner["complete"] else ", which is not fully stated"),
-                        "amps": inner["amps"] if inner and inner["complete"] else None,
-                        "verified": bool(inner) and not inner["unverified"]}
-            if load["amps"] is None:
-                missing.append("%s: %s" % (load["who"], load["why"]))
-                continue
-            amps += load["amps"]
-            if not load["verified"]:
-                unverified.append("%s: %s" % (load["who"], load["why"]))
-        supplies = rails[net]["supplies"]
-        settled[net] = {"amps": amps, "complete": not missing, "missing": missing,
-                        "unverified": unverified,
-                        "supply": supplies[0] if len(supplies) == 1 else None}
-        return settled[net]
-
+    settle = rail_settler(rails, outputs)
     return {net: settle(net) for net in rails}
 
 
