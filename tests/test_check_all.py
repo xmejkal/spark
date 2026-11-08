@@ -512,6 +512,14 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
         self.assertEqual((result["status"], result["unchecked"]), (check_all.COULD_NOT_RUN, ["no bom.csv in fab-gerbers.zip"]))
         self.assertEqual(result["unchecked"][0].code, "no_bom_in_package")
 
+    def test_a_board_the_vendor_check_cannot_compare_keeps_its_code(self):
+        board = written("noboard.json", {"pins": {"D3": 38}})
+        vendor = next(c for c in check_all.CHECKS if c.name == "vendor-truth")
+        result = vendor.run({"boards": [board]})
+        self.assertEqual(result["status"], check_all.COULD_NOT_RUN)
+        self.assertTrue(result["unchecked"][0].startswith("noboard: no vendor.arduino_variant in noboard.json"), result)
+        self.assertEqual(result["unchecked"][0].code, "no_vendor_variant")
+
     def test_a_project_folder_that_is_not_there_is_project_unusable(self):
         missing = Path(tempfile.mkdtemp()) / "nowhere"
         checked, refusal = check_all.CheckedFolder.named(str(missing))

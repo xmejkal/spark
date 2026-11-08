@@ -257,7 +257,7 @@ class VendorTruth(Check):
         for path in inputs["boards"]:
             result = check_vendor_pins.check_board(Path(path), offline=True, repo="")
             if result["status"] == "could-not-run":
-                unchecked.append("%s: %s" % (result["board"], result["reason"]))
+                unchecked.append(Refusal("%s: %s" % (result["board"], result["reason"]), result["reason"].code))
             else:
                 problems += ["%s: %s" % (result["board"], p)
                              for p in result.get("problems", [])]
