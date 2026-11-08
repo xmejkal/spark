@@ -1422,6 +1422,19 @@ changed, an exit code changed, the band's bound off by one, a printed line dropp
 `matching.py` carries a code that `sourcing_codes.CODES` names, `rules_check.py` and `parts.py` read the band from
 `spark.sourcing.part_rules`, no handler prints, and the goldens of W6-R1 are byte-equal.
 
+P717 claims check (at 00879980, no decision changed). Holds: `PartError` 7 raises (`parts.py:1299`, `:1339`, `:1343`,
+`:1765`, `:1971`; `:264`, `:272` are `:265`, `:273`); `NoTranscript` 7 (`cost.py:64`, `:226` to `:242`); `UnknownMatcher`
+1 (`matching.py:229`); `parts.main` 23 at `:2358`, `cost.main` 21 at `:279`; `simulation_problems` 56 (`:547`),
+`conflicts_of` 44 (`:1440`), `_op_requirements` 44 (`:2202`); the two prints (`:1780`, `:2130`), `_say` `:2335`;
+`rules_check.py:32`, `:33`; the lazy band import `parts.py:494`; `areas/checks.md:47`. Corrections: `validate` is 225 lines at
+`:620` (P716 pruned one); `_cannot` is `:243`. `drawer.py` raises only `StoreProblem`, coded by P716, so it gains no code.
+`TheSourcingAreaTest` does not exist: this PR makes it, with `part_rules` alone, and `sourcing_codes` stays flat in
+`scripts/` as `records_codes` did until its move (S3a). A decision: a `_cannot` item is an envelope's `unchecked` dict
+`{sentence, fix}`, so a code in it is a new JSON key, and the JSON then changes. The codes go on the three
+raised errors, and an item's code waits for the Operation card, as P716's records codes do. `cost.main`'s three refusals
+are prints in an R1 key, and wait too. `NoTranscript` and `UnknownMatcher` become `CodedMessageError`s
+(`UnknownMatcher` keeps `ValueError` as its second base, which `tools/match_eval.py:104` catches).
+
 ### The four moves, W6-R3a, W6-R3b, W6-S3a and W6-S3b (what they share)
 
 Why four. 6,189 lines and 728 rows at 1.6 minutes is 19 hours of one serial mutation run. The order is bottom-up along

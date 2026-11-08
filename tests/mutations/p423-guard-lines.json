@@ -26,8 +26,8 @@
  {
   "file": "scripts/parts.py",
   "name": "--keep prints the photo's name as it is",
-  "find": "% printable(path.name), file=sys.stderr)",
-  "replace": "% path.name, file=sys.stderr)"
+  "find": "% printable(path.name)]\n            if located and not args.json else ())",
+  "replace": "% path.name]\n            if located and not args.json else ())"
  },
  {
   "file": "scripts/spark/bench/board_look.py",

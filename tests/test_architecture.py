@@ -472,5 +472,33 @@ class TheBuildAreaTest(unittest.TestCase):
 # --- end MVP ---
 
 
+# --- MVP ---
+class TheSourcingAreaTest(unittest.TestCase):
+    """W6-S2 (P717): the sourcing area starts with the pull-up band in `scripts/spark/sourcing/part_rules.py`, its
+    `__init__.py` imports nothing, and each module imports alone. Checks and `parts.py` read the band from there, so no
+    module imports the checks area for it. `sourcing_codes` stays flat in `scripts/` until its move (W6-S3a)."""
+    SOURCING = ROOT / "scripts" / "spark" / "sourcing"
+    #: The modules of the area so far, by the names of its page (`areas/sourcing.md`).
+    MODULES = ["part_rules"]
+
+    def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):
+        modules = sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py")
+        self.assertEqual(modules, self.MODULES)
+        # any binding of a name, a tuple's element too (the refuter's `PULLUP_MIN_OHM, PULLUP_MAX_OHM = 1000, 10000`)
+        bound = {str(path.relative_to(ROOT)) for path in (ROOT / "scripts").rglob("*.py")
+                 for node in ast.walk(ast.parse(path.read_text())) if isinstance(node, ast.Name)
+                 and isinstance(node.ctx, ast.Store) and node.id in ("PULLUP_MIN_OHM", "PULLUP_MAX_OHM")}
+        self.assertEqual(sorted(bound), ["scripts/spark/sourcing/part_rules.py"])
+
+    def test_the_area_s_init_imports_nothing(self):
+        # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)
+        tree = ast.parse((self.SOURCING / "__init__.py").read_text())
+        self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
+
+    def test_each_sourcing_module_imports_alone(self):
+        each_module_imports_alone(self, "sourcing")
+# --- end MVP ---
+
+
 if __name__ == "__main__":
     unittest.main()

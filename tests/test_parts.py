@@ -928,6 +928,27 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertEqual(answers, [("https://wiki.example/a", True), ("https://wiki.example/b", False)])
 
 
+class EachPartRefusalHasItsCodeTest(unittest.TestCase):
+    """P717: each PartError names its sourcing code, so an agent decides on the code and never on the sentence."""
+
+    def test_a_part_no_record_holds_and_a_record_that_breaks_the_contract(self):
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (project / "parts").mkdir()
+        (project / "parts" / "broken-part.json").write_text(json.dumps({"schema": 1, "id": "broken-part"}))
+        asked = {"definition_path": (lambda: parts.definition_path("no-such-part", project), "no_such_part"),
+                 "fetch_documents": (lambda: parts.fetch_documents("no-such-part", project), "no_such_part"),
+                 "promote": (lambda: parts.promote("no-such-part", project), "no_such_part"),
+                 "_set_in_home": (lambda: parts._set_in_home("no-such-part", project, {}, True, None), "no_such_part"),
+                 "load": (lambda: parts.load("broken-part", project), "part_contract_broken"),
+                 "_read_json_input": (lambda: parts._read_json_input(str(project / "parts")), "input_unreadable")}
+        with in_store(home):
+            for name, (refusing, code) in asked.items():
+                with self.subTest(name=name):
+                    with self.assertRaises(parts.CodedMessageError) as refused:
+                        refusing()
+                    self.assertEqual(refused.exception.code, code, str(refused.exception))
+
+
 class EverythingFoundIsKeptTest(unittest.TestCase):
     """The catalog: what research has read, chosen or not, with its datasheets kept beside it."""
 
@@ -1112,8 +1133,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
             self.assertEqual(parts.promote("x-part", project), project / "parts" / "x-part.json")
             self.assertEqual(json.loads((project / "parts" / "x-part.json").read_text())["documents"], documents)
             self.assertTrue((project / "parts" / "x-part" / "chip" / "x.chip.json").is_file(), "a chip travels with it")
-            with self.assertRaises(parts.PartError):
+            with self.assertRaises(parts.PartError) as refused:
                 parts.promote("x-part", project, to=project / "parts")
+            self.assertEqual(refused.exception.code, "promotion_would_overwrite")  # P717
             self.assertEqual(parts.promote("x-part", project, to=library), library / "x-part.json")
             self.assertTrue((library / "x-part" / "chip" / "x.chip.json").is_file())
 
@@ -1317,6 +1339,23 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         with in_store(self._home()), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
             parts.main(["--keep", str(local)])
         self.assertIn("  removed the location (EXIF GPS) from mod?ule.jpg before keeping it\n", err.getvalue())
+
+    def test_a_store_that_cannot_be_written_refuses_the_photo_after_the_line_that_says_the_location_went(self):
+        # P717 (the refuter): keep_local's OSError is answered by --keep itself, so its line is not lost
+        import tempfile
+        photo, _ = self._photo_with_location()
+        local = Path(tempfile.mkdtemp()) / "module.jpg"
+        local.write_bytes(photo)
+        home = self._home()
+        home.chmod(0o500)  # read-only: no sources folder can be made
+        self.addCleanup(home.chmod, 0o700)
+        err = io.StringIO()
+        with in_store(home), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            code = parts.main(["--keep", str(local)])
+        said = err.getvalue()
+        self.assertEqual(code, 2, said)
+        location_went = "  removed the location (EXIF GPS) from module.jpg before keeping it\n"
+        self.assertTrue(said.startswith(location_went + "parts.py: --keep: "), said)
 
     def test_a_photo_with_no_location_and_any_other_file_are_kept_unchanged(self):
         photo, _ = self._photo_with_location()
@@ -1849,7 +1888,7 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
         return out.getvalue() + err.getvalue()
 
     def test_each_answer_field_reaches_both_the_text_and_the_envelope(self):
-        for field in set(parts.Answer._fields) - {"data", "lines", "truncated"}:
+        for field in set(parts.Answer._fields) - {"data", "lines", "truncated", "diagnostics"}:
             item = self.SAMPLES[field]
             with self.subTest(field=field):
                 answer = parts.Answer({"x": 1}, ["  a line of the answer"], **{field: [item]})
@@ -1860,6 +1899,16 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
                                            item.get("upgrade"))):
                     self.assertIn(words, text)
         self.assertIn("could not check: could not read", self.say(parts.Answer({}, ["  a line"], unchecked=[self.SAMPLES["unchecked"]]), False))
+
+    def test_the_diagnostics_go_to_stderr_with_json_or_without_and_never_into_the_envelope(self):
+        # P717 (X2): a handler returns its stderr lines and `_say` prints them, so no handler prints
+        for as_json in (True, False):
+            with self.subTest(as_json=as_json):
+                with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+                    answer = parts.Answer({"x": 1}, ["  a line"], diagnostics=["a crash's line", "its traceback"])
+                    parts._say("show", answer, as_json)
+                self.assertEqual(err.getvalue(), "a crash's line\nits traceback\n")
+                self.assertNotIn("traceback", out.getvalue())
 
     def test_an_answer_with_no_lines_says_its_problems_and_fixes_on_stderr(self):
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:

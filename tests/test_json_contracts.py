@@ -41,6 +41,7 @@ import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 import board_codes  # noqa: E402
 import records_codes  # noqa: E402
+import sourcing_codes  # noqa: E402
 from spark.build import build_codes  # noqa: E402
 from spark.checks import check_codes  # noqa: E402
 from spark.design import design_codes  # noqa: E402
@@ -268,10 +269,12 @@ class TheBenchCodesTableTest(unittest.TestCase):
     """P433: every code that look.py and deploy.py write is in board_codes.CODES or the core's codes.CODES (P442), which say
     it in one sentence. P684: the firmware's are in firmware_codes.CODES. P692: the breadboard sheet's in
     breadboard_codes.CODES. P693: the checks' in check_codes.CODES. P700: the design's in design_codes.CODES. P701: the
-    build's in build_codes.CODES. P716: the records' in records_codes.CODES."""
+    build's in build_codes.CODES. P716: the records' in records_codes.CODES. P717: sourcing's in
+    sourcing_codes.CODES."""
 
     def test_the_tables_hold_each_constant_of_their_module_once_with_a_sentence_and_share_no_code(self):
-        for module in (board_codes, codes, firmware_codes, breadboard_codes, check_codes, design_codes, build_codes, records_codes):
+        for module in (board_codes, codes, firmware_codes, breadboard_codes, check_codes, design_codes, build_codes,
+                       records_codes, sourcing_codes):
             constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)}
             self.assertEqual(sorted(constants.values()), sorted(module.CODES))
             sentences = list(module.CODES.values())
@@ -301,6 +304,9 @@ class TheBenchCodesTableTest(unittest.TestCase):
                          ["missing_fact", "tool_missing"])
         self.assertEqual([records_codes.CODES[code] for code in ("missing_fact", "tool_missing")],
                          [board_codes.CODES["missing_fact"], board_codes.CODES["tool_missing"]])
+        # P717: no sourcing code is an equal literal of another leaf
+        tables = others + (records_codes,)
+        self.assertEqual(set(sourcing_codes.CODES) & set().union(*(other.CODES for other in tables)), set())
         # P692: a store problem is one code in both leaves, an equal literal with the same meaning
         self.assertEqual(sorted(set(breadboard_codes.CODES) & set(board_codes.CODES)), ["store_problem"])
         self.assertEqual(breadboard_codes.CODES["store_problem"], board_codes.CODES["store_problem"])

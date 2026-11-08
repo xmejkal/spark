@@ -11,6 +11,8 @@ import re
 from collections import namedtuple
 
 import parts
+import sourcing_codes
+from spark.core.errors import CodedMessageError
 from spark.core.text_guards import TAGS_MAX, TEXT_MAX, clean
 
 #: The words a need's `what` drops before WordOverlap counts it (P211).
@@ -28,8 +30,10 @@ Fit = namedtuple("Fit", "offer score exact why")
 Fit.__doc__ = "One offer as a matcher sees it for one need: a score from 0 to 1, SameWords' answer (`exact`), the reasons."
 
 
-class UnknownMatcher(ValueError):
-    """A matcher name that is no matcher, or one that does not serve the caller; the message lists the names that fit."""
+class UnknownMatcher(CodedMessageError, ValueError):
+    """A matcher name that is no matcher, or one that does not serve the caller; the message lists the names that
+    fit. Its code is `sourcing_codes.UNKNOWN_MATCHER`, and it stays a ValueError, which `tools/match_eval.py`
+    catches."""
 
 
 def words(text):
@@ -226,5 +230,6 @@ def matcher(name, caller):
     """The matcher called `name` for `caller` ("match" or "need"), or UnknownMatcher naming the ones that fit."""
     fitting = sorted(key for key, cls in MATCHERS.items() if caller in cls.serves)
     if name not in fitting:
-        raise UnknownMatcher("%s is no matcher for --%s; the names that fit: %s" % (name, caller, ", ".join(fitting)))
+        raise UnknownMatcher("%s is no matcher for --%s; the names that fit: %s", name, caller, ", ".join(fitting),
+                             code=sourcing_codes.UNKNOWN_MATCHER)
     return MATCHERS[name]()

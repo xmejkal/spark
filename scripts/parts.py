@@ -7,24 +7,22 @@ What a part asks of the board it plugs into, and what is actually known about it
     parts.py --validate
     parts.py --unverified <part> [part ...]   what nobody has checked yet about those parts
 
-A part library is easy to get wrong in a way that is worse than not having one. The temptation is
-a schema covering everything a part might have — and since a motor driver's facts (input
-thresholds, current) have nothing in common with a rangefinder's (an I2C address, a calibration),
-that schema degenerates into `{"name": ..., "notes": ...}`: a directory of documentation
-pretending to be configuration.
+A part library is easy to get wrong in a way that is worse than not having one. The temptation is a schema covering
+everything a part might have — and since a motor driver's facts (input thresholds, current) have nothing in common with
+a rangefinder's (an I2C address, a calibration), that schema degenerates into `{"name": ..., "notes": ...}`: a directory
+of documentation pretending to be configuration.
 
 So this splits them.
 
-**`needs` is a real schema**, because it IS uniform: every part asks its host for some pins, and
-each pin either needs a capability or does not. That is exactly what `assign_pins.py` consumes,
-and it is the reason this file exists rather than a folder of markdown.
+**`needs` is a real schema**, because it IS uniform: every part asks its host for some pins, and each pin either needs a
+capability or does not. That is exactly what `assign_pins.py` consumes, and it is the reason this file exists rather
+than a folder of markdown.
 
-**`facts` is deliberately open**, and every entry carries three things: a value, where it came
-from, and whether anyone has actually checked. A fact with `verified: false` is not a defect —
-most parts arrive with several — but it must be VISIBLE, because the unverified ones are what
-decide whether a design works. On the project this came from, the single most consequential
-number in the whole build was an audio module's idle current, which nobody had measured and
-every document quietly assumed.
+**`facts` is deliberately open**, and every entry carries three things: a value, where it came from, and whether anyone
+has actually checked. A fact with `verified: false` is not a defect — most parts arrive with several — but it must be
+VISIBLE, because the unverified ones are what decide whether a design works. On the project this came from, the single
+most consequential number in the whole build was an audio module's idle current, which nobody had measured and every
+document quietly assumed.
 """
 
 import argparse
@@ -181,12 +179,11 @@ def audit(project=None):
     return counts, owed, broken, silent, dangling, stops
 
 
-#: What a pin's WIRING name may contain. Measured, not assumed: a probe board with six pin
-#: labels showed `IN+`, `OUT-` and `A.B` unresolvable as tscircuit selectors while `V_IN`,
-#: `GND2` and `3V3` resolved. An MP1584 buck's pads are silkscreened IN+ IN- OUT+ OUT-, and a
-#: record using those names produced four "could not find port" errors and a regulator joined
-#: to nothing. The fix at the time renamed the pins and LOST the silkscreen — which is exactly
-#: the failure `physical.pad_aliases` prevents on the board side. Parts had no equivalent.
+#: What a pin's WIRING name may contain. Measured, not assumed: a probe board with six pin labels showed `IN+`, `OUT-`
+#: and `A.B` unresolvable as tscircuit selectors while `V_IN`, `GND2` and `3V3` resolved. An MP1584 buck's pads are
+#: silkscreened IN+ IN- OUT+ OUT-, and a record using those names produced four "could not find port" errors and a
+#: regulator joined to nothing. The fix at the time renamed the pins and LOST the silkscreen — which is exactly the
+#: failure `physical.pad_aliases` prevents on the board side. Parts had no equivalent.
 #:
 #: So an entry has a `pin` (what selectors use, restricted to this) and optionally `printed`
 #: (what is silkscreened, unrestricted). The generated file shows both where they differ.
@@ -205,11 +202,10 @@ NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, di
                   "and the board names the part after it in code")
 
 
-#: What a `needs` entry may ask a pin for. THE ONE DEFINITION — `assign_pins` imports it from
-#: here rather than keeping its own, because it had its own and the two disagreed: a servo part
-#: declaring `needs: ["pwm"]` validated as a good record and then made the pin assigner refuse
-#: the whole design. The only way out was to delete a true fact about the part, which is a
-#: contract punishing honesty.
+#: What a `needs` entry may ask a pin for. THE ONE DEFINITION — `assign_pins` imports it from here rather than keeping
+#: its own, because it had its own and the two disagreed: a servo part declaring `needs: ["pwm"]` validated as a good
+#: record and then made the pin assigner refuse the whole design. The only way out was to delete a true fact about the
+#: part, which is a contract punishing honesty.
 #:
 #: It lives in the lower module on purpose. A capability is a claim a PART makes, so the file
 #: that validates parts owns the vocabulary and the file that consumes it follows.
@@ -221,19 +217,23 @@ import boards  # noqa: E402
 import missing_facts  # noqa: E402
 import provenance  # noqa: E402
 import records_codes  # noqa: E402
+import sourcing_codes  # noqa: E402
 import store  # noqa: E402
-from spark.core.text_guards import ValueMessageError, guard_lines, printable  # noqa: E402
+from spark.core.errors import CodedMessageError  # noqa: E402
+from spark.core.text_guards import guard_lines, printable  # noqa: E402
+from spark.sourcing.part_rules import PULLUP_MAX_OHM, PULLUP_MIN_OHM  # noqa: E402
 
 
-class PartError(ValueMessageError):
-    """A part definition that cannot be used, with the reason."""
+class PartError(CodedMessageError):
+    """A part definition that cannot be used, with the reason and its `sourcing_codes` code."""
 
 
 #: What one operation found (§6.4.1): its `data`, the lines a person reads without --json, and the rest of the
 #: envelope. A handler returns one; `main` prints it either way and exits by its status. `notes` are said and never
 #: fail ({subject, sentence}); `assumptions` are what the answer rests on that nobody has checked ({fact, basis, …}).
-Answer = namedtuple("Answer", "data lines problems unchecked next truncated notes assumptions",
-                    defaults=(None, (), (), (), (), None, (), ()))
+#: `diagnostics` are lines for stderr, with --json or without, so no handler prints (X2).
+Answer = namedtuple("Answer", "data lines problems unchecked next truncated notes assumptions diagnostics",
+                    defaults=(None, (), (), (), (), None, (), (), ()))
 
 
 def _problem(subject, sentence, fix=None):
@@ -262,7 +262,8 @@ def definition_path(part_id: str, project: Path = None) -> Path:
     found = store.records("parts", LIBRARY, project).get(part_id)
     if found:
         return found[1]
-    raise PartError("no part called %r.\n  available: %s", part_id, ", ".join(available(project)) or "(none)")
+    raise PartError("no part called %r.\n  available: %s", part_id, ", ".join(available(project)) or "(none)",
+                    code=sourcing_codes.NO_SUCH_PART)
 
 
 def load(part_id: str, project: Path = None) -> dict:
@@ -270,21 +271,20 @@ def load(part_id: str, project: Path = None) -> dict:
     part = json.loads(path.read_text())
     problems = validate(part, path)
     if problems:
-        raise PartError.of_lines(["%s does not meet the part contract:" % path] + ["  - " + problem for problem in problems])
+        raise PartError.of_lines(["%s does not meet the part contract:" % path]
+                                 + ["  - " + problem for problem in problems], code=sourcing_codes.PART_CONTRACT_BROKEN)
     return part
 
 
-#: Footprinter families whose trailing number IS the pad count. Deliberately a whitelist, because
-#: the obvious shortcut — take the first integer — is wrong in the most damaging direction:
-#: `sot23` is a three-pad package named after its body, `0603` is a size in hundredths of an inch,
-#: and `sod123` is neither. A rule that read those as 23, 603 and 123 pads would contradict every
-#: honest part file it met, which is how a useful check gets switched off.
+#: Footprinter families whose trailing number IS the pad count. Deliberately a whitelist, because the obvious shortcut —
+#: take the first integer — is wrong in the most damaging direction: `sot23` is a three-pad package named after its
+#: body, `0603` is a size in hundredths of an inch, and `sod123` is neither. A rule that read those as 23, 603 and 123
+#: pads would contradict every honest part file it met, which is how a useful check gets switched off.
 PAD_COUNT_FAMILIES = ("pinrow", "headermodule", "jst_ph_", "jst_sh_", "jst_xh_", "dip", "bh_")
 
-#: The three lists in a record that hold pins. Written out three times before 2026-09-29, and
-#: the missing-pin rule was applied to one of them for a week while the other two were read
-#: with `entry["pin"]` — G15. A fourth list added to the schema now has to be added here, and
-#: nowhere else.
+#: The three lists in a record that hold pins. Written out three times before 2026-09-29, and the missing-pin rule was
+#: applied to one of them for a week while the other two were read with `entry["pin"]` — G15. A fourth list added to the
+#: schema now has to be added here, and nowhere else.
 PIN_LISTS = ("needs", "power", "unused_pins")
 
 
@@ -347,13 +347,12 @@ def type_problems(value, expected=None, where=""):
     return []
 
 
-#: The buses a part may put a signal on, and the lines each has, by the board's label for the
-#: line with the names vendors print for it. THE definition: `assign_pins` imports it to find the
-#: board's pin for a line, and `validate` refuses a record naming a bus or a line not here — where
-#: the record is written, not four scripts later (the shape of `CAPABILITIES`, G12). `i2s` was
-#: missing from the assigner's own copy for one evening and the shipped MAX98357A could not be
-#: placed by the chain while `--validate` called it fine (sprint-4 close audit, C6). A signal
-#: named `<BUS>_<LINE>` — `I2S_BCLK` — names its line.
+#: The buses a part may put a signal on, and the lines each has, by the board's label for the line with the names
+#: vendors print for it. THE definition: `assign_pins` imports it to find the board's pin for a line, and `validate`
+#: refuses a record naming a bus or a line not here — where the record is written, not four scripts later (the shape of
+#: `CAPABILITIES`, G12). `i2s` was missing from the assigner's own copy for one evening and the shipped MAX98357A could
+#: not be placed by the chain while `--validate` called it fine (sprint-4 close audit, C6). A signal named
+#: `<BUS>_<LINE>` — `I2S_BCLK` — names its line.
 BUSES = {
     "i2c": {"SDA": ("SDA",), "SCL": ("SCL",)},
     "spi": {"SCK": ("SCK", "CLK", "SCLK"), "MOSI": ("MOSI", "DIN", "SDI", "SI"),
@@ -491,7 +490,6 @@ def i2c_pullup_problems(part: dict) -> list:
     (`host_parts` pull-ups on every bus line); saying neither is how a bus floats. A module
     pull-up must also be one that can hold a bus: the same band `compare_design` judges by.
     """
-    from spark.checks.rules_check import PULLUP_MIN_OHM, PULLUP_MAX_OHM
     lines = [need.get("pin") for need in part.get("needs") or [] if need.get("bus") == "i2c" and need.get("pin")]
     if not lines:
         return []
@@ -580,6 +578,12 @@ def simulation_problems(part: dict, path: Path) -> list:
         for pad in sorted(wired - set(pins)):
             problems.append("simulation.wokwi.pins does not say where the wired pad %r goes on the "
                             "stand-in; name its pin, or null when it has none" % pad)
+    return problems + chip_problems(part, path, chip, pins)
+
+
+def chip_problems(part, path, chip, pins):
+    """What is wrong with a record's `simulation.wokwi.chip`: its name, its files beside the record, its pins."""
+    problems = []
     if chip and not (isinstance(chip, str) and re.fullmatch(SELECTOR_SAFE, chip)):
         # the re-check's probes: a chip's name names its files (`../escape` reached outside the chip folder, and
         # stage_chips copied from there) and is written into wokwi.toml (`x"⏎[[chip]]` was a table of its own)
@@ -622,15 +626,13 @@ def validate(part: dict, path: Path, owed=()) -> list:
     problems = []
 
     if "schema" not in owed and part.get("schema") != SUPPORTED_SCHEMA:
-        problems.append("schema is %r, but this code understands only %d"
-                        % (part.get("schema"), SUPPORTED_SCHEMA))
+        problems.append("schema is %r, but this code understands only %d" % (part.get("schema"), SUPPORTED_SCHEMA))
     for key in REQUIRED_KEYS:
         if key not in part and key not in owed:
             problems.append("missing required key %r" % key)
     # an owed id is a missing one, so the plain-key check below never reads it
     if "id" not in owed and part.get("id") != path.stem:
-        problems.append("id is %r but the file is named %r; they must match"
-                        % (part.get("id"), path.stem))
+        problems.append("id is %r but the file is named %r; they must match" % (part.get("id"), path.stem))
     elif isinstance(part.get("id"), str) and not store.PLAIN.fullmatch(part["id"]):
         # P87's attribute half: `board_emitter.component_name` capitalises the id's words and strips nothing, so the id is
         # what keeps `<chip name="…">` a name — a plain key, as every key of the store is
@@ -649,12 +651,10 @@ def validate(part: dict, path: Path, owed=()) -> list:
         if not need.get("signal"):
             problems.append("%s has no signal" % where)
         if need.get("direction") not in ("in", "out", "bidirectional", None):
-            problems.append("%s direction is %r; expected in, out or bidirectional"
-                            % (where, need.get("direction")))
+            problems.append("%s direction is %r; expected in, out or bidirectional" % (where, need.get("direction")))
         bus = need.get("bus")
         if bus and bus not in BUSES:
-            problems.append("%s is on bus %r, which is not a bus this knows: %s"
-                            % (where, bus, ", ".join(BUSES)))
+            problems.append("%s is on bus %r, which is not a bus this knows: %s" % (where, bus, ", ".join(BUSES)))
         elif bus and need.get("signal") and bus_line_of(bus, need["signal"]) is None:
             problems.append("%s is on the %s bus but %r is not one of its lines: %s"
                             % (where, bus.upper(), need["signal"],
@@ -662,13 +662,11 @@ def validate(part: dict, path: Path, owed=()) -> list:
                                          for line, names in BUSES[bus].items())))
         unknown = sorted(set(need.get("needs") or []) - set(CAPABILITIES))
         if unknown:
-            # Caught HERE, not four scripts later. `assign_pins` refuses the entire design over
-            # an unknown capability — rightly, since a silently dropped requirement produces a
-            # board wrong in exactly the way the requirement existed to prevent — but it did so
-            # long after this file had pronounced the record good.
+            # Caught HERE, not four scripts later. `assign_pins` refuses the entire design over an unknown capability —
+            # rightly, since a silently dropped requirement produces a board wrong in exactly the way the requirement
+            # existed to prevent — but it did so long after this file had pronounced the record good.
             problems.append("%s asks a pin for %s, which is not something a pin can be asked "
-                            "for. Known: %s"
-                            % (where, ", ".join(unknown), ", ".join(CAPABILITIES)))
+                            "for. Known: %s" % (where, ", ".join(unknown), ", ".join(CAPABILITIES)))
 
     # Every list of pins, in one place. Only `needs` entries were checked for a pin, and then
     # `power` and `unused_pins` were read with `entry["pin"]` in four places — so an entry missing
@@ -677,8 +675,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
     for group in PIN_LISTS:
         for index, entry in enumerate(part.get(group) or []):
             if not entry.get("pin"):
-                problems.append("%s[%d] has no pin, so nothing can say where it connects"
-                                % (group, index))
+                problems.append("%s[%d] has no pin, so nothing can say where it connects" % (group, index))
 
     # The wiring name reaches a tscircuit selector verbatim, so it is restricted to what a
     # selector can parse. The silkscreen goes in `printed`, where anything is allowed.
@@ -693,8 +690,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
                     % (group, index, pin))
             printed = entry.get("printed")
             if printed is not None and not isinstance(printed, str):
-                problems.append("%s[%d] printed is %r; it is the silkscreen text, a string"
-                                % (group, index, printed))
+                problems.append("%s[%d] printed is %r; it is the silkscreen text, a string" % (group, index, printed))
             elif printed is not None and any(mark in printed for mark in ENDS_THE_COMMENT):
                 problems.append("%s[%d] printed %r holds %s — the generated board keeps the silkscreen in a comment, "
                                 "which that would end; write it without" % (group, index, printed, " and ".join(
@@ -733,12 +729,11 @@ def validate(part: dict, path: Path, owed=()) -> list:
                 problems.append("body_mm is unverified with no why_it_matters; say what depends "
                                 "on it — here, whether the modules physically fit the board")
 
-    # A footprint standing in for the real one. `facts` and `body_mm` carry `verified`; the
-    # footprint carried no provenance at all, so an XT30 inlet drawn as a JST PH — wrong pitch,
-    # wrong hole size, stated as a placeholder in a comment nothing reads — looked identical to a
-    # footprint generated from a vendor drawing. `check_footprints` duly measured the JST's
-    # annular rings and reported a defect about a part that is not on the board. The most
-    # expensive field to get wrong was the one field with no way to say "not yet".
+    # A footprint standing in for the real one. `facts` and `body_mm` carry `verified`; the footprint carried no
+    # provenance at all, so an XT30 inlet drawn as a JST PH — wrong pitch, wrong hole size, stated as a placeholder in a
+    # comment nothing reads — looked identical to a footprint generated from a vendor drawing. `check_footprints` duly
+    # measured the JST's annular rings and reported a defect about a part that is not on the board. The most expensive
+    # field to get wrong was the one field with no way to say "not yet".
     if part.get("footprint_placeholder"):
         if not part.get("footprint_note"):
             problems.append("footprint_placeholder is set with no footprint_note — say what the "
@@ -763,11 +758,10 @@ def validate(part: dict, path: Path, owed=()) -> list:
         if not isinstance(order, list) or not order:
             problems.append("pin_order must be a list of pad names, pad 1 first")
         else:
-            # `.get`, not `[...]`. An entry with no `pin` is exactly what the checks above
-            # exist to report, and reading it here crashed the validator on the malformation it
-            # was written to catch: `needs[0] has no pin` was appended, then this line raised
-            # KeyError three lines later. Every real part has a pin_order, so any part broken in
-            # that way took the whole run down instead of being reported.
+            # `.get`, not `[...]`. An entry with no `pin` is exactly what the checks above exist to report, and reading
+            # it here crashed the validator on the malformation it was written to catch: `needs[0] has no pin` was
+            # appended, then this line raised KeyError three lines later. Every real part has a pin_order, so any part
+            # broken in that way took the whole run down instead of being reported.
             named = {entry.get("pin") for group in PIN_LISTS for entry in part.get(group) or []} - {None}
             for position, pad in enumerate(order, start=1):
                 if pad is not None and pad not in named:
@@ -790,12 +784,11 @@ def validate(part: dict, path: Path, owed=()) -> list:
                     "pin_order does not say where %s sit(s), so the generator would have to "
                     "guess a pad for them" % ", ".join(missing))
 
-            # The two fields describe the same physical thing and nothing compared them. The
-            # VL6180X breakout shipped saying `pinrow5` while naming seven pads — five of its
-            # seven carry a signal and two are unwired, so somebody counted the pins instead of
-            # the pads. The generator then labelled a pad that did not exist; that port got no
-            # position, and tscircuit's autorouter died reading its x — which does not fail
-            # loudly, it just leaves the whole board with zero traces.
+            # The two fields describe the same physical thing and nothing compared them. The VL6180X breakout shipped
+            # saying `pinrow5` while naming seven pads — five of its seven carry a signal and two are unwired, so
+            # somebody counted the pins instead of the pads. The generator then labelled a pad that did not exist; that
+            # port got no position, and tscircuit's autorouter died reading its x — which does not fail loudly, it just
+            # leaves the whole board with zero traces.
             pads = footprint_pad_count(part.get("footprint"))
             if pads is not None and pads != len(order):
                 problems.append(
@@ -821,8 +814,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
             # Keyed on the NET it would land on, which for an output is the load plus which side
             # of it this pin drives. Two outputs on one load are the normal case — that is what a
             # differential pair is — and they are only a short if nothing distinguishes them.
-            outputs_by_rail.setdefault(
-                (supply.get("rail"), supply.get("polarity")), []).append(supply.get("pin"))
+            outputs_by_rail.setdefault((supply.get("rail"), supply.get("polarity")), []).append(supply.get("pin"))
 
     for (rail, polarity), pins in outputs_by_rail.items():
         if len(pins) > 1:
@@ -1096,12 +1088,11 @@ SECTION = re.compile(r"^\s*(Table\s+\d+.*|[A-Z]{2,}[A-Z0-9 /&,\-]{4,}.*|\d+(\.\d
 
 def scan_datasheet(pages, wanted, labels=None):
     """
-    Each wanted fact's lines in a datasheet, read page by page and STOPPED on the page where every
-    fact is FOUND (P80): a run that printed a whole datasheet paid for it on every later turn, while
-    the facts sat on one page. FOUND is a table row with the label, a standalone number, and the
-    unit on the row or in a column header above; a prose bullet never is — the S3 overview's "7 uA"
-    taken for the table is the P63 misreading. LABEL ONLY shows the next two lines; NOT FOUND names
-    the words tried. `pages` yields (number, text); `labels` adds words per fact.
+    Each wanted fact's lines in a datasheet, read page by page and STOPPED on the page where every fact is FOUND (P80):
+    a run that printed a whole datasheet paid for it on every later turn, while the facts sat on one page. FOUND is a
+    table row with the label, a standalone number, and the unit on the row or in a column header above; a prose bullet
+    never is — the S3 overview's "7 uA" taken for the table is the P63 misreading. LABEL ONLY shows the next two lines;
+    NOT FOUND names the words tried. `pages` yields (number, text); `labels` adds words per fact.
     """
     plan = {}
     for fact in wanted:
@@ -1288,15 +1279,14 @@ def fetch_plan(record):
 
 def fetch_documents(part_id, project=None, fetch=None):
     """
-    Download every cited datasheet or image into the store and point at each from the record's
-    `documents`: its URL, checksum, file name and the date it was fetched — `title` and `version`
-    stay null until someone reads them, because a version is what the document PRINTS, not a
-    guess (P61). A document the store would refuse by name stops the whole fetch before any
-    download (`fetch_plan`). `fetch(url) -> bytes or None` is a parameter for the tests.
+    Download every cited datasheet or image into the store and point at each from the record's `documents`: its URL,
+    checksum, file name and the date it was fetched — `title` and `version` stay null until someone reads them, because
+    a version is what the document PRINTS, not a guess (P61). A document the store would refuse by name stops the whole
+    fetch before any download (`fetch_plan`). `fetch(url) -> bytes or None` is a parameter for the tests.
     """
     home = record_home(part_id, project)
     if home is None:
-        raise PartError("no record called %r to fetch for", part_id)
+        raise PartError("no record called %r to fetch for", part_id, code=sourcing_codes.NO_SUCH_PART)
     path = home / (part_id + DEFINITION_SUFFIX)
     record = json.loads(path.read_text())
     documents = dict(record.get("documents") or {})
@@ -1336,11 +1326,12 @@ def promote(part_id, project, to=None, dry_run=False):
     import shutil
     home = record_home(part_id, project)
     if home is None:
-        raise PartError("no record called %r to promote", part_id)
+        raise PartError("no record called %r to promote", part_id, code=sourcing_codes.NO_SUCH_PART)
     to = Path(to) if to else (Path(project) / "parts" if home in (store.place("catalog"), store.place("shelf")) else LIBRARY)
     target = to / (part_id + DEFINITION_SUFFIX)
     if target.exists():
-        raise PartError("%s exists; a promotion never overwrites", target)
+        raise PartError("%s exists; a promotion never overwrites", target,
+                        code=sourcing_codes.PROMOTION_WOULD_OVERWRITE)
     if dry_run:
         return target
     to.mkdir(parents=True, exist_ok=True)
@@ -1406,10 +1397,9 @@ def skeleton(part_id, kind, vendor=None):
 
 def cited_urls(record):
     """
-    Every http(s) URL the record cites: in its `sources` — a list, or a dict of them, as four
-    library records keep it — and in each fact's own source, wherever in the sentence it sits.
-    Read only as a list of strings that START with http, this saw no URL at all in any of the
-    eight library and board records (both P62 lenses, 2026-10-02).
+    Every http(s) URL the record cites: in its `sources` — a list, or a dict of them, as four library records keep it —
+    and in each fact's own source, wherever in the sentence it sits. Read only as a list of strings that START with
+    http, this saw no URL at all in any of the eight library and board records (both P62 lenses, 2026-10-02).
     """
     sources = record.get("sources") or []
     texts = list(sources.values()) if isinstance(sources, dict) else list(sources)
@@ -1439,14 +1429,13 @@ def pull_conflicts(part):
 
 def conflicts_of(part):
     """
-    A pull-down the board adds against the module's own pull-up, said with its arithmetic (P81, B11).
-    The L9110S states 10 k pull-ups to VCC on its inputs and asked the board for 10 k pull-downs "so
-    both are held low": a divider at half the supply, above its 2.5 V input threshold on a 6 V pack.
-    The record's note said so; no output did. Quiet when the pin stays under the input-high threshold
-    across the module's whole supply range.
+    A pull-down the board adds against the module's own pull-up, said with its arithmetic (P81, B11). The L9110S states
+    10 k pull-ups to VCC on its inputs and asked the board for 10 k pull-downs "so both are held low": a divider at half
+    the supply, above its 2.5 V input threshold on a 6 V pack. The record's note said so; no output did. Quiet when the
+    pin stays under the input-high threshold across the module's whole supply range.
 
-    Each is {pin, line, rests_on, fix, upgrade}. `rests_on` names, as `<part>.<fact>`, the facts it used that nobody
-    has verified: none, and it is a problem whose `fix` is the arithmetic's answer; any, and it is an assumption, which
+    Each is {pin, line, rests_on, fix, upgrade}. `rests_on` names, as `<part>.<fact>`, the facts it used that nobody has
+    verified: none, and it is a problem whose `fix` is the arithmetic's answer; any, and it is an assumption, which
     `upgrade` says how to settle (the PO's rule, 2026-10-05 on #43).
     """
     facts = part.get("facts") or {}
@@ -1456,11 +1445,7 @@ def conflicts_of(part):
     pull_up, high, supply = value("onboard_input_pullups_ohms"), value("input_high_threshold_v"), value("supply_range_v")
     if not isinstance(pull_up, (int, float)):
         return []
-    recorded = {"onboard_input_pullups_ohms": True, "input_high_threshold_v": isinstance(high, (int, float)),
-                "supply_range_v": isinstance(supply, list) and len(supply) == 2}
-    rests_on = sorted("%s.%s" % (part.get("id"), name) for name, usable in recorded.items()  # missing is not verified
-                      if not (usable and (facts.get(name) or {}).get("verified")))
-    upgrade = "record or verify %s from the maker's own sources (parts.py --fact-set), then run --show again" % ", ".join(rests_on)
+    rests_on, upgrade = _rests_on(part, facts, high, supply)
     fix = _holding_low(facts, pull_up, supply)
     said = []
     for host_part in part.get("host_parts") or []:
@@ -1481,6 +1466,16 @@ def conflicts_of(part):
             line += "; the module's input-low threshold is not recorded, so below that the level is undefined"
         said.append({"pin": host_part["pin"], "line": line, "rests_on": rests_on, "fix": fix, "upgrade": upgrade})
     return said
+
+
+def _rests_on(part, facts, high, supply):
+    """The facts a CONFLICT used that nobody has verified, as `<part>.<fact>`, and the `upgrade` that settles them."""
+    recorded = {"onboard_input_pullups_ohms": True, "input_high_threshold_v": isinstance(high, (int, float)),
+                "supply_range_v": isinstance(supply, list) and len(supply) == 2}
+    rests_on = sorted("%s.%s" % (part.get("id"), name) for name, usable in recorded.items()  # missing is not verified
+                      if not (usable and (facts.get(name) or {}).get("verified")))
+    upgrade = "record or verify %s from the maker's own sources (parts.py --fact-set), then run --show again" % ", ".join(rests_on)
+    return rests_on, upgrade
 
 
 def _holding_low(facts, pull_up, supply):
@@ -1762,7 +1757,7 @@ def _op_fetch(args, project):
     if args.dry_run:
         home = record_home(args.fetch, project)
         if home is None:
-            raise PartError("no record called %r to fetch for", args.fetch)
+            raise PartError("no record called %r to fetch for", args.fetch, code=sourcing_codes.NO_SUCH_PART)
         wanted = [url for url, _ in fetch_plan(json.loads((home / (args.fetch + DEFINITION_SUFFIX)).read_text()))]
         return Answer({"documents": None, "would_fetch": wanted}, ["  would fetch %s" % url for url in wanted]
                       or ["  %s cites no datasheet or image URL to keep" % args.fetch])
@@ -1776,11 +1771,16 @@ def _op_keep(args, project):
     if not path.is_file():
         return Answer(unchecked=[_cannot("--keep: no file at %s" % path)])
     located = path.name.lower().endswith((".jpg", ".jpeg")) and without_location(path.read_bytes())[1]
-    if located and not args.json:
-        print("  removed the location (EXIF GPS) from %s before keeping it" % printable(path.name), file=sys.stderr)
-    entry = keep_local(path, args.url, dry_run=args.dry_run)
+    said = (["  removed the location (EXIF GPS) from %s before keeping it" % printable(path.name)]
+            if located and not args.json else ())
+    try:  # P423: a store that refuses the file, or cannot be written, refuses it after the line was said
+        entry = keep_local(path, args.url, dry_run=args.dry_run)
+    except store.StoreProblem as refused:
+        return Answer(unchecked=[_cannot(str(refused))], diagnostics=said)
+    except OSError as unwritable:
+        return Answer(unchecked=[_cannot("--keep: %s" % unwritable)], diagnostics=said)
     return Answer({"document": entry, "location_removed": located, "written": not args.dry_run},
-                  [json.dumps(entry, indent=2, ensure_ascii=False)])
+                  [json.dumps(entry, indent=2, ensure_ascii=False)], diagnostics=said)
 
 
 def _op_read(args, project):
@@ -1805,11 +1805,13 @@ def _op_promote(args, project):
 
 
 def _read_json_input(name):
-    """A payload from a file, or from stdin for '-' — the way labels and names travel, never argv (§6.4.2): (data, None) or (None, why not)."""
+    """A payload from a file, or from stdin for '-' — the way labels and names travel, never argv (§6.4.2). A refusal
+    with the code `input_unreadable` when it is not readable JSON, which `main` answers as could-not-run."""
     try:
-        return json.loads(sys.stdin.read() if name == "-" else Path(name).read_text()), None
+        return json.loads(sys.stdin.read() if name == "-" else Path(name).read_text())
     except (OSError, ValueError) as broken:
-        return None, "%s is not readable JSON: %s" % ("stdin" if name == "-" else name, broken)
+        raise CodedMessageError("%s is not readable JSON: %s", "stdin" if name == "-" else name, broken,
+                                code=sourcing_codes.INPUT_UNREADABLE) from None
 
 
 def _change_line(change, dry_run):
@@ -1876,18 +1878,14 @@ def _op_drawer(args, project):
 
 def _op_drawer_set(args, project):
     import drawer
-    items, unreadable = _read_json_input(args.drawer_set)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    items = _read_json_input(args.drawer_set)
     return _drawer_answer(*drawer.plan_set(items, project), args.dry_run)
 
 
 def _op_drawer_import(args, project):
     import drawer
     source, name = args.drawer_import
-    payload, unreadable = _read_json_input(name)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    payload = _read_json_input(name)
     changes, questions, problems, smaller = drawer.plan_import(source, payload)
     answer = _drawer_answer(changes, questions, problems, args.dry_run)
     if not problems and not args.dry_run:
@@ -1968,7 +1966,8 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
     """
     path, source = _record_path(part_id, project, "board" if "pin_roles" in values else "part")  # P464: only a level in pin_roles reaches a board
     if path is None:
-        raise PartError("no record called %r — `parts.py --need` finds what exists", part_id)
+        raise PartError("no record called %r — `parts.py --need` finds what exists", part_id,
+                        code=sourcing_codes.NO_SUCH_PART)
     if path.parent.resolve() in (LIBRARY.resolve(), boards.LIBRARY.resolve()):
         return Answer(problems=[_problem(part_id, "%s is in spark's own library, which is changed in spark's repository, "
                                                   "not by parts.py" % part_id)])
@@ -1993,9 +1992,7 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
 
 def _op_function_set(args, project):
     part_id, name = args.function_set
-    function, unreadable = _read_json_input(name)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    function = _read_json_input(name)
     answer = _set_in_home(part_id, project, {"function": function}, args.dry_run, lambda record, after, path:
                           function_problems(after) if function else ["a function is a non-empty list [{does, what}]"])
     return answer._replace(data=dict(answer.data, was=answer.data["was"]["function"], now=function)) if answer.data else answer
@@ -2005,9 +2002,7 @@ def _op_fact_set(args, project):
     """Fill a record's chain facts, write `facts` entries by name (a bench result and its source, P374), or set what it says of itself (about, description, tags)."""
     import drawer
     part_id, name = args.fact_set
-    facts, unreadable = _read_json_input(name)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    facts = _read_json_input(name)
     if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + ("facts", "pin_roles"))):
         return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s, or `facts` entries by name; or of what a "
                                                   "record says of itself: %s" % (", ".join(CHAIN_FACTS), ", ".join(drawer.DESCRIBING)))])
@@ -2106,9 +2101,7 @@ def _op_offer(args, project):
 def _op_needs_set(args, project):
     from spark.design import needs
     target, name = args.needs_set
-    items, unreadable = _read_json_input(name)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    items = _read_json_input(name)
     after, changes, problems = needs.plan_set(target, items)
     written = not (problems or args.dry_run)
     if written and changes:
@@ -2126,9 +2119,7 @@ def _op_needs_drop(args, project):
     target, need = args.needs_drop
     result = run_operation(DropNeed(), {"project": Path(target), "need": need, "dry_run": args.dry_run},
                            build_outside=lambda effects: build_outside_world(effects, Reporter()))
-    if result.diagnostics:  # a crash's traceback: an Answer has no place for it
-        print(guard_lines("\n".join(result.diagnostics)), file=sys.stderr)
-    return Answer(result.data, result.lines, notes=result.notes or (),
+    return Answer(result.data, result.lines, notes=result.notes or (), diagnostics=result.diagnostics,
                   problems=[_problem(found.subject, found.sentence, found.fix) for found in result.findings if found.severity == outcomes.PROBLEMS],
                   unchecked=[_cannot(found.sentence, found.fix) for found in result.findings if found.severity == outcomes.COULD_NOT_RUN])
 
@@ -2141,9 +2132,7 @@ def _op_pick(args, project):
     if not pairs or len(pairs) != len(given):
         return Answer(unchecked=[_cannot("--pick takes the project, then NEED=ID for each pick: light=led-red-5mm",
                                          "parts.py --match <project> lists each need's candidates and their ids")])
-    reasons, unreadable = _read_json_input(args.passed_over) if args.passed_over else ([], None)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    reasons = _read_json_input(args.passed_over) if args.passed_over else []
     history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
     listed, keys_before = store.find_listed_name(target) is not None, needs.entry_keys(needs.read(target))
     after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
@@ -2199,6 +2188,20 @@ def _names_your_entries(file_name, new_keys, dry_run):
         "names", "y" if len(new_keys) == 1 else "ies", ", ".join(sorted(new_keys)))] if new_keys else []
 
 
+def _gap_lines(problems, no_supply, no_receiver, no_driver):
+    """What `--requirements` says of a rail with no supply, a net with no receiver or no driver: none on a refusal."""
+    said = []
+    said += ["  rail %s has no supply — pick a power inlet or a supply (%s draw%s from it)"
+             % (gap["rail"], ", ".join(gap["drawn_by"]), "s" if len(gap["drawn_by"]) == 1 else "") for gap in ([] if problems else no_supply)]
+    said += ["  net %s is driven by %s and nothing listed receives it — pick what it drives (a speaker terminal, a motor, a connector)"
+             % (gap["net"], gap["driven_by"]) for gap in ([] if problems else no_receiver)]
+    said += ["  net %s is one side of a driven pair and nothing listed drives it — pick what drives the pair (the amplifier this "
+             "terminal hangs off), never a supply (%s %s on it)" % (gap["net"], ", ".join(gap["received_by"]),
+                                                                    "is" if len(gap["received_by"]) == 1 else "are")
+             for gap in ([] if problems else no_driver)]
+    return said
+
+
 def _op_requirements(args, project):
     from spark.design import needs
     content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver = needs.requirements(
@@ -2227,14 +2230,7 @@ def _op_requirements(args, project):
              for part_id, how in ([] if problems else placeholder)]
     said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
     said += ["  kept, not from a pick: %s" % ", ".join(needs.entry_label(entry) for entry in kept)] if kept and not problems else []
-    said += ["  rail %s has no supply — pick a power inlet or a supply (%s draw%s from it)"
-             % (gap["rail"], ", ".join(gap["drawn_by"]), "s" if len(gap["drawn_by"]) == 1 else "") for gap in ([] if problems else no_supply)]
-    said += ["  net %s is driven by %s and nothing listed receives it — pick what it drives (a speaker terminal, a motor, a connector)"
-             % (gap["net"], gap["driven_by"]) for gap in ([] if problems else no_receiver)]
-    said += ["  net %s is one side of a driven pair and nothing listed drives it — pick what drives the pair (the amplifier this "
-             "terminal hangs off), never a supply (%s %s on it)" % (gap["net"], ", ".join(gap["received_by"]),
-                                                                    "is" if len(gap["received_by"]) == 1 else "are")
-             for gap in ([] if problems else no_driver)]
+    said += _gap_lines(problems, no_supply, no_receiver, no_driver)
     said += ["  not on the board: %s — %s" % (item["need"], needs.NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
              for item in ([] if problems else unserved)]
     said += [] if problems else _names_your_entries(needs.REQUIREMENTS, needs.unserved_keys(content) - named, args.dry_run)
@@ -2340,6 +2336,8 @@ def _say(op, answer, as_json):
     """
     said = envelope("parts", op, answer.data, answer.problems, answer.unchecked, answer.next, answer.truncated,
                     notes=answer.notes, assumptions=answer.assumptions)
+    if answer.diagnostics:
+        print(guard_lines("\n".join(answer.diagnostics)), file=sys.stderr)
     if as_json:
         print(json.dumps(said, ensure_ascii=False, separators=(",", ":")).encode("utf-8", "backslashreplace").decode("utf-8"))  # P445: a lone surrogate is written as a JSON escape
     else:
@@ -2375,7 +2373,7 @@ def main(argv=None):
         value = getattr(args, op.replace("-", "_"))
         answer = Answer(problems=[_problem(" ".join(value) if isinstance(value, list) else
                                            (value if isinstance(value, str) else None), str(broken))])
-    except store.StoreProblem as broken:
+    except CodedMessageError as broken:  # a store's refusal, an unreadable input: could-not-run, never a traceback
         answer = Answer(unchecked=[_cannot(str(broken))])
     return _say(op, answer, args.json)
 

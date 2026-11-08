@@ -39,6 +39,8 @@ design, because `needs` imports `loader`, `board_emitter` and `footprint_emitter
 | `sourcing/datasheets.py` | fetching, keeping and reading a datasheet, moved out of `parts.py` |
 | `sourcing/part_facts.py` | setting facts on a part record, moved out of `parts.py` |
 | `sourcing/run_cost.py` | the transcript tally, moved from `cost.py`, which stays the CLI |
+| `sourcing/part_rules.py` | the rules that judge a part record's facts: the pull-up band since P717 (W6-S2), `i2c_pullup_problems` and the others in W6-S3a |
+| `scripts/sourcing_codes.py` | the leaf `sourcing_codes` (P717, flat until W6-S3a moves it to `sourcing/`): a code and its sentence for each refusal of `PartError`, `NoTranscript` and `UnknownMatcher`, `errors.CodedMessageError`s |
 | `sourcing/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
 ### Its seams and adapters

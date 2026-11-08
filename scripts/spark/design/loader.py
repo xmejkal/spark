@@ -39,7 +39,7 @@ from spark.design import design_codes
 from spark.design import fab
 import parts as parts_library
 import provenance
-from spark.core.text_guards import ValueMessageError
+from spark.core.errors import CodedMessageError
 
 #: What `load` returns. `parts` are the requested instances: each a copy of its record, with
 #: `_instance` set when the requirements named it.
@@ -62,13 +62,9 @@ def one_board_message(circuits, flags=""):
             "with its own parts/ and run init_project.py in it" % (circuits[0], " " + flags if flags else ""))
 
 
-class DesignError(ValueMessageError):
+class DesignError(CodedMessageError):
     """Error: the input cannot be loaded, and this is why. Always a sentence, never a traceback. `code` (design_codes) says
-    which refusal it is, and an agent decides on it, never on the sentence (P700)."""
-
-    def __init__(self, template, *values, code):
-        super().__init__(template, *values)
-        self.code = code
+    which refusal it is, and an agent decides on it, never on the sentence (P700). A CodedMessageError (P716 row 11)."""
 
 
 #: Why two parts cannot share a name — said by this reader and by `needs` for the picks it writes, in the same words,
