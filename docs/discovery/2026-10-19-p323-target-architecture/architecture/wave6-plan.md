@@ -1175,8 +1175,8 @@ imports `needs` and `drawer`, and no page says whether idea sits below design (r
 Guard, do not skip. Every child has an empty `HOME`, no `WOKWI_CLI_TOKEN`, `CLAUDE_CODE_SESSION_ID=spark-suite`, the
 four proxies of W6-C1 at the closed port (`golden_checks.PROXIES`, `CLOSED_PROXY`, `tests/golden_checks.py:33`, `:34`),
 and a `PATH` of the fakes folder alone, with the fakes calling `/bin/mkdir`, `/bin/cp` and an absolute Python (P698 row
-2). The one `urlopen` is `store.fetch` (`store.py:403`), behind `_must_be_web` (`:378`), which admits `file:` only when
-`unittest` is in `sys.modules` (`:385`). A golden child is a fresh process with no `unittest`, so a `file:` URL is
+2). The one `urlopen` is `store.fetch` (`store.py:403`), behind `_must_be_web` (`:378`), whose test at `:385` admits `file:` only when
+`unittest` is in `sys.modules`. A golden child is a fresh process with no `unittest`, so a `file:` URL is
 refused, and a web URL meets the closed proxy and fails in one connect. So `sources` and `fetch` are `could-not-run`
 Cases, and no child reaches a vendor site. `tools.py --install` runs `curl` through `run_checked` (`tools.py:403`,
 `:353`): the net runs it with `--dry-run` alone (`:600`), which prints the commands and runs nothing. `parts.py --read`
@@ -1205,7 +1205,9 @@ writes that op's goldens. Mutation (est. 9 rows): the proxies not set, `HOME` no
 a `curl` in the fakes folder, the scrub skipped, an exit code wrong, the fake `pdftotext` never exits 1, the written files
 not listed, the fixture transcript not given. Proven with `--anchors`, run with `--copy`. Review: no product logic. One reviewer on the everyday
 model and the refuter on the strongest. Size est.: 160 helper lines, 140 test lines, 45 goldens. Tests only, so it can
-open while W6-U3 is open.
+open while W6-U3 is open. After it: the four CLIs have goldens, and a change to one line of their output fails a test.
+Done when every Case of the four CLIs passes on main with the fakes alone, the guard test passes, and the mutation run
+caught every planted row.
 
 ### W6-R2, the records codes (after W6-R1)
 
@@ -1215,11 +1217,11 @@ Files: `scripts/records_codes.py` (proposed, a leaf, as `firmware_codes`). The s
 (`boards.py:163` the first), `ToolProblem` at 23 (`tools.py`, 3 of them inside `main`, `:627`, `:650`, `:653`),
 `StoreProblem` at 11 in `store.py`, 3 in `drawer.py`, 1 in `deploy_record_store.py` and 2 in `parts.py`. One code per refusal an agent acts on differently (P692 row 13), so est.
 18 codes. Each class gains a `code` attribute, as `NotBuilt` did. `boards.main` (53 lines, `:911`) and `tools.main` (80,
-`:586`) are R1 keys that cannot grow (P684 row 28), so no line enters them: the three `raise` sites in `tools.main` take
+`:586`) are rule R1 keys that cannot grow (P684 row 28), so no line enters them: the three `raise` sites in `tools.main` take
 their code as an argument on the line they have. `missing_facts.py:31` reads
 `board_codes.MISSING_FACT`: `records_codes` gains its own `MISSING_FACT`, one code shared by two leaves as `breadboard_codes`
 shares one with `board_codes` (P692, `test_self_confirmation.py:49`), so no records module imports the bench. `boards.py`
-(967) and `tools.py` (669) are over R1's 600, paid with prunes, else `--accept-new` with the reason. No function of the
+(967) and `tools.py` (669) are over rule R1's 600, paid with prunes, else `--accept-new` with the reason. No function of the
 three is between 41 and 60 lines without a key, so this PR extracts nothing.
 
 Tests: in the three test files, each site's code as a literal. `records_codes` joins `measure.LEAVES`
@@ -1227,7 +1229,9 @@ Tests: in the three test files, each site's code as a literal. `records_codes` j
 Mutation (est. 8 rows): three rows with one site's code swapped, an error drops its code, `CODES` missing a constant, a
 sentence changed, an exit code changed, `MISSING_FACT` read from the wrong leaf. Docs: `areas/records.md` (the leaf's
 row). `json.md` gains nothing until a code reaches a JSON. Review: logic. The lenses on the everyday model, the refuter on
-the strongest, one mutation run. Size est.: 120 product lines, 100 test lines.
+the strongest, one mutation run. Size est.: 120 product lines, 100 test lines. Done when every refusal of `boards.py`,
+`tools.py` and `store.py` carries a code that `records_codes.CODES` names, `missing_facts` reads `MISSING_FACT` from
+`records_codes`, and the goldens of W6-R1 are byte-equal.
 
 ### W6-S2, the sourcing codes (after W6-R2)
 
@@ -1235,12 +1239,12 @@ Goal: each refusal of `parts.py`, `cost.py`, `drawer.py` and `matching.py` has a
 
 Files: `scripts/sourcing_codes.py` (proposed, a leaf). The sites: `PartError` at 7 `raise` sites (`parts.py:264`, `:272`, `:1299`,
 `:1339`, `:1343`, `:1765`, `:1971`), `_cannot` (`:242`, the `could-not-run` findings), `NoTranscript` at 7 (`cost.py`),
-`UnknownMatcher` at 1 (`matching.py`). `PartError` lands in `part_rules.py` (sourcing) in W6-S3a, so its code from
+`UnknownMatcher` at 1 (`matching.py`). `PartError` lands in `part_records.py` (sourcing) in W6-S3a, so its code from
 `sourcing_codes` points up no arrow. Est. 12 codes.
-`parts.main` (23 lines, `:2358`) and `cost.main` (21, `:279`) are R1 keys, so the codes come from the handlers. Three
-extractions, so R1 catches nothing after the move: `simulation_problems` 56 (`:546`), `conflicts_of` 44 (`:1440`),
+`parts.main` (23 lines, `:2358`) and `cost.main` (21, `:279`) are rule R1 keys, so the codes come from the handlers. Three
+extractions, so rule R1 catches nothing after the move: `simulation_problems` 56 (`:546`), `conflicts_of` 44 (`:1440`),
 `_op_requirements` 44 (`:2202`). `validate` (226, `:619`) keeps its key. Two X2 prunes: `_op_keep` (`:1780`) and
-`_op_needs_drop` (`:2130`) print, and a library function may not. Each returns its line and `_say` (`:2335`) prints it,
+`_op_needs_drop` (`:2130`) print, and a library function does not. Each returns its line and `_say` (`:2335`) prints it,
 goldens green. The band: this PR creates `scripts/spark/sourcing/__init__.py` (the index
 docstring alone) and `part_rules.py` with `PULLUP_MIN_OHM` and `PULLUP_MAX_OHM` from `rules_check.py:32`, `:33`.
 `rules_check.py` and `parts.py:493` import them from `spark.sourcing.part_rules` at the top, and `areas/checks.md:47`
@@ -1248,7 +1252,9 @@ adds sourcing. `sourcing_codes` and `part_rules` join `TheSourcingAreaTest`'s mo
 
 Tests, mutation (est. 8 rows: two codes swapped, `PartError` drops its code, `CODES` missing a constant, a sentence
 changed, an exit code changed, the band's bound off by one, a printed line dropped) and review as W6-R2. Docs:
-`areas/sourcing.md` (the leaf's row, the `part_rules` row), `areas/checks.md`. Size est.: 120 product lines, 100 test lines.
+`areas/sourcing.md` (the leaf's row, the `part_rules` row), `areas/checks.md`. Size est.: 120 product lines, 100 test lines. Done when every refusal of `parts.py`, `cost.py`, `drawer.py` and
+`matching.py` carries a code that `sourcing_codes.CODES` names, `rules_check.py` and `parts.py` read the band from
+`spark.sourcing.part_rules`, no handler prints, and the goldens of W6-R1 are byte-equal.
 
 ### The four moves, W6-R3a, W6-R3b, W6-S3a and W6-S3b (what they share)
 
@@ -1273,13 +1279,13 @@ import-alone test (`:301`). The map is regenerated (`python3 tools/map.py --writ
 | R3a | `records_codes.py` | `spark/records/records_codes.py` | 0 | 0 | the leaf |
 | R3b | `tools.py` (669), `versions.py` (53) | `spark/records/tool_finder.py`, `versions.py` (proposed row), the CLI stays | 62, 5 | 10 | `tools.py:36` `SCRIPTS`, `:48` `PLUGIN` |
 | S3a | `parts.py`, 26 names (125 lines), 18 (246), 17 (303) | `spark/records/record_kind.py`, `spark/sourcing/part_rules.py`, `part_records.py` (proposed) | 10, 33, 41 | 9 | the contract, the rules, the loader, by the map |
-| S3a | `matching.py` (230), `cost.py` (303) | `spark/sourcing/matching.py`, `run_cost.py`, the CLI `cost.py` stays | 21, 55 | 13 | `matching.py:13` imports `part_rules` |
+| S3a | `matching.py` (230), `cost.py` (303) | `spark/sourcing/matching.py`, `run_cost.py`, the CLI `cost.py` stays | 21, 55 | 13 | `matching.py:13` (`import parts`) becomes an import of `part_records` |
 | S3a | `sourcing_codes.py` | `spark/sourcing/sourcing_codes.py` | 0 | 0 | the leaf |
 | S3b | `parts.py`, 34 names (336), 15 (149), 32 (329), 12 (266), the CLI keeps 9 (195) | `spark/sourcing/datasheets.py`, `part_facts.py`, `part_handlers.py`, `spark/design/goal_handlers.py` | 42, 17, 77, 78, and 23 stay | 8 | the handlers, by the map |
 | S3b | `drawer.py` (440) | `spark/sourcing/drawer.py` | 54 | 1 | `drawer.py:305`, `:321` read `shelvable`, `shelve` |
 
 Shared rules, checked at 8bfaeffa. C1 (`tools/measure.py:633`): no two modules under `scripts/` share a basename, so
-the handler modules are `part_handlers.py` and `goal_handlers.py`, not two `operations.py`. R1 counts every line of a module
+the handler modules are `part_handlers.py` and `goal_handlers.py`, not two `operations.py`. Rule R1 counts every line of a module
 (`measure.py:447`), so the old `part_rules` (about 645) was over 600 and is split in two by job. The biggest piece is
 then `datasheets.py`, est. 416 lines with blanks and header. The three extractions are W6-S2's. The four `main` keys stay, and a moved key
 moves with `--accept-new`. R6: each docstring gets its role word and its key goes (`R6` on `NoTranscript`, `Offer`, the
@@ -1445,7 +1451,8 @@ Operation, N19's `audit` and `board-list`), the `Retriever` Strategy, `onboard_p
 
 ## The later groups
 
-Each group follows the same three PRs. The order is the plan's. Open question 1 says which moves share a PR.
+Firmware, breadboard and checks got three PRs each, design with build and records with sourcing seven each. The order is
+the plan's. Open question 1 says which moves share a PR.
 
 **Breadboard**: W6-B1 above (merged), then W6-B2 and W6-B3 above.
 
@@ -1500,6 +1507,10 @@ bench reaches `scenario_steps` and `project_image` along its arrow, and nothing 
    shim goes on the child's `PATH` instead.
 5. `board_codes` keeps four aliases for one PR. A test pins that each equals its `firmware_codes` twin until W6-F3
    removes them.
+6. A records-net child installs or removes a real tool: `tools.py --on` runs `install()` (`tools.py:628`) and `--off`
+   runs `claude mcp remove` (`:636`), and `--install` runs `curl` (`:403`). W6-R1's child has a `PATH` of the fakes
+   folder alone, `--install` runs with `--dry-run`, and a guard test proves no `curl`, `claude` or `tools.MANAGERS`
+   command is found in a child.
 
 ## Review size
 
@@ -1515,3 +1526,15 @@ bench reaches `scenario_steps` and `project_image` along its arrow, and nothing 
   everyday model, the refuter on the strongest, one mutation run of est. 10 rows.
 - W6-B3: 2,324 lines moved, 40 import lines, 166 rows, 17 keys. W6-C3: 2,585 lines moved, 25 import lines, 118 rows,
   27 keys. No new logic. Each as W6-F3 is reviewed.
+- W6-D1: est. 130 helper lines, 120 test lines, 19 goldens, no product logic. One reviewer on the everyday model, the
+  refuter on the strongest, one mutation run of est. 7 rows. W6-D2: est. 150 product lines, 120 test lines, est. 24 codes,
+  8 extracted functions. W6-U2: est. 90 product lines, 80 test lines, est. 14 codes. Both hold logic: the lenses on the
+  everyday model, the refuter on the strongest, one mutation run each (est. 9 and 7 rows).
+- W6-D3a: 1,500 lines, 121 rows, 11 keys. W6-D3b: 1,784 lines, 110 rows, 8 keys. W6-D3c: 831 lines, 221 rows, 2 keys.
+  W6-U3: 1,693 lines, 153 rows, 15 keys. No new logic. Each as W6-F3 is reviewed.
+- W6-R1: est. 160 helper lines, 140 test lines, 45 goldens, no product logic. One reviewer on the everyday model, the
+  refuter on the strongest, one mutation run of est. 9 rows. W6-R2: est. 120 product lines, 100 test lines, est. 18 codes.
+  W6-S2: est. 120 product lines, 100 test lines, est. 12 codes, 3 extracted functions. Both hold logic: the lenses on the
+  everyday model, the refuter on the strongest, one mutation run each (est. 8 rows).
+- W6-R3a: 2,110 lines, 198 rows, 11 keys. W6-R3b: 722 lines, 67 rows, 10 keys. W6-S3a: 1,207 lines, 160 rows, 22 keys.
+  W6-S3b: 1,520 lines, 268 rows, 9 keys. No new logic. Each as W6-F3 is reviewed.
