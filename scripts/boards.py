@@ -35,6 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import board_pads
 import provenance
+import records_codes
 import store
 
 #: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one
@@ -129,12 +130,12 @@ ONBOARD_BATTERY_SENSE = "onboard_battery_sense"
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
 GPIO_MIN, GPIO_MAX = 0, 63
 
-from spark.core import outcomes, text_guards  # noqa: E402
+from spark.core import errors, outcomes  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
 
 
-class BoardError(text_guards.ValueMessageError):
-    """Error: a board definition that cannot be used, with the reason a person needs to fix it."""
+class BoardError(errors.CodedMessageError):
+    """Error: a board definition that cannot be used, with the reason a person needs to fix it, and its `code` (records_codes)."""
 
 
 def walk_up(start: Path):
@@ -160,9 +161,8 @@ def project_root(start: Path = None) -> Path:
         if (directory / PROJECT_BOARDS_DIR / SELECTION_NAME).is_file() \
                 or (directory / SPARK_DIR).is_dir():
             return directory
-    raise BoardError(
-        "no project here: nothing up from %s holds %s/%s or %s/",
-        here, PROJECT_BOARDS_DIR, SELECTION_NAME, SPARK_DIR)
+    raise BoardError("no project here: nothing up from %s holds %s/%s or %s/",
+        here, PROJECT_BOARDS_DIR, SELECTION_NAME, SPARK_DIR, code=records_codes.NO_PROJECT_HERE)
 
 
 #: The plugin's own root: what a design in no project is built from — its shipped boards and
@@ -187,11 +187,11 @@ def project_or_library(start: Path = None) -> Path:
 
 def _read_json(path: Path, what: str) -> dict:
     if not path.is_file():
-        raise BoardError("no %s at %s", what, path)
+        raise BoardError("no %s at %s", what, path, code=records_codes.BOARD_FILE_MISSING)
     try:
         return json.loads(path.read_text())
     except ValueError as broken:
-        raise BoardError("%s is not valid JSON: %s", path, broken) from broken
+        raise BoardError("%s is not valid JSON: %s", path, broken, code=records_codes.RECORD_FILE_BROKEN) from broken
 
 
 def selection_file(project: Path) -> Path:
@@ -216,13 +216,13 @@ def active_id(project: Path) -> str:
     selection = _read_json(selection_file(project), "board selection")
     board_id = selection.get("board")
     if not board_id:
-        raise BoardError('%s names no board (expected a "board" key holding a board id)', selection_file(project))
+        raise BoardError('%s names no board (expected a "board" key holding a board id)', selection_file(project), code=records_codes.NO_BOARD_SELECTED)
     if not isinstance(board_id, str):
         raise BoardError(
             "%s holds %r where a board id belongs. "
             "A project is built around ONE board: `.spark/board.json` is one file per project "
             "and every consumer reads it. Two boards means two projects — a car and its remote "
-            "are separate designs that happen to talk to each other.", selection_file(project), board_id)
+            "are separate designs that happen to talk to each other.", selection_file(project), board_id, code=records_codes.NO_BOARD_SELECTED)
     return board_id
 
 
@@ -237,7 +237,7 @@ def definition_path(project: Path, board_id: str = None) -> Path:
     found = records(project).get(board_id) if isinstance(board_id, str) else None
     if found:
         return found[1]
-    raise BoardError("no board definition for %r.\n  available: %s", board_id, ", ".join(available(project)) or "(none)")
+    raise BoardError("no board definition for %r.\n  available: %s", board_id, ", ".join(available(project)) or "(none)", code=records_codes.NO_BOARD_DEFINITION)
 
 
 def available(project: Path) -> list:
@@ -267,7 +267,7 @@ def load(project: Path, board_id: str = None) -> dict:
     board = _read_json(path, "board definition")
     problems = validate(board, path)
     if problems:
-        raise BoardError.of_lines([f"{path} does not meet the board contract:"] + [f"  - {problem}" for problem in problems])
+        raise BoardError.of_lines([f"{path} does not meet the board contract:"] + [f"  - {problem}" for problem in problems], code=records_codes.BOARD_CONTRACT_BROKEN)
     return board
 
 
@@ -879,7 +879,7 @@ def get(project: Path, key_path: str, board_id: str = None):
     value = load(project, board_id)
     for step in key_path.split(KEY_PATH_SEPARATOR):
         if not isinstance(value, dict) or step not in value:
-            raise BoardError("no %r in this board definition (stopped at %r)", key_path, step)
+            raise BoardError("no %r in this board definition (stopped at %r)", key_path, step, code=records_codes.NO_SUCH_FIELD)
         value = value[step]
     return value
 

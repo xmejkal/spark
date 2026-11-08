@@ -1058,6 +1058,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                 self.assertEqual(asked, [], "the first document, which is fine, is not downloaded either: all or nothing")
                 self.assertIn(cited, str(refused.exception), "the refusal names the document")
                 self.assertIn(shown, str(refused.exception), "and the name the store would not keep it under")
+                self.assertEqual(refused.exception.code, "file_name_refused")
                 self.assertFalse((home / "sources").exists(), "nothing was kept")
                 self.assertEqual((home / "catalog" / "x-part.json").read_text(), before)
 
@@ -1132,6 +1133,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         with self.assertRaises(parts.store.StoreProblem) as caught:
             parts.fetch_plan({"sources": [url]})
         assert_flat(self, caught.exception, url)
+        self.assertEqual(caught.exception.code, "file_name_refused")
 
     def test_cited_urls_reads_a_dict_of_sources_and_a_url_inside_prose(self):
         # Both P62 lenses: four library records keep `sources` as a dict, and `--sources` saw none.

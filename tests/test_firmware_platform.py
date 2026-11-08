@@ -49,7 +49,7 @@ class MicroPythonPlatformTest(unittest.TestCase):
 
     def test_a_missing_tool_shows_when_a_step_asks_for_it_not_before(self):
         def missing(role):
-            raise tools.ToolProblem("%s is not installed" % role)
+            raise tools.ToolProblem("%s is not installed" % role, code="tool_missing")
         platform = firmware_platform.MicroPythonPlatform(self.project, missing)  # builds
         with self.assertRaises(tools.ToolProblem):
             platform.make_port_finder(None)
@@ -74,7 +74,7 @@ class FakeFirmwarePlatformTest(unittest.TestCase):
 
     def test_a_part_that_is_an_exception_is_raised(self):
         with self.assertRaises(tools.ToolProblem):
-            FakeFirmwarePlatform(port_finder=tools.ToolProblem("no mpremote")).make_port_finder(None)
+            FakeFirmwarePlatform(port_finder=tools.ToolProblem("no mpremote", code="tool_missing")).make_port_finder(None)
 
     def test_a_fake_board_reader_gives_its_readings_in_turn_and_keeps_the_ports(self):
         stop = board_look.LookStopError("could not read", reason="board_not_read")

@@ -36,6 +36,7 @@ areas' `OPERATIONS`, as `parts.py` does.
 | `records/brief.py` | `Brief`: the project's `prefer` and `sellers`, from `.spark/project.json` |
 | `records/deploy_record_store.py` | `DeployRecordStore` and `LastDeploy`: what the store says of the board on USB (built in `scripts/` in P431) |
 | `records/provenance.py` | the leaf `provenance`: what a fact must carry |
+| `records/records_codes.py` | the leaf `records_codes` (P716, flat in `scripts/` until W6-R3a): a code and its sentence for each refusal of `BoardError`, `ToolProblem` and `StoreProblem`, `errors.CodedMessageError`s |
 | `records/tool_finder.py` | `ToolFinder` over the three `tools.json` layers, install lines |
 | `records/backends.py` | `Backends` and `build_outside` |
 

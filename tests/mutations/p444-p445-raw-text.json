@@ -44,14 +44,14 @@
  {
   "file": "scripts/store.py",
   "name": "the projects list path enters its sentence raw",
-  "find": "in each project\", path, broken)",
-  "replace": "in each project\" % (path, broken))"
+  "find": "in each project\", path, broken, code=records_codes.RECORD_FILE_BROKEN)",
+  "replace": "in each project\" % (path, broken), code=records_codes.RECORD_FILE_BROKEN)"
  },
  {
   "file": "scripts/tools.py",
   "name": "the tools file path enters its sentence raw",
-  "find": "fix it or delete it\", path, broken)",
-  "replace": "fix it or delete it\" % (path, broken))"
+  "find": "fix it or delete it\", path, broken, code=records_codes.TOOLS_LIST_BROKEN)",
+  "replace": "fix it or delete it\" % (path, broken), code=records_codes.TOOLS_LIST_BROKEN)"
  },
  {
   "file": "scripts/tools.py",

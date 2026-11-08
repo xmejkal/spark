@@ -306,7 +306,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         def find(name, project=None, personal=None):
             if name == failing:
                 raise tools.ToolProblem({"littlefs": "littlefs (littlefs-python) is not installed — install: python3 -m pip install --user littlefs-python",
-                                         "firmware-image": "firmware-image (micropython-esp32s3) is not installed — install: /spark:setup add micropython-esp32s3"}[name])
+                                         "firmware-image": "firmware-image (micropython-esp32s3) is not installed — install: /spark:setup add micropython-esp32s3"}[name], code="tool_missing")
             return real(name, project, personal)
         err = io.StringIO()
         with mock.patch.object(tools, "find", side_effect=find), contextlib.redirect_stderr(err), \
@@ -477,7 +477,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         import tools
 
         def not_installed(name, *rest):
-            raise tools.ToolProblem("%s is not installed" % name)
+            raise tools.ToolProblem("%s is not installed" % name, code="tool_missing")
         given = self.root / "micropython.bin"
         self.assertEqual(self.chosen_for("ESP32_GENERIC", given, not_installed), (given, ESP32_INTERPRETER_OFFSET))
 

@@ -1,5 +1,5 @@
 [
- {"file": "scripts/spark/build/board_engine.py", "name": "the chain has no converter of its own again", "find": "    converter = tools.find(\"diagram-converter\", project)\n", "replace": "    raise tools.ToolProblem(\"no converter\")\n"},
+ {"file": "scripts/spark/build/board_engine.py", "name": "the chain has no converter of its own again", "find": "    converter = tools.find(\"diagram-converter\", project)\n", "replace": "    raise tools.ToolProblem(\"no converter\", code=\"tool_missing\")\n"},
  {"file": "scripts/spark/build/board_engine.py", "name": "the plugin's converter is preferred over a project's own", "find": "    if own is not None:\n        return tools.find(\"ts-runtime\", project).command + [\"run\", str(own)]", "replace": "    if False:\n        return tools.find(\"ts-runtime\", project).command + [\"run\", str(own)]"},
  {"file": "scripts/spark/build/board_engine.py", "name": "the search goes back to one person's checkout", "find": "CONVERTER_PATHS = (\"tools/circuit-to-wokwi/cli.ts\",)", "replace": "CONVERTER_PATHS = (\"tools/circuit-to-wokwi/cli.ts\", \"../smartbin-local/tools/circuit-to-wokwi/cli.ts\")"},
  {"file": "tools/circuit-to-wokwi/lib/board.ts", "name": "the converter guesses a board when nobody names one", "find": "if (!BOARD_FROM_CALLER) {", "replace": "if (false) {"},

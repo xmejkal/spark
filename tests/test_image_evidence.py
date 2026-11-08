@@ -479,14 +479,14 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertIn("no firmware/main.py", self.why())
 
     def test_a_missing_interpreter_raises_its_tool_problem_with_the_check_words(self):
-        self.raising = tools.ToolProblem("no tool holds it")
+        self.raising = tools.ToolProblem("no tool holds it", code="tool_missing")
         with self.assertRaises(tools.ToolProblem) as raised:
             self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
 
     def test_a_newline_in_the_image_name_gives_one_line_in_the_check_words_of_a_missing_tool_and_of_an_unreadable_file(self):
         named = mock.Mock(path=Path(NASTY))
-        self.raising = tools.ToolProblem("no tool holds it")
+        self.raising = tools.ToolProblem("no tool holds it", code="tool_missing")
         with self.assertRaises(tools.ToolProblem) as raised:
             NoSimulationEvidence(self.project)._why_image_differs(named)
         assert_flat(self, raised.exception)
@@ -497,7 +497,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     def test_a_missing_littlefs_raises_its_tool_problem_with_the_install_line(self):
         def find(name, *args, **kwargs):
-            raise tools.ToolProblem("littlefs (littlefs-python) is not installed — install: python3 -m pip install --user littlefs-python")
+            raise tools.ToolProblem("littlefs (littlefs-python) is not installed — install: python3 -m pip install --user littlefs-python", code="tool_missing")
 
         with mock.patch.object(tools, "find", side_effect=find):
             with self.assertRaises(tools.ToolProblem) as raised:

@@ -68,6 +68,7 @@ class TheDrawerTest(unittest.TestCase):
         (self.home / "drawer" / "odd.json").write_text(json.dumps({"schema": 1, "label": "odd", NASTY: 1}))
         with self.assertRaises(drawer.store.StoreProblem) as caught:
             drawer.entries()
+            self.assertEqual(caught.exception.code, "record_file_broken")
         assert_flat(self, caught.exception, NASTY)
 
     def test_an_entry_needs_only_a_label_and_a_count(self):
