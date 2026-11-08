@@ -19,8 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_footprints  # noqa: E402
-from spark.checks import build_check  # noqa: E402
-from spark.checks import physics_check  # noqa: E402
+from spark.checks import build_check, physics_check  # noqa: E402
 import copper  # noqa: E402
 import emit_board  # noqa: E402
 import emit_footprint  # noqa: E402

@@ -32,8 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_all  # noqa: E402
-from spark.checks import check  # noqa: E402
-from spark.checks import build_check  # noqa: E402
+from spark.checks import build_check, check  # noqa: E402
 import design  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 

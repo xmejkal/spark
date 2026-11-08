@@ -17,9 +17,8 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.checks import check  # noqa: E402
+from spark.checks import check, rules_check  # noqa: E402
 import compare_design  # noqa: E402
-from spark.checks import rules_check  # noqa: E402
 
 
 def circuit(components, pin_to_pin=(), to_net=(), resistors=()):

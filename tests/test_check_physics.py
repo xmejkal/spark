@@ -27,9 +27,8 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.checks import build_check  # noqa: E402
+from spark.checks import build_check, physics_check  # noqa: E402
 import check_physics  # noqa: E402
-from spark.checks import physics_check  # noqa: E402
 
 
 def component(name, ftype, **fields):
