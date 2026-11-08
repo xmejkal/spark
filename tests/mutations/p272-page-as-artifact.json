@@ -12,7 +12,7 @@
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the title keeps four words of the name", "find": "TITLE_NAME_WORDS = 3", "replace": "TITLE_NAME_WORDS = 4"},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "a long word is not cut", "find": "[:TITLE_WORD_LETTERS] for word", "replace": " for word"},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "a name of no words gives one word", "find": "or [\"spark\"]) + \" circuit\"", "replace": "or [\"\"]) + \" circuit\""},
- {"file": "scripts/check_spine.py", "name": "the kept page takes the folder name as its title", "find": "title = tabbed_page.page_title(Path(destination).resolve().name)", "replace": "title = Path(destination).resolve().name"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "the kept page takes the folder name as its title", "find": "title = tabbed_page.page_title(Path(destination).resolve().name)", "replace": "title = Path(destination).resolve().name"},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark paper equals the light paper", "find": "\"--paper\": \"#1d1c1a\"", "replace": "\"--paper\": \"#f6f3ee\""},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark ink equals the light ink", "find": "\"--ink\": \"#e8e4dc\"", "replace": "\"--ink\": \"#222\""},
  {"file": "scripts/spark/breadboard/tabbed_page.py", "name": "the dark accent equals the light accent", "find": "\"--accent\": \"#ff7a70\"", "replace": "\"--accent\": \"#c33\""},

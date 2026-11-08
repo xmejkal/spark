@@ -36,19 +36,19 @@
   "replace": "    claims += []"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "a rail the build never created reads as nothing to check",
   "find": "        if wanted is None or wanted not in board.nets_of(component, pin):",
   "replace": "        if wanted is not None and wanted not in board.nets_of(component, pin):"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "every component counts as grounded",
   "find": "        if net_ids & ground_ids:\n            grounded.add(owner)",
   "replace": "        if True:\n            grounded.add(owner)"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "the supply claims are never asked of the built circuit",
   "find": "    for component, pin, net in claims:",
   "replace": "    for component, pin, net in []:"

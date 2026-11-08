@@ -26,6 +26,8 @@ from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import kept_moves  # noqa: E402
 import check_spine  # noqa: E402
+from spark.build import kept_files  # noqa: E402
+from spark.build.stages import Stage  # noqa: E402
 
 DATA = ROOT / "tests" / "data" / "breadboard"
 FULL = DATA / "button-light-xiao"
@@ -310,9 +312,9 @@ class TheBuildSaysItTest(unittest.TestCase):
         project = new_project(FULL)
         build(project)
         edit(project, move("LedRed5mm", dy=-500))
-        stages = [check_spine.Stage("build", check_spine.OK, "built")]
+        stages = [Stage("build", check_spine.OK, "built")]
         with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}):
-            kept = check_spine.keep_breadboard(project / "requirements.json", project, stages)
+            kept = kept_files.keep_breadboard(project / "requirements.json", project, stages)
         named = [entry for entry in kept if entry["did"] == "move not kept"]
         self.assertEqual(len(named), 1)
         self.assertIn("LedRed5mm", named[0]["line"])

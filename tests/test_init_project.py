@@ -124,10 +124,10 @@ class WhatItWritesTest(unittest.TestCase):
     def test_a_core_the_documents_were_not_measured_on_is_said_not_swallowed(self):
         # W1's shape, for the toolchain: a build on a different core is not failed — a newer core
         # may be perfectly good — but it is never passed in silence either.
-        import check_spine
-        self.assertEqual(check_spine.core_note(project_setup.PINNED_CORE), "")
-        self.assertIn(project_setup.PINNED_CORE, check_spine.core_note("0.0.9999"))
-        self.assertEqual(check_spine.core_note("unknown version"), "",
+        from spark.build import build_service
+        self.assertEqual(build_service.core_note(project_setup.PINNED_CORE), "")
+        self.assertIn(project_setup.PINNED_CORE, build_service.core_note("0.0.9999"))
+        self.assertEqual(build_service.core_note("unknown version"), "",
                          "a version nobody could read is not a drift claim")
 
     def test_a_package_file_is_written_so_tscircuit_stops_its_walk_at_the_project(self):

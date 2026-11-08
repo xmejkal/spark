@@ -118,8 +118,8 @@ class ItRefusesToGuessTest(unittest.TestCase):
     def test_the_search_names_no_other_repository(self):
         # It named `../smartbin-local/tools/circuit-to-wokwi/cli.ts` — one person's checkout,
         # beside which the chain's last stage was the only place it worked.
-        import check_spine
-        for entry in check_spine.CONVERTER_PATHS:
+        from spark.build import board_engine
+        for entry in board_engine.CONVERTER_PATHS:
             self.assertNotIn("..", entry,
                              "a search path that climbs out of the project names somebody's "
                              "machine: %r" % entry)

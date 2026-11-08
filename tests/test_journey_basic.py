@@ -37,6 +37,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_spine  # noqa: E402
+from spark.build import board_engine  # noqa: E402
+from spark.build import build_service  # noqa: E402
 import deploy  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.firmware import scenario_run  # noqa: E402
@@ -81,7 +83,7 @@ def _board_file(path):
 
 
 def _built(path):
-    traces, errors = check_spine.count_in(json.loads(path.read_text()))
+    traces, errors = build_service.count_in(json.loads(path.read_text()))
     if errors:
         return "%d error element(s) in it" % len(errors)
     return None if traces else "no pcb_trace in it: nothing joins the parts"
@@ -92,7 +94,7 @@ def _diagram(path):
     lacking = {"wokwi-pushbutton", "wokwi-led"} - {part["type"] for part in diagram.get("parts", [])}
     if lacking:
         return "no %s in it" % ", ".join(sorted(lacking))
-    return None if check_spine.wires_in(diagram) else "no wire in it"
+    return None if build_service.wires_in(diagram) else "no wire in it"
 
 
 def _sheet(path):
@@ -225,10 +227,10 @@ def walk(project):
     except ValueError:  # a spine that printed no verdict: what it said instead is the failure's reason
         verdict = {"status": "crashed", "stages": [{"name": "check_spine", "status": "crashed",
                                                      "detail": spine.stderr.strip()[-800:] or "no output"}]}
-    toolchain = check_spine.find_toolchain(project)
+    toolchain = board_engine.find_toolchain(project)
     if toolchain is None or not any(s["name"] == "build" and s["status"] == check_spine.OK for s in verdict["stages"]):
         return verdict
-    modules = check_spine.modules_for(toolchain)
+    modules = board_engine.modules_for(toolchain)
     if modules is not None:
         os.symlink(modules, project / "node_modules")
     verdict["exports failed"] = {}
@@ -368,7 +370,7 @@ class TheBasicJourneyTest(unittest.TestCase):
 
     def skip_without_the_build(self):
         # Only a missing board engine is a skip. One that is installed and cannot build is a failure: JB2 was one.
-        if check_spine.find_toolchain(self.project) is not None:
+        if board_engine.find_toolchain(self.project) is not None:
             return
         build = self.stage("build")
         ran = list(WITHOUT_THE_BUILD) + [stage["name"] for stage in self.verdict["stages"] if stage["status"] == check_spine.OK]

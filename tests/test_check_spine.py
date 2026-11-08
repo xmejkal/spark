@@ -42,6 +42,10 @@ from spark.design import pin_assigner  # noqa: E402
 import boards  # noqa: E402
 from spark.build import build_codes  # noqa: E402
 import check_spine  # noqa: E402
+from spark.build import board_engine  # noqa: E402
+from spark.build import build_service  # noqa: E402
+from spark.build import kept_files  # noqa: E402
+from spark.build.stages import Stage  # noqa: E402
 from suite_runs import slow  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
@@ -55,23 +59,23 @@ from fakes import FakeTscircuitExport, fake_tsci  # noqa: E402
 
 
 def stage(name, status):
-    return check_spine.Stage(name, status)
+    return Stage(name, status)
 
 
 class ABoardWithNoCopperIsNotBuiltTest(unittest.TestCase):
     def test_a_circuit_with_traces_and_no_errors_counts_as_built(self):
-        traces, errors = check_spine.count_in(
+        traces, errors = build_service.count_in(
             [{"type": "pcb_trace"}, {"type": "pcb_trace"}, {"type": "source_component"}])
         self.assertEqual((traces, errors), (2, []))
 
     def test_traces_are_counted_not_assumed(self):
         # The whole gate rests on this number, so it is read from the netlist and nothing else.
-        self.assertEqual(check_spine.count_in([{"type": "source_component"}])[0], 0)
+        self.assertEqual(build_service.count_in([{"type": "source_component"}])[0], 0)
 
     def test_every_kind_of_error_element_is_found(self):
         # They do not share a prefix — pcb_port_not_connected_error, pcb_trace_missing_error,
         # source_*_error — so the match is on the word, not on a list somebody has to maintain.
-        _, errors = check_spine.count_in([
+        _, errors = build_service.count_in([
             {"type": "pcb_port_not_connected_error"},
             {"type": "pcb_trace_missing_error"},
             {"type": "pcb_trace"}])
@@ -80,7 +84,7 @@ class ABoardWithNoCopperIsNotBuiltTest(unittest.TestCase):
     def test_a_warning_is_not_an_error(self):
         # `pcb_component_missing_courtyard_warning` and friends are present on a good board.
         # Counting them would make the gate unpassable, and an unpassable gate gets removed.
-        _, errors = check_spine.count_in([
+        _, errors = build_service.count_in([
             {"type": "pcb_component_missing_courtyard_warning"},
             {"type": "source_unnamed_trace_warning"}])
         self.assertEqual(errors, [])
@@ -93,18 +97,18 @@ class WhatTheExitCodeMeansTest(unittest.TestCase):
     """
 
     def test_everything_ok_is_ok(self):
-        self.assertEqual(check_spine.verdict([stage("board", check_spine.OK),
+        self.assertEqual(build_service.verdict([stage("board", check_spine.OK),
                                               stage("build", check_spine.OK)]),
                          check_spine.EXIT_OK)
 
     def test_a_stage_that_could_not_run_is_not_a_pass(self):
-        self.assertEqual(check_spine.verdict([stage("board", check_spine.OK),
+        self.assertEqual(build_service.verdict([stage("board", check_spine.OK),
                                               stage("build", check_spine.COULD_NOT_RUN)]),
                          check_spine.EXIT_COULD_NOT_RUN)
 
     def test_a_real_problem_outranks_a_stage_that_could_not_run(self):
         # Both present: the thing that is known broken is the more urgent news.
-        self.assertEqual(check_spine.verdict([stage("schematic", check_spine.PROBLEMS),
+        self.assertEqual(build_service.verdict([stage("schematic", check_spine.PROBLEMS),
                                               stage("build", check_spine.COULD_NOT_RUN)]),
                          check_spine.EXIT_PROBLEMS)
 
@@ -160,11 +164,11 @@ class EveryComponentNeedsAGroundTest(unittest.TestCase):
         # It has a trace, so "does it connect to anything" would pass it. The question is
         # whether it shares a RETURN PATH, and that is a different question.
         self.assertEqual(
-            check_spine.islands_in(self.circuit(ground_the_mcu=False)), ["Mcu reaches no ground"])
+            build_service.islands_in(self.circuit(ground_the_mcu=False)), ["Mcu reaches no ground"])
 
     def test_grounding_it_clears_the_finding(self):
         self.assertEqual(
-            check_spine.islands_in(self.circuit(ground_the_mcu=True)), [])
+            build_service.islands_in(self.circuit(ground_the_mcu=True)), [])
 
     def test_a_ground_under_another_name_still_counts(self):
         # A design with an analogue return calls it AGND, and "the net called GND" stops being
@@ -173,7 +177,7 @@ class EveryComponentNeedsAGroundTest(unittest.TestCase):
         for element in circuit:
             if element.get("name") == "GND":
                 element["name"] = "AGND"
-        self.assertEqual(check_spine.islands_in(circuit), [])
+        self.assertEqual(build_service.islands_in(circuit), [])
 
     def test_a_passive_between_a_pin_and_a_rail_is_not_an_island(self):
         # P6 placed the first pull-ups a generated board ever carried, and this check reported
@@ -186,16 +190,16 @@ class EveryComponentNeedsAGroundTest(unittest.TestCase):
             {"type": "source_trace", "source_trace_id": "t4", "connected_source_port_ids": ["p_r1", "p_mod_sda"], "connected_source_net_ids": []},
             {"type": "source_trace", "source_trace_id": "t5", "connected_source_port_ids": ["p_r2"], "connected_source_net_ids": ["n_v33"]},
         ]
-        self.assertEqual(check_spine.islands_in(circuit), [])
+        self.assertEqual(build_service.islands_in(circuit), [])
         dangling = [e for e in circuit if e.get("source_trace_id") != "t5"]
-        self.assertEqual(check_spine.islands_in(dangling), ["SdaPullup.pin2 (a terminal connected to nothing)"])
+        self.assertEqual(build_service.islands_in(dangling), ["SdaPullup.pin2 (a terminal connected to nothing)"])
 
     def test_a_component_in_no_trace_at_all_is_not_reported_here(self):
         # Already covered by the generators, which refuse to emit a part they cannot wire.
         # Reporting it twice, in different words, is how a finding gets scrolled past.
         circuit = self.circuit(ground_the_mcu=True) + [
             {"type": "source_component", "source_component_id": "c_lonely", "name": "Lonely"}]
-        self.assertNotIn("Lonely", check_spine.islands_in(circuit))
+        self.assertNotIn("Lonely", build_service.islands_in(circuit))
 
 
 class TheSupplyThePartRecordsPromiseTest(unittest.TestCase):
@@ -226,12 +230,12 @@ class TheSupplyThePartRecordsPromiseTest(unittest.TestCase):
 
     def test_a_pin_the_design_feeds_and_the_board_does_not_is_named(self):
         self.assertEqual(
-            check_spine.islands_in(self.circuit(feed_the_mcu=False), [("Mcu", "VCC", "V5V")]),
+            build_service.islands_in(self.circuit(feed_the_mcu=False), [("Mcu", "VCC", "V5V")]),
             ["Mcu.VCC is fed by net.V5V in this design and is not on it"])
 
     def test_wiring_it_clears_the_finding(self):
         self.assertEqual(
-            check_spine.islands_in(self.circuit(feed_the_mcu=True), [("Mcu", "VCC", "V5V")]), [])
+            build_service.islands_in(self.circuit(feed_the_mcu=True), [("Mcu", "VCC", "V5V")]), [])
 
     def test_a_rail_the_build_never_created_is_named_too(self):
         # The failure mode that is easy to miss: the trace was asked for, tscircuit dropped it,
@@ -239,13 +243,13 @@ class TheSupplyThePartRecordsPromiseTest(unittest.TestCase):
         # "no claim to check".
         circuit = [e for e in self.circuit(feed_the_mcu=True) if e.get("name") != "V5V"]
         self.assertEqual(
-            check_spine.islands_in(circuit, [("Mcu", "VCC", "V5V")]),
+            build_service.islands_in(circuit, [("Mcu", "VCC", "V5V")]),
             ["Mcu.VCC is fed by net.V5V in this design and is not on it"])
 
     def test_no_claims_asks_no_supply_question(self):
         # A button has no supply pin, and asking every component whether it reaches a rail is how
         # a check that fires on correct designs gets ignored. Only what a record states is asked.
-        self.assertEqual(check_spine.islands_in(self.circuit(feed_the_mcu=False)), [])
+        self.assertEqual(build_service.islands_in(self.circuit(feed_the_mcu=False)), [])
 
 
 class WhichOfTheModulesOwnPadsGetWiredTest(unittest.TestCase):
@@ -316,7 +320,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_the_board_its_footprint_and_dist_all_arrive(self):
         into = Path(tempfile.mkdtemp()) / "project"
-        said = [k["line"] for k in check_spine.kept_into(self.workdir(), into)]
+        said = [k["line"] for k in kept_files.kept_into(self.workdir(), into)]
         self.assertTrue((into / "board.tsx").is_file())
         self.assertTrue((into / "FireBeetle2Esp32S3.tsx").is_file())
         # dist is the one that matters: it is what design.CIRCUIT_PATHS names.
@@ -325,7 +329,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
 
     def test_a_destination_that_does_not_exist_yet_is_made(self):
         into = Path(tempfile.mkdtemp()) / "not" / "there"
-        check_spine.kept_into(self.workdir(), into)
+        kept_files.kept_into(self.workdir(), into)
         self.assertTrue((into / "board.tsx").is_file())
 
     def test_a_board_someone_has_edited_is_left_alone_and_said(self):
@@ -333,7 +337,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         # overwriting it is how a tool loses somebody's afternoon.
         into = Path(tempfile.mkdtemp())
         (into / "board.tsx").write_text("// MINE, hand-edited")
-        said = [k["line"] for k in check_spine.kept_into(self.workdir(), into)]
+        said = [k["line"] for k in kept_files.kept_into(self.workdir(), into)]
         self.assertEqual((into / "board.tsx").read_text(), "// MINE, hand-edited")
         self.assertTrue(any("left alone" in line and "board.tsx" in line for line in said),
                         "an untouched file must be named, not silently skipped: %s" % said)
@@ -342,7 +346,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp())
         (into / "dist" / "board").mkdir(parents=True)
         (into / "dist" / "board" / "circuit.json").write_text("stale")
-        check_spine.kept_into(self.workdir(), into)
+        kept_files.kept_into(self.workdir(), into)
         self.assertEqual((into / "dist" / "board" / "circuit.json").read_text(), "[]")
 
     def test_report_actually_calls_it_and_still_clears_the_temp_directory(self):
@@ -355,7 +359,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
         self.assertTrue((into / "dist" / "board" / "circuit.json").is_file(),
                         "report did not put the board where the checks look")
         self.assertFalse(work.exists(), "the temp directory is still cleared away")
@@ -373,7 +377,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
         self.assertIn("board D3", (into / "breadboard.md").read_text())
         self.assertIn("the parts and how to wire them on a breadboard", err.getvalue())
 
@@ -389,7 +393,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
         return into, err.getvalue()
 
     def test_keeping_a_xiao_build_writes_its_drawn_breadboard_beside_the_sheet(self):
@@ -422,7 +426,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         (into / "breadboard.json").write_text("{}")  # an old drawing, which describes another build
         args = argparse.Namespace(json=True, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
-            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
         kept = json.loads(out.getvalue())["kept"]
         by_file = {Path(entry["file"]).name: entry for entry in kept if Path(entry["file"]).name.startswith("breadboard.")}
         self.assertEqual((by_file["breadboard.svg"]["did"], by_file["breadboard.svg"]["drawn_from"]), ("wrote", "record"))
@@ -441,7 +445,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         shutil.copy(fixture / "dist" / "board" / "circuit.json", work / "dist" / "board" / "circuit.json")
         args = argparse.Namespace(json=True, keep=Path(tempfile.mkdtemp()) / "project", requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
-            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
         return [entry for entry in json.loads(out.getvalue())["kept"] if Path(entry["file"]).name.startswith("breadboard.")]
 
     def test_an_older_refusal_has_a_null_code_and_a_wrote_entry_of_wokwi_geometry_has_no_drawn_from(self):
@@ -462,7 +466,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into.mkdir(); (into / "breadboard.json").write_text("{}")
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            check_spine.report([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
         self.assertFalse((into / "breadboard.json").exists())
         self.assertIn("no drawn breadboard: the build did not finish in this run; removed", err.getvalue())
 
@@ -479,7 +483,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         earlier = (into / "breadboard.json").read_text()
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            check_spine.report([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
         self.assertEqual((into / "breadboard.json").read_text(), earlier)
         self.assertIn("left alone: %s (it may hold your moves" % (into / "breadboard.json"), err.getvalue())
         self.assertFalse((into / "breadboard.svg").exists())
@@ -493,7 +497,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into = Path(tempfile.mkdtemp()) / "project"
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            check_spine.report([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("no breadboard sheet: the build did not finish", err.getvalue())
 
@@ -507,7 +511,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into.mkdir(); (into / "breadboard.md").write_text("# an earlier build's sheet")
         args = argparse.Namespace(json=False, keep=into, requirements=str(fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([check_spine.Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
+            check_spine.report([Stage("build", check_spine.PROBLEMS, "1 error")], args, self.workdir())
         self.assertFalse((into / "breadboard.md").exists())
         self.assertIn("removed", err.getvalue())
 
@@ -519,7 +523,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         fixture = Path(__file__).resolve().parent / "data" / "breadboard" / "button-light"
         args = argparse.Namespace(json=True, keep=into, requirements=str(requirements or fixture / "requirements.json"))
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report(stages or [check_spine.Stage("build", check_spine.OK, "fine")], args, self.workdir())
+            check_spine.report(stages or [Stage("build", check_spine.OK, "fine")], args, self.workdir())
         return json.loads(out.getvalue())["kept"], err.getvalue()
 
     def emitted_pins(self, requirements):
@@ -545,7 +549,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
     def test_the_pin_map_needs_no_finished_build(self):
         # It is made from the requirements alone, so a machine without the board engine still gets it.
         into = Path(tempfile.mkdtemp()) / "project"
-        self.keep_with_pins(into, stages=[check_spine.Stage("build", check_spine.COULD_NOT_RUN, "no tsci")])
+        self.keep_with_pins(into, stages=[Stage("build", check_spine.COULD_NOT_RUN, "no tsci")])
         self.assertTrue((into / "firmware" / "pins.py").is_file())
 
     def test_a_pin_map_spark_wrote_earlier_is_rewritten(self):
@@ -591,7 +595,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         def a_run_that_simulated(requirements, workdir, *rest, **named):
             (workdir / "sim").mkdir()
             (workdir / "sim" / "diagram.json").write_text('{"parts": []}')
-            return [check_spine.Stage("build", check_spine.OK, "fine")]
+            return [Stage("build", check_spine.OK, "fine")]
 
         into, elsewhere = Path(tempfile.mkdtemp()) / "project", Path(tempfile.mkdtemp()) / "sim"
         with mock.patch.object(check_spine, "run", a_run_that_simulated), \
@@ -620,26 +624,26 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         # The build runs in a fresh folder and keep_simulation merges into the project's sim/, so only keep_simulation can remove it.
         work, into = self.a_kept_project()
         (work / "sim" / "diagram.json").write_text("{}")
-        done = [check_spine.Stage("build", check_spine.OK, "fine"), check_spine.Stage("simulation", check_spine.OK, "ran")]
-        self.assertEqual(check_spine.keep_simulation(work, into, done)["did"], "wrote")
+        done = [Stage("build", check_spine.OK, "fine"), Stage("simulation", check_spine.OK, "ran")]
+        self.assertEqual(kept_files.keep_simulation(work, into, done)["did"], "wrote")
         self.assertFalse((into / "WHAT-THIS-CANNOT-SHOW.md").exists())
         self.assertTrue((into / "scenarios" / "mine.scenario.yaml").is_file())  # a person's scenarios stay
         self.assertEqual((into / "diagram.json").read_text(), "{}")
         (work / "sim" / "WHAT-THIS-CANNOT-SHOW.md").write_text("- **New** — from this build\n")
-        check_spine.keep_simulation(work, into, done)
+        kept_files.keep_simulation(work, into, done)
         self.assertEqual((into / "WHAT-THIS-CANNOT-SHOW.md").read_text(), "- **New** — from this build\n")
 
     def test_the_older_note_and_diagram_stay_when_the_simulation_stage_did_not_finish(self):
         # The stage writes board.json and wokwi-mapping.json before it can stop; the older diagram stays, so its note must too.
         for status in (check_spine.COULD_NOT_RUN, check_spine.PROBLEMS):
             work, into = self.a_kept_project()
-            stopped = [check_spine.Stage("build", check_spine.OK, "fine"), check_spine.Stage("simulation", status, "stopped")]
+            stopped = [Stage("build", check_spine.OK, "fine"), Stage("simulation", status, "stopped")]
             with self.subTest(status=status):
-                check_spine.keep_simulation(work, into, stopped)
+                kept_files.keep_simulation(work, into, stopped)
                 self.assertEqual((into / "WHAT-THIS-CANNOT-SHOW.md").read_text(), "- **Old** — from an earlier build\n")
                 self.assertEqual((into / "diagram.json").read_text(), '{"parts": ["older"]}')
         work, into = self.a_kept_project()  # a build that stopped before the simulation stage has no simulation stage at all
-        check_spine.keep_simulation(work, into, [check_spine.Stage("board", check_spine.COULD_NOT_RUN, "no board")])
+        kept_files.keep_simulation(work, into, [Stage("board", check_spine.COULD_NOT_RUN, "no board")])
         self.assertTrue((into / "WHAT-THIS-CANNOT-SHOW.md").is_file())
 
     def keep_through_main(self, *argv, requirements=None):
@@ -653,7 +657,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             handed["firmware"] = firmware
             (workdir / "sim").mkdir()
             (workdir / "sim" / "diagram.json").write_text('{"parts": []}')
-            return [check_spine.Stage("build", check_spine.OK, "fine")]
+            return [Stage("build", check_spine.OK, "fine")]
 
         with mock.patch.object(check_spine, "run", a_run_that_simulated), \
                 contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
@@ -733,7 +737,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             if writes:
                 (workdir / "sim").mkdir()
                 (workdir / "sim" / "wokwi.toml").write_text("[wokwi]\n")
-            return [check_spine.Stage("build", check_spine.OK, "fine")]
+            return [Stage("build", check_spine.OK, "fine")]
 
         with mock.patch.object(check_spine, "run", a_run_that_simulated), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
@@ -776,7 +780,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         into.mkdir(); (into / "board.tsx").write_text("// MINE")
         args = argparse.Namespace(json=True, keep=into)
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, self.workdir())
+            check_spine.report([Stage("build", check_spine.OK, "fine")], args, self.workdir())
         kept = json.loads(out.getvalue())["kept"]
         self.assertIn({"file": str(into / "board.tsx"), "did": "left alone", "why": "delete it to have it regenerated"}, kept)
         self.assertIn({"file": str(into / "dist"), "did": "wrote", "why": "this is what every check reads"}, kept)
@@ -789,7 +793,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         blocked = Path(tempfile.mkdtemp()) / "a-file"; blocked.write_text("not a folder")
         args = argparse.Namespace(json=True, keep=blocked)
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, self.workdir())
+            check_spine.report([Stage("build", check_spine.OK, "fine")], args, self.workdir())
         said = json.loads(out.getvalue())
         self.assertEqual((said["status"], said["kept"][0]["did"]), ("ok", "not kept"))
         self.assertIn("not kept", err.getvalue())
@@ -801,7 +805,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         work = self.workdir()
         args = argparse.Namespace(json=False, keep=None)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            check_spine.report([check_spine.Stage("build", check_spine.OK, "fine")], args, work)
+            check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
         self.assertFalse(work.exists())
 
     def test_the_documented_one_command_leaves_the_board_behind(self):
@@ -842,7 +846,7 @@ class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
             raise subprocess.TimeoutExpired(cmd, named.get("timeout"), stderr=b"routing net 3\nrouting net 4\n")
 
         patches = [mock.patch.object(check_spine.subprocess, "run", a_child_that_ran_late),
-                   mock.patch.object(check_spine, "find_toolchain", lambda start: Path("/x/node_modules/.bin/tsci"))]
+                   mock.patch.object(board_engine, "find_toolchain", lambda start: Path("/x/node_modules/.bin/tsci"))]
         if run:
             patches.append(mock.patch.object(check_spine, "run", run))
         with contextlib.ExitStack() as stack:
@@ -868,7 +872,7 @@ class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
 
     def test_the_probe_that_runs_past_its_limit_names_120_seconds(self):
         def a_run_that_probed(requirements, workdir, *rest, **named):
-            check_spine.toolchain_can_build(Path("/x/tsci"), workdir)
+            board_engine.toolchain_can_build(Path("/x/tsci"), workdir)
         said, code, limits = self.main_with(run=a_run_that_probed)
         detail = said["stages"][0]["detail"]
         self.assertIn("`tsci build` did not finish in 120s", detail)
@@ -878,8 +882,8 @@ class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
     def test_the_converter_that_runs_past_its_limit_names_120_seconds(self):
         def a_run_that_converted(requirements, workdir, *rest, **named):
             (workdir / "sim").mkdir()
-            with mock.patch.object(check_spine, "converter_command", lambda project, own: ["/x/convert-wokwi", "--circuit"]):
-                check_spine.convert(None, None, ["--circuit", "c.json"], workdir / "sim", workdir)
+            with mock.patch.object(board_engine, "converter_command", lambda project, own: ["/x/convert-wokwi", "--circuit"]):
+                board_engine.convert(None, None, ["--circuit", "c.json"], workdir / "sim", workdir)
         said, code, limits = self.main_with(run=a_run_that_converted)
         self.assertIn("`convert-wokwi --circuit` did not finish in 120s", said["stages"][0]["detail"])
         self.assertEqual(2, code)
@@ -913,7 +917,7 @@ class FindingTheToolchainTest(unittest.TestCase):
         binary.write_text("#!/bin/sh\n")
         deep = root / "a" / "b"
         deep.mkdir(parents=True)
-        self.assertEqual(check_spine.find_toolchain(deep), binary)
+        self.assertEqual(board_engine.find_toolchain(deep), binary)
 
     def test_no_toolchain_anywhere_is_none_not_a_guess(self):
         # PATH has to be emptied: this machine has a global tsci, so without it the test passes
@@ -923,7 +927,7 @@ class FindingTheToolchainTest(unittest.TestCase):
         original = os.environ.get("PATH", "")
         os.environ["PATH"] = ""
         try:
-            self.assertIsNone(check_spine.find_toolchain(Path(tempfile.mkdtemp())))
+            self.assertIsNone(board_engine.find_toolchain(Path(tempfile.mkdtemp())))
         finally:
             os.environ["PATH"] = original
 
@@ -938,43 +942,43 @@ class ReachingSimulationTest(unittest.TestCase):
     """
 
     def test_a_diagram_with_connections_is_counted(self):
-        self.assertEqual(check_spine.wires_in({"connections": [["a", "b"], ["c", "d"]]}), 2)
+        self.assertEqual(build_service.wires_in({"connections": [["a", "b"], ["c", "d"]]}), 2)
 
     def test_a_diagram_with_no_connections_counts_zero(self):
         # The same failure shape as a board with no copper: every part placed, nothing joined.
         # It is what an unmapped component looks like once the converter has given up on it.
-        self.assertEqual(check_spine.wires_in({"parts": [{"id": "mcu"}], "connections": []}), 0)
+        self.assertEqual(build_service.wires_in({"parts": [{"id": "mcu"}], "connections": []}), 0)
 
     def test_the_serial_monitor_s_wires_are_not_counted_so_an_unwired_board_still_counts_zero(self):
         # P190: the two serial wires are in every S3 diagram; counted, the 0-connections guard could never fire.
         serial = [["mcu:TX", "$serialMonitor:RX", "", []], ["mcu:RX", "$serialMonitor:TX", "", []]]
-        self.assertEqual(check_spine.wires_in({"connections": serial}), 0)
-        self.assertEqual(check_spine.wires_in({"connections": serial + [["mcu:38", "btn:1.l", "", []]]}), 1)
+        self.assertEqual(build_service.wires_in({"connections": serial}), 0)
+        self.assertEqual(build_service.wires_in({"connections": serial + [["mcu:38", "btn:1.l", "", []]]}), 1)
 
     def test_a_diagram_with_no_serial_monitor_is_said_in_the_stage_line(self):
         # P190: a board part with no pins named TX and RX gets no serial wires, so a scenario hears nothing.
-        self.assertFalse(check_spine.serial_wired({"connections": [["mcu:38", "btn:1.l", "", []]]}))
-        self.assertTrue(check_spine.serial_wired({"connections": [["mcu:TX", "$serialMonitor:RX", "", []]]}))
-        said = check_spine.simulation_detail(3, {}, 0, [], serial=False)
+        self.assertFalse(build_service.serial_wired({"connections": [["mcu:38", "btn:1.l", "", []]]}))
+        self.assertTrue(build_service.serial_wired({"connections": [["mcu:TX", "$serialMonitor:RX", "", []]]}))
+        said = build_service.simulation_detail(3, {}, 0, [], serial=False)
         self.assertIn("no serial monitor is wired", said)
-        self.assertNotIn("serial", check_spine.simulation_detail(3, {}, 0, [], serial=True))
+        self.assertNotIn("serial", build_service.simulation_detail(3, {}, 0, [], serial=True))
 
     def test_serial_heard_is_wired_or_the_boards_record_says_true(self):
         # P468: a record's `serial_without_wires` counts only as the value true, never "yes", 1 or a missing record
         bare = {"connections": []}
         wired = {"connections": [["mcu:TX", "$serialMonitor:RX", "", []]]}
-        self.assertTrue(check_spine.serial_heard(bare, {"serial_without_wires": True}))
-        self.assertFalse(check_spine.serial_heard(bare, {}))
-        self.assertFalse(check_spine.serial_heard(bare, None))
-        self.assertFalse(check_spine.serial_heard(bare, {"serial_without_wires": "yes"}))
-        self.assertTrue(check_spine.serial_heard(wired, {}))
+        self.assertTrue(build_service.serial_heard(bare, {"serial_without_wires": True}))
+        self.assertFalse(build_service.serial_heard(bare, {}))
+        self.assertFalse(build_service.serial_heard(bare, None))
+        self.assertFalse(build_service.serial_heard(bare, {"serial_without_wires": "yes"}))
+        self.assertTrue(build_service.serial_heard(wired, {}))
 
     def test_the_shipped_xiao_and_firebeetle_records_say_their_serial_needs_no_wires(self):
         self.assertIs(boards.load(ROOT, "xiao-esp32-c6")["serial_without_wires"], True)
         self.assertIs(boards.load(ROOT, "firebeetle2-esp32s3")["serial_without_wires"], True)
 
     def test_a_diagram_missing_the_key_entirely_counts_zero_rather_than_raising(self):
-        self.assertEqual(check_spine.wires_in({}), 0)
+        self.assertEqual(build_service.wires_in({}), 0)
 
     def test_the_converter_is_found_from_a_directory_below_it(self):
         import tempfile
@@ -987,7 +991,7 @@ class ReachingSimulationTest(unittest.TestCase):
         # Both sides resolved: on macOS /var is a symlink to /private/var, so the finder's own
         # `.resolve()` — which is right, it normalises what it returns — would otherwise make
         # this fail on a path difference that is not one.
-        self.assertEqual(check_spine.find_converter(deep), converter.resolve())
+        self.assertEqual(board_engine.find_converter(deep), converter.resolve())
 
     def test_a_directory_with_nothing_beside_it_gets_the_plugins_own(self):
         # THE CONTRACT CHANGED WITH P32a, and again with P82: a project with no converter of its own
@@ -995,9 +999,9 @@ class ReachingSimulationTest(unittest.TestCase):
         # TypeScript source (which needs node_modules an installed plugin lacks).
         import tempfile
         import tools
-        self.assertIsNone(check_spine.find_converter(Path(tempfile.mkdtemp())))
+        self.assertIsNone(board_engine.find_converter(Path(tempfile.mkdtemp())))
         with mock.patch.object(tools, "PERSONAL", Path(tempfile.mkdtemp()) / "absent.json"):
-            command = check_spine.converter_command(None, None)
+            command = board_engine.converter_command(None, None)
         self.assertTrue(command[-1].endswith("dist/converter.mjs"), command)
 
     def test_the_plugins_converter_is_really_there(self):
@@ -1013,14 +1017,14 @@ class ReachingSimulationTest(unittest.TestCase):
         mine = root / "tools" / "circuit-to-wokwi"
         mine.mkdir(parents=True)
         (mine / "cli.ts").write_text("// mine\n")
-        self.assertEqual(check_spine.find_converter(root), (mine / "cli.ts").resolve())
+        self.assertEqual(board_engine.find_converter(root), (mine / "cli.ts").resolve())
 
     def test_no_converter_at_all_is_could_not_run_not_a_guess(self):
         from unittest import mock
         import tempfile
         import tools
         with mock.patch.object(tools, "PLUGIN", Path("/nowhere")):
-            stage = check_spine.converter_stage_problem(Path(tempfile.mkdtemp()))
+            stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()))
         self.assertEqual(stage.status, check_spine.COULD_NOT_RUN)
         self.assertIn("circuit-to-wokwi", stage.detail)
 
@@ -1144,7 +1148,7 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
         for name in self.EARLIER_BUILD:
             (project / name).write_text("from an earlier build")
         (project / "firmware").mkdir()
-        (project / "firmware" / "pins.py").write_text(check_spine.pin_assigner.PIN_MODULE_HEADER + "\n")
+        (project / "firmware" / "pins.py").write_text(kept_files.pin_assigner.PIN_MODULE_HEADER + "\n")
         if requirements_text is not None:
             (project / "requirements.json").write_text(requirements_text)
         return project
@@ -1226,7 +1230,7 @@ class TheInputIsReadBeforeAnythingRunsTest(unittest.TestCase):
              "body_mm": {"width": 5, "height": 5, "verified": True, "source": "t"}}))
         path = root / "car.requirements.json"
         path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["probe"]}))
-        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
+        with mock.patch.object(board_engine, "find_toolchain", return_value=None):
             code, out = self._main([str(path)], tempfile.mkdtemp())
         self.assertNotIn("no part called", out)
         self.assertIn("[ok  ] schematic", out)
@@ -1278,7 +1282,7 @@ class ABrokenTraceIsNamedTest(unittest.TestCase):
 
 # --- MVP --- (P512, #708) Done when: an SPI and an I2C part build with 0 errors on both shipped boards
 @slow("four tscircuit builds, about 5 s each, 19.0 s on 2026-11-02")
-@unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+@unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")
 class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
     """
     P512: the emitter traced `.Mcu > .MOSI` where the pad is MO (FireBeetle 2) and `.Mcu > .SDA` where it is D4 (XIAO
@@ -1331,7 +1335,7 @@ class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):
         binary = root / "node_modules" / ".bin" / "tsci"
         binary.parent.mkdir(parents=True)
         binary.write_text("#!/bin/sh\n")
-        self.assertEqual(check_spine.modules_for(binary), root / "node_modules")
+        self.assertEqual(board_engine.modules_for(binary), root / "node_modules")
 
     def test_a_global_tsci_links_nothing(self):
         # ~/.nvm/versions/node/v18/bin/tsci: its parent.parent is the prefix, not a node_modules.
@@ -1339,7 +1343,7 @@ class OnlyAProjectsOwnModulesAreLinkedTest(unittest.TestCase):
         binary = prefix / "bin" / "tsci"
         binary.parent.mkdir(parents=True)
         binary.write_text("#!/bin/sh\n")
-        self.assertIsNone(check_spine.modules_for(binary))
+        self.assertIsNone(board_engine.modules_for(binary))
 
 
 class AToolchainFaultIsNotADesignFaultTest(unittest.TestCase):
@@ -1359,7 +1363,7 @@ class AToolchainFaultIsNotADesignFaultTest(unittest.TestCase):
         # `main` writes the requirements into the working directory before `run`; this drives
         # `run` directly, so it does the same.
         (workdir / "requirements.json").write_text(json.dumps(check_spine.REFERENCE))
-        stages = check_spine.run(dict(check_spine.REFERENCE), workdir, toolchain=binary)
+        stages = build_service.run(dict(check_spine.REFERENCE), workdir, toolchain=binary)
         build = next((stage for stage in stages if stage.name == "build"), None)
         if build is None:
             self.fail("the chain stopped before the build stage: %s" % stages)
@@ -1372,7 +1376,7 @@ class AToolchainFaultIsNotADesignFaultTest(unittest.TestCase):
         self.assertIn("0.0.0-fake", build.detail)
         self.assertIn("toolchain, not the design", build.detail)
         self.assertIn("Cannot find package", build.detail)
-        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+        self.assertEqual(build_service.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
 
     def test_a_tool_that_builds_a_trivial_board_but_not_this_one_is_a_problem(self):
         # The control: same failure on the design, but the preflight passes, so the design is
@@ -1381,20 +1385,20 @@ class AToolchainFaultIsNotADesignFaultTest(unittest.TestCase):
         self.assertEqual(build.status, check_spine.PROBLEMS, build.detail)
         self.assertIn("no circuit.json was produced", build.detail)
         self.assertIn("does build a trivial board", build.detail)
-        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_PROBLEMS)
+        self.assertEqual(build_service.verdict(stages), check_spine.EXIT_PROBLEMS)
 
     def test_the_preflight_reports_what_the_tool_said(self):
         root = Path(tempfile.mkdtemp())
-        can, words = check_spine.toolchain_can_build(fake_tsci(root, "false"), root)
+        can, words = board_engine.toolchain_can_build(fake_tsci(root, "false"), root)
         self.assertFalse(can)
         self.assertIn("react", words)
-        can, _ = check_spine.toolchain_can_build(fake_tsci(root, "true"), root)
+        can, _ = board_engine.toolchain_can_build(fake_tsci(root, "true"), root)
         self.assertTrue(can)
 
     def test_the_version_is_asked_of_the_tool_and_never_raises(self):
         root = Path(tempfile.mkdtemp())
-        self.assertEqual(check_spine.tsci_version(fake_tsci(root, "true")), "0.0.0-fake")
-        self.assertEqual(check_spine.tsci_version(root / "no-such-tsci"), "unknown version")
+        self.assertEqual(board_engine.tsci_version(fake_tsci(root, "true")), "0.0.0-fake")
+        self.assertEqual(board_engine.tsci_version(root / "no-such-tsci"), "unknown version")
 
 
 class NothingToBuildIsNotAPassTest(unittest.TestCase):
@@ -1404,11 +1408,11 @@ class NothingToBuildIsNotAPassTest(unittest.TestCase):
         workdir = Path(tempfile.mkdtemp())
         requirements = {"board": "firebeetle2-esp32s3", "parts": []}
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        stages = check_spine.run(requirements, workdir, toolchain=Path("/nonexistent/tsci"))
+        stages = build_service.run(requirements, workdir, toolchain=Path("/nonexistent/tsci"))
         self.assertEqual([s.name for s in stages], ["board", "parts"])
         self.assertEqual(stages[-1].status, check_spine.COULD_NOT_RUN)
         self.assertIn("nothing to build", stages[-1].detail)
-        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+        self.assertEqual(build_service.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
         self.assertIn('"board_only": true', stages[-1].detail)
 
 
@@ -1423,9 +1427,9 @@ class TheTabbedPageTest(unittest.TestCase):
                      {"file": str(self.picture), "did": "wrote", "why": "a picture"}]
         self.page = self.project / "page.html"
 
-    def keep(self, stages=(check_spine.Stage("build", check_spine.OK),), exporter=None):
+    def keep(self, stages=(Stage("build", check_spine.OK),), exporter=None):
         self.exporter = exporter or FakeTscircuitExport()
-        return check_spine.keep_tabbed_page(self.project, list(stages), self.kept, self.exporter)
+        return kept_files.keep_tabbed_page(self.project, list(stages), self.kept, self.exporter)
 
     def test_a_build_that_finished_writes_three_tabs_from_the_kept_circuit(self):
         entry = self.keep()
@@ -1442,14 +1446,14 @@ class TheTabbedPageTest(unittest.TestCase):
 
     def test_a_failed_build_removes_an_earlier_page(self):
         self.page.write_text("old")
-        entry = self.keep(stages=[check_spine.Stage("build", check_spine.PROBLEMS)])
+        entry = self.keep(stages=[Stage("build", check_spine.PROBLEMS)])
         self.assertEqual(entry["did"], "removed")
         self.assertIn("the build did not finish in this run", entry["why"])
         self.assertFalse(self.page.exists())
 
     def test_a_board_only_build_removes_an_earlier_page(self):
         self.page.write_text("old")
-        entry = self.keep(stages=[check_spine.Stage("build", check_spine.SKIPPED)])
+        entry = self.keep(stages=[Stage("build", check_spine.SKIPPED)])
         self.assertEqual((entry["did"], entry["line"].split(";")[0]), ("removed", "no page: board only: nothing to draw"))
 
     def test_a_dist_that_was_not_kept_removes_an_earlier_page(self):
@@ -1483,7 +1487,7 @@ class TheBoardAloneTest(unittest.TestCase):
         workdir = Path(tempfile.mkdtemp())
         requirements = dict({"board": "xiao-esp32-c6", "parts": [], "board_only": True}, **extra)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        return workdir, check_spine.run(requirements, workdir, toolchain=Path("/nonexistent/tsci"))
+        return workdir, build_service.run(requirements, workdir, toolchain=Path("/nonexistent/tsci"))
 
     def test_the_board_stages_are_skipped_and_the_simulation_holds_the_board(self):
         workdir, stages = self.run_alone()
@@ -1493,17 +1497,17 @@ class TheBoardAloneTest(unittest.TestCase):
         diagram = json.loads((workdir / "sim" / "diagram.json").read_text())
         self.assertEqual([part["type"] for part in diagram["parts"]], ["board-xiao-esp32-c6"])
         self.assertTrue((workdir / "sim" / "wokwi.toml").is_file())
-        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_OK)
+        self.assertEqual(build_service.verdict(stages), check_spine.EXIT_OK)
 
     # --- MVP ---
     def test_the_board_alone_names_the_button_no_scenario_can_press(self):
         from test_boards import kept_definition_board
         workdir = Path(tempfile.mkdtemp())
-        stages = check_spine.board_alone(kept_definition_board(), workdir)
+        stages = build_service.board_alone(kept_definition_board(), workdir)
         self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.OK))
         self.assertIn("ONBOARD_BUTTON (GPIO9): the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9", stages[-1].detail)
         self.assertIn("ONBOARD_BUTTON (GPIO9)", (workdir / "sim" / "WHAT-THIS-CANNOT-SHOW.md").read_text())
-        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_OK)
+        self.assertEqual(build_service.verdict(stages), check_spine.EXIT_OK)
 
     def test_the_board_alone_warns_of_no_serial_monitor_unless_the_record_says_it_needs_no_wires(self):
         # P468: the XIAO's USB serial needs no wires, so only a record without the fact keeps the warning
@@ -1512,7 +1516,7 @@ class TheBoardAloneTest(unittest.TestCase):
             board.pop("serial_without_wires", None)
             if fact:
                 board["serial_without_wires"] = fact
-            stages = check_spine.board_alone(board, Path(tempfile.mkdtemp()))
+            stages = build_service.board_alone(board, Path(tempfile.mkdtemp()))
             self.assertEqual("no serial monitor is wired in the diagram" in stages[-1].detail, warned)
 
     def test_a_definition_not_checked_is_said_in_json_and_still_exits_0(self):
@@ -1604,34 +1608,34 @@ class TheBoardAloneTest(unittest.TestCase):
 
     def test_the_verdict_says_the_board_alone_ran(self):
         _, stages = self.run_alone()
-        said = check_spine.render(stages, check_spine.verdict(stages))
+        said = check_spine.render(stages, build_service.verdict(stages))
         self.assertIn("[--  ] build", said)
         self.assertIn("the chain runs end to end for the board alone", said)
 
     def test_a_board_wokwi_cannot_show_is_could_not_run(self):
         board = {"name": "No Wokwi Board"}
-        stages = check_spine.board_alone(board, Path(tempfile.mkdtemp()))
+        stages = build_service.board_alone(board, Path(tempfile.mkdtemp()))
         self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.COULD_NOT_RUN))
 
     def test_the_breadboard_line_says_there_is_nothing_to_wire(self):
         workdir, stages = self.run_alone()
-        kept = check_spine.keep_breadboard(workdir / "requirements.json", workdir, stages)
+        kept = kept_files.keep_breadboard(workdir / "requirements.json", workdir, stages)
         self.assertEqual([entry["line"] for entry in kept], ["no breadboard sheet: board only: nothing to wire",
                                                              "no drawn breadboard: board only: nothing to wire",
                                                              "no breadboard picture: board only: nothing to wire"])
 
     def test_the_store_is_never_told_a_board_alone_was_built(self):
         _, stages = self.run_alone()
-        self.assertFalse(check_spine.vouches_for_a_build(stages))
-        self.assertTrue(check_spine.vouches_for_a_build([check_spine.Stage("build", check_spine.OK)]))
+        self.assertFalse(build_service.vouches_for_a_build(stages))
+        self.assertTrue(build_service.vouches_for_a_build([Stage("build", check_spine.OK)]))
 
     def test_an_earlier_build_s_dist_is_removed_and_said(self):
         workdir, stages = self.run_alone()
         (workdir / "dist" / "board").mkdir(parents=True)
-        kept = check_spine.drop_an_older_build(workdir, stages)
+        kept = kept_files.drop_an_older_build(workdir, stages)
         self.assertEqual([entry["did"] for entry in kept], ["removed"])
         self.assertFalse((workdir / "dist").exists())
-        self.assertEqual(check_spine.drop_an_older_build(workdir, [check_spine.Stage("build", check_spine.OK)]), [])
+        self.assertEqual(kept_files.drop_an_older_build(workdir, [Stage("build", check_spine.OK)]), [])
 
     def test_a_string_true_is_not_board_only(self):
         _, stages = self.run_alone(board_only="true")
@@ -1672,9 +1676,9 @@ class AnEmitBoardCrashIsNotADesignFaultTest(unittest.TestCase):
                     return real_run(command, *args, **kwargs)
 
                 with mock.patch.object(subprocess, "run", side_effect=emit_board_crashes):
-                    stages = check_spine.run(requirements, workdir, from_library=True)
+                    stages = build_service.run(requirements, workdir, from_library=True)
                 self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].detail), ("schematic", check_spine.COULD_NOT_RUN, said))
-                self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+                self.assertEqual(build_service.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
 
     def test_a_refusal_of_the_generator_is_could_not_run_in_its_own_words(self):
         # the control: exit 2 is emit_board refusing the input, and its sentence is the stage's detail, whole
@@ -1686,7 +1690,7 @@ class AnEmitBoardCrashIsNotADesignFaultTest(unittest.TestCase):
         from board_library import library_without
         (workdir / "boards").mkdir()
         shutil.copy(library_without("power.io_volts") / "xiao-esp32-c6.json", workdir / "boards")
-        stages = check_spine.run(requirements, workdir, project=workdir)
+        stages = build_service.run(requirements, workdir, project=workdir)
         self.assertEqual((stages[-1].name, stages[-1].status), ("schematic", check_spine.COULD_NOT_RUN))
         self.assertTrue(stages[-1].detail.startswith("cannot emit a board: led-red-5mm asks for 5 mA"), stages[-1].detail)
 
@@ -1724,7 +1728,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         """`run` as `main` calls it: the requirements file in the work folder, the project's own board."""
         workdir = Path(tempfile.mkdtemp())
         (workdir / "requirements.json").write_text(json.dumps(wanted))
-        return check_spine.run(wanted, workdir, project=project)
+        return build_service.run(wanted, workdir, project=project)
 
     def test_no_header_stops_at_the_footprint_stage_and_says_what_still_comes(self):
         project, wanted = self.project_without("physical.header")
@@ -1733,7 +1737,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         self.assertEqual(stages[-1].detail,
                          "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of them "
                          "can be derived from the rest:\n  physical.header (no header geometry at all)\n" + self.HINT)
-        self.assertEqual(check_spine.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
+        self.assertEqual(build_service.verdict(stages), check_spine.EXIT_COULD_NOT_RUN)
 
     def test_a_header_with_no_order_and_no_width_names_each_gap(self):
         project, wanted = self.project_without("physical.header_order", "physical.width_mm")
@@ -1789,8 +1793,8 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         """`run` with the board engine missing, so it stops after the footprint stage: (the work folder, its stages)."""
         workdir = Path(tempfile.mkdtemp())
         (workdir / "requirements.json").write_text(json.dumps(wanted))
-        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
-            return workdir, check_spine.run(wanted, workdir, project=project)
+        with mock.patch.object(board_engine, "find_toolchain", return_value=None):
+            return workdir, build_service.run(wanted, workdir, project=project)
 
     # --- MVP --- (P432, OC2)
     def test_the_spine_writes_the_footprint_without_calling_the_footprint_cli(self):
@@ -1807,7 +1811,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         (project / ".spark" / "rules.json").write_text(json.dumps({"fabrication": {"drill_step_mm": 0.3}}))
         workdir, stages = self.run_to_the_footprint(project, wanted)
         written = (workdir / [stage for stage in stages if stage.name == "footprint"][0].detail).read_text()
-        self.assertNotEqual(written, check_spine.footprint_emitter.render(boards.load(project, "xiao-esp32-c6"), None))
+        self.assertNotEqual(written, build_service.footprint_emitter.render(boards.load(project, "xiao-esp32-c6"), None))
         with contextlib.redirect_stdout(io.StringIO()) as printed:
             code = emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(project)])
         self.assertEqual(code, 0)
@@ -1907,7 +1911,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
 
     def test_a_crash_in_drawing_the_footprint_is_a_stage_and_keeps_the_stages_before_it(self):
         project, wanted = self.project_without("physical.header.drill_mm")
-        with mock.patch.object(check_spine.footprint_emitter, "render", side_effect=ZeroDivisionError("a fault of its own")):
+        with mock.patch.object(build_service.footprint_emitter, "render", side_effect=ZeroDivisionError("a fault of its own")):
             workdir, stages = self.run_to_the_footprint(project, wanted)
         self.assertEqual([(s.name, s.status) for s in stages],
                          [("board", "ok"), ("schematic", "ok"), ("footprint", check_spine.COULD_NOT_RUN)])
@@ -1923,7 +1927,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
     # --- MVP --- (P430, #569) a crash's text is stored raw and guarded where it is printed
     def test_a_crash_in_drawing_the_footprint_keeps_its_text_raw_and_the_screen_shows_it_guarded(self):
         project, wanted = self.project_without("physical.header.drill_mm")
-        with mock.patch.object(check_spine.footprint_emitter, "render", side_effect=RuntimeError("a\u202e\x1bb")):
+        with mock.patch.object(build_service.footprint_emitter, "render", side_effect=RuntimeError("a\u202e\x1bb")):
             _, stages = self.run_to_the_footprint(project, wanted)
         self.assertEqual(stages[-1].detail, "emit_footprint.py crashed: RuntimeError: a\u202e\x1bb")
         self.assertEqual(self.said_by_report(stages, True)["stages"][-1]["detail"], stages[-1].detail)
@@ -1931,7 +1935,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
 
     def test_a_crash_in_reading_the_input_keeps_its_text_raw_and_the_screen_shows_it_guarded(self):
         project, wanted = self.project_without("physical.header.drill_mm")
-        with mock.patch.object(check_spine.board_emitter, "read_inputs", side_effect=ValueError("a\u202e\x1bb")):
+        with mock.patch.object(build_service.board_emitter, "read_inputs", side_effect=ValueError("a\u202e\x1bb")):
             stages = self.run_spine(project, wanted)
         self.assertEqual(stages[-1].detail, "emit_board.py crashed: ValueError: a\u202e\x1bb")
         self.assertEqual(self.said_by_report(stages, True)["stages"][-1]["detail"], stages[-1].detail)
@@ -1941,7 +1945,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         # The decided residual (P430): the text keeps a message's own newlines, so a second line can look like a stage.
         # Only a --json reader gets one detail, whole.
         project, wanted = self.project_without("physical.header.drill_mm")
-        with mock.patch.object(check_spine.footprint_emitter, "render", side_effect=RuntimeError("a\nb")):
+        with mock.patch.object(build_service.footprint_emitter, "render", side_effect=RuntimeError("a\nb")):
             _, stages = self.run_to_the_footprint(project, wanted)
         self.assertIn("crashed: RuntimeError: a\nb\n", self.said_by_report(stages, False))
         self.assertEqual(self.said_by_report(stages, True)["stages"][-1]["detail"], "emit_footprint.py crashed: RuntimeError: a\nb")
@@ -1969,12 +1973,12 @@ class AConverterLimitIsNotADesignFaultTest(unittest.TestCase):
         # and inlet; that read as `!! simulation … the chain is broken` (audit B11).
         said = ("3 problem(s) converting the board:\n  - no Wokwi part is mapped to this component. "
                 "Add it to lib/mapping.ts, or add a skip rule (component Sg90Servo)")
-        self.assertTrue(check_spine.simulation_could_not_look(said))
+        self.assertTrue(board_engine.simulation_could_not_look(said))
 
     def test_any_other_converter_failure_is_still_a_problem(self):
-        self.assertFalse(check_spine.simulation_could_not_look("TypeError: cannot read x of undefined"))
-        self.assertFalse(check_spine.simulation_could_not_look(""))
-        self.assertFalse(check_spine.simulation_could_not_look(None))
+        self.assertFalse(board_engine.simulation_could_not_look("TypeError: cannot read x of undefined"))
+        self.assertFalse(board_engine.simulation_could_not_look(""))
+        self.assertFalse(board_engine.simulation_could_not_look(None))
 
 
 class AFileInNoProjectIsSaidToBeTest(unittest.TestCase):
@@ -1986,8 +1990,8 @@ class AFileInNoProjectIsSaidToBeTest(unittest.TestCase):
         workdir = Path(tempfile.mkdtemp())
         requirements = dict(check_spine.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
-            stages = check_spine.run(requirements, workdir, from_library=True)
+        with mock.patch.object(board_engine, "find_toolchain", return_value=None):
+            stages = build_service.run(requirements, workdir, from_library=True)
         self.assertIn("plugin's library", stages[0].detail)
         self.assertEqual(stages[0].status, check_spine.OK)
         self.assertNotIn("schematic-notes", [s.name for s in stages])
@@ -2003,9 +2007,9 @@ class AMissingBoardEngineSaysWhatTheToolsListSaysTest(unittest.TestCase):
         requirements = dict(check_spine.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         said = "tscircuit needs bun: bun (bun) is not installed — install: npm install -g bun"
-        with mock.patch.object(check_spine, "find_toolchain", return_value=None), \
+        with mock.patch.object(board_engine, "find_toolchain", return_value=None), \
                 mock.patch.object(tools, "find", side_effect=tools.ToolProblem(said)):
-            stages = check_spine.run(requirements, workdir, from_library=True)
+            stages = build_service.run(requirements, workdir, from_library=True)
         build = [stage for stage in stages if stage.name == "build"][0]
         self.assertEqual(build.status, check_spine.COULD_NOT_RUN)
         self.assertIn("npm install -g bun", build.detail)
@@ -2026,7 +2030,7 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
         requirements = dict(check_spine.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         with mock.patch.object(tools, "PERSONAL", self.broken_home() / ".local" / "share" / "spark" / "tools.json"):
-            stages = check_spine.run(requirements, workdir, from_library=True)
+            stages = build_service.run(requirements, workdir, from_library=True)
         build = [stage for stage in stages if stage.name == "build"][0]
         self.assertEqual(build.status, check_spine.COULD_NOT_RUN)
         self.assertIn("is not JSON", build.detail)
@@ -2038,8 +2042,8 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
         workdir = Path(tempfile.mkdtemp())
         requirements = dict(check_spine.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
-            stages = check_spine.run(requirements, workdir, project=project, from_library=True)
+        with mock.patch.object(board_engine, "find_toolchain", return_value=None):
+            stages = build_service.run(requirements, workdir, project=project, from_library=True)
         build = [stage for stage in stages if stage.name == "build"][0]
         self.assertIn(".spark/tools.json is not JSON", build.detail)
 
@@ -2060,15 +2064,15 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
     def test_the_plugin_s_own_converter_source_is_never_what_runs(self):
         # A requirements file in no project resolves to the plugin, whose cli.ts needs node_modules an
         # installed plugin does not have; the bundle is what ships (B10).
-        self.assertIsNone(check_spine.find_converter(ROOT / "scripts"))
-        self.assertIsNone(check_spine.find_converter(ROOT))
+        self.assertIsNone(board_engine.find_converter(ROOT / "scripts"))
+        self.assertIsNone(board_engine.find_converter(ROOT))
 
     def test_a_project_s_own_converter_runs_with_the_ts_runtime_from_the_list(self):
         import tools
         own = Path(tempfile.mkdtemp()) / "cli.ts"
         bun = tools.Tool("bun", "ts-runtime", {"kind": "path"}, ["/opt/bun"])
         with mock.patch.object(tools, "find", return_value=bun) as asked:
-            self.assertEqual(check_spine.converter_command(None, own), ["/opt/bun", "run", str(own)])
+            self.assertEqual(board_engine.converter_command(None, own), ["/opt/bun", "run", str(own)])
         self.assertEqual(asked.call_args[0][0], "ts-runtime")
 
     def test_the_converter_the_list_names_is_the_one_that_runs(self):
@@ -2077,9 +2081,9 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
         node = tools.Tool("node", "js-runtime", {"kind": "path"}, ["/opt/node"])
         bundled = tools.Tool("circuit-to-wokwi", "diagram-converter", {"kind": "bundled"}, ["/plugin/converter.mjs"])
         with mock.patch.object(tools, "find", side_effect=lambda role, *rest: swapped if role == "diagram-converter" else node):
-            self.assertEqual(check_spine.converter_command(None, None), ["/opt/my-conv"])
+            self.assertEqual(board_engine.converter_command(None, None), ["/opt/my-conv"])
         with mock.patch.object(tools, "find", side_effect=lambda role, *rest: bundled if role == "diagram-converter" else node):
-            self.assertEqual(check_spine.converter_command(None, None), ["/opt/node", "/plugin/converter.mjs"])
+            self.assertEqual(board_engine.converter_command(None, None), ["/opt/node", "/plugin/converter.mjs"])
 
 class TheConverterShipsAsOneFileTest(unittest.TestCase):
     """B10 / P82: an installed spark has no node_modules in tools/circuit-to-wokwi, so the converter ships built."""
@@ -2109,7 +2113,7 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
     def test_no_node_means_could_not_run_naming_the_install(self):
         import tools
         with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("js-runtime (node) is not installed — install: brew install node")):
-            stage = check_spine.converter_stage_problem(Path(tempfile.mkdtemp()))
+            stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()))
         self.assertEqual(stage.status, check_spine.COULD_NOT_RUN)
         self.assertIn("brew install node", stage.detail)
 
@@ -2122,7 +2126,7 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
                 raise tools.ToolProblem("js-runtime (node) is not installed — install: brew install node")
             return real(name, *rest)
         with mock.patch.object(tools, "find", side_effect=no_node):
-            stage = check_spine.converter_stage_problem(Path(tempfile.mkdtemp()))
+            stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()))
         self.assertIsNotNone(stage, "the bundle is here and Node is not: the converter cannot run")
         self.assertIn("brew install node", stage.detail)
 
@@ -2304,9 +2308,9 @@ class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):
         return elements
 
     def test_a_terminal_across_a_pair_is_asked_only_whether_an_end_dangles(self):
-        self.assertEqual(check_spine.islands_in(self.circuit()), ["SpeakerTerminal reaches no ground"])
-        self.assertEqual(check_spine.islands_in(self.circuit(), across=("SpeakerTerminal",)), [])
-        self.assertEqual(check_spine.islands_in(self.circuit(both_ends=False), across=("SpeakerTerminal",)),
+        self.assertEqual(build_service.islands_in(self.circuit()), ["SpeakerTerminal reaches no ground"])
+        self.assertEqual(build_service.islands_in(self.circuit(), across=("SpeakerTerminal",)), [])
+        self.assertEqual(build_service.islands_in(self.circuit(both_ends=False), across=("SpeakerTerminal",)),
                          ["SpeakerTerminal.SPK_N (a terminal connected to nothing)"])
 
     def test_the_build_stage_hands_the_loads_across_a_pair_to_the_island_check(self):
@@ -2315,8 +2319,8 @@ class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):
         workdir.mkdir()
         requirements = {"board": "firebeetle2-esp32s3", "parts": ["max98357a-dfr0954", "speaker-terminal"]}
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        with mock.patch.object(check_spine, "islands_in", return_value=[]) as islands:
-            check_spine.run(requirements, workdir, toolchain=fake_tsci(root, "true"), from_library=True)
+        with mock.patch.object(build_service, "islands_in", return_value=[]) as islands:
+            build_service.run(requirements, workdir, toolchain=fake_tsci(root, "true"), from_library=True)
         self.assertEqual(islands.call_args.kwargs["across"], ["SpeakerTerminal"])
 
 
@@ -2437,7 +2441,7 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
             check_spine.main([str(self.FIXTURE / "requirements.json"), "--keep", str(into)])
         return out.getvalue()
 
-    @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+    @unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")
     def test_a_second_build_keeps_a_moved_part_a_hand_added_part_and_its_wire(self):
         into = Path(tempfile.mkdtemp()) / "project"
         first = self.build(into)
@@ -2456,7 +2460,7 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         self.assertIn("kept from your diagram: ", second)
         self.assertIn("hand-added: mine", second)
 
-    @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+    @unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")
     def test_a_hand_added_led_passes_and_an_unwired_one_is_a_warning(self):
         # P497: the linter knows wokwi-led's attributes, not the handAdded mark, and warns on a part in no wire
         into = Path(tempfile.mkdtemp()) / "project"
@@ -2475,7 +2479,7 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         self.assertNotIn("wired was added by hand and has no wire yet", second)
         self.assertNotIn("no diagram was produced", second)
 
-    @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+    @unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")
     def test_a_failing_rebuild_prints_no_hand_added_warning(self):
         # P497: a blocking problem (a misspelt attribute) beside an unwired hand-added part: the build stops and warns nothing
         into = Path(tempfile.mkdtemp()) / "project"
@@ -2488,7 +2492,7 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         self.assertIn("colr", second)
         self.assertNotIn("was added by hand and has no wire yet", second)
 
-    @unittest.skipUnless(test_converter.node() and check_spine.find_toolchain(ROOT), "needs the board engine and Node")
+    @unittest.skipUnless(test_converter.node() and board_engine.find_toolchain(ROOT), "needs the board engine and Node")
     def test_a_full_build_on_a_board_heard_without_wires_gives_no_serial_warning(self):
         # P468: the XIAO's Wokwi part has no TX and RX, so its diagram gets no $serialMonitor wires, and its record says a
         # run heard it without them
@@ -2511,7 +2515,7 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         real = subprocess.run
         self.addCleanup(setattr, check_spine.subprocess, "run", real)
         check_spine.subprocess.run = lambda command, *rest, **named: broken if "--circuit" in command else real(command, *rest, **named)
-        stages = check_spine.run(requirements, workdir, toolchain=check_spine.find_toolchain(ROOT), project=ROOT)
+        stages = build_service.run(requirements, workdir, toolchain=board_engine.find_toolchain(ROOT), project=ROOT)
         self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.PROBLEMS))
         self.assertIn("no diagram was produced", stages[-1].detail)
 
@@ -2556,18 +2560,18 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
                                       ("parts", "board_only_with_parts")),
                                      ({"board": "firebeetle2-esp32s3"}, ("parts", "no_parts")),
                                      ({"board": "firebeetle2-esp32s3", "parts": ["no-such-part"]}, ("parts", "part_unusable"))):
-            last = check_spine.run(requirements, workdir)[-1]
+            last = build_service.run(requirements, workdir)[-1]
             self.assertEqual((last.name, last.code), wanted, requirements)
-        self.assertIsNone(check_spine.run({"board": "firebeetle2-esp32s3"}, workdir)[0].code)  # the board stage, ok
+        self.assertIsNone(build_service.run({"board": "firebeetle2-esp32s3"}, workdir)[0].code)  # the board stage, ok
 
     def test_a_sheet_not_written_carries_its_code_into_the_json(self):
         project = Path(tempfile.mkdtemp())
         (project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": []}))
-        built = [check_spine.Stage("build", check_spine.OK)]
-        entry = check_spine.keep_breadboard(project / "requirements.json", project, built)[0]
+        built = [Stage("build", check_spine.OK)]
+        entry = kept_files.keep_breadboard(project / "requirements.json", project, built)[0]
         self.assertEqual((entry["did"], entry["code"]), ("not written", "file_unusable"))  # no dist/board to record in
         (project / "dist" / "board").mkdir(parents=True)
-        entry = check_spine.keep_breadboard(project / "requirements.json", project, built)[0]
+        entry = kept_files.keep_breadboard(project / "requirements.json", project, built)[0]
         self.assertEqual((entry["did"], entry["code"]), ("not written", "not_built"))
         self.assertTrue(entry["line"].startswith("no breadboard sheet: nothing is built at "), entry["line"])
 # --- end MVP ---

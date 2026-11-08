@@ -24,7 +24,7 @@
   "replace": "    return sorted(said)"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "the stage stops printing what the simulation cannot show",
   "find": "        detail += \"\\n           what it cannot show (%d):\" % len(limits)",
   "replace": "        detail += \"\""

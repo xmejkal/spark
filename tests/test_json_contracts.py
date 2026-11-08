@@ -38,6 +38,7 @@ import check_all  # noqa: E402
 import check_footprints  # noqa: E402
 import check_physics  # noqa: E402
 import check_spine  # noqa: E402
+from spark.build import board_engine  # noqa: E402
 import board_codes  # noqa: E402
 from spark.build import build_codes  # noqa: E402
 from spark.checks import check_codes  # noqa: E402
@@ -224,7 +225,7 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
     def test_check_spine(self):
         # Says `check`, not `tool`. The toolchain is withheld so the chain stops at `build`
         # without needing tscircuit, which the suite must never depend on.
-        with mock.patch.object(check_spine, "find_toolchain", return_value=None):
+        with mock.patch.object(board_engine, "find_toolchain", return_value=None):
             self._check("check_spine", lambda: check_spine.main([self.requirements, "--json"]),
                         ["check", "stages", "status"])
 

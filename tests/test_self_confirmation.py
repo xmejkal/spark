@@ -76,7 +76,7 @@ MAY_READ = {
     "onboard_parts.ONBOARD_PARTS": "the table of roles spark wires (P484), checked against the roles a scenario reaches",
     "check.CHECKS": STRUCTURE, "boards.LIBRARY": STRUCTURE, "parts.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE,
     "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
-    "check_spine.CONVERTER_PATHS": STRUCTURE,
+    "board_engine.CONVERTER_PATHS": STRUCTURE,
     "project_setup.PROJECT_TEMPLATE": STRUCTURE,
     "project_setup.NOTHING_TO_DO": "the Refusal under test: its code is compared with a literal, never read as the expectation (P701)",
     "wiring_steps.JOIN": "a kind of step, which picks the steps the test counts: vocabulary, not a value",

@@ -1,30 +1,30 @@
 [
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "the built board is deleted again instead of landing in the project",
   "find": "    kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None",
   "replace": "    kept = None"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "dist never arrives, so no check can read the board",
   "find": "        shutil.copytree(built, destination / \"dist\", dirs_exist_ok=True)",
   "replace": "        pass"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "a hand-edited board.tsx is silently overwritten",
   "find": "        if target.exists():\n            kept.append({\"file\": str(target), \"did\": \"left alone\",",
   "replace": "        if False:\n            kept.append({\"file\": str(target), \"did\": \"left alone\","
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "a file left alone is skipped without saying so",
   "find": "            kept.append({\"file\": str(target), \"did\": \"left alone\", \"why\": \"delete it to have it regenerated\",\n                         \"line\": \"left alone: %s (delete it to have it regenerated)\" % target})",
   "replace": "            pass"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "a destination that does not exist yet is not made",
   "find": "    destination.mkdir(parents=True, exist_ok=True)",
   "replace": "    pass"

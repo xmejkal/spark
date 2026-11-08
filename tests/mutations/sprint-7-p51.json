@@ -18,13 +18,13 @@
   "replace": "\"core\": \"0.0.2663\""
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "a build on an unmeasured core passes in silence",
   "find": "    return \"; the documents were measured on core %s\" % project_setup.PINNED_CORE",
   "replace": "    return \"\""
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_service.py",
   "name": "a version nobody could read is reported as a drift",
   "find": "    if version in (\"unknown version\", project_setup.PINNED_CORE):",
   "replace": "    if version == project_setup.PINNED_CORE:"

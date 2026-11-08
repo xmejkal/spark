@@ -60,7 +60,7 @@
   "replace": "return PlannedLayout(layout, None, named, fresh)"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "no drawing-differs entry",
   "find": "for differs in written.differs]",
   "replace": "for differs in []]"

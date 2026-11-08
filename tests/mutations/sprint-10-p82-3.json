@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/board_engine.py",
   "name": "tsci is looked for outside the list again",
   "find": "        return Path(tools.find(\"board-engine\", start).command[0])",
   "replace": "        return None"

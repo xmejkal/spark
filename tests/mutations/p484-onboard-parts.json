@@ -36,7 +36,7 @@
   "replace": "            if False:"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/board_engine.py",
   "name": "a board-only build drops the person's kept diagram",
   "find": "    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)\n    made = subprocess.run(converter_command(project, own) + source",
   "replace": "    bad_kept = \"\" if \"--netlist\" in source else sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)\n    made = subprocess.run(converter_command(project, own) + source"

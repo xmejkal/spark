@@ -289,16 +289,16 @@ class WhatTheSimulationCannotShowTest(unittest.TestCase):
         self.assertFalse((work / "WHAT-THIS-CANNOT-SHOW.md").exists())
 
     def test_the_stage_says_it_too_for_the_person_watching_the_run(self):
-        import check_spine
-        detail = check_spine.simulation_detail(34, {"l9110s": "reused"}, 0,
+        from spark.build import build_service
+        detail = build_service.simulation_detail(34, {"l9110s": "reused"}, 0,
                                                [("Valve1, Valve2", "no MOSFET")])
         self.assertIn("34 wire(s)", detail)
         self.assertIn("what it cannot show", detail)
         self.assertIn("Valve1, Valve2: no MOSFET", detail)
 
     def test_a_simulation_with_nothing_to_admit_says_only_what_it_did(self):
-        import check_spine
-        self.assertEqual(check_spine.simulation_detail(5, {}, 0, []), "5 wire(s) in the diagram")
+        from spark.build import build_service
+        self.assertEqual(build_service.simulation_detail(5, {}, 0, []), "5 wire(s) in the diagram")
 
     def test_the_note_beside_the_diagram_carries_every_line(self):
         # The terminal gets closed; the sim directory is what somebody opens a week later.

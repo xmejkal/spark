@@ -18,11 +18,11 @@
  {"file": "scripts/breadboard.py", "name": "the command does not print what it did not keep", "find": "        print(\"not kept: %s\" % named.line, file=sys.stderr)", "replace": "        pass"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "the write result drops the names", "find": "    return WriteResult(Path(out), paths, None, planned.not_kept)", "replace": "    return WriteResult(Path(out), paths, None, [])"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "the planner never lets a strategy reserve first", "find": "        self.placement.reserve_first(ledger)", "replace": "        pass"},
- {"file": "scripts/check_spine.py", "name": "the build entry has another word than the constant", "find": "\"did\": MOVE_NOT_KEPT,", "replace": "\"did\": \"not kept\","},
+ {"file": "scripts/spark/build/kept_files.py", "name": "the build entry has another word than the constant", "find": "\"did\": MOVE_NOT_KEPT,", "replace": "\"did\": \"not kept\","},
  {"file": "scripts/spark/breadboard/kept_moves.py", "name": "a breadboard dragged from the corner is ignored", "find": "                    if float(one[\"left\"]) != 0 or float(one[\"top\"]) != 0:", "replace": "                    if False:"},
- {"file": "scripts/check_spine.py", "name": "the build entry does not say which part", "find": "\"part\": named.subject, ", "replace": ""},
+ {"file": "scripts/spark/build/build_service.py", "name": "the build entry does not say which part", "find": "\"part\": named.subject, ", "replace": ""},
  {"file": "scripts/spark/breadboard/kept_moves.py", "name": "two pins of a part may share a row", "find": "len(set(groups)) < len(groups) or ", "replace": ""},
  {"file": "scripts/spark/breadboard/kept_moves.py", "name": "the last of two parts with one id wins", "find": "parts.setdefault(one[\"id\"], one)", "replace": "parts[one[\"id\"]] = one"},
- {"file": "scripts/check_spine.py", "name": "a build that did not finish removes the person's moves", "find": "    if renderer is sheet.EDITABLE_DRAWING and path.exists() and sheet.holds_parts(path):", "replace": "    if False:"},
+ {"file": "scripts/spark/build/kept_files.py", "name": "a build that did not finish removes the person's moves", "find": "    if renderer is sheet.EDITABLE_DRAWING and path.exists() and sheet.holds_parts(path):", "replace": "    if False:"},
  {"file": "scripts/spark/breadboard/sheet.py", "name": "any breadboard.json is left, even one that holds nothing", "find": "    return bool(earlier and earlier.parts)", "replace": "    return True"}
 ]

@@ -30,6 +30,8 @@ from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import kept_moves  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 import check_spine  # noqa: E402
+from spark.build import kept_files  # noqa: E402
+from spark.build.stages import Stage  # noqa: E402
 from spark.breadboard.drawing import Jumper, WokwiGeometry  # noqa: E402
 from spark.breadboard.drawing_match import JOINED_TO_OTHER, JOINED_TO_UNUSED, NOT_JOINED, DrawnNets  # noqa: E402
 
@@ -165,8 +167,8 @@ class TheBuildSaysItTest(unittest.TestCase):
 
     def test_the_kept_entry_carries_its_code(self):
         with in_store():
-            kept = check_spine.keep_breadboard(self.project / "requirements.json", self.project,
-                                               [check_spine.Stage("build", check_spine.OK)])
+            kept = kept_files.keep_breadboard(self.project / "requirements.json", self.project,
+                                               [Stage("build", check_spine.OK)])
         differs = [entry for entry in kept if entry["did"] == "drawing differs"]
         self.assertEqual([(entry["code"], entry["subject"]) for entry in differs], [(NOT_JOINED, "R1 end 1")])
         self.assertEqual(differs[0]["line"], "drawing differs: R1 end 1 is not joined to board D8 in the drawing")
