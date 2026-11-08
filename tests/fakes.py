@@ -273,7 +273,7 @@ class FakeTscircuitExport:
         self.asked = []
 
     def export_svg(self, circuit_path, form):
-        import tabbed_page
+        from spark.breadboard import tabbed_page
         self.asked.append((str(circuit_path), form))
         return self.results.get(form, tabbed_page.SvgExportResult(
             '<svg xmlns="http://www.w3.org/2000/svg"><title>fake %s</title></svg>' % form, None))

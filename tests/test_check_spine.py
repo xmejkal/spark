@@ -46,7 +46,7 @@ import emit_board  # noqa: E402
 import missing_facts  # noqa: E402
 import parts  # noqa: E402
 import store  # noqa: E402
-import tabbed_page  # noqa: E402
+from spark.breadboard import tabbed_page  # noqa: E402
 import test_converter  # noqa: E402
 from fakes import FakeTscircuitExport  # noqa: E402
 
@@ -1485,7 +1485,7 @@ class TheTabbedPageTest(unittest.TestCase):
         self.assertIn("Breadboard: not drawn, because breadboard.svg cannot be read", self.page.read_text())
 
     def test_a_failed_export_still_writes_the_page_with_its_why(self):
-        import tabbed_page
+        from spark.breadboard import tabbed_page
         failed = FakeTscircuitExport({"pcb-svg": tabbed_page.SvgExportResult(None, "tsci is not installed")})
         self.assertEqual(self.keep(exporter=failed)["did"], "wrote")
         self.assertIn("<p>PCB: not drawn, because tsci is not installed.</p>", self.page.read_text())

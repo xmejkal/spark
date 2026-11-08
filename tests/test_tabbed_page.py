@@ -21,8 +21,8 @@ from suite_runs import slow  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import tabbed_page  # noqa: E402
-from tabbed_page import SvgExportResult, Tab, TabbedHtmlPage, TscircuitExport  # noqa: E402
+from spark.breadboard import tabbed_page  # noqa: E402
+from spark.breadboard.tabbed_page import SvgExportResult, Tab, TabbedHtmlPage, TscircuitExport  # noqa: E402
 
 SVG = '<svg xmlns="http://www.w3.org/2000/svg"><style>.boundary{fill:beige}</style><rect class="boundary"/></svg>'
 CIRCUIT = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao" / "dist" / "board" / "circuit.json"
