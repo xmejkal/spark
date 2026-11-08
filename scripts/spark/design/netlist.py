@@ -34,7 +34,7 @@ COMPONENT, PORT, NET, TRACE = "source_component", "source_port", "source_net", "
 
 
 class Netlist:
-    """What the built design joins to what, indexed by net."""
+    """Value: what the built design joins to what, indexed by net."""
 
     def __init__(self, circuit):
         self.elements = circuit
