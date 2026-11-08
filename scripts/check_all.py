@@ -226,8 +226,8 @@ def rail_loads_in(project, circuit):
 
 class Buildability(Check):
     def call(self, inputs):
-        import check_footprints
-        from check_footprints import PROBLEM, ADVISORY
+        from spark.checks import build_check
+        from spark.checks.build_check import PROBLEM, ADVISORY
         placeholders, notes = placeholder_components_in(inputs.get("project"))
         # The project's own process, so a board house that can do less than this plugin's
         # default judges by ITS numbers rather than by these (P46).
@@ -236,7 +236,7 @@ class Buildability(Check):
         # check's inputs made a project that has none skip buildability altogether.
         stated = inputs.get("rules")
         rules = fab.read_rules(stated) if stated else None  # --- MVP --- (P434): refused, naming the file, by `Check.run` (P455)
-        findings = check_footprints.run(circuit_of(inputs), placeholders, rules=rules)
+        findings = build_check.run(circuit_of(inputs), placeholders, rules=rules)
 
         def of(severity):
             return ["%s: %s" % (f.subject, f.detail)

@@ -27,7 +27,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import check_footprints  # noqa: E402
+from spark.checks import build_check  # noqa: E402
 import check_physics  # noqa: E402
 
 
@@ -463,7 +463,7 @@ class OneCopyOfPackageOfTest(unittest.TestCase):
     def test_package_of_is_check_footprints_own_function_not_a_copy(self):
         # Audit A7: loaded by file path, `check_footprints` was instantiated a second time and
         # `package_of` here was a different function object from the one every test of it runs.
-        self.assertIs(check_physics.package_of, check_footprints.package_of)
+        self.assertIs(check_physics.package_of, build_check.package_of)
 
 
 class EachRuleHasANameTest(unittest.TestCase):

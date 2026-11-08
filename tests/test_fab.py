@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_footprints  # noqa: E402
+from spark.checks import build_check  # noqa: E402
 import check_physics  # noqa: E402
 import copper  # noqa: E402
 import emit_board  # noqa: E402
@@ -57,7 +58,7 @@ class OneTableNotTwoCopiesTest(unittest.TestCase):
     def test_both_checkers_judge_by_the_same_package_ratings(self):
         # They were two separate dicts. A package added to one was missing from the other and
         # nothing said so.
-        self.assertIs(check_footprints.PACKAGE_POWER_W, check_physics.PACKAGE_POWER_W)
+        self.assertIs(build_check.PACKAGE_POWER_W, check_physics.PACKAGE_POWER_W)
 
     def test_the_generator_and_the_checker_agree_about_vias(self):
         self.assertEqual((emit_board.VIA_HOLE_MM, emit_board.VIA_PAD_MM),
@@ -102,8 +103,8 @@ class TheRingIsArithmeticNotProseTest(unittest.TestCase):
         pad = emit_footprint.pad_diameter_mm(hole)
         circuit = [{"type": "pcb_plated_hole", "shape": "circle",
                     "hole_diameter": hole, "outer_diameter": pad, "pcb_component_id": "c1"}]
-        self.assertEqual(check_footprints.check_annular_rings(circuit), [])
-        self.assertTrue(check_footprints.check_annular_rings(circuit, self.STRICTER),
+        self.assertEqual(build_check.check_annular_rings(circuit), [])
+        self.assertTrue(build_check.check_annular_rings(circuit, self.STRICTER),
                         "a stricter process accepted a pad drawn for a looser one")
 
 

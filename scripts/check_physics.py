@@ -45,7 +45,7 @@ import copper  # noqa: E402
 
 #: `res0603` -> `0603`, check_footprints' one copy: the package table here was keyed on the bare size while the engine
 #: emits the prefixed form, so nothing matched (audit A7).
-from check_footprints import package_of  # noqa: E402
+from spark.checks.build_check import package_of  # noqa: E402
 
 import netlist  # noqa: E402
 from emit_board import GROUND_NETS  # noqa: E402

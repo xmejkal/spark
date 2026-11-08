@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_all  # noqa: E402
-import check_footprints  # noqa: E402
+from spark.checks import build_check  # noqa: E402
 import design  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -907,7 +907,8 @@ class TheCheckListItselfTest(unittest.TestCase):
         #                 it is about this repository, not about any design.
         #   check_codes — the leaf of the checks' refusal codes (P693): a table, not a check.
         NOT_A_CHECK = {"check_all", "check_spine", "check_commit", "check_codes"}
-        on_disk = {path.stem for path in (ROOT / "scripts").glob("check_*.py")} - NOT_A_CHECK
+        MOVED = {"check_footprints": "build_check"}
+        on_disk = {MOVED.get(path.stem, path.stem) for path in (ROOT / "scripts").glob("check_*.py")} - NOT_A_CHECK
         on_disk |= {"compare_design"}
 
         wired = set()
@@ -947,7 +948,7 @@ class OneModulePerProcessTest(unittest.TestCase):
         # Unpatched, the rings are under the minimum: a problem.
         self.assertEqual(chosen.run({"circuit": circuit})["status"], check_all.PROBLEMS)
         # Patched on the shared module, the check sees no findings at all.
-        with mock.patch.object(check_footprints, "run", return_value=[]):
+        with mock.patch.object(build_check, "run", return_value=[]):
             self.assertEqual(chosen.run({"circuit": circuit})["status"], check_all.OK)
 
     def test_the_placeholder_list_uses_the_design_module_everyone_else_imports(self):
