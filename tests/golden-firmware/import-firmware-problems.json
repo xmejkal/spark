@@ -14,7 +14,8 @@
     {
       "module": "sensor",
       "status": "raised",
-      "detail": "ModuleNotFoundError: No module named 'missing_driver'"
+      "detail": "ModuleNotFoundError: No module named 'missing_driver'",
+      "code": "import_failed"
     }
   ]
 }

@@ -45,6 +45,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import firmware_codes  # noqa: E402
+from firmware_codes import Refusal  # noqa: E402
 from spark.core.outcomes import EXIT_FOR, answer  # noqa: E402
 
 STAND_IN = Path(__file__).resolve().parent / "stand_in"
@@ -66,7 +68,8 @@ NOTHING_TO_IMPORT = ("firmware/ holds nothing to import but %s, %s and %s. The f
 
 
 def import_one(name, firmware, timeout_s):
-    """One module imported in a process of its own, as (status word, detail); the detail is empty when it imported."""
+    """One module imported in a process of its own, as (status word, detail); the detail is empty when it imported, else a
+    Refusal whose code names why not."""
     # -B: no __pycache__ in the person's folder. -I: the child's own folder and the current folder stay off sys.path
     command = [sys.executable, "-I", "-B", str(CHILD), name,
                str(STAND_IN), str(firmware), str(firmware / "lib"), str(FALLBACK)]
@@ -74,29 +77,33 @@ def import_one(name, firmware, timeout_s):
         done = subprocess.run(command, cwd=str(firmware), capture_output=True, text=True, errors="replace",
                               stdin=subprocess.DEVNULL, timeout=timeout_s)
     except subprocess.TimeoutExpired:
-        return TIMED_OUT, ("did not return within %g s: something at module level loops or waits; "
-                           "put it in a function that %s calls" % (timeout_s, BOOT_FILE))
+        return TIMED_OUT, Refusal("did not return within %g s: something at module level loops or waits; "
+                                  "put it in a function that %s calls" % (timeout_s, BOOT_FILE), firmware_codes.IMPORT_TIMEOUT)
     if done.returncode == 0:
         return IMPORTED, ""
     last = done.stderr.strip().splitlines()[-1:]
-    return RAISED, last[0] if last else "exited with code %d" % done.returncode
+    return RAISED, Refusal(last[0] if last else "exited with code %d" % done.returncode, firmware_codes.IMPORT_FAILED)
 
 
 def look(project, timeout_s):
-    """Every module of PROJECT/firmware imported: (modules, problems, unchecked)."""
+    """Every module of PROJECT/firmware imported: (modules, problems, unchecked). A module not imported carries its `code`
+    (P684), and each problem and unchecked item is a Refusal."""
     firmware = (project / "firmware").resolve()  # whole: the child runs inside it, so a relative path would name nothing
     if not firmware.is_dir():
-        return [], [], ["no firmware/ folder in %s: there is nothing to import" % project]
+        return [], [], [Refusal("no firmware/ folder in %s: there is nothing to import" % project,
+                                firmware_codes.NO_FIRMWARE_FOLDER)]
     names = sorted({path.stem for path in firmware.glob("*.py") if path.name not in BOOT_FILES}
                    | {path.parent.name for path in firmware.glob("*/__init__.py")})  # a package, the bin's shape
     modules = []
     for name in names:
         status, detail = import_one(name, firmware, timeout_s)
         modules.append({"module": name, "status": status, "detail": detail})
-    problems = ["%s %s: %s" % (entry["module"], entry["status"], entry["detail"])
+        if status != IMPORTED:  # --- MVP --- an agent decides on the code, never on the detail's words
+            modules[-1]["code"] = detail.code
+    problems = [Refusal("%s %s: %s" % (entry["module"], entry["status"], entry["detail"]), entry["code"])
                 for entry in modules if entry["status"] != IMPORTED]
     if not set(names) - {PIN_MODULE}:
-        problems.append(NOTHING_TO_IMPORT)
+        problems.append(Refusal(NOTHING_TO_IMPORT, firmware_codes.NOTHING_TO_IMPORT))
     return modules, problems, []
 
 

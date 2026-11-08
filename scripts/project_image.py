@@ -8,7 +8,7 @@ sim/runs/ that name an image's sha256, and says why an image is not yet one to p
 import functools
 import hashlib
 
-import board_codes
+import firmware_codes
 import flash_image
 from spark.core import outcomes
 import run_scenario
@@ -25,8 +25,8 @@ NO_SIMULATION_HINT = "or, with no simulation, the board is the test: %srun look.
 
 # --- MVP ---
 class DeployError(Exception):
-    """Error: why the image cannot go on the board yet. The message is the whole sentence. `reason` is the board_codes
-    code that names the cause, a required keyword, so no raise site goes without one (P433)."""
+    """Error: why the image cannot go on the board yet. The message is the whole sentence. `reason` is the code that names the
+    cause, firmware_codes' here and board_codes' in the bench, a required keyword, so no raise site goes without one (P433)."""
 
     def __init__(self, message, *, reason):
         super().__init__(message)
@@ -45,18 +45,18 @@ class ProjectImage:
         toml = project / "sim" / "wokwi.toml"
         if not toml.is_file():
             raise DeployError("no sim/wokwi.toml in %s: build with /spark:build --keep . first" % project,
-                              reason=board_codes.NO_SIM_TOML)
+                              reason=firmware_codes.NO_SIM_TOML)
         named = sim_project.firmware_in(toml)
         if named.state == outcomes.NOT_CHECKED:
-            raise DeployError("sim/wokwi.toml %s%s" % (named.why, named.fix()), reason=board_codes.FIRMWARE_LINE_BAD)
+            raise DeployError("sim/wokwi.toml %s%s" % (named.why, named.fix()), reason=firmware_codes.FIRMWARE_LINE_BAD)
         self.path = toml.parent / (named.name or run_scenario.DEFAULT_IMAGE)
         outside = sim_project.why_outside_sim(toml.parent, self.path)
         if outside:
-            raise DeployError(outside, reason=board_codes.FIRMWARE_LINE_BAD)
+            raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)
         if not self.path.is_file():
             build = BUILD_IMAGE_HINT % flash_image.build_command(project, self.path)
             raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it, "
-                              % self.path + NO_SIMULATION_HINT % (build + ", then "), reason=board_codes.NO_IMAGE)
+                              % self.path + NO_SIMULATION_HINT % (build + ", then "), reason=firmware_codes.NO_IMAGE)
         self.project = project
         #: run_scenario.py writes every log here, in whichever sub-folder of sim/ the image is
         self.runs = project / "sim" / "runs"
@@ -78,7 +78,7 @@ class ProjectImage:
             try:
                 records.append((log,) + run_scenario.run_record(log))
             except OSError as cannot:
-                raise DeployError("cannot read %s: %s" % (log, cannot), reason=board_codes.LOG_UNREADABLE)
+                raise DeployError("cannot read %s: %s" % (log, cannot), reason=firmware_codes.LOG_UNREADABLE)
         return records
 
     def why_untested(self):

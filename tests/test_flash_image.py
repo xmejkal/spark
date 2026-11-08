@@ -133,8 +133,9 @@ class TheImageTest(unittest.TestCase):
             self.assertEqual(json.loads(handle.read()), {"T": 40})
 
     def test_an_interpreter_too_large_for_its_slot_is_refused(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as refused:
             flash_image.image(b"\x00" * (MICROPYTHON_VFS_OFFSET + 1), [])
+        self.assertEqual(refused.exception.code, "interpreter_unusable")
 
     @needs_littlefs
     def test_the_command_writes_the_image_and_names_what_went_in(self):
@@ -223,6 +224,7 @@ class TheImageHoldsAVfsPartitionTest(unittest.TestCase):
     def refused(self, interpreter, offset=0):
         with self.assertRaises(ValueError) as said:
             flash_image.image(interpreter, self.files, offset=offset)
+        self.assertEqual(said.exception.code, "interpreter_unusable")  # P684: each of the table's refusals
         return str(said.exception)
 
     def test_an_offset_past_the_table_is_refused_where_a_negative_slice_would_give_wrong_bytes(self):
@@ -607,6 +609,53 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
             code, said = self.run_main([], failing=None)
         self.assertEqual(code, flash_image.EXIT_OK, said)
         self.assertEqual((self.root / "out.bin").read_bytes()[:BOOTLOADER_TABLE_OFFSET], (self.root / "micropython.bin").read_bytes()[:BOOTLOADER_TABLE_OFFSET])
+
+@needs_littlefs
+class EachRefusalHasItsCodeTest(unittest.TestCase):
+    """P684 (W6-F2): each refusal has its code, beside the sentence the command prints."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        (self.root / "fw").mkdir()
+        (self.root / "fw" / "main.py").write_text("print('hi')\n")
+        (self.root / "micropython.bin").write_bytes(fake_interpreter())
+
+    def refusal_of(self, micropython="micropython.bin", files="fw", config=None, project=None):
+        given = self.root / micropython if micropython else None
+        refusal, made = flash_image.make_image(given, project or self.root, self.root / files, config)
+        self.assertIsNone(made)
+        return refusal
+
+    def test_a_missing_interpreter_is_its_code(self):
+        refusal = self.refusal_of(micropython="nope.bin")
+        self.assertEqual(refusal.code, "no_interpreter")
+        self.assertIn("micropython.org/download", refusal)
+
+    def test_files_that_are_no_folder_are_its_code(self):
+        self.assertEqual(self.refusal_of(files="fw/main.py").code, "files_not_folder")
+
+    def test_an_interpreter_spark_cannot_use_is_its_code(self):
+        (self.root / "micropython.bin").write_bytes(fake_interpreter(table=b"\xff" * TABLE_SIZE))
+        self.assertEqual(self.refusal_of().code, "interpreter_unusable")
+
+    def test_a_config_that_is_no_json_is_its_code_and_said_before_a_bad_build(self):
+        (self.root / "micropython.bin").write_bytes(fake_interpreter(table=b"\xff" * TABLE_SIZE))
+        refusal = self.refusal_of(config="{")
+        self.assertEqual(refusal.code, "config_not_json")
+        self.assertTrue(refusal.startswith("Expecting property name"), refusal)
+
+    def test_a_build_spark_cannot_find_is_a_missing_tool(self):
+        project = self.root / "project"
+        project.mkdir()
+        (project / "requirements.json").write_text("{")
+        self.assertEqual(self.refusal_of(micropython=None, project=project).code, "tool_missing")
+
+    def test_an_image_is_made_with_no_refusal(self):
+        refusal, (interpreter, _, files, flash) = flash_image.make_image(self.root / "micropython.bin", self.root,
+                                                                         self.root / "fw")
+        self.assertEqual((refusal, interpreter.offset, [name for name, _ in files], len(flash)),
+                         (None, 0, ["/main.py"], MICROPYTHON_FLASH_SIZE))
+
 
 if __name__ == "__main__":
     unittest.main()

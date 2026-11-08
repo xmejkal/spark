@@ -31,6 +31,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 import boards
+import firmware_codes
+from firmware_codes import Refusal
 import store
 import tools
 
@@ -67,6 +69,12 @@ def filesystem(files, overrides=None):
     return bytes(fs.context.buffer)
 
 # --- MVP ---
+class InterpreterError(ValueError):
+    """Error: the MicroPython build cannot make an image: it is damaged, too large, or not the build for the board's chip.
+    The message is the whole sentence, and `code` names it (P684)."""
+    code = firmware_codes.INTERPRETER_UNUSABLE
+
+
 class PartitionTable(namedtuple("PartitionTable", "entries")):
     """
     Value: the partition table inside an interpreter, as (label, type, subtype, offset, size, flags) entries. The
@@ -83,15 +91,15 @@ class PartitionTable(namedtuple("PartitionTable", "entries")):
 
     @classmethod
     def read(cls, interpreter, offset):
-        """The table in the interpreter that starts at `offset` in the flash. ValueError: no table, or not one spark can use."""
+        """The table in the interpreter that starts at `offset` in the flash. InterpreterError: no table, or not one spark can use."""
         start = cls.TABLE_OFFSET - offset
         if start < 0:
-            raise ValueError("MicroPython at %#x starts past the partition table at %#x, so the image cannot say where its "
+            raise InterpreterError("MicroPython at %#x starts past the partition table at %#x, so the image cannot say where its "
                              "file system is: use the build for the board's chip from micropython.org/download"
                              % (offset, cls.TABLE_OFFSET))
         table = interpreter[start:start + cls.TABLE_SIZE]
         if len(table) < cls.TABLE_SIZE:
-            raise ValueError("MicroPython is %d bytes, too short to hold a partition table at %#x, so the image cannot say "
+            raise InterpreterError("MicroPython is %d bytes, too short to hold a partition table at %#x, so the image cannot say "
                              "where its file system is: use the build for the board's chip from micropython.org/download"
                              % (len(interpreter), cls.TABLE_OFFSET))
         entries = []
@@ -102,31 +110,31 @@ class PartitionTable(namedtuple("PartitionTable", "entries")):
                 try:
                     entries.append((label.rstrip(b"\x00").decode(), kind, subtype, where, size, flags))
                 except UnicodeDecodeError:
-                    raise ValueError("a partition label in the interpreter's table is not text, so the interpreter is damaged: "
+                    raise InterpreterError("a partition label in the interpreter's table is not text, so the interpreter is damaged: "
                                      "download the build again from micropython.org/download")
                 continue
             if chunk[:16] == cls.MD5_MAGIC and chunk[16:] != hashlib.md5(table[:position]).digest():
-                raise ValueError("the partition table's MD5 does not match its entries, so the interpreter is damaged: "
+                raise InterpreterError("the partition table's MD5 does not match its entries, so the interpreter is damaged: "
                                  "download the build again from micropython.org/download")
             break
         if not entries:
-            raise ValueError("the MicroPython interpreter holds no partition table at %#x, so the image cannot say where its "
+            raise InterpreterError("the MicroPython interpreter holds no partition table at %#x, so the image cannot say where its "
                              "file system is: use a build from micropython.org/download for the board's chip" % cls.TABLE_OFFSET)
         return cls(tuple(entries))
 
     def with_filesystem(self):
-        """This table with the "vfs" entry that spark's file system fills. ValueError: a partition is in its way."""
+        """This table with the "vfs" entry that spark's file system fills. InterpreterError: a partition is in its way."""
         for entry in self.entries:
             label, where, size = entry[0], entry[3], entry[4]
             if label in ("vfs", "ffat") and entry != self.FILESYSTEM:
-                raise ValueError('the partition table holds a "%s" entry other than the 2 MB "vfs" at %#x that spark writes: '
+                raise InterpreterError('the partition table holds a "%s" entry other than the 2 MB "vfs" at %#x that spark writes: '
                                  "use the build for the board's chip from micropython.org/download" % (label, FILESYSTEM_OFFSET))
             if label != "vfs" and where + size > FILESYSTEM_OFFSET:
-                raise ValueError('the partition "%s" ends at %#x, past %#x where the file system starts: use the build for '
+                raise InterpreterError('the partition "%s" ends at %#x, past %#x where the file system starts: use the build for '
                                  "the board's chip from micropython.org/download" % (label, where + size, FILESYSTEM_OFFSET))
         entries = tuple(entry for entry in self.entries if entry != self.FILESYSTEM) + (self.FILESYSTEM,)
         if (len(entries) + 1) * self.ENTRY_FORMAT.size >= self.TABLE_SIZE:  # the MD5 entry too, and ESP-IDF refuses a full table
-            raise ValueError("the partition table has no room for the vfs entry and an MD5 entry: use the build for the "
+            raise InterpreterError("the partition table has no room for the vfs entry and an MD5 entry: use the build for the "
                              "board's chip from micropython.org/download")
         return PartitionTable(entries)
 
@@ -144,7 +152,7 @@ class PartitionTable(namedtuple("PartitionTable", "entries")):
 def image(interpreter, files, overrides=None, offset=0):
     """The whole flash: the interpreter at `offset`, the filesystem at FILESYSTEM_OFFSET, 0xff between."""
     if offset + len(interpreter) > FILESYSTEM_OFFSET:
-        raise ValueError("MicroPython at %#x is %d bytes and would pass %#x, where the filesystem starts"
+        raise InterpreterError("MicroPython at %#x is %d bytes and would pass %#x, where the filesystem starts"
                          % (offset, len(interpreter), FILESYSTEM_OFFSET))
     interpreter = PartitionTable.read(interpreter, offset).with_filesystem().placed_in(interpreter, offset)
     flash = bytearray(b"\xff" * FLASH_SIZE)
@@ -273,6 +281,35 @@ MICROPYTHON_HELP = ("the interpreter .bin from micropython.org for the board's c
                     "with this file, so to use your own build, name it there")
 
 
+# --- MVP ---
+def make_image(given, project, folder, config_text=None):
+    """
+    The image of the files under `folder`, with the MicroPython build `given` or the project's (P684): (None, (the
+    interpreter, its bytes, the files, the flash)), or (a Refusal, None) whose code names why not. `config_text` is the
+    JSON written as /config.json. A bad --config is said before a bad build, as when one except caught both.
+    """
+    try:
+        tools.find("littlefs", project)  # P457: a project's tools file that turns it off is named
+        interpreter = interpreter_for(given, project)
+    except tools.ToolProblem as missing:
+        return Refusal(str(missing), firmware_codes.TOOL_MISSING), None
+    if not interpreter.path.is_file():
+        return Refusal("no interpreter at %s — download a build from micropython.org/download for the board's chip"
+                       % interpreter.path, firmware_codes.NO_INTERPRETER), None
+    if not Path(folder).is_dir():
+        return Refusal("%s is not a directory" % folder, firmware_codes.FILES_NOT_FOLDER), None
+    files, micropython = files_under(folder), interpreter.path.read_bytes()
+    try:
+        config = json.loads(config_text) if config_text else None
+    except ValueError as broken:
+        return Refusal(str(broken), firmware_codes.CONFIG_NOT_JSON), None
+    try:
+        return None, (interpreter, micropython, files, image(micropython, files, config, interpreter.offset))
+    except ValueError as broken:  # an InterpreterError; any other ValueError is said as before
+        return Refusal(str(broken), firmware_codes.INTERPRETER_UNUSABLE), None
+# --- end MVP ---
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="flash_image.py", description=__doc__.split("\n\n")[0])
     parser.add_argument("--micropython", type=Path, help=MICROPYTHON_HELP)
@@ -284,25 +321,11 @@ def main(argv=None):
     parser.add_argument("--config", help="JSON written as /config.json into the image")
     parser.add_argument("-o", "--output", required=True, type=Path)
     args = parser.parse_args(argv)
-    try:
-        tools.find("littlefs", args.project or project_here())  # P457: a project's tools file that turns it off is named
-        interpreter = interpreter_for(args.micropython, args.project or project_here())
-    except tools.ToolProblem as missing:
-        print("flash_image.py: %s" % missing, file=sys.stderr)
+    refusal, made = make_image(args.micropython, args.project or project_here(), args.files, args.config)
+    if refusal:
+        print("flash_image.py: %s" % refusal, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    if not interpreter.path.is_file():
-        print("flash_image.py: no interpreter at %s — download a build from micropython.org/download for the board's chip" % interpreter.path, file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    if not args.files.is_dir():
-        print("flash_image.py: %s is not a directory" % args.files, file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
-    files = files_under(args.files)
-    try:
-        micropython = interpreter.path.read_bytes()
-        flash = image(micropython, files, json.loads(args.config) if args.config else None, interpreter.offset)
-    except ValueError as broken:
-        print("flash_image.py: %s" % broken, file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
+    interpreter, micropython, files, flash = made
     args.output.write_bytes(flash)
     for destination, content in files:
         print("  %-28s %6d bytes" % (destination, len(content)))

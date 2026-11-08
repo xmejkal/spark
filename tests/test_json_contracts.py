@@ -46,6 +46,7 @@ import check_vendor_pins  # noqa: E402
 import compare_design  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 import emit_footprint  # noqa: E402
+import firmware_codes  # noqa: E402
 import grant  # noqa: E402
 import import_firmware  # noqa: E402
 from spark.core import outcomes  # noqa: E402
@@ -148,6 +149,16 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         self._check("import_firmware", lambda: import_firmware.main([str(self.project), "--json"]),
                     ["modules", "problems", "status", "tool", "unchecked"])
 
+    def test_import_firmware_a_module_not_imported(self):
+        # P684 (W6-F2): such an entry gains `code`; an imported one keeps its three keys
+        firmware = Path(tempfile.mkdtemp()) / "firmware"
+        firmware.mkdir()
+        (firmware / "broken.py").write_text("raise KeyError('k')\n")
+        payload = self._check("import_firmware", lambda: import_firmware.main([str(firmware.parent), "--json"]),
+                              ["modules", "problems", "status", "tool", "unchecked"])
+        self.assertEqual(sorted(payload["modules"][0]), ["code", "detail", "module", "status"])
+        self.assertEqual(payload["modules"][0]["code"], "import_failed")
+
     def test_check_vendor_pins(self):
         # A BARE LIST, not an envelope: no tool, no overall status, and each entry's status word
         # may be `mismatch`, a fourth word outcomes.py does not know. Both are P43's.
@@ -241,18 +252,32 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
         self.assertEqual(sorted(payload), ENVELOPE)
 
 
+#: P684: the codes board_codes and firmware_codes both hold, as equal literals in two leaves, until W6-F3 moves the bench's
+#: readers to firmware_codes.
+SHARED_CODES = ("NO_SIM_TOML", "FIRMWARE_LINE_BAD", "NO_IMAGE", "LOG_UNREADABLE", "TOOL_MISSING")
+
+
 class TheBenchCodesTableTest(unittest.TestCase):
     """P433: every code that look.py and deploy.py write is in board_codes.CODES or the core's codes.CODES (P442), which say
-    it in one sentence."""
+    it in one sentence. P684: the firmware's are in firmware_codes.CODES."""
 
     def test_the_tables_hold_each_constant_of_their_module_once_with_a_sentence_and_share_no_code(self):
-        for module in (board_codes, codes):
+        for module in (board_codes, codes, firmware_codes):
             constants = {name: value for name, value in vars(module).items() if name.isupper() and isinstance(value, str)}
             self.assertEqual(sorted(constants.values()), sorted(module.CODES))
             sentences = list(module.CODES.values())
             self.assertTrue(all(sentence.strip() for sentence in sentences))
             self.assertEqual(len(set(sentences)), len(sentences))
         self.assertEqual(set(board_codes.CODES) & set(codes.CODES), set())
+        self.assertEqual(set(firmware_codes.CODES) & set(codes.CODES), set())
+        self.assertEqual(sorted(set(firmware_codes.CODES) & set(board_codes.CODES)),
+                         sorted(getattr(firmware_codes, name) for name in SHARED_CODES))
+
+    def test_the_shared_codes_are_equal_in_both_leaves(self):
+        self.assertEqual([getattr(board_codes, name) for name in SHARED_CODES],
+                         ["no_sim_toml", "firmware_line_bad", "no_image", "log_unreadable", "tool_missing"])
+        self.assertEqual([getattr(firmware_codes, name) for name in SHARED_CODES],
+                         [getattr(board_codes, name) for name in SHARED_CODES])
 
     @slow("runs the look, gate, grant and doctor test modules once more under a spy, 1 test, 15.7 s on 2026-10-27")
     def test_every_reason_raised_is_in_the_table(self):
@@ -278,7 +303,8 @@ class TheBenchCodesTableTest(unittest.TestCase):
     def test_agents_md_names_every_code(self):
         guide = ROOT / "docs" / "guide"
         text = "".join(page.read_text() for page in [guide / "agents.md"] + sorted((guide / "agents").glob("*.md")))
-        self.assertEqual([code for code in list(board_codes.CODES) + list(codes.CODES) if "`%s`" % code not in text], [])
+        named = list(board_codes.CODES) + list(codes.CODES) + list(firmware_codes.CODES)
+        self.assertEqual([code for code in named if "`%s`" % code not in text], [])
 
     def test_every_why_a_site_raises_a_grant_refusal_with_has_a_code(self):
         tree = ast.parse(Path(board_grant.__file__).read_text())

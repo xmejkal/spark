@@ -816,6 +816,20 @@ class AModuleThatFailsIsAProblemTest(unittest.TestCase):
         code, answer = answer_for(a_project())
         self.assertEqual(code, outcomes.EXIT_PROBLEMS, answer)
 
+    def test_a_module_not_imported_carries_its_code_and_one_imported_carries_none(self):
+        # P684 (W6-F2): an agent decides on the code, never on the detail's words
+        project = a_project(light="x = 1\n", broken="raise KeyError('k')\n", spin="while True:\n    pass\n")
+        _, answer = answer_for(project, "--timeout", LOOP_TIMEOUT_S)
+        self.assertEqual([(entry["module"], entry.get("code")) for entry in answer["modules"]],
+                         [("broken", "import_failed"), ("light", None), ("spin", "import_timeout")])
+        self.assertEqual(sorted(module_named(answer, "broken")), ["code", "detail", "module", "status"])
+
+    def test_nothing_to_import_and_no_folder_have_their_codes_in_the_library(self):
+        problems = import_firmware.look(a_project(main="while True:\n    pass\n"), 5)[1]
+        self.assertEqual([problem.code for problem in problems], ["nothing_to_import"])
+        unchecked = import_firmware.look(Path(tempfile.mkdtemp()), 5)[2]
+        self.assertEqual([gap.code for gap in unchecked], ["no_firmware_folder"])
+
 
 def with_package(project, name, init="x = 1\n"):
     """firmware/NAME/__init__.py: the shape of the bin's firmware, a two-line main.py over a package."""
