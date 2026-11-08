@@ -1,0 +1,25 @@
+# P684 firmware codes (W6-F2): rows
+
+The claims of the W6-F2 plan, `docs/discovery/2026-10-19-p323-target-architecture/architecture/wave6-plan.md` (section
+"W6-F2, the codes"), checked against main 252000b1 (after #915 and #917) before any code. Card:
+[P684 #921](https://github.com/xmejkal/spark/issues/921).
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | `scripts/board_codes.py` is the shape: the constants, then `CODES` with one sentence each | plan | closed | `scripts/board_codes.py`, 53 codes, then `PASTED_CODES` |
+| 2 | `idea_codes.py` is the second model | plan | closed | it is `scripts/spark/idea/idea_codes.py`, not under `scripts/`: three codes, the same shape |
+| 3 | `spark/core/codes.py` exists, so `firmware_codes` is unique under `scripts/` (C1) | plan | closed | `scripts/spark/core/codes.py` exists; no `firmware_codes` anywhere in the tree |
+| 4 | `project_image.py` raises four `DeployError` reasons at five sites | plan | closed | `NO_SIM_TOML` :48, `FIRMWARE_LINE_BAD` :51 and :55, `NO_IMAGE` :59, `LOG_UNREADABLE` :81. No other module raises them |
+| 5 | `import_firmware.py:120` returns `answer(...)` with no `next` | plan | closed | line 120 is `result = dict(answer(problems, unchecked), tool=..., modules=...)`: an assignment, and `answer()` has no `next` key |
+| 6 | five mutation rows name `board_codes.X` in `project_image.py`, four of them in `replace` too | plan | closed | `p239-pr5.json` one (`find` only, `replace` is `continue`), `p429-firmware-line.json` one, `p433-bench-codes.json` three (rows 34 to 36), the last four in both |
+| 7 | the docs pages exist | plan | closed | `docs/guide/agents/json.md` (`import_firmware.py` at :189, the "do not take `--json`" list at :297), `docs/guide/agents.md`, `commands/build.md`, `commands/deploy.md` |
+| 8 | `run_scenario.py` has 8 refusals | plan | raised | 17 causes, a count: also no `firmware/main.py` (`NO_MAIN`), the scenario unreadable or with no steps, `littlefs` or the simulator missing (`ToolProblem`), the firmware line bad (`image_in` and `why_outside_sim`, the same cause as `project_image` :51 and :55), the interpreter's three (from `flash_image`), wokwi-cli not finishing in time (`TimeoutExpired`, `run()`) and wokwi-cli not launching (`OSError`, `run()`) |
+| 9 | `flash_image.py` has 5 refusals | plan | raised | 6, a count: a bad `--config` is a `ValueError` caught with the damaged interpreter's (`main()` :303), so it needs its own `except`. `build_unknown` and `tool_missing` both arrive as one `tools.ToolProblem` at :290, so telling them apart needs a reason on `ToolProblem` or a split of `interpreter_for`'s raises |
+| 10 | `import_firmware.py` has 3 refusals | plan | raised | 4, a count: no `firmware/` folder (could-not-run, `look()` :89) has none |
+| 11 | each refusal site of `run_scenario.py` raises or returns its code | plan | raised | `ScenarioRun.problem()` :465 catches five calls in one `try` (the scenario, `littlefs`, `image_in`, `files_under`, the interpreter), so it splits; `problem()`, `run()` and `verdict()` return sentences and tuples, whose shapes change |
+| 12 | `import_firmware.py --json` items gain a `code` key | plan | raised, design | `problems` and `unchecked` are plain strings (`outcomes.answer`), not items. Only `modules` entries are dicts, and `nothing_to_import` (a problem) and no `firmware/` (unchecked) have no module. Which items carry the code is a JSON-shape decision |
+| 13 | the 8 goldens stay unchanged | plan, brief | raised, design | contradicts row 12: any `code` key in the JSON changes `tests/golden-firmware/import-firmware-problems.json`, and `import-firmware-ok.json` too if an imported module carries one. The 6 `.txt` goldens can stay byte-equal |
+| 14 | `board_codes` keeps the four names as aliases of `firmware_codes` | plan | raised, design | `board_codes` is a U1 leaf (`tools/measure.py:247` `LEAVES`, `tests/planted_tree.py:11`): an import of `firmware_codes` is the breach `U1 imports-firmware_codes`. Either equal literals in both modules with a test that keeps them equal, or `firmware_codes` joins `LEAVES` and U1 allows a leaf to import a leaf |
+| 15 | the plan's `tool_missing` is a new firmware code | plan | raised | `board_codes.TOOL_MISSING = "tool_missing"` exists (P436), so the same string in two tables. Reuse it as a fifth alias, or another name |
+| 16 | the `--json` output is checked "against the envelope contract" in `test_json_contracts.py` | plan | raised | `import_firmware.py` prints the `answer()` shape, not `outcomes.envelope`; `test_import_firmware` checks the top-level key set only. The check is a per-item `code` assertion, not the envelope |
+| 17 | `CODES` names every constant once, the tables share no code | plan | raised | `TheBenchCodesTableTest` asserts `board_codes.CODES` and `codes.CODES` share nothing. While the aliases live, `board_codes.CODES` keeps the four (its constants equal its `CODES`), so `firmware_codes` and `board_codes` share four codes, five with row 15 |
