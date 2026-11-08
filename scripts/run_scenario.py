@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import flash_image
+from spark.firmware import image_builder
 from spark.firmware.firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRMWARE_LINE_BAD, NEVER_READY, NO_MAIN_PY, NO_SIM_PROJECT, NO_TOKEN,
                             RUN_INPUT_UNUSABLE, SIMULATOR_CANNOT_START, SIMULATOR_HUNG, SIMULATOR_LOST,
                             STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING, Refusal)
@@ -467,8 +467,8 @@ class ScenarioRun:
             self.steps = with_ready_wait(self.scenario.read_text())
             tools.find("littlefs", self.project)  # P457: a project's tools file that turns it off is named
             self.image = image_in(self.sim / "wokwi.toml")
-            self.files = flash_image.files_under(self.project / "firmware")
-            self.flash = flash_image.interpreter_for(self.micropython, self.project).image(self.files)
+            self.files = image_builder.files_under(self.project / "firmware")
+            self.flash = image_builder.interpreter_for(self.micropython, self.project).image(self.files)
         except (OSError, ValueError, tools.ToolProblem) as cannot:  # a missing tool or a bad build: flash_image's codes
             code = TOOL_MISSING if isinstance(cannot, tools.ToolProblem) else getattr(cannot, "code", RUN_INPUT_UNUSABLE)
             return Refusal("%s: %s" % (self.scenario.name, cannot), code)

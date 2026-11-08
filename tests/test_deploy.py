@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.bench import board_envelope  # noqa: E402
 import deploy  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
-import flash_image  # noqa: E402
+from spark.firmware import image_builder  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 from spark.firmware.project_image import DeployError  # noqa: E402
 import run_scenario  # noqa: E402
@@ -140,11 +140,11 @@ class TheNoSimulationDryRunTest(ProjectCase):
 
     def setUp(self):
         super().setUp()
-        patcher = mock.patch.object(flash_image, "interpreter_for",
-                                    side_effect=lambda given, project=None, find_tool=None: flash_image.Interpreter(self.micropython, 0))
+        patcher = mock.patch.object(image_builder, "interpreter_for",
+                                    side_effect=lambda given, project=None, find_tool=None: image_builder.Interpreter(self.micropython, 0))
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.image.write_bytes(flash_image.image(self.micropython.read_bytes(), flash_image.files_under(self.project / "firmware")))
+        self.image.write_bytes(image_builder.image(self.micropython.read_bytes(), image_builder.files_under(self.project / "firmware")))
 
     def test_a_dry_run_declares_reads_alone_and_runs_with_no_simulation_and_a_deploy_everything(self):
         # P655: `outside.run` refuses in a dry run, whose only child is the compile check of --no-simulation

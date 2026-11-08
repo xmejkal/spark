@@ -14,7 +14,7 @@ from pathlib import Path
 
 from spark.bench import board_grant
 from brief import UnnamedMust
-import flash_image
+from spark.firmware import image_builder
 from spark.firmware.project_image import BUILD_IMAGE_HINT, NO_SIMULATION_FLAG
 from spark.core import outcomes
 from spark.core import text_guards
@@ -388,7 +388,7 @@ class NoSimulationEvidence(ImageEvidence):
     # --- MVP --- P436: a board record that cannot be read is a sentence (evidence_refuses), not a missing tool
     def _why_board_build_unknown(self, image):
         try:
-            flash_image.board_build(self.project)
+            image_builder.board_build(self.project)
         except tools.ToolProblem as cannot:
             return str(cannot_check(image.path.name, cannot))
         return None
@@ -397,7 +397,7 @@ class NoSimulationEvidence(ImageEvidence):
     def _why_image_differs(self, image):
         try:
             (self.find_tool or tools.find)("littlefs", project=self.project)  # P457: a missing or turned-off littlefs names its own fix
-            built = flash_image.interpreter_for(None, self.project, self.find_tool).image(flash_image.files_under(self.project / "firmware"))
+            built = image_builder.interpreter_for(None, self.project, self.find_tool).image(image_builder.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tools.ToolProblem, ImportError) as cannot:
             raise cannot_check(image.path.name, cannot, tools.ToolProblem)
@@ -408,18 +408,18 @@ class NoSimulationEvidence(ImageEvidence):
                 raise
             return "firmware/ does not fit the image's file system: %s" % cannot
         if held != built:
-            build, entry = flash_image.build_entry(self.project)
-            own = flash_image.own_build_hint_for(self.project, build, entry and entry[0], image.path)
+            build, entry = image_builder.build_entry(self.project)
+            own = image_builder.own_build_hint_for(self.project, build, entry and entry[0], image.path)
             return ("%s does not match a build of firmware/ as it is now (firmware/, the board's MicroPython or how spark "
                     "builds images changed since): %s%s"
-                    % (image.path.name, BUILD_IMAGE_HINT % flash_image.build_command(self.project, image.path),
+                    % (image.path.name, BUILD_IMAGE_HINT % image_builder.build_command(self.project, image.path),
                        "; or " + own if own else ""))
         return None
     # --- end MVP ---
 
     def expected_files(self, image):
         return {path: hashlib.sha256(data).hexdigest()
-                for path, data in flash_image.files_under(self.project / "firmware")}
+                for path, data in image_builder.files_under(self.project / "firmware")}
 
     def argv(self):
         return [NO_SIMULATION_FLAG]

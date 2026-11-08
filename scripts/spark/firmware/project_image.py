@@ -9,7 +9,7 @@ import functools
 import hashlib
 
 from spark.firmware import firmware_codes
-import flash_image
+from spark.firmware import image_builder
 from spark.core import outcomes
 import run_scenario
 from spark.firmware import sim_project
@@ -54,7 +54,7 @@ class ProjectImage:
         if outside:
             raise DeployError(outside, reason=firmware_codes.FIRMWARE_LINE_BAD)
         if not self.path.is_file():
-            build = BUILD_IMAGE_HINT % flash_image.build_command(project, self.path)
+            build = BUILD_IMAGE_HINT % image_builder.build_command(project, self.path)
             raise DeployError("no %s yet: run a scenario first (run_scenario.py), which writes the image and tests it, "
                               % self.path + NO_SIMULATION_HINT % (build + ", then "), reason=firmware_codes.NO_IMAGE)
         self.project = project

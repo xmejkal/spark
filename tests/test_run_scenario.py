@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_scenario  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
-import flash_image  # noqa: E402
+from spark.firmware import image_builder  # noqa: E402
 import tools  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, OK, PROBLEMS  # noqa: E402
 
@@ -876,8 +876,8 @@ class TheOriginalEsp32sImageTest(ProjectCase):
 
     def test_the_run_s_image_holds_the_interpreter_at_0x1000(self):
         self.micropython.write_bytes(fake_interpreter(offset=0x1000))
-        chosen = flash_image.Interpreter(self.micropython, 0x1000)  # micropython.org/download/ESP32_GENERIC/: write_flash 0x1000
-        with mock.patch.object(flash_image, "interpreter_for", return_value=chosen):
+        chosen = image_builder.Interpreter(self.micropython, 0x1000)  # micropython.org/download/ESP32_GENERIC/: write_flash 0x1000
+        with mock.patch.object(image_builder, "interpreter_for", return_value=chosen):
             status, said, _ = self.run_with()
         self.assertEqual(status, OK, said)
         image = (self.project / "sim" / "flash-with-firmware.bin").read_bytes()
