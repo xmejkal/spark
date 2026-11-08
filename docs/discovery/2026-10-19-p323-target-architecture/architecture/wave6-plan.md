@@ -8,13 +8,18 @@
 > `areas/firmware.md`, and no module re-exports an old name. W6-F1 starts now. W6-F2 and W6-F3 wait for PR #906 and PR #915 (W5-3a).
 > Breadboard and checks are refined too (P690): W6-B2 and W6-C2 give their refusals codes, text unchanged but for
 > P688's item 3 (a package with no `bom.csv`: a sentence and exit 2, two new goldens), and the move is two PRs, W6-B3
-> and W6-C3, because together they are three times W6-F3. Design with build and records with
-> sourcing get one paragraph each. Batching the later moves into fewer PRs is open question 1.
+> and W6-C3, because together they are three times W6-F3. Design with build is refined too (P698). It gets seven PRs.
+> W6-D1 is one golden net with a fake `tsci` and a fake converter. W6-D2 and W6-U2 are the codes, design then build.
+> W6-D3a, W6-D3b, W6-D3c and W6-U3 are the moves, each at most W6-F3's size, 605 mutation rows in all. `BuildService`
+> and the N19 Operations are later cards, because a move PR adds no logic. Records with sourcing stays one paragraph,
+> with what must be refined first. Open question 1 is answered: a big move is one PR per area, or more.
 
 Fable 5.1 wrote this plan on 2026-11-07, against `origin/main` 4e63057e. W5-1 (#914) and W5-2 (#913) are in main.
 W5-3a (#915) and W5-3b are stacked on PR #906. Every firmware count below is from that tree. A name marked "proposed" is not
 in the code yet, and "est." marks a guess. P690 (2026-11-08) refined the breadboard and checks sections against
 `origin/main` 46bca725, and every breadboard and checks count is from that tree, with W6-F1, W6-F2, W6-B1 and W6-C1 merged and W6-F3 (P685) in Build.
+P698 (2026-11-08) refined the design-with-build group against `origin/main` 924e48a4. Every count of that group is from
+that tree, with the firmware group done and W6-B2 merged.
 
 ## Council
 
@@ -746,6 +751,204 @@ files in all name a path of the fifteen. `areas/checks.md` follows. History keep
 
 Review: as W6-B3. Size: 2,585 lines moved, 25 import lines, 118 rows, 27 keys, 2 `SCRIPTS` lines.
 
+### The design-with-build group (P698, at 924e48a4)
+
+The group is 13 flat modules, 5,808 lines: the ten of `areas/design.md` and the three of `areas/build.md`. The first
+paragraph's "15 modules, 6,075 lines" was not reproduced, and no file list gives it. The five CLIs are `assign_pins.py`,
+`emit_board.py`, `emit_footprint.py`, `check_spine.py` and `init_project.py`. `design.py` and `needs.py` have no `main`.
+605 mutation rows in 96 tables name one of the 13. 36 baseline keys do. 90 import lines outside the 13 name one (35
+under `scripts/`, 26 of them lazy, and 55 in 28 test files), and 27 sit among them. 16 agent-facing pages name a path.
+The 14 test files hold 10,578 lines. This is three times W6-F3 in lines and 2.3 times in rows (267), so the group gets
+seven PRs, none bigger than W6-F3. Two decisions, with the reason:
+
+- `BuildService` and the six `BuildStage`s are not in the move. They replace `check_spine.run` (189 lines,
+  `check_spine.py:362`), which 126 rows guard, and the in-process `BoardEmitter` call replaces a child process
+  (`:415`). Both are logic, and a move PR adds none. "No base class with one implementation" does not stop them, because
+  six stages implement one Strategy. They are one card after W6-U3, with W6-D1's goldens as its net.
+- The `board-list` and `audit` Operations (N19) wait too. No design Operation runs on `run_cli` today, `boards.py`
+  and `parts.py` are the next group's files, and the firmware Operations waited the same way.
+
+### W6-D1, the design-with-build golden net
+
+Guard, do not skip. Every child has no `WOKWI_CLI_TOKEN`, the four proxies of W6-C1, and a `PATH` of the shim folder
+alone. None of the five CLIs runs `wokwi-cli` or `gh`. `check_spine.run` runs `tsci` (`check_spine.py:461`, `:183`,
+`:191`), the converter (`:560`) and `emit_board.py` as a child (`:415`). `init_project.main` asks the tools list
+(`init_project.py:426`). A test asserts the `tsci` found is the fake.
+
+Goal: what the five CLIs print, and what `--keep` writes, stays byte-equal through the codes and the moves. Two fakes,
+no copy. The fake `tsci` is `test_check_spine.fake_tsci` (`tests/test_check_spine.py:1234`). It answers `--version`
+with `0.0.0-fake` and copies a canned `circuit.json`. It moves to `tests/fakes.py` beside `FakeTscircuitExport`
+(`:267`), so both files import it. The fake converter is new (proposed, `tests/fake_converter.py`): it writes a canned
+`diagram.json` to its `--out`. The project's `.spark/tools.json` names it as the `diagram-converter` with `"kind":
+"path"` and `"also": []`, as W6-F1's shim does. The project is `golden_checks.build_project`'s copy of
+`tests/data/breadboard/button-light`, which holds a built `dist/board/circuit.json`.
+
+Cases, est. 16, each `<op>-<status>[-<scenario>]`. `assign-pins`: `ok.json`, `ok.txt`, `problems-impossible.txt`
+(`EXIT_IMPOSSIBLE`), `could-not-run-no-requirements.txt`. `emit-board`: `ok.txt` (the board file on stdout),
+`could-not-run-no-footprint.txt`, `could-not-run-refused.txt`. `emit-footprint`: `ok.json`,
+`could-not-run-no-footprint.txt`. `check-spine`: `ok.json`, `ok-keep.txt` (the `kept` lines), `problems-build.txt` (the
+fake `tsci` with errors), `could-not-run-no-tsci.txt`, `could-not-run-requirements.txt`, `board-only.json`.
+`init-project`: `ok.txt`, `nothing-to-do.txt` (`EXIT_NOTHING_TO_DO`), `could-not-run-no-board.txt`. The PR probes each
+and reports the real count. A Case that reaches the `simulation` stage holds the fake converter's diagram.
+
+Files: `tests/golden_design.py` (proposed, the helper, named after the group's first area, and it holds both areas'
+Cases), `tests/test_golden_design.py`, the goldens in `tests/golden-design/`, `tests/mutations/p<card>-design-net.json`.
+Reuse: `golden_firmware.Case`, `plant`, `run_script(env=...)`, `golden_checks.child_env`, `build_project`, and
+`golden_bench.scrub`, `replacements_of`, `op_of`, `check_golden`. The scrub adds a pattern only if a probe shows a date
+or a hash. The `kept` lines name files under `<project-dir>`, scrubbed. `SPARK_ACCEPT=<op>` writes that op's goldens.
+
+Mutation (est. 7 rows): the scrub skipped, an exit code wrong, the proxies not set, the `PATH` with another folder, the
+fake `tsci` answers `--version` wrong, the written files not appended, the fake converter writes no diagram. Proven
+with `--anchors`, run with `--copy`. Review: no product logic. One reviewer on the everyday model and the refuter on the
+strongest. Size est.: 130 helper lines, 120 test lines, 30 lines of the fake converter, 16 goldens. Tests only, so it
+can open while a move PR is open.
+
+### W6-D2, the design codes (after W6-D1)
+
+Goal: each refusal of the four design CLIs and of `design.load` has a code. Text and exit codes stay byte-equal.
+
+Files: `scripts/design_codes.py` (proposed, a leaf, as `firmware_codes`. C1 refuses `codes.py`). The sites, read at
+924e48a4: `DesignError` at 31 `raise` sites (`design.py:118` to `:447`), `Impossible` at 12 (`assign_pins.py:193` to
+`:476`), `RefusedInput` at 2 (`emit_board.py:1093`, `:1096`), `emit_board.main`'s 6 returns (`:1115` to `:1177`),
+`emit_footprint.main`'s 2 (`:315`, `:319`). One code per refusal an agent acts on differently (P684, P692 row 13), so
+the 31 `DesignError` sites share about 8 codes. Est. 24 codes. The PR reports the real count. How a code travels:
+`DesignError`, `Impossible` and `RefusedInput` gain a `code` attribute, as `NotBuilt` did. `why_no_footprint`
+(`emit_footprint.py:151`) returns a `Refusal` from `spark/core/result.py` (its home since W6-C2). Each `main` is an R1
+key that cannot grow (P684 row 28). So `emit_board.main`'s 6 refusals move into one library function. It returns the
+refusal with its code, as `check_footprints.built_design` did (P693 row 5). `emit_board.py` (1,208) and `needs.py`
+(831) are over R1's 600, so each line added there raises an `R1:<module>` key. The PR pays with prunes, else
+`--accept-new` with the reason. `assign_pins.py` has 25 lines of room.
+
+This PR also extracts the eight functions of 41 to 60 lines that R1 catches after the move: `design.read` 51 (`:114`),
+`signals_of` 41 (`:381`), `needs.plan_pick` 57 (`:475`), `requirements` 55 (`:771`), `assign_pins.onboard_lines` 44
+(`:435`), `emit_board.rail_loads` 60 (`:512`), `header_lines` 46 (`:598`), `emit_footprint.render` 44 (`:253`). One
+commit each, goldens green. `assign_pins.assign` (116) keeps its key, and the key moves with `--accept-new`.
+
+Tests: in the four test files. Each site's code as a literal. `CODES` names every constant once. `design_codes` joins
+`measure.LEAVES` (`tools/measure.py:247`), `planted_tree.LEAF_NAMES` (`tests/planted_tree.py:11`) and
+`TheBenchCodesTableTest`'s tuple. Mutation (est. 9 rows): three sites with one code swapped, an error drops its code, a
+`Refusal` back to a plain `str`, `CODES` missing a constant, a sentence changed, an exit code changed, the library
+function lets a refusal through. Docs: `areas/design.md` (the leaf's row). `json.md` gains nothing: no code reaches a
+JSON. Review: logic. The lenses on the everyday model, the refuter on the strongest, one mutation run. Size est.: 150
+product lines, 120 test lines.
+
+### W6-U2, the build codes (after W6-D2)
+
+Goal: each refusal of `check_spine.py` and `init_project.py` has a code. Text and JSON stay byte-equal.
+
+Files: `scripts/build_codes.py` (proposed, a leaf). `Stage` (`check_spine.py:121`) gains an optional `code`. `report`
+(`:1012`) prints `name`, `status` and `detail` only (`:1031`), so the JSON is unchanged. The sites: `run` returns a `could-not-run`
+or `problems` Stage at est. 12 places (`:409` to `:543`), `main` at 3 (`:718`, `:745`, `:746`), `board_alone` at 1,
+`init_project.main` at 4 (`:423`, `:428`, `:486`, `:515`). Est. 12 codes, the page's `tool_cannot_build` among them.
+`init_project.main` (112 lines) is an R1 key, so its codes come from one small library function. `check_spine.py`
+(1,048) is over 600, paid as in W6-D2. This PR extracts `check_spine.islands_in` 56 (`:285`). `rules_for` (70) and
+`run` (189) keep their keys.
+
+Two small prunes from P691 and P694's review: `check_spine.py:843` catches `(breadboard.NotBuilt, design.DesignError,
+store.StoreProblem, OSError, ValueError)` by hand, and it becomes `breadboard.REFUSALS + (ValueError,)`
+(`breadboard.py:114`). Its "not written" entry gains a `code` from `breadboard.refusal_code` (`:117`). That `kept` entry
+is in the JSON, so one golden is accepted again, read by eye, as `import-firmware-problems.json` was. P691 (#933) keeps
+the 12 `NotDrawn` sites of `drawing.py` and the one of `part_shape.py`, and loses its `:843` sentence.
+
+Tests, mutation (est. 7 rows: two codes swapped, `Stage` drops its code, `CODES` missing a constant, the `kept` entry's
+code dropped, an exit code changed, a sentence changed) and review as W6-D2. Size est.: 90 product lines, 80 test lines.
+
+### W6-D3a, W6-D3b, W6-D3c and W6-U3, the moves (after W6-U2, one open at a time)
+
+Why four. 5,808 lines and 605 rows at 1.6 minutes is 16 hours of one serial mutation run. Four PRs keep each under
+W6-F3 (1,900 lines, 267 rows). The order is bottom-up along the imports among the 13, so no moved module imports a flat
+one for long. Each PR is `git mv`, the page's names, the import lines and the rows, one commit per module, goldens
+green after each commit. The CLIs stay in `scripts/` as a `main`, and no module re-exports an old name. Each PR's
+closing test is `TheDesignAreaTest` or `TheBuildAreaTest` (proposed). Both take the shape of `TheFirmwareAreaTest`
+(`tests/test_architecture.py:312`) with its `CLIS` dict.
+
+| PR | Old file (lines) | New file | Rows | Keys | Note |
+|---|---|---|---|---|---|
+| D3a | `fab.py` (134), `copper.py` (122) | `spark/design/fab.py`, `copper.py` | 21, 2 | 0 | `fab.py:30` `__file__` to `parents[3]` |
+| D3a | `design.py` (450) | `spark/design/loader.py` | 53 | 1 | no CLI, `design.py:38` goes |
+| D3a | `restricted_pins.py` (81), `netlist.py` (138) | `spark/design/restricted_pins.py`, `netlist.py` | 0, 6 | 2 | |
+| D3a | `assign_pins.py` (575) | `spark/design/pin_assigner.py`, the CLI stays | 39 | 8 | `R1:assign` moves, `main` keys stay |
+| D3b | `emit_footprint.py` (344) | `spark/design/footprint_emitter.py`, the CLI stays | 19 | 2 | `_report` prints (`:337`), so it stays with `main` |
+| D3b | `emit_board.py` (1,208) | `spark/design/board_emitter.py`, the CLI stays | 67 | 6 | `R1:<module>` moves with `--accept-new`, no split |
+| D3b | `part_shape.py` (232) | `spark/breadboard/part_shape.py` | 24 | 0 | the edge fix below |
+| D3b | `design_codes.py` | `spark/design/design_codes.py` | 0 | 0 | the leaf |
+| D3c | `needs.py` (831) | `spark/design/needs.py` | 221 | 2 | `parts.py` keeps its 7 lazy imports |
+| U3 | `check_spine.py` (1,048) | `spark/build/build_service.py`, `board_engine.py`, `kept_build.py` (proposed), the CLI stays | 126 | 11 | the split, one commit |
+| U3 | `init_project.py` (522) | `spark/build/project_setup.py`, the CLI stays | 27 | 4 | |
+| U3 | `ai_files.py` (123) | `spark/build/ai_files.py` | 0 | 1 | `ai_files.py:25` to `parents[3]` |
+| U3 | `build_codes.py` | `spark/build/build_codes.py` | 0 | 0 | the leaf |
+
+Sizes: D3a 1,500 lines and 121 rows. D3b 1,784 and 110. D3c 831 and 221. U3 1,693 and 153.
+
+The edge fix. `part_shape.py` imports `breadboard_drawing` for `NotDrawn`, three codes and `WOKWI_GEOMETRY_FILE`
+(`part_shape.py:24`, `:26`), and `breadboard_catalog.py:15` imports it back. Under design that is an upward edge and
+a U1 cycle (P694's review). It moves to breadboard instead: its job is a part's pixel shape in the Wokwi drawing, and
+its one design import, `emit_footprint` (`:25`), is a downward arrow. The appendix row "design's `shapes/`" is
+corrected, and `areas/breadboard.md` gains the row.
+
+The `check_spine.py` split, as W6-F3's. `board_engine.py` holds the tool adapters: `find_toolchain`, `modules_for`,
+`toolchain_can_build`, `tsci_version`, `find_converter`, `converter_command`, `converter_stage_problem`, `convert` and
+their constants (`:131` to `:243`, `:553`). `kept_build.py` holds what `--keep` writes: `kept_into` to
+`keep_simulation` (`:769` to `:1010`), `left_off` and `design_handed_to`. `build_service.py` holds `run`, `Stage`,
+`islands_in`, `board_alone`, `verdict` and the stage sentences. The CLI keeps `main`, `report`, `render`,
+`timed_out_sentence` and `said_of_a_crash`, because `report` prints (`:1037`, `:1041`). No module is then over 600, so
+`R1:scripts/check_spine.py:<module>` goes. The one `__file__` that breaks is `:416`, the `emit_board.py` child: a
+`EMIT_BOARD_SCRIPT` with `parents[2]`, as `image_builder.FLASH_IMAGE_SCRIPT` does (P685 row 5), with a test.
+`find_converter`'s `scripts/check_spine.py` test (`:214`) holds, because the CLI stays.
+
+The rules, checked at 924e48a4. R1: the nine extractions are the codes PRs', so the only new breach is none. The
+`main` keys stay (five), `R1:assign`, `rules_for`, `run` and the two `<module>` keys move with `--accept-new`. R6: 5 keys
+(`AiFiles`, `Impossible`, `Stage`, `RefusedInput`, `Netlist`), each docstring gets its role word and its key goes. X2:
+`emit_footprint._report` and `check_spine.report` print, and both stay in their CLI. No other `print` or `sys.exit`
+sits outside a `main` (checked with `ast`). T1: 6 keys, the two `file-write` keys of `assign_pins` (`:550`) and
+`emit_footprint` (`:327`) sit in `main` and stay, `check_spine`'s three and `init_project`'s one follow their code.
+C1 2, C3 2 (both in a `main`, stay), R2 5, R3 5. U1: the two leaves are in `LEAVES` since the codes PRs. `MAY_READ`
+(`tests/test_self_confirmation.py:50` to `:80`) has 17 keys on the 13, and 15 take the new module name (the
+`emit_footprint` and `copper` keys name values that stay by name). Import lines: 90 outside and 27 among. The 26 lazy
+ones stay lazy. `sim_project.py:20` (firmware) and `board_envelope.py:17` (bench) read design along their arrows.
+Rows: `--retarget` for each file that moves whole. The rows of a CLI's `main` go back to the CLI's file by a scratch
+script, as P685 row 11 did. `--anchors` proves each `find` occurs once. No row is dropped. Each PR's retargeted tables
+run once, in parallel `--copy` shards.
+
+Renames the pages ask for are a card, not a move: `ImpossibleError` for `Impossible`, `PinAssigner`, `PinMap`,
+`BoardEmitter`, `NeedsService`, `BuildInputs`, `ProjectSetupService`, `TscircuitEngine`, `DiagramConverter`. Tests
+assert the old names. `__init__.py` holds the index docstring alone, in `design` and in `build`.
+
+Tests: the 28 test files import from `spark.design` or `spark.build`. The import-alone test extends to each moved module
+(`each_module_imports_alone`, `test_architecture.py:301`). The map is regenerated. Docs: the 16 agent-facing pages
+(`how-it-works.md` names 11 of the 13), `areas/design.md`, `areas/build.md`, `areas/breadboard.md` and
+`developing.md`. History keeps the old paths. Review: no new logic. One reviewer on the everyday model and the refuter
+on the strongest, the retargeted tables as the one mutation run, a whole-branch review before each PR.
+
+## Design and build after W6-U3 (the moved modules and their classes)
+
+```mermaid
+classDiagram
+  class Design { <<Value>> }
+  class DesignError { <<Error>> code }
+  class RestrictedPins { <<Value>> }
+  class Netlist { <<Value>> }
+  class Impossible { <<Error>> code }
+  class BoardInputs { <<Value>> }
+  class RefusedInput { <<Error>> stage code }
+  class design_codes { <<leaf>> CODES }
+  class Stage { <<Value>> name status detail code }
+  class AiFiles { <<Value>> }
+  class build_codes { <<leaf>> CODES }
+  class Refusal { <<Value>> code }
+  DesignError ..> design_codes
+  Impossible ..> design_codes
+  RefusedInput ..> design_codes
+  BoardInputs ..> Design
+  Stage ..> build_codes
+  Stage ..> RefusedInput
+```
+
+`Design` and `DesignError` (`loader.py`), `RestrictedPins`, `Netlist`, `Impossible` (`pin_assigner.py`), `BoardInputs`
+and `RefusedInput` (`board_emitter.py`), `Stage` (`build_service.py`) and `AiFiles` exist today. `pin_assigner.py`,
+`board_emitter.py`, `footprint_emitter.py`, `needs.py`, `board_engine.py`, `kept_build.py` and `project_setup.py` hold
+functions, and the page's Services wait for their cards.
+
 ## Breadboard and checks after W6-B3 and W6-C3 (the moved modules and their classes)
 
 ```mermaid
@@ -789,14 +992,16 @@ Each group follows the same three PRs. The order is the plan's. Open question 1 
 
 **Checks**: W6-C1 above (merged), then W6-C2 and W6-C3 above.
 
-**Design with build** (15 modules, 6,075 lines, `emit_board.py` alone 1,208). The move brings the `board-list`
-and `audit` Operations (N19), and `BuildService` with six `BuildStage`s replaces `check_spine.run`. Done: the spine
-calls `BoardEmitter` in process, and `ImpossibleError` is in the code (est. three PRs of 200, 250 and 6,000 moved
-lines, the biggest of the wave).
+**Design with build**: W6-D1, W6-D2, W6-U2, W6-D3a, W6-D3b, W6-D3c and W6-U3 above (P698).
 
-**Records with sourcing** (13 modules, 5,949 lines). The move brings P391's stage 2 classes, `Brief`, `ToolFinder`,
-the two bench leaves and the `parts.py` split by job group. Done: `parts.py` imports its Operation modules at the
-top, and the eight lazy edges of section 5 are gone (est. three PRs of 200, 250 and 6,000 moved lines).
+**Records with sourcing** (13 modules and 5,949 lines by the first count, not checked since). The move brings P391's
+stage 2 classes, `Brief`, `ToolFinder`, the two bench leaves and the `parts.py` split by job group. Done when:
+`ls scripts/*.py` prints only the CLIs, each a `main` that parses and prints. `tests/test_architecture.py` holds one
+area test per area, as `TheFirmwareAreaTest` does. No lazy import under `scripts/spark/` points up an arrow, and
+`parts.py` imports its Operation modules at the top. What must be refined first, when it is next: the count at that
+day's main, the job groups of `parts.py` (2,384 lines at 924e48a4), and the name of each split module against
+`areas/records.md` and `areas/sourcing.md`. Also where `boards.footprint_stop` goes (`boards.py:248`, with a lazy
+`emit_footprint` import at `:255`, an upward edge), and how many move PRs, by the rule above.
 
 ## Firmware after W6-F3 (partial: the moved modules and their classes)
 
