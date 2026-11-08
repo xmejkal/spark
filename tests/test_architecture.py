@@ -481,12 +481,14 @@ class TheSourcingAreaTest(unittest.TestCase):
     #: The modules of the area so far, by the names of its page (`areas/sourcing.md`).
     MODULES = ["part_rules"]
 
-    def test_the_area_holds_its_modules_and_the_band_is_defined_there_alone(self):
-        self.assertEqual(sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py"), self.MODULES)
-        defined = [str(path.relative_to(ROOT)) for path in (ROOT / "scripts").rglob("*.py")
-                   if any(isinstance(node, ast.Assign) and any(getattr(target, "id", None) == "PULLUP_MIN_OHM" for target in node.targets)
-                          for node in ast.parse(path.read_text()).body)]
-        self.assertEqual(defined, ["scripts/spark/sourcing/part_rules.py"])
+    def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):
+        modules = sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py")
+        self.assertEqual(modules, self.MODULES)
+        # any binding of a name, a tuple's element too (the refuter's `PULLUP_MIN_OHM, PULLUP_MAX_OHM = 1000, 10000`)
+        bound = {str(path.relative_to(ROOT)) for path in (ROOT / "scripts").rglob("*.py")
+                 for node in ast.walk(ast.parse(path.read_text())) if isinstance(node, ast.Name)
+                 and isinstance(node.ctx, ast.Store) and node.id in ("PULLUP_MIN_OHM", "PULLUP_MAX_OHM")}
+        self.assertEqual(sorted(bound), ["scripts/spark/sourcing/part_rules.py"])
 
     def test_the_area_s_init_imports_nothing(self):
         # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)

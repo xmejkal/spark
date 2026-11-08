@@ -47,8 +47,8 @@ STEPS = ("S", "M", "C", "G", "L", "T", "I", "F", "R")
 
 
 class NoTranscript(CodedMessageError):
-    """A cost that is not known: no step, a step line spark cannot read, no session, or no transcript of it here. Could-not-run, never 0.
-    Its code is one of `sourcing_codes`'."""
+    """A cost that is not known: no step, a step line spark cannot read, no session, or no transcript of it here.
+    Could-not-run, never 0. Its code is one of `sourcing_codes`'."""
 
 
 def _when(stamp):
@@ -64,7 +64,8 @@ def _start_of(step):
     try:
         return _when(step["start"])
     except (KeyError, ValueError):
-        raise NoTranscript("a step line in your history (project %r, step %r) has no start spark can read as a time — fix it by hand",
+        raise NoTranscript("a step line in your history (project %r, step %r) has no start spark can read as a time "
+                           "— fix it by hand",
                            step.get("project"), step.get("step"), code=sourcing_codes.STEP_LINE_BROKEN) from None
 
 
@@ -226,23 +227,32 @@ def cost(steps, project, root=None):
     """
     found = windows(steps, project)
     if not found:
-        raise NoTranscript("no step of %s is in the history — `parts.py --step <project> <step>` marks each", project, code=sourcing_codes.NO_STEP_MARKED)
+        raise NoTranscript("no step of %s is in the history — `parts.py --step <project> <step>` marks each",
+                           project, code=sourcing_codes.NO_STEP_MARKED)
     inside, minutes, read = [], 0.0, {}
     for session, start, end in found:
         if not session:
-            raise NoTranscript("a step of %s was marked in no Claude Code session, so its cost cannot be counted", project, code=sourcing_codes.STEP_WITHOUT_SESSION)
+            raise NoTranscript("a step of %s was marked in no Claude Code session, so its cost cannot be counted",
+                               project, code=sourcing_codes.STEP_WITHOUT_SESSION)
         paths = transcripts(session, root)
         if not paths:
-            raise NoTranscript("no transcript of session %s here, so the cost of its steps is not known", session, code=sourcing_codes.NO_TRANSCRIPT)
+            raise NoTranscript("no transcript of session %s here, so the cost of its steps is not known",
+                               session, code=sourcing_codes.NO_TRANSCRIPT)
         if session not in read:
             try:
                 read[session] = _read(paths)
             except OSError:  # its message names the file, and the file's folder names the directory the session ran in
-                raise NoTranscript("the transcripts of session %s could not be opened, so the cost of its steps is not known", session, code=sourcing_codes.TRANSCRIPT_UNREADABLE) from None
+                raise NoTranscript("the transcripts of session %s could not be opened, "
+                                   "so the cost of its steps is not known",
+                                   session, code=sourcing_codes.TRANSCRIPT_UNREADABLE) from None
             if not any(_moment(entry) for entry in read[session][0]):
-                raise NoTranscript("the transcripts of session %s name no time spark can read, so the cost of its steps is not known", session, code=sourcing_codes.TRANSCRIPT_UNREADABLE)
+                raise NoTranscript("the transcripts of session %s name no time spark can read, "
+                                   "so the cost of its steps is not known",
+                                   session, code=sourcing_codes.TRANSCRIPT_UNREADABLE)
         if not any(moment >= start for moment in map(_moment, read[session][0]) if moment):
-            raise NoTranscript("the transcripts of session %s end before one of its steps began, so the cost of its steps is not known", session, code=sourcing_codes.TRANSCRIPT_ENDS_EARLY)
+            raise NoTranscript("the transcripts of session %s end before one of its steps began, "
+                               "so the cost of its steps is not known",
+                               session, code=sourcing_codes.TRANSCRIPT_ENDS_EARLY)
         here = [entry for entry in read[session][0] if _inside(entry, start, end)]
         inside += here
         minutes += ((end or max([_when(entry["timestamp"]) for entry in here], default=start)) - start).total_seconds() / 60

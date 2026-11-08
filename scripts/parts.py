@@ -262,7 +262,8 @@ def definition_path(part_id: str, project: Path = None) -> Path:
     found = store.records("parts", LIBRARY, project).get(part_id)
     if found:
         return found[1]
-    raise PartError("no part called %r.\n  available: %s", part_id, ", ".join(available(project)) or "(none)", code=sourcing_codes.NO_SUCH_PART)
+    raise PartError("no part called %r.\n  available: %s", part_id, ", ".join(available(project)) or "(none)",
+                    code=sourcing_codes.NO_SUCH_PART)
 
 
 def load(part_id: str, project: Path = None) -> dict:
@@ -270,7 +271,8 @@ def load(part_id: str, project: Path = None) -> dict:
     part = json.loads(path.read_text())
     problems = validate(part, path)
     if problems:
-        raise PartError.of_lines(["%s does not meet the part contract:" % path] + ["  - " + problem for problem in problems], code=sourcing_codes.PART_CONTRACT_BROKEN)
+        raise PartError.of_lines(["%s does not meet the part contract:" % path]
+                                 + ["  - " + problem for problem in problems], code=sourcing_codes.PART_CONTRACT_BROKEN)
     return part
 
 
@@ -580,7 +582,7 @@ def simulation_problems(part: dict, path: Path) -> list:
 
 
 def chip_problems(part, path, chip, pins):
-    """What is wrong with a record's custom chip, `simulation.wokwi.chip`: its name, its files beside the record, its pins."""
+    """What is wrong with a record's `simulation.wokwi.chip`: its name, its files beside the record, its pins."""
     problems = []
     if chip and not (isinstance(chip, str) and re.fullmatch(SELECTOR_SAFE, chip)):
         # the re-check's probes: a chip's name names its files (`../escape` reached outside the chip folder, and
@@ -1328,7 +1330,8 @@ def promote(part_id, project, to=None, dry_run=False):
     to = Path(to) if to else (Path(project) / "parts" if home in (store.place("catalog"), store.place("shelf")) else LIBRARY)
     target = to / (part_id + DEFINITION_SUFFIX)
     if target.exists():
-        raise PartError("%s exists; a promotion never overwrites", target, code=sourcing_codes.PROMOTION_WOULD_OVERWRITE)
+        raise PartError("%s exists; a promotion never overwrites", target,
+                        code=sourcing_codes.PROMOTION_WOULD_OVERWRITE)
     if dry_run:
         return target
     to.mkdir(parents=True, exist_ok=True)
@@ -1466,7 +1469,7 @@ def conflicts_of(part):
 
 
 def _rests_on(part, facts, high, supply):
-    """The facts a CONFLICT used that nobody has verified, as `<part>.<fact>`, and the `upgrade` that says how to settle them."""
+    """The facts a CONFLICT used that nobody has verified, as `<part>.<fact>`, and the `upgrade` that settles them."""
     recorded = {"onboard_input_pullups_ohms": True, "input_high_threshold_v": isinstance(high, (int, float)),
                 "supply_range_v": isinstance(supply, list) and len(supply) == 2}
     rests_on = sorted("%s.%s" % (part.get("id"), name) for name, usable in recorded.items()  # missing is not verified
@@ -1768,12 +1771,16 @@ def _op_keep(args, project):
     if not path.is_file():
         return Answer(unchecked=[_cannot("--keep: no file at %s" % path)])
     located = path.name.lower().endswith((".jpg", ".jpeg")) and without_location(path.read_bytes())[1]
-    said = ["  removed the location (EXIF GPS) from %s before keeping it" % printable(path.name)] if located and not args.json else ()
-    try:  # P423: a name the store refuses is refused after the line was said
+    said = (["  removed the location (EXIF GPS) from %s before keeping it" % printable(path.name)]
+            if located and not args.json else ())
+    try:  # P423: a store that refuses the file, or cannot be written, refuses it after the line was said
         entry = keep_local(path, args.url, dry_run=args.dry_run)
     except store.StoreProblem as refused:
         return Answer(unchecked=[_cannot(str(refused))], diagnostics=said)
-    return Answer({"document": entry, "location_removed": located, "written": not args.dry_run}, [json.dumps(entry, indent=2, ensure_ascii=False)], diagnostics=said)
+    except OSError as unwritable:
+        return Answer(unchecked=[_cannot("--keep: %s" % unwritable)], diagnostics=said)
+    return Answer({"document": entry, "location_removed": located, "written": not args.dry_run},
+                  [json.dumps(entry, indent=2, ensure_ascii=False)], diagnostics=said)
 
 
 def _op_read(args, project):
@@ -1798,11 +1805,13 @@ def _op_promote(args, project):
 
 
 def _read_json_input(name):
-    """A payload from a file, or from stdin for '-' — the way labels and names travel, never argv (§6.4.2): (data, None) or (None, why not)."""
+    """A payload from a file, or from stdin for '-' — the way labels and names travel, never argv (§6.4.2). A refusal
+    with the code `input_unreadable` when it is not readable JSON, which `main` answers as could-not-run."""
     try:
-        return json.loads(sys.stdin.read() if name == "-" else Path(name).read_text()), None
+        return json.loads(sys.stdin.read() if name == "-" else Path(name).read_text())
     except (OSError, ValueError) as broken:
-        return None, "%s is not readable JSON: %s" % ("stdin" if name == "-" else name, broken)
+        raise CodedMessageError("%s is not readable JSON: %s", "stdin" if name == "-" else name, broken,
+                                code=sourcing_codes.INPUT_UNREADABLE) from None
 
 
 def _change_line(change, dry_run):
@@ -1869,18 +1878,14 @@ def _op_drawer(args, project):
 
 def _op_drawer_set(args, project):
     import drawer
-    items, unreadable = _read_json_input(args.drawer_set)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    items = _read_json_input(args.drawer_set)
     return _drawer_answer(*drawer.plan_set(items, project), args.dry_run)
 
 
 def _op_drawer_import(args, project):
     import drawer
     source, name = args.drawer_import
-    payload, unreadable = _read_json_input(name)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    payload = _read_json_input(name)
     changes, questions, problems, smaller = drawer.plan_import(source, payload)
     answer = _drawer_answer(changes, questions, problems, args.dry_run)
     if not problems and not args.dry_run:
@@ -1961,7 +1966,8 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
     """
     path, source = _record_path(part_id, project, "board" if "pin_roles" in values else "part")  # P464: only a level in pin_roles reaches a board
     if path is None:
-        raise PartError("no record called %r — `parts.py --need` finds what exists", part_id, code=sourcing_codes.NO_SUCH_PART)
+        raise PartError("no record called %r — `parts.py --need` finds what exists", part_id,
+                        code=sourcing_codes.NO_SUCH_PART)
     if path.parent.resolve() in (LIBRARY.resolve(), boards.LIBRARY.resolve()):
         return Answer(problems=[_problem(part_id, "%s is in spark's own library, which is changed in spark's repository, "
                                                   "not by parts.py" % part_id)])
@@ -1986,9 +1992,7 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
 
 def _op_function_set(args, project):
     part_id, name = args.function_set
-    function, unreadable = _read_json_input(name)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    function = _read_json_input(name)
     answer = _set_in_home(part_id, project, {"function": function}, args.dry_run, lambda record, after, path:
                           function_problems(after) if function else ["a function is a non-empty list [{does, what}]"])
     return answer._replace(data=dict(answer.data, was=answer.data["was"]["function"], now=function)) if answer.data else answer
@@ -1998,9 +2002,7 @@ def _op_fact_set(args, project):
     """Fill a record's chain facts, write `facts` entries by name (a bench result and its source, P374), or set what it says of itself (about, description, tags)."""
     import drawer
     part_id, name = args.fact_set
-    facts, unreadable = _read_json_input(name)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    facts = _read_json_input(name)
     if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + ("facts", "pin_roles"))):
         return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s, or `facts` entries by name; or of what a "
                                                   "record says of itself: %s" % (", ".join(CHAIN_FACTS), ", ".join(drawer.DESCRIBING)))])
@@ -2099,9 +2101,7 @@ def _op_offer(args, project):
 def _op_needs_set(args, project):
     from spark.design import needs
     target, name = args.needs_set
-    items, unreadable = _read_json_input(name)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    items = _read_json_input(name)
     after, changes, problems = needs.plan_set(target, items)
     written = not (problems or args.dry_run)
     if written and changes:
@@ -2119,7 +2119,7 @@ def _op_needs_drop(args, project):
     target, need = args.needs_drop
     result = run_operation(DropNeed(), {"project": Path(target), "need": need, "dry_run": args.dry_run},
                            build_outside=lambda effects: build_outside_world(effects, Reporter()))
-    return Answer(result.data, result.lines, notes=result.notes or (), diagnostics=result.diagnostics,  # a crash's traceback
+    return Answer(result.data, result.lines, notes=result.notes or (), diagnostics=result.diagnostics,
                   problems=[_problem(found.subject, found.sentence, found.fix) for found in result.findings if found.severity == outcomes.PROBLEMS],
                   unchecked=[_cannot(found.sentence, found.fix) for found in result.findings if found.severity == outcomes.COULD_NOT_RUN])
 
@@ -2132,9 +2132,7 @@ def _op_pick(args, project):
     if not pairs or len(pairs) != len(given):
         return Answer(unchecked=[_cannot("--pick takes the project, then NEED=ID for each pick: light=led-red-5mm",
                                          "parts.py --match <project> lists each need's candidates and their ids")])
-    reasons, unreadable = _read_json_input(args.passed_over) if args.passed_over else ([], None)
-    if unreadable:
-        return Answer(unchecked=[_cannot(unreadable)])
+    reasons = _read_json_input(args.passed_over) if args.passed_over else []
     history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
     listed, keys_before = store.find_listed_name(target) is not None, needs.entry_keys(needs.read(target))
     after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
@@ -2191,7 +2189,7 @@ def _names_your_entries(file_name, new_keys, dry_run):
 
 
 def _gap_lines(problems, no_supply, no_receiver, no_driver):
-    """What `--requirements` says of a rail with no supply and of a driven net with no receiver or no driver: nothing on a refusal."""
+    """What `--requirements` says of a rail with no supply, a net with no receiver or no driver: none on a refusal."""
     said = []
     said += ["  rail %s has no supply — pick a power inlet or a supply (%s draw%s from it)"
              % (gap["rail"], ", ".join(gap["drawn_by"]), "s" if len(gap["drawn_by"]) == 1 else "") for gap in ([] if problems else no_supply)]
@@ -2375,7 +2373,7 @@ def main(argv=None):
         value = getattr(args, op.replace("-", "_"))
         answer = Answer(problems=[_problem(" ".join(value) if isinstance(value, list) else
                                            (value if isinstance(value, str) else None), str(broken))])
-    except store.StoreProblem as broken:
+    except CodedMessageError as broken:  # a store's refusal, an unreadable input: could-not-run, never a traceback
         answer = Answer(unchecked=[_cannot(str(broken))])
     return _say(op, answer, args.json)
 

@@ -64,7 +64,7 @@ def one_board_message(circuits, flags=""):
 
 class DesignError(CodedMessageError):
     """Error: the input cannot be loaded, and this is why. Always a sentence, never a traceback. `code` (design_codes) says
-    which refusal it is, and an agent decides on it, never on the sentence (P700). A CodedMessageError, as P716 row 11 asked."""
+    which refusal it is, and an agent decides on it, never on the sentence (P700). A CodedMessageError (P716 row 11)."""
 
 
 #: Why two parts cannot share a name — said by this reader and by `needs` for the picks it writes, in the same words,

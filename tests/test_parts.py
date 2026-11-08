@@ -939,11 +939,12 @@ class EachPartRefusalHasItsCodeTest(unittest.TestCase):
                  "fetch_documents": (lambda: parts.fetch_documents("no-such-part", project), "no_such_part"),
                  "promote": (lambda: parts.promote("no-such-part", project), "no_such_part"),
                  "_set_in_home": (lambda: parts._set_in_home("no-such-part", project, {}, True, None), "no_such_part"),
-                 "load": (lambda: parts.load("broken-part", project), "part_contract_broken")}
+                 "load": (lambda: parts.load("broken-part", project), "part_contract_broken"),
+                 "_read_json_input": (lambda: parts._read_json_input(str(project / "parts")), "input_unreadable")}
         with in_store(home):
             for name, (refusing, code) in asked.items():
                 with self.subTest(name=name):
-                    with self.assertRaises(parts.PartError) as refused:
+                    with self.assertRaises(parts.CodedMessageError) as refused:
                         refusing()
                     self.assertEqual(refused.exception.code, code, str(refused.exception))
 
@@ -1338,6 +1339,22 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         with in_store(self._home()), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
             parts.main(["--keep", str(local)])
         self.assertIn("  removed the location (EXIF GPS) from mod?ule.jpg before keeping it\n", err.getvalue())
+
+    def test_a_store_that_cannot_be_written_refuses_the_photo_after_the_line_that_says_the_location_went(self):
+        # P717 (the refuter): keep_local's OSError is answered by --keep itself, so its line is not lost
+        import tempfile
+        photo, _ = self._photo_with_location()
+        local = Path(tempfile.mkdtemp()) / "module.jpg"
+        local.write_bytes(photo)
+        home = self._home()
+        home.chmod(0o500)  # read-only: no sources folder can be made
+        self.addCleanup(home.chmod, 0o700)
+        with in_store(home), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            code = parts.main(["--keep", str(local)])
+        said = err.getvalue()
+        self.assertEqual(code, 2, said)
+        self.assertTrue(said.startswith("  removed the location (EXIF GPS) from module.jpg before keeping it\nparts.py: --keep: "),
+                        said)
 
     def test_a_photo_with_no_location_and_any_other_file_are_kept_unchanged(self):
         photo, _ = self._photo_with_location()
@@ -1887,7 +1904,8 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
         for as_json in (True, False):
             with self.subTest(as_json=as_json):
                 with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-                    parts._say("show", parts.Answer({"x": 1}, ["  a line"], diagnostics=["a crash's line", "its traceback"]), as_json)
+                    answer = parts.Answer({"x": 1}, ["  a line"], diagnostics=["a crash's line", "its traceback"])
+                    parts._say("show", answer, as_json)
                 self.assertEqual(err.getvalue(), "a crash's line\nits traceback\n")
                 self.assertNotIn("traceback", out.getvalue())
 
