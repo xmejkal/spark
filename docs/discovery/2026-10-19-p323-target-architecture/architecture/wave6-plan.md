@@ -1430,7 +1430,7 @@ P717 claims check (at 00879980, no decision changed). Holds: `PartError` 7 raise
 `:620` (P716 pruned one); `_cannot` is `:243`. `drawer.py` raises only `StoreProblem`, coded by P716, so it gains no code.
 `TheSourcingAreaTest` does not exist: this PR makes it, with `part_rules` alone, and `sourcing_codes` stays flat in
 `scripts/` as `records_codes` did until its move (S3a). A decision: a `_cannot` item is an envelope's `unchecked` dict
-`{sentence, fix}`, so a code in it is a new JSON key and the JSON would not stay byte-equal. The codes go on the three
+`{sentence, fix}`, so a code in it is a new JSON key, and the JSON then changes. The codes go on the three
 raised errors, and an item's code waits for the Operation card, as P716's records codes do. `cost.main`'s three refusals
 are prints in an R1 key, and wait too. `NoTranscript` and `UnknownMatcher` become `CodedMessageError`s
 (`UnknownMatcher` keeps `ValueError` as its second base, which `tools/match_eval.py:104` catches).
