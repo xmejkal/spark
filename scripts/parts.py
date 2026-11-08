@@ -147,7 +147,7 @@ def audit(project=None):
     the footprint stage, their files lacking what the footprint is drawn from (C-7, P121).
     """
     import drawer
-    import emit_footprint
+    from spark.design import footprint_emitter
     walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", LIBRARY, project, drafts=True).items()]
     walked += [("board", found, layer, path) for found, (layer, path) in boards.records(project).items()]
     known, mine, seen = drawer.linkable(project), store.projects(), {row[3].resolve() for row in walked}
@@ -173,9 +173,9 @@ def audit(project=None):
             broken.append({"id": found, "layer": layer, "problems": wrong})
         elif owing:
             owed.append({"id": found, "layer": layer, "owes": owing})
-        elif kind == "board" and emit_footprint.footprint_gaps(record):  # C-7: a board owes nothing, and may still stop the chain
-            stops.append({"id": found, "layer": layer, "stops_why": emit_footprint.why_no_footprint(record),
-                          "stop_line": emit_footprint.footprint_stop_line(record)})  # P411: the text shows the line; `--audit` drops it from the JSON
+        elif kind == "board" and footprint_emitter.footprint_gaps(record):  # C-7: a board owes nothing, and may still stop the chain
+            stops.append({"id": found, "layer": layer, "stops_why": footprint_emitter.why_no_footprint(record),
+                          "stop_line": footprint_emitter.footprint_stop_line(record)})  # P411: the text shows the line; `--audit` drops it from the JSON
         if isinstance(record, dict) and not function_of(record, board=kind == "board") and (kind, found, layer, path) not in linked:
             silent.append(found)
     return counts, owed, broken, silent, dangling, stops
@@ -631,7 +631,7 @@ def validate(part: dict, path: Path, owed=()) -> list:
         problems.append("id is %r but the file is named %r; they must match"
                         % (part.get("id"), path.stem))
     elif isinstance(part.get("id"), str) and not store.PLAIN.fullmatch(part["id"]):
-        # P87's attribute half: `emit_board.component_name` capitalises the id's words and strips nothing, so the id is
+        # P87's attribute half: `board_emitter.component_name` capitalises the id's words and strips nothing, so the id is
         # what keeps `<chip name="…">` a name — a plain key, as every key of the store is
         problems.append(NOT_A_PLAIN_ID % part["id"])
     wrong_types = type_problems({key: value for key, value in part.items() if key not in owed})
@@ -2223,7 +2223,7 @@ def _op_requirements(args, project):
     said += ["  board %s: %s" % (content["board"], stop)] if stop else []
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
     said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
-             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.emit_board.DEFAULT_BODY_MM + (how,))
+             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.board_emitter.DEFAULT_BODY_MM + (how,))
              for part_id, how in ([] if problems else placeholder)]
     said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
     said += ["  kept, not from a pick: %s" % ", ".join(needs.entry_label(entry) for entry in kept)] if kept and not problems else []

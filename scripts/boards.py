@@ -247,18 +247,18 @@ def available(project: Path) -> list:
 
 def footprint_stop(board_id: str, project: Path = None) -> str:
     """
-    `emit_footprint.footprint_stop_line` of a board that stops the chain at the footprint stage — its file lacks what the
-    footprint is drawn from (`emit_footprint.footprint_gaps`; C-7, P121) — and "" for one that builds on. Said wherever a
+    `footprint_emitter.footprint_stop_line` of a board that stops the chain at the footprint stage — its file lacks what the
+    footprint is drawn from (`footprint_emitter.footprint_gaps`; C-7, P121) — and "" for one that builds on. Said wherever a
     board is offered or picked (F12: the XIAO was listed and picked without a word), never refused: such a board is still a
     choice for pin-map work. A file that cannot be read is not said to stop here; `--validate` names it.
     """
-    import emit_footprint  # here, not at the top: it imports this module
+    from spark.design import footprint_emitter  # here, not at the top: it imports this module
     found = records(project).get(board_id)
     try:
         board = _read_json(found[1], "board definition") if found else None
     except BoardError:
         return ""
-    return (emit_footprint.footprint_stop_line(board) or "") if isinstance(board, dict) else ""
+    return (footprint_emitter.footprint_stop_line(board) or "") if isinstance(board, dict) else ""
 
 
 def load(project: Path, board_id: str = None) -> dict:

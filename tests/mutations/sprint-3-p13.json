@@ -8,8 +8,8 @@
  {
   "file": "scripts/spark/checks/check.py",
   "name": "design loaded by path again",
-  "find": "    from spark.design import loader\n    import emit_board\n",
-  "replace": "    import importlib.util as _u; _s = _u.spec_from_file_location(\"loader\", Path(__file__).resolve().parents[1] / \"design\" / \"loader.py\"); loader = _u.module_from_spec(_s); _s.loader.exec_module(loader)\n    import emit_board\n"
+  "find": "    from spark.design import loader\n    from spark.design import board_emitter\n",
+  "replace": "    import importlib.util as _u; _s = _u.spec_from_file_location(\"loader\", Path(__file__).resolve().parents[1] / \"design\" / \"loader.py\"); loader = _u.module_from_spec(_s); _s.loader.exec_module(loader)\n    from spark.design import board_emitter\n"
  },
  {
   "file": "scripts/spark/checks/physics_check.py",

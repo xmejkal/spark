@@ -58,7 +58,7 @@ BUILD_ERRORS = [{"type": "source_trace_not_connected_error", "message": "Could n
                  "selectors_not_found": [".BTN1 > .pin1"]},
                 {"type": "pcb_trace_error", "message": "a trace crosses another"}]
 #: What the fake tsci builds for the reference design (check_spine.REFERENCE): its three supplies, as
-#: emit_board.supply_inputs states them, each component grounded, and copper, so that no island stops the build.
+#: board_emitter.supply_inputs states them, each component grounded, and copper, so that no island stops the build.
 REFERENCE_CIRCUIT = "reference-circuit.json"
 REFERENCE_FEEDS = (("Mcu", "3V3", "V33"), ("L9110sModule", "VCC", "MOTOR6V"), ("Vl6180xBreakout", "VIN", "V33"))
 

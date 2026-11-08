@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import emit_footprint  # noqa: E402
+from spark.design import footprint_emitter  # noqa: E402
 
 #: Produced by `tools/generate-firebeetle-footprint.py` in the smart-bin project, from DFRobot's
 #: published dimension drawing, and checked by hand against the module. It is the only independent
@@ -59,23 +60,23 @@ class TheHoleIsSizedForThePinTest(unittest.TestCase):
     """
 
     def test_the_hole_admits_a_header_pin_after_plating(self):
-        finished = emit_footprint.hole_diameter_mm() - 2 * emit_footprint.PLATING_THICKNESS_MM
-        self.assertGreaterEqual(finished, emit_footprint.HEADER_PIN_DIAGONAL_MM)
+        finished = footprint_emitter.hole_diameter_mm() - 2 * footprint_emitter.PLATING_THICKNESS_MM
+        self.assertGreaterEqual(finished, footprint_emitter.HEADER_PIN_DIAGONAL_MM)
 
     def test_the_vendors_drill_is_not_used(self):
         # Stated as its own test because it is the one number a careful person would copy.
         vendor = firebeetle()["physical"]["header"]["drill_mm"]
-        self.assertNotAlmostEqual(emit_footprint.hole_diameter_mm(), vendor, places=3)
+        self.assertNotAlmostEqual(footprint_emitter.hole_diameter_mm(), vendor, places=3)
 
     def test_the_pad_leaves_enough_copper_around_the_hole(self):
-        hole = emit_footprint.hole_diameter_mm()
-        ring = (emit_footprint.pad_diameter_mm(hole) - hole) / 2
+        hole = footprint_emitter.hole_diameter_mm()
+        ring = (footprint_emitter.pad_diameter_mm(hole) - hole) / 2
         self.assertGreaterEqual(ring, 0.25)
 
     def test_the_generated_file_says_why_it_differs_from_the_drawing(self):
         # Somebody comparing this against the vendor PDF will find a disagreement and needs to
         # know it was deliberate, not a units bug.
-        text = emit_footprint.render(firebeetle())
+        text = footprint_emitter.render(firebeetle())
         self.assertIn("NOT the 0.9 mm on the vendor drawing", text)
 
 
@@ -89,7 +90,7 @@ class APadsLabelIsWrittenAsTextTest(unittest.TestCase):
         for row, labels in board["physical"]["header_order"].items():
             if not row.startswith("//"):
                 board["physical"]["header_order"][row] = [crafted if label == "RST" else label for label in labels]
-        text = emit_footprint.render(board)
+        text = footprint_emitter.render(board)
         self.assertIn("portHints={[%s]}" % json.dumps(crafted), text)
         self.assertNotIn('portHints={["%s"]}' % crafted, text)
         self.assertIn('portHints={["D-"]}', text, "an ordinary label is written as it always was")
@@ -100,7 +101,7 @@ class TheFootprintsCommentsStayCommentsTest(unittest.TestCase):
         # concern 1: the footprint's first line names the board file in a `//` comment, which a line break ends
         board = firebeetle()
         board["id"] = 'firebeetle2-esp32s3\nexport const injected = "FOOTPRINT-INJECTED" //'
-        text = emit_footprint.render(board)
+        text = footprint_emitter.render(board)
         self.assertIn("FOOTPRINT-INJECTED", text)
         self.assertEqual([line for line in text.splitlines() if "FOOTPRINT-INJECTED" in line and not line.startswith("//")], [])
 
@@ -108,7 +109,7 @@ class TheFootprintsCommentsStayCommentsTest(unittest.TestCase):
 class ItMatchesAnIndependentlyMadeFootprintTest(unittest.TestCase):
     @unittest.skipUnless(REFERENCE.is_file(), "the hand-checked reference is not on this machine")
     def test_every_pad_agrees_with_the_hand_checked_footprint(self):
-        generated = pads_in(emit_footprint.render(firebeetle()))
+        generated = pads_in(footprint_emitter.render(firebeetle()))
         reference = pads_in(REFERENCE.read_text())
         self.assertEqual(len(generated), len(reference))
         for made, known in zip(generated, reference):
@@ -119,7 +120,7 @@ class ItMatchesAnIndependentlyMadeFootprintTest(unittest.TestCase):
 
 class WhereThePadsGoTest(unittest.TestCase):
     def setUp(self):
-        self.placed = emit_footprint.pads(firebeetle())
+        self.placed = footprint_emitter.pads(firebeetle())
 
     def test_all_32_pads_are_placed(self):
         self.assertEqual(len(self.placed), 32)
@@ -167,20 +168,20 @@ class WhatItWillNotInventTest(unittest.TestCase):
 
     def test_a_board_with_no_header_order_is_refused(self):
         board = self._render_without("header_order")
-        gaps = emit_footprint._missing(board["physical"], board["physical"]["header"])
+        gaps = footprint_emitter._missing(board["physical"], board["physical"]["header"])
         self.assertEqual([field for field, _ in gaps], ["physical.header_order"])
         self.assertTrue(gaps[0][1], gaps)  # a gap that is not derivable carries its note
 
     def test_a_board_with_no_header_geometry_is_refused(self):
         board = self._render_without("header")
-        gaps = emit_footprint._missing(board["physical"], board["physical"].get("header"))
+        gaps = footprint_emitter._missing(board["physical"], board["physical"].get("header"))
         self.assertEqual([field for field, _ in gaps], ["physical.header"])
 
     def test_the_distance_to_the_first_pad_is_required(self):
         # It was prose in a comment until 2026-09-25, so nothing could read it and the pads could
         # not be tied to the outline at all.
         board = self._render_without("header", "first_pad_from_edge_mm")
-        gaps = emit_footprint._missing(board["physical"], board["physical"]["header"])
+        gaps = footprint_emitter._missing(board["physical"], board["physical"]["header"])
         self.assertEqual(gaps, [("physical.header.first_pad_from_edge_mm", "")])
 
     def test_a_pad_order_that_disagrees_with_the_pin_count_is_refused(self):
@@ -189,22 +190,22 @@ class WhatItWillNotInventTest(unittest.TestCase):
         board = copy.deepcopy(firebeetle())
         board["physical"]["header_order"]["row_18"].pop()
         with self.assertRaises(ValueError) as caught:
-            emit_footprint.pads(board)
+            footprint_emitter.pads(board)
         self.assertIn("17", str(caught.exception))
 
     def test_a_row_count_that_disagrees_with_the_pad_order_is_refused(self):
         board = copy.deepcopy(firebeetle())
         board["physical"]["header"]["pins"] = [18]
         with self.assertRaises(ValueError):
-            emit_footprint.pads(board)
+            footprint_emitter.pads(board)
 
     def test_a_library_board_with_no_header_geometry_is_refused_rather_than_guessed(self):
         # The XIAO's file once recorded no header geometry at all (P121); a board that lacks it must come out as could-not-run.
         from board_library import library_without
         file = library_without("physical.header") / "xiao-esp32-c6.json"
         board = json.loads(file.read_text())
-        self.assertTrue(emit_footprint.footprint_gaps(board))
-        self.assertEqual(emit_footprint.footprint_gaps(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())), [])
+        self.assertTrue(footprint_emitter.footprint_gaps(board))
+        self.assertEqual(footprint_emitter.footprint_gaps(json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())), [])
 
 
 class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
@@ -214,51 +215,51 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
     """
 
     def test_a_board_that_is_no_object_lacks_all_of_it(self):
-        self.assertEqual(emit_footprint.footprint_gaps([]), ["physical.header (no header geometry at all)"])
-        self.assertEqual(emit_footprint.footprint_gaps(None), ["physical.header (no header geometry at all)"])
+        self.assertEqual(footprint_emitter.footprint_gaps([]), ["physical.header (no header geometry at all)"])
+        self.assertEqual(footprint_emitter.footprint_gaps(None), ["physical.header (no header geometry at all)"])
 
     def test_the_list_names_the_board_and_each_gap_with_its_note(self):
         board = firebeetle()
         del board["physical"]["header_order"], board["physical"]["width_mm"]
-        self.assertEqual(emit_footprint.why_no_footprint(board),
+        self.assertEqual(footprint_emitter.why_no_footprint(board),
                          "firebeetle2-esp32s3 cannot have a footprint generated — these are not recorded, and none of them can be "
                          "derived from the rest:\n  physical.width_mm\n  physical.header_order (which label is on which pad — not derivable)")
-        self.assertEqual(emit_footprint.why_no_footprint(board).code, "board_lacks_footprint")  # P700
-        self.assertIsNone(emit_footprint.why_no_footprint(firebeetle()))
+        self.assertEqual(footprint_emitter.why_no_footprint(board).code, "board_lacks_footprint")  # P700
+        self.assertIsNone(footprint_emitter.why_no_footprint(firebeetle()))
 
     def test_the_geometry_gaps_leave_out_the_modules_name_and_the_footprint_gaps_keep_it(self):
         board = firebeetle()
         del board["physical"]["footprint_export"], board["physical"]["height_mm"]
-        self.assertEqual(emit_footprint.geometry_gaps(board), ["physical.height_mm"])
-        self.assertEqual(emit_footprint.footprint_gaps(board),
+        self.assertEqual(footprint_emitter.geometry_gaps(board), ["physical.height_mm"])
+        self.assertEqual(footprint_emitter.footprint_gaps(board),
                          ["physical.height_mm", "physical.footprint_export (what the module should be called)"])
-        self.assertEqual(emit_footprint.geometry_gaps(None), ["physical.header (no header geometry at all)"])
+        self.assertEqual(footprint_emitter.geometry_gaps(None), ["physical.header (no header geometry at all)"])
 
     def test_the_line_names_the_one_field_that_is_missing_without_its_note(self):
         board = firebeetle()
         del board["physical"]["header"]
-        self.assertEqual(emit_footprint.footprint_stop_line(board),
+        self.assertEqual(footprint_emitter.footprint_stop_line(board),
                          "stops at the footprint stage (P121): its board file lacks physical.header")
 
     def test_the_line_counts_the_fields_and_names_the_first_when_more_are_missing(self):
         board = firebeetle()
         del board["physical"]["header_order"], board["physical"]["width_mm"]
-        self.assertEqual(emit_footprint.footprint_stop_line(board),
+        self.assertEqual(footprint_emitter.footprint_stop_line(board),
                          "stops at the footprint stage (P121): its board file lacks 2 fields (first: physical.width_mm)")
 
     def test_the_line_is_none_for_a_board_that_builds_and_says_the_stage_for_no_board(self):
-        self.assertIsNone(emit_footprint.footprint_stop_line(firebeetle()))
-        self.assertEqual(emit_footprint.footprint_stop_line("not a board"),
+        self.assertIsNone(footprint_emitter.footprint_stop_line(firebeetle()))
+        self.assertEqual(footprint_emitter.footprint_stop_line("not a board"),
                          "stops at the footprint stage (P121): its board file lacks physical.header")
 
     def test_a_pad_order_that_does_not_fit_the_pin_counts_is_a_disagreement(self):
         board = firebeetle()
         board["physical"]["header"]["pins"] = [18]
-        self.assertEqual(emit_footprint.why_header_disagrees(board),
+        self.assertEqual(footprint_emitter.why_header_disagrees(board),
                          "the board definition disagrees with itself: physical.header.pins lists 1 rows and header_order has 2 (%s)"
                          % ", ".join(key for key in board["physical"]["header_order"] if not key.startswith("//")))
-        self.assertEqual(emit_footprint.why_header_disagrees(board).code, "board_disagrees")  # P700
-        self.assertIsNone(emit_footprint.why_header_disagrees(firebeetle()))
+        self.assertEqual(footprint_emitter.why_header_disagrees(board).code, "board_disagrees")  # P700
+        self.assertIsNone(footprint_emitter.why_header_disagrees(firebeetle()))
 
     def test_a_value_of_the_wrong_kind_is_a_disagreement_that_names_the_field(self):
         # boards.validate checks no header geometry: a pitch written as text reached `pads` and raised a TypeError
@@ -276,12 +277,12 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
             with self.subTest(field=field, value=value):
                 board = firebeetle()
                 (board["physical"][where] if where else board["physical"])[field] = value
-                self.assertEqual(emit_footprint.why_header_disagrees(board), "the board definition disagrees with itself: " + said)
-                self.assertEqual(emit_footprint.why_wrong_kind(board).code, "board_disagrees")  # P700
+                self.assertEqual(footprint_emitter.why_header_disagrees(board), "the board definition disagrees with itself: " + said)
+                self.assertEqual(footprint_emitter.why_wrong_kind(board).code, "board_disagrees")  # P700
 
     def test_a_type_error_while_drawing_is_said_not_raised(self):
         # P411: a caller may hand rules no reader checked; a text drill step is a TypeError in `render`, said, never raised
-        said = emit_footprint.why_header_disagrees(firebeetle(), {"fabrication": {"drill_step_mm": "0.1"}})
+        said = footprint_emitter.why_header_disagrees(firebeetle(), {"fabrication": {"drill_step_mm": "0.1"}})
         self.assertTrue(said.startswith("the board definition disagrees with itself: unsupported operand"), said)
         self.assertEqual(said.code, "board_disagrees")
 
@@ -290,10 +291,10 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
         del board["physical"]["header_order"]
         for given in (board, "not a board", None, []):
             with self.subTest(given=given):
-                self.assertIsNone(emit_footprint.why_header_disagrees(given))
+                self.assertIsNone(footprint_emitter.why_header_disagrees(given))
 
     def test_the_list_of_a_board_that_is_no_object_names_no_board(self):
-        self.assertEqual(emit_footprint.why_no_footprint("not a board"),
+        self.assertEqual(footprint_emitter.why_no_footprint("not a board"),
                          "None cannot have a footprint generated — these are not recorded, and none of them can be derived from the "
                          "rest:\n  physical.header (no header geometry at all)")
 
@@ -378,11 +379,11 @@ class TheBoardToDrawTest(unittest.TestCase):
     which: a board that cannot be loaded, or the rules file's own."""
 
     def test_a_board_and_its_rules(self):
-        board, rules, refused = emit_footprint.board_to_draw(None, "firebeetle2-esp32s3")
+        board, rules, refused = footprint_emitter.board_to_draw(None, "firebeetle2-esp32s3")
         self.assertEqual((board["id"], refused), ("firebeetle2-esp32s3", None))
 
     def test_an_unknown_board(self):
-        board, rules, refused = emit_footprint.board_to_draw(None, "no-such-board")
+        board, rules, refused = footprint_emitter.board_to_draw(None, "no-such-board")
         self.assertEqual((board, rules, refused.code), (None, None, "board_unusable"))
         self.assertTrue(refused.startswith("no board or rules to generate from: no board definition for 'no-such-board'"), refused)
 
@@ -394,7 +395,7 @@ class TheBoardToDrawTest(unittest.TestCase):
         self.addCleanup(os.chdir, here)
         os.chdir(gone)
         os.rmdir(gone)
-        _, _, refused = emit_footprint.board_to_draw(None, "firebeetle2-esp32s3")
+        _, _, refused = footprint_emitter.board_to_draw(None, "firebeetle2-esp32s3")
         self.assertEqual(refused.code, "no_project_folder")
         self.assertTrue(refused.startswith("no board or rules to generate from: "), refused)
 
@@ -403,7 +404,7 @@ class TheBoardToDrawTest(unittest.TestCase):
         root = Path(tempfile.mkdtemp())
         (root / ".spark").mkdir()
         (root / ".spark" / "rules.json").write_text("{not json")
-        _, _, refused = emit_footprint.board_to_draw(str(root), "firebeetle2-esp32s3")
+        _, _, refused = footprint_emitter.board_to_draw(str(root), "firebeetle2-esp32s3")
         self.assertEqual(refused.code, "rules_refused")
         self.assertTrue(refused.startswith("no board or rules to generate from: "), refused)
 # --- end MVP ---

@@ -33,7 +33,8 @@ from spark.design import copper  # noqa: E402
 from spark.design import loader  # noqa: E402
 import board_pads  # noqa: E402
 import emit_board  # noqa: E402
-import emit_footprint  # noqa: E402
+from spark.design import board_emitter  # noqa: E402
+from spark.design import footprint_emitter  # noqa: E402
 import parts  # noqa: E402
 
 PARTS = ["l9110s-module", "vl6180x-breakout", "dfr0534-module"]
@@ -44,8 +45,8 @@ def generated():
     part_list = [parts.load(part_id) for part_id in PARTS]
     signals = parts.signals_for(PARTS)
     assignments, _ = pin_assigner.assign(board, signals)
-    placements, width, height = emit_board.place(board, part_list)
-    return emit_board.emit(board, part_list, assignments, placements, width, height)
+    placements, width, height = board_emitter.place(board, part_list)
+    return board_emitter.emit(board, part_list, assignments, placements, width, height)
 
 
 # --- MVP --- (P512, #708) a trace names the pad the footprint has, on every shipped board
@@ -57,7 +58,7 @@ class EveryTraceReachesAFootprintPadTest(unittest.TestCase):
 
     def test_a_trace_names_the_aliased_pad(self):
         part = parts.load("tactile-button")
-        line = emit_board.signal_lines([part], [{"signal": "BUTTON", "pin": "MOSI", "gpio": 15, "why": "w"}],
+        line = board_emitter.signal_lines([part], [{"signal": "BUTTON", "pin": "MOSI", "gpio": 15, "why": "w"}],
                                        board_pads.BoardPads({"MOSI": "MO"}))
         self.assertIn('<trace from=".Mcu > .MO" ', "\n".join(line))
 
@@ -65,11 +66,11 @@ class EveryTraceReachesAFootprintPadTest(unittest.TestCase):
         part_list = [parts.load("tactile-button")]
         for path in sorted((ROOT / "boards").glob("*.json")):
             board = json.loads(path.read_text())
-            pads = {label for label, _, _ in emit_footprint.pads(board)}
-            placements, width, height = emit_board.place(board, part_list)
+            pads = {label for label, _, _ in footprint_emitter.pads(board)}
+            placements, width, height = board_emitter.place(board, part_list)
             for label, gpio in sorted(board["pins"].items()):
                 with self.subTest(board=path.stem, label=label):
-                    tsx = emit_board.emit(board, part_list, [{"signal": "BUTTON", "pin": label, "gpio": gpio, "why": "w"}],
+                    tsx = board_emitter.emit(board, part_list, [{"signal": "BUTTON", "pin": label, "gpio": gpio, "why": "w"}],
                                           placements, width, height)
                     traced = re.findall(r'<trace from="\.Mcu > \.([^"]+)"', tsx)
                     self.assertTrue(traced, tsx)
@@ -86,7 +87,7 @@ class WhatItEmitsTest(unittest.TestCase):
     def test_every_part_becomes_a_component(self):
         for part_id in PARTS:
             with self.subTest(part=part_id):
-                self.assertIn(emit_board.component_name(parts.load(part_id)), self.tsx)
+                self.assertIn(board_emitter.component_name(parts.load(part_id)), self.tsx)
 
     def test_every_signal_a_part_asked_for_becomes_a_trace(self):
         """
@@ -123,7 +124,7 @@ class WhatItEmitsTest(unittest.TestCase):
             part = parts.load(part_id)
             for need in part["needs"]:
                 with self.subTest(part=part_id, pin=need["pin"]):
-                    self.assertIn('.%s > .%s"' % (emit_board.component_name(part), need["pin"]),
+                    self.assertIn('.%s > .%s"' % (board_emitter.component_name(part), need["pin"]),
                                   self.tsx)
 
     def test_each_trace_carries_the_reason_the_pin_was_chosen(self):
@@ -186,8 +187,8 @@ class TheSilkscreenSurvivesTest(unittest.TestCase):
 
     def _emit(self, part):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        placements, width, height = emit_board.place(board, [part])
-        return emit_board.emit(board, [part], [], placements, width, height, {})
+        placements, width, height = board_emitter.place(board, [part])
+        return board_emitter.emit(board, [part], [], placements, width, height, {})
 
     def test_the_wiring_name_is_what_reaches_the_selector(self):
         tsx = self._emit(self.buck())
@@ -242,8 +243,8 @@ class ARecordsTextStaysInsideItsCommentTest(unittest.TestCase):
         place(led, board)
         signals = [{"name": need["signal"], "needs": need.get("needs", []), "from": led["id"]} for need in led["needs"]]
         assignments, _ = pin_assigner.assign(board, signals)
-        placements, width, height = emit_board.place(board, [led])
-        return emit_board.emit(board, [led], assignments, placements, width, height, {})
+        placements, width, height = board_emitter.place(board, [led])
+        return board_emitter.emit(board, [led], assignments, placements, width, height, {})
 
     def test_text_with_a_comment_s_end_in_it_never_reaches_code(self):
         for where, place in self.PLACES.items():
@@ -255,8 +256,8 @@ class ARecordsTextStaysInsideItsCommentTest(unittest.TestCase):
 
     def test_a_comment_s_end_is_the_only_text_changed(self):
         # a `"` is only text inside a comment, and product names carry inch marks: nothing but `*/` is touched
-        self.assertEqual(emit_board.inert('a 1/4" jack */ and **/ twice'), 'a 1/4" jack * / and ** / twice')
-        self.assertEqual(emit_board.inert(5), "5")
+        self.assertEqual(board_emitter.inert('a 1/4" jack */ and **/ twice'), 'a 1/4" jack * / and ** / twice')
+        self.assertEqual(board_emitter.inert(5), "5")
 
 
 class ARecordsIdNamesItsComponentTest(unittest.TestCase):
@@ -266,8 +267,8 @@ class ARecordsIdNamesItsComponentTest(unittest.TestCase):
     def test_a_plain_id_becomes_letters_and_digits_and_nothing_else_is_stripped(self):
         for part_id in ("led-red-5mm", "jst-ph-2-power-inlet", "max98357a-dfr0954", "a", "0603-r"):
             with self.subTest(id=part_id):
-                self.assertRegex(emit_board.component_name({"id": part_id}), r"^[A-Za-z0-9]+$")
-        self.assertEqual(emit_board.component_name({"id": 'x"y'}), 'X"y', "the conversion keeps a quote: the rule is upstream")
+                self.assertRegex(board_emitter.component_name({"id": part_id}), r"^[A-Za-z0-9]+$")
+        self.assertEqual(board_emitter.component_name({"id": 'x"y'}), 'X"y', "the conversion keeps a quote: the rule is upstream")
 
     def test_a_record_whose_id_is_no_plain_key_never_reaches_the_board(self):
         root = Path(tempfile.mkdtemp())
@@ -303,22 +304,22 @@ class PlaceholderFootprintsAreNamedTest(unittest.TestCase):
         return record
 
     def test_a_placeholder_is_named_as_the_netlist_will_see_it(self):
-        self.assertEqual(emit_board.placeholder_components(
+        self.assertEqual(board_emitter.placeholder_components(
             [self.part("xt30-inlet", placeholder=True)]), ["Xt30Inlet"])
 
     def test_a_named_instance_is_named_by_its_instance(self):
         # Otherwise the checker looks for a name that is not in the netlist and skips nothing.
-        self.assertEqual(emit_board.placeholder_components(
+        self.assertEqual(board_emitter.placeholder_components(
             [self.part("inlet", placeholder=True, instance="PackIn")]), ["PackIn"])
 
     def test_a_real_footprint_is_not_listed(self):
-        self.assertEqual(emit_board.placeholder_components([self.part("real")]), [])
+        self.assertEqual(board_emitter.placeholder_components([self.part("real")]), [])
 
     def test_the_emitted_file_says_which_footprints_are_stand_ins(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         parts_list = [self.part("xt30-inlet", placeholder=True)]
-        placements, width, height = emit_board.place(board, parts_list)
-        tsx = emit_board.emit(board, parts_list, [], placements, width, height, {})
+        placements, width, height = board_emitter.place(board, parts_list)
+        tsx = board_emitter.emit(board, parts_list, [], placements, width, height, {})
         self.assertIn("PLACEHOLDERS", tsx)
         self.assertIn("Xt30Inlet drawn as pinrow1", tsx)
 
@@ -351,8 +352,8 @@ class PowerTracesAreSizedTest(unittest.TestCase):
     def _emit(self, rules):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         parts_list = [self.part("load", "traction")]
-        placements, width, height = emit_board.place(board, parts_list)
-        return emit_board.emit(board, parts_list, [], placements, width, height, rules)
+        placements, width, height = board_emitter.place(board, parts_list)
+        return board_emitter.emit(board, parts_list, [], placements, width, height, rules)
 
     def test_a_heavy_rail_gets_a_stated_thickness(self):
         self.assertIn('to="net.TRACTION" thickness=', self._emit(self.RULES))
@@ -408,31 +409,31 @@ class ManyOfOnePartTest(unittest.TestCase):
         return part
 
     def test_an_instance_name_wins_over_the_part_id(self):
-        self.assertEqual(emit_board.component_name(self.button("BtnForward")), "BtnForward")
+        self.assertEqual(board_emitter.component_name(self.button("BtnForward")), "BtnForward")
 
     def test_without_one_the_part_id_is_still_used(self):
-        self.assertEqual(emit_board.component_name(self.button()), "TactileButton")
+        self.assertEqual(board_emitter.component_name(self.button()), "TactileButton")
 
     def test_two_unnamed_instances_are_caught_before_anything_is_emitted(self):
         # The safety net, independent of how a design arrives at two of the same name.
-        repeated = emit_board.duplicate_component_names([self.button(), self.button()])
+        repeated = board_emitter.duplicate_component_names([self.button(), self.button()])
         self.assertEqual(repeated, ["TactileButton"])
 
     def test_named_instances_do_not_collide(self):
-        self.assertEqual(emit_board.duplicate_component_names(
+        self.assertEqual(board_emitter.duplicate_component_names(
             [self.button("BtnLeft"), self.button("BtnRight")]), [])
 
     def test_two_instances_given_the_SAME_name_are_still_caught(self):
         # Naming is not a cure by itself; a copy-pasted requirements entry hits the same wall.
-        self.assertEqual(emit_board.duplicate_component_names(
+        self.assertEqual(board_emitter.duplicate_component_names(
             [self.button("BtnLeft"), self.button("BtnLeft")]), ["BtnLeft"])
 
     def test_two_names_that_differ_only_in_capitals_are_one_name_and_both_spellings_are_said(self):
         # P163: `loader.signal_name` puts the instance in capitals, so OpenLid and Openlid are one signal — two GPIOs were
         # traced to one pad, exit 0. The refusal names what the person wrote, both ways.
-        self.assertEqual(emit_board.duplicate_component_names(
+        self.assertEqual(board_emitter.duplicate_component_names(
             [self.button("OpenLid"), self.button("Openlid"), self.button("BtnMode")]), ["OpenLid / Openlid"])
-        self.assertEqual(emit_board.duplicate_component_names(
+        self.assertEqual(board_emitter.duplicate_component_names(
             [self.button("OpenLid"), self.button("Openlid"), self.button("OPENLID"), self.button("OpenLid")]),
             ["OpenLid / Openlid / OPENLID"], "each spelling once, in the order written")
 
@@ -476,44 +477,44 @@ class AnyRailCanBeNamedTest(unittest.TestCase):
                 "footprint": "pinrow%d" % len(power)}
 
     def test_a_rail_nobody_thought_of_becomes_a_net(self):
-        self.assertEqual(emit_board.net_name_for_rail("servo"), "SERVO")
-        self.assertEqual(emit_board.net_name_for_rail("traction"), "TRACTION")
+        self.assertEqual(board_emitter.net_name_for_rail("servo"), "SERVO")
+        self.assertEqual(board_emitter.net_name_for_rail("traction"), "TRACTION")
 
     def test_a_rail_named_by_its_voltage_gets_a_net_name_the_builder_accepts(self):
         # tscircuit: 'Net name "12V" cannot start with a number' — the irrigation build's first stop (I7)
-        self.assertEqual(emit_board.net_name_for_rail("12v"), "V12V")
-        self.assertEqual(emit_board.net_name_for_rail("5v"), "V5V")
+        self.assertEqual(board_emitter.net_name_for_rail("12v"), "V12V")
+        self.assertEqual(board_emitter.net_name_for_rail("5v"), "V5V")
 
     def test_the_established_names_are_unchanged(self):
         # Existing designs reference these nets by name; renaming them would be a silent rewire.
-        self.assertEqual(emit_board.net_name_for_rail("logic"), "V33")
-        self.assertEqual(emit_board.net_name_for_rail("ground"), "GND")
-        self.assertEqual(emit_board.net_name_for_rail("motor"), "MOTOR6V")
-        self.assertEqual(emit_board.net_name_for_rail("speaker"), "SPEAKER")
+        self.assertEqual(board_emitter.net_name_for_rail("logic"), "V33")
+        self.assertEqual(board_emitter.net_name_for_rail("ground"), "GND")
+        self.assertEqual(board_emitter.net_name_for_rail("motor"), "MOTOR6V")
+        self.assertEqual(board_emitter.net_name_for_rail("speaker"), "SPEAKER")
 
     def test_no_rail_at_all_is_still_None(self):
         # Absent is different from unrecognised. A power pin naming no rail is a record that never
         # said where the pin goes, and inventing a default for it would be the original defect
         # wearing a different hat.
-        self.assertIsNone(emit_board.net_name_for_rail(None))
-        self.assertIsNone(emit_board.net_name_for_rail(""))
+        self.assertIsNone(board_emitter.net_name_for_rail(None))
+        self.assertIsNone(board_emitter.net_name_for_rail(""))
 
     def test_an_invented_rail_is_reported_with_the_pins_on_it(self):
         # Open vocabulary means a typo creates a net. Reported rather than refused, because
         # refusing is what dropped the connections.
         servo = self.part("servo", [{"pin": "VCC", "rail": "servo", "direction": "in"},
                                     {"pin": "GND", "rail": "ground", "direction": "in"}])
-        invented = emit_board.rails_not_established([servo])
+        invented = board_emitter.rails_not_established([servo])
         self.assertEqual(invented, {"SERVO": ["servo.VCC"]})
 
     def test_a_design_using_only_established_rails_invents_nothing(self):
         motor = self.part("m", [{"pin": "VCC", "rail": "motor", "direction": "in"},
                                 {"pin": "GND", "rail": "ground", "direction": "in"}])
-        self.assertEqual(emit_board.rails_not_established([motor]), {})
+        self.assertEqual(board_emitter.rails_not_established([motor]), {})
 
     def test_a_power_pin_naming_no_rail_is_reported(self):
         broken = self.part("x", [{"pin": "VCC", "direction": "in"}])
-        self.assertEqual(emit_board.power_pins_with_no_rail([broken]), ["x.VCC"])
+        self.assertEqual(board_emitter.power_pins_with_no_rail([broken]), ["x.VCC"])
 
     def test_every_declared_power_pin_reaches_a_net(self):
         """
@@ -530,7 +531,7 @@ class AnyRailCanBeNamedTest(unittest.TestCase):
         for part in (servo, buck):
             for supply in part["power"]:
                 with self.subTest(part=part["id"], pin=supply["pin"]):
-                    self.assertIsNotNone(emit_board.net_for(supply),
+                    self.assertIsNotNone(board_emitter.net_for(supply),
                                          "declared and unplaceable, which is how it vanished")
 
 
@@ -552,8 +553,8 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         part_list = [parts.load(part_id) for part_id in part_ids]
         assignments, _ = pin_assigner.assign(board, parts.signals_for(part_ids))
-        placements, width, height = emit_board.place(board, part_list)
-        return emit_board.emit(board, part_list, assignments, placements, width, height)
+        placements, width, height = board_emitter.place(board, part_list)
+        return board_emitter.emit(board, part_list, assignments, placements, width, height)
 
     def test_a_bridged_output_pair_lands_on_two_nets(self):
         tsx = self._emit(["dfr0534-module"])
@@ -565,7 +566,7 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
         # next differential output somebody adds.
         for part_id in parts.available():
             part = parts.load(part_id)
-            nets = [emit_board.net_for(supply) for supply in part.get("power") or []
+            nets = [board_emitter.net_for(supply) for supply in part.get("power") or []
                     if supply.get("direction") == "out"]
             with self.subTest(part=part_id):
                 self.assertEqual(len(nets), len(set(nets)),
@@ -581,7 +582,7 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
         number was right only while the processor was ungrounded.
         """
         tsx = self._emit(["dfr0534-module", "l9110s-module"])
-        modules = tuple('.%s >' % emit_board.component_name(parts.load(p)) for p in ("dfr0534-module", "l9110s-module"))
+        modules = tuple('.%s >' % board_emitter.component_name(parts.load(p)) for p in ("dfr0534-module", "l9110s-module"))
         module_grounds = [line for line in tsx.splitlines()
                           if 'to="net.GND"' in line and any(line.startswith('    <trace from="%s' % m) for m in modules)]
         self.assertEqual(len(module_grounds), 2, "two modules, one ground pin each; the pulldowns the L9110S demands have their own")
@@ -608,8 +609,8 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
         part = parts.load("l9110s-module")
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         assignments, _ = pin_assigner.assign(board, parts.signals_for(["l9110s-module"]))
-        placements, width, height = emit_board.place(board, [part])
-        tsx = emit_board.emit(board, [part], assignments, placements, width, height)
+        placements, width, height = board_emitter.place(board, [part])
+        tsx = board_emitter.emit(board, [part], assignments, placements, width, height)
         # Off the silkscreen, confirmed four independent ways.
         self.assertIn('pin1: "BIA", pin2: "BIB", pin3: "GND", pin4: "VCC", pin5: "AIA", '
                       'pin6: "AIB"', tsx)
@@ -619,8 +620,8 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
         part = parts.load("dfr0534-module")
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         assignments, _ = pin_assigner.assign(board, parts.signals_for(["dfr0534-module"]))
-        placements, width, height = emit_board.place(board, [part])
-        tsx = emit_board.emit(board, [part], assignments, placements, width, height)
+        placements, width, height = board_emitter.place(board, [part])
+        tsx = board_emitter.emit(board, [part], assignments, placements, width, height)
         self.assertIn('pin9: "SPKN", pin10: "SPKP"', tsx)
         self.assertNotIn('pin4: "SPKN"', tsx)
 
@@ -631,7 +632,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
         # library getting better. A test should fail when the behaviour breaks, not when the data
         # improves.
         unpinned = {"id": "x", "name": "A part nobody has opened", "kind": "test", "needs": []}
-        self.assertEqual(emit_board.parts_without_a_pinout([unpinned]),
+        self.assertEqual(board_emitter.parts_without_a_pinout([unpinned]),
                          ["A part nobody has opened"])
 
     def test_every_part_in_the_library_either_has_a_pinout_or_says_why_not(self):
@@ -666,12 +667,12 @@ class EveryUnroutableNetIsPredictedTest(unittest.TestCase):
     """
 
     def test_a_rail_nothing_supplies_is_named(self):
-        self.assertIn("MOTOR6V", emit_board.rails_without_a_source([parts.load("l9110s-module")]))
+        self.assertIn("MOTOR6V", board_emitter.rails_without_a_source([parts.load("l9110s-module")]))
 
     def test_an_output_nothing_receives_is_named_too(self):
         # The half that was missing. Excluding outputs from the rail check was right — the part
         # IS the source — but it left two unroutable nets unmentioned.
-        driven = emit_board.outputs_with_nothing_on_them([parts.load("dfr0534-module")])
+        driven = board_emitter.outputs_with_nothing_on_them([parts.load("dfr0534-module")])
         self.assertEqual({net for net, _, _ in driven}, {"SPEAKER_P", "SPEAKER_N"})
 
     def test_both_kinds_reach_the_generated_file(self):
@@ -679,15 +680,15 @@ class EveryUnroutableNetIsPredictedTest(unittest.TestCase):
         ids = ["l9110s-module", "dfr0534-module"]
         part_list = [parts.load(part_id) for part_id in ids]
         assignments, _ = pin_assigner.assign(board, parts.signals_for(ids))
-        placements, width, height = emit_board.place(board, part_list)
-        tsx = emit_board.emit(board, part_list, assignments, placements, width, height)
+        placements, width, height = board_emitter.place(board, part_list)
+        tsx = board_emitter.emit(board, part_list, assignments, placements, width, height)
         self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", tsx)
         self.assertIn("NOTHING ON THIS BOARD RECEIVES IT", tsx)
 
     def test_a_rail_the_module_supplies_is_not_reported_either_way(self):
         part_list = [parts.load("vl6180x-breakout")]
-        self.assertNotIn("V33", emit_board.rails_without_a_source(part_list))
-        self.assertEqual(emit_board.outputs_with_nothing_on_them(part_list), [])
+        self.assertNotIn("V33", board_emitter.rails_without_a_source(part_list))
+        self.assertEqual(board_emitter.outputs_with_nothing_on_them(part_list), [])
 
 
 class EverySignalTheAssignerPlacedIsAccountedForTest(unittest.TestCase):
@@ -708,8 +709,8 @@ class EverySignalTheAssignerPlacedIsAccountedForTest(unittest.TestCase):
         signals = parts.signals_for(["l9110s-module"]) + [
             {"name": "BTN_OPEN", "needs": ["wake"]}, {"name": "LED_RED", "needs": []}]
         assignments, _ = pin_assigner.assign(board, signals)
-        placements, width, height = emit_board.place(board, part_list)
-        return assignments, emit_board.emit(
+        placements, width, height = board_emitter.place(board, part_list)
+        return assignments, board_emitter.emit(
             board, part_list, assignments, placements, width, height)
 
     def test_a_signal_no_part_claims_is_named_rather_than_dropped(self):
@@ -743,12 +744,12 @@ class RailsWithoutASourceTest(unittest.TestCase):
     def test_a_rail_the_module_supplies_is_not_reported(self):
         # The microcontroller module provides 3V3 and ground, so consuming those is fine.
         part_list = [parts.load("vl6180x-breakout")]
-        self.assertNotIn("V33", emit_board.rails_without_a_source(part_list))
-        self.assertNotIn("GND", emit_board.rails_without_a_source(part_list))
+        self.assertNotIn("V33", board_emitter.rails_without_a_source(part_list))
+        self.assertNotIn("GND", board_emitter.rails_without_a_source(part_list))
 
     def test_a_rail_only_consumed_is_reported(self):
         part_list = [parts.load("l9110s-module")]
-        self.assertIn("MOTOR6V", emit_board.rails_without_a_source(part_list))
+        self.assertIn("MOTOR6V", board_emitter.rails_without_a_source(part_list))
 
 
 class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
@@ -761,21 +762,21 @@ class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
     def test_an_input_naming_a_side_of_a_pair_joins_that_side_s_net(self):
         for polarity, net in (("+", "SPEAKER_P"), ("-", "SPEAKER_N")):
             with self.subTest(polarity=polarity):
-                self.assertEqual(emit_board.net_for({"pin": "X", "rail": "speaker", "direction": "in", "polarity": polarity}), net)
-        self.assertEqual(emit_board.net_for({"pin": "X", "rail": "speaker", "direction": "in"}), "SPEAKER")
+                self.assertEqual(board_emitter.net_for({"pin": "X", "rail": "speaker", "direction": "in", "polarity": polarity}), net)
+        self.assertEqual(board_emitter.net_for({"pin": "X", "rail": "speaker", "direction": "in"}), "SPEAKER")
 
     def test_the_terminal_receives_both_outputs_and_nothing_is_left_unrouted(self):
         part_list = [parts.load("max98357a-dfr0954"), parts.load("speaker-terminal")]
-        self.assertEqual([emit_board.net_for(supply) for supply in part_list[1]["power"]], ["SPEAKER_P", "SPEAKER_N"])
-        self.assertEqual((emit_board.outputs_with_nothing_on_them(part_list), emit_board.rails_without_a_source(part_list)), ([], []))
+        self.assertEqual([board_emitter.net_for(supply) for supply in part_list[1]["power"]], ["SPEAKER_P", "SPEAKER_N"])
+        self.assertEqual((board_emitter.outputs_with_nothing_on_them(part_list), board_emitter.rails_without_a_source(part_list)), ([], []))
 
     def test_the_terminal_alone_is_a_rail_nothing_drives(self):
-        self.assertEqual(emit_board.rails_without_a_source([parts.load("speaker-terminal")]), ["SPEAKER_N", "SPEAKER_P"])
+        self.assertEqual(board_emitter.rails_without_a_source([parts.load("speaker-terminal")]), ["SPEAKER_N", "SPEAKER_P"])
 
     def test_the_terminal_alone_is_told_to_add_what_drives_the_pair_never_a_supply(self):
         # F15's follow-up: --requirements said "never a supply", while the board's comment and emit_board's own note still
         # said to add "whatever supplies this rail (a connector, a regulator, a battery)" — into a bridged amplifier output
-        said = "\n".join(emit_board.power_note_lines([parts.load("speaker-terminal")]))
+        said = "\n".join(board_emitter.power_note_lines([parts.load("speaker-terminal")]))
         self.assertIn("    {/* NOTHING ON THIS BOARD DRIVES net.SPEAKER_P, one side of a driven pair. Add what\n"
                       "        drives the pair (the amplifier this terminal hangs off), never a supply,\n"
                       "        or the net has one member and will not route. */}", said)
@@ -795,19 +796,19 @@ class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
     def test_a_load_across_a_pair_is_named_so_the_island_check_asks_it_no_ground(self):
         part_list = [parts.load("max98357a-dfr0954"), parts.load("speaker-terminal"), parts.load("l9110s-module"),
                      parts.load("jst-ph-2-power-inlet")]
-        self.assertEqual(emit_board.loads_across_a_pair(part_list), ["SpeakerTerminal"])
+        self.assertEqual(board_emitter.loads_across_a_pair(part_list), ["SpeakerTerminal"])
 
 
 class PlacementTest(unittest.TestCase):
     def test_nothing_is_placed_on_top_of_anything_else(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         part_list = [parts.load(part_id) for part_id in PARTS]
-        placements, _, _ = emit_board.place(board, part_list)
+        placements, _, _ = board_emitter.place(board, part_list)
 
         boxes = []
         for part in part_list:
-            x, y = placements[emit_board.component_name(part)]
-            w, h = emit_board.body_of(part)
+            x, y = placements[board_emitter.component_name(part)]
+            w, h = board_emitter.body_of(part)
             boxes.append((x - w / 2, y - h / 2, x + w / 2, y + h / 2))
         for index, first in enumerate(boxes):
             for second in boxes[index + 1:]:
@@ -818,7 +819,7 @@ class PlacementTest(unittest.TestCase):
     def test_the_board_is_big_enough_for_what_is_on_it(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         part_list = [parts.load(part_id) for part_id in PARTS]
-        _, width, height = emit_board.place(board, part_list)
+        _, width, height = board_emitter.place(board, part_list)
         self.assertGreater(height, board["physical"]["height_mm"])
         self.assertGreater(width, board["physical"]["width_mm"])
 
@@ -1007,7 +1008,7 @@ class ReadInputsTest(unittest.TestCase):
 
     def test_read_inputs_gives_the_design_and_its_assignments(self):
         root = self.project({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]})
-        inputs = emit_board.read_inputs(root / "requirements.json", root)
+        inputs = board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual(inputs.design.board["id"], "firebeetle2-esp32s3")
         expected, _ = pin_assigner.assign(inputs.design.board, inputs.design.signals)
         self.assertEqual(inputs.assignments, expected)
@@ -1016,8 +1017,8 @@ class ReadInputsTest(unittest.TestCase):
     def test_an_unknown_need_is_refused_under_schematic(self):
         root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"],
                              "signals": [{"name": "X", "needs": ["teleport"]}]})
-        with self.assertRaises(emit_board.RefusedInput) as caught:
-            emit_board.read_inputs(root / "requirements.json", root)
+        with self.assertRaises(board_emitter.RefusedInput) as caught:
+            board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual(caught.exception.stage, "schematic")
         self.assertTrue(str(caught.exception).startswith("cannot emit a board: "), str(caught.exception))
         self.assertIn("X asks for teleport", str(caught.exception))
@@ -1027,8 +1028,8 @@ class ReadInputsTest(unittest.TestCase):
     def test_a_footprint_gap_is_refused_under_footprint_in_its_own_words(self):
         from board_library import board_missing
         root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]})
-        with board_missing("physical.header_order"), self.assertRaises(emit_board.RefusedInput) as caught:
-            emit_board.read_inputs(root / "requirements.json", root)
+        with board_missing("physical.header_order"), self.assertRaises(board_emitter.RefusedInput) as caught:
+            board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual(caught.exception.stage, "footprint")
         self.assertEqual(str(caught.exception),
                          "xiao-esp32-c6 cannot have a footprint generated — these are not recorded, and none of them "
@@ -1039,15 +1040,15 @@ class ReadInputsTest(unittest.TestCase):
         from board_library import board_missing
         root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"],
                              "signals": [{"name": "X", "needs": ["teleport"]}]})
-        with board_missing("physical.header_order"), self.assertRaises(emit_board.RefusedInput) as caught:
-            emit_board.read_inputs(root / "requirements.json", root)
+        with board_missing("physical.header_order"), self.assertRaises(board_emitter.RefusedInput) as caught:
+            board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual(caught.exception.stage, "schematic")
 
     def test_a_design_with_a_malformed_file_is_refused_under_schematic(self):
         root = self.project({})
         (root / "requirements.json").write_text("{not json")
-        with self.assertRaises(emit_board.RefusedInput) as caught:
-            emit_board.read_inputs(root / "requirements.json", root)
+        with self.assertRaises(board_emitter.RefusedInput) as caught:
+            board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual(caught.exception.stage, "schematic")
         self.assertIn("not JSON", str(caught.exception))
         self.assertEqual(caught.exception.code, "requirements_unreadable")  # P700: the DesignError's own code
@@ -1094,7 +1095,7 @@ class ReadInputsTest(unittest.TestCase):
     def test_it_prints_nothing(self):
         root = self.project({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]})
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            emit_board.read_inputs(root / "requirements.json", root)
+            board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual((out.getvalue(), err.getvalue()), ("", ""))
 
 
@@ -1106,18 +1107,18 @@ class EachBoardRefusalCarriesItsCodeTest(unittest.TestCase):
         root = Path(tempfile.mkdtemp())
         (root / ".spark").mkdir()
         (root / "requirements.json").write_text(json.dumps({"board": board_id, "parts": [part_id]}))
-        inputs = emit_board.read_inputs(root / "requirements.json", root)
+        inputs = board_emitter.read_inputs(root / "requirements.json", root)
         parts_now = [dict(part, **changed) for part in inputs.design.parts]
-        return emit_board.BoardInputs(inputs.design._replace(parts=parts_now), inputs.assignments)
+        return board_emitter.BoardInputs(inputs.design._replace(parts=parts_now), inputs.assignments)
 
     def test_a_design_that_emits_has_no_refusal(self):
-        text, refused = emit_board.board_file(self.inputs("firebeetle2-esp32s3", "l9110s-module"))
+        text, refused = board_emitter.board_file(self.inputs("firebeetle2-esp32s3", "l9110s-module"))
         self.assertIsNone(refused)
         self.assertIn("<board", text)
 
     def test_each_gap_in_the_part_records(self):
         inputs = self.inputs("firebeetle2-esp32s3", "l9110s-module")
-        twice = emit_board.BoardInputs(inputs.design._replace(parts=inputs.design.parts * 2), inputs.assignments)
+        twice = board_emitter.BoardInputs(inputs.design._replace(parts=inputs.design.parts * 2), inputs.assignments)
         for given, code, start in ((twice, "name_used_twice", "two or more components would be called: "),
                                    (self.inputs("firebeetle2-esp32s3", "l9110s-module", footprint=None), "no_part_footprint",
                                     "no footprint recorded for: "),
@@ -1126,13 +1127,13 @@ class EachBoardRefusalCarriesItsCodeTest(unittest.TestCase):
                                    (self.inputs("firebeetle2-esp32s3", "l9110s-module", body_mm=None), "no_outline",
                                     "no outline recorded for: ")):
             with self.subTest(code=code):
-                text, refused = emit_board.board_file(given)
+                text, refused = board_emitter.board_file(given)
                 self.assertIsNone(text)
                 self.assertEqual(refused.code, code)
                 self.assertTrue(refused.startswith(start), refused)
 
     def test_a_missing_outline_is_no_refusal_when_a_size_may_be_assumed(self):
-        text, refused = emit_board.board_file(self.inputs("firebeetle2-esp32s3", "l9110s-module", body_mm=None), True)
+        text, refused = board_emitter.board_file(self.inputs("firebeetle2-esp32s3", "l9110s-module", body_mm=None), True)
         self.assertIsNone(refused)
         self.assertIn("NOBODY HAS MEASURED", text)
 
@@ -1140,7 +1141,7 @@ class EachBoardRefusalCarriesItsCodeTest(unittest.TestCase):
         inputs = self.inputs("xiao-esp32-c6", "led-red-5mm")
         led = inputs.design.parts[0]
         facts = {name: fact for name, fact in led["facts"].items() if name != "forward_voltage_v"}
-        text, refused = emit_board.board_file(self.inputs("xiao-esp32-c6", "led-red-5mm", facts=facts))
+        text, refused = board_emitter.board_file(self.inputs("xiao-esp32-c6", "led-red-5mm", facts=facts))
         self.assertEqual(refused.code, "series_resistor_unsized")
         self.assertTrue(refused.startswith("cannot emit a board: led-red-5mm asks for "), refused)
 
@@ -1150,7 +1151,7 @@ class EachBoardRefusalCarriesItsCodeTest(unittest.TestCase):
         (root / ".spark").mkdir()
         (root / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [
             "jst-ph-2-power-inlet", "jst-ph-2-power-inlet"]}))
-        _, refused = emit_board.board_file(emit_board.read_inputs(root / "requirements.json", root))
+        _, refused = board_emitter.board_file(board_emitter.read_inputs(root / "requirements.json", root))
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
             code = emit_board.main([str(root / "requirements.json")])
         self.assertEqual((code, err.getvalue(), refused.code), (emit_board.EXIT_COULD_NOT_RUN, refused + "\n", "name_used_twice"))
@@ -1174,49 +1175,49 @@ class EachSectionStandsAloneTest(unittest.TestCase):
         part_list = [parts.load(part_id) for part_id in PARTS]
         part_list[1] = dict(part_list[1], footprint_placeholder=True, footprint_note="stand-in")
         assignments, _ = pin_assigner.assign(board, parts.signals_for(PARTS))
-        placements, width, height = emit_board.place(board, part_list)
-        self.assertTrue(emit_board.stand_in_lines(part_list), "the fixture must have a stand-in")
-        self.assertTrue(emit_board.host_requirement_lines(part_list),
+        placements, width, height = board_emitter.place(board, part_list)
+        self.assertTrue(board_emitter.stand_in_lines(part_list), "the fixture must have a stand-in")
+        self.assertTrue(board_emitter.host_requirement_lines(part_list),
                         "the fixture must have a part with host requirements")
-        sections = (emit_board.header_lines(board, part_list, placements, width, height)
-                    + emit_board.component_lines(part_list, placements)
-                    + emit_board.host_part_lines(part_list, placements)
-                    + emit_board.signal_lines(part_list, assignments, board_pads.BoardPads.from_record(board))
-                    + emit_board.power_lines(board, part_list, {})
-                    + emit_board.stand_in_lines(part_list)
-                    + emit_board.host_requirement_lines(part_list)
+        sections = (board_emitter.header_lines(board, part_list, placements, width, height)
+                    + board_emitter.component_lines(part_list, placements)
+                    + board_emitter.host_part_lines(part_list, placements)
+                    + board_emitter.signal_lines(part_list, assignments, board_pads.BoardPads.from_record(board))
+                    + board_emitter.power_lines(board, part_list, {})
+                    + board_emitter.stand_in_lines(part_list)
+                    + board_emitter.host_requirement_lines(part_list)
                     + ["  </board>", ")"])
-        self.assertEqual(emit_board.emit(board, part_list, assignments, placements, width, height),
+        self.assertEqual(board_emitter.emit(board, part_list, assignments, placements, width, height),
                          "\n".join(sections) + "\n")
 
     def test_a_pad_naming_no_rail_is_said_not_skipped(self):
         # Was `continue`: the silent drop G2 removed for module pins, kept for the MCU's own.
         board = dict(self.BOARD, power_pads={"GND1": {"rail": "ground"}, "3V3": {}})
-        text = "\n".join(emit_board.mcu_power_lines(board, [], {}, set()))
+        text = "\n".join(board_emitter.mcu_power_lines(board, [], {}, set()))
         self.assertIn("Mcu.3V3 NAMES NO RAIL", text)
         self.assertIn('from=".Mcu > .GND1" to="net.GND"', text)
 
     def test_a_board_with_no_power_pads_at_all_is_said(self):
         board = {key: value for key, value in self.BOARD.items() if key != "power_pads"}
         self.assertIn("DOES NOT SAY WHICH OF ITS PADS ARE POWER",
-                      "\n".join(emit_board.mcu_power_lines(board, [], {}, set())))
+                      "\n".join(board_emitter.mcu_power_lines(board, [], {}, set())))
 
     def test_the_unjustified_note_names_every_net_nobody_sized(self):
-        self.assertEqual(emit_board.unjustified_lines(set()), [])
-        self.assertIn("net.GND, net.V33", emit_board.unjustified_lines({"V33", "GND"})[0])
+        self.assertEqual(board_emitter.unjustified_lines(set()), [])
+        self.assertIn("net.GND, net.V33", board_emitter.unjustified_lines({"V33", "GND"})[0])
 
     def test_stand_ins_are_listed_only_when_there_are_any(self):
         real = parts.load("l9110s-module")
         fake = dict(real, id="x", name="x", footprint_placeholder=True, footprint_note="stands in")
-        self.assertEqual(emit_board.stand_in_lines([real]), [])
+        self.assertEqual(board_emitter.stand_in_lines([real]), [])
         self.assertIn("X drawn as %s — stands in" % real["footprint"],
-                      "\n".join(emit_board.stand_in_lines([fake])))
+                      "\n".join(board_emitter.stand_in_lines([fake])))
 
     def test_host_requirements_are_carried_per_part(self):
         part = dict(parts.load("l9110s-module"), host_requirements=["pull both inputs down"])
         self.assertIn("- %s: pull both inputs down" % part["name"],
-                      "\n".join(emit_board.host_requirement_lines([part])))
-        self.assertEqual(emit_board.host_requirement_lines([dict(part, host_requirements=[])]), [])
+                      "\n".join(board_emitter.host_requirement_lines([part])))
+        self.assertEqual(board_emitter.host_requirement_lines([dict(part, host_requirements=[])]), [])
 
 
 class OnePowerWalkTest(unittest.TestCase):
@@ -1233,18 +1234,18 @@ class OnePowerWalkTest(unittest.TestCase):
 
     def test_every_entry_with_a_rail_is_yielded_with_its_net(self):
         got = [(part["name"], supply["pin"], net)
-               for part, supply, net in emit_board.power_connections([self.PART])]
+               for part, supply, net in board_emitter.power_connections([self.PART])]
         self.assertEqual(got, [("p", "VCC", "V33"), ("p", "OUT", "SPEAKER_P")])
 
     def test_an_entry_with_no_rail_is_not_yielded_and_is_reported_by_the_one_rule(self):
-        self.assertNotIn("NC", [s["pin"] for _, s, _ in emit_board.power_connections([self.PART])])
-        self.assertEqual(emit_board.power_pins_with_no_rail([self.PART]), ["p.NC"])
+        self.assertNotIn("NC", [s["pin"] for _, s, _ in board_emitter.power_connections([self.PART])])
+        self.assertEqual(board_emitter.power_pins_with_no_rail([self.PART]), ["p.NC"])
 
     def test_the_placeholder_filter_is_the_one_the_names_come_from(self):
         real = parts.load("l9110s-module")
         fake = dict(real, id="x", name="x", footprint_placeholder=True, footprint_note="n")
-        self.assertEqual(emit_board.placeholders([fake, real]), [fake])
-        self.assertEqual(emit_board.placeholder_components([fake, real]), ["X"])
+        self.assertEqual(board_emitter.placeholders([fake, real]), [fake])
+        self.assertEqual(board_emitter.placeholder_components([fake, real]), ["X"])
 
 
 class WhatAPartMustRecordTest(unittest.TestCase):
@@ -1252,16 +1253,16 @@ class WhatAPartMustRecordTest(unittest.TestCase):
 
     def test_a_part_with_no_footprint_is_named(self):
         part = {k: v for k, v in parts.load("l9110s-module").items() if k != "footprint"}
-        self.assertEqual(emit_board.parts_without_a_footprint([part]), [part["name"]])
-        self.assertEqual(emit_board.parts_without_a_footprint([parts.load("l9110s-module")]), [])
+        self.assertEqual(board_emitter.parts_without_a_footprint([part]), [part["name"]])
+        self.assertEqual(board_emitter.parts_without_a_footprint([parts.load("l9110s-module")]), [])
 
     def test_a_part_with_no_outline_is_named_and_one_with_is_not(self):
         with_outline = parts.load("l9110s-module")
         without = {k: v for k, v in with_outline.items() if k != "body_mm"}
-        self.assertTrue(emit_board.has_an_outline(with_outline))
-        self.assertFalse(emit_board.has_an_outline(without))
-        self.assertEqual(emit_board.parts_without_an_outline([without]), [with_outline["name"]])
-        self.assertEqual(emit_board.parts_without_an_outline([with_outline]), [])
+        self.assertTrue(board_emitter.has_an_outline(with_outline))
+        self.assertFalse(board_emitter.has_an_outline(without))
+        self.assertEqual(board_emitter.parts_without_an_outline([without]), [with_outline["name"]])
+        self.assertEqual(board_emitter.parts_without_an_outline([with_outline]), [])
 
 
 class TwoSuppliesOnOneRailTest(unittest.TestCase):
@@ -1281,24 +1282,24 @@ class TwoSuppliesOnOneRailTest(unittest.TestCase):
                 "body_mm": {"width": 10, "height": 10, "verified": True, "source": "test"}}
 
     def test_a_supply_onto_the_modules_own_rail_is_named(self):
-        contended = emit_board.outputs_in_contention([self.regulator("Buck", "logic")])
+        contended = board_emitter.outputs_in_contention([self.regulator("Buck", "logic")])
         self.assertEqual([net for net, _ in contended], ["V33"])
         self.assertIn("Buck.VOUT", contended[0][1])
         self.assertTrue(any("microcontroller" in who for who in contended[0][1]))
 
     def test_two_supplies_onto_one_rail_are_named(self):
-        contended = emit_board.outputs_in_contention(
+        contended = board_emitter.outputs_in_contention(
             [self.regulator("BuckA", "servo"), self.regulator("BuckB", "servo")])
         self.assertEqual(contended, [("SERVO", ["BuckA.VOUT", "BuckB.VOUT"])])
 
     def test_a_ground_return_from_a_connector_is_not_a_contended_supply(self):
         # The inlet's GND is `out` — where the pack's return meets board ground. The first
         # version of the rule called that a second supply on GND, on every design with an inlet.
-        self.assertEqual(emit_board.outputs_in_contention([parts.load("jst-ph-2-power-inlet")]), [])
+        self.assertEqual(board_emitter.outputs_in_contention([parts.load("jst-ph-2-power-inlet")]), [])
 
     def test_one_supply_on_its_own_rail_is_not(self):
-        self.assertEqual(emit_board.outputs_in_contention([self.regulator("Buck", "servo")]), [])
-        self.assertEqual(emit_board.outputs_in_contention(
+        self.assertEqual(board_emitter.outputs_in_contention([self.regulator("Buck", "servo")]), [])
+        self.assertEqual(board_emitter.outputs_in_contention(
             [parts.load(part_id) for part_id in PARTS] + [parts.load("jst-ph-2-power-inlet")]), [])
 
     def test_the_file_and_the_notes_both_say_it(self):
@@ -1320,29 +1321,29 @@ class ThePowerHelpersEachHaveANameTest(unittest.TestCase):
     RULES = {"physics": {"rails": {"TRACTION": {"max_current_a": 2.9}}}}
 
     def test_trace_width_mm_is_none_unless_a_positive_current_is_stated(self):
-        self.assertIsNone(emit_board.trace_width_mm("V33", self.RULES))
-        self.assertGreater(emit_board.trace_width_mm("TRACTION", self.RULES), copper.MIN_TRACE_WIDTH_MM)
+        self.assertIsNone(board_emitter.trace_width_mm("V33", self.RULES))
+        self.assertGreater(board_emitter.trace_width_mm("TRACTION", self.RULES), copper.MIN_TRACE_WIDTH_MM)
         for bad in (0, -1, "2.9", None):
             rules = {"physics": {"rails": {"X": {"max_current_a": bad}}}}
-            self.assertIsNone(emit_board.trace_width_mm("X", rules), bad)
+            self.assertIsNone(board_emitter.trace_width_mm("X", rules), bad)
 
     def test_power_trace_sizes_a_stated_rail_and_records_an_unstated_one(self):
         unjustified = set()
-        sized = emit_board.power_trace("Drive", "VCC", "TRACTION", self.RULES, "", unjustified)
+        sized = board_emitter.power_trace("Drive", "VCC", "TRACTION", self.RULES, "", unjustified)
         self.assertIn('from=".Drive > .VCC" to="net.TRACTION" thickness="', sized)
         self.assertEqual(unjustified, set())
-        bare = emit_board.power_trace("Drive", "GND", "GND", self.RULES, "return", unjustified)
+        bare = board_emitter.power_trace("Drive", "GND", "GND", self.RULES, "return", unjustified)
         self.assertNotIn("thickness=", bare)
         self.assertIn("{/* return */}", bare)
         self.assertEqual(unjustified, {"GND"})
 
     def test_power_note_lines_reports_a_pin_naming_no_rail(self):
         part = {"id": "x", "name": "X", "power": [{"pin": "VCC"}]}
-        self.assertIn("X.VCC NAMES NO RAIL", "\n".join(emit_board.power_note_lines([part])))
-        self.assertEqual(emit_board.power_note_lines([]), [])
+        self.assertIn("X.VCC NAMES NO RAIL", "\n".join(board_emitter.power_note_lines([part])))
+        self.assertEqual(board_emitter.power_note_lines([]), [])
 
     def test_module_power_lines_traces_every_power_pin_that_names_a_rail(self):
-        lines = emit_board.module_power_lines([parts.load("l9110s-module")], self.RULES, set())
+        lines = board_emitter.module_power_lines([parts.load("l9110s-module")], self.RULES, set())
         self.assertEqual(len(lines), 2)
         self.assertTrue(any('from=".L9110sModule > .VCC" to="net.MOTOR6V"' in line for line in lines))
         self.assertTrue(any('from=".L9110sModule > .GND" to="net.GND"' in line for line in lines))
@@ -1357,8 +1358,8 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
     def _emit(self, part, signals=()):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         assignments, _ = pin_assigner.assign(board, list(signals))
-        placements, width, height = emit_board.place(board, [part])
-        return emit_board.emit(board, [part], assignments, placements, width, height, {}), placements
+        placements, width, height = board_emitter.place(board, [part])
+        return board_emitter.emit(board, [part], assignments, placements, width, height, {}), placements
 
     def _part(self, **extra):
         part = parts.load("l9110s-module")
@@ -1441,7 +1442,7 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
         self.assertEqual(len(positions), len(set(positions)), "no two components share a position")
         module_x = placements["L9110sModule"][0]
         for name in ("L9110sModulePulldownAIA", "L9110sModulePulldownAIB"):
-            self.assertGreater(placements[name][0], module_x + emit_board.body_of(self._part())[0] / 2,
+            self.assertGreater(placements[name][0], module_x + board_emitter.body_of(self._part())[0] / 2,
                                "%s sits to the right of the module's body" % name)
 
 
@@ -1480,7 +1481,7 @@ class WhatARailCarries(unittest.TestCase):
                          {"output_current_a": self.fact(rating)})
 
     def test_a_load_is_read_from_the_fact_its_pin_names_in_that_facts_unit(self):
-        rail = emit_board.rail_loads([self.servo(), self.buck()])["SERVO"]
+        rail = board_emitter.rail_loads([self.servo(), self.buck()])["SERVO"]
         self.assertAlmostEqual(rail["amps"], 0.7, msg="stall_current_ma, not idle_current_ma")
         self.assertTrue(rail["complete"])
 
@@ -1490,14 +1491,14 @@ class WhatARailCarries(unittest.TestCase):
                         {"active_supply_current_ua": self.fact({"active_max": 200, "standby_max": 110})})
         motor = self.part("motor", [{"pin": "VCC", "rail": "servo", "direction": "in",
                                      "draws": "run_current_a"}], {"run_current_a": self.fact(1.5)})
-        rail = emit_board.rail_loads([rtc, motor, self.buck()])["SERVO"]
+        rail = board_emitter.rail_loads([rtc, motor, self.buck()])["SERVO"]
         self.assertAlmostEqual(rail["amps"], 1.5002, msg="a dotted pointer reads one key of the value")
 
     def test_a_load_whose_figure_is_null_is_named_not_summed_as_zero(self):
         probe = self.part("probe", [{"pin": "VCC", "rail": "servo", "direction": "in",
                                      "draws": "operating_current_ma"}],
                           {"operating_current_ma": self.fact(None, verified=False)}, instance="Soil1")
-        rail = emit_board.rail_loads([probe, self.servo(), self.buck()])["SERVO"]
+        rail = board_emitter.rail_loads([probe, self.servo(), self.buck()])["SERVO"]
         self.assertFalse(rail["complete"])
         self.assertAlmostEqual(rail["amps"], 0.7, msg="what IS stated is still summed")
         self.assertEqual(len(rail["missing"]), 1)
@@ -1506,39 +1507,39 @@ class WhatARailCarries(unittest.TestCase):
 
     def test_an_input_that_names_no_fact_is_named_as_missing(self):
         mute = self.part("mute", [{"pin": "VCC", "rail": "servo", "direction": "in"}])
-        rail = emit_board.rail_loads([mute, self.buck()])["SERVO"]
+        rail = board_emitter.rail_loads([mute, self.buck()])["SERVO"]
         self.assertFalse(rail["complete"])
         self.assertIn("Mute.VCC", rail["missing"][0])
 
     def test_a_pointer_to_a_fact_with_no_current_unit_is_refused_not_read_as_amps(self):
         odd = self.part("odd", [{"pin": "VCC", "rail": "servo", "direction": "in",
                                  "draws": "stall_current"}], {"stall_current": self.fact(700)})
-        rail = emit_board.rail_loads([odd, self.buck()])["SERVO"]
+        rail = board_emitter.rail_loads([odd, self.buck()])["SERVO"]
         self.assertFalse(rail["complete"], "700 of what — amps, milliamps? Not a guess to make")
 
     def test_the_supply_and_its_rating_come_from_the_output_pin(self):
-        supply = emit_board.rail_loads([self.servo(), self.buck(rating=3.0)])["SERVO"]["supply"]
+        supply = board_emitter.rail_loads([self.servo(), self.buck(rating=3.0)])["SERVO"]["supply"]
         self.assertEqual(supply["who"], "Buck.VOUT")
         self.assertAlmostEqual(supply["amps"], 3.0)
 
     def test_a_converter_input_draws_what_its_output_carries(self):
-        rails = emit_board.rail_loads([self.servo(stall=700), self.buck()])
+        rails = board_emitter.rail_loads([self.servo(stall=700), self.buck()])
         self.assertAlmostEqual(rails["TRACTION"]["amps"], 0.7,
                                msg="a step-down converter draws at most what it delivers")
         self.assertTrue(rails["TRACTION"]["complete"])
 
     def test_a_converter_whose_output_is_not_fully_stated_leaves_its_input_open(self):
         mute = self.part("mute", [{"pin": "VCC", "rail": "servo", "direction": "in"}])
-        rails = emit_board.rail_loads([mute, self.buck()])
+        rails = board_emitter.rail_loads([mute, self.buck()])
         self.assertFalse(rails["TRACTION"]["complete"])
         self.assertIn("Buck.VIN", rails["TRACTION"]["missing"][0])
 
     def test_unverified_figures_are_carried_so_a_sum_can_say_what_it_rests_on(self):
-        rail = emit_board.rail_loads([self.servo(verified=False), self.buck()])["SERVO"]
+        rail = board_emitter.rail_loads([self.servo(verified=False), self.buck()])["SERVO"]
         self.assertIn("Sg90Servo.VCC", " ".join(rail["unverified"]))
 
     def test_ground_is_not_a_rail_with_a_load(self):
-        self.assertNotIn("GND", emit_board.rail_loads([self.servo(), self.buck()]))
+        self.assertNotIn("GND", board_emitter.rail_loads([self.servo(), self.buck()]))
 
     def test_the_module_feeds_its_own_logic_rail_and_takes_its_own_share_of_it(self):
         board = {"power_pads": {"VCC": {"rail": "servo", "direction": "in", "feeds": "3V3"},
@@ -1547,7 +1548,7 @@ class WhatARailCarries(unittest.TestCase):
                                         "own_draw": "module_peak_a"},
                                 "GND1": {"rail": "ground", "direction": "out"}},
                  "power": {"regulator_3v3_a": self.fact(1.5), "module_peak_a": self.fact(0.355)}}
-        rails = emit_board.rail_loads([self.servo(stall=700), self.buck()], board)
+        rails = board_emitter.rail_loads([self.servo(stall=700), self.buck()], board)
         self.assertAlmostEqual(rails["V33"]["amps"], 0.355)
         self.assertAlmostEqual(rails["V33"]["supply"]["amps"], 1.5)
         self.assertAlmostEqual(rails["SERVO"]["amps"], 1.055,
@@ -1558,13 +1559,13 @@ class WhatARailCarries(unittest.TestCase):
         board = {"power_pads": {"3V3": {"rail": "logic", "direction": "out", "can_supply": "regulator_3v3_a",
                                         "volts": "io_volts"}},
                  "power": {"regulator_3v3_a": self.fact(1.5), "io_volts": self.fact(3.3, verified=False)}}
-        supply = emit_board.rail_loads([], board)["V33"]["supply"]
+        supply = board_emitter.rail_loads([], board)["V33"]["supply"]
         self.assertEqual(supply["volts"], {"value": 3.3, "verified": False, "why": "io_volts"})
 
     def test_a_supply_that_names_no_voltage_says_so_rather_than_zero(self):
         board = {"power_pads": {"3V3": {"rail": "logic", "direction": "out", "can_supply": "regulator_3v3_a"}},
                  "power": {"regulator_3v3_a": self.fact(1.5)}}
-        volts = emit_board.rail_loads([], board)["V33"]["supply"]["volts"]
+        volts = board_emitter.rail_loads([], board)["V33"]["supply"]["volts"]
         self.assertIsNone(volts["value"])
         self.assertIn("names no fact for its voltage", volts["why"])
 
@@ -1574,18 +1575,18 @@ class WhatARailCarries(unittest.TestCase):
         unjustified, while the records held the servo's stall the whole time — and the checker,
         reading the same records, would then judge the default against it.
         """
-        lines = "\n".join(emit_board.power_lines({}, [self.servo(stall=1500), self.buck()], {}))
+        lines = "\n".join(board_emitter.power_lines({}, [self.servo(stall=1500), self.buck()], {}))
         self.assertRegex(lines, r'from="\.Sg90Servo > \.VCC" to="net\.SERVO" thickness="[\d.]+mm"')
         unjustified = [line for line in lines.splitlines() if "IS UNJUSTIFIED" in line]
         self.assertNotIn("net.SERVO", " ".join(unjustified))
 
     def test_a_stated_current_still_beats_the_records(self):
         rules = {"physics": {"rails": {"SERVO": {"max_current_a": 0.05}}}}
-        filled = emit_board.rules_with_record_currents(rules, {"SERVO": {"amps": 1.5, "complete": True}})
+        filled = board_emitter.rules_with_record_currents(rules, {"SERVO": {"amps": 1.5, "complete": True}})
         self.assertEqual(filled["physics"]["rails"]["SERVO"]["max_current_a"], 0.05)
 
     def test_an_open_rail_is_not_filled_from_a_partial_sum(self):
-        filled = emit_board.rules_with_record_currents({}, {"SERVO": {"amps": 0.7, "complete": False}})
+        filled = board_emitter.rules_with_record_currents({}, {"SERVO": {"amps": 0.7, "complete": False}})
         self.assertNotIn("SERVO", filled["physics"]["rails"], "a partial sum would size it too thin")
 
 if __name__ == "__main__":

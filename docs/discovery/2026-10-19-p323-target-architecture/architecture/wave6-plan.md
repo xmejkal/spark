@@ -959,7 +959,7 @@ every child (rows 17 to 21).
 
 Goal: each refusal of the four design CLIs and of `design.load` has a code. Text and exit codes stay byte-equal.
 
-Files: `scripts/design_codes.py` (proposed, a leaf, as `firmware_codes`. C1 refuses `codes.py`). The sites, read at
+Files: `scripts/design_codes.py` (moved to `scripts/spark/design/design_codes.py` in P703; a leaf, as `firmware_codes`. C1 refuses `codes.py`). The sites, read at
 924e48a4: `DesignError` at 30 `raise` sites (`design.py:118` to `:447`), `Impossible` at 11 (`assign_pins.py:193` to
 `:476`), `RefusedInput` at 2 (`emit_board.py:1093`, `:1096`), `emit_board.main`'s 6 returns (`:1115` to `:1177`),
 `emit_footprint.main`'s 3 (`:315`, `:319`, `:323`). One code per refusal an agent acts on differently (P684, P692 row 13),
@@ -1142,6 +1142,35 @@ Rows: 110. Docs: 7 agent-facing pages, `areas/design.md`, `areas/breadboard.md`.
 `part_shape.py` is under `spark/breadboard/`. Done-item 3 (P700): the extractions W6-D2 left, `emit_board.rail_loads`
 (60) and `header_lines` (46), each its own commit after the `git mv`, where R1's 40 lines apply. `R6:RefusedInput` went
 in P700, so the keys are 7.
+
+P703 claims check (2026-11-08, against fd967e0f). Each claim above was read in the code. None changes a decision. These
+are wrong or stale:
+
+1. Lines: `emit_board.py` 1,207 (P700), `emit_footprint.py` 369, not 344, `part_shape.py` 232, `design_codes.py` 56:
+   1,864, not 1,784.
+2. Keys: 8, not 7: `C1:RefusedInput`, `R1:<module>` (1207), `R1:main` of both CLIs (55, 27), `R2:host_part_lines`,
+   `R3:emit`, `R3:power_trace`, `T1:file-write` (`emit_footprint.main`). The two `main` keys and `T1` stay with the CLIs.
+3. Rows: 124 in 24 tables, not 110: `emit_board.py` 74, `emit_footprint.py` 25, `part_shape.py` 24, `design_codes.py`
+   1. 35 rows of 12 other tables name one of the four in `find` or `replace`. `--anchors` refuses 114 on main, 1 of
+   them in the 124 (`p97-council` F9, `emit_board.py`).
+4. Import lines: 37, not 29: 4 among the four, 21 in `scripts/` (7 lazy: `boards.py:255`, `init_project.py:98`,
+   `:109`, `:131`, `parts.py:150`, `check.py:174`, `:198`), 12 in 9 test files. `breadboard_catalog.py:15` is
+   `drawing_catalog.py:9` since W6-B3, and `sheet.py:17` imports `part_shape` too.
+5. The extractions go before the `git mv` (the brief), not after: under `scripts/spark/` a 60-line function is a new
+   R1 breach at the move. `rail_loads` (60, `:514`) and `header_lines` (46, `:600`) hold. The module key rises by
+   their few lines between those commits and falls at the move, where `main` leaves for the CLI.
+6. Name clashes: no importer binds `board_emitter`, `footprint_emitter`, `part_shape` or `design_codes` (`symtable`).
+7. Patch sites: 5, all `mock.patch.object` on `check_spine.emit_board` or `.emit_footprint` (`test_check_spine.py:1797`
+   to `:1943`). `:1797` patches the CLI's `main` to prove the spine never runs it, and `:1811` runs it: both name the
+   CLI `emit_footprint`, the rest `check_spine.footprint_emitter` and `check_spine.board_emitter`.
+8. MAY_READ: 5 keys on the four, 4 take the new name (`emit_board.VIA_*` 2, `emit_footprint.*` 2); `design_codes.CODES`
+   keeps its stem.
+9. Docs: the agent-facing pages name the CLIs, which stay. `refactor-plan.md:639` and W6-B2's section already say
+   `part_shape` is breadboard's (P698).
+
+These hold: the `SCRIPTS` lines (`emit_board.py:36`, `emit_footprint.py:45`, `part_shape.py:22`), the edge
+(`part_shape.py:24` to `:26`, `drawing` for `NotDrawn`, its codes and `WOKWI_GEOMETRY_FILE`), six `NotDrawn` sites with
+`:110` returned and `:226` without a code, and no other function of the four over 40 lines.
 
 ### W6-D3c, the needs (after W6-D3b)
 

@@ -853,9 +853,9 @@ class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
         self.assertEqual((code, "    half-board (project)" in lines), (0, True), lines)
 
     def test_the_line_comes_from_the_footprint_module_and_asks_nothing_of_parts(self):
-        # P411: footprint_stop imported `parts` for a sentence that now lives in emit_footprint; the edge to parts that remains is validate's.
-        # emit_footprint loads parts itself, through loader (loader.py:40), so it is loaded first: the test asks only whether footprint_stop imports parts
-        import emit_footprint  # noqa: F401
+        # P411: footprint_stop imported `parts` for a sentence that now lives in footprint_emitter; the edge to parts that remains is validate's.
+        # footprint_emitter loads parts itself, through loader (loader.py:40), so it is loaded first: the test asks only whether footprint_stop imports parts
+        from spark.design import footprint_emitter  # noqa: F401
         from board_library import board_missing
         with board_missing("physical.header_order"), mock.patch.dict(sys.modules, {"parts": None}):
             self.assertEqual(boards.footprint_stop("xiao-esp32-c6", project()),

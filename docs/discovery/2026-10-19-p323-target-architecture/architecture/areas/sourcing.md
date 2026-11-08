@@ -26,8 +26,8 @@ the offers that match a need. It also tallies what a project's run cost, read fr
 | cost | `step`, `tally`, and `cost.py` | reads, writes |
 
 The goal Operations of `parts.py` (`need`, `needs`, `needs-set`, `match`, `offer`, `pick`, `requirements`) live in
-design, because `needs.py` imports `design`, `emit_board` and `emit_footprint`. `audit` lives in design too: it asks
-`emit_footprint.footprint_gaps` whether a board stops the chain (`parts.audit`). `parts.py` imports both areas'
+design, because `needs.py` imports `design`, `board_emitter` and `footprint_emitter`. `audit` lives in design too: it asks
+`footprint_emitter.footprint_gaps` whether a board stops the chain (`parts.audit`). `parts.py` imports both areas'
 `OPERATIONS`, so its flags stay as they are.
 
 ### Its components

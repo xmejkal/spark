@@ -258,7 +258,7 @@ class ResistorPowerTest(unittest.TestCase):
 
 
 def rail_held_at(volts, verified=True, who="Mcu.3V3"):
-    """One rail as `emit_board.rail_loads` returns it, with the voltage its supply's record states."""
+    """One rail as `board_emitter.rail_loads` returns it, with the voltage its supply's record states."""
     rail = summed(0.355, rating=1.5, who=who)
     rail["supply"]["volts"] = {"value": volts, "verified": verified, "why": "io_volts"}
     return rail
@@ -549,7 +549,7 @@ class TheExitCodeFollowsTheFindingsTest(unittest.TestCase):
 
 
 def summed(amps, missing=(), unverified=(), rating=3.0, rating_verified=True, who="Buck.VOUT"):
-    """One rail as `emit_board.rail_loads` returns it."""
+    """One rail as `board_emitter.rail_loads` returns it."""
     return {"amps": amps, "complete": not missing, "missing": list(missing),
             "unverified": list(unverified),
             "supply": {"who": who, "amps": rating, "verified": rating_verified,

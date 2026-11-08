@@ -17,7 +17,7 @@ import collections
 import re
 
 import board_pads
-import emit_board
+from spark.design import board_emitter
 
 #: What an end is: a pad of the board, a pin of a part, or one end of a resistor a part asks for.
 BOARD, PART, RESISTOR = "board", "part", "resistor"
@@ -274,7 +274,7 @@ def _natural(text):
 def wiring(board, circuit, design_parts, resistors, board_component):
     """The wiring: one numbered line per connection point, board labels first, and the same points as steps.
     `board_component` is the circuit's name for the board (`sheet.BOARD_COMPONENT`)."""
-    records = {emit_board.component_name(part): part for part in design_parts}
+    records = {board_emitter.component_name(part): part for part in design_parts}
 
     def end(component, port):
         """One end of a connection, as a person finds it on the bench. Every end of a part or a resistor reads

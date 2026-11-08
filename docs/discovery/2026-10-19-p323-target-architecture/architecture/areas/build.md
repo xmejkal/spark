@@ -89,7 +89,7 @@ Today one function, `check_spine.run` (204 lines, 6 parameters), runs every stag
 and returns `stages + [Stage(...)]` from 23 places. `Stage(name, status, detail)` holds each
 result. `BUILD_STAGES` keeps today's order and JSON names: `parts`, `board`, `schematic`, `schematic-notes`,
 `footprint`, `build`, `simulation`. `SchematicStage` runs the board emitter and adds `schematic-notes`. `FootprintStage` calls
-`emit_footprint.render`, not `emit_footprint.main` (OC2).
+`footprint_emitter.render`, not the CLI's `emit_footprint.main` (OC2).
 `CircuitStage` prints as `build`. The stop rule stays: `goes_on(result)` is true only for `ok`, except that
 `SchematicStage` goes on over its notes, which report `problems` (the `schematic-notes` stage in `run`). The board engine's trivial-board probe (`toolchain_can_build`) moves into `TscircuitEngine`, so a
 broken tool reads as `could-not-run` with code `tool_cannot_build`, never as a design problem.

@@ -1,24 +1,24 @@
 [
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "the demanded passives are printed as prose again, not placed",
   "find": "             + host_part_lines(part_list, placements, board)\n",
   "replace": ""
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "a pull-up goes to ground like a pull-down",
   "find": "            net = \"GND\" if kind == \"pulldown\" else supply_net_of(part)",
   "replace": "            net = \"GND\""
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "the host's trace ignores the divider and lands on the pad",
   "find": "            wants[loader.signal_name(part, need)] = signal_target(part, need)",
   "replace": "            wants[loader.signal_name(part, need)] = (component_name(part), need[\"pin\"])"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "the passives are placed on top of the modules",
   "find": "        placements[name] = (-width / 2 + column_x + widest + GAP_MM + PASSIVE_BODY_MM[0] / 2, y)",
   "replace": "        placements[name] = (-width / 2 + column_x + widest / 2, y)"

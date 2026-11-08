@@ -15,8 +15,8 @@ from pathlib import Path
 import boards
 from spark.design import loader
 import drawer
-import emit_board
-import emit_footprint
+from spark.design import board_emitter
+from spark.design import footprint_emitter
 import matching
 import parts
 import store
@@ -225,10 +225,10 @@ def _candidate(need, fit, context, mine=None):
                 "broken": bool(parts._shape_problems(boards.validate, record, context["path"], "board definition"))
                 if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
         if offer.kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
-            said["stops_at"] = "footprint" if emit_footprint.footprint_gaps(record) else None
+            said["stops_at"] = "footprint" if footprint_emitter.footprint_gaps(record) else None
             if said["stops_at"]:  # P411: a board that builds gains no key
-                said["stops_why"] = emit_footprint.why_no_footprint(record)  # the list, for Claude
-                said["stop_line"] = emit_footprint.footprint_stop_line(record)  # the text shows it; `--match` drops it from the JSON
+                said["stops_why"] = footprint_emitter.why_no_footprint(record)  # the list, for Claude
+                said["stop_line"] = footprint_emitter.footprint_stop_line(record)  # the text shows it; `--match` drops it from the JSON
     return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": [], "limits": []}, **said,
                 what=sorted({f["what"] for f in offer.functions if f.get("does") == need["does"]}),
                 what_matches=fit.exact, score=fit.score, why=fit.why, about=offer.about,
@@ -622,7 +622,7 @@ def _name_after(need_id):
 
 
 def _called(part_id, name):
-    """What the generator calls an instance (`emit_board.component_name`): the name it is given, else its part id in capitals."""
+    """What the generator calls an instance (`board_emitter.component_name`): the name it is given, else its part id in capitals."""
     return name or "".join(word.capitalize() for word in part_id.replace("_", "-").split("-"))
 
 
@@ -699,7 +699,7 @@ def _board_problems(board_picks, unfiled, project):
         return []
     if unfiled and not board_picks:
         filed = boards.records(project)
-        stopping = {board_id: emit_footprint.footprint_stop_line(parts._parse(path)) for board_id, (_, path) in filed.items()}
+        stopping = {board_id: footprint_emitter.footprint_stop_line(parts._parse(path)) for board_id, (_, path) in filed.items()}
         builds = [board_id for board_id in filed if not stopping[board_id]]  # C-7: a board that stops is never suggested
         said = "; ".join(["spark has one that builds for %s" % ", ".join(builds) if builds else "spark has no board file that builds"]
                          + ["%s %s" % (board_id, line) for board_id, line in stopping.items() if line])
@@ -731,10 +731,10 @@ def _unserved(needs, known, entries):
 def _power_gaps(listed, known):
     """
     What the board's power would lack (C-3; the PO, 2026-10-08), from the records of every part the file lists, on the rails the
-    file gives them: each rail a part draws from and nothing listed supplies — `emit_board.rails_without_a_source`, the rule the
+    file gives them: each rail a part draws from and nothing listed supplies — `board_emitter.rails_without_a_source`, the rule the
     schematic stage stops on — as {"rail", "drawn_by"}; each net a part drives that nothing listed receives
-    (`emit_board.outputs_with_nothing_on_them`) as {"net", "driven_by"}; and, split out of the first, each side of a driven pair
-    nothing listed drives (`emit_board.pair_sides_without_a_driver`: an amplifier's, never a supply's; F15) as {"net",
+    (`board_emitter.outputs_with_nothing_on_them`) as {"net", "driven_by"}; and, split out of the first, each side of a driven pair
+    nothing listed drives (`board_emitter.pair_sides_without_a_driver`: an amplifier's, never a supply's; F15) as {"net",
     "received_by"}. A part whose record is not found or is broken is left to the build to name. Said before the build, never
     refused: the inlet, the supply, the amplifier or the terminal is the person's pick.
     """
@@ -752,11 +752,11 @@ def _power_gaps(listed, known):
         except (loader.DesignError, TypeError, AttributeError):
             continue  # a rail given to a pin the part does not have: the build names it
     no_supply = [{"rail": net, "drawn_by": sorted({"%s.%s" % (part["name"], supply["pin"])
-                                                   for part, supply, on in emit_board.power_connections(part_list)
+                                                   for part, supply, on in board_emitter.power_connections(part_list)
                                                    if on == net and supply.get("direction") != "out"})}
-                 for net in emit_board.rails_without_a_source(part_list)]
-    no_receiver = [{"net": net, "driven_by": "%s.%s" % (name, pin)} for net, name, pin in emit_board.outputs_with_nothing_on_them(part_list)]
-    pair_sides = set(emit_board.pair_sides_without_a_driver(part_list))
+                 for net in board_emitter.rails_without_a_source(part_list)]
+    no_receiver = [{"net": net, "driven_by": "%s.%s" % (name, pin)} for net, name, pin in board_emitter.outputs_with_nothing_on_them(part_list)]
+    pair_sides = set(board_emitter.pair_sides_without_a_driver(part_list))
     no_driver = [{"net": gap["rail"], "received_by": gap["drawn_by"]} for gap in no_supply if gap["rail"] in pair_sides]
     return [gap for gap in no_supply if gap["rail"] not in pair_sides], no_receiver, no_driver
 

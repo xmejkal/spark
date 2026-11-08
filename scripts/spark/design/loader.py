@@ -4,7 +4,7 @@ A design, loaded once: the requirements file, the project it belongs to, the boa
 instances, and the rules.
 
 Three scripts loaded a design on their own — `emit_board.main`, `check_all`'s placeholder list
-and `check_spine` — and the copies disagreed in the ways copies do. `emit_board.main` resolved
+and `check_spine` — and the copies disagreed in the ways copies do. That `main` (`board_emitter.read_inputs` now) resolved
 the project on one line and passed the unresolved `--project` flag to the rules lookup seventy
 lines later, so the documented invocation (inside the project, no flag) emitted every power
 trace unsized, exit 0, and blamed the reader for it. `check_spine` resolved the project from the
@@ -22,7 +22,7 @@ Everything that can be wrong with the input is a `DesignError`, which callers tu
 This module resolves and reads. It names a SIGNAL for its instance (`signal_name`), because that
 name is decided when the instance is, and so it is the one that says which instance names are ONE
 name (`one_name`): `signal_name` is what makes them one. It does not name COMPONENTS for the
-netlist — that is `emit_board`'s, because the name is decided by what the emitted file needs —
+netlist — that is `board_emitter`'s, because the name is decided by what the emitted file needs —
 and it does not assign pins, because only the generator needs that. It refuses a file that gives
 two parts one name before any stage runs on it (`read`), and a design whose signals land on one
 name where the signals are derived (`signals_of`, which is the first to hold the part records).
@@ -35,7 +35,7 @@ from collections import namedtuple
 from pathlib import Path
 
 import boards
-import design_codes
+from spark.design import design_codes
 from spark.design import fab
 import parts as parts_library
 import provenance
@@ -91,7 +91,7 @@ def names_that_are_one(wanted):
     The first pair of `parts` entries whose names are one name, as (index, name, index, name), or None.
 
     On the names the file GIVES: an entry's shape is `requested_parts`' to refuse, and what an unnamed entry is called
-    is the generator's (`emit_board.component_name`), whose own compare stays as the independent net.
+    is the generator's (`board_emitter.component_name`), whose own compare stays as the independent net.
     """
     seen = {}
     for index, entry in enumerate(wanted.get("parts") or []):
@@ -284,7 +284,7 @@ def record(part_id, project):
     The library's record for a part, or a DesignError saying what is wrong with it.
 
     `parts.load` reads the file outside any try, so a malformed project part was a
-    `JSONDecodeError` traceback through `emit_board` and `[!!] schematic Traceback …` through the
+    `JSONDecodeError` traceback through `emit_board.py` and `[!!] schematic Traceback …` through the
     spine — the A8 class, one module below the loader (audit B10). Named by part id here, since
     the library resolves the path.
     """
@@ -399,7 +399,7 @@ def signals_of(part_list, wanted, project):
     Every signal this design asks the host for, ready for `assign_pins`: each instance's, named
     per instance, then the requirements' own.
 
-    Derived HERE, once. `emit_board.main` derived them and `assign_pins.main` handed the raw
+    Derived HERE, once. `emit_board.main` (`board_emitter.read_inputs` now) derived them and `assign_pins.main` handed the raw
     `parts` entries to the library instead, so the first step every document names crashed on
     the `{part, name}` form every document shows (audit B1), and the two mains could have
     disagreed about which signals a design has. A requirements entry that pins a part's signal is that signal's pin,

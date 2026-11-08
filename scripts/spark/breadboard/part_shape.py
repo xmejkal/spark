@@ -5,7 +5,7 @@ same shape projected to the pixels the drawn breadboard plans with.
     find_part_px(board)  ->  (part_px, the name of the source that placed it); find_source gives the source itself
 
 The frame, written down once: the board seen from above, component side up, USB-C at the bottom, the origin at the
-top-left corner of the PCB, y down, in mm. The outline is the PCB only, not the USB-C overhang. `emit_footprint.pads`
+top-left corner of the PCB, y down, in mm. The outline is the PCB only, not the USB-C overhang. `footprint_emitter.pads`
 counts from the centre with y up, so `RecordShapeSource` flips it: x + W/2, H/2 - y.
 
 A shape holds facts only. Each group of facts carries the provenance of `provenance.fact_problems`: a value, whether it
@@ -16,20 +16,17 @@ there never shows a board it is not.
 import collections
 import json
 import math
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from spark.breadboard import drawing  # noqa: E402
-import emit_footprint  # noqa: E402
-from spark.breadboard.drawing import NotDrawn  # noqa: E402
+from spark.breadboard import drawing
+from spark.breadboard.drawing import NotDrawn
+from spark.design import footprint_emitter
 
 #: Pixels per millimetre: Wokwi draws 96 px to the inch.
 PX_PER_MM = 96 / 25.4
 #: The name of the source that draws a board from its own record, and the word `part_px["source"]` carries for it.
 RECORD = "record"
-#: The one edge `emit_footprint.pads` knows to be flush: its pads count from the +y end.
+#: The one edge `footprint_emitter.pads` knows to be flush: its pads count from the +y end.
 FLUSH_EDGE = "+y"
 
 #: Value: a part in mm: its outline `size` (width, height), its `pins` {label: (x, y)}, the pad `ground` stands for, and
@@ -107,10 +104,10 @@ class RecordShapeSource(ShapeSource):
 
     @staticmethod
     def _disagrees(field, said):
-        return NotDrawn(emit_footprint.DISAGREES_MESSAGE % said, drawing.HEADER_DISAGREES, field)
+        return NotDrawn(footprint_emitter.DISAGREES_MESSAGE % said, drawing.HEADER_DISAGREES, field)
 
     def _refuse_odd_header(self, physical):
-        """What `emit_footprint.pads` would place wrongly or place twice: more than two rows, a row count that disagrees with
+        """What `footprint_emitter.pads` would place wrongly or place twice: more than two rows, a row count that disagrees with
         the pin counts, a pitch of nothing, an edge it does not handle."""
         header = physical["header"]
         sizes = (("physical.width_mm", physical["width_mm"]), ("physical.height_mm", physical["height_mm"]),
@@ -140,17 +137,17 @@ class RecordShapeSource(ShapeSource):
 
     def find_shape(self, board):
         """The PartShape of this board's record, or NotDrawn with a code and a subject."""
-        missing = emit_footprint.geometry_missing(board)
+        missing = footprint_emitter.geometry_missing(board)
         if missing:
-            raise NotDrawn("the board file lacks %s" % ", ".join(emit_footprint.geometry_gaps(board)),
+            raise NotDrawn("the board file lacks %s" % ", ".join(footprint_emitter.geometry_gaps(board)),
                            drawing.NO_HEADER_FACT, missing[0][0])
         physical = board["physical"]
-        wrong = emit_footprint.kind_problem(physical)
+        wrong = footprint_emitter.kind_problem(physical)
         if wrong:
             raise self._disagrees(*wrong)
         self._refuse_odd_header(physical)
         try:
-            placed = emit_footprint.pads(board)
+            placed = footprint_emitter.pads(board)
         except (ValueError, KeyError, TypeError) as exc:
             raise self._disagrees("physical.header.pins" if isinstance(exc, ValueError) else "physical.header", exc) from exc
         self._refuse_pads_outside(physical, placed)
@@ -184,11 +181,11 @@ class RecordShapeSource(ShapeSource):
                      "why_it_matters": "a pad label read wrong wires the wrong pin, and no fact of the record says the pads are checked",
                      "note": "pads not verified"},
             "row_side": {"value": "row 0 on the left", "verified": False,
-                         "source": "emit_footprint.pads, which puts row 0 at -x",
+                         "source": "footprint_emitter.pads, which puts row 0 at -x",
                          "why_it_matters": "a mirrored board shows on the bench: the pins sit on the other side",
                          "note": "row side not verified"},
             "usb_end": {"value": "at the end away from the first pads", "verified": False,
-                        "source": "emit_footprint.pads, which puts the first pads at the +y end",
+                        "source": "footprint_emitter.pads, which puts the first pads at the +y end",
                         "why_it_matters": "the pins may sit at the other end of the board",
                         "note": "USB end not verified"}}
         if doubtful:

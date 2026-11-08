@@ -1,72 +1,72 @@
 [
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "milliamps are read as amps",
   "find": "CURRENT_UNITS = ((\"_ua\", 1e-6), (\"_ma\", 1e-3), (\"_a\", 1.0))",
   "replace": "CURRENT_UNITS = ((\"_ua\", 1e-6), (\"_ma\", 1.0), (\"_a\", 1.0))"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "a fact with no unit in its name is read anyway",
   "find": "    if not isinstance(fact, dict) or scale is None:",
   "replace": "    scale = scale or 1.0\n    if not isinstance(fact, dict):"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "a dotted pointer's key is ignored",
   "find": "    if key:\n        value = value.get(key) if isinstance(value, dict) else None",
   "replace": "    if False:\n        value = value.get(key) if isinstance(value, dict) else None"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "a load nobody stated is dropped instead of named",
   "find": "                missing.append(\"%s: %s\" % (load[\"who\"], load[\"why\"]))\n                continue",
   "replace": "                continue"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "the module's own draw on the rail it makes is ignored",
   "find": "            if supply.get(\"own_draw\"):",
   "replace": "            if False:"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "a converter's input is read as an ordinary load",
   "find": "        elif supply.get(\"feeds\"):",
   "replace": "        elif False:"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "a converter's input takes a partial sum as its draw",
   "find": "                        \"amps\": inner[\"amps\"] if inner and inner[\"complete\"] else None,",
   "replace": "                        \"amps\": inner[\"amps\"] if inner else None,"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "ground is summed as a rail",
   "find": "        if net in GROUND_NETS:\n            continue\n        rail = rails.setdefault(net, {\"loads\": [], \"supplies\": []})",
   "replace": "        rail = rails.setdefault(net, {\"loads\": [], \"supplies\": []})"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "an unverified figure is summed without saying so",
   "find": "            if not load[\"verified\"]:\n                unverified.append",
   "replace": "            if False:\n                unverified.append"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "the records overwrite a current somebody stated",
   "find": "        if load[\"complete\"] and not isinstance(stated, (int, float)):",
   "replace": "        if load[\"complete\"]:"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "an open sum sizes a trace, too thin",
   "find": "        if load[\"complete\"] and not isinstance(stated, (int, float)):",
   "replace": "        if not isinstance(stated, (int, float)):"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "the generator never reads the records",
   "find": "    rules = rules_with_record_currents(rules, rail_loads(part_list, board))",
   "replace": "    rules = rules"

@@ -21,8 +21,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import check_footprints  # noqa: E402
 from spark.checks import build_check, physics_check  # noqa: E402
 from spark.design import copper  # noqa: E402
-import emit_board  # noqa: E402
-import emit_footprint  # noqa: E402
+from spark.design import board_emitter  # noqa: E402
+from spark.design import footprint_emitter  # noqa: E402
 from spark.design import fab  # noqa: E402
 
 
@@ -60,7 +60,7 @@ class OneTableNotTwoCopiesTest(unittest.TestCase):
         self.assertIs(build_check.PACKAGE_POWER_W, physics_check.PACKAGE_POWER_W)
 
     def test_the_generator_and_the_checker_agree_about_vias(self):
-        self.assertEqual((emit_board.VIA_HOLE_MM, emit_board.VIA_PAD_MM),
+        self.assertEqual((board_emitter.VIA_HOLE_MM, board_emitter.VIA_PAD_MM),
                          (fab.process("min_via_hole_mm"), fab.process("min_via_pad_mm")))
 
 
@@ -87,19 +87,19 @@ class TheRingIsArithmeticNotProseTest(unittest.TestCase):
                                0.45 + fab.process("annular_ring_margin_mm"))
 
     def test_raising_the_minimum_moves_the_pad_the_generator_draws(self):
-        hole = emit_footprint.hole_diameter_mm()
-        self.assertGreater(emit_footprint.pad_diameter_mm(hole, self.STRICTER),
-                           emit_footprint.pad_diameter_mm(hole))
+        hole = footprint_emitter.hole_diameter_mm()
+        self.assertGreater(footprint_emitter.pad_diameter_mm(hole, self.STRICTER),
+                           footprint_emitter.pad_diameter_mm(hole))
 
     def test_the_default_still_reproduces_the_hand_checked_footprint(self):
         # 1.00 mm hole, 1.70 mm pad, measured against a footprint made independently.
-        hole = emit_footprint.hole_diameter_mm()
-        self.assertEqual((hole, emit_footprint.pad_diameter_mm(hole)), (1.0, 1.7))
+        hole = footprint_emitter.hole_diameter_mm()
+        self.assertEqual((hole, footprint_emitter.pad_diameter_mm(hole)), (1.0, 1.7))
 
     def test_a_pad_drawn_for_the_default_fails_a_stricter_project(self):
         # The two halves meeting: what the generator drew, judged by what a project demands.
-        hole = emit_footprint.hole_diameter_mm()
-        pad = emit_footprint.pad_diameter_mm(hole)
+        hole = footprint_emitter.hole_diameter_mm()
+        pad = footprint_emitter.pad_diameter_mm(hole)
         circuit = [{"type": "pcb_plated_hole", "shape": "circle",
                     "hole_diameter": hole, "outer_diameter": pad, "pcb_component_id": "c1"}]
         self.assertEqual(build_check.check_annular_rings(circuit), [])
@@ -123,10 +123,10 @@ class AProjectsOwnProcessReachesEveryRuleTest(unittest.TestCase):
     def test_the_command_line_carries_it_all_the_way_through(self):
         work = Path(tempfile.mkdtemp())
         circuit = work / "circuit.json"
-        hole = emit_footprint.hole_diameter_mm()
+        hole = footprint_emitter.hole_diameter_mm()
         circuit.write_text(json.dumps([
             {"type": "pcb_plated_hole", "shape": "circle", "hole_diameter": hole,
-             "outer_diameter": emit_footprint.pad_diameter_mm(hole), "pcb_component_id": "c1"}]))
+             "outer_diameter": footprint_emitter.pad_diameter_mm(hole), "pcb_component_id": "c1"}]))
         rules = work / "rules.json"
         rules.write_text(json.dumps({"fabrication": {"min_annular_ring_mm": 0.45}}))
         self.assertEqual(check_footprints.main([str(circuit)]), check_footprints.EXIT_OK)

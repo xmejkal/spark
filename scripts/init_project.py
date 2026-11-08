@@ -95,19 +95,19 @@ def declared_inputs(part_list):
     `component_name`, so a rule is keyed by the string that actually reached the netlist — an
     instance name is not a record id (`59b7a0b`).
     """
-    import emit_board
+    from spark.design import board_emitter
     pins = []
     for part in part_list:
         for need in part.get("needs") or []:
             if need.get("direction") == "in" and need.get("pin"):
-                pins.append([emit_board.component_name(part), need["pin"]])
+                pins.append([board_emitter.component_name(part), need["pin"]])
     return sorted(pins)
 
 
 def firmware_pulled(part_list):
     """Each pin the board's internal pull-up holds, set by the firmware, which no netlist shows (P204)."""
-    import emit_board
-    return sorted([emit_board.component_name(part), pin] for part in part_list for pin in part.get("_firmware_pulls", []))
+    from spark.design import board_emitter
+    return sorted([board_emitter.component_name(part), pin] for part in part_list for pin in part.get("_firmware_pulls", []))
 
 
 def i2c_lines(part_list):
@@ -128,14 +128,14 @@ def i2c_lines(part_list):
     signal pin-to-pin and no net is ever called SDA. That was the other half of why this list
     stayed empty and unusable.
     """
-    import emit_board
+    from spark.design import board_emitter
     host_pulls, carried = [], []
     for part in part_list:
         pulled = {p["pin"] for p in (part.get("host_parts") or []) if p.get("kind") == "pullup"}
         for need in part.get("needs") or []:
             if need.get("bus") != "i2c" or not need.get("pin"):
                 continue
-            where = "%s.%s" % (emit_board.component_name(part), need["pin"])
+            where = "%s.%s" % (board_emitter.component_name(part), need["pin"])
             (host_pulls if need["pin"] in pulled else carried).append(where)
     return sorted(host_pulls), sorted(carried)
 

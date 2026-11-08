@@ -24,7 +24,7 @@ from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import drawing_catalog  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
-import part_shape  # noqa: E402
+from spark.breadboard import part_shape  # noqa: E402
 from spark.breadboard.drawing import HoleLedger, NotDrawn, WokwiGeometry, rotate  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
