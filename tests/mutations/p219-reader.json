@@ -110,8 +110,8 @@
  {
   "file": "scripts/spark/bench/board_look.py",
   "name": "no board name not caught",
-  "find": "if not name:\n            raise LookStop",
-  "replace": "if False:\n            raise LookStop"
+  "find": "if not name:\n            raise LookStopError",
+  "replace": "if False:\n            raise LookStopError"
  },
  {
   "file": "scripts/spark/bench/board_look.py",

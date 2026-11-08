@@ -44,7 +44,7 @@ class AStopKeepsEachTypedValueOnOneLineTest(unittest.TestCase):
 
     def test_a_newline_in_the_port_of_the_doctor_s_lines_fakes_no_line(self):
         port = "/dev/x\nGRANTED"
-        stop = board_look.LookStop("esptool could not read the board", reason="esptool_failed")
+        stop = board_look.LookStopError("esptool could not read the board", reason="esptool_failed")
         doctor_for = lambda cannot: (["grant.py: esptool could not read the board on %s" % port], None)  # noqa: E731
         said = stop_result(stop, "grant.py", self.project, port, doctor_for)
         self.assertEqual((said.diagnostics, self.faked_lines(said)),

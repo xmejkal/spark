@@ -15,11 +15,11 @@ from spark.bench import board_envelope
 from spark.bench import board_grant
 from spark.bench import board_look
 from spark.bench import deploy_gate
-from spark.bench import ready_check
+from spark.bench import ready_probe
 import store
 import tools
 from spark.bench.board_console import LEAVE_CONSOLE
-from spark.bench.deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY
+from spark.bench.deploy_stages import DeployPhase
 from spark.bench.deploy_service import DeployService, FlashError
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
@@ -82,7 +82,7 @@ class StageTrackingReporter(Reporter):
     outside's report. So the result knows the stage the run reached, the service's BEGINs counted (P655)."""
 
     def __init__(self, report_on):
-        self.report_on, self.stage = report_on, STAGE_PLAN
+        self.report_on, self.stage = report_on, DeployPhase.PLAN
 
     def report(self, event):
         if event.kind == BEGIN:
@@ -95,8 +95,8 @@ Asked = namedtuple("Asked", "port token dry_run")
 #: Value: what the result says of the board after a crash in `stage`: `data.board_state`, the words of the sentence, the fix.
 CrashState = namedtuple("CrashState", "board_state words fix")
 CRASH_STATES = {
-    STAGE_FLASH: CrashState(board_envelope.MAY_BE_ERASED, "may be erased", "run look.py, then deploy again"),
-    STAGE_VERIFY: CrashState(board_envelope.FLASHED_NOT_VERIFIED, "is flashed, not verified", "read the board with look.py; do not deploy again"),
+    DeployPhase.FLASH: CrashState(board_envelope.MAY_BE_ERASED, "may be erased", "run look.py, then deploy again"),
+    DeployPhase.VERIFY: CrashState(board_envelope.FLASHED_NOT_VERIFIED, "is flashed, not verified", "read the board with look.py; do not deploy again"),
 }
 CRASH_WHY_LOOK = "the deploy crashed: the board %s"
 
@@ -141,19 +141,19 @@ class DeployFlowService:
 
     def plan(self):
         """The plan's notes, then in a dry run each command the deploy would run and the REPL line, and the run ends."""
-        self.report(Event.begin(STAGE_PLAN))
+        self.report(Event.begin(DeployPhase.PLAN))
         try:
             planned = self._reached["plan"] = self.service.plan(self.asked.port)
         except (DeployError, tools.ToolProblem) as cannot:
             return self.refuse(cannot)
         for note in planned.notes:
-            self.say(STAGE_PLAN, "note: %s" % note)
+            self.say(DeployPhase.PLAN, "note: %s" % note)
         if not self.asked.dry_run:
             return None
         for command in planned.commands:
-            self.say(STAGE_PLAN, "would run: %s" % shlex.join(command), raw=True)  # P677: a command a person may run
-        self.say(STAGE_PLAN, "board: not looked at: run look.py")
-        self.say(STAGE_PLAN, WATCH % shlex.join(self.service.platform.make_connection(planned.mpremote, self.asked.port, self.outside.run).repl_command()),
+            self.say(DeployPhase.PLAN, "would run: %s" % shlex.join(command), raw=True)  # P677: a command a person may run
+        self.say(DeployPhase.PLAN, "board: not looked at: run look.py")
+        self.say(DeployPhase.PLAN, WATCH % shlex.join(self.service.platform.make_connection(planned.mpremote, self.asked.port, self.outside.run).repl_command()),
                  raw=True)
         return EXIT_OK
 
@@ -162,21 +162,21 @@ class DeployFlowService:
         doctor (P354); a closed gate gives the line to run in the terminal."""
         reached, token = self._reached, self.asked.token
         try:
-            self.report(Event.begin(STAGE_LOOK))
+            self.report(Event.begin(DeployPhase.LOOK))
             look = self.look = reached["report"] = self.service.look(self.asked.port)
             for line in board_look.report_lines(look, token=False, indent=""):
-                self.say(STAGE_LOOK, line)
+                self.say(DeployPhase.LOOK, line)
             reached["port"] = look.port
-            self.report(Event.begin(STAGE_GATE))  # before the "standing yes" line, which is a gate line
+            self.report(Event.begin(DeployPhase.GATE))  # before the "standing yes" line, which is a gate line
             self.consent = self.choose_consent(look, token)
             self.planned = self.service.deploy(look, token, self.consent)
             self.keep_yes()  # only now is there a yes to report
-        except (board_look.LookStop, DeployError, tools.ToolProblem) as cannot:
+        except (board_look.LookStopError, DeployError, tools.ToolProblem) as cannot:
             if isinstance(cannot, FlashError):
                 self.keep_yes()
             reached.update(refusal=str(cannot), reason=reason_of(cannot))
             lines = ["%s: %s" % (SCRIPT, cannot)]
-            if isinstance(cannot, board_look.LookStop):
+            if isinstance(cannot, board_look.LookStopError):
                 lines, reached["doctor"] = board_doctor.stop_answer(SCRIPT, cannot, self.service.platform, self.outside.run)
             self.diagnostics += lines
             return EXIT_COULD_NOT_RUN
@@ -201,33 +201,33 @@ class DeployFlowService:
         chosen = self.grants.consent_for_deploy(look, evidence, self.outside.make_consent(line))
         if chosen.why not in WHY_NOT_SAID:
             # raw: the sentence may hold the grant line the person pastes (P677)
-            self.say(STAGE_GATE, "standing yes: not used: %s" % (board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]), raw=True)
+            self.say(DeployPhase.GATE, "standing yes: not used: %s" % (board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]), raw=True)
         return chosen.consent
 
     def verify(self):
         """The board after the flash: the facts, ready, the board log, the store record, and the REPL line when ready is unknown."""
         reached = self._reached
-        self.report(Event.begin(STAGE_VERIFY))
+        self.report(Event.begin(DeployPhase.VERIFY))
         result = reached["result"] = self.service.verify(self.look, self.planned)
         ready = result.ready
-        if ready.verdict != ready_check.SEEN:
+        if ready.verdict != ready_probe.SEEN:
             reached.update(refusal=ready.sentence, reason=(result.start and result.start.code) or board_codes.READY_UNKNOWN
-                           if ready.verdict == ready_check.UNKNOWN else board_codes.READY_NOT_SEEN)
+                           if ready.verdict == ready_probe.UNKNOWN else board_codes.READY_NOT_SEEN)
         for line in (result.facts_line, DEPLOYED_LINE % (result.image_sha256, reached["who"]), "%s: %s" % (ready.verdict, ready.sentence)):
-            self.say(STAGE_VERIFY, line)
-        self.say(STAGE_VERIFY, "board log: %s" % result.log_path, raw=True)  # P677: a file a person opens, as data.board_log
+            self.say(DeployPhase.VERIFY, line)
+        self.say(DeployPhase.VERIFY, "board log: %s" % result.log_path, raw=True)  # P677: a file a person opens, as data.board_log
         try:
             reached["store_record"] = str(self.service.record(result, self.consent))
-            self.say(STAGE_VERIFY, "store record: %s" % reached["store_record"])
+            self.say(DeployPhase.VERIFY, "store record: %s" % reached["store_record"])
         except (OSError, KeyError, store.StoreProblem) as cannot:  # KeyError: getpass before Python 3.13
             reached["store_record_error"] = str(cannot)
             reached["notes"] = ["the store record was not written: %s" % cannot]
-            self.say(STAGE_VERIFY, "store record: not written: %s" % cannot)
-        if ready.verdict == ready_check.UNKNOWN:
+            self.say(DeployPhase.VERIFY, "store record: not written: %s" % cannot)
+        if ready.verdict == ready_probe.UNKNOWN:
             if result.start is None or result.start.port:  # P462: with the port gone there is nothing to watch
-                self.say(STAGE_VERIFY, WATCH % shlex.join(result.repl_command), raw=True)
+                self.say(DeployPhase.VERIFY, WATCH % shlex.join(result.repl_command), raw=True)
             return EXIT_COULD_NOT_RUN
-        return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS
+        return EXIT_OK if ready.verdict == ready_probe.SEEN else EXIT_PROBLEMS
 
 
 class DeployImage(Operation):

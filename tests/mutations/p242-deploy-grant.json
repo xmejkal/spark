@@ -170,13 +170,13 @@
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "why-not-printed",
-  "find": "            self.say(STAGE_GATE, \"standing yes: not used: %s\" % (board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]))\n",
+  "find": "            self.say(DeployPhase.GATE, \"standing yes: not used: %s\" % (board_grant.DEPLOY_MESSAGE_FOR.get(chosen.why) or board_grant.MESSAGE_FOR[chosen.why]), raw=True)\n",
   "replace": "            pass\n"
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "standing-yes-not-printed",
-  "find": "            self.report(Event.line(deploy_stages.STAGE_GATE, \"yes: %s\" % consent.who))\n",
+  "find": "            self.report(Event.line(DeployPhase.GATE, \"yes: %s\" % consent.who))\n",
   "replace": "            pass\n"
  },
  {

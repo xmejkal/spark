@@ -220,7 +220,7 @@ class GrantService:
 
     def issue(self, port, minutes, consent, before_look=lambda: None, script="grant.py", scope=SCOPE_LIVE):
         """The Grant of `scope` kept for the board on USB (or on `port`) for `minutes` from the yes, after one look and
-        a yes from `consent`. `before_look` runs just before the board restarts. Raises GrantRefusedError, board_look.LookStop, or
+        a yes from `consent`. `before_look` runs just before the board restarts. Raises GrantRefusedError, board_look.LookStopError, or
         GateClosedError when consent cannot ask. It saves nothing then."""
         if not 1 <= minutes <= MAX_MINUTES:
             raise GrantRefusedError(WHY_BAD_MINUTES)
@@ -247,7 +247,7 @@ class GrantService:
 
     def check(self, port=None, script="grant.py"):
         """A GrantCheckResult for the board on USB (or on `port`). It runs only `mpremote devs`: no contact with the
-        board. board_look.LookStop when the board cannot be found."""
+        board. board_look.LookStopError when the board cannot be found."""
         board = self.finder.require_one_board(script, port)
         try:
             grant = self.grants.find(board.serial)

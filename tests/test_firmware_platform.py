@@ -77,10 +77,10 @@ class FakeFirmwarePlatformTest(unittest.TestCase):
             FakeFirmwarePlatform(port_finder=tools.ToolProblem("no mpremote")).make_port_finder(None)
 
     def test_a_fake_board_reader_gives_its_readings_in_turn_and_keeps_the_ports(self):
-        stop = board_look.LookStop("could not read", reason="board_not_read")
+        stop = board_look.LookStopError("could not read", reason="board_not_read")
         reader = FakeBoardReader("first", stop)
         self.assertEqual(reader.read("/dev/a"), "first")
-        with self.assertRaises(board_look.LookStop):
+        with self.assertRaises(board_look.LookStopError):
             reader.read("/dev/b")
         self.assertEqual(reader.read_ports, ["/dev/a", "/dev/b"])
 

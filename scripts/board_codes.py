@@ -5,7 +5,7 @@ A leaf: it imports nothing of spark. `look.py --json` and `deploy.py --json` wri
 `unchecked` item, so an agent decides on the code and never on the English sentence (no magic strings, P260). A raise
 site names its code in `reason`, and `CODES` says in one sentence what each code means.
 
-    the look's stops       a LookStop's `reason`: the look could not go on
+    the look's stops       a LookStopError's `reason`: the look could not go on
     the look's findings    a Stop's code, and the code of a warning or an unchecked item of a LookReport
     the gate's refusals    a GateClosedError's `reason`: the deploy gate stays shut
     the grant's refusals   a GrantRefusedError's `reason`, from its WHY_ word (board_grant.CODE_FOR_WHY)
@@ -15,7 +15,7 @@ The codes every Operation can write (`bad_argument`, `crash`) are the core's, in
 """
 
 # --- MVP ---
-#: A LookStop's reason: the look could not go on.
+#: A LookStopError's reason: the look could not go on.
 LIST_FAILED, LIST_TIMEOUT = "list_failed", "list_timeout"
 NO_PORT, PORT_NOT_LISTED, TWO_BOARDS = "no_port", "port_not_listed", "two_boards"
 FLASHER_NOT_ESPTOOL, BOARD_NOT_READ, READ_TIMEOUT = "flasher_not_esptool", "board_not_read", "read_timeout"

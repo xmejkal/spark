@@ -107,7 +107,7 @@ class FakeClock:
 
 
 class FakePortFinder:
-    """A fake board_look.PortFinder: each `nodes` call gives the next of `looks`, a list of Ports (or a LookStop to raise),
+    """A fake board_look.PortFinder: each `nodes` call gives the next of `looks`, a list of Ports (or a LookStopError to raise),
     and the last one for good."""
 
     def __init__(self, *looks):
@@ -164,7 +164,7 @@ class FakeConsoleProbe:
 
 
 class FakeBoardReader:
-    """A fake board_look.BoardReader: each `read` gives the next of `readings` (a BoardReading, or a LookStop to raise), and
+    """A fake board_look.BoardReader: each `read` gives the next of `readings` (a BoardReading, or a LookStopError to raise), and
     the last one for good. Keeps each port it was asked for in `read_ports`."""
 
     def __init__(self, *readings):
@@ -184,10 +184,10 @@ class FakeFirmwarePlatform(FirmwarePlatform):
     `roles` the role of each `find_tool`."""
 
     def __init__(self, project=Path("."), flasher=None, shell_command=None, port_finder=None, board_reader=None,
-                 connection=None, ready_check=None, console_probe=None, tool=None):
+                 connection=None, ready_probe=None, console_probe=None, tool=None):
         super().__init__(project)
         self.parts = {"flasher": flasher, "shell_command": shell_command, "port_finder": port_finder,
-                      "board_reader": board_reader, "connection": connection, "ready_check": ready_check,
+                      "board_reader": board_reader, "connection": connection, "ready_probe": ready_probe,
                       "console_probe": console_probe, "tool": tool}
         self.hints, self.roles = [], []
 
@@ -218,8 +218,8 @@ class FakeFirmwarePlatform(FirmwarePlatform):
     def make_connection(self, command, port, run):
         return self._part("connection")
 
-    def make_ready_check(self, connection):
-        return self._part("ready_check")
+    def make_ready_probe(self, connection):
+        return self._part("ready_probe")
 
     def make_console_probe(self, port, run):
         return self._part("console_probe")

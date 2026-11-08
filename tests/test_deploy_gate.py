@@ -425,7 +425,7 @@ class TheBusyPortTest(GateCase):
     """P354: a console left open holds the port, so esptool's look fails. The doctor says so, as look.py's does."""
 
     #: The doctor's result for a port that another program holds (test_deploy_json builds its envelope from it).
-    BUSY = board_doctor.BoardDoctorResult(
+    BUSY = board_doctor.DoctorProbeResult(
         (board_doctor.CheckResult("console", False, "another program holds the port: locked", "close_other"),),
         None, "close_other", None)
 
@@ -454,7 +454,7 @@ class TheBusyPortTest(GateCase):
 
     def test_a_stop_the_doctor_gives_no_result_for_prints_its_own_line_with_the_port_as_a_question_mark(self):
         port = "/dev/cu.usb\u202emodem"
-        stop = board_look.LookStop("could not read the board on %s.", port, reason="board_not_read")  # no port: no doctor
+        stop = board_look.LookStopError("could not read the board on %s.", port, reason="board_not_read")  # no port: no doctor
         real = MicroPythonPlatform(self.project, lambda role: found(role))
         platform = FakeFirmwarePlatform(self.project, flasher=real.make_flasher(), shell_command=real.make_shell_command(), port_finder=object(),
                                         board_reader=FakeBoardReader(stop))

@@ -56,7 +56,7 @@
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "deploy's lines print around the reporter",
-  "find": "        self.report(Event.line(stage, text))",
+  "find": "        self.report(Event.line(stage, text, raw))",
   "replace": "        print(\"  \" + text, flush=True)"
  },
  {
@@ -92,7 +92,7 @@
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "deploy's standing-yes line prints around the reporter",
-  "find": "self.say(STAGE_GATE, \"standing yes: not used: %s\" %",
+  "find": "self.say(DeployPhase.GATE, \"standing yes: not used: %s\" %",
   "replace": "print(\"  standing yes: not used: %s\" %"
  },
  {
@@ -105,7 +105,7 @@
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "deploy's gate refusal is an event, not a diagnostic",
   "find": "            self.diagnostics.append(\"%s: %s\" % (SCRIPT, shut))",
-  "replace": "            self.say(STAGE_GATE, \"%s: %s\" % (SCRIPT, shut))"
+  "replace": "            self.say(DeployPhase.GATE, \"%s: %s\" % (SCRIPT, shut))"
  },
  {
   "file": "scripts/spark/core/events.py",

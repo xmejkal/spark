@@ -229,6 +229,7 @@ to the rules we set". New code follows them now. Today's names change in the nam
    script with two modes names its mode: `issue-grant`, `check-grant` (`grant.py`, `grant.py --check`).
 5. A class that only reads says so in its name: `Reader`, `Finder` or `Probe`. A class or a method that changes a
    board, a file or a port has a verb that names the change: `write`, `erase`, `cure`, `save`.
+   A `Probe` asks the board or the port one question: an Adapter, or a Strategy when several answer it (`DoctorProbe`).
 
 The role table above still applies. Its role words end a name, and `Fake` starts one. A Service, a Store or an
 Adapter from that table is a helper with its role word, and an Operation calls it.

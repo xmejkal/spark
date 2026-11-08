@@ -13,11 +13,11 @@ from pathlib import Path
 
 from spark.bench import board_doctor
 import boards
-from spark.bench.deploy_stages import STAGE_FLASH, STAGE_GATE, STAGE_LOOK, STAGE_PLAN, STAGE_VERIFY  # noqa: F401  (the stages are data.stage; the look reads them here)
+from spark.bench.deploy_stages import DeployPhase
 import design
 from spark.core import outcomes
 from spark.core.result import Finding, NextStep, OperationResult
-from spark.bench import ready_check
+from spark.bench import ready_probe
 import store
 from spark.bench.deploy_gate import NEXT_LOOK, NEXT_DEPLOY
 
@@ -80,7 +80,7 @@ def deploy_step(project, token, port, evidence, why):
 
 
 def doctor_fix(doctor, places):
-    """The `fix` of a BoardDoctorResult: its next step's sentence, naming the buttons as `places` does, or '' when there
+    """The `fix` of a DoctorProbeResult: its next step's sentence, naming the buttons as `places` does, or '' when there
     is no doctor result or it names no step."""
     return board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
 
@@ -110,7 +110,7 @@ def _steps(reached):
             following.append(outcomes.add_env(outcomes.step("grant", reached["grant_argv"],
                                            "the person runs it once in their own terminal; it lets Claude erase ALL of the flash for N minutes (1 to 1440, 60 here)",
                                            effects=["writes"], needs_yes=True), store.read_given_env()))
-    elif result and result.ready.verdict == ready_check.UNKNOWN:
+    elif result and result.ready.verdict == ready_probe.UNKNOWN:
         stopped = bool(result.start and result.start.code)  # P462: the person has a step first
         gone = stopped and result.start.port is None  # no port to open: mpremote would choose a board of its own
         again = "read the board again with the REPL (data.repl_command): the firmware prints `ready`. Never deploy again for this"
@@ -142,7 +142,7 @@ def deploy_data(reached):
         "board_log": str(result.log_path) if result else None,
         "repl_command": list(result.repl_command) if result and not (result.start and result.start.port is None) else None,
         "store_record": reached.get("store_record"), "store_record_error": reached.get("store_record_error"),
-        "board_state": MAY_BE_ERASED if stage == STAGE_FLASH else None,
+        "board_state": MAY_BE_ERASED if stage == DeployPhase.FLASH else None,
         "person_action": result.start.sentence if result and result.start and result.start.code else None,
         "run_in_terminal": reached.get("run_in_terminal"),
     }

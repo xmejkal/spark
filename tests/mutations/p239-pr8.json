@@ -26,7 +26,7 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "deploy-no-show-running",
-  "find": "self.report(Event.line(deploy_stages.STAGE_FLASH, \"running: %s\" % shlex.join(command)))",
+  "find": "self.report(Event.line(DeployPhase.FLASH, \"running: %s\" % shlex.join(command), raw=True))",
   "replace": "pass"
  },
  {
@@ -62,7 +62,7 @@
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "main-exit-ok-always",
-  "find": "return EXIT_OK if ready.verdict == ready_check.SEEN else EXIT_PROBLEMS",
+  "find": "return EXIT_OK if ready.verdict == ready_probe.SEEN else EXIT_PROBLEMS",
   "replace": "return EXIT_OK"
  },
  {

@@ -268,7 +268,7 @@ class TheBenchCodesTableTest(unittest.TestCase):
         for name in ("test_board_look", "test_board_doctor", "test_board_grant"):
             suite.addTests(unittest.defaultTestLoader.loadTestsFromName(name))
         suite.addTests(unittest.defaultTestLoader.loadTestsFromName("TheGateTest", test_deploy_gate))
-        with mock.patch.object(board_look.LookStop, "__init__", spying(board_look.LookStop.__init__)), \
+        with mock.patch.object(board_look.LookStopError, "__init__", spying(board_look.LookStopError.__init__)), \
                 mock.patch.object(deploy_gate.GateClosedError, "__init__", spying(deploy_gate.GateClosedError.__init__)):
             result = unittest.TextTestRunner(stream=io.StringIO()).run(suite)
         self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
