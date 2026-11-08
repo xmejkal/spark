@@ -25,12 +25,7 @@ from spark.design import netlist
 from spark.checks import check_codes
 from spark.core.outcomes import OK, COULD_NOT_RUN, status_of
 from spark.core.result import Refusal
-
-#: A pull-up weaker than this cannot hold a bus high against its own capacitance; stronger than
-#: this and the driving pin cannot pull it down. Wide on purpose — this is a sanity band, not a
-#: design calculation, and saying which is which matters.
-PULLUP_MIN_OHM = 1000
-PULLUP_MAX_OHM = 10000
+from spark.sourcing.part_rules import PULLUP_MAX_OHM, PULLUP_MIN_OHM
 
 
 #: The three answers a caller must be able to tell apart.

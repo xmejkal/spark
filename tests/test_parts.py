@@ -928,6 +928,26 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertEqual(answers, [("https://wiki.example/a", True), ("https://wiki.example/b", False)])
 
 
+class EachPartRefusalHasItsCodeTest(unittest.TestCase):
+    """P717: each PartError names its sourcing code, so an agent decides on the code and never on the sentence."""
+
+    def test_a_part_no_record_holds_and_a_record_that_breaks_the_contract(self):
+        home, project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (project / "parts").mkdir()
+        (project / "parts" / "broken-part.json").write_text(json.dumps({"schema": 1, "id": "broken-part"}))
+        asked = {"definition_path": (lambda: parts.definition_path("no-such-part", project), "no_such_part"),
+                 "fetch_documents": (lambda: parts.fetch_documents("no-such-part", project), "no_such_part"),
+                 "promote": (lambda: parts.promote("no-such-part", project), "no_such_part"),
+                 "_set_in_home": (lambda: parts._set_in_home("no-such-part", project, {}, True, None), "no_such_part"),
+                 "load": (lambda: parts.load("broken-part", project), "part_contract_broken")}
+        with in_store(home):
+            for name, (refusing, code) in asked.items():
+                with self.subTest(name=name):
+                    with self.assertRaises(parts.PartError) as refused:
+                        refusing()
+                    self.assertEqual(refused.exception.code, code, str(refused.exception))
+
+
 class EverythingFoundIsKeptTest(unittest.TestCase):
     """The catalog: what research has read, chosen or not, with its datasheets kept beside it."""
 
@@ -1112,8 +1132,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
             self.assertEqual(parts.promote("x-part", project), project / "parts" / "x-part.json")
             self.assertEqual(json.loads((project / "parts" / "x-part.json").read_text())["documents"], documents)
             self.assertTrue((project / "parts" / "x-part" / "chip" / "x.chip.json").is_file(), "a chip travels with it")
-            with self.assertRaises(parts.PartError):
+            with self.assertRaises(parts.PartError) as refused:
                 parts.promote("x-part", project, to=project / "parts")
+            self.assertEqual(refused.exception.code, "promotion_would_overwrite")  # P717
             self.assertEqual(parts.promote("x-part", project, to=library), library / "x-part.json")
             self.assertTrue((library / "x-part" / "chip" / "x.chip.json").is_file())
 

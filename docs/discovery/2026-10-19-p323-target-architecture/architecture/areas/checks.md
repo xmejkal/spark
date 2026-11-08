@@ -44,7 +44,7 @@ libraries live in `scripts/spark/checks/`.
 | `Check` Strategy: `run(inputs) -> OperationResult` | the five checks | a toy `Check` in the test | `CHECKS` |
 | vendor headers: `header(variant) -> str` | `GhVendorHeaders` over `gh api` (`vendor_pins_check.py:61`) | a dict from variant to header text | none |
 
-Checks imports design (the `Design` Value and `Netlist`), records and core.
+Checks imports design (the `Design` Value and `Netlist`), records, sourcing (the pull-up band, `part_rules`, P717) and core.
 
 Three checks are later, not MVP: `OrderCheck`, `BuildCheck` and `PhysicsCheck` (today `TheOrder`, `Buildability` and
 `Physics` in `check_all.py`, with `check_bom`, `check_footprints` and `check_physics`). They ask PCB and fab questions, which

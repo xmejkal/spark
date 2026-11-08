@@ -457,6 +457,31 @@ class WhatIsCountedTest(AScratchStore):
         self.assertEqual(counted["runs"], {"spark:part-finder": 2, "general-purpose": 1})
 
 
+class EachCostNotKnownHasItsCodeTest(AScratchStore):
+    """P717: each NoTranscript names its sourcing code, so an agent decides on the code and never on the sentence."""
+
+    def assert_code(self, steps, code):
+        with self.assertRaises(cost.NoTranscript) as refused:
+            cost.cost(steps, "plant-alarm")
+        self.assertEqual(refused.exception.code, code, str(refused.exception))
+
+    def test_the_history_and_its_step_lines(self):
+        self.assert_code([], "no_step_marked")
+        self.assert_code([{k: v for k, v in self.STEP.items() if k != "start"}], "step_line_broken")
+        self.assert_code([dict(self.STEP, session=None)], "step_without_session")
+
+    def test_the_transcripts_of_a_step_s_session(self):
+        self.assert_code([self.STEP], "no_transcript")
+        self.transcript("s1", json.dumps({"type": "assistant", "message": {"id": "m", "content": []}}))
+        self.assert_code([self.STEP], "transcript_unreadable")
+        self.transcript("s1", self.fetch_at("2026-10-06T09:00:00Z"))
+        self.assert_code([self.STEP], "transcript_ends_early")
+        opened = next((self.claude / ".claude" / "projects").rglob("s1.jsonl"))
+        opened.chmod(0)  # it cannot be opened
+        self.addCleanup(opened.chmod, 0o600)
+        self.assert_code([self.STEP], "transcript_unreadable")
+
+
 class WhatCannotBeReadIsSaidNeverATracebackTest(AScratchStore):
     """
     The transcript is the harness's format and may change, a session's last line may be half written while it is live, and
