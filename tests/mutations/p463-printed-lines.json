@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/firmware/image_builder.py",
   "name": "no-entry-refusal-hint-dropped",
-  "find": "own_build_hint_for(project, build, None))",
-  "replace": "\"\")"
+  "find": "own_build_hint_for(project, build, None), code=firmware_codes.NO_INTERPRETER)",
+  "replace": "\"\", code=firmware_codes.NO_INTERPRETER)"
  },
  {
   "file": "scripts/store.py",
