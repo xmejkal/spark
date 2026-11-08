@@ -1,5 +1,5 @@
 {
-  "//": "Where Wokwi draws each pin and each breadboard hole, in Wokwi px (96 per inch) from the part's top-left corner, unturned. They are facts about Wokwi's drawings, not about the physical parts, so one file holds them per Wokwi type. The drawn breadboard (breadboard_drawing.py, P267) reads them. Measured in Chrome on wokwi.com on 2026-10-16: docs/discovery/2026-10-16-p267-wokwi-holes/README.md, with the test diagram and its sha256.",
+  "//": "Where Wokwi draws each pin and each breadboard hole, in Wokwi px (96 per inch) from the part's top-left corner, unturned. They are facts about Wokwi's drawings, not about the physical parts, so one file holds them per Wokwi type. The drawn breadboard (scripts/spark/breadboard/drawing.py, P267) reads them. Measured in Chrome on wokwi.com on 2026-10-16: docs/discovery/2026-10-16-p267-wokwi-holes/README.md, with the test diagram and its sha256.",
   "schema": 1,
   "//turn": "Each part turns about its center, the second number pair below (the pivot), never about its corner: a turn of 90 degrees maps (x, y) to (cx + cy - y, cy - cx + x). Measured for each type below at 0 and 90 degrees.",
   "//tolerance_px": "How far a pin may lie from a hole center and still be in it. The worst measured fit is 1.2 px (the resistor's legs are 58.8 px apart, six pitches are 57.6).",
