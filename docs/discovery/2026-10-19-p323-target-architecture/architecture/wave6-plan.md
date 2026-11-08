@@ -1242,6 +1242,32 @@ import lines, none in `scripts/`. Rows: 153. Docs: 14 agent-facing pages, `areas
 1,693 lines, 18 import lines, 153 rows, 15 keys. Done when `ls scripts/*.py` shows `check_spine.py` and
 `init_project.py` of the three, `scripts/spark/build/__init__.py` imports nothing, and `TheBuildAreaTest` passes.
 
+P705 claims check (2026-11-08, against 5ebc3b94). Each claim above was read in the code, and the import map was
+rebuilt with `ast`: only `check_spine.py` (`build_codes`, `init_project`) and `init_project.py` (`ai_files`,
+`build_codes`) import the four, so the split makes no cycle. None changes a decision. These are wrong or stale:
+
+1. 1,774 lines, not 1,693 (P701 grew them): `check_spine.py` 1,046, `init_project.py` 548, `ai_files.py` 123,
+   `build_codes.py` 57. Rows: 162 (130, 30, 0, 2), not 153.
+2. `stages` is a parameter of 10 functions, and `stages =` is in 51 lines of `test_check_spine.py`: the import by
+   name holds.
+3. `find_toolchain` is looked up twice: by `main` (`:724`) and by `run` (`:452`), which asks again when `main` found
+   none. Three of the 9 patches go through `main` (`test_check_spine.py:845`, `:1229`, `test_json_contracts.py:227`)
+   and need both covered. So `main` and `run` read `board_engine.find_toolchain`, and the 9 patches name
+   `board_engine`. `run` (8) and `_kept` (1) are looked up by the CLI, which imports them by name, so they stay on
+   `check_spine`. `islands_in` goes to `build_service`, `converter_command` to `board_engine`.
+4. 10 more sites reach a module through `check_spine` (`subprocess`, `sim_project`, `loader`, `parts`,
+   `footprint_emitter`, `board_emitter`, `pin_assigner`). The CLI keeps the first four. The others read
+   `build_service.` or `kept_files.`.
+5. `core_note` reads `init_project.PINNED_CORE`: it reads `project_setup.PINNED_CORE`. `REQUIREMENTS_STAGE` is read by
+   `main` and `why_not_built`: it goes to `kept_files`, and the CLI imports it by name.
+6. `islands_in` is 56 lines. Under `scripts/spark/` that is a new R1 breach, so its extraction is the commit after
+   the split (P701 row 4), before any test run.
+7. Keys: `R6:AiFiles` is the only R6 key left (`Stage`'s went in P701): its docstring takes its role word.
+   `R1:rules_for` (70) moves at its value. 5 `MAY_READ` keys name `init_project` (`CIRCUIT_PATHS`, `PINNED_TSCI`,
+   `PINNED_CORE`, `PROJECT_TEMPLATE`, `NOTHING_TO_DO`), and they follow the module the test reads.
+8. Line numbers moved by P701: `Stage` `:122`, `run` `:363`, `SCRIPTS.parent` `:374` and `:580`, the `emit_board.py`
+   child `:417`, `report`'s prints `:1035` and `:1039`.
+
 ### The records-with-sourcing group (P710, at 8bfaeffa)
 
 The group is 15 flat modules, 6,189 lines. The first count's "13 modules, 5,949 lines" is reproduced at 4e63057e, and it
