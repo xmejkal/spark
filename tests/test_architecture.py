@@ -396,5 +396,37 @@ class TheChecksAreaTest(unittest.TestCase):
 # --- end MVP ---
 
 
+# --- MVP ---
+class TheDesignAreaTest(unittest.TestCase):
+    """W6-D3a (P702): the design values live in `scripts/spark/design/`, its `__init__.py` imports nothing, and each
+    module imports alone. `scripts/` keeps the CLI `assign_pins.py`, which defines `main` only. W6-D3b and W6-D3c add
+    the emitters and the needs."""
+    DESIGN = ROOT / "scripts" / "spark" / "design"
+    #: The modules of the area so far, by the names of its page (`areas/design.md`).
+    MODULES = ["copper", "fab", "loader", "netlist", "pin_assigner", "restricted_pins"]
+    CLIS = ["assign_pins.py"]
+
+    def test_scripts_holds_the_cli_and_no_design_library_module(self):
+        self.assertEqual(sorted(path.stem for path in self.DESIGN.glob("*.py") if path.name != "__init__.py"), self.MODULES)
+        scripts = ROOT / "scripts"
+        old = ["assign_pins.py", "copper.py", "design.py", "fab.py", "netlist.py", "restricted_pins.py"]
+        self.assertEqual([name for name in old if (scripts / name).exists()], self.CLIS)
+        self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in scripts.glob("*.py")}), [])
+        for cli in self.CLIS:
+            with self.subTest(cli=cli):
+                tree = ast.parse((scripts / cli).read_text())
+                self.assertEqual([node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))],
+                                 ["main"])
+
+    def test_the_area_s_init_imports_nothing(self):
+        # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)
+        tree = ast.parse((self.DESIGN / "__init__.py").read_text())
+        self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
+
+    def test_each_design_module_imports_alone(self):
+        each_module_imports_alone(self, "design")
+# --- end MVP ---
+
+
 if __name__ == "__main__":
     unittest.main()
