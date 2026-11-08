@@ -800,7 +800,7 @@ with `0.0.0-fake` and copies a canned `circuit.json`. It moves to `tests/fakes.p
 "path"` and `"also": []`, as W6-F1's shim does. The project is `golden_checks.build_project`'s copy of
 `tests/data/breadboard/button-light`, which holds a built `dist/board/circuit.json`.
 
-Cases, est. 16, each `<op>-<status>[-<scenario>]`. `assign-pins`: `ok.json`, `ok.txt`, `problems-impossible.txt`
+Cases, est. 19, each `<op>-<status>[-<scenario>]`. `assign-pins`: `ok.json`, `ok.txt`, `problems-impossible.txt`
 (`EXIT_IMPOSSIBLE`), `could-not-run-no-requirements.txt`. `emit-board`: `ok.txt` (the board file on stdout),
 `could-not-run-no-footprint.txt`, `could-not-run-refused.txt`. `emit-footprint`: `ok.json`,
 `could-not-run-no-footprint.txt`. `check-spine`: `ok.json`, `ok-keep.txt` (the `kept` lines), `problems-build.txt` (the
@@ -820,7 +820,7 @@ or a hash. The `kept` lines name files under `<project-dir>`, scrubbed. `SPARK_A
 Mutation (est. 7 rows): the scrub skipped, an exit code wrong, the proxies not set, the `PATH` with another folder, the
 fake `tsci` answers `--version` wrong, the written files not appended, the fake converter writes no diagram. Proven
 with `--anchors`, run with `--copy`. Review: no product logic. One reviewer on the everyday model and the refuter on the
-strongest. Size est.: 130 helper lines, 120 test lines, 30 lines of the fake converter, 16 goldens. Tests only, so it
+strongest. Size est.: 130 helper lines, 120 test lines, 30 lines of the fake converter, 19 goldens. Tests only, so it
 can open while a move PR is open.
 
 ### W6-D2, the design codes (after W6-D1 and P693)
@@ -846,7 +846,7 @@ commit each, goldens green. `assign_pins.assign` (116) keeps its key, and the ke
 
 Tests: in the four test files. Each site's code as a literal. `CODES` names every constant once. `design_codes` joins
 `measure.LEAVES` (`tools/measure.py:247`), `planted_tree.LEAF_NAMES` (`tests/planted_tree.py:11`) and
-`TheBenchCodesTableTest`'s tuple. Mutation (est. 9 rows): three sites with one code swapped, an error drops its code, a
+`TheBenchCodesTableTest`'s tuple. Mutation (est. 9 rows): three rows with one site's code swapped (one per CLI with a leaf code), an error drops its code, a
 `Refusal` back to a plain `str`, `CODES` missing a constant, a sentence changed, an exit code changed, the library
 function lets a refusal through. Docs: `areas/design.md` (the leaf's row). `json.md` gains nothing: no code reaches a
 JSON. Review: logic. The lenses on the everyday model, the refuter on the strongest, one mutation run. Size est.: 150
@@ -875,14 +875,15 @@ the 12 `NotDrawn` sites of `drawing.py` and the one of `part_shape.py`, and lose
 Tests, mutation (est. 7 rows: two codes swapped, `Stage` drops its code, `CODES` missing a constant, the `kept` entry's
 code dropped, an exit code changed, a sentence changed) and review as W6-D2. Size est.: 90 product lines, 80 test lines.
 
-### W6-D3a, W6-D3b, W6-D3c and W6-U3, the moves (after W6-U2, one open at a time, W6-D3b after W6-B3)
+### The four moves, W6-D3a, W6-D3b, W6-D3c and W6-U3 (what they share)
 
 Why four. 5,808 lines and 605 rows at 1.6 minutes is 16 hours of one serial mutation run. Four PRs keep each under
 W6-F3 (1,900 lines, 267 rows). The order is bottom-up along the imports among the 13, so no moved module imports a flat
-one for long. Each PR is `git mv`, the page's names, the import lines and the rows, one commit per module, goldens
-green after each commit. The CLIs stay in `scripts/` as a `main`, and no module re-exports an old name. Each PR's
-closing test is `TheDesignAreaTest` or `TheBuildAreaTest` (proposed). Both take the shape of `TheFirmwareAreaTest`
-(`tests/test_architecture.py:312`) with its `CLIS` dict.
+one for long. One move PR is open at a time. Each PR is `git mv`, the page's names, the import lines and the rows, one
+commit per module, goldens green after each commit. The CLIs stay in `scripts/` as a `main`, and no module re-exports
+an old name. Each PR extends `TheDesignAreaTest` or `TheBuildAreaTest` (proposed), the shape of `TheFirmwareAreaTest`
+(`tests/test_architecture.py:312`) with its `CLIS` dict, and the import-alone test (`each_module_imports_alone`,
+`test_architecture.py:301`). The map is regenerated. History keeps the old paths.
 
 | PR | Old file (lines) | New file | Rows | Keys | Note |
 |---|---|---|---|---|---|
@@ -900,54 +901,20 @@ closing test is `TheDesignAreaTest` or `TheBuildAreaTest` (proposed). Both take 
 | U3 | `ai_files.py` (123) | `spark/build/ai_files.py` | 0 | 1 | `ai_files.py:25` to `parents[3]` |
 | U3 | `build_codes.py` | `spark/build/build_codes.py` | 0 | 0 | the leaf |
 
-Sizes: D3a 1,500 lines and 121 rows. D3b 1,784 and 110. D3c 831 and 221. U3 1,693 and 153.
-
-The edge fix. `part_shape.py` imports `breadboard_drawing` for `NotDrawn`, three codes and `WOKWI_GEOMETRY_FILE`
-(`part_shape.py:24`, `:26`), and `breadboard_catalog.py:15` imports it back. Under design that is an upward edge and
-a U1 cycle (P694's review). It moves to breadboard instead: its job is a part's pixel shape in the Wokwi drawing, and
-its one design import, `emit_footprint` (`:25`), is a downward arrow. The appendix row "design's `shapes/`" is
-corrected (`refactor-plan.md:639`), `areas/breadboard.md` gains the row, and W6-B2's section above says it is breadboard's.
-This is a named done-item of W6-D3b, after W6-B3 (P694) has made the folder. `part_shape.py` has six `NotDrawn` sites
-(`:110` returns one, five raise), and only `:226` has no code (P691).
-
-The `check_spine.py` split, as W6-F3's, its own commit before the `git mv`, with the page's names. `stages.py` holds
-`Stage` (`:121`) and `NO_FOOTPRINT_HINT`, a small module the other two import, so `convert` (`:566`, `:568`) and
-`converter_stage_problem` (`:233`) make no cycle. The name clashes (P694's lesson): `stages` is a local in `run` (`:372`)
-and `main` (`:743`), a parameter of 7 functions, and `stages =` 46 times in `test_check_spine.py`. The module keeps the
-page's name, and every importer imports by name, `from spark.build.stages import Stage, NO_FOOTPRINT_HINT`, never the
-module. `REFERENCE` (`:86`) is read by `main` alone (`:716`), so it stays in the CLI and `check_spine.REFERENCE` keeps
-its `MAY_READ` key. `CONVERTER_PATHS` goes to `board_engine`. `board_engine.py` holds the tool adapters: `find_toolchain`,
-`modules_for`, `toolchain_can_build`, `tsci_version`, `find_converter`, `converter_command`, `converter_stage_problem`,
-`simulation_could_not_look` (`:246`, called by `convert` alone), `convert` and their constants (`:131` to `:250`, `:553`). `kept_files.py` holds the files `--keep` writes into DIR and
-what an earlier build left there: `kept_into` to `keep_simulation` (`:769` to `:1010`), `left_off` and
-`design_handed_to`. One meaning of `kept_`: the noun after it is what a run keeps between runs, as `kept_moves.py`'s
-moves. `build_service.py` holds `run` as a function, `said_of_a_crash` (`:113`, which `run` calls at `:412`, `:445`),
-`islands_in`, `board_alone`, `verdict` and the stage sentences. Its docstring says `BuildService` comes into this file
-with its card, so no later rename. The CLI keeps `main`, `report`, `render` and `timed_out_sentence`, because `report`
-prints (`:1037`, `:1041`). No module is then over 600, so `R1:scripts/check_spine.py:<module>` goes. Two `__file__`
-paths break. `SCRIPTS.parent` (`:373`, `:582`) is the plugin folder, and under `scripts/spark/build/` it is
-`scripts/spark`: both read `boards.PLUGIN_ROOT` (`boards.py:171`). The `emit_board.py` child (`:416`) gets an
-`EMIT_BOARD_SCRIPT` with `parents[2]`, as `image_builder.FLASH_IMAGE_SCRIPT` does (P685 row 5), with a test. It is the
-one logic-adjacent change of the move. `find_converter`'s `scripts/check_spine.py` test (`:214`) holds, because the CLI
-stays. A done-item of W6-U3: the 20 `mock.patch.object(check_spine, ...)` sites in `test_check_spine.py`,
-`test_json_contracts.py` and `test_routes.py` (`find_toolchain` 9, `run` 8, `islands_in`, `converter_command` and
-`_kept` 1 each) follow their function to the module that looks the name up. A missed `find_toolchain` patch lets the
-tests at `test_check_spine.py:1807` and `:2004` find a real `tsci` on `PATH`. The proof is P685 row 9's: plant an
-early binding (`from ... import find_toolchain`) in a scratch copy and see those tests go red.
-
-The rules, checked at 924e48a4. R1: the nine extractions are the codes PRs', so the only new breach is none. The
-`main` keys stay (five), `R1:assign`, `rules_for`, `run` and the two `<module>` keys move with `--accept-new`. R6: 5 keys
-(`AiFiles`, `Impossible`, `Stage`, `RefusedInput`, `Netlist`), each docstring gets its role word and its key goes. X2:
-`emit_footprint._report` and `check_spine.report` print, and both stay in their CLI. No other `print` or `sys.exit`
-sits outside a `main` (checked with `ast`). T1: 6 keys, the two `file-write` keys of `assign_pins` (`:550`) and
-`emit_footprint` (`:327`) sit in `main` and stay, `check_spine`'s three and `init_project`'s one follow their code.
-C1 2, C3 2 (both in a `main`, stay), R2 5, R3 5. U1: the two leaves are in `LEAVES` since the codes PRs. `MAY_READ`
-(`tests/test_self_confirmation.py:50` to `:80`) has 21 keys on the 13, and 15 take the new module name
-(`emit_footprint.*` becomes `footprint_emitter.*`, `check_spine.CONVERTER_PATHS` becomes `board_engine.*`, and the
-`copper`, `fab`, `netlist`, `ai_files` and `check_spine.REFERENCE` keys keep their stem). Import lines: 90 outside and 27 among. The 26 lazy ones (12 in `scripts/`, 14 in tests) stay lazy. `sim_project.py:20` (firmware) and `board_envelope.py:17` (bench) read design along their arrows.
-Rows: `--retarget` for each file that moves whole. The rows of a CLI's `main` go back to the CLI's file by a scratch
-script, as P685 row 11 did. `--anchors` proves each `find` occurs once. No row is dropped. Each PR's retargeted tables
-run once, in parallel `--copy` shards.
+Shared rules, checked at 924e48a4, with each PR's share below. R1: the nine extractions are the codes PRs', so no new
+breach. The five `main` keys stay, and a moved key moves with `--accept-new`. R6: each docstring gets its role word and
+its key goes. X2: `emit_footprint._report` and `check_spine.report` print, and both stay in their CLI. No other `print`
+or `sys.exit` sits outside a `main` (checked with `ast`). T1: the two `file-write` keys in a `main` (`assign_pins.py:550`,
+`emit_footprint.py:327`) stay, the rest follow their code. C3 keys sit in a `main` and stay. U1: the two leaves are in
+`LEAVES` since the codes PRs. `MAY_READ` (`tests/test_self_confirmation.py:50` to `:80`) has 21 keys on the 13, and 15
+take the new module name (`emit_footprint.*` becomes `footprint_emitter.*`, `check_spine.CONVERTER_PATHS` becomes
+`board_engine.*`, and the `copper`, `fab`, `netlist`, `ai_files` and `check_spine.REFERENCE` keys keep their stem).
+Import lines: 90 outside and 27 among. The 26 lazy ones (12 in `scripts/`, 14 in tests) stay lazy. `sim_project.py:20`
+(firmware) and `board_envelope.py:17` (bench) read design along their arrows. Rows: `--retarget` for each file that
+moves whole. The rows of a CLI's `main` go back to the CLI's file by a scratch script, as P685 row 11 did. `--anchors`
+proves each `find` occurs once. No row is dropped. Each PR's retargeted tables run once, in parallel `--copy` shards.
+Review of each: no new logic. One reviewer on the everyday model and the refuter on the strongest, the retargeted
+tables as the one mutation run, a whole-branch review before the PR.
 
 Cards filed with this plan, under #94: the seven PRs, then `BuildService` with the in-process `BoardEmitter` call,
 the N19 Operations, the `emit_board.py` split (1,208 lines, one module over R1's 600), and the renames.
@@ -955,11 +922,76 @@ Renames the pages ask for are a card, not a move: `ImpossibleError` for `Impossi
 `BoardEmitter`, `NeedsService`, `BuildInputs`, `ProjectSetupService`, `TscircuitEngine`, `DiagramConverter`. Tests
 assert the old names. `__init__.py` holds the index docstring alone, in `design` and in `build`.
 
-Tests: the 28 test files import from `spark.design` or `spark.build`. The import-alone test extends to each moved module
-(`each_module_imports_alone`, `test_architecture.py:301`). The map is regenerated. Docs: the 16 agent-facing pages
-(`how-it-works.md` names 11 of the 13), `areas/design.md`, `areas/build.md`, `areas/breadboard.md` and
-`developing.md`. History keeps the old paths. Review: no new logic. One reviewer on the everyday model and the refuter
-on the strongest, the retargeted tables as the one mutation run, a whole-branch review before each PR.
+### W6-D3a, the design values (after W6-U2)
+
+Files: the six D3a rows of the table, 1,500 lines, into `scripts/spark/design/` with its `__init__.py`. `__file__`:
+`fab.py:30` takes `parents[3]`, and the `SCRIPTS` lines of `design.py:38` and `assign_pins.py:41` go from the library.
+Keys: 11 (`C1` and `R6` `Impossible`, `C3:EXIT_IMPOSSIBLE`, `R1:assign`, two `R1`/`R2` `main` keys, `R2` `onboard_lines`,
+`rails_requested`, `Netlist.__init__`, `R6:Netlist`, `T1:file-write`). The `main`, `C3` and `T1` keys stay. Tests: 16
+test files, 24 import lines, and 28 in `scripts/`. Rows: 121. Docs: 9 agent-facing pages and `areas/design.md`. Size:
+1,500 lines, 52 import lines, 121 rows, 11 keys. Done when `ls scripts/*.py` shows `assign_pins.py` alone of the six.
+
+### W6-D3b, the emitters (after W6-D3a and W6-B3)
+
+Files: the four D3b rows, 1,784 lines. The `SCRIPTS` lines of `emit_board.py:36`, `emit_footprint.py:45` and
+`part_shape.py:22` go from the libraries. Done-item 1, the edge fix. `part_shape.py` imports `breadboard_drawing` for
+`NotDrawn`, three codes and `WOKWI_GEOMETRY_FILE` (`part_shape.py:24`, `:26`), and `breadboard_catalog.py:15` imports it
+back. Under design that is an upward edge and a U1 cycle (P694's review). It moves to `spark/breadboard/` instead: its
+job is a part's pixel shape in the Wokwi drawing, and its one design import, `emit_footprint` (`:25`), is a downward
+arrow. So this PR waits for W6-B3 (P694), which makes the folder. The appendix row is corrected (`refactor-plan.md:639`),
+`areas/breadboard.md` gains the row, and W6-B2's section says it is breadboard's. `part_shape.py` has six `NotDrawn`
+sites (`:110` returns one, five raise), and only `:226` has no code (P691). Done-item 2: `R1:scripts/emit_board.py:<module>`
+moves with `--accept-new` (`measure.py:705`, P441 row 4), named in the PR body for the PO, and its value does not rise.
+Keys: 8 (`C1` and `R6` `RefusedInput`, `R1:<module>`, two `R1` `main` keys, `R2:host_part_lines`, `R3:emit`,
+`R3:power_trace`, `T1:file-write` of `emit_footprint`). Tests: 9 test files, 11 import lines, and 18 in `scripts/`.
+Rows: 110. Docs: 7 agent-facing pages, `areas/design.md`, `areas/breadboard.md`. Size: 1,784 lines, 29 import lines,
+110 rows, 8 keys. Done when `ls scripts/*.py` shows `emit_board.py` and `emit_footprint.py` of the three, and
+`part_shape.py` is under `spark/breadboard/`.
+
+### W6-D3c, the needs (after W6-D3b)
+
+Files: `needs.py` alone, 831 lines, to `spark/design/needs.py`. It has no `main` and no `__file__`. Keys: 2
+(`R1:<module>`, with `--accept-new` as D3b's, and `R3:candidates`). Tests: 2 test files, 2 import lines, and 9 in
+`scripts/` (`parts.py`'s 7 lazy ones stay lazy, `check_spine.py:69`, `spark/idea/drop_need.py:8`). Rows: 221, the
+group's biggest run, in shards. Docs: 2 agent-facing pages and `areas/design.md`. Size: 831 lines, 11 import lines,
+221 rows, 2 keys. Done when `ls scripts/*.py` shows no design library module and `TheDesignAreaTest` passes whole.
+
+### W6-U3, the build move (after W6-D3c)
+
+Files: the four U3 rows, 1,693 lines, into `scripts/spark/build/`. `ai_files.py:25` takes `parents[3]`, and the
+`SCRIPTS` lines of `init_project.py:35` and `check_spine.py:58` go from the libraries. Done-item 1, the `check_spine.py`
+split, as W6-F3's, its own commit before the `git mv`, with the page's names. `stages.py` holds `Stage` (`:121`) and
+`NO_FOOTPRINT_HINT`, a small module the other two import, so `convert` (`:566`, `:568`) and `converter_stage_problem`
+(`:233`) make no cycle. The name clashes (P694's lesson): `stages` is a local in `run` (`:372`) and `main` (`:743`), a
+parameter of 7 functions, and `stages =` 46 times in `test_check_spine.py`. The module keeps the page's name, and every
+importer imports by name, `from spark.build.stages import Stage, NO_FOOTPRINT_HINT`, never the module. `REFERENCE`
+(`:86`) is read by `main` alone (`:716`), so it stays in the CLI and keeps its `MAY_READ` key. `CONVERTER_PATHS` goes to
+`board_engine`. `board_engine.py` holds the tool adapters: `find_toolchain`, `modules_for`, `toolchain_can_build`,
+`tsci_version`, `find_converter`, `converter_command`, `converter_stage_problem`, `simulation_could_not_look` (`:246`,
+called by `convert` alone), `convert` and their constants (`:131` to `:250`, `:553`). `kept_files.py` holds the files
+`--keep` writes into DIR and what an earlier build left there: `kept_into` to `keep_simulation` (`:769` to `:1010`),
+`left_off` and `design_handed_to`. One meaning of `kept_`: the noun after it is what a run keeps between runs, as
+`kept_moves.py`'s moves. `build_service.py` holds `run` as a function, `said_of_a_crash` (`:113`, which `run` calls at
+`:412`, `:445`), `islands_in`, `board_alone`, `verdict` and the stage sentences. Its docstring says `BuildService` comes
+into this file with its card, so no later rename. The CLI keeps `main`, `report`, `render` and `timed_out_sentence`,
+because `report` prints (`:1037`, `:1041`). No module is then over 600, so `R1:scripts/check_spine.py:<module>` goes.
+
+Done-item 2, the `__file__` paths. `SCRIPTS.parent` (`:373`, `:582`) is the plugin folder, and under
+`scripts/spark/build/` it is `scripts/spark`: both read `boards.PLUGIN_ROOT` (`boards.py:171`). The `emit_board.py`
+child (`:416`) gets an `EMIT_BOARD_SCRIPT` with `parents[2]`, as `image_builder.FLASH_IMAGE_SCRIPT` does (P685 row 5),
+with a test. It is the one logic-adjacent change of the move. `find_converter`'s `scripts/check_spine.py` test (`:214`)
+holds, because the CLI stays. Done-item 3, the patches: the 20 `mock.patch.object(check_spine, ...)` sites in
+`test_check_spine.py`, `test_json_contracts.py` and `test_routes.py` (`find_toolchain` 9, `run` 8, `islands_in`,
+`converter_command` and `_kept` 1 each) follow their function to the module that looks the name up. A missed
+`find_toolchain` patch lets the tests at `test_check_spine.py:1807` and `:2004` find a real `tsci` on `PATH`. The proof
+is P685 row 9's: plant an early binding (`from ... import find_toolchain`) in a scratch copy and see those tests go red.
+
+Keys: 15 (`C3:EXIT_NOTHING_TO_DO`, `R1` `<module>`, `main` and `run` of `check_spine`, `R1` `main` and `rules_for` of
+`init_project`, `R3:run`, `R3:write`, `R6` `AiFiles` and `Stage`, `T1` `file-write`, `os.environ` and `subprocess` of
+`check_spine`, `T1:file-write` of `init_project`). The three `main` keys and the `C3` key stay. Tests: 14 test files, 18
+import lines, none in `scripts/`. Rows: 153. Docs: 14 agent-facing pages, `areas/build.md`, `developing.md`. Size:
+1,693 lines, 18 import lines, 153 rows, 15 keys. Done when `ls scripts/*.py` shows `check_spine.py` and
+`init_project.py` of the three, `scripts/spark/build/__init__.py` imports nothing, and `TheBuildAreaTest` passes.
 
 ## Design and build after W6-U3 (the moved modules and their classes)
 
@@ -977,12 +1009,13 @@ classDiagram
   class AiFiles { <<Value>> }
   class build_codes { <<leaf>> CODES }
   class Refusal { <<Value>> code }
+  class footprint_emitter { <<module>> why_no_footprint() }
   DesignError ..> design_codes
   Impossible ..> design_codes
   RefusedInput ..> design_codes
   BoardInputs ..> Design
   Stage ..> build_codes
-  Stage ..> RefusedInput
+  footprint_emitter ..> Refusal
 ```
 
 `Design` and `DesignError` (`loader.py`), `RestrictedPins`, `Netlist`, `Impossible` (`pin_assigner.py`), `BoardInputs`

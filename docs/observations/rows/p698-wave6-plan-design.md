@@ -3,8 +3,10 @@
 What the plan council found while Fable 5.1 refined the design-with-build group of the wave 6 plan. Card:
 [P698 #943](https://github.com/xmejkal/spark/issues/943). Plan:
 `docs/discovery/2026-10-19-p323-target-architecture/architecture/wave6-plan.md`, whose Council section ("P698 round 1")
-lists each change. Round 1 ran on 9428ddb2 (the refuter on Opus, an architecture lens on Sonnet). A row "acted" names
-the plan section that changed. The coordinator decided rows 1 and 2.
+lists each change. Round 1 ran on 9428ddb2 (the refuter on Opus, an architecture lens on Sonnet), and its fixes are commit d5fe9864.
+Round 2 (the refuter on Opus, on d5fe9864) held both blockers and added rows 16 to 22, fixed in e5e83b1e. The PR's
+reviewer (Sonnet, on e5e83b1e) added rows 23 to 26. A row "acted" names the plan section that changed. The coordinator
+decided rows 1, 2, 18 and 19.
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
@@ -13,7 +15,7 @@ the plan section that changed. The coordinator decided rows 1 and 2.
 | 3 | `SCRIPTS.parent` (`:373`, `:582`) is the plugin folder | refuter | acted | under `scripts/spark/build/` it is `scripts/spark`. Both read `boards.PLUGIN_ROOT`, and W6-D1 gains `ok-reference.json` (no argument). W6-U3, W6-D1 |
 | 4 | `run` returns 12 refusal Stages from `:409` | refuter | acted | 20 from `:379`, `convert` 2, `converter_stage_problem` 1, `main`'s third at `:750`. Est. 14 codes. W6-U2 |
 | 5 | `DesignError` 31 sites, `Impossible` 12, `emit_footprint.main` 2 | refuter | acted | 30, 11 and 3 (`:323`). W6-D2 |
-| 6 | `MAY_READ` has 17 keys on the 13, 15 change | refuter | acted | 21 keys (`:50` to `:80`), 16 change, `emit_footprint.*` becomes `footprint_emitter.*`. The moves |
+| 6 | `MAY_READ` has 17 keys on the 13, 15 change | refuter | acted | 21 keys (`:50` to `:80`), 16 change, `emit_footprint.*` becomes `footprint_emitter.*`. Superseded by row 22: 15 change. The moves |
 | 7 | `part_shape.py` has one `NotDrawn` site | refuter | acted | six: `:110` returns one, five raise, and only `:226` has no code. W6-D3b |
 | 8 | `part_shape`'s move to breadboard is said once | lens | acted | a named done-item of W6-D3b, after W6-B3 (P694), with `areas/design.md`, `areas/breadboard.md`, `refactor-plan.md:639` and the W6-B2 sentence at `wave6-plan.md:521` |
 | 9 | the split and `EMIT_BOARD_SCRIPT` sit in the move's text with no mark | lens | acted | the split is its own commit before the `git mv`. `EMIT_BOARD_SCRIPT` (`parents[2]`) is named as the one logic-adjacent change. W6-U3 |
@@ -30,3 +32,7 @@ the plan section that changed. The coordinator decided rows 1 and 2.
 | 20 | `wave6-plan.md:529` still says five `part_shape.py` sites raise with `code=None` | refuter, round 2 | acted | one, `:226`. `:145`, `:168` and `:173` pass codes |
 | 21 | the `mock.patch.object(check_spine, ...)` sites must follow their functions | refuter, round 2 | acted | 20 sites in three test files (`find_toolchain` 9, `run` 8, `islands_in`, `converter_command`, `_kept` 1 each), a done-item of W6-U3 with P685 row 9's proof. A missed `find_toolchain` patch lets `:1807` and `:2004` find a real `tsci` |
 | 22 | where `check_spine.REFERENCE` goes | refuter, round 2 | acted | `main` alone reads it (`:716`), so it stays in the CLI and keeps its `MAY_READ` key. `CONVERTER_PATHS` goes to `board_engine`, so 15 keys change, not 16 (row 6) |
+| 23 | W6-D1 says "Cases, est. 16" and lists 19 | reviewer | acted | 19, and 19 goldens in the size line |
+| 24 | W6-D2 says "est. 9 rows" and lists seven defects | reviewer | acted | the three swapped-code rows are named as three, one per CLI with a leaf code |
+| 25 | the four moves share one block, so an implementer of one PR cannot find its files, tests, rows, size and done-when | reviewer | acted | a shared section ("what they share", the table, the rules once) and one section per PR with its after-line, files, done-items, keys, tests, rows, docs, size and done-when. The order: D3a after W6-U2, D3b after D3a and W6-B3, D3c after D3b, U3 after D3c |
+| 26 | the class diagram lacks `footprint_emitter ..> Refusal` and has `Stage ..> RefusedInput` with no basis in the text | reviewer | acted | `footprint_emitter` (a module, `why_no_footprint`) points at `Refusal`, and the `Stage` arrow is gone |
