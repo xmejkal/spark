@@ -24,10 +24,7 @@ from fakes import FakePartPictures  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import breadboard  # noqa: E402
-import breadboard_drawing  # noqa: E402
-import breadboard_steps  # noqa: E402
-import part_pictures  # noqa: E402
+from spark.breadboard import drawing, part_pictures, sheet, wiring_steps  # noqa: E402
 from test_breadboard_layout import RECORD_BOARD, record_inputs  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
@@ -41,9 +38,9 @@ def in_store():
 
 def xiao_svg(pictures=None):
     with in_store():
-        read = breadboard._read_build(XIAO / "requirements.json")
-        layout = breadboard._plan_layout(read)
-    return breadboard_drawing.SvgBreadboardDiagram(pictures=pictures).text(layout), layout
+        read = sheet._read_build(XIAO / "requirements.json")
+        layout = sheet._plan_layout(read)
+    return drawing.SvgBreadboardDiagram(pictures=pictures).text(layout), layout
 
 
 class ThePictogramsTest(unittest.TestCase):
@@ -89,7 +86,7 @@ class TheSvgTest(unittest.TestCase):
 
     def test_no_jumper_bends_on_a_hole(self):
         # The refuter (P268): a bend on a hole of another group looks like a joint that is not there.
-        holes = [(hole.x, hole.y) for hole in breadboard_drawing.WokwiGeometry.load().surface.holes]
+        holes = [(hole.x, hole.y) for hole in drawing.WokwiGeometry.load().surface.holes]
         for path in (p for p in self.root.findall("svg:path", NS) if p.get("fill") == "none"):
             numbers = [float(n) for n in re.findall(r"-?[\d.]+", path.get("d"))]
             for x, y in zip(numbers[2:-2:2], numbers[3:-2:2]):
@@ -116,10 +113,10 @@ class TheSvgTest(unittest.TestCase):
             self.assertAlmostEqual(numbers[1], center(jumper.one.name)[1], places=3)
             self.assertAlmostEqual(numbers[-2], center(jumper.other.name)[0], places=3)
             self.assertAlmostEqual(numbers[-1], center(jumper.other.name)[1], places=3)
-            self.assertEqual(path.get("stroke"), breadboard_steps.StepColors().color(jumper.step))
+            self.assertEqual(path.get("stroke"), wiring_steps.StepColors().color(jumper.step))
 
     def test_a_turned_part_turns_about_its_measured_center(self):
-        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
+        board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
         groups = [g for g in self.root.findall("svg:g", NS) if "rotate(90 34 44)" in (g.get("transform") or "")]
         self.assertEqual(len(groups), 1)
         self.assertEqual(board.rotate, 90)
@@ -142,9 +139,9 @@ def without_pictures(text):
 
 def record_svg():
     with in_store():
-        read = breadboard._read_build(RECORD_BOARD / "requirements.json")
-    layout = breadboard_drawing.BreadboardPlanner(*record_inputs(read)).plan(read.steps)
-    return breadboard_drawing.SvgBreadboardDiagram().text(layout), layout
+        read = sheet._read_build(RECORD_BOARD / "requirements.json")
+    layout = drawing.BreadboardPlanner(*record_inputs(read)).plan(read.steps)
+    return drawing.SvgBreadboardDiagram().text(layout), layout
 
 
 class TheRecordBoardSvgTest(unittest.TestCase):
@@ -180,7 +177,7 @@ class TheRecordBoardSvgTest(unittest.TestCase):
         self.assertEqual(len(self.root.findall("svg:line", NS)), 0)
 
     def test_the_same_layout_gives_the_same_bytes(self):
-        self.assertEqual(self.text, breadboard_drawing.SvgBreadboardDiagram().text(self.layout))
+        self.assertEqual(self.text, drawing.SvgBreadboardDiagram().text(self.layout))
 
     def test_the_picture_is_the_one_looked_at_on_2026_10_29(self):
         # rendered and looked at once (pad labels, rings, USB end, note); regenerate the hash only on purpose
@@ -198,7 +195,7 @@ class TheSheetShowsItTest(unittest.TestCase):
         project = Path(tempfile.mkdtemp()) / "xiao"
         shutil.copytree(XIAO, project)
         with in_store():
-            breadboard.write(project / "requirements.json", project / "breadboard.md")
+            sheet.write(project / "requirements.json", project / "breadboard.md")
         link = re.search(r"!\[[^\]]*\]\(([^)]+)\)", (project / "breadboard.md").read_text()).group(1)
         self.assertTrue((project / link).is_file())
 
@@ -207,7 +204,7 @@ class TheSheetShowsItTest(unittest.TestCase):
         shutil.copytree(MOTOR, project)
         (project / "breadboard.svg").write_text("<svg/>")
         with in_store():
-            breadboard.write(project / "requirements.json", project / "breadboard.md")
+            sheet.write(project / "requirements.json", project / "breadboard.md")
         self.assertNotIn("![", (project / "breadboard.md").read_text())
         self.assertIn("breadboard.json and breadboard.svg not written: ", (project / "breadboard.md").read_text())
         self.assertFalse((project / "breadboard.svg").exists())

@@ -16,11 +16,10 @@ import json
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
-import breadboard_steps
-import part_pictures
+from spark.breadboard import part_pictures, wiring_steps
 
-WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
-BREADBOARDS_FILE = Path(__file__).resolve().parent.parent / "data" / "breadboards.json"
+WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parents[3] / "data" / "wokwi-geometry.json"
+BREADBOARDS_FILE = Path(__file__).resolve().parents[3] / "data" / "breadboards.json"
 
 #: Value: one hole, its Wokwi name (12t.a, tp.3), its center in px, its group (the holes joined with it inside the
 #: board: a breadboard row such as 12t, or a rail such as tp), and its column (from 1; a rail hole has none, 0).
@@ -304,13 +303,13 @@ class BreadboardPlanner:
         seated = list(steps.anchored())
         placed, after = {}, 1
         for step in seated:
-            if step.act == breadboard_steps.PLACE:
+            if step.act == wiring_steps.PLACE:
                 placed[step.subject] = self.placement.place(step.subject, self._drawn(step.subject), ledger, after)
                 after = max(hole.column for hole in placed[step.subject].holes.values()) + self.SPACING_COLUMNS
         for step in seated:
-            if step.act != breadboard_steps.PLACE and step.anchor.seat().kind == breadboard_steps.RAIL:
+            if step.act != wiring_steps.PLACE and step.anchor.seat().kind == wiring_steps.RAIL:
                 raise NotDrawn("%s goes on a rail, and rails are not drawn yet" % step.anchor.seat().mark)
-            if step.act == breadboard_steps.SUPPLY:
+            if step.act == wiring_steps.SUPPLY:
                 raise NotDrawn("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject)
         self._place_resistors(seated, placed, ledger, after)
         parts_only = HoleLedger(self.geometry.surface, ledger.taken)
@@ -319,7 +318,7 @@ class BreadboardPlanner:
             end = step.subject
             if not step.jumper:
                 continue
-            if step.act == breadboard_steps.SETUP:
+            if step.act == wiring_steps.SETUP:
                 jumper = Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
                                 ledger.claim_free_group(after, end.name), number)
                 groups[end.name] = jumper.other.group
@@ -335,10 +334,10 @@ class BreadboardPlanner:
         """A resistor has a fixed length, so it goes in with the leg that joins a row already in that row."""
         resistors = collections.OrderedDict()
         for step in seated:
-            if (step.act in (breadboard_steps.SETUP, breadboard_steps.JOIN)
-                    and step.subject.kind == breadboard_steps.RESISTOR):
+            if (step.act in (wiring_steps.SETUP, wiring_steps.JOIN)
+                    and step.subject.kind == wiring_steps.RESISTOR):
                 pinned = resistors.setdefault(step.subject.component, [])
-                if step.act == breadboard_steps.JOIN:
+                if step.act == wiring_steps.JOIN:
                     pinned.append((step.subject, step.anchor.seat().end))
         waiting = list(resistors.items())
         while waiting:
@@ -385,7 +384,7 @@ def end_pin(end, catalog):
 
 def end_group(end, placed, catalog, groups=None):
     """The group an end sits in: its pin's group, or the free group its board pad's jumper took (`groups`, which the
-    planner fills as it draws). The planner and the drawing check (`breadboard_match`) both ask it."""
+    planner fills as it draws). The planner and the drawing check (`drawing_match`) both ask it."""
     if groups and end.name in groups:
         return groups[end.name]
     if end.component not in placed:
@@ -396,7 +395,7 @@ def end_group(end, placed, catalog, groups=None):
 class WokwiBreadboardDiagram:
     """Renderer: a BreadboardLayout as a Wokwi diagram, each jumper in its step's color. Its constructor takes the
     colors, so the sheet and the diagram share one palette. Every drawing renderer has the four class attributes
-    below, `text(layout)` and `why_not_written(layout)`, which `breadboard.DRAWING_RENDERERS` and the build read."""
+    below, `text(layout)` and `why_not_written(layout)`, which `sheet.DRAWING_RENDERERS` and the build read."""
 
     #: The file it writes, beside the sheet.
     FILE_NAME = "breadboard.json"
@@ -413,7 +412,7 @@ class WokwiBreadboardDiagram:
     DECLINED_MESSAGE = "Wokwi has no part with this board's pins"
 
     def __init__(self, colors=None, breadboard_id="bb1"):
-        self.colors = colors or breadboard_steps.StepColors()
+        self.colors = colors or wiring_steps.StepColors()
         self.breadboard_id = breadboard_id
 
     def why_not_written(self, layout):
@@ -464,7 +463,7 @@ class SvgBreadboardDiagram:
     NOTE_PX = 14
 
     def __init__(self, colors=None, pictures=None):
-        self.colors = colors or breadboard_steps.StepColors()
+        self.colors = colors or wiring_steps.StepColors()
         self.pictures = pictures or part_pictures.PictogramPartPictures()
 
     def why_not_written(self, layout):

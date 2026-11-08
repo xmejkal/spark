@@ -21,9 +21,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import breadboard_drawing  # noqa: E402
+from spark.breadboard import drawing  # noqa: E402
 import emit_footprint  # noqa: E402
-from breadboard_drawing import NotDrawn  # noqa: E402
+from spark.breadboard.drawing import NotDrawn  # noqa: E402
 
 #: Pixels per millimetre: Wokwi draws 96 px to the inch.
 PX_PER_MM = 96 / 25.4
@@ -85,7 +85,7 @@ class WokwiGeometryShapeSource(ShapeSource):
     def _measured(self, board):
         parts = self._parts
         if parts is None:
-            parts = json.loads(Path(breadboard_drawing.WOKWI_GEOMETRY_FILE).read_text())["parts"]
+            parts = json.loads(Path(drawing.WOKWI_GEOMETRY_FILE).read_text())["parts"]
         found = parts.get(board.get("wokwi_part_type")) if board.get("wokwi_part_type") else None
         return found if isinstance(found, dict) else None
 
@@ -107,7 +107,7 @@ class RecordShapeSource(ShapeSource):
 
     @staticmethod
     def _disagrees(field, said):
-        return NotDrawn(emit_footprint.DISAGREES_MESSAGE % said, breadboard_drawing.HEADER_DISAGREES, field)
+        return NotDrawn(emit_footprint.DISAGREES_MESSAGE % said, drawing.HEADER_DISAGREES, field)
 
     def _refuse_odd_header(self, physical):
         """What `emit_footprint.pads` would place wrongly or place twice: more than two rows, a row count that disagrees with
@@ -143,7 +143,7 @@ class RecordShapeSource(ShapeSource):
         missing = emit_footprint.geometry_missing(board)
         if missing:
             raise NotDrawn("the board file lacks %s" % ", ".join(emit_footprint.geometry_gaps(board)),
-                           breadboard_drawing.NO_HEADER_FACT, missing[0][0])
+                           drawing.NO_HEADER_FACT, missing[0][0])
         physical = board["physical"]
         wrong = emit_footprint.kind_problem(physical)
         if wrong:
@@ -158,7 +158,7 @@ class RecordShapeSource(ShapeSource):
         pins = {}
         for label, x, y in placed:
             if label in pins:
-                raise NotDrawn("two pads of the board file are called %s" % label, breadboard_drawing.DUPLICATE_PAD_LABEL, label)
+                raise NotDrawn("two pads of the board file are called %s" % label, drawing.DUPLICATE_PAD_LABEL, label)
             pins[label] = (round(x + width / 2, 4), round(height / 2 - y, 4))
         if len(set(pins.values())) != len(pins):
             along = len({x for _, x, _ in placed}) == len({pins[label][0] for label in pins})  # one row's pads meet: the pitch
@@ -166,12 +166,12 @@ class RecordShapeSource(ShapeSource):
         doubtful = physical["header"].get("doubtful_pads")
         if not isinstance(doubtful, list):
             raise NotDrawn("the board file does not say which pads are doubtful: physical.header.doubtful_pads",
-                           breadboard_drawing.NO_DOUBTFUL_PAD_FACT)
+                           drawing.NO_DOUBTFUL_PAD_FACT)
         grounds = [name for name, pad in (board.get("power_pads") or {}).items()
                    if isinstance(pad, dict) and pad.get("rail") == "ground" and name not in doubtful]
         if len(grounds) != 1 or grounds[0] not in pins:
             raise NotDrawn("the board's ground pads, less the doubtful ones, are not exactly one: %s" % (", ".join(grounds) or "none"),
-                           breadboard_drawing.GROUND_NOT_ONE, ", ".join(grounds) or None)
+                           drawing.GROUND_NOT_ONE, ", ".join(grounds) or None)
         return PartShape((width, height), pins, grounds[0], self._groups(len(pins), doubtful))
 
     @staticmethod

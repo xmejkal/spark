@@ -1,5 +1,5 @@
 """
-The sheet lists what to change on the bench after a rebuild (P300, #366): `breadboard.write()` keeps a wiring record
+The sheet lists what to change on the bench after a rebuild (P300, #366): `sheet.write()` keeps a wiring record
 beside the sheet, compares it with the new steps, and says each difference in the sheet and on stderr.
 
     python3 -m unittest tests.test_breadboard_record
@@ -23,7 +23,9 @@ import suite_temp  # noqa: E402,F401
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import breadboard  # noqa: E402
-import breadboard_changes  # noqa: E402
+
+from spark.breadboard import sheet  # noqa: E402
+from spark.breadboard import bench_changes  # noqa: E402
 import check_spine  # noqa: E402
 from test_breadboard_keep import BUTTON_ONLY, FULL, LED_ONLY, build, change_requirements, new_project  # noqa: E402
 
@@ -31,7 +33,7 @@ SECTION = "### Changes since the last build"
 
 
 def record(project):
-    return json.loads((project / breadboard_changes.WiringRecord.FILE_NAME).read_text())
+    return json.loads((project / bench_changes.WiringRecord.FILE_NAME).read_text())
 
 
 def section(project):
@@ -64,7 +66,7 @@ class RebuildTest(unittest.TestCase):
         build(project)
         change_requirements(project, FULL)
         written = build(project)
-        lines = breadboard_changes.ChangeList().render(written.changes)
+        lines = bench_changes.ChangeList().render(written.changes)
         self.assertEqual(lines[0], "Put LedRed5mm in the breadboard.")
         self.assertIn("Put R1 end 1 (in series with LedRed5mm A) in a free row.", lines)
         self.assertEqual([one.code for one in written.changes], ["added"] * 5 + ["rerouted"])
@@ -86,7 +88,7 @@ class RebuildTest(unittest.TestCase):
         build(project)
         change_requirements(project, BUTTON_ONLY)
         written = build(project)
-        jumper = next(breadboard_changes.ChangeList().line(one) for one in written.changes
+        jumper = next(bench_changes.ChangeList().line(one) for one in written.changes
                       if one.code == "removed" and one.kind == "jumper")
         self.assertRegex(jumper, r"^Take out the (red|orange|gold|green|cyan|blue|purple|magenta) jumper from ")
 
@@ -103,7 +105,7 @@ class RebuildTest(unittest.TestCase):
     def test_a_record_that_cannot_be_read_is_said_and_written_again(self):
         project = new_project(FULL)
         build(project)
-        (project / breadboard_changes.WiringRecord.FILE_NAME).write_text("{not json")
+        (project / bench_changes.WiringRecord.FILE_NAME).write_text("{not json")
         written = build(project)
         self.assertEqual(written.changes, [])
         self.assertRegex(" ".join(section(project)), r"cannot be compared.*cannot be read")
@@ -143,15 +145,15 @@ class WriteOrderTest(unittest.TestCase):
         project = new_project(BUTTON_ONLY)
         build(project)
         change_requirements(project, FULL)
-        earlier = (project / breadboard_changes.WiringRecord.FILE_NAME).read_text()
-        with mock.patch.object(breadboard.DRAWING_RENDERERS[1], "text", side_effect=RuntimeError("boom")):
+        earlier = (project / bench_changes.WiringRecord.FILE_NAME).read_text()
+        with mock.patch.object(sheet.DRAWING_RENDERERS[1], "text", side_effect=RuntimeError("boom")):
             with self.assertRaises(RuntimeError):
                 build(project)
-        self.assertEqual((project / breadboard_changes.WiringRecord.FILE_NAME).read_text(), earlier)
+        self.assertEqual((project / bench_changes.WiringRecord.FILE_NAME).read_text(), earlier)
 
     def test_a_circuit_that_cannot_be_drawn_still_keeps_a_record_without_colors(self):
         project = new_project(LED_ONLY)
-        with mock.patch.object(breadboard, "_plan_layout", side_effect=breadboard.breadboard_drawing.NotDrawn("no room")):
+        with mock.patch.object(sheet, "_plan_layout", side_effect=sheet.drawing.NotDrawn("no room")):
             build(project)
         self.assertTrue(all(step["color"] is None for step in record(project)["steps"]))
 
@@ -199,10 +201,10 @@ class CheckSpineTest(unittest.TestCase):
 
     def test_a_build_that_did_not_finish_keeps_the_record(self):
         project = self.rebuilt()
-        earlier = (project / breadboard_changes.WiringRecord.FILE_NAME).read_text()
+        earlier = (project / bench_changes.WiringRecord.FILE_NAME).read_text()
         self.keep(project, FULL, [check_spine.Stage("build", check_spine.PROBLEMS, "1 error")])
         self.assertFalse((project / "breadboard.md").exists())
-        self.assertEqual((project / breadboard_changes.WiringRecord.FILE_NAME).read_text(), earlier)
+        self.assertEqual((project / bench_changes.WiringRecord.FILE_NAME).read_text(), earlier)
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ the sentence each wired GPIO gives the limits. `check_spine.board_alone` calls i
 from typing import NamedTuple, Optional
 
 import boards
-import breadboard
+from spark.breadboard import sheet
 import design
 import provenance
 from spark.firmware import sim_project
@@ -39,7 +39,7 @@ ONBOARD_PARTS = {
         "place: a scenario presses that part, not the board's own button. " + boards.BENCH),
 }
 
-#: The netlist's file name in the simulation project. The board's component name is `breadboard.BOARD_COMPONENT`, the
+#: The netlist's file name in the simulation project. The board's component name is `sheet.BOARD_COMPONENT`, the
 #: name the converter's `lib/mapping.ts` matches (a test reads both).
 NETLIST = "netlist.json"
 
@@ -127,12 +127,12 @@ def make_converter_input(parts, ground, project):
     """
     The converter's input for `parts` (`OnboardPartReader.parts`) and `ground`, the board's ground pin (the reader's
     `ground`), as ({file name: JSON value}, None), or (None, why) when a part record cannot be read or lacks a fact below;
-    writes nothing. NETLIST holds the board as `breadboard.BOARD_COMPONENT` and each part by its role, a net from the
+    writes nothing. NETLIST holds the board as `sheet.BOARD_COMPONENT` and each part by its role, a net from the
     GPIO's board pin to the part's signal pin (its record's first need), and one ground net from `ground` to each part's
     ground pin (its `power` entry on the ground rail). `sim_project.MAPPING_FILE` holds each part's Wokwi type, pins and
     attrs from its record's `simulation.wokwi`.
     """
-    board = breadboard.BOARD_COMPONENT
+    board = sheet.BOARD_COMPONENT
     components = [{"id": board, "name": board, "type": "board", "pins": []}]
     nets, mapping, grounds = [], {}, [{"componentId": board, "pinName": ground}]
     for part in parts:

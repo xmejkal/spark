@@ -337,5 +337,32 @@ class TheFirmwareAreaTest(unittest.TestCase):
 # --- end MVP ---
 
 
+# --- MVP ---
+class TheBreadboardAreaTest(unittest.TestCase):
+    """W6-B3 (P694): the breadboard's modules live in `scripts/spark/breadboard/`, its `__init__.py` imports nothing, and
+    each module imports alone. `scripts/` keeps the CLI `breadboard.py`, which defines `main` only."""
+    BREADBOARD = ROOT / "scripts" / "spark" / "breadboard"
+    #: The ten modules of the area, by the names of its page (`areas/breadboard.md`).
+    MODULES = ["bench_changes", "breadboard_codes", "drawing", "drawing_catalog", "drawing_match", "kept_moves",
+               "part_pictures", "sheet", "tabbed_page", "wiring_steps"]
+
+    def test_scripts_holds_the_cli_and_no_breadboard_library_module(self):
+        self.assertEqual(sorted(path.stem for path in self.BREADBOARD.glob("*.py") if path.name != "__init__.py"), self.MODULES)
+        old = ["part_pictures.py", "tabbed_page.py"] + [path.name for path in (ROOT / "scripts").glob("breadboard*.py")]
+        self.assertEqual(sorted(name for name in old if (ROOT / "scripts" / name).exists()), ["breadboard.py"])
+        self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in (ROOT / "scripts").glob("*.py")}), [])
+        tree = ast.parse((ROOT / "scripts" / "breadboard.py").read_text())
+        self.assertEqual([node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))], ["main"])
+
+    def test_the_area_s_init_imports_nothing(self):
+        # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)
+        tree = ast.parse((self.BREADBOARD / "__init__.py").read_text())
+        self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
+
+    def test_each_breadboard_module_imports_alone(self):
+        each_module_imports_alone(self, "breadboard")
+# --- end MVP ---
+
+
 if __name__ == "__main__":
     unittest.main()

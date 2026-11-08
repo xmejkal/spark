@@ -1,18 +1,14 @@
 """
 What the drawn breadboard draws each component as: the catalog of a build, from the records, as `DrawnPart`s keyed by the
-name the steps use, and what a planned layout says of its board. It writes no file. `breadboard.py` plans with it (P267).
+name the steps use, and what a planned layout says of its board. It writes no file. `sheet` plans with it (P267).
 """
 
 import re
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-import breadboard_drawing  # noqa: E402
-import breadboard_steps  # noqa: E402
-import emit_board  # noqa: E402
-import part_shape  # noqa: E402
+import emit_board
+import part_shape
+from spark.breadboard import drawing
+from spark.breadboard import wiring_steps
 
 #: Ohms by a resistance's suffix, for the value Wokwi's resistor takes.
 OHMS = {"": 1, "k": 1000, "M": 1000000}
@@ -33,21 +29,21 @@ def describe_parts(read, geometry):
     not its printed labels names no pins, so the drawing says which pin it cannot find. `geometry` must be Wokwi's own."""
     board = read.built.board
     source = part_shape.find_source(board, part_shape.sources_for(geometry.data["parts"]))
-    catalog = {breadboard_steps.THE_BOARD: breadboard_drawing.DrawnPart(
+    catalog = {wiring_steps.THE_BOARD: drawing.DrawnPart(
         board.get("wokwi_part_type") or board.get("id"), {}, source.find_pin_names(board))}
     for part in read.built.parts:
         wokwi = (part.get("simulation") or {}).get("wokwi") or {}
         if wokwi.get("part"):
-            catalog[emit_board.component_name(part)] = breadboard_drawing.DrawnPart(
+            catalog[emit_board.component_name(part)] = drawing.DrawnPart(
                 wokwi["part"], wokwi.get("attrs") or {}, wokwi.get("pins") or {})
     for tag, value, _ in read.resistors.values():
-        catalog[tag] = breadboard_drawing.DrawnPart("wokwi-resistor", {"value": to_ohms(value)}, {"1": "1", "2": "2"})
+        catalog[tag] = drawing.DrawnPart("wokwi-resistor", {"value": to_ohms(value)}, {"1": "1", "2": "2"})
     return catalog
 
 
 def find_board_px(layout):
     """The part_px the layout drew its board from, {} when it drew none."""
-    return next((layout.geometry.part(part.type) for part in layout.parts if part.id == breadboard_steps.THE_BOARD), {})
+    return next((layout.geometry.part(part.type) for part in layout.parts if part.id == wiring_steps.THE_BOARD), {})
 
 
 def board_lines(layout):

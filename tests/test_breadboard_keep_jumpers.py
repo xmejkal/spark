@@ -102,7 +102,7 @@ class MovedJumperTest(unittest.TestCase):
 
     def test_a_jumper_moved_under_the_board_body_is_named(self):
         project = built_full()
-        covered = base.breadboard_drawing.FirstFitPartPlacement(base.GEOMETRY)._covered(
+        covered = base.drawing.FirstFitPartPlacement(base.GEOMETRY)._covered(
             base.GEOMETRY.part("board-xiao-esp32-c6"), 90, part(project, "board")["left"],
             part(project, "board")["top"], base.holes_of(project, "board"))
         under = next(hole for hole in covered if hole.group.startswith("6b"))
@@ -185,16 +185,16 @@ class EscapedMutantsTest(unittest.TestCase):
     def test_when_the_kept_plan_has_no_room_a_connection_to_a_part_pin_is_still_named(self):
         project = built_full()
         edit(project, lambda drawn: drawn["connections"].append(["board:D8", "LedRed5mm:A", "green", []]))
-        with base.mock.patch.object(base.breadboard_keep.KeepMovesFirstFitPartPlacement, "place",
-                                    side_effect=base.breadboard_drawing.NotDrawn("no room")):
+        with base.mock.patch.object(base.kept_moves.KeepMovesFirstFitPartPlacement, "place",
+                                    side_effect=base.drawing.NotDrawn("no room")):
             written = build(project)
         self.assertEqual(codes(written), {"jumper board:D8-LedRed5mm:A": "jumper-not-on-board"})
 
     def test_when_the_kept_plan_has_no_room_a_moved_jumper_is_named_no_room(self):
         project = built_full()
         change_wire(project, 1, other="bb1:14t.b")
-        with base.mock.patch.object(base.breadboard_keep.KeepMovesFirstFitPartPlacement, "place",
-                                    side_effect=base.breadboard_drawing.NotDrawn("no room")):
+        with base.mock.patch.object(base.kept_moves.KeepMovesFirstFitPartPlacement, "place",
+                                    side_effect=base.drawing.NotDrawn("no room")):
             written = build(project)
         self.assertEqual(codes(written), {"jumper 6b.j-14t.b": "no-room"})
 
@@ -217,8 +217,8 @@ class ParseTest(unittest.TestCase):
     def test_a_connection_of_two_ends_is_read_with_no_route(self):
         text = json.dumps({"parts": [{"type": base.GEOMETRY.surface.type, "id": "a", "left": 0, "top": 0}],
                            "connections": [["a:1a.a", "a:2a.a"]]})
-        earlier = base.breadboard_keep.EarlierDiagram.parse(text, base.GEOMETRY.surface.type)
-        self.assertEqual(earlier.jumpers, [base.breadboard_keep.EarlierJumper("1a.a", "2a.a", ())])
+        earlier = base.kept_moves.EarlierDiagram.parse(text, base.GEOMETRY.surface.type)
+        self.assertEqual(earlier.jumpers, [base.kept_moves.EarlierJumper("1a.a", "2a.a", ())])
 
 
 class QuietTest(unittest.TestCase):

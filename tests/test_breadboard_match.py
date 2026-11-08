@@ -23,13 +23,15 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
-import breadboard_catalog  # noqa: E402
-import breadboard_drawing  # noqa: E402
-import breadboard_keep  # noqa: E402
-import breadboard_steps  # noqa: E402
+
+from spark.breadboard import sheet  # noqa: E402
+from spark.breadboard import drawing_catalog  # noqa: E402
+from spark.breadboard import drawing  # noqa: E402
+from spark.breadboard import kept_moves  # noqa: E402
+from spark.breadboard import wiring_steps  # noqa: E402
 import check_spine  # noqa: E402
-from breadboard_drawing import Jumper, WokwiGeometry  # noqa: E402
-from breadboard_match import JOINED_TO_OTHER, JOINED_TO_UNUSED, NOT_JOINED, DrawnNets  # noqa: E402
+from spark.breadboard.drawing import Jumper, WokwiGeometry  # noqa: E402
+from spark.breadboard.drawing_match import JOINED_TO_OTHER, JOINED_TO_UNUSED, NOT_JOINED, DrawnNets  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 GEOMETRY = WokwiGeometry.load()
@@ -56,9 +58,9 @@ class TheCheckTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         with in_store():
-            cls.read = breadboard._read_build(XIAO / "requirements.json")
-        cls.layout = breadboard._plan_layout(cls.read)
-        cls.catalog = breadboard_catalog.describe_parts(cls.read, GEOMETRY)
+            cls.read = sheet._read_build(XIAO / "requirements.json")
+        cls.layout = sheet._plan_layout(cls.read)
+        cls.catalog = drawing_catalog.describe_parts(cls.read, GEOMETRY)
         cls.points = cls.read.steps.points
 
     def differences(self, layout, points=None):
@@ -87,7 +89,7 @@ class TheCheckTest(unittest.TestCase):
 
     def test_a_point_joined_to_a_pin_no_point_names_is_a_short(self):
         # row 17b holds GND (LED K); the board's 5V pad is in no point
-        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
+        board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
         five = board.holes["5V"]
         beside = next(hole.name for hole in HOLES.values() if hole.group == five.group and hole.name != five.name)
         found = self.differences(with_jumpers(self.layout, ("17b.i", beside)))
@@ -95,19 +97,19 @@ class TheCheckTest(unittest.TestCase):
                          [(JOINED_TO_UNUSED, "board GND is joined to board 5V in the drawing, which no point names")])
 
     def test_an_end_s_group_is_the_free_row_its_setup_jumper_took(self):
-        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
-        end = breadboard_steps.End("board", board.id, "board D8", "board D8", "D8")
+        board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
+        end = wiring_steps.End("board", board.id, "board D8", "board D8", "D8")
         placed = {board.id: board}
-        self.assertEqual(breadboard_drawing.end_group(end, placed, self.catalog, {"board D8": "28t"}), "28t")
-        self.assertEqual(breadboard_drawing.end_group(end, placed, self.catalog), board.holes["D8"].group)
+        self.assertEqual(drawing.end_group(end, placed, self.catalog, {"board D8": "28t"}), "28t")
+        self.assertEqual(drawing.end_group(end, placed, self.catalog), board.holes["D8"].group)
 
     def test_board_pads_joined_through_a_free_row_match_and_a_moved_setup_jumper_does_not(self):
-        named = {end.pin for point in self.points for end in point.ends if end.component == breadboard_steps.THE_BOARD}
-        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
+        named = {end.pin for point in self.points for end in point.ends if end.component == wiring_steps.THE_BOARD}
+        board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
         one, other = [pin for pin in board.holes if pin not in named and pin in self.catalog[board.id].pins][:2]
-        ends = [breadboard_steps.End("board", board.id, "board " + pin, "board " + pin, pin)
+        ends = [wiring_steps.End("board", board.id, "board " + pin, "board " + pin, pin)
                 for pin in (one, other)]
-        point = [breadboard_steps.StepPoint(ends, None, None)]
+        point = [wiring_steps.StepPoint(ends, None, None)]
         rows = [board.holes[pin].group for pin in (one, other)]
         joined = with_jumpers(self.layout, (rows[0] + ".a", "28t.a"), (rows[1] + ".a", "28t.b"))
         self.assertEqual(self.differences(joined, point), [])
@@ -123,9 +125,9 @@ class TheBuildSaysItTest(unittest.TestCase):
         self.project = Path(tempfile.mkdtemp()) / "xiao"
         shutil.copytree(XIAO, self.project)
         with in_store():
-            layout = breadboard._plan_layout(breadboard._read_build(XIAO / "requirements.json"))
+            layout = sheet._plan_layout(sheet._read_build(XIAO / "requirements.json"))
         self.planted = moved(layout, 5, "29b.f")
-        self.plan = mock.patch.object(breadboard, "_plan_layout", return_value=self.planted)
+        self.plan = mock.patch.object(sheet, "_plan_layout", return_value=self.planted)
         self.plan.start()
         self.addCleanup(mock.patch.stopall)
 
@@ -142,8 +144,8 @@ class TheBuildSaysItTest(unittest.TestCase):
 
     def test_two_differences_give_the_first_and_a_count_on_the_sheet(self):
         both = moved(self.planted, 6, "30b.f")
-        with in_store(), mock.patch.object(breadboard, "_plan_layout", return_value=both):
-            written = breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
+        with in_store(), mock.patch.object(sheet, "_plan_layout", return_value=both):
+            written = sheet.write(self.project / "requirements.json", self.project / "breadboard.md")
         self.assertEqual([one.subject for one in written.differs], ["R1 end 1", "TactileButton A"])
         self.assertIn("in the drawing, and 1 more. Wire from the steps above.",
                       (self.project / "breadboard.md").read_text())
@@ -151,14 +153,14 @@ class TheBuildSaysItTest(unittest.TestCase):
     def test_a_kept_layout_is_checked_not_the_fresh_one(self):
         self.plan.stop()  # the first build plans for real, so the second one keeps its layout
         with in_store():
-            breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
-        keep = breadboard_keep.KeepMovesJumperPlacement.place_jumpers
+            sheet.write(self.project / "requirements.json", self.project / "breadboard.md")
+        keep = kept_moves.KeepMovesJumperPlacement.place_jumpers
 
         def keep_then_move(placement, layout, ledger):
             return moved(keep(placement, layout, ledger), 5, "29b.f")
 
-        with in_store(), mock.patch.object(breadboard_keep.KeepMovesJumperPlacement, "place_jumpers", keep_then_move):
-            written = breadboard.write(self.project / "requirements.json", self.project / "breadboard.md")
+        with in_store(), mock.patch.object(kept_moves.KeepMovesJumperPlacement, "place_jumpers", keep_then_move):
+            written = sheet.write(self.project / "requirements.json", self.project / "breadboard.md")
         self.assertEqual([(one.code, one.subject) for one in written.differs], [(NOT_JOINED, "R1 end 1")])
 
     def test_the_kept_entry_carries_its_code(self):

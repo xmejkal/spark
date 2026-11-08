@@ -22,7 +22,7 @@ import emit_board
 #: What an end is: a pad of the board, a pin of a part, or one end of a resistor a part asks for.
 BOARD, PART, RESISTOR = "board", "part", "resistor"
 #: The board, as an End's component and a placing step name it; a step says it as "the board". (The circuit calls
-#: the same board `breadboard.BOARD_COMPONENT`, "Mcu".)
+#: the same board `sheet.BOARD_COMPONENT`, "Mcu".)
 THE_BOARD = "board"
 #: Which end anchors a point first: a part's pin sits in a fixed row, a resistor end goes anywhere, and a board pad
 #: needs a jumper to a free row.
@@ -273,7 +273,7 @@ def _natural(text):
 
 def wiring(board, circuit, design_parts, resistors, board_component):
     """The wiring: one numbered line per connection point, board labels first, and the same points as steps.
-    `board_component` is the circuit's name for the board (`breadboard.BOARD_COMPONENT`)."""
+    `board_component` is the circuit's name for the board (`sheet.BOARD_COMPONENT`)."""
     records = {emit_board.component_name(part): part for part in design_parts}
 
     def end(component, port):

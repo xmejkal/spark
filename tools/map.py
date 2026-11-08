@@ -29,8 +29,8 @@ REGISTRIES = (
     Registry("spark.bench.OPERATIONS", "spark.bench", "OPERATIONS", str),
     Registry("spark.idea.OPERATIONS", "spark.idea", "OPERATIONS", str),
     Registry("parts.OPERATIONS", "parts", "OPERATIONS", operator.itemgetter(0)),
-    Registry("breadboard.WIRING_VIEWS", "breadboard", "WIRING_VIEWS", operator.itemgetter(0)),
-    Registry("breadboard.DRAWING_RENDERERS", "breadboard", "DRAWING_RENDERERS", operator.attrgetter("FILE_NAME")),
+    Registry("spark.breadboard.sheet.WIRING_VIEWS", "spark.breadboard.sheet", "WIRING_VIEWS", operator.itemgetter(0)),
+    Registry("spark.breadboard.sheet.DRAWING_RENDERERS", "spark.breadboard.sheet", "DRAWING_RENDERERS", operator.attrgetter("FILE_NAME")),
 )
 
 

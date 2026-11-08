@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import boards  # noqa: E402
-import breadboard  # noqa: E402
+from spark.breadboard import sheet  # noqa: E402
 import check_spine  # noqa: E402
 import onboard_parts  # noqa: E402
 import store  # noqa: E402
@@ -79,7 +79,7 @@ class TheReaderPicksTheRowsSparkCanWireTest(unittest.TestCase):
         mapping = (ROOT / "tools" / "circuit-to-wokwi" / "lib" / "mapping.ts").read_text()
         self.assertIn('export const BOARD: PartMapping = {', mapping)
         board_block = mapping.split("export const BOARD: PartMapping = {", 1)[1].split("};", 1)[0]
-        self.assertIn('match: "%s",' % breadboard.BOARD_COMPONENT, board_block)
+        self.assertIn('match: "%s",' % sheet.BOARD_COMPONENT, board_block)
 
     def test_every_wired_role_is_one_a_scenario_reaches(self):
         self.assertEqual(sorted(onboard_parts.ONBOARD_PARTS), sorted(role for role, spec in boards.ONBOARD_ROLES.items() if spec.scenario_verb))

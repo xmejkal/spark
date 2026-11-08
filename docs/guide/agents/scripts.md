@@ -201,17 +201,17 @@ These write:
   A step to a doubtful pad (GND1 or GND3 of the FireBeetle) finds no pin and is refused as an older site, with no code.
   The sheet names the pad that every GND means. Its picture is not verified: the row side, the USB end and the pads
   rest on the record and on the footprint's convention, and the sheet says to hold the board to the picture.
-  A part moved in the earlier `breadboard.json` stays there (P273, `breadboard_keep.py`): `breadboard.write()` reads the
+  A part moved in the earlier `breadboard.json` stays there (P273, `spark/breadboard/kept_moves.py`): `sheet.write()` reads the
   earlier file before it writes, and a part keeps its place if its pins are over free holes, one
   row each. A resistor is checked when it is placed (P287): its joined pin must still lie in the row it joins and its other pin
   in a free row. A jumper keeps its holes, route and direction (not its color) when its two rows are the two rows of a jumper
   the new layout draws (`KeepMovesJumperPlacement`), so a kept jumper never changes what is connected.
   `WriteResult.not_kept` lists `NotKeptResult(subject, code, why)` for each part or jumper (`jumper 4b.j-24b.f`) it could not
-  keep (codes in `breadboard_keep.CODES`), printed on stderr as `not kept: …`; `check_spine --keep --json` lists each under
+  keep (codes in `kept_moves.CODES`), printed on stderr as `not kept: …`; `check_spine --keep --json` lists each under
   `kept` with `did` `move not kept`, `subject`, `code` and `why`. Spark never names a jumper it drew itself (the record `wiring-record.json` lists them as `drawn_jumpers`) when a new circuit leaves it out. It always names a jumper the person moved when the build cannot keep it. With no record, it names no jumper for rows that no planned jumper joins. A build
   that did not finish (failed or refused) leaves a `breadboard.json` that holds parts, with a `left alone` entry, since it
   may hold moves; one that holds none, or is not readable, is removed. Never read a missing `not kept` line as proof that a move was kept: read the file.
-  The build checks the drawing against the points (P279, `breadboard_match.py`). `DrawnNets` joins the rows of each
+  The build checks the drawing against the points (P279, `spark/breadboard/drawing_match.py`). `DrawnNets` joins the rows of each
   jumper and the pins that are one inside a part (`joined_pins` in `data/wokwi-geometry.json`, the pushbutton's two sides
   of a contact). `PlannedLayout.differs` and `WriteResult.differs` list `DrawingDiffersResult(subject, code, why)`. The
   codes are `not-joined` (an end is not in its point's net), `joined-to-other` (two points share a net, a short) and
@@ -220,7 +220,7 @@ These write:
   `check_spine --keep` adds `{file: breadboard.json, did: "drawing differs", code, subject, why}`. The files are still
   written and the exit code does not change: wire from the steps, not from the drawing. A pin of the contact a point
   names (the pushbutton's other side) counts as that point's. Only the drawn layout is checked, not a breadboard on the bench.
-  A rebuild lists what to change on the bench (P300, `breadboard_changes.py`). `breadboard.write()` reads
+  A rebuild lists what to change on the bench (P300, `spark/breadboard/bench_changes.py`). `sheet.write()` reads
   `wiring-record.json`, which holds each step of the last sheet, before it writes anything. It compares the record with the
   new steps, writes the sheet, and then writes the new record. The sheet gets a section `### Changes since the last build`
   before `### Steps`: one bullet for each change, `- Nothing to change on the bench.` when there is none, and one line with the
@@ -235,7 +235,7 @@ These write:
   `wiring-record.json` whole or not at all. A project built before the record has none: the first rebuild counts a jumper
   that equals the fresh plan's as spark's. A failed build never removes
   `wiring-record.json`. Never read an empty list as proof that nothing changed on the bench: read the sheet.
-  Each drawing is one entry of `breadboard.DRAWING_RENDERERS`, all from one plan of the layout (P270). The second,
+  Each drawing is one entry of `sheet.DRAWING_RENDERERS`, all from one plan of the layout (P270). The second,
   `breadboard.svg` (P268), is a picture of the same layout that `breadboard.md` shows inline. Its part pictures come
   from `part_pictures.PictogramPartPictures` (`data/pictograms/<wokwi type>.svg`, else `module.svg`).
 - `check_spine.py`: a temporary build, or the project with `--keep`. There it replaces `dist/`, which every check
