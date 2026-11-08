@@ -16,7 +16,7 @@ import json
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
-import breadboard_steps
+from spark.breadboard import wiring_steps
 from spark.breadboard import part_pictures
 
 WOKWI_GEOMETRY_FILE = Path(__file__).resolve().parent.parent / "data" / "wokwi-geometry.json"
@@ -304,13 +304,13 @@ class BreadboardPlanner:
         seated = list(steps.anchored())
         placed, after = {}, 1
         for step in seated:
-            if step.act == breadboard_steps.PLACE:
+            if step.act == wiring_steps.PLACE:
                 placed[step.subject] = self.placement.place(step.subject, self._drawn(step.subject), ledger, after)
                 after = max(hole.column for hole in placed[step.subject].holes.values()) + self.SPACING_COLUMNS
         for step in seated:
-            if step.act != breadboard_steps.PLACE and step.anchor.seat().kind == breadboard_steps.RAIL:
+            if step.act != wiring_steps.PLACE and step.anchor.seat().kind == wiring_steps.RAIL:
                 raise NotDrawn("%s goes on a rail, and rails are not drawn yet" % step.anchor.seat().mark)
-            if step.act == breadboard_steps.SUPPLY:
+            if step.act == wiring_steps.SUPPLY:
                 raise NotDrawn("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject)
         self._place_resistors(seated, placed, ledger, after)
         parts_only = HoleLedger(self.geometry.surface, ledger.taken)
@@ -319,7 +319,7 @@ class BreadboardPlanner:
             end = step.subject
             if not step.jumper:
                 continue
-            if step.act == breadboard_steps.SETUP:
+            if step.act == wiring_steps.SETUP:
                 jumper = Jumper(ledger.claim_free_hole(self._group_of(end, placed, groups), end.name),
                                 ledger.claim_free_group(after, end.name), number)
                 groups[end.name] = jumper.other.group
@@ -335,10 +335,10 @@ class BreadboardPlanner:
         """A resistor has a fixed length, so it goes in with the leg that joins a row already in that row."""
         resistors = collections.OrderedDict()
         for step in seated:
-            if (step.act in (breadboard_steps.SETUP, breadboard_steps.JOIN)
-                    and step.subject.kind == breadboard_steps.RESISTOR):
+            if (step.act in (wiring_steps.SETUP, wiring_steps.JOIN)
+                    and step.subject.kind == wiring_steps.RESISTOR):
                 pinned = resistors.setdefault(step.subject.component, [])
-                if step.act == breadboard_steps.JOIN:
+                if step.act == wiring_steps.JOIN:
                     pinned.append((step.subject, step.anchor.seat().end))
         waiting = list(resistors.items())
         while waiting:
@@ -413,7 +413,7 @@ class WokwiBreadboardDiagram:
     DECLINED_MESSAGE = "Wokwi has no part with this board's pins"
 
     def __init__(self, colors=None, breadboard_id="bb1"):
-        self.colors = colors or breadboard_steps.StepColors()
+        self.colors = colors or wiring_steps.StepColors()
         self.breadboard_id = breadboard_id
 
     def why_not_written(self, layout):
@@ -464,7 +464,7 @@ class SvgBreadboardDiagram:
     NOTE_PX = 14
 
     def __init__(self, colors=None, pictures=None):
-        self.colors = colors or breadboard_steps.StepColors()
+        self.colors = colors or wiring_steps.StepColors()
         self.pictures = pictures or part_pictures.PictogramPartPictures()
 
     def why_not_written(self, layout):

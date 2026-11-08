@@ -8,7 +8,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from breadboard_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, MermaidDiagram, NumberedList,  # noqa: E402
+from spark.breadboard.wiring_steps import (BOARD, PART, RESISTOR, BreadboardSteps, End, MermaidDiagram, NumberedList,  # noqa: E402
                               StepPoint)
 
 

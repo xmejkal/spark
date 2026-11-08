@@ -21,14 +21,14 @@ import os
 import re
 from pathlib import Path
 
-import breadboard_steps
+from spark.breadboard import wiring_steps
 
 #: The codes of WiringChange. A code decides; ChangeList writes the words.
 ADDED, REMOVED, REROUTED, SWAPPED = "added", "removed", "rerouted", "swapped"
 CODES = (ADDED, REMOVED, REROUTED, SWAPPED)
 #: What a person does for a step: put a part in, put a resistor leg in, run a jumper, connect a supply. A swap and a
 #: removed resistor say the resistor.
-PLACE, LEG, JUMPER, SUPPLY, RESISTOR = breadboard_steps.PLACE, "leg", "jumper", breadboard_steps.SUPPLY, "resistor"
+PLACE, LEG, JUMPER, SUPPLY, RESISTOR = wiring_steps.PLACE, "leg", "jumper", wiring_steps.SUPPLY, "resistor"
 #: Where a setup step puts an end: nothing holds it yet.
 FREE_ROW = "a free row"
 
@@ -45,19 +45,19 @@ WiringChange = collections.namedtuple("WiringChange", "code kind name color befo
 
 
 def _end_key(end):
-    if end.kind == breadboard_steps.RESISTOR:
+    if end.kind == wiring_steps.RESISTOR:
         return (end.kind, end.job or end.component, end.pin)
     return (end.kind, end.words)
 
 
 def _anchor_key(anchor):
     seat = anchor.seat()
-    return (seat.kind,) + _end_key(seat.end) if seat.kind == breadboard_steps.ROW else (seat.kind, seat.mark)
+    return (seat.kind,) + _end_key(seat.end) if seat.kind == wiring_steps.ROW else (seat.kind, seat.mark)
 
 
 def _name(end):
     """An end as a change line names it: a resistor end also by its job, since its tag renumbers."""
-    if end.kind == breadboard_steps.RESISTOR and end.job:
+    if end.kind == wiring_steps.RESISTOR and end.job:
         return "%s (%s)" % (end.name, end.job)
     return end.name
 
@@ -65,9 +65,9 @@ def _name(end):
 def _destination(anchor):
     """Where the ends of an anchor meet, in words that survive a renumbering: a rail is named by its mark."""
     seat = anchor.seat()
-    if seat.kind == breadboard_steps.RAIL:
+    if seat.kind == wiring_steps.RAIL:
         return "the %s rail" % seat.mark
-    if seat.end.kind == breadboard_steps.BOARD:
+    if seat.end.kind == wiring_steps.BOARD:
         return "the row of the jumper from %s" % seat.end.name
     return "the row of " + _name(seat.end)
 
@@ -78,22 +78,22 @@ def describe(seated, colors=None):
     colors = colors or {}
     reached, found = set(), []
     for number, one in enumerate(seated, 1):
-        if one.act == breadboard_steps.PLACE:
-            name = "the board" if one.subject == breadboard_steps.THE_BOARD else one.subject
+        if one.act == wiring_steps.PLACE:
+            name = "the board" if one.subject == wiring_steps.THE_BOARD else one.subject
             found.append(RecordedStep((PLACE, one.subject), None, PLACE, name, "", "", "", "", None, ""))
             continue
         anchor = _anchor_key(one.anchor)
-        if one.act == breadboard_steps.SUPPLY:
+        if one.act == wiring_steps.SUPPLY:
             found.append(RecordedStep((SUPPLY, one.subject), anchor, SUPPLY, "the %s supply" % one.subject,
                                       _destination(one.anchor), "", "", "", None, ""))
             continue
         end = one.subject
         seat = one.anchor.seat()
-        marks = seat.mark if seat.kind == breadboard_steps.RAIL and anchor not in reached else ""
+        marks = seat.mark if seat.kind == wiring_steps.RAIL and anchor not in reached else ""
         reached.add(anchor)
-        to = FREE_ROW if one.act == breadboard_steps.SETUP else _destination(one.anchor)
-        resistor = end.kind == breadboard_steps.RESISTOR
-        source = _name(end) if end.kind == breadboard_steps.BOARD or not one.jumper else "the row of " + _name(end)
+        to = FREE_ROW if one.act == wiring_steps.SETUP else _destination(one.anchor)
+        resistor = end.kind == wiring_steps.RESISTOR
+        source = _name(end) if end.kind == wiring_steps.BOARD or not one.jumper else "the row of " + _name(end)
         found.append(RecordedStep(_end_key(end), anchor, JUMPER if one.jumper else LEG, source, to,
                                   end.component if resistor else "", end.value if resistor else "",
                                   end.job if resistor else "", colors.get(number) if one.jumper else None, marks))

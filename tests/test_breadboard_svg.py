@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import breadboard  # noqa: E402
 import breadboard_drawing  # noqa: E402
-import breadboard_steps  # noqa: E402
+from spark.breadboard import wiring_steps  # noqa: E402
 from spark.breadboard import part_pictures  # noqa: E402
 from test_breadboard_layout import RECORD_BOARD, record_inputs  # noqa: E402
 
@@ -116,10 +116,10 @@ class TheSvgTest(unittest.TestCase):
             self.assertAlmostEqual(numbers[1], center(jumper.one.name)[1], places=3)
             self.assertAlmostEqual(numbers[-2], center(jumper.other.name)[0], places=3)
             self.assertAlmostEqual(numbers[-1], center(jumper.other.name)[1], places=3)
-            self.assertEqual(path.get("stroke"), breadboard_steps.StepColors().color(jumper.step))
+            self.assertEqual(path.get("stroke"), wiring_steps.StepColors().color(jumper.step))
 
     def test_a_turned_part_turns_about_its_measured_center(self):
-        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
+        board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
         groups = [g for g in self.root.findall("svg:g", NS) if "rotate(90 34 44)" in (g.get("transform") or "")]
         self.assertEqual(len(groups), 1)
         self.assertEqual(board.rotate, 90)

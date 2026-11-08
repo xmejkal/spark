@@ -18,7 +18,7 @@ wiring-record.json, which it keeps beside the sheet):
     (the board and each part in first, each pin in its own row, then each wire to its point's anchor: a part's pin row,
     else a resistor end's row, else a free row for a board pin's jumper, or a rail for a point with more ends than a row
     holds); a mermaid diagram whose numbered lines are those steps; and the points, one per
-    line, as the check list after wiring (breadboard_steps.py holds the step rule);
+    line, as the check list after wiring (spark/breadboard/wiring_steps.py holds the step rule);
   - beside the sheet, breadboard.json (P267): the steps on a Wokwi half breadboard, each jumper in its step's color,
     to paste into a new project on wokwi.com; and breadboard.svg (P268), the same layout as a picture the sheet
     shows, each part as spark's own pictogram (data/pictograms/). A part, a resistor or a jumper you moved in
@@ -58,7 +58,7 @@ from spark.breadboard import breadboard_codes  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
 import breadboard_match  # noqa: E402
-import breadboard_steps  # noqa: E402
+from spark.breadboard import wiring_steps  # noqa: E402
 import design  # noqa: E402
 import drawer  # noqa: E402
 import emit_board  # noqa: E402
@@ -82,12 +82,12 @@ LEGEND = ("*have*: yours = your drawer holds it for this project · in your draw
 #: The views of the wiring steps the sheet shows, in order: (heading, one line that says how to read it, renderer).
 WIRING_VIEWS = (
     ("Steps", "One connection per step. The board's pins take the rows beside them, so a board pin always gets a jumper.",
-     breadboard_steps.NumberedList()),
-    ("Diagram", "Each line is one step, with its number.", breadboard_steps.MermaidDiagram()),
+     wiring_steps.NumberedList()),
+    ("Diagram", "Each line is one step, with its number.", wiring_steps.MermaidDiagram()),
 )
 
 #: The one palette of step colors, for the sheet's color line and the drawing's jumpers alike.
-STEP_COLORS = breadboard_steps.StepColors()
+STEP_COLORS = wiring_steps.StepColors()
 #: The drawings written beside the sheet, in order: each a renderer of one planned layout (P270). A new drawing is a
 #: new entry here, and nothing else changes.
 DRAWING_RENDERERS = (breadboard_drawing.WokwiBreadboardDiagram(STEP_COLORS),
@@ -217,7 +217,7 @@ def _parts_table(board, design_parts, resistors, supplies, have):
 def _supplies(circuit):
     """{net name: the parts on it} for each point that carries a named net and no board pin: a supply from off the board."""
     found = {}
-    for point in breadboard_steps.points(circuit):
+    for point in wiring_steps.points(circuit):
         if point.nets and not any(component["name"] == BOARD_COMPONENT for component, _ in point.members):
             for net in point.nets:
                 found.setdefault(net, set()).update(component["name"] for component, _ in point.members)
@@ -277,7 +277,7 @@ def _read_build(requirements_path, circuit_path=None):
         (c["name"], ("R%d" % number, c.get("display_resistance") or "", passives.get(c["name"], "")))
         for number, c in enumerate((c for c in circuit if c.get("type") == "source_component"
                                     and c.get("ftype") == "simple_resistor"), 1))
-    point_lines, steps = breadboard_steps.wiring(built.board, circuit, built.parts, resistors, BOARD_COMPONENT)
+    point_lines, steps = wiring_steps.wiring(built.board, circuit, built.parts, resistors, BOARD_COMPONENT)
     return Read(built, circuit, resistors, point_lines, steps)
 
 
@@ -290,7 +290,7 @@ def _drawing_inputs(read):
     part_px, _ = part_shape.find_part_px(board, part_shape.sources_for(wokwi.data["parts"]))
     if not part_px.get("full_surface"):
         return wokwi, catalog
-    geometry = wokwi.with_part(catalog[breadboard_steps.THE_BOARD].type, part_px)
+    geometry = wokwi.with_part(catalog[wiring_steps.THE_BOARD].type, part_px)
     return geometry.with_surface(breadboard_drawing.Surface.load_full()), catalog
 
 

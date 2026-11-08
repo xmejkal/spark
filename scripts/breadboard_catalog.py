@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import breadboard_drawing  # noqa: E402
-import breadboard_steps  # noqa: E402
+from spark.breadboard import wiring_steps  # noqa: E402
 import emit_board  # noqa: E402
 import part_shape  # noqa: E402
 
@@ -33,7 +33,7 @@ def describe_parts(read, geometry):
     not its printed labels names no pins, so the drawing says which pin it cannot find. `geometry` must be Wokwi's own."""
     board = read.built.board
     source = part_shape.find_source(board, part_shape.sources_for(geometry.data["parts"]))
-    catalog = {breadboard_steps.THE_BOARD: breadboard_drawing.DrawnPart(
+    catalog = {wiring_steps.THE_BOARD: breadboard_drawing.DrawnPart(
         board.get("wokwi_part_type") or board.get("id"), {}, source.find_pin_names(board))}
     for part in read.built.parts:
         wokwi = (part.get("simulation") or {}).get("wokwi") or {}
@@ -47,7 +47,7 @@ def describe_parts(read, geometry):
 
 def find_board_px(layout):
     """The part_px the layout drew its board from, {} when it drew none."""
-    return next((layout.geometry.part(part.type) for part in layout.parts if part.id == breadboard_steps.THE_BOARD), {})
+    return next((layout.geometry.part(part.type) for part in layout.parts if part.id == wiring_steps.THE_BOARD), {})
 
 
 def board_lines(layout):

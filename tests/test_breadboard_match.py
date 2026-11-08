@@ -26,7 +26,7 @@ import breadboard  # noqa: E402
 import breadboard_catalog  # noqa: E402
 import breadboard_drawing  # noqa: E402
 import breadboard_keep  # noqa: E402
-import breadboard_steps  # noqa: E402
+from spark.breadboard import wiring_steps  # noqa: E402
 import check_spine  # noqa: E402
 from breadboard_drawing import Jumper, WokwiGeometry  # noqa: E402
 from breadboard_match import JOINED_TO_OTHER, JOINED_TO_UNUSED, NOT_JOINED, DrawnNets  # noqa: E402
@@ -87,7 +87,7 @@ class TheCheckTest(unittest.TestCase):
 
     def test_a_point_joined_to_a_pin_no_point_names_is_a_short(self):
         # row 17b holds GND (LED K); the board's 5V pad is in no point
-        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
+        board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
         five = board.holes["5V"]
         beside = next(hole.name for hole in HOLES.values() if hole.group == five.group and hole.name != five.name)
         found = self.differences(with_jumpers(self.layout, ("17b.i", beside)))
@@ -95,19 +95,19 @@ class TheCheckTest(unittest.TestCase):
                          [(JOINED_TO_UNUSED, "board GND is joined to board 5V in the drawing, which no point names")])
 
     def test_an_end_s_group_is_the_free_row_its_setup_jumper_took(self):
-        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
-        end = breadboard_steps.End("board", board.id, "board D8", "board D8", "D8")
+        board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
+        end = wiring_steps.End("board", board.id, "board D8", "board D8", "D8")
         placed = {board.id: board}
         self.assertEqual(breadboard_drawing.end_group(end, placed, self.catalog, {"board D8": "28t"}), "28t")
         self.assertEqual(breadboard_drawing.end_group(end, placed, self.catalog), board.holes["D8"].group)
 
     def test_board_pads_joined_through_a_free_row_match_and_a_moved_setup_jumper_does_not(self):
-        named = {end.pin for point in self.points for end in point.ends if end.component == breadboard_steps.THE_BOARD}
-        board = next(part for part in self.layout.parts if part.id == breadboard_steps.THE_BOARD)
+        named = {end.pin for point in self.points for end in point.ends if end.component == wiring_steps.THE_BOARD}
+        board = next(part for part in self.layout.parts if part.id == wiring_steps.THE_BOARD)
         one, other = [pin for pin in board.holes if pin not in named and pin in self.catalog[board.id].pins][:2]
-        ends = [breadboard_steps.End("board", board.id, "board " + pin, "board " + pin, pin)
+        ends = [wiring_steps.End("board", board.id, "board " + pin, "board " + pin, pin)
                 for pin in (one, other)]
-        point = [breadboard_steps.StepPoint(ends, None, None)]
+        point = [wiring_steps.StepPoint(ends, None, None)]
         rows = [board.holes[pin].group for pin in (one, other)]
         joined = with_jumpers(self.layout, (rows[0] + ".a", "28t.a"), (rows[1] + ".a", "28t.b"))
         self.assertEqual(self.differences(joined, point), [])
