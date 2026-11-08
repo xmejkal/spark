@@ -6,8 +6,9 @@
 > a golden net with `fake_wokwi_cli.py`, and no run spends a Wokwi minute. W6-F2 gives their refusals codes, text
 > unchanged. W6-F3 is the move: six modules and the stand-ins go into `scripts/spark/firmware/` under the names of
 > `areas/firmware.md`, and no module re-exports an old name. W6-F1 starts now. W6-F2 and W6-F3 wait for PR #906 and PR #915 (W5-3a).
-> Breadboard and checks are refined too (P690): W6-B2 and W6-C2 give their refusals codes, text unchanged, and the
-> move is two PRs, W6-B3 and W6-C3, because together they are three times W6-F3. Design with build and records with
+> Breadboard and checks are refined too (P690): W6-B2 and W6-C2 give their refusals codes, text unchanged but for
+> P688's item 3 (a package with no `bom.csv`: a sentence and exit 2, two new goldens), and the move is two PRs, W6-B3
+> and W6-C3, because together they are three times W6-F3. Design with build and records with
 > sourcing get one paragraph each. Batching the later moves into fewer PRs is open question 1.
 
 Fable 5.1 wrote this plan on 2026-11-07, against `origin/main` 4e63057e. W5-1 (#914) and W5-2 (#913) are in main.
@@ -499,6 +500,9 @@ It touches no file of P685 but `measure.py:247`, `planted_tree.py:11` and `test_
 ### W6-C2, the checks codes (after P685)
 
 Goal: each refusal of the six check CLIs has a code. The text and the JSON stay byte-equal to the 17 W6-C1 goldens.
+One output changes, by the PO (P688's item 3): a package with no `bom.csv` gets a sentence and exit 2 from `check_bom.py`
+(today a `SystemExit` on stderr and exit 1), and `check_all.py` loses its `SystemExit: ` prefix on that line. Two new
+goldens pin both, and the comment at `tests/test_check_all.py:132` ("raises SystemExit") is updated.
 
 Files: `scripts/check_codes.py` (proposed, a leaf). The page's `checks/codes.py` repeats `spark/core/codes.py`'s
 basename, which C1 counts (`tools/measure.py:633`), so the name is `check_codes`, as `firmware_codes` and
@@ -518,9 +522,12 @@ The sites, 20, and their codes, 14, read at 46bca725. The PR reports the real co
 
 How a code travels. Every site but three returns its sentence in a dict's `reason` or `unchecked`, or in a
 `(None, why)` pair, so each sentence becomes a `Refusal`: a `str`, so `json.dumps` and every caller print the same
-bytes. `Refusal` moves from `firmware_codes.py:17` to `spark/core/codes.py`, the leaf every area imports, and the three
-firmware import lines follow (`flash_image.py:35`, `import_firmware.py:49`, `run_scenario.py:47`, under their W6-F3
-paths). No re-export stays. That is why this PR waits for P685. The three sites that print in `main`
+bytes. `Refusal` moves from `firmware_codes.py:17` to `spark/core/result.py` (the next paragraph says why), and the
+three firmware import lines follow, after P685: `spark/firmware/image_builder.py:26`, `import_firmware.py:49` and
+`run_scenario.py:47` on branch `p685-firmware-move`. No re-export stays. That is why this PR waits for P685. Two more
+things follow the class: the mutation row `p684-firmware-codes.json:10` ("a Refusal drops its code", `refusal.code =
+code`) points at `scripts/spark/core/result.py`, proven with `--anchors`, and `firmware_codes.py:7`'s sentence about
+`Refusal` names its new home. The three sites that print in `main`
 (`check_footprints.py:562`, `check_bom.py:166`, `check_all.py:532`) name their code in `main` only, as W6-F2's four.
 `skipped` (`check_all.py:88`) is a status, not a refusal, and gets no code. No code reaches a JSON in this PR: a `reason`
 stays the same string, so `json.md` gains nothing and every table is library-only until an Operation writes codes.
@@ -608,17 +615,18 @@ What the rules do at the move, checked at 46bca725:
   R2 and R3: the 4 keys follow their file.
 - U1: `breadboard_codes` and `check_codes` are in `LEAVES` and `LEAF_NAMES` since the codes PRs. `MAY_READ`
   (`tests/test_self_confirmation.py:43`-`:91`) has 16 keys on the fifteen, and 14 take the new module name (the two
-  `part_pictures` keys stay). `constant_reads` keys on the import's alias (`:101`), so a test imports a moved module
-  as `from spark.breadboard import drawing`, never `as breadboard_drawing`: a key no read matches fails at `:120`.
+  `part_pictures` keys stay). `constant_reads` keys on the imported name, not the `as` name (`:101`), so a read through an
+  aliased import is skipped with no error. A test imports a moved module as `from spark.breadboard import drawing`,
+  never `as breadboard_drawing`. A `MAY_READ` key that no read matches still fails at `:120`.
 - The 86 import lines: 65 outside the fifteen (7 under `scripts/`: `onboard_parts.py:10`, `part_shape.py:24` and
   `:26`, `check_spine.py:64`, `:65` and `:75`, `parts.py:493`, and 58 in 24 test files) and 21 among them. The 8 lazy
   ones of `check_all.py` and `parts.py` stay lazy: a move changes no import shape.
 - The 284 rows move with `tools/mutate.py --retarget`, which rewrites a row's `file` and nothing else
-  (`tools/mutate.py:272`). Two kinds of rows are then moved by hand, as W6-F3's were. 17 rows find text inside a `main`
+  (`tools/mutate.py:272`). Two kinds of rows are then moved by hand, as W6-F3's were. 18 rows find text inside a `main`
   that stays in `scripts/`: `check_vendor_pins` 5 (`p179-vendor-cache`, `p181-p179-docs`, `sprint-6-p42`), `breadboard` 4
   (`p191-breadboard`, `p273-keep-moves`, `p279-drawing-check`, `p686-breadboard-net`), `check_all` 3 (`p197-clean-check`,
   `p319-one-project`), `check_footprints` 3 (`p434-rule-kinds`, `sprint-6-p42`, `sprint-8-p57`), `check_physics` 2
-  (`sprint-6-p34`, `sprint-6-p41`). They go back to the CLI's file. 9 rows in 7 tables name an old module as
+  (`sprint-6-p34`, `sprint-6-p41`), `check_bom` 1 (`sprint-8-p54`, `return EXIT_PROBLEMS`, `check_bom.py:182`). They go back to the CLI's file. 9 rows in 7 tables name an old module as
   `module.name` or `import module` in `find` or `replace` (`check_all.py` 3, `check_spine.py` 2, `breadboard.py` 2,
   `part_shape.py` 1, `check_physics.py` 1). They take the new name. `--anchors` proves each `find` occurs once. No row
   is dropped. Each PR runs its retargeted tables once, in parallel `--copy` shards.

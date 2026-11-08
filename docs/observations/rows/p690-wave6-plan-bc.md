@@ -4,7 +4,7 @@ What the plan council found while Fable 5.1 refined the breadboard and checks se
 [P690 #931](https://github.com/xmejkal/spark/issues/931). Plan:
 `docs/discovery/2026-10-19-p323-target-architecture/architecture/wave6-plan.md`, whose Council section ("P690 round 1")
 lists each change. Round 1 ran on f6cbf0f1 (the refuter on Opus, an architecture lens on Sonnet), and its fixes are
-commit 1aadf9da. A row "acted" names the plan section that changed.
+commit 1aadf9da. Round 2 (the refuter on Opus, on 1aadf9da) held rows 1 to 5, 7, 9 and 10, and added rows 19 to 25. A row "acted" names the plan section that changed.
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
@@ -26,3 +26,10 @@ commit 1aadf9da. A row "acted" names the plan section that changed.
 | 16 | the plan should state that `check_spine` (design) keeps importing `breadboard`, a downward arrow of the overview | architecture lens, NOTE | acted | W6-B2's second paragraph says so (`check_spine.py:64`) |
 | 17 | W6-C2 touches three firmware files that P685 moves (`flash_image.py:35`, `import_firmware.py:49`, `run_scenario.py:47`) | author, round 1 | closed | W6-C2 waits for P685 and edits the import lines under their W6-F3 paths. Said in the section's title and body |
 | 18 | the 44 baseline keys, and that a key whose path is rewritten counts as "the baseline only shrinks" | author, least sure | verified | 44 keys counted at 46bca725 (C1 3, C3 1, R1 11, R2 2, R3 2, R6 21, T1 4). The rewrite is `--accept-new`'s job (row 13), not a shrink: the plan says so |
+| 19 | 17 rows find text inside a staying `main`: `sprint-8-p54.json`'s `return EXIT_PROBLEMS` matches only `check_bom.py:182`, in `main` | refuter, round 2 | acted | 18 rows, `check_bom` 1 added to W6-BC3's rows bullet. Row 10 is closed by this |
+| 20 | plan :521 still said `Refusal` moves to `spark/core/codes.py`, while :528 says `result.py` | refuter, round 2 | acted | :521 rewritten: `result.py`, with a pointer to the next paragraph |
+| 21 | on branch `p685-firmware-move`, `flash_image.py` no longer imports `Refusal`: the importers are `spark/firmware/image_builder.py:26`, `import_firmware.py:49`, `run_scenario.py:47` | refuter, round 2 | acted | W6-C2 names the three after P685, on that branch |
+| 22 | mutation row `p684-firmware-codes.json:10` points at `firmware_codes.py` and finds `refusal.code = code`, and `firmware_codes.py:7` describes `Refusal` | refuter, round 2 | acted | W6-C2: the row points at `scripts/spark/core/result.py`, proven with `--anchors`, and the docstring sentence names the new home |
+| 23 | the TL;DR says W6-C2 keeps text unchanged, but P688's item 3 changes `check_bom`'s output (stderr and exit 1 become a sentence and exit 2) and `check_all` drops its `SystemExit: ` prefix, and `test_check_all.py:132`'s comment goes stale | refuter, round 2 | acted | the TL;DR and W6-C2's goal say so, with the two new goldens and the comment update |
+| 24 | `constant_reads` keys on `alias.name` (`:101`), not the `as` name, so an aliased import is skipped without error, so row 9's "fails at :120" holds only for a `MAY_READ` key no read matches | refuter, round 2 (NOTE) | acted | the U1 bullet reworded. The no-`as` rule stays |
+| 25 | `spark/core/result.py` is a safe home for `Refusal`: it imports only `spark.core.outcomes` | refuter, round 2 | verified | the author's "least sure" claim of round 1's report holds |
