@@ -5,10 +5,10 @@
   "find": "except (AttributeError, TypeError, KeyError, ValueError) as wrong:", "replace": "except ZeroDivisionError as wrong:"},
  {"file": "scripts/spark/sourcing/part_records.py", "name": "a malformed function is trusted",
   "find": "    if record.get(\"function\") and not function_problems(record):\n", "replace": "    if record.get(\"function\"):\n"},
- {"file": "scripts/parts.py", "name": "the walk stops at spark's layers",
+ {"file": "scripts/spark/design/goal_handlers.py", "name": "the walk stops at spark's layers",
   "find": "    for kind, found, layer, path in walked + linked:\n", "replace": "    for kind, found, layer, path in walked:\n"},
- {"file": "scripts/parts.py", "name": "another project's silent record is listed",
+ {"file": "scripts/spark/design/goal_handlers.py", "name": "another project's silent record is listed",
   "find": " and (kind, found, layer, path) not in linked:", "replace": ":"},
- {"file": "scripts/parts.py", "name": "a malformed board raises",
+ {"file": "scripts/spark/design/goal_handlers.py", "name": "a malformed board raises",
   "find": "_shape_problems(\n            board_records.validate, record, path, \"board definition\")", "replace": "(\n            board_records.validate(record, path))"}
 ]

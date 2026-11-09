@@ -15,6 +15,6 @@
  {"file": "scripts/spark/sourcing/drawer.py", "name": "a record is offered twice", "find": "        unique.setdefault(row[:2], row)\n", "replace": "        unique[row[:2]] = row\n"},
  {"file": "scripts/parts.py", "name": "the cap cuts a candidate that fits",
   "find": "if rank < 8 or c[\"what_matches\"]", "replace": "if rank < 8"},
- {"file": "scripts/parts.py", "name": "the text hides other words",
+ {"file": "scripts/spark/design/goal_handlers.py", "name": "the text hides other words",
   "find": "(\"\" if c[\"what_matches\"] else \" [other words]\")", "replace": "\"\""}
 ]

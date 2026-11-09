@@ -60,7 +60,7 @@
   "replace": "    return lines or [\"  nothing to change\"]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/design/goal_handlers.py",
   "name": "text mode hides a need that cannot be matched",
   "find": "    lines += [\"  %s: %s\" % (p[\"subject\"], p[\"sentence\"]) for p in problems]\n",
   "replace": "    pass\n"
