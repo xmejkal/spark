@@ -281,7 +281,7 @@ review runs those commands. If an item cannot name one, it does not enter Ready.
 
 Every one of these, for every item. No exceptions, no "mostly".
 
-1. The push hook's quick run — green — and the tests of the modules the change touched, with its area's golden net.
+1. The push hook's story run — green. It runs the tests of the modules the change touched, with its area's golden net.
    The full run, `python3 tools/check_commit.py --full`, is a sweep: at the end of a wave or an epic, or when the PO
    asks (the PO, 2026-11-08: *"you test the story"*).
 2. **Mutation rows, for logic.** The pull request writes the defects that the change prevents into
