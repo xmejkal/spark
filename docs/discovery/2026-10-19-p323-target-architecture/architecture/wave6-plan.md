@@ -1573,6 +1573,25 @@ P391's card's question (row 19). Keys: 22 (`R1:validate`, `R2` `validate`, `host
 `areas/sourcing.md`, 4 agent-facing pages. Size: 1,207 lines, est. 50 import lines, 160 rows, 22 keys. Done when
 `boards.py:830`'s lazy import is a top import of `record_kind`, `matching.py` imports no `parts`, and `ls scripts/*.py`
 shows `cost.py` of the two.
+P720 claims check (at a54f51fd, no decision changed). The `ast` map, rebuilt with locals excluded over the 166 top-level
+names of `parts.py`: the three lists hold, and the names on no list go to the lowest module of their users.
+`record_kind` 28 names, 127 lines (the list, `RECORD_TYPES`, `_type_name`, and `PIN_LISTS` and `DEFINITION_SUFFIX`,
+which `parts.py` keeps reading); `part_rules` 19 names, 251 lines (the list, `chip_problems`, new since P717, `_rests_on`,
+`_holding_low` and four constants); `part_records` 14 names, 278 lines (the list, `SUPPORTED_SCHEMA`, `KIND_FUNCTION`,
+`FOOTPRINT_NAME`, `ENDS_THE_COMMENT` and `NOT_A_PLAIN_ID`); `parts.py` keeps 105. Every reference points down
+(`part_rules` to `record_kind` 4, `part_records` to `part_rules` 8 and `record_kind` 15, `parts` to the three 110), no
+pair is two-way, and none of the three reads `parts`. `record_kind` imports `store` alone; `part_records` imports
+`board_records` too (`function_of`), down. The rows: 88 move (`record_kind` 11, `part_rules` 33, `part_records` 44), 245
+stay, 12 have no `find` in the source (as on main), and `matching.py` 22, `cost.py` 59, `sourcing_codes.py` 1.
+Corrections: `parts.py` is 2,382 lines; `LIBRARY` is `:44`, the `sys.path` line `:214`, `_parse` `:1304`,
+`_write_record` `:1941`, `load` `:270`, `definition_path` `:262`, `broken_problems` `:135`, `validate` `:625` (212
+lines); `boards.py:830` is `board_records.py:802`; `drawer.py` reads the contract at `:24`, `:145`, `:200`, `:239` and
+`needs.py` at `:151`; `matching.py` reads `function_of` and `aliases` at `:88`, `:89`. Keys: 21, not 22: the `R2` keys of
+`parts` are `validate`, `chip_problems`, `footprint_pad_count` and `host_part_problems` (`simulation_problems` lost its
+key to P717's extraction); the `T1` keys of `parts` stay, because `datetime`, the file write and `subprocess` sit in
+functions that stay. `parts.py` stays a CLI in `scripts/`, so its `sys.path` line stays, as `tools.py`'s did. The flat
+`parts.py` imports the moved names by name, so its own lines do not change; a test that patches `LIBRARY` patches it
+where each module looks it up, as P719 did for `PERSONAL`.
 
 ### W6-S3b, the sourcing move (after W6-S3a)
 
