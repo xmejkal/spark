@@ -449,11 +449,12 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
         return [entry for entry in json.loads(out.getvalue())["kept"] if Path(entry["file"]).name.startswith("breadboard.")]
 
-    def test_an_older_refusal_has_a_null_code_and_a_wrote_entry_of_wokwi_geometry_has_no_drawn_from(self):
+    def test_a_part_with_no_drawing_fact_names_its_code_and_a_wrote_entry_of_wokwi_geometry_has_no_drawn_from(self):
         for entry in self.kept_json_of("motor"):
             if entry["did"] == "not written" and entry["file"].endswith((".json", ".svg")):
                 with self.subTest(file=entry["file"]):
-                    self.assertEqual((entry["code"], entry["subject"], entry["expected"]), (None, None, False))
+                    self.assertEqual((entry["code"], entry["subject"], entry["expected"]),
+                                     ("no_drawing_fact", "L9110sModule", False))
         wrote = [entry for entry in self.kept_json_of("button-light-xiao") if entry["did"] == "wrote"]
         self.assertTrue(wrote)
         self.assertTrue(all("drawn_from" not in entry for entry in wrote))

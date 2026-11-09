@@ -220,7 +220,7 @@ def find_source(board, sources=SHAPE_SOURCES):
     for source in sources:
         if source.describe_part(board) is not None:
             return source
-    raise NotDrawn("nothing says how to draw the board %s" % board.get("id"))
+    raise NotDrawn("nothing says how to draw the board %s" % board.get("id"), drawing.NO_DRAWING_FACT, board.get("id"))
 
 
 def find_part_px(board, sources=SHAPE_SOURCES):

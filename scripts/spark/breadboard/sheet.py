@@ -363,7 +363,7 @@ def sheet(requirements_path, circuit_path=None, read=None, planned=None, change_
 
 
 #: Result: what write() wrote: the sheet's path, [(path, renderer)] for each drawing written, a NotWritten for each one not
-#: written (its code and subject are None for an older refusal), the [NotKeptResult] of the
+#: written (with its code and subject), the [NotKeptResult] of the
 #: earlier parts not kept, the [WiringChange] since the last build (none on a first build), each end the drawing joins
 #: differently from the points ([DrawingDiffersResult], P279), and what a board's drawing was made from (`record`, or
 #: None for Wokwi's own geometry).
