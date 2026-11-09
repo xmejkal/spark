@@ -12,6 +12,8 @@ The bin's board is read too, for three things: its cards in a working stage fly 
 labelled `bench` sits outside it), the lane is one lane across both boards, and a card of its that waits on someone is
 asked since when like any (the spec, §1: "The bin's desk cards count in the same three. A bench session is your hands, so
 it sits outside them"). They fill none of spark's stages and are asked for no Needed by or slice (P146).
+Ready and Build are judged per session, by the card's slice: spark's cards and the sound slices' each have their own
+places (P730, the PO, 2026-11-09).
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
 must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories (every task
 is counted as riding on its story) or not the bin's board (spark's cards are counted alone): a line says so with the
@@ -40,19 +42,27 @@ BIN_BOARD = "bin"
 #: expedite and waits were not checked either. A could-not-look, not a failure — said with its cause, and the push goes
 #: through (W1).
 BIN_UNREAD = "the bin's board could not be read (%s) — its cards were not counted or checked"
-#: The stages that carry a limit (§3); Idea and Done carry none. Every working stage takes 2, the PO's call of
-#: 2026-10-06 evening (P146); Ready is a queue, not work, and stays at 5.
-LIMITS = {"Discovery": 2, "Design": 2, "Ready": 5, "Build": 3, "Review": 2}
+# --- MVP ---
+#: The slices of the sound session (P730, the PO, 2026-11-09): "pixel-games" and "graphics library" own 1 place in Ready and
+#: 1 in Build. Every other card, and a card with no slice, is the spark session's.
+SOUND_SLICES = ("pixel-games", "graphics library")
+#: Ready and Build are held per session (P730); the spark session stays at 4 and 2, the sound session takes 1 and 1.
+SESSION_LIMITS = {"spark": {"Ready": 4, "Build": 2}, "sound": {"Ready": 1, "Build": 1}}
+#: The stages held across the whole board (§3); Idea and Done carry no limit. Every working stage takes 2, the PO's call of
+#: 2026-10-06 evening (P146). Ready and Build are not here: SESSION_LIMITS holds them (P730).
+LIMITS = {"Discovery": 2, "Design": 2, "Review": 2}
+#: Every stage the gate knows (P167), in the board's order.
+STAGES = ("Idea", "Discovery", "Design", "Ready", "Build", "Review", "Done")
 IN_FLIGHT = ("Discovery", "Design", "Build", "Review")
 #: From the commitment on (Ready, Build, Review) a card carries its Needed by and slice; in Idea, Discovery and Design
 #: it decides whether to build, and the PO's order into Ready is what commits. P146, docs/2026-10-06-process-design.md:
 #: the skeptic pass's item 6 ("the gate checks a slice from Ready on, not from Discovery on") and §1 ("Your order into
 #: Ready commits"). A card with no Status is not asked either, like Idea (stage_of).
 JUDGED = ("Ready", "Build", "Review")
-#: Every stage the gate knows (P167), in the board's order: Idea, the limited ones, Done. A card whose Status is any other
+#: The stages the gate knows (P167), STAGES. A card whose Status is any other
 #: word stands in a stage somebody renamed or added on the board, and the gate judges nothing until that is a decision.
 #: `--help` lists these, so the two cannot drift.
-KNOWN = ("Idea", *LIMITS, "Done")
+KNOWN = STAGES
 #: Where a card with no Status stands: GitHub's "No status" column holds a new item, which is the board's own state —
 #: not counted, not judged, and said (no_stage()).
 NO_STAGE_IS = "Idea"
@@ -168,6 +178,12 @@ def counts(entry):
     return "epic" not in labels
 
 
+# --- MVP ---
+def session_of(entry):
+    """The session a card's places come from (P730): "sound" for a slice in SOUND_SLICES, else "spark" — one with no slice too."""
+    return "sound" if entry.get("slice") in SOUND_SLICES else "spark"
+
+
 def problems(items, bin_items=()):
     """
     Every sentence the gate fails on: a card with no Needed by or no slice — asked from Ready on, the commitment
@@ -217,13 +233,17 @@ def problems(items, bin_items=()):
         allowance = 1 if sum(1 for e in held if EXPEDITE in (e.get("labels") or [])) == 1 else 0
         return len(held) > limit + allowance
 
-    for stage, limit in LIMITS.items():
-        held = by_stage.get(stage, [])
-        # The expedite enters Build, so it lends a working stage a place; Ready is a queue it never enters: none.
-        if (over(held, limit) if stage in IN_FLIGHT else len(held) > limit):
-            said.append("%s holds %d (%s) — its limit is %d: %s"
-                        % (stage, len(held), ", ".join(_ref(e) for e in held), limit,
-                           "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
+    for stage in STAGES:
+        # Ready and Build are held per session (P730); the other stages are held across the whole board.
+        sessions = [(session, " (%s)" % session, limits[stage]) for session, limits in SESSION_LIMITS.items()
+                    if stage in limits] or ([(None, "", LIMITS[stage])] if stage in LIMITS else [])
+        for session, mark, session_limit in sessions:
+            held = [e for e in by_stage.get(stage, []) if session in (None, session_of(e))]
+            # The expedite enters Build, so it lends a working stage a place; Ready is a queue it never enters: none.
+            if (over(held, session_limit) if stage in IN_FLIGHT else len(held) > session_limit):
+                said.append("%s%s holds %d (%s) — its limit is %d: %s"
+                            % (stage, mark, len(held), ", ".join(_ref(e) for e in held), session_limit,
+                               "the PO moves one back to Idea" if stage == "Ready" else "finish one before starting another"))
     flying = [e for stage in IN_FLIGHT for e in by_stage.get(stage, [])]
     # A bench session is the PO's hands and sits outside the limits (the spec, §1): a bin card labelled so does not fly.
     flying += [e for e in bin_cards if e.get("status") in IN_FLIGHT and counts(e) and BENCH not in (e.get("labels") or [])]
@@ -376,6 +396,7 @@ PO's own gh login. tools/check_commit.py runs it at every push; it takes no argu
 
 It fails on:
   - a stage over its WIP limit: %(limits)s;
+    Ready and Build are counted per session, by the card's slice: %(sessions)s;
   - more than %(most)d cards in flight: Discovery, Design, Build and Review together, across both
     boards;
   - two open cards labelled `expedite`. One card at a time may carry it, on the PO's word: its
@@ -413,6 +434,8 @@ def _parser():
     return argparse.ArgumentParser(
         prog="check_backlog.py", formatter_class=argparse.RawDescriptionHelpFormatter,
         description=CHECKS % {"limits": ", ".join("%s %d" % limit for limit in LIMITS.items()), "most": MOST_IN_FLIGHT,
+                              "sessions": "; ".join("%s: %s" % (session, ", ".join("%s %d" % limit for limit in limits.items()))
+                                                    for session, limits in SESSION_LIMITS.items()),
                               "known": ", ".join(KNOWN)},
         epilog=EXIT_CODES % {"owner": OWNER})
 
