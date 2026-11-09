@@ -339,7 +339,7 @@ class AnOldDrawingTest(unittest.TestCase):
         with in_store():
             written = sheet.write(project / "requirements.json", project / "breadboard.md")
         self.assertEqual(written.drawings, [])
-        # the board is drawn from its record now, so the plan stops at the module nothing says how to draw (P691: its code)
+        # the board is drawn from its record now, so the plan stops at the module nothing says how to draw (P691)
         self.assertEqual([(one.path.name, one.code, one.subject) for one in written.not_written],
                          [("breadboard.json", "no_drawing_fact", "L9110sModule"),
                           ("breadboard.svg", "no_drawing_fact", "L9110sModule")])

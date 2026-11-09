@@ -51,18 +51,12 @@ CODES = {
     NO_HOLE_LEFT: ("the breadboard has no place where a part fits with a free hole beside each of its pins, or no "
                    "free row for a jumper; the subject is the part or the end"),
     NO_WOKWI_PART: "Wokwi has no part with this board's pins, so no Wokwi diagram is written, by design",
-    NO_PIN_POSITION: ("spark's data/wokwi-geometry.json has no pin positions for a Wokwi part or one of its pins; "
-                      "the subject is the type"),
-    NO_DRAWING_FACT: ("nothing says how to draw a part: its record has no Wokwi part, or no shape source describes the "
-                      "board; the subject is the part"),
-    NO_WOKWI_PIN: ("no Wokwi pin is known for an end: its part's record does not map it, or it is a doubtful pad; the "
-                   "subject is the end"),
-    ROW_FULL: ("the row of a pin has no free hole for one more jumper, as too many steps join that pin; the subject is "
-               "the row"),
-    NOT_DRAWN_YET: ("a step spark does not draw yet: a rail, a supply from off the board, or a resistor whose both "
-                    "legs join rows; the subject is the rail, the supply or the resistor"),
-    PLANNER_FAULT: ("the planner met what the steps rule out, a hole claimed twice or a part joined before it is "
-                    "placed: a fault in spark; the subject is the hole, the part or the end"),
+    NO_PIN_POSITION: "data/wokwi-geometry.json lacks a Wokwi type's pins or one of them; the subject is the type",
+    NO_DRAWING_FACT: "nothing says how to draw a part (no Wokwi part in its record) or the board; the subject is it",
+    NO_WOKWI_PIN: "the end in the subject has no Wokwi pin: its part's record does not map it, or it is a doubtful pad",
+    ROW_FULL: "a pin's row has no free hole for one more jumper, as too many steps join it; the subject is the row",
+    NOT_DRAWN_YET: "the subject is not drawn yet: a rail, an off-board supply, or a resistor with both legs joined",
+    PLANNER_FAULT: "a fault in spark's planner: a hole claimed twice or an unplaced part joined; the subject names it",
 }
 
 
