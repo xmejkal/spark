@@ -2,7 +2,7 @@
  {"file": "scripts/parts.py", "name": "needs-set: written means bytes changed",
   "find": "    written = not (problems or args.dry_run)\n    if written and changes:\n        needs.write",
   "replace": "    written = bool(changes) and not (problems or args.dry_run)\n    if written and changes:\n        needs.write"},
- {"file": "scripts/parts.py", "name": "a refusal also says nothing to change",
+ {"file": "scripts/spark/sourcing/part_handlers.py", "name": "a refusal also says nothing to change",
   "find": "    return lines or [\"  nothing to change\"]\n", "replace": "    return lines + [\"  nothing to change\"]\n"},
  {"file": "scripts/spark/design/needs.py", "name": "any verb is one", "find": "\"does\": (lambda v: v in VERBS,", "replace": "\"does\": (lambda v: True,"},
  {"file": "scripts/spark/design/needs.py", "name": "an empty condition is words",

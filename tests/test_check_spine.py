@@ -52,6 +52,7 @@ from spark.design import board_emitter  # noqa: E402
 import emit_footprint  # noqa: E402
 from spark.records import missing_facts  # noqa: E402
 import parts  # noqa: E402
+from spark.sourcing import part_facts  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
 import test_converter  # noqa: E402
@@ -2259,7 +2260,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 
     def test_the_line_waits_while_another_holds_the_store(self):
         loaded = loader.load(self.project / "requirements.json", self.project)
-        recorder = threading.Thread(target=parts.note_built, args=(loaded,))
+        recorder = threading.Thread(target=part_facts.note_built, args=(loaded,))
         with store.locked():
             recorder.start()
             time.sleep(0.5)
@@ -2275,7 +2276,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 
     def test_whatever_stops_the_recording_the_verdict_stands_and_the_reason_is_said(self):
         for refusal in (store.StoreProblem("the projects list is not JSON", code="record_file_broken"), OSError("the disk is full")):
-            with self.subTest(refusal=refusal), mock.patch.object(check_spine.parts, "note_built", side_effect=refusal):
+            with self.subTest(refusal=refusal), mock.patch.object(check_spine.part_facts, "note_built", side_effect=refusal):
                 code, said, complained = self.answer()
                 self.assertEqual((code, "the chain runs end to end" in said), (0, True))
                 self.assertIn(str(refusal), complained)
@@ -2283,7 +2284,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 
     def test_a_reason_with_a_carriage_return_and_an_override_shows_as_question_marks_on_stderr(self):
         # P423: every text print of the script goes through guard_lines
-        with mock.patch.object(check_spine.parts, "note_built", side_effect=OSError("full\u202e\rdisk")):
+        with mock.patch.object(check_spine.part_facts, "note_built", side_effect=OSError("full\u202e\rdisk")):
             _, _, complained = self.answer()
         self.assertIn("  the build was not recorded in your history: full??disk\n", complained)
 

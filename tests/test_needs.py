@@ -26,7 +26,7 @@ from spark.records import board_records  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.design import loader  # noqa: E402
-import drawer  # noqa: E402
+from spark.sourcing import drawer  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.design import needs  # noqa: E402
 import parts  # noqa: E402

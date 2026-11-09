@@ -19,7 +19,7 @@
   "replace": "[alias for alias in said] if isinstance(said, list) else []"},
  {"file": "scripts/parts.py", "name": "a search by words iterates an alias that is no list",
   "find": "\" \".join(aliases(record))", "replace": "\" \".join(record.get(\"also_known_as\") or [])"},
- {"file": "scripts/drawer.py", "name": "a record's aliases are never part numbers",
+ {"file": "scripts/spark/sourcing/drawer.py", "name": "a record's aliases are never part numbers",
   "find": "    aliases = part_records.aliases(record)", "replace": "    aliases = []"},
  {"file": "scripts/spark/design/needs.py", "name": "a record's aliases never name it",
   "find": "names = [record.get(\"name\")] + parts.aliases(record)", "replace": "names = [record.get(\"name\")]"},

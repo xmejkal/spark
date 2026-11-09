@@ -5,7 +5,7 @@
   "find": "return Path.home() / \".local\" / \"share\" / \"spark\"", "replace": "return Path.home() / \".spark\""},
  {"file": "scripts/spark/records/store.py", "name": "the tools list is read from another name",
   "find": "\"tools\": \"tools.json\"", "replace": "\"tools\": \"tools-list.json\""},
- {"file": "scripts/parts.py", "name": "the catalog is read from the plugin again",
+ {"file": "scripts/spark/sourcing/datasheets.py", "name": "the catalog is read from the plugin again",
   "find": "for path in sorted(store.place(\"catalog\").glob(\"*\" + DEFINITION_SUFFIX)):", "replace": "for path in sorted((store.PLUGIN / \"catalog\").glob(\"*\" + DEFINITION_SUFFIX)):"},
  {"file": "scripts/spark/records/store.py", "name": "a kept document goes beside the catalog, not into sources",
   "find": "    folder = place(\"sources\") / digest\n", "replace": "    folder = place(\"sources\").parent / digest\n"}

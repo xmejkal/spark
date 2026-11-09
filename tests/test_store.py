@@ -671,10 +671,11 @@ class TheOneDoorTest(unittest.TestCase):
         self.assertEqual(missing.exception.code, "url_unreachable")
 
     def test_parts_asks_through_the_door(self):
-        import parts
+        from spark.sourcing import datasheets
         asked = []
         with mock.patch.object(store, "fetch", lambda url, method="GET": asked.append((url, method)) or b"x"):
-            self.assertEqual((parts.reachable("https://v.example/a.pdf"), parts._download("https://v.example/b.pdf")), (True, b"x"))
+            self.assertEqual((datasheets.reachable("https://v.example/a.pdf"),
+                              datasheets._download("https://v.example/b.pdf")), (True, b"x"))
         self.assertEqual(asked, [("https://v.example/a.pdf", "HEAD"), ("https://v.example/b.pdf", "GET")])
 
     def test_only_the_store_opens_a_url(self):
@@ -834,10 +835,10 @@ class TheOneDoorTest(unittest.TestCase):
                 self.assertEqual([found.name for found in (home / "sources").rglob("*") if found.is_file()], [])
 
     def test_a_url_that_does_not_answer_is_not_reachable_and_downloads_as_none(self):
-        import parts
+        from spark.sourcing import datasheets
         gone, here = (Path(tempfile.mkdtemp()) / "gone.pdf").as_uri(), self.a_file(b"%PDF drawing").as_uri()
-        self.assertEqual((parts.reachable(gone), parts._download(gone)), (False, None))
-        self.assertEqual((parts.reachable(here), parts._download(here)), (True, b"%PDF drawing"))
+        self.assertEqual((datasheets.reachable(gone), datasheets._download(gone)), (False, None))
+        self.assertEqual((datasheets.reachable(here), datasheets._download(here)), (True, b"%PDF drawing"))
 
     def test_a_name_with_a_control_character_in_it_is_refused_with_a_sentence_of_its_own(self):
         # A NUL byte is not a path out of the sources, so the operating system refused it with a ValueError nothing caught.

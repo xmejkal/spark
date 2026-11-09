@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import parts as parts_library  # noqa: E402
+from spark.sourcing import part_facts  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_IMPOSSIBLE  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.design.pin_assigner import Impossible, assign, pin_module, pulled_up, render  # noqa: E402
@@ -65,7 +65,7 @@ def main(argv=None):
 
     # Whatever the parts do not know about themselves travels with the answer. A pin map that
     # looks complete while resting on unmeasured numbers is the thing this plugin exists to stop.
-    open_questions = parts_library.unverified(
+    open_questions = part_facts.unverified(
         list(dict.fromkeys(part["id"] for part in loaded.parts)), loaded.project)
 
     if args.json:

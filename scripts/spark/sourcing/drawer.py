@@ -15,9 +15,8 @@ from pathlib import Path
 from collections import namedtuple
 
 from spark.records import board_records
-import parts
 from spark.records import record_kind
-from spark.sourcing import part_records
+from spark.sourcing import part_facts, part_records
 from spark.records import records_codes
 from spark.records import store
 from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems, printable
@@ -231,14 +230,8 @@ def _shelve_from(target, where, path):
     return (path, where or None) if where is not None and where not in SPARKS_OWN and "part" in target else None
 
 
-def settle(entry_id, before, values, known):
-    """
-    One entry after a write sets `values` on it (§5.2): (change or None, questions, problems). Every value is checked;
-    an `is` the write names must exist and is set as given (null too). Otherwise a new or changed part number links, and
-    drops a stale `is` when nothing matches; an entry with a number and no `is` key is linked once. A change is
-    {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
-    """
-    values = {key: scrub(key, value) for key, value in values.items()}
+def _value_problems(entry_id, before, values):
+    """Why a write cannot set `values` on an entry (§5.2): no such field, a bad value, a new entry with no label."""
     problems = [record_kind._problem(entry_id, "%s is not a drawer field — the fields are %s"
                                      % (printable(key), ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
@@ -249,6 +242,18 @@ def settle(entry_id, before, values, known):
     if before is None and "label" not in values:
         problems.append(record_kind._problem(entry_id,
                                              "a new entry needs a label — with no count it is owned, count unknown"))
+    return problems
+
+
+def settle(entry_id, before, values, known):
+    """
+    One entry after a write sets `values` on it (§5.2): (change or None, questions, problems). Every value is checked;
+    an `is` the write names must exist and is set as given (null too). Otherwise a new or changed part number links, and
+    drops a stale `is` when nothing matches; an entry with a number and no `is` key is linked once. A change is
+    {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
+    """
+    values = {key: scrub(key, value) for key, value in values.items()}
+    problems = _value_problems(entry_id, before, values)
     if problems:
         return None, [], problems
     after, questions, shelve = dict(before or {"schema": 1}, **values), [], None
@@ -312,7 +317,7 @@ def plan_set(items, project=None):
         change, asked, refused = settle(entry_id, current.get(entry_id), values, known)
         questions += asked
         problems += refused
-        if change and change["shelve"] and change["shelve"][1] is None and not parts.shelvable(*change["shelve"]):
+        if change and change["shelve"] and change["shelve"][1] is None and not part_facts.shelvable(*change["shelve"]):
             # A folder on no list keeps a record only it can see: unshelved, the entry would point at nothing elsewhere (RX3).
             problems.append(record_kind._problem(
                 entry_id, "%s does not meet the part contract yet, and its folder is on no list, "
@@ -329,7 +334,7 @@ def apply(changes):
     """Shelve what a new link brought in, then write every entry that changed."""
     for change in changes:
         if change["shelve"]:
-            parts.shelve(*change["shelve"])
+            part_facts.shelve(*change["shelve"])
         if change["now"]:
             store.write_json("drawer", change["entry"], change["after"])
 

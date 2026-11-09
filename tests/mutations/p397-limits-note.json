@@ -6,7 +6,7 @@
 {"file": "scripts/spark/design/needs.py", "name": "not-checked-counts-as-no-pin", "find": "and each and each[0][0] != board_records.ONBOARD_GPIOS", "replace": "and each"},
 {"file": "scripts/spark/design/needs.py", "name": "display-counts-as-no-pin", "find": "board_records.ONBOARD_ROLES[role].scenario_verb and each and", "replace": "each and"},
 {"file": "scripts/spark/design/needs.py", "name": "limits-note-before-the-footprint-note", "find": "    notes += _limits_notes(after, picked, rows, entries, name)\n", "replace": "    notes[:0] = _limits_notes(after, picked, rows, entries, name)\n"},
-{"file": "scripts/parts.py", "name": "match-text-drops-the-limits", "find": "            lines += [\"          \" + sentence for sentence in c[\"limits\"]]  # P397: the JSON keeps them as data\n", "replace": ""},
+{"file": "scripts/spark/design/goal_handlers.py", "name": "match-text-drops-the-limits", "find": "            lines += [\"          \" + sentence for sentence in c[\"limits\"]]  # P397: the JSON keeps them as data\n", "replace": ""},
 {"file": "scripts/spark/design/needs.py", "name": "other-choice-names-a-held-part", "find": "next((c for c in nameable if c[\"free\"] != 0), None)", "replace": "next((c for c in nameable), None)"},
 {"file": "scripts/spark/design/needs.py", "name": "other-choice-names-a-part-to-get", "find": "                and c[\"owned\"] != 0 and _holds_wokwi(", "replace": "                and _holds_wokwi("},
 {"file": "scripts/spark/design/needs.py", "name": "other-choice-names-a-part-with-no-wokwi-model", "find": " and _holds_wokwi(records[(\"part\", c[\"id\"])])]", "replace": "]"},

@@ -4,13 +4,13 @@ the holds of the project that only that pick explained, and no other hold. Histo
 are not touched: when requirements.json still lists the dropped part, a note says who runs what. parts.py is its CLI.
 """
 
-import drawer
-from spark.design import needs
-from spark.records import store
 from spark.core import outcomes
 from spark.core.errors import SparkError
 from spark.core.operation import COMMON_ARGUMENTS, READS, WRITES, Argument, Operation
 from spark.core.result import Finding, OperationResult
+from spark.records import store
+from spark.sourcing import drawer
+from spark.design import needs
 from spark.idea import idea_codes
 
 # --- MVP ---

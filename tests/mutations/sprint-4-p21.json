@@ -24,7 +24,7 @@
   "replace": "        else:\n            to_place.append(dict(signal, line=line))\n            continue\n            raise Impossible(\"%s needs the %s bus's %s line and this board labels no %s pin \u2014 \""
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_facts.py",
   "name": "the line does not survive the instance rename (B2)",
   "find": "                entry[\"line\"] = need[\"signal\"]\n",
   "replace": ""

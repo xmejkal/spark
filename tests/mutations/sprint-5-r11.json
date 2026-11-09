@@ -6,7 +6,7 @@
   "replace": "    haystack = \" \".join([part_id, record.get(\"name\") or \"\"]).lower()"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/design/goal_handlers.py",
   "name": "no match no longer names the research command",
   "find": "Research it: /spark:research",
   "replace": "Research it: "
@@ -18,19 +18,19 @@
   "replace": "            if False:"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a dead source counts as reachable",
   "find": "    return [(url, fetch(url)) for url in cited_urls(record)]",
   "replace": "    return [(url, True) for url in cited_urls(record)]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_handlers.py",
   "name": "a skeleton overwrites an existing record",
   "find": "    if target.exists():\n        return Answer(problems=[_problem(args.skeleton,",
   "replace": "    if False:\n        return Answer(problems=[_problem(args.skeleton,"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a draft record stops the search again (I3)",
   "find": "        except PartError:\n            # A record still being filled in",
   "replace": "        except ImportError:\n            # A record still being filled in"

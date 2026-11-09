@@ -235,7 +235,7 @@ small cases in [`tests/data/snapshot/`](../../tests/data/snapshot/README.md). Th
 
 It records six scripts as the projects run them, with what they call, such as the chain's `emit_board.py`: `boards.py`,
 `check_bom.py`, `check_vendor_pins.py`, `check_physics.py`, `check_spine.py` and `check_all.py`. No `--json` answer is
-kept, and no command of `parts.py`, `drawer.py` or `needs.py` runs, so a change that shows only in their answers does not show here.
+kept, and no `parts.py` command runs (drawer and needs too), so a change only in their answers does not show here.
 
 Take main first, then the branch against it:
 

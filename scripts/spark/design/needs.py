@@ -13,10 +13,9 @@ import re
 from pathlib import Path
 
 from spark.design import loader
-import drawer
 from spark.design import board_emitter
 from spark.design import footprint_emitter
-from spark.sourcing import matching
+from spark.sourcing import drawer, matching
 from spark.sourcing.part_records import broken_problems
 from spark.records import board_records, record_kind, records_codes, store
 from spark.records.record_kind import _parse, _problem, _shape_problems, owes, VERBS

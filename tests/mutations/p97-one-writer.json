@@ -10,7 +10,7 @@
   "replace": "    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")"},
  {"file": "scripts/spark/design/needs.py", "name": "the needs file is written in place",
   "find": "    store.write_file(path, json.dumps({\"schema\": 1, \"needs\": needs}", "replace": "    path.write_text(json.dumps({\"schema\": 1, \"needs\": needs}"},
- {"file": "scripts/parts.py", "name": "a fetched record is written in place",
+ {"file": "scripts/spark/sourcing/datasheets.py", "name": "a fetched record is written in place",
   "find": "    record[\"documents\"] = documents\n    _write_record(path, record)",
   "replace": "    record[\"documents\"] = documents\n    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")"},
  {"file": "scripts/parts.py", "name": "a read waits for a writer too",

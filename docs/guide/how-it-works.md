@@ -149,8 +149,8 @@ Imported by the scripts above, and not run on their own:
 - `spark/design/fab.py`: what a board house can make;
 - `spark/core/outcomes.py`: the exit codes and the three outcomes, defined once;
 - `spark/records/store.py`: where spark keeps what it keeps;
-- `drawer.py`: what you own;
-- `spark/design/needs.py`: what a goal needs, and what the store offers for each;
+- `spark/sourcing/`: the drawer (what you own), the part facts, the datasheets and the handlers `parts.py` runs;
+- `spark/design/needs.py`: what a goal needs, and what the store offers for each (`goal_handlers.py` answers them);
 - `spark/sourcing/run_cost.py`: what a project's run cost, read from the transcripts of the sessions its steps ran in,
   tool names and counts only. `parts.py --step` and `--tally` use it. The CLI `cost.py` reads one transcript:
   `cost.py <transcript.jsonl>` says what that run cost;

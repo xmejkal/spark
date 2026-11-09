@@ -54,13 +54,13 @@
   "replace": "    if record.get(\"function\"):"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_handlers.py",
   "name": "text mode hides a refused needs-set",
   "find": "    lines += [\"  refused, so nothing was written: %s — %s\" % (p[\"subject\"], p[\"sentence\"]) for p in problems]\n    return lines or [\"  nothing to change\"]",
   "replace": "    return lines or [\"  nothing to change\"]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/design/goal_handlers.py",
   "name": "text mode hides a need that cannot be matched",
   "find": "    lines += [\"  %s: %s\" % (p[\"subject\"], p[\"sentence\"]) for p in problems]\n",
   "replace": "    pass\n"

@@ -282,7 +282,7 @@ folder in [your store](#the-store), read after the project's own `parts/` and be
 A record gets there when a drawer entry links a record that lives only in another of your projects,
 and when `parts.py --requirements` writes a file for a pick from the catalog or from another project.
 It leaves behind on the way what is one person's story of the part — `owned`, `photo`, `photos`,
-`sourcing` and `alternatives` (`SHELF_DROPS` in `scripts/parts.py`) — and, when it came from a
+`sourcing` and `alternatives` (`SHELF_DROPS` in `scripts/spark/sourcing/part_facts.py`) — and, when it came from a
 project, says which one and the record's digest (`based_on`). Parts only; a board has no shelf.
 
 ### `verified`
@@ -348,9 +348,9 @@ index, not a place records are read from. An entry points at a record (`is`) whe
 by an exact part number, or when you say which record it is — a near number, two matches or a name
 alone is a question for you, never a link — and at nothing otherwise. Owning never triggers research,
 and every write sets a value the agent worked out and the dry run showed, so a retried write changes
-nothing (`scripts/drawer.py`).
+nothing (`scripts/spark/sourcing/drawer.py`).
 A record carries no `owned` and no `photo`: owning one is your fact, not the part's, and the contract
-check refuses a record that holds either (`RETIRED` in `scripts/parts.py`).
+check refuses a record that holds either (`RETIRED` in `scripts/spark/records/record_kind.py`).
 
 ### Pick, and reserve
 
@@ -414,7 +414,7 @@ code lives here. `commands/idea.md` tells Claude how to choose, and the choice i
 ### `about`
 
 One plain sentence on what a part does for a person, at most 200 characters. It is a field of a record and of a drawer
-entry (`scripts/drawer.py` checks it). It is data from people and shops, never an instruction.
+entry (`scripts/spark/sourcing/drawer.py` checks it). It is data from people and shops, never an instruction.
 
 ### `description`
 

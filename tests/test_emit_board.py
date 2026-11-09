@@ -35,7 +35,7 @@ from spark.records import board_pads  # noqa: E402
 import emit_board  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402
-import parts  # noqa: E402
+from spark.sourcing import part_facts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
 from spark.sourcing import part_records  # noqa: E402
 
@@ -45,7 +45,7 @@ PARTS = ["l9110s-module", "vl6180x-breakout", "dfr0534-module"]
 def generated():
     board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
     part_list = [part_records.load(part_id) for part_id in PARTS]
-    signals = parts.signals_for(PARTS)
+    signals = part_facts.signals_for(PARTS)
     assignments, _ = pin_assigner.assign(board, signals)
     placements, width, height = board_emitter.place(board, part_list)
     return board_emitter.emit(board, part_list, assignments, placements, width, height)
@@ -103,7 +103,7 @@ class WhatItEmitsTest(unittest.TestCase):
         """
         signal_traces = [line for line in self.tsx.splitlines()
                          if '<trace from=".Mcu' in line and 'to="net.' not in line]
-        self.assertEqual(len(signal_traces), len(parts.signals_for(PARTS)))
+        self.assertEqual(len(signal_traces), len(part_facts.signals_for(PARTS)))
 
     def test_every_pad_the_board_file_calls_power_is_wired_or_says_why_not(self):
         # The board file says which of its pads are power; every one of them must appear. A
@@ -554,7 +554,7 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
     def _emit(self, part_ids):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         part_list = [part_records.load(part_id) for part_id in part_ids]
-        assignments, _ = pin_assigner.assign(board, parts.signals_for(part_ids))
+        assignments, _ = pin_assigner.assign(board, part_facts.signals_for(part_ids))
         placements, width, height = board_emitter.place(board, part_list)
         return board_emitter.emit(board, part_list, assignments, placements, width, height)
 
@@ -611,7 +611,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
     def test_pads_are_numbered_from_the_module_not_from_the_file(self):
         part = part_records.load("l9110s-module")
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        assignments, _ = pin_assigner.assign(board, parts.signals_for(["l9110s-module"]))
+        assignments, _ = pin_assigner.assign(board, part_facts.signals_for(["l9110s-module"]))
         placements, width, height = board_emitter.place(board, [part])
         tsx = board_emitter.emit(board, [part], assignments, placements, width, height)
         # Off the silkscreen, confirmed four independent ways.
@@ -622,7 +622,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
         # The audio module has ten pads and wires five. Closing the gaps would put SPKN on pad 4.
         part = part_records.load("dfr0534-module")
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        assignments, _ = pin_assigner.assign(board, parts.signals_for(["dfr0534-module"]))
+        assignments, _ = pin_assigner.assign(board, part_facts.signals_for(["dfr0534-module"]))
         placements, width, height = board_emitter.place(board, [part])
         tsx = board_emitter.emit(board, [part], assignments, placements, width, height)
         self.assertIn('pin9: "SPKN", pin10: "SPKP"', tsx)
@@ -682,7 +682,7 @@ class EveryUnroutableNetIsPredictedTest(unittest.TestCase):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         ids = ["l9110s-module", "dfr0534-module"]
         part_list = [part_records.load(part_id) for part_id in ids]
-        assignments, _ = pin_assigner.assign(board, parts.signals_for(ids))
+        assignments, _ = pin_assigner.assign(board, part_facts.signals_for(ids))
         placements, width, height = board_emitter.place(board, part_list)
         tsx = board_emitter.emit(board, part_list, assignments, placements, width, height)
         self.assertIn("NOTHING ON THIS BOARD SOURCES net.MOTOR6V", tsx)
@@ -709,7 +709,7 @@ class EverySignalTheAssignerPlacedIsAccountedForTest(unittest.TestCase):
     def _emit_with_extra_signals(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         part_list = [part_records.load("l9110s-module")]
-        signals = parts.signals_for(["l9110s-module"]) + [
+        signals = part_facts.signals_for(["l9110s-module"]) + [
             {"name": "BTN_OPEN", "needs": ["wake"]}, {"name": "LED_RED", "needs": []}]
         assignments, _ = pin_assigner.assign(board, signals)
         placements, width, height = board_emitter.place(board, part_list)
@@ -1178,7 +1178,7 @@ class EachSectionStandsAloneTest(unittest.TestCase):
         board = self.BOARD
         part_list = [part_records.load(part_id) for part_id in PARTS]
         part_list[1] = dict(part_list[1], footprint_placeholder=True, footprint_note="stand-in")
-        assignments, _ = pin_assigner.assign(board, parts.signals_for(PARTS))
+        assignments, _ = pin_assigner.assign(board, part_facts.signals_for(PARTS))
         placements, width, height = board_emitter.place(board, part_list)
         self.assertTrue(board_emitter.stand_in_lines(part_list), "the fixture must have a stand-in")
         self.assertTrue(board_emitter.host_requirement_lines(part_list),
@@ -1386,7 +1386,7 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
 
     def test_a_divider_puts_the_hosts_pin_on_the_midpoint(self):
         part = self._part(host_parts=[{"kind": "divider", "pin": "AIA", "top_ohms": 10000, "bottom_ohms": 18000, "why": "5 V pulse"}])
-        signals = parts.signals_for(["l9110s-module"])
+        signals = part_facts.signals_for(["l9110s-module"])
         tsx, _ = self._emit(part, signals)
         self.assertIn('<trace from=".L9110sModule > .AIA" to=".L9110sModuleDividerAIATop > .pin1" />', tsx)
         self.assertIn('<trace from=".L9110sModuleDividerAIATop > .pin2" to=".L9110sModuleDividerAIABottom > .pin1" />', tsx)
@@ -1398,7 +1398,7 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
     def test_a_series_resistor_sits_between_the_hosts_pin_and_the_pad(self):
         # P78: an LED's current-limiting resistor is in the signal's path, not to a rail.
         part = self._part(host_parts=[{"kind": "series", "pin": "AIA", "ohms": 1000, "why": "limits the current"}])
-        tsx, _ = self._emit(part, parts.signals_for(["l9110s-module"]))
+        tsx, _ = self._emit(part, part_facts.signals_for(["l9110s-module"]))
         self.assertIn('<resistor name="L9110sModuleSeriesAIA" resistance="1k" footprint="0603"', tsx)
         self.assertIn('<trace from=".L9110sModuleSeriesAIA > .pin2" to=".L9110sModule > .AIA" />', tsx)
         self.assertRegex(tsx, r'<trace from="\.Mcu > \.\w+" to="\.L9110sModuleSeriesAIA > \.pin1" />  \{/\* MOTOR_IA',
@@ -1409,7 +1409,7 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
         # The PO, building the quickstart: "it can find the parts and calculate, right?"
         part = self._part(host_parts=[{"kind": "series", "pin": "AIA", "for_current_ma": 5, "why": "an indicator"}])
         part["facts"] = dict(part.get("facts") or {}, forward_voltage_v={"value": 2.0, "verified": True, "source": "s"})
-        tsx, _ = self._emit(part, parts.signals_for(["l9110s-module"]))
+        tsx, _ = self._emit(part, part_facts.signals_for(["l9110s-module"]))
         self.assertIn('<resistor name="L9110sModuleSeriesAIA" resistance="270"', tsx,
                       "(3.3 - 2.0) V / 5 mA = 260, rounded UP to E12 so the current never exceeds what was asked")
         self.assertIn("(3.3 V - 2 V) / 5 mA = 260 ohm; next E12 value up: 270 ohm, about 4.8 mA", tsx)
@@ -1418,13 +1418,13 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
         part = self._part(host_parts=[{"kind": "series", "pin": "AIA", "for_current_ma": 5, "why": "w"}])
         part["facts"] = dict(part.get("facts") or {}, forward_voltage_v={"value": 3.4, "verified": True, "source": "s"})
         with self.assertRaises(ValueError) as refused:
-            self._emit(part, parts.signals_for(["l9110s-module"]))
+            self._emit(part, part_facts.signals_for(["l9110s-module"]))
         self.assertIn("3.4 V", str(refused.exception))
 
     def test_a_current_without_the_numbers_to_compute_it_is_refused_by_name(self):
         part = self._part(host_parts=[{"kind": "series", "pin": "AIA", "for_current_ma": 5, "why": "w"}])
         with self.assertRaises(ValueError) as refused:
-            self._emit(part, parts.signals_for(["l9110s-module"]))
+            self._emit(part, part_facts.signals_for(["l9110s-module"]))
         self.assertIn("forward_voltage_v", str(refused.exception))
 
     def test_a_pulldown_the_modules_own_pullup_defeats_is_named_in_the_board_file(self):
@@ -1436,7 +1436,7 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
     def test_a_shipped_button_gets_the_pull_up_its_record_asks_for(self):
         # G7 / B13: the record said "give it an external pull" in prose only; the board had none.
         button = part_records.load("tactile-button")
-        tsx, _ = self._emit(button, parts.signals_for(["tactile-button"]))
+        tsx, _ = self._emit(button, part_facts.signals_for(["tactile-button"]))
         self.assertIn('<resistor name="TactileButtonPullupA" resistance="10k"', tsx)
         self.assertIn('<trace from=".TactileButtonPullupA > .pin2" to="net.V33" />', tsx)
 

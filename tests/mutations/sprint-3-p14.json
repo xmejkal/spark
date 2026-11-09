@@ -8,8 +8,8 @@
  {
   "file": "scripts/spark/design/board_emitter.py",
   "name": "the placeholder filter inverted",
-  "find": "    return [part for part in part_list if parts_library.has_placeholder_footprint(part)]",
-  "replace": "    return [part for part in part_list if not parts_library.has_placeholder_footprint(part)]"
+  "find": "    return [part for part in part_list if part_facts.has_placeholder_footprint(part)]",
+  "replace": "    return [part for part in part_list if not part_facts.has_placeholder_footprint(part)]"
  },
  {
   "file": "scripts/spark/design/board_emitter.py",

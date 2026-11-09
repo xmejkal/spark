@@ -107,6 +107,17 @@ class ReadersTest(unittest.TestCase):
                          "parts_library.one_line(x)\ndrawer.clean(y)\ndrawer.listing()\n")
         self.assertEqual(measure.old_reads(tree), {"parts.one_line", "drawer.clean", "drawer.TAGS_MAX"})
 
+    def test_the_old_reads_find_the_moved_module_through_its_package(self):
+        tree = ast.parse("from spark.sourcing import drawer\nfrom spark.sourcing.drawer import CONTROL\n"
+                         "drawer.clean(y)\ndrawer.listing()\n")
+        self.assertEqual(measure.old_reads(tree), {"drawer.clean", "drawer.CONTROL"})
+
+    def test_a_module_of_spark_s_packages_is_imported_by_its_own_name_too(self):
+        tree = ast.parse("import json\nfrom spark.sourcing import drawer\nfrom spark.core.outcomes import EXIT_OK\n"
+                         "import spark.design.needs\nfrom collections import namedtuple\n")
+        self.assertEqual(measure.imports_of(tree), {"json", "spark", "sourcing", "drawer", "outcomes",
+                                                     "EXIT_OK", "needs", "collections"})
+
     def test_functions_come_with_their_class_and_their_outer_function(self):
         tree = ast.parse("class A:\n    def m(self):\n        def inner():\n            pass\n\n\ndef f():\n    pass\n")
         self.assertEqual([name for name, _ in measure.functions_of(tree)], ["A.m", "A.m.inner", "f"])

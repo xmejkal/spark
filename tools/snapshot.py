@@ -23,9 +23,9 @@ there under a copy of the person's store. Each command's exit, stdout and stderr
 written as placeholders, so two snapshots of unchanged spark compare equal. The projects and the store are only read.
 
 What it records: the text of boards.py, check_bom.py, check_vendor_pins.py, check_physics.py, check_spine.py and
-check_all.py, as the projects run them, with what they call. Not recorded: any --json answer, any command of parts.py,
-drawer.py or needs.py, and the ten placeholder channels counted per project (#133). A change that shows only in those
-does not show here.
+check_all.py, as the projects run them, with what they call. Not recorded: any --json answer, any command of parts.py
+(the drawer and needs ones too), and the ten placeholder channels counted per project (#133). A change that shows only
+in those does not show here.
 
 Needs: the bin, irrigation and plant-alarm at ~/Development/<name> (a missing one is skipped and said), the store at
 ~/.local/share/spark (copied, never used live), and tsci for the chain: a project's own node_modules, or --tsci-bin.

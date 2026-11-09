@@ -3,6 +3,6 @@
   "find": "    if record.get(\"function\") and not function_problems(record):\n        said = record[\"function\"]", "replace": "    if False:\n        said = record[\"function\"]"},
  {"file": "scripts/spark/sourcing/part_records.py", "name": "any verb is a function",
   "find": "and f.get(\"does\") in VERBS", "replace": "and f.get(\"does\")"},
- {"file": "scripts/parts.py", "name": "a dry run of --function-set writes",
+ {"file": "scripts/spark/sourcing/part_handlers.py", "name": "a dry run of --function-set writes",
   "find": "    if changes and not dry_run:\n        _write_record(path, after)", "replace": "    if changes:\n        _write_record(path, after)"}
 ]

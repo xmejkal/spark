@@ -6,31 +6,31 @@
   "replace": "    return []"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a broken catalog record is passed off as a record",
   "find": "        if not (isinstance(record, dict) and all(record.get(key) for key in CATALOG_KEYS)):",
   "replace": "        if not isinstance(record, dict):"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a fetched document is not recorded",
   "find": "            documents[document_key(name, documents)] = {",
   "replace": "            _unrecorded = {"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a page is kept as if it were a datasheet",
   "find": " if url.split(\"?\")[0].lower().endswith(KEEPABLE) and url not in known]",
   "replace": " if url not in known]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_facts.py",
   "name": "promotion leaves the record's folder (its chip) behind",
   "find": "    if (home / part_id).is_dir():\n        shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)",
   "replace": "    if False:\n        shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_facts.py",
   "name": "promotion overwrites",
   "find": "    if target.exists():\n        raise PartError(\"%s exists; a promotion never overwrites\", target,",
   "replace": "    if False:\n        raise PartError(\"%s exists; a promotion never overwrites\", target,"
@@ -48,13 +48,13 @@
   "replace": "    return write_file(target, json.dumps(data, indent=2) + \"\\n\", name in PRIVATE)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "the saved name keeps its percent-encoding",
   "find": "    return urllib.parse.unquote(url.split(\"?\")[0].rsplit(\"/\", 1)[-1]) or \"document\"",
   "replace": "    return url.split(\"?\")[0].rsplit(\"/\", 1)[-1] or \"document\""
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a second document's entry overwrites the first's",
   "find": "    while key in taken:",
   "replace": "    while False:"
