@@ -48,22 +48,21 @@ BIN_UNREAD = "the bin's board could not be read (%s) — its cards were not coun
 SOUND_SLICES = ("pixel-games", "graphics library")
 #: Ready and Build are held per session (P730); the spark session stays at 4 and 2, the sound session takes 1 and 1.
 SESSION_LIMITS = {"spark": {"Ready": 4, "Build": 2}, "sound": {"Ready": 1, "Build": 1}}
-#: The stages that carry a limit (§3); Idea and Done carry none. Every working stage takes 2, the PO's call of
-#: 2026-10-06 evening (P146); Ready is a queue, not work. Ready and Build hold the sum of the sessions' places (P730), so
-#: that one table holds the numbers; problems() judges those two per session.
-LIMITS = {"Discovery": 2, "Design": 2,
-          **{stage: sum(limits[stage] for limits in SESSION_LIMITS.values()) for stage in ("Ready", "Build")},
-          "Review": 2}
+#: The stages held across the whole board (§3); Idea and Done carry no limit. Every working stage takes 2, the PO's call of
+#: 2026-10-06 evening (P146). Ready and Build are not here: SESSION_LIMITS holds them (P730).
+LIMITS = {"Discovery": 2, "Design": 2, "Review": 2}
+#: Every stage the gate knows (P167), in the board's order.
+STAGES = ("Idea", "Discovery", "Design", "Ready", "Build", "Review", "Done")
 IN_FLIGHT = ("Discovery", "Design", "Build", "Review")
 #: From the commitment on (Ready, Build, Review) a card carries its Needed by and slice; in Idea, Discovery and Design
 #: it decides whether to build, and the PO's order into Ready is what commits. P146, docs/2026-10-06-process-design.md:
 #: the skeptic pass's item 6 ("the gate checks a slice from Ready on, not from Discovery on") and §1 ("Your order into
 #: Ready commits"). A card with no Status is not asked either, like Idea (stage_of).
 JUDGED = ("Ready", "Build", "Review")
-#: Every stage the gate knows (P167), in the board's order: Idea, the limited ones, Done. A card whose Status is any other
+#: The stages the gate knows (P167), STAGES. A card whose Status is any other
 #: word stands in a stage somebody renamed or added on the board, and the gate judges nothing until that is a decision.
 #: `--help` lists these, so the two cannot drift.
-KNOWN = ("Idea", *LIMITS, "Done")
+KNOWN = STAGES
 #: Where a card with no Status stands: GitHub's "No status" column holds a new item, which is the board's own state —
 #: not counted, not judged, and said (no_stage()).
 NO_STAGE_IS = "Idea"
@@ -104,12 +103,6 @@ def _section(body, name):
 def _ref(entry):
     """A card as a sentence names it: `#12`, or `bin #12` for one of the bin's (problems() marks those, BIN_BOARD)."""
     return "%s#%s" % (BIN_BOARD + " " if entry.get("board") == BIN_BOARD else "", entry["content"].get("number"))
-
-
-# --- MVP ---
-def session_of(entry):
-    """The session a card's places come from (P730): "sound" for a slice in SOUND_SLICES, else "spark" — one with no slice too."""
-    return "sound" if entry.get("slice") in SOUND_SLICES else "spark"
 
 
 def _name(entry):
@@ -185,6 +178,12 @@ def counts(entry):
     return "epic" not in labels
 
 
+# --- MVP ---
+def session_of(entry):
+    """The session a card's places come from (P730): "sound" for a slice in SOUND_SLICES, else "spark" — one with no slice too."""
+    return "sound" if entry.get("slice") in SOUND_SLICES else "spark"
+
+
 def problems(items, bin_items=()):
     """
     Every sentence the gate fails on: a card with no Needed by or no slice — asked from Ready on, the commitment
@@ -234,10 +233,10 @@ def problems(items, bin_items=()):
         allowance = 1 if sum(1 for e in held if EXPEDITE in (e.get("labels") or [])) == 1 else 0
         return len(held) > limit + allowance
 
-    for stage, limit in LIMITS.items():
+    for stage in STAGES:
         # Ready and Build are held per session (P730); the other stages are held across the whole board.
         sessions = [(session, " (%s)" % session, limits[stage]) for session, limits in SESSION_LIMITS.items()
-                    if stage in limits] or [(None, "", limit)]
+                    if stage in limits] or ([(None, "", LIMITS[stage])] if stage in LIMITS else [])
         for session, mark, session_limit in sessions:
             held = [e for e in by_stage.get(stage, []) if session in (None, session_of(e))]
             # The expedite enters Build, so it lends a working stage a place; Ready is a queue it never enters: none.

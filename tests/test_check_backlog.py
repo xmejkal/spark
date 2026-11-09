@@ -292,9 +292,9 @@ class TheBacklogCheckTest(unittest.TestCase):
 
     def test_an_expedite_lends_ready_no_place(self):
         # The expedite enters Build (the spec's table): a working stage may hold it one over its limit, Ready never may.
-        cards = [item(1), item(2), item(3), item(4), item(5), item(9, labels=("story", "expedite"))]
+        cards = [item(1), item(2), item(3), item(4), item(9, labels=("story", "expedite"))]
         self.assertEqual(check_backlog.problems(cards),
-                         ["Ready (spark) holds 6 (#1, #2, #3, #4, #5, #9) — its limit is 4: the PO moves one back to Idea"])
+                         ["Ready (spark) holds 5 (#1, #2, #3, #4, #9) — its limit is 4: the PO moves one back to Idea"])
 
     def test_the_bin_s_cards_in_flight_count_in_the_same_total(self):
         spark = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
@@ -1039,7 +1039,7 @@ class TheGateSaysWhatItIsTest(unittest.TestCase):
         done, asked = self.gate("--help")
         said = " ".join(done.stdout.split())  # argparse wraps to the terminal; the words are what is pinned
         self.assertEqual((done.returncode, asked), (0, ""), "--help ran the gate: " + done.stdout)
-        for words in ("Discovery 2, Design 2, Ready 5, Build 3, Review 2", "spark: Ready 4, Build 2; sound: Ready 1, Build 1", "more than 4 cards in flight", "expedite",
+        for words in ("Discovery 2, Design 2, Review 2", "spark: Ready 4, Build 2; sound: Ready 1, Build 1", "more than 4 cards in flight", "expedite",
                       "Waiting since", "Needed by", "a task with no parent story", "bench",
                       "The stages it knows: Idea, Discovery, Design, Ready, Build, Review, Done",
                       "exit codes:", "0 the limits hold — or could-not-run", "1 a problem",

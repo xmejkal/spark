@@ -114,7 +114,7 @@ PO's order into Ready commits.
 | **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request), sized to the change, has run and its fixes are in; the DoD green; the proof posted; **then the PO merges** on Claude's "ready to merge" | the PR says `Closes #N` |
 | **Done** | — | the work is where it is used (merged, or installed when there is no PR), and *Value proven by* has run with its output on the issue | (end) | the proof is posted on the issue |
 
-Ready takes five (D), four of them spark's and one the sound session's (P730); each working stage two, Build too (one of its two is the sound session's), and at most four cards in flight — Discovery to Review — at once: the
+Ready takes five (D), four of them spark's and one the sound session's (P730); each working stage two, except Build, which takes three, two of them spark's and one the sound session's (P730); at most four cards in flight — Discovery to Review — at once: the
 PO's call of 2026-10-06 evening, after the first day at the cap of three (*"2 everywhere, cap 4"*). What counts (P146,
 the PO, 2026-10-06):
 
