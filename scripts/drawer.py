@@ -231,14 +231,8 @@ def _shelve_from(target, where, path):
     return (path, where or None) if where is not None and where not in SPARKS_OWN and "part" in target else None
 
 
-def settle(entry_id, before, values, known):
-    """
-    One entry after a write sets `values` on it (§5.2): (change or None, questions, problems). Every value is checked;
-    an `is` the write names must exist and is set as given (null too). Otherwise a new or changed part number links, and
-    drops a stale `is` when nothing matches; an entry with a number and no `is` key is linked once. A change is
-    {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
-    """
-    values = {key: scrub(key, value) for key, value in values.items()}
+def _value_problems(entry_id, before, values):
+    """Why a write cannot set `values` on an entry (§5.2): no such field, a bad value, a new entry with no label."""
     problems = [record_kind._problem(entry_id, "%s is not a drawer field — the fields are %s"
                                      % (printable(key), ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
@@ -249,6 +243,18 @@ def settle(entry_id, before, values, known):
     if before is None and "label" not in values:
         problems.append(record_kind._problem(entry_id,
                                              "a new entry needs a label — with no count it is owned, count unknown"))
+    return problems
+
+
+def settle(entry_id, before, values, known):
+    """
+    One entry after a write sets `values` on it (§5.2): (change or None, questions, problems). Every value is checked;
+    an `is` the write names must exist and is set as given (null too). Otherwise a new or changed part number links, and
+    drops a stale `is` when nothing matches; an entry with a number and no `is` key is linked once. A change is
+    {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
+    """
+    values = {key: scrub(key, value) for key, value in values.items()}
+    problems = _value_problems(entry_id, before, values)
     if problems:
         return None, [], problems
     after, questions, shelve = dict(before or {"schema": 1}, **values), [], None
