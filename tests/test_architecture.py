@@ -399,13 +399,13 @@ class TheChecksAreaTest(unittest.TestCase):
 
 # --- MVP ---
 class TheDesignAreaTest(unittest.TestCase):
-    """W6-D3a (P702), W6-D3b (P703) and W6-D3c (P704): the design values, the emitters and the needs live in
-    `scripts/spark/design/`, its `__init__.py` imports nothing, and each module imports alone. `scripts/` keeps the three
-    CLIs."""
+    """W6-D3a (P702), W6-D3b (P703), W6-D3c (P704) and W6-S3b (P721): the design values, the emitters, the needs and the
+    goal handlers live in `scripts/spark/design/`, its `__init__.py` imports nothing, and each module imports alone.
+    `scripts/` keeps the three CLIs."""
     DESIGN = ROOT / "scripts" / "spark" / "design"
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
-    MODULES = ["board_emitter", "copper", "design_codes", "fab", "footprint_emitter", "loader", "needs", "netlist",
-               "pin_assigner", "restricted_pins"]
+    MODULES = ["board_emitter", "copper", "design_codes", "fab", "footprint_emitter", "goal_handlers", "loader", "needs",
+               "netlist", "pin_assigner", "restricted_pins"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print. A library function back in a CLI, under
     #: any name, fails the check.
     CLIS = {"assign_pins.py": ["main"], "emit_board.py": ["main"], "emit_footprint.py": ["_report", "main"]}
@@ -523,13 +523,19 @@ class TheRecordsAreaTest(unittest.TestCase):
 
 # --- MVP ---
 class TheSourcingAreaTest(unittest.TestCase):
-    """W6-S2 (P717) and W6-S3a (P720): the sourcing area holds the pull-up band and the part rules in
-    `scripts/spark/sourcing/part_rules.py`, the part records, the matchers, the cost of a run and the leaf
-    `sourcing_codes`. Its `__init__.py` imports nothing, and each module imports alone. Checks and `parts.py` read the
-    band from there, so no module imports the checks area for it. `scripts/` keeps the CLI `cost.py`, `main` alone."""
+    """W6-S2 (P717), W6-S3a (P720) and W6-S3b (P721): the sourcing area holds the pull-up band and the part rules in
+    `scripts/spark/sourcing/part_rules.py`, the part records, the part facts, the datasheets, the drawer, the part
+    handlers, the matchers, the cost of a run and the leaf `sourcing_codes`. Its `__init__.py` imports nothing, and each
+    module imports alone. Checks read the band from there, so no module imports the checks area for it. `scripts/` keeps
+    the CLIs `cost.py`, `main` alone, and `parts.py`, its parser, its printers and the handlers that read a payload."""
     SOURCING = ROOT / "scripts" / "spark" / "sourcing"
-    #: The modules of the area so far, by the names of its page (`areas/sourcing.md`).
-    MODULES = ["matching", "part_records", "part_rules", "run_cost", "sourcing_codes"]
+    #: The modules of the area, by the names of its page (`areas/sourcing.md`).
+    MODULES = ["datasheets", "drawer", "matching", "part_facts", "part_handlers", "part_records", "part_rules", "run_cost",
+               "sourcing_codes"]
+    #: `parts.py`'s own top-level functions: its parser and printers, `_op_describe`, `_op_needs_drop` on the core, and
+    #: the handlers that read a JSON payload, because reading stdin is the interface's job (P721 row 6).
+    PARTS_CLI = ["_not_negative", "_op_describe", "_op_drawer_import", "_op_drawer_set", "_op_fact_set", "_op_function_set",
+                 "_op_needs_drop", "_op_needs_set", "_op_pick", "_parser", "_read_json_input", "_say", "_text_of", "main"]
 
     def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):
         modules = sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py")
@@ -540,10 +546,19 @@ class TheSourcingAreaTest(unittest.TestCase):
                  and isinstance(node.ctx, ast.Store) and node.id in ("PULLUP_MIN_OHM", "PULLUP_MAX_OHM")}
         self.assertEqual(sorted(bound), ["scripts/spark/sourcing/part_rules.py"])
         scripts = ROOT / "scripts"
-        self.assertEqual([name for name in ("cost.py", "matching.py", "sourcing_codes.py") if (scripts / name).exists()],
-                         ["cost.py"])
+        self.assertEqual([name for name in ("cost.py", "drawer.py", "matching.py", "sourcing_codes.py")
+                          if (scripts / name).exists()], ["cost.py"])
         tree = ast.parse((scripts / "cost.py").read_text())
         self.assertEqual([node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))], ["main"])
+
+    def test_parts_py_defines_only_its_cli_and_no_module_imports_it(self):
+        tree = ast.parse((ROOT / "scripts" / "parts.py").read_text())
+        self.assertEqual(sorted(node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))),
+                         self.PARTS_CLI)
+        importers = sorted(str(path.relative_to(ROOT)) for path in (ROOT / "scripts").rglob("*.py")
+                           for node in ast.walk(ast.parse(path.read_text())) if isinstance(node, ast.Import)
+                           and any(alias.name in ("parts", "drawer") for alias in node.names))
+        self.assertEqual(importers, [])
 
     def test_the_area_s_init_imports_nothing(self):
         # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)
