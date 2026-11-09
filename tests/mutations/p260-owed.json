@@ -1,45 +1,45 @@
 [
  {
-  "file": "scripts/spark/sourcing/part_records.py",
+  "file": "scripts/spark/records/record_kind.py",
   "name": "schema",
-  "find": "if \"schema\" not in owed and part",
-  "replace": "if part"
+  "find": "if \"schema\" in validation.owed or record.get(\"schema\") == self.version:",
+  "replace": "if record.get(\"schema\") == self.version:"
  },
  {
-  "file": "scripts/spark/sourcing/part_records.py",
+  "file": "scripts/spark/records/record_kind.py",
   "name": "required",
-  "find": "if key not in part and key not in owed:",
-  "replace": "if key not in part:"
+  "find": "if key not in record and key not in validation.owed]",
+  "replace": "if key not in record]"
  },
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "id",
-  "find": "if \"id\" not in owed and part.get(\"id\")",
-  "replace": "if part.get(\"id\")"
+  "find": "if \"id\" not in validation.owed and part.get(\"id\") != validation.path.stem:",
+  "replace": "if part.get(\"id\") != validation.path.stem:"
  },
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "body",
-  "find": "if body is not None and \"body_mm\" not in owed:",
-  "replace": "if body is not None:"
+  "find": "if body is None or \"body_mm\" in validation.owed:",
+  "replace": "if body is None:"
  },
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "pin_order",
-  "find": "if order is not None and \"pin_order\" not in owed:",
-  "replace": "if order is not None:"
+  "find": "return None if \"pin_order\" in validation.owed else part.get(\"pin_order\")",
+  "replace": "return part.get(\"pin_order\")"
  },
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "proof",
-  "find": "if \"pin_order_proof\" not in owed:\n        problems.extend(pin_order_problems",
-  "replace": "if True:\n        problems.extend(pin_order_problems"
+  "find": "return [] if \"pin_order_proof\" in validation.owed else pin_order_problems(part)",
+  "replace": "return pin_order_problems(part)"
  },
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "sim",
-  "find": "if \"simulation\" not in owed:",
-  "replace": "if True:"
+  "find": "return [] if \"simulation\" in validation.owed else simulation_problems(part, validation.path)",
+  "replace": "return simulation_problems(part, validation.path)"
  },
  {
   "file": "scripts/spark/sourcing/part_records.py",

@@ -32,8 +32,8 @@
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "validate no longer looks at host_parts",
-  "find": "    problems.extend(host_part_problems(part))",
-  "replace": "    pass"
+  "find": "    return host_part_problems(part)",
+  "replace": "    return []"
  },
  {
   "file": "scripts/spark/build/build_service.py",

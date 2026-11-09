@@ -31,8 +31,9 @@ W6-R3a, P718), a design fact. `boards.py` imports both areas' `OPERATIONS`, as `
 | `records/store.py` | the store's folder, `write_file`, `fetch`, events, `keep`, moved from `scripts/store.py` in W6-R3a (P718) |
 | `records/record_folders.py` | `RecordFolders`: the library, store and project folders, built once |
 | `records/record_finder.py` | `RecordFinder`: one record kind read across the three folders, the nearest wins |
-| `records/record_kind.py` | the record contract, moved from `parts.py` in W6-S3a (P720): `LIBRARY`, the keys and verbs, `RECORD_TYPES`, `document_problems`, the one reader and writer of a record file (`_parse`, `_write_record`) and `Answer`. `RecordKind` (a kind's `version`, `required` keys and rules, `validate`, `stops_at`, `shelf_copy`, `digest`) comes with P391's card; the part kind's `validate` is in sourcing's `part_records` |
-| `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, `OnboardRole`, `ONBOARD_ROLES`, `POWER_FACT_FUNCTIONS`, `SimulatedPart`, `read_simulated_part`, `WOKWI_DEFINITION`, `onboard_limits`, `gpio_limits` and the readers of the role table, moved from `boards.py` in W6-R3a (P718). The CLI `boards.py` keeps `main` and `_validate_all`, which prints. Its split by job is a card |
+| `records/record_kind.py` | the record contract, moved from `parts.py` in W6-S3a (P720): `LIBRARY`, the keys and verbs, `RECORD_TYPES`, `document_problems`, the one reader and writer of a record file (`_parse`, `_write_record`) and `Answer`. `RecordKind` is built (P724): a kind's `version`, `required` keys, `rules` and `stop_after`, and `validate`. `BOARD` is in `board_records`, `PART` in sourcing's `part_records`. `shelf_copy`, `digest`, `RecordFinder`, `RecordFolders`, `Record` and `ShelveRecord` fold into P342 #437 |
+| `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, `OnboardRole`, `ONBOARD_ROLES`, `SimulatedPart`, `read_simulated_part`, `WOKWI_DEFINITION`, `onboard_limits`, `gpio_limits` and the readers of the role table, moved from `boards.py` in W6-R3a (P718), and `BOARD`, its contract (P724). The CLI `boards.py` keeps `main` and `_validate_all`, which prints |
+| `records/board_rules.py` | the board's rules, one named rule per function, and the names they read: `PIN_ROLES`, `POWER_FUNCTIONS`, `GPIO_MIN`, `GPIO_MAX`, `is_gpio`, `is_pin_map_constant`, which `board_records` imports (P724) |
 | `records/brief.py` | `Brief`: the project's `prefer` and `sellers`, from `.spark/project.json` |
 | `records/deploy_record_store.py` | `DeployRecordStore` and `LastDeploy`: what the store says of the board on USB (built in `scripts/` in P431) |
 | `records/provenance.py` | the leaf `provenance`: what a fact must carry |
@@ -80,8 +81,9 @@ classDiagram
     kind
     version
     required
-    validate(record) list
-    stops_at(record)
+    rules
+    stop_after
+    validate(record, path, owed, for_fab) list
     shelf_copy(record)
     digest(record)
   }
