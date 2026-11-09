@@ -44,8 +44,8 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "write_log writes no names marker",
-  "find": ".from_text(self.steps).log_lines()",
-  "replace": ".from_text(self.steps).line()"
+  "find": "self.steps.log_lines()",
+  "replace": "self.steps.line()"
  },
  {
   "file": "scripts/spark/firmware/scenario_steps.py",
@@ -62,8 +62,8 @@
  {
   "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "a nested name in a block step is read as the step's name",
-  "find": "if not depth and (number == 0 or len(text) - len(text.lstrip()) == indent):",
-  "replace": "if number == 0 or len(text) - len(text.lstrip()) >= indent:"
+  "find": "if not depth and (number == 0 or cls._indent(text) == indent):",
+  "replace": "if number == 0 or cls._indent(text) >= indent:"
  },
  {
   "file": "scripts/spark/bench/board_look.py",
@@ -92,8 +92,8 @@
  {
   "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "a flow step reads name as its kind",
-  "find": "if kind and kind != cls.NAME_KEY:",
-  "replace": "if kind:"
+  "find": "if key and cls._key_of(key) != cls.NAME_KEY:",
+  "replace": "if key:"
  },
  {
   "file": "scripts/spark/bench/image_evidence.py",
@@ -182,8 +182,8 @@
  {
   "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: two single quotes in a single-quoted name stay two",
-  "find": "(value[1:-1].replace(\"''\", \"'\") if",
-  "replace": "(value[1:-1] if"
+  "find": "return value[1:-1].replace(\"''\", \"'\") if",
+  "replace": "return value[1:-1] if"
  },
  {
   "file": "scripts/spark/firmware/scenario_steps.py",
@@ -200,8 +200,8 @@
  {
   "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "D: a name that the next line goes on with is read",
-  "find": "len(texts[number + 1]) - len(texts[number + 1].lstrip()) > indent):",
-  "replace": "len(texts[number + 1]) - len(texts[number + 1].lstrip()) > 999):"
+  "find": "and cls._indent(texts[number + 1]) > indent):",
+  "replace": "and cls._indent(texts[number + 1]) > 999):"
  },
  {
   "file": "scripts/spark/firmware/scenario_steps.py",

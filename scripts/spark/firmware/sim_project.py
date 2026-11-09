@@ -305,6 +305,7 @@ class FirmwareLine:
         return "" if self.why is None or self.why.startswith(CANNOT_READ) else ' To fix it, write it as firmware = "name.bin".'
 
 
+# --- MVP --- (P399)
 @dataclass(frozen=True)
 class DiagramIds:
     """Value: the component ids of a diagram.json, in its order (P399). `state` is RECORDED, or NOT_CHECKED when `why` says they could not be read."""

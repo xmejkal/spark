@@ -129,7 +129,7 @@ class ScenarioRun:
         outside = sim_project.why_outside_sim(self.sim, self.image)
         return Refusal(outside, FIRMWARE_LINE_BAD) if outside else None
 
-    def unknown_component_ids(self):
+    def unknown_component_ids(self):  # --- MVP --- (P399)
         """The Refusal for the component ids that the steps name and the diagram lacks, or None. A diagram that cannot be read refuses nothing."""
         self.diagram_ids = sim_project.component_ids_in(self.sim / "diagram.json")
         unknown = [each for each in self.steps.component_ids if each not in self.diagram_ids.ids]
@@ -138,7 +138,7 @@ class ScenarioRun:
         return Refusal("%s: sim/diagram.json has no component %s. Its component ids: %s"
                        % (self.scenario.name, ", ".join(unknown), ", ".join(self.diagram_ids.ids)), UNKNOWN_COMPONENT_ID)
 
-    def not_checked(self):
+    def not_checked(self):  # --- MVP --- (P399)
         """After problem(): one sentence for each thing it could not compare with the diagram. The run goes on after them."""
         said = [NOT_CHECKED_STEP % step for step in self.steps.unread_steps]
         return said + ([NOT_CHECKED_DIAGRAM % self.diagram_ids.why] if self.diagram_ids.state != outcomes.RECORDED else [])
@@ -192,6 +192,16 @@ class ScenarioRun:
                                self.timeout_ms, sentence, self.steps.log_lines(), IMAGE_LINE,
                                hashlib.sha256(self.flash).hexdigest(), files, shown, sim_project.SCENARIO_SECTION, self.steps_text, said.strip()))
         return self.log
+
+
+def free_checks(run, project):  # --- MVP --- (P399)
+    """
+    (the simulator, the lines to print) for this ScenarioRun: what costs nothing first, then the tool, then the token, so a
+    missing build comes before an account. A refused run has no simulator and one line. A run that goes on has the not_checked lines.
+    """
+    refusal = run.problem()
+    simulator, refusal = (None, refusal) if refusal else find_simulator(project)
+    return simulator, [refusal] if refusal else run.not_checked()
 
 
 def find_simulator(project, find_tool=None):  # --- MVP --- (P684)

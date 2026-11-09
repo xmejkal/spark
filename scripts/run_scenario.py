@@ -35,7 +35,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from spark.firmware.scenario_run import DEFAULT_TIMEOUT_MS, ScenarioRun, find_simulator
+from spark.firmware.scenario_run import DEFAULT_TIMEOUT_MS, ScenarioRun, free_checks
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_FOR, OK
 from spark.core.text_guards import guard_lines
 
@@ -45,15 +45,6 @@ It needs a Wokwi CI token (wokwi.com/dashboard/ci) in WOKWI_CLI_TOKEN: export WO
 The firmware must print `ready` once its setup is done (the ready contract, commands/build.md).
 
 Exit codes: 0 the scenario passed, 1 it failed, 2 it could not run. The log is sim/runs/<name>.log."""
-
-
-def free_checks(run, project):
-    """(the simulator, None), or (None, why it cannot run): what costs nothing first, then the tool, then the token. A missing build comes before an account."""
-    refusal = run.problem()
-    simulator, refusal = (None, refusal) if refusal else find_simulator(project)
-    if not refusal and run.not_checked():
-        print(guard_lines("\n".join("run_scenario.py: %s" % each for each in run.not_checked())), file=sys.stderr)
-    return simulator, refusal
 
 
 def main(argv=None):
@@ -68,9 +59,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms)
     run.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here
-    simulator, refusal = free_checks(run, args.project)
-    if refusal:
-        print(guard_lines("run_scenario.py: %s" % refusal), file=sys.stderr)
+    simulator, said = free_checks(run, args.project)
+    if said:
+        print(guard_lines("\n".join("run_scenario.py: %s" % each for each in said)), file=sys.stderr)
+    if simulator is None:
         return EXIT_COULD_NOT_RUN
     status, sentence, log = run.run(simulator.command)
     print(guard_lines("%s: %s%s" % (args.scenario.name, sentence, "\nlog: %s" % log if log else "")),

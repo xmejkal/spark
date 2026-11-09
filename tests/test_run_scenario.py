@@ -24,11 +24,13 @@ import run_scenario  # noqa: E402
 
 from spark.firmware import scenario_run  # noqa: E402
 
+from spark.firmware import firmware_codes  # noqa: E402
 from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, OK, PROBLEMS  # noqa: E402
+from spark.core.outcomes import (COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, NOT_CHECKED, OK, PROBLEMS,  # noqa: E402
+                                 RECORDED)
 
 #: wokwi-cli as the tests run it: tests/fake_wokwi_cli.py, which spends nothing.
 FAKE_CLI = [sys.executable, str(Path(__file__).resolve().parent / "fake_wokwi_cli.py")]
@@ -953,6 +955,160 @@ class TheCommandTest(ProjectCase):
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("/spark:build --keep .", said)
         self.assertNotIn("WOKWI_CLI_TOKEN", said)
+
+
+class TheComponentIdsTest(unittest.TestCase):
+    """P399: which component ids a scenario's steps name, and which steps could not be read. It fails only toward unread."""
+
+    def steps(self, *items):
+        return scenario_steps.ScenarioSteps.from_text("name: x\nsteps:\n" + "".join("  %s\n" % item for item in items))
+
+    def test_each_shape_that_spark_writes_gives_its_id(self):
+        for items in (("- set-control: { part-id: b, name: pressed, value: 1 }",), ("- { set-control: { part-id: b } }",),
+                      ("- set-control:", "    part-id: b", "    name: pressed"), ('- expect-pin: { "part-id": "b", pin: A }',),
+                      ("- name: press", "  set-control: { part-id: b, name: pressed, value: 1 }",),
+                      ("- { name: press, set-control: { part-id: b } }",), ("- name: press", "  set-control:", "    part-id: b")):
+            with self.subTest(items):
+                read = self.steps(*items)
+                self.assertEqual((read.component_ids, read.unread_steps), (("b",), ()))
+
+    def test_ids_come_in_order_without_repeats(self):
+        read = self.steps("- set-control: { part-id: b }", "- expect-pin: { part-id: led, pin: A }", "- set-control: { part-id: b }")
+        self.assertEqual(read.component_ids, ("b", "led"))
+
+    def test_a_step_with_no_readable_id_is_unread_with_its_text(self):
+        for item, text in (("- set-control: { name: pressed }", "set-control: { name: pressed }"),
+                           ("- set-control: { part-id: *b }", "set-control: { part-id: *b }"),
+                           ("- expect-pin: { part-id: 'two words', pin: A }", "expect-pin: { part-id: 'two words', pin: A }"),
+                           ("- name: a step with no kind", "name: a step with no kind")):
+            with self.subTest(item):
+                read = self.steps(item)
+                self.assertEqual((read.component_ids, read.unread_steps), ((), (text,)))
+
+    def test_another_kind_that_names_a_part_id_is_unread(self):
+        read = self.steps("- take-screenshot: { part-id: lcd }")
+        self.assertEqual((read.component_ids, read.unread_steps), ((), ("take-screenshot: { part-id: lcd }",)))
+
+    def test_text_that_only_looks_like_an_id_is_no_id(self):
+        for items in (("- wait-serial: temp {part-id: ghost}",), ('- wait-serial: "part-id: ghost"',),
+                      ('- { name: "part-id: ghost", set-control: { part-id: b } }',),
+                      ("- name: |", "      part-id: ghost", "  set-control: { part-id: b }"),
+                      ('- set-control: { name: "part-id: ghost", part-id: b }',)):
+            with self.subTest(items):
+                self.assertNotIn("ghost", self.steps(*items).component_ids)
+
+    def test_a_log_holds_no_ids(self):
+        self.assertEqual(scenario_steps.ScenarioSteps({}).component_ids, ())
+
+
+class TheNamedReadyWaitTest(unittest.TestCase):
+    """P399: the ready wait reads each step's kind, so a step's name does not hide a wait or a press."""
+
+    def test_a_named_wait_for_ready_is_kept_alone(self):
+        for items in ('  - name: boots\n    wait-serial: "ready"\n', '  - { name: boots, wait-serial: ready }\n'):
+            with self.subTest(items):
+                scenario = "name: x\nsteps:\n" + items
+                self.assertEqual(scenario_run.with_ready_wait(scenario), scenario)
+
+    def test_a_named_press_ends_the_search_for_a_wait(self):
+        for items in ('  - name: press\n    set-control: { part-id: b }\n  - wait-serial: "ready"\n',
+                      '  - { name: press, set-control: { part-id: b } }\n  - wait-serial: "ready"\n'):
+            with self.subTest(items):
+                self.assertIn(scenario_steps.READY_STEP, scenario_run.with_ready_wait("name: x\nsteps:\n" + items))
+
+    def test_a_comma_in_the_ready_text_is_kept(self):
+        scenario = 'name: x\nsteps:\n  - wait-serial: "boot, ready"\n'
+        self.assertEqual(scenario_run.with_ready_wait(scenario), scenario)
+
+    def test_a_step_name_that_says_ready_is_no_wait(self):
+        scenario = 'name: x\nsteps:\n  - name: ready\n    wait-serial: "hello"\n'
+        self.assertIn(scenario_steps.READY_STEP, scenario_run.with_ready_wait(scenario))
+
+
+class TheDiagramIdsTest(unittest.TestCase):
+    """P399: component_ids_in never raises, and it says why when the ids cannot be read."""
+
+    def read(self, text):
+        diagram = Path(tempfile.mkdtemp()) / "diagram.json"
+        diagram.write_text(text)
+        return sim_project.component_ids_in(diagram)
+
+    def test_the_ids_in_their_order(self):
+        read = self.read('{"parts": [{"id": "mcu"}, {"id": "led"}]}')
+        self.assertEqual((read.ids, read.state), (("mcu", "led"), RECORDED))
+
+    def test_what_cannot_be_read_says_why(self):
+        for text, why in (("{", sim_project.WHY_DIAGRAM_UNREADABLE), ("[]", sim_project.WHY_DIAGRAM_UNREADABLE),
+                          ("{}", sim_project.WHY_DIAGRAM_NO_PARTS), ('{"parts": 3}', sim_project.WHY_DIAGRAM_NO_PARTS),
+                          ('{"parts": [{"type": "x"}]}', sim_project.WHY_DIAGRAM_PART_NO_ID),
+                          ('{"parts": ["x"]}', sim_project.WHY_DIAGRAM_PART_NO_ID), ('{"parts": [{"id": 3}]}', sim_project.WHY_DIAGRAM_PART_NO_ID)):
+            with self.subTest(text):
+                read = self.read(text)
+                self.assertEqual((read.ids, read.state, read.why), ((), NOT_CHECKED, why))
+
+    def test_a_missing_file_says_why(self):
+        read = sim_project.component_ids_in(Path(tempfile.mkdtemp()) / "diagram.json")
+        self.assertEqual((read.state, read.why), (NOT_CHECKED, sim_project.WHY_DIAGRAM_UNREADABLE))
+
+
+@needs_littlefs
+class TheRunComparesTheComponentIdsTest(ProjectCase):
+    """P399: a wrong id stops before wokwi-cli starts, and what cannot be compared is said while the run goes on."""
+
+    def scenario_with(self, step):
+        self.scenario.write_text('name: x\nversion: 1\nsteps:\n  - wait-serial: "ready"\n  - %s\n' % step)
+
+    def test_a_wrong_id_is_refused_before_the_simulator(self):
+        self.scenario_with("set-control: { part-id: tactilebuton, name: pressed, value: 1 }")
+        code, said = self.command()
+        self.assertEqual(code, EXIT_COULD_NOT_RUN)
+        self.assertIn("tactilebuton", said)
+        self.assertIn("mcu, tactilebutton, ledred5mm", said)
+        self.assertFalse(self.seen.exists())
+
+    def test_the_refusal_has_its_code(self):
+        self.scenario_with("expect-pin: { part-id: nope, pin: A, value: 1 }")
+        refusal = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).problem()
+        self.assertEqual(refusal.code, firmware_codes.UNKNOWN_COMPONENT_ID)
+
+    def test_a_right_id_runs(self):
+        self.scenario_with("set-control: { part-id: tactilebutton, name: pressed, value: 1 }")
+        code, said = self.command()
+        self.assertEqual(code, EXIT_OK)
+        self.assertNotIn("not checked", said)
+
+    def test_the_boards_own_button_and_led_pass(self):  # P480
+        (self.project / "sim" / "diagram.json").write_text(json.dumps({"parts": [
+            {"id": each} for each in ("mcu", "onboard_button", "onboard_led")]}))
+        self.scenario.write_text('name: x\nversion: 1\nsteps:\n  - wait-serial: "ready"\n'
+                                 "  - set-control: { part-id: onboard_button, name: pressed, value: 1 }\n"
+                                 "  - expect-pin: { part-id: onboard_led, pin: A, value: 1 }\n")
+        self.assertEqual(self.command()[0], EXIT_OK)
+
+    def test_an_unread_step_says_not_checked_and_the_run_goes_on(self):
+        self.scenario_with("set-control: { name: pressed, value: 1 }")
+        code, said = self.command()
+        self.assertEqual(code, EXIT_OK)
+        self.assertIn("not checked: spark cannot read the component id of this step: set-control: { name: pressed, value: 1 }", said)
+        self.assertTrue(self.seen.exists())
+
+    def test_an_unreadable_diagram_says_not_checked_and_the_run_goes_on(self):
+        (self.project / "sim" / "diagram.json").write_text("{")
+        self.scenario_with("set-control: { part-id: anything, name: pressed, value: 1 }")
+        code, said = self.command()
+        self.assertEqual(code, EXIT_OK)
+        self.assertIn("not checked: the scenario's component ids, because " + sim_project.WHY_DIAGRAM_UNREADABLE, said)
+
+    def test_a_right_to_left_mark_in_an_id_prints_as_a_question_mark(self):
+        self.scenario_with("set-control: { part-id: a\u202eb, name: pressed, value: 1 }")
+        said = self.command()[1]
+        self.assertNotIn("\u202e", said)
+        self.assertIn("a?b", said)
+
+    def test_the_log_is_written_from_the_steps_read_once(self):
+        self.scenario_with("set-control: { part-id: tactilebutton, name: pressed, value: 1 }")
+        self.command()
+        self.assertIn("set-control 1", self.log.read_text())
 
 
 class EachRefusalHasItsCodeTest(ProjectCase):

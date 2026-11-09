@@ -143,6 +143,7 @@ class ScenarioSteps:
             return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY, named, components)
         return cls(counts, named=named, components=components)
 
+    # --- MVP --- (P399)
     @classmethod
     def _steps_in(cls, body, width):
         """Each step of the list at this indent: [its lines, the indent of its own keys or None, in flow form]."""

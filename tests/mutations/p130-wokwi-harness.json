@@ -14,14 +14,14 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a scenario that already waits for ready text gets a second wait that never matches",
-  "find": "    if any(WAIT_SERIAL in step and READY in step\n",
-  "replace": "    if False and any(WAIT_SERIAL in step and READY in step\n"
+  "find": "    if ScenarioSteps.from_text(scenario).has_ready_wait():\n",
+  "replace": "    if False:\n"
  },
  {
-  "file": "scripts/spark/firmware/scenario_run.py",
+  "file": "scripts/spark/firmware/scenario_steps.py",
   "name": "a ready wait after the first input stops the wait before it",
-  "find": "itertools.takewhile(lambda step: SET_CONTROL not in step, steps)",
-  "replace": "steps"
+  "find": "            if kind == SET_CONTROL:\n                return False\n",
+  "replace": "            if False:\n                return False\n"
  },
  {
   "file": "scripts/spark/firmware/scenario_run.py",

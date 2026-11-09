@@ -1,0 +1,98 @@
+[
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "a wrong component id is never refused",
+  "find": "        if self.diagram_ids.state != outcomes.RECORDED or not unknown:\n",
+  "replace": "        if True:\n"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "an unreadable diagram refuses every id",
+  "find": "        if self.diagram_ids.state != outcomes.RECORDED or not unknown:\n",
+  "replace": "        if not unknown:\n"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "the refusal of a wrong id has another code",
+  "find": "\", \".join(self.diagram_ids.ids)), UNKNOWN_COMPONENT_ID)",
+  "replace": "\", \".join(self.diagram_ids.ids)), RUN_INPUT_UNUSABLE)"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "an unreadable diagram is not said",
+  "find": "[NOT_CHECKED_DIAGRAM % self.diagram_ids.why] if self.diagram_ids.state != outcomes.RECORDED else []",
+  "replace": "[]"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "an unread step is not said",
+  "find": "said = [NOT_CHECKED_STEP % step for step in self.steps.unread_steps]",
+  "replace": "said = []"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "what could not be compared is never printed",
+  "find": "    return simulator, [refusal] if refusal else run.not_checked()\n",
+  "replace": "    return simulator, [refusal] if refusal else []\n"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "any kind of step is read for an id",
+  "find": "found = cls._ids_in(value) if kind in cls.COMPONENT_KINDS else None",
+  "replace": "found = cls._ids_in(value)"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "a value that is no plain id is refused as a wrong id",
+  "find": "return ids if ids and all(cls.COMPONENT_ID.fullmatch(each) for each in ids) else None",
+  "replace": "return ids or None"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "another kind that names a part-id is not said",
+  "find": "kind in cls.COMPONENT_KINDS or PART_ID_KEY in \" \".join(texts):",
+  "replace": "kind in cls.COMPONENT_KINDS:"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "a step with no kind is not said",
+  "find": "elif kind is None or kind in cls.COMPONENT_KINDS or",
+  "replace": "elif kind in cls.COMPONENT_KINDS or"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "an id named twice is listed twice",
+  "find": "StepComponents(tuple(dict.fromkeys(ids)), tuple(unread),",
+  "replace": "StepComponents(tuple(ids), tuple(unread),"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "a step name that says ready counts as a wait",
+  "find": "if kind == WAIT_SERIAL and READY in value:",
+  "replace": "if READY in value:"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "a block value's deeper lines are read as its own",
+  "find": "pieces = [line for line in value[1:] if cls._indent(line) == cls._indent(value[1])]",
+  "replace": "pieces = value[1:]"
+ },
+ {
+  "file": "scripts/spark/firmware/sim_project.py",
+  "name": "a diagram with no parts list reads as no ids",
+  "find": "    if not isinstance(parts, list):\n        return DiagramIds(state=outcomes.NOT_CHECKED, why=WHY_DIAGRAM_NO_PARTS)\n",
+  "replace": "    parts = parts or []\n"
+ },
+ {
+  "file": "scripts/spark/firmware/sim_project.py",
+  "name": "a part with no id reads as an id",
+  "find": "    if not all(isinstance(each, str) and each for each in ids):\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/spark/firmware/firmware_codes.py",
+  "name": "the code loses its sentence",
+  "find": "    UNKNOWN_COMPONENT_ID: \"a step of the scenario names a component id that sim/diagram.json does not hold\",\n",
+  "replace": ""
+ }
+]
