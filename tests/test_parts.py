@@ -42,7 +42,7 @@ from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
-from spark.sourcing import part_facts, part_records  # noqa: E402
+from spark.sourcing import datasheets, part_facts, part_records  # noqa: E402
 from spark.sourcing import part_rules  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
@@ -838,13 +838,13 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
     """
 
     def test_need_matches_id_name_kind_and_alias(self):
-        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["motor"])[0]])
-        self.assertIn("vl6180x-breakout", [p["id"] for p in parts.need(["rangefinder"])[0]])
-        self.assertEqual(parts.need(["unobtainium"]), ([], []))
-        self.assertEqual([p["id"] for p in parts.need(["motor", "driver"])[0]], ["l9110s-module"])
-        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["motor-driver"])[0]],
+        self.assertIn("l9110s-module", [p["id"] for p in datasheets.need(["motor"])[0]])
+        self.assertIn("vl6180x-breakout", [p["id"] for p in datasheets.need(["rangefinder"])[0]])
+        self.assertEqual(datasheets.need(["unobtainium"]), ([], []))
+        self.assertEqual([p["id"] for p in datasheets.need(["motor", "driver"])[0]], ["l9110s-module"])
+        self.assertIn("l9110s-module", [p["id"] for p in datasheets.need(["motor-driver"])[0]],
                       "the kind alone matches — the name says 'motor driver' without the hyphen")
-        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["hg7881"])[0]],
+        self.assertIn("l9110s-module", [p["id"] for p in datasheets.need(["hg7881"])[0]],
                       "an alias alone matches — HG7881 appears nowhere but also_known_as")
 
     def test_need_takes_a_matcher_and_refuses_one_that_does_not_serve_it(self):
@@ -859,10 +859,10 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         import tempfile
         root = Path(tempfile.mkdtemp())
         parts.main(["--skeleton", "dfr0457-mosfet-driver", "--kind", "mosfet-driver", "--project", str(root)])
-        found, drafts = parts.need(["mosfet"], root)
+        found, drafts = datasheets.need(["mosfet"], root)
         self.assertEqual(found, [])
         self.assertEqual(drafts, ["dfr0457-mosfet-driver"])
-        self.assertIn("l9110s-module", [p["id"] for p in parts.need(["motor"], root)[0]],
+        self.assertIn("l9110s-module", [p["id"] for p in datasheets.need(["motor"], root)[0]],
                       "the library is still searched past the draft")
 
     def test_no_match_names_the_research_command_and_the_vendor_order(self):
@@ -927,8 +927,8 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         record = {"sources": ["https://wiki.example/a", "not a url"],
                   "facts": {"x": {"value": 1, "verified": True, "source": "https://wiki.example/b"},
                             "y": {"value": 2, "verified": False, "source": "the datasheet, page 3"}}}
-        self.assertEqual(parts.cited_urls(record), ["https://wiki.example/a", "https://wiki.example/b"])
-        answers = parts.sources_resolve(record, fetch=lambda url: url.endswith("/a"))
+        self.assertEqual(datasheets.cited_urls(record), ["https://wiki.example/a", "https://wiki.example/b"])
+        answers = datasheets.sources_resolve(record, fetch=lambda url: url.endswith("/a"))
         self.assertEqual(answers, [("https://wiki.example/a", True), ("https://wiki.example/b", False)])
 
 
@@ -940,7 +940,7 @@ class EachPartRefusalHasItsCodeTest(unittest.TestCase):
         (project / "parts").mkdir()
         (project / "parts" / "broken-part.json").write_text(json.dumps({"schema": 1, "id": "broken-part"}))
         asked = {"definition_path": (lambda: part_records.definition_path("no-such-part", project), "no_such_part"),
-                 "fetch_documents": (lambda: parts.fetch_documents("no-such-part", project), "no_such_part"),
+                 "fetch_documents": (lambda: datasheets.fetch_documents("no-such-part", project), "no_such_part"),
                  "promote": (lambda: part_facts.promote("no-such-part", project), "no_such_part"),
                  "_set_in_home": (lambda: parts._set_in_home("no-such-part", project, {}, True, None), "no_such_part"),
                  "load": (lambda: part_records.load("broken-part", project), "part_contract_broken"),
@@ -969,8 +969,8 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         (catalog / "broken.json").write_text("{not json")
         (catalog / "nameless.json").write_text(json.dumps({"schema": 1, "id": "nameless", "kind": "sensor"}))
         with in_store(home):
-            known = parts.catalog_matches(["Soil", "moisture"])
-            records, broken = parts.catalog_records()
+            known = datasheets.catalog_matches(["Soil", "moisture"])
+            records, broken = datasheets.catalog_records()
         self.assertEqual([p["id"] for p in known], ["sen0193-soil-moisture"])
         self.assertEqual((sorted(records), broken), (["dfr0831-buck-5v", "sen0193-soil-moisture"], ["broken.json", "nameless.json"]),
                          "a record that parses but does not say what it is, is broken too")
@@ -994,7 +994,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
             fetched.append(url)
             return b"payload" if ".pdf" in url or url.endswith(".jpg") else None
         with in_store(home):
-            kept = parts.fetch_documents("x-part", fetch=fetch)
+            kept = datasheets.fetch_documents("x-part", fetch=fetch)
         self.assertEqual(sorted(fetched), ["https://v.example/photo.jpg", "https://v.example/x.pdf?v=2"],
                          "only datasheets and images are fetched; a page is not")
         digest = hashlib.sha256(b"payload").hexdigest()
@@ -1010,9 +1010,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         home = self._home(); catalog = home / "catalog"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"])
         with in_store(home):
-            parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
+            datasheets.fetch_documents("x-part", fetch=lambda url: b"pdf")
             again = []
-            parts.fetch_documents("x-part", fetch=lambda url: again.append(url))
+            datasheets.fetch_documents("x-part", fetch=lambda url: again.append(url))
         self.assertEqual(again, [])
 
     def test_a_catalog_draft_answers_sources_show_and_unverified_like_any_record(self):
@@ -1020,7 +1020,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         home = self._home(); catalog = home / "catalog"
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"],
                              facts={"pitch_mm": {"value": 2.0, "verified": False, "why_it_matters": "the socket", "source": "the maker's page"}})
-        answered = lambda record: [(url, True) for url in parts.cited_urls(record)]  # noqa: E731 — no network
+        answered = lambda record: [(url, True) for url in datasheets.cited_urls(record)]  # noqa: E731 — no network
         with in_store(home), mock.patch.object(parts, "sources_resolve", answered):
             self.assertEqual(part_records.any_record("x-part")["id"], "x-part")
             self.assertEqual([q["fact"] for q in part_facts.unverified(["x-part"])], ["pitch_mm"])
@@ -1033,7 +1033,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self._catalog_record(catalog, "x-part", sources=["https://v.example/DFR%20(1).pdf"],
                              **{"//": "98 Kč — 帝江"})
         with in_store(home):
-            kept = parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
+            kept = datasheets.fetch_documents("x-part", fetch=lambda url: b"pdf")
         (key, entry), = kept.items()
         self.assertEqual(entry["file"], "DFR (1).pdf")
         self.assertTrue((store / entry["sha256"] / "DFR (1).pdf").is_file())
@@ -1054,7 +1054,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
 
         with in_store(home), mock.patch.object(Path, "replace", autospec=True, side_effect=the_disk_fills_at_the_record):
             with self.assertRaises(OSError):
-                parts.fetch_documents("x-part", fetch=lambda url: b"pdf")
+                datasheets.fetch_documents("x-part", fetch=lambda url: b"pdf")
         self.assertEqual((catalog / "x-part.json").read_text(), before)
         self.assertEqual([found.name for found in (home / "sources").rglob("*") if found.is_file()], ["x.pdf"])
 
@@ -1079,7 +1079,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                 asked = []
                 with in_store(home):
                     with self.assertRaises(store.StoreProblem) as refused:
-                        parts.fetch_documents("x-part", fetch=lambda url: asked.append(url) or b"pdf")
+                        datasheets.fetch_documents("x-part", fetch=lambda url: asked.append(url) or b"pdf")
                 self.assertEqual(asked, [], "the first document, which is fine, is not downloaded either: all or nothing")
                 self.assertIn(cited, str(refused.exception), "the refusal names the document")
                 self.assertIn(shown, str(refused.exception), "and the name the store would not keep it under")
@@ -1117,7 +1117,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         home = self._home(); catalog, store = home / "catalog", home / "sources"
         self._catalog_record(catalog, "x-part", sources=["https://a.example/DS3231.pdf", "https://b.example/DS3231.pdf"])
         with in_store(home):
-            kept = parts.fetch_documents("x-part", fetch=lambda url: url.encode())
+            kept = datasheets.fetch_documents("x-part", fetch=lambda url: url.encode())
         self.assertEqual(sorted(entry["url"] for entry in kept.values()),
                          ["https://a.example/DS3231.pdf", "https://b.example/DS3231.pdf"])
         self.assertEqual(len({entry["sha256"] for entry in kept.values()}), 2, "two documents, two checksums")
@@ -1157,7 +1157,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_a_newline_in_the_name_of_a_document_gives_one_line_in_a_fetch_that_the_store_would_refuse(self):
         url = "https://x.example/a%0AGRANTED:%20board%20ok.pdf"
         with self.assertRaises(parts.store.StoreProblem) as caught:
-            parts.fetch_plan({"sources": [url]})
+            datasheets.fetch_plan({"sources": [url]})
         assert_flat(self, caught.exception, url)
         self.assertEqual(caught.exception.code, "file_name_refused")
 
@@ -1168,7 +1168,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                   "facts": {"w": {"source": "Table 3 of https://c.example/ds.pdf (rev 7)"},
                             "v": {"source": "the drawing (see https://d.example/dim.pdf)."},
                             "u": {"source": "https://e.example/DFR%20(1).pdf"}}}
-        self.assertEqual(sorted(parts.cited_urls(record)),
+        self.assertEqual(sorted(datasheets.cited_urls(record)),
                          ["https://a.example/pins.h", "https://b.example/wiki", "https://c.example/ds.pdf",
                           "https://d.example/dim.pdf", "https://e.example/DFR%20(1).pdf"],
                          "a parenthesis the URL opened is its own; one it never opened is the prose's")
@@ -1187,7 +1187,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         local = Path(tempfile.mkdtemp()) / "ds_v1.1.pdf"
         local.write_bytes(b"the v1.1 pdf")
         with in_store(home):
-            entry = parts.keep_local(local, url="https://v.example/ds.pdf")
+            entry = datasheets.keep_local(local, url="https://v.example/ds.pdf")
         digest = hashlib.sha256(b"the v1.1 pdf").hexdigest()
         self.assertEqual(entry, {"url": "https://v.example/ds.pdf", "sha256": digest, "file": "ds_v1.1.pdf",
                                  "retrieved": datetime.date.today().isoformat(), "title": None, "version": None})
@@ -1254,7 +1254,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         from spark.records import board_records
         with in_store(home), \
                 mock.patch.object(board_records, "LIBRARY", home / "no-library"), \
-                mock.patch.object(parts, "_download", no_network), \
+                mock.patch.object(datasheets, "_download", no_network), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
             code = parts.main(["--kept"] + words + ["--project", str(project)])
         return code, out.getvalue(), store
@@ -1613,7 +1613,8 @@ class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
         raise AssertionError("read past the last page the facts are on")
 
     def test_a_fact_on_a_table_row_is_found_and_the_reading_stops_there(self):
-        found = parts.scan_datasheet(self.pages(self.PAGE_1, self.PAGE_2), ["forward_voltage_v", "max_continuous_current_ma"])
+        found = datasheets.scan_datasheet(self.pages(self.PAGE_1, self.PAGE_2),
+                                          ["forward_voltage_v", "max_continuous_current_ma"])
         self.assertEqual(found["forward_voltage_v"]["status"], "FOUND")
         self.assertEqual(found["forward_voltage_v"]["hits"][0][:2], (2, 4), "page 2, line 4")
         self.assertIn("1.9", found["forward_voltage_v"]["hits"][0][3])
@@ -1621,7 +1622,7 @@ class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
 
     def test_a_prose_bullet_is_never_taken_for_the_table(self):
         # The S3 overview's "7 uA" bullet was taken before the table — the P63 misreading in miniature.
-        found = parts.scan_datasheet(iter([(1, self.PAGE_1)]), ["forward_voltage_v"])
+        found = datasheets.scan_datasheet(iter([(1, self.PAGE_1)]), ["forward_voltage_v"])
         self.assertNotEqual(found["forward_voltage_v"]["status"], "FOUND")
 
     def test_a_unit_stated_in_a_column_header_counts(self):
@@ -1630,17 +1631,18 @@ class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
           Work mode                 Description                     Current (uA)
           Deep-sleep                RTC memory and peripherals on   8
         """
-        found = parts.scan_datasheet(iter([(1, page)]), ["deep_sleep_current_ua"])
+        found = datasheets.scan_datasheet(iter([(1, page)]), ["deep_sleep_current_ua"])
         self.assertEqual(found["deep_sleep_current_ua"]["status"], "FOUND")
         self.assertIn("Table 12", found["deep_sleep_current_ua"]["hits"][0][2], "the locator a citation needs")
 
     def test_a_label_whose_value_sits_below_shows_the_next_lines(self):
-        found = parts.scan_datasheet(iter([(1, self.PAGE_2)]), ["viewing_angle_deg"])
+        found = datasheets.scan_datasheet(iter([(1, self.PAGE_2)]), ["viewing_angle_deg"])
         self.assertEqual(found["viewing_angle_deg"]["status"], "LABEL ONLY")
         self.assertIn("30", found["viewing_angle_deg"]["hits"][0][3])
 
     def test_a_fact_nowhere_says_so_and_names_the_words_tried(self):
-        found = parts.scan_datasheet(iter([(1, self.PAGE_2)]), ["reverse_current_ua"], labels={"reverse_current_ua": ["leakage"]})
+        found = datasheets.scan_datasheet(iter([(1, self.PAGE_2)]), ["reverse_current_ua"],
+                                          labels={"reverse_current_ua": ["leakage"]})
         self.assertEqual(found["reverse_current_ua"]["status"], "NOT FOUND")
         self.assertIn("leakage", found["reverse_current_ua"]["tried"])
 
@@ -1654,7 +1656,8 @@ class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
           Deep-sleep
                          RTC memory is powered on. RTC peripherals off.    7        uA
         """
-        hit = parts.scan_datasheet(iter([(1, page)]), ["deep_sleep_current_ua"])["deep_sleep_current_ua"]["hits"][0][3]
+        hit = datasheets.scan_datasheet(iter([(1, page)]),
+                                        ["deep_sleep_current_ua"])["deep_sleep_current_ua"]["hits"][0][3]
         self.assertIn("8", hit)
         self.assertIn("7", hit)
 
@@ -1663,7 +1666,7 @@ class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
         Table 9: Recommended Operating Conditions
           VDD33        Power supply voltage        3.0     3.3     3.6     V
         """
-        hit = parts.scan_datasheet(iter([(1, page)]), ["supply_voltage_v"])["supply_voltage_v"]["hits"][0]
+        hit = datasheets.scan_datasheet(iter([(1, page)]), ["supply_voltage_v"])["supply_voltage_v"]["hits"][0]
         self.assertEqual(hit[2], "Table 9: Recommended Operating Conditions")
 
     def test_a_stray_capital_letter_is_not_a_heading(self):
@@ -1673,7 +1676,8 @@ class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
         K                           Symbol
           DC Forward Current        IF        30        mA
         """
-        hit = parts.scan_datasheet(iter([(1, page)]), ["max_continuous_current_ma"])["max_continuous_current_ma"]["hits"][0]
+        hit = datasheets.scan_datasheet(iter([(1, page)]),
+                                        ["max_continuous_current_ma"])["max_continuous_current_ma"]["hits"][0]
         self.assertEqual(hit[2], "ABSOLUTE MAXIMUM RATINGS")
 
     def test_a_maker_naming_the_fact_its_own_way_is_still_read(self):
@@ -1681,7 +1685,7 @@ class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
           Parameter                           Symbol     Typ.     Unit
           Wavelength at Peak Emission         lpeak      627      nm
         """
-        found = parts.scan_datasheet(iter([(1, page)]), ["peak_wavelength_nm"])["peak_wavelength_nm"]
+        found = datasheets.scan_datasheet(iter([(1, page)]), ["peak_wavelength_nm"])["peak_wavelength_nm"]
         self.assertEqual(found["status"], "FOUND")
         self.assertEqual(len(found["tried"]), len(set(found["tried"])), "each word tried once")
 
@@ -1737,7 +1741,7 @@ class TheCatalogIsThePersonSTest(unittest.TestCase):
         (home / "catalog").mkdir()
         (home / "catalog" / "rtc-a.json").write_text(json.dumps({"schema": 1, "id": "rtc-a", "name": "An RTC", "kind": "rtc"}))
         with in_store(home):
-            self.assertEqual(sorted(parts.catalog_records()[0]), ["rtc-a"], "read from the store's catalog")
+            self.assertEqual(sorted(datasheets.catalog_records()[0]), ["rtc-a"], "read from the store's catalog")
         self.assertEqual(sorted((ROOT / "catalog").glob("*.json")), [], "the plugin ships no catalog records")
 
     def test_a_catalog_record_with_seller_listings_is_refused_by_name(self):
@@ -1750,7 +1754,7 @@ class TheCatalogIsThePersonSTest(unittest.TestCase):
         kept = dict(record, id="rtc-b"); kept.pop("sourcing")
         (catalog / "rtc-b.json").write_text(json.dumps(kept))
         with in_store(home):
-            records, broken = parts.catalog_records()
+            records, broken = datasheets.catalog_records()
         self.assertEqual(sorted(records), ["rtc-b"], "a candidate keeps its part facts — its pinout too")
         self.assertEqual(records["rtc-b"]["pin_order"], ["VCC", "GND", "SCL", "SDA"])
         self.assertEqual(len(broken), 1)
@@ -1829,7 +1833,8 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         # `sources_resolve` binds `reachable` as a default argument, so it is the function patched here.
         def no_network(*_):
             raise AssertionError("a dry run asked the network")
-        with mock.patch.object(parts, "sources_resolve", no_network), mock.patch.object(parts, "_download", no_network):
+        with mock.patch.object(parts, "sources_resolve", no_network), \
+                mock.patch.object(datasheets, "_download", no_network):
             said, code = run_json(["--sources", "l9110s-module", "--dry-run"])
         self.assertEqual((code, bool(said["data"]["sources"])), (0, True))
 

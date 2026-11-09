@@ -18,7 +18,7 @@
   "replace": "            if False:"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a dead source counts as reachable",
   "find": "    return [(url, fetch(url)) for url in cited_urls(record)]",
   "replace": "    return [(url, True) for url in cited_urls(record)]"
@@ -30,7 +30,7 @@
   "replace": "    if False:\n        return Answer(problems=[_problem(args.skeleton,"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a draft record stops the search again (I3)",
   "find": "        except PartError:\n            # A record still being filled in",
   "replace": "        except ImportError:\n            # A record still being filled in"

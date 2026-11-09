@@ -1,18 +1,18 @@
 [
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a dict of sources is read as its keys again, and --sources goes blind",
   "find": "    texts = list(sources.values()) if isinstance(sources, dict) else list(sources)",
   "replace": "    texts = list(sources)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a URL inside a sentence is not seen",
   "find": "    urls = [url for text in texts if isinstance(text, str) for url in URL.findall(text)]",
   "replace": "    urls = [text for text in texts if isinstance(text, str) and text.startswith(\"http\")]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a parenthesis the URL never opened is kept as part of it",
   "find": "    while url.endswith(\")\") and url.count(\")\") > url.count(\"(\"):",
   "replace": "    while False:"
@@ -24,7 +24,7 @@
   "replace": "    folder = place(\"sources\")\n"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a document records no date it was fetched",
   "find": "                \"retrieved\": datetime.date.today().isoformat(), \"title\": None, \"version\": None}",
   "replace": "                \"retrieved\": None, \"title\": None, \"version\": None}"
