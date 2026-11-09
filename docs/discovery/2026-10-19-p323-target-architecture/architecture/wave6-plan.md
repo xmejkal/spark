@@ -1533,6 +1533,20 @@ with grep): `tools` is a local or a parameter nowhere in `scripts/`, and every i
 spark.records import tool_finder`. Tests: 46 importer files, the 54 patch sites. Rows: 67. Docs: 8 agent-facing pages, `areas/records.md`
 (the `versions` row). Size: 722 lines, est. 60 import lines, 67 rows, 10 keys. Done when `ls scripts/*.py` shows
 `tools.py` of the two and `TheRecordsAreaTest` passes whole.
+P719 claims check (at e3d86228, no decision changed). These hold. The files are 722 lines (669 and 53). `:36` is
+`SCRIPTS` and `:37` the `sys.path` line. The 10 keys hold. `board_records.PLUGIN_ROOT` is the plugin folder
+(`parents[3]`). `print_status` prints (`:574` to `:583`), and only it reads `MARKS` (`:571`). Every importer writes
+`import tools`, with no `from tools import` and no `as`. Symtable finds `tools` bound otherwise only as a parameter
+in `tests/test_cost.py`, which imports no tools. The 54 `mock.patch.object(tools, ...)` sites hold, and so does
+`tools.DOWNLOADS` in `MAY_READ`. These change. `PLUGIN` is `:50` (`:48` is `UNKNOWN_VERSION`). The rows are 70, not
+67 (65 and 5). 8 of them go back to the CLI (6 of `main`, 2 of `print_status`). 2 rows are refused on main and stay
+refused. The importer files are 50, not 46: 20 in `scripts/` (with the lazy one of `parts.py`) and 30 in `tests/`.
+`areas/records.md` has no `versions` row yet, so it gains one. The 32 patches of `tools.shutil`, `tools.os` and
+`tools.importlib` patch the shared module objects. They read `tool_finder.`, and their site changes nothing. The CLI
+imports the library's names by name, so `main` and `print_status` do not change. Through the module, five of their
+lines pass 120 characters and `R1:main` rises. So a test that runs `main` patches `PERSONAL` and `DOWNLOADS` in both
+modules that look them up. `test_routes.py:415` guards `install`, which only `main` reads there, so it stays on the
+CLI.
 
 ### W6-S3a, the part contract (after W6-R3b)
 
