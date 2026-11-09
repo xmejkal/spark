@@ -666,7 +666,7 @@ class TheBoardsOwnPowerPartsTest(unittest.TestCase):
         for value, holds in (("", False), (" ", False), ("\n", False), ("a", True), (0, True), (0.0, True), (-1, True),
                              (True, False), (None, False), ([], False)):
             with self.subTest(value=value):
-                self.assertEqual(board_records.is_fact_value(value), holds)
+                self.assertEqual(board_records.is_pin_map_constant(value), holds)
 
     def test_the_shipped_boards_with_a_charger_offer_it(self):
         for name in ("xiao-esp32-c6", "firebeetle2-esp32s3"):

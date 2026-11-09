@@ -108,7 +108,7 @@ def _op_unverified(args, project):
     return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions, next=follow)
 
 
-def _brief(part):
+def _part_summary(part):
     return {"id": part["id"], "kind": part["kind"], "name": part["name"]}
 
 

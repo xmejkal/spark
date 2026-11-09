@@ -473,7 +473,7 @@ def fact_lines(role, name, record):
     named = []
     for fact, said in facts.items():
         value = said.get("value") if isinstance(said, dict) else None
-        if board_records.is_fact_value(value):
+        if board_records.is_pin_map_constant(value):
             source = one_line(str(said.get("source")))
             named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, source: %s%s" % (
                 value, role, fact, source, "" if said.get("verified") is True else "; not verified")))

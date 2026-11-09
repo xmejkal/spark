@@ -18,7 +18,7 @@ from spark.records.record_kind import Answer, _cannot, owes, _parse, _problem, _
 from spark.sourcing import datasheets, drawer, matching, run_cost
 from spark.sourcing.datasheets import catalog_matches, NEED_MATCHER
 from spark.sourcing.part_facts import _row, shelve
-from spark.sourcing.part_handlers import _brief, sellers, vendor_order, _write_lines
+from spark.sourcing.part_handlers import _part_summary, sellers, vendor_order, _write_lines
 from spark.sourcing.part_records import broken_problems, function_of
 from spark.design import footprint_emitter, needs
 
@@ -72,8 +72,8 @@ def _op_need(args, project):
         return Answer(unchecked=[_cannot(str(wrong))])
     found, drafts = datasheets.need(args.need, project, chosen)
     known = [p for p in catalog_matches(args.need, chosen) if p["id"] not in drafts and p["id"] not in {q["id"] for q in found}]
-    data = {"need": args.need, "vendor_order": list(vendor_order(project)), "found": [_brief(p) for p in found],
-            "drafts": drafts, "catalog": [_brief(p) for p in known]}
+    data = {"need": args.need, "vendor_order": list(vendor_order(project)), "found": [_part_summary(p) for p in found],
+            "drafts": drafts, "catalog": [_part_summary(p) for p in known]}
     lines = [_row(p["id"], p["kind"], p["name"]) for p in found]
     lines += [_row(part_id, "(draft)", "does not yet meet the contract — being filled in") for part_id in drafts]
     lines += [_row(p["id"], p["kind"], "%s  [catalog: researched before; `--promote %s --project .` builds with it]"
