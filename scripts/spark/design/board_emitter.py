@@ -1,9 +1,10 @@
 """
-A pin map and a module list, as a board file you can build. The CLI `emit_board.py` asks it.
+Stops a bad input and gives the board file, from a pin map and a module list. The CLI `emit_board.py` asks it.
 
 This is the last step of "I have these modules, wire them up". Everything before it — which board,
 what each module asks for, which pin each signal goes on — is settled by `board_records.py`,
-`parts.py` and `assign_pins.py`. This turns that into tscircuit.
+`parts.py` and `assign_pins.py`. This turns that into tscircuit: `board_sections` writes each section, `power_rails`
+answers for the rails, and `board_components` names and places the parts (P708).
 
 WHAT IT IS HONEST ABOUT
 The connections are derived and trustworthy: every trace comes from a pin assignment that was
