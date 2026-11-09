@@ -39,20 +39,35 @@ BreadboardLayout = collections.namedtuple("BreadboardLayout", "breadboard parts 
 NO_HEADER_FACT, HEADER_DISAGREES = "no_header_fact", "header_disagrees"
 NO_DOUBTFUL_PAD_FACT, GROUND_NOT_ONE = "no_doubtful_pad_fact", "ground_not_one"
 DUPLICATE_PAD_LABEL, NO_HOLE_LEFT, NO_WOKWI_PART = "duplicate_pad_label", "no_hole_left", "no_wokwi_part"
-#: Each code with the one sentence that says what it means. A refusal with no code is an older site, whose text stands.
+NO_PIN_POSITION, NO_DRAWING_FACT, NO_WOKWI_PIN = "no_pin_position", "no_drawing_fact", "no_wokwi_pin"
+ROW_FULL, NOT_DRAWN_YET, PLANNER_FAULT = "row_full", "not_drawn_yet", "planner_fault"
+#: Each code with the one sentence that says what it means. Every refusal has one (P691).
 CODES = {
     NO_HEADER_FACT: "the board's record lacks a field its pads or its outline need; the subject is the first field",
     HEADER_DISAGREES: "the board's record disagrees with itself, a value of the wrong kind or a pad order that does not fit the pin counts",
     NO_DOUBTFUL_PAD_FACT: "the board's record does not say which pads are doubtful (physical.header.doubtful_pads), so no ground is picked",
     GROUND_NOT_ONE: "the board's ground pads, less the doubtful ones, are not exactly one; the subject names those left",
     DUPLICATE_PAD_LABEL: "two pads of the board's record have one label; the subject is the label",
-    NO_HOLE_LEFT: "the breadboard has no place where a part fits with a free hole beside each of its pins; the subject is the part",
+    NO_HOLE_LEFT: ("the breadboard has no place where a part fits with a free hole beside each of its pins, or no "
+                   "free row for a jumper; the subject is the part or the end"),
     NO_WOKWI_PART: "Wokwi has no part with this board's pins, so no Wokwi diagram is written, by design",
+    NO_PIN_POSITION: ("spark's data/wokwi-geometry.json has no pin positions for a Wokwi part or one of its pins; "
+                      "the subject is the type"),
+    NO_DRAWING_FACT: ("nothing says how to draw a part: its record has no Wokwi part, or no shape source describes the "
+                      "board; the subject is the part"),
+    NO_WOKWI_PIN: ("no Wokwi pin is known for an end: its part's record does not map it, or it is a doubtful pad; the "
+                   "subject is the end"),
+    ROW_FULL: ("the row of a pin has no free hole for one more jumper, as too many steps join that pin; the subject is "
+               "the row"),
+    NOT_DRAWN_YET: ("a step spark does not draw yet: a rail, a supply from off the board, or a resistor whose both "
+                    "legs join rows; the subject is the rail, the supply or the resistor"),
+    PLANNER_FAULT: ("the planner met what the steps rule out, a hole claimed twice or a part joined before it is "
+                    "placed: a fault in spark; the subject is the hole, the part or the end"),
 }
 
 
-#: Value: a drawing a build did not write: where it would be, its renderer, why as a code from CODES (None for an older
-#: refusal) with its subject (None when it has none), and the sentence a person reads.
+#: Value: a drawing a build did not write: where it would be, its renderer, why as a code from CODES with its subject
+#: (None when it has none), and the sentence a person reads.
 NotWritten = collections.namedtuple("NotWritten", "path renderer code subject why")
 #: The codes of a refusal that is no failure: the drawing is not written by design, and a retry gives the same.
 BY_DESIGN = (NO_WOKWI_PART,)
@@ -60,7 +75,7 @@ BY_DESIGN = (NO_WOKWI_PART,)
 
 class NotDrawn(Exception):
     """The steps cannot be drawn: a fact the drawing needs is missing, or the breadboard has no room. `code` (one of
-    CODES, or None for an older site) and `subject` say which, so a caller never reads the message."""
+    CODES) and `subject` say which, so a caller never reads the message."""
 
     def __init__(self, message, code=None, subject=None):
         super().__init__(message)
@@ -138,7 +153,8 @@ class WokwiGeometry:
         """{center, covers_holes, pins} of one Wokwi type, or NotDrawn naming it."""
         found = self.data["parts"].get(wokwi_type)
         if found is None:
-            raise NotDrawn("no Wokwi pin positions for %s in data/wokwi-geometry.json" % wokwi_type)
+            raise NotDrawn("no Wokwi pin positions for %s in data/wokwi-geometry.json" % wokwi_type, NO_PIN_POSITION,
+                           wokwi_type)
         return found
 
     def hole_at(self, x, y):
@@ -167,7 +183,8 @@ class HoleLedger:
 
     def claim(self, hole, by):
         if hole.name in self.taken:
-            raise NotDrawn("hole %s is taken by %s, and %s needs it too" % (hole.name, self.taken[hole.name], by))
+            raise NotDrawn("hole %s is taken by %s, and %s needs it too" % (hole.name, self.taken[hole.name], by),
+                           PLANNER_FAULT, hole.name)
         self.taken[hole.name] = by
 
     def is_free(self, hole):
@@ -180,7 +197,7 @@ class HoleLedger:
         """Claim the first free hole of one group, or NotDrawn: the group is full."""
         hole = next((hole for hole in self.surface.holes if hole.group == group and self.is_free(hole)), None)
         if hole is None:
-            raise NotDrawn("row %s has no free hole for %s" % (group, by))
+            raise NotDrawn("row %s has no free hole for %s" % (group, by), ROW_FULL, group)
         self.claim(hole, by)
         return hole
 
@@ -191,7 +208,7 @@ class HoleLedger:
             if hole.column > after and self.group_is_free(hole.group):
                 self.claim(hole, by)
                 return hole
-        raise NotDrawn("the breadboard has no free row left for %s" % by)
+        raise NotDrawn("the breadboard has no free row left for %s" % by, NO_HOLE_LEFT, by)
 
 
 class PartPlacement:
@@ -233,7 +250,8 @@ class FirstFitPartPlacement(PartPlacement):
         part_px = self.geometry.part(drawn.type)
         wanted = [pin for pin in drawn.pins.values() if pin not in part_px["pins"]]
         if wanted:
-            raise NotDrawn("data/wokwi-geometry.json has no pin %s on %s" % (wanted[0], drawn.type))
+            raise NotDrawn("data/wokwi-geometry.json has no pin %s on %s" % (wanted[0], drawn.type), NO_PIN_POSITION,
+                           drawn.type)
         for degrees in self.TURNS_DEGREES:
             turned = rotate(part_px["pins"], part_px["center"], degrees)
             first = pinned[0] if pinned else next(iter(turned))
@@ -308,9 +326,11 @@ class BreadboardPlanner:
                 after = max(hole.column for hole in placed[step.subject].holes.values()) + self.SPACING_COLUMNS
         for step in seated:
             if step.act != wiring_steps.PLACE and step.anchor.seat().kind == wiring_steps.RAIL:
-                raise NotDrawn("%s goes on a rail, and rails are not drawn yet" % step.anchor.seat().mark)
+                mark = step.anchor.seat().mark
+                raise NotDrawn("%s goes on a rail, and rails are not drawn yet" % mark, NOT_DRAWN_YET, mark)
             if step.act == wiring_steps.SUPPLY:
-                raise NotDrawn("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject)
+                raise NotDrawn("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject,
+                               NOT_DRAWN_YET, step.subject)
         self._place_resistors(seated, placed, ledger, after)
         parts_only = HoleLedger(self.geometry.surface, ledger.taken)
         groups, jumpers = {}, []
@@ -345,11 +365,11 @@ class BreadboardPlanner:
             ready = [(component, pinned) for component, pinned in waiting
                      if all(anchor.component in placed for _, anchor in pinned)]
             if not ready:
-                raise NotDrawn("%s joins a row that is never placed" % waiting[0][0])
+                raise NotDrawn("%s joins a row that is never placed" % waiting[0][0], PLANNER_FAULT, waiting[0][0])
             for component, pinned in ready:
                 if len(pinned) > 1:
                     raise NotDrawn("both ends of %s join other rows, and a drawn resistor has a fixed length"
-                                   % component)
+                                   % component, NOT_DRAWN_YET, component)
                 drawn = self._drawn(component)
                 joined = [(self._pin(end), self._group_of(anchor, placed, {})) for end, anchor in pinned]
                 placed[component] = self.placement.place(component, drawn, ledger, after if not joined else 0,
@@ -370,7 +390,7 @@ def drawn_part(component, catalog):
     """What the catalog draws for one component, or NotDrawn naming it."""
     drawn = catalog.get(component)
     if drawn is None:
-        raise NotDrawn("nothing says how to draw %s in Wokwi" % component)
+        raise NotDrawn("nothing says how to draw %s in Wokwi" % component, NO_DRAWING_FACT, component)
     return drawn
 
 
@@ -378,7 +398,7 @@ def end_pin(end, catalog):
     """The Wokwi pin of one end, or NotDrawn naming it."""
     pin = drawn_part(end.component, catalog).pins.get(end.pin)
     if pin is None:
-        raise NotDrawn("which Wokwi pin is %s is not known" % end.name)
+        raise NotDrawn("which Wokwi pin is %s is not known" % end.name, NO_WOKWI_PIN, end.name)
     return pin
 
 
@@ -388,7 +408,7 @@ def end_group(end, placed, catalog, groups=None):
     if groups and end.name in groups:
         return groups[end.name]
     if end.component not in placed:
-        raise NotDrawn("%s is joined before it is placed" % end.name)
+        raise NotDrawn("%s is joined before it is placed" % end.name, PLANNER_FAULT, end.name)
     return placed[end.component].holes[end_pin(end, catalog)].group
 
 
