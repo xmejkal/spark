@@ -389,7 +389,7 @@ with no transcript of a step's session it says the cost was not counted, and exi
 
 ### Matcher
 
-A class that ranks the offers for one need, best first. It lives in `scripts/matching.py`, which holds all matching of a
+A class that ranks the offers for one need, best first. It lives in `scripts/spark/sourcing/matching.py`, which holds all matching of a
 need or a search word. There are three: SameWords, NameContains and WordOverlap. `parts.py --match` and `--need` take
 `--matcher NAME`. **The failure behind it:** two scripts each kept a copy of a rule, so a second way to rank meant a
 second copy (P211).
@@ -397,13 +397,13 @@ second copy (P211).
 ### Offer
 
 One thing a need can match: a record with the drawer entries that say they are it, or a drawer entry with no record.
-It lives in `scripts/matching.py` as `Offer`. `parts.py --offer KEY` prints its whole text. **The failure behind it:**
+It lives in `scripts/spark/sourcing/matching.py` as `Offer`. `parts.py --offer KEY` prints its whole text. **The failure behind it:**
 a chooser saw only a score and a label for a candidate, not what the part says of itself.
 
 ### Fit
 
 One offer as a matcher sees it for one need: a `score` from 0 to 1, the reasons (`why`), and `exact`, which is what
-SameWords says whatever the matcher. It lives in `scripts/matching.py` as `Fit`. `parts.py --match` shows the `score`
+SameWords says whatever the matcher. It lives in `scripts/spark/sourcing/matching.py` as `Fit`. `parts.py --match` shows the `score`
 and the `why` of each candidate.
 
 ### Chooser
