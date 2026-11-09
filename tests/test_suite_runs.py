@@ -184,7 +184,7 @@ def gate_said(argv, left=()):
     said, asked = io.StringIO(), []
 
     def measured(tree, full=False, story=None):
-        asked.append(full)
+        asked.append(full and story is None)  # a full run is given no story (P714)
         return "quick run: Ran 1 of 2 tests in 1.0 s (1 slow test skipped) / OK", True, list(left)
 
     archived = []

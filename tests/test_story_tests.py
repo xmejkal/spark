@@ -19,9 +19,9 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import story_tests  # noqa: E402
 
-TESTS = {"test_widget": "import widget\n", "test_other": "import other\n", "test_uses_widget_tests": "import test_widget\n",
+TESTS = {"test_widget": "import widget\n", "test_other": "import other  # and its __init__\n", "test_uses_widget_tests": "import test_widget\n",
          "test_golden_firmware": "", "test_golden_design": "", "test_golden_records": "", "test_golden_bench": "",
-         "test_converter": "", "test_build_page": "reads commands/build.md\n", "test_docs": ""}
+         "test_converter": "", "test_build_page": "reads commands/build.md\n", "test_docs": "walks past only_the_always_list\n"}
 
 
 def chosen(*changed, tests=TESTS, goldens=()):
@@ -84,14 +84,17 @@ class TheChangedFilesChooseTheTestsTest(unittest.TestCase):
 
 class ADoubtRunsTheQuickRunTest(unittest.TestCase):
     def assert_quick(self, story, word):
-        self.assertEqual((story.state, story.modules), ("quick_run", ()))
+        self.assertEqual((story.state, story.modules, story.scope()), ("quick_run", (), None))
         self.assertIn(word, story.why)
 
     def test_the_core_runs_the_quick_run(self):
-        self.assert_quick(chosen("scripts/spark/core/widget.py"), "scripts/spark/core/widget.py")
+        self.assert_quick(chosen("scripts/spark/core/widget.py"), "every area depends on scripts/spark/core/widget.py")
 
     def test_a_package_file_runs_the_quick_run(self):
-        self.assert_quick(chosen("scripts/spark/firmware/__init__.py"), "scripts/spark/firmware/__init__.py")
+        self.assert_quick(chosen("scripts/spark/firmware/__init__.py"), "every area depends on scripts/spark/firmware/__init__.py")
+
+    def test_a_file_only_an_always_run_test_names_runs_the_quick_run(self):
+        self.assert_quick(chosen("tools/only_the_always_list.py"), "no test names tools/only_the_always_list.py")
 
     def test_a_file_nothing_names_runs_the_quick_run_and_is_named(self):
         self.assert_quick(chosen("tools/nothing_names_me.py"), "tools/nothing_names_me.py")
@@ -121,7 +124,7 @@ class WhatTheChoiceRemovesTest(unittest.TestCase):
         self.assertEqual(story.modules, ("test_docs", "test_widget"))
 
     def test_the_story_says_how_much_it_chose(self):
-        self.assertEqual(chosen("tools/widget.py", "README.md").scope(), "2 of 10 test files for 2 changed files")
+        self.assertEqual(chosen("tools/widget.py", "README.md").scope(), "2 of 10 test files")
 
     def test_every_always_run_test_exists_in_this_repository(self):
         texts = {found.stem: "" for found in (ROOT / "tests").glob("test_*.py")}

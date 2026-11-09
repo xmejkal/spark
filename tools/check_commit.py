@@ -42,6 +42,9 @@ import story_tests  # noqa: E402  (beside this file)
 #: How many of the names left behind the gate's line shows; the count says the rest.
 NAMES_SHOWN = 3
 
+#: The word for the run of every test; story_tests holds the other two.
+RUN_FULL = "full"
+
 
 def archive(root, commit, into):
     """The committed tree, extracted; nothing from the working tree."""
@@ -160,28 +163,23 @@ def temp_line(left):
     return "temp: the suite left {:,} {} behind ({}) — P172".format(len(left), "entry" if len(left) == 1 else "entries", shown)
 
 
-def run_name(quick, scope):
-    """The word for a run: a `scope` makes it the story run."""
-    return "story" if scope is not None else "quick" if quick else "full"
-
-
-def suite_line(said, quick, slow_skipped, scope=None):
+def suite_line(said, run, slow_skipped, scope=None):
     """
     The suite's verdict line from the lines the runner said: "quick run: Ran N of M tests in S s (K slow tests skipped;
-    the full run is check_commit.py --full) / OK", "full run: Ran M tests in S s / OK", or, when `scope` says how much
+    the full run is check_commit.py --full) / OK", "full run: Ran M tests in S s / OK", or, with the `scope` that says how much
     was chosen, "story run: Ran N tests in S s (K slow tests skipped; <scope>; the full run is check_commit.py --full) / OK".
     The quick and story lines are built so that they cannot be quoted as the suite's count: they name what they left out.
     """
     ran = next((re.match(r"Ran (\d+) tests? in ([\d.]+)s", line) for line in said if line.startswith("Ran ")), None)
     verdict = [line for line in said if not line.startswith("Ran ")]
     if ran is None:
-        return " / ".join([run_name(quick, scope) + " run"] + said)
+        return " / ".join([run + " run"] + said)
     total, seconds = int(ran.group(1)), float(ran.group(2))
-    if scope is not None:
+    if run == story_tests.RUN_STORY:
         counted = "Ran {:,} tests in {:.1f} s ({:,} slow {} skipped; {}; the full run is check_commit.py --full)".format(
             total - slow_skipped, seconds, slow_skipped, "test" if slow_skipped == 1 else "tests", scope)
-        return " / ".join(["story run: " + counted] + verdict)
-    if quick:
+        return " / ".join([run + " run: " + counted] + verdict)
+    if run == story_tests.RUN_QUICK:
         counted = "Ran {:,} of {:,} tests in {:.1f} s ({:,} slow {} skipped; the full run is check_commit.py --full)".format(
             total - slow_skipped, total, seconds, slow_skipped, "test" if slow_skipped == 1 else "tests")
         return " / ".join(["quick run: " + counted] + verdict)
@@ -195,8 +193,9 @@ def measure(tree, full=False, story=None):
     The quick run (P425) sets SPARK_SUITE=quick, so the tests marked slow skip; `full` runs every test.
     A `story` in the state CHOSEN runs only its modules (P714), as a quick run does; any other runs the whole suite.
     """
-    chosen = story is not None and story.state == story_tests.CHOSEN
-    what = ["tests.%s" % module for module in story.modules] if chosen else ["discover", "-s", "tests"]
+    run = RUN_FULL if full else story.run_word() if story else story_tests.RUN_QUICK
+    what = ["tests.%s" % module for module in story.modules] if run == story_tests.RUN_STORY else ["discover", "-s", "tests"]
+    scope = None if story is None else story.scope()
     lend_node_modules(tree)
     temp = tempfile.mkdtemp(prefix="spark-commit-temp-")
     try:
@@ -210,12 +209,13 @@ def measure(tree, full=False, story=None):
     finally:
         shutil.rmtree(temp, ignore_errors=True)  # a plain rmtree: it never chmods and never follows a link
     suite_said = [line for line in (suite.stderr + suite.stdout).splitlines() if line.startswith(("Ran ", "OK", "FAILED"))]
+    last_line_said = (suite.stderr + suite.stdout).splitlines()[-1:]  # a test module that cannot compile stops the runner before any verdict
     # The verdict's own `skipped=N` caps the count: a failure's traceback can embed a child's -v lines.
     skipped_in_all = sum(int(count) for line in suite_said for count in re.findall(r"skipped=(\d+)", line))
     slow_skipped = min(skipped_in_all, sum(1 for line in suite.stderr.splitlines() if " ... skipped '%s" % SLOW_PREFIX in line))
     # The mutation tables' anchors are no longer checked here (P208): the tables are history, and a moved line no
     # longer blocks a push.
-    return suite_line(suite_said, not full, slow_skipped, story.scope() if chosen else None), suite.returncode == 0, left
+    return suite_line(suite_said or last_line_said, run, slow_skipped, scope), suite.returncode == 0, left
 
 
 def main(argv=None):
@@ -254,8 +254,7 @@ def gate(root, commit, scratch, full=False):
     backlog = check_backlog.main()
     if not full:
         print("  {} run: the seconds above are the tests alone; the board check and the size line come on top, "
-              "{:.0f} s for the whole gate".format("story" if story.state == story_tests.CHOSEN else "quick",
-                                                   time.monotonic() - began))
+              "{:.0f} s for the whole gate".format(story.run_word(), time.monotonic() - began))
     return EXIT_FOR[status_of(problems=not ok or backlog != 0 or bool(left), unchecked=left is None)]
 
 

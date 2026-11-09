@@ -5,9 +5,9 @@ The PO, 2026-11-08: "you test the story. Maybe a few integration or some end-to-
 worked on." `check_commit.py` calls `select` with what it read from git and from the committed tree, so this module
 holds no git and reads no file.
 
-Each changed file adds the tests that name it, the golden net of its area, and ALWAYS_RUN_TESTS. A doubt runs more,
-never less: a file nothing names, the core, a package file or unread changes make it the whole quick run, with a
-sentence that says why. The sweeps run what a story leaves out (`check_commit.py --full`).
+Each changed file adds the tests that name it and the golden net of its area, and ALWAYS_RUN_TESTS always run. A doubt
+runs more: a file that only ALWAYS_RUN_TESTS name, the core, a package file or unread changes make it the whole quick
+run, with a sentence that says why. The sweeps run what a story leaves out (`check_commit.py --full`).
 """
 
 import re
@@ -17,6 +17,10 @@ from pathlib import PurePosixPath
 #: The states of StoryTests: its modules run, or the whole quick run does and `why` says the reason.
 CHOSEN = "chosen"
 QUICK_RUN = "quick_run"
+
+#: The words for the run a StoryTests asks for, in the gate's line.
+RUN_STORY = "story"
+RUN_QUICK = "quick"
 
 #: These read the whole tree, so no file's name finds them. Together 38 s on 2026-11-09.
 ALWAYS_RUN_TESTS = ("test_architecture", "test_self_confirmation", "test_docs", "test_map", "test_journey", "test_lint",
@@ -56,11 +60,14 @@ class StoryTests:
     state: str
     why: str
     test_files: int = 0
-    changed_files: int = 0
+
+    def run_word(self):
+        """The word for this run in the gate's line."""
+        return RUN_STORY if self.state == CHOSEN else RUN_QUICK
 
     def scope(self):
-        """How much of the suite was chosen, for the gate's line."""
-        return "{:,} of {:,} test files for {:,} changed files".format(len(self.modules), self.test_files, self.changed_files)
+        """How much of the suite was chosen, for the gate's line; None for the quick run."""
+        return "{:,} of {:,} test files".format(len(self.modules), self.test_files) if self.state == CHOSEN else None
 
 
 def _quick_run(why):
@@ -82,7 +89,7 @@ def _pattern_for(name):
 
 
 def _tests_for(name, test_texts, golden_texts):
-    """The test modules that the changed file `name` adds, or None when nothing names it."""
+    """The test modules that the changed file `name` adds, or None when no test of its own names it."""
     if name.startswith(NO_TEST_OF_THEIR_OWN) or ("/" not in name and name.endswith(ROOT_DOCUMENT_SUFFIX)):
         return set()
     if name.startswith(BENCH_NET_FOLDER):
@@ -95,8 +102,8 @@ def _tests_for(name, test_texts, golden_texts):
     named = _named_by(_pattern_for(name), test_texts, golden_texts)
     test_file = TEST_FILE.match(name)
     if test_file and test_file.group(1) in test_texts:
-        named.add(test_file.group(1))
-    if not named:
+        return named | {test_file.group(1)}
+    if not named - set(ALWAYS_RUN_TESTS):  # a mention in a test that reads the whole tree does not test this file
         return None
     area = AREA_MODULE.match(name)
     if area:
@@ -106,8 +113,8 @@ def _tests_for(name, test_texts, golden_texts):
 
 def select(changed, test_texts, golden_texts):
     """
-    StoryTests for the file names `changed`, None when they could not be read. `test_texts` maps each module
-    tests/test_*.py to its text, and `golden_texts` each helper tests/golden_*.py to its text.
+    StoryTests for the file names `changed`. A `changed` of None (git could not tell) gives the quick run. `test_texts`
+    maps each module tests/test_*.py to its text, and `golden_texts` each helper tests/golden_*.py to its text.
     """
     if changed is None:
         return _quick_run(WHY_CHANGES_UNREAD)
@@ -124,4 +131,4 @@ def select(changed, test_texts, golden_texts):
     modules = tuple(sorted(chosen & set(test_texts)))  # a test the rules name may not exist: a run of it would fail
     if not modules:
         return _quick_run(WHY_NOTHING_LEFT)
-    return StoryTests(modules, CHOSEN, None, len(test_texts), len(changed))
+    return StoryTests(modules, CHOSEN, None, len(test_texts))

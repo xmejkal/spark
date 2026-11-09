@@ -19,7 +19,7 @@ flash image skip with the reason "the littlefs package is not installed". They a
 ([`tests/suite_runs.py`](../../tests/suite_runs.py)). Run `/spark:setup` to install it and run them.
 
 **The runs of the suite** ([P425](https://github.com/xmejkal/spark/issues/559), [P714](https://github.com/xmejkal/spark/issues/963)). The plain command above is the full
-run: every test. The push hook runs the story run: the tests that [`tools/story_tests.py`](../../tools/story_tests.py) chooses from what the branch changed, the golden net of each changed area, and the tests that read the whole tree. If a file gives a doubt (nothing names it, or it is in the core or an `__init__.py`), the hook runs the quick run and prints why. Both skip the tests marked `@slow`
+run: every test. The push hook runs the story run: the tests that [`tools/story_tests.py`](../../tools/story_tests.py) chooses from what the branch changed, the golden net of each changed area, and `ALWAYS_RUN_TESTS`, a short list of tests that read much of the tree. Other tests that read the tree run when a file names them and at a sweep. If a file gives a doubt (only that list names it, or it is in the core or an `__init__.py`), the hook runs the quick run and prints why. Both skip the tests marked `@slow`
 ([`tests/suite_runs.py`](../../tests/suite_runs.py)) and say how many they skipped. Neither line is the suite's
 count, and a commit message or a card quotes the full run's. A mark needs more than about 2 s and a reason anyone
 can check: the reason says what the test runs and its measured seconds, with the date. Put the mark on a class or a method:
@@ -140,7 +140,7 @@ ln -sf ../../tools/pre-push .git/hooks/pre-push
 
 It reports:
 
-- the story run of the suite, as committed: `story run: Ran N tests in S s (K slow tests skipped; F of T test files for C changed files; the full run is
+- the story run of the suite, as committed: `story run: Ran N tests in S s (K slow tests skipped; F of T test files; the full run is
   check_commit.py --full)`. If the hook cannot choose, the line is the quick run's, `quick run: Ran N of M tests in S s (K slow tests skipped; ...)`, and the next line starts `no story run:` and gives the reason. The skipped count is only the `@slow` tests, never a real skip such as a missing tool. The
   seconds are the tests alone; the board check (about 18 s) and the size line come on top, and the gate prints its
   whole time. No budget fails the push: the time is printed and not capped, as the size line is

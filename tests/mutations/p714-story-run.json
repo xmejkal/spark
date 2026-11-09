@@ -13,12 +13,6 @@
  },
  {
   "file": "tools/story_tests.py",
-  "name": "a file nothing names adds no test and the push goes on",
-  "find": "    if not named:\n        return None\n",
-  "replace": "    if not named:\n        return set()\n"
- },
- {
-  "file": "tools/story_tests.py",
   "name": "unread changes count as no change at all",
   "find": "    if changed is None:\n        return _quick_run(WHY_CHANGES_UNREAD)\n",
   "replace": "    if changed is None:\n        changed = [\"README.md\"]\n"
@@ -40,12 +34,6 @@
   "name": "nothing to run becomes an empty command",
   "find": "    if not modules:\n        return _quick_run(WHY_NOTHING_LEFT)\n",
   "replace": ""
- },
- {
-  "file": "tools/story_tests.py",
-  "name": "a changed test does not run itself",
-  "find": "        named.add(test_file.group(1))\n",
-  "replace": "        pass\n"
  },
  {
   "file": "tools/story_tests.py",
@@ -91,18 +79,6 @@
  },
  {
   "file": "tools/check_commit.py",
-  "name": "the story run runs the whole suite",
-  "find": "what = [\"tests.%s\" % module for module in story.modules] if chosen else [\"discover\", \"-s\", \"tests\"]",
-  "replace": "what = [\"discover\", \"-s\", \"tests\"]"
- },
- {
-  "file": "tools/check_commit.py",
-  "name": "a quick-run answer runs an empty story",
-  "find": "chosen = story is not None and story.state == story_tests.CHOSEN",
-  "replace": "chosen = story is not None"
- },
- {
-  "file": "tools/check_commit.py",
   "name": "a deleted or renamed file is not listed",
   "find": "\"diff\", \"--no-renames\", \"--name-only\", since, commit]",
   "replace": "\"diff\", \"--diff-filter=AM\", \"--name-only\", since, commit]"
@@ -114,9 +90,57 @@
   "replace": "        pass\n"
  },
  {
+  "file": "tools/story_tests.py",
+  "name": "a file that only an always-run test names adds no test and the push goes on",
+  "find": "    if not named - set(ALWAYS_RUN_TESTS):  # a mention in a test that reads the whole tree does not test this file\n        return None\n",
+  "replace": "    if not named - set(ALWAYS_RUN_TESTS):\n        return set()\n"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a mention in an always-run test removes the doubt",
+  "find": "if not named - set(ALWAYS_RUN_TESTS):",
+  "replace": "if not named:"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a changed test does not run itself",
+  "find": "return named | {test_file.group(1)}",
+  "replace": "return named"
+ },
+ {
   "file": "tools/check_commit.py",
-  "name": "the story line drops its scope",
-  "find": "\"story run: \" + counted",
-  "replace": "\"quick run: \" + counted"
+  "name": "the story run runs the whole suite",
+  "find": "what = [\"tests.%s\" % module for module in story.modules] if run == story_tests.RUN_STORY else [\"discover\", \"-s\", \"tests\"]",
+  "replace": "what = [\"discover\", \"-s\", \"tests\"]"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a quick-run answer asks for the story run",
+  "find": "return RUN_STORY if self.state == CHOSEN else RUN_QUICK",
+  "replace": "return RUN_STORY"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the story line loses its scope",
+  "find": "scope = None if story is None else story.scope()",
+  "replace": "scope = None"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the full run is given a story",
+  "find": "story = None if full else story_tests_in(scratch, changed_files(root, commit))",
+  "replace": "story = story_tests_in(scratch, changed_files(root, commit))"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a renamed file is listed by its new name only",
+  "find": "\"diff\", \"--no-renames\", \"--name-only\", since, commit]",
+  "replace": "\"diff\", \"--name-only\", since, commit]"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a module that cannot compile leaves the line with no reason",
+  "find": "suite_said or last_line_said",
+  "replace": "suite_said"
  }
 ]

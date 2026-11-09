@@ -289,7 +289,7 @@ class TheStoryRunTest(unittest.TestCase):
     def test_a_failing_test_of_a_file_the_branch_left_alone_does_not_run(self):
         code, said = self.branch_changes({"a.py": "def one(): return 1  # a comment\n"})
         self.assertEqual(code, check_commit.EXIT_OK, said)
-        self.assertRegex(said, r"story run: Ran 1 tests in [\d.]+ s \(0 slow tests skipped; 1 of 2 test files for 1 changed files; "
+        self.assertRegex(said, r"story run: Ran 1 tests in [\d.]+ s \(0 slow tests skipped; 1 of 2 test files; "
                                r"the full run is check_commit.py --full\) / OK\n")
         self.assertRegex(said, r"story run: the seconds above")
 
@@ -309,12 +309,18 @@ class TheStoryRunTest(unittest.TestCase):
         self.assertEqual(code, check_commit.EXIT_PROBLEMS, said)
         self.assertIn("  no story run: no test names tools/new_thing.py\n", said)
 
-    def test_a_deleted_file_counts_as_changed(self):
+    def test_a_selected_test_that_cannot_compile_fails_the_gate_and_the_line_says_why(self):
+        code, said = self.branch_changes({"tests/test_a.py": "def broken(:\n"})
+        self.assertEqual(code, check_commit.EXIT_PROBLEMS, said)
+        self.assertIn("SyntaxError", said)
+
+    def test_a_deleted_file_and_both_names_of_a_renamed_file_count_as_changed(self):
         root = repo_with(self.MAIN)
         subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=str(root), check=True, env=own_env())
-        for command in (["git", "rm", "-q", "b.py"], ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "two"]):
+        for command in (["git", "rm", "-q", "b.py"], ["git", "mv", "a.py", "c.py"],
+                        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "two"]):
             subprocess.run(command, cwd=str(root), check=True, capture_output=True, env=own_env())
-        self.assertEqual(check_commit.changed_files(root, "HEAD"), ["b.py"])
+        self.assertEqual(check_commit.changed_files(root, "HEAD"), ["a.py", "b.py", "c.py"])
 
 
 if __name__ == "__main__":
