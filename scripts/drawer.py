@@ -16,12 +16,14 @@ from collections import namedtuple
 
 from spark.records import board_records
 import parts
+from spark.records import record_kind
+from spark.sourcing import part_records
 from spark.records import records_codes
 from spark.records import store
 from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems, printable
 
-#: What a part does (§5.6) — one list, in parts.py.
-VERBS = parts.VERBS
+#: What a part does (§5.6) — one list, in record_kind.
+VERBS = record_kind.VERBS
 
 #: An entry's fields, in the order its file shows them (§5.2). No price, no date, no condition grade (W21).
 FIELDS = ("label", "count", "part_number", "revision", "is", "function", "place", "used_in", "from", "bought",
@@ -142,7 +144,8 @@ def linkable(project=None):
     library, the catalog), then each project on the person's list, by its name (§5.5). The first of an id wins. A
     project whose folder is gone has nothing to offer and is passed over.
     """
-    found = [("part", part_id, layer, path) for part_id, (layer, path) in store.records("parts", parts.LIBRARY, project, drafts=True).items()]
+    found = [("part", part_id, layer, path) for part_id, (layer, path) in store.records("parts", record_kind.LIBRARY,
+                                                                                        project, drafts=True).items()]
     found += [("board", board_id, layer, path) for board_id, (layer, path) in board_records.records(project).items()]
     for name, folder in store.projects().items():
         found += [("part", path.stem, name, path) for path in sorted((folder / "parts").glob("*.json"))]
@@ -161,7 +164,7 @@ def numbers(record, record_id):
     word like "button" is never a number.
     """
     sku = record.get("sku")
-    aliases = parts.aliases(record)
+    aliases = part_records.aliases(record)
     stated = {s.lower() for s in (sku if isinstance(sku, list) else [sku]) + aliases if isinstance(s, str)}
     words = (token for word in [record_id] + aliases for token in re.split(r"[^a-z0-9]+", word.lower()))
     return stated, {w for w in words if re.search(r"[a-z]", w) and re.search(r"\d", w)}
@@ -197,7 +200,7 @@ def link(number, known=None, maker=None):
     """
     wanted, exact, near = number.lower(), [], []
     for kind, record_id, where, path in (linkable() if known is None else known):
-        record = parts._parse(path)
+        record = record_kind._parse(path)
         if not isinstance(record, dict):
             continue
         found = _match(wanted, record, record_id)
@@ -236,21 +239,26 @@ def settle(entry_id, before, values, known):
     {"entry", "new", "was", "now", "after", "shelve"}. Nothing is written here.
     """
     values = {key: scrub(key, value) for key, value in values.items()}
-    problems = [parts._problem(entry_id, "%s is not a drawer field — the fields are %s" % (printable(key), ", ".join(FIELDS)))
+    problems = [record_kind._problem(entry_id, "%s is not a drawer field — the fields are %s"
+                                     % (printable(key), ", ".join(FIELDS)))
                 for key in values if key not in FIELDS]
-    problems += [parts._problem(entry_id, each) for key, value in values.items() for each in list_key_problems(key, value, SURROGATE)]
-    problems += [parts._problem(entry_id, CHECKS[key][1]) for key, value in values.items() if key in CHECKS and not CHECKS[key][0](value)]
+    problems += [record_kind._problem(entry_id, each) for key, value in values.items()
+                 for each in list_key_problems(key, value, SURROGATE)]
+    problems += [record_kind._problem(entry_id, CHECKS[key][1]) for key, value in values.items() if key in CHECKS
+                 and not CHECKS[key][0](value)]
     if before is None and "label" not in values:
-        problems.append(parts._problem(entry_id, "a new entry needs a label — with no count it is owned, count unknown"))
+        problems.append(record_kind._problem(entry_id,
+                                             "a new entry needs a label — with no count it is owned, count unknown"))
     if problems:
         return None, [], problems
     after, questions, shelve = dict(before or {"schema": 1}, **values), [], None
     if values.get("is"):
         where, path = resolve(values["is"], known)
         if where is None:
-            return None, [], [parts._problem(entry_id, "no record called %s — `parts.py --need` finds what exists; one "
-                                             "/spark:research just wrote into this folder needs `--project .`"
-                                             % json.dumps(values["is"]))]
+            return None, [], [record_kind._problem(entry_id,
+                                                   "no record called %s — `parts.py --need` finds what exists; one "
+                                                   "/spark:research just wrote into this folder needs `--project .`"
+                                                   % json.dumps(values["is"]))]
         shelve = _shelve_from(values["is"], where, path)
     elif "is" not in values and _words((after.get("part_number") or {}).get("number")) and (
             "is" not in after or before is None or after["part_number"] != before.get("part_number")):
@@ -284,7 +292,7 @@ def plan_set(items, project=None):
     record in `project` too, the folder /spark:research just wrote it into (P185), though no list names that project.
     """
     if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
-        return [], [], [parts._problem(None, "a drawer write is a JSON list of entries, each an object")]
+        return [], [], [record_kind._problem(None, "a drawer write is a JSON list of entries, each an object")]
     # The given project only fills gaps: a record it holds under an id spark already knows never shadows the shelf or the
     # library, or its copy would go on the shelf for every project (P185 refuter, RX1). Its own layer is named as the
     # person's list names it, or not at all ("") when the folder is on no list (P185 review, P1).
@@ -298,16 +306,18 @@ def plan_set(items, project=None):
         values = {key: value for key, value in item.items() if key != "entry"}
         entry_id = item.get("entry") or (_free_key(clean(values["label"]), current) if _words(values.get("label")) else None)
         if not (isinstance(entry_id, str) and store.PLAIN.fullmatch(entry_id)):
-            problems.append(parts._problem(None, "an entry needs a label, or an `entry` key of lower-case letters, digits and '-'"))
+            problems.append(record_kind._problem(
+                None, "an entry needs a label, or an `entry` key of lower-case letters, digits and '-'"))
             continue
         change, asked, refused = settle(entry_id, current.get(entry_id), values, known)
         questions += asked
         problems += refused
         if change and change["shelve"] and change["shelve"][1] is None and not parts.shelvable(*change["shelve"]):
             # A folder on no list keeps a record only it can see: unshelved, the entry would point at nothing elsewhere (RX3).
-            problems.append(parts._problem(entry_id, "%s does not meet the part contract yet, and its folder is on no list, "
-                                           "so no other project could find it: fix it (`parts.py --validate --project .`) "
-                                           "or put the folder on your list (/spark:init)" % Path(change["shelve"][0]).stem))
+            problems.append(record_kind._problem(
+                entry_id, "%s does not meet the part contract yet, and its folder is on no list, "
+                          "so no other project could find it: fix it (`parts.py --validate --project .`) "
+                          "or put the folder on your list (/spark:init)" % Path(change["shelve"][0]).stem))
             continue
         if change:
             changes.append(change)
@@ -388,7 +398,7 @@ def plan_import(source, payload):
     """
     refused = payload_problems(source, payload)
     if refused:
-        return [], [], [parts._problem(source, sentence) for sentence in refused], []
+        return [], [], [record_kind._problem(source, sentence) for sentence in refused], []
     current, known = entries(), linkable()
     by_product = {(entry.get("from") or {}).get("product"): entry_id for entry_id, entry in current.items()
                   if (entry.get("from") or {}).get("seller") == source}

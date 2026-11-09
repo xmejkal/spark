@@ -141,7 +141,7 @@ Each by its name in check_all's answer:
 
 ### The libraries
 
-Imported by the scripts above, and not run on their own, except `cost.py`:
+Imported by the scripts above, and not run on their own:
 
 - `spark/design/loader.py`: a design, loaded once: the requirements file, its project, the board, the parts and the rules;
 - `spark/design/netlist.py`: the built design, as connectivity;
@@ -151,8 +151,8 @@ Imported by the scripts above, and not run on their own, except `cost.py`:
 - `spark/records/store.py`: where spark keeps what it keeps;
 - `drawer.py`: what you own;
 - `spark/design/needs.py`: what a goal needs, and what the store offers for each;
-- `cost.py`: what a project's run cost, read from the Claude Code transcripts of the sessions its steps ran in, tool
-  names and counts only. `parts.py --step` and `--tally` use it. On one transcript it runs on its own:
+- `spark/sourcing/run_cost.py`: what a project's run cost, read from the transcripts of the sessions its steps ran in,
+  tool names and counts only. `parts.py --step` and `--tally` use it. The CLI `cost.py` reads one transcript:
   `cost.py <transcript.jsonl>` says what that run cost;
 - `spark/firmware/sim_project.py`: the simulation project a design implies, written by `check_spine.py`'s simulation stage.
 

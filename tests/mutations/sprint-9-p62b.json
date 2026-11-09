@@ -56,7 +56,7 @@
  {
   "file": "scripts/spark/records/board_records.py",
   "name": "a board's documents are not read",
-  "find": "    problems += parts.document_problems(board)\n",
+  "find": "    problems += record_kind.document_problems(board)\n",
   "replace": "\n"
  }
 ]

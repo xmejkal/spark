@@ -19,7 +19,8 @@ from typing import NamedTuple, Optional
 from spark.records import board_records
 from spark.design import board_emitter
 from spark.core import outcomes
-import parts as parts_library
+from spark.sourcing import part_records
+from spark.sourcing import part_rules
 from spark.firmware.scenario_steps import WHY_LOG_UNREADABLE
 from spark.records import tool_finder
 
@@ -74,8 +75,8 @@ def mapping_for(design):
             entry["attrs"] = wokwi["attrs"]
         if wokwi.get("chip"):
             entry["wokwiType"] = "chip-" + wokwi["chip"]
-            record = parts_library.definition_path(part["id"], design.project)
-            chips.append((parts_library.chip_folder(part, record), wokwi["chip"]))
+            record = part_records.definition_path(part["id"], design.project)
+            chips.append((part_rules.chip_folder(part, record), wokwi["chip"]))
         else:
             entry["wokwiType"] = wokwi.get("part")
         mapping[name] = entry
@@ -252,7 +253,7 @@ def stage_chips(chips, sim_dir, compiler=None):
     for folder, chip in chips:
         target.mkdir(parents=True, exist_ok=True)
         source, binary = folder / (chip + ".chip.c"), folder / (chip + ".chip.wasm")
-        for suffix in parts_library.CHIP_SOURCE_SUFFIXES:
+        for suffix in part_rules.CHIP_SOURCE_SUFFIXES:
             shutil.copy2(folder / (chip + suffix), target / (chip + suffix))
         if binary.is_file() and binary.stat().st_mtime >= source.stat().st_mtime:
             shutil.copy2(binary, target / binary.name)

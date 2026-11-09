@@ -1038,8 +1038,8 @@ class TheReferenceDesignTest(unittest.TestCase):
     def test_it_names_only_parts_the_library_actually_has(self):
         # If it drifts, the gate fails for a reason that has nothing to do with the chain, and
         # somebody switches it off.
-        import parts
-        available = set(parts.available())
+        from spark.records import record_kind
+        available = set(record_kind.available())
         for part_id in check_spine.REFERENCE["parts"]:
             with self.subTest(part=part_id):
                 self.assertIn(part_id, available)
@@ -1047,10 +1047,10 @@ class TheReferenceDesignTest(unittest.TestCase):
     def test_it_includes_something_that_sources_a_rail(self):
         # Without it the design has a net with one member, the autorouter skips routing, and the
         # gate's own reference design demonstrates the defect the gate exists to catch.
-        import parts
+        from spark.sourcing import part_records
         sources = [part_id for part_id in check_spine.REFERENCE["parts"]
                    if any(supply.get("direction") == "out"
-                          for supply in parts.load(part_id).get("power") or [])]
+                          for supply in part_records.load(part_id).get("power") or [])]
         self.assertTrue(sources, "no part in the reference design supplies a rail")
 
 

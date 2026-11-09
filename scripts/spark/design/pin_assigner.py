@@ -36,7 +36,7 @@ from spark.records import board_records
 from spark.design import design_codes
 from spark.design import loader
 from spark.records import missing_facts
-import parts as parts_library
+from spark.sourcing import part_rules
 from spark.records import provenance
 from spark.core.text_guards import one_line
 
@@ -47,7 +47,7 @@ from spark.core.text_guards import one_line
 #: Imported rather than restated. This file kept its own copy, `("wake", "adc")`, while
 #: `parts.py` validated any string at all — so a servo declaring `needs: ["pwm"]` was a good
 #: record here and an impossible design there.
-CAPABILITIES = parts_library.CAPABILITIES
+CAPABILITIES = part_rules.CAPABILITIES
 
 #: Roles from the board definition that make a pin unusable for general assignment.
 #:
@@ -165,7 +165,7 @@ def candidates(board):
 
 #: The lines a bus has, with the names vendors print for them — the parts library's definition,
 #: imported, so a record `parts.py --validate` calls fine is one this can place (close audit C6).
-BUS_LINES = parts_library.BUSES
+BUS_LINES = part_rules.BUSES
 
 #: Lines every device on the bus shares — which is what a bus IS. A chip select is per device:
 #: the first takes the board's SS pin and the rest are ordinary signals on any free pin.
@@ -185,7 +185,7 @@ def bus_line(signal):
     if lines is None:
         raise Impossible("%s is on bus %r, which is not a bus this knows: %s"
                          % (signal["name"], signal["bus"], ", ".join(BUS_LINES)), design_codes.UNKNOWN_BUS)
-    line = parts_library.bus_line_of(signal["bus"], signal.get("line") or signal["name"])
+    line = part_rules.bus_line_of(signal["bus"], signal.get("line") or signal["name"])
     if line is None:
         raise Impossible("%s is on the %s bus but %r is not one of its lines: %s"
                          % (signal["name"], signal["bus"].upper(), signal.get("line") or signal["name"],

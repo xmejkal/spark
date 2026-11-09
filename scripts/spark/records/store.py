@@ -7,7 +7,7 @@ two scripts and read once at import, so the suite kept away from the real one on
 constants by hand — and a test that forgot one would have written into the person's store. Now the home is
 read on every call: SPARK_HOME, else XDG_DATA_HOME/spark, else ~/.local/share/spark.
 
-This module owns *where* and *how bytes move*; `parts.py` owns what a record must be. It imports only the
+This module owns *where* and *how bytes move*; `record_kind` owns what a record must be. It imports only the
 standard library and the leaf `text_guards`, which imports nothing of spark.
 """
 

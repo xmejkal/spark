@@ -1,7 +1,7 @@
 [
- {"file": "scripts/parts.py", "name": "a series resistor is a kind the generator cannot place",
+ {"file": "scripts/spark/sourcing/part_rules.py", "name": "a series resistor is a kind the generator cannot place",
   "find": "HOST_PART_KINDS = (\"pulldown\", \"pullup\", \"divider\", \"series\")", "replace": "HOST_PART_KINDS = (\"pulldown\", \"pullup\", \"divider\")"},
- {"file": "scripts/parts.py", "name": "a series resistor with neither a value nor a current passes",
+ {"file": "scripts/spark/sourcing/part_rules.py", "name": "a series resistor with neither a value nor a current passes",
   "find": "            if not positive(\"ohms\") and not positive(\"for_current_ma\"):", "replace": "            if False:"},
  {"file": "scripts/spark/design/board_emitter.py", "name": "the host's trace goes straight to the pad, past the resistor",
   "find": "        if host_part[\"kind\"] == \"series\" and host_part[\"pin\"] == need[\"pin\"]:\n            return (host_part_names(part, host_part)[0], \"pin1\")", "replace": ""},

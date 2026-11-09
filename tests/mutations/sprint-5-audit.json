@@ -6,7 +6,7 @@
   "replace": "            staged[chip] = \"compiled\""
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_rules.py",
   "name": "a chip pin the chip lacks validates clean again (D18)",
   "find": "                if target is not None and target not in chip_pins:",
   "replace": "                if False:"

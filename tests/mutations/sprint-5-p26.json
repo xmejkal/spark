@@ -1,18 +1,18 @@
 [
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_rules.py",
   "name": "i2s vanishes from the vocabulary (C6)",
   "find": "    \"i2s\": {\"BCLK\": (\"BCLK\", \"SCK\"), \"LRC\": (\"LRC\", \"LRCLK\", \"WS\"), \"DIN\": (\"DIN\", \"SD\", \"DOUT\")},\n",
   "replace": ""
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_rules.py",
   "name": "a bus-prefixed signal no longer names its line",
   "find": "    if printed.startswith(bus.upper() + \"_\"):\n        printed = printed[len(bus) + 1:]",
   "replace": "    if False:\n        printed = printed[len(bus) + 1:]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "the contract lets an unknown bus through",
   "find": "        if bus and bus not in BUSES:",
   "replace": "        if False:"

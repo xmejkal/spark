@@ -24,6 +24,7 @@ from typing import Optional
 from pathlib import Path
 from spark.records import board_pads
 from spark.records import provenance
+from spark.records import record_kind
 from spark.records import records_codes
 from spark.records import store
 
@@ -304,7 +305,7 @@ class OnboardRole:
     """
     Value: what spark knows of one part that a board carries itself. `constant` is the name pins.py gives it.
     `scenario_verb` is what a scenario does to it (`read`, `press`), or None when no scenario reaches it. `does` and
-    `what` are the function the board offers a need, in the words of `parts.VERBS`. `not_in_diagram` is what a passed
+    `what` are the function the board offers a need, in `record_kind.VERBS`' words. `not_in_diagram` is what a passed
     run does not test of a part that no scenario reaches. A row has a verb or a sentence, never both and never neither.
     """
 
@@ -799,24 +800,23 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
     # such a pad with `continue` — the silent drop G2 removed for module pins, kept for the
     # processor's own. Refused here, where the board file is read, so it never reaches a
     # generator at all (sprint audit A6, item 8).
-    import parts  # a board points at its datasheets the way a part does (P62b), and names a rail as a part does
     for pad, supply in sorted((board.get("power_pads") or {}).items()):
         if not isinstance(supply, dict) or not supply.get("rail"):
             problems.append(f"power_pads.{pad} names no rail, so the microcontroller pad would be "
                             f"wired to nothing")
         # P87's attribute half: the pad's trace is written to `net.<RAIL>`, so a rail is a name, never text
-        elif not (isinstance(supply["rail"], str) and re.fullmatch(parts.SELECTOR_SAFE, supply["rail"])):
+        elif not (isinstance(supply["rail"], str) and re.fullmatch(record_kind.SELECTOR_SAFE, supply["rail"])):
             problems.append(f"power_pads.{pad} rail is {supply['rail']!r}, but a rail is a name — letters, digits and _ "
                             f"(ground, logic, motor): the board is written with it as code")
 
     # P87's attribute half: board.tsx holds each pins key, alias pad, power_pads key, export (names) and id (a key).
     for kind, label in ([("pins key", key) for key in (pins if isinstance(pins, dict) else {})]  # --- MVP --- (P512)
                         + [("alias pad", pad) for pad in sorted(board_pads.BoardPads.from_record(board).alias_pads(), key=str)]):
-        if not re.fullmatch(parts.SELECTOR_SAFE, str(label)):  # an alias pad too: `.Mcu > .<pad>` takes it
+        if not re.fullmatch(record_kind.SELECTOR_SAFE, str(label)):  # an alias pad too: `.Mcu > .<pad>` takes it
             problems.append(f"{kind} {label!r} is not a name — letters, digits and _ (D3, SDA, A0): the board is written "
                             f"with it as code")
     for pad in board.get("power_pads") if isinstance(board.get("power_pads"), dict) else {}:
-        if not re.fullmatch(parts.SELECTOR_SAFE, pad):
+        if not re.fullmatch(record_kind.SELECTOR_SAFE, pad):
             problems.append(f"power_pads key {pad!r} is not a name — letters, digits and _ (3V3, GND1, VCC): the board is "
                             f"written with it as code")
     # concern 1: the footprint's comment quotes the drawing's drill (`NOT the <drill_mm> mm`), so it is a number, never text
@@ -826,14 +826,14 @@ def validate(board: dict, path: Path, for_fab: bool = False) -> list:
         problems.append(f"physical.header.drill_mm is {drill!r}, but it is a number of millimetres (0.9): the footprint "
                         f"generated from it is written with it")
     export = physical.get("footprint_export") if isinstance(physical, dict) else None
-    if export and not (isinstance(export, str) and re.fullmatch(parts.SELECTOR_SAFE, export)):
+    if export and not (isinstance(export, str) and re.fullmatch(record_kind.SELECTOR_SAFE, export)):
         problems.append(f"physical.footprint_export is {export!r}, but it is a name — letters, digits and _ "
                         f"(FireBeetle2Esp32S3): the board is written with it as code")
     if isinstance(board.get("id"), str) and not store.PLAIN.fullmatch(board["id"]):
         problems.append(f"id is {board['id']!r}, but an id is a plain key — lower-case letters, digits and - "
                         f"(firebeetle2-esp32s3): files are named by it, and it is written into the footprint generated from it")
 
-    problems += parts.document_problems(board)
+    problems += record_kind.document_problems(board)
     return problems
 
 

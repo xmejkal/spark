@@ -476,12 +476,13 @@ class TheBuildAreaTest(unittest.TestCase):
 
 # --- MVP ---
 class TheRecordsAreaTest(unittest.TestCase):
-    """W6-R3a (P718) and W6-R3b (P719): the records' modules live in `scripts/spark/records/`, its `__init__.py` imports
-    nothing, and each module imports alone. `scripts/` keeps the CLIs `boards.py` and `tools.py`."""
+    """W6-R3a (P718), W6-R3b (P719) and W6-S3a (P720, `record_kind`): the records' modules live in
+    `scripts/spark/records/`, its `__init__.py` imports nothing, and each module imports alone. `scripts/` keeps the CLIs
+    `boards.py` and `tools.py`."""
     RECORDS = ROOT / "scripts" / "spark" / "records"
     #: The modules of the area so far, by the names of its page (`areas/records.md`).
     MODULES = ["board_pads", "board_records", "brief", "deploy_record_store", "missing_facts", "onboard_parts",
-               "provenance", "records_codes", "store", "tool_finder", "versions"]
+               "provenance", "record_kind", "records_codes", "store", "tool_finder", "versions"]
     #: Each CLI's own top-level functions: `main`, what only it uses to print (`_validate_all` and `print_status`) and
     #: the lazy read of design's `footprint_stop`. A library function back in a CLI, under any name, fails the check.
     CLIS = {"boards.py": ["_footprint_stop", "_validate_all", "main"], "tools.py": ["main", "print_status"]}
@@ -522,12 +523,13 @@ class TheRecordsAreaTest(unittest.TestCase):
 
 # --- MVP ---
 class TheSourcingAreaTest(unittest.TestCase):
-    """W6-S2 (P717): the sourcing area starts with the pull-up band in `scripts/spark/sourcing/part_rules.py`, its
-    `__init__.py` imports nothing, and each module imports alone. Checks and `parts.py` read the band from there, so no
-    module imports the checks area for it. `sourcing_codes` stays flat in `scripts/` until its move (W6-S3a)."""
+    """W6-S2 (P717) and W6-S3a (P720): the sourcing area holds the pull-up band and the part rules in
+    `scripts/spark/sourcing/part_rules.py`, the part records, the matchers, the cost of a run and the leaf
+    `sourcing_codes`. Its `__init__.py` imports nothing, and each module imports alone. Checks and `parts.py` read the
+    band from there, so no module imports the checks area for it. `scripts/` keeps the CLI `cost.py`, `main` alone."""
     SOURCING = ROOT / "scripts" / "spark" / "sourcing"
     #: The modules of the area so far, by the names of its page (`areas/sourcing.md`).
-    MODULES = ["part_rules"]
+    MODULES = ["matching", "part_records", "part_rules", "run_cost", "sourcing_codes"]
 
     def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):
         modules = sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py")
@@ -537,6 +539,11 @@ class TheSourcingAreaTest(unittest.TestCase):
                  for node in ast.walk(ast.parse(path.read_text())) if isinstance(node, ast.Name)
                  and isinstance(node.ctx, ast.Store) and node.id in ("PULLUP_MIN_OHM", "PULLUP_MAX_OHM")}
         self.assertEqual(sorted(bound), ["scripts/spark/sourcing/part_rules.py"])
+        scripts = ROOT / "scripts"
+        self.assertEqual([name for name in ("cost.py", "matching.py", "sourcing_codes.py") if (scripts / name).exists()],
+                         ["cost.py"])
+        tree = ast.parse((scripts / "cost.py").read_text())
+        self.assertEqual([node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))], ["main"])
 
     def test_the_area_s_init_imports_nothing(self):
         # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)

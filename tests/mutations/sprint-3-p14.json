@@ -42,7 +42,7 @@
   "replace": "CIRCUIT_PATHS = (\"dist/board/circuit.json\",)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/records/record_kind.py",
   "name": "unused_pins dropped from the one pin-list constant",
   "find": "PIN_LISTS = (\"needs\", \"power\", \"unused_pins\")",
   "replace": "PIN_LISTS = (\"needs\", \"power\")"

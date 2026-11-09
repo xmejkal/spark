@@ -38,6 +38,8 @@ from spark.records import board_records
 from spark.design import design_codes
 from spark.design import fab
 import parts as parts_library
+from spark.records import record_kind
+from spark.sourcing import part_records
 from spark.records import provenance
 from spark.core.errors import CodedMessageError
 
@@ -164,7 +166,7 @@ def refuse_bad_signals(path, signals):
         if pin == "":
             raise DesignError('%s: signals[%d].pin is an empty name; write a pin name from the board such as "D0"',
                               path, index, code=design_codes.REQUIREMENTS_FIELD_WRONG)
-        if not re.fullmatch(parts_library.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
+        if not re.fullmatch(record_kind.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
             raise DesignError("%s: signals[%d] is named %r, but a signal is a name — letters, digits and _ (LED_STATUS): the "
                               "pin map and the board name it, and firmware is written against it", path, index, signal["name"],
                               code=design_codes.REQUIREMENTS_FIELD_WRONG)
@@ -217,7 +219,7 @@ def requested_parts(wanted):
                 raise DesignError("parts[%d] names no `part`: %s", index, json.dumps(entry),
                                   code=design_codes.REQUIREMENTS_FIELD_WRONG)
             name = entry.get("name")
-            if name is not None and not (isinstance(name, str) and re.fullmatch(parts_library.SELECTOR_SAFE, name)):
+            if name is not None and not (isinstance(name, str) and re.fullmatch(record_kind.SELECTOR_SAFE, name)):
                 # P87's attribute half: the instance's name is the component the board is written with, `<chip name="…">`
                 raise DesignError("parts[%d] calls its instance %r, but an instance's name is a name — letters, digits and _ "
                                   "(BtnOpen): the board is written with it as code", index, name,
@@ -250,7 +252,8 @@ def rails_requested(wanted):
                 raise DesignError("parts[%d].rails must map pin names to rail names: %s",
                                   index, json.dumps(rails), code=design_codes.REQUIREMENTS_FIELD_WRONG)
             for pin, rail in rails.items():
-                if not re.fullmatch(parts_library.SELECTOR_SAFE, rail):  # P87's attribute half: the rail is the net written
+                # P87's attribute half: the rail is the net written
+                if not re.fullmatch(record_kind.SELECTOR_SAFE, rail):
                     raise DesignError("parts[%d].rails puts %s on %r, but a rail is a name — letters, digits and _ (traction, "
                                       "motor): the board is written with it as code", index, pin, rail,
                                       code=design_codes.REQUIREMENTS_FIELD_WRONG)
@@ -261,7 +264,7 @@ def rails_requested(wanted):
 def on_rails(part, rails):
     """
     The part's record with the named power pins moved to the design's rails — a COPY, with its
-    own `power` list; the argument is left exactly as loaded. (`parts.load` reads the file every
+    own `power` list; the argument is left exactly as loaded. (`part_records.load` reads the file every
     time, so an in-place edit would reach nothing else today; the copy is the contract, not a
     fix, and the test holds the function to it rather than to a cache that does not exist.)
     """
@@ -279,14 +282,14 @@ def record(part_id, project):
     """
     The library's record for a part, or a DesignError saying what is wrong with it.
 
-    `parts.load` reads the file outside any try, so a malformed project part was a
+    `part_records.load` reads the file outside any try, so a malformed project part was a
     `JSONDecodeError` traceback through `emit_board.py` and `[!!] schematic Traceback …` through the
     spine — the A8 class, one module below the loader (audit B10). Named by part id here, since
     the library resolves the path.
     """
     try:
-        return parts_library.load(part_id, project)
-    except parts_library.PartError as broken:
+        return part_records.load(part_id, project)
+    except part_records.PartError as broken:
         raise DesignError.of_error(broken, code=design_codes.PART_UNUSABLE) from broken
     except ValueError as broken:
         raise DesignError("the record for %r is not JSON: %s", part_id, broken, code=design_codes.PART_UNUSABLE) from broken
@@ -405,7 +408,7 @@ def signals_of(part_list, wanted, project):
     for part in part_list:
         try:
             asked = parts_library.signals_for([part["id"]], project)
-        except parts_library.PartError as broken:
+        except part_records.PartError as broken:
             raise DesignError.of_error(broken, code=design_codes.PART_UNUSABLE) from broken
         except (ValueError, OSError) as broken:
             raise DesignError("%s", broken, code=design_codes.PART_UNUSABLE) from broken

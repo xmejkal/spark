@@ -15,7 +15,7 @@ from spark.design import loader
 import drawer
 from spark.design import board_emitter
 from spark.breadboard import part_shape
-import parts
+from spark.sourcing import part_rules
 from spark.records import store
 from spark.breadboard import bench_changes
 from spark.breadboard import breadboard_codes
@@ -202,7 +202,7 @@ def _before_power(design_parts, supplies):
               for net, users in supplies.items()]
     for part in design_parts:
         name = board_emitter.component_name(part)
-        lines += ["- **CONFLICT** on %s: %s" % (name, conflict) for conflict in parts.pull_conflicts(part)]
+        lines += ["- **CONFLICT** on %s: %s" % (name, conflict) for conflict in part_rules.pull_conflicts(part)]
         lines += ["- %s %s has no resistor: the firmware must pull it up with Pin.PULL_UP, as `pins.py` says (P204)"
                   % (name, pin) for pin in part.get("_firmware_pulls", [])]
         lines += ["- %s %s: %s" % (name, pin["pin"], pin.get("note", "")) for pin in part.get("unused_pins") or []]

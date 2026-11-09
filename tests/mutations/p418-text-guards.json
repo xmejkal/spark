@@ -6,7 +6,7 @@
   "replace": "\\x7f-\\x9f\\ud800"
  },
  {
-  "file": "scripts/matching.py",
+  "file": "scripts/spark/sourcing/matching.py",
   "name": "an offer's tags skip clean, so a bidi or control character and a long tag stay",
   "find": "[clean(tag).lower() for tag in tags",
   "replace": "[tag.lower() for tag in tags"

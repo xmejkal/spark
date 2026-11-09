@@ -30,19 +30,19 @@
   "replace": "                \"retrieved\": None, \"title\": None, \"version\": None}"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/records/record_kind.py",
   "name": "a record still carrying attachments passes",
   "find": "    if \"attachments\" in part:",
   "replace": "    if False:"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/records/record_kind.py",
   "name": "a checksum that is not one passes",
   "find": "        if not isinstance(entry, dict) or not re.fullmatch(r\"[0-9a-f]{64}\", str(entry.get(\"sha256\"))):",
   "replace": "        if not isinstance(entry, dict):"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "the validator never asks about documents",
   "find": "    problems.extend(document_problems(part))\n",
   "replace": ""

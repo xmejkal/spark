@@ -30,6 +30,7 @@ import drawer  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.design import needs  # noqa: E402
 import parts  # noqa: E402
+from spark.records import record_kind  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core import text_guards  # noqa: E402
@@ -2348,7 +2349,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         library.mkdir()
         (library / "x-amp.json").write_text(json.dumps({"schema": 1, "id": "x-amp", "name": "An amp", "kind": "audio-amplifier", "needs": []}))
         _, project = self.project([self.BOARD, ("alarm", [{"part": "x-amp"}]), ("soil", [{"part": "x-soil"}])])
-        with mock.patch.object(parts, "LIBRARY", library):
+        with mock.patch.object(record_kind, "LIBRARY", library):
             said, code = run(["--requirements", str(project)])
         owed = "owes footprint, pin_order, pin_order_proof, body_mm, simulation — "
         self.assertEqual((code, [(p["subject"], p["sentence"]) for p in said["problems"]]), (1, [
@@ -2389,7 +2390,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         led = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
         (library / "x-dim.json").write_text(json.dumps(dict({k: v for k, v in led.items() if k != "body_mm"}, id="x-dim")))
         _, project = self.project([self.BOARD, ("light", [{"part": "x-dim"}])])
-        with mock.patch.object(parts, "LIBRARY", library):
+        with mock.patch.object(record_kind, "LIBRARY", library):
             text = self.text(["--requirements", str(project), "--dry-run"])
         self.assertIn("x-dim owes body_mm, so the PCB step lays it out at a placeholder 16 x 12 mm: a dimension drawing (fetched "
                       "after the person's yes) or a measurement fills it — it is in spark's own library, so it is filled in "

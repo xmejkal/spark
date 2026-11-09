@@ -134,7 +134,7 @@ class ListEntryProblemsTest(unittest.TestCase):
 
     def test_entries_that_are_no_object_give_one_problem(self):
         self.assertEqual(provenance.list_entry_problems([self.GOOD], {}), ["facts is [%r], but it is an object" % self.GOOD])
-        self.assertEqual(provenance.list_fact_problems([self.GOOD]), [], "parts.type_problems says it, once")
+        self.assertEqual(provenance.list_fact_problems([self.GOOD]), [], "record_kind.type_problems says it, once")
 
     def test_a_name_that_is_no_string_is_one_problem_and_never_a_traceback(self):
         self.assertEqual(provenance.list_entry_problems({1: self.GOOD}, {}),

@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import matching  # noqa: E402
+from spark.sourcing import matching  # noqa: E402
 
 SENSE = {"does": "sense", "what": "range"}
 

@@ -20,7 +20,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-import matching  # noqa: E402
+from spark.sourcing import matching  # noqa: E402
 from spark.core.outcomes import EXIT_FOR, envelope  # noqa: E402
 
 
