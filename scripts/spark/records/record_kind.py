@@ -2,11 +2,11 @@
 The record contract (W6-S3a, P720): what every JSON record spark keeps holds and owes, part or board. Where records
 live (`LIBRARY`, `record_home`, `available`), the keys and verbs a record is held to, the type of each field `validate`
 reads (`RECORD_TYPES`, `type_problems`), a document's shape and its citations, and the one reader and writer of a record
-file (`_parse`, `_write_record`). Every finding is an `Answer` item made by `_problem`, `_cannot` or `_note`.
+file (`_parse`, `_write_record`). Every finding is an `Answer` item made by `_problem`, `_cannot` or `_note`. `RecordKind`
+(P724) validates one kind of record by its named rules, and `board_records.BOARD` and `part_records.PART` are its two.
 
 Moved whole from `parts.py`, which reads these names, as do `drawer`, `needs` and `board_records`. It imports `store`
-alone of spark, so the records area reads nothing above it. `RecordKind` and `RecordFinder` (`areas/records.md`) come
-with P391's card.
+alone of spark, so the records area reads nothing above it. `RecordFinder` (`areas/records.md`) comes with P342.
 """
 
 import json
@@ -98,6 +98,47 @@ def _with_project(project):
 
 def available(project: Path = None) -> list:
     return sorted(store.records("parts", LIBRARY, project))
+
+
+#: The facts of one `RecordKind.validate` call that each rule reads (P724): the record's file, the keys it owes (whose
+#: checks do not run) and whether it is held to the fab contract too. A weak name, kept: spark has no better word.
+Validation = namedtuple("Validation", "path owed for_fab")
+
+
+class RecordKind:
+    """
+    Strategy: one kind of record, a board or a part, and the contract it is held to (P724). Each kind is one instance
+    (`board_records.BOARD`, `part_records.PART`), so a caller swaps one for the other. It is given the kind's name, its
+    schema `version`, its `required` keys and its `rules`, each a function `(record, validation) -> list` of problems,
+    which run in order after the two checks every kind shares. A rule in `stop_after` that finds a problem is the last
+    to run, because the rules after it read what it checked. It raises what a rule raises on a record too malformed to
+    read, which `_shape_problems` says as one line.
+    """
+
+    def __init__(self, kind, version, required, rules, stop_after=()):
+        self.kind, self.version, self.required = kind, version, required
+        self.rules, self.stop_after = tuple(rules), tuple(stop_after)
+
+    def validate(self, record, path, owed=(), for_fab=False):
+        """Every way `record` breaks the contract, as sentences. Empty means it holds. The checks of an `owed` key do not run."""
+        validation = Validation(path, owed, for_fab)
+        problems = self.version_problems(record, validation) + self.required_problems(record, validation)
+        for rule in self.rules:
+            found = rule(record, validation)
+            problems += found
+            if found and rule in self.stop_after:
+                break
+        return problems
+
+    def version_problems(self, record, validation):
+        """The schema version this code understands, or one problem; none when the record owes its `schema`."""
+        if "schema" in validation.owed or record.get("schema") == self.version:
+            return []
+        return ["schema is %r, but this code understands only %d" % (record.get("schema"), self.version)]
+
+    def required_problems(self, record, validation):
+        """One problem per required key the record lacks and does not owe."""
+        return ["missing required key %r" % key for key in self.required if key not in record and key not in validation.owed]
 
 #: The three lists in a record that hold pins. Written out three times before 2026-09-29, and the missing-pin rule was
 #: applied to one of them for a week while the other two were read with `entry["pin"]` — G15. A fourth list added to the
