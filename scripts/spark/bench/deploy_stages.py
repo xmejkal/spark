@@ -10,3 +10,14 @@ class DeployPhase:
     it, because "stage" means a build stage. A holder of constants by design, never instantiated."""
 
     PLAN, LOOK, GATE, FLASH, VERIFY = "plan", "look", "gate", "flash", "verify"
+
+
+# --- MVP ---
+#: The sentence a person reads when a stage starts: why spark does it (P476). One table, so no stage says it twice.
+PHASE_WHY = {
+    DeployPhase.PLAN: "why: spark checks the image and finds its tools first, so a wrong image stops before the board is touched",
+    DeployPhase.LOOK: "why: spark compares the chip and flash size with the board's record, so a board that cannot take the image is stopped",
+    DeployPhase.GATE: "why: the erase cannot be undone, so the write needs a yes for this board",
+    DeployPhase.FLASH: "why: the erase and the write replace what the board runs. esptool then restarts the chip with its watchdog, because a plain reset can leave an ESP32-S3 in download mode. A chip with no watchdog reset in esptool, such as the C6, gets the plain reset",
+    DeployPhase.VERIFY: "why: a written image is not yet a running one, so spark checks its files on the board and waits for ready",
+}
