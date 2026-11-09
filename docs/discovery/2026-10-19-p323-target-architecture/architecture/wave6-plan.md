@@ -1621,16 +1621,16 @@ nothing upward: `record_kind` (records), then `part_rules`, `part_records`, `par
 `areas/sourcing.md`, `areas/design.md`, `developing.md`. Size: 1,520 lines, est. 80 import lines, 268 rows, 9 keys. Done
 when `ls scripts/*.py` prints only the CLIs, each a `main` that parses and prints, `scripts/spark/sourcing/__init__.py`
 imports nothing, no lazy import under `scripts/spark/` points up an arrow, and `TheSourcingAreaTest` passes.
-P721 claims check (at e35f6b1a, one decision open: the build stopped here). The `ast` map was rebuilt with symtable
-(locals excluded) over the 108 top-level names of `parts.py` (1,570 lines). `FOUND`, `LABEL_ONLY` and `NOT_FOUND` are
-three names of one line. The map gives `part_facts` 17 names, `datasheets` 37, `part_handlers` 32, `goal_handlers` 13
-and the CLI 9. `part_facts` holds the list and `printed_names` and `has_placeholder_footprint`, because `board_emitter`
-reads them (the lowest module of their users). `part_handlers` holds the list, `_brief` and `_op_step`. The bodies,
-before headers and imports: `part_facts` 198 lines, `datasheets` 392, `part_handlers` 388, `goal_handlers` 279, the CLI
-215. So each is under 600, and `R1:scripts/parts.py:<module>` goes. Every reference points down: `part_handlers` to
-`datasheets` 9 and to `part_facts` 10, `goal_handlers` to `part_handlers` 8, to `datasheets` 3 and to `part_facts` 2.
-`datasheets` and `part_facts` read neither each other nor a handler module. No pair is two-way. The outside readers of
-`parts` all read `part_facts`: `drawer` (`shelvable`, `shelve`, `:315`, `:332`), `board_emitter` (`printed_names`,
+P721 claims check (at e35f6b1a, one decision taken: option (b)). The `ast` map was rebuilt with symtable (locals
+excluded) over the 108 top-level names of `parts.py` (1,570 lines). `FOUND`, `LABEL_ONLY` and `NOT_FOUND` are three
+names of one line. The map gives `part_facts` 17 names, `datasheets` 37, `part_handlers` 32, `goal_handlers` 13 and the
+CLI 9. `part_facts` holds the list and `printed_names` and `has_placeholder_footprint`, because `board_emitter` reads
+them (the lowest module of their users). `part_handlers` holds the list, `_brief` and `_op_step`. The bodies, before
+headers and imports: `part_facts` 198 lines, `datasheets` 392, `part_handlers` 388, `goal_handlers` 279, the CLI 215. So
+each is under 600, and `R1:scripts/parts.py:<module>` goes. Every reference points down: `part_handlers` to `datasheets`
+9 and to `part_facts` 10, `goal_handlers` to `part_handlers` 8, to `datasheets` 3 and to `part_facts` 2. `datasheets`
+and `part_facts` read neither each other nor a handler module. No pair is two-way. The outside readers of `parts` all
+read `part_facts`: `drawer` (`shelvable`, `shelve`, `:315`, `:332`), `board_emitter` (`printed_names`,
 `has_placeholder_footprint`), `loader` (`signals_for`), `assign_pins` (`unverified`) and `check_spine` (`note_built`).
 After the move no module imports `parts`, and the `drawer` <-> `parts` two-way import is gone. The lazy imports become
 top imports. `datasheets` imports `matching` and `tool_finder`. `part_handlers` imports `drawer` and `run_cost`.
@@ -1654,8 +1654,11 @@ But X2 also counts `sys.stdin` under `scripts/spark/`, and `_read_json_input` (`
 `scripts/spark/` it is a new key, `X2:...:sys.stdin` 1. In the CLI, it makes the handlers import upward. Each way out is
 a decision. (a) Accept the new key with `--accept-new`, name it for the PO, and file a card for a payload reader. (b)
 Keep the six handlers and `_read_json_input` in the CLI. The CLI still imports only downward, and it keeps 16 names,
-about 310 lines. (c) Add a seam that reads the payload in the CLI, which is new logic. The rows are in
-`p721-sourcing-move.md`.
+about 310 lines. (c) Add a seam that reads the payload in the CLI, which is new logic. The decision (the caller,
+2026-11-09) is (b), and the plan's placement changes. Reading stdin is interface work, so by the one-core rule it
+belongs to the CLI. It needs no new key and no new logic, and the Operations card turns the six into Operations on
+`run_cli`. So `parts.py` keeps about 16 names and 310 lines, `part_handlers` 28 and `goal_handlers` 12, and the CLI
+still imports only down. The rows are in `p721-sourcing-move.md`.
 
 ## Records and sourcing after W6-S3b (the moved modules and their classes)
 
