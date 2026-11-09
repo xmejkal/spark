@@ -203,8 +203,11 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
             for node in ast.walk(ast.parse(module.read_text())):
                 name = getattr(node, "func", None)
                 name = getattr(name, "attr", None) or getattr(name, "id", None)
-                if (isinstance(node, ast.Call) and name == "NotDrawn" and len(node.args) < 2
-                        and "code" not in [keyword.arg for keyword in node.keywords]):
+                if not (isinstance(node, ast.Call) and name == "NotDrawn"):
+                    continue
+                code = node.args[1] if len(node.args) > 1 else next(
+                    (keyword.value for keyword in node.keywords if keyword.arg == "code"), None)
+                if code is None or (isinstance(code, ast.Constant) and code.value is None):
                     uncoded.append("%s:%d" % (module.relative_to(ROOT), node.lineno))
         self.assertEqual(uncoded, [])
 
