@@ -60,10 +60,17 @@ def with_ready_wait(scenario):
 
 
 def image_in(toml):
-    """The flash image wokwi.toml names, or sim_project.DEFAULT_IMAGE when the build named none. It writes nothing."""
+    """
+    The flash image wokwi.toml names, or sim_project.DEFAULT_IMAGE when the build named none. It writes nothing, and it raises
+    ValueError for what a real run would fail on: no place to name the image, or a file it cannot change.
+    """
     named = sim_project.firmware_in(toml)
     if named.state == outcomes.NOT_CHECKED:
         raise ValueError("wokwi.toml %s%s" % (named.why, named.fix()))
+    if named.state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE not in toml.read_text():
+        raise ValueError("wokwi.toml names no firmware, and wokwi-cli refuses that. To fix it, write it as firmware = \"name.bin\".")
+    if named.state == outcomes.NONE_RECORDED and not os.access(toml, os.W_OK):
+        raise ValueError("wokwi.toml names no firmware, and a run cannot write the name there: the file is read-only")
     return toml.parent / (named.name or sim_project.DEFAULT_IMAGE)
 
 
@@ -133,7 +140,11 @@ class ScenarioRun:
                     else getattr(cannot, "code", RUN_INPUT_UNUSABLE))
             return Refusal("%s: %s" % (self.scenario.name, cannot), code)
         outside = sim_project.why_outside_sim(self.sim, self.image)
-        return Refusal(outside, FIRMWARE_LINE_BAD) if outside else None
+        if outside:
+            return Refusal(outside, FIRMWARE_LINE_BAD)
+        if self.image.is_dir() or not self.image.parent.is_dir():
+            return Refusal("%s: wokwi.toml names %s, and a run cannot write its image there" % (self.scenario.name, self.image.name), RUN_INPUT_UNUSABLE)
+        return None
 
     def unknown_component_ids(self):  # --- MVP --- (P399)
         """The Refusal for the component ids that the steps name and the diagram lacks, or None. A diagram that cannot be read refuses nothing."""
@@ -162,10 +173,7 @@ class ScenarioRun:
         problem = self.problem()
         if problem:
             return COULD_NOT_RUN, problem, None
-        try:
-            write_image_name(self.sim / "wokwi.toml")
-        except OSError as cannot:
-            return COULD_NOT_RUN, Refusal("%s: sim/wokwi.toml cannot be written: %s" % (self.scenario.name, cannot), RUN_INPUT_UNUSABLE), None
+        write_image_name(self.sim / "wokwi.toml")
         self.image.write_bytes(self.flash)
         # Beside the original, so a step's own path (a screenshot to compare with) resolves where its author wrote it.
         as_run = self.scenario.absolute().parent / (".as-run." + self.scenario.name)  # wokwi-cli reads a relative one from sim/

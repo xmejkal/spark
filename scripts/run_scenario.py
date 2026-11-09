@@ -15,8 +15,10 @@ place. Only then the tool, the token and the paid run. A step whose id cannot be
 prints `not checked` and the run goes on (P399).
 
 Each run puts MicroPython and the project's firmware/ into a new flash image, so a run never tests an older firmware. When
-the build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
-wokwi-cli refuses a wokwi.toml that names none.
+the build named no image (no --firmware), a real run names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would
+have: wokwi-cli refuses a wokwi.toml that names none.
+
+--dry-run makes the free checks alone: it needs no token, starts no run and writes nothing (P399).
 
 A step's own `name:` key may hold a must line of the brief (copied exactly): the log's header names every step (P345),
 and the look lists the must lines that no passed scenario named.

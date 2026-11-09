@@ -32,13 +32,25 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "the image name is never written",
-  "find": "            write_image_name(self.sim / \"wokwi.toml\")\n",
-  "replace": "            pass\n"
+  "find": "        write_image_name(self.sim / \"wokwi.toml\")\n",
+  "replace": "        pass\n"
  },
  {
   "file": "scripts/spark/firmware/scenario_run.py",
-  "name": "a read-only wokwi.toml is a traceback",
-  "find": "        except OSError as cannot:\n            return COULD_NOT_RUN, Refusal(\"%s: sim/wokwi.toml",
-  "replace": "        except KeyError as cannot:\n            return COULD_NOT_RUN, Refusal(\"%s: sim/wokwi.toml"
+  "name": "a read-only wokwi.toml with no name passes the free checks",
+  "find": "    if named.state == outcomes.NONE_RECORDED and not os.access(toml, os.W_OK):\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "a wokwi.toml with no name and no place for one passes the free checks",
+  "find": "    if named.state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE not in toml.read_text():\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "an image name with nowhere to write passes the free checks",
+  "find": "        if self.image.is_dir() or not self.image.parent.is_dir():\n",
+  "replace": "        if False:\n"
  }
 ]

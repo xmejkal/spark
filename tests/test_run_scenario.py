@@ -1174,6 +1174,10 @@ class TheDryRunTest(ProjectCase):
         self.assertIn("would pass", said)
         self.assertEqual(self.tree(), before)
 
+    def test_a_read_only_file_with_no_name_exits_2(self):
+        (self.project / "sim" / "wokwi.toml").chmod(0o444)
+        self.assertEqual(self.dry_run()[0], EXIT_COULD_NOT_RUN)
+
     def test_what_it_could_not_compare_is_said(self):
         (self.project / "sim" / "diagram.json").write_text("{")
         code, said = self.dry_run()
@@ -1198,6 +1202,15 @@ class TheImageNameIsWrittenOnARealRunOnlyTest(ProjectCase):
         status, sentence, log = self.run_with()
         self.assertEqual((status, sentence.code, log), (COULD_NOT_RUN, "run_input_unusable", None))
         self.assertFalse(self.seen.exists())
+
+    def test_what_a_real_run_would_fail_on_is_a_free_check(self):
+        (self.project / "sim" / "folder.bin").mkdir()
+        for text in ("[wokwi]\nversion = 1\n", '[wokwi]\nversion = 1\nfirmware = "build/x.bin"\n', '[wokwi]\nversion = 1\nfirmware = "folder.bin"\n'):
+            with self.subTest(text):
+                self.toml().write_text(text)
+                refusal = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).problem()
+                self.assertEqual(refusal.code, "run_input_unusable")
+                self.assertIn("wokwi.toml", refusal)
 
 
 class EachRefusalHasItsCodeTest(ProjectCase):
