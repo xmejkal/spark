@@ -19,7 +19,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import drawer  # noqa: E402
+from spark.sourcing import drawer  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
@@ -805,7 +805,8 @@ class TheSmallFixesTest(unittest.TestCase):
         self.assertIn("lower-case letters, digits and '-'", said["problems"][0]["sentence"])
 
     def test_the_store_writes_and_reads_utf8_whatever_the_locale(self):
-        script = ("import sys; sys.path.insert(0, %r); from spark.records import store; import drawer; "
+        script = ("import sys; sys.path.insert(0, %r); from spark.records import store; "
+                  "from spark.sourcing import drawer; "
                   "store.write_json('drawer', 'k', "
                   "{'schema': 1, 'label': 'žluťoučký kůň', 'count': 1}); print(drawer.entries()['k']['label'])" % str(ROOT / "scripts"))
         env = dict(os.environ, SPARK_HOME=str(self.home), LC_ALL="C", PYTHONUTF8="0", PYTHONCOERCECLOCALE="0", PYTHONIOENCODING="utf-8")

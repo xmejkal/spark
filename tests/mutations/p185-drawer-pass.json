@@ -1,18 +1,18 @@
 [
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "plan_set ignores the project it is given and looks only at spark's layers and the person's list",
   "find": "for row in linkable(project)",
   "replace": "for row in linkable()"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "plan_set looks in the wrong folder, the project's parent, for the record /spark:research wrote",
   "find": "for row in linkable(project)",
   "replace": "for row in linkable(project.parent if project else None)"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "with a project given, plan_set offers only the project's records and drops the library and the shelf",
   "find": "] + known",
   "replace": "]"
@@ -30,25 +30,25 @@
   "replace": "drawer.plan_set(items, None), args.dry_run"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "the shelf copy names the layer 'project' instead of the project's name on the list (review P1)",
   "find": "named, seen = store.find_listed_name(project) or \"\"",
   "replace": "named, seen = \"project\""
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "a project's own copy of a known id shadows the library and goes on the shelf for every project (refuter RX1)",
   "find": "and row[:2] not in seen]",
   "replace": "]"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "an unlisted folder's record is not shelved at all",
   "find": "return (path, where or None) if where is not None",
   "replace": "return (path, where) if where"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "a record no other project can see is linked from a folder on no list (refuter RX3)",
   "find": "if change and change[\"shelve\"] and change[\"shelve\"][1] is None and not part_facts.shelvable(*change[\"shelve\"]):",
   "replace": "if False:"

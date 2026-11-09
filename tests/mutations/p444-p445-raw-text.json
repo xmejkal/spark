@@ -78,19 +78,19 @@
   "replace": "records(project).get(board_id)"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "the scrub skips sha256 and does again",
   "find": "{key: _scrubbed(item, cap) for key",
   "replace": "{key: item if key in (\"sha256\", \"does\") else _scrubbed(item, cap) for key"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "an id is cleaned like a label and cut at 255",
   "find": "_in_bytes(_scrubbed(value, store.FILE_NAME_MAX_BYTES), store.FILE_NAME_MAX_BYTES)",
   "replace": "_in_bytes(_scrubbed(value), store.FILE_NAME_MAX_BYTES)"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "a key with a lone surrogate in a field is not looked at",
   "find": "list_key_problems(key, value, SURROGATE)",
   "replace": "[]"
@@ -132,13 +132,13 @@
   "replace": "print(\"  %s is off (%s)\" % (args.off, where))"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "an unknown field name enters its sentence raw",
   "find": "% (printable(key), \", \".join(FIELDS))",
   "replace": "% (key, \", \".join(FIELDS))"
  },
  {
-  "file": "scripts/drawer.py",
+  "file": "scripts/spark/sourcing/drawer.py",
   "name": "an id is cut by characters, not bytes",
   "find": "return _in_bytes(_scrubbed(value, store.FILE_NAME_MAX_BYTES), store.FILE_NAME_MAX_BYTES)",
   "replace": "return _scrubbed(value, store.FILE_NAME_MAX_BYTES)"

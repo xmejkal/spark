@@ -110,7 +110,7 @@
  {"file": "scripts/spark/records/store.py", "name": "the history's lines are numbered without the blank ones (final 8)",
   "find": "    for number, line in enumerate(path.read_bytes().splitlines() if path.is_file() else [], 1):",
   "replace": "    for number, line in enumerate([line for line in (path.read_bytes().splitlines() if path.is_file() else []) if line.strip()], 1):"},
- {"file": "scripts/drawer.py", "name": "an import leaves an unsure entry with no count without one (final 5)",
+ {"file": "scripts/spark/sourcing/drawer.py", "name": "an import leaves an unsure entry with no count without one (final 5)",
   "find": "            if before.get(\"unsure\"):\n                values.update(count=total, unsure=False)",
   "replace": "            if before.get(\"unsure\") and \"count\" in before:\n                values.update(count=total, unsure=False)"}
 ]

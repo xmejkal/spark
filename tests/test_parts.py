@@ -2737,7 +2737,7 @@ class ABenchResultGoesBackWithItsSourceTest(unittest.TestCase):
         with in_store(home := self.a_joystick()):
             run_json(["--fact-set", "x-joy", self.given({"facts": {"runs_at_3v3": self.entry(source="s" * 700)}})])
         self.assertEqual(len(self.record(home)["facts"]["runs_at_3v3"]["source"]), 700)
-        import drawer
+        from spark.sourcing import drawer
         self.assertEqual(len(drawer.scrub("place", "p" * 700)), 160)
 
     def test_each_refusal_says_its_own_sentence_and_writes_nothing(self):

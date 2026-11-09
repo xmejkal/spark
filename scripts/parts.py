@@ -49,7 +49,6 @@ def audit(project=None):
     of what they do (spark's layers and this project only); which entries point at nothing; which boards stop the chain at
     the footprint stage, their files lacking what the footprint is drawn from (C-7, P121).
     """
-    import drawer
     from spark.design import footprint_emitter
     walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", record_kind.LIBRARY,
                                                                                      project, drafts=True).items()]
@@ -97,7 +96,7 @@ from spark.records import records_codes  # noqa: E402
 from spark.records.record_kind import (  # noqa: E402
     _absent, Answer, available, _cannot, CHAIN_FACTS, DEFINITION_SUFFIX, _note, owes, _parse, _problem,
     record_home, _shape_problems, _with_project, WRITE_BACK_HINT, _write_record)
-from spark.sourcing import sourcing_codes  # noqa: E402
+from spark.sourcing import drawer, sourcing_codes  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.core.errors import CodedMessageError  # noqa: E402
 from spark.core.text_guards import guard_lines, printable  # noqa: E402
@@ -841,7 +840,6 @@ def _write_lines(changes, problems, dry_run, said=()):
 
 def _drawer_answer(changes, questions, problems, dry_run):
     """What a drawer write did or would do (§5.2): all of it, or — when anything is refused — none of it."""
-    import drawer
     if not problems and not dry_run:
         drawer.apply(changes)
     made = [change for change in changes if change["now"]]
@@ -861,7 +859,6 @@ def _drawer_answer(changes, questions, problems, dry_run):
 
 
 def _op_drawer(args, project):
-    import drawer
     entries = drawer.listing()
     shown, truncated = store.page_with_store(entries, args.start, "drawer", ["--drawer"])
     lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], "?" if e["count"] is None else e["count"],
@@ -874,13 +871,11 @@ def _op_drawer(args, project):
 
 
 def _op_drawer_set(args, project):
-    import drawer
     items = _read_json_input(args.drawer_set)
     return _drawer_answer(*drawer.plan_set(items, project), args.dry_run)
 
 
 def _op_drawer_import(args, project):
-    import drawer
     source, name = args.drawer_import
     payload = _read_json_input(name)
     changes, questions, problems, smaller = drawer.plan_import(source, payload)
@@ -905,7 +900,6 @@ def _record_path(part_id, project, kind="part"):
     home: that project's record is. A record found in the project given names that project too, when the shelf holds a copy
     of it shelved from there: the copy follows its record, however the record was reached. `kind` is "board" for a board's record (P464).
     """
-    import drawer
     path, where = next(((path, where) for found_kind, found, where, path in drawer.linkable(project) if (found_kind, found) == (kind, part_id)),
                        (None, None))
     if path is not None and path.parent == store.place("shelf"):
@@ -989,7 +983,6 @@ def _op_function_set(args, project):
 
 def _op_fact_set(args, project):
     """Fill a record's chain facts, write `facts` entries by name (a bench result and its source, P374), or set what it says of itself (about, description, tags)."""
-    import drawer
     part_id, name = args.fact_set
     facts = _read_json_input(name)
     if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + ("facts", "pin_roles"))):
@@ -1114,7 +1107,6 @@ def _op_needs_drop(args, project):
 
 
 def _op_pick(args, project):
-    import drawer
     from spark.design import needs
     target, given = args.pick[0], args.pick[1:]
     pairs = [tuple(one.split("=", 1)) for one in given if "=" in one]
@@ -1250,7 +1242,6 @@ def _op_step(args, project):
 
 def _op_tally(args, project):
     from spark.sourcing import run_cost
-    import drawer
     from spark.design import needs
     name = store.find_listed_name(args.tally)
     if name is None:
