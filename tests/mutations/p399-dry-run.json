@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a dry run deletes the older log",
+  "find": "    if args.dry_run:  # before the unlink: a dry run leaves an older log in place\n",
+  "replace": "    run.log.unlink(missing_ok=True)\n    if args.dry_run:\n"
+ },
+ {
+  "file": "scripts/run_scenario.py",
+  "name": "a dry run prints its refusal on stdout",
+  "find": "file=sys.stdout if status == OK else sys.stderr)\n        return EXIT_FOR[status]",
+  "replace": "file=sys.stdout)\n        return EXIT_FOR[status]"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "a dry run refused by a free check still says it passed",
+  "find": "        if refusal:\n            return COULD_NOT_RUN, [refusal]\n",
+  "replace": "        if refusal:\n            return OK, [refusal]\n"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "a dry run does not say what it left out",
+  "find": "self.not_checked() + [self.steps.line(), DRY_RUN_DONE]",
+  "replace": "self.not_checked() + [self.steps.line()]"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "a dry run does not say what it could not compare",
+  "find": "return OK, self.not_checked() + [self.steps.line(), DRY_RUN_DONE]",
+  "replace": "return OK, [self.steps.line(), DRY_RUN_DONE]"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "the image name is never written",
+  "find": "            write_image_name(self.sim / \"wokwi.toml\")\n",
+  "replace": "            pass\n"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "a read-only wokwi.toml is a traceback",
+  "find": "        except OSError as cannot:\n            return COULD_NOT_RUN, Refusal(\"%s: sim/wokwi.toml",
+  "replace": "        except KeyError as cannot:\n            return COULD_NOT_RUN, Refusal(\"%s: sim/wokwi.toml"
+ }
+]

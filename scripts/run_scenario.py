@@ -45,20 +45,31 @@ EPILOG = """A run spends Wokwi CI minutes: ask the person before each run, whate
 It needs a Wokwi CI token (wokwi.com/dashboard/ci) in WOKWI_CLI_TOKEN: export WOKWI_CLI_TOKEN=...
 The firmware must print `ready` once its setup is done (the ready contract, commands/build.md).
 
-Exit codes: 0 the scenario passed, 1 it failed, 2 it could not run. The log is sim/runs/<name>.log."""
+--dry-run makes the same free checks: it needs no token, starts no run and writes nothing.
+
+Exit codes: 0 the scenario passed (with --dry-run, the free checks passed), 1 it failed, 2 it could not run. The log is sim/runs/<name>.log."""
+
+#: The arguments: (flags, what argparse needs for them).
+ARGUMENTS = (
+    (("scenario",), {"type": Path, "help": "the scenario file, relative to the project: sim/scenarios/<name>.scenario.yaml"}),
+    (("--project",), {"type": Path, "default": Path("."), "help": "the project folder with sim/ and firmware/ (default: here)"}),
+    (("--timeout-ms",), {"type": int, "default": DEFAULT_TIMEOUT_MS, "help": "simulated time the run may take"}),
+    (("--micropython",), {"type": Path, "help": "the interpreter .bin; omitted, the one /spark:setup downloads"}),
+    (("--dry-run",), {"action": "store_true", "help": "make the free checks only: no token, no run, nothing written"}),
+)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="run_scenario.py", description=__doc__.strip().split("\n\n")[0],
                                      epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("scenario", type=Path,
-                        help="the scenario file, relative to the project: sim/scenarios/<name>.scenario.yaml")
-    parser.add_argument("--project", type=Path, default=Path("."),
-                        help="the project folder with sim/ and firmware/ (default: here)")
-    parser.add_argument("--timeout-ms", type=int, default=DEFAULT_TIMEOUT_MS, help="simulated time the run may take")
-    parser.add_argument("--micropython", type=Path, help="the interpreter .bin; omitted, the one /spark:setup downloads")
+    for flags, options in ARGUMENTS:
+        parser.add_argument(*flags, **options)
     args = parser.parse_args(argv)
     run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms)
+    if args.dry_run:  # before the unlink: a dry run leaves an older log in place
+        status, said = run.dry_run()
+        print(guard_lines("\n".join(map(str, said))), file=sys.stdout if status == OK else sys.stderr)
+        return EXIT_FOR[status]
     run.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here
     simulator, said = free_checks(run, args.project)
     if said:
