@@ -120,7 +120,9 @@ class RecordKind:
         self.rules, self.stop_after = tuple(rules), tuple(stop_after)
 
     def validate(self, record, path, owed=(), for_fab=False):
-        """Every way `record` breaks the contract, as sentences. Empty means it holds. The checks of an `owed` key do not run."""
+        """Every way `record` breaks the contract, as sentences. Empty means it holds. An `owed` key
+        skips the shared version and required-key checks, and each rule that reads `validation.owed` (the part's do; no
+        board rule does)."""
         validation = Validation(path, owed, for_fab)
         problems = self.version_problems(record, validation) + self.required_problems(record, validation)
         for rule in self.rules:
