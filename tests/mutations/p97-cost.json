@@ -16,7 +16,7 @@
   "find": "    return bool(held) and _counts([entry for _, entry in held])[0] != 0", "replace": "    return bool(held)"},
  {"file": "scripts/parts.py", "name": "every pick is from the store",
   "find": "if dict({\"event\": \"reused\", \"project\": name, \"need\": need_id}, **pick) in reused)", "replace": "if True)"},
- {"file": "scripts/parts.py", "name": "a dry run of a step writes",
+ {"file": "scripts/spark/sourcing/part_handlers.py", "name": "a dry run of a step writes",
   "find": "    if not args.dry_run:\n        store.append_event(event)", "replace": "    if True:\n        store.append_event(event)"},
 
  {"file": "commands/idea.md", "name": "the idea page never ends with the tally", "find": "## T — the tally", "replace": "## Done"},
@@ -93,7 +93,7 @@
  {"file": "scripts/spark/sourcing/run_cost.py", "name": "a session id that is a pattern is recorded", "find": "    return found if found and SESSION_ID.fullmatch(found) else None", "replace": "    return found or None"},
  {"file": "scripts/spark/sourcing/run_cost.py", "name": "a session id may be anything", "find": "SESSION_ID = re.compile(r\"[0-9A-Za-z-]+\")", "replace": "SESSION_ID = re.compile(r\".+\")"},
  {"file": "scripts/spark/sourcing/run_cost.py", "name": "a session id spark cannot use is called no session", "find": "    if os.environ.get(\"CLAUDE_CODE_SESSION_ID\"):\n        return \" — this Claude Code", "replace": "    if False:\n        return \" — this Claude Code"},
- {"file": "scripts/parts.py", "name": "a step with no usable session does not say so", "find": "\", with this Claude Code session's id\" if event[\"session\"] else run_cost.session_note())]", "replace": "\", with this Claude Code session's id\" if event[\"session\"] else \"\")]"},
+ {"file": "scripts/spark/sourcing/part_handlers.py", "name": "a step with no usable session does not say so", "find": "\", with this Claude Code session's id\" if event[\"session\"] else run_cost.session_note())]", "replace": "\", with this Claude Code session's id\" if event[\"session\"] else \"\")]"},
  {"file": "scripts/spark/sourcing/run_cost.py", "name": "a transcript that cannot be opened is a traceback", "find": "            except OSError:  # its message", "replace": "            except ZeroDivisionError:  # its message"},
  {"file": "scripts/spark/sourcing/run_cost.py", "name": "a message counts at its first usage", "find": "largest.update({key: max(largest[key], value) for key, value in used.items()})", "replace": "largest.update({key: largest[key] or value for key, value in used.items()})"},
  {"file": "scripts/spark/sourcing/run_cost.py", "name": "a message counts at its last usage", "find": "largest.update({key: max(largest[key], value) for key, value in used.items()})", "replace": "largest.update(used)"},

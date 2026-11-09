@@ -18,7 +18,7 @@
   "replace": "(dict(entry), {key"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_handlers.py",
   "name": "spark's library board is not refused",
   "find": "in (record_kind.LIBRARY.resolve(), board_records.LIBRARY.resolve()):",
   "replace": "in (record_kind.LIBRARY.resolve(),):"
@@ -42,7 +42,7 @@
   "replace": "if finding.severity"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_handlers.py",
   "name": "a board write is looked up as a part record",
   "find": "\"board\" if \"pin_roles\" in values else \"part\"",
   "replace": "\"part\""

@@ -25,8 +25,8 @@
   "find": "    if int(text) < 0:", "replace": "    if False:"},
  {"file": "scripts/spark/sourcing/drawer.py", "name": "a read of no lines is accepted",
   "find": "    if payload.get(\"lines\") == 0 == payload.get(\"stated\"):", "replace": "    if False:"},
- {"file": "scripts/parts.py", "name": "a refused write says it was written",
+ {"file": "scripts/spark/sourcing/part_handlers.py", "name": "a refused write says it was written",
   "find": "\"written\": not (problems or dry_run)}", "replace": "\"written\": not dry_run}"},
- {"file": "scripts/parts.py", "name": "a refused write's change lines are not marked",
+ {"file": "scripts/spark/sourcing/part_handlers.py", "name": "a refused write's change lines are not marked",
   "find": "(\"  not written: \" + _change_line(change, False).strip()) if problems else _change_line(change, dry_run)", "replace": "_change_line(change, dry_run)"}
 ]

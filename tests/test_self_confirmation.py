@@ -61,7 +61,8 @@ MAY_READ = {
     "copper.DEFAULT_RISE_C": "an input to the arithmetic under test, whose expected result (2.9 A) is a literal",
     "footprint_emitter.PLATING_THICKNESS_MM": "the plated-hole rule's own inputs, which test_fab pins to the data file",
     "footprint_emitter.HEADER_PIN_DIAGONAL_MM": "the plated-hole rule's own inputs, which test_fab pins to the data file",
-    "parts.DEFAULT_VENDOR_ORDER": "the claim is the FALLBACK: with nothing configured, the default is what is used",
+    "part_handlers.DEFAULT_VENDOR_ORDER":
+        "the claim is the FALLBACK: with nothing configured, the default is what is used",
     "pin_assigner.ROLE_PENALTY": RELATION, "pin_assigner.CAPABILITY_COST": RELATION,
     "pin_assigner.CONFLICTING_ROLES": RELATION + "; and every priced role must be a role boards may declare",
     "board_records.PIN_ROLES": "the vocabulary of roles a board may declare, checked against what pin_assigner prices",

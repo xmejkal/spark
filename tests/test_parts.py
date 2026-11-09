@@ -42,7 +42,7 @@ from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
-from spark.sourcing import datasheets, part_facts, part_records  # noqa: E402
+from spark.sourcing import datasheets, part_facts, part_handlers, part_records  # noqa: E402
 from spark.sourcing import part_rules  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
@@ -877,21 +877,21 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
     def test_the_vendor_order_is_the_briefs_when_it_says_and_the_default_when_not(self):
         import tempfile
         root = Path(tempfile.mkdtemp())
-        self.assertEqual(parts.vendor_order(root), parts.DEFAULT_VENDOR_ORDER)
+        self.assertEqual(part_handlers.vendor_order(root), part_handlers.DEFAULT_VENDOR_ORDER)
         (root / ".spark").mkdir()
         (root / ".spark" / "project.json").write_text(json.dumps({"prefer": ["Seeed", "adafruit"]}))
-        self.assertEqual(parts.vendor_order(root), ("seeed", "adafruit"))
+        self.assertEqual(part_handlers.vendor_order(root), ("seeed", "adafruit"))
         (root / ".spark" / "project.json").write_text(json.dumps({"prefer": None}))
-        self.assertEqual(parts.vendor_order(root), parts.DEFAULT_VENDOR_ORDER)
+        self.assertEqual(part_handlers.vendor_order(root), part_handlers.DEFAULT_VENDOR_ORDER)
 
     def test_sellers_come_from_the_brief_or_are_none_named(self):
         # Local first is the person's rule, so it lives in their brief; the tool never picks a shop.
         import tempfile
         root = Path(tempfile.mkdtemp())
-        self.assertEqual(parts.sellers(root), ())
+        self.assertEqual(part_handlers.sellers(root), ())
         (root / ".spark").mkdir()
         (root / ".spark" / "project.json").write_text(json.dumps({"sellers": ["LaskaKit", "gme"]}))
-        self.assertEqual(parts.sellers(root), ("laskakit", "gme"))
+        self.assertEqual(part_handlers.sellers(root), ("laskakit", "gme"))
         self.assertIn("sourcing", part_facts.skeleton("x", "connector"))
 
     def test_a_skeleton_whose_id_is_no_plain_key_is_refused_and_nothing_is_written(self):
@@ -942,7 +942,8 @@ class EachPartRefusalHasItsCodeTest(unittest.TestCase):
         asked = {"definition_path": (lambda: part_records.definition_path("no-such-part", project), "no_such_part"),
                  "fetch_documents": (lambda: datasheets.fetch_documents("no-such-part", project), "no_such_part"),
                  "promote": (lambda: part_facts.promote("no-such-part", project), "no_such_part"),
-                 "_set_in_home": (lambda: parts._set_in_home("no-such-part", project, {}, True, None), "no_such_part"),
+                 "_set_in_home": (lambda: part_handlers._set_in_home("no-such-part", project, {}, True, None),
+                                  "no_such_part"),
                  "load": (lambda: part_records.load("broken-part", project), "part_contract_broken"),
                  "_read_json_input": (lambda: parts._read_json_input(str(project / "parts")), "input_unreadable")}
         with in_store(home):
@@ -1021,7 +1022,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"],
                              facts={"pitch_mm": {"value": 2.0, "verified": False, "why_it_matters": "the socket", "source": "the maker's page"}})
         answered = lambda record: [(url, True) for url in datasheets.cited_urls(record)]  # noqa: E731 — no network
-        with in_store(home), mock.patch.object(parts, "sources_resolve", answered):
+        with in_store(home), mock.patch.object(part_handlers, "sources_resolve", answered):
             self.assertEqual(part_records.any_record("x-part")["id"], "x-part")
             self.assertEqual([q["fact"] for q in part_facts.unverified(["x-part"])], ["pitch_mm"])
             with contextlib.redirect_stdout(io.StringIO()) as out:
@@ -1833,7 +1834,7 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         # `sources_resolve` binds `reachable` as a default argument, so it is the function patched here.
         def no_network(*_):
             raise AssertionError("a dry run asked the network")
-        with mock.patch.object(parts, "sources_resolve", no_network), \
+        with mock.patch.object(part_handlers, "sources_resolve", no_network), \
                 mock.patch.object(datasheets, "_download", no_network):
             said, code = run_json(["--sources", "l9110s-module", "--dry-run"])
         self.assertEqual((code, bool(said["data"]["sources"])), (0, True))
@@ -1943,7 +1944,7 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
         unreachable = lambda record: [("https://unreachable.example/a.pdf", False)]  # noqa: E731 — no network
         project = Path(tempfile.mkdtemp()); (project / "parts").mkdir()
         (project / "parts" / "cited.json").write_text(record.read_text())
-        with mock.patch.object(parts, "sources_resolve", unreachable):
+        with mock.patch.object(part_handlers, "sources_resolve", unreachable):
             text, code = run_text(["--sources", "cited", "--project", str(project)])
         self.assertEqual((code, text.count("unreachable.example")), (1, 1), text)
         home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()

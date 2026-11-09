@@ -24,7 +24,7 @@
   "replace": "    return [(url, True) for url in cited_urls(record)]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_handlers.py",
   "name": "a skeleton overwrites an existing record",
   "find": "    if target.exists():\n        return Answer(problems=[_problem(args.skeleton,",
   "replace": "    if False:\n        return Answer(problems=[_problem(args.skeleton,"
