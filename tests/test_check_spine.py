@@ -998,9 +998,9 @@ class ReachingSimulationTest(unittest.TestCase):
         # gets the plugin's — now the bundle the tools list names, run on Node, never the plugin's
         # TypeScript source (which needs node_modules an installed plugin lacks).
         import tempfile
-        import tools
+        from spark.records import tool_finder
         self.assertIsNone(board_engine.find_converter(Path(tempfile.mkdtemp())))
-        with mock.patch.object(tools, "PERSONAL", Path(tempfile.mkdtemp()) / "absent.json"):
+        with mock.patch.object(tool_finder, "PERSONAL", Path(tempfile.mkdtemp()) / "absent.json"):
             command = board_engine.converter_command(None, None)
         self.assertTrue(command[-1].endswith("dist/converter.mjs"), command)
 
@@ -1022,8 +1022,8 @@ class ReachingSimulationTest(unittest.TestCase):
     def test_no_converter_at_all_is_could_not_run_not_a_guess(self):
         from unittest import mock
         import tempfile
-        import tools
-        with mock.patch.object(tools, "PLUGIN", Path("/nowhere")):
+        from spark.records import tool_finder
+        with mock.patch.object(tool_finder, "PLUGIN", Path("/nowhere")):
             stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()))
         self.assertEqual(stage.status, check_spine.COULD_NOT_RUN)
         self.assertIn("circuit-to-wokwi", stage.detail)
@@ -2003,13 +2003,13 @@ class AMissingBoardEngineSaysWhatTheToolsListSaysTest(unittest.TestCase):
     install the tools list does not ask for, and not the thing that was missing."""
 
     def test_the_build_stage_carries_the_tools_list_s_sentence(self):
-        import tools
+        from spark.records import tool_finder
         workdir = Path(tempfile.mkdtemp())
         requirements = dict(check_spine.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         said = "tscircuit needs bun: bun (bun) is not installed — install: npm install -g bun"
         with mock.patch.object(board_engine, "find_toolchain", return_value=None), \
-                mock.patch.object(tools, "find", side_effect=tools.ToolProblem(said, code="tool_missing")):
+                mock.patch.object(tool_finder, "find", side_effect=tool_finder.ToolProblem(said, code="tool_missing")):
             stages = build_service.run(requirements, workdir, from_library=True)
         build = [stage for stage in stages if stage.name == "build"][0]
         self.assertEqual(build.status, check_spine.COULD_NOT_RUN)
@@ -2017,7 +2017,8 @@ class AMissingBoardEngineSaysWhatTheToolsListSaysTest(unittest.TestCase):
         self.assertNotIn("npm i -g", build.detail)
 
 class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
-    """The whole-branch review (2026-10-03): the expectations held in tools.find and broke at the real entry points."""
+    """The whole-branch review (2026-10-03): the expectations held in tool_finder.find and broke at the real entry
+    points."""
 
     def broken_home(self):
         home = Path(tempfile.mkdtemp())
@@ -2026,11 +2027,12 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
         return home
 
     def test_a_broken_personal_file_is_named_by_the_build_stage(self):
-        import tools
+        from spark.records import tool_finder
         workdir = Path(tempfile.mkdtemp())
         requirements = dict(check_spine.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        with mock.patch.object(tools, "PERSONAL", self.broken_home() / ".local" / "share" / "spark" / "tools.json"):
+        with mock.patch.object(tool_finder, "PERSONAL",
+                               self.broken_home() / ".local" / "share" / "spark" / "tools.json"):
             stages = build_service.run(requirements, workdir, from_library=True)
         build = [stage for stage in stages if stage.name == "build"][0]
         self.assertEqual(build.status, check_spine.COULD_NOT_RUN)
@@ -2069,21 +2071,24 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
         self.assertIsNone(board_engine.find_converter(ROOT))
 
     def test_a_project_s_own_converter_runs_with_the_ts_runtime_from_the_list(self):
-        import tools
+        from spark.records import tool_finder
         own = Path(tempfile.mkdtemp()) / "cli.ts"
-        bun = tools.Tool("bun", "ts-runtime", {"kind": "path"}, ["/opt/bun"])
-        with mock.patch.object(tools, "find", return_value=bun) as asked:
+        bun = tool_finder.Tool("bun", "ts-runtime", {"kind": "path"}, ["/opt/bun"])
+        with mock.patch.object(tool_finder, "find", return_value=bun) as asked:
             self.assertEqual(board_engine.converter_command(None, own), ["/opt/bun", "run", str(own)])
         self.assertEqual(asked.call_args[0][0], "ts-runtime")
 
     def test_the_converter_the_list_names_is_the_one_that_runs(self):
-        import tools
-        swapped = tools.Tool("my-conv", "diagram-converter", {"kind": "path"}, ["/opt/my-conv"])
-        node = tools.Tool("node", "js-runtime", {"kind": "path"}, ["/opt/node"])
-        bundled = tools.Tool("circuit-to-wokwi", "diagram-converter", {"kind": "bundled"}, ["/plugin/converter.mjs"])
-        with mock.patch.object(tools, "find", side_effect=lambda role, *rest: swapped if role == "diagram-converter" else node):
+        from spark.records import tool_finder
+        swapped = tool_finder.Tool("my-conv", "diagram-converter", {"kind": "path"}, ["/opt/my-conv"])
+        node = tool_finder.Tool("node", "js-runtime", {"kind": "path"}, ["/opt/node"])
+        bundled = tool_finder.Tool("circuit-to-wokwi", "diagram-converter", {"kind": "bundled"},
+                                   ["/plugin/converter.mjs"])
+        with mock.patch.object(tool_finder, "find",
+                               side_effect=lambda role, *rest: swapped if role == "diagram-converter" else node):
             self.assertEqual(board_engine.converter_command(None, None), ["/opt/my-conv"])
-        with mock.patch.object(tools, "find", side_effect=lambda role, *rest: bundled if role == "diagram-converter" else node):
+        with mock.patch.object(tool_finder, "find",
+                               side_effect=lambda role, *rest: bundled if role == "diagram-converter" else node):
             self.assertEqual(board_engine.converter_command(None, None), ["/opt/node", "/plugin/converter.mjs"])
 
 class TheConverterShipsAsOneFileTest(unittest.TestCase):
@@ -2112,28 +2117,31 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
         self.assertIn("SPARK_BOARD_JSON is not set", said, "it loaded every module and reached its own first check")
 
     def test_no_node_means_could_not_run_naming_the_install(self):
-        import tools
-        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("js-runtime (node) is not installed — install: brew install node", code="tool_missing")):
+        from spark.records import tool_finder
+        missing = tool_finder.ToolProblem("js-runtime (node) is not installed — install: brew install node",
+                                          code="tool_missing")
+        with mock.patch.object(tool_finder, "find", side_effect=missing):
             stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()))
         self.assertEqual(stage.status, check_spine.COULD_NOT_RUN)
         self.assertIn("brew install node", stage.detail)
 
     def test_the_converter_present_and_node_missing_is_could_not_run(self):
-        import tools
-        real = tools.find
+        from spark.records import tool_finder
+        real = tool_finder.find
 
         def no_node(name, *rest):
             if name == "js-runtime":
-                raise tools.ToolProblem("js-runtime (node) is not installed — install: brew install node", code="tool_missing")
+                raise tool_finder.ToolProblem("js-runtime (node) is not installed — install: brew install node",
+                                              code="tool_missing")
             return real(name, *rest)
-        with mock.patch.object(tools, "find", side_effect=no_node):
+        with mock.patch.object(tool_finder, "find", side_effect=no_node):
             stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()))
         self.assertIsNotNone(stage, "the bundle is here and Node is not: the converter cannot run")
         self.assertIn("brew install node", stage.detail)
 
     def test_the_plugin_s_converter_is_the_bundle(self):
-        import tools
-        self.assertEqual(tools.find("diagram-converter", None, Path(tempfile.mkdtemp()) / "absent.json").command,
+        from spark.records import tool_finder
+        self.assertEqual(tool_finder.find("diagram-converter", None, Path(tempfile.mkdtemp()) / "absent.json").command,
                          [str(self.BUNDLE)])
 
 

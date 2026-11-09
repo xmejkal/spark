@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_doctor  # noqa: E402
 from spark.records import board_records  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from spark.bench.board_console import ConsoleReadResult  # noqa: E402
 from spark.bench.board_look import LookStopError, Port  # noqa: E402
 from fakes import FakeConsoleProbe, FakeFirmwarePlatform, FakePortFinder  # noqa: E402
@@ -21,8 +21,8 @@ from fakes import FakeConsoleProbe, FakeFirmwarePlatform, FakePortFinder  # noqa
 PORT = "/dev/cu.usbmodem1101"
 C6 = Port(PORT, "8C:BF:EA:00:00:02", "303a:1001", "Espressif USB JTAG/serial debug unit")
 DEFAULTS = json.loads((ROOT / "data" / "tools.json").read_text())
-ESPTOOL = tools.Tool("esptool", "flasher", DEFAULTS["esptool"], ["/opt/python3", "-m", "esptool"])
-MPREMOTE = tools.Tool("mpremote", "board-shell", DEFAULTS["mpremote"], ["/opt/python3", "-m", "mpremote"])
+ESPTOOL = tool_finder.Tool("esptool", "flasher", DEFAULTS["esptool"], ["/opt/python3", "-m", "esptool"])
+MPREMOTE = tool_finder.Tool("mpremote", "board-shell", DEFAULTS["mpremote"], ["/opt/python3", "-m", "mpremote"])
 SAID = "ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data received."
 
 
@@ -109,18 +109,18 @@ class StepTest(unittest.TestCase):
 
 class ConfigurationTest(unittest.TestCase):
     def test_a_layer_that_changes_the_silent_step_changes_the_step(self):
-        mine = tools.Tool("esptool", "flasher", dict(DEFAULTS["esptool"], silent_step="press_reset"), [])
+        mine = tool_finder.Tool("esptool", "flasher", dict(DEFAULTS["esptool"], silent_step="press_reset"), [])
         result, _ = examine(ConsoleReadResult("read", "", None), tool=mine)
         self.assertEqual(result.next_step, "press_reset")
 
     def test_an_unknown_silent_step_is_an_error_that_names_the_tool(self):
         with self.assertRaises(board_doctor.UnknownStepError) as stop:
             examine(ConsoleReadResult("read", "", None),
-                    tool=tools.Tool("esptool", "flasher", dict(DEFAULTS["esptool"], silent_step="erase"), []))
+                    tool=tool_finder.Tool("esptool", "flasher", dict(DEFAULTS["esptool"], silent_step="erase"), []))
         self.assertIn("esptool", str(stop.exception))
 
     def test_a_tool_of_the_person_s_own_with_no_silent_step_still_gets_the_checks(self):
-        own = tools.Tool("my-shell", "board-shell", {"kind": "path"}, [])
+        own = tool_finder.Tool("my-shell", "board-shell", {"kind": "path"}, [])
         busy, _ = examine(ConsoleReadResult("busy", "", "locked"), tool=own)
         silent, _ = examine(ConsoleReadResult("read", "", None), tool=own)
         self.assertEqual((busy.next_step, silent.next_step), ("close_other", None))
@@ -140,7 +140,8 @@ class EsptoolStopTest(unittest.TestCase):
 
     def test_a_tools_list_it_cannot_use_keeps_the_stop_and_says_no_doctor(self):
         stop = LookStopError("could not read the board on %s", PORT, port=PORT, tool_said=SAID, reason="board_not_read")
-        platform = FakeFirmwarePlatform(port_finder=tools.ToolProblem("mpremote is not installed", code="tool_missing"))
+        platform = FakeFirmwarePlatform(
+            port_finder=tool_finder.ToolProblem("mpremote is not installed", code="tool_missing"))
         lines = board_doctor.stop_lines("grant.py", stop, platform, None)
         self.assertEqual(lines, ["grant.py: could not read the board on %s (no doctor: mpremote is not installed)" % PORT])
 

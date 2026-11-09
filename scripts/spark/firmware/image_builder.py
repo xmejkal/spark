@@ -25,7 +25,7 @@ from spark.records import board_records
 from spark.core.result import Refusal
 from spark.firmware import firmware_codes
 from spark.records import store
-import tools
+from spark.records import tool_finder
 
 
 FLASH_SIZE = 4 * 1024 * 1024
@@ -165,14 +165,16 @@ def board_build(project):
     try:
         board = json.loads(requirements.read_text()).get("board")
     except (OSError, ValueError, AttributeError) as cannot:
-        raise tools.ToolProblem("%s cannot be read, so its board's MicroPython build is not known: %s", requirements, cannot, code=firmware_codes.TOOL_MISSING)
+        raise tool_finder.ToolProblem("%s cannot be read, so its board's MicroPython build is not known: %s",
+                                      requirements, cannot, code=firmware_codes.TOOL_MISSING)
     if not board:
         return None
     try:
         return board_records.get(Path(project), "micropython_port", board)
     except board_records.BoardError as cannot:
         first, *rest = str(cannot).split("\n")  # the problem's own lines stay lines; the board's name is a value
-        raise tools.ToolProblem.of_lines(["the board %s names no MicroPython build that can be read: %s" % (board, first)] + rest, code=cannot.code)
+        raise tool_finder.ToolProblem.of_lines(["the board %s names no MicroPython build that can be read: %s"
+                                                % (board, first)] + rest, code=cannot.code)
 
 
 class Interpreter(namedtuple("Interpreter", "path offset")):
@@ -185,9 +187,10 @@ class Interpreter(namedtuple("Interpreter", "path offset")):
 
 def offset_of(entry):
     """Where an entry's build starts in the flash: its `flash_offset`, else 0. A broken one is a ToolProblem."""
-    problem = tools.flash_offset_problem(entry)
+    problem = tool_finder.flash_offset_problem(entry)
     if problem:
-        raise tools.ToolProblem("the MicroPython build's tools list entry is broken: %s", problem, code=firmware_codes.TOOL_MISSING)
+        raise tool_finder.ToolProblem("the MicroPython build's tools list entry is broken: %s", problem,
+                                      code=firmware_codes.TOOL_MISSING)
     return int(entry.get("flash_offset", "0"), 0)
 
 
@@ -199,7 +202,7 @@ def build_entry(project):
     build = board_build(project) if project else None
     if not build:
         return None, None
-    for name, entry in tools.merged(project)["tools"].items():
+    for name, entry in tool_finder.merged(project)["tools"].items():
         if entry.get("micropython_port") == build and "micropython-esp32-bin" in (entry.get("meets") or []):
             return build, (name, entry)
     return build, None
@@ -207,6 +210,8 @@ def build_entry(project):
 
 #: The CLI a person runs to build the image, two folders up from this module (P685): the build command names it.
 FLASH_IMAGE_SCRIPT = Path(__file__).resolve().parents[2] / "flash_image.py"
+#: The CLI a person runs to name a build and install it, two folders up too (P719): the hint's two lines name it.
+TOOLS_SCRIPT = Path(__file__).resolve().parents[2] / "tools.py"
 #: P463: how a person names their own MicroPython build in the project's tools list: the two tools.py lines, then the build again.
 OWN_BUILD_HINT = "to use another MicroPython build, name it in this project's tools list: %s, then %s, then %s"
 BUILD_AGAIN = "build the image again"
@@ -231,7 +236,7 @@ def own_build_hint_for(project, build, name, image=None):
     entry = {"kind": "download", "file": "<file>", "url": "<url>", "sha256": "<sha256>"}
     if not name:
         entry.update(micropython_port=build, meets=["micropython-esp32-bin"])
-    tools_py, where, name = Path(tools.__file__), ["--project", Path(project).resolve()], name or "<name>"
+    tools_py, where, name = TOOLS_SCRIPT, ["--project", Path(project).resolve()], name or "<name>"
     return OWN_BUILD_HINT % (store.format_rerun_line(tools_py, where + ["--new", "%s=%s" % (name, json.dumps(entry))]),
                              store.format_rerun_line(tools_py, where + ["--install", name]),
                              build_command(project, image) if image else BUILD_AGAIN)
@@ -242,19 +247,19 @@ def interpreter_for(given, project=None, find_tool=None):
     The MicroPython build and its offset: the file given, at the offset of the board's build (0 when no entry
     holds that build), else the tools list's download for the build the project's board names (P229), else the
     firmware-image role's (P82). A board whose build no tool holds is a ToolProblem, never another chip's build.
-    `find_tool` (a name -> tools.Tool) finds the download; the project's tools list when None.
+    `find_tool` (a name -> tool_finder.Tool) finds the download; the project's tools list when None.
     """
     build, held = build_entry(project)
-    find_tool = find_tool or (lambda name: tools.find(name, project))
+    find_tool = find_tool or (lambda name: tool_finder.find(name, project))
     if given:
         return Interpreter(Path(given), offset_of(held[1]) if held else 0)
     if held:
         name, entry = held
         return Interpreter(Path(find_tool(name).command[0]), offset_of(entry))
     if build:
-        raise tools.ToolProblem("no tool on the tools list holds the MicroPython build %s that the board names; add "
-                                "one from https://micropython.org/download/%s/; or %s", build, build,
-                                own_build_hint_for(project, build, None), code=firmware_codes.NO_INTERPRETER)
+        raise tool_finder.ToolProblem("no tool on the tools list holds the MicroPython build %s that the board names; "
+                                      "add one from https://micropython.org/download/%s/; or %s", build, build,
+                                      own_build_hint_for(project, build, None), code=firmware_codes.NO_INTERPRETER)
     found = find_tool("firmware-image")
     return Interpreter(Path(found.command[0]), offset_of(found.entry))
 
@@ -267,9 +272,9 @@ def make_image(given, project, folder, config_text=None):
     is the JSON written as /config.json. A bad --config is said before a bad build, as when one except caught both.
     """
     try:
-        tools.find("littlefs", project)  # P457: a project's tools file that turns it off is named
+        tool_finder.find("littlefs", project)  # P457: a project's tools file that turns it off is named
         interpreter = interpreter_for(given, project)
-    except tools.ToolProblem as missing:
+    except tool_finder.ToolProblem as missing:
         return None, Refusal(str(missing), firmware_codes.TOOL_MISSING)
     if not interpreter.path.is_file():
         return None, Refusal("no interpreter at %s — download a build from micropython.org/download for the board's chip"

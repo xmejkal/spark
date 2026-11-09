@@ -29,7 +29,7 @@ from pathlib import Path
 from spark.records import board_records
 from spark.design import footprint_emitter
 from spark.build import build_codes
-import tools
+from spark.records import tool_finder
 from spark.design.loader import CIRCUIT_PATHS, one_board_message
 
 from spark.core.result import Refusal
@@ -356,7 +356,7 @@ def write(path, payload, force, brief=False, merge=False, unstated=None):
 #: spark's own defaults only — a person's or a project's pin is theirs, not what the documents were
 #: measured on, and reading the merged list at import made a broken personal file crash every script
 #: that imports this one (the final review of P82).
-_TSCIRCUIT = tools._read(tools.DEFAULTS)["tscircuit"]
+_TSCIRCUIT = tool_finder._read(tool_finder.DEFAULTS)["tscircuit"]
 PINNED_TSCI = _TSCIRCUIT["version"]
 
 #: The `tscircuit` core every number in the documents was measured on. Pinned as a direct
@@ -373,7 +373,7 @@ def package_file(project):
     directory, where a global tsci resolves from its own install. Never rewritten: a person may
     add to it. `npm install` once, then `npx --no tsci build`.
     """
-    pinned = tools.merged(project)["tools"]["tscircuit"]  # a project's own pin wins (P82)
+    pinned = tool_finder.merged(project)["tools"]["tscircuit"]  # a project's own pin wins (P82)
     return {"name": project.name, "private": True,
             "dependencies": {"@tscircuit/cli": pinned["version"], "tscircuit": pinned["core"]},
             "//": "written by /spark:init: `npm install` once, then `npx --no tsci build board.tsx` works here. "
@@ -408,8 +408,8 @@ def why_project_refused(project):
     if not project.is_dir():
         return Refusal("no directory at %s" % project, build_codes.NO_PROJECT_FOLDER)
     try:
-        tools.merged(project)
-    except tools.ToolProblem as broken:
+        tool_finder.merged(project)
+    except tool_finder.ToolProblem as broken:
         return Refusal("init_project.py: %s" % broken, build_codes.TOOLS_FILE_UNREADABLE)
     return None
 

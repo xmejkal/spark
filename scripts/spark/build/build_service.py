@@ -22,7 +22,7 @@ from spark.design import needs
 from spark.design import netlist
 from spark.records import onboard_parts
 from spark.firmware import sim_project
-import tools
+from spark.records import tool_finder
 
 from spark.core.outcomes import EXIT_FOR, EXIT_OK, EXIT_COULD_NOT_RUN, COULD_NOT_RUN, OK, PROBLEMS, SKIPPED, status_of
 from spark.core.text_guards import clean
@@ -163,7 +163,7 @@ def core_note(version):
     Silence means they agree. A build is never failed for this — a newer core may be perfectly
     good — but it is never passed in silence either.
     """
-    if version in (tools.UNKNOWN_VERSION, project_setup.PINNED_CORE):
+    if version in (tool_finder.UNKNOWN_VERSION, project_setup.PINNED_CORE):
         return ""
     return "; the documents were measured on core %s" % project_setup.PINNED_CORE
 
@@ -260,9 +260,9 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     toolchain = toolchain or board_engine.find_toolchain(project or workdir)
     if toolchain is None:
         try:
-            tools.find("board-engine", project or workdir)
+            tool_finder.find("board-engine", project or workdir)
             said = "the board engine was not found"
-        except tools.ToolProblem as missing:
+        except tool_finder.ToolProblem as missing:
             said = str(missing)  # the tools list's own sentence, with what installs it (P82)
         return stages + [Stage("build", COULD_NOT_RUN,
                                "%s — so the chain was not exercised; /spark:setup installs it" % said, build_codes.TOOL_MISSING)]

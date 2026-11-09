@@ -14,7 +14,7 @@ from spark.bench import board_look
 from spark.records import board_records
 from spark.bench import flasher
 from spark.bench import ready_probe
-import tools
+from spark.records import tool_finder
 from spark.bench import board_codes
 from spark.firmware.project_image import DeployError
 
@@ -42,15 +42,15 @@ class FirmwarePlatform:
         self.project = project
 
     def find_tool(self, role):
-        """The tools.Tool for `role` (`flasher` or `board-shell`). tools.ToolProblem says why it is not installed."""
+        """The Tool for `role` (`flasher` or `board-shell`). ToolProblem says why it is not installed."""
         raise NotImplementedError
 
     def make_flasher(self):
-        """The Flasher for this project's chip. DeployError says why the chip cannot be read; tools.ToolProblem, the tool."""
+        """The Flasher for this project's chip. DeployError says why the chip cannot be read; ToolProblem, the tool."""
         raise NotImplementedError
 
     def make_shell_command(self):
-        """The board shell's command, as an argv list. tools.ToolProblem says why it is not installed."""
+        """The board shell's command, as an argv list. tool_finder.ToolProblem says why it is not installed."""
         raise NotImplementedError
 
     def make_port_finder(self, run):
@@ -81,12 +81,12 @@ class FirmwarePlatform:
 
 class MicroPythonPlatform(FirmwarePlatform):
     """Strategy: MicroPython on an ESP32. esptool writes the image and reads the board, mpremote talks to it. Each tool is
-    found when a step needs it, so a missing tool shows then and not before. `find_tool` is a (role -> tools.Tool) function:
+    found when a step needs it, so a missing tool shows then and not before. `find_tool` is a (role -> Tool) function:
     the project's tools list when None."""
 
     def __init__(self, project, find_tool=None):
         super().__init__(project)
-        self._find_tool = find_tool or (lambda role: tools.find(role, project))
+        self._find_tool = find_tool or (lambda role: tool_finder.find(role, project))
 
     def find_tool(self, role):
         return self._find_tool(role)
@@ -97,7 +97,7 @@ class MicroPythonPlatform(FirmwarePlatform):
                                       board_records.ButtonPlaces.from_record(record))
 
     def make_shell_command(self):
-        return tools.command_for(self.find_tool("board-shell"))
+        return tool_finder.command_for(self.find_tool("board-shell"))
 
     def make_port_finder(self, run):
         return board_look.PortFinder(self.find_tool("board-shell"), run)

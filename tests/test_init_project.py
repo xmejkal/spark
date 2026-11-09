@@ -57,8 +57,8 @@ class WhatItWritesTest(unittest.TestCase):
         self.assertEqual(dependencies, {"@tscircuit/cli": "0.1.2200", "tscircuit": "0.0.2700"})
 
     def test_the_pins_are_the_tools_list_s(self):
-        import tools
-        entry = tools.merged()["tools"]["tscircuit"]
+        from spark.records import tool_finder
+        entry = tool_finder.merged()["tools"]["tscircuit"]
         self.assertEqual((project_setup.PINNED_TSCI, project_setup.PINNED_CORE), (entry["version"], entry["core"]))
 
     def setUp(self):
@@ -553,12 +553,12 @@ class TheMeasuredPinsAreSparkSTest(unittest.TestCase):
         # The final review: PINNED_* read the merged list, so a personal pin leaked into "measured on"
         # and into the suite. The documents were measured on spark's own defaults.
         import importlib
-        import tools
+        from spark.records import tool_finder
         personal = Path(tempfile.mkdtemp()) / "tools.json"
         personal.write_text(json.dumps({"tscircuit": {"version": "9.9.9", "core": "8.8.8"}}))
         defaults = json.loads((ROOT / "data" / "tools.json").read_text())["tscircuit"]
         try:
-            with mock.patch.object(tools, "PERSONAL", personal):
+            with mock.patch.object(tool_finder, "PERSONAL", personal):
                 importlib.reload(project_setup)
                 self.assertEqual((project_setup.PINNED_TSCI, project_setup.PINNED_CORE), (defaults["version"], defaults["core"]))
         finally:

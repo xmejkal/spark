@@ -9,8 +9,8 @@ writes check_spine.py's goldens from today's output and fails, so that a person 
 
 No golden runs a real tool. A child's PATH is the fakes' folder alone, its proxies a closed port, and it carries no
 WOKWI_CLI_TOKEN (golden_checks.child_env). The project's tools list names the board engine and the diagram converter
-as the two fakes, with no other place to look and no needs: tools.find looks for bun and node first, and finds neither
-on that PATH. It names wokwi-cli with no place to look but that PATH, where it is not. The fake tsci and the
+as the two fakes, with no other place to look and no needs: tool_finder.find looks for bun and node first, and finds
+neither on that PATH. It names wokwi-cli with no place to look but that PATH, where it is not. The fake tsci and the
 converter's shim call /bin/mkdir, /bin/cp and this Python by their absolute paths, so they run on that PATH.
 
 The reference design (check_spine.py with no argument) is built from the plugin's folder, where the project's tools list

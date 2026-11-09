@@ -363,18 +363,18 @@ class TheKeptDiagramIsCopiedInTest(unittest.TestCase):
 
 class WokwiCliComesFromTheToolsListTest(unittest.TestCase):
     def test_wokwi_cli_is_found_through_the_simulator_role(self):
-        import tools
-        found = tools.Tool("wokwi-cli", "simulator", {}, ["/somewhere/wokwi-cli"])
-        with mock.patch.object(tools, "find", return_value=found) as asked:
+        from spark.records import tool_finder
+        found = tool_finder.Tool("wokwi-cli", "simulator", {}, ["/somewhere/wokwi-cli"])
+        with mock.patch.object(tool_finder, "find", return_value=found) as asked:
             self.assertEqual(sim_project.find_wokwi_cli(), "/somewhere/wokwi-cli")
         self.assertEqual(asked.call_args[0][0], "simulator")
 
     def test_no_wokwi_cli_is_none_with_the_reason_kept(self):
         # The final review: the ToolProblem was dropped and a hard-coded hint (a 404 npm line) printed instead.
-        import tools
+        from spark.records import tool_finder
         said = "simulator (wokwi-cli) is not installed — install: SENTENCE FROM THE LIST"
         root, chip = a_project()
-        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem(said, code="tool_missing")):
+        with mock.patch.object(tool_finder, "find", side_effect=tool_finder.ToolProblem(said, code="tool_missing")):
             self.assertIsNone(sim_project.find_wokwi_cli())
             staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim")
         self.assertIn("SENTENCE FROM THE LIST", problems[0])

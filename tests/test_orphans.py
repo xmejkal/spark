@@ -94,7 +94,7 @@ class NothingShipsUnusedTest(unittest.TestCase):
         unnamed = [name for name in skills + agents if name not in text]
         self.assertEqual(unnamed, [], "skills or agents nothing routes to: %s" % unnamed)
 
-    #: Scripts that still name a tool's executable, until their task moves them to tools.find (P82).
+    #: Scripts that still name a tool's executable, until their task moves them to tool_finder.find (P82).
     NOT_YET_MOVED = {}  # empty since the final review: a project's own cli.ts runs under the ts-runtime role
 
     def test_no_script_but_tools_names_a_tool_s_executable(self):
@@ -102,13 +102,13 @@ class NothingShipsUnusedTest(unittest.TestCase):
                  if isinstance(entry, dict) and entry.get("exe")} | {"bun"}
         named = {}
         for path in script_files():
-            if path.name == "tools.py":
+            if path.name == "tool_finder.py":  # the library of tools.py (P719)
                 continue
             text = path.read_text()
             found = {name for name in names if '"%s"' % name in text}
             if found - self.NOT_YET_MOVED.get(path.name, set()):
                 named[path.name] = sorted(found - self.NOT_YET_MOVED.get(path.name, set()))
-        self.assertEqual(named, {}, "ask tools.find for the tool instead (P82)")
+        self.assertEqual(named, {}, "ask tool_finder.find for the tool instead (P82)")
 
     def test_every_script_still_allowed_to_name_a_tool_still_does(self):
         stale = {name: sorted(tools_named) for name, tools_named in self.NOT_YET_MOVED.items()

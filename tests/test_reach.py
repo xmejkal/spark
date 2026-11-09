@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import reach  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from spark.bench.board_console import Cure  # noqa: E402
 from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
 from spark.bench.reach_board import ReachBoard  # noqa: E402
@@ -110,7 +110,7 @@ class ReachScriptTest(unittest.TestCase):
         self.assertIn("  first   none: the cure came first\n", said)
 
     def test_cure_first_with_mpremote_not_a_python_package_runs_nothing(self):
-        command = tools.Tool("mpremote", "board-shell", {"kind": "command"}, ["/usr/local/bin/mpremote"])
+        command = tool_finder.Tool("mpremote", "board-shell", {"kind": "command"}, ["/usr/local/bin/mpremote"])
         outside = FakeOutsideWorld(run=lambda c, **kw: None, find_tool=lambda name, **where: command)
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
@@ -157,8 +157,9 @@ class ReachScriptTest(unittest.TestCase):
         self.assertNotIn("\u202e", problems)
 
     def test_a_tools_list_word_in_the_no_doctor_line_shows_guarded(self):
-        shell = tools.Tool("mpremote\u202e", "board-shell", {"kind": "python", "module": "mpremote", "silent_step": "erase"},
-                           ["/opt/python3"])
+        shell = tool_finder.Tool("mpremote\u202e", "board-shell",
+                                 {"kind": "python", "module": "mpremote", "silent_step": "erase"},
+                                 ["/opt/python3"])
         with mock.patch.dict(found.__globals__["FOUND"], {"board-shell": shell}):
             code, _, problems, _ = self.go(answers=(REFUSED, REFUSED))
         self.assertEqual(code, 2)

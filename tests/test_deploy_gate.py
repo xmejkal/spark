@@ -35,7 +35,7 @@ from spark.firmware import image_builder  # noqa: E402
 from spark.bench import flasher  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform, FakeReporter,  # noqa: E402
                    FakeOutsideWorld, FakeProbePlatform,
                    line_made_at_import, pin_time_zone)
@@ -471,7 +471,7 @@ class TheBusyPortTest(GateCase):
     def test_with_no_doctor_the_stop_says_why_and_keeps_its_own_words(self):
         self.run_the_scenario()
         code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True,
-                                        probe=tools.ToolProblem("no mpremote", code="tool_missing"))
+                                        probe=tool_finder.ToolProblem("no mpremote", code="tool_missing"))
         self.assertEqual(code, 2)
         self.assertIn("(no doctor: no mpremote)", problems)
 

@@ -27,7 +27,7 @@ from spark.firmware import sim_project  # noqa: E402
 from spark.records import store  # noqa: E402
 import flash_image  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from spark.bench.image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
 from spark.firmware.scenario_steps import ScenarioSteps  # noqa: E402
 from spark.firmware.project_image import DeployError, ProjectImage  # noqa: E402
@@ -479,15 +479,15 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertIn("no firmware/main.py", self.why())
 
     def test_a_missing_interpreter_raises_its_tool_problem_with_the_check_words(self):
-        self.raising = tools.ToolProblem("no tool holds it", code="tool_missing")
-        with self.assertRaises(tools.ToolProblem) as raised:
+        self.raising = tool_finder.ToolProblem("no tool holds it", code="tool_missing")
+        with self.assertRaises(tool_finder.ToolProblem) as raised:
             self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
 
     def test_a_newline_in_the_image_name_gives_one_line_in_the_check_words_of_a_missing_tool_and_of_an_unreadable_file(self):
         named = mock.Mock(path=Path(NASTY))
-        self.raising = tools.ToolProblem("no tool holds it", code="tool_missing")
-        with self.assertRaises(tools.ToolProblem) as raised:
+        self.raising = tool_finder.ToolProblem("no tool holds it", code="tool_missing")
+        with self.assertRaises(tool_finder.ToolProblem) as raised:
             NoSimulationEvidence(self.project)._why_image_differs(named)
         assert_flat(self, raised.exception)
         self.raising = OSError("gone")
@@ -497,17 +497,18 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     def test_a_missing_littlefs_raises_its_tool_problem_with_the_install_line(self):
         def find(name, *args, **kwargs):
-            raise tools.ToolProblem("littlefs (littlefs-python) is not installed — install: python3 -m pip install --user littlefs-python", code="tool_missing")
+            raise tool_finder.ToolProblem("littlefs (littlefs-python) is not installed — install: python3 -m pip "
+                                          "install --user littlefs-python", code="tool_missing")
 
-        with mock.patch.object(tools, "find", side_effect=find):
-            with self.assertRaises(tools.ToolProblem) as raised:
+        with mock.patch.object(tool_finder, "find", side_effect=find):
+            with self.assertRaises(tool_finder.ToolProblem) as raised:
                 self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: littlefs (littlefs-python) "
                          "is not installed — install: python3 -m pip install --user littlefs-python")
 
     def test_a_littlefs_that_fails_to_import_raises_its_tool_problem(self):
         self.raising = ImportError("No module named 'littlefs'")
-        with self.assertRaises(tools.ToolProblem) as raised:
+        with self.assertRaises(tool_finder.ToolProblem) as raised:
             self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: No module named 'littlefs'")
 
@@ -616,10 +617,10 @@ class TheOwnBuildHintTest(unittest.TestCase):
         self.firmware = self.project / "firmware"
         self.firmware.mkdir()
         (self.firmware / "main.py").write_text("print('ready')\n")
-        self.downloads = tools.DOWNLOADS  # the suite's scratch store, so the folder goes with the test
+        self.downloads = tool_finder.DOWNLOADS  # the suite's scratch store, so the folder goes with the test
         self.downloads.mkdir(parents=True, exist_ok=True)
         self.addCleanup(shutil.rmtree, self.downloads, True)
-        (self.downloads / tools.merged(self.project)["tools"][self.NAME]["file"]).write_bytes(fake_interpreter())
+        (self.downloads / tool_finder.merged(self.project)["tools"][self.NAME]["file"]).write_bytes(fake_interpreter())
         self.own = Path(tempfile.mkdtemp()) / "my-micropython.bin"
         self.own.write_bytes(fake_interpreter(size=0xA000))
         with contextlib.redirect_stdout(io.StringIO()):

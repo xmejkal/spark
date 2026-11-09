@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_console  # noqa: E402
 from spark.bench import download_mode  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from fakes import FakeClock  # noqa: E402
 from unittest import mock  # noqa: E402
 
@@ -116,8 +116,8 @@ class TheConsoleTest(unittest.TestCase):
                          (False, "could not read the port: could not open port"))
 
     def test_a_probe_needs_mpremote_as_a_python_package_and_a_port(self):
-        python = tools.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote"}, ["/opt/python3"])
-        command = tools.Tool("mpremote", "board-shell", {"kind": "command"}, ["/usr/local/bin/mpremote"])
+        python = tool_finder.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote"}, ["/opt/python3"])
+        command = tool_finder.Tool("mpremote", "board-shell", {"kind": "command"}, ["/usr/local/bin/mpremote"])
         self.assertEqual(board_console.ConsoleProbe.for_tool(python, PORT).python, ["/opt/python3"])
         self.assertIsNone(board_console.ConsoleProbe.for_tool(command, PORT))
         self.assertIsNone(board_console.ConsoleProbe.for_tool(python, None))

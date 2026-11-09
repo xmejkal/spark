@@ -75,7 +75,7 @@ CASES = [
 
 def name_the_shim(project, folder):
     """Write the shim into `folder` and name it as wokwi-cli in `project`'s tools list, with no other place to look
-    (`also` empty, no `fetch`), so tools.find finds the shim or nothing. Returns the shim's Path."""
+    (`also` empty, no `fetch`), so tool_finder.find finds the shim or nothing. Returns the shim's Path."""
     shim = Path(folder) / "wokwi-cli-shim"
     fake = " ".join(shlex.quote(part) for part in golden_bench.FAKE_WOKWI_CLI)
     shim.write_text(SHIM % {"token": shlex.quote(FAKE_TOKEN), "refused": REFUSED_EXIT, "fake": fake})

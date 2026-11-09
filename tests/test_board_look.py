@@ -25,7 +25,7 @@ from spark.firmware import project_image  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from test_deploy import FOUND, ProjectCase, found  # noqa: E402
 
 #: The C6 and the mpremote lines are P228's bench outputs, trimmed. The S3, classic ESP32, KB and CH340 files are
@@ -83,7 +83,8 @@ class LookCase(ProjectCase):
             return done(text or data(esptool), esptool_code)
 
         flasher = flasher or FOUND["flasher"]
-        with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: flasher if name == "flasher" else found(name)):
+        with mock.patch.object(tool_finder, "find",
+                               side_effect=lambda name, *a, **k: flasher if name == "flasher" else found(name)):
             return board_look.looker(MicroPythonPlatform(self.project), run).run(self.project, port, evidence or image_evidence.PassedRunEvidence(ignore_older_runs))
 
 
@@ -297,7 +298,7 @@ class EsptoolReaderTest(unittest.TestCase):
         self.assertEqual(ran, [["/opt/python3", "-m", "esptool", "--port", C6_PORT, "flash-id"]])
 
     def test_another_flasher_than_esptool_is_not_read(self):
-        other = tools.Tool("probe-rs", "flasher", {"kind": "binary"}, ["/opt/probe-rs"])
+        other = tool_finder.Tool("probe-rs", "flasher", {"kind": "binary"}, ["/opt/probe-rs"])
         with self.assertRaises(board_look.LookStopError) as stop:
             board_look.EsptoolReader(other, lambda argv, **kw: done("")).read(C6_PORT)
         self.assertIn("the look reads only esptool", str(stop.exception))
@@ -490,13 +491,14 @@ class LookTest(LookCase):
         self.assertEqual(stop.exception.reason, "no_board_record")
 
     def test_a_tool_that_cannot_be_used_stops_the_look_with_its_sentence(self):
-        platform = FakeFirmwarePlatform(self.project, port_finder=tools.ToolProblem("mpremote is not installed", code="tool_missing"))
+        platform = FakeFirmwarePlatform(
+            self.project, port_finder=tool_finder.ToolProblem("mpremote is not installed", code="tool_missing"))
         with self.assertRaises(board_look.LookStopError) as stop:
             board_look.looker(platform)
         self.assertEqual((str(stop.exception), stop.exception.reason), ("mpremote is not installed", "tool_missing"))
 
     def test_another_flasher_stops_the_look(self):
-        other = tools.Tool("probe-rs", "flasher", {"kind": "binary"}, ["/opt/probe-rs"])
+        other = tool_finder.Tool("probe-rs", "flasher", {"kind": "binary"}, ["/opt/probe-rs"])
         with self.assertRaises(board_look.LookStopError) as stop:
             self.look(flasher=other)
         self.assertIn("the look reads only esptool", str(stop.exception))
@@ -811,7 +813,8 @@ class TheLookCodesTheImageRefusalTest(LookCase):
 
     def test_a_missing_image_tool_is_tool_missing_with_no_token_and_the_image_kept(self):
         self.run_the_scenario()
-        problem = tools.ToolProblem("cannot check flash-with-firmware.bin against firmware/: no tool holds it", code="tool_missing")
+        problem = tool_finder.ToolProblem("cannot check flash-with-firmware.bin against firmware/: no tool holds it",
+                                          code="tool_missing")
         report = self.look(evidence=self.RefusingEvidence(problem=problem))
         self.assertEqual((report.no_token_reason().code, report.token(), report.image_code), ("tool_missing", None, "tool_missing"))
         self.assertEqual(report.image_why, "cannot check flash-with-firmware.bin against firmware/: no tool holds it")

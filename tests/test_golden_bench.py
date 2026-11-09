@@ -18,7 +18,7 @@ from suite_runs import needs_littlefs  # noqa: E402
 
 import golden_bench  # noqa: E402
 from spark.records import board_records  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from micropython_fakes import fake_interpreter  # noqa: E402
 from spark.bench import board_codes  # noqa: E402
 from spark.core import codes  # noqa: E402
@@ -81,7 +81,7 @@ class ThePrintedDeployLineTest(unittest.TestCase):
         self.project = golden_bench.build_project(self.folder)
         self.store = self.folder / "the store"
         (self.store / "downloads").mkdir(parents=True)
-        lists = tools.merged(self.project)["tools"]
+        lists = tool_finder.merged(self.project)["tools"]
         build = board_records.get(self.project, "micropython_port", golden_bench.BOARD_ID)
         entry = next(entry for entry in lists.values() if entry.get("micropython_port") == build)
         (self.store / "downloads" / entry["file"]).write_bytes(fake_interpreter())

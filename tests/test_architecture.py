@@ -476,22 +476,22 @@ class TheBuildAreaTest(unittest.TestCase):
 
 # --- MVP ---
 class TheRecordsAreaTest(unittest.TestCase):
-    """W6-R3a (P718): the records' modules live in `scripts/spark/records/`, its `__init__.py` imports nothing, and each
-    module imports alone. `scripts/` keeps the CLI `boards.py`."""
+    """W6-R3a (P718) and W6-R3b (P719): the records' modules live in `scripts/spark/records/`, its `__init__.py` imports
+    nothing, and each module imports alone. `scripts/` keeps the CLIs `boards.py` and `tools.py`."""
     RECORDS = ROOT / "scripts" / "spark" / "records"
     #: The modules of the area so far, by the names of its page (`areas/records.md`).
     MODULES = ["board_pads", "board_records", "brief", "deploy_record_store", "missing_facts", "onboard_parts",
-               "provenance", "records_codes", "store"]
-    #: The CLI's own top-level functions: `main`, what only it uses to print (`_validate_all` prints) and the lazy read
-    #: of design's `footprint_stop`. A library function back in the CLI, under any name, fails the check.
-    CLIS = {"boards.py": ["_footprint_stop", "_validate_all", "main"]}
+               "provenance", "records_codes", "store", "tool_finder", "versions"]
+    #: Each CLI's own top-level functions: `main`, what only it uses to print (`_validate_all` and `print_status`) and
+    #: the lazy read of design's `footprint_stop`. A library function back in a CLI, under any name, fails the check.
+    CLIS = {"boards.py": ["_footprint_stop", "_validate_all", "main"], "tools.py": ["main", "print_status"]}
 
     def test_scripts_holds_the_cli_and_no_records_library_module(self):
         modules = sorted(path.stem for path in self.RECORDS.glob("*.py") if path.name != "__init__.py")
         self.assertEqual(modules, self.MODULES)
         scripts = ROOT / "scripts"
         old = ["board_codes.py", "board_pads.py", "boards.py", "brief.py", "deploy_record_store.py", "missing_facts.py",
-               "onboard_parts.py", "provenance.py", "records_codes.py", "store.py"]
+               "onboard_parts.py", "provenance.py", "records_codes.py", "store.py", "tools.py", "versions.py"]
         self.assertEqual([name for name in old if (scripts / name).exists()], sorted(self.CLIS))
         self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in scripts.glob("*.py")}), [])
         for cli, own in self.CLIS.items():
@@ -509,12 +509,14 @@ class TheRecordsAreaTest(unittest.TestCase):
         each_module_imports_alone(self, "records")
 
     def test_the_plugin_folder_is_three_folders_up(self):
-        # store.PLUGIN, board_records.LIBRARY and PLUGIN_ROOT read the plugin by parents[3] since the move
-        code = ("from spark.records import board_records, store; print(store.PLUGIN); "
-                "print(board_records.PLUGIN_ROOT); print(board_records.LIBRARY)")
+        # store.PLUGIN, board_records.LIBRARY and PLUGIN_ROOT read the plugin by parents[3] since the move, and
+        # tool_finder.PLUGIN reads PLUGIN_ROOT (P719)
+        code = ("from spark.records import board_records, store, tool_finder; print(store.PLUGIN); "
+                "print(board_records.PLUGIN_ROOT); print(board_records.LIBRARY); print(tool_finder.PLUGIN)")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True,
                              timeout=60, stdin=subprocess.DEVNULL)
-        self.assertEqual(run.stdout.split("\n")[:3], [str(ROOT), str(ROOT), str(ROOT / "boards")], run.stderr)
+        self.assertEqual(run.stdout.split("\n")[:4], [str(ROOT), str(ROOT), str(ROOT / "boards"), str(ROOT)],
+                         run.stderr)
 # --- end MVP ---
 
 

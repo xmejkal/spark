@@ -6,13 +6,13 @@ simulator loaded it. Only the commands are built here: deploy.py runs them, and 
 """
 
 from spark.records import board_records
-import tools
+from spark.records import tool_finder
 
 
 def build_esptool_prefix(tool, port=None, chip=None):
     """The start of an esptool command line: the tool, then `--chip`, then `--port`, each when given. The order is the
     one deploy.py has always printed. `EsptoolFlasher` and board_look.EsptoolReader both begin their lines with it."""
-    return tools.command_for(tool) + (["--chip", chip] if chip else []) + (["--port", port] if port else [])
+    return tool_finder.command_for(tool) + (["--chip", chip] if chip else []) + (["--port", port] if port else [])
 
 
 class Flasher:
@@ -33,7 +33,7 @@ class Flasher:
 
 
 class EsptoolFlasher(Flasher):
-    """esptool: erase the whole flash, then write one image at IMAGE_OFFSET. `tool` is the tools.Tool for the `flasher`
+    """esptool: erase the whole flash, then write one image at IMAGE_OFFSET. `tool` is the Tool for the `flasher`
     role, `chip` the chip as esptool names it."""
 
     #: Where the image goes: it is the whole flash from its first byte, as the simulator loaded it.

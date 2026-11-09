@@ -29,7 +29,7 @@ from spark.firmware import scenario_run  # noqa: E402
 from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from fakes import FakeOutsideWorld  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
 from spark.core.events import TerminalReporter  # noqa: E402
@@ -38,24 +38,30 @@ FAKE_CLI = [sys.executable, str(ROOT / "tests" / "fake_wokwi_cli.py")]
 READY_MATCHED = '[s] Expected text matched: "ready"\n'
 SCENARIO = 'name: s\nversion: 1\nsteps:\n  - wait-serial: "LED on"\n'
 PYTHON = "/opt/python3"
-#: esptool, mpremote and littlefs as tools.find returns them once /spark:setup installed them for the Python at PYTHON.
-FOUND = {"flasher": tools.Tool("esptool", "flasher", {"kind": "python", "module": "esptool", "silent_step": "hold_boot"},
-                                [PYTHON]),
-         "board-shell": tools.Tool("mpremote", "board-shell",
-                                   {"kind": "python", "module": "mpremote", "silent_step": "press_reset"}, [PYTHON]),
-         "littlefs": tools.Tool("littlefs", "littlefs", {"kind": "python", "module": "littlefs"}, [PYTHON])}  # P436: the image check asks for it
+#: esptool, mpremote and littlefs as tool_finder.find returns them once /spark:setup installed them for the Python at
+#: PYTHON.
+FOUND = {"flasher": tool_finder.Tool("esptool", "flasher",
+                                     {"kind": "python", "module": "esptool", "silent_step": "hold_boot"},
+                                      [PYTHON]),
+         "board-shell": tool_finder.Tool("mpremote", "board-shell",
+                                               {"kind": "python", "module": "mpremote",
+                                                "silent_step": "press_reset"}, [PYTHON]),
+         "littlefs": tool_finder.Tool("littlefs", "littlefs", {"kind": "python", "module": "littlefs"},
+                                      [PYTHON])}  # P436: the image check asks for it
 PORT = "/dev/cu.usbmodem1101"
 
 
 def real_littlefs(name, **where):
     """The fakes for every role but littlefs, which the real tools lists answer, with the project when given (P457)."""
-    return tools.find(name, **where) if name == "littlefs" else found(name)
+    return tool_finder.find(name, **where) if name == "littlefs" else found(name)
 
 
 def found(name, *args, **kwargs):
-    """tools.find for the roles and tools deploy.py and the image check ask for."""
-    if name not in FOUND:  # P436: as tools.find does for a tool nothing installed, so a test can meet a missing tool with no patch
-        raise tools.ToolProblem("%s is not installed — install: /spark:setup add %s" % (name, name), code="tool_missing")
+    """tool_finder.find for the roles and tools deploy.py and the image check ask for."""
+    # P436: as tool_finder.find does for a tool nothing installed, so a test can meet a missing tool with no patch
+    if name not in FOUND:
+        raise tool_finder.ToolProblem("%s is not installed — install: /spark:setup add %s" % (name, name),
+                                      code="tool_missing")
     return FOUND[name]
 
 
@@ -85,7 +91,8 @@ class ProjectCase(unittest.TestCase):
             scenario_run.ScenarioRun(self.project, scenario or self.scenario, micropython=self.micropython).run(FAKE_CLI)
 
     def plan(self, port=None, ignore_older_runs=False):
-        """The DeployPlan of a DeployService over this project's MicroPython platform. tools.find must be patched."""
+        """The DeployPlan of a DeployService over this project's MicroPython platform. tool_finder.find must be
+        patched."""
         evidence = image_evidence.PassedRunEvidence(ignore_older_runs)  # the default is the refusal
         return deploy_service.DeployService(
             self.project, firmware_platform.MicroPythonPlatform(self.project), evidence, FakeOutsideWorld()).plan(port)
@@ -315,13 +322,13 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
 
     def test_plan_refuses_by_default(self):
         self.run_two_scenarios()
-        with mock.patch.object(tools, "find", side_effect=found), self.assertRaises(DeployError) as said:
+        with mock.patch.object(tool_finder, "find", side_effect=found), self.assertRaises(DeployError) as said:
             self.plan()
         self.assertIn("--ignore-older-runs", str(said.exception))
 
     def test_plan_returns_a_deploy_plan_read_by_name(self):
         self.run_the_scenario()
-        with mock.patch.object(tools, "find", side_effect=found):
+        with mock.patch.object(tool_finder, "find", side_effect=found):
             plan = self.plan(PORT)
         self.assertIsInstance(plan, deploy_service.DeployPlan)
         self.assertEqual((len(plan.commands), plan.mpremote, plan.notes), (2, [PYTHON, "-m", "mpremote"], []))
@@ -332,7 +339,7 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
         self.run_two_scenarios()
 
         def missing(name, *args, **kwargs):
-            raise tools.ToolProblem("flasher (esptool) is not installed", code="tool_missing")
+            raise tool_finder.ToolProblem("flasher (esptool) is not installed", code="tool_missing")
         code, _, problems, _ = self.deploy("--dry-run", find=missing)
         self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
         self.assertIn("tested another image", problems)
@@ -357,7 +364,8 @@ class WhatDeployNeedsTest(ProjectCase):
         self.run_the_scenario()
 
         def missing(name, *args, **kwargs):
-            raise tools.ToolProblem("flasher (esptool) is not installed — install: python3 -m pip install --user esptool==5.5.0", code="tool_missing")
+            raise tool_finder.ToolProblem("flasher (esptool) is not installed — install: python3 -m pip install --user "
+                                          "esptool==5.5.0", code="tool_missing")
         code, _, problems, ran = self.deploy("--dry-run", find=missing)
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
         self.assertIn("pip install --user esptool==5.5.0", problems)

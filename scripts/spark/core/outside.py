@@ -13,8 +13,8 @@ from spark.core.errors import SparkError
 from spark.core.operation import ASKS, RUNS
 
 # --- MVP ---
-#: Value: `run` runs a program as `subprocess.run` does, and `find_tool` gives the `tools.Tool` for a role or a tool's
-#: name, or raises `tools.ToolProblem`; `find_tool(name, project=None)` asks the shared tools lists without the project's;
+#: Value: `run` runs a program as `subprocess.run` does, and `find_tool` gives the `Tool` for a role or a tool's
+#: name, or raises `ToolProblem`; `find_tool(name, project=None)` asks the shared tools lists without the project's;
 #: `report(event)` gives an `events.Event` to the Reporter the frontend picked (P507), and is not an effect: every Operation has it.
 #: `clock` has `now`, `monotonic` and `sleep` (`clock.SystemClock`). `make_consent(line)` gives the ConsentStrategy that asks
 #: the person for the yes, given the line that runs the Operation again in the person's own terminal; it needs ASKS (P657).

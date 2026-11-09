@@ -27,7 +27,7 @@ from spark.firmware import scenario_run  # noqa: E402
 from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, EXIT_OK, EXIT_PROBLEMS, OK, PROBLEMS  # noqa: E402
 
 #: wokwi-cli as the tests run it: tests/fake_wokwi_cli.py, which spends nothing.
@@ -366,7 +366,7 @@ class TheVerdictTest(unittest.TestCase):
 
 
 #: The tools list's simulator, pointed at the fake: the same entry words as data/tools.json's wokwi-cli.
-FAKE_SIMULATOR = tools.Tool("wokwi-cli", "simulator", {
+FAKE_SIMULATOR = tool_finder.Tool("wokwi-cli", "simulator", {
     "account_env": "WOKWI_CLI_TOKEN",
     "needs_account": "a Wokwi token in WOKWI_CLI_TOKEN — create one at wokwi.com/dashboard/ci"}, FAKE_CLI)
 
@@ -396,7 +396,7 @@ class ProjectCase(unittest.TestCase):
             return scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
 
     def command(self, *argv, token="t", tool=FAKE_SIMULATOR, exit_code=0, **fake):
-        real_find = tools.find
+        real_find = tool_finder.find
 
         def find(name, *args, **kwargs):
             if name != "simulator":
@@ -411,7 +411,7 @@ class ProjectCase(unittest.TestCase):
         env.update(told, **({"WOKWI_CLI_TOKEN": token} if token else {}))
         argv = list(argv) or [str(self.scenario.relative_to(self.project)), "--project", str(self.project),
                               "--micropython", str(self.micropython)]
-        with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(tools, "find", side_effect=find), \
+        with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(tool_finder, "find", side_effect=find), \
                 redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
             code = run_scenario.main(argv)
         self.stdout = out.getvalue()
@@ -540,12 +540,13 @@ class TheLogNamesTheImageTest(ProjectCase):
         (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
         c6 = self.project / "c6.bin"
         c6.write_bytes(fake_interpreter(head=b"\xe9C6"))
-        real_find = tools.find
-        found = tools.Tool("micropython-xiao-esp32c6", None, {}, [str(c6)])
+        real_find = tool_finder.find
+        found = tool_finder.Tool("micropython-xiao-esp32c6", None, {}, [str(c6)])
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_EXIT": "0", "FAKE_WOKWI_OUT": READY_MATCHED,
                 "FAKE_WOKWI_ERR": "", "FAKE_WOKWI_SEEN": str(self.seen)}
         with mock.patch.dict(os.environ, told), mock.patch.object(
-                tools, "find", side_effect=lambda name, *rest, **kw: found if name == "micropython-xiao-esp32c6" else real_find(name, *rest, **kw)):
+                tool_finder, "find", side_effect=lambda name, *rest, **kw:
+                found if name == "micropython-xiao-esp32c6" else real_find(name, *rest, **kw)):
             scenario_run.ScenarioRun(self.project, self.scenario).run(FAKE_CLI)
         self.assertEqual((self.project / "sim" / "flash-with-firmware.bin").read_bytes()[:3], b"\xe9C6")
 
@@ -825,8 +826,9 @@ class TheMutationTesterFoundTheseMissingTest(ProjectCase):
         self.assertIn("again", log.read_text())
 
     def test_a_token_named_by_the_tools_list_is_the_one_asked_for(self):
-        other = tools.Tool("wokwi-cli", "simulator", {"account_env": "OTHER_TOKEN", "needs_account": "set OTHER_TOKEN"},
-                           FAKE_CLI)
+        other = tool_finder.Tool("wokwi-cli", "simulator",
+                                 {"account_env": "OTHER_TOKEN", "needs_account": "set OTHER_TOKEN"},
+                                 FAKE_CLI)
         code, said = self.command(tool=other, token=None)
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("OTHER_TOKEN is not set", said)
@@ -931,13 +933,16 @@ class TheCommandTest(ProjectCase):
     @needs_littlefs
     def test_a_problem_with_an_override_and_a_carriage_return_shows_as_question_marks(self):
         # P423: the refusal line goes through the guard too
-        code, said = self.command(tool=tools.ToolProblem("simulator is not installed\u202e\r THE LINE", code="tool_missing"))
+        code, said = self.command(
+            tool=tool_finder.ToolProblem("simulator is not installed\u202e\r THE LINE", code="tool_missing"))
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("run_scenario.py: simulator is not installed?? THE LINE", said)
 
     @needs_littlefs
     def test_a_missing_tool_could_not_run_with_its_install_line(self):
-        code, said = self.command(tool=tools.ToolProblem("simulator (wokwi-cli) is not installed — install: THE LINE", code="tool_missing"))
+        missing = tool_finder.ToolProblem("simulator (wokwi-cli) is not installed — install: THE LINE",
+                                          code="tool_missing")
+        code, said = self.command(tool=missing)
         self.assertEqual(code, EXIT_COULD_NOT_RUN)
         self.assertIn("THE LINE", said)
 
@@ -999,7 +1004,7 @@ class EachRefusalHasItsCodeTest(ProjectCase):
 
     def test_a_missing_simulator_and_an_unset_token_are_their_codes(self):
         def missing(name, project):
-            raise tools.ToolProblem("simulator (wokwi-cli) is not installed", code="tool_missing")
+            raise tool_finder.ToolProblem("simulator (wokwi-cli) is not installed", code="tool_missing")
 
         self.assertEqual(scenario_run.find_simulator(self.project, missing)[1].code, "tool_missing")
         with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": ""}):

@@ -19,7 +19,7 @@ from spark.firmware import image_builder
 from spark.firmware.project_image import BUILD_IMAGE_HINT, NO_SIMULATION_FLAG
 from spark.core import outcomes
 from spark.core import text_guards
-import tools
+from spark.records import tool_finder
 from spark.firmware.scenario_steps import (NO_MAIN, ONE_RUN_MESSAGE, PASSED, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps,
                                             file_hashes)
 from spark.firmware.sim_project import SimulationLimits
@@ -41,7 +41,7 @@ OLDER_LOG_CAVEAT = "the passed run's log is older than step counting: run its sc
 #: What a passed run's limits section that cannot be read tells the person to do (the sentence starts with why it was not checked).
 LIMITS_HINT = "fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"
 MANY_RUNS_MESSAGE = "the passed runs (%s) have"
-#: P436: the words of the image check that could not run, as a sentence and as a tools.ToolProblem.
+#: P436: the words of the image check that could not run, as a sentence and as a tool_finder.ToolProblem.
 CANNOT_CHECK_MESSAGE = "cannot check %s against firmware/: %s"
 
 
@@ -190,7 +190,7 @@ class ImageEvidence(abc.ABC):
     @abc.abstractmethod
     def why_not_ready(self, image):
         """None when the evidence says `image` may go on a board, else why not. DeployError when a log cannot be read;
-        tools.ToolProblem when a tool the check needs is missing (P436)."""
+        tool_finder.ToolProblem when a tool the check needs is missing (P436)."""
 
     def caveats(self, image):
         """Sentences the person reads before the gate question about what tested `image`, or [] when there are none."""
@@ -356,12 +356,12 @@ class NoSimulationEvidence(ImageEvidence):
 
     def __init__(self, project, find_tool=None):
         self.project = Path(project)
-        #: a name -> tools.Tool for the image check's MicroPython build, or None for the project's tools list. littlefs is
+        #: a name -> Tool for the image check's MicroPython build, or None for the project's tools list. littlefs is
         #: asked without the project either way, as flash_image.main asks it; the project-aware lookup is a later card
         self.find_tool = find_tool
 
     def why_not_ready(self, image):
-        """None, or one sentence. A broken file is a sentence; a missing tool raises a tools.ToolProblem (P436)."""
+        """None, or one sentence. A broken file is a sentence; a missing tool raises a ToolProblem (P436)."""
         return (self._why_no_main() or self._why_not_compiling() or self._why_run_failed(image)
                 or self._why_board_build_unknown(image) or self._why_image_differs(image))
 
@@ -391,18 +391,20 @@ class NoSimulationEvidence(ImageEvidence):
     def _why_board_build_unknown(self, image):
         try:
             image_builder.board_build(self.project)
-        except tools.ToolProblem as cannot:
+        except tool_finder.ToolProblem as cannot:
             return str(cannot_check(image.path.name, cannot))
         return None
 
     # --- MVP --- P436: a missing tool raises its ToolProblem (tool_missing: /spark:setup); an unreadable file is a sentence
     def _why_image_differs(self, image):
         try:
-            (self.find_tool or tools.find)("littlefs", project=self.project)  # P457: a missing or turned-off littlefs names its own fix
+            # P457: a missing or turned-off littlefs names its own fix
+            (self.find_tool or tool_finder.find)("littlefs", project=self.project)
             built = image_builder.interpreter_for(None, self.project, self.find_tool).image(image_builder.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
-        except (tools.ToolProblem, ImportError) as cannot:
-            raise cannot_check(image.path.name, cannot, tools.ToolProblem, code=getattr(cannot, "code", board_codes.TOOL_MISSING))
+        except (tool_finder.ToolProblem, ImportError) as cannot:
+            raise cannot_check(image.path.name, cannot, tool_finder.ToolProblem,
+                               code=getattr(cannot, "code", board_codes.TOOL_MISSING))
         except (OSError, ValueError) as cannot:
             return str(cannot_check(image.path.name, cannot))
         except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as image_builder does
@@ -429,5 +431,5 @@ class NoSimulationEvidence(ImageEvidence):
 
 def evidence_for(project, no_simulation, ignore_older_runs, find_tool=None):
     """The evidence the flags of look.py and deploy.py select (they exclude each other in argparse). `find_tool` is the
-    NoSimulationEvidence's (a name -> tools.Tool), the project's tools list when None."""
+    NoSimulationEvidence's (a name -> tool_finder.Tool), the project's tools list when None."""
     return NoSimulationEvidence(project, find_tool) if no_simulation else PassedRunEvidence(ignore_older_runs)
