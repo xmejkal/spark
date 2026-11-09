@@ -4,7 +4,7 @@
 
 - [The stages](#the-flow--an-items-stages): Idea → Discovery → Design → Ready → Build → Review → Done. The PO's order
   into Ready is the commitment.
-- The limits: Build 3 (the PO, 2026-10-18, R9), the other working stages 2, Ready 5, at most 4 cards in flight across both boards.
+- The limits: the other working stages 2, at most 4 cards in flight across both boards. Ready and Build are held per session (P730, the PO, 2026-11-09): the spark session takes Ready 4 and Build 2, and the sound session (the slices "pixel-games" and "graphics library") takes 1 and 1.
 - The PO orders Ready and merges; Claude proposes, builds and says "ready to merge".
 - Where things stand: `python3 tools/board.py status`; the push gate by hand: `python3 tools/check_backlog.py`; the
   day-close, printed and not posted: `python3 tools/board.py close --dry-run "<line>"`.
@@ -114,7 +114,7 @@ PO's order into Ready commits.
 | **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request), sized to the change, has run and its fixes are in; the DoD green; the proof posted; **then the PO merges** on Claude's "ready to merge" | the PR says `Closes #N` |
 | **Done** | — | the work is where it is used (merged, or installed when there is no PR), and *Value proven by* has run with its output on the issue | (end) | the proof is posted on the issue |
 
-Ready takes five (D); each working stage two, and at most four cards in flight — Discovery to Review — at once: the
+Ready takes five (D), four of them spark's and one the sound session's (P730); each working stage two, Build too (one of its two is the sound session's), and at most four cards in flight — Discovery to Review — at once: the
 PO's call of 2026-10-06 evening, after the first day at the cap of three (*"2 everywhere, cap 4"*). What counts (P146,
 the PO, 2026-10-06):
 
