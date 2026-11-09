@@ -481,7 +481,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
     def test_a_pin_with_no_position_an_end_with_no_pin_and_an_unplaced_part_are_coded(self):
         """P691: each refusal carries its code and subject, so an agent never reads the sentence."""
         geometry = GEOMETRY.with_part("board-x", {"size": [1, 1], "center": [0, 0], "covers_holes": False, "pins": {}})
-        end = wiring_steps.End(wiring_steps.PART, "X", "X 9", "X, pin 9", "9")
+        end = wiring_steps.End("part", "X", "X 9", "X, pin 9", "9")
         catalog = {"X": drawing.DrawnPart("board-x", {}, {"9": "P9"})}
         for refuse, expected in (
                 (lambda: drawing.FirstFitPartPlacement(geometry).place("X", catalog["X"], HoleLedger(geometry.surface)),
