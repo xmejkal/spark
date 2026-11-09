@@ -2,13 +2,13 @@
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "a wrong type runs the other checks",
-  "find": "    if wrong_types:  # the checks below",
-  "replace": "    if False:  # the checks below"
+  "find": "PART = RecordKind(\"part\", SUPPORTED_SCHEMA, REQUIRED_KEYS, RULES, stop_after=(field_type_problems,))",
+  "replace": "PART = RecordKind(\"part\", SUPPORTED_SCHEMA, REQUIRED_KEYS, RULES)"
  },
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "an owed key is type-checked",
-  "find": "if key not in owed})",
+  "find": "if key not in validation.owed})",
   "replace": "})"
  },
  {
@@ -21,7 +21,7 @@
   "file": "scripts/spark/records/record_kind.py",
   "name": "map values are not walked",
   "find": "for problem in type_problems(inner, expected.value,",
-  "replace": "for problem in [] if inner else type_problems(inner, expected.value,"
+  "replace": "for problem in type_problems(None, expected.value,"
  },
  {
   "file": "scripts/spark/records/record_kind.py",

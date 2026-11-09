@@ -32,8 +32,8 @@
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "validate no longer looks at simulation",
-  "find": "    problems.extend(simulation_problems(part, path))",
-  "replace": "    pass"
+  "find": "return [] if \"simulation\" in validation.owed else simulation_problems(part, validation.path)",
+  "replace": "return []"
  },
  {
   "file": "scripts/spark/sourcing/part_rules.py",

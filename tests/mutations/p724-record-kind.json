@@ -1,0 +1,44 @@
+[
+ {
+  "file": "scripts/spark/records/record_kind.py",
+  "name": "a rule in stop_after that finds a problem does not stop the rules after it",
+  "find": "            if found and rule in self.stop_after:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/records/record_kind.py",
+  "name": "a rule in stop_after stops the rules after it when it finds nothing",
+  "find": "            if found and rule in self.stop_after:",
+  "replace": "            if rule in self.stop_after:"
+ },
+ {
+  "file": "scripts/spark/records/record_kind.py",
+  "name": "a rule's problems are dropped",
+  "find": "            problems += found",
+  "replace": "            pass"
+ },
+ {
+  "file": "scripts/spark/records/record_kind.py",
+  "name": "the rules run in the wrong order",
+  "find": "        for rule in self.rules:",
+  "replace": "        for rule in reversed(self.rules):"
+ },
+ {
+  "file": "scripts/spark/records/record_kind.py",
+  "name": "a rule is never told the record is held to the fab contract",
+  "find": "validation = Validation(path, owed, for_fab)",
+  "replace": "validation = Validation(path, owed, False)"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "a board is held to the fab contract without for_fab",
+  "find": "    if not validation.for_fab:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/records/board_rules.py",
+  "name": "a decision inside an object of the board is not found",
+  "find": "        problems += forbidden_key_problems(value, validation, where)",
+  "replace": "        pass"
+ }
+]

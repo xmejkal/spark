@@ -20,7 +20,7 @@
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "the validator never asks about pull-ups",
-  "find": "    problems.extend(i2c_pullup_problems(part))\n",
-  "replace": ""
+  "find": "    return i2c_pullup_problems(part)",
+  "replace": "    return []"
  }
 ]

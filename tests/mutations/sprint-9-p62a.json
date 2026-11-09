@@ -44,7 +44,7 @@
  {
   "file": "scripts/spark/sourcing/part_records.py",
   "name": "the validator never asks about documents",
-  "find": "    problems.extend(document_problems(part))\n",
-  "replace": ""
+  "find": "    return document_problems(part)",
+  "replace": "    return []"
  }
 ]
