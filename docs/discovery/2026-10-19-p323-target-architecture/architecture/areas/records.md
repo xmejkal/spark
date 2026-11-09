@@ -40,7 +40,8 @@ W6-R3a, P718), a design fact. `boards.py` imports both areas' `OPERATIONS`, as `
 | `records/onboard_parts.py` | the onboard parts a scenario wires (`ONBOARD_PARTS`, P484). It reads `sheet`, `loader` and `sim_project`, so it imports three areas above records; its split is a card |
 | `records/missing_facts.py` | the facts a board record owes a stage, as Findings, and what refuses a write of them (P464) |
 | `records/records_codes.py` | the leaf `records_codes` (P716, moved in W6-R3a): a code and its sentence for each refusal of `BoardError`, `ToolProblem` and `StoreProblem`, `errors.CodedMessageError`s |
-| `records/tool_finder.py` | `ToolFinder` over the three `tools.json` layers, install lines |
+| `records/tool_finder.py` | the three `tools.json` layers merged, `find`, `status`, `plan`, `install` and the install lines, moved from `tools.py` in W6-R3b (P719). The CLI `tools.py` keeps `main` and `print_status`, which prints. `ToolFinder` comes with its card |
+| `records/versions.py` | version numbers compared: a pin against the release installed, and a release against the oldest one spark runs, moved from `scripts/versions.py` in W6-R3b (P719) |
 | `records/backends.py` | `Backends` and `build_outside` |
 
 ### Its seams and adapters
@@ -48,7 +49,7 @@ W6-R3a, P718), a design fact. `boards.py` imports both areas' `OPERATIONS`, as `
 | Seam | Real adapter | Fake | Configured in |
 |---|---|---|---|
 | record folders | `RecordFolders.from_environ()` | `RecordFolders(tmp)` | `SPARK_HOME`, then `XDG_DATA_HOME`, then `~/.local/share/spark` (`store.home`) |
-| tool finder: `find(role) -> Tool` | `ToolFinder` over `data/tools.json`, the store's and the project's `tools.json` | `FakeToolFinder({role: argv})` | the three layers, the project wins (`tools.py:79-85`) |
+| tool finder: `find(role) -> Tool` | `ToolFinder` over `data/tools.json`, the store's and the project's `tools.json` | `FakeToolFinder({role: argv})` | the three layers, the project wins (`tool_finder.merged`) |
 | network: `fetch(url) -> bytes` | `store.fetch`, the only `urlopen` | a dict from URL to bytes | none |
 | file writes | `store.write_file` | a recording writer | none |
 
@@ -149,7 +150,7 @@ sequenceDiagram
 
 - A new record kind, such as chips, is one `RecordKind` and one `RecordFinder("chips")`. No new class.
 - A new tool is one row in `data/tools.json` for its role. A person switches it with `tools.py --use ROLE=TOOL`.
-- A tool's MCP version is a `kind: mcp` row (`tools.py:162`). Claude runs that tool and passes its result to the
+- A tool's MCP version is a `kind: mcp` row (`tool_finder.py:155`). Claude runs that tool and passes its result to the
   Operation as an input file. spark has no MCP client, so no core Adapter exists for it.
 - An online store is a fourth folder in `RecordFolders`, only when a second user needs it.
 

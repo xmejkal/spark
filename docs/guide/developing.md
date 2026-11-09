@@ -50,7 +50,7 @@ The suite still reads source for rules about the code itself:
 
 - no script imports unittest;
 - only `store.py` spells the store's path;
-- only `tools.py` names a tool's executable;
+- only `tool_finder.py` names a tool's executable;
 - no script restates a number that `data/fabrication.json` holds;
 - every script a command runs starts with its shebang;
 - every test module has, after its standard-library imports and before anything else, these two lines

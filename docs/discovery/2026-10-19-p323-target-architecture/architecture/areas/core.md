@@ -29,7 +29,7 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 | Seam | Kind | Who fills it |
 |---|---|---|
 | `OutsideWorld` | Value of callables: `run`, `find_tool` and `report` today; `write`, `fetch`, `clock`, `consent`, `environ` with their first user | `spark.bench.build_project_outside_world` in production, `FakeOutsideWorld` in tests |
-| `Privacy` | Value: path replacements and secret values to mask | records, from the record folders and `account_env` rows (`tools.py:339`) |
+| `Privacy` | Value: path replacements and secret values to mask | records, from the record folders and `account_env` rows (`tool_finder.py:314`) |
 | the frontend | a function that calls `run_operation` and renders the result | `run_cli` today, an MCP server later |
 
 Core depends on nothing in spark.
