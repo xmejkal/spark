@@ -177,16 +177,14 @@ These only read:
 These write:
 
 - `init_project.py`: four project files, three files that AI tools read, plus the store's projects list.
-- `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for
-  what you have, and refuses a failed or stale build. Its Wiring section has numbered steps (one connection each),
-  a mermaid diagram whose edges are those steps, and the points as a check list. Beside it it writes, at each build,
-  `breadboard.json` (P267): the same steps on a Wokwi half breadboard, each jumper in its step's color, as a Wokwi
-  diagram, and `breadboard.svg` (P268), the picture. A board in `data/wokwi-geometry.json` is drawn on that half
-  breadboard (the XIAO ESP32-C6). A board with a complete record is drawn from the record on a 63-column breadboard
-  (P412, the FireBeetle 2 ESP32-S3). It gets `breadboard.svg` alone, because Wokwi has no part with its pins. Rails are
-  not drawn yet. When a drawing is not written, the sheet and stderr say `breadboard.json not written:` and why, and an
-  old file is removed. A refusal that has a code is one of these. A refusal from an older site has no code, so its code
-  is `null` in `kept`.
+- `breadboard.py`: `breadboard.md` beside the requirements file, or `--out`, new each time. It reads the drawer for what
+  you have, and refuses a failed or stale build. Its Wiring section has numbered steps (one connection each), a mermaid
+  diagram whose edges are those steps, and the points as a check list. Beside it, each build writes `breadboard.json`
+  (P267): the same steps on a Wokwi half breadboard, each jumper in its step's color, as a Wokwi diagram, and
+  `breadboard.svg` (P268), the picture. A board in `data/wokwi-geometry.json` is drawn on that half breadboard (the XIAO
+  ESP32-C6). A board with a complete record is drawn from the record on a 63-column breadboard (P412, the FireBeetle 2
+  ESP32-S3). It gets `breadboard.svg` alone, because Wokwi has no part with its pins. When a drawing is not written, the
+  sheet and stderr say `breadboard.json not written:` and why, and an old file is removed. Its `code` in `kept`:
 
   | code | subject | next step |
   | --- | --- | --- |
@@ -195,12 +193,14 @@ These write:
   | `no_doubtful_pad_fact` | none | research `physical.header.doubtful_pads` of the board file. Never guess it. A project file made before P412 lacks it |
   | `ground_not_one` | the ground pads left | settle with a meter which ground pads have a net, then fix `doubtful_pads` |
   | `duplicate_pad_label` | the label | fix `header_order` of the record |
-  | `no_hole_left` | the part | the part does not fit with a free hole beside each pin. Use a longer breadboard or another part |
+  | `no_hole_left` | the part or the end | the part does not fit with a free hole beside each pin, or a jumper finds no free row. Use a longer breadboard or another part |
+  | `no_drawing_fact`, `no_wokwi_pin` | the part; the end | research the part's `simulation.wokwi` (`part`, `pins`) in its record, or a board's `wokwi_pin_naming`. Never guess it. A step to a doubtful pad (GND1 or GND3 of the FireBeetle) finds no pin: wire the pad the sheet names |
+  | `row_full`, `not_drawn_yet` | the row; the rail, the supply or the resistor | spark does not draw it yet (too many joins to one pin, a rail, a supply from off the board, a resistor whose both legs join rows): wire it from the sheet's steps. Do not retry |
+  | `no_pin_position`, `planner_fault` | the Wokwi type; the hole, the part or the end | a fault in spark's own data or planner: report it. Do not retry |
   | `no_wokwi_part` | none | none. It is by design, and `expected` is `true`. Do not retry |
 
-  A step to a doubtful pad (GND1 or GND3 of the FireBeetle) finds no pin and is refused as an older site, with no code.
-  The sheet names the pad that every GND means. Its picture is not verified: the row side, the USB end and the pads
-  rest on the record and on the footprint's convention, and the sheet says to hold the board to the picture.
+  The sheet names the pad that every GND means. Its picture is not verified: the row side, the USB end and the pads rest
+  on the record and on the footprint's convention, and the sheet says to hold the board to the picture.
   A part moved in the earlier `breadboard.json` stays there (P273, `spark/breadboard/kept_moves.py`): `sheet.write()` reads the
   earlier file before it writes, and a part keeps its place if its pins are over free holes, one
   row each. A resistor is checked when it is placed (P287): its joined pin must still lie in the row it joins and its other pin

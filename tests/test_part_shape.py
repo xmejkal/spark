@@ -5,6 +5,7 @@ that a board whose record lacks a fact or disagrees with itself is refused with 
     python3 -m unittest tests.test_part_shape
 """
 
+import ast
 import copy
 import json
 import sys
@@ -191,8 +192,26 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
     def test_every_code_has_one_sentence(self):
         self.assertEqual(sorted(drawing.CODES), sorted([
             "no_header_fact", "header_disagrees", "no_doubtful_pad_fact", "ground_not_one", "duplicate_pad_label",
-            "no_hole_left", "no_wokwi_part"]))
+            "no_hole_left", "no_wokwi_part", "no_pin_position", "no_drawing_fact", "no_wokwi_pin", "row_full",
+            "not_drawn_yet", "planner_fault"]))
         self.assertTrue(all(sentence and "\n" not in sentence for sentence in drawing.CODES.values()))
+
+    def test_every_not_drawn_raise_names_a_code(self):
+        """P691: no NotDrawn under scripts/spark/ is made without a code, so an agent decides on the code."""
+        uncoded = []
+        for module in sorted((ROOT / "scripts" / "spark").rglob("*.py")):
+            for node in ast.walk(ast.parse(module.read_text())):
+                name = getattr(node, "func", None)
+                name = getattr(name, "attr", None) or getattr(name, "id", None)
+                if (isinstance(node, ast.Call) and name == "NotDrawn" and len(node.args) < 2
+                        and "code" not in [keyword.arg for keyword in node.keywords]):
+                    uncoded.append("%s:%d" % (module.relative_to(ROOT), node.lineno))
+        self.assertEqual(uncoded, [])
+
+    def test_a_board_no_source_describes_has_a_code(self):
+        with self.assertRaises(drawing.NotDrawn) as refused:
+            part_shape.find_source({"id": "board-x"}, ())
+        self.assertEqual((refused.exception.code, refused.exception.subject), ("no_drawing_fact", "board-x"))
 
 
 class TheGuideNamesEveryCodeTest(unittest.TestCase):
