@@ -38,9 +38,7 @@ from spark.core.cli import HelpText, run_cli
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK  # noqa: F401  (the tests read deploy's exit codes here)
 
 #: What --help says beyond the arguments.
-EPILOG = """Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).
-
-It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
+EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
 (--ignore-older-runs flashes anyway).
 
 --no-simulation flashes an image that no simulation tested, as the board is the test. Build the image first with
@@ -97,7 +95,9 @@ with --json prints an envelope (status could-not-run, code bad_argument, exit 2)
 the error on stderr and exits 2.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
-came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
+came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.
+
+Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 

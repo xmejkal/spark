@@ -1,5 +1,5 @@
   why: spark checks the image and finds its tools first, so a wrong image stops before the board is touched
-  why: spark compares the chip and flash size with the board's record, so a board that cannot take the image is stopped
+  why: spark reads the chip and flash size, so another chip or too little flash for the image is stopped
   the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
   port   /dev/cu.usbmodem101
   mac    dc:da:0c:xx:xx:xx

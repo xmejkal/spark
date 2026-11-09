@@ -346,9 +346,8 @@ class TheWhyLineTest(unittest.TestCase):
         events = [Event.line(DeployPhase.FLASH, "running: x"), Event.begin("other")]
         self.assertEqual(self.reported(events), events)
 
-    def test_the_flash_line_names_the_watchdog_and_the_plain_reset(self):
-        self.assertIn("watchdog", PHASE_WHY[DeployPhase.FLASH])
-        self.assertIn("plain reset", PHASE_WHY[DeployPhase.FLASH])
+    def test_the_flash_line_names_the_watchdog_restart(self):
+        self.assertIn("restarts the chip with its watchdog", PHASE_WHY[DeployPhase.FLASH])
 
     def test_the_tracker_keeps_the_stage_and_the_why_line_stays_out_of_it(self):
         seen = []
