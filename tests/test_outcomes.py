@@ -21,8 +21,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tools"))  # `mutate`, which test_every_script_answers_in_the_one_vocabulary imports
 
-import deploy_record_store  # noqa: E402
-import boards  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
@@ -128,21 +128,21 @@ def read_text(text):
 
 def read_definition(case):
     """
-    boards.read_simulated_part with `case` as what the board's record holds for its Wokwi definition: None (the record names
-    none), text (the kept file's bytes), ("entry", value) (the `documents` entry itself, whatever it is) or ("record",
-    value) (the board record itself, whatever it is).
+    board_records.read_simulated_part with `case` as what the board's record holds for its Wokwi definition: None (the
+    record names none), text (the kept file's bytes), ("entry", value) (the `documents` entry itself, whatever it is) or
+    ("record", value) (the board record itself, whatever it is).
     """
     if isinstance(case, tuple) and case[0] == "record":
         board = case[1]
     elif case is None:
         board = kept_definition_board()
-        del board["documents"][boards.WOKWI_DEFINITION]
+        del board["documents"][board_records.WOKWI_DEFINITION]
     elif isinstance(case, tuple):
         board = kept_definition_board()
-        board["documents"][boards.WOKWI_DEFINITION] = case[1]
+        board["documents"][board_records.WOKWI_DEFINITION] = case[1]
     else:
         board = kept_definition_board(case)
-    return boards.read_simulated_part(board)
+    return board_records.read_simulated_part(board)
 
 
 #: Every reader that follows the rule in outcomes.py: its function from an input to a Value, and for each input the state
@@ -164,7 +164,7 @@ READERS = {
         "older, with no section": (LOG_HEADER + "\nbody\n", "none-recorded"),
         "good": (LOG_HEADER + "\n--- what this simulation cannot show ---\n- **A** — no part\n\n--- the scenario as run ---\n",
                  "recorded")}),
-    "boards.read_simulated_part": (read_definition, {
+    "board_records.read_simulated_part": (read_definition, {
         "missing": (None, "none-recorded"),
         "malformed": ('{"pins": ', "not-checked"),
         "wrong shape": ('{"pins": [1]}', "not-checked"),
@@ -214,8 +214,8 @@ class ThreeStatesTest(unittest.TestCase):
 
 class OneUpwardWalkTest(unittest.TestCase):
     def test_the_walk_is_nearest_first_and_ends_at_the_root(self):
-        import boards
-        walked = boards.walk_up(ROOT / "scripts")
+        from spark.records import board_records
+        walked = board_records.walk_up(ROOT / "scripts")
         self.assertEqual(walked[0], (ROOT / "scripts").resolve())
         self.assertEqual(walked[1], ROOT.resolve())
         self.assertEqual(walked[-1], Path(walked[-1].anchor))

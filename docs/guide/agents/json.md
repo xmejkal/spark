@@ -326,7 +326,7 @@ Without `--json` it prints the same on stderr and nothing on stdout ([P442](http
 
 **The `code` of an item** ([P433](https://github.com/xmejkal/spark/issues/575)). Every item of `problems` and `unchecked` in
 `look.py --json` and `deploy.py --json` has `code`, the cause in one word. Decide on the code, never on the sentence. The codes
-come from one table, `scripts/board_codes.py`. The same code can come from the look and from deploy.py (`evidence_refuses` is both).
+come from one table, `scripts/spark/bench/board_codes.py`. The look and deploy.py share a code (`evidence_refuses`).
 The flat line of `grant.py`, `live.py` and `reach.py` has no `code`; their Findings do. In deploy.py, the reasons of a look that could not run come as an `unchecked` item of stage `look`.
 look.py gives each stop, warning and unknown field an item of its own. deploy.py's gate gives one item for all the look's stops, with the first stop's `code`.
 The column "needs the person" says whether the next step waits on the person's hands, yes or choice.
@@ -369,7 +369,7 @@ The column "needs the person" says whether the next step waits on the person's h
 | `crash` | `look.py`, `deploy.py` | the look crashed (`grant.py`, `live.py` and `reach.py` print no stdout line for a crash, exit 2, the traceback on stderr): a defect in spark, never in the project. The sentence names the exception class; the traceback is on stderr | report it to the spark maintainers with the stderr traceback; running the look again for it is no use | yes |
 | `undeclared_effect` | no script today: the look declares `runs`. An Operation whose `effects` miss what it reaches | the operation ran a program its effects do not declare: a defect in spark | report it, as for `crash` | yes |
 
-`bad_argument`, `crash` and `undeclared_effect` are the core's codes, in `scripts/spark/core/codes.py`: every operation can write them. The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `serial_not_mac` and `no_mac` are in the table of `scripts/board_codes.py` too. They name the reasons of
+`bad_argument`, `crash` and `undeclared_effect` are the core's codes, in `scripts/spark/core/codes.py`: every operation can write them. The codes `not_a_grant`, `bad_minutes`, `bad_scope`, `serial_not_mac` and `no_mac` are in `scripts/spark/bench/board_codes.py` too. They name the reasons of
 `grant.py`'s refusals, which do not reach this envelope. So do `no_grant`, `grant_expired`, `grant_no_zone`, `not_reached`, `no_probe`, `reset_failed`, `raised`, `refused_no_grant`, `refused_pin`, `refused_no_parse`, `store_problem` and `board_record_unusable`: the codes of the findings that `grant.py`, `live.py` and `reach.py` give the core, which print no envelope. With two stops, the deploy gate's `code` is the first stop's.
 
 **A bad flag.** With `--json`, `look.py` and `deploy.py` print an envelope for an argument they cannot run with, such as

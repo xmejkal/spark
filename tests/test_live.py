@@ -231,7 +231,7 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual(finding_of("print(1)", answers=(refused, refused)), ("could-not-run", ["not_reached"]))
 
     def test_every_answer_but_ran_is_a_code_of_the_table(self):
-        import board_codes
+        from spark.bench import board_codes
         from spark.bench import board_live
         for answer in set(board_live.EXIT_FOR_ANSWER) - {board_live.RAN}:
             self.assertIn(answer, board_codes.CODES)

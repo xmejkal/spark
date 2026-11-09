@@ -38,10 +38,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.design import pin_assigner  # noqa: E402
-import missing_facts  # noqa: E402
+from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 
@@ -1247,9 +1247,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         home, project, store = self._kept_world(stored)
         def no_network(url):
             raise AssertionError("--kept must never reach the network, asked for %s" % url)
-        import boards
+        from spark.records import board_records
         with in_store(home), \
-                mock.patch.object(boards, "LIBRARY", home / "no-library"), \
+                mock.patch.object(board_records, "LIBRARY", home / "no-library"), \
                 mock.patch.object(parts, "_download", no_network), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
             code = parts.main(["--kept"] + words + ["--project", str(project)])

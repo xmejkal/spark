@@ -21,10 +21,10 @@ import struct
 from collections import namedtuple
 from pathlib import Path
 
-import boards
+from spark.records import board_records
 from spark.core.result import Refusal
 from spark.firmware import firmware_codes
-import store
+from spark.records import store
 import tools
 
 
@@ -169,8 +169,8 @@ def board_build(project):
     if not board:
         return None
     try:
-        return boards.get(Path(project), "micropython_port", board)
-    except boards.BoardError as cannot:
+        return board_records.get(Path(project), "micropython_port", board)
+    except board_records.BoardError as cannot:
         first, *rest = str(cannot).split("\n")  # the problem's own lines stay lines; the board's name is a value
         raise tools.ToolProblem.of_lines(["the board %s names no MicroPython build that can be read: %s" % (board, first)] + rest, code=cannot.code)
 

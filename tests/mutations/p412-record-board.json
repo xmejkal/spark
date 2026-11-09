@@ -78,7 +78,7 @@
 "replace": "        if False:"
 },
  {
-"file": "scripts/boards.py",
+"file": "scripts/spark/records/board_records.py",
 "name": "validate accepts a doubtful pad that is no pad",
 "find": "            elif name not in pads:\n                problems.append(\"physical.header.doubtful_pads names",
 "replace": "            elif False:\n                problems.append(\"physical.header.doubtful_pads names"
@@ -162,7 +162,7 @@
 "replace": "\"pads\": {\"value\": pad_count, \"verified\": True,"
 },
  {
-"file": "scripts/boards.py",
+"file": "scripts/spark/records/board_records.py",
 "name": "a doubtful pad entry that is no text is accepted",
 "find": "            if not isinstance(name, str):",
 "replace": "            if False:"

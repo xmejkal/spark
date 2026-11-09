@@ -11,14 +11,14 @@ import hashlib
 import shlex
 import subprocess
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench.deploy_stages import DeployPhase
 from spark.bench import board_facts
-import boards
+from spark.records import board_records
 from spark.bench import board_look
 from spark.bench import board_start
 from spark.bench import deploy_gate
-import deploy_record_store
+from spark.records import deploy_record_store
 from spark.bench import download_mode
 from spark.bench import ready_probe
 from spark.firmware.project_image import DeployError, ProjectImage
@@ -145,7 +145,7 @@ class DeployService:
         expected = self.evidence.expected_files(image)
         moment = self.clock.now()  # once: the facts file and the board log share it
         starter = board_start.BoardStartService(self.platform.make_port_finder(self.run), look.reading.mac, self.clock,
-                                                boards.ButtonPlaces.of_project(self.project))
+                                                board_records.ButtonPlaces.of_project(self.project))
         row = starter.find_port(look.port)
         port = row and row.device
 

@@ -262,7 +262,8 @@ class TheFootprintStopIsSaidTwoWaysTest(unittest.TestCase):
         self.assertIsNone(footprint_emitter.why_header_disagrees(firebeetle()))
 
     def test_a_value_of_the_wrong_kind_is_a_disagreement_that_names_the_field(self):
-        # boards.validate checks no header geometry: a pitch written as text reached `pads` and raised a TypeError
+        # board_records.validate checks no header geometry: a pitch written as text reached `pads` and raised a
+        # TypeError
         for where, field, value, said in (("header", "pitch_mm", "2.54", "physical.header.pitch_mm is not a finite number"),
                                           ("header", "first_pad_from_edge_mm", True, "physical.header.first_pad_from_edge_mm is not a finite number"),
                                           ("header", "pins", 18, "physical.header.pins is not a list of whole numbers"),

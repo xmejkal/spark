@@ -26,7 +26,8 @@ consequence against — a finding is only "bad" relative to something the projec
 import json
 from pathlib import Path
 
-import boards
+from spark.records import board_records
+from spark.design import footprint_emitter
 from spark.build import build_codes
 import tools
 from spark.design.loader import CIRCUIT_PATHS, one_board_message
@@ -388,8 +389,8 @@ def boards_offered(project):
     The boards to choose from, as both "Available:" lines say them: those that build first, then each that stops at the
     footprint stage, said as such (C-7, F12) — offered, never hidden, since such a board is still a choice for pin-map work.
     """
-    offered = boards.available(project)
-    stops = {board_id: boards.footprint_stop(board_id, project) for board_id in offered}
+    offered = board_records.available(project)
+    stops = {board_id: footprint_emitter.footprint_stop(board_id, project) for board_id in offered}
     said = [", ".join(board_id for board_id in offered if not stops[board_id])]
     said += ["%s %s" % (board_id, stops[board_id]) for board_id in offered if stops[board_id]]
     return "; ".join(part for part in said if part) or "none"
@@ -415,7 +416,7 @@ def why_project_refused(project):
 
 def why_board_refused(board, project):
     """Value: why `board` cannot be made active, as a Refusal: neither the project nor spark has it. None when one has."""
-    if board in boards.available(project):
+    if board in board_records.available(project):
         return None
     return Refusal("no board called %r. Available: %s" % (board, boards_offered(project)), build_codes.UNKNOWN_BOARD)
 

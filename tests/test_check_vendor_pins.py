@@ -220,7 +220,7 @@ class TheExitCodeTellsTheThreeApartTest(unittest.TestCase):
 class WhereTheHeaderIsKept(unittest.TestCase):
     """
     P179. A live check writes the header it fetched into the cache of the project that owns the
-    board file, found by the walk every script shares (`boards.project_root`), and says which file.
+    board file, found by the walk every script shares (`board_records.project_root`), and says which file.
     An offline check reads that copy first and says whose cache answered. Before the fix the
     write followed P10's read fallback, so the first live check of any new board wrote into
     spark's own folder, and a later `--offline` passed from a file in nobody's project (P100

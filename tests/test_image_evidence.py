@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import image_evidence  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 import flash_image  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 import tools  # noqa: E402

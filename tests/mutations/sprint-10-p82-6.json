@@ -12,5 +12,5 @@
  {"file": "scripts/tools.py", "name": "the token row stays after the token is set", "find": "        if entry.get(\"needs_account\") and not os.environ.get(entry.get(\"account_env\") or \"\", \"\"):", "replace": "        if entry.get(\"needs_account\"):"},
  {"file": "scripts/tools.py", "name": "status says all is well with a tool missing", "find": "            return EXIT_COULD_NOT_RUN if print_status(project, None) else EXIT_OK", "replace": "            return print_status(project, None) and EXIT_OK"},
  {"file": "scripts/tools.py", "name": "a new entry spark cannot find is written", "find": "            if problem:\n                raise ToolProblem(\"%s: %s — nothing written\", name, problem, code=records_codes.TOOL_ENTRY_BROKEN)\n", "replace": ""},
- {"file": "scripts/tools.py", "name": "a project named '.' gives a command that works only from there", "find": "        for directory in boards.walk_up(Path(project).absolute()):", "replace": "        for directory in boards.walk_up(Path(project)):"}
+ {"file": "scripts/tools.py", "name": "a project named '.' gives a command that works only from there", "find": "        for directory in board_records.walk_up(Path(project).absolute()):", "replace": "        for directory in board_records.walk_up(Path(project)):"}
 ]

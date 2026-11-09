@@ -3,11 +3,11 @@ The stops of the bench Operations (P657, W4-3): the board_codes code that a refu
 and deploy name one stop by one code, and the result of a stop before the board answered. An Operation puts the code in its Finding.
 """
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_envelope
 from spark.bench import board_look
-import boards
-import store
+from spark.records import board_records
+from spark.records import store
 import tools
 from spark.design.restricted_pins import BrokenRecordError
 from spark.core import outcomes
@@ -17,7 +17,8 @@ from spark.core.text_guards import guard_sentence
 # --- MVP ---
 #: The refusals that carry no `reason` of their own, by class, with the code each gets.
 CODE_OF_CLASS = ((tools.ToolProblem, board_codes.TOOL_MISSING), (store.StoreProblem, board_codes.STORE_PROBLEM),
-                 (boards.BoardError, board_codes.BOARD_RECORD_UNUSABLE), (BrokenRecordError, board_codes.BOARD_RECORD_UNUSABLE))
+                 (board_records.BoardError, board_codes.BOARD_RECORD_UNUSABLE),
+                 (BrokenRecordError, board_codes.BOARD_RECORD_UNUSABLE))
 
 
 def reason_of(refusal):
@@ -34,7 +35,7 @@ def stop_result(cannot, script, project, port, doctor_for=None):
     its line on stderr as `<script>: <cannot>`, the port and the project put on one line first (P430). `doctor_for(stop)`,
     when given, is asked for a LookStopError and answers (lines, DoctorProbeResult or None) as `board_doctor.stop_answer` does: the
     doctor's lines then replace the sentence, as look.py's stop does."""
-    doctor, places = None, boards.ButtonPlaces.of_project(project)
+    doctor, places = None, board_records.ButtonPlaces.of_project(project)
     if doctor_for is not None and isinstance(cannot, board_look.LookStopError):
         lines, doctor = doctor_for(cannot)
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)

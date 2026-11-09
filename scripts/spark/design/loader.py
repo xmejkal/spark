@@ -34,11 +34,11 @@ import re
 from collections import namedtuple
 from pathlib import Path
 
-import boards
+from spark.records import board_records
 from spark.design import design_codes
 from spark.design import fab
 import parts as parts_library
-import provenance
+from spark.records import provenance
 from spark.core.errors import CodedMessageError
 
 #: What `load` returns. `parts` are the requested instances: each a copy of its record, with
@@ -188,12 +188,12 @@ def project_for(path, project=None):
             raise DesignError("no directory at %s — `--project` names a project directory", chosen,
                               code=design_codes.NO_PROJECT_FOLDER)
         return chosen.resolve()
-    return boards.project_or_library(Path(path).resolve().parent)
+    return board_records.project_or_library(Path(path).resolve().parent)
 
 
 def is_library(project):
     """Whether a design was resolved to the plugin's own root, for want of a project around it."""
-    return Path(project).resolve() == boards.PLUGIN_ROOT
+    return Path(project).resolve() == board_records.PLUGIN_ROOT
 
 
 #: What the two mains say when a design was built from nowhere. One sentence, one place.
@@ -302,8 +302,8 @@ def parts_of(wanted, project, board=None):
     """
     if board is None:
         try:
-            board = boards.load(project, wanted.get("board"))
-        except boards.BoardError:
+            board = board_records.load(project, wanted.get("board"))
+        except board_records.BoardError:
             board = None  # no board, no internal pull-up: every resistor stays
     part_list = []
     rails = rails_requested(wanted)
@@ -461,8 +461,8 @@ def load(path, project=None, board_id=None):
     wanted = read(path)
     root = project_for(path, project)
     try:
-        board = boards.load(root, board_id or wanted.get("board"))
-    except boards.BoardError as broken:
+        board = board_records.load(root, board_id or wanted.get("board"))
+    except board_records.BoardError as broken:
         raise DesignError.of_error(broken, code=design_codes.BOARD_UNUSABLE) from broken
     part_list = parts_of(wanted, root, board)
     return Design(Path(path), root, wanted, board, part_list, signals_of(part_list, wanted, root),

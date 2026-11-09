@@ -67,9 +67,9 @@ project, use a scratch `SPARK_HOME`.
 
 Every `parts.py` operation that writes holds the store's lock from its plan to its last byte (`store.locked()`), so two
 writes at once take turns instead of each writing what the other never read. The drawer, its imports, the shelf, the
-projects list and the history are the places only the person should see (`PRIVATE` in `scripts/store.py`): spark writes
-them 0600 in folders 0700 and never inside a git work tree, and you never put them into a URL, a web search, a research
-agent's prompt or a commit.
+projects list and the history are the places only the person should see (`PRIVATE` in `scripts/spark/records/store.py`):
+spark writes them 0600 in folders 0700 and never inside a git work tree, and you never put them into a URL, a web
+search, a research agent's prompt or a commit.
 
 A scratch store hides three things, so tell the person:
 

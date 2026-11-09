@@ -5,13 +5,13 @@ the LiveTryResult and the port, so no golden changed. The status comes from `boa
 stays exit 2 whatever the answer was; a stop has the same fields, empty, with the answer `could-not-run`.
 """
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_envelope
 from spark.bench import board_grant
 from spark.bench import board_live
 from spark.bench import board_look
-import boards
+from spark.records import board_records
 import tools
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.design.restricted_pins import BrokenRecordError
@@ -28,7 +28,7 @@ from spark.core.text_guards import printable
 SCRIPT = "live.py"
 
 
-def describe(result, places=boards.ButtonPlaces.EMPTY):
+def describe(result, places=board_records.ButtonPlaces.EMPTY):
     """The lines a person reads, for a LiveTryResult, each guarded (P430). `places` names the buttons the doctor's steps mention."""
     out = ["answer  %s" % result.answer]
     out += ["why     %s" % result.why] if result.why else []
@@ -81,14 +81,15 @@ class RunLiveCode(Operation):
             probe = platform.make_console_probe(port, outside.run)
             service = board_live.LiveTryService(board_grant.GrantService(finder, now=outside.clock.now),
                                                 platform.make_connection(platform.make_shell_command(), port, outside.run), probe,
-                                                boards.load(project), board_doctor.BoardDoctorService.for_board(finder, probe),
+                                                board_records.load(project),
+                                                board_doctor.BoardDoctorService.for_board(finder, probe),
                                                 platform.find_tool("board-shell"))
             result = service.run(code, port)
-        except (tools.ToolProblem, board_look.LookStopError, boards.BoardError, BrokenRecordError) as cannot:
+        except (tools.ToolProblem, board_look.LookStopError, board_records.BoardError, BrokenRecordError) as cannot:
             empty = dict.fromkeys(board_live.LiveTryResult._fields)
             return stops.stop_result(cannot, SCRIPT, project, port)._replace(
                 data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(cannot), port=port))
-        places = boards.ButtonPlaces.of_project(project)
+        places = board_records.ButtonPlaces.of_project(project)
         return OperationResult(data_of(port, result), self._findings(result, places), lines=describe(result, places))
 
     @staticmethod

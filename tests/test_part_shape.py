@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import part_shape  # noqa: E402
-import provenance  # noqa: E402
+from spark.records import provenance  # noqa: E402
 
 GEOMETRY = json.loads((ROOT / "data" / "wokwi-geometry.json").read_text())
 RECORD = part_shape.RecordShapeSource()

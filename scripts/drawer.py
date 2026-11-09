@@ -14,10 +14,10 @@ import re
 from pathlib import Path
 from collections import namedtuple
 
-import boards
+from spark.records import board_records
 import parts
-import records_codes
-import store
+from spark.records import records_codes
+from spark.records import store
 from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems, printable
 
 #: What a part does (§5.6) — one list, in parts.py.
@@ -143,11 +143,11 @@ def linkable(project=None):
     project whose folder is gone has nothing to offer and is passed over.
     """
     found = [("part", part_id, layer, path) for part_id, (layer, path) in store.records("parts", parts.LIBRARY, project, drafts=True).items()]
-    found += [("board", board_id, layer, path) for board_id, (layer, path) in boards.records(project).items()]
+    found += [("board", board_id, layer, path) for board_id, (layer, path) in board_records.records(project).items()]
     for name, folder in store.projects().items():
         found += [("part", path.stem, name, path) for path in sorted((folder / "parts").glob("*.json"))]
         found += [("board", path.stem, name, path) for path in sorted((folder / "boards").glob("*.json"))
-                  if path.name not in boards.NOT_A_BOARD]
+                  if path.name not in board_records.NOT_A_BOARD]
     unique = {}
     for row in found:
         unique.setdefault(row[:2], row)

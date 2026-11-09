@@ -22,10 +22,10 @@ import subprocess
 from collections import namedtuple
 from dataclasses import dataclass
 
-import board_codes
-import boards
-import brief
-import deploy_record_store
+from spark.bench import board_codes
+from spark.records import board_records
+from spark.records import brief
+from spark.records import deploy_record_store
 from spark.bench import flasher
 from spark.core import outcomes
 from spark.firmware import project_image
@@ -112,7 +112,7 @@ class PortFinder:
             raise LookStopError("could not list the boards on USB: %s", cannot, reason=board_codes.LIST_FAILED)
         except subprocess.TimeoutExpired:
             raise LookStopError("could not list the boards on USB: mpremote took more than %d s. %s",
-                           LIST_TIMEOUT_S, flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY),
+                           LIST_TIMEOUT_S, flasher.EsptoolFlasher.boot_hint_for(board_records.ButtonPlaces.EMPTY),
                            reason=board_codes.LIST_TIMEOUT)
         if done.returncode:
             lines = (done.stderr or "").strip().splitlines()
@@ -186,7 +186,8 @@ class BoardReader:
 class EsptoolReader(BoardReader):
     """esptool 5.5.0's `flash-id` output, parsed with anchored lines. A field that does not parse is None."""
 
-    def __init__(self, flasher_tool, run=subprocess.run, boot_hint=flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.EMPTY)):
+    def __init__(self, flasher_tool, run=subprocess.run,
+                 boot_hint=flasher.EsptoolFlasher.boot_hint_for(board_records.ButtonPlaces.EMPTY)):
         self.flasher_tool, self.run, self.boot_hint = flasher_tool, run, boot_hint
 
     def read(self, port):
@@ -474,8 +475,8 @@ class LookService:
         if not name:
             raise LookStopError("requirements.json names no board", reason=board_codes.NO_BOARD_NAMED)
         try:
-            return boards.load(project, name)
-        except boards.BoardError:
+            return board_records.load(project, name)
+        except board_records.BoardError:
             raise LookStopError("no board record for %s: P230 will research one.", name, reason=board_codes.NO_BOARD_RECORD)
 
 
@@ -483,7 +484,7 @@ def looker(platform, run=subprocess.run):
     """A LookService with the platform's port finder and board reader, whose hint names the project's buttons.
     tools.ToolProblem becomes a LookStopError."""
     try:
-        hint = flasher.EsptoolFlasher.boot_hint_for(boards.ButtonPlaces.of_project(platform.project))
+        hint = flasher.EsptoolFlasher.boot_hint_for(board_records.ButtonPlaces.of_project(platform.project))
         return LookService(platform.make_port_finder(run), platform.make_board_reader(run, hint))
     except tools.ToolProblem as cannot:
         raise LookStopError("%s", cannot, reason=board_codes.TOOL_MISSING)

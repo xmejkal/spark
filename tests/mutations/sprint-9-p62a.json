@@ -18,7 +18,7 @@
   "replace": "    while False:"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "a file is kept under its name, not its checksum",
   "find": "    folder = place(\"sources\") / digest\n",
   "replace": "    folder = place(\"sources\")\n"

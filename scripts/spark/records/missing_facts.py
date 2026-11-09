@@ -5,17 +5,17 @@ renders through `spark.core.result.envelope_item`. A person tells the fact (`par
 or a bench measures it; `level_write_problems` is the rule for what that write may hold.
 """
 
-import boards
-import provenance
-import records_codes
+from spark.records import board_records
+from spark.records import provenance
+from spark.records import records_codes
 from spark.core import outcomes
 from spark.core.result import Finding
 
 # --- MVP ---
 #: Each role whose active level a stage needs, and what the level means for it. One table feeds the Findings and the pin map.
 ACTIVE_LEVEL_MEANING = {
-    boards.ONBOARD_LED: "the level that lights it",
-    boards.ONBOARD_BUTTON: "the level it reads when pressed",
+    board_records.ONBOARD_LED: "the level that lights it",
+    board_records.ONBOARD_BUTTON: "the level it reads when pressed",
 }
 LEVEL_FACT = "active_level"
 SENTENCE = "%s has no %s in the board record (%s), so the firmware would guess it"
@@ -31,8 +31,8 @@ def list_missing_facts(board):
     return [Finding(outcomes.COULD_NOT_RUN, "pin_roles.%s.%s" % (role, LEVEL_FACT), records_codes.MISSING_FACT,
                     SENTENCE % (spec.what, LEVEL_FACT.replace("_", " "), ACTIVE_LEVEL_MEANING[role]),
                     FIX % board.get("id", "<board>"))
-            for role, spec, entry in boards.onboard_entries(board)
-            if role in ACTIVE_LEVEL_MEANING and boards.names_pins(entry) and provenance.read_value(entry, LEVEL_FACT) is None]
+            for role, spec, entry in board_records.onboard_entries(board) if role in ACTIVE_LEVEL_MEANING
+            and board_records.names_pins(entry) and provenance.read_value(entry, LEVEL_FACT) is None]
 
 
 def level_write_problems(values):
@@ -69,11 +69,12 @@ def merged_roles(record, values):
 def board_write_problems(record, after, path, values, project):
     """
     What refuses a write of `values` to a board record: a board that is not in `project`'s own boards/ (another listed
-    project's board is that project's to change), else `level_write_problems`, else each problem `boards.validate` finds in
-    `after` that `record` did not have.
+    project's board is that project's to change), else `level_write_problems`, else each problem
+    `board_records.validate` finds in `after` that `record` did not have.
     """
     if project is None or path.parent.resolve() != (project / "boards").resolve():
         return ["%s is not a board of %s: pass --project <the folder of the project that owns it>, or copy it into this project's boards/ first"
                 % (path.stem, "this project (%s)" % project if project else "a project (no --project was given)")]
-    return level_write_problems(values) or sorted(set(boards.validate(after, path)) - set(boards.validate(record, path)))
+    return level_write_problems(values) or sorted(set(board_records.validate(after, path))
+                                                  - set(board_records.validate(record, path)))
 # --- end MVP ---

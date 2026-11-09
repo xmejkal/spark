@@ -24,13 +24,13 @@
   "replace": "\"i2c\": 15,"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "SPI dropped from the role vocabulary",
   "find": "    \"spi\": \"the hardware SPI bus; spent last by signals that could use any pin\",\n",
   "replace": ""
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "I2C dropped from the role vocabulary",
   "find": "    \"i2c\": \"the hardware I2C bus; spent last by signals that could use any pin\",\n",
   "replace": ""

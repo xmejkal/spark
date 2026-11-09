@@ -39,7 +39,7 @@ from pathlib import Path
 from spark.design import loader
 from spark.design import design_codes
 from spark.design import fab
-import boards
+from spark.records import board_records
 from spark.core.result import Refusal
 from spark.core.text_guards import one_line
 
@@ -159,6 +159,22 @@ def footprint_stop_line(board):
     if not fields:
         return None
     return STOP_LINE_MESSAGE % (fields[0] if len(fields) == 1 else "%d fields (first: %s)" % (len(fields), fields[0]))
+
+
+def footprint_stop(board_id: str, project: Path = None) -> str:
+    """
+    `footprint_stop_line` of a board that stops the chain at the footprint stage — its file lacks what the footprint
+    is drawn from (`footprint_gaps`; C-7, P121) — and "" for one that builds on. Said wherever a board is offered or
+    picked (F12: the XIAO was listed and picked without a word), never refused: such a board is still a choice for
+    pin-map work. A file that cannot be read is not said to stop here; `--validate` names it. A design fact, read by
+    `boards.py --list` and wherever a board is chosen (P718 moved it here from the board records).
+    """
+    found = board_records.records(project).get(board_id)
+    try:
+        board = board_records._read_json(found[1], "board definition") if found else None
+    except board_records.BoardError:
+        return ""
+    return (footprint_stop_line(board) or "") if isinstance(board, dict) else ""
 
 
 #: What a board whose header geometry and pad order do not fit each other is told (P411): `main` and the spine's footprint stage.
@@ -306,8 +322,8 @@ def board_to_draw(project_flag, board_id):
     """
     project = None
     try:
-        project = Path(project_flag) if project_flag else boards.project_or_library()
-        board = boards.load(project, board_id)
+        project = Path(project_flag) if project_flag else board_records.project_or_library()
+        board = board_records.load(project, board_id)
         rules = loader.rules_in(project)
     except Exception as exc:  # noqa: BLE001 — the message is the product
         code = (exc.code if isinstance(exc, loader.DesignError) else design_codes.BOARD_UNUSABLE if project

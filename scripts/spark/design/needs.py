@@ -12,15 +12,15 @@ import json
 import re
 from pathlib import Path
 
-import boards
+from spark.records import board_records
 from spark.design import loader
 import drawer
 from spark.design import board_emitter
 from spark.design import footprint_emitter
 import matching
 import parts
-import records_codes
-import store
+from spark.records import records_codes
+from spark.records import store
 from spark.core.text_guards import clean, kept_reason, printable
 
 #: How a need stands against the store (§3).
@@ -97,9 +97,8 @@ def plan_set(project, items):
         problems += [parts._problem(need_id, sentence) for sentence in faults(after)]
         changed = [key for key in NEED_FIELDS if after.get(key) != (before or {}).get(key)]
         if changed:
-            changes.append({"need": need_id, "new": before is None,
-                            "was": {key: before.get(key) for key in changed} if before else {},
-                            "now": {key: after.get(key) for key in changed}})
+            changes.append({"need": need_id, "new": before is None, "was": {key: before.get(key) for key in changed}
+                            if before else {}, "now": {key: after.get(key) for key in changed}})
         order += [] if need_id in current else [need_id]
         current[need_id] = after
     return [current[need_id] for need_id in order], changes, problems
@@ -185,7 +184,7 @@ Limits.__doc__ = "What a passed run does not test of a board's parts that serve 
 
 def serving_roles(need, functions):
     """
-    The `role` of each of a board's `functions` (`boards.onboard_functions`) that serves the need, as WordOverlap admits a
+    The `role` of each of a board's `functions` (`onboard_functions`) that serves the need, as WordOverlap admits a
     board: the need's verb and any word of `matching.need_words` that the function's `what` shares, so `press button`,
     `input button`, `boot button` and `status led` meet the board's own button and LED. A function with no role is a
     power fact, which no limit is about.
@@ -197,16 +196,17 @@ def serving_roles(need, functions):
 
 def board_limits(need, record, functions, definitions=None, key=None):
     """
-    The Limits of the board `record` for the need (P397): the sentences of `boards.role_limits` for the roles that serve it
+    The Limits of the board `record` for the need (P397): the sentences of `role_limits` for the roles that serve it
     (`onboard_limits` returns (component, sentence) pairs; the `limits` key and this keep the sentences). A sentence about a definition spark did not
     compare says "not checked" and then the bench, which the build's own text leaves to the reader. `no_pin` is true when a
     part a scenario could reach has no pin in the definition, or only a stand-in's bare header pin: the only limit that a part on a header pad would lift.
-    `definitions` and `key` are `boards.role_limits`'s: the caller's memo, and the offer's key that names the board in it.
+    `definitions` and `key` are `role_limits`'s: the caller's memo, and the offer's key that names the board in it.
     """
-    said = boards.role_limits(record, serving_roles(need, functions), definitions, key)
+    said = board_records.role_limits(record, serving_roles(need, functions), definitions, key)
     pairs = [pair for each in said.values() for pair in each]
-    sentences = [("%s. %s" % (sentence, boards.BENCH)) if component == boards.ONBOARD_GPIOS else sentence for component, sentence in pairs]
-    no_pin = any(boards.ONBOARD_ROLES[role].scenario_verb and each and each[0][0] != boards.ONBOARD_GPIOS
+    sentences = [("%s. %s" % (sentence, board_records.BENCH)) if component == board_records.ONBOARD_GPIOS else sentence
+                 for component, sentence in pairs]
+    no_pin = any(board_records.ONBOARD_ROLES[role].scenario_verb and each and each[0][0] != board_records.ONBOARD_GPIOS
                  for role, each in said.items())
     return Limits(list(dict.fromkeys(sentences)), no_pin)
 
@@ -223,8 +223,8 @@ def _candidate(need, fit, context, mine=None):
     else:
         said = {"id": offer.key, "kind": offer.kind, "in": context["in"], "label": record.get("name"),
                 "owes": [] if offer.kind == "board" else parts.owes(record),
-                "broken": bool(parts._shape_problems(boards.validate, record, context["path"], "board definition"))
-                if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
+                "broken": bool(parts._shape_problems(board_records.validate, record, context["path"],
+                "board definition")) if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
         if offer.kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
             said["stops_at"] = "footprint" if footprint_emitter.footprint_gaps(record) else None
             if said["stops_at"]:  # P411: a board that builds gains no key
@@ -250,7 +250,7 @@ def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
     The store's candidates for one need (§6.2's code half): every offer the matcher admits, owned first, then the best
     score, then nearest. The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
     `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397); `definitions` is the dict that
-    `boards.role_limits` fills, so a caller that matches several needs reads each board's Wokwi definition once.
+    `role_limits` fills, so a caller that matches several needs reads each board's Wokwi definition once.
     """
     built = offers(known, entries)
     found = _rank(need, built, mine, matcher)
@@ -516,7 +516,7 @@ def plan_pick(project, given, passed_over=()):
               for key in _unfiled_boards(after, known, entries)]
     # F12 (C-7): a board this pick picks that stops the chain at the footprint stage is said, never refused
     for key in sorted({key for need_id in picked for pick in picked[need_id] for kind, key in pick.items() if kind == "board"}):
-        stop = boards.footprint_stop(key, project)
+        stop = footprint_emitter.footprint_stop(key, project)
         notes += ["board %s: %s" % (key, stop)] if stop else []
     notes += _limits_notes(after, picked, rows, entries, name)
     events = [dict({"event": "reused", "project": name, "need": need_id}, **pick) for need_id in picked for pick in picked[need_id]]
@@ -681,7 +681,7 @@ def _board_problems(board_picks, unfiled, project):
     if len(board_picks) == 1:
         return []
     if unfiled and not board_picks:
-        filed = boards.records(project)
+        filed = board_records.records(project)
         stopping = {board_id: footprint_emitter.footprint_stop_line(parts._parse(path)) for board_id, (_, path) in filed.items()}
         builds = [board_id for board_id in filed if not stopping[board_id]]  # C-7: a board that stops is never suggested
         said = "; ".join(["spark has one that builds for %s" % ", ".join(builds) if builds else "spark has no board file that builds"]

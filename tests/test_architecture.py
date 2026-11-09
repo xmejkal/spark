@@ -275,11 +275,12 @@ class TheBenchAreaTest(unittest.TestCase):
     """W5-3a (P679, S11): the bench's modules live in `scripts/spark/bench/`, and each one imports alone."""
     BENCH = ROOT / "scripts" / "spark" / "bench"
 
-    def test_only_the_two_leaves_and_the_record_store_stay_in_scripts(self):
-        # board_codes and board_pads are leaves other areas import (a cycle through spark.bench, wave 6 picks their home);
-        # deploy_record_store waits for the records to move
+    def test_no_bench_module_stays_in_scripts(self):
+        # W6-R3a (P718): board_codes, read by bench modules alone, is the bench's leaf; board_pads and
+        # deploy_record_store are the records area's
         left = sorted(path.name for pattern in ("board_*.py", "deploy_*.py") for path in (ROOT / "scripts").glob(pattern))
-        self.assertEqual(left, ["board_codes.py", "board_pads.py", "deploy_record_store.py"])
+        self.assertEqual(left, [])
+        self.assertTrue((self.BENCH / "board_codes.py").is_file())
 
     def test_no_bench_module_has_a_second_copy_in_scripts(self):
         # the review of #915: flasher.py or image_evidence.py back in scripts/ would pass the glob above
@@ -465,10 +466,55 @@ class TheBuildAreaTest(unittest.TestCase):
 
     def test_the_build_runs_the_emit_board_cli_in_scripts(self):
         # run's child is the CLI two folders up from build_service, and the plugin's own library is the plugin folder
-        code = "import boards; from spark.build import build_service; print(build_service.EMIT_BOARD_SCRIPT); print(boards.PLUGIN_ROOT)"
+        code = ("from spark.records import board_records; from spark.build import build_service; "
+                "print(build_service.EMIT_BOARD_SCRIPT); print(board_records.PLUGIN_ROOT)")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True,
                              timeout=60, stdin=subprocess.DEVNULL)
         self.assertEqual(run.stdout.split("\n")[:2], [str(ROOT / "scripts" / "emit_board.py"), str(ROOT)], run.stderr)
+# --- end MVP ---
+
+
+# --- MVP ---
+class TheRecordsAreaTest(unittest.TestCase):
+    """W6-R3a (P718): the records' modules live in `scripts/spark/records/`, its `__init__.py` imports nothing, and each
+    module imports alone. `scripts/` keeps the CLI `boards.py`."""
+    RECORDS = ROOT / "scripts" / "spark" / "records"
+    #: The modules of the area so far, by the names of its page (`areas/records.md`).
+    MODULES = ["board_pads", "board_records", "brief", "deploy_record_store", "missing_facts", "onboard_parts",
+               "provenance", "records_codes", "store"]
+    #: The CLI's own top-level functions: `main`, what only it uses to print (`_validate_all` prints) and the lazy read
+    #: of design's `footprint_stop`. A library function back in the CLI, under any name, fails the check.
+    CLIS = {"boards.py": ["_footprint_stop", "_validate_all", "main"]}
+
+    def test_scripts_holds_the_cli_and_no_records_library_module(self):
+        modules = sorted(path.stem for path in self.RECORDS.glob("*.py") if path.name != "__init__.py")
+        self.assertEqual(modules, self.MODULES)
+        scripts = ROOT / "scripts"
+        old = ["board_codes.py", "board_pads.py", "boards.py", "brief.py", "deploy_record_store.py", "missing_facts.py",
+               "onboard_parts.py", "provenance.py", "records_codes.py", "store.py"]
+        self.assertEqual([name for name in old if (scripts / name).exists()], sorted(self.CLIS))
+        self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in scripts.glob("*.py")}), [])
+        for cli, own in self.CLIS.items():
+            with self.subTest(cli=cli):
+                tree = ast.parse((scripts / cli).read_text())
+                defined = [node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))]
+                self.assertEqual(sorted(defined), own)
+
+    def test_the_area_s_init_imports_nothing(self):
+        # an __init__ that imports its modules made the cycles of wave 5 (P676 rows 4 and 10)
+        tree = ast.parse((self.RECORDS / "__init__.py").read_text())
+        self.assertEqual([node.lineno for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))], [])
+
+    def test_each_records_module_imports_alone(self):
+        each_module_imports_alone(self, "records")
+
+    def test_the_plugin_folder_is_three_folders_up(self):
+        # store.PLUGIN, board_records.LIBRARY and PLUGIN_ROOT read the plugin by parents[3] since the move
+        code = ("from spark.records import board_records, store; print(store.PLUGIN); "
+                "print(board_records.PLUGIN_ROOT); print(board_records.LIBRARY)")
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True,
+                             timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout.split("\n")[:3], [str(ROOT), str(ROOT), str(ROOT / "boards")], run.stderr)
 # --- end MVP ---
 
 

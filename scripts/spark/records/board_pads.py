@@ -2,7 +2,7 @@
 The footprint pad each pin label of a board sits on (P512, #708).
 
 The one reader of a board record's `physical.pad_aliases`, so a trace, a pin line, a breadboard sheet and the record
-validator in boards.py all read the pad the silkscreen prints from here.
+validator in board_records.py all read the pad the silkscreen prints from here.
 """
 
 from dataclasses import dataclass

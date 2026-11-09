@@ -31,13 +31,13 @@ was never actually satisfiable.
 from collections import namedtuple
 from pathlib import Path
 
-import board_pads
-import boards
+from spark.records import board_pads
+from spark.records import board_records
 from spark.design import design_codes
 from spark.design import loader
-import missing_facts
+from spark.records import missing_facts
 import parts as parts_library
-import provenance
+from spark.records import provenance
 from spark.core.text_guards import one_line
 
 #: What a signal can ask a pin for, from the contract that validates parts. Anything else in
@@ -96,8 +96,8 @@ DEFAULT_ROLE_PENALTY = 5
 #: person needs to be told about. The rest are caveats that may not apply: a pin being on ADC2
 #: matters only if you wanted to read a voltage with it, and calling that "another job" when the
 #: signal is an LED is noise dressed as a warning.
-CONFLICTING_ROLES = (boards.CONSOLE_UART, boards.ONBOARD_BUTTON, boards.ONBOARD_LED, boards.ONBOARD_DISPLAY,
-                     boards.ONBOARD_BATTERY_SENSE)
+CONFLICTING_ROLES = (board_records.CONSOLE_UART, board_records.ONBOARD_BUTTON, board_records.ONBOARD_LED,
+                     board_records.ONBOARD_DISPLAY, board_records.ONBOARD_BATTERY_SENSE)
 
 #: What one unused capability costs, in the same units as a role penalty.
 #:
@@ -421,7 +421,7 @@ def pin_module(board, assignments, source, pulled_up=()):
                          % (entry["signal"], PULL_SUFFIX, entry["signal"]))
     written = {entry["signal"] for entry in assignments}
     written |= {entry["signal"] + PULL_SUFFIX for entry in assignments if entry["signal"] in pulled_up}
-    for role, spec, record in boards.onboard_entries(board):
+    for role, spec, record in board_records.onboard_entries(board):
         lines += onboard_lines(written, role, spec.constant, record)
     return "\n".join(lines) + "\n"
 
@@ -433,21 +433,21 @@ def onboard_lines(written, role, name, record):
     - `labels`: `<NAME>_<LABEL>` per label whose GPIO is a number, in the record's order, the note on the first;
     - `active_level`, with one GPIO or labels: `<NAME>_ON`, the level that lights the LED or that the pressed button reads;
     - each fact whose value is a finite number or a word: `<NAME>_<FACT>`, with its source and "not verified" when it is not.
-    `boards.names_pins` says whether the part has a name for its pins at all. An LED with no level says so. `written` is
-    every name pins.py writes for a signal, its `_PULL` line too: a part that would write one of them is refused, since
-    the later line would win. A `gpio` that is no list gives no lines.
+    `board_records.names_pins` says whether the part has a name for its pins at all. An LED with no level says so.
+    `written` is every name pins.py writes for a signal, its `_PULL` line too: a part that would write one of them is
+    refused, since the later line would win. A `gpio` that is no list gives no lines.
     """
     gpio = record.get("gpio")
     if not isinstance(gpio, list):
         return []
-    labels = boards.pin_labels(record)
+    labels = board_records.pin_labels(record)
     level = provenance.read_value(record, "active_level")
     note = one_line("%s: %s" % (role, str(record.get("note", "")).rstrip(".")))
     named = []
-    if boards.names_pins(record):
+    if board_records.names_pins(record):
         if labels:
             for label, number in labels.items():
-                if boards.is_gpio(number):
+                if board_records.is_gpio(number):
                     said = note if not named else "%s: the note is on the first line of this part" % role
                     named.append(("%s_%s" % (name, label), "%d  # %s" % (number, said)))
         else:
@@ -473,7 +473,7 @@ def fact_lines(role, name, record):
     named = []
     for fact, said in facts.items():
         value = said.get("value") if isinstance(said, dict) else None
-        if boards.is_fact_value(value):
+        if board_records.is_fact_value(value):
             source = one_line(str(said.get("source")))
             named.append(("%s_%s" % (name, fact.upper()), "%r  # %s: %s, source: %s%s" % (
                 value, role, fact, source, "" if said.get("verified") is True else "; not verified")))

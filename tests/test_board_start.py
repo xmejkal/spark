@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from spark.bench import board_look  # noqa: E402
 from spark.bench import board_start  # noqa: E402
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from fakes import FakeClock, FakePortFinder  # noqa: E402
 
 MAC = "8c:bf:ea:00:00:03"
@@ -32,7 +32,7 @@ class BoardStartTest(unittest.TestCase):
         self.clock, self.finder = FakeClock(), FakePortFinder(*looks)
         self.lines = []
         self.report = lambda event: self.lines.append(event.text)  # what the person reads of each Event
-        return board_start.BoardStartService(self.finder, mac, self.clock, boards.ButtonPlaces.EMPTY)
+        return board_start.BoardStartService(self.finder, mac, self.clock, board_records.ButtonPlaces.EMPTY)
 
     def answers_after(self, calls):
         """A read that says no `calls` times, then yes; it keeps the ports it was asked for."""

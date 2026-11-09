@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import flash_image  # noqa: E402
 
 from spark.firmware import image_builder  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 from micropython_fakes import MICROPYTHON_TABLE, fake_interpreter, table_bytes  # noqa: E402
 

@@ -16,7 +16,7 @@ A Ctrl-C during the run stops live.py before the reset.
 
 from collections import namedtuple
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_reach
 from spark.bench.board_connection import BoardUnreachableError

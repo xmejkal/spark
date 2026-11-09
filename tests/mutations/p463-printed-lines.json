@@ -1,18 +1,18 @@
 [
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "prefix-dropped",
   "find": "    return \"SPARK_HOME=%s %s\" % (shlex.quote(str(Path(given).resolve())), line) if given else line",
   "replace": "    return line"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "store-not-quoted",
   "find": "(shlex.quote(str(Path(given).resolve())), line)",
   "replace": "(str(Path(given).resolve()), line)"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "store-not-resolved",
   "find": "shlex.quote(str(Path(given).resolve()))",
   "replace": "shlex.quote(str(Path(given)))"
@@ -42,7 +42,7 @@
   "replace": "\"\", code=firmware_codes.NO_INTERPRETER)"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "rerun-line-prefix-dropped",
   "find": "return prefix_home(shlex.join([str(Path(script).resolve())]",
   "replace": "return (shlex.join([str(Path(script).resolve())]"

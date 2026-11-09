@@ -674,7 +674,8 @@ class TheSuiteGuardTest(unittest.TestCase):
 
     def test_under_unittest_the_store_takes_a_scratch_home_whatever_the_environment_holds(self):
         inherited = tempfile.mkdtemp()
-        done = subprocess.run([sys.executable, "-c", "import unittest, sys; sys.path.insert(0, %r); import store; print(store.home())"
+        done = subprocess.run([sys.executable, "-c", "import unittest, sys; sys.path.insert(0, %r); "
+                               "from spark.records import store; print(store.home())"
                                % str(ROOT / "scripts")], env=dict(os.environ, SPARK_HOME=inherited), capture_output=True, text=True,
                               timeout=30)
         self.assertNotEqual(Path(done.stdout.strip()), Path(inherited), done.stderr)
@@ -803,7 +804,8 @@ class TheSmallFixesTest(unittest.TestCase):
         self.assertIn("lower-case letters, digits and '-'", said["problems"][0]["sentence"])
 
     def test_the_store_writes_and_reads_utf8_whatever_the_locale(self):
-        script = ("import sys; sys.path.insert(0, %r); import store, drawer; store.write_json('drawer', 'k', "
+        script = ("import sys; sys.path.insert(0, %r); from spark.records import store; import drawer; "
+                  "store.write_json('drawer', 'k', "
                   "{'schema': 1, 'label': 'žluťoučký kůň', 'count': 1}); print(drawer.entries()['k']['label'])" % str(ROOT / "scripts"))
         env = dict(os.environ, SPARK_HOME=str(self.home), LC_ALL="C", PYTHONUTF8="0", PYTHONCOERCECLOCALE="0", PYTHONIOENCODING="utf-8")
         done = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True, timeout=30)

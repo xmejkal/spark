@@ -22,7 +22,7 @@ from board_library import board_missing  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.design import loader  # noqa: E402
@@ -30,7 +30,7 @@ import drawer  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.design import needs  # noqa: E402
 import parts  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core import text_guards  # noqa: E402
 from spark.idea.drop_need import DropNeed  # noqa: E402
@@ -1460,8 +1460,8 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
     def keep_the_xiao(self, text, edit=lambda board: None):
         """The XIAO's record in the project, with the Wokwi definition `text` kept in the scratch store under its sha256."""
         board = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
-        board["documents"][boards.WOKWI_DEFINITION].update(sha256=store.keep(text.encode(), "wokwi-test.board.json"),
-                                                           file="wokwi-test.board.json")
+        board["documents"][board_records.WOKWI_DEFINITION].update(
+            sha256=store.keep(text.encode(), "wokwi-test.board.json"), file="wokwi-test.board.json")
         edit(board)
         (self.project / "boards").mkdir(parents=True, exist_ok=True)
         (self.project / "boards" / "xiao-esp32-c6.json").write_text(json.dumps(board))
@@ -1519,7 +1519,7 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
 
     def test_the_picked_board_s_sentence_is_the_builds_sentence(self):
         board = json.loads((self.project / "boards" / "xiao-esp32-c6.json").read_text())
-        built = [sentence for _, sentence in boards.onboard_limits(board)]
+        built = [sentence for _, sentence in board_records.onboard_limits(board)]
         self.assertEqual(built, [self.NO_PIN])
         self.assertTrue(self.pick("press=xiao-esp32-c6")["board xiao-esp32-c6 for press"].startswith(built[0]))
 
@@ -1602,10 +1602,10 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
 
     def test_the_definition_of_a_board_is_read_once_for_every_need_of_a_match_and_of_a_pick(self):
         (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [self.NEEDS["press"], self.NEEDS["blink"]]}))
-        with mock.patch.object(boards, "read_simulated_part", wraps=boards.read_simulated_part) as read:
+        with mock.patch.object(board_records, "read_simulated_part", wraps=board_records.read_simulated_part) as read:
             run(["--match", str(self.project)])
         self.assertEqual(sorted(call.args[0]["id"] for call in read.call_args_list), ["firebeetle2-esp32s3", "xiao-esp32-c6"])
-        with mock.patch.object(boards, "read_simulated_part", wraps=boards.read_simulated_part) as read:
+        with mock.patch.object(board_records, "read_simulated_part", wraps=board_records.read_simulated_part) as read:
             run(["--pick", str(self.project), "press=xiao-esp32-c6", "blink=xiao-esp32-c6", "--dry-run"])
         self.assertEqual([call.args[0]["id"] for call in read.call_args_list], ["xiao-esp32-c6"])
 
@@ -2264,7 +2264,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
             {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"entry": "beetle-c6"}]},
             {"id": "light", "does": "indicate", "what": "led", "pick": [{"part": "led-red-5mm"}]}]}))
-        with mock.patch.object(boards, "LIBRARY", library):
+        with mock.patch.object(board_records, "LIBRARY", library):
             said, code = run(["--requirements", str(project)])
             text = self.text(["--requirements", str(project)])
         sentence = ("picked as the board, but a board needs a board file — a record in boards/ — before spark can build with it, "
@@ -2292,7 +2292,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.owned(home, "beetle-c6", {"label": "Beetle ESP32 C6 Mini", "count": 3})
         (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [
             {"id": "board", "does": "compute", "what": "microcontroller", "pick": [{"entry": "beetle-c6"}]}]}))
-        with mock.patch.object(boards, "LIBRARY", library):
+        with mock.patch.object(board_records, "LIBRARY", library):
             said, _ = run(["--requirements", str(project)])
         self.assertEqual(said["problems"][0]["sentence"],
                          "picked as the board, but a board needs a board file — a record in boards/ — before spark can build with it, "

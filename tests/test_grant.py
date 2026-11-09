@@ -25,10 +25,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.bench import board_console  # noqa: E402
 from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 import grant  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 import tools  # noqa: E402
 from fakes import FakeClock, FakeConsent, FakeOutsideWorld, FakeProbePlatform, line_made_at_import, pin_time_zone  # noqa: E402
 from spark.bench.check_grant import CheckGrant  # noqa: E402
@@ -89,7 +89,7 @@ class GrantCase(unittest.TestCase):
         project = Path(tempfile.mkdtemp())
         (project / "boards").mkdir()
         (project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))
-        record = dict(boards.load(Path("."), "xiao-esp32-c6"), physical={"buttons": buttons})
+        record = dict(board_records.load(Path("."), "xiao-esp32-c6"), physical={"buttons": buttons})
         (project / "boards" / "xiao-esp32-c6.json").write_text(json.dumps(record))
         return str(project)
 

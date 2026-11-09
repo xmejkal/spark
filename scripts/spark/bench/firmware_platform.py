@@ -11,11 +11,11 @@ import json
 from spark.bench import board_connection
 from spark.bench import board_console
 from spark.bench import board_look
-import boards
+from spark.records import board_records
 from spark.bench import flasher
 from spark.bench import ready_probe
 import tools
-import board_codes
+from spark.bench import board_codes
 from spark.firmware.project_image import DeployError
 
 
@@ -28,8 +28,8 @@ def record_of(project):
     """The board record requirements.json names (P192: no chip table). DeployError says why it cannot be read."""
     requirements = project / "requirements.json"
     try:
-        return boards.load(project, board_of(project))
-    except (OSError, ValueError, AttributeError, boards.BoardError) as cannot:
+        return board_records.load(project, board_of(project))
+    except (OSError, ValueError, AttributeError, board_records.BoardError) as cannot:
         raise DeployError("the board's chip cannot be read from %s: %s" % (requirements, cannot), reason=board_codes.CHIP_UNKNOWN)
 
 
@@ -93,7 +93,8 @@ class MicroPythonPlatform(FirmwarePlatform):
 
     def make_flasher(self):
         record = record_of(self.project)  # first: a record problem shows before a missing tool
-        return flasher.EsptoolFlasher(self.find_tool("flasher"), record["chip"], boards.ButtonPlaces.from_record(record))
+        return flasher.EsptoolFlasher(self.find_tool("flasher"), record["chip"],
+                                      board_records.ButtonPlaces.from_record(record))
 
     def make_shell_command(self):
         return tools.command_for(self.find_tool("board-shell"))

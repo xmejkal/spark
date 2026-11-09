@@ -14,7 +14,7 @@
  {"file": "tests/test_suite_temp.py", "name": "P172: the scan takes `import suite_temp` with no path line before it", "find": "            return on_path\n", "replace": "            return True\n"},
  {"file": "tests/test_suite_temp.py", "name": "P172: the scan takes any sys.path.insert for the path line", "find": "on_path = on_path or ast.unparse(node.value) == PATH_LINE", "replace": "on_path = True"},
  {"file": "tests/test_suite_temp.py", "name": "P172: the scan lets a spark module be imported before suite_temp", "find": "if not any(is_sparks(name.split(\".\")[0]) for name in names):", "replace": "if True:"},
- {"file": "scripts/store.py", "name": "P172: store's scratch home is not removed at exit", "find": "    atexit.register(shutil.rmtree, _suite_home, True)\n", "replace": "    pass\n"},
+ {"file": "scripts/spark/records/store.py", "name": "P172: store's scratch home is not removed at exit", "find": "    atexit.register(shutil.rmtree, _suite_home, True)\n", "replace": "    pass\n"},
  {"file": "tools/mutate.py", "name": "P172: mutate keeps each run's folder, its pycache and its temp", "find": "        shutil.rmtree(run, ignore_errors=True)", "replace": "        None"},
  {"file": "tools/mutate.py", "name": "P172: the suite mutate runs writes to mutate's own temp folder", "find": ", TMPDIR=str(run / \"tmp\"))", "replace": ")"},
  {"file": "tools/mutate.py", "name": "P172: the run's temp folder is never made, so TMPDIR falls back elsewhere", "find": "        (run / \"tmp\").mkdir()", "replace": "        pass"}

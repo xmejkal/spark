@@ -15,8 +15,8 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import deploy_record_store  # noqa: E402
-import store  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
+from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 STORE = deploy_record_store.DeployRecordStore()

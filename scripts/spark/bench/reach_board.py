@@ -4,11 +4,11 @@ power-on, and say whether the board answered. reach.py is its CLI, and its `--js
 (`FlatJsonLine`), so no golden changed. The time of `at` is the outside's clock, and a stop has no data, so no line.
 """
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_look
 from spark.bench import board_reach
-import boards
+from spark.records import board_records
 import tools
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench import bench_privacy
@@ -95,7 +95,7 @@ class ReachBoard(Operation):
         except board_doctor.UnknownStepError as cannot:
             diagnostics.append("%s: no doctor: %s" % (SCRIPT, cannot))  # P430: the tools list's words: run_cli guards the stderr lines
             doctor = None
-        places = boards.ButtonPlaces.of_project(project)
+        places = board_records.ButtonPlaces.of_project(project)
         lines = describe(port, result) + (["  " + line for line in board_doctor.describe(doctor, places)] if doctor else [])
         fix = board_doctor.step_sentence(doctor.next_step, places) if doctor and doctor.next_step else ""
         findings = [] if result.reached else [Finding(outcomes.COULD_NOT_RUN, None, board_codes.NOT_REACHED, result.why, fix)]

@@ -17,13 +17,13 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_doctor  # noqa: E402
 from spark.bench import board_envelope  # noqa: E402
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 import tools  # noqa: E402
 from spark.core import outcomes  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
 from test_board_look import done  # noqa: E402
 import test_deploy_gate  # noqa: E402
@@ -249,7 +249,8 @@ class DeployJsonTest(JsonCase, GateCase):
         with mock.patch.object(board_doctor, "after_esptool", return_value=hold):
             code, said, _ = self.go("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True)
         fix = self.one(code, said, "deploy", "deploy")["unchecked"][0]["fix"]
-        self.assertEqual(fix, board_doctor.step_sentence("hold_boot", boards.ButtonPlaces.of_project(self.project)))
+        self.assertEqual(fix, board_doctor.step_sentence("hold_boot",
+                                                         board_records.ButtonPlaces.of_project(self.project)))
         self.assertNotEqual(fix, board_doctor.step_sentence("hold_boot"))
 
     @needs_littlefs
@@ -280,9 +281,11 @@ class DeployJsonTest(JsonCase, GateCase):
 
     def test_doctor_fix_is_the_step_s_sentence_or_nothing(self):
         busy = test_deploy_gate.TheBusyPortTest.BUSY
-        self.assertEqual(board_envelope.doctor_fix(busy, boards.ButtonPlaces.EMPTY), board_doctor.step_sentence("close_other"))
-        self.assertEqual((board_envelope.doctor_fix(None, boards.ButtonPlaces.EMPTY),
-                          board_envelope.doctor_fix(busy._replace(next_step=None), boards.ButtonPlaces.EMPTY)), ("", ""))
+        self.assertEqual(board_envelope.doctor_fix(busy, board_records.ButtonPlaces.EMPTY),
+                         board_doctor.step_sentence("close_other"))
+        self.assertEqual((board_envelope.doctor_fix(None, board_records.ButtonPlaces.EMPTY),
+                          board_envelope.doctor_fix(busy._replace(next_step=None),
+                                                    board_records.ButtonPlaces.EMPTY)), ("", ""))
 
     @needs_littlefs
     def test_the_answer_no_is_unchecked_with_no_next_step(self):
@@ -441,7 +444,7 @@ class DeployJsonTest(JsonCase, GateCase):
 
     @needs_littlefs
     def test_a_store_record_that_was_not_written_is_said_beside_the_null(self):
-        import store
+        from spark.records import store
         with mock.patch.object(deploy_service.DeployService, "record", side_effect=store.StoreProblem("no", code="store_not_writable")):
             code, said, _ = self.ready()
         said = self.one(code, said, "deploy", "deploy")

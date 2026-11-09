@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_doctor  # noqa: E402
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 import tools  # noqa: E402
 from spark.bench.board_console import ConsoleReadResult  # noqa: E402
 from spark.bench.board_look import LookStopError, Port  # noqa: E402
@@ -156,7 +156,7 @@ class OutputTest(unittest.TestCase):
             "if not  unplug the board, plug it in again, and run it again"])
 
     def test_the_two_button_steps_name_the_places_when_given_them(self):
-        places = boards.ButtonPlaces.from_record({"physical": {"buttons": {
+        places = board_records.ButtonPlaces.from_record({"physical": {"buttons": {
             "seen_from": "the shield facing you", "boot": {"silkscreen": "B", "place": "top right"},
             "reset": {"silkscreen": "R", "place": "top left"}}}})
         self.assertEqual(board_doctor.step_sentence("press_reset", places),

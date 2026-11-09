@@ -71,8 +71,8 @@ NEED_MATCHER = "name-contains"
 
 def function_of(record, board=False):
     """
-    What a record does (§5.6): its own `function`, else what its kind says, else nothing. A board also does what its
-    own parts do (`boards.onboard_functions`), each one added once and never to the record's own list. One the record
+    What a record does (§5.6): its own `function`, else what its kind says, else nothing. A board also does what its own
+    parts do (`board_records.onboard_functions`), each one added once and never to the record's own list. One the record
     also says (the same `does` and `what`) is the board's own dict, which carries the `role` (P397).
     """
     if record.get("function") and not function_problems(record):
@@ -83,7 +83,7 @@ def function_of(record, board=False):
         said = [{"does": kind_function[0], "what": kind_function[1]}] if kind_function else []
     if not board:
         return said
-    onboard = boards.onboard_functions(record)
+    onboard = board_records.onboard_functions(record)
     own = {(function["does"], function["what"]): function for function in onboard}
     named = {(function["does"], function["what"]) for function in said}
     return [own.get((function["does"], function["what"]), function) for function in said] + [
@@ -147,7 +147,7 @@ def audit(project=None):
     import drawer
     from spark.design import footprint_emitter
     walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", LIBRARY, project, drafts=True).items()]
-    walked += [("board", found, layer, path) for found, (layer, path) in boards.records(project).items()]
+    walked += [("board", found, layer, path) for found, (layer, path) in board_records.records(project).items()]
     known, mine, seen = drawer.linkable(project), store.projects(), {row[3].resolve() for row in walked}
     dangling, linked = [], []
     for entry, said in drawer.entries().items():
@@ -163,8 +163,9 @@ def audit(project=None):
     for kind, found, layer, path in walked + linked:
         row = counts.setdefault(layer, {"current": 0, "owed": 0, "broken": 0})
         record = _parse(path)
-        wrong = (["does not parse as a JSON object"] if not isinstance(record, dict) else
-                 _shape_problems(boards.validate, record, path, "board definition") if kind == "board" else broken_problems(record, path))
+        wrong = (["does not parse as a JSON object"] if not isinstance(record, dict) else _shape_problems(
+            board_records.validate, record, path, "board definition") if kind == "board"
+            else broken_problems(record, path))
         owing = [] if wrong or kind == "board" else owes(record)
         row["broken" if wrong else "owed" if owing else "current"] += 1
         if wrong:
@@ -212,13 +213,13 @@ NOT_A_PLAIN_ID = ("id is %r, but an id is a plain key — lower-case letters, di
 CAPABILITIES = ("wake", "adc", "pwm")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, add_env, envelope, step as next_step  # noqa: E402, F401
-from brief import Brief  # noqa: E402
-import boards  # noqa: E402
-import missing_facts  # noqa: E402
-import provenance  # noqa: E402
-import records_codes  # noqa: E402
+from spark.records.brief import Brief  # noqa: E402
+from spark.records import board_records  # noqa: E402
+from spark.records import missing_facts  # noqa: E402
+from spark.records import provenance  # noqa: E402
+from spark.records import records_codes  # noqa: E402
 import sourcing_codes  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from spark.core.errors import CodedMessageError  # noqa: E402
 from spark.core.text_guards import guard_lines, printable  # noqa: E402
 from spark.sourcing.part_rules import PULLUP_MAX_OHM, PULLUP_MIN_OHM  # noqa: E402
@@ -775,9 +776,8 @@ def validate(part: dict, path: Path, owed=()) -> list:
             placed = [pad for pad in order if pad is not None]
             repeated = {pad for pad in placed if placed.count(pad) > 1}
             for pad in sorted(repeated - supplies):
-                problems.append(
-                    "pin_order names %r on more than one pad, and it is not a supply — a signal "
-                    "on two pads is two pads shorted together" % pad)
+                problems.append("pin_order names %r on more than one pad, and it is not a supply — a signal on two "
+                                "pads is two pads shorted together" % pad)
             missing = sorted(named - set(placed))
             if missing:
                 problems.append(
@@ -1180,7 +1180,7 @@ def keep_local(path, url=None, dry_run=False):
 def records_with_documents(project=None):
     """(owner id, record) for every record that can point at a document: parts, catalog, boards."""
     paths = [path for _, path in store.records("parts", LIBRARY, project, drafts=True).values()]
-    paths += [path for _, path in boards.records(project).values()]
+    paths += [path for _, path in board_records.records(project).values()]
     for path in paths:
         record = _parse(path)
         if isinstance(record, dict) and record.get("documents"):
@@ -1968,7 +1968,7 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
     if path is None:
         raise PartError("no record called %r — `parts.py --need` finds what exists", part_id,
                         code=sourcing_codes.NO_SUCH_PART)
-    if path.parent.resolve() in (LIBRARY.resolve(), boards.LIBRARY.resolve()):
+    if path.parent.resolve() in (LIBRARY.resolve(), board_records.LIBRARY.resolve()):
         return Answer(problems=[_problem(part_id, "%s is in spark's own library, which is changed in spark's repository, "
                                                   "not by parts.py" % part_id)])
     record = json.loads(path.read_text(encoding="utf-8"))
@@ -2203,7 +2203,7 @@ def _gap_lines(problems, no_supply, no_receiver, no_driver):
 
 
 def _op_requirements(args, project):
-    from spark.design import needs
+    from spark.design import footprint_emitter, needs
     content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver = needs.requirements(
         args.requirements)
     path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
@@ -2222,8 +2222,8 @@ def _op_requirements(args, project):
     said += ["  board only: nothing to build but the board; the build skips the parts, schematic and footprint"
              ] if content.get(needs.BOARD_ONLY) is True and not problems else []
     said += ["  board_only removed: the file lists parts"] if isinstance(held, dict) and needs.BOARD_ONLY in held and content["parts"] and not problems else []
-    stop = "" if problems else boards.footprint_stop(content["board"], Path(args.requirements))  # F12 (C-7): said, never refused
-    said += ["  board %s: %s" % (content["board"], stop)] if stop else []
+    stop = "" if problems else footprint_emitter.footprint_stop(content["board"], Path(args.requirements))
+    said += ["  board %s: %s" % (content["board"], stop)] if stop else []  # F12 (C-7): said, never refused
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
     said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
              "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.board_emitter.DEFAULT_BODY_MM + (how,))

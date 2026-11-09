@@ -23,7 +23,7 @@ from suite_runs import slow  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 
 SHIPPED = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())
 FRESH = json.loads((ROOT / "tests" / "data" / "breadboard" / "button-light-xiao" / "boards"
@@ -132,11 +132,11 @@ class TheFactsBothRecordsStateAgreeTest(unittest.TestCase):
 class TheLibraryXiaoIsAValidBoardTest(unittest.TestCase):
     def test_validate_finds_no_problem(self):
         path = ROOT / "boards" / "xiao-esp32-c6.json"
-        self.assertEqual(boards.validate(SHIPPED, path), [])
+        self.assertEqual(board_records.validate(SHIPPED, path), [])
 
     def test_the_fab_gate_finds_no_problem_in_the_library_xiao(self):
         path = ROOT / "boards" / "xiao-esp32-c6.json"
-        self.assertEqual(boards.validate(SHIPPED, path, for_fab=True), [])
+        self.assertEqual(board_records.validate(SHIPPED, path, for_fab=True), [])
 
 
 if __name__ == "__main__":

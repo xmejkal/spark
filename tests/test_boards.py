@@ -30,9 +30,10 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import board_pads  # noqa: E402
 import boards  # noqa: E402
-import store  # noqa: E402
+from spark.records import board_pads  # noqa: E402
+from spark.records import board_records  # noqa: E402
+from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 LIBRARY_BOARD = "firebeetle2-esp32s3"
@@ -65,22 +66,22 @@ class WhereABoardComesFromTest(unittest.TestCase):
         # The whole point of shipping a library: adopt a verified board without copying a file
         # you would then have to maintain.
         root = project()
-        self.assertEqual(boards.load(root)["id"], LIBRARY_BOARD)
-        self.assertEqual(boards.definition_path(root).parent, boards.LIBRARY)
+        self.assertEqual(board_records.load(root)["id"], LIBRARY_BOARD)
+        self.assertEqual(board_records.definition_path(root).parent, board_records.LIBRARY)
 
     def test_the_library_is_listed_as_available(self):
-        self.assertIn(LIBRARY_BOARD, boards.available(project()))
+        self.assertIn(LIBRARY_BOARD, board_records.available(project()))
 
     def test_a_projects_own_definition_wins_over_the_library(self):
         # A definition you verified yourself must never be replaced by a shared one, and a
         # project must not change behaviour because the plugin was updated.
         root = project(own={LIBRARY_BOARD: definition(LIBRARY_BOARD, name="Mine")})
-        self.assertEqual(boards.load(root)["name"], "Mine")
-        self.assertEqual(boards.definition_path(root).parent, root / "boards")
+        self.assertEqual(board_records.load(root)["name"], "Mine")
+        self.assertEqual(board_records.definition_path(root).parent, root / "boards")
 
     def test_a_board_nobody_has_is_refused_with_the_alternatives(self):
-        with self.assertRaises(boards.BoardError) as refused:
-            boards.load(project(active="no-such-board"))
+        with self.assertRaises(board_records.BoardError) as refused:
+            board_records.load(project(active="no-such-board"))
         self.assertIn("no board definition", str(refused.exception))
         self.assertEqual(refused.exception.code, "no_board_definition")
         self.assertIn(LIBRARY_BOARD, str(refused.exception))
@@ -88,8 +89,8 @@ class WhereABoardComesFromTest(unittest.TestCase):
     def test_a_selection_naming_nothing_is_refused(self):
         root = project()
         (root / "boards" / "active.json").write_text(json.dumps({"schema": 1}))
-        with self.assertRaises(boards.BoardError):
-            boards.active_id(root)
+        with self.assertRaises(board_records.BoardError):
+            board_records.active_id(root)
 
     def test_a_selection_holding_TWO_boards_is_refused(self):
         """
@@ -104,8 +105,8 @@ class WhereABoardComesFromTest(unittest.TestCase):
         root = project()
         (root / "boards" / "active.json").write_text(
             json.dumps({"schema": 1, "board": ["firebeetle2-esp32s3", "xiao-esp32-c6"]}))
-        with self.assertRaises(boards.BoardError) as caught:
-            boards.active_id(root)
+        with self.assertRaises(board_records.BoardError) as caught:
+            board_records.active_id(root)
         self.assertIn("ONE board", str(caught.exception))
         self.assertEqual(caught.exception.code, "no_board_selected")
 
@@ -115,19 +116,19 @@ class WhereABoardComesFromTest(unittest.TestCase):
         root = project()
         (root / "boards" / "active.json").write_text(
             json.dumps({"schema": 1, "board": ["a", "b"]}))
-        with self.assertRaises(boards.BoardError) as caught:
-            boards.active_id(root)
+        with self.assertRaises(board_records.BoardError) as caught:
+            board_records.active_id(root)
         self.assertIn("two projects", str(caught.exception))
 
     def test_a_selection_holding_a_number_is_refused_too(self):
         # The check is on the TYPE, not on lists specifically.
         root = project()
         (root / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": 7}))
-        with self.assertRaises(boards.BoardError):
-            boards.active_id(root)
+        with self.assertRaises(board_records.BoardError):
+            board_records.active_id(root)
 
     def test_an_ordinary_string_selection_still_works(self):
-        self.assertEqual(boards.active_id(project()), "firebeetle2-esp32s3")
+        self.assertEqual(board_records.active_id(project()), "firebeetle2-esp32s3")
 
 
 BUTTONS = {"seen_from": "the shield facing you, USB-C at the top",
@@ -142,11 +143,11 @@ class EachRefusalNamesItsCodeTest(unittest.TestCase):
     """P716: the refusals of boards.py the other tests do not reach, each with its records_codes code as a literal."""
 
     def test_no_project_and_a_selection_with_no_board_name_their_codes(self):
-        with self.assertRaises(boards.BoardError) as refused:
-            boards.project_root(Path(tempfile.mkdtemp()))
+        with self.assertRaises(board_records.BoardError) as refused:
+            board_records.project_root(Path(tempfile.mkdtemp()))
         self.assertEqual(refused.exception.code, "no_project_here")
-        with self.assertRaises(boards.BoardError) as refused:
-            boards.active_id(project(active=""))
+        with self.assertRaises(board_records.BoardError) as refused:
+            board_records.active_id(project(active=""))
         self.assertEqual(refused.exception.code, "no_board_selected")
 
 
@@ -155,12 +156,12 @@ class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
         folder = Path(tempfile.mkdtemp()) / NASTY
         folder.mkdir()
         (folder / "bad.json").write_text("{not json")
-        with self.assertRaises(boards.BoardError) as caught:
-            boards._read_json(folder / "bad.json", "board definition")
+        with self.assertRaises(board_records.BoardError) as caught:
+            board_records._read_json(folder / "bad.json", "board definition")
         assert_flat(self, caught.exception, folder / "bad.json")
         self.assertEqual(caught.exception.code, "record_file_broken")
-        with self.assertRaises(boards.BoardError) as caught:
-            boards._read_json(folder / "nope.json", NASTY)
+        with self.assertRaises(board_records.BoardError) as caught:
+            board_records._read_json(folder / "nope.json", NASTY)
         assert_flat(self, caught.exception, NASTY)
         self.assertEqual(caught.exception.code, "board_file_missing")
 
@@ -169,15 +170,15 @@ class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
         (root / "boards").mkdir(parents=True)
         (root / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "bad"}))
         (root / "boards" / "bad.json").write_text(json.dumps({"id": "bad"}))
-        with self.assertRaises(boards.BoardError) as caught:
-            boards.load(root)
+        with self.assertRaises(board_records.BoardError) as caught:
+            board_records.load(root)
         assert_flat(self, caught.exception)
         self.assertEqual(caught.exception.code, "board_contract_broken")
         self.assertGreater(len(str(caught.exception).split("\n")), 2, "the problem lines stay lines")
 
     def test_an_id_with_a_newline_is_shown_escaped_with_the_available_boards_on_a_line_of_their_own(self):
-        with self.assertRaises(boards.BoardError) as caught:
-            boards.definition_path(project(), NASTY)
+        with self.assertRaises(board_records.BoardError) as caught:
+            board_records.definition_path(project(), NASTY)
         assert_flat(self, caught.exception, NASTY)
         self.assertEqual(len(str(caught.exception).split("\n")), 2)
 
@@ -186,16 +187,16 @@ class ButtonPlacesTest(unittest.TestCase):
     """The words that name BOOT and RESET in a hint, from the record's physical.buttons."""
 
     def test_a_full_record_names_each_button_with_its_silkscreen_and_place(self):
-        places = boards.ButtonPlaces.from_record(with_buttons(BUTTONS))
+        places = board_records.ButtonPlaces.from_record(with_buttons(BUTTONS))
         self.assertEqual(places.boot, "BOOT button (B, top right)")
         self.assertEqual(places.reset, "RESET (R, top left)")
         self.assertEqual(places.orientation, ". Left and right as seen with the shield facing you, USB-C at the top")
 
     def test_a_record_without_buttons_gives_the_plain_words(self):
         for record in ({}, {"physical": {}}, {"physical": None}, None, [], with_buttons("x"), with_buttons(None)):
-            places = boards.ButtonPlaces.from_record(record)
+            places = board_records.ButtonPlaces.from_record(record)
             self.assertEqual((places.boot, places.reset, places.orientation), ("BOOT button", "RESET", ""), record)
-        self.assertEqual(boards.ButtonPlaces.EMPTY.boot, "BOOT button")
+        self.assertEqual(board_records.ButtonPlaces.EMPTY.boot, "BOOT button")
 
     def test_a_part_missing_or_of_the_wrong_type_gives_the_plain_words_not_half_a_hint(self):
         for broken in ({k: v for k, v in BUTTONS.items() if k != "seen_from"},
@@ -206,24 +207,24 @@ class ButtonPlacesTest(unittest.TestCase):
                        dict(BUTTONS, seen_from=" "),
                        dict(BUTTONS, boot={"silkscreen": "", "place": "top right"}),
                        dict(BUTTONS, reset={"silkscreen": "R", "place": ""})):
-            places = boards.ButtonPlaces.from_record(with_buttons(broken))
+            places = board_records.ButtonPlaces.from_record(with_buttons(broken))
             self.assertEqual((places.boot, places.reset, places.orientation), ("BOOT button", "RESET", ""), broken)
 
     def test_of_project_reads_the_record_requirements_names(self):
         root = project(own={"mine": definition("mine", physical={"footprint_module": "X", "footprint_export": "X",
                                                                  "buttons": BUTTONS})})
         (root / "requirements.json").write_text(json.dumps({"board": "mine"}))
-        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button (B, top right)")
+        self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button (B, top right)")
 
     def test_of_project_gives_the_plain_words_when_the_record_cannot_be_read(self):
         root = project()
-        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")  # no requirements.json
+        self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button")  # no requirements.json
         (root / "requirements.json").write_text("{not json")
-        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")
+        self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button")
         (root / "requirements.json").write_text(json.dumps({"board": "no-such-board"}))
-        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")
+        self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button")
         (root / "requirements.json").write_text(json.dumps({}))
-        self.assertEqual(boards.ButtonPlaces.of_project(root).boot, "BOOT button")
+        self.assertEqual(board_records.ButtonPlaces.of_project(root).boot, "BOOT button")
 
 
 # --- MVP --- (P512, #708) the one reader of physical.pad_aliases
@@ -259,26 +260,26 @@ class AnAliasIsWrittenAsCodeTest(unittest.TestCase):
         for key, row in board["physical"]["header_order"].items():
             if isinstance(row, list):
                 board["physical"]["header_order"][key] = [crafted if label == "MI" else label for label in row]
-        said = boards.validate(board, path)
+        said = board_records.validate(board, path)
         self.assertTrue([problem for problem in said if "alias pad %r is not a name" % (crafted,) in problem], said)
 
     def test_an_alias_that_is_no_text_is_refused_not_raised(self):
         path = ROOT / "boards" / "firebeetle2-esp32s3.json"
         board = json.loads(path.read_text())
         board["physical"]["pad_aliases"]["MISO"] = 7
-        said = boards.validate(board, path)
+        said = board_records.validate(board, path)
         self.assertTrue([problem for problem in said if "maps MISO to 7" in problem], said)  # refused, not a TypeError
 
 
 class OnlyBoardPadsReadsThePadAliasesTest(unittest.TestCase):
     """
     P512: the alias lookup was written in four places and missing in the fifth, the emitter. Python files under
-    scripts/ and tools/ may read the key only in board_pads.py. tests/ are outside this test, and the converter's
-    TypeScript copies (tools/circuit-to-wokwi/lib/*.ts) are not guarded.
+    scripts/ and tools/ may read the key only in spark/records/board_pads.py. tests/ are outside this test, and the
+    converter's TypeScript copies (tools/circuit-to-wokwi/lib/*.ts) are not guarded.
     """
 
     def test_no_other_python_file_reads_the_key(self):
-        allowed = {ROOT / "scripts" / "board_pads.py"}
+        allowed = {ROOT / "scripts" / "spark" / "records" / "board_pads.py"}
         readers = [str(source.relative_to(ROOT)) for folder in ("scripts", "tools") for source in (ROOT / folder).rglob("*.py")
                    if source not in allowed and re.search(r"[\"']pad_aliases[\"']", source.read_text())]
         self.assertEqual(readers, [])
@@ -287,22 +288,22 @@ class OnlyBoardPadsReadsThePadAliasesTest(unittest.TestCase):
 class ResolvingTest(unittest.TestCase):
     def test_resolve_writes_the_board_to_one_known_path(self):
         root = project()
-        written = boards.resolve(root)
+        written = board_records.resolve(root)
         self.assertEqual(written, root / ".spark" / "board.json")
         self.assertEqual(json.loads(written.read_text())["id"], LIBRARY_BOARD)
 
     def test_the_resolved_file_says_it_is_generated(self):
         # It is derived. A file that looks hand-written invites being hand-edited.
         root = project()
-        resolved = json.loads(boards.resolve(root).read_text())
+        resolved = json.loads(board_records.resolve(root).read_text())
         self.assertIn("GENERATED", resolved["//generated"])
         # And it must not have clobbered the definition's own comment.
         self.assertIn("//", resolved)
 
     def test_resolving_an_invalid_board_writes_nothing(self):
         root = project(active="broken", own={"broken": {"schema": 1, "id": "broken"}})
-        with self.assertRaises(boards.BoardError):
-            boards.resolve(root)
+        with self.assertRaises(board_records.BoardError):
+            board_records.resolve(root)
         self.assertFalse((root / ".spark" / "board.json").exists(),
                          "a board that fails the contract must not reach consumers")
 
@@ -312,7 +313,7 @@ class TheContractTest(unittest.TestCase):
 
     def _problems(self, board_id="b", **overrides):
         root = project(active=board_id, own={board_id: definition(board_id, **overrides)})
-        return boards.validate(json.loads((root / "boards" / (board_id + ".json")).read_text()),
+        return board_records.validate(json.loads((root / "boards" / (board_id + ".json")).read_text()),
                                root / "boards" / (board_id + ".json"))
 
     def test_a_good_definition_passes(self):
@@ -367,7 +368,7 @@ class TheContractTest(unittest.TestCase):
                 for row, labels in board["physical"]["header_order"].items():
                     if not row.startswith("//"):
                         board["physical"]["header_order"][row] = [crafted if label == old else label for label in labels]
-                self.assertEqual([p for p in boards.validate(board, path) if crafted in p],
+                self.assertEqual([p for p in board_records.validate(board, path) if crafted in p],
                                  ["%s key %r is not a name — letters, digits and _ (%s): the board is written with it as code"
                                   % (key, crafted, "D3, SDA, A0" if key == "pins" else "3V3, GND1, VCC")])
 
@@ -390,7 +391,7 @@ class TheContractTest(unittest.TestCase):
                 self.assertEqual(len([p for p in problems if "doubtful_pads" in p]), count, problems)
 
     def test_the_library_boards_doubtful_pads_are_the_two_grounds_of_the_firebeetle(self):
-        board = json.loads((boards.LIBRARY / (LIBRARY_BOARD + ".json")).read_text())
+        board = json.loads((board_records.LIBRARY / (LIBRARY_BOARD + ".json")).read_text())
         self.assertEqual(board["physical"]["header"]["doubtful_pads"], ["GND1", "GND3"])
 
     def test_a_wrong_schema_version_is_refused_rather_than_read_hopefully(self):
@@ -423,8 +424,8 @@ class TheContractTest(unittest.TestCase):
         board = definition("b", physical={"footprint_module": None, "footprint_export": None})
         path = Path(tempfile.mkdtemp()) / "b.json"
         path.write_text(json.dumps(board))
-        self.assertEqual(boards.validate(board, path), [])
-        self.assertTrue(boards.validate(board, path, for_fab=True))
+        self.assertEqual(board_records.validate(board, path), [])
+        self.assertTrue(board_records.validate(board, path, for_fab=True))
 
 
 class TheRoleVocabularyIsClosedTest(unittest.TestCase):
@@ -439,8 +440,8 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
     """
 
     def _problems(self, roles):
-        return boards.validate(dict(definition("b"), pin_roles=roles),
-                               boards.LIBRARY / "b.json")
+        return board_records.validate(dict(definition("b"), pin_roles=roles),
+                               board_records.LIBRARY / "b.json")
 
     def test_a_role_no_script_reads_is_refused(self):
         problems = self._problems({"boot_log_tx": {"gpio": [0], "note": "the old name"}})
@@ -449,11 +450,11 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
     def test_the_refusal_lists_the_names_that_would_have_worked(self):
         # Refusing without saying what to write instead is how a vocabulary becomes folklore.
         problems = self._problems({"typo_uart": {"gpio": [0], "note": "x"}})
-        self.assertTrue(any(boards.CONSOLE_UART in p for p in problems), problems)
+        self.assertTrue(any(board_records.CONSOLE_UART in p for p in problems), problems)
 
     def test_a_known_role_passes(self):
         self.assertEqual(
-            self._problems({boards.CONSOLE_UART: {"gpio": [0], "note": "prints the boot log"}}),
+            self._problems({board_records.CONSOLE_UART: {"gpio": [0], "note": "prints the boot log"}}),
             [])
 
     def test_an_active_level_of_zero_or_one_passes(self):
@@ -502,7 +503,8 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
     def test_pin_roles_that_is_no_object_is_one_problem_not_a_crash(self):
         for roles in ([1], ["onboard_led"], "x", 5, [], True):
             with self.subTest(roles=roles):
-                problems = boards.validate(dict(definition("b"), pin_roles=roles), boards.LIBRARY / "b.json")
+                problems = board_records.validate(dict(definition("b"), pin_roles=roles),
+                                                  board_records.LIBRARY / "b.json")
                 self.assertEqual(problems, ["pin_roles is %r; it must be an object of role -> {gpio, note}" % (roles,)])
 
     def test_a_role_name_with_a_line_break_reaches_the_screen_quoted_in_every_problem(self):
@@ -599,10 +601,10 @@ class TheRoleVocabularyIsClosedTest(unittest.TestCase):
         sys.path.insert(0, str(ROOT / "scripts"))
         from spark.design import pin_assigner  # noqa: E402,PLC0415 - here so this file stays standalone
         priced = set(pin_assigner.ROLE_PENALTY) | set(pin_assigner.CONFLICTING_ROLES)
-        self.assertEqual(priced - set(boards.PIN_ROLES), set())
+        self.assertEqual(priced - set(board_records.PIN_ROLES), set())
 
     def test_every_onboard_role_is_one_a_board_may_use(self):
-        self.assertEqual(set(boards.ONBOARD_ROLES) - set(boards.PIN_ROLES), set())
+        self.assertEqual(set(board_records.ONBOARD_ROLES) - set(board_records.PIN_ROLES), set())
 
 
 # --- MVP ---
@@ -619,7 +621,7 @@ class TheBoardsOwnPowerPartsTest(unittest.TestCase):
         return {"value": value, "verified": True, "source": "s"}
 
     def offered(self, power):
-        return boards.onboard_functions({"power": power})
+        return board_records.onboard_functions({"power": power})
 
     def test_each_power_fact_with_a_value_is_one_function(self):
         for fact, function in (("charger", self.CHARGER), ("regulator", self.REGULATOR), ("battery_input", self.BATTERY_INPUT)):
@@ -646,57 +648,59 @@ class TheBoardsOwnPowerPartsTest(unittest.TestCase):
     def test_the_power_functions_follow_the_pin_roles_functions(self):
         board = {"power": {"charger": self.fact("TP4054")}, "pin_roles": {"onboard_battery_sense": {"gpio": [34], "note": "x"},
                                                                               "onboard_led": {"gpio": [2], "note": "x"}}}
-        self.assertEqual(boards.onboard_functions(board), [
+        self.assertEqual(board_records.onboard_functions(board), [
             {"does": "indicate", "what": "onboard LED light", "role": "onboard_led"}, self.BATTERY_LEVEL, self.CHARGER])
 
     def test_a_board_with_no_pin_role_still_offers_its_power_facts(self):
-        self.assertEqual(boards.onboard_functions({"pin_roles": 5, "power": {"charger": self.fact("TP4054")}}), [self.CHARGER])
+        self.assertEqual(board_records.onboard_functions({"pin_roles": 5, "power": {"charger": self.fact("TP4054")}}),
+                         [self.CHARGER])
 
     def test_the_battery_level_pin_is_offered_when_pins_py_names_it(self):
         for entry, offered in (({"gpio": [34], "note": "x"}, True), ({"gpio": [], "note": "x"}, False),
                                ({"gpio": [34, 35], "note": "x"}, False)):
             with self.subTest(entry=entry):
-                self.assertEqual(boards.onboard_functions({"pin_roles": {"onboard_battery_sense": entry}}),
+                self.assertEqual(board_records.onboard_functions({"pin_roles": {"onboard_battery_sense": entry}}),
                                  [self.BATTERY_LEVEL] if offered else [])
 
     def test_a_blank_word_is_no_fact_value_and_a_number_or_a_word_is(self):
         for value, holds in (("", False), (" ", False), ("\n", False), ("a", True), (0, True), (0.0, True), (-1, True),
                              (True, False), (None, False), ([], False)):
             with self.subTest(value=value):
-                self.assertEqual(boards.is_fact_value(value), holds)
+                self.assertEqual(board_records.is_fact_value(value), holds)
 
     def test_the_shipped_boards_with_a_charger_offer_it(self):
         for name in ("xiao-esp32-c6", "firebeetle2-esp32s3"):
             with self.subTest(board=name):
-                record = json.loads((boards.LIBRARY / (name + ".json")).read_text())
-                self.assertIn(self.CHARGER, boards.onboard_functions(record))
-                self.assertIn(self.REGULATOR, boards.onboard_functions(record))
+                record = json.loads((board_records.LIBRARY / (name + ".json")).read_text())
+                self.assertIn(self.CHARGER, board_records.onboard_functions(record))
+                self.assertIn(self.REGULATOR, board_records.onboard_functions(record))
 
     def test_the_firebeetle_names_its_regulator_as_its_v1_3_schematic_prints_it(self):
-        firebeetle = json.loads((boards.LIBRARY / "firebeetle2-esp32s3.json").read_text())
+        firebeetle = json.loads((board_records.LIBRARY / "firebeetle2-esp32s3.json").read_text())
         fact = firebeetle["power"]["regulator"]
         self.assertEqual((fact["value"], fact["verified"], fact["cites"]), ("TPS62A02DRLR", True, {
             "document": "firebeetle2-s3-schematic-v1-3", "at": "U1"}))
 
     def test_the_xiao_offers_its_battery_pads(self):
-        xiao = json.loads((boards.LIBRARY / "xiao-esp32-c6.json").read_text())
-        self.assertIn(self.BATTERY_INPUT, boards.onboard_functions(xiao))
+        xiao = json.loads((board_records.LIBRARY / "xiao-esp32-c6.json").read_text())
+        self.assertIn(self.BATTERY_INPUT, board_records.onboard_functions(xiao))
 
 
 class TheOnboardRoleTableTest(unittest.TestCase):
     def test_a_row_has_a_scenario_verb_or_a_sentence_and_not_both_nor_neither(self):
-        self.assertEqual(boards.OnboardRole("X", "read", "indicate", "x").not_in_diagram, None)
-        self.assertEqual(boards.OnboardRole("X", None, "indicate", "x", "s").scenario_verb, None)
+        self.assertEqual(board_records.OnboardRole("X", "read", "indicate", "x").not_in_diagram, None)
+        self.assertEqual(board_records.OnboardRole("X", None, "indicate", "x", "s").scenario_verb, None)
         for args in (("X", None, "indicate", "x", None), ("X", "read", "indicate", "x", "s"), ("X", "", "indicate", "x"),
                      ("X", None, "indicate", "x", "")):
             with self.subTest(args=args):
                 with self.assertRaises(ValueError) as caught:
-                    boards.OnboardRole(*args)
+                    board_records.OnboardRole(*args)
                 self.assertIn("X needs a scenario verb or a sentence", str(caught.exception))
 
     def test_the_table_holds_the_battery_level_pin_beside_the_display(self):
-        self.assertEqual(list(boards.ONBOARD_ROLES), ["onboard_led", "onboard_button", "onboard_display", "onboard_battery_sense"])
-        spec = boards.ONBOARD_ROLES["onboard_battery_sense"]
+        self.assertEqual(list(board_records.ONBOARD_ROLES),
+                         ["onboard_led", "onboard_button", "onboard_display", "onboard_battery_sense"])
+        spec = board_records.ONBOARD_ROLES["onboard_battery_sense"]
         self.assertEqual((spec.constant, spec.scenario_verb, spec.does, spec.what),
                          ("ONBOARD_BATTERY_SENSE", None, "sense", "onboard battery level"))
 
@@ -705,7 +709,7 @@ class TheBoardsPowerFactsAreCheckedTest(unittest.TestCase):
     FACT = {"value": "TP4054", "verified": True, "source": "s"}
 
     def problems(self, power):
-        return boards.validate(dict(definition("b"), power=power), boards.LIBRARY / "b.json")
+        return board_records.validate(dict(definition("b"), power=power), board_records.LIBRARY / "b.json")
 
     def test_a_power_fact_with_its_provenance_holds(self):
         self.assertEqual(self.problems({"charger": self.FACT, "regulator": self.FACT, "battery_input": self.FACT}), [])
@@ -743,7 +747,7 @@ class TheBoardsPowerFactsAreCheckedTest(unittest.TestCase):
 
     def test_a_board_with_no_power_has_no_power_problem(self):
         self.assertEqual(self.problems(None), [])
-        self.assertEqual(boards.validate(definition("b"), boards.LIBRARY / "b.json"), [])
+        self.assertEqual(board_records.validate(definition("b"), board_records.LIBRARY / "b.json"), [])
 
     def test_a_power_fact_the_table_does_not_name_is_left_to_its_reader(self):
         self.assertEqual(self.problems({"charge_current_a": {"value": 0.12}}), [])
@@ -752,20 +756,20 @@ class TheBoardsPowerFactsAreCheckedTest(unittest.TestCase):
 
 class TheShippedLibraryTest(unittest.TestCase):
     def test_every_board_in_the_library_satisfies_its_own_contract(self):
-        for path in sorted(boards.LIBRARY.glob("*.json")):
+        for path in sorted(board_records.LIBRARY.glob("*.json")):
             with self.subTest(board=path.stem):
-                problems = boards.validate(json.loads(path.read_text()), path)
+                problems = board_records.validate(json.loads(path.read_text()), path)
                 self.assertEqual(problems, [], "%s: %s" % (path.stem, problems))
 
     def test_every_shipped_board_names_the_console_uart(self):
         # Not decoration: it is the role the pin-capability check singles out, so a board that
         # omits it is a board where that check silently does nothing.
-        for path in sorted(boards.LIBRARY.glob("*.json")):
+        for path in sorted(board_records.LIBRARY.glob("*.json")):
             if path.name == "active.json":
                 continue
             with self.subTest(board=path.stem):
                 roles = json.loads(path.read_text()).get("pin_roles") or {}
-                self.assertIn(boards.CONSOLE_UART, roles)
+                self.assertIn(board_records.CONSOLE_UART, roles)
 
 
 
@@ -797,8 +801,8 @@ class TheCommandLineTheSmartBinDependsOnTest(unittest.TestCase):
 
     def test_a_refusal_prints_the_sentence_of_the_error_and_its_code_is_the_records_one(self):
         # P716: the error main catches for --get names its code; main prints its sentence and exits 1
-        with self.assertRaises(boards.BoardError) as refused:
-            boards.get(self.project, "physical.no_such_field")
+        with self.assertRaises(board_records.BoardError) as refused:
+            board_records.get(self.project, "physical.no_such_field")
         self.assertEqual(refused.exception.code, "no_such_field")
         self.assertEqual(self._run("--get", "physical.no_such_field"), (1, "", "boards.py: " + str(refused.exception)))
 
@@ -879,12 +883,12 @@ class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
     def test_the_line_comes_from_the_footprint_module_and_asks_nothing_of_parts(self):
         # P411: footprint_stop imported `parts` for a sentence that now lives in footprint_emitter; the edge to parts that remains is validate's.
         # footprint_emitter loads parts itself, through loader (loader.py:40), so it is loaded first: the test asks only whether footprint_stop imports parts
-        from spark.design import footprint_emitter  # noqa: F401
+        from spark.design import footprint_emitter
         from board_library import board_missing
         with board_missing("physical.header_order"), mock.patch.dict(sys.modules, {"parts": None}):
-            self.assertEqual(boards.footprint_stop("xiao-esp32-c6", project()),
+            self.assertEqual(footprint_emitter.footprint_stop("xiao-esp32-c6", project()),
                              "stops at the footprint stage (P121): its board file lacks physical.header_order")
-            self.assertEqual(boards.footprint_stop("firebeetle2-esp32s3", project()), "")
+            self.assertEqual(footprint_emitter.footprint_stop("firebeetle2-esp32s3", project()), "")
 
 
 class APadTheBoardCanWireMustHaveASimulatorNameTest(unittest.TestCase):
@@ -901,13 +905,13 @@ class APadTheBoardCanWireMustHaveASimulatorNameTest(unittest.TestCase):
         return json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
 
     def test_the_shipped_board_holds(self):
-        problems = boards.validate(self.board(), ROOT / "boards" / "firebeetle2-esp32s3.json")
+        problems = board_records.validate(self.board(), ROOT / "boards" / "firebeetle2-esp32s3.json")
         self.assertEqual([p for p in problems if "wokwi_power_pins" in p], [])
 
     def test_a_pad_with_no_simulator_name_is_reported(self):
         board = self.board()
         board["wokwi_power_pins"].pop("VCC")
-        problems = boards.validate(board, ROOT / "boards" / "firebeetle2-esp32s3.json")
+        problems = board_records.validate(board, ROOT / "boards" / "firebeetle2-esp32s3.json")
         self.assertTrue(any("VCC" in p and "wokwi_power_pins" in p for p in problems),
                         "a pad that can be wired and cannot be simulated passed: %s" % problems)
 
@@ -916,7 +920,7 @@ class APadTheBoardCanWireMustHaveASimulatorNameTest(unittest.TestCase):
         # would fail a definition that is complete.
         board = self.board()
         board.pop("wokwi_part_type")
-        problems = boards.validate(board, ROOT / "boards" / "firebeetle2-esp32s3.json")
+        problems = board_records.validate(board, ROOT / "boards" / "firebeetle2-esp32s3.json")
         self.assertEqual([p for p in problems if "wokwi_power_pins" in p], [])
 
 
@@ -928,7 +932,7 @@ class ABoardPointsAtItsDatasheetsLikeAPartTest(unittest.TestCase):
         return json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
 
     def problems(self, board):
-        return boards.validate(board, ROOT / "boards" / "firebeetle2-esp32s3.json")
+        return board_records.validate(board, ROOT / "boards" / "firebeetle2-esp32s3.json")
 
     def test_a_citation_of_a_document_the_board_does_not_hold_is_reported(self):
         board = self.board()
@@ -958,16 +962,16 @@ DEFINITION_CHANGED = DEFINITION + "\n"
 
 
 def kept_definition_board(text=DEFINITION):
-    """The XIAO record, with its Wokwi definition kept in this process's scratch store (`store.py:40-42`)."""
+    """The XIAO record, with its Wokwi definition kept in this process's scratch store (`store.py`, its suite guard)."""
     digest = store.keep(text.encode(), "wokwi-test.board.json")
-    board = boards.load(ROOT, "xiao-esp32-c6")
-    board["documents"][boards.WOKWI_DEFINITION] = dict(board["documents"][boards.WOKWI_DEFINITION],
+    board = board_records.load(ROOT, "xiao-esp32-c6")
+    board["documents"][board_records.WOKWI_DEFINITION] = dict(board["documents"][board_records.WOKWI_DEFINITION],
                                                         sha256=digest, file="wokwi-test.board.json")
     return board
 
 
 def kept_path(board):
-    entry = board["documents"][boards.WOKWI_DEFINITION]
+    entry = board["documents"][board_records.WOKWI_DEFINITION]
     return store.place("sources") / entry["sha256"] / entry["file"]
 
 
@@ -978,21 +982,21 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
                                "or it does not parse")
 
     def state_of(self, board):
-        part = boards.read_simulated_part(board)
+        part = board_records.read_simulated_part(board)
         return part.state, part.why
 
     def test_the_targets_of_its_pins_are_its_gpios_with_the_comment_cut(self):
-        part = boards.read_simulated_part(kept_definition_board())
+        part = board_records.read_simulated_part(kept_definition_board())
         self.assertEqual((part.state, part.why, part.board_id, part.gpios), ("recorded", None, "xiao-esp32-c6", frozenset({0, 15})))
 
     def test_a_gpio_with_no_pin_has_a_reason_and_one_with_a_pin_has_none(self):
-        part = boards.read_simulated_part(kept_definition_board())
+        part = board_records.read_simulated_part(kept_definition_board())
         self.assertEqual(part.why_not_simulated(9), "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9")
         self.assertIsNone(part.why_not_simulated(15))
 
     def test_a_file_the_store_lacks_is_not_checked(self):
         board = kept_definition_board()
-        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        board["documents"][board_records.WOKWI_DEFINITION]["file"] = "absent.board.json"
         self.assertEqual(self.state_of(board), self.NOT_KEPT)
 
     def test_a_file_whose_bytes_changed_is_not_checked(self):
@@ -1002,7 +1006,7 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
 
     def test_strict_json_with_a_comment_mark_inside_a_string_parses(self):
         text = '{"pins": {"D1": {"target": "GPIO1", "note": "a /* b"}, "D2": {"target": "GPIO2", "note": "*/"}}}'
-        self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({1, 2}))
+        self.assertEqual(board_records.read_simulated_part(kept_definition_board(text)).gpios, frozenset({1, 2}))
 
     def test_a_definition_that_does_not_parse_is_not_checked(self):
         self.assertEqual(self.state_of(kept_definition_board('{"pins": ')), self.NOT_KEPT)
@@ -1014,12 +1018,12 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
 
     def test_a_target_that_is_not_ascii_digits_is_no_gpio(self):
         text = '{"pins": {"D1": {"target": "GPIO\uff19"}, "D2": {"target": 9}, "D3": {"target": "GPIO3"}}}'
-        self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({3}))
+        self.assertEqual(board_records.read_simulated_part(kept_definition_board(text)).gpios, frozenset({3}))
 
     def test_only_a_whole_gpio_name_is_a_gpio(self):
         text = '{"pins": {"A": {"target": "GPIO9x"}, "B": {"target": "XGPIO9"}, "C": {"target": "GPIO9/ADC"}, ' \
                '"D": {"target": "GPIO5"}}}'
-        self.assertEqual(boards.read_simulated_part(kept_definition_board(text)).gpios, frozenset({5}))
+        self.assertEqual(board_records.read_simulated_part(kept_definition_board(text)).gpios, frozenset({5}))
 
     def test_a_definition_nested_too_deep_is_not_checked(self):
         self.assertEqual(self.state_of(kept_definition_board("[" * 100000 + "]" * 100000)), self.NOT_KEPT)
@@ -1034,17 +1038,18 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
         # Only a missing key is "names none": a key that is there and holds nothing usable is a record spark could not read.
         for entry in (None, "wokwi-board", ["x"], 5, {}):
             with self.subTest(entry=entry):
-                self.assertEqual(self.state_of({"id": "x", "documents": {boards.WOKWI_DEFINITION: entry}}), self.NOT_KEPT)
+                self.assertEqual(self.state_of({"id": "x", "documents": {board_records.WOKWI_DEFINITION: entry}}),
+                                 self.NOT_KEPT)
 
     def test_a_file_name_with_a_null_byte_is_not_checked_never_raised(self):
         board = kept_definition_board()
-        board["documents"][boards.WOKWI_DEFINITION]["file"] = "a\0b.board.json"
+        board["documents"][board_records.WOKWI_DEFINITION]["file"] = "a\0b.board.json"
         self.assertEqual(self.state_of(board), self.NOT_KEPT)
 
     def test_a_pin_target_whose_digits_int_refuses_is_not_checked_never_raised(self):
         # int() refuses a very long digit run on Python 3.9.14+, 3.10.7+ and 3.11+, and not on older ones, so it is made to here.
         board = kept_definition_board('{"pins": {"D1": {"target": "GPIO9"}}}')
-        with mock.patch.object(boards, "int", side_effect=ValueError("too many digits"), create=True):
+        with mock.patch.object(board_records, "int", side_effect=ValueError("too many digits"), create=True):
             self.assertEqual(self.state_of(board), self.NOT_KEPT)
 
     def test_a_record_that_is_no_table_names_no_definition(self):
@@ -1057,7 +1062,7 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
         # absolute one, a "../" one, or a FIFO that hangs the read. The outside file below holds a good definition.
         outside = Path(tempfile.mkdtemp()) / "outside.board.json"
         outside.write_text(DEFINITION)
-        good = kept_definition_board()["documents"][boards.WOKWI_DEFINITION]
+        good = kept_definition_board()["documents"][board_records.WOKWI_DEFINITION]
         hostile = {"an absolute sha256": dict(good, sha256=str(outside.parent), file=outside.name),
                    "a ../ sha256": dict(good, sha256="../" * 3 + str(outside.parent).lstrip("/"), file=outside.name),
                    "an uppercase sha256": dict(good, sha256=good["sha256"].upper()),
@@ -1070,23 +1075,23 @@ class AWokwiDefinitionSaysWhichGpiosItSimulatesTest(unittest.TestCase):
                    "a file that is no string": dict(good, file=5)}
         for case, entry in hostile.items():
             with self.subTest(case=case), mock.patch.object(Path, "read_bytes", side_effect=AssertionError("opened " + case)):
-                board = {"id": "x", "documents": {boards.WOKWI_DEFINITION: entry}}
+                board = {"id": "x", "documents": {board_records.WOKWI_DEFINITION: entry}}
                 self.assertEqual(self.state_of(board), self.NOT_KEPT)
 
     def test_why_not_simulated_says_what_stopped_the_reader_never_that_a_pin_is_missing(self):
         # A definition that spark could not look at has no GPIOs, which is not the same as having no pin on GPIO9.
         lacking = kept_definition_board()
-        lacking["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
-        self.assertEqual(boards.read_simulated_part(lacking).why_not_simulated(9),
+        lacking["documents"][board_records.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        self.assertEqual(board_records.read_simulated_part(lacking).why_not_simulated(9),
                          "not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 "
                          "differs, or it does not parse")
-        self.assertEqual(boards.read_simulated_part({"id": "x"}).why_not_simulated(9),
+        self.assertEqual(board_records.read_simulated_part({"id": "x"}).why_not_simulated(9),
                          "not checked: the board record names no Wokwi definition")
 
     def test_the_value_is_built_by_state_why_and_gpios(self):
-        part = boards.SimulatedPart("recorded", "x", frozenset({1}))
+        part = board_records.SimulatedPart("recorded", "x", frozenset({1}))
         self.assertEqual((part.state, part.board_id, part.gpios, part.why), ("recorded", "x", frozenset({1}), None))
-        self.assertEqual(boards.SimulatedPart("none-recorded", "x").gpios, frozenset())
+        self.assertEqual(board_records.SimulatedPart("none-recorded", "x").gpios, frozenset())
 
 
 class TheBoardsOwnLimitsTest(unittest.TestCase):
@@ -1096,50 +1101,50 @@ class TheBoardsOwnLimitsTest(unittest.TestCase):
                                         "way for a scenario to press it. Test it on the board.")
 
     def test_the_button_with_no_pin_is_a_limit_and_the_led_with_one_is_not(self):
-        self.assertEqual(boards.onboard_limits(kept_definition_board()), [self.BUTTON])
+        self.assertEqual(board_records.onboard_limits(kept_definition_board()), [self.BUTTON])
 
     def test_an_led_with_no_pin_is_one_no_scenario_can_read(self):
         board = kept_definition_board()
-        board["pin_roles"][boards.ONBOARD_LED]["gpio"] = [3]
+        board["pin_roles"][board_records.ONBOARD_LED]["gpio"] = [3]
         self.assertIn(("ONBOARD_LED (GPIO3)", "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO3, so spark "
                                               "knows no way for a scenario to read it. Test it on the board."),
-                      boards.onboard_limits(board))
+                      board_records.onboard_limits(board))
 
     def test_a_record_that_names_no_definition_says_not_checked(self):
         board = kept_definition_board()
-        del board["documents"][boards.WOKWI_DEFINITION]
-        self.assertEqual(boards.onboard_limits(board),
+        del board["documents"][board_records.WOKWI_DEFINITION]
+        self.assertEqual(board_records.onboard_limits(board),
                          [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
 
     def test_a_definition_the_store_lacks_says_not_checked(self):
         board = kept_definition_board()
-        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
-        self.assertEqual(boards.onboard_limits(board),
+        board["documents"][board_records.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        self.assertEqual(board_records.onboard_limits(board),
                          [("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board "
                                             "record names, its sha256 differs, or it does not parse")])
 
     def test_a_definition_whose_bytes_changed_says_not_checked(self):
         board = kept_definition_board(DEFINITION_CHANGED)
         kept_path(board).write_text(DEFINITION_CHANGED + " ")
-        self.assertEqual([component for component, _ in boards.onboard_limits(board)], ["onboard GPIOs"])
+        self.assertEqual([component for component, _ in board_records.onboard_limits(board)], ["onboard GPIOs"])
 
     def test_each_gpio_of_a_role_with_no_pin_is_its_own_limit(self):
         board = kept_definition_board()
-        board["pin_roles"][boards.ONBOARD_BUTTON]["gpio"] = [9, 3]
-        self.assertEqual([component for component, _ in boards.onboard_limits(board)],
+        board["pin_roles"][board_records.ONBOARD_BUTTON]["gpio"] = [9, 3]
+        self.assertEqual([component for component, _ in board_records.onboard_limits(board)],
                          ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_BUTTON (GPIO3)"])
 
     def test_a_gpio_that_is_not_a_number_is_skipped_never_raised(self):
         board = kept_definition_board()
-        board["pin_roles"][boards.ONBOARD_BUTTON]["gpio"] = ["9", None, True]
-        self.assertEqual(boards.onboard_limits(board), [])
+        board["pin_roles"][board_records.ONBOARD_BUTTON]["gpio"] = ["9", None, True]
+        self.assertEqual(board_records.onboard_limits(board), [])
 
     def test_a_board_with_no_onboard_role_says_nothing(self):
         board = kept_definition_board()
-        for role in (boards.ONBOARD_LED, boards.ONBOARD_BUTTON):
+        for role in (board_records.ONBOARD_LED, board_records.ONBOARD_BUTTON):
             del board["pin_roles"][role]
-        del board["documents"][boards.WOKWI_DEFINITION]
-        self.assertEqual(boards.onboard_limits(board), [])
+        del board["documents"][board_records.WOKWI_DEFINITION]
+        self.assertEqual(board_records.onboard_limits(board), [])
 
     DISPLAY = ("ONBOARD_DISPLAY", "spark adds no part to the diagram for the board's own display, so a passed run does not "
                                   "test what it shows. Test it on the board.")
@@ -1151,48 +1156,49 @@ class TheBoardsOwnLimitsTest(unittest.TestCase):
         for gpio in ([3], [15], [], "x"):
             with self.subTest(gpio=gpio):
                 board = kept_definition_board()
-                board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": gpio, "note": "the screen"}
-                self.assertEqual(boards.onboard_limits(board), [self.BUTTON, self.DISPLAY])
+                board["pin_roles"][board_records.ONBOARD_DISPLAY] = {"gpio": gpio, "note": "the screen"}
+                self.assertEqual(board_records.onboard_limits(board), [self.BUTTON, self.DISPLAY])
 
     def test_the_t_displays_record_names_no_definition_a_screen_and_a_battery_pin(self):
-        self.assertEqual(boards.onboard_limits(json.loads(self.TDISPLAY.read_text())),
+        self.assertEqual(board_records.onboard_limits(json.loads(self.TDISPLAY.read_text())),
                          [("onboard GPIOs", "not checked: the board record names no Wokwi definition"), self.DISPLAY, self.BATTERY])
 
     def test_the_battery_level_pin_is_one_limit_after_the_gpio_lines_whatever_its_gpio_is(self):
         for gpio in ([34], [], "x"):
             with self.subTest(gpio=gpio):
                 board = kept_definition_board()
-                board["pin_roles"][boards.ONBOARD_BATTERY_SENSE] = {"gpio": gpio, "note": "the divider"}
-                self.assertEqual(boards.onboard_limits(board), [self.BUTTON, self.BATTERY])
+                board["pin_roles"][board_records.ONBOARD_BATTERY_SENSE] = {"gpio": gpio, "note": "the divider"}
+                self.assertEqual(board_records.onboard_limits(board), [self.BUTTON, self.BATTERY])
 
     def test_a_board_with_only_a_display_gets_that_line_and_no_not_checked_line(self):
         board = json.loads(self.TDISPLAY.read_text())
-        del board["pin_roles"][boards.ONBOARD_BUTTON]
-        del board["pin_roles"][boards.ONBOARD_BATTERY_SENSE]
-        self.assertEqual(boards.onboard_limits(board), [self.DISPLAY])
+        del board["pin_roles"][board_records.ONBOARD_BUTTON]
+        del board["pin_roles"][board_records.ONBOARD_BATTERY_SENSE]
+        self.assertEqual(board_records.onboard_limits(board), [self.DISPLAY])
 
     def test_a_definition_the_store_lacks_still_leaves_the_display_line_after_the_not_checked_one(self):
         board = kept_definition_board()
-        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
-        board["pin_roles"][boards.ONBOARD_DISPLAY] = {"gpio": [3], "note": "the screen"}
-        self.assertEqual([component for component, _ in boards.onboard_limits(board)], ["onboard GPIOs", "ONBOARD_DISPLAY"])
+        board["documents"][board_records.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        board["pin_roles"][board_records.ONBOARD_DISPLAY] = {"gpio": [3], "note": "the screen"}
+        self.assertEqual([component for component, _ in board_records.onboard_limits(board)],
+                         ["onboard GPIOs", "ONBOARD_DISPLAY"])
 
     def test_a_board_that_names_every_onboard_part_has_a_sentence_for_each_part_no_scenario_reaches(self):
         board = kept_definition_board()
-        for role in boards.ONBOARD_ROLES:
+        for role in board_records.ONBOARD_ROLES:
             board["pin_roles"].setdefault(role, {"gpio": [3], "note": "x"})
-        self.assertEqual([component for component, _ in boards.onboard_limits(board)],
+        self.assertEqual([component for component, _ in board_records.onboard_limits(board)],
                          ["ONBOARD_BUTTON (GPIO9)", "ONBOARD_DISPLAY", "ONBOARD_BATTERY_SENSE"])
 
     def test_a_role_with_no_gpio_list_says_nothing(self):
         board = kept_definition_board()
-        board["pin_roles"][boards.ONBOARD_BUTTON] = {"note": "somewhere"}
-        self.assertEqual(boards.onboard_limits(board), [])
+        board["pin_roles"][board_records.ONBOARD_BUTTON] = {"note": "somewhere"}
+        self.assertEqual(board_records.onboard_limits(board), [])
 
     def test_documents_that_are_not_a_table_name_no_definition(self):
         board = kept_definition_board()
         board["documents"] = ["wokwi-board"]
-        self.assertEqual(boards.onboard_limits(board),
+        self.assertEqual(board_records.onboard_limits(board),
                          [("onboard GPIOs", "not checked: the board record names no Wokwi definition")])
 
     # --- P397: the limits of one role, for the note of a pick
@@ -1201,47 +1207,54 @@ class TheBoardsOwnLimitsTest(unittest.TestCase):
 
     def test_a_role_has_the_pairs_that_onboard_limits_gives_for_it_alone(self):
         board = kept_definition_board()
-        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_BUTTON}), {boards.ONBOARD_BUTTON: [self.BUTTON]})
-        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_LED}), {boards.ONBOARD_LED: []})
-        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_LED, boards.ONBOARD_BUTTON}),
-                         {boards.ONBOARD_LED: [], boards.ONBOARD_BUTTON: [self.BUTTON]})
+        self.assertEqual(board_records.role_limits(board, {board_records.ONBOARD_BUTTON}),
+                         {board_records.ONBOARD_BUTTON: [self.BUTTON]})
+        self.assertEqual(board_records.role_limits(board, {board_records.ONBOARD_LED}), {board_records.ONBOARD_LED: []})
+        self.assertEqual(board_records.role_limits(board, {board_records.ONBOARD_LED, board_records.ONBOARD_BUTTON}),
+                         {board_records.ONBOARD_LED: [], board_records.ONBOARD_BUTTON: [self.BUTTON]})
 
     def test_a_role_the_board_does_not_name_or_the_caller_did_not_ask_for_is_not_in_the_answer(self):
         board = kept_definition_board()
-        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_DISPLAY, boards.ONBOARD_BATTERY_SENSE}), {})
-        self.assertEqual(boards.role_limits(board, set()), {})
+        self.assertEqual(board_records.role_limits(board, {board_records.ONBOARD_DISPLAY,
+                                                           board_records.ONBOARD_BATTERY_SENSE}), {})
+        self.assertEqual(board_records.role_limits(board, set()), {})
 
     def test_a_part_no_scenario_reaches_has_its_sentence_and_the_definition_is_not_read_for_it(self):
         board = json.loads(self.TDISPLAY.read_text())
-        with mock.patch.object(boards, "read_simulated_part", side_effect=AssertionError("read")):
-            self.assertEqual(boards.role_limits(board, {boards.ONBOARD_DISPLAY, boards.ONBOARD_BATTERY_SENSE}),
-                             {boards.ONBOARD_DISPLAY: [self.DISPLAY], boards.ONBOARD_BATTERY_SENSE: [self.BATTERY]})
+        with mock.patch.object(board_records, "read_simulated_part", side_effect=AssertionError("read")):
+            self.assertEqual(board_records.role_limits(board, {board_records.ONBOARD_DISPLAY,
+                                                               board_records.ONBOARD_BATTERY_SENSE}),
+                             {board_records.ONBOARD_DISPLAY: [self.DISPLAY],
+                              board_records.ONBOARD_BATTERY_SENSE: [self.BATTERY]})
 
     def test_a_definition_spark_cannot_compare_gives_each_verb_role_its_not_checked_pair(self):
         board = kept_definition_board()
-        board["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
-        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_LED, boards.ONBOARD_BUTTON}),
-                         {boards.ONBOARD_LED: [self.NOT_KEPT], boards.ONBOARD_BUTTON: [self.NOT_KEPT]})
+        board["documents"][board_records.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        self.assertEqual(board_records.role_limits(board, {board_records.ONBOARD_LED, board_records.ONBOARD_BUTTON}),
+                         {board_records.ONBOARD_LED: [self.NOT_KEPT], board_records.ONBOARD_BUTTON: [self.NOT_KEPT]})
 
     def test_the_definition_is_read_once_for_every_role_and_once_over_calls_that_share_a_dict(self):
         board = kept_definition_board()
-        with mock.patch.object(boards, "read_simulated_part", wraps=boards.read_simulated_part) as read:
-            boards.role_limits(board, {boards.ONBOARD_LED, boards.ONBOARD_BUTTON})
+        with mock.patch.object(board_records, "read_simulated_part", wraps=board_records.read_simulated_part) as read:
+            board_records.role_limits(board, {board_records.ONBOARD_LED, board_records.ONBOARD_BUTTON})
         self.assertEqual(read.call_count, 1)
-        with mock.patch.object(boards, "read_simulated_part", wraps=boards.read_simulated_part) as read:
+        with mock.patch.object(board_records, "read_simulated_part", wraps=board_records.read_simulated_part) as read:
             shared = {}
-            boards.role_limits(board, {boards.ONBOARD_LED}, shared)
-            boards.role_limits(board, {boards.ONBOARD_BUTTON}, shared)
+            board_records.role_limits(board, {board_records.ONBOARD_LED}, shared)
+            board_records.role_limits(board, {board_records.ONBOARD_BUTTON}, shared)
         self.assertEqual((read.call_count, list(shared)), (1, ["xiao-esp32-c6"]))
 
     def test_two_records_that_share_an_id_or_have_none_do_not_share_a_cached_definition(self):
         board, other = kept_definition_board(), kept_definition_board(DEFINITION_CHANGED)
-        other["documents"][boards.WOKWI_DEFINITION]["file"] = "absent.board.json"
+        other["documents"][board_records.WOKWI_DEFINITION]["file"] = "absent.board.json"
         shared = {}
-        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_BUTTON}, shared, "kept"), {boards.ONBOARD_BUTTON: [self.BUTTON]})
-        self.assertEqual(boards.role_limits(other, {boards.ONBOARD_BUTTON}, shared, "absent"), {boards.ONBOARD_BUTTON: [self.NOT_KEPT]})
+        self.assertEqual(board_records.role_limits(board, {board_records.ONBOARD_BUTTON}, shared, "kept"),
+                         {board_records.ONBOARD_BUTTON: [self.BUTTON]})
+        self.assertEqual(board_records.role_limits(other, {board_records.ONBOARD_BUTTON}, shared, "absent"),
+                         {board_records.ONBOARD_BUTTON: [self.NOT_KEPT]})
         del board["id"]
-        self.assertEqual(boards.role_limits(board, {boards.ONBOARD_BUTTON}, shared, "kept")[boards.ONBOARD_BUTTON][0][0], "ONBOARD_BUTTON (GPIO9)")
+        self.assertEqual(board_records.role_limits(board, {board_records.ONBOARD_BUTTON}, shared, "kept")
+                         [board_records.ONBOARD_BUTTON][0][0], "ONBOARD_BUTTON (GPIO9)")
         self.assertEqual(sorted(shared), ["absent", "kept"])
 
 
@@ -1254,50 +1267,50 @@ class TheFireBeetleCitesItsStandInsDefinitionTest(unittest.TestCase):
 
     def firebeetle(self, text=DEVKIT):
         """The shipped FireBeetle record, with a hand-made definition kept in the scratch store under its entry."""
-        board = boards.load(ROOT, "firebeetle2-esp32s3")
+        board = board_records.load(ROOT, "firebeetle2-esp32s3")
         entry = board["documents"]["wokwi-board"]
         board["documents"]["wokwi-board"] = dict(entry, sha256=store.keep(text.encode(), entry["file"]))
         return board
 
     def test_the_record_cites_the_devkits_file_with_a_64_hex_sha256(self):
-        entry = boards.load(ROOT, "firebeetle2-esp32s3")["documents"]["wokwi-board"]
+        entry = board_records.load(ROOT, "firebeetle2-esp32s3")["documents"]["wokwi-board"]
         self.assertRegex(entry["sha256"], "^[0-9a-f]{64}$")
         self.assertEqual(entry["file"], "wokwi-esp32-s3-devkitc-1.board.json")
 
     def test_a_kept_definition_is_read_with_both_pins_and_the_stand_in_mark(self):
-        part = boards.read_simulated_part(self.firebeetle())
+        part = board_records.read_simulated_part(self.firebeetle())
         self.assertEqual((part.state, part.gpios, part.is_stand_in), ("recorded", frozenset({21, 47}), True))
 
     def test_each_onboard_gpio_the_stand_in_reaches_still_gets_one_limit_with_the_stand_in_sentence(self):
-        self.assertEqual(boards.onboard_limits(self.firebeetle()),
+        self.assertEqual(board_records.onboard_limits(self.firebeetle()),
                          [("ONBOARD_LED (GPIO21)", self.STAND_IN % 21 + self.TAIL % "read"),
                           ("ONBOARD_BUTTON (GPIO47)", self.STAND_IN % 47 + self.TAIL % "press")])
 
     def test_an_empty_store_says_spark_lacks_it_and_never_that_no_definition_is_named(self):
-        board = boards.load(ROOT, "firebeetle2-esp32s3")
+        board = board_records.load(ROOT, "firebeetle2-esp32s3")
         board["documents"]["wokwi-board"]["sha256"] = "0" * 64
-        self.assertEqual(boards.onboard_limits(board),
+        self.assertEqual(board_records.onboard_limits(board),
                          [("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board "
                                             "record names, its sha256 differs, or it does not parse")])
 
     def test_a_definition_without_gpio47_says_it_has_no_pin_there(self):
-        said = dict(boards.onboard_limits(self.firebeetle('{"pins": {"21": {"target": "GPIO21"}}}')))
+        said = dict(board_records.onboard_limits(self.firebeetle('{"pins": {"21": {"target": "GPIO21"}}}')))
         self.assertTrue(said["ONBOARD_BUTTON (GPIO47)"].startswith("the Wokwi definition of firebeetle2-esp32s3 has no pin on GPIO47"))
 
     def test_a_board_that_is_no_stand_in_gets_no_stand_in_sentence(self):
         board = kept_definition_board()
-        self.assertFalse(boards.read_simulated_part(board).is_stand_in)
-        self.assertIsNone(boards.read_simulated_part(board).why_not_simulated(15))
+        self.assertFalse(board_records.read_simulated_part(board).is_stand_in)
+        self.assertIsNone(board_records.read_simulated_part(board).why_not_simulated(15))
 
     def test_a_part_that_is_no_stand_in_keeps_its_old_texts(self):
-        part = boards.read_simulated_part(kept_definition_board())
+        part = board_records.read_simulated_part(kept_definition_board())
         self.assertEqual(part.why_not_simulated(21), "the Wokwi definition of xiao-esp32-c6 has no pin on GPIO21")
         self.assertIsNone(part.why_not_simulated(0))
 
     def test_only_true_marks_a_stand_in(self):
         board = self.firebeetle()
         board["wokwi_is_stand_in"] = "yes"
-        self.assertFalse(boards.read_simulated_part(board).is_stand_in)
+        self.assertFalse(board_records.read_simulated_part(board).is_stand_in)
 
 
 # --- end MVP ---

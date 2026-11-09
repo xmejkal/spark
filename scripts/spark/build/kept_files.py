@@ -12,7 +12,7 @@ from spark.breadboard import drawing, sheet, tabbed_page
 from spark.design import loader
 from spark.design import pin_assigner
 from spark.firmware import sim_project
-import store
+from spark.records import store
 
 from spark.core.outcomes import OK, SKIPPED
 from spark.core.result import envelope_item

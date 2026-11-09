@@ -39,7 +39,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.design import pin_assigner  # noqa: E402
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.build import build_codes  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
@@ -50,9 +50,9 @@ from suite_runs import slow  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 import emit_footprint  # noqa: E402
-import missing_facts  # noqa: E402
+from spark.records import missing_facts  # noqa: E402
 import parts  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
 import test_converter  # noqa: E402
 from fakes import FakeTscircuitExport, fake_tsci  # noqa: E402
@@ -974,8 +974,8 @@ class ReachingSimulationTest(unittest.TestCase):
         self.assertTrue(build_service.serial_heard(wired, {}))
 
     def test_the_shipped_xiao_and_firebeetle_records_say_their_serial_needs_no_wires(self):
-        self.assertIs(boards.load(ROOT, "xiao-esp32-c6")["serial_without_wires"], True)
-        self.assertIs(boards.load(ROOT, "firebeetle2-esp32s3")["serial_without_wires"], True)
+        self.assertIs(board_records.load(ROOT, "xiao-esp32-c6")["serial_without_wires"], True)
+        self.assertIs(board_records.load(ROOT, "firebeetle2-esp32s3")["serial_without_wires"], True)
 
     def test_a_diagram_missing_the_key_entirely_counts_zero_rather_than_raising(self):
         self.assertEqual(build_service.wires_in({}), 0)
@@ -1512,7 +1512,7 @@ class TheBoardAloneTest(unittest.TestCase):
     def test_the_board_alone_warns_of_no_serial_monitor_unless_the_record_says_it_needs_no_wires(self):
         # P468: the XIAO's USB serial needs no wires, so only a record without the fact keeps the warning
         for fact, warned in ((True, False), (None, True)):
-            board = boards.load(ROOT, "xiao-esp32-c6")
+            board = board_records.load(ROOT, "xiao-esp32-c6")
             board.pop("serial_without_wires", None)
             if fact:
                 board["serial_without_wires"] = fact
@@ -1811,7 +1811,8 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
         (project / ".spark" / "rules.json").write_text(json.dumps({"fabrication": {"drill_step_mm": 0.3}}))
         workdir, stages = self.run_to_the_footprint(project, wanted)
         written = (workdir / [stage for stage in stages if stage.name == "footprint"][0].detail).read_text()
-        self.assertNotEqual(written, build_service.footprint_emitter.render(boards.load(project, "xiao-esp32-c6"), None))
+        self.assertNotEqual(written, build_service.footprint_emitter.render(
+            board_records.load(project, "xiao-esp32-c6"), None))
         with contextlib.redirect_stdout(io.StringIO()) as printed:
             code = emit_footprint.main(["--board", "xiao-esp32-c6", "--project", str(project)])
         self.assertEqual(code, 0)

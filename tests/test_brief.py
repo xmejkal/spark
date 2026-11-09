@@ -17,7 +17,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from brief import Brief  # noqa: E402
+from spark.records.brief import Brief  # noqa: E402
 
 
 def brief_of(text):
@@ -79,7 +79,8 @@ class BriefTest(unittest.TestCase):
         folder = Path(tempfile.mkdtemp())
         (folder / ".spark").mkdir()
         os.mkfifo(folder / ".spark" / "project.json")
-        code = "import sys; sys.path.insert(0, %r); from brief import Brief; print(Brief.from_project(%r).must)" % (str(ROOT / "scripts"), str(folder))
+        code = ("import sys; sys.path.insert(0, %r); from spark.records.brief import Brief; "
+                "print(Brief.from_project(%r).must)" % (str(ROOT / "scripts"), str(folder)))
         try:
             done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=10)
         except subprocess.TimeoutExpired:

@@ -19,13 +19,13 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import boards  # noqa: E402
+from spark.records import board_records  # noqa: E402
 from spark.breadboard import sheet  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import build_service  # noqa: E402
-import onboard_parts  # noqa: E402
-import store  # noqa: E402
-from onboard_parts import OnboardPartReader  # noqa: E402
+from spark.records import onboard_parts  # noqa: E402
+from spark.records import store  # noqa: E402
+from spark.records.onboard_parts import OnboardPartReader  # noqa: E402
 
 LED = {"id": "led-red-5mm", "onboard": "firebeetle2-esp32s3", "_instance": "onboard_led", "gpio": 21, "pin": "D13"}
 BUTTON = {"id": "tactile-button", "onboard": "firebeetle2-esp32s3", "_instance": "onboard_button", "gpio": 47, "pin": "D14"}
@@ -43,7 +43,7 @@ DEVKIT = '{"pins": {"21": {"target": "GPIO21"}, "47": {"target": "GPIO47"}, "GND
 
 def firebeetle(**roles):
     """The shipped FireBeetle record, its pin_roles entries updated by `roles` ({role: {key: value}})."""
-    board = boards.load(ROOT, "firebeetle2-esp32s3")
+    board = board_records.load(ROOT, "firebeetle2-esp32s3")
     for role, changes in roles.items():
         board["pin_roles"][role].update(changes)
     return board
@@ -54,7 +54,7 @@ class TheReaderPicksTheRowsSparkCanWireTest(unittest.TestCase):
         self.assertEqual(OnboardPartReader(firebeetle()).parts(), [LED, BUTTON])
 
     def test_a_board_that_is_no_stand_in_gives_none(self):
-        self.assertEqual(OnboardPartReader(boards.load(ROOT, "xiao-esp32-c6")).parts(), [])
+        self.assertEqual(OnboardPartReader(board_records.load(ROOT, "xiao-esp32-c6")).parts(), [])
         self.assertEqual(OnboardPartReader(dict(firebeetle(), wokwi_is_stand_in="yes")).parts(), [])
 
     def test_a_level_the_part_is_not_wired_for_leaves_that_part_out(self):
@@ -83,7 +83,8 @@ class TheReaderPicksTheRowsSparkCanWireTest(unittest.TestCase):
         self.assertIn('match: "%s",' % sheet.BOARD_COMPONENT, board_block)
 
     def test_every_wired_role_is_one_a_scenario_reaches(self):
-        self.assertEqual(sorted(onboard_parts.ONBOARD_PARTS), sorted(role for role, spec in boards.ONBOARD_ROLES.items() if spec.scenario_verb))
+        self.assertEqual(sorted(onboard_parts.ONBOARD_PARTS),
+                         sorted(role for role, spec in board_records.ONBOARD_ROLES.items() if spec.scenario_verb))
 
 
 class AWiredGpioHasItsOwnLimitTest(unittest.TestCase):
@@ -95,19 +96,19 @@ class AWiredGpioHasItsOwnLimitTest(unittest.TestCase):
 
     def test_each_wired_gpio_says_what_its_part_stands_in_for(self):
         board = self.kept(firebeetle())
-        said = boards.onboard_limits(board, onboard_parts.say_wired_gpios(OnboardPartReader(board).parts()))
+        said = board_records.onboard_limits(board, onboard_parts.say_wired_gpios(OnboardPartReader(board).parts()))
         self.assertEqual(said, [("ONBOARD_LED (GPIO21)", WIRED_LED), ("ONBOARD_BUTTON (GPIO47)", WIRED_BUTTON)])
 
     def test_a_definition_not_in_the_store_says_not_checked_and_still_words_each_wired_gpio(self):
         board = firebeetle()  # the suite's scratch store holds no Wokwi definition
-        said = boards.onboard_limits(board, onboard_parts.say_wired_gpios(OnboardPartReader(board).parts()))
+        said = board_records.onboard_limits(board, onboard_parts.say_wired_gpios(OnboardPartReader(board).parts()))
         self.assertEqual(said, [("onboard GPIOs", NOT_CHECKED), ("ONBOARD_LED (GPIO21)", WIRED_LED),
                                 ("ONBOARD_BUTTON (GPIO47)", WIRED_BUTTON)])
-        self.assertEqual(boards.onboard_limits(board), [("onboard GPIOs", NOT_CHECKED)])
+        self.assertEqual(board_records.onboard_limits(board), [("onboard GPIOs", NOT_CHECKED)])
 
     def test_a_gpio_left_unwired_keeps_the_bare_header_pin_sentence(self):
         board = self.kept(firebeetle(onboard_button={"active_level": 1}))
-        said = boards.onboard_limits(board, onboard_parts.say_wired_gpios(OnboardPartReader(board).parts()))
+        said = board_records.onboard_limits(board, onboard_parts.say_wired_gpios(OnboardPartReader(board).parts()))
         self.assertEqual(said, [("ONBOARD_LED (GPIO21)", WIRED_LED), ("ONBOARD_BUTTON (GPIO47)", UNWIRED_BUTTON)])
 
 

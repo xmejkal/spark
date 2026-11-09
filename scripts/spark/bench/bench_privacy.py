@@ -15,9 +15,9 @@ How to mark a raw place is in `spark.core.privacy`'s docstring.
 import os
 from pathlib import Path
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_envelope
-import store
+from spark.records import store
 import tools
 from spark.core.privacy import Pasted, Privacy
 

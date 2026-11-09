@@ -10,9 +10,9 @@ from pathlib import Path
 from spark.bench import board_doctor
 from spark.bench import board_grant
 from spark.bench import board_look
-import boards
+from spark.records import board_records
 from spark.bench import flasher
-import store
+from spark.records import store
 import tools
 from spark.bench.deploy_gate import GateClosedError, format_rerun_line
 from spark.bench.deploy_stages import DeployPhase
@@ -62,7 +62,7 @@ class IssueGrant(Operation):
 
     def run(self, minutes, scope, project, port, *, outside):
         platform = self.platform_for(project, outside.find_tool)
-        places = boards.ButtonPlaces.of_project(project)
+        places = board_records.ButtonPlaces.of_project(project)
         try:
             finder = platform.make_port_finder(outside.run)
             reader = platform.make_board_reader(outside.run, flasher.EsptoolFlasher.boot_hint_for(places))

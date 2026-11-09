@@ -15,7 +15,7 @@ numbers only: code that harms the board another way, such as a register write, i
 
 import ast
 
-#: The pin roles whose numbers a live try refuses (D14). Each is one of boards.PIN_ROLES.
+#: The pin roles whose numbers a live try refuses (D14). Each is one of board_records.PIN_ROLES.
 REFUSED_ROLES = ("usb", "flash")
 #: The sentence for a record whose restricted role is not a list of whole GPIO numbers with a note.
 BROKEN_ROLE = "the record {board} has a pin_roles.{role} that is not a list of whole GPIO numbers with a note"

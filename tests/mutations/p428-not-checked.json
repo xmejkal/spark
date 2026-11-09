@@ -12,7 +12,7 @@
   "replace": "if steps.state == outcomes.NONE_RECORDED:"
  },
  {
-  "file": "scripts/deploy_record_store.py",
+  "file": "scripts/spark/records/deploy_record_store.py",
   "name": "read_last_deploy: a record that cannot be read is NONE_RECORDED",
   "find": "except (OSError, ValueError, RecursionError):\n            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)",
   "replace": "except (OSError, ValueError, RecursionError):\n            return LastDeploy(outcomes.NONE_RECORDED)"
@@ -30,7 +30,7 @@
   "replace": "outcomes.NOT_CHECKED_MESSAGE % \"the log cannot be read\", UNCOUNTED_ADVICE"
  },
  {
-  "file": "scripts/deploy_record_store.py",
+  "file": "scripts/spark/records/deploy_record_store.py",
   "name": "read_last_deploy raises on a record that is not JSON (READERS never-raises)",
   "find": "        except (OSError, ValueError, RecursionError):\n            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)\n        deploys",
   "replace": "        except (OSError, RecursionError):\n            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)\n        deploys"

@@ -5,12 +5,12 @@ look.py printed before it (board_look.report_lines and board_envelope's look ite
 `crash` envelope and exit 2, is the one new output.
 """
 
-import board_codes
+from spark.bench import board_codes
 from spark.bench import board_doctor
 from spark.bench import board_envelope
 from spark.bench import board_look
 from spark.bench.deploy_stages import DeployPhase
-import boards
+from spark.records import board_records
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
 from spark.bench import bench_privacy
@@ -83,7 +83,7 @@ class LookAtBoard(Operation):
     def _stopped(stop, platform, port, outside):
         """The result of a LookStopError: one unchecked Finding, the doctor's facts in `data`, its lines as the diagnostics."""
         lines, doctor = board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)
-        places = boards.ButtonPlaces.of_project(platform.project)
+        places = board_records.ButtonPlaces.of_project(platform.project)
         # the port and the button words, each on one line (P430); a tool problem's path is flat already (P444)
         said = guard_sentence("\n".join(lines), port, places.boot, places.reset, places.orientation)
         return OperationResult({"doctor": board_doctor.as_dict(doctor)} if doctor else None,

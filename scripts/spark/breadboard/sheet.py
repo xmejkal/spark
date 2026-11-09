@@ -10,13 +10,13 @@ import re
 from pathlib import Path
 
 from spark.design import pin_assigner
-import board_pads
+from spark.records import board_pads
 from spark.design import loader
 import drawer
 from spark.design import board_emitter
 from spark.breadboard import part_shape
 import parts
-import store
+from spark.records import store
 from spark.breadboard import bench_changes
 from spark.breadboard import breadboard_codes
 from spark.breadboard import drawing

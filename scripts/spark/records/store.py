@@ -25,7 +25,7 @@ import threading
 import urllib.parse
 from pathlib import Path
 
-import records_codes
+from spark.records import records_codes
 from spark.core import outcomes
 from spark.core.errors import CodedMessageError
 from spark.core.text_guards import CONTROL
@@ -36,7 +36,7 @@ except ImportError:  # spark installs on macOS and Linux (README); where there i
     fcntl = None
 
 #: The plugin's own folder: spark's library of parts and boards ships here, read-only.
-PLUGIN = Path(__file__).resolve().parent.parent
+PLUGIN = Path(__file__).resolve().parents[3]
 
 #: The suite never touches the person's store (P88). A process running unittest gets a scratch one here, at
 #: import, whatever SPARK_HOME it inherited (spark's own refusals tell people to set it), and every script it

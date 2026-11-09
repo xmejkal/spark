@@ -36,13 +36,13 @@
   "replace": "or False"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "a file name with a lone surrogate is accepted",
   "find": "if CONTROL.search(name):",
   "replace": "if False:"
  },
  {
-  "file": "scripts/store.py",
+  "file": "scripts/spark/records/store.py",
   "name": "the projects list path enters its sentence raw",
   "find": "in each project\", path, broken, code=records_codes.RECORD_FILE_BROKEN)",
   "replace": "in each project\" % (path, broken), code=records_codes.RECORD_FILE_BROKEN)"
@@ -72,7 +72,7 @@
   "replace": "P230 will research one.\" % name, reason"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "a board id that is no string reaches a lookup",
   "find": "records(project).get(board_id) if isinstance(board_id, str) else None",
   "replace": "records(project).get(board_id)"

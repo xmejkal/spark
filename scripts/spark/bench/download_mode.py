@@ -7,7 +7,7 @@ docs/observations/2026-10-14-p238-spike/finding.md). This module holds the ROM's
 them. board_console.py's `ConsoleProbe` reads the console and waits for the press of R (P251 moved it there).
 """
 
-import boards
+from spark.records import board_records
 from spark.firmware.scenario_steps import READY
 
 #: What the ESP32 ROM prints when it boots into download mode, as the XIAO C6 printed it on 2026-10-14 (AT157).
@@ -28,22 +28,22 @@ PORT_GONE = ("the board's port is gone: press its %(reset)s once%(orientation)s.
 READ_AGAIN = "read again"
 
 
-def press_reset(places=boards.ButtonPlaces.EMPTY):
-    """PRESS_RESET with the RESET button's place from `places`, a boards.ButtonPlaces."""
+def press_reset(places=board_records.ButtonPlaces.EMPTY):
+    """PRESS_RESET with the RESET button's place from `places`, a board_records.ButtonPlaces."""
     return PRESS_RESET % {"reset": places.reset, "orientation": places.orientation}
 
 
-def no_reset(places=boards.ButtonPlaces.EMPTY):
+def no_reset(places=board_records.ButtonPlaces.EMPTY):
     """NO_RESET with the wait and the RESET button's place from `places`."""
     return NO_RESET % {"wait": RESET_WAIT_S, "reset": places.reset, "orientation": places.orientation}
 
 
-def not_counted(places=boards.ButtonPlaces.EMPTY):
+def not_counted(places=board_records.ButtonPlaces.EMPTY):
     """NOT_COUNTED with the RESET button's place from `places`."""
     return NOT_COUNTED % {"reset": places.reset, "orientation": places.orientation}
 
 
-def port_gone(places=boards.ButtonPlaces.EMPTY):
+def port_gone(places=board_records.ButtonPlaces.EMPTY):
     """PORT_GONE with the RESET button's place from `places`."""
     return PORT_GONE % {"reset": places.reset, "orientation": places.orientation}
 

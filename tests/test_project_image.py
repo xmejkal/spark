@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.firmware import project_image  # noqa: E402
 from spark.firmware import scenario_steps  # noqa: E402
-import store  # noqa: E402
+from spark.records import store  # noqa: E402
 from spark.firmware.project_image import DeployError, ProjectImage  # noqa: E402
 
 IMAGE = b"image"

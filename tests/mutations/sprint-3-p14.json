@@ -30,7 +30,7 @@
   "replace": "    if True:\n        return []"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/records/board_records.py",
   "name": "the contract lets a rail-less pad through",
   "find": "        if not isinstance(supply, dict) or not supply.get(\"rail\"):",
   "replace": "        if False:"

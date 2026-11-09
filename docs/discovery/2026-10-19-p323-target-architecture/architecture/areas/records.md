@@ -20,23 +20,26 @@ the store and the project. It also builds `Backends` once per run, so every back
 | `board-get`, `board-validate`, `board-resolve`, and `--path`, `--id`, `--paths` | `boards.py` (`main`) | reads |
 | `tool-status`, `tool-install`, `tool-on`, `tool-off`, `tool-use`, `tool-pin`, `tool-new` | `tools.py --status` and the rest (`main`) | reads, writes, network and runs for install |
 
-The flags stay as they are. `boards.py --list` is design's `board-list` Operation, because it says which board
-stops at the footprint (`footprint_stop`, called in `main`), a design fact. `boards.py` imports both
-areas' `OPERATIONS`, as `parts.py` does.
+The flags stay as they are. `boards.py --list` is design's `board-list` Operation, because it says which board stops at
+the footprint (`footprint_emitter.footprint_stop`, read by `main` and wherever a board is chosen; it moved to design in
+W6-R3a, P718), a design fact. `boards.py` imports both areas' `OPERATIONS`, as `parts.py` does.
 
 ### Its components
 
 | Module | Holds |
 |---|---|
-| `records/store.py` | the store's folder, `write_file`, `fetch`, events, `keep`, moved from `scripts/store.py` |
+| `records/store.py` | the store's folder, `write_file`, `fetch`, events, `keep`, moved from `scripts/store.py` in W6-R3a (P718) |
 | `records/record_folders.py` | `RecordFolders`: the library, store and project folders, built once |
 | `records/record_finder.py` | `RecordFinder`: one record kind read across the three folders, the nearest wins |
 | `records/record_kind.py` | `RecordKind`: a record kind's `version`, `required` keys and rules, `validate`, `stops_at`, `shelf_copy`, `digest` |
-| `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, `OnboardRole`, `ONBOARD_ROLES`, `POWER_FACT_FUNCTIONS`, `SimulatedPart`, `read_simulated_part`, `WOKWI_DEFINITION`, `onboard_limits`, `gpio_limits` and the readers of the role table, moved from `boards.py` |
+| `records/board_records.py` | the board loader, `ButtonPlaces`, `BoardError`, `OnboardRole`, `ONBOARD_ROLES`, `POWER_FACT_FUNCTIONS`, `SimulatedPart`, `read_simulated_part`, `WOKWI_DEFINITION`, `onboard_limits`, `gpio_limits` and the readers of the role table, moved from `boards.py` in W6-R3a (P718). The CLI `boards.py` keeps `main` and `_validate_all`, which prints. Its split by job is a card |
 | `records/brief.py` | `Brief`: the project's `prefer` and `sellers`, from `.spark/project.json` |
 | `records/deploy_record_store.py` | `DeployRecordStore` and `LastDeploy`: what the store says of the board on USB (built in `scripts/` in P431) |
 | `records/provenance.py` | the leaf `provenance`: what a fact must carry |
-| `records/records_codes.py` | the leaf `records_codes` (P716, flat in `scripts/` until W6-R3a): a code and its sentence for each refusal of `BoardError`, `ToolProblem` and `StoreProblem`, `errors.CodedMessageError`s |
+| `records/board_pads.py` | the footprint pad each pin label of a board sits on: the one reader of `physical.pad_aliases` (P512) |
+| `records/onboard_parts.py` | the onboard parts a scenario wires (`ONBOARD_PARTS`, P484). It reads `sheet`, `loader` and `sim_project`, so it imports three areas above records; its split is a card |
+| `records/missing_facts.py` | the facts a board record owes a stage, as Findings, and what refuses a write of them (P464) |
+| `records/records_codes.py` | the leaf `records_codes` (P716, moved in W6-R3a): a code and its sentence for each refusal of `BoardError`, `ToolProblem` and `StoreProblem`, `errors.CodedMessageError`s |
 | `records/tool_finder.py` | `ToolFinder` over the three `tools.json` layers, install lines |
 | `records/backends.py` | `Backends` and `build_outside` |
 

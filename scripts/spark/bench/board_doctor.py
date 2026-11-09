@@ -18,7 +18,7 @@ the project can change in their own layers): esptool needs download mode, mpremo
 
 from collections import namedtuple
 
-import boards
+from spark.records import board_records
 import tools
 from spark.bench.board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
 from spark.bench.board_look import LookStopError
@@ -163,7 +163,7 @@ def after_esptool(stop, platform, run):
     return doctor.examine(stop.port, platform.find_tool("flasher"), stop.tool_said)
 
 
-def step_sentence(code, places=boards.ButtonPlaces.EMPTY):
+def step_sentence(code, places=board_records.ButtonPlaces.EMPTY):
     """The sentence of step `code`, naming the buttons as `places` (ButtonPlaces) does."""
     return MESSAGE_FOR[code] % {"boot": places.boot, "reset": places.reset, "orientation": places.orientation}
 
@@ -178,7 +178,7 @@ def stop_answer(script, stop, platform, run):
     if result is None:
         return ["%s: %s" % (script, stop)], None
     return ["%s: could not read the board on %s" % (script, stop.port)] + [
-        "  " + line for line in describe(result, boards.ButtonPlaces.of_project(platform.project))], result
+        "  " + line for line in describe(result, board_records.ButtonPlaces.of_project(platform.project))], result
 
 
 def stop_lines(script, stop, platform, run):
@@ -186,7 +186,7 @@ def stop_lines(script, stop, platform, run):
     return stop_answer(script, stop, platform, run)[0]
 
 
-def describe(result, places=boards.ButtonPlaces.EMPTY):
+def describe(result, places=board_records.ButtonPlaces.EMPTY):
     """The lines a person reads for a DoctorProbeResult, without indent. `places` names the buttons the steps mention."""
     out = ["said    %s" % result.tool_said] if result.tool_said else []
     out += ["check   %s: %s" % (check.name, check.fact) for check in result.checks]
