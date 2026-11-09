@@ -283,7 +283,7 @@ class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
         project = Path(tempfile.mkdtemp()) / NASTY
         project.mkdir()
         (project / "requirements.json").write_text("{not json")
-        with self.assertRaises(image_builder.tools.ToolProblem) as caught:
+        with self.assertRaises(image_builder.tool_finder.ToolProblem) as caught:
             image_builder.board_build(project)
         assert_flat(self, caught.exception)
 
@@ -300,24 +300,27 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
     def run_main(self, argv, failing):
         import contextlib
         import io
-        import tools
-        real = tools.find
+        from spark.records import tool_finder
+        real = tool_finder.find
 
         def find(name, project=None, personal=None):
             if name == failing:
-                raise tools.ToolProblem({"littlefs": "littlefs (littlefs-python) is not installed — install: python3 -m pip install --user littlefs-python",
-                                         "firmware-image": "firmware-image (micropython-esp32s3) is not installed — install: /spark:setup add micropython-esp32s3"}[name], code="tool_missing")
+                raise tool_finder.ToolProblem({
+                    "littlefs": "littlefs (littlefs-python) is not installed — install: python3 -m pip install --user "
+                                "littlefs-python",
+                    "firmware-image": "firmware-image (micropython-esp32s3) is not installed — install: /spark:setup "
+                                      "add micropython-esp32s3"}[name], code="tool_missing")
             return real(name, project, personal)
         err = io.StringIO()
-        with mock.patch.object(tools, "find", side_effect=find), contextlib.redirect_stderr(err), \
+        with mock.patch.object(tool_finder, "find", side_effect=find), contextlib.redirect_stderr(err), \
                 contextlib.redirect_stdout(io.StringIO()):
             code = flash_image.main(argv + ["--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
         return code, err.getvalue()
 
     def test_without_micropython_the_list_s_download_is_used(self):
-        import tools
-        found = tools.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])
-        with mock.patch.object(tools, "find", return_value=found) as asked:
+        from spark.records import tool_finder
+        found = tool_finder.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])
+        with mock.patch.object(tool_finder, "find", return_value=found) as asked:
             self.assertEqual(image_builder.interpreter_for(None), (Path("/downloads/mp.bin"), 0))
         self.assertEqual(asked.call_args[0][0], "firmware-image")
 
@@ -333,28 +336,29 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
                 "roles": {"firmware-image": "micropython-esp32s3"}, "contracts": {}}
 
     def test_the_build_comes_from_the_project_s_board(self):
-        import tools
-        found = tools.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
-        with mock.patch.object(tools, "merged", return_value=self.two_builds()), \
-                mock.patch.object(tools, "find", return_value=found) as asked:
+        from spark.records import tool_finder
+        found = tool_finder.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
+        with mock.patch.object(tool_finder, "merged", return_value=self.two_builds()), \
+                mock.patch.object(tool_finder, "find", return_value=found) as asked:
             self.assertEqual(image_builder.interpreter_for(None, self.project_on("xiao-esp32-c6")), (Path("/downloads/c6.bin"), 0))
         self.assertEqual(asked.call_args[0][0], "micropython-xiao-esp32c6")
 
     def test_a_board_whose_build_no_tool_holds_is_refused_by_name(self):
-        import tools
+        from spark.records import tool_finder
         lists = self.two_builds()
         del lists["tools"]["micropython-xiao-esp32c6"]
-        with mock.patch.object(tools, "merged", return_value=lists), self.assertRaises(tools.ToolProblem) as said:
+        with mock.patch.object(tool_finder, "merged",
+                               return_value=lists), self.assertRaises(tool_finder.ToolProblem) as said:
             image_builder.interpreter_for(None, self.project_on("xiao-esp32-c6"))
         self.assertIn("SEEED_XIAO_ESP32C6", str(said.exception))
 
     def test_that_refusal_names_the_tools_entry_to_write_with_the_two_fields_that_tie_it_to_the_build(self):
         # P463: the person can name their own build; no entry holds this one yet, so the entry needs the build and the contract
-        import tools
+        from spark.records import tool_finder
         project = self.project_on("firebeetle2-esp32s3")
         (project / ".spark").mkdir()
         (project / ".spark" / "tools.json").write_text(json.dumps({"micropython-esp32s3": {"micropython_port": "ELSEWHERE"}}))
-        with self.assertRaises(tools.ToolProblem) as said:
+        with self.assertRaises(tool_finder.ToolProblem) as said:
             image_builder.interpreter_for(None, project)
         entry = {"kind": "download", "file": "<file>", "url": "<url>", "sha256": "<sha256>",
                  "micropython_port": "ESP32_GENERIC_S3", "meets": ["micropython-esp32-bin"]}
@@ -376,36 +380,37 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(image_builder.own_build_hint_for("/p", None, None), "")
 
     def test_a_named_board_with_no_build_in_its_record_is_refused_not_given_the_default(self):
-        import tools
-        with mock.patch.object(tools, "merged", return_value=self.two_builds()), self.assertRaises(tools.ToolProblem) as said:
+        from spark.records import tool_finder
+        with mock.patch.object(tool_finder, "merged",
+                               return_value=self.two_builds()), self.assertRaises(tool_finder.ToolProblem) as said:
             image_builder.interpreter_for(None, self.project_on("no-such-board"))
         self.assertIn("no-such-board", str(said.exception))
 
     def test_the_build_s_tool_is_found_in_the_project_s_lists(self):
-        import tools
+        from spark.records import tool_finder
         project = self.project_on("xiao-esp32-c6")
-        found = tools.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
-        with mock.patch.object(tools, "merged", return_value=self.two_builds()) as lists, \
-                mock.patch.object(tools, "find", return_value=found) as asked:
+        found = tool_finder.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
+        with mock.patch.object(tool_finder, "merged", return_value=self.two_builds()) as lists, \
+                mock.patch.object(tool_finder, "find", return_value=found) as asked:
             image_builder.interpreter_for(None, project)
         self.assertEqual(asked.call_args, mock.call("micropython-xiao-esp32c6", project))
         self.assertEqual(lists.call_args, mock.call(project))
 
     def test_an_entry_that_does_not_meet_the_contract_is_not_the_build(self):
-        import tools
+        from spark.records import tool_finder
         lists = self.two_builds()
         lists["tools"] = {"a-stray": {"micropython_port": "SEEED_XIAO_ESP32C6"}, **lists["tools"]}
-        found = tools.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
-        with mock.patch.object(tools, "merged", return_value=lists), \
-                mock.patch.object(tools, "find", return_value=found) as asked:
+        found = tool_finder.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])
+        with mock.patch.object(tool_finder, "merged", return_value=lists), \
+                mock.patch.object(tool_finder, "find", return_value=found) as asked:
             image_builder.interpreter_for(None, self.project_on("xiao-esp32-c6"))
         self.assertEqual(asked.call_args[0][0], "micropython-xiao-esp32c6")
 
     def test_a_broken_requirements_file_is_refused_not_given_the_default(self):
-        import tools
+        from spark.records import tool_finder
         project = Path(tempfile.mkdtemp())
         (project / "requirements.json").write_text("{not json")
-        with self.assertRaises(tools.ToolProblem) as said:
+        with self.assertRaises(tool_finder.ToolProblem) as said:
             image_builder.interpreter_for(None, project)
         self.assertIn("requirements.json", str(said.exception))
 
@@ -413,19 +418,19 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         import contextlib
         import io
         import os
-        import tools
+        from spark.records import tool_finder
         c6, s3 = self.root / "c6.bin", self.root / "s3.bin"
         c6.write_bytes(fake_interpreter(head=b"\xe9C6"))
         s3.write_bytes(fake_interpreter(head=b"\xe9S3"))
-        real = tools.find
+        real = tool_finder.find
         builds = {"micropython-xiao-esp32c6": c6, "firmware-image": s3, "micropython-esp32s3": s3}
 
         def find(name, *rest, **kw):
-            return tools.Tool(name, None, {}, [str(builds[name])]) if name in builds else real(name, *rest, **kw)
+            return tool_finder.Tool(name, None, {}, [str(builds[name])]) if name in builds else real(name, *rest, **kw)
         here = os.getcwd()
         try:
             os.chdir(cwd or here)
-            with mock.patch.object(tools, "find", side_effect=find), contextlib.redirect_stdout(io.StringIO()), \
+            with mock.patch.object(tool_finder, "find", side_effect=find), contextlib.redirect_stdout(io.StringIO()), \
                     contextlib.redirect_stderr(io.StringIO()):
                 code = flash_image.main(argv + ["--files", str(self.root / "fw"), "-o", str(self.root / "out.bin")])
         finally:
@@ -446,9 +451,9 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(self.image_from_main(project, [], cwd=project / "firmware"), (0, b"\xe9C6"))
 
     def test_a_project_with_no_board_uses_the_firmware_image_role(self):
-        import tools
-        found = tools.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])
-        with mock.patch.object(tools, "find", return_value=found) as asked:
+        from spark.records import tool_finder
+        found = tool_finder.Tool("micropython-esp32s3", "firmware-image", {}, ["/downloads/mp.bin"])
+        with mock.patch.object(tool_finder, "find", return_value=found) as asked:
             self.assertEqual(image_builder.interpreter_for(None, Path(tempfile.mkdtemp())), (Path("/downloads/mp.bin"), 0))
         self.assertEqual(asked.call_args[0][0], "firmware-image")
 
@@ -460,11 +465,11 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         return lists
 
     def chosen_for(self, build, given=None, find=None):
-        import tools
-        found = tools.Tool("micropython-esp32", None, {}, ["/downloads/esp32.bin"])
+        from spark.records import tool_finder
+        found = tool_finder.Tool("micropython-esp32", None, {}, ["/downloads/esp32.bin"])
         with mock.patch.object(image_builder, "board_build", return_value=build), \
-                mock.patch.object(tools, "merged", return_value=self.with_the_esp32()), \
-                mock.patch.object(tools, "find", side_effect=find or (lambda name, *rest: found)):
+                mock.patch.object(tool_finder, "merged", return_value=self.with_the_esp32()), \
+                mock.patch.object(tool_finder, "find", side_effect=find or (lambda name, *rest: found)):
             return image_builder.interpreter_for(given, Path(tempfile.mkdtemp()))
 
     def test_an_esp32_board_s_build_starts_at_its_entry_s_offset(self):
@@ -474,10 +479,10 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(self.chosen_for("ESP32_GENERIC_S3").offset, 0)
 
     def test_a_given_file_keeps_the_board_s_offset_while_its_download_is_not_in_the_store(self):
-        import tools
+        from spark.records import tool_finder
 
         def not_installed(name, *rest):
-            raise tools.ToolProblem("%s is not installed" % name, code="tool_missing")
+            raise tool_finder.ToolProblem("%s is not installed" % name, code="tool_missing")
         given = self.root / "micropython.bin"
         self.assertEqual(self.chosen_for("ESP32_GENERIC", given, not_installed), (given, ESP32_INTERPRETER_OFFSET))
 
@@ -486,31 +491,31 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(self.chosen_for("ESP32_GENERIC_C3", given), (given, 0))
 
     def test_a_given_file_for_a_board_whose_record_names_no_build_is_refused(self):
-        import tools
-        with self.assertRaises(tools.ToolProblem) as said:
+        from spark.records import tool_finder
+        with self.assertRaises(tool_finder.ToolProblem) as said:
             image_builder.interpreter_for(self.root / "micropython.bin", self.project_on("no-such-board"))
         self.assertIn("no-such-board", str(said.exception))
 
     def test_a_given_file_with_a_broken_requirements_file_is_refused(self):
-        import tools
+        from spark.records import tool_finder
         project = Path(tempfile.mkdtemp())
         (project / "requirements.json").write_text("{not json")
-        with self.assertRaises(tools.ToolProblem) as said:
+        with self.assertRaises(tool_finder.ToolProblem) as said:
             image_builder.interpreter_for(self.root / "micropython.bin", project)
         self.assertIn("requirements.json", str(said.exception))
 
     def test_a_project_with_no_board_takes_the_role_entry_s_offset(self):
-        import tools
-        found = tools.Tool("micropython-esp32", "firmware-image", {"kind": "download", "flash_offset": "0x1000"},
-                           ["/downloads/esp32.bin"])
-        with mock.patch.object(tools, "find", return_value=found):
+        from spark.records import tool_finder
+        found = tool_finder.Tool("micropython-esp32", "firmware-image", {"kind": "download", "flash_offset": "0x1000"},
+                                 ["/downloads/esp32.bin"])
+        with mock.patch.object(tool_finder, "find", return_value=found):
             self.assertEqual(image_builder.interpreter_for(None, Path(tempfile.mkdtemp())).offset, ESP32_INTERPRETER_OFFSET)
 
     def test_a_broken_flash_offset_is_a_tool_problem_on_every_path(self):
-        import tools
+        from spark.records import tool_finder
         for broken in (4096, "-0x10", "zero"):
             with self.subTest(broken=broken):
-                with self.assertRaises(tools.ToolProblem) as said:
+                with self.assertRaises(tool_finder.ToolProblem) as said:
                     image_builder.offset_of({"kind": "download", "flash_offset": broken})
                 self.assertIn("flash_offset", str(said.exception))
 
@@ -518,12 +523,13 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
     def test_the_command_says_could_not_run_for_a_broken_flash_offset(self):
         import contextlib
         import io
-        import tools
-        found = tools.Tool("micropython-esp32", "firmware-image", {"kind": "download", "flash_offset": "zero"},
-                           [str(self.root / "micropython.bin")])
-        real = tools.find
+        from spark.records import tool_finder
+        found = tool_finder.Tool("micropython-esp32", "firmware-image", {"kind": "download", "flash_offset": "zero"},
+                                 [str(self.root / "micropython.bin")])
+        real = tool_finder.find
         err = io.StringIO()
-        with mock.patch.object(tools, "find", side_effect=lambda name, *rest: found if name == "firmware-image" else real(name, *rest)), \
+        with mock.patch.object(tool_finder, "find", side_effect=lambda name, *rest:
+                               found if name == "firmware-image" else real(name, *rest)), \
                 contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
             code = flash_image.main(["--project", str(Path(tempfile.mkdtemp())), "--files", str(self.root / "fw"),
                                      "-o", str(self.root / "out.bin")])
@@ -574,15 +580,15 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
 
     def test_the_shipped_list_holds_the_original_esp32_s_build_at_0x1000(self):
         import re
-        import tools
-        entry = tools.merged()["tools"]["micropython-esp32"]
+        from spark.records import tool_finder
+        entry = tool_finder.merged()["tools"]["micropython-esp32"]
         self.assertEqual((entry["micropython_port"], int(entry["flash_offset"], 0)), ("ESP32_GENERIC", ESP32_INTERPRETER_OFFSET))
-        self.assertIsNone(tools.entry_problem(entry))
+        self.assertIsNone(tool_finder.entry_problem(entry))
         self.assertRegex(entry["sha256"], re.compile(r"^[0-9a-f]{64}$"))
 
     def test_the_shipped_list_holds_a_build_for_each_shipped_board(self):
-        import tools
-        held = {entry.get("micropython_port") for entry in tools.merged()["tools"].values()}
+        from spark.records import tool_finder
+        held = {entry.get("micropython_port") for entry in tool_finder.merged()["tools"].values()}
         for record in sorted((ROOT / "boards").glob("*.json")):
             port = json.loads(record.read_text()).get("micropython_port")
             if port:
@@ -604,10 +610,11 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
 
     @needs_littlefs
     def test_with_no_build_given_the_download_goes_into_the_image(self):
-        import tools
-        found = tools.Tool("micropython-esp32s3", "firmware-image", {}, [str(self.root / "micropython.bin")])
-        real = tools.find
-        with mock.patch.object(tools, "find", side_effect=lambda name, *rest: found if name == "firmware-image" else real(name, *rest)):
+        from spark.records import tool_finder
+        found = tool_finder.Tool("micropython-esp32s3", "firmware-image", {}, [str(self.root / "micropython.bin")])
+        real = tool_finder.find
+        with mock.patch.object(tool_finder, "find", side_effect=lambda name, *rest:
+                               found if name == "firmware-image" else real(name, *rest)):
             code, said = self.run_main([], failing=None)
         self.assertEqual(code, flash_image.EXIT_OK, said)
         self.assertEqual((self.root / "out.bin").read_bytes()[:BOOTLOADER_TABLE_OFFSET], (self.root / "micropython.bin").read_bytes()[:BOOTLOADER_TABLE_OFFSET])

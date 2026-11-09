@@ -16,7 +16,7 @@ from suite_runs import needs_littlefs  # noqa: E402
 
 import golden_bench  # noqa: E402
 import golden_firmware  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 
 
 class ShimGuardTest(unittest.TestCase):
@@ -37,10 +37,10 @@ class ShimGuardTest(unittest.TestCase):
                               capture_output=True, text=True, timeout=golden_bench.RUN_TIMEOUT_S)
 
     def test_the_simulator_found_is_the_shim(self):
-        self.assertEqual(tools.find("simulator", self.project).command, [str(self.shim)])
+        self.assertEqual(tool_finder.find("simulator", self.project).command, [str(self.shim)])
 
     def test_the_project_names_no_other_place_for_the_simulator(self):
-        entry = tools.merged(self.project)["tools"]["wokwi-cli"]
+        entry = tool_finder.merged(self.project)["tools"]["wokwi-cli"]
         self.assertEqual((entry["also"], entry["fetch"]), ([], None))
 
     def test_every_child_carries_the_fake_token(self):
@@ -88,7 +88,7 @@ class FirmwareGoldenTest(unittest.TestCase):
         cls.shim = golden_firmware.name_the_shim(cls.project, cls.folder)
         # The guard holds before any child runs: no Case starts unless the simulator found is the shim. A raise, not an
         # assert, which python -O strips.
-        if tools.find("simulator", cls.project).command != [str(cls.shim)]:
+        if tool_finder.find("simulator", cls.project).command != [str(cls.shim)]:
             raise RuntimeError("the simulator found is not the shim, so no firmware golden runs")
 
     def run_case(self, case):

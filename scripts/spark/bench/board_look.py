@@ -30,7 +30,7 @@ from spark.bench import flasher
 from spark.core import outcomes
 from spark.firmware import project_image
 from spark.firmware import sim_project
-import tools
+from spark.records import tool_finder
 from spark.core.events import INDENT
 from spark.core.text_guards import ValueMessageError, printable
 
@@ -103,7 +103,7 @@ class PortFinder:
     """The boards on USB. It runs mpremote's `devs`, which only lists, never opens a port or runs code on a board."""
 
     def __init__(self, shell, run=subprocess.run):
-        self.command, self.run = tools.command_for(shell) + ["devs"], run
+        self.command, self.run = tool_finder.command_for(shell) + ["devs"], run
 
     def nodes(self):
         try:
@@ -445,7 +445,7 @@ class LookService:
         except project_image.DeployError as cannot:
             why, code = str(cannot), cannot.reason  # image stays set when only the logs could not be read: the fit check needs it
         # --- MVP --- P436: the image check needs a tool that is missing; image stays set, there is no token
-        except tools.ToolProblem as cannot:
+        except tool_finder.ToolProblem as cannot:
             why, code = str(cannot), board_codes.TOOL_MISSING
         # --- end MVP ---
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
@@ -482,9 +482,9 @@ class LookService:
 
 def looker(platform, run=subprocess.run):
     """A LookService with the platform's port finder and board reader, whose hint names the project's buttons.
-    tools.ToolProblem becomes a LookStopError."""
+    tool_finder.ToolProblem becomes a LookStopError."""
     try:
         hint = flasher.EsptoolFlasher.boot_hint_for(board_records.ButtonPlaces.of_project(platform.project))
         return LookService(platform.make_port_finder(run), platform.make_board_reader(run, hint))
-    except tools.ToolProblem as cannot:
+    except tool_finder.ToolProblem as cannot:
         raise LookStopError("%s", cannot, reason=board_codes.TOOL_MISSING)

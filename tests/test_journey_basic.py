@@ -43,7 +43,7 @@ import deploy  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.firmware import scenario_run  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
 #: The firmware a person (or the conversation) writes once the pin map exists (P59): main.py over light.py.
@@ -156,10 +156,10 @@ def _deploy(path):
     project = path.parent.parent
     if not (project / "requirements.json").is_file() or not list((path.parent / "runs").glob("*.log")):
         return None  # deploy.py reads the requirements and the run's log: those stages name their absence
-    stand_ins = {role: tools.Tool(name, role, {"kind": "python", "module": name}, [sys.executable])
+    stand_ins = {role: tool_finder.Tool(name, role, {"kind": "python", "module": name}, [sys.executable])
                  for role, name in (("flasher", "esptool"), ("board-shell", "mpremote"))}
     out, err = io.StringIO(), io.StringIO()
-    with unittest.mock.patch.object(tools, "find", side_effect=lambda role, *args, **kwargs: stand_ins[role]), \
+    with unittest.mock.patch.object(tool_finder, "find", side_effect=lambda role, *args, **kwargs: stand_ins[role]), \
             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         code = deploy.main(["--project", str(project), "--dry-run"])
     if code != 0:

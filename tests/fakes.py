@@ -229,7 +229,7 @@ class FakeFirmwarePlatform(FirmwarePlatform):
 
 class FakeProbePlatform(MicroPythonPlatform):
     """A fake MicroPythonPlatform for a test that runs the real finder, reader and flasher over a fake `run`: the console
-    probe is `probe` (or raised, when it is an exception), and the tools come from `find_tool` (a role -> tools.Tool; the
+    probe is `probe` (or raised, when it is an exception), and the tools come from `find_tool` (a role -> Tool; the
     project's tools list when None)."""
 
     def __init__(self, project, probe, find_tool=None):
@@ -333,7 +333,7 @@ class FakeReporter(Reporter):
 
 class FakeOutsideWorld:
     """Fake OutsideWorld (spark.core.outside): `run` answers a command as `subprocess.run` would, with the callable a test
-    gives, and keeps each command in `ran`; `find_tool` gives a tools.Tool by its name with the callable given (a dict's
+    gives, and keeps each command in `ran`; `find_tool` gives a Tool by its name with the callable given (a dict's
     `get`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program.
     `report` is its `reporter`'s, a FakeReporter of its own unless the test gives one (P507). `clock` is a FakeClock unless
     given, and `make_consent` the callable given, or one that fails the test on its first call (P655)."""

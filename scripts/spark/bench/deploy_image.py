@@ -17,7 +17,7 @@ from spark.bench import board_look
 from spark.bench import deploy_gate
 from spark.bench import ready_probe
 from spark.records import store
-import tools
+from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
 from spark.bench.deploy_stages import DeployPhase
 from spark.bench.deploy_service import DeployService, FlashError
@@ -144,7 +144,7 @@ class DeployFlowService:
         self.report(Event.begin(DeployPhase.PLAN))
         try:
             planned = self._reached["plan"] = self.service.plan(self.asked.port)
-        except (DeployError, tools.ToolProblem) as cannot:
+        except (DeployError, tool_finder.ToolProblem) as cannot:
             return self.refuse(cannot)
         for note in planned.notes:
             self.say(DeployPhase.PLAN, "note: %s" % note)
@@ -171,7 +171,7 @@ class DeployFlowService:
             self.consent = self.choose_consent(look, token)
             self.planned = self.service.deploy(look, token, self.consent)
             self.keep_yes()  # only now is there a yes to report
-        except (board_look.LookStopError, DeployError, tools.ToolProblem) as cannot:
+        except (board_look.LookStopError, DeployError, tool_finder.ToolProblem) as cannot:
             if isinstance(cannot, FlashError):
                 self.keep_yes()
             reached.update(refusal=str(cannot), reason=reason_of(cannot))

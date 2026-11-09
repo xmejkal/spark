@@ -16,10 +16,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.bench import board_look  # noqa: E402
 from spark.records import board_records  # noqa: E402
 from spark.bench import flasher  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 
 PYTHON = "/opt/python3"
-ESPTOOL = tools.Tool("esptool", "flasher", {"kind": "python", "module": "esptool"}, [PYTHON])
+ESPTOOL = tool_finder.Tool("esptool", "flasher", {"kind": "python", "module": "esptool"}, [PYTHON])
 PORT = "/dev/cu.usbmodem1101"
 BASE = [PYTHON, "-m", "esptool"]
 

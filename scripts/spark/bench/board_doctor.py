@@ -19,7 +19,7 @@ the project can change in their own layers): esptool needs download mode, mpremo
 from collections import namedtuple
 
 from spark.records import board_records
-import tools
+from spark.records import tool_finder
 from spark.bench.board_console import KIND_BUSY, KIND_READ, LEAVE_CONSOLE, shows_boot
 from spark.bench.board_look import LookStopError
 from spark.bench.download_mode import DOWNLOAD_MODE
@@ -143,7 +143,7 @@ class BoardDoctorService:
         return cls((PortListedDoctorProbe(finder), ConsoleDoctorProbe(probe)))
 
     def examine(self, port, tool, tool_said=None):
-        """The DoctorProbeResult for the board on `port` after `tool` (a tools.Tool) failed and said `tool_said`.
+        """The DoctorProbeResult for the board on `port` after `tool` (a tool_finder.Tool) failed and said `tool_said`.
         UnknownStepError when the tools list gives the tool no known silent_step."""
         silent_step, results = silent_step_of(tool), []
         for check in self.checks:
@@ -156,7 +156,8 @@ class BoardDoctorService:
 
 def after_esptool(stop, platform, run):
     """The DoctorProbeResult for a board_look.LookStopError from esptool's read, or None when the stop names no port (it
-    was no failed read). The tools come from the FirmwarePlatform `platform`. tools.ToolProblem and UnknownStepError pass up."""
+    was no failed read). The tools come from the FirmwarePlatform `platform`. ToolProblem and UnknownStepError pass
+    up."""
     if stop.port is None:
         return None
     doctor = BoardDoctorService.for_board(platform.make_port_finder(run), platform.make_console_probe(stop.port, run))
@@ -173,7 +174,7 @@ def stop_answer(script, stop, platform, run):
     read, the board doctor's facts and next step follow, and the next step is the last line. `platform` as `after_esptool`."""
     try:
         result = after_esptool(stop, platform, run)
-    except (tools.ToolProblem, UnknownStepError) as cannot:
+    except (tool_finder.ToolProblem, UnknownStepError) as cannot:
         return ["%s: %s (no doctor: %s)" % (script, stop, cannot)], None
     if result is None:
         return ["%s: %s" % (script, stop)], None

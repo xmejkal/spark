@@ -20,7 +20,7 @@ from spark.firmware.firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRM
                                            SIMULATOR_HUNG, SIMULATOR_LOST, STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING)
 from spark.firmware.scenario_steps import (FILE_LINE, IMAGE_LINE, NO_MAIN, PASSED, READY, READY_STEP, SET_CONTROL, WAIT_SERIAL,
                                            ScenarioSteps, printed_text)
-import tools
+from spark.records import tool_finder
 
 
 #: wokwi-cli's line when a wait-serial step matched (0.27.1): the proof that the ready text arrived.
@@ -114,12 +114,13 @@ class ScenarioRun:
             return Refusal(NO_MAIN % (self.project, READY), NO_MAIN_PY)
         try:
             self.steps = with_ready_wait(self.scenario.read_text())
-            tools.find("littlefs", self.project)  # P457: a project's tools file that turns it off is named
+            tool_finder.find("littlefs", self.project)  # P457: a project's tools file that turns it off is named
             self.image = image_in(self.sim / "wokwi.toml")
             self.files = image_builder.files_under(self.project / "firmware")
             self.flash = image_builder.interpreter_for(self.micropython, self.project).image(self.files)
-        except (OSError, ValueError, tools.ToolProblem) as cannot:  # a missing tool or a bad build: image_builder's codes
-            code = TOOL_MISSING if isinstance(cannot, tools.ToolProblem) else getattr(cannot, "code", RUN_INPUT_UNUSABLE)
+        except (OSError, ValueError, tool_finder.ToolProblem) as cannot:  # a missing tool, or image_builder's codes
+            code = (TOOL_MISSING if isinstance(cannot, tool_finder.ToolProblem)
+                    else getattr(cannot, "code", RUN_INPUT_UNUSABLE))
             return Refusal("%s: %s" % (self.scenario.name, cannot), code)
         outside = sim_project.why_outside_sim(self.sim, self.image)
         return Refusal(outside, FIRMWARE_LINE_BAD) if outside else None
@@ -176,10 +177,11 @@ class ScenarioRun:
 
 
 def find_simulator(project, find_tool=None):  # --- MVP --- (P684)
-    """(the simulator, None) or (None, a Refusal): no simulator, or its token unset. `find_tool`: tools.find when None."""
+    """(the simulator, None) or (None, a Refusal): no simulator, or its token unset. `find_tool`: tool_finder.find when
+    None."""
     try:
-        simulator = (find_tool or tools.find)("simulator", project)
-    except tools.ToolProblem as missing:
+        simulator = (find_tool or tool_finder.find)("simulator", project)
+    except tool_finder.ToolProblem as missing:
         return None, Refusal(str(missing), TOOL_MISSING)
     token = simulator.entry.get("account_env", "WOKWI_CLI_TOKEN")
     if token and not os.environ.get(token):

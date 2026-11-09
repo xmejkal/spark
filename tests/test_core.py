@@ -11,7 +11,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
 from spark.core.cli import DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
@@ -126,7 +126,7 @@ class Toy(Operation):
                                ["  what   %s" % what, "  left   %s" % left], ["an aside"] if what == "problems" else [])
 
 
-TOOL = tools.Tool("esptool", "flasher", {}, ["esptool"])
+TOOL = tool_finder.Tool("esptool", "flasher", {}, ["esptool"])
 TEXT = HelpText("toy.py", "The toy.", "Exit codes: 0, 1, 2.")
 
 

@@ -13,7 +13,7 @@ from spark.records import board_records
 from spark.build import build_codes
 from spark.build.stages import Stage
 from spark.firmware import sim_project
-import tools
+from spark.records import tool_finder
 
 from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS
 
@@ -29,8 +29,8 @@ def find_toolchain(start):
     because a project's own pinned version beats whatever is installed globally.
     """
     try:
-        return Path(tools.find("board-engine", start).command[0])
-    except tools.ToolProblem:
+        return Path(tool_finder.find("board-engine", start).command[0])
+    except tool_finder.ToolProblem:
         return None
 
 
@@ -84,9 +84,9 @@ def tsci_version(toolchain):
     try:
         said = subprocess.run([str(toolchain), "--version"], capture_output=True, text=True,
                               timeout=60).stdout.strip().splitlines()
-        return said[-1].strip() if said else tools.UNKNOWN_VERSION
+        return said[-1].strip() if said else tool_finder.UNKNOWN_VERSION
     except (OSError, subprocess.TimeoutExpired):
-        return tools.UNKNOWN_VERSION
+        return tool_finder.UNKNOWN_VERSION
 
 
 #: Where a project may carry its own converter, for its developer; otherwise the tools list's diagram-converter, the
@@ -114,10 +114,10 @@ def converter_command(project, own):
     """The command that converts: a project's own cli.ts under the ts-runtime; else the tools list's
     diagram-converter — the bundle under the js-runtime, or a swapped converter as it is."""
     if own is not None:
-        return tools.find("ts-runtime", project).command + ["run", str(own)]
-    converter = tools.find("diagram-converter", project)
+        return tool_finder.find("ts-runtime", project).command + ["run", str(own)]
+    converter = tool_finder.find("diagram-converter", project)
     if converter.entry.get("kind") == "bundled":
-        return tools.find("js-runtime", project).command + converter.command
+        return tool_finder.find("js-runtime", project).command + converter.command
     return converter.command
 
 
@@ -125,7 +125,7 @@ def converter_stage_problem(project, own=None):
     """None when the converter and what runs it are here; else the could-not-run Stage saying which and how to install it."""
     try:
         converter_command(project, own)
-    except tools.ToolProblem as missing:
+    except tool_finder.ToolProblem as missing:
         return Stage("simulation", COULD_NOT_RUN, str(missing), build_codes.TOOL_MISSING)
     return None
 

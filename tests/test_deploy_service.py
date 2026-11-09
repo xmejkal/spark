@@ -26,7 +26,7 @@ from spark.firmware import project_image  # noqa: E402
 from spark.bench import ready_probe  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld  # noqa: E402
 from spark.core.events import LINE  # noqa: E402
 from test_board_look import FOUND, found  # noqa: E402
@@ -48,7 +48,7 @@ class ServiceCase(GateCase):
         self.commands = []
         self.clock = FakeClock()
         self.slept = self.clock.slept
-        patch = mock.patch.object(tools, "find", side_effect=find)
+        patch = mock.patch.object(tool_finder, "find", side_effect=find)
         patch.start()
         self.addCleanup(patch.stop)
 
@@ -272,20 +272,21 @@ class ThePlanTest(ServiceCase):
     @needs_littlefs
     def test_plan_checks_the_image_before_the_tools(self):
         (self.project / "sim" / "runs" / "s.log").unlink()
-        with mock.patch.object(tools, "find", side_effect=AssertionError("tools asked first")):
+        with mock.patch.object(tool_finder, "find", side_effect=AssertionError("tools asked first")):
             with self.assertRaises(project_image.DeployError):
                 self.service().plan()
 
     def test_a_chip_problem_shows_before_a_missing_tool(self):
         (self.project / "requirements.json").unlink()
-        with mock.patch.object(tools, "find", side_effect=tools.ToolProblem("flasher is not installed", code="tool_missing")):
+        with mock.patch.object(tool_finder, "find",
+                               side_effect=tool_finder.ToolProblem("flasher is not installed", code="tool_missing")):
             with self.assertRaises(project_image.DeployError):
                 self.service().plan()
 
     @needs_littlefs
     def test_plan_asks_for_the_flasher_before_the_shell(self):
         asked = []
-        with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: asked.append(name) or find(name)):
+        with mock.patch.object(tool_finder, "find", side_effect=lambda name, *a, **k: asked.append(name) or find(name)):
             self.service().plan()
         self.assertEqual(asked, ["flasher", "board-shell"])
 
@@ -312,7 +313,7 @@ class TheFirmwarePlatformTest(ServiceCase):
     def test_an_unknown_board_is_a_deploy_error_before_a_missing_tool(self):
         (self.project / "requirements.json").write_text(json.dumps({"board": "no-such-board"}))
         asked = []
-        with mock.patch.object(tools, "find", side_effect=lambda name, *a, **k: asked.append(name) or find(name)):
+        with mock.patch.object(tool_finder, "find", side_effect=lambda name, *a, **k: asked.append(name) or find(name)):
             with self.assertRaises(project_image.DeployError):
                 firmware_platform.MicroPythonPlatform(self.project).make_flasher()
         self.assertEqual(asked, [])

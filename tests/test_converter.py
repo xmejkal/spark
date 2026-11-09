@@ -49,10 +49,10 @@ def node():
     Not the person's file: a personal `{"node": {"on": false}}` skipped four of these tests, and a skip
     reads green (the final review of P82)."""
     import tempfile
-    import tools
+    from spark.records import tool_finder
     try:
-        return tools.find("js-runtime", None, Path(tempfile.mkdtemp()) / "absent.json").command
-    except tools.ToolProblem:
+        return tool_finder.find("js-runtime", None, Path(tempfile.mkdtemp()) / "absent.json").command
+    except tool_finder.ToolProblem:
         return None
 
 

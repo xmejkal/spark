@@ -18,7 +18,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 import golden_bench  # noqa: E402
 import golden_checks  # noqa: E402
 import golden_records  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 
 
 def guard_holds(folder, shims):
@@ -35,7 +35,7 @@ def guard_holds(folder, shims):
     if env["HOME"] == os.environ.get("HOME"):
         return "a child keeps the parent's HOME"
     with mock.patch.dict(os.environ, {"PATH": env["PATH"]}):
-        reader = tools.find("pdf-text", None, personal=Path(shims) / "no-tools.json").command
+        reader = tool_finder.find("pdf-text", None, personal=Path(shims) / "no-tools.json").command
     if reader != [str(Path(shims) / "pdftotext")]:
         return "the pdf-text tool found is not the fake: %r" % reader
     page = [reader[0], "-layout", "-f", "2", "-l", "2", "x.pdf", "-"]

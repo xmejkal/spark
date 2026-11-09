@@ -20,8 +20,8 @@
  {
   "file": "scripts/spark/bench/flasher.py",
   "name": "the port comes before the chip",
-  "find": "return tools.command_for(tool) + ([\"--chip\", chip] if chip else []) + ([\"--port\", port] if port else [])",
-  "replace": "return tools.command_for(tool) + ([\"--port\", port] if port else []) + ([\"--chip\", chip] if chip else [])"
+  "find": "return tool_finder.command_for(tool) + ([\"--chip\", chip] if chip else []) + ([\"--port\", port] if port else [])",
+  "replace": "return tool_finder.command_for(tool) + ([\"--port\", port] if port else []) + ([\"--chip\", chip] if chip else [])"
  },
  {
   "file": "scripts/spark/bench/flasher.py",
@@ -134,14 +134,14 @@
  {
   "file": "scripts/spark/bench/flasher.py",
   "name": "prefix drops the tool command",
-  "find": "return tools.command_for(tool) + ([\"--chip\"",
+  "find": "return tool_finder.command_for(tool) + ([\"--chip\"",
   "replace": "return ([\"--chip\""
  },
  {
   "file": "scripts/spark/bench/flasher.py",
   "name": "prefix reverses the tool command",
-  "find": "return tools.command_for(tool) + ([\"--chip\"",
-  "replace": "return list(reversed(tools.command_for(tool))) + ([\"--chip\""
+  "find": "return tool_finder.command_for(tool) + ([\"--chip\"",
+  "replace": "return list(reversed(tool_finder.command_for(tool))) + ([\"--chip\""
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",
@@ -168,7 +168,7 @@
   "replace": "BOOT_HINT = flasher.Flasher.BOOT_HINT"
  },
  {
-  "file": "scripts/tools.py",
+  "file": "scripts/spark/records/tool_finder.py",
   "name": "find no longer refuses a tool below its oldest version",
   "find": "    here = versions.too_old(entry)",
   "replace": "    here = None"
@@ -192,19 +192,19 @@
   "replace": ""
  },
  {
-  "file": "scripts/tools.py",
+  "file": "scripts/spark/records/tool_finder.py",
   "name": "to_install leaves out a tool below its floor",
   "find": " or versions.too_old(want):",
   "replace": ":"
  },
  {
-  "file": "scripts/tools.py",
+  "file": "scripts/spark/records/tool_finder.py",
   "name": "--pin writes a version below the floor",
   "find": "    if field == \"version\" and oldest and (versions.release_tuple(value) is None or versions.is_older(value, oldest)):",
   "replace": "    if False:"
  },
  {
-  "file": "scripts/tools.py",
+  "file": "scripts/spark/records/tool_finder.py",
   "name": "--pin writes a version with no digits",
   "find": "(versions.release_tuple(value) is None or versions.is_older(value, oldest))",
   "replace": "versions.is_older(value, oldest)"

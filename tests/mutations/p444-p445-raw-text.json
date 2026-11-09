@@ -48,7 +48,7 @@
   "replace": "in each project\" % (path, broken), code=records_codes.RECORD_FILE_BROKEN)"
  },
  {
-  "file": "scripts/tools.py",
+  "file": "scripts/spark/records/tool_finder.py",
   "name": "the tools file path enters its sentence raw",
   "find": "fix it or delete it\", path, broken, code=records_codes.TOOLS_LIST_BROKEN)",
   "replace": "fix it or delete it\" % (path, broken), code=records_codes.TOOLS_LIST_BROKEN)"

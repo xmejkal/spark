@@ -5,7 +5,7 @@
   "find": "interpreter.offset + len(micropython), FILESYSTEM_OFFSET))", "replace": "interpreter.offset + len(micropython), 0))"},
  {"file": "scripts/spark/firmware/image_builder.py", "name": "Interpreter.image drops the config overrides",
   "find": "return image(self.path.read_bytes(), files, overrides, self.offset)", "replace": "return image(self.path.read_bytes(), files, None, self.offset)"},
- {"file": "scripts/tools.py", "name": "a zero offset is refused",
+ {"file": "scripts/spark/records/tool_finder.py", "name": "a zero offset is refused",
   "find": "int(value, 0) >= 0", "replace": "int(value, 0) > 0"},
  {"file": "scripts/spark/firmware/scenario_run.py", "name": "the scenario run builds at offset 0",
   "find": "self.flash = image_builder.interpreter_for(self.micropython, self.project).image(self.files)",

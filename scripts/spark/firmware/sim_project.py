@@ -21,7 +21,7 @@ from spark.design import board_emitter
 from spark.core import outcomes
 import parts as parts_library
 from spark.firmware.scenario_steps import WHY_LOG_UNREADABLE
-import tools
+from spark.records import tool_finder
 
 #: The converter's mapping from each component name to its Wokwi part, in the simulation project (`mapping_for`, P31).
 MAPPING_FILE = "wokwi-mapping.json"
@@ -30,16 +30,16 @@ MAPPING_FILE = "wokwi-mapping.json"
 def find_wokwi_cli(project=None):
     """wokwi-cli, wherever the tools list says to look (PATH, ~/.local/bin, spark's downloads), else None."""
     try:
-        return tools.find("simulator", project).command[0]
-    except tools.ToolProblem:
+        return tool_finder.find("simulator", project).command[0]
+    except tool_finder.ToolProblem:
         return None
 
 
 def simulator_problem(project=None):
     """Why there is no wokwi-cli, in the tools list's own words with its install line — or None when it is here."""
     try:
-        tools.find("simulator", project)
-    except tools.ToolProblem as missing:
+        tool_finder.find("simulator", project)
+    except tool_finder.ToolProblem as missing:
         return str(missing)
     return None
 

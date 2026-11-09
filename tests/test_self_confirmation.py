@@ -98,7 +98,7 @@ MAY_READ = {
     "part_pictures.PICTOGRAMS": STRUCTURE,
     "wiring_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
     "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",
-    "tools.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
+    "tool_finder.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
 }
 
 

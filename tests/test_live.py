@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import board_look  # noqa: E402
 import live  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from spark.bench.board_console import Cure  # noqa: E402
 from fakes import FakeClock, FakeConsoleProbe, FakeOutsideWorld, FakeProbePlatform  # noqa: E402
 from spark.bench.run_live_code import RunLiveCode  # noqa: E402
@@ -153,8 +153,9 @@ class LiveScriptTest(unittest.TestCase):
 
     def test_an_unknown_silent_step_keeps_the_try_s_answer_and_says_no_doctor(self):
         refused = subprocess.CalledProcessError(1, [], "", "mpremote.transport.TransportError: could not enter raw repl\n")
-        shell = tools.Tool("mpremote", "board-shell", {"kind": "python", "module": "mpremote", "silent_step": "erase"},
-                           ["/opt/python3"])
+        shell = tool_finder.Tool("mpremote", "board-shell",
+                                 {"kind": "python", "module": "mpremote", "silent_step": "erase"},
+                                 ["/opt/python3"])
         with mock.patch.dict(found.__globals__["FOUND"], {"board-shell": shell}):
             code, said, _, _ = self.go("--code", "print(1)", "--json", answers=(refused, refused))
         line = json.loads(said)

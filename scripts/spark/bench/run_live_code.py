@@ -12,7 +12,7 @@ from spark.bench import board_grant
 from spark.bench import board_live
 from spark.bench import board_look
 from spark.records import board_records
-import tools
+from spark.records import tool_finder
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.design.restricted_pins import BrokenRecordError
 from spark.bench import bench_privacy
@@ -85,7 +85,8 @@ class RunLiveCode(Operation):
                                                 board_doctor.BoardDoctorService.for_board(finder, probe),
                                                 platform.find_tool("board-shell"))
             result = service.run(code, port)
-        except (tools.ToolProblem, board_look.LookStopError, board_records.BoardError, BrokenRecordError) as cannot:
+        except (tool_finder.ToolProblem, board_look.LookStopError, board_records.BoardError,
+                BrokenRecordError) as cannot:
             empty = dict.fromkeys(board_live.LiveTryResult._fields)
             return stops.stop_result(cannot, SCRIPT, project, port)._replace(
                 data=dict(empty, answer=outcomes.COULD_NOT_RUN, why=str(cannot), port=port))

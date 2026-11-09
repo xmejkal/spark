@@ -18,7 +18,7 @@ from pathlib import Path
 from spark.bench import board_codes
 from spark.bench import board_envelope
 from spark.records import store
-import tools
+from spark.records import tool_finder
 from spark.core.privacy import Pasted, Privacy
 
 # --- MVP ---
@@ -37,9 +37,9 @@ class AccountSecrets:
         entries = ()
         for layers in (project, None):
             try:
-                entries = tools.merged(layers)["tools"].values()
+                entries = tool_finder.merged(layers)["tools"].values()
                 break
-            except tools.ToolProblem:
+            except tool_finder.ToolProblem:
                 continue
         names = [entry.get("account_env") for entry in entries]
         return [os.environ[name] for name in names if isinstance(name, str) and len(os.environ.get(name, "")) >= MIN_SECRET]

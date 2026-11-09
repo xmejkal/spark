@@ -8,7 +8,8 @@ and its own store. `SPARK_ACCEPT=parts python3 -m unittest tests.test_golden_rec
 today's output and fails, so that a person reads `git diff tests/golden-records`.
 
 No golden reaches the network, a vendor site, an installer or a package manager. A child's PATH is the fakes' folder
-alone, which holds a fake pdftotext and nothing else, so no curl, claude or install manager of tools.MANAGERS is found
+alone, which holds a fake pdftotext and nothing else, so no curl, claude or install manager of tool_finder.MANAGERS is
+found
 (GUARDED, and the guard test runs `command -v` for each in a child). Its proxies are a closed port, its HOME an empty
 folder, and it carries no secret of the parent (golden_checks.child_env). store.fetch admits `file:` only under
 unittest, which a child never imports, so `--sources` and `--fetch` ask a URL at the closed port itself and fail in one
@@ -26,7 +27,7 @@ import golden_bench  # noqa: E402
 import golden_checks  # noqa: E402
 import golden_design  # noqa: E402
 import golden_firmware  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from fakes import fake_pdftotext  # noqa: E402
 from golden_firmware import LOG_MARK  # noqa: E402
 
@@ -34,7 +35,7 @@ ROOT = golden_bench.ROOT
 GOLDEN_DIR = ROOT / "tests" / "golden-records"
 PROJECT = golden_firmware.PROJECT
 #: The programs no child may find: each install manager's program, the downloader and Claude Code's own CLI.
-GUARDED = tuple(program for _, program in tools.MANAGERS if program) + ("curl", "claude")
+GUARDED = tuple(program for _, program in tool_finder.MANAGERS if program) + ("curl", "claude")
 #: The session id every child runs in (the suite's own, store.py's), so `--step` never names the person's session.
 SESSION = "spark-suite"
 #: A `written` name that starts with STORE is read from the run's store, not its project.

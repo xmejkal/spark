@@ -30,7 +30,7 @@
   "replace": "self.runs = project / \"sim\" / \"runs\"\n        self.read_run_logs()"
  },
  {
-  "file": "scripts/tools.py",
+  "file": "scripts/spark/records/tool_finder.py",
   "name": "command_for drops -m",
   "find": "return tool.command + [\"-m\", tool.entry[\"module\"]]",
   "replace": "return tool.command + [tool.entry[\"module\"]]"

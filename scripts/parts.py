@@ -1142,10 +1142,10 @@ def datasheet_pages(path, command):
 
 def read_datasheet(path, wanted, labels=None, project=None):
     """What `scan_datasheet` found, with the pages read, as an Answer: a fact not on a table row is a problem."""
-    import tools
+    from spark.records import tool_finder
     try:
-        reader = tools.find("pdf-text", project)
-    except tools.ToolProblem as missing:
+        reader = tool_finder.find("pdf-text", project)
+    except tool_finder.ToolProblem as missing:
         return Answer(unchecked=[_cannot("--read: %s" % missing)])
     read = []
     def counted():

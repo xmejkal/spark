@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.bench import board_look  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from fakes import FakeBoardReader, FakeFirmwarePlatform  # noqa: E402
 
 from test_deploy import FOUND  # noqa: E402
@@ -34,12 +34,12 @@ class MicroPythonPlatformTest(unittest.TestCase):
         self.assertEqual((made.tool, made.chip), (ESPTOOL, "esp32c6"))
 
     def test_the_shell_command_is_the_board_shell_s(self):
-        self.assertEqual(self.platform.make_shell_command(), tools.command_for(MPREMOTE))
+        self.assertEqual(self.platform.make_shell_command(), tool_finder.command_for(MPREMOTE))
 
     def test_the_port_finder_lists_with_the_board_shell_and_the_reader_reads_with_the_flasher(self):
         ran = []
         run = lambda command, **kw: ran.append(command)  # noqa: E731
-        self.assertEqual(self.platform.make_port_finder(run).command, tools.command_for(MPREMOTE) + ["devs"])
+        self.assertEqual(self.platform.make_port_finder(run).command, tool_finder.command_for(MPREMOTE) + ["devs"])
         reader = self.platform.make_board_reader(run, "try the button")
         self.assertEqual((reader.flasher_tool, reader.boot_hint), (ESPTOOL, "try the button"))
 
@@ -49,9 +49,9 @@ class MicroPythonPlatformTest(unittest.TestCase):
 
     def test_a_missing_tool_shows_when_a_step_asks_for_it_not_before(self):
         def missing(role):
-            raise tools.ToolProblem("%s is not installed" % role, code="tool_missing")
+            raise tool_finder.ToolProblem("%s is not installed" % role, code="tool_missing")
         platform = firmware_platform.MicroPythonPlatform(self.project, missing)  # builds
-        with self.assertRaises(tools.ToolProblem):
+        with self.assertRaises(tool_finder.ToolProblem):
             platform.make_port_finder(None)
 
 
@@ -73,8 +73,9 @@ class FakeFirmwarePlatformTest(unittest.TestCase):
             platform.make_flasher()
 
     def test_a_part_that_is_an_exception_is_raised(self):
-        with self.assertRaises(tools.ToolProblem):
-            FakeFirmwarePlatform(port_finder=tools.ToolProblem("no mpremote", code="tool_missing")).make_port_finder(None)
+        with self.assertRaises(tool_finder.ToolProblem):
+            FakeFirmwarePlatform(
+                port_finder=tool_finder.ToolProblem("no mpremote", code="tool_missing")).make_port_finder(None)
 
     def test_a_fake_board_reader_gives_its_readings_in_turn_and_keeps_the_ports(self):
         stop = board_look.LookStopError("could not read", reason="board_not_read")

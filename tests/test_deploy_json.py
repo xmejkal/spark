@@ -21,7 +21,7 @@ from spark.records import board_records  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import store  # noqa: E402
 from fakes import FakeConsent, FakeConsoleProbe, FakeOutsideWorld  # noqa: E402
@@ -320,7 +320,8 @@ class DeployJsonTest(JsonCase, GateCase):
 
     def test_a_tool_that_cannot_be_used_is_tool_missing(self):
         self.run_the_scenario()
-        with mock.patch.object(deploy_service.DeployService, "plan", side_effect=tools.ToolProblem("esptool is not installed", code="tool_missing")):
+        with mock.patch.object(deploy_service.DeployService, "plan",
+                               side_effect=tool_finder.ToolProblem("esptool is not installed", code="tool_missing")):
             code, said, _ = self.go("--token", "aaaa-bbbb")
         said = self.one(code, said, "deploy", "deploy")
         self.assertEqual((code, said["data"]["stage"], said["unchecked"][0]["code"]), (2, "plan", "tool_missing"))

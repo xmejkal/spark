@@ -25,7 +25,7 @@ from spark.bench import look_at_board  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.records import store  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 from fakes import FakeConsent, FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event  # noqa: E402
@@ -53,7 +53,8 @@ class LookScriptCase(LookCase):
         return self.go_with(FakeOutsideWorld(run=run, find_tool=found), *argv)
 
     def go_with(self, outside, *argv):
-        """(exit code, stdout lines, stderr) of look.py on `outside`, a FakeOutsideWorld, so no test patches tools.find (P442)."""
+        """(exit code, stdout lines, stderr) of look.py on `outside`, a FakeOutsideWorld, so no test patches
+        tool_finder.find (P442)."""
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = look.main(["--project", str(self.project), *argv], outside=outside)
@@ -276,7 +277,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", said[-1])
 
     def test_no_simulation_with_a_finder_that_lacks_littlefs_gives_no_token_and_the_install_line(self):
-        # P442: the image check asks the finder the look was given, not tools.find, so the fake decides what is installed
+        # P442: the image check asks the finder the look was given, not tool_finder.find, so the fake decides what is
+        # installed
         self.image.write_bytes(b"x")  # P452: the finder answers before the image is read, so no littlefs is needed to build one
 
         asked = []
@@ -495,7 +497,7 @@ class WhatStopsTheLookTest(LookScriptCase):
 
     def test_a_tool_that_is_missing(self):
         def missing(name):
-            raise tools.ToolProblem("no esptool", code="tool_missing")
+            raise tool_finder.ToolProblem("no esptool", code="tool_missing")
         code, said, problems = self.go_with(FakeOutsideWorld(find_tool=missing))
         self.assertEqual((code, said, problems), (2, [], "look.py: no esptool\n"))
 

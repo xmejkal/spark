@@ -3,7 +3,8 @@ The flow of a deploy, without a terminal (P239 PR 8): plan, look, gate, flash, t
 
 `DeployService` prints nothing and never exits. A line the person must see while a step runs is an Event it reports
 through `outside.report` (E2, P655); the rest comes back in a `DeployResult`; a refusal is an exception (`LookStopError`,
-`DeployError`, `tools.ToolProblem`, `deploy_gate.GateClosedError`). The DeployImage Operation chooses the yes and builds the result.
+`DeployError`, `ToolProblem`, `deploy_gate.GateClosedError`). The DeployImage Operation chooses the yes and builds the
+result.
 """
 
 import collections
@@ -63,7 +64,7 @@ class DeployService:
     """Service: the steps of one deploy of `project`, over a FirmwarePlatform. `outside` is the OutsideWorld: its `run` runs a
     command, its `clock` has `now`, `monotonic` and `sleep`, and its `report` takes each Event a person reads while a step
     runs. `records` keeps the deploy (default: the store's DeployRecordStore). `evidence` (an ImageEvidence) holds for every
-    step. Its methods raise `DeployError`, `tools.ToolProblem`, `board_look.LookStopError` or `deploy_gate.GateClosedError` to
+    step. Its methods raise `DeployError`, `ToolProblem`, `board_look.LookStopError` or `deploy_gate.GateClosedError` to
     say why a step cannot go on; they never print and never exit."""
 
     def __init__(self, project, platform, evidence, outside, records=None):
@@ -74,7 +75,7 @@ class DeployService:
     def plan(self, port=None):
         """
         A DeployPlan (the flash commands, the shell's command, notes) for this project. Nothing runs here. A DeployError or
-        a tools.ToolProblem says why the image cannot go on the board yet: what costs nothing is checked before the tools.
+        a ToolProblem says why the image cannot go on the board yet: what costs nothing is checked before the tools.
         A run log that tested another image refuses the flash, unless the evidence makes it a note.
         """
         image = ProjectImage(self.project)
@@ -94,7 +95,7 @@ class DeployService:
         """
         Pass the gate, then run the flash commands, erase first. Returns the DeployPlan it ran. `look` is the LookReport,
         `consent` the person's yes. It reports the gate's yes line, a BEGIN of the flash and a line per command (E2).
-        GateClosedError, DeployError and tools.ToolProblem say why nothing, or not everything, was flashed.
+        GateClosedError, DeployError and tool_finder.ToolProblem say why nothing, or not everything, was flashed.
         """
         image_path = ProjectImage(self.project).path.relative_to(self.project)
         deploy_gate.require_open_gate(look, token, consent, image_path, look.question_caveats())
@@ -138,7 +139,7 @@ class DeployService:
         """
         Read the board after the flash: find its port by the MAC, copy the facts file, check each file's sha256 and wait for
         `ready`, with the recovery for a board in download mode (P243 to P245, P462). Writes the board log. Raises DeployError
-        when the passed run's log cannot be read, and tools.ToolProblem when a tool is missing: after the flash they are not
+        when the passed run's log cannot be read, and ToolProblem when a tool is missing: after the flash they are not
         turned into a sentence. `look` is the LookReport, `planned` the DeployPlan that `deploy` returned. Returns a DeployResult.
         """
         image = ProjectImage(self.project)  # fresh: the flash and the person's wait are behind us

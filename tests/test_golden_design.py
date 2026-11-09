@@ -19,7 +19,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 import golden_bench  # noqa: E402
 import golden_checks  # noqa: E402
 import golden_design  # noqa: E402
-import tools  # noqa: E402
+from spark.records import tool_finder  # noqa: E402
 
 #: The real tools a design or build CLI could reach, none of which a golden child may find.
 REAL_TOOLS = ("tsci", "bun", "node", "npm", "wokwi-cli", "gh")
@@ -31,8 +31,9 @@ def guard_holds(project, shims):
     path = golden_checks.child_env(Path(shims).parent / "guard-store", shims)["PATH"]
     try:
         with mock.patch.dict(os.environ, {"PATH": path}):
-            found = {role: tools.find(role, project, personal=Path(shims) / "no-tools.json").command for role in ROLES}
-    except tools.ToolProblem as refused:
+            found = {role: tool_finder.find(role, project,
+                                            personal=Path(shims) / "no-tools.json").command for role in ROLES}
+    except tool_finder.ToolProblem as refused:
         return "a fake is not found: %s" % refused
     if found != {role: [str(Path(shims) / exe)] for role, exe in ROLES.items()}:
         return "the tools found are not the fakes: %r" % found
@@ -83,12 +84,12 @@ class DesignGuardTest(unittest.TestCase):
     def test_no_real_tool_is_found(self):
         with mock.patch.dict(os.environ, {"PATH": self.env()["PATH"]}):
             for role in ("ts-runtime", "js-runtime", "simulator"):
-                with self.assertRaises(tools.ToolProblem, msg=role):
-                    tools.find(role, self.project, personal=self.folder / "no-tools.json")
+                with self.assertRaises(tool_finder.ToolProblem, msg=role):
+                    tool_finder.find(role, self.project, personal=self.folder / "no-tools.json")
         self.assertEqual([name for name in REAL_TOOLS if shutil.which(name, path=self.env()["PATH"])], [])
 
     def test_without_needs_the_fakes_are_refused(self):
-        # tools.find looks for bun and node first: the reason the project's list says "needs": [] (P698 row 2).
+        # tool_finder.find looks for bun and node first: the reason the project's list says "needs": [] (P698 row 2).
         project = self.folder / "needs"
         named = golden_design.fakes_named(self.shims)
         for entry in named.values():
