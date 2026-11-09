@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.checks import build_check, physics_check  # noqa: E402
+from spark.checks import physics_board  # noqa: E402
 import check_physics  # noqa: E402
 
 
@@ -249,7 +250,7 @@ class ResistorPowerTest(unittest.TestCase):
         circuit = [component("R1", "simple_resistor", resistance=100),
                    {"type": "cad_component", "source_component_id": "R1",
                     "footprinter_string": "res0603"}]
-        self.assertEqual(physics_check.Board(circuit).footprint_of("R1"), "res0603")
+        self.assertEqual(physics_board.Board(circuit).footprint_of("R1"), "res0603")
 
     def test_the_package_table_matches_what_the_engine_emits(self):
         # Keyed "0603" and matched with startswith against "res0603", which can never be true.
@@ -280,7 +281,7 @@ class TheWholeRailAcrossAResistorTest(unittest.TestCase):
                     "footprinter_string": footprint}]
         circuit += trace("V33", ["Pullup.pin1"], [0.25])
         circuit += list(more)
-        board = physics_check.Board(circuit)
+        board = physics_board.Board(circuit)
         return physics_check.check_resistor_power(board, rails, loads, bus_nets)
 
     def severities(self, findings):
@@ -360,7 +361,7 @@ class TheWholeRailAcrossAResistorTest(unittest.TestCase):
         circuit = [net("GND"), component("Shunt", "simple_resistor", resistance=1), port("Shunt", "pin1"),
                    {"type": "cad_component", "source_component_id": "Shunt", "footprinter_string": "res0603"}]
         circuit += trace("GND", ["Shunt.pin1"], [0.25])
-        findings = physics_check.check_resistor_power(physics_check.Board(circuit), {"GND": {}}, {})
+        findings = physics_check.check_resistor_power(physics_board.Board(circuit), {"GND": {}}, {})
         self.assertEqual(self.severities(findings), ["could-not-run"])
 
     def test_a_resistor_between_two_rails_is_judged_once(self):
@@ -474,25 +475,25 @@ class EachRuleHasANameTest(unittest.TestCase):
     """
 
     def test_i2c_rise_time_with_a_bus_speed_it_has_no_limit_for_is_could_not_run(self):
-        findings = physics_check.check_i2c_rise_time(physics_check.Board([]), {}, 123456, 100)
+        findings = physics_check.check_i2c_rise_time(physics_board.Board([]), {}, 123456, 100)
         self.assertEqual([f.severity for f in findings], ["could-not-run"])
         self.assertIn("no rise-time limit known", findings[0].detail)
 
     def test_trace_currents_with_no_rails_stated_finds_nothing_and_says_nothing(self):
         # Nothing was asked, so nothing is answered — `check_all` reports the unasked separately.
-        self.assertEqual(physics_check.check_trace_currents(physics_check.Board([]), {}, 10), [])
+        self.assertEqual(physics_check.check_trace_currents(physics_board.Board([]), {}, 10), [])
 
     def test_trace_currents_for_a_rail_with_no_trace_does_not_pass_it(self):
         rails = {"X": {"max_current_a": 1.0}}
-        findings = physics_check.check_trace_currents(physics_check.Board([]), rails, 10)
+        findings = physics_check.check_trace_currents(physics_board.Board([]), rails, 10)
         self.assertTrue(findings, "a rail with a stated current and no copper was passed in silence")
         self.assertNotEqual(findings[0].severity, "problem")   # it could not measure, it did not fail it
 
     def test_capacitor_voltages_with_no_rails_finds_nothing(self):
-        self.assertEqual(physics_check.check_capacitor_voltages(physics_check.Board([]), {}), [])
+        self.assertEqual(physics_check.check_capacitor_voltages(physics_board.Board([]), {}), [])
 
     def test_resistor_power_with_no_resistors_finds_nothing(self):
-        self.assertEqual(physics_check.check_resistor_power(physics_check.Board([]), {}), [])
+        self.assertEqual(physics_check.check_resistor_power(physics_board.Board([]), {}), [])
 
 
 class TheExitCodeFollowsTheFindingsTest(unittest.TestCase):
@@ -626,7 +627,7 @@ class TheRecordsFillAnUnstatedRailTest(unittest.TestCase):
         circuit = [net("SERVO"), port("Load", "VCC"), component("Load", "simple_chip")]
         circuit += trace("SERVO", ["Load.VCC"], [0.15])
         rails = {"SERVO": {"max_current_a": stated}}
-        return physics_check.check_trace_currents(physics_check.Board(circuit), rails, 10, loads)
+        return physics_check.check_trace_currents(physics_board.Board(circuit), rails, 10, loads)
 
     def test_a_null_rail_is_judged_by_the_sum_its_records_give(self):
         findings = self._judge(None, {"SERVO": summed(1.5)})

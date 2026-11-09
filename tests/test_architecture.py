@@ -377,8 +377,8 @@ class TheChecksAreaTest(unittest.TestCase):
     """W6-C3 (P695): the checks' modules live in `scripts/spark/checks/`, its `__init__.py` imports nothing, and each
     module imports alone. `scripts/` keeps the six CLIs and `check_spine.py`, and each CLI defines `main` only."""
     CHECKS = ROOT / "scripts" / "spark" / "checks"
-    #: The seven modules of the area, by the names of its page (`areas/checks.md`).
-    MODULES = ["build_check", "check", "check_codes", "order_check", "physics_check", "rules_check", "vendor_pins_check"]
+    #: The modules of the area, by the names of its page (`areas/checks.md`).
+    MODULES = ["build_check", "check", "check_codes", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
     CLIS = ["check_all.py", "check_bom.py", "check_footprints.py", "check_physics.py", "check_vendor_pins.py",
             "compare_design.py"]
 

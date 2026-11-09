@@ -172,13 +172,13 @@ class APadHasOneIdentityAndSeveralSpellingsTest(unittest.TestCase):
 
 class TheTwoCallersShareIt(unittest.TestCase):
     def test_the_rules_checker_and_the_physics_checker_answer_alike(self):
-        from spark.checks import physics_check
+        from spark.checks import physics_board
         from spark.checks import rules_check
         elements = circuit()
         self.assertIs(rules_check.Netlist, netlist.Netlist)
-        self.assertTrue(issubclass(physics_check.Board, netlist.Netlist))
+        self.assertTrue(issubclass(physics_board.Board, netlist.Netlist))
         self.assertEqual(rules_check.Netlist(elements).nets_of("U1", "GND"),
-                         physics_check.Board(elements).nets_of("U1", "GND"))
+                         physics_board.Board(elements).nets_of("U1", "GND"))
 
 
 if __name__ == "__main__":
