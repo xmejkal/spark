@@ -19,7 +19,7 @@ import math
 from pathlib import Path
 
 from spark.breadboard import drawing
-from spark.breadboard.drawing import NotDrawn
+from spark.breadboard.drawing import NotDrawnError
 from spark.design import footprint_emitter
 
 #: Pixels per millimetre: Wokwi draws 96 px to the inch.
@@ -104,7 +104,7 @@ class RecordShapeSource(ShapeSource):
 
     @staticmethod
     def _disagrees(field, said):
-        return NotDrawn(footprint_emitter.DISAGREES_MESSAGE % said, drawing.HEADER_DISAGREES, field)
+        return NotDrawnError(footprint_emitter.DISAGREES_MESSAGE % said, drawing.HEADER_DISAGREES, field)
 
     def _refuse_odd_header(self, physical):
         """What `footprint_emitter.pads` would place wrongly or place twice: more than two rows, a row count that disagrees with
@@ -136,10 +136,10 @@ class RecordShapeSource(ShapeSource):
                                       "a pad lies outside the board along its length")
 
     def find_shape(self, board):
-        """The PartShape of this board's record, or NotDrawn with a code and a subject."""
+        """The PartShape of this board's record, or NotDrawnError with a code and a subject."""
         missing = footprint_emitter.geometry_missing(board)
         if missing:
-            raise NotDrawn("the board file lacks %s" % ", ".join(footprint_emitter.geometry_gaps(board)),
+            raise NotDrawnError("the board file lacks %s" % ", ".join(footprint_emitter.geometry_gaps(board)),
                            drawing.NO_HEADER_FACT, missing[0][0])
         physical = board["physical"]
         wrong = footprint_emitter.kind_problem(physical)
@@ -155,19 +155,19 @@ class RecordShapeSource(ShapeSource):
         pins = {}
         for label, x, y in placed:
             if label in pins:
-                raise NotDrawn("two pads of the board file are called %s" % label, drawing.DUPLICATE_PAD_LABEL, label)
+                raise NotDrawnError("two pads of the board file are called %s" % label, drawing.DUPLICATE_PAD_LABEL, label)
             pins[label] = (round(x + width / 2, 4), round(height / 2 - y, 4))
         if len(set(pins.values())) != len(pins):
             along = len({x for _, x, _ in placed}) == len({pins[label][0] for label in pins})  # one row's pads meet: the pitch
             raise self._disagrees("physical.header.%s" % ("pitch_mm" if along else "row_spacing_mm"), "two pads sit at one place")
         doubtful = physical["header"].get("doubtful_pads")
         if not isinstance(doubtful, list):
-            raise NotDrawn("the board file does not say which pads are doubtful: physical.header.doubtful_pads",
+            raise NotDrawnError("the board file does not say which pads are doubtful: physical.header.doubtful_pads",
                            drawing.NO_DOUBTFUL_PAD_FACT)
         grounds = [name for name, pad in (board.get("power_pads") or {}).items()
                    if isinstance(pad, dict) and pad.get("rail") == "ground" and name not in doubtful]
         if len(grounds) != 1 or grounds[0] not in pins:
-            raise NotDrawn("the board's ground pads, less the doubtful ones, are not exactly one: %s" % (", ".join(grounds) or "none"),
+            raise NotDrawnError("the board's ground pads, less the doubtful ones, are not exactly one: %s" % (", ".join(grounds) or "none"),
                            drawing.GROUND_NOT_ONE, ", ".join(grounds) or None)
         return PartShape((width, height), pins, grounds[0], self._groups(len(pins), doubtful))
 
@@ -216,11 +216,11 @@ SHAPE_SOURCES = sources_for()
 
 
 def find_source(board, sources=SHAPE_SOURCES):
-    """The first source that describes this board, or NotDrawn when none does."""
+    """The first source that describes this board, or NotDrawnError when none does."""
     for source in sources:
         if source.describe_part(board) is not None:
             return source
-    raise NotDrawn("nothing says how to draw the board %s" % board.get("id"), drawing.NO_DRAWING_FACT, board.get("id"))
+    raise NotDrawnError("nothing says how to draw the board %s" % board.get("id"), drawing.NO_DRAWING_FACT, board.get("id"))
 
 
 def find_part_px(board, sources=SHAPE_SOURCES):

@@ -177,12 +177,12 @@ class PinsAskedForByNameTest(unittest.TestCase):
         self.assertEqual(placed(assignments)["SDA"], "A0")
 
     def test_a_named_pin_the_board_does_not_have_is_refused(self):
-        with self.assertRaises(pin_assigner.Impossible) as refused:
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(board(), [{"name": "SDA", "pin": "NOPE"}])
         self.assertIn("does not bring out", str(refused.exception))
 
     def test_two_signals_on_one_named_pin_are_refused(self):
-        with self.assertRaises(pin_assigner.Impossible):
+        with self.assertRaises(pin_assigner.ImpossibleError):
             pin_assigner.assign(board(), [{"name": "A", "pin": "P0"}, {"name": "B", "pin": "P0"}])
 
     def test_a_named_pin_is_taken_out_of_play_for_everyone_else(self):
@@ -195,7 +195,7 @@ class PinsAskedForByNameTest(unittest.TestCase):
 class RefusalTest(unittest.TestCase):
     def test_more_wake_signals_than_wake_pins_is_refused_with_the_reason(self):
         signals = [{"name": "W%d" % n, "needs": ["wake"]} for n in range(4)]
-        with self.assertRaises(pin_assigner.Impossible) as refused:
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(board(), signals)
         message = str(refused.exception)
         self.assertIn("needs wake", message)
@@ -205,14 +205,14 @@ class RefusalTest(unittest.TestCase):
 
     def test_a_capability_no_pin_has_is_refused_plainly(self):
         flat = board(wake_capable_gpio=[], adc_gpio=[])
-        with self.assertRaises(pin_assigner.Impossible) as refused:
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(flat, [{"name": "INT", "needs": ["wake"]}])
         self.assertIn("no pin on this board can do that", str(refused.exception))
 
     def test_an_unknown_requirement_is_refused_rather_than_ignored(self):
         # A typo'd requirement that is silently dropped produces a board that is wrong in exactly
         # the way the requirement existed to prevent.
-        with self.assertRaises(pin_assigner.Impossible) as refused:
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(board(), [{"name": "X", "needs": ["waek"]}])
         self.assertIn("not something a pin can be asked for", str(refused.exception))
 
@@ -220,7 +220,7 @@ class RefusalTest(unittest.TestCase):
         # Partial answers are the failure mode: a board gets built around a map that was never
         # satisfiable, and the missing signal is discovered on the bench.
         signals = [{"name": "W%d" % n, "needs": ["wake"]} for n in range(4)]
-        with self.assertRaises(pin_assigner.Impossible):
+        with self.assertRaises(pin_assigner.ImpossibleError):
             pin_assigner.assign(board(), signals)
 
 
@@ -385,14 +385,14 @@ class ABusIsSharedTest(unittest.TestCase):
         self.assertEqual(self.on("DOUT", placed), "MISO")
 
     def test_a_bus_line_the_vocabulary_does_not_know_is_refused_not_placed_anywhere(self):
-        with self.assertRaises(pin_assigner.Impossible) as refused:
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(self.board, [{"name": "XYZ", "bus": "spi", "needs": []}])
         self.assertIn("XYZ", str(refused.exception))
         self.assertIn("SCK", str(refused.exception), "the refusal names the lines a bus has")
 
     def test_a_bus_the_board_does_not_label_is_refused(self):
         board = dict(self.board, pins={k: v for k, v in self.board["pins"].items() if k not in ("SDA", "SCL")})
-        with self.assertRaises(pin_assigner.Impossible) as refused:
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(board, [{"name": "SDA", "bus": "i2c", "needs": []}])
         self.assertIn("SDA", str(refused.exception))
 
@@ -406,7 +406,7 @@ class ABusIsSharedTest(unittest.TestCase):
         self.assertEqual(len(pins), 2)
 
     def test_a_bus_pin_taken_by_a_plain_signal_is_still_a_conflict(self):
-        with self.assertRaises(pin_assigner.Impossible):
+        with self.assertRaises(pin_assigner.ImpossibleError):
             pin_assigner.assign(self.board, [{"name": "LED", "pin": "SDA", "needs": []},
                                             {"name": "SDA", "bus": "i2c", "needs": []}])
 
@@ -481,7 +481,7 @@ class ABusWithNoDedicatedPinsGoesAnywhereTest(unittest.TestCase):
 
     def test_a_bus_the_board_dedicates_pins_to_is_still_refused_when_a_line_is_missing(self):
         board = dict(self.board, pins={k: v for k, v in self.board["pins"].items() if k != "SDA"})
-        with self.assertRaises(pin_assigner.Impossible):
+        with self.assertRaises(pin_assigner.ImpossibleError):
             pin_assigner.assign(board, [{"name": "SDA", "bus": "i2c", "needs": []}])
 
     def test_the_vocabulary_is_the_parts_librarys(self):
@@ -500,16 +500,16 @@ class ANamedPinIsStillCheckedTest(unittest.TestCase):
         self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
 
     def test_a_named_pin_that_cannot_do_what_is_asked_is_refused_saying_what(self):
-        with self.assertRaises(pin_assigner.Impossible) as refused:
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(self.board, [{"name": "BTN_WAKE", "pin": "D14", "needs": ["wake"]}])
         self.assertIn("D14", str(refused.exception))
         self.assertIn("wake", str(refused.exception))
-        with self.assertRaises(pin_assigner.Impossible) as refused:
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(self.board, [{"name": "SENSE", "pin": "D3", "needs": ["adc"]}])
         self.assertIn("adc", str(refused.exception))
 
     def test_a_named_strap_is_refused_even_with_nothing_asked(self):
-        with self.assertRaises(pin_assigner.Impossible) as refused:
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(self.board, [{"name": "BTN_BOOT", "pin": "D9", "needs": []}])
         self.assertIn("strapping", str(refused.exception))
 
@@ -568,7 +568,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
     def test_a_signal_named_like_the_board_s_led_is_refused_not_shadowed(self):
         lit = board(pin_roles={"onboard_led": {"gpio": [15], "note": "the LED"}})
         assignments, _ = pin_assigner.assign(lit, [{"name": "ONBOARD_LED", "needs": []}])
-        with self.assertRaises(pin_assigner.Impossible):
+        with self.assertRaises(pin_assigner.ImpossibleError):
             pin_assigner.pin_module(lit, assignments, "r.json")
 
     def test_the_level_that_lights_the_board_s_led_is_named_with_its_source(self):
@@ -616,7 +616,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
     def test_a_signal_named_like_the_board_s_button_is_refused_not_shadowed(self):
         pressed = board(pin_roles={"onboard_button": {"gpio": [9], "note": "the button"}})
         assignments, _ = pin_assigner.assign(pressed, [{"name": "ONBOARD_BUTTON", "needs": []}])
-        with self.assertRaises(pin_assigner.Impossible):
+        with self.assertRaises(pin_assigner.ImpossibleError):
             pin_assigner.pin_module(pressed, assignments, "r.json")
 
     def test_a_button_line_without_a_level_is_its_number_and_its_note(self):
@@ -634,7 +634,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
         # The refuter's repro: a signal ONBOARD_LED_ON on GPIO17, then the level line, and the firmware read 0.
         lit = board(pin_roles={"onboard_led": {"gpio": [15], "note": "the LED", "active_level": 0}})
         assignments, _ = pin_assigner.assign(lit, [{"name": "ONBOARD_LED_ON", "needs": []}])
-        with self.assertRaises(pin_assigner.Impossible):
+        with self.assertRaises(pin_assigner.ImpossibleError):
             pin_assigner.pin_module(lit, assignments, "r.json")
 
     def test_the_board_s_whole_note_reaches_its_own_line(self):
@@ -695,7 +695,7 @@ class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
 
     def test_a_signal_name_python_cannot_spell_is_refused_not_mangled(self):
         assignments, _ = pin_assigner.assign(board(), [{"name": "2ND-LED", "needs": []}])
-        with self.assertRaises(pin_assigner.Impossible):
+        with self.assertRaises(pin_assigner.ImpossibleError):
             pin_assigner.pin_module(board(), assignments, "r.json")
 
     def test_the_command_writes_the_file(self):
@@ -836,7 +836,7 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
         for taken in ("ONBOARD_DISPLAY_CS", "ONBOARD_DISPLAY_WIDTH", "ONBOARD_BUTTON_ON", "ONBOARD_BUTTON_S2"):
             with self.subTest(taken=taken):
                 assignments, _ = pin_assigner.assign(board(), [{"name": taken, "needs": []}])
-                with self.assertRaises(pin_assigner.Impossible) as caught:
+                with self.assertRaises(pin_assigner.ImpossibleError) as caught:
                     pin_assigner.pin_module(self.record(), assignments, "r.json")
                 self.assertEqual(str(caught.exception), "%s is a name pins.py gives a signal and the board's own %s: rename the signal"
                                  % (taken, "display" if "DISPLAY" in taken else "button"))
@@ -846,7 +846,7 @@ class TheBoardsOwnDisplayAndLabelledButtonsTest(unittest.TestCase):
         record = self.record()
         record["pin_roles"]["onboard_display"]["facts"]["pull"] = {"value": "down", "verified": True, "source": "s"}
         assignments = [{"signal": "ONBOARD_DISPLAY", "gpio": 25, "pin": "IO25", "why": "w", "roles": []}]
-        with self.assertRaises(pin_assigner.Impossible) as caught:
+        with self.assertRaises(pin_assigner.ImpossibleError) as caught:
             pin_assigner.pin_module(record, assignments, "r.json", pulled_up=("ONBOARD_DISPLAY",))
         self.assertIn("ONBOARD_DISPLAY_PULL is a name pins.py gives a signal", str(caught.exception))
         self.assertIn("ONBOARD_DISPLAY_PULL = 'down'", "\n".join(pin_assigner.pin_module(record, assignments, "r.json").splitlines()),
@@ -879,14 +879,14 @@ if __name__ == "__main__":
 
 # --- MVP --- (P700)
 class EachImpossibleCarriesItsCodeTest(unittest.TestCase):
-    """P700: every Impossible carries its code (design_codes) beside its sentence, and an agent decides on the code."""
+    """P700: every ImpossibleError carries its code (design_codes) beside its sentence, and an agent decides on the code."""
 
     def setUp(self):
         import json
         self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
 
     def code_of(self, on, signals):
-        with self.assertRaises(pin_assigner.Impossible) as caught:
+        with self.assertRaises(pin_assigner.ImpossibleError) as caught:
             pin_assigner.assign(on, signals)
         return caught.exception.code
 
@@ -905,10 +905,10 @@ class EachImpossibleCarriesItsCodeTest(unittest.TestCase):
         self.assertEqual(self.code_of(board(), [{"name": "W%d" % n, "needs": ["wake"]} for n in range(4)]), "no_pin_left")
 
     def test_a_signal_name_the_pin_map_cannot_write(self):
-        with self.assertRaises(pin_assigner.Impossible) as caught:
+        with self.assertRaises(pin_assigner.ImpossibleError) as caught:
             pin_assigner.pin_module(board(), [{"signal": "1X", "pin": "P0", "gpio": 0, "why": "", "roles": []}], "r.json")
         self.assertEqual(caught.exception.code, "signal_name_unusable")
-        with self.assertRaises(pin_assigner.Impossible) as caught:
+        with self.assertRaises(pin_assigner.ImpossibleError) as caught:
             pin_assigner.onboard_lines({"ONBOARD_LED"}, "onboard_led", "ONBOARD_LED", {"gpio": [5], "note": "x"})
         self.assertEqual(caught.exception.code, "signal_name_unusable")
 
@@ -918,7 +918,7 @@ class EachImpossibleCarriesItsCodeTest(unittest.TestCase):
         path = Path(tempfile.mkdtemp()) / "car.requirements.json"
         path.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [],
                                     "signals": [{"name": "BTN_BOOT", "pin": "D9", "needs": []}]}))
-        with self.assertRaises(pin_assigner.Impossible) as caught:
+        with self.assertRaises(pin_assigner.ImpossibleError) as caught:
             pin_assigner.pin_module_for(path)
         self.assertEqual(caught.exception.code, "named_pin_unsuitable")
         self.assertIn("BTN_BOOT", str(caught.exception))

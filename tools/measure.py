@@ -576,8 +576,8 @@ def raw_value_message(source, known):
     V1: a call of a ValueMessageError or a subclass, in a raise or before it, whose template (the first argument, or the
     keyword `template`) is no string constant, such as a `%`, an f-string, a name or a call, or whose arguments hold a `**`.
     Only `scripts/spark/core/text_guards.py`, where the helpers hand their own `template` on, may pass the bare name
-    `template`. The count is per class name. Known limits: a class under another name (`import ToolProblem as SP`,
-    `P = ToolProblem`) is not seen; `X.of_lines(...)` is not counted, because it is safe by construction; a helper
+    `template`. The count is per class name. Known limits: a class under another name (`import ToolError as SP`,
+    `P = ToolError`) is not seen; `X.of_lines(...)` is not counted, because it is safe by construction; a helper
     `def f(template)` outside text_guards is counted, so the baseline or a fix covers it.
     """
     seen = collections.Counter()

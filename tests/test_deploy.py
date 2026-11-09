@@ -60,7 +60,7 @@ def found(name, *args, **kwargs):
     """tool_finder.find for the roles and tools deploy.py and the image check ask for."""
     # P436: as tool_finder.find does for a tool nothing installed, so a test can meet a missing tool with no patch
     if name not in FOUND:
-        raise tool_finder.ToolProblem("%s is not installed — install: /spark:setup add %s" % (name, name),
+        raise tool_finder.ToolError("%s is not installed — install: /spark:setup add %s" % (name, name),
                                       code="tool_missing")
     return FOUND[name]
 
@@ -339,7 +339,7 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
         self.run_two_scenarios()
 
         def missing(name, *args, **kwargs):
-            raise tool_finder.ToolProblem("flasher (esptool) is not installed", code="tool_missing")
+            raise tool_finder.ToolError("flasher (esptool) is not installed", code="tool_missing")
         code, _, problems, _ = self.deploy("--dry-run", find=missing)
         self.assertEqual(code, deploy.EXIT_COULD_NOT_RUN)
         self.assertIn("tested another image", problems)
@@ -364,7 +364,7 @@ class WhatDeployNeedsTest(ProjectCase):
         self.run_the_scenario()
 
         def missing(name, *args, **kwargs):
-            raise tool_finder.ToolProblem("flasher (esptool) is not installed — install: python3 -m pip install --user "
+            raise tool_finder.ToolError("flasher (esptool) is not installed — install: python3 -m pip install --user "
                                           "esptool==5.5.0", code="tool_missing")
         code, _, problems, ran = self.deploy("--dry-run", find=missing)
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))

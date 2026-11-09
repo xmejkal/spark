@@ -33,7 +33,7 @@ def guard_holds(project, shims):
         with mock.patch.dict(os.environ, {"PATH": path}):
             found = {role: tool_finder.find(role, project,
                                             personal=Path(shims) / "no-tools.json").command for role in ROLES}
-    except tool_finder.ToolProblem as refused:
+    except tool_finder.ToolError as refused:
         return "a fake is not found: %s" % refused
     if found != {role: [str(Path(shims) / exe)] for role, exe in ROLES.items()}:
         return "the tools found are not the fakes: %r" % found
@@ -84,7 +84,7 @@ class DesignGuardTest(unittest.TestCase):
     def test_no_real_tool_is_found(self):
         with mock.patch.dict(os.environ, {"PATH": self.env()["PATH"]}):
             for role in ("ts-runtime", "js-runtime", "simulator"):
-                with self.assertRaises(tool_finder.ToolProblem, msg=role):
+                with self.assertRaises(tool_finder.ToolError, msg=role):
                     tool_finder.find(role, self.project, personal=self.folder / "no-tools.json")
         self.assertEqual([name for name in REAL_TOOLS if shutil.which(name, path=self.env()["PATH"])], [])
 

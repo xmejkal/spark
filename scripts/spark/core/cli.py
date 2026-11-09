@@ -123,7 +123,7 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     try:
         values = vars(parser.parse_args(argv))
-    except outcomes.BadArgument as bad:
+    except outcomes.BadArgumentError as bad:
         refused = OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.BAD_ARGUMENT, str(bad), BAD_ARGUMENT_FIX % text.prog)])
         line = renderer.render_bad_argument(refused, operation.name, operation.name) if JSON_FLAG in argv else None
         if line is None:

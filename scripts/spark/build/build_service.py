@@ -214,7 +214,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # the board's footprint, so a record that cannot give one stops here, before the CLI `emit_board.py` is asked.
     try:
         inputs = board_emitter.read_inputs(workdir / "requirements.json", project)
-    except board_emitter.RefusedInput as refused:
+    except board_emitter.RefusedInputError as refused:
         hint = "\n" + NO_FOOTPRINT_HINT if refused.stage == board_emitter.FOOTPRINT_STAGE else ""
         return stages + [Stage(refused.stage, COULD_NOT_RUN, str(refused) + hint, refused.code)]
     except Exception as crash:  # noqa: BLE001 -- emit_board ran in a child until P432, so a crash was a stage (F5), not a lost run
@@ -262,7 +262,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         try:
             tool_finder.find("board-engine", project or workdir)
             said = "the board engine was not found"
-        except tool_finder.ToolProblem as missing:
+        except tool_finder.ToolError as missing:
             said = str(missing)  # the tools list's own sentence, with what installs it (P82)
         return stages + [Stage("build", COULD_NOT_RUN,
                                "%s — so the chain was not exercised; /spark:setup installs it" % said, build_codes.TOOL_MISSING)]

@@ -370,11 +370,11 @@ class WokwiCliComesFromTheToolsListTest(unittest.TestCase):
         self.assertEqual(asked.call_args[0][0], "simulator")
 
     def test_no_wokwi_cli_is_none_with_the_reason_kept(self):
-        # The final review: the ToolProblem was dropped and a hard-coded hint (a 404 npm line) printed instead.
+        # The final review: the ToolError was dropped and a hard-coded hint (a 404 npm line) printed instead.
         from spark.records import tool_finder
         said = "simulator (wokwi-cli) is not installed — install: SENTENCE FROM THE LIST"
         root, chip = a_project()
-        with mock.patch.object(tool_finder, "find", side_effect=tool_finder.ToolProblem(said, code="tool_missing")):
+        with mock.patch.object(tool_finder, "find", side_effect=tool_finder.ToolError(said, code="tool_missing")):
             self.assertIsNone(sim_project.find_wokwi_cli())
             staged, problems = sim_project.stage_chips([(chip, "probe")], root / "sim")
         self.assertIn("SENTENCE FROM THE LIST", problems[0])

@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 from spark.design import loader  # noqa: E402
-from spark.design.board_emitter import (RefusedInput, board_file, outputs_in_contention,  # noqa: E402
+from spark.design.board_emitter import (RefusedInputError, board_file, outputs_in_contention,  # noqa: E402
                                         outputs_with_nothing_on_them, pair_sides_without_a_driver,
                                         rails_without_a_source, read_inputs)
 
@@ -37,7 +37,7 @@ def main(argv=None):
 
     try:
         inputs = read_inputs(args.requirements, args.project, args.board)
-    except RefusedInput as refused:
+    except RefusedInputError as refused:
         print(refused, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     design, assignments = inputs.design, inputs.assignments

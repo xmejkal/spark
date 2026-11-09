@@ -126,7 +126,7 @@ def keep_in_store(payload, name, dry_run=False):
         return store.keep(payload, name)
     problem = store.file_name_problem(name)
     if problem:
-        raise store.StoreProblem("%s", problem, code=records_codes.FILE_NAME_REFUSED)
+        raise store.StoreError("%s", problem, code=records_codes.FILE_NAME_REFUSED)
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -204,7 +204,7 @@ def read_datasheet(path, wanted, labels=None, project=None):
     """What `scan_datasheet` found, with the pages read, as an Answer: a fact not on a table row is a problem."""
     try:
         reader = tool_finder.find("pdf-text", project)
-    except tool_finder.ToolProblem as missing:
+    except tool_finder.ToolError as missing:
         return Answer(unchecked=[_cannot("--read: %s" % missing)])
     read = []
     def counted():
@@ -323,7 +323,7 @@ def document_name(url):
 
 def fetch_plan(record):
     """
-    [(url, file name)] for every document `--fetch` would keep, or a StoreProblem naming the first one the store would
+    [(url, file name)] for every document `--fetch` would keep, or a StoreError naming the first one the store would
     refuse by name. All or nothing (§6.4): the names come from the URLs, so every one is known before any download, and a
     refusal stops the whole fetch — not halfway, with the documents before it kept and no record pointing at them.
     `store.keep` still refuses such a name itself, as the last line of defence.
@@ -332,7 +332,7 @@ def fetch_plan(record):
     for url, name in plan:
         problem = store.file_name_problem(name)
         if problem:
-            raise store.StoreProblem("%s: %s — nothing was fetched", url, problem, code=records_codes.FILE_NAME_REFUSED)
+            raise store.StoreError("%s: %s — nothing was fetched", url, problem, code=records_codes.FILE_NAME_REFUSED)
     return plan
 
 
@@ -364,7 +364,7 @@ def _download(url):
     """One cited document through spark's one door to the network (§6.5) — None when it does not answer, so it is not kept."""
     try:
         return store.fetch(url)
-    except store.StoreProblem:
+    except store.StoreError:
         return None
 
 
@@ -406,7 +406,7 @@ def reachable(url):
     """Whether a URL answers at all, asked through spark's one door (§6.5). A hallucinated source is the one lie research tells easily."""
     try:
         store.fetch(url, method="HEAD")
-    except store.StoreProblem:
+    except store.StoreError:
         return False
     return True
 

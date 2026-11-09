@@ -169,7 +169,7 @@ def no_project_for_live(path: Path, variant: str) -> str:
             "(init_project.py makes one); %s" % (path.resolve(), offline))
 
 
-class CouldNotKeep(Exception):
+class CouldNotKeepError(Exception):
     """A live check could not fetch the vendor's header or keep it; the message names the place and the cause, and
     `code` (check_codes) says which."""
 
@@ -181,22 +181,22 @@ class CouldNotKeep(Exception):
 def keep_live_header(path: Path, variant: str, repo: str):
     """
     Fetch the vendor's header and keep it in the owning project's cache. Returns `(header text,
-    the file written)`. Raises `CouldNotKeep` when no project owns the board file, the fetch fails,
+    the file written)`. Raises `CouldNotKeepError` when no project owns the board file, the fetch fails,
     or the file cannot be written. The project is found first, so a refusal costs no network call.
     """
     try:
         target = project_header(path, variant)
     except board_records.BoardError:
-        raise CouldNotKeep(no_project_for_live(path, variant), check_codes.BOARD_HAS_NO_PROJECT) from None
+        raise CouldNotKeepError(no_project_for_live(path, variant), check_codes.BOARD_HAS_NO_PROJECT) from None
     try:
         header = fetch_variant_header(variant, repo)
     except RuntimeError as broken:
-        raise CouldNotKeep(str(broken), check_codes.HEADER_NOT_FETCHED) from None
+        raise CouldNotKeepError(str(broken), check_codes.HEADER_NOT_FETCHED) from None
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(header)
     except OSError as refused:
-        raise CouldNotKeep("fetched the header but could not keep it at %s: %s"
+        raise CouldNotKeepError("fetched the header but could not keep it at %s: %s"
                            % (target, refused.strerror or refused), check_codes.HEADER_NOT_KEPT) from None
     return header, target
 
@@ -222,7 +222,7 @@ def check_board(path: Path, offline: bool, repo: str):
     else:
         try:
             header, wrote = keep_live_header(path, variant, repo)
-        except CouldNotKeep as refused:
+        except CouldNotKeepError as refused:
             return {"board": path.stem, "status": "could-not-run", "reason": Refusal(str(refused), refused.code)}
         source = "%s %s" % (repo, VARIANT_PATH % variant)
 

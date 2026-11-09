@@ -1,6 +1,6 @@
 """
 The reasons a record, a tool or the store refuses, each a code with one sentence (P716, W6-R2): board_records'
-BoardError, tool_finder's ToolProblem and store's StoreProblem, wherever they are raised.
+BoardError, tool_finder's ToolError and store's StoreError, wherever they are raised.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
 sentence (no magic strings, P260). The three errors are `errors.CodedMessageError`s, so a raise cannot leave its

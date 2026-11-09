@@ -208,7 +208,7 @@ class TheMatchersTest(unittest.TestCase):
 
     def test_a_matcher_is_found_by_name_for_a_caller_it_serves(self):
         self.assertIsInstance(matching.matcher("word-overlap", "match"), matching.WordOverlap)
-        with self.assertRaises(matching.UnknownMatcher) as refused:
+        with self.assertRaises(matching.UnknownMatcherError) as refused:
             matching.matcher("name-contains", "match")
         self.assertIn("same-words, word-overlap", str(refused.exception))
         self.assertEqual(refused.exception.code, "unknown_matcher")  # P717

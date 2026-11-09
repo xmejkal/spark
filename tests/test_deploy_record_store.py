@@ -93,7 +93,7 @@ class ReadLastDeployTest(LastDeployCase):
         with mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
             self.addCleanup(shutil.rmtree, home, True)
             self.write("[1]")
-            with self.assertRaises(store.StoreProblem) as caught:
+            with self.assertRaises(store.StoreError) as caught:
                 STORE.write_deploy(said(), "ready seen", "yes")
         assert_flat(self, caught.exception, caught.exception.values[0])
         self.assertEqual(caught.exception.code, "not_a_board_record")
@@ -117,7 +117,7 @@ class ReadLastDeployTest(LastDeployCase):
 
     def test_a_record_that_is_no_board_record_is_left_as_it_is(self):
         self.write("[1, 2]")
-        with self.assertRaises(store.StoreProblem):
+        with self.assertRaises(store.StoreError):
             STORE.write_deploy(said(), "ready seen", "a test")
         self.assertEqual(STORE.find_path(MAC).read_text(), "[1, 2]")
 

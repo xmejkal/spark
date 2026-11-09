@@ -12,7 +12,7 @@ NOTHING_TO_DO — which is fine as a local name for "ran, and the answer is no",
 fourteen places the numbers could drift apart (sprint-4 audit B17). Scripts import the codes from
 here and alias the middle one to their own word.
 
-`AnsweringParser` is the argparse that a script with a `--json` envelope uses: a bad flag raises `BadArgument` (P433).
+`AnsweringParser` is the argparse that a script with a `--json` envelope uses: a bad flag raises `BadArgumentError` (P433).
 """
 
 import argparse
@@ -129,16 +129,16 @@ def add_env(said, env):
 
 
 # --- MVP ---
-class BadArgument(Exception):
+class BadArgumentError(Exception):
     """An argument a script cannot run with: could-not-run, and with --json an envelope like any other answer."""
 
 
 class AnsweringParser(argparse.ArgumentParser):
-    """argparse, except that a bad argument is an answer, not an exit: `error` raises BadArgument before argparse prints
+    """argparse, except that a bad argument is an answer, not an exit: `error` raises BadArgumentError before argparse prints
     anything. A script catches it, and prints an envelope with --json or calls `exit_with_usage` without it."""
 
     def error(self, message):
-        raise BadArgument(message)
+        raise BadArgumentError(message)
 
     def exit_with_usage(self, message):
         """Print the usage and `message` on stderr as argparse does, and exit with EXIT_COULD_NOT_RUN. The message holds the

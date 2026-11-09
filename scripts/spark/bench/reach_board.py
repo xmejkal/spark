@@ -82,7 +82,7 @@ class ReachBoard(Operation):
             finder = platform.make_port_finder(outside.run)
             port = port or finder.require_one_port(SCRIPT)
             probe = platform.make_console_probe(port, outside.run)
-        except (tool_finder.ToolProblem, board_look.LookStopError) as cannot:
+        except (tool_finder.ToolError, board_look.LookStopError) as cannot:
             return stop_result(cannot, SCRIPT, project, port)
         if cure_first and probe is None:
             return OperationResult(None, [Finding(outcomes.COULD_NOT_RUN, None, board_codes.NO_PROBE, board_reach.NO_PROBE_MESSAGE, "")],

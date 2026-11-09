@@ -39,7 +39,7 @@ W6-R3a, P718), a design fact. `boards.py` imports both areas' `OPERATIONS`, as `
 | `records/board_pads.py` | the footprint pad each pin label of a board sits on: the one reader of `physical.pad_aliases` (P512) |
 | `records/onboard_parts.py` | the onboard parts a scenario wires (`ONBOARD_PARTS`, P484). It reads `sheet`, `loader` and `sim_project`, so it imports three areas above records; its split is a card |
 | `records/missing_facts.py` | the facts a board record owes a stage, as Findings, and what refuses a write of them (P464) |
-| `records/records_codes.py` | the leaf `records_codes` (P716, moved in W6-R3a): a code and its sentence for each refusal of `BoardError`, `ToolProblem` and `StoreProblem`, `errors.CodedMessageError`s |
+| `records/records_codes.py` | the leaf `records_codes` (P716, moved in W6-R3a): a code and its sentence for each refusal of `BoardError`, `ToolError` and `StoreError`, `errors.CodedMessageError`s |
 | `records/tool_finder.py` | the three `tools.json` layers merged, `find`, `status`, `plan`, `install` and the install lines, moved from `tools.py` in W6-R3b (P719). The CLI `tools.py` keeps `main` and `print_status`, which prints. `ToolFinder` comes with its card |
 | `records/versions.py` | version numbers compared: a pin against the release installed, and a release against the oldest one spark runs, moved from `scripts/versions.py` in W6-R3b (P719) |
 | `records/backends.py` | `Backends` and `build_outside` |

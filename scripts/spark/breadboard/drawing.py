@@ -67,7 +67,7 @@ NotWritten = collections.namedtuple("NotWritten", "path renderer code subject wh
 BY_DESIGN = (NO_WOKWI_PART,)
 
 
-class NotDrawn(Exception):
+class NotDrawnError(Exception):
     """The steps cannot be drawn: a fact the drawing needs is missing, or the breadboard has no room. `code` (one of
     CODES) and `subject` say which, so a caller never reads the message."""
 
@@ -144,10 +144,10 @@ class WokwiGeometry:
         return copied
 
     def part(self, wokwi_type):
-        """{center, covers_holes, pins} of one Wokwi type, or NotDrawn naming it."""
+        """{center, covers_holes, pins} of one Wokwi type, or NotDrawnError naming it."""
         found = self.data["parts"].get(wokwi_type)
         if found is None:
-            raise NotDrawn("no Wokwi pin positions for %s in data/wokwi-geometry.json" % wokwi_type, NO_PIN_POSITION,
+            raise NotDrawnError("no Wokwi pin positions for %s in data/wokwi-geometry.json" % wokwi_type, NO_PIN_POSITION,
                            wokwi_type)
         return found
 
@@ -177,7 +177,7 @@ class HoleLedger:
 
     def claim(self, hole, by):
         if hole.name in self.taken:
-            raise NotDrawn("hole %s is taken by %s, and %s needs it too" % (hole.name, self.taken[hole.name], by),
+            raise NotDrawnError("hole %s is taken by %s, and %s needs it too" % (hole.name, self.taken[hole.name], by),
                            PLANNER_FAULT, hole.name)
         self.taken[hole.name] = by
 
@@ -188,21 +188,21 @@ class HoleLedger:
         return all(self.is_free(hole) for hole in self.surface.holes if hole.group == group)
 
     def claim_free_hole(self, group, by):
-        """Claim the first free hole of one group, or NotDrawn: the group is full."""
+        """Claim the first free hole of one group, or NotDrawnError: the group is full."""
         hole = next((hole for hole in self.surface.holes if hole.group == group and self.is_free(hole)), None)
         if hole is None:
-            raise NotDrawn("row %s has no free hole for %s" % (group, by), ROW_FULL, group)
+            raise NotDrawnError("row %s has no free hole for %s" % (group, by), ROW_FULL, group)
         self.claim(hole, by)
         return hole
 
     def claim_free_group(self, after, by):
-        """Claim a hole in the first group right of column `after` with nothing in it, or NotDrawn: the board is
+        """Claim a hole in the first group right of column `after` with nothing in it, or NotDrawnError: the board is
         full."""
         for hole in self.surface.terminal:
             if hole.column > after and self.group_is_free(hole.group):
                 self.claim(hole, by)
                 return hole
-        raise NotDrawn("the breadboard has no free row left for %s" % by, NO_HOLE_LEFT, by)
+        raise NotDrawnError("the breadboard has no free row left for %s" % by, NO_HOLE_LEFT, by)
 
 
 class PartPlacement:
@@ -244,7 +244,7 @@ class FirstFitPartPlacement(PartPlacement):
         part_px = self.geometry.part(drawn.type)
         wanted = [pin for pin in drawn.pins.values() if pin not in part_px["pins"]]
         if wanted:
-            raise NotDrawn("data/wokwi-geometry.json has no pin %s on %s" % (wanted[0], drawn.type), NO_PIN_POSITION,
+            raise NotDrawnError("data/wokwi-geometry.json has no pin %s on %s" % (wanted[0], drawn.type), NO_PIN_POSITION,
                            drawn.type)
         for degrees in self.TURNS_DEGREES:
             turned = rotate(part_px["pins"], part_px["center"], degrees)
@@ -265,7 +265,7 @@ class FirstFitPartPlacement(PartPlacement):
                 for hole in covered:
                     ledger.claim(hole, "%s, which covers it" % part_id)
                 return PlacedPart(part_id, drawn.type, drawn.attrs, left, top, degrees, holes)
-        raise NotDrawn("%s does not fit on the breadboard" % part_id, NO_HOLE_LEFT, part_id)
+        raise NotDrawnError("%s does not fit on the breadboard" % part_id, NO_HOLE_LEFT, part_id)
 
     def _fit(self, turned, left, top, ledger, after, pinned):
         holes = {}
@@ -321,9 +321,9 @@ class BreadboardPlanner:
         for step in seated:
             if step.act != wiring_steps.PLACE and step.anchor.seat().kind == wiring_steps.RAIL:
                 mark = step.anchor.seat().mark
-                raise NotDrawn("%s goes on a rail, and rails are not drawn yet" % mark, NOT_DRAWN_YET, mark)
+                raise NotDrawnError("%s goes on a rail, and rails are not drawn yet" % mark, NOT_DRAWN_YET, mark)
             if step.act == wiring_steps.SUPPLY:
-                raise NotDrawn("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject,
+                raise NotDrawnError("the %s supply comes from off the board, and a supply is not drawn yet" % step.subject,
                                NOT_DRAWN_YET, step.subject)
         self._place_resistors(seated, placed, ledger, after)
         parts_only = HoleLedger(self.geometry.surface, ledger.taken)
@@ -359,10 +359,10 @@ class BreadboardPlanner:
             ready = [(component, pinned) for component, pinned in waiting
                      if all(anchor.component in placed for _, anchor in pinned)]
             if not ready:
-                raise NotDrawn("%s joins a row that is never placed" % waiting[0][0], PLANNER_FAULT, waiting[0][0])
+                raise NotDrawnError("%s joins a row that is never placed" % waiting[0][0], PLANNER_FAULT, waiting[0][0])
             for component, pinned in ready:
                 if len(pinned) > 1:
-                    raise NotDrawn("both ends of %s join other rows, and a drawn resistor has a fixed length"
+                    raise NotDrawnError("both ends of %s join other rows, and a drawn resistor has a fixed length"
                                    % component, NOT_DRAWN_YET, component)
                 drawn = self._drawn(component)
                 joined = [(self._pin(end), self._group_of(anchor, placed, {})) for end, anchor in pinned]
@@ -381,18 +381,18 @@ class BreadboardPlanner:
 
 
 def drawn_part(component, catalog):
-    """What the catalog draws for one component, or NotDrawn naming it."""
+    """What the catalog draws for one component, or NotDrawnError naming it."""
     drawn = catalog.get(component)
     if drawn is None:
-        raise NotDrawn("nothing says how to draw %s in Wokwi" % component, NO_DRAWING_FACT, component)
+        raise NotDrawnError("nothing says how to draw %s in Wokwi" % component, NO_DRAWING_FACT, component)
     return drawn
 
 
 def end_pin(end, catalog):
-    """The Wokwi pin of one end, or NotDrawn naming it."""
+    """The Wokwi pin of one end, or NotDrawnError naming it."""
     pin = drawn_part(end.component, catalog).pins.get(end.pin)
     if pin is None:
-        raise NotDrawn("which Wokwi pin is %s is not known" % end.name, NO_WOKWI_PIN, end.name)
+        raise NotDrawnError("which Wokwi pin is %s is not known" % end.name, NO_WOKWI_PIN, end.name)
     return pin
 
 
@@ -402,7 +402,7 @@ def end_group(end, placed, catalog, groups=None):
     if groups and end.name in groups:
         return groups[end.name]
     if end.component not in placed:
-        raise NotDrawn("%s is joined before it is placed" % end.name, PLANNER_FAULT, end.name)
+        raise NotDrawnError("%s is joined before it is placed" % end.name, PLANNER_FAULT, end.name)
     return placed[end.component].holes[end_pin(end, catalog)].group
 
 

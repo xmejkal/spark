@@ -30,7 +30,7 @@ def find_toolchain(start):
     """
     try:
         return Path(tool_finder.find("board-engine", start).command[0])
-    except tool_finder.ToolProblem:
+    except tool_finder.ToolError:
         return None
 
 
@@ -125,7 +125,7 @@ def converter_stage_problem(project, own=None):
     """None when the converter and what runs it are here; else the could-not-run Stage saying which and how to install it."""
     try:
         converter_command(project, own)
-    except tool_finder.ToolProblem as missing:
+    except tool_finder.ToolError as missing:
         return Stage("simulation", COULD_NOT_RUN, str(missing), build_codes.TOOL_MISSING)
     return None
 

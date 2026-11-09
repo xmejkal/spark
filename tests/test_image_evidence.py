@@ -479,15 +479,15 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertIn("no firmware/main.py", self.why())
 
     def test_a_missing_interpreter_raises_its_tool_problem_with_the_check_words(self):
-        self.raising = tool_finder.ToolProblem("no tool holds it", code="tool_missing")
-        with self.assertRaises(tool_finder.ToolProblem) as raised:
+        self.raising = tool_finder.ToolError("no tool holds it", code="tool_missing")
+        with self.assertRaises(tool_finder.ToolError) as raised:
             self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: no tool holds it")
 
     def test_a_newline_in_the_image_name_gives_one_line_in_the_check_words_of_a_missing_tool_and_of_an_unreadable_file(self):
         named = mock.Mock(path=Path(NASTY))
-        self.raising = tool_finder.ToolProblem("no tool holds it", code="tool_missing")
-        with self.assertRaises(tool_finder.ToolProblem) as raised:
+        self.raising = tool_finder.ToolError("no tool holds it", code="tool_missing")
+        with self.assertRaises(tool_finder.ToolError) as raised:
             NoSimulationEvidence(self.project)._why_image_differs(named)
         assert_flat(self, raised.exception)
         self.raising = OSError("gone")
@@ -497,18 +497,18 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     def test_a_missing_littlefs_raises_its_tool_problem_with_the_install_line(self):
         def find(name, *args, **kwargs):
-            raise tool_finder.ToolProblem("littlefs (littlefs-python) is not installed — install: python3 -m pip "
+            raise tool_finder.ToolError("littlefs (littlefs-python) is not installed — install: python3 -m pip "
                                           "install --user littlefs-python", code="tool_missing")
 
         with mock.patch.object(tool_finder, "find", side_effect=find):
-            with self.assertRaises(tool_finder.ToolProblem) as raised:
+            with self.assertRaises(tool_finder.ToolError) as raised:
                 self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: littlefs (littlefs-python) "
                          "is not installed — install: python3 -m pip install --user littlefs-python")
 
     def test_a_littlefs_that_fails_to_import_raises_its_tool_problem(self):
         self.raising = ImportError("No module named 'littlefs'")
-        with self.assertRaises(tool_finder.ToolProblem) as raised:
+        with self.assertRaises(tool_finder.ToolError) as raised:
             self.why()
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: No module named 'littlefs'")
 

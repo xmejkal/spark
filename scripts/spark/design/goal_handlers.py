@@ -68,7 +68,7 @@ def audit(project=None):
 def _op_need(args, project):
     try:
         chosen = matching.matcher(args.matcher or NEED_MATCHER, "need")
-    except matching.UnknownMatcher as wrong:
+    except matching.UnknownMatcherError as wrong:
         return Answer(unchecked=[_cannot(str(wrong))])
     found, drafts = datasheets.need(args.need, project, chosen)
     known = [p for p in catalog_matches(args.need, chosen) if p["id"] not in drafts and p["id"] not in {q["id"] for q in found}]
@@ -113,7 +113,7 @@ def _op_needs(args, project):
 def _op_match(args, project):
     try:
         chosen = matching.matcher(args.matcher or needs.MATCHER, "match")
-    except matching.UnknownMatcher as wrong:
+    except matching.UnknownMatcherError as wrong:
         return Answer(unchecked=[_cannot(str(wrong))])
     matched, problems = needs.match(args.match, chosen)
     if not matched and not problems:
@@ -248,7 +248,7 @@ def _op_tally(args, project):
     owned = sum(1 for _, pick in picks if needs.owned(pick, entries))
     try:
         counted, unchecked = run_cost.cost([event for event in history if event.get("event") == "step"], name), []
-    except run_cost.NoTranscript as missing:
+    except run_cost.NoTranscriptError as missing:
         counted, unchecked = None, [_cannot(str(missing), "mark each step with parts.py --step <project> <step> in a Claude Code session")]
     said, unreadable = run_cost.line(len(picks), from_store, owned, counted), run_cost.unreadable_note(counted)
     built = any(event.get("event") == "built" and event.get("project") == name for event in history)

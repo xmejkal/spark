@@ -32,7 +32,7 @@
  {
   "file": "scripts/spark/idea/drop_need.py",
   "name": "a needs file that is no JSON crashes instead of exiting 2",
-  "find": "        except store.StoreProblem as unreadable:",
+  "find": "        except store.StoreError as unreadable:",
   "replace": "        except KeyError as unreadable:"
  },
  {
@@ -56,7 +56,7 @@
  {
   "file": "scripts/spark/idea/drop_need.py",
   "name": "a refused write escapes as a crash, not a SparkError",
-  "find": "        except (OSError, store.StoreProblem) as failed:\n            raise SparkError(\"the drop of",
+  "find": "        except (OSError, store.StoreError) as failed:\n            raise SparkError(\"the drop of",
   "replace": "        except KeyError as failed:\n            raise SparkError(\"the drop of"
  }
 ]

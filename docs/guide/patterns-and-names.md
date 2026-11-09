@@ -16,7 +16,7 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Strategy | a base class that a caller can swap for another | ends in `Strategy` when the noun alone does not say it does something | `ConsentStrategy`; `BoardReader`, `Flasher` and `Reporter` stay plain, and their docstrings say Strategy |
 | Adapter | wraps an outside program behind spark's own interface | a plain noun; the docstring says Adapter | `BoardConnection` wraps mpremote, the tool that talks to MicroPython on a board |
 | Result | what a method returns, as a namedtuple | ends in `Result` | `ReadyResult`, `DeployResult` |
-| Error | an exception | ends in `Error` (the deploy and checks areas only, for now) | `GateClosedError`, `DeployError`, `PackageError` |
+| Error | an exception | ends in `Error` (rule C1) | `GateClosedError`, `DeployError`, `PackageError` |
 | Value | facts with no actions. A method can calculate from the facts (`token()`, `to_dict()`; `token()` reads the image file), and a `why_` or `find_` method can answer a question about them, reading the project's files if it must. None changes anything | a plain noun; the docstring says Value | `Port`, `BoardReading`, `LookReport`, `RestrictedPins`, `ProjectImage` |
 | Store | reads and writes one place in the person's store, as JSON files | the noun of what it keeps, then `Store` | `GrantStore` keeps one grant file per board in `grants/` |
 | Decorator | wraps an object of another class, has the same methods, and adds one behaviour around them | what it adds, then the whole name of what it wraps | `RetryingBoardConnection` cures the board once and runs the code again |
@@ -193,14 +193,14 @@ one key: they say how many, not where, so a new breach next to an old one shows 
 
 An error that puts a path, a name or a record's field into its sentence inherits from `ValueMessageError`
 (`scripts/spark/core/text_guards.py`, [P444](https://github.com/xmejkal/spark/issues/592)) and a raise passes the values as
-arguments: `raise ToolProblem("%s is not JSON (%s)", path, broken)`, never `"..." % (path, broken)`. The class puts each value on
+arguments: `raise ToolError("%s is not JSON (%s)", path, broken)`, never `"..." % (path, broken)`. The class puts each value on
 one line, keeps a number and a `%r` value as they are, and keeps the raw values on `.values`. Rule V1 counts the raises that
 build the text first. Its baseline has no entry (P451, [#606](https://github.com/xmejkal/spark/issues/606)), and
 `tests/test_architecture.py` fails if one comes back, so a new raw site is fixed and never baselined.
 `Class.of_lines([...])` raises several sentences, one per line, each flattened; `Class.of_error(error)` does the same for
 the lines of another error, so a nested error keeps its line breaks.
 
-What V1 does not see, so a reviewer looks for it: a class under another name (`import ToolProblem as SP`, `P = ToolProblem`),
+What V1 does not see, so a reviewer looks for it: a class under another name (`import ToolError as SP`, `P = ToolError`),
 the lines that `X.of_lines(...)` and `X.of_error(...)` take (safe by construction), and a message built before the raise
 (a sentence a function returns, such as `tool_finder.off_sentence` and `tool_finder.entry_problem`, which
 use `flat_line` by hand).
@@ -256,8 +256,7 @@ These rules name a class, a function or a constant:
   `_MESSAGE` suffix. `tests/test_no_magic_strings.py` fails on a literal with a space in a comparison, a `match`
   case or a search such as `startswith` or `re.search`. It does not see a one-word literal, a sentence built at run
   time, a dictionary key or a split, so a reviewer checks those.
-- Only the deploy area uses the `Error` suffix now. The rest of the repository changes in v0.13
-  ([#94](https://github.com/xmejkal/spark/issues/94)).
+- An exception's name ends in `Error`; rule C1 fails one that does not ([P709](https://github.com/xmejkal/spark/issues/956)).
 
 Each docstring says these things:
 

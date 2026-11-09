@@ -97,7 +97,7 @@ An Operation is a class with one public method, `run`. Its keyword parameters ar
 `outside`: `LookAtBoard.run(self, project, port, ignore_older_runs, no_simulation, *, outside)` (P442; `backends` folded
 into `outside.find_tool`). Its module is named after it, and the area's `OPERATIONS` in `__init__.py` maps each printed `op` to its
 class. One test checks that every `Argument.dest` names a parameter. `SparkError.status` is an instance field with
-the class default `could-not-run`: `ImpossibleError` (today `assign_pins.Impossible`) defaults to `problems`, and
+the class default `could-not-run`: `ImpossibleError` (in `pin_assigner.py`) defaults to `problems`, and
 `GateClosedError` sets it per instance, as its `code` is today.
 
 `fix` stays a string, as today (`board_envelope.look_envelope`), so the envelope only gains keys. `fix_step` was dropped on 2026-10-27, because it would be

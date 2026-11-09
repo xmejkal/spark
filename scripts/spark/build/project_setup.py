@@ -409,7 +409,7 @@ def why_project_refused(project):
         return Refusal("no directory at %s" % project, build_codes.NO_PROJECT_FOLDER)
     try:
         tool_finder.merged(project)
-    except tool_finder.ToolProblem as broken:
+    except tool_finder.ToolError as broken:
         return Refusal("init_project.py: %s" % broken, build_codes.TOOLS_FILE_UNREADABLE)
     return None
 

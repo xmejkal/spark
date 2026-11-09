@@ -244,7 +244,7 @@ class FakeProbePlatform(MicroPythonPlatform):
 
 class FakeDeployRecordStore:
     """A fake deploy_record_store.DeployRecordStore: `write_deploy` keeps each call in `written` and gives `path`, or raises
-    `raises` (for example store.StoreProblem)."""
+    `raises` (for example store.StoreError)."""
 
     def __init__(self, path=Path("record.json"), raises=None):
         self.path, self.raises, self.written = path, raises, []

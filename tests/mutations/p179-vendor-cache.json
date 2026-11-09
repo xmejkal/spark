@@ -74,7 +74,7 @@
  {
   "file": "scripts/spark/checks/vendor_pins_check.py",
   "name": "the fetch runs before the project check, spending a network call on a refusal (P179, refuter B9)",
-  "find": "        target = project_header(path, variant)\n    except board_records.BoardError:\n        raise CouldNotKeep",
-  "replace": "        fetch_variant_header(variant, repo)\n        target = project_header(path, variant)\n    except board_records.BoardError:\n        raise CouldNotKeep"
+  "find": "        target = project_header(path, variant)\n    except board_records.BoardError:\n        raise CouldNotKeepError",
+  "replace": "        fetch_variant_header(variant, repo)\n        target = project_header(path, variant)\n    except board_records.BoardError:\n        raise CouldNotKeepError"
  }
 ]

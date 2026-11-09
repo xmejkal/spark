@@ -41,12 +41,12 @@ OLDER_LOG_CAVEAT = "the passed run's log is older than step counting: run its sc
 #: What a passed run's limits section that cannot be read tells the person to do (the sentence starts with why it was not checked).
 LIMITS_HINT = "fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"
 MANY_RUNS_MESSAGE = "the passed runs (%s) have"
-#: P436: the words of the image check that could not run, as a sentence and as a tool_finder.ToolProblem.
+#: P436: the words of the image check that could not run, as a sentence and as a tool_finder.ToolError.
 CANNOT_CHECK_MESSAGE = "cannot check %s against firmware/: %s"
 
 
 def cannot_check(name, cause, error=text_guards.ValueMessageError, **keywords):
-    """The error of CANNOT_CHECK_MESSAGE for this name and cause: each line of the cause is a value, so its line breaks stay (P451). `keywords` go to `error`: a ToolProblem's `code`."""
+    """The error of CANNOT_CHECK_MESSAGE for this name and cause: each line of the cause is a value, so its line breaks stay (P451). `keywords` go to `error`: a ToolError's `code`."""
     lines = str(cause).split("\n")
     return error("\n".join([CANNOT_CHECK_MESSAGE] + ["%s"] * (len(lines) - 1)), name, *lines, **keywords)
 
@@ -190,7 +190,7 @@ class ImageEvidence(abc.ABC):
     @abc.abstractmethod
     def why_not_ready(self, image):
         """None when the evidence says `image` may go on a board, else why not. DeployError when a log cannot be read;
-        tool_finder.ToolProblem when a tool the check needs is missing (P436)."""
+        tool_finder.ToolError when a tool the check needs is missing (P436)."""
 
     def caveats(self, image):
         """Sentences the person reads before the gate question about what tested `image`, or [] when there are none."""
@@ -361,7 +361,7 @@ class NoSimulationEvidence(ImageEvidence):
         self.find_tool = find_tool
 
     def why_not_ready(self, image):
-        """None, or one sentence. A broken file is a sentence; a missing tool raises a ToolProblem (P436)."""
+        """None, or one sentence. A broken file is a sentence; a missing tool raises a ToolError (P436)."""
         return (self._why_no_main() or self._why_not_compiling() or self._why_run_failed(image)
                 or self._why_board_build_unknown(image) or self._why_image_differs(image))
 
@@ -391,19 +391,19 @@ class NoSimulationEvidence(ImageEvidence):
     def _why_board_build_unknown(self, image):
         try:
             image_builder.board_build(self.project)
-        except tool_finder.ToolProblem as cannot:
+        except tool_finder.ToolError as cannot:
             return str(cannot_check(image.path.name, cannot))
         return None
 
-    # --- MVP --- P436: a missing tool raises its ToolProblem (tool_missing: /spark:setup); an unreadable file is a sentence
+    # --- MVP --- P436: a missing tool raises its ToolError (tool_missing: /spark:setup); an unreadable file is a sentence
     def _why_image_differs(self, image):
         try:
             # P457: a missing or turned-off littlefs names its own fix
             (self.find_tool or tool_finder.find)("littlefs", project=self.project)
             built = image_builder.interpreter_for(None, self.project, self.find_tool).image(image_builder.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
-        except (tool_finder.ToolProblem, ImportError) as cannot:
-            raise cannot_check(image.path.name, cannot, tool_finder.ToolProblem,
+        except (tool_finder.ToolError, ImportError) as cannot:
+            raise cannot_check(image.path.name, cannot, tool_finder.ToolError,
                                code=getattr(cannot, "code", board_codes.TOOL_MISSING))
         except (OSError, ValueError) as cannot:
             return str(cannot_check(image.path.name, cannot))

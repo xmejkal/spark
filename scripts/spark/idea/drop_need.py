@@ -52,11 +52,11 @@ class DropNeed(Operation):
     def run(self, project, need, dry_run, *, outside):
         try:
             current, entries = self.needs.read(project), self.drawer.entries()
-        except store.StoreProblem as unreadable:
+        except store.StoreError as unreadable:
             raise SparkError("%s", unreadable, code=idea_codes.NEEDS_UNREADABLE, fix=UNREADABLE_FIX)
         try:
             name = store.plan_listed_name(project)
-        except (OSError, store.StoreProblem) as failed:
+        except (OSError, store.StoreError) as failed:
             raise SparkError("the project's name could not be read: %s", failed, code=idea_codes.DROP_UNWRITTEN, fix=UNWRITTEN_FIX)
         ids = [each["id"] for each in current]
         dropped = next((each for each in current if each["id"] == need), None)
@@ -76,7 +76,7 @@ class DropNeed(Operation):
             if not dry_run:
                 self.drawer.apply(changes)
                 self.needs.write(project, after)
-        except (OSError, store.StoreProblem) as failed:
+        except (OSError, store.StoreError) as failed:
             raise SparkError("the drop of %s was not finished: %s", need, failed, code=idea_codes.DROP_UNWRITTEN, fix=UNWRITTEN_FIX)
         return OperationResult(data, lines=lines, notes=[{"subject": None, "sentence": note} for note in notes] or None)
 # --- end MVP ---

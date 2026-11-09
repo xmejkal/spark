@@ -164,7 +164,7 @@ def _op_keep(args, project):
             if located and not args.json else ())
     try:  # P423: a store that refuses the file, or cannot be written, refuses it after the line was said
         entry = keep_local(path, args.url, dry_run=args.dry_run)
-    except store.StoreProblem as refused:
+    except store.StoreError as refused:
         return Answer(unchecked=[_cannot(str(refused))], diagnostics=said)
     except OSError as unwritable:
         return Answer(unchecked=[_cannot("--keep: %s" % unwritable)], diagnostics=said)

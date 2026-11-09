@@ -146,9 +146,9 @@ class TheRecordTest(ServiceCase):
         self.assertEqual((kept, records.written), (Path("kept.json"), [({"mac": "aa:bb"}, "ready seen", "a test")]))
 
     def test_a_store_that_cannot_be_written_raises_what_the_records_raise(self):
-        records = FakeDeployRecordStore(raises=store.StoreProblem("no room", code="store_not_writable"))
+        records = FakeDeployRecordStore(raises=store.StoreError("no room", code="store_not_writable"))
         result = deploy_service.DeployResult({"mac": "aa:bb"}, "", ready_probe.ReadyResult("ready seen", "ready", ""), None, [])
-        with self.assertRaises(store.StoreProblem):
+        with self.assertRaises(store.StoreError):
             self.service(records=records).record(result, FakeConsent(True))
 
 
@@ -279,7 +279,7 @@ class ThePlanTest(ServiceCase):
     def test_a_chip_problem_shows_before_a_missing_tool(self):
         (self.project / "requirements.json").unlink()
         with mock.patch.object(tool_finder, "find",
-                               side_effect=tool_finder.ToolProblem("flasher is not installed", code="tool_missing")):
+                               side_effect=tool_finder.ToolError("flasher is not installed", code="tool_missing")):
             with self.assertRaises(project_image.DeployError):
                 self.service().plan()
 

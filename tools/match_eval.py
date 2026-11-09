@@ -101,7 +101,7 @@ def main(argv=None):
         matchers = [matching.matcher(name, "match") for name in names]  # the core refuses a name, as --match does
         cases, offers = json.loads(Path(args.cases).read_text(encoding="utf-8")), drawer_offers(args.drawer)
         results = [evaluate(one, cases, offers) for one in matchers]
-    except (OSError, ValueError) as wrong:  # UnknownMatcher and a JSON error are ValueErrors
+    except (OSError, ValueError) as wrong:  # UnknownMatcherError and a JSON error are ValueErrors
         return _could_not_run(wrong, args.json)
     except (KeyError, AttributeError, TypeError) as odd:  # a case or a drawer file in the wrong shape
         return _could_not_run("a case or a drawer file is not in the shape this tool reads (%s: %s)" % (type(odd).__name__, odd),

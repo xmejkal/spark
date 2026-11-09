@@ -39,28 +39,28 @@ FILE = Path(".spark") / "needs.json"
 
 
 def read(project):
-    """The project's needs, in order — [] when it has none yet; a file not in the needs shape is a StoreProblem."""
+    """The project's needs, in order — [] when it has none yet; a file not in the needs shape is a StoreError."""
     path = Path(project) / FILE
     if not path.is_file():
         return []
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except ValueError as broken:
-        raise store.StoreProblem("%s is not JSON (%s)", path, broken, code=records_codes.RECORD_FILE_BROKEN)
+        raise store.StoreError("%s is not JSON (%s)", path, broken, code=records_codes.RECORD_FILE_BROKEN)
     if not (isinstance(data, dict) and isinstance(data.get("needs"), list)
             and all(isinstance(need, dict) and isinstance(need.get("id"), str) for need in data["needs"])):
-        raise store.StoreProblem('%s is not {"schema": 1, "needs": [{"id", "does", "what", …}]} — fix it by hand', path, code=records_codes.RECORD_FILE_BROKEN)
+        raise store.StoreError('%s is not {"schema": 1, "needs": [{"id", "does", "what", …}]} — fix it by hand', path, code=records_codes.RECORD_FILE_BROKEN)
     stray = sorted(set(data) - {"schema", "needs"})
     if stray:
-        raise store.StoreProblem("%s holds %s, which a needs file does not — fix it by hand", path, ", ".join(stray), code=records_codes.RECORD_FILE_BROKEN)
+        raise store.StoreError("%s holds %s, which a needs file does not — fix it by hand", path, ", ".join(stray), code=records_codes.RECORD_FILE_BROKEN)
     if data.get("schema", 1) != 1:
-        raise store.StoreProblem("%s is schema %r — this spark reads schema 1", path, data["schema"], code=records_codes.RECORD_FILE_BROKEN)
+        raise store.StoreError("%s is schema %r — this spark reads schema 1", path, data["schema"], code=records_codes.RECORD_FILE_BROKEN)
     ids = [need["id"] for need in data["needs"]]
     for need in data["needs"]:
         said = ((["`id` is not lower-case letters, digits and '-'"] if not store.PLAIN.fullmatch(need["id"]) else [])
                 + (["is there more than once"] if ids.count(need["id"]) > 1 else []) + faults(need, held_only=True))
         if said:
-            raise store.StoreProblem("%s: need %r: %s — fix it by hand", path, need["id"], said[0], code=records_codes.RECORD_FILE_BROKEN)
+            raise store.StoreError("%s: need %r: %s — fix it by hand", path, need["id"], said[0], code=records_codes.RECORD_FILE_BROKEN)
     return data["needs"]
 
 
@@ -481,7 +481,7 @@ def _picks_given(given, known, entries, ids):
         elif pick is None:
             problems.append(_problem(need_id, "no record or drawer entry called %s — --match lists the candidates" % pick_id))
         elif not (store.PLAIN.fullmatch(pick_id) and store.PLAIN.fullmatch(named)):  # the key given, and the id written
-            raise store.StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so a pick cannot name it: "
+            raise store.StoreError("%r is not a plain key — lower-case letters, digits and '-' — so a pick cannot name it: "
                                      "rename the drawer entry, or the record's file, then pick it",
                                      named if store.PLAIN.fullmatch(pick_id) else pick_id, code=records_codes.KEY_NOT_PLAIN)
         elif pick not in picked.setdefault(need_id, []):
@@ -771,17 +771,17 @@ def _part_picks(picks, known):
 
 
 def _held_file(project):
-    """(the project's requirements file as a dict, its `parts` list), {} and [] when there is none; a StoreProblem when
+    """(the project's requirements file as a dict, its `parts` list), {} and [] when there is none; a StoreError when
     either is no JSON of its kind, for `requirements`."""
     file = Path(project) / REQUIREMENTS
     try:
         held = json.loads(file.read_text(encoding="utf-8")) if file.is_file() else {}
     except ValueError as broken:
-        raise store.StoreProblem("%s is not JSON (%s) — fix it by hand", file, broken, code=records_codes.RECORD_FILE_BROKEN)
+        raise store.StoreError("%s is not JSON (%s) — fix it by hand", file, broken, code=records_codes.RECORD_FILE_BROKEN)
     held = held if isinstance(held, dict) else {}
     existing = held.get("parts") or []
     if not isinstance(existing, list):
-        raise store.StoreProblem("%s: `parts` is not a list — fix it by hand", file, code=records_codes.RECORD_FILE_BROKEN)
+        raise store.StoreError("%s: `parts` is not a list — fix it by hand", file, code=records_codes.RECORD_FILE_BROKEN)
     return held, existing
 
 

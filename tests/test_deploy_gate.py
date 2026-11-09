@@ -471,7 +471,7 @@ class TheBusyPortTest(GateCase):
     def test_with_no_doctor_the_stop_says_why_and_keeps_its_own_words(self):
         self.run_the_scenario()
         code, _, problems = self.deploy("--token", "aaaa-bbbb", consent=FakeConsent(True), look_fails=True,
-                                        probe=tool_finder.ToolProblem("no mpremote", code="tool_missing"))
+                                        probe=tool_finder.ToolError("no mpremote", code="tool_missing"))
         self.assertEqual(code, 2)
         self.assertIn("(no doctor: no mpremote)", problems)
 

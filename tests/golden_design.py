@@ -124,7 +124,7 @@ CASES = [
     Case("assign-pins-problems-impossible.txt", "assign_pins.py", [REQUIREMENTS], 1,
          requirements(parts=[{"part": "led-red-5mm", "name": "Led%d" % n} for n in range(24)])),
     Case("assign-pins-could-not-run-no-requirements.txt", "assign_pins.py", ["missing.requirements.json"], 2),
-    # --- each Impossible a requirements file reaches (P699, for W6-D2's codes) ---
+    # --- each ImpossibleError a requirements file reaches (P699, for W6-D2's codes) ---
     Case("assign-pins-problems-unknown-bus.txt", "assign_pins.py", [REQUIREMENTS], 1, signals({"name": "X", "bus": "can"})),
     Case("assign-pins-problems-not-a-bus-line.txt", "assign_pins.py", [REQUIREMENTS], 1,
          signals({"name": "FOO", "bus": "i2c"})),

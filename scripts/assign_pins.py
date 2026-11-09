@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.sourcing import part_facts  # noqa: E402
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_IMPOSSIBLE  # noqa: E402
 from spark.design import loader  # noqa: E402
-from spark.design.pin_assigner import Impossible, assign, pin_module, pulled_up, render  # noqa: E402
+from spark.design.pin_assigner import ImpossibleError, assign, pin_module, pulled_up, render  # noqa: E402
 
 
 def main(argv=None):
@@ -49,14 +49,14 @@ def main(argv=None):
 
     try:
         assignments, leftover = assign(board, loaded.signals)
-    except Impossible as refused:
+    except ImpossibleError as refused:
         print("cannot place every signal on this board:\n\n  %s" % refused)
         return EXIT_IMPOSSIBLE
 
     if args.emit_pins:
         try:
             module = pin_module(board, assignments, Path(args.requirements).name, pulled_up(loaded.parts))
-        except Impossible as refused:
+        except ImpossibleError as refused:
             print("cannot write the pin map:\n\n  %s" % refused)
             return EXIT_IMPOSSIBLE
         target = Path(args.emit_pins)

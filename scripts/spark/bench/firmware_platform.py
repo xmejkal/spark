@@ -42,15 +42,15 @@ class FirmwarePlatform:
         self.project = project
 
     def find_tool(self, role):
-        """The Tool for `role` (`flasher` or `board-shell`). ToolProblem says why it is not installed."""
+        """The Tool for `role` (`flasher` or `board-shell`). ToolError says why it is not installed."""
         raise NotImplementedError
 
     def make_flasher(self):
-        """The Flasher for this project's chip. DeployError says why the chip cannot be read; ToolProblem, the tool."""
+        """The Flasher for this project's chip. DeployError says why the chip cannot be read; ToolError, the tool."""
         raise NotImplementedError
 
     def make_shell_command(self):
-        """The board shell's command, as an argv list. tool_finder.ToolProblem says why it is not installed."""
+        """The board shell's command, as an argv list. tool_finder.ToolError says why it is not installed."""
         raise NotImplementedError
 
     def make_port_finder(self, run):

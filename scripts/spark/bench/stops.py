@@ -16,7 +16,7 @@ from spark.core.text_guards import guard_sentence
 
 # --- MVP ---
 #: The refusals that carry no `reason` of their own, by class, with the code each gets.
-CODE_OF_CLASS = ((tool_finder.ToolProblem, board_codes.TOOL_MISSING), (store.StoreProblem, board_codes.STORE_PROBLEM),
+CODE_OF_CLASS = ((tool_finder.ToolError, board_codes.TOOL_MISSING), (store.StoreError, board_codes.STORE_PROBLEM),
                  (board_records.BoardError, board_codes.BOARD_RECORD_UNUSABLE),
                  (BrokenRecordError, board_codes.BOARD_RECORD_UNUSABLE))
 

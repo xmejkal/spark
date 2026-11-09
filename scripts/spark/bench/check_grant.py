@@ -61,7 +61,7 @@ class CheckGrant(Operation):
         try:
             finder = platform.make_port_finder(outside.run)
             result = board_grant.GrantService(finder, now=outside.clock.now).check(port)
-        except (tool_finder.ToolProblem, board_look.LookStopError, store.StoreProblem) as cannot:
+        except (tool_finder.ToolError, board_look.LookStopError, store.StoreError) as cannot:
             doctor_for = lambda stop: board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)  # noqa: E731
             return stop_result(cannot, SCRIPT, project, port, doctor_for)._replace(data=dict(COULD_NOT_RUN_DATA))
         findings = [] if result.granted else [Finding(outcomes.PROBLEMS, None, board_grant.CODE_FOR_WHY[result.why],

@@ -52,7 +52,7 @@ def node():
     from spark.records import tool_finder
     try:
         return tool_finder.find("js-runtime", None, Path(tempfile.mkdtemp()) / "absent.json").command
-    except tool_finder.ToolProblem:
+    except tool_finder.ToolError:
         return None
 
 

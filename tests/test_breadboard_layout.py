@@ -25,7 +25,7 @@ from spark.breadboard import drawing_catalog  # noqa: E402
 from spark.breadboard import drawing  # noqa: E402
 from spark.breadboard import wiring_steps  # noqa: E402
 from spark.breadboard import part_shape  # noqa: E402
-from spark.breadboard.drawing import HoleLedger, NotDrawn, WokwiGeometry, rotate  # noqa: E402
+from spark.breadboard.drawing import HoleLedger, NotDrawnError, WokwiGeometry, rotate  # noqa: E402
 
 XIAO = ROOT / "tests" / "data" / "breadboard" / "button-light-xiao"
 RECORD_BOARD = ROOT / "tests" / "data" / "breadboard" / "button-light"
@@ -107,7 +107,7 @@ class TheLedgerTest(unittest.TestCase):
         ledger = HoleLedger(GEOMETRY.surface)
         hole = GEOMETRY.surface.terminal[0]
         ledger.claim(hole, "board D0")
-        with self.assertRaisesRegex(NotDrawn, "hole 1t.a is taken by board D0") as refused:
+        with self.assertRaisesRegex(NotDrawnError, "hole 1t.a is taken by board D0") as refused:
             ledger.claim(hole, "LedRed5mm A")
         self.assertEqual((refused.exception.code, refused.exception.subject), ("planner_fault", "1t.a"))
 
@@ -118,11 +118,11 @@ class TheLedgerTest(unittest.TestCase):
         ledger = HoleLedger(GEOMETRY.surface)
         for _ in range(5):
             ledger.claim_free_hole("1t", "a jumper")
-        with self.assertRaisesRegex(NotDrawn, "row 1t has no free hole") as full_row:
+        with self.assertRaisesRegex(NotDrawnError, "row 1t has no free hole") as full_row:
             ledger.claim_free_hole("1t", "a jumper")
         for _ in range(59):
             ledger.claim_free_group(0, "a part")
-        with self.assertRaisesRegex(NotDrawn, "no free row left") as full_board:
+        with self.assertRaisesRegex(NotDrawnError, "no free row left") as full_board:
             ledger.claim_free_group(0, "one more")
         self.assertEqual((full_row.exception.code, full_row.exception.subject), ("row_full", "1t"))
         self.assertEqual((full_board.exception.code, full_board.exception.subject), ("no_hole_left", "one more"))
@@ -221,7 +221,7 @@ class TheGeometryCopiesTest(unittest.TestCase):
         self.assertEqual(copied.part("board-x")["size"], [1, 1])
         self.assertIsNot(copied, GEOMETRY)
         self.assertEqual(json.dumps(GEOMETRY.data, sort_keys=True), before)
-        with self.assertRaises(NotDrawn) as refused:
+        with self.assertRaises(NotDrawnError) as refused:
             GEOMETRY.part("board-x")
         self.assertEqual((refused.exception.code, refused.exception.subject), ("no_pin_position", "board-x"))
 
@@ -287,7 +287,7 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
 
         self.assertEqual(min(h.column for h in place(()).holes.values()), 46)
         for taken in ("55t.a", "55b.j"):
-            with self.subTest(taken=taken), self.assertRaises(NotDrawn) as refused:
+            with self.subTest(taken=taken), self.assertRaises(NotDrawnError) as refused:
                 place((taken,))
             self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "board"))
 
@@ -315,14 +315,14 @@ class TheRecordBoardLayoutTest(unittest.TestCase):
         board = json.loads(json.dumps(self.read.built.board))
         board["physical"]["header"]["row_spacing_mm"] = 25.4
         board["physical"]["width_mm"] = 27.94
-        with self.assertRaises(NotDrawn) as refused:
+        with self.assertRaises(NotDrawnError) as refused:
             drawing.BreadboardPlanner(*record_inputs(self.read, board=board)).plan(self.read.steps)
         self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "board"))
 
     def test_a_30_column_surface_fits_the_button_and_refuses_the_led(self):
         full = json.loads((ROOT / "data" / "breadboards.json").read_text())["full"]
         thirty = drawing.Surface(dict(full, columns=30))
-        with self.assertRaises(NotDrawn) as refused:
+        with self.assertRaises(NotDrawnError) as refused:
             drawing.BreadboardPlanner(*record_inputs(self.read, thirty)).plan(self.read.steps)
         self.assertEqual((refused.exception.code, refused.exception.subject), ("no_hole_left", "LedRed5mm"))
         placed = drawing.BreadboardPlanner(*record_inputs(self.read)).plan(self.read.steps).parts
@@ -409,7 +409,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         rail = wiring_steps.StepPoint(read.steps.points[0].ends, None, True)
         steps = wiring_steps.BreadboardSteps(read.steps.placed, [rail] + read.steps.points[1:])
         planner = drawing.BreadboardPlanner(GEOMETRY, drawing_catalog.describe_parts(read, GEOMETRY))
-        with self.assertRaisesRegex(NotDrawn, "goes on a rail, and rails are not drawn yet") as refused:
+        with self.assertRaisesRegex(NotDrawnError, "goes on a rail, and rails are not drawn yet") as refused:
             planner.plan(steps)
         self.assertEqual(refused.exception.code, "not_drawn_yet")
         self.assertIn(refused.exception.subject, str(refused.exception))
@@ -421,7 +421,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         supplied = wiring_steps.StepPoint(last.ends, "VBAT", False)
         steps = wiring_steps.BreadboardSteps(read.steps.placed, read.steps.points[:-1] + [supplied])
         planner = drawing.BreadboardPlanner(GEOMETRY, drawing_catalog.describe_parts(read, GEOMETRY))
-        with self.assertRaisesRegex(NotDrawn, "the VBAT supply comes from off the board") as refused:
+        with self.assertRaisesRegex(NotDrawnError, "the VBAT supply comes from off the board") as refused:
             planner.plan(steps)
         self.assertEqual((refused.exception.code, refused.exception.subject), ("not_drawn_yet", "VBAT"))
 
@@ -456,7 +456,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         points = [wiring_steps.StepPoint([self.end_named(read, "LedRed5mm A"), self.leg("R1", 1)], None, False),
                   wiring_steps.StepPoint([self.end_named(read, "TactileButton A"), self.leg("R1", 2)], None, False)]
         planner = drawing.BreadboardPlanner(GEOMETRY, drawing_catalog.describe_parts(read, GEOMETRY))
-        with self.assertRaisesRegex(NotDrawn, "both ends of R1 join other rows") as refused:
+        with self.assertRaisesRegex(NotDrawnError, "both ends of R1 join other rows") as refused:
             planner.plan(wiring_steps.BreadboardSteps(read.steps.placed, points))
         self.assertEqual((refused.exception.code, refused.exception.subject), ("not_drawn_yet", "R1"))
 
@@ -474,7 +474,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         read = xiao_read()
         catalog = drawing_catalog.describe_parts(read, GEOMETRY)
         del catalog["LedRed5mm"]
-        with self.assertRaisesRegex(NotDrawn, "nothing says how to draw LedRed5mm in Wokwi") as refused:
+        with self.assertRaisesRegex(NotDrawnError, "nothing says how to draw LedRed5mm in Wokwi") as refused:
             drawing.BreadboardPlanner(GEOMETRY, catalog).plan(read.steps)
         self.assertEqual((refused.exception.code, refused.exception.subject), ("no_drawing_fact", "LedRed5mm"))
 
@@ -488,7 +488,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
                  ("no_pin_position", "board-x")),
                 (lambda: drawing.end_pin(end, {"X": drawing.DrawnPart("board-x", {}, {})}), ("no_wokwi_pin", "X 9")),
                 (lambda: drawing.end_group(end, {}, catalog), ("planner_fault", "X 9"))):
-            with self.subTest(expected=expected), self.assertRaises(NotDrawn) as refused:
+            with self.subTest(expected=expected), self.assertRaises(NotDrawnError) as refused:
                 refuse()
             self.assertEqual((refused.exception.code, refused.exception.subject), expected)
 
@@ -498,7 +498,7 @@ class WhatIsNotDrawnTest(unittest.TestCase):
         step = next(step for step in wiring_steps.BreadboardSteps([], [joined]).anchored()
                     if step.act == wiring_steps.JOIN)
         planner = drawing.BreadboardPlanner(GEOMETRY, drawing_catalog.describe_parts(read, GEOMETRY))
-        with self.assertRaisesRegex(NotDrawn, "R1 joins a row that is never placed") as refused:
+        with self.assertRaisesRegex(NotDrawnError, "R1 joins a row that is never placed") as refused:
             planner._place_resistors([step], {}, HoleLedger(GEOMETRY.surface), 1)
         self.assertEqual((refused.exception.code, refused.exception.subject), ("planner_fault", "R1"))
 

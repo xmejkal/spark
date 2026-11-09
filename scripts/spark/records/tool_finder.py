@@ -7,7 +7,7 @@ contract it meets: spark's defaults in data/tools.json, the person's in
 ~/.local/share/spark/tools.json, the project's in .spark/tools.json — merged entry by entry and
 field by field, the project winning. Every script asks `find`; nothing else names a tool.
 
-A missing tool is a ToolProblem whose sentence says what installs it. Only `install` installs, and
+A missing tool is a ToolError whose sentence says what installs it. Only `install` installs, and
 only for /spark:setup once the person has said yes; it never runs `sudo`. This module is the library, and the CLI
 `scripts/tools.py` is what /spark:setup runs (P719). `ToolFinder` (`areas/records.md`) comes with its card.
 """
@@ -49,7 +49,7 @@ MANAGERS = (("npm", "npm"), ("pip", "python3"), ("brew", "brew"), ("download", N
 Tool = namedtuple("Tool", "name role entry command")
 
 
-class ToolProblem(CodedMessageError):
+class ToolError(CodedMessageError):
     """Error: a tool spark cannot use — missing, refused, turned off, or a list it cannot read. The message is the whole sentence; its values are flattened (P444), and its `code` is a code of the area that raises it (records_codes, firmware_codes)."""
 
 
@@ -59,9 +59,9 @@ def _read(path):
     try:
         data = json.loads(path.read_text())
     except ValueError as broken:
-        raise ToolProblem("%s is not JSON (%s) — fix it or delete it", path, broken, code=records_codes.TOOLS_LIST_BROKEN)
+        raise ToolError("%s is not JSON (%s) — fix it or delete it", path, broken, code=records_codes.TOOLS_LIST_BROKEN)
     if not isinstance(data, dict):
-        raise ToolProblem("%s holds a %s; a tools file is an object", path, type(data).__name__, code=records_codes.TOOLS_LIST_BROKEN)
+        raise ToolError("%s holds a %s; a tools file is an object", path, type(data).__name__, code=records_codes.TOOLS_LIST_BROKEN)
     return data
 
 
@@ -77,15 +77,15 @@ def merged(project=None, personal=None):
             if key.startswith("//") or key in RESERVED:
                 continue
             if not isinstance(value, dict):
-                raise ToolProblem("%s: the entry %r is not an object", path, key, code=records_codes.TOOLS_LIST_BROKEN)
+                raise ToolError("%s: the entry %r is not an object", path, key, code=records_codes.TOOLS_LIST_BROKEN)
             # --- MVP --- a tool's name, and each name in its `needs`, is put into sentences that scripts print, one line each (P430)
             needs = value.get("needs")
             hidden = [name for name in [key] + (needs if isinstance(needs, list) else []) if isinstance(name, str) and not name.isprintable()]
             if hidden:
-                raise ToolProblem("%s: the entry %r has a name with a character a terminal cannot print: %r", path, key, hidden[0], code=records_codes.TOOLS_LIST_BROKEN)
+                raise ToolError("%s: the entry %r has a name with a character a terminal cannot print: %r", path, key, hidden[0], code=records_codes.TOOLS_LIST_BROKEN)
             lists["tools"].setdefault(key, {}).update(value)
         if not isinstance(data.get("roles") or {}, dict):
-            raise ToolProblem("%s: `roles` is not an object — it maps a job to a tool, e.g. {\"pdf-text\": \"pdftotext\"}", path, code=records_codes.TOOLS_LIST_BROKEN)
+            raise ToolError("%s: `roles` is not an object — it maps a job to a tool, e.g. {\"pdf-text\": \"pdftotext\"}", path, code=records_codes.TOOLS_LIST_BROKEN)
         lists["roles"].update(data.get("roles") or {})
         if path == DEFAULTS:
             lists["contracts"].update(data.get("contracts") or {})
@@ -97,7 +97,7 @@ def _filled(line, entry):
     try:
         return line.format(version=entry.get("version", ""), core=entry.get("core", ""))
     except (KeyError, IndexError, ValueError) as unknown:
-        raise ToolProblem("the install line %r names %s; only {version} and {core} are filled", line, unknown, code=records_codes.TOOL_ENTRY_BROKEN)
+        raise ToolError("the install line %r names %s; only {version} and {core} are filled", line, unknown, code=records_codes.TOOL_ENTRY_BROKEN)
 
 
 def install_line(entry):
@@ -136,7 +136,7 @@ def fetch_of(entry):
     """(file, url, sha256, executable) of what spark downloads for this tool here, or None when it downloads nothing.
 
     A `download` entry is one file for every machine (the MicroPython build); a `fetch` block names one
-    build per platform (wokwi-cli, whose releases are a binary each). No build for this machine is a ToolProblem.
+    build per platform (wokwi-cli, whose releases are a binary each). No build for this machine is a ToolError.
     """
     if entry.get("kind") == "download":
         return entry["file"], entry["url"], entry["sha256"], bool(entry.get("executable"))
@@ -145,7 +145,7 @@ def fetch_of(entry):
         return None
     build = fetch["platforms"].get(platform_key())
     if not build:
-        raise ToolProblem("there is no build of it for %s — its list has %s",
+        raise ToolError("there is no build of it for %s — its list has %s",
                           platform_key() or "this machine", ", ".join(sorted(fetch["platforms"])), code=records_codes.NO_BUILD_FOR_PLATFORM)
     return fetch["file"], build["url"], build["sha256"], bool(fetch.get("executable"))
 
@@ -248,35 +248,35 @@ def command_for(tool):
 
 
 def find(name, project=None, personal=None, _seen=()):
-    """A role or a tool's name -> the Tool to run, or a ToolProblem saying why not and what to do."""
+    """A role or a tool's name -> the Tool to run, or a ToolError saying why not and what to do."""
     lists = merged(project, personal)
     role = name if name in lists["roles"] else None
     tool_name = lists["roles"].get(name, name)
     entry = lists["tools"].get(tool_name)
     if entry is None:
-        raise ToolProblem("%s: no tool called %r in any tools file", name, tool_name, code=records_codes.UNKNOWN_TOOL)
+        raise ToolError("%s: no tool called %r in any tools file", name, tool_name, code=records_codes.UNKNOWN_TOOL)
     contract = lists["contracts"].get(role) if role else None
     if contract and contract not in (entry.get("meets") or []):
-        raise ToolProblem("%s: %s does not say it meets %r, so this step will not use it", role, tool_name, contract, code=records_codes.CONTRACT_NOT_MET)
+        raise ToolError("%s: %s does not say it meets %r, so this step will not use it", role, tool_name, contract, code=records_codes.CONTRACT_NOT_MET)
     problem = entry_problem(entry)
     if problem:
-        raise ToolProblem("%s: %s", tool_name, problem, code=records_codes.TOOL_ENTRY_BROKEN)
+        raise ToolError("%s: %s", tool_name, problem, code=records_codes.TOOL_ENTRY_BROKEN)
     if entry.get("on") is False:
-        raise ToolProblem("%s", off_sentence(tool_name, project, personal), code=records_codes.TOOL_OFF)
+        raise ToolError("%s", off_sentence(tool_name, project, personal), code=records_codes.TOOL_OFF)
     if tool_name in _seen:
-        raise ToolProblem("%s: its needs go round in a loop — %s", tool_name, " → ".join(_seen + (tool_name,)), code=records_codes.NEEDS_LOOP)
+        raise ToolError("%s: its needs go round in a loop — %s", tool_name, " → ".join(_seen + (tool_name,)), code=records_codes.NEEDS_LOOP)
     for need in entry.get("needs") or []:
         try:
             find(need, project, personal, _seen + (tool_name,))
-        except ToolProblem as inner:
-            raise ToolProblem("%s needs %s: %s", tool_name, need, inner, code=inner.code)
+        except ToolError as inner:
+            raise ToolError("%s needs %s: %s", tool_name, need, inner, code=inner.code)
     command = locate(entry, project)
     if command is None:
-        raise ToolProblem("%s (%s) is not installed — install: %s",
+        raise ToolError("%s (%s) is not installed — install: %s",
                           role or tool_name, tool_name, install_hint(entry) or "see its entry in %s" % DEFAULTS, code=records_codes.TOOL_MISSING)
     here = versions.too_old(entry)
     if here:
-        raise ToolProblem("%s %s is too old: spark needs %s or newer. Install: %s", tool_name, here,
+        raise ToolError("%s %s is too old: spark needs %s or newer. Install: %s", tool_name, here,
                           entry["oldest_version"], install_hint(entry) or "see its entry in %s" % DEFAULTS, code=records_codes.TOOL_TOO_OLD)
     return Tool(tool_name, role, entry, command)
 
@@ -301,8 +301,8 @@ def status(project=None, personal=None):
                 for need in entry.get("needs") or []:
                     try:
                         find(need, project, personal)
-                    except ToolProblem as inner:
-                        raise ToolProblem("%s needs %s: %s", name, need, inner, code=inner.code)
+                    except ToolError as inner:
+                        raise ToolError("%s needs %s: %s", name, need, inner, code=inner.code)
                 rows.append(("ok", label, "%s (MCP%s)" % (name, ", spark's own" if entry.get("owner") == "spark" else "")))
             else:
                 found = find(label, project, personal)
@@ -310,7 +310,7 @@ def status(project=None, personal=None):
                                 % (field, here or "unknown", pinned)
                                 for field, here, pinned in pin_differences(found.entry, found.command))
                 rows.append(("ok", label, "%s — %s%s" % (name, " ".join(found.command), notes)))
-        except ToolProblem as missing:
+        except ToolError as missing:
             rows.append(("missing", label, str(missing)))
         if entry.get("needs_account") and not os.environ.get(entry.get("account_env") or "", ""):
             rows.append(("person", label, "needs " + entry["needs_account"]))
@@ -394,7 +394,7 @@ def plan(names, project=None, personal=None):
                 step["problem"] = "%s: no way to install it here — %s" % (name, install_hint(entry) or "see its entry in %s" % DEFAULTS)
                 continue
             argv = shlex.split(line)
-        except ToolProblem as unusable:
+        except ToolError as unusable:
             step["problem"] = "%s: %s" % (name, unusable)
             continue
         if "sudo" in argv:
@@ -439,10 +439,10 @@ def install(names, project=None, personal=None, run=None):
         if fetch:
             try:
                 settle_download(*fetch)
-            except ToolProblem as wrong:
+            except ToolError as wrong:
                 problems.append(str(wrong))
     if problems:
-        raise ToolProblem.of_lines(problems, code=records_codes.INSTALL_FAILED)
+        raise ToolError.of_lines(problems, code=records_codes.INSTALL_FAILED)
     return ran
 
 
@@ -454,7 +454,7 @@ def settle_download(file, url, sha256, executable=False):
     if digest != sha256:
         if part.exists():
             part.unlink()
-        raise ToolProblem("%s: the download's checksum %s is not the %s its entry states — deleted",
+        raise ToolError("%s: the download's checksum %s is not the %s its entry states — deleted",
                           file, digest[:12], str(sha256)[:12], code=records_codes.INSTALL_FAILED)
     if executable:
         part.chmod(0o755)
@@ -480,7 +480,7 @@ def pin(target, value, project, where):
     field = field or "version"
     oldest = merged(project)["tools"].get(name, {}).get("oldest_version")
     if field == "version" and oldest and (versions.release_tuple(value) is None or versions.is_older(value, oldest)):
-        raise ToolProblem("%s: %s is not %s or newer, the oldest spark runs — nothing written", name, value, oldest, code=records_codes.PIN_REFUSED)
+        raise ToolError("%s: %s is not %s or newer, the oldest spark runs — nothing written", name, value, oldest, code=records_codes.PIN_REFUSED)
     return name, field, choose([name, field], value, where)
 
 
@@ -490,7 +490,7 @@ def use(role, tool_name, project=None, personal=None):
     entry = lists["tools"].get(tool_name)
     contract = lists["contracts"].get(role)
     if entry is None or (contract and contract not in (entry.get("meets") or [])):
-        raise ToolProblem("%s: %s does not say it meets %r, so this step will not use it", role, tool_name, contract, code=records_codes.CONTRACT_NOT_MET)
+        raise ToolError("%s: %s does not say it meets %r, so this step will not use it", role, tool_name, contract, code=records_codes.CONTRACT_NOT_MET)
     return choose(["roles", role], tool_name, Path(project) / PROJECT_FILE if project else (personal or PERSONAL))
 
 

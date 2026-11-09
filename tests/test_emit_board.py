@@ -1021,18 +1021,18 @@ class ReadInputsTest(unittest.TestCase):
     def test_an_unknown_need_is_refused_under_schematic(self):
         root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"],
                              "signals": [{"name": "X", "needs": ["teleport"]}]})
-        with self.assertRaises(board_emitter.RefusedInput) as caught:
+        with self.assertRaises(board_emitter.RefusedInputError) as caught:
             board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual(caught.exception.stage, "schematic")
         self.assertTrue(str(caught.exception).startswith("cannot emit a board: "), str(caught.exception))
         self.assertIn("X asks for teleport", str(caught.exception))
         self.assertEqual(str(caught.exception), "cannot emit a board: " + caught.exception.why)
-        self.assertEqual(caught.exception.code, "unknown_need")  # P700: the Impossible's own code
+        self.assertEqual(caught.exception.code, "unknown_need")  # P700: the ImpossibleError's own code
 
     def test_a_footprint_gap_is_refused_under_footprint_in_its_own_words(self):
         from board_library import board_missing
         root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]})
-        with board_missing("physical.header_order"), self.assertRaises(board_emitter.RefusedInput) as caught:
+        with board_missing("physical.header_order"), self.assertRaises(board_emitter.RefusedInputError) as caught:
             board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual(caught.exception.stage, "footprint")
         self.assertEqual(str(caught.exception),
@@ -1044,14 +1044,14 @@ class ReadInputsTest(unittest.TestCase):
         from board_library import board_missing
         root = self.project({"board": "xiao-esp32-c6", "parts": ["led-red-5mm"],
                              "signals": [{"name": "X", "needs": ["teleport"]}]})
-        with board_missing("physical.header_order"), self.assertRaises(board_emitter.RefusedInput) as caught:
+        with board_missing("physical.header_order"), self.assertRaises(board_emitter.RefusedInputError) as caught:
             board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual(caught.exception.stage, "schematic")
 
     def test_a_design_with_a_malformed_file_is_refused_under_schematic(self):
         root = self.project({})
         (root / "requirements.json").write_text("{not json")
-        with self.assertRaises(board_emitter.RefusedInput) as caught:
+        with self.assertRaises(board_emitter.RefusedInputError) as caught:
             board_emitter.read_inputs(root / "requirements.json", root)
         self.assertEqual(caught.exception.stage, "schematic")
         self.assertIn("not JSON", str(caught.exception))

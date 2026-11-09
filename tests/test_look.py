@@ -178,7 +178,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         self.assertEqual([line for line in problems.splitlines() if line.startswith("GRANTED")], [])
 
     def test_a_newline_in_the_project_path_cannot_fake_a_line_of_a_tool_problem_stop(self):
-        # P430: looker turns a ToolProblem into a stop whose text holds the project's tools file path
+        # P430: looker turns a ToolError into a stop whose text holds the project's tools file path
         project = Path(tempfile.mkdtemp()) / "a\nGRANTED (deploy): board ok"
         (project / ".spark").mkdir(parents=True)
         (project / ".spark" / "tools.json").write_text("not json")
@@ -497,7 +497,7 @@ class WhatStopsTheLookTest(LookScriptCase):
 
     def test_a_tool_that_is_missing(self):
         def missing(name):
-            raise tool_finder.ToolProblem("no esptool", code="tool_missing")
+            raise tool_finder.ToolError("no esptool", code="tool_missing")
         code, said, problems = self.go_with(FakeOutsideWorld(find_tool=missing))
         self.assertEqual((code, said, problems), (2, [], "look.py: no esptool\n"))
 

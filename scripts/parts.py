@@ -37,7 +37,7 @@ from pathlib import Path
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from spark.core.outcomes import AnsweringParser, BadArgument, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope  # noqa: E402, F401
+from spark.core.outcomes import AnsweringParser, BadArgumentError, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope  # noqa: E402, F401
 from spark.core import outcomes  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.errors import CodedMessageError  # noqa: E402
@@ -343,7 +343,7 @@ def main(argv=None):
     asked = next((name for name, *_ in OPERATIONS if "--" + name in argv), None)
     try:
         args = _parser().parse_args(argv)
-    except BadArgument as bad:
+    except BadArgumentError as bad:
         return _say(asked, Answer(unchecked=[_cannot(str(bad), "parts.py --describe --json lists every operation and its arguments")]),
                     "--json" in argv)
     op = next(name for name, *_ in OPERATIONS if getattr(args, name.replace("-", "_")) not in (None, False))

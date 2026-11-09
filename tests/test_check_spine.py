@@ -695,7 +695,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertEqual([entry["did"] for entry in said["kept"] if entry["file"].endswith("pins.py")], ["left alone"])
 
     def test_pins_that_cannot_be_placed_write_no_pin_map(self):
-        # The ordinary refusal is assign_pins.Impossible, not a DesignError: a need no pin can meet.
+        # The ordinary refusal is assign_pins.ImpossibleError, not a DesignError: a need no pin can meet.
         wanted = Path(tempfile.mkdtemp()) / "requirements.json"
         wanted.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["led-red-5mm"],
                                       "signals": [{"name": "X", "needs": ["teleport"]}]}))
@@ -1892,7 +1892,7 @@ class ABoardWithNoFootprintStopsAtTheFootprintStageTest(unittest.TestCase):
             with self.subTest(fields=fields, extra=extra):
                 project, wanted = self.project_without(*fields, requirements=dict(
                     {"board": "xiao-esp32-c6", "parts": ["led-red-5mm"]}, **extra))
-                with self.assertRaises(board_emitter.RefusedInput) as refused:
+                with self.assertRaises(board_emitter.RefusedInputError) as refused:
                     board_emitter.read_inputs(project / "requirements.json", project)
                 self.assertTrue(str(refused.exception).startswith(first), str(refused.exception))
                 stages = self.run_spine(project, wanted)
@@ -2011,7 +2011,7 @@ class AMissingBoardEngineSaysWhatTheToolsListSaysTest(unittest.TestCase):
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         said = "tscircuit needs bun: bun (bun) is not installed — install: npm install -g bun"
         with mock.patch.object(board_engine, "find_toolchain", return_value=None), \
-                mock.patch.object(tool_finder, "find", side_effect=tool_finder.ToolProblem(said, code="tool_missing")):
+                mock.patch.object(tool_finder, "find", side_effect=tool_finder.ToolError(said, code="tool_missing")):
             stages = build_service.run(requirements, workdir, from_library=True)
         build = [stage for stage in stages if stage.name == "build"][0]
         self.assertEqual(build.status, check_spine.COULD_NOT_RUN)
@@ -2120,7 +2120,7 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
 
     def test_no_node_means_could_not_run_naming_the_install(self):
         from spark.records import tool_finder
-        missing = tool_finder.ToolProblem("js-runtime (node) is not installed — install: brew install node",
+        missing = tool_finder.ToolError("js-runtime (node) is not installed — install: brew install node",
                                           code="tool_missing")
         with mock.patch.object(tool_finder, "find", side_effect=missing):
             stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()))
@@ -2133,7 +2133,7 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
 
         def no_node(name, *rest):
             if name == "js-runtime":
-                raise tool_finder.ToolProblem("js-runtime (node) is not installed — install: brew install node",
+                raise tool_finder.ToolError("js-runtime (node) is not installed — install: brew install node",
                                               code="tool_missing")
             return real(name, *rest)
         with mock.patch.object(tool_finder, "find", side_effect=no_node):
@@ -2276,7 +2276,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         self.assertIn("history.jsonl line 1 is not a history event", complained)
 
     def test_whatever_stops_the_recording_the_verdict_stands_and_the_reason_is_said(self):
-        for refusal in (store.StoreProblem("the projects list is not JSON", code="record_file_broken"), OSError("the disk is full")):
+        for refusal in (store.StoreError("the projects list is not JSON", code="record_file_broken"), OSError("the disk is full")):
             with self.subTest(refusal=refusal), mock.patch.object(check_spine.part_facts, "note_built", side_effect=refusal):
                 code, said, complained = self.answer()
                 self.assertEqual((code, "the chain runs end to end" in said), (0, True))

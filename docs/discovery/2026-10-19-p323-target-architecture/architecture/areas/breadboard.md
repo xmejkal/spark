@@ -29,7 +29,7 @@ The build runs the same Service as its breadboard stage.
 | `breadboard/drawing_match.py` | the drawing check against `circuit.json`, from `breadboard_match.py` (P694) |
 | `breadboard/drawing_catalog.py` | what the drawn breadboard draws each component as, the catalog of a build, from `breadboard_catalog.py` (P694) |
 | `breadboard/part_pictures.py` | `PartPictures`, moved as is |
-| `breadboard/part_shape.py` | `PartShape`, `ShapeSource`, `find_part_px`, a part's pixel shape in the Wokwi drawing, moved as is in W6-D3b (P703, planned in P698). It raises `NotDrawn` and imports design's `footprint_emitter`, a downward arrow |
+| `breadboard/part_shape.py` | `PartShape`, `ShapeSource`, `find_part_px`, a part's pixel shape in the Wokwi drawing, moved as is in W6-D3b (P703, planned in P698). It raises `NotDrawnError` and imports design's `footprint_emitter`, a downward arrow |
 | `breadboard/tabbed_page.py` | `TabbedHtmlPage`, `TscircuitExport`, moved as is |
 | `breadboard/sheet.py` | the sheet flow, from `breadboard.py`, whose `main` stays in `scripts/` as the CLI (P694) |
 | `breadboard/breadboard_codes.py` | the codes of the refusals of the run, with one sentence each (a leaf, P692); a drawing not written has its codes in `drawing.py`'s `CODES`. Moved as it is (P694) |

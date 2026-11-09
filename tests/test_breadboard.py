@@ -177,7 +177,7 @@ class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):
         project = a_copy()
         (project / "requirements.json").write_text(json.dumps(
             {"board": "firebeetle2-esp32s3", "parts": ["tactile-button", "led-red-5mm", "jst-ph-2-power-inlet"]}))
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuiltError) as said:
             sheet.sheet(project / "requirements.json")
         self.assertIn("build again", str(said.exception))
 
@@ -186,14 +186,14 @@ class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):
         project = a_copy()
         wanted = json.loads((project / "requirements.json").read_text())
         (project / "requirements.json").write_text(json.dumps(dict(wanted, board="xiao-esp32-c6")))
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuiltError) as said:
             sheet.sheet(project / "requirements.json")
         self.assertIn("built from other requirements", str(said.exception))
 
     def test_a_build_that_recorded_nothing_is_refused(self):
         project = a_copy()
         (project / "dist" / "board" / "built-from.json").unlink()
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuiltError) as said:
             sheet.sheet(project / "requirements.json")
         self.assertIn("records no finished build", str(said.exception))
 
@@ -201,14 +201,14 @@ class AStaleOrFailedBuildIsRefusedTest(unittest.TestCase):
         project = a_copy()
         circuit = project / "dist" / "board" / "circuit.json"
         circuit.write_text(json.dumps(json.loads(circuit.read_text()) + [{"type": "source_trace_not_connected_error"}]))
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuiltError) as said:
             sheet.sheet(project / "requirements.json")
         self.assertIn("the last build failed", str(said.exception))
 
     def test_a_circuit_that_is_not_a_list_of_elements_is_refused(self):
         project = a_copy()
         (project / "dist" / "board" / "circuit.json").write_text("{}")
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt):
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuiltError):
             sheet.sheet(project / "requirements.json")
 
 
@@ -216,7 +216,7 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
     """P692: each refusal of the sheet names its code from breadboard_codes, as a literal here (P677 row 26)."""
 
     def code_of(self, project):
-        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuilt) as said:
+        with in_store(Path(tempfile.mkdtemp())), self.assertRaises(sheet.NotBuiltError) as said:
             sheet.sheet(project / "requirements.json")
         return said.exception.code
 
@@ -252,9 +252,9 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
         self.assertEqual(self.code_of(project), "built_from_other_requirements")
 
     def test_the_errors_from_outside_each_have_their_own(self):
-        self.assertEqual(sheet.refusal_code(sheet.NotBuilt("not built", "build_failed")), "build_failed")
+        self.assertEqual(sheet.refusal_code(sheet.NotBuiltError("not built", "build_failed")), "build_failed")
         self.assertEqual(sheet.refusal_code(loader.DesignError("no part %s", "x", code="part_unusable")), "requirements_unusable")
-        self.assertEqual(sheet.refusal_code(store.StoreProblem("the store", code="record_file_broken")), "store_problem")
+        self.assertEqual(sheet.refusal_code(store.StoreError("the store", code="record_file_broken")), "store_problem")
         self.assertEqual(sheet.refusal_code(PermissionError("breadboard.md")), "file_unusable")
 
     def test_a_broken_list_of_projects_stops_the_sheet_as_a_store_problem(self):
@@ -268,7 +268,7 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
 
     def test_main_catches_exactly_the_errors_that_have_a_code(self):
         self.assertEqual(set(sheet.REFUSALS),
-                         {sheet.NotBuilt, loader.DesignError, store.StoreProblem, OSError})
+                         {sheet.NotBuiltError, loader.DesignError, store.StoreError, OSError})
 
 
 class APadIsNamedAsItIsPrintedTest(unittest.TestCase):

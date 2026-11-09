@@ -25,7 +25,7 @@ def to_ohms(resistance):
 
 def describe_parts(read, geometry):
     """{component as the steps name it: how Wokwi draws it}, from the records. The board's pins come from the first
-    shape source that places it (`part_shape`), or NotDrawn with a code says why none does. A board whose Wokwi pins are
+    shape source that places it (`part_shape`), or NotDrawnError with a code says why none does. A board whose Wokwi pins are
     not its printed labels names no pins, so the drawing says which pin it cannot find. `geometry` must be Wokwi's own."""
     board = read.built.board
     source = part_shape.find_source(board, part_shape.sources_for(geometry.data["parts"]))
