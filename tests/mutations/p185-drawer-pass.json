@@ -50,7 +50,7 @@
  {
   "file": "scripts/drawer.py",
   "name": "a record no other project can see is linked from a folder on no list (refuter RX3)",
-  "find": "if change and change[\"shelve\"] and change[\"shelve\"][1] is None and not parts.shelvable(*change[\"shelve\"]):",
+  "find": "if change and change[\"shelve\"] and change[\"shelve\"][1] is None and not part_facts.shelvable(*change[\"shelve\"]):",
   "replace": "if False:"
  },
  {

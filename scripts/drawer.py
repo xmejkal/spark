@@ -15,9 +15,8 @@ from pathlib import Path
 from collections import namedtuple
 
 from spark.records import board_records
-import parts
 from spark.records import record_kind
-from spark.sourcing import part_records
+from spark.sourcing import part_facts, part_records
 from spark.records import records_codes
 from spark.records import store
 from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems, printable
@@ -318,7 +317,7 @@ def plan_set(items, project=None):
         change, asked, refused = settle(entry_id, current.get(entry_id), values, known)
         questions += asked
         problems += refused
-        if change and change["shelve"] and change["shelve"][1] is None and not parts.shelvable(*change["shelve"]):
+        if change and change["shelve"] and change["shelve"][1] is None and not part_facts.shelvable(*change["shelve"]):
             # A folder on no list keeps a record only it can see: unshelved, the entry would point at nothing elsewhere (RX3).
             problems.append(record_kind._problem(
                 entry_id, "%s does not meet the part contract yet, and its folder is on no list, "
@@ -335,7 +334,7 @@ def apply(changes):
     """Shelve what a new link brought in, then write every entry that changed."""
     for change in changes:
         if change["shelve"]:
-            parts.shelve(*change["shelve"])
+            part_facts.shelve(*change["shelve"])
         if change["now"]:
             store.write_json("drawer", change["entry"], change["after"])
 

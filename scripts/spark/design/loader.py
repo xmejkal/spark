@@ -37,9 +37,8 @@ from pathlib import Path
 from spark.records import board_records
 from spark.design import design_codes
 from spark.design import fab
-import parts as parts_library
 from spark.records import record_kind
-from spark.sourcing import part_records
+from spark.sourcing import part_facts, part_records
 from spark.records import provenance
 from spark.core.errors import CodedMessageError
 
@@ -407,7 +406,7 @@ def signals_of(part_list, wanted, project):
     signals, sources = [], []  # sources[i] says where signals[i] came from, for the refusal below
     for part in part_list:
         try:
-            asked = parts_library.signals_for([part["id"]], project)
+            asked = part_facts.signals_for([part["id"]], project)
         except part_records.PartError as broken:
             raise DesignError.of_error(broken, code=design_codes.PART_UNUSABLE) from broken
         except (ValueError, OSError) as broken:

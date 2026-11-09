@@ -24,13 +24,13 @@
   "replace": " if url not in known]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_facts.py",
   "name": "promotion leaves the record's folder (its chip) behind",
   "find": "    if (home / part_id).is_dir():\n        shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)",
   "replace": "    if False:\n        shutil.copytree(home / part_id, to / part_id, dirs_exist_ok=True)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_facts.py",
   "name": "promotion overwrites",
   "find": "    if target.exists():\n        raise PartError(\"%s exists; a promotion never overwrites\", target,",
   "replace": "    if False:\n        raise PartError(\"%s exists; a promotion never overwrites\", target,"

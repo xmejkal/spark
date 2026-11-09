@@ -42,7 +42,7 @@ from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
-from spark.sourcing import part_records  # noqa: E402
+from spark.sourcing import part_facts, part_records  # noqa: E402
 from spark.sourcing import part_rules  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
@@ -167,7 +167,7 @@ class TheContractTest(unittest.TestCase):
     def test_a_real_footprint_needs_no_note(self):
         # Opt-in, so the five shipped records and every honest footprint are untouched.
         self.assertEqual(self._problems(footprint="pinrow5"), [])
-        self.assertFalse(parts.has_placeholder_footprint(part(footprint="pinrow5")))
+        self.assertFalse(part_facts.has_placeholder_footprint(part(footprint="pinrow5")))
 
     def test_a_footprint_that_is_no_footprinter_name_is_refused(self):
         """
@@ -258,7 +258,7 @@ class TheContractTest(unittest.TestCase):
     def test_printed_names_are_collected_only_where_they_differ(self):
         record = part(needs=[{"signal": "S", "pin": "VIN", "printed": "IN+", "direction": "in"}],
                       power=[{"pin": "GND", "printed": "GND", "rail": "ground", "direction": "in"}])
-        self.assertEqual(parts.printed_names(record), {"VIN": "IN+"})
+        self.assertEqual(part_facts.printed_names(record), {"VIN": "IN+"})
 
     def test_a_nonsense_direction_is_caught(self):
         problems = self._problems(needs=[{"signal": "S", "pin": "P", "direction": "sideways"}])
@@ -299,39 +299,39 @@ class TheContractTest(unittest.TestCase):
 
 class WhatAPartAsksForTest(unittest.TestCase):
     def test_signals_come_out_ready_for_the_assigner(self):
-        signals = parts.signals_for(["l9110s-module"])
+        signals = part_facts.signals_for(["l9110s-module"])
         self.assertEqual([s["name"] for s in signals], ["MOTOR_IA", "MOTOR_IB"])
         self.assertTrue(all(s["from"] == "l9110s-module" for s in signals))
 
     def test_a_capability_a_part_needs_survives_into_the_signal(self):
-        signals = parts.signals_for(["vl6180x-breakout"])
+        signals = part_facts.signals_for(["vl6180x-breakout"])
         interrupt = next(s for s in signals if s["name"] == "TOF_INT")
         self.assertIn("wake", interrupt["needs"])
 
     def test_a_bus_signal_is_marked_as_one(self):
-        signals = parts.signals_for(["vl6180x-breakout"])
+        signals = part_facts.signals_for(["vl6180x-breakout"])
         self.assertEqual({s["name"] for s in signals if s.get("bus") == "i2c"}, {"SDA", "SCL"})
 
     def test_an_optional_signal_is_still_offered(self):
         # Dropping it silently would hide a requirement. A caller that does not want the sensor
         # to wake the host can remove it; it must not vanish on its own.
-        self.assertIn("TOF_INT", [s["name"] for s in parts.signals_for(["vl6180x-breakout"])])
+        self.assertIn("TOF_INT", [s["name"] for s in part_facts.signals_for(["vl6180x-breakout"])])
 
 
 class WhatNobodyHasCheckedTest(unittest.TestCase):
     def test_unverified_facts_are_collected_across_parts(self):
-        questions = parts.unverified(["dfr0534-module", "vl6180x-breakout"])
+        questions = part_facts.unverified(["dfr0534-module", "vl6180x-breakout"])
         self.assertTrue(questions)
         self.assertTrue(all("why_it_matters" in q for q in questions))
 
     def test_a_verified_fact_is_not_reported_as_open(self):
-        names = {q["fact"] for q in parts.unverified(["l9110s-module"])}
+        names = {q["fact"] for q in part_facts.unverified(["l9110s-module"])}
         self.assertNotIn("input_high_threshold_v", names)
 
     def test_the_audio_module_declares_its_unmeasured_idle_current(self):
         # The single most consequential unknown on the project this came from. If the library
         # cannot surface that, it is not doing its job.
-        questions = parts.unverified(["dfr0534-module"])
+        questions = part_facts.unverified(["dfr0534-module"])
         self.assertIn("idle_current_ma", {q["fact"] for q in questions})
 
     def test_a_joystick_lists_ten_rows_and_the_guessed_outline_row_says_where_it_goes_back(self):
@@ -377,7 +377,7 @@ class FromPartsToAPinMapTest(unittest.TestCase):
 
     def setUp(self):
         self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        self.signals = parts.signals_for(
+        self.signals = part_facts.signals_for(
             ["l9110s-module", "vl6180x-breakout", "dfr0534-module"])
 
     def test_every_signal_the_parts_ask_for_is_placed(self):
@@ -529,7 +529,7 @@ class ABusIsSpentLastTest(unittest.TestCase):
         board the I2C pins ARE GPIO 1 and 2, which are ADC1 — a bus signal goes where its bus is,
         and the first version of this test counted them and failed for the right placement.
         """
-        signals = parts.signals_for(["l9110s-module", "vl6180x-breakout"]) + [
+        signals = part_facts.signals_for(["l9110s-module", "vl6180x-breakout"]) + [
             {"name": "LED_%d" % i, "needs": []} for i in range(3)]
         placed, _ = pin_assigner.assign(self.board, signals)
         adc1 = set(self.board["adc_gpio"])
@@ -607,7 +607,7 @@ class AProjectCanExtendTheLibraryTest(unittest.TestCase):
 
     def test_a_projects_own_part_can_be_loaded_and_asked_for_signals(self):
         self.assertEqual(part_records.load("ssd1306-oled", self.project)["name"], "SSD1306 OLED")
-        self.assertTrue(parts.signals_for(["ssd1306-oled"], self.project))
+        self.assertTrue(part_facts.signals_for(["ssd1306-oled"], self.project))
 
     def test_a_project_definition_beats_the_shipped_one_of_the_same_name(self):
         # The reason the override exists: what you verified yourself must not be replaced by a
@@ -708,7 +708,7 @@ class TheShippedLibraryTest(unittest.TestCase):
             with self.subTest(part=part_id):
                 definition = part_records.load(part_id)
                 self.assertTrue(
-                    parts.signals_for([part_id]) or definition.get("power"),
+                    part_facts.signals_for([part_id]) or definition.get("power"),
                     "%s asks the host for no pin and carries no rail, so placing it on a board "
                     "does nothing at all" % part_id)
 
@@ -892,7 +892,7 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         (root / ".spark").mkdir()
         (root / ".spark" / "project.json").write_text(json.dumps({"sellers": ["LaskaKit", "gme"]}))
         self.assertEqual(parts.sellers(root), ("laskakit", "gme"))
-        self.assertIn("sourcing", parts.skeleton("x", "connector"))
+        self.assertIn("sourcing", part_facts.skeleton("x", "connector"))
 
     def test_a_skeleton_whose_id_is_no_plain_key_is_refused_and_nothing_is_written(self):
         # P87's follow-through: every reader refuses a record named so, so nobody is handed a file they cannot use
@@ -941,7 +941,7 @@ class EachPartRefusalHasItsCodeTest(unittest.TestCase):
         (project / "parts" / "broken-part.json").write_text(json.dumps({"schema": 1, "id": "broken-part"}))
         asked = {"definition_path": (lambda: part_records.definition_path("no-such-part", project), "no_such_part"),
                  "fetch_documents": (lambda: parts.fetch_documents("no-such-part", project), "no_such_part"),
-                 "promote": (lambda: parts.promote("no-such-part", project), "no_such_part"),
+                 "promote": (lambda: part_facts.promote("no-such-part", project), "no_such_part"),
                  "_set_in_home": (lambda: parts._set_in_home("no-such-part", project, {}, True, None), "no_such_part"),
                  "load": (lambda: part_records.load("broken-part", project), "part_contract_broken"),
                  "_read_json_input": (lambda: parts._read_json_input(str(project / "parts")), "input_unreadable")}
@@ -1023,7 +1023,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         answered = lambda record: [(url, True) for url in parts.cited_urls(record)]  # noqa: E731 — no network
         with in_store(home), mock.patch.object(parts, "sources_resolve", answered):
             self.assertEqual(part_records.any_record("x-part")["id"], "x-part")
-            self.assertEqual([q["fact"] for q in parts.unverified(["x-part"])], ["pitch_mm"])
+            self.assertEqual([q["fact"] for q in part_facts.unverified(["x-part"])], ["pitch_mm"])
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 code = parts.main(["--sources", "x-part"])
         self.assertEqual((code, "ok" in out.getvalue()), (0, True), out.getvalue())
@@ -1134,13 +1134,13 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         (catalog / "x-part" / "chip").mkdir(parents=True)
         (catalog / "x-part" / "chip" / "x.chip.json").write_text("{}")
         with in_store(home):
-            self.assertEqual(parts.promote("x-part", project), project / "parts" / "x-part.json")
+            self.assertEqual(part_facts.promote("x-part", project), project / "parts" / "x-part.json")
             self.assertEqual(json.loads((project / "parts" / "x-part.json").read_text())["documents"], documents)
             self.assertTrue((project / "parts" / "x-part" / "chip" / "x.chip.json").is_file(), "a chip travels with it")
             with self.assertRaises(part_records.PartError) as refused:
-                parts.promote("x-part", project, to=project / "parts")
+                part_facts.promote("x-part", project, to=project / "parts")
             self.assertEqual(refused.exception.code, "promotion_would_overwrite")  # P717
-            self.assertEqual(parts.promote("x-part", project, to=library), library / "x-part.json")
+            self.assertEqual(part_facts.promote("x-part", project, to=library), library / "x-part.json")
             self.assertTrue((library / "x-part" / "chip" / "x.chip.json").is_file())
 
     def test_a_newline_in_the_target_gives_one_line_in_a_promotion_that_never_overwrites(self):
@@ -1151,7 +1151,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         (project / "parts" / "x-part.json").write_text("{}")
         with in_store(home):
             with self.assertRaises(part_records.PartError) as caught:
-                parts.promote("x-part", project, to=project / "parts")
+                part_facts.promote("x-part", project, to=project / "parts")
         assert_flat(self, caught.exception, project / "parts" / "x-part.json")
 
     def test_a_newline_in_the_name_of_a_document_gives_one_line_in_a_fetch_that_the_store_would_refuse(self):
@@ -1549,7 +1549,7 @@ class APinOrderSaysHowItWasReadTest(unittest.TestCase):
 
     def test_an_unverified_pin_order_is_listed_with_the_unverified_facts(self):
         definition = self.record(pin_order_proof={"verified": False, "source": "read off a photo"})
-        listed = [q for q in parts.open_questions_of(definition) if q["fact"] == "pin_order"]
+        listed = [q for q in part_facts.open_questions_of(definition) if q["fact"] == "pin_order"]
         self.assertEqual(len(listed), 1)
         self.assertEqual(listed[0]["source"], "read off a photo")
 
@@ -1580,7 +1580,7 @@ class APullTheBoardAddsAgainstTheModulesOwnIsShownWithItsArithmeticTest(unittest
         self.assertEqual(part_rules.pull_conflicts(self.record(pulldown_ohms=1000)), [])
 
     def test_show_prints_it_where_a_person_reads_the_part(self):
-        self.assertIn("5 V", parts.describe(self.record()))
+        self.assertIn("5 V", part_facts.describe(self.record()))
 
 class ReadingADatasheetStopsWhenItHasWhatItNeedsTest(unittest.TestCase):
     """
@@ -2034,7 +2034,8 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
         self.assertEqual([text.count("fix for l9110s-module.%s: " % pin) for pin in ("AIA", "AIB")], [1, 1], text)
         said, code = run_json(["--unverified", "l9110s-module", "jst-ph-2-power-inlet", "tactile-button"])
         self.assertEqual((said["status"], code, "questions" in said["data"]), ("ok", 0, False))
-        self.assertEqual(len(said["assumptions"]), len(parts.unverified(["l9110s-module", "jst-ph-2-power-inlet", "tactile-button"])))
+        self.assertEqual(len(said["assumptions"]),
+                         len(part_facts.unverified(["l9110s-module", "jst-ph-2-power-inlet", "tactile-button"])))
 
 
 class TheShelfIsALayerTest(unittest.TestCase):
@@ -2059,10 +2060,11 @@ class TheShelfTest(unittest.TestCase):
 
     def test_a_digest_moves_only_with_the_facts_a_build_reads(self):
         record = {"id": "x", "name": "X", "needs": [{"signal": "SIG"}], "pin_order": ["SIG", "GND"]}
-        self.assertEqual(parts.digest(record),
+        self.assertEqual(part_facts.digest(record),
                          hashlib.sha256(b'{"needs":[{"signal":"SIG"}],"pin_order":["SIG","GND"]}').hexdigest())
-        self.assertEqual(parts.digest(dict(record, name="renamed", sources=["https://x.example"])), parts.digest(record))
-        self.assertNotEqual(parts.digest(dict(record, pin_order=["GND", "SIG"])), parts.digest(record))
+        self.assertEqual(part_facts.digest(dict(record, name="renamed", sources=["https://x.example"])),
+                         part_facts.digest(record))
+        self.assertNotEqual(part_facts.digest(dict(record, pin_order=["GND", "SIG"])), part_facts.digest(record))
 
     def test_a_shelved_record_leaves_the_project_s_story_behind_and_says_where_it_came_from(self):
         home, source = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "x-module.json"
@@ -2073,8 +2075,8 @@ class TheShelfTest(unittest.TestCase):
         (source.parent / "x-module" / "chip").mkdir(parents=True)
         (source.parent / "x-module" / "chip" / "x.chip.json").write_text("{}")
         with in_store(home):
-            self.assertTrue(parts.shelve(source, "irrigation"))
-            self.assertFalse(parts.shelve(source, "irrigation"), "a retried shelving changes nothing")
+            self.assertTrue(part_facts.shelve(source, "irrigation"))
+            self.assertFalse(part_facts.shelve(source, "irrigation"), "a retried shelving changes nothing")
             shelved = json.loads((home / "shelf" / "x-module.json").read_text())
             self.assertEqual(part_records.load("x-module")["id"], "x-module", "the shelf copy still meets the contract")
         self.assertEqual(sorted(set(record) - set(shelved)), ["alternatives", "owned", "photo", "photos", "sourcing"])
@@ -2093,7 +2095,7 @@ class TheShelfTest(unittest.TestCase):
         os.chmod(chip / "y.chip.json", 0o644)
         os.chmod(chip, 0o755)
         with in_store(home):
-            parts.shelve(source, "irrigation")
+            part_facts.shelve(source, "irrigation")
         shelved = home / "shelf" / "y-module" / "chip"
         self.assertEqual(stat.S_IMODE((shelved / "y.chip.json").stat().st_mode), 0o600)
         self.assertEqual(stat.S_IMODE(shelved.stat().st_mode), 0o700)

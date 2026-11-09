@@ -471,8 +471,8 @@ class ABusWithNoDedicatedPinsGoesAnywhereTest(unittest.TestCase):
         self.board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
 
     def test_the_shipped_i2s_amplifier_is_placed_and_the_reason_names_the_matrix(self):
-        import parts
-        placed, _ = pin_assigner.assign(self.board, parts.signals_for(["max98357a-dfr0954"]))
+        from spark.sourcing import part_facts
+        placed, _ = pin_assigner.assign(self.board, part_facts.signals_for(["max98357a-dfr0954"]))
         names = {a["signal"] for a in placed}
         self.assertTrue({"I2S_BCLK", "I2S_LRC", "I2S_DIN"} <= names, names)
         why = next(a["why"] for a in placed if a["signal"] == "I2S_BCLK")

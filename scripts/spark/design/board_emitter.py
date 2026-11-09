@@ -30,8 +30,7 @@ from spark.design import copper
 from spark.design import loader
 from spark.design import design_codes
 from spark.design import footprint_emitter
-import parts as parts_library
-from spark.sourcing import part_rules
+from spark.sourcing import part_facts, part_rules
 
 from spark.core.result import Refusal
 
@@ -316,7 +315,7 @@ def placeholder_components(part_list):
 
 def placeholders(part_list):
     """The parts whose footprint is a stand-in — the one filter, for the name list and the file."""
-    return [part for part in part_list if parts_library.has_placeholder_footprint(part)]
+    return [part for part in part_list if part_facts.has_placeholder_footprint(part)]
 
 
 def duplicate_component_names(part_list):
@@ -773,7 +772,7 @@ def component_lines(part_list, placements):
                                for position, pad in enumerate(part.get("pin_order") or [], 1)
                                if pad is not None)
         lines.append("    {/* %s */}" % inert(part["name"]))
-        printed = parts_library.printed_names(part)
+        printed = part_facts.printed_names(part)
         if printed:
             # The silkscreen, kept where a person wiring the module will read it. `pin` is what
             # a selector can parse; `printed` is what is actually on the part, and losing the

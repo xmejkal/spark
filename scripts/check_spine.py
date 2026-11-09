@@ -68,7 +68,7 @@ from spark.build.kept_files import (REQUIREMENTS_STAGE, _kept, _kept_pins, desig
                                     keep_breadboard, keep_simulation, keep_tabbed_page, left_off, simulation_dir)
 from spark.build.stages import Stage  # noqa: E402
 from spark.design import loader  # noqa: E402
-import parts  # noqa: E402
+from spark.sourcing import part_facts  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.records import store  # noqa: E402
 
@@ -189,7 +189,7 @@ def main(argv=None):
     # A history that cannot be kept is said, and the verdict stands: the chain ran, whatever the store thinks of it.
     if handed is not None and vouches_for_a_build(stages):
         try:
-            parts.note_built(handed)
+            part_facts.note_built(handed)
         except (store.StoreProblem, OSError) as unrecorded:
             print(guard_lines("  the build was not recorded in your history: %s" % unrecorded), file=sys.stderr)
 
