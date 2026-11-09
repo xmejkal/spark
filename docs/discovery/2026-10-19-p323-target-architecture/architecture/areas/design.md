@@ -33,6 +33,7 @@ into records and sourcing would be a parameter with one value.
 | Module | Holds |
 |---|---|
 | `design/loader.py` | `load` and the `Design` Value, moved from `design.py` in P702 (the name avoids `design/design.py`) |
+| `design/goal_handlers.py` | `audit` and the handlers of the goal Operations, moved out of `parts.py` (W6-S3b, P721). `--needs-set` and `--pick` read a JSON payload, so they stay in the CLI |
 | `design/needs.py` | a goal's needs, matched against the store, the pick, moved from `scripts/needs.py` in P704 with the extractions P700 left. Its reason guard `kept_reason` went to `core/text_guards.py` |
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is in P702 |
 | `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` in P702. The CLI `assign_pins.py` stays in `scripts/` and defines `main` only |

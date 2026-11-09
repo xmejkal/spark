@@ -2,8 +2,9 @@
 Matching a need, or a search word, to what the store offers (P211; docs/2026-10-12-p211-matching-design.md).
 
 A matcher ranks the offers, and a chooser picks one: Claude in the conversation, or the person. This is the one place
-for the rules. `needs.candidates` (`parts.py --match`), `parts.need` and `catalog_matches` (`--need`), `--offer` and
-`tools/match_eval.py` call it, and it reads no store: callers build the offers. Part numbers stay in `drawer._match`.
+for the rules. `needs.candidates` (`parts.py --match`), `datasheets.need` and `catalog_matches` (`--need`), `--offer`
+and `tools/match_eval.py` call it, and it reads no store: callers build the offers. Part numbers stay in
+`drawer._match`.
 """
 
 import json

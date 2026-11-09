@@ -23,6 +23,10 @@ has actually checked. A fact with `verified: false` is not a defect — most par
 VISIBLE, because the unverified ones are what decide whether a design works. On the project this came from, the single
 most consequential number in the whole build was an audio module's idle current, which nobody had measured and every
 document quietly assumed.
+
+This file is the CLI (W6-S3b, P721): the parser, the printers, `--describe`, `--needs-drop` on the core and the
+handlers that read a JSON payload. The rest lives in `spark/sourcing/` (`part_facts`, `datasheets`, `part_handlers`,
+`drawer`) and in `spark/design/goal_handlers.py`.
 """
 
 import argparse
