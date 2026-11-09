@@ -305,7 +305,7 @@ class OnboardRole:
     """
     Value: what spark knows of one part that a board carries itself. `constant` is the name pins.py gives it.
     `scenario_verb` is what a scenario does to it (`read`, `press`), or None when no scenario reaches it. `does` and
-    `what` are the function the board offers a need, in the words of `parts.VERBS`. `not_in_diagram` is what a passed
+    `what` are the function the board offers a need, in `record_kind.VERBS`' words. `not_in_diagram` is what a passed
     run does not test of a part that no scenario reaches. A row has a verb or a sentence, never both and never neither.
     """
 

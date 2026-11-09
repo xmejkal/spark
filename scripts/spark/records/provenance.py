@@ -1,7 +1,7 @@
 """
 What a fact in a record must carry: a module with no spark imports, so that a part record and a board record check
 their facts by one rule. A fact is {value, verified, source}, and an unverified value says why it matters.
-`parts.validate` and `board_records.validate` call it.
+`part_records.validate` and `board_records.validate` call it.
 """
 
 import re
@@ -62,7 +62,10 @@ def fact_problems(where, fact):
 
 
 def list_fact_problems(facts):
-    """`fact_problems` of each entry of a `facts` object, spelled `facts.<name>`. A `facts` that is no object gives none: `parts.type_problems` says so. It never raises."""
+    """
+    `fact_problems` of each entry of a `facts` object, spelled `facts.<name>`. A `facts` that is no object gives none:
+    `record_kind.type_problems` says so. It never raises.
+    """
     if not isinstance(facts, dict):
         return []
     return [problem for name, fact in facts.items() for problem in fact_problems("facts.%s" % name, fact)]
@@ -72,9 +75,9 @@ def list_entry_problems(entries, held):
     """
     Why `entries`, facts to write into a record whose own `facts` is `held`, cannot be written (P374). Each name is
     lowercase letters, digits and underscores, and each entry holds under `list_fact_problems`. Entries that are no object are one
-    problem, in the words of `parts.type_problems`, so that the two are one message. A `held` that is neither absent nor
+    problem, in `record_kind.type_problems`' words, so that the two are one message. A `held` that is neither absent nor
     an object is one problem: repair the file by hand first, it is never read as empty. Nothing, `{}` and `[]` give no
-    problem, because `parts._absent` refuses them already.
+    problem, because `record_kind._absent` refuses them already.
     """
     if entries is None or entries == {} or entries == []:
         return []

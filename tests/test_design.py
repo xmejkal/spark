@@ -315,7 +315,7 @@ class ARailBelongsToTheDesignTest(unittest.TestCase):
 
     def test_on_rails_returns_a_copy_and_leaves_its_argument_as_loaded(self):
         # The first version of this test re-loaded the record from disk afterwards, which
-        # `parts.load` does fresh every time — so an in-place edit was invisible and the mutation
+        # `part_records.load` does fresh every time — so an in-place edit was invisible and the mutation
         # escaped (W12). The contract is on the function: its argument is untouched.
         from spark.sourcing import part_records
         record = part_records.load("l9110s-module")

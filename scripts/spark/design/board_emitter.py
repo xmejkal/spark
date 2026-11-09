@@ -60,7 +60,7 @@ KNOWN_RAIL_NETS = {"logic": "V33", "ground": "GND", "motor": "MOTOR6V", "speaker
 
 def net_name_for_rail(rail):
     """
-    The net a rail's name means. ANY rail name is allowed — a name, of letters, digits and _, which `parts.validate`,
+    The net a rail's name means. ANY rail name is allowed — letters, digits and _, which `part_records.validate`,
     `board_records.validate` and `loader` hold a rail to: the board is written with it as code (P87's attribute half).
 
     This was a closed dictionary of four, and a rail outside it returned None — which the power
@@ -428,7 +428,7 @@ def outputs_in_contention(part_list):
     """
     Nets driven by more than one supply, or by a supply onto a rail the module itself provides.
 
-    `parts.validate` keeps two outputs of ONE part off one net; nothing did across parts, or
+    `part_records.validate` keeps two outputs of ONE part off one net; nothing did across parts, or
     against the board: a regulator's VOUT declared on `logic` was traced to net.V33 beside the
     microcontroller's own 3V3, exit 0, no note (sprint-4 audit B9). Two supplies on one rail
     short into each other unless one is designed to back-feed — which a part record cannot say,

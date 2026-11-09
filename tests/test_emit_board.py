@@ -264,7 +264,7 @@ class ARecordsTextStaysInsideItsCommentTest(unittest.TestCase):
 
 class ARecordsIdNamesItsComponentTest(unittest.TestCase):
     """P87's attribute half: `component_name` capitalises the words of an id and strips nothing, so what keeps
-    `<chip name="…">` a name is the rule upstream — `parts.validate` holds every id to `store.PLAIN`."""
+    `<chip name="…">` a name is the rule upstream — `part_records.validate` holds every id to `store.PLAIN`."""
 
     def test_a_plain_id_becomes_letters_and_digits_and_nothing_else_is_stripped(self):
         for part_id in ("led-red-5mm", "jst-ph-2-power-inlet", "max98357a-dfr0954", "a", "0603-r"):
@@ -915,7 +915,7 @@ class TheDocumentedInvocationTest(unittest.TestCase):
         self.assertIn('to=".L9110sModule > .AIA" />  {/* MOTOR_IA:', tsx)
 
     def test_a_malformed_part_record_is_could_not_run_not_a_traceback(self):
-        # B10: `parts.load` read the file outside any try; through here it was a JSONDecodeError.
+        # B10: `part_records.load` read the file outside any try; through here it was a JSONDecodeError.
         root = self._project()
         (root / "parts").mkdir()
         (root / "parts" / "l9110s-module.json").write_text("{half a record")
@@ -1272,7 +1272,7 @@ class WhatAPartMustRecordTest(unittest.TestCase):
 class TwoSuppliesOnOneRailTest(unittest.TestCase):
     """
     Audit B9: a regulator's VOUT on `logic` was traced to net.V33 beside the microcontroller's
-    own 3V3 — exit 0, no note. `parts.validate` looks inside one part; this looks across the
+    own 3V3 — exit 0, no note. `part_records.validate` looks inside one part; this looks across the
     design and at the rails the module itself supplies.
     """
 

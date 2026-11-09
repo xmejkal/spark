@@ -264,7 +264,7 @@ def rails_requested(wanted):
 def on_rails(part, rails):
     """
     The part's record with the named power pins moved to the design's rails — a COPY, with its
-    own `power` list; the argument is left exactly as loaded. (`parts.load` reads the file every
+    own `power` list; the argument is left exactly as loaded. (`part_records.load` reads the file every
     time, so an in-place edit would reach nothing else today; the copy is the contract, not a
     fix, and the test holds the function to it rather than to a cache that does not exist.)
     """
@@ -282,7 +282,7 @@ def record(part_id, project):
     """
     The library's record for a part, or a DesignError saying what is wrong with it.
 
-    `parts.load` reads the file outside any try, so a malformed project part was a
+    `part_records.load` reads the file outside any try, so a malformed project part was a
     `JSONDecodeError` traceback through `emit_board.py` and `[!!] schematic Traceback …` through the
     spine — the A8 class, one module below the loader (audit B10). Named by part id here, since
     the library resolves the path.
