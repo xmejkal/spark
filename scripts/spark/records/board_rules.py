@@ -1,5 +1,5 @@
 """
-The rules a board record is held to (P724), as `part_rules` holds a part's: one named rule per function, each
+The rules a board record is held to (P724), as `part_records` holds a part's: one named rule per function, each
 `(board, validation) -> list` of problems, in the order of `RULES`, which `board_records.BOARD` runs, and the names only
 they read (the forbidden keys, the fab keys, the shape of a label and a fact). The names `board_records` code and other
 modules read too (`PIN_ROLES`, `POWER_FUNCTIONS`, `GPIO_MIN`, `GPIO_MAX`, `is_gpio`, `is_pin_map_constant`) live here,

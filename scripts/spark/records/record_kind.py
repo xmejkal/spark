@@ -140,6 +140,7 @@ class RecordKind:
         """One problem per required key the record lacks and does not owe."""
         return ["missing required key %r" % key for key in self.required if key not in record and key not in validation.owed]
 
+
 #: The three lists in a record that hold pins. Written out three times before 2026-09-29, and the missing-pin rule was
 #: applied to one of them for a week while the other two were read with `entry["pin"]` — G15. A fourth list added to the
 #: schema now has to be added here, and nowhere else.
@@ -175,6 +176,7 @@ RECORD_TYPES = {
     "documents": MapOf(dict),
     "pin_order": ListOf(str, nulls=True),  # a null is a pad with nothing on it
 }
+
 
 def _type_name(expected):
     return "a list" if isinstance(expected, ListOf) else "a string" if expected is str else "an object"
