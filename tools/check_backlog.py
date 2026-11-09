@@ -42,6 +42,7 @@ BIN_BOARD = "bin"
 #: expedite and waits were not checked either. A could-not-look, not a failure — said with its cause, and the push goes
 #: through (W1).
 BIN_UNREAD = "the bin's board could not be read (%s) — its cards were not counted or checked"
+# --- MVP ---
 #: The slices of the sound session (P730, the PO, 2026-11-09): "pixel-games" and "graphics library" own 1 place in Ready and
 #: 1 in Build. Every other card, and a card with no slice, is the spark session's.
 SOUND_SLICES = ("pixel-games", "graphics library")
@@ -105,6 +106,7 @@ def _ref(entry):
     return "%s#%s" % (BIN_BOARD + " " if entry.get("board") == BIN_BOARD else "", entry["content"].get("number"))
 
 
+# --- MVP ---
 def session_of(entry):
     """The session a card's places come from (P730): "sound" for a slice in SOUND_SLICES, else "spark" — one with no slice too."""
     return "sound" if entry.get("slice") in SOUND_SLICES else "spark"
