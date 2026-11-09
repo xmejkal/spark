@@ -103,8 +103,8 @@ classDiagram
 
 Most classes exist: `BreadboardPlanner` (`drawing.py:288`), `PartPlacement` (`:198`), `JumperPlacement`
 (`:209`), `FirstFitPartPlacement` (`:218`), the keep variants (`kept_moves.py:158`, `:262`), the Renderers
-(`drawing.py:396`, `:449`) and `PartPictures` (`part_pictures.py:27`). Two renames:
-`WiringStep` for `Step` (`wiring_steps.py:39`) and `WiringLog` for `WiringRecord` (`bench_changes.py:103`).
+(`drawing.py:396`, `:449`), `PartPictures` (`part_pictures.py:27`), `WiringStep` (`wiring_steps.py:39`) and `WiringLog`
+(`bench_changes.py:103`), which P709 renamed from `Step` and `WiringRecord`.
 The method names in the diagram are a sketch. Each class keeps its real methods.
 
 ### The main flow: a sheet from a build

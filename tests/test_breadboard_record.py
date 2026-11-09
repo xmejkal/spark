@@ -34,7 +34,7 @@ SECTION = "### Changes since the last build"
 
 
 def record(project):
-    return json.loads((project / bench_changes.WiringRecord.FILE_NAME).read_text())
+    return json.loads((project / bench_changes.WiringLog.FILE_NAME).read_text())
 
 
 def section(project):
@@ -106,7 +106,7 @@ class RebuildTest(unittest.TestCase):
     def test_a_record_that_cannot_be_read_is_said_and_written_again(self):
         project = new_project(FULL)
         build(project)
-        (project / bench_changes.WiringRecord.FILE_NAME).write_text("{not json")
+        (project / bench_changes.WiringLog.FILE_NAME).write_text("{not json")
         written = build(project)
         self.assertEqual(written.changes, [])
         self.assertRegex(" ".join(section(project)), r"cannot be compared.*cannot be read")
@@ -146,11 +146,11 @@ class WriteOrderTest(unittest.TestCase):
         project = new_project(BUTTON_ONLY)
         build(project)
         change_requirements(project, FULL)
-        earlier = (project / bench_changes.WiringRecord.FILE_NAME).read_text()
+        earlier = (project / bench_changes.WiringLog.FILE_NAME).read_text()
         with mock.patch.object(sheet.DRAWING_RENDERERS[1], "text", side_effect=RuntimeError("boom")):
             with self.assertRaises(RuntimeError):
                 build(project)
-        self.assertEqual((project / bench_changes.WiringRecord.FILE_NAME).read_text(), earlier)
+        self.assertEqual((project / bench_changes.WiringLog.FILE_NAME).read_text(), earlier)
 
     def test_a_circuit_that_cannot_be_drawn_still_keeps_a_record_without_colors(self):
         project = new_project(LED_ONLY)
@@ -202,10 +202,10 @@ class CheckSpineTest(unittest.TestCase):
 
     def test_a_build_that_did_not_finish_keeps_the_record(self):
         project = self.rebuilt()
-        earlier = (project / bench_changes.WiringRecord.FILE_NAME).read_text()
+        earlier = (project / bench_changes.WiringLog.FILE_NAME).read_text()
         self.keep(project, FULL, [Stage("build", check_spine.PROBLEMS, "1 error")])
         self.assertFalse((project / "breadboard.md").exists())
-        self.assertEqual((project / bench_changes.WiringRecord.FILE_NAME).read_text(), earlier)
+        self.assertEqual((project / bench_changes.WiringLog.FILE_NAME).read_text(), earlier)
 
 
 if __name__ == "__main__":
