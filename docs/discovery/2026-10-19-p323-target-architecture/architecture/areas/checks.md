@@ -31,6 +31,7 @@ libraries live in `scripts/spark/checks/`.
 | `checks/check.py` | `Check`, `CHECKS`, `CheckedFolder` and the five checks (`RulesVsNetlist`, `Physics`, `Buildability`, `VendorTruth`, `TheOrder`), the library of `check_all.py` (P695) |
 | `checks/rules_check.py` | `RulesCheck` and `compare_design`'s logic |
 | `checks/physics_check.py` | `PhysicsCheck` and `check_physics`'s logic, `CircuitBoard` |
+| `checks/physics_board.py` | `Board`, the built netlist with the questions physics asks, and `measured_route` (P708) |
 | `checks/build_check.py` | `BuildCheck` and `check_footprints`'s logic |
 | `checks/vendor_pins_check.py` | `VendorPinsCheck`, `check_vendor_pins`'s logic, the Adapter `GhVendorHeaders` |
 | `checks/order_check.py` | `OrderCheck` and `check_bom`'s logic |

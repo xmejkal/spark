@@ -31,6 +31,7 @@ a new project with the files every check and reviewer needs.
 | `build/project_setup.py` | `init_project.py`'s library (P705); later `ProjectSetupService` |
 | `build/build_codes.py` | the leaf of codes (P701): one per stage that stops the build and per refusal of init. A `Stage` carries a `code` (a design error's own when one stopped it), and `project_setup`'s `why_project_refused`, `why_board_refused` and `find_circuit` return a `Refusal`. Only the sheet's `not written` entry in `kept` writes its code |
 | `build/ai_files.py` | `AiFiles`, moved as is (P705) |
+| `build/board_alone_input.py` | `read_board_alone`, `make_converter_input`, `BoardAloneResult` and `NETLIST`: the converter's input for a board-only build, moved out of `records/onboard_parts.py` in P708 |
 | `build/__init__.py` | its index docstring, no import; later the area's `OPERATIONS`. One module per Operation, named after it |
 
 ### Its seams and adapters

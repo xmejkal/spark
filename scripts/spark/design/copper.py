@@ -3,7 +3,7 @@
 How much current a piece of copper carries, and how wide it has to be.
 
 ONE definition of this arithmetic, because two things need it and they must not disagree:
-`check_physics` judges a board by it, and `board_emitter` sizes traces by it. They had separate
+`check_physics` judges a board by it, and `board_sections` sizes traces by it. They had separate
 answers for a while — the generator had none at all and emitted the router's 0.15 mm default
 everywhere, including on a car whose traction rail carries 2.9 A — and when the generator finally
 learned to size a trace it did so by reaching into the checker with `importlib`. Two copies of one

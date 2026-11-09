@@ -22,7 +22,7 @@ Everything that can be wrong with the input is a `DesignError`, which callers tu
 This module resolves and reads. It names a SIGNAL for its instance (`signal_name`), because that
 name is decided when the instance is, and so it is the one that says which instance names are ONE
 name (`one_name`): `signal_name` is what makes them one. It does not name COMPONENTS for the
-netlist — that is `board_emitter`'s, because the name is decided by what the emitted file needs —
+netlist — that is `board_components`'s, because the name is decided by what the emitted file needs —
 and it does not assign pins, because only the generator needs that. It refuses a file that gives
 two parts one name before any stage runs on it (`read`), and a design whose signals land on one
 name where the signals are derived (`signals_of`, which is the first to hold the part records).

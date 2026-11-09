@@ -115,7 +115,7 @@ Each by its name in check_all's answer:
 - `check_spine.py`: the one thing that has to work, a module list in and a board that builds out. Its libraries are in `spark/build/`.
 - `assign_pins.py`: which pin each signal should go on, and why. Scarce pins are spent last. `--emit-pins` writes the
   map for the firmware.
-- `emit_board.py`: a pin map and a module list, as a board file you can build (here, `board.tsx`).
+- `emit_board.py`: a pin map and a module list, as a board file you can build (here, `board.tsx`). Its library is `spark/design/board_emitter.py` with `board_sections.py`, `power_rails.py` and `board_components.py`.
 - `emit_footprint.py`: a board definition, turned into the footprint module its design imports.
 - `flash_image.py`: a flash image with MicroPython and the project's files, for a headless simulation.
 - `run_scenario.py`: one scenario run in Wokwi after the firmware's `ready` text, with a dated log ([P130](https://github.com/xmejkal/spark/issues/64)).
@@ -150,7 +150,7 @@ Imported by the scripts above, and not run on their own:
 - `spark/core/outcomes.py`: the exit codes and the three outcomes, defined once;
 - `spark/records/store.py`: where spark keeps what it keeps;
 - `spark/sourcing/`: the drawer (what you own), the part facts, the datasheets and the handlers `parts.py` runs;
-- `spark/design/needs.py`: what a goal needs, and what the store offers for each (`goal_handlers.py` answers them);
+- `spark/design/needs.py`: what a goal needs, and what the store offers for each (`goal_handlers.py` answers them); `need_requirements.py` beside it builds the requirements file from the picks;
 - `spark/sourcing/run_cost.py`: what a project's run cost, read from the transcripts of the sessions its steps ran in,
   tool names and counts only. `parts.py --step` and `--tally` use it. The CLI `cost.py` reads one transcript:
   `cost.py <transcript.jsonl>` says what that run cost;
