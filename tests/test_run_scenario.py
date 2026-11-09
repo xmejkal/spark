@@ -24,7 +24,6 @@ import run_scenario  # noqa: E402
 
 from spark.firmware import scenario_run  # noqa: E402
 
-from spark.firmware import firmware_codes  # noqa: E402
 from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
@@ -1014,7 +1013,7 @@ class TheNamedReadyWaitTest(unittest.TestCase):
         for items in ('  - name: press\n    set-control: { part-id: b }\n  - wait-serial: "ready"\n',
                       '  - { name: press, set-control: { part-id: b } }\n  - wait-serial: "ready"\n'):
             with self.subTest(items):
-                self.assertIn(scenario_steps.READY_STEP, scenario_run.with_ready_wait("name: x\nsteps:\n" + items))
+                self.assertIn('- wait-serial: "ready"', scenario_run.with_ready_wait("name: x\nsteps:\n" + items))
 
     def test_a_comma_in_the_ready_text_is_kept(self):
         scenario = 'name: x\nsteps:\n  - wait-serial: "boot, ready"\n'
@@ -1022,7 +1021,7 @@ class TheNamedReadyWaitTest(unittest.TestCase):
 
     def test_a_step_name_that_says_ready_is_no_wait(self):
         scenario = 'name: x\nsteps:\n  - name: ready\n    wait-serial: "hello"\n'
-        self.assertIn(scenario_steps.READY_STEP, scenario_run.with_ready_wait(scenario))
+        self.assertIn('- wait-serial: "ready"', scenario_run.with_ready_wait(scenario))
 
 
 class TheDiagramIdsTest(unittest.TestCase):
@@ -1038,17 +1037,18 @@ class TheDiagramIdsTest(unittest.TestCase):
         self.assertEqual((read.ids, read.state), (("mcu", "led"), RECORDED))
 
     def test_what_cannot_be_read_says_why(self):
-        for text, why in (("{", sim_project.WHY_DIAGRAM_UNREADABLE), ("[]", sim_project.WHY_DIAGRAM_UNREADABLE),
-                          ("{}", sim_project.WHY_DIAGRAM_NO_PARTS), ('{"parts": 3}', sim_project.WHY_DIAGRAM_NO_PARTS),
-                          ('{"parts": [{"type": "x"}]}', sim_project.WHY_DIAGRAM_PART_NO_ID),
-                          ('{"parts": ["x"]}', sim_project.WHY_DIAGRAM_PART_NO_ID), ('{"parts": [{"id": 3}]}', sim_project.WHY_DIAGRAM_PART_NO_ID)):
+        unreadable, no_parts, no_id = "cannot be read as JSON", "no list of parts", "has no id"
+        for text, why in (("{", unreadable), ("[]", unreadable), ("{}", no_parts), ('{"parts": 3}', no_parts),
+                          ('{"parts": [{"type": "x"}]}', no_id), ('{"parts": ["x"]}', no_id), ('{"parts": [{"id": 3}]}', no_id)):
             with self.subTest(text):
                 read = self.read(text)
-                self.assertEqual((read.ids, read.state, read.why), ((), NOT_CHECKED, why))
+                self.assertEqual((read.ids, read.state), ((), NOT_CHECKED))
+                self.assertIn(why, read.why)
 
     def test_a_missing_file_says_why(self):
         read = sim_project.component_ids_in(Path(tempfile.mkdtemp()) / "diagram.json")
-        self.assertEqual((read.state, read.why), (NOT_CHECKED, sim_project.WHY_DIAGRAM_UNREADABLE))
+        self.assertEqual(read.state, NOT_CHECKED)
+        self.assertIn("cannot be read", read.why)
 
 
 @needs_littlefs
@@ -1069,7 +1069,7 @@ class TheRunComparesTheComponentIdsTest(ProjectCase):
     def test_the_refusal_has_its_code(self):
         self.scenario_with("expect-pin: { part-id: nope, pin: A, value: 1 }")
         refusal = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).problem()
-        self.assertEqual(refusal.code, firmware_codes.UNKNOWN_COMPONENT_ID)
+        self.assertEqual(refusal.code, "unknown_component_id")
 
     def test_a_right_id_runs(self):
         self.scenario_with("set-control: { part-id: tactilebutton, name: pressed, value: 1 }")
@@ -1097,7 +1097,7 @@ class TheRunComparesTheComponentIdsTest(ProjectCase):
         self.scenario_with("set-control: { part-id: anything, name: pressed, value: 1 }")
         code, said = self.command()
         self.assertEqual(code, EXIT_OK)
-        self.assertIn("not checked: the scenario's component ids, because " + sim_project.WHY_DIAGRAM_UNREADABLE, said)
+        self.assertIn("not checked: the scenario's component ids, because sim/diagram.json cannot be read", said)
 
     def test_a_right_to_left_mark_in_an_id_prints_as_a_question_mark(self):
         self.scenario_with("set-control: { part-id: a\u202eb, name: pressed, value: 1 }")

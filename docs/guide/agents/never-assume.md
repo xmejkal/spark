@@ -190,11 +190,6 @@ no-control caveat, and a passed log that cannot be counted gets its own caveat, 
 control, unless a counted run sets a control. The log also holds `sim/WHAT-THIS-CANNOT-SHOW.md` after its header (item 9),
 and the time of the run carries its zone.
 
-A `run_scenario.py` line that starts with `not checked:` means that spark could not compare a step, or the whole scenario, with
-`sim/diagram.json`, and the run went on. It is not a pass of that comparison. Tell the person which step it names. Only spark's own
-step shapes are read, so a step in another form lands here and is never refused
-([P399](https://github.com/xmejkal/spark/issues/515)).
-
 ## 9. The project has things no simulation can show
 
 The limits note, `sim/WHAT-THIS-CANNOT-SHOW.md` (P396, the limits note), lists them, for example a display or a battery

@@ -27,10 +27,7 @@ the-button-lights-the-led.scenario.yaml: passed
 log: sim/runs/the-button-lights-the-led.log
 ```
 
-If a step names a component that `sim/diagram.json` does not hold, the command stops with exit 2 before it spends a Wokwi minute.
-It prints the word and the diagram's ids.
-
-The command puts MicroPython and `firmware/` into one flash image and waits for the firmware's `ready` line. Then it
+If a step names a component that `sim/diagram.json` does not hold, the command stops with exit 2 before it spends a Wokwi minute. The command puts MicroPython and `firmware/` into one flash image and waits for the firmware's `ready` line. Then it
 runs the steps and writes the log with its date ([P130](https://github.com/xmejkal/spark/issues/64)). The diagram the
 build writes wires the board's serial port to Wokwi's serial monitor, so a scenario's `wait-serial` hears the firmware
 ([P190](https://github.com/xmejkal/spark/issues/142)). The ready contract and the scenario's form are on
