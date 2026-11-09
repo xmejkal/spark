@@ -115,13 +115,16 @@ suite goes **red**, a test noticed it. If the suite stays green, a test is missi
 **When.** Only a change that holds logic is mutation-tested: a line that decides, computes, compares, bounds, orders
 or chooses. A change to documentation, wiring or process is not ([P208](https://github.com/xmejkal/spark/issues/175), the PO, 2026-10-12).
 
-**Who.** Before a pull request that changes logic, the council launches the **mutation tester**
-([`.claude/agents/mutation-tester.md`](.claude/agents/mutation-tester.md)). It reads the branch's diff and plants at most
-12 defects on the changed lines, in one table. It runs them once in a copy of the tree and reports *N planted, M
-caught*, and the council's report carries that line.
+**A pull request writes rows and runs none** (the PO, 2026-11-08: *"you test the story"*, and 2026-11-09: *"lets try not to overrun the mutations, it always takes forever, lets be smart about it"*, [P714](https://github.com/xmejkal/spark/issues/963)). The
+implementer writes the defects that the change prevents, at most 12, into `tests/mutations/<card>-<topic>.json`. It
+proves them with `python3 tools/mutate.py --anchors <table>`, which takes seconds: each `find` is there once, and each
+defect compiles. The branch also adds no refused row: `--anchors tests/mutations/*.json` refuses no row that main
+accepts. No mutation run and no full run is a gate of a pull request.
 
-**When a table is kept.** Only when a defect escaped. The missing test is written, the defect is caught, and the table
-goes into `tests/mutations/<card>-<topic>.json`, so that anyone can run it again. A table is JSON, one entry per defect
+**A sweep runs them.** At the end of a wave or an epic, or when the PO asks, the council launches the **mutation
+tester** ([`.claude/agents/mutation-tester.md`](.claude/agents/mutation-tester.md)) once, over the rows of the files
+the wave or epic changed. It reports *N planted, M caught*. An escape is a missing test: write it, and run that row
+again. A refused row is a guard whose code moved: re-anchor it, or delete it with the reason. A table is JSON, one entry per defect
 (tables written before 2026-10-05 carry their sprint, such as `sprint-10-p96-…`):
 
 ```json

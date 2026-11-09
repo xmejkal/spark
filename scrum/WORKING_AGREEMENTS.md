@@ -51,12 +51,14 @@ moved to an offset MicroPython never reads.
 
 ## W3 — Mutation testing is the acceptance bar
 
-Re-introduce the defect; the suite must go red. Before the merge, not after somebody finds it again.
+Re-introduce the defect; the suite must go red. Each logic change writes the rows before its merge, and a sweep runs
+them at the end of a wave or an epic, or when the PO asks. The PO, 2026-11-09: *"lets try not to overrun the
+mutations, it always takes forever, lets be smart about it"* ([P714](https://github.com/xmejkal/spark/issues/963)).
 
 The council's mutation tester ([`.claude/agents/mutation-tester.md`](../.claude/agents/mutation-tester.md)) puts the
 defects back into the changed lines, in a copy of the tree, and names each one the suite does not notice: a missing
-test. A table in `tests/mutations/` is kept only when a defect escaped, and the rows about an epic's files run in one
-sweep when the epic is done ([the Definition of Done](README.md#definition-of-done)). When, who and how:
+test. A pull request proves its rows with `tools/mutate.py --anchors` only, and the rows about a wave's or an epic's
+files run in one sweep when it is done ([the Definition of Done](README.md#definition-of-done)). When, who and how:
 [the glossary](../GLOSSARY.md#mutation-and-the-mutation-table). This holds since 2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175), the PO: *"lets limit the
 mutations as you say"*). Before it, every logic change wrote a table, and the pre-push gate checked every table's
 anchors. A table of 25 rows ran 615 s, and moved code blocked pushes (the measurement: [P130's council](../docs/observations/2026-10-12-p130-council.md)). The older tables stay as history.

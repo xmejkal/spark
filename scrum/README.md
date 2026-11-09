@@ -221,9 +221,11 @@ A pull request fixes the gaps it makes. Older gaps in the README's shape go to P
 | anything else, 50 or more changed lines | the six lenses on Sonnet, then the refuter on Opus |
 | a design or an epic | the full council, as the Design stage runs it, then the refuter on Opus |
 
-For a change that holds logic, the council also launches the mutation tester on Sonnet
-([`.claude/agents/mutation-tester.md`](../.claude/agents/mutation-tester.md)), beside the reviewers. Its line, *N
-planted, M caught*, goes into the council's report, and an escape is fixed before the merge ([P208](https://github.com/xmejkal/spark/issues/175)).
+For a change that holds logic, the pull request carries its mutation rows, proven with `tools/mutate.py --anchors`,
+and refuses no row that main accepts. The council runs no mutation for a pull request. The mutation tester
+([`.claude/agents/mutation-tester.md`](../.claude/agents/mutation-tester.md)) runs at a sweep: the end of a wave or an
+epic, or the PO's request ([P714](https://github.com/xmejkal/spark/issues/963); the PO, 2026-11-09: *"lets try not to
+overrun the mutations"*).
 
 Count added plus removed lines (`git diff --shortstat origin/main...HEAD`). Claude's reading, the PO's to change: the
 files under `skills/`, `agents/`, `commands/` and `tools/` are behaviour, not docs, though most are Markdown; and a PR
@@ -279,13 +281,13 @@ review runs those commands. If an item cannot name one, it does not enter Ready.
 
 Every one of these, for every item. No exceptions, no "mostly".
 
-1. The full run, `python3 tools/check_commit.py --full` (every test, on the committed tree) — green. The push hook runs
-   only the quick run, which skips the `@slow` tests (P425).
-2. **Mutation tested, for logic, by the mutation tester.** The council launches it for a change that holds logic. It
-   puts the defects that the change prevents back into the changed lines, in a copy of the tree, and reports *N
-   planted, M caught*. A fix with no failing-first test is not a fix. A table in `tests/mutations/` is kept only when a
-   defect escaped (the PO, 2026-10-12, [P208](https://github.com/xmejkal/spark/issues/175): *"lets limit the mutations as you say"*). A change to docs, wiring or
-   process needs no mutation. When, who and how: [the glossary](../GLOSSARY.md#mutation-and-the-mutation-table).
+1. The push hook's quick run — green — and the tests of the modules the change touched, with its area's golden net.
+   The full run, `python3 tools/check_commit.py --full`, is a sweep: at the end of a wave or an epic, or when the PO
+   asks (the PO, 2026-11-08: *"you test the story"*).
+2. **Mutation rows, for logic.** The pull request writes the defects that the change prevents into
+   `tests/mutations/<card>-<topic>.json` and proves them with `tools/mutate.py --anchors`. It refuses no row that main
+   accepts. The rows run at the next sweep, not before the merge. A fix with no failing-first test is not a fix. A
+   change to docs, wiring or process needs no rows. When, who and how: [the glossary](../GLOSSARY.md#mutation-and-the-mutation-table).
 3. `python3 scripts/check_spine.py` — exit 0 when `scripts/` changed. With no file named it runs the reference design
    that ships with spark: the chain still runs end to end.
 4. The item's own *Value proven by* command runs and shows what it claims, and its output is posted on the issue — or,
@@ -307,7 +309,7 @@ Every one of these, for every item. No exceptions, no "mostly".
    (P169): *"lets'use git tags and releases, and we can always fill in the version /release content, what new
    functionality and bug fixes etc have been added"*.
 
-**When an epic is done** (P98; P102a moved it from the sprint's close): every row about the files the epic changed,
+**When a wave or an epic is done, or when the PO asks** (P98; P102a moved it from the sprint's close; P714): every row about the files the epic changed,
 in one sweep that prints its time, `python3 tools/mutate.py tests/mutations/*.json --for <the epic's changed files>
 --copy`. A refused row is a guard whose code moved: re-anchor it or delete it with the reason. An escape is a missing
 test, opened as a backlog item the same day.

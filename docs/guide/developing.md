@@ -102,13 +102,13 @@ SPARK_ACCEPT=check-spine python3 -m unittest tests.test_golden_design   # or ass
 SPARK_ACCEPT=parts python3 -m unittest tests.test_golden_records   # or boards, tools, cost
 ```
 
-**The second rule: every fix that holds logic is mutation-tested.** Before the pull request, the council's mutation
-tester puts the defects that the fix prevents back into the changed lines, in a copy of the tree
-([P208](https://github.com/xmejkal/spark/issues/175)). Without a council, run the rows about your files yourself:
+**The second rule: every fix that holds logic writes its mutation rows, and a sweep runs them.** A pull request proves
+its rows with `--anchors` (seconds) and runs no mutation. A sweep runs them at the end of a wave or an epic, or when the
+PO asks ([the glossary](../../GLOSSARY.md#mutation-and-the-mutation-table), [P714](https://github.com/xmejkal/spark/issues/963)):
 
 ```sh
-changed=$(git diff --name-only origin/main...HEAD)     # the files your branch changed
-python3 tools/mutate.py tests/mutations/*.json --for $changed --copy
+python3 tools/mutate.py --anchors tests/mutations/*.json                # a pull request: no row refused that main accepts
+python3 tools/mutate.py tests/mutations/*.json --for $changed --copy    # a sweep: changed = the files the wave changed
 ```
 
 `--copy` removes its copy in a `finally`, and also when SIGTERM stops it (the signal becomes `SystemExit`, only in the
