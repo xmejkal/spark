@@ -11,14 +11,14 @@ the codes wait in the library for the Operation that comes later. No code is an 
 
 
 # --- MVP ---
-#: parts.py: a part record asked for by name, its contract, a promotion, and the JSON a write reads.
+#: part_records: a part record asked for by name, its contract, a promotion, and the JSON a write reads.
 NO_SUCH_PART, PART_CONTRACT_BROKEN = "no_such_part", "part_contract_broken"
 PROMOTION_WOULD_OVERWRITE, INPUT_UNREADABLE = "promotion_would_overwrite", "input_unreadable"
-#: cost.py: what a project's history and its session transcripts lack, so the cost of its steps is not known.
+#: run_cost: what a project's history and its session transcripts lack, so the cost of its steps is not known.
 STEP_LINE_BROKEN, NO_STEP_MARKED, STEP_WITHOUT_SESSION = "step_line_broken", "no_step_marked", "step_without_session"
 NO_TRANSCRIPT, TRANSCRIPT_UNREADABLE = "no_transcript", "transcript_unreadable"
 TRANSCRIPT_ENDS_EARLY = "transcript_ends_early"
-#: matching.py: a matcher name.
+#: matching: a matcher name.
 UNKNOWN_MATCHER = "unknown_matcher"
 
 #: Each code and the one sentence that says what it means.

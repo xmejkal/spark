@@ -16,10 +16,10 @@ from spark.core.errors import CodedMessageError
 from spark.records import board_records
 from spark.records import provenance
 from spark.records import record_kind
+from spark.records import store
 from spark.records.record_kind import (
     _absent, available, DEFINITION_SUFFIX, document_problems, owes, _parse, PIN_LISTS, record_home, REQUIRED_KEYS,
     RETIRED, SELECTOR_SAFE, _shape_problems, type_problems, VERBS)
-from spark.records import store
 from spark.sourcing import sourcing_codes
 from spark.sourcing.part_rules import (
     bus_line_of, BUSES, CAPABILITIES, footprint_pad_count, host_part_problems, i2c_pullup_problems,

@@ -10,10 +10,10 @@ import json
 import re
 from collections import namedtuple
 
-from spark.sourcing import part_records
-from spark.sourcing import sourcing_codes
 from spark.core.errors import CodedMessageError
 from spark.core.text_guards import TAGS_MAX, TEXT_MAX, clean
+from spark.sourcing import part_records
+from spark.sourcing import sourcing_codes
 
 #: The words a need's `what` drops before WordOverlap counts it (P211).
 FILLER = frozenset(("a", "an", "the", "of", "for", "to", "and", "or", "with"))

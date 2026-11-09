@@ -25,8 +25,8 @@ import os
 import re
 from pathlib import Path
 
-from spark.sourcing import sourcing_codes
 from spark.core.errors import CodedMessageError
+from spark.sourcing import sourcing_codes
 
 #: What reaches the network (§6.7): these tools, every MCP tool (its name does not say whether it reaches the network), and a
 #: simple shell command that names one of these — unless that command says `--dry-run`, which opens no URL.

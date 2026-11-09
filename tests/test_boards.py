@@ -881,7 +881,7 @@ class TheListSaysWhichBoardStopsAtTheFootprintTest(unittest.TestCase):
         self.assertEqual((code, "    half-board (project)" in lines), (0, True), lines)
 
     def test_the_line_comes_from_the_footprint_module_and_asks_nothing_of_parts(self):
-        # P411: footprint_stop imported `parts` for a sentence that now lives in footprint_emitter; the edge to parts that remains is validate's.
+        # P411: footprint_stop imported `parts` for a sentence that now lives in footprint_emitter; no edge to parts remains.
         # footprint_emitter loads parts itself, through loader (loader.py:40), so it is loaded first: the test asks only whether footprint_stop imports parts
         from spark.design import footprint_emitter
         from board_library import board_missing
