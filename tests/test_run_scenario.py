@@ -378,7 +378,7 @@ class ProjectCase(unittest.TestCase):
         self.project = Path(tempfile.mkdtemp())
         sim = self.project / "sim"
         (sim / "scenarios").mkdir(parents=True)
-        (sim / "diagram.json").write_text("{}")
+        (sim / "diagram.json").write_text(json.dumps({"parts": [{"id": each} for each in ("mcu", "tactilebutton", "ledred5mm")]}))
         (sim / "wokwi.toml").write_text(sim_project.wokwi_toml([]))  # as the build writes it with no --firmware
         (self.project / "firmware").mkdir()
         (self.project / "firmware" / "main.py").write_text("print('ready')\n")
@@ -562,7 +562,7 @@ class APassSaysWhatItsScenarioLeftOutTest(ProjectCase):
     """P485: a pass prints the look's no-control caveat after `passed` on the scenario's line, and the log's verdict stays `passed`."""
 
     NO_CONTROL = 'name: it starts\nversion: 1\nsteps:\n  - wait-serial: "hello"\n'
-    PIN_ONLY = NO_CONTROL + "  - expect-pin: { part-id: led1, pin: A, value: 1 }\n"
+    PIN_ONLY = NO_CONTROL + "  - expect-pin: { part-id: ledred5mm, pin: A, value: 1 }\n"
     NO_KIND = NO_CONTROL + "  - name: a step with no kind\n"
 
     def printed(self, scenario):

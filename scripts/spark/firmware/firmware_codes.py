@@ -18,6 +18,7 @@ NO_SIM_TOML, FIRMWARE_LINE_BAD, NO_IMAGE = "no_sim_toml", "firmware_line_bad", "
 LOG_UNREADABLE, TOOL_MISSING = "log_unreadable", "tool_missing"
 #: run_scenario.py: what stops a run before the paid call.
 NO_SIM_PROJECT, NO_MAIN_PY, RUN_INPUT_UNUSABLE, NO_TOKEN = "no_sim_project", "no_main_py", "run_input_unusable", "no_token"
+UNKNOWN_COMPONENT_ID = "unknown_component_id"
 #: run_scenario.py: wokwi-cli and the board, during the run.
 SIMULATOR_CANNOT_START, SIMULATOR_HUNG, SIMULATOR_LOST = "simulator_cannot_start", "simulator_hung", "simulator_lost"
 BOARD_SILENT, BOARD_NOT_STARTED, NEVER_READY = "board_silent", "board_not_started", "never_ready"
@@ -41,6 +42,7 @@ CODES = {
     RUN_INPUT_UNUSABLE: "the scenario, the firmware line or the firmware's files cannot be read, so the run cannot make "
                         "its image",
     NO_TOKEN: "the simulator's account token is not set, and a run spends Wokwi CI minutes",
+    UNKNOWN_COMPONENT_ID: "a step of the scenario names a component id that sim/diagram.json does not hold",
     SIMULATOR_CANNOT_START: "wokwi-cli could not be started",
     SIMULATOR_HUNG: "wokwi-cli did not finish within the simulated time and the startup allowance, so it was stopped",
     SIMULATOR_LOST: "wokwi-cli lost its connection to the simulator",

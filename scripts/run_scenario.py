@@ -10,7 +10,9 @@ earlier reaches a board that is still booting. So a scenario holds only behaviou
 person's words, and spark ships none.
 
 A run spends Wokwi CI minutes, so every check that costs nothing comes first: the simulation project, firmware/main.py,
-the scenario's steps, littlefs, MicroPython and the image's place. Only then the tool, the token and the paid run. Each
+the scenario's steps, the component ids its steps name against sim/diagram.json, littlefs, MicroPython and the image's
+place. Only then the tool, the token and the paid run. A step whose id cannot be read, or a diagram that cannot be read,
+prints `not checked` and the run goes on (P399). Each
 run puts MicroPython and the project's firmware/ into a new flash image, so a run never tests an older firmware. When the
 build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
 wokwi-cli refuses a wokwi.toml that names none.
@@ -45,6 +47,15 @@ The firmware must print `ready` once its setup is done (the ready contract, comm
 Exit codes: 0 the scenario passed, 1 it failed, 2 it could not run. The log is sim/runs/<name>.log."""
 
 
+def free_checks(run, project):
+    """(the simulator, None), or (None, why it cannot run): what costs nothing first, then the tool, then the token. A missing build comes before an account."""
+    refusal = run.problem()
+    simulator, refusal = (None, refusal) if refusal else find_simulator(project)
+    if not refusal and run.not_checked():
+        print(guard_lines("\n".join("run_scenario.py: %s" % each for each in run.not_checked())), file=sys.stderr)
+    return simulator, refusal
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="run_scenario.py", description=__doc__.strip().split("\n\n")[0],
                                      epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -57,8 +68,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms)
     run.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here
-    refusal = run.problem()  # what costs nothing first, then the tool, then the token: a missing build before an account
-    simulator, refusal = (None, refusal) if refusal else find_simulator(args.project)
+    simulator, refusal = free_checks(run, args.project)
     if refusal:
         print(guard_lines("run_scenario.py: %s" % refusal), file=sys.stderr)
         return EXIT_COULD_NOT_RUN

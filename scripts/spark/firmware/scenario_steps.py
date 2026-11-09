@@ -15,6 +15,8 @@ from spark.core import outcomes
 #: The kinds of wokwi-cli scenario step that this reads by name: the one that sets a control, the one that reads a pin
 #: and the one that waits for serial text.
 SET_CONTROL, EXPECT_PIN, WAIT_SERIAL = "set-control", "expect-pin", "wait-serial"
+#: The key that names a component of the diagram inside a step's value (wokwi-cli's own word for a component id).
+PART_ID_KEY = "part-id"
 READY = "ready"
 READY_STEP = '- %s: "%s"' % (WAIT_SERIAL, READY)
 #: The log's line that names the image a run tested, by its sha256 (P192): deploy.py flashes only an image a passed run names.
@@ -69,6 +71,16 @@ class StepNames:
     why: str = None
 
 
+@dataclass(frozen=True)
+class StepComponents:
+    """Value: what a scenario's steps say about the diagram (P399): the component ids in order, the text of each step that no id
+    could be read from, and (kind, value) of each step in order. A log holds none of them."""
+
+    ids: tuple = ()
+    unread: tuple = ()
+    kinds: tuple = ()
+
+
 # --- MVP ---
 class ScenarioSteps:
     """
@@ -80,6 +92,9 @@ class ScenarioSteps:
     `names` are the step names, in order, each with its spaces collapsed (P345). `names_state` is an outcomes word apart from
     `state`: RECORDED (the scenario or the log named them, perhaps none), NONE_RECORDED (a log from before names) or NOT_CHECKED
     (`names_why` says why).
+
+    `component_ids` are the ids that the steps name, without repeats, and `unread_steps` the text of each step that no id could be
+    read from (P399). The reader fails only toward unread: a shape it does not know is never a wrong id.
     """
 
     #: A key at the start of a step's text, plain or quoted. Anchored, so a kind named inside a value is no key.
@@ -87,36 +102,31 @@ class ScenarioSteps:
     ITEM = re.compile(r"^(\s*)-(?:\s|$)")
     #: The one key a step carries beside its kind: wokwi-cli prints it as the step's name (TestScenario.ts, validStepKeys).
     NAME_KEY = "name"
+    #: The kinds that must name a component, and the form of a component id that this reads.
+    COMPONENT_KINDS = (SET_CONTROL, EXPECT_PIN)
+    COMPONENT_ID = re.compile(r"[\w.-]+")
 
-    def __init__(self, counts, state=outcomes.RECORDED, why=None, named=None):
+    def __init__(self, counts, state=outcomes.RECORDED, why=None, named=None, components=None):
         self.counts, self.state, self.why = dict(counts), state, why
         named = named or StepNames()
         self.names, self.names_state, self.names_why = tuple(named.names), named.state, named.why
+        components = components or StepComponents()
+        self.component_ids, self.unread_steps, self._kinds = components.ids, components.unread, components.kinds
 
     @classmethod
     def from_text(cls, steps):
-        """The ScenarioSteps of a scenario's text, comments cut as with_ready_wait cuts them. Only the items at the indent of the first step count."""
+        """The ScenarioSteps of a scenario's text, comments cut. Only the items at the indent of the first step count."""
         lines = [cls._uncomment(line).rstrip() for line in steps.splitlines()]
         start = next((i for i, line in enumerate(lines) if line == "steps:"), None)
         body = [] if start is None else [line for line in lines[start + 1:] if line.strip()]
         first = next((cls.ITEM.match(line) for line in body if cls.ITEM.match(line)), None)
         if first is None:
             return cls({}, outcomes.NONE_RECORDED, None, StepNames((), outcomes.RECORDED))
-        width, steps = len(first.group(1)), []  # each step: [its lines, the indent of its own keys or None, in flow form]
-        for line in body:
-            item = cls.ITEM.match(line)
-            if item and len(item.group(1)) == width:
-                rest = line[item.end():].lstrip()
-                steps.append([[rest.lstrip("{")], len(line) - len(rest) if rest else None, rest.startswith("{")])
-            elif len(line) - len(line.lstrip()) <= width:
-                break  # the steps list ended: a key of the scenario at its own indent
-            elif steps:
-                steps[-1][0].append(line)
-                if steps[-1][1] is None:
-                    steps[-1][1] = len(line) - len(line.lstrip())
+        steps = cls._steps_in(body, len(first.group(1)))
+        kinds = [cls._kind_and_value(*step) for step in steps]
+        components = cls._components_of(steps, kinds)
         counts, keyless, names, unread = {}, False, [], False
-        for texts, indent, flow in steps:
-            kind = cls._kind(texts)
+        for (texts, indent, flow), (kind, _) in zip(steps, kinds):
             if kind:
                 counts[kind] = counts.get(kind, 0) + 1
             else:
@@ -130,18 +140,93 @@ class ScenarioSteps:
                 names.append(name)
         named = StepNames((), outcomes.NOT_CHECKED, WHY_NAME_NOT_READ) if unread else StepNames(names, outcomes.RECORDED)
         if keyless:
-            return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY, named)
-        return cls(counts, named=named)
+            return cls({}, outcomes.NOT_CHECKED, WHY_NO_KEY, named, components)
+        return cls(counts, named=named, components=components)
 
     @classmethod
-    def _kind(cls, step):
-        """A step's kind: the first key of its lines that is not `name`, or None. The flow form keeps its keys on one line."""
-        for text in step[0].split(",") + step[1:]:
+    def _steps_in(cls, body, width):
+        """Each step of the list at this indent: [its lines, the indent of its own keys or None, in flow form]."""
+        steps = []
+        for line in body:
+            item = cls.ITEM.match(line)
+            if item and len(item.group(1)) == width:
+                rest = line[item.end():].lstrip()
+                steps.append([[rest.lstrip("{")], len(line) - len(rest) if rest else None, rest.startswith("{")])
+            elif cls._indent(line) <= width:
+                break  # the steps list ended: a key of the scenario at its own indent
+            elif steps:
+                steps[-1][0].append(line)
+                if steps[-1][1] is None:
+                    steps[-1][1] = cls._indent(line)
+        return steps
+
+    @staticmethod
+    def _indent(text):
+        """How many spaces the text starts with."""
+        return len(text) - len(text.lstrip())
+
+    @staticmethod
+    def _key_of(match):
+        """The key that `KEY` matched, with its quotes removed."""
+        return match.group(1) or match.group(2) or match.group(3)
+
+    @classmethod
+    def _own_keys(cls, texts, indent, flow):
+        """
+        The step's own keys as (text, its line number or None in flow form): in flow form the keys outside any nested `{}` or `[]`, in
+        block form the keys at the indent of its first key and outside any nested bracket.
+        """
+        if flow:
+            return [(piece, None) for piece in cls._pieces(" ".join(texts))]
+        own, depth = [], 0
+        for number, text in enumerate(texts):
+            if not depth and (number == 0 or cls._indent(text) == indent):
+                own.append((text, number))
+            depth = cls._depth(text, depth)
+        return own
+
+    @classmethod
+    def _kind_and_value(cls, texts, indent, flow):
+        """(a step's kind, the lines of its value), from the first of its own keys that is not `name`, or (None, [])."""
+        own = cls._own_keys(texts, indent, flow)
+        for place, (text, number) in enumerate(own):
             key = cls.KEY.match(text)
-            kind = key and (key.group(1) or key.group(2) or key.group(3))
-            if kind and kind != cls.NAME_KEY:
-                return kind
-        return None
+            if key and cls._key_of(key) != cls.NAME_KEY:
+                end = own[place + 1][1] if place + 1 < len(own) else None
+                return cls._key_of(key), [text[key.end():]] + ([] if number is None else texts[number + 1:end])
+        return None, []
+
+    @classmethod
+    def _components_of(cls, steps, kinds):
+        """The StepComponents of these steps and their (kind, value lines)."""
+        ids, unread = [], []
+        for (texts, _, _), (kind, value) in zip(steps, kinds):
+            found = cls._ids_in(value) if kind in cls.COMPONENT_KINDS else None
+            if found:
+                ids += found
+            elif kind is None or kind in cls.COMPONENT_KINDS or PART_ID_KEY in " ".join(texts):
+                unread.append(" ".join(" ".join(texts).split()))
+        return StepComponents(tuple(dict.fromkeys(ids)), tuple(unread),
+                              tuple((kind, " ".join(value)) for kind, value in kinds))
+
+    @classmethod
+    def _ids_in(cls, value):
+        """The component ids directly inside a step's value, as a list, or None when there is none or one is no plain id."""
+        joined = " ".join(value).strip()
+        if joined.startswith("{"):
+            pieces = cls._pieces(joined[1:])
+        else:
+            pieces = [line for line in value[1:] if cls._indent(line) == cls._indent(value[1])]
+        keyed = [(cls.KEY.match(piece), piece) for piece in pieces]
+        ids = [cls._scalar(piece[key.end():].strip()) for key, piece in keyed if key and cls._key_of(key) == PART_ID_KEY]
+        return ids if ids and all(cls.COMPONENT_ID.fullmatch(each) for each in ids) else None
+
+    @staticmethod
+    def _scalar(value):
+        """A value's text: its quotes removed, as YAML reads them, or as it is when it has none."""
+        if len(value) > 1 and value[0] == value[-1] and value[0] in "'\"":
+            return value[1:-1].replace("''", "'") if value[0] == "'" else value[1:-1].replace('\\"', '"').replace("\\\\", "\\")
+        return value
 
     # --- MVP ---
     @classmethod
@@ -152,24 +237,14 @@ class ScenarioSteps:
         `set-control: { part-id: b, name: pressed }` is the control's, not the step's. Raises ValueError for a name that is a block
         scalar (`>`, `|`) or that the next line goes on with: spark does not read those.
         """
-        if flow:
-            own = [(piece, None) for piece in cls._pieces(" ".join(texts))]
-        else:
-            own, depth = [], 0
-            for number, text in enumerate(texts):
-                if not depth and (number == 0 or len(text) - len(text.lstrip()) == indent):
-                    own.append((text, number))
-                depth = cls._depth(text, depth)
-        for piece, number in own:
+        for piece, number in cls._own_keys(texts, indent, flow):
             key = cls.KEY.match(piece)
-            if key and (key.group(1) or key.group(2) or key.group(3)) == cls.NAME_KEY:
+            if key and cls._key_of(key) == cls.NAME_KEY:
                 value = " ".join(piece[key.end():].split())
                 if value[:1] in (">", "|") or (number is not None and number + 1 < len(texts)
-                                               and len(texts[number + 1]) - len(texts[number + 1].lstrip()) > indent):
+                                               and cls._indent(texts[number + 1]) > indent):
                     raise ValueError("a step name over more than one line")
-                if len(value) > 1 and value[0] == value[-1] and value[0] in "'\"":
-                    value = " ".join((value[1:-1].replace("''", "'") if value[0] == "'" else value[1:-1].replace('\\"', '"').replace("\\\\", "\\")).split())
-                return value or None
+                return " ".join(cls._scalar(value).split()) or None
         return None
 
     @classmethod
@@ -233,7 +308,8 @@ class ScenarioSteps:
     def from_log(cls, log):
         """The ScenarioSteps a log's header counts and names. A log with no counts line (older) is NONE_RECORDED, and one with no
         names marker has names_state NONE_RECORDED. One that says the steps were not read, a malformed one, a names marker that
-        its name lines do not match and a file that cannot be read are NOT_CHECKED. It never raises."""
+        its name lines do not match and a file that cannot be read are NOT_CHECKED. It never raises. A log holds no component
+        ids, so `component_ids` and `unread_steps` stay empty."""
         try:
             header = _header(log)
         except OSError:
@@ -276,6 +352,15 @@ class ScenarioSteps:
     def count(self, kind):
         """How many steps have this kind."""
         return self.counts.get(kind, 0)
+
+    def has_ready_wait(self):
+        """Whether a wait-serial step whose text holds READY comes before the first set-control step."""
+        for kind, value in self._kinds:
+            if kind == SET_CONTROL:
+                return False
+            if kind == WAIT_SERIAL and READY in value:
+                return True
+        return False
 
     # --- MVP ---
     def control_caveat(self, subject):

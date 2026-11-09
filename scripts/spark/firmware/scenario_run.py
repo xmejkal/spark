@@ -5,21 +5,20 @@ wokwi-cli and the log. run_scenario.py is its CLI. The log's words and their rea
 
 import datetime
 import hashlib
-import itertools
 import os
 import subprocess
 import tempfile
 from pathlib import Path
 
-from spark.core import outcomes
+from spark.core import outcomes, zone_time
 from spark.core.outcomes import COULD_NOT_RUN, OK, PROBLEMS
 from spark.core.result import Refusal
 from spark.firmware import image_builder, sim_project
 from spark.firmware.firmware_codes import (BOARD_NOT_STARTED, BOARD_SILENT, FIRMWARE_LINE_BAD, NEVER_READY, NO_MAIN_PY,
                                            NO_SIM_PROJECT, NO_TOKEN, RUN_INPUT_UNUSABLE, SIMULATOR_CANNOT_START,
-                                           SIMULATOR_HUNG, SIMULATOR_LOST, STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING)
-from spark.firmware.scenario_steps import (FILE_LINE, IMAGE_LINE, NO_MAIN, PASSED, READY, READY_STEP, SET_CONTROL, WAIT_SERIAL,
-                                           ScenarioSteps, printed_text)
+                                           SIMULATOR_HUNG, SIMULATOR_LOST, STEP_FAILED, STEP_TIMEOUT, TOOL_MISSING,
+                                           UNKNOWN_COMPONENT_ID)
+from spark.firmware.scenario_steps import FILE_LINE, IMAGE_LINE, NO_MAIN, PASSED, READY, READY_STEP, ScenarioSteps, printed_text
 from spark.records import tool_finder
 
 
@@ -32,6 +31,9 @@ STEP_ITEM = "- "
 #: wokwi-cli's own exit code for a run that reached --timeout (its --timeout-exit-code default).
 TIMEOUT_EXIT = 42
 DEFAULT_TIMEOUT_MS = 60000
+#: How the run says what it could not compare with the diagram (P399): the run goes on.
+NOT_CHECKED_STEP = "not checked: spark cannot read the component id of this step: %s"
+NOT_CHECKED_DIAGRAM = "not checked: the scenario's component ids, because %s"
 #: How long wokwi-cli may take beyond the simulated time: connecting, sending the image.
 STARTUP_ALLOWANCE_S = 120
 
@@ -48,9 +50,7 @@ def with_ready_wait(scenario):
         (i for i in range(start + 1, len(lines)) if lines[i].strip() and not lines[i].lstrip().startswith("#")), None)
     if first is None or not lines[first].lstrip().startswith(STEP_ITEM):
         raise ValueError("it has no steps: list with a '- ' item under it")
-    steps = [line.split("#")[0] for line in lines[first:] if line.lstrip().startswith("-")]
-    if any(WAIT_SERIAL in step and READY in step
-           for step in itertools.takewhile(lambda step: SET_CONTROL not in step, steps)):
+    if ScenarioSteps.from_text(scenario).has_ready_wait():
         return scenario
     step = lines[first].lstrip()
     lines.insert(first, lines[first][:len(lines[first]) - len(step)] + READY_STEP)
@@ -104,7 +104,7 @@ class ScenarioRun:
         self.sim = self.project / "sim"
         self.micropython, self.timeout_ms = micropython, timeout_ms
         self.log = self.sim / "runs" / (self.scenario.name.removesuffix(".yaml").removesuffix(".scenario") + ".log")
-        self.steps = self.flash = self.image = self.files = None
+        self.steps_text = self.steps = self.diagram_ids = self.flash = self.image = self.files = None
 
     def problem(self):
         """Why this run cannot pass, found before any Wokwi minute is spent, as a Refusal, or None."""
@@ -113,7 +113,11 @@ class ScenarioRun:
         if not (self.project / "firmware" / "main.py").is_file():
             return Refusal(NO_MAIN % (self.project, READY), NO_MAIN_PY)
         try:
-            self.steps = with_ready_wait(self.scenario.read_text())
+            self.steps_text = with_ready_wait(self.scenario.read_text())
+            self.steps = ScenarioSteps.from_text(self.steps_text)
+            unknown = self.unknown_component_ids()
+            if unknown:
+                return unknown
             tool_finder.find("littlefs", self.project)  # P457: a project's tools file that turns it off is named
             self.image = image_in(self.sim / "wokwi.toml")
             self.files = image_builder.files_under(self.project / "firmware")
@@ -124,6 +128,20 @@ class ScenarioRun:
             return Refusal("%s: %s" % (self.scenario.name, cannot), code)
         outside = sim_project.why_outside_sim(self.sim, self.image)
         return Refusal(outside, FIRMWARE_LINE_BAD) if outside else None
+
+    def unknown_component_ids(self):
+        """The Refusal for the component ids that the steps name and the diagram lacks, or None. A diagram that cannot be read refuses nothing."""
+        self.diagram_ids = sim_project.component_ids_in(self.sim / "diagram.json")
+        unknown = [each for each in self.steps.component_ids if each not in self.diagram_ids.ids]
+        if self.diagram_ids.state != outcomes.RECORDED or not unknown:
+            return None
+        return Refusal("%s: sim/diagram.json has no component %s. Its component ids: %s"
+                       % (self.scenario.name, ", ".join(unknown), ", ".join(self.diagram_ids.ids)), UNKNOWN_COMPONENT_ID)
+
+    def not_checked(self):
+        """After problem(): one sentence for each thing it could not compare with the diagram. The run goes on after them."""
+        said = [NOT_CHECKED_STEP % step for step in self.steps.unread_steps]
+        return said + ([NOT_CHECKED_DIAGRAM % self.diagram_ids.why] if self.diagram_ids.state != outcomes.RECORDED else [])
 
     def run(self, cli):
         """Run it with the firmware as it is now: (status, sentence, the log or None). Every paid run leaves a log."""
@@ -137,7 +155,7 @@ class ScenarioRun:
         with tempfile.TemporaryDirectory() as scratch:
             serial_log = Path(scratch) / "serial.log"
             try:
-                as_run.write_text(self.steps)
+                as_run.write_text(self.steps_text)
                 done = subprocess.run(list(cli) + [str(self.sim), "--scenario", str(as_run), "--timeout",
                                                    str(self.timeout_ms), "--serial-log-file", str(serial_log)],
                                       capture_output=True, encoding="utf-8", errors="replace",
@@ -152,7 +170,7 @@ class ScenarioRun:
             serial = serial_log.read_text(errors="replace") if serial_log.is_file() else ""
         status, sentence = verdict(done.returncode, serial, done.stdout, done.stderr, self.timeout_ms)
         log = self.write_log(sentence, done.stdout + done.stderr)  # the log's verdict stays `passed`: deploy reads it
-        return status, ScenarioSteps.from_text(self.steps).passed_sentence() if status == OK else sentence, log
+        return status, self.steps.passed_sentence() if status == OK else sentence, log
 
     def write_log(self, sentence, said):
         """
@@ -170,9 +188,9 @@ class ScenarioRun:
             shown = ""
         self.log.write_text("# %s, run %s, timeout %d ms\nverdict: %s\n%s\n%s%s\n%s\n%s%s\n%s\n"
                             "--- wokwi-cli printed ---\n%s\n"
-                            % (self.scenario.name, datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
-                               self.timeout_ms, sentence, ScenarioSteps.from_text(self.steps).log_lines(), IMAGE_LINE,
-                               hashlib.sha256(self.flash).hexdigest(), files, shown, sim_project.SCENARIO_SECTION, self.steps, said.strip()))
+                            % (self.scenario.name, zone_time.stamp(datetime.datetime.now()),
+                               self.timeout_ms, sentence, self.steps.log_lines(), IMAGE_LINE,
+                               hashlib.sha256(self.flash).hexdigest(), files, shown, sim_project.SCENARIO_SECTION, self.steps_text, said.strip()))
         return self.log
 
 

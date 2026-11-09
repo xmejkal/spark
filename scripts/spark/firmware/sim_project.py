@@ -25,6 +25,10 @@ from spark.sourcing import part_rules
 from spark.firmware.scenario_steps import WHY_LOG_UNREADABLE
 from spark.records import tool_finder
 
+#: Why the ids of a diagram.json are outcomes.NOT_CHECKED, one sentence each (P399).
+WHY_DIAGRAM_UNREADABLE = "sim/diagram.json cannot be read as JSON"
+WHY_DIAGRAM_NO_PARTS = "sim/diagram.json has no list of parts"
+WHY_DIAGRAM_PART_NO_ID = "a part in sim/diagram.json has no id"
 #: The converter's mapping from each component name to its Wokwi part, in the simulation project (`mapping_for`, P31).
 MAPPING_FILE = "wokwi-mapping.json"
 
@@ -299,6 +303,29 @@ class FirmwareLine:
     def fix(self):
         """What to add after `why` when a person can rewrite the line: the form to write, or "" when the file cannot be read."""
         return "" if self.why is None or self.why.startswith(CANNOT_READ) else ' To fix it, write it as firmware = "name.bin".'
+
+
+@dataclass(frozen=True)
+class DiagramIds:
+    """Value: the component ids of a diagram.json, in its order (P399). `state` is RECORDED, or NOT_CHECKED when `why` says they could not be read."""
+
+    ids: tuple = ()
+    state: str = outcomes.RECORDED
+    why: Optional[str] = None
+
+
+def component_ids_in(diagram):
+    """The DiagramIds of a diagram.json: its `parts`, each with an `id`. It never raises."""
+    try:
+        parts = json.loads(Path(diagram).read_text()).get("parts")
+    except (OSError, ValueError, AttributeError, RecursionError):
+        return DiagramIds(state=outcomes.NOT_CHECKED, why=WHY_DIAGRAM_UNREADABLE)
+    if not isinstance(parts, list):
+        return DiagramIds(state=outcomes.NOT_CHECKED, why=WHY_DIAGRAM_NO_PARTS)
+    ids = [part.get("id") if isinstance(part, dict) else None for part in parts]
+    if not all(isinstance(each, str) and each for each in ids):
+        return DiagramIds(state=outcomes.NOT_CHECKED, why=WHY_DIAGRAM_PART_NO_ID)
+    return DiagramIds(tuple(ids))
 
 
 def firmware_in(toml):
