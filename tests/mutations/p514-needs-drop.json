@@ -42,9 +42,9 @@
   "replace": "                self.needs.write(project, after)\n                self.drawer.apply(changes)\n"
  },
  {
-  "file": "scripts/spark/design/needs.py",
+  "file": "scripts/spark/design/need_requirements.py",
   "name": "the requirements note compares the entry key, not the record a pick is",
-  "find": "[next(iter(_as_record(pick, known, entries).items()))]\n                if kind == \"part\"}",
+  "find": "[next(iter(as_record(pick, known, entries).items()))]\n                if kind == \"part\"}",
   "replace": "[next(iter(pick.items()))]\n                if kind == \"part\"}"
  },
  {

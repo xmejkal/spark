@@ -411,8 +411,8 @@ class TheDesignAreaTest(unittest.TestCase):
     `scripts/` keeps the three CLIs."""
     DESIGN = ROOT / "scripts" / "spark" / "design"
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
-    MODULES = ["board_emitter", "copper", "design_codes", "fab", "footprint_emitter", "goal_handlers", "loader", "needs",
-               "netlist", "pin_assigner", "restricted_pins"]
+    MODULES = ["board_emitter", "copper", "design_codes", "fab", "footprint_emitter", "goal_handlers", "loader", "need_requirements",
+               "needs", "netlist", "pin_assigner", "restricted_pins"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print. A library function back in a CLI, under
     #: any name, fails the check.
     CLIS = {"assign_pins.py": ["main"], "emit_board.py": ["main"], "emit_footprint.py": ["_report", "main"]}

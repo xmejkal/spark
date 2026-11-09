@@ -27,7 +27,6 @@
 "R1:scripts/spark/checks/physics_check.py:check_resistor_power": 94,
 "R1:scripts/spark/checks/physics_check.py:run": 62,
 "R1:scripts/spark/design/board_emitter.py:<module>": 1144,
-"R1:scripts/spark/design/needs.py:<module>": 827,
 "R1:scripts/spark/design/pin_assigner.py:assign": 116,
 "R1:scripts/spark/records/tool_finder.py:plan": 67,
 "R1:scripts/spark/sourcing/drawer.py:plan_import": 63,

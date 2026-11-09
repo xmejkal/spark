@@ -18,7 +18,7 @@ from spark.build.stages import Stage, NO_FOOTPRINT_HINT
 from spark.design import board_emitter
 from spark.design import footprint_emitter
 from spark.design import loader
-from spark.design import needs
+from spark.design import need_requirements
 from spark.design import netlist
 from spark.records import onboard_parts
 from spark.build import board_alone_input
@@ -193,7 +193,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
 
     # Nothing to build is not a pass. An empty parts list came out `ok` end to end (two traces, two wires), which proves
     # nothing about the chain and reads as though it did. Intake row M3 had it as `problems` on 09-25; both were wrong.
-    if requirements.get(needs.BOARD_ONLY) is True:
+    if requirements.get(need_requirements.BOARD_ONLY) is True:
         if requirements.get("parts"):
             return stages + [Stage("parts", COULD_NOT_RUN, "the requirements say board_only and name parts: say one", build_codes.BOARD_ONLY_WITH_PARTS)]
         return stages + board_alone(board, workdir, firmware, project)
@@ -201,7 +201,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         return stages + [Stage("parts", COULD_NOT_RUN,
                                "the requirements name no parts, so there is nothing to build; a "
                                "board holding only the microcontroller proves nothing. A project that runs "
-                               'on the board alone says "%s": true' % needs.BOARD_ONLY, build_codes.NO_PARTS)]
+                               'on the board alone says "%s": true' % need_requirements.BOARD_ONLY, build_codes.NO_PARTS)]
 
     # The design's own part records, so the build stage below can ask whether the circuit honoured what they state.
     # `board_emitter` reads the same records; if that succeeded, this cannot fail for a reason not already told.

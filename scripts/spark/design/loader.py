@@ -78,7 +78,7 @@ def one_name(name):
     """
     A name as the build tells names apart: `signal_name` puts an instance's name in capitals before its signals, so
     OpenLid and Openlid both give OPENLID_BUTTON — one signal, which `assign_pins` placed twice and the generator
-    traced to one pad from two GPIOs, exit 0 (P163, #100). The ONE definition; `needs._one_name` points here.
+    traced to one pad from two GPIOs, exit 0 (P163, #100). The ONE definition; `need_requirements._one_name` points here.
     """
     return name.upper()
 

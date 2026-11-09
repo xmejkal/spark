@@ -20,7 +20,9 @@ from spark.sourcing.datasheets import catalog_matches, NEED_MATCHER
 from spark.sourcing.part_facts import _row, shelve
 from spark.sourcing.part_handlers import _part_summary, sellers, vendor_order, _write_lines
 from spark.sourcing.part_records import broken_problems, function_of
+from spark.design import board_emitter
 from spark.design import footprint_emitter, needs
+from spark.design import need_requirements
 
 
 def audit(project=None):
@@ -198,36 +200,36 @@ def _gap_lines(problems, no_supply, no_receiver, no_driver):
 
 
 def _op_requirements(args, project):
-    content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver = needs.requirements(
+    content, shelving, unplaced, kept, board_was, problems, placeholder, unserved, no_supply, no_receiver, no_driver = need_requirements.requirements(
         args.requirements)
-    path, changed = Path(args.requirements) / needs.REQUIREMENTS, False
-    # F16: the drawer keys the file names before this write — needs.requirements has read it as JSON already
+    path, changed = Path(args.requirements) / need_requirements.REQUIREMENTS, False
+    # F16: the drawer keys the file names before this write — need_requirements.requirements has read it as JSON already
     held = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
-    named = needs.unserved_keys(held)
+    named = need_requirements.unserved_keys(held)
     if not problems and not args.dry_run:
         for record, source in shelving:
             shelve(record, source)
         changed = store.write_file(path, json.dumps(content, indent=2, ensure_ascii=False) + "\n")
     said = [] if problems else ["  %s %s: board %s; parts %s" % (
         "would write" if args.dry_run else "wrote" if changed else "unchanged", path, content["board"],
-        ", ".join(needs.entry_label(entry) for entry in content["parts"]) or "none")]
+        ", ".join(need_requirements.entry_label(entry) for entry in content["parts"]) or "none")]
     said += ["  board: %s → %s" % (json.dumps(board_was), json.dumps(content["board"]))] if board_was not in (None, content["board"]) and not problems else []
     # --- MVP --- P387: board_only is said both ways, never silently written or dropped
     said += ["  board only: nothing to build but the board; the build skips the parts, schematic and footprint"
-             ] if content.get(needs.BOARD_ONLY) is True and not problems else []
-    said += ["  board_only removed: the file lists parts"] if isinstance(held, dict) and needs.BOARD_ONLY in held and content["parts"] and not problems else []
+             ] if content.get(need_requirements.BOARD_ONLY) is True and not problems else []
+    said += ["  board_only removed: the file lists parts"] if isinstance(held, dict) and need_requirements.BOARD_ONLY in held and content["parts"] and not problems else []
     stop = "" if problems else footprint_emitter.footprint_stop(content["board"], Path(args.requirements))
     said += ["  board %s: %s" % (content["board"], stop)] if stop else []  # F12 (C-7): said, never refused
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
     said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
-             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + needs.board_emitter.DEFAULT_BODY_MM + (how,))
+             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + board_emitter.DEFAULT_BODY_MM + (how,))
              for part_id, how in ([] if problems else placeholder)]
     said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
-    said += ["  kept, not from a pick: %s" % ", ".join(needs.entry_label(entry) for entry in kept)] if kept and not problems else []
+    said += ["  kept, not from a pick: %s" % ", ".join(need_requirements.entry_label(entry) for entry in kept)] if kept and not problems else []
     said += _gap_lines(problems, no_supply, no_receiver, no_driver)
-    said += ["  not on the board: %s — %s" % (item["need"], needs.NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
+    said += ["  not on the board: %s — %s" % (item["need"], need_requirements.NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
              for item in ([] if problems else unserved)]
-    said += [] if problems else _names_your_entries(needs.REQUIREMENTS, needs.unserved_keys(content) - named, args.dry_run)
+    said += [] if problems else _names_your_entries(need_requirements.REQUIREMENTS, need_requirements.unserved_keys(content) - named, args.dry_run)
     return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
                    "unplaced": unplaced, "kept": kept, "board_was": board_was, "placeholder_outline": [part_id for part_id, _ in placeholder],
                    "unserved": unserved, "no_supply": no_supply, "no_driver": no_driver,
