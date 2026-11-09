@@ -123,7 +123,7 @@ def id_problems(part, validation):
     if "id" not in validation.owed and part.get("id") != validation.path.stem:
         return ["id is %r but the file is named %r; they must match" % (part.get("id"), validation.path.stem)]
     if isinstance(part.get("id"), str) and not store.PLAIN.fullmatch(part["id"]):
-        # P87's attribute half: `board_emitter.component_name` capitalises the id's words and strips nothing, so the id is
+        # P87's attribute half: `board_components.component_name` capitalises the id's words and strips nothing, so the id is
         # what keeps `<chip name="…">` a name — a plain key, as every key of the store is
         return [NOT_A_PLAIN_ID % part["id"]]
     return []

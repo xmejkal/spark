@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import check_footprints  # noqa: E402
 from spark.checks import build_check, physics_check  # noqa: E402
 from spark.design import copper  # noqa: E402
-from spark.design import board_emitter  # noqa: E402
+from spark.design import board_sections  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402
 from spark.design import fab  # noqa: E402
 
@@ -60,7 +60,7 @@ class OneTableNotTwoCopiesTest(unittest.TestCase):
         self.assertIs(build_check.PACKAGE_POWER_W, physics_check.PACKAGE_POWER_W)
 
     def test_the_generator_and_the_checker_agree_about_vias(self):
-        self.assertEqual((board_emitter.VIA_HOLE_MM, board_emitter.VIA_PAD_MM),
+        self.assertEqual((board_sections.VIA_HOLE_MM, board_sections.VIA_PAD_MM),
                          (fab.process("min_via_hole_mm"), fab.process("min_via_pad_mm")))
 
 

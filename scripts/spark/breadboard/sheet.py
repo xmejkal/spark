@@ -12,7 +12,7 @@ from pathlib import Path
 from spark.design import pin_assigner
 from spark.records import board_pads
 from spark.design import loader
-from spark.design import board_emitter
+from spark.design import board_components
 from spark.breadboard import part_shape
 from spark.sourcing import drawer, part_rules
 from spark.records import store
@@ -86,8 +86,8 @@ def _passives(design_parts):
     for part in design_parts:
         for host_part in part.get("host_parts") or []:
             phrase = PURPOSE.get(host_part["kind"], host_part["kind"] + " on")
-            for name in board_emitter.host_part_names(part, host_part):
-                found[name] = "%s %s %s" % (phrase, board_emitter.component_name(part), host_part["pin"])
+            for name in board_components.host_part_names(part, host_part):
+                found[name] = "%s %s %s" % (phrase, board_components.component_name(part), host_part["pin"])
     return found
 
 
@@ -118,7 +118,7 @@ def _check_fresh(circuit, design_parts, circuit_path, requirements_path):
     failed = sorted({e["type"] for e in circuit if re.fullmatch(r"source_\w+_error", e.get("type") or "")})
     if failed:
         raise NotBuiltError("the last build failed (%s): %s" % (", ".join(failed), again), breadboard_codes.BUILD_FAILED)
-    wanted = ({BOARD_COMPONENT} | {board_emitter.component_name(part) for part in design_parts}
+    wanted = ({BOARD_COMPONENT} | {board_components.component_name(part) for part in design_parts}
               | set(_passives(design_parts)))
     built = {e["name"] for e in circuit if e.get("type") == "source_component"
              and e.get("ftype") in ("simple_chip", "simple_resistor")}
@@ -158,7 +158,7 @@ def _parts_table(board, design_parts, resistors, supplies, have):
             "| 1 | %s | the board | %s |" % (board.get("name"), status(board.get("id")))]
     by_record = collections.OrderedDict()
     for part in design_parts:
-        by_record.setdefault(part["id"], (part, []))[1].append(board_emitter.component_name(part))
+        by_record.setdefault(part["id"], (part, []))[1].append(board_components.component_name(part))
     rows += ["| %d | %s | %s | %s |" % (len(names), part.get("name"), ", ".join(sorted(names)), status(record_id))
              for record_id, (part, names) in by_record.items()]
     by_value = collections.OrderedDict()
@@ -200,7 +200,7 @@ def _before_power(design_parts, supplies):
               "range of %s (`parts.py --show`) before you connect it" % (net, ", ".join(sorted(users)))
               for net, users in supplies.items()]
     for part in design_parts:
-        name = board_emitter.component_name(part)
+        name = board_components.component_name(part)
         lines += ["- **CONFLICT** on %s: %s" % (name, conflict) for conflict in part_rules.pull_conflicts(part)]
         lines += ["- %s %s has no resistor: the firmware must pull it up with Pin.PULL_UP, as `pins.py` says (P204)"
                   % (name, pin) for pin in part.get("_firmware_pulls", [])]

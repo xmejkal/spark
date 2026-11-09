@@ -16,6 +16,8 @@ from spark.build import project_setup
 from spark.build.board_engine import convert, converter_stage_problem, find_converter, toolchain_can_build, tsci_version
 from spark.build.stages import Stage, NO_FOOTPRINT_HINT
 from spark.design import board_emitter
+from spark.design import board_sections
+from spark.design import power_rails
 from spark.design import footprint_emitter
 from spark.design import loader
 from spark.design import need_requirements
@@ -73,7 +75,7 @@ def count_in(circuit):
 
 
 #: Nets that are a ground: the generator's list, so this rule and its supply rule agree.
-GROUND_NETS = board_emitter.GROUND_NETS
+GROUND_NETS = power_rails.GROUND_NETS
 #: tscircuit's types for the two-terminal parts a generated board places between a pin and a rail.
 PASSIVE_FTYPES = ("simple_resistor", "simple_capacitor", "simple_inductor", "simple_diode")
 
@@ -81,7 +83,7 @@ PASSIVE_FTYPES = ("simple_resistor", "simple_capacitor", "simple_inductor", "sim
 def islands_in(circuit, claims=(), across=()):
     """
     Every component the board leaves on an island, said in its own words. `across` names the
-    components that sit across a driven pair (`board_emitter.loads_across_a_pair`: a speaker
+    components that sit across a driven pair (`power_rails.loads_across_a_pair`: a speaker
     terminal, C-3) — asked, as a passive is, whether an end dangles, never whether they reach ground.
 
     Three questions, because a component can be stranded in three ways and a board builds,
@@ -94,7 +96,7 @@ def islands_in(circuit, claims=(), across=()):
       or the top of a divider, sits between a pin and a rail and reaches no ground BY DESIGN, and
       was reported here as an island the evening P6 placed the first ones. What must hold for it
       is that neither end dangles.
-    * **an unfed supply pin** (`claims`, from `board_emitter.supply_inputs`). This is P29's half. The
+    * **an unfed supply pin** (`claims`, from `power_rails.supply_inputs`). This is P29's half. The
       irrigation controller's buck record says "Feeds the FireBeetle's 5 V/VCC input and the
       sensors"; net.V5V joined the buck to a flow meter, the processor was on no 5 V net at all,
       and the stage read `[ok]`. `claims` is what the design STATES, so this compares the built
@@ -236,7 +238,7 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
         return stages + [Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, "emit_board.py crashed: %s" % (
             said[-1] if said else "exit %d, and nothing said" % emitted.returncode), build_codes.STAGE_CRASHED)]
     board_file.write_text(emitted.stdout)
-    traces_asked = emitted.stdout.count(board_emitter.TRACE_TAG)
+    traces_asked = emitted.stdout.count(board_sections.TRACE_TAG)
     stages.append(Stage(board_emitter.SCHEMATIC_STAGE, OK, "%d trace(s) written" % traces_asked))
     if emitted.stderr.strip():
         stages.append(Stage("schematic-notes", PROBLEMS, emitted.stderr.strip(), build_codes.SCHEMATIC_NOTED))
@@ -300,8 +302,8 @@ def run(requirements, workdir, toolchain=None, project=None, from_library=False,
     # routed and reported zero errors, while every module around it was correctly wired to a
     # ground the processor was not on.
     islands = islands_in(json.loads(circuit_path.read_text()),
-                         board_emitter.supply_inputs(board, part_list),
-                         across=board_emitter.loads_across_a_pair(part_list))
+                         power_rails.supply_inputs(board, part_list),
+                         across=power_rails.loads_across_a_pair(part_list))
     if islands:
         return stages + [Stage("build", PROBLEMS, "%s. A board builds, routes and reports no error with a component joined "
                                "to nothing — the parts around it are wired to nets it is simply not on" % "; ".join(islands),

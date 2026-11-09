@@ -19,9 +19,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 from spark.design import loader  # noqa: E402
-from spark.design.board_emitter import (RefusedInputError, board_file, outputs_in_contention,  # noqa: E402
-                                        outputs_with_nothing_on_them, pair_sides_without_a_driver,
-                                        rails_without_a_source, read_inputs)
+from spark.design.board_emitter import RefusedInputError, board_file, read_inputs  # noqa: E402
+from spark.design.power_rails import (outputs_in_contention, outputs_with_nothing_on_them,
+                                      pair_sides_without_a_driver, rails_without_a_source)  # noqa: E402
 
 
 def main(argv=None):

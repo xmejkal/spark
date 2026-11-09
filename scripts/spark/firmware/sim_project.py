@@ -17,7 +17,8 @@ from pathlib import Path
 from typing import NamedTuple, Optional
 
 from spark.records import board_records
-from spark.design import board_emitter
+from spark.design import board_components
+from spark.design import board_sections
 from spark.core import outcomes
 from spark.sourcing import part_records
 from spark.sourcing import part_rules
@@ -52,14 +53,14 @@ def mapping_for(design):
     """
     mapping, chips, unmapped = {}, [], []
     for part in design.parts:
-        name = board_emitter.component_name(part)
+        name = board_components.component_name(part)
         # The passives spark itself placed for this part (P6): a resistor is a resistor, whatever
         # the record says about the module — its own skip must not skip them.
         for host_part in part.get("host_parts") or []:
             values = ((host_part.get("top_ohms"), host_part.get("bottom_ohms")) if host_part["kind"] == "divider"
-                      else (board_emitter.series_ohms(part, host_part, design.board)[0],) if host_part["kind"] == "series"
+                      else (board_sections.series_ohms(part, host_part, design.board)[0],) if host_part["kind"] == "series"
                       else (host_part.get("ohms"),))
-            for resistor, ohms in zip(board_emitter.host_part_names(part, host_part), values):
+            for resistor, ohms in zip(board_components.host_part_names(part, host_part), values):
                 mapping[resistor] = {"wokwiType": "wokwi-resistor", "attrs": {"value": str(ohms)},
                                      "pins": {"anode": "1", "cathode": "2", "pin1": "1", "pin2": "2"}}
         simulation = part.get("simulation")
@@ -102,10 +103,10 @@ def limits_of(design):
         wokwi = ((part.get("simulation") or {}).get("wokwi") or {})
         sentence = wokwi.get("stand_in") or wokwi.get("note")
         if sentence:
-            said.append((board_emitter.component_name(part), sentence))
+            said.append((board_components.component_name(part), sentence))
         skip = (part.get("simulation") or {}).get("skip")
         if skip:
-            said.append((board_emitter.component_name(part), "not simulated at all: %s" % skip))
+            said.append((board_components.component_name(part), "not simulated at all: %s" % skip))
     # Grouped by the sentence, because three identical soil probes printed three identical
     # paragraphs and a finding that long gets scrolled past — which is how this one was invisible
     # in the first place.

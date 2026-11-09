@@ -12,19 +12,19 @@
   "replace": "            if width]"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_sections.py",
   "name": "generator stops sizing traces (escaped once)",
   "find": "    return copper.width_to_emit_mm(current, rise)",
   "replace": "    return None"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/power_rails.py",
   "name": "close the rail vocabulary again",
   "find": "    net = KNOWN_RAIL_NETS.get(rail, str(rail).upper())",
   "replace": "    net = KNOWN_RAIL_NETS.get(rail)\n    if net is None:\n        return None"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_components.py",
   "name": "ignore an instance name",
   "find": "    if part.get(\"_instance\"):\n        return part[\"_instance\"]",
   "replace": "    if False:\n        return part[\"_instance\"]"

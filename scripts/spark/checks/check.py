@@ -171,13 +171,13 @@ def placeholder_components_in(project):
     if not project:
         return (), []
     from spark.design import loader
-    from spark.design import board_emitter
+    from spark.design import board_components
     names, notes = set(), []
     for requirements in sorted(Path(project).glob("*requirements.json")):
         try:
             # the file's own project, the one the build reads (P319)
             part_list = loader.parts_of(loader.read(requirements), loader.project_for(requirements))
-            names |= set(board_emitter.placeholder_components(part_list))
+            names |= set(board_components.placeholder_components(part_list))
         except loader.DesignError as broken:
             notes.append("%s could not be read, so any stand-in footprint it names was "
                          "measured as if real: %s" % (requirements.name, broken))
@@ -195,7 +195,8 @@ def rail_loads_in(project, circuit):
     """
     if not project:
         return None, []
-    from spark.design import board_emitter
+    from spark.design import board_components
+    from spark.design import power_rails
     present = {e.get("name") for e in circuit if e.get("type") == "source_component"}
     matched, notes = [], []
     for requirements in sorted(Path(project).glob("*requirements.json")):
@@ -204,13 +205,13 @@ def rail_loads_in(project, circuit):
         except loader.DesignError as broken:
             notes.append("%s could not be read: %s" % (requirements.name, broken))
             continue
-        names = {board_emitter.component_name(part) for part in made.parts}
+        names = {board_components.component_name(part) for part in made.parts}
         if names and names <= present:
             matched.append(made)
     if len(matched) != 1:
         return None, notes + ["%d requirements files describe this circuit, so no rail was "
                               "summed from the part records" % len(matched)]
-    return board_emitter.rail_loads(matched[0].parts, matched[0].board), notes
+    return power_rails.rail_loads(matched[0].parts, matched[0].board), notes
 
 
 class BuildCheck(Check):

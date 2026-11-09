@@ -20,7 +20,7 @@ from spark.sourcing.datasheets import catalog_matches, NEED_MATCHER
 from spark.sourcing.part_facts import _row, shelve
 from spark.sourcing.part_handlers import _part_summary, sellers, vendor_order, _write_lines
 from spark.sourcing.part_records import broken_problems, function_of
-from spark.design import board_emitter
+from spark.design import board_components
 from spark.design import footprint_emitter, needs
 from spark.design import need_requirements
 
@@ -222,7 +222,7 @@ def _op_requirements(args, project):
     said += ["  board %s: %s" % (content["board"], stop)] if stop else []  # F12 (C-7): said, never refused
     said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
     said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
-             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + board_emitter.DEFAULT_BODY_MM + (how,))
+             "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + board_components.DEFAULT_BODY_MM + (how,))
              for part_id, how in ([] if problems else placeholder)]
     said += ["  reserved, not placed — no record: %s" % ", ".join(unplaced)] if unplaced and not problems else []
     said += ["  kept, not from a pick: %s" % ", ".join(need_requirements.entry_label(entry) for entry in kept)] if kept and not problems else []
