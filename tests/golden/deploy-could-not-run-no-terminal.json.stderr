@@ -1,3 +1,5 @@
+  why: spark checks the image and finds its tools first, so a wrong image stops before the board is touched
+  why: spark compares the chip and flash size with the board's record, so a board that cannot take the image is stopped
   the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
   port   /dev/cu.usbmodem101
   mac    dc:da:0c:xx:xx:xx
@@ -9,6 +11,7 @@
   what this simulation cannot show, so test it on the board:
   - ONBOARD_DISPLAY — spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. Test it on the board.
   all fields match the board record firebeetle2-esp32s3.
+  why: the erase cannot be undone, so the write needs a yes for this board
 deploy.py: no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):
   SPARK_HOME=<spark-home> <repo>/scripts/deploy.py --project <project-dir> --token 5aed-<image> --port /dev/cu.usbmodem101
 Or, to let Claude deploy this board for N minutes (1 to 1440) with no yes each time, run this once. It allows an erase of ALL of the flash and any passed image of any project:

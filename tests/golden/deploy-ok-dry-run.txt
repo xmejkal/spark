@@ -1,3 +1,4 @@
+  why: spark checks the image and finds its tools first, so a wrong image stops before the board is touched
   would run: <python> -m esptool --chip esp32s3 erase-flash
   would run: <python> -m esptool --chip esp32s3 --after watchdog-reset write-flash 0x0 <project-dir>/sim/flash-with-firmware.bin
   board: not looked at: run look.py
