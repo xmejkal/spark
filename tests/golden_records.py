@@ -148,6 +148,7 @@ CASES = [
          written=("parts/golden-led.json",)),
     Case("parts-fetch-ok-dry-run.txt", "parts.py", ["--fetch", "golden-led", "--dry-run"] + WITH, 0, (SMALL_LED,)),
     Case("parts-fetch-problems-no-record.json", "parts.py", ["--fetch", "no-such-part", "--json"] + WITH, 1),
+    Case("parts-fetch-problems-no-record-dry-run.txt", "parts.py", ["--fetch", "no-such-part", "--dry-run"] + WITH, 1),
     Case("parts-keep-ok.txt", "parts.py", ["--keep", "sheet.pdf", "--url", CLOSED_URL], 0, (SHEET,),
          written=(SHEET_KEPT,)),
     Case("parts-keep-could-not-run-no-file.txt", "parts.py", ["--keep", "missing.pdf"], 2),

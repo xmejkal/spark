@@ -1,0 +1,2 @@
+--- stderr ---
+parts.py: no record called 'no-such-part' to fetch for
