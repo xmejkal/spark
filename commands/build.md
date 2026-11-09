@@ -293,7 +293,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/run_scenario.py sim/scenarios/<name>.scenario.yaml
 
 The scenario's path is the project's, so it works from the project folder or with `--project`. It needs the
 simulation project in `sim/` (`diagram.json`, `wokwi.toml`, the chips), which the one command keeps with `--keep .`,
-and a `firmware/main.py`. It runs one scenario ([P130](https://github.com/xmejkal/spark/issues/64)). It first puts MicroPython and the project's `firmware/`
+and a `firmware/main.py`. It runs one scenario ([P130](https://github.com/xmejkal/spark/issues/64)). A step's `part-id` must be a component id of
+`sim/diagram.json`: a wrong one exits 2 with the word and the diagram's ids, before wokwi-cli starts. A step whose id spark cannot read, or a
+diagram it cannot read, prints `not checked` and the run goes on ([P399](https://github.com/xmejkal/spark/issues/515)). It first puts MicroPython and the project's `firmware/`
 into one flash image, so a run never tests an older firmware. The interpreter is the MicroPython v1.29.0 build that the
 board's record names in `micropython_port`, taken from the tools list and fetched and checked by `/spark:setup`. The
 list holds the original ESP32, ESP32-S3 and ESP32-C6 builds and Seeed's XIAO ESP32-C6 build. The original ESP32's build starts at 0x1000

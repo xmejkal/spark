@@ -10,9 +10,12 @@ earlier reaches a board that is still booting. So a scenario holds only behaviou
 person's words, and spark ships none.
 
 A run spends Wokwi CI minutes, so every check that costs nothing comes first: the simulation project, firmware/main.py,
-the scenario's steps, littlefs, MicroPython and the image's place. Only then the tool, the token and the paid run. Each
-run puts MicroPython and the project's firmware/ into a new flash image, so a run never tests an older firmware. When the
-build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
+the scenario's steps, the component ids its steps name against sim/diagram.json, littlefs, MicroPython and the image's
+place. Only then the tool, the token and the paid run. A step whose id cannot be read, or a diagram that cannot be read,
+prints `not checked` and the run goes on (P399).
+
+Each run puts MicroPython and the project's firmware/ into a new flash image, so a run never tests an older firmware. When
+the build named no image (no --firmware), this names flash-with-firmware.bin in sim/wokwi.toml, as --firmware would have:
 wokwi-cli refuses a wokwi.toml that names none.
 
 A step's own `name:` key may hold a must line of the brief (copied exactly): the log's header names every step (P345),
@@ -33,7 +36,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from spark.firmware.scenario_run import DEFAULT_TIMEOUT_MS, ScenarioRun, find_simulator
+from spark.firmware.scenario_run import DEFAULT_TIMEOUT_MS, ScenarioRun, free_checks
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_FOR, OK
 from spark.core.text_guards import guard_lines
 
@@ -57,10 +60,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms)
     run.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here
-    refusal = run.problem()  # what costs nothing first, then the tool, then the token: a missing build before an account
-    simulator, refusal = (None, refusal) if refusal else find_simulator(args.project)
-    if refusal:
-        print(guard_lines("run_scenario.py: %s" % refusal), file=sys.stderr)
+    simulator, said = free_checks(run, args.project)
+    if said:
+        print(guard_lines("\n".join("run_scenario.py: %s" % each for each in said)), file=sys.stderr)
+    if simulator is None:
         return EXIT_COULD_NOT_RUN
     status, sentence, log = run.run(simulator.command)
     print(guard_lines("%s: %s%s" % (args.scenario.name, sentence, "\nlog: %s" % log if log else "")),

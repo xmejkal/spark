@@ -1,9 +1,9 @@
 [
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "main asks for the token before the free checks (a missing build is hidden by the token message)",
-  "find": "    refusal = run.problem()  # what costs nothing first",
-  "replace": "    refusal = None  # what costs nothing first"
+  "find": "    refusal = run.problem()\n",
+  "replace": "    refusal = None\n"
  },
  {
   "file": "scripts/spark/firmware/scenario_run.py",

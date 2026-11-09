@@ -38,7 +38,7 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a pass prints a bare passed again",
-  "find": "        return status, ScenarioSteps.from_text(self.steps).passed_sentence() if status == OK else sentence, log",
+  "find": "        return status, self.steps.passed_sentence() if status == OK else sentence, log",
   "replace": "        return status, sentence, log"
  },
  {

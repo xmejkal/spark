@@ -10,7 +10,7 @@ sentence alone, with the same exit code as before. Their codes wait in the libra
 
 | script | codes |
 | --- | --- |
-| `run_scenario.py`, before the paid call | `no_sim_project`, `no_main_py`, `run_input_unusable` (the scenario, the firmware line or the files cannot be read), `firmware_line_bad` (an image outside `sim/`), `tool_missing` (littlefs, the simulator or the MicroPython build), `interpreter_unusable`, `no_token` |
+| `run_scenario.py`, before the paid call | `no_sim_project`, `no_main_py`, `unknown_component_id`, `run_input_unusable` (the scenario, the firmware line or the files cannot be read), `firmware_line_bad` (an image outside `sim/`), `tool_missing` (littlefs, the simulator or the MicroPython build), `interpreter_unusable`, `no_token` |
 | `run_scenario.py`, during the run | `simulator_cannot_start`, `simulator_hung` (wokwi-cli outlived its wall clock), `simulator_lost`, `board_silent`, `board_not_started`, `never_ready`, `step_timeout`, `step_failed` |
 | `flash_image.py` | `tool_missing`, `no_interpreter`, `files_not_folder`, `config_not_json`, `interpreter_unusable` (damaged, too large, or not the build for the board's chip) |
 | `import_firmware.py` | `import_failed`, `import_timeout` (in `--json`), `nothing_to_import`, `no_firmware_folder` (in the library only) |

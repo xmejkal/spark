@@ -135,7 +135,7 @@ def build_project(folder):
     project = Path(folder) / "bench s3"
     sim = project / "sim"
     (sim / "scenarios").mkdir(parents=True)
-    (sim / "diagram.json").write_text("{}")
+    (sim / "diagram.json").write_text('{"parts": []}')
     (sim / "wokwi.toml").write_text(sim_project.wokwi_toml([]))
     (project / "firmware").mkdir()
     (project / "firmware" / "main.py").write_text("print('ready')\n")
