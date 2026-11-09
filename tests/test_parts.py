@@ -1941,12 +1941,13 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
 
     def test_a_problem_the_lines_say_in_their_own_words_is_not_said_again(self):
         record = written(part("cited", sources=["https://unreachable.example/a.pdf"]))
-        unreachable = lambda record: [("https://unreachable.example/a.pdf", False)]  # noqa: E731 — no network
+        asked = []  # the stub answers as the network would, so only its calls show the patch is the one looked up
+        unreachable = lambda record: asked.append(1) or [("https://unreachable.example/a.pdf", False)]  # noqa: E731
         project = Path(tempfile.mkdtemp()); (project / "parts").mkdir()
         (project / "parts" / "cited.json").write_text(record.read_text())
         with mock.patch.object(part_handlers, "sources_resolve", unreachable):
             text, code = run_text(["--sources", "cited", "--project", str(project)])
-        self.assertEqual((code, text.count("unreachable.example")), (1, 1), text)
+        self.assertEqual((code, text.count("unreachable.example"), asked), (1, 1, [1]), text)
         home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
         (home / "catalog" / "half-written.json").write_text("{")
         with in_store(home):

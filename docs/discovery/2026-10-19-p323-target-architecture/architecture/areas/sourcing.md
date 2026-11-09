@@ -23,7 +23,7 @@ the offers that match a need. It also tallies what a project's run cost, read fr
 | facts | `fact-set`, `function-set`, `promote` | writes |
 | datasheets | `sources`, `fetch`, `keep`, `read`, `kept`, `catalog` | reads, writes, network, runs the `pdf-text` tool for `read` (`datasheets.read_datasheet`) |
 | drawer | `drawer`, `drawer-set`, `drawer-import` | reads, writes |
-| cost | `step`, `tally`, and `cost.py` | reads, writes |
+| cost | `step`, `tally`, and `cost.py` | reads, writes. `tally`'s handler lives in `design/goal_handlers.py`, because it reads `needs` (design), and sourcing imports no design module (P721) |
 
 The goal Operations of `parts.py` (`need`, `needs`, `needs-set`, `match`, `offer`, `pick`, `requirements`) live in
 design, because `needs` imports `loader`, `board_emitter` and `footprint_emitter`. `audit` lives in design too: it asks
