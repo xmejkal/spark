@@ -24,7 +24,7 @@ import re
 from dataclasses import dataclass
 
 from spark.design import pin_assigner
-from spark.records import board_pads
+from spark.records import board_pads, provenance
 from spark.design import fab
 from spark.design import copper
 from spark.design import loader
@@ -32,7 +32,6 @@ from spark.design import design_codes
 from spark.design import footprint_emitter
 import parts as parts_library
 from spark.sourcing import part_rules
-from spark.records import provenance
 
 from spark.core.result import Refusal
 

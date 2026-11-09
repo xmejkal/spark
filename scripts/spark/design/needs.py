@@ -12,17 +12,14 @@ import json
 import re
 from pathlib import Path
 
-from spark.records import board_records
 from spark.design import loader
 import drawer
 from spark.design import board_emitter
 from spark.design import footprint_emitter
 from spark.sourcing import matching
 from spark.sourcing.part_records import broken_problems
-from spark.records import record_kind
+from spark.records import board_records, record_kind, records_codes, store
 from spark.records.record_kind import _parse, _problem, _shape_problems, owes, VERBS
-from spark.records import records_codes
-from spark.records import store
 from spark.core.text_guards import clean, kept_reason, printable
 
 #: How a need stands against the store (§3).
