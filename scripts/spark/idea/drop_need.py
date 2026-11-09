@@ -11,6 +11,7 @@ from spark.core.result import Finding, OperationResult
 from spark.records import store
 from spark.sourcing import drawer
 from spark.design import needs
+from spark.design import need_requirements
 from spark.idea import idea_codes
 
 # --- MVP ---
@@ -67,7 +68,7 @@ class DropNeed(Operation):
         after = [each for each in current if each["id"] != need]
         try:
             changes, released = self.needs.dropped_holds(name, current, after, entries)
-            notes = [REQUIREMENTS_NOTE % (part, project) for part in self.needs.parts_left_listed(project, dropped, after)]
+            notes = [REQUIREMENTS_NOTE % (part, project) for part in need_requirements.parts_left_listed(project, dropped, after)]
             lines = ["  %s %s: %s %s" % ("would drop" if dry_run else "dropped", need, dropped.get("does", ""), dropped.get("what", ""))]
             lines += [RELEASE_LINE % ("would release" if dry_run else "released", hold["was"] - hold["now"], hold["was"], hold["entry"])
                       for hold in released]

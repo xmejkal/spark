@@ -24,6 +24,7 @@ from spark.breadboard import sheet  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import build_service  # noqa: E402
 from spark.records import onboard_parts  # noqa: E402
+from spark.build import board_alone_input  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records.onboard_parts import OnboardPartReader  # noqa: E402
 
@@ -114,7 +115,7 @@ class AWiredGpioHasItsOwnLimitTest(unittest.TestCase):
 
 class TheConverterInputComesFromThePartRecordsTest(unittest.TestCase):
     def test_the_netlist_wires_each_signal_pin_to_its_gpio_and_each_ground_pin_to_ground(self):
-        files, why = onboard_parts.make_converter_input([LED, BUTTON], "GND1", ROOT)
+        files, why = board_alone_input.make_converter_input([LED, BUTTON], "GND1", ROOT)
         self.assertIsNone(why)
         self.assertEqual(files["wokwi-mapping.json"], {
             "onboard_led": {"wokwiType": "wokwi-led", "pins": {"A": "A", "K": "C"}, "attrs": {"color": "red"}},
@@ -131,9 +132,9 @@ class TheConverterInputComesFromThePartRecordsTest(unittest.TestCase):
         record = json.loads((ROOT / "parts" / "led-red-5mm.json").read_text())
         record["power"][0]["rail"] = "supply"
         (project / "parts" / "led-red-5mm.json").write_text(json.dumps(record))
-        self.assertEqual(onboard_parts.make_converter_input([LED], "GND1", project),
+        self.assertEqual(board_alone_input.make_converter_input([LED], "GND1", project),
                          (None, "the record for 'led-red-5mm' names no signal pin, ground pin or Wokwi part, so spark cannot wire onboard_led"))
-        files, why = onboard_parts.make_converter_input([dict(LED, id="no-such-part")], "GND1", project)
+        files, why = board_alone_input.make_converter_input([dict(LED, id="no-such-part")], "GND1", project)
         self.assertIsNone(files)
         self.assertTrue(why.startswith("no part called 'no-such-part'"), why)
 

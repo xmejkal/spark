@@ -6,31 +6,31 @@
   "replace": "        names = [port.get(\"name\")]"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/power_rails.py",
   "name": "a receiving pad is wired whether or not anything drives its rail",
   "find": "        yield pad, net, bool(net) and (not receives or net in driven)",
   "replace": "        yield pad, net, bool(net)"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/power_rails.py",
   "name": "a ground pad becomes conditional, so a board with no ground source loses its return",
   "find": "        receives = supply.get(\"direction\", \"in\") == \"in\" and net not in GROUND_NETS",
   "replace": "        receives = supply.get(\"direction\", \"in\") == \"in\""
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/power_rails.py",
   "name": "another consumer of a rail counts as its source",
   "find": "    return {net for _, supply, net in power_connections(part_list)\n            if supply.get(\"direction\") == \"out\" and net not in GROUND_NETS}",
   "replace": "    return {net for _, supply, net in power_connections(part_list)\n            if net not in GROUND_NETS}"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_sections.py",
   "name": "the pad left open stops being explained, so forgotten and reasoned-about look alike",
   "find": "            lines.append(\"    {/* Mcu.%s receives net.%s and NOTHING ON THIS BOARD DRIVES that\" % (inert(pad), inert(net)))",
   "replace": "            lines.append(\"    {/*\")"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/power_rails.py",
   "name": "the claim the spine checks stops including the module's own pads",
   "find": "    claims += [(\"Mcu\", pad, net) for pad, net, wired in mcu_power_nets(board, part_list)\n               if wired and net not in GROUND_NETS]",
   "replace": "    claims += []"

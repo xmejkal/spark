@@ -27,8 +27,9 @@ import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.sourcing import drawer  # noqa: E402
-from spark.design import board_emitter  # noqa: E402
+from spark.design import board_components  # noqa: E402
 from spark.design import needs  # noqa: E402
+from spark.design import need_requirements  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
 from spark.records import store  # noqa: E402
@@ -2123,7 +2124,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         for part_id, name in (("tactile-button", None), ("led-1", None), ("led1", None), ("jst_ph_2", None), ("tactile-button", "BtnOpen")):
             with self.subTest(part_id=part_id, name=name):
                 instance = {"_instance": name} if name else {}
-                self.assertEqual(needs._called(part_id, name), board_emitter.component_name(dict({"id": part_id}, **instance)))
+                self.assertEqual(need_requirements._called(part_id, name), board_components.component_name(dict({"id": part_id}, **instance)))
 
     def test_a_re_pick_leaves_the_old_part_listed_as_kept(self):
         _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
@@ -2142,7 +2143,7 @@ class TheRequirementsFileTest(unittest.TestCase):
                 said, _ = run(["--requirements", str(project)])
                 self.assertEqual((self.written(project)["parts"], said["data"]["kept"]),
                                  ([held, {"part": "tactile-button", "name": "Mode"}], []))
-                self.assertEqual(board_emitter.duplicate_component_names(loader.parts_of(self.written(project), project)), [])
+                self.assertEqual(board_components.duplicate_component_names(loader.parts_of(self.written(project), project)), [])
 
     def test_an_entry_named_after_a_need_is_that_need_s_own(self):
         _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("mode", [{"part": "tactile-button"}])])

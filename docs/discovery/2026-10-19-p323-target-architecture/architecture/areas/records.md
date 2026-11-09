@@ -38,7 +38,7 @@ W6-R3a, P718), a design fact. `boards.py` imports both areas' `OPERATIONS`, as `
 | `records/deploy_record_store.py` | `DeployRecordStore` and `LastDeploy`: what the store says of the board on USB (built in `scripts/` in P431) |
 | `records/provenance.py` | the leaf `provenance`: what a fact must carry |
 | `records/board_pads.py` | the footprint pad each pin label of a board sits on: the one reader of `physical.pad_aliases` (P512) |
-| `records/onboard_parts.py` | the onboard parts a scenario wires (`ONBOARD_PARTS`, P484). It reads `sheet`, `loader` and `sim_project`, so it imports three areas above records; its split is a card |
+| `records/onboard_parts.py` | the onboard parts a scenario wires (`ONBOARD_PARTS`, P484). It imports only records and core since P708, and the converter's input is `build/board_alone_input.py` |
 | `records/missing_facts.py` | the facts a board record owes a stage, as Findings, and what refuses a write of them (P464) |
 | `records/records_codes.py` | the leaf `records_codes` (P716, moved in W6-R3a): a code and its sentence for each refusal of `BoardError`, `ToolError` and `StoreError`, `errors.CodedMessageError`s |
 | `records/tool_finder.py` | the three `tools.json` layers merged, `find`, `status`, `plan`, `install` and the install lines, moved from `tools.py` in W6-R3b (P719). The CLI `tools.py` keeps `main` and `print_status`, which prints. `ToolFinder` comes with its card |

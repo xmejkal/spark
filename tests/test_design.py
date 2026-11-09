@@ -445,9 +445,9 @@ class CapitalsDoNotMakeTwoNamesTest(unittest.TestCase):
         self.assertNotEqual(loader.one_name("Btn_Open"), loader.one_name("BtnOpen"))
 
     def test_needs_tells_names_apart_the_same_way(self):
-        # W16: `needs._one_name` was a second copy of the rule for the picks it writes; now it is a pointer.
-        from spark.design import needs
-        self.assertIs(needs._one_name, loader.one_name)
+        # W16: `need_requirements._one_name` was a second copy of the rule for the picks it writes; now it is a pointer.
+        from spark.design import need_requirements
+        self.assertIs(need_requirements._one_name, loader.one_name)
 
     def test_two_entries_whose_names_differ_only_in_capitals_are_refused_where_the_file_is_read(self):
         path = self.entries("OpenLid", "Openlid")

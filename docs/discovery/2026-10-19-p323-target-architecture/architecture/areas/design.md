@@ -4,7 +4,7 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): `PinAssigner`, `PinMap`, `BoardEmitter`, `NeedsService`, `ImpossibleError`, the modules
-`loader`, `pin_assigner`, `board_emitter`, `footprint_emitter`, `goal_handlers` (the goal handlers of `parts.py` as
+`loader`, `pin_assigner`, `board_emitter`, `board_sections`, `power_rails`, `board_components`, `need_requirements`, `footprint_emitter`, `goal_handlers` (the goal handlers of `parts.py` as
 functions, a stopgap until the "one module per Operation" card: C1 refuses a second `operations.py`, P710), and the
 Operation names below.
 
@@ -34,11 +34,15 @@ into records and sourcing would be a parameter with one value.
 |---|---|
 | `design/loader.py` | `load` and the `Design` Value, moved from `design.py` in P702 (the name avoids `design/design.py`) |
 | `design/goal_handlers.py` | `audit` and the handlers of the goal Operations, moved out of `parts.py` (W6-S3b, P721), and `tally`'s handler of the cost group, because it reads `needs`, which sourcing may not import. `--needs-set` and `--pick` read a JSON payload, so they stay in the CLI |
-| `design/needs.py` | a goal's needs, matched against the store, the pick, moved from `scripts/needs.py` in P704 with the extractions P700 left. Its reason guard `kept_reason` went to `core/text_guards.py` |
+| `design/needs.py` | a goal's needs, matched against the store, the holds and the pick, moved from `scripts/needs.py` in P704 with the extractions P700 left. Its reason guard `kept_reason` went to `core/text_guards.py` |
+| `design/need_requirements.py` | the requirements file from the picks, `unserved_keys` and `parts_left_listed` (P708) |
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is in P702 |
 | `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` in P702. The CLI `assign_pins.py` stays in `scripts/` and defines `main` only |
 | `design/netlist.py` | `Netlist`, moved as is in P702 |
-| `design/board_emitter.py` | the board file writer, moved from `emit_board.py` in P703 (1145 lines), with `read_inputs`, `BoardInputs`, `RefusedInputError`, `REFUSED_INPUT_MESSAGE` and the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE`. The CLI `emit_board.py` stays in `scripts/` and defines `main` only |
+| `design/board_emitter.py` | what stops a bad input and gives the board file: `read_inputs`, `BoardInputs`, `RefusedInputError`, `PART_GAPS`, `board_file`, `REFUSED_INPUT_MESSAGE` and the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE`. The file writer moved from `emit_board.py` in P703, and P708 split it. The CLI `emit_board.py` stays in `scripts/` and defines `main` only |
+| `design/board_sections.py` | `emit` and every `*_lines` function: each section of the tscircuit file (P708) |
+| `design/power_rails.py` | the rails and the power nets: their names, who drives them and what loads them (P708) |
+| `design/board_components.py` | the parts: their names, their gaps and their place on the first-draft layout (P708) |
 | `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, moved from `emit_footprint.py` in P703. The CLI `emit_footprint.py` stays in `scripts/` with `main` and `_report`, which prints. `footprint_stop` came from `boards.py` in W6-R3a (P718) |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is in P702 |
 | `design/design_codes.py` | the leaf of codes (P700): one per refusal of `load`, `assign_pins`, `emit_board` and `emit_footprint`, moved as it is in P703. A `DesignError`, an `ImpossibleError` and a `RefusedInputError` carry a `code`, and `why_no_footprint`, `why_wrong_kind`, `why_header_disagrees`, `board_file` and `board_to_draw` return a `Refusal`. No CLI writes a code yet |

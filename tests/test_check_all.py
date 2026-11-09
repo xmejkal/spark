@@ -901,8 +901,9 @@ class TheCheckListItselfTest(unittest.TestCase):
         # switched off.
         #   check       — the runner itself.
         #   check_codes — the leaf of the checks' refusal codes (P693): a table, not a check.
+        #   physics_board — the netlist that `physics_check` reads (P708): a Value, not a check.
         # `check_spine` (it BUILDS a design) and `check_commit` (it measures a commit) are not in the area.
-        NOT_A_CHECK = {"__init__", "check", "check_codes"}
+        NOT_A_CHECK = {"__init__", "check", "check_codes", "physics_board"}
         on_disk = {path.stem for path in (ROOT / "scripts" / "spark" / "checks").glob("*.py")} - NOT_A_CHECK
 
         wired = set()

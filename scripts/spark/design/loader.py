@@ -22,7 +22,7 @@ Everything that can be wrong with the input is a `DesignError`, which callers tu
 This module resolves and reads. It names a SIGNAL for its instance (`signal_name`), because that
 name is decided when the instance is, and so it is the one that says which instance names are ONE
 name (`one_name`): `signal_name` is what makes them one. It does not name COMPONENTS for the
-netlist — that is `board_emitter`'s, because the name is decided by what the emitted file needs —
+netlist — that is `board_components`'s, because the name is decided by what the emitted file needs —
 and it does not assign pins, because only the generator needs that. It refuses a file that gives
 two parts one name before any stage runs on it (`read`), and a design whose signals land on one
 name where the signals are derived (`signals_of`, which is the first to hold the part records).
@@ -78,7 +78,7 @@ def one_name(name):
     """
     A name as the build tells names apart: `signal_name` puts an instance's name in capitals before its signals, so
     OpenLid and Openlid both give OPENLID_BUTTON — one signal, which `assign_pins` placed twice and the generator
-    traced to one pad from two GPIOs, exit 0 (P163, #100). The ONE definition; `needs._one_name` points here.
+    traced to one pad from two GPIOs, exit 0 (P163, #100). The ONE definition; `need_requirements._one_name` points here.
     """
     return name.upper()
 
@@ -88,7 +88,7 @@ def names_that_are_one(wanted):
     The first pair of `parts` entries whose names are one name, as (index, name, index, name), or None.
 
     On the names the file GIVES: an entry's shape is `requested_parts`' to refuse, and what an unnamed entry is called
-    is the generator's (`board_emitter.component_name`), whose own compare stays as the independent net.
+    is the generator's (`board_components.component_name`), whose own compare stays as the independent net.
     """
     seen = {}
     for index, entry in enumerate(wanted.get("parts") or []):

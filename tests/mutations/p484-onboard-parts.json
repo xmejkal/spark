@@ -24,7 +24,7 @@
   "replace": "\"onboard\": role, \"_instance\": role,"
  },
  {
-  "file": "scripts/spark/records/onboard_parts.py",
+  "file": "scripts/spark/build/board_alone_input.py",
   "name": "a part's ground pin is the signal pin again",
   "find": "        grounds.append({\"componentId\": role, \"pinName\": returns})",
   "replace": "        grounds.append({\"componentId\": role, \"pinName\": signal})"

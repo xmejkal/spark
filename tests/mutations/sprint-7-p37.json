@@ -14,8 +14,8 @@
  {
   "file": "scripts/spark/firmware/sim_project.py",
   "name": "a part nobody simulates at all says nothing about it",
-  "find": "        if skip:\n            said.append((board_emitter.component_name(part), \"not simulated at all: %s\" % skip))",
-  "replace": "        if False:\n            said.append((board_emitter.component_name(part), \"not simulated at all: %s\" % skip))"
+  "find": "        if skip:\n            said.append((board_components.component_name(part), \"not simulated at all: %s\" % skip))",
+  "replace": "        if False:\n            said.append((board_components.component_name(part), \"not simulated at all: %s\" % skip))"
  },
  {
   "file": "scripts/spark/firmware/sim_project.py",

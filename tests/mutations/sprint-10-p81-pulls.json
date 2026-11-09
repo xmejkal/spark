@@ -7,6 +7,6 @@
   "find": "            line += \"; the module's input-low threshold is not recorded, so below that the level is undefined\"", "replace": "            pass"},
  {"file": "scripts/spark/sourcing/part_facts.py", "name": "--show keeps the conflict to itself",
   "find": "            lines.append(\"\\n  CONFLICT: %s\" % conflict[\"line\"])", "replace": "            pass"},
- {"file": "scripts/spark/design/board_emitter.py", "name": "the board file keeps the conflict to itself",
+ {"file": "scripts/spark/design/board_sections.py", "name": "the board file keeps the conflict to itself",
   "find": "            lines.append(\"          - CONFLICT %s\" % inert(\"%s: %s\" % (part[\"name\"], conflict)))", "replace": "            pass"}
 ]

@@ -377,8 +377,8 @@ class TheChecksAreaTest(unittest.TestCase):
     """W6-C3 (P695): the checks' modules live in `scripts/spark/checks/`, its `__init__.py` imports nothing, and each
     module imports alone. `scripts/` keeps the six CLIs and `check_spine.py`, and each CLI defines `main` only."""
     CHECKS = ROOT / "scripts" / "spark" / "checks"
-    #: The seven modules of the area, by the names of its page (`areas/checks.md`).
-    MODULES = ["build_check", "check", "check_codes", "order_check", "physics_check", "rules_check", "vendor_pins_check"]
+    #: The modules of the area, by the names of its page (`areas/checks.md`).
+    MODULES = ["build_check", "check", "check_codes", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
     CLIS = ["check_all.py", "check_bom.py", "check_footprints.py", "check_physics.py", "check_vendor_pins.py",
             "compare_design.py"]
 
@@ -411,8 +411,8 @@ class TheDesignAreaTest(unittest.TestCase):
     `scripts/` keeps the three CLIs."""
     DESIGN = ROOT / "scripts" / "spark" / "design"
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
-    MODULES = ["board_emitter", "copper", "design_codes", "fab", "footprint_emitter", "goal_handlers", "loader", "needs",
-               "netlist", "pin_assigner", "restricted_pins"]
+    MODULES = ["board_components", "board_emitter", "board_sections", "copper", "design_codes", "fab", "footprint_emitter", "goal_handlers",
+               "loader", "need_requirements", "needs", "netlist", "pin_assigner", "power_rails", "restricted_pins"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print. A library function back in a CLI, under
     #: any name, fails the check.
     CLIS = {"assign_pins.py": ["main"], "emit_board.py": ["main"], "emit_footprint.py": ["_report", "main"]}
@@ -445,8 +445,8 @@ class TheBuildAreaTest(unittest.TestCase):
     """W6-U3 (P705): the build's modules live in `scripts/spark/build/`, its `__init__.py` imports nothing, and each module
     imports alone. `scripts/` keeps the two CLIs."""
     BUILD = ROOT / "scripts" / "spark" / "build"
-    #: The seven modules of the area, by the names of its page (`areas/build.md`).
-    MODULES = ["ai_files", "board_engine", "build_codes", "build_service", "kept_files", "project_setup", "stages"]
+    #: The modules of the area, by the names of its page (`areas/build.md`).
+    MODULES = ["ai_files", "board_alone_input", "board_engine", "build_codes", "build_service", "kept_files", "project_setup", "stages"]
     #: Each CLI's own top-level functions: `main` and what only it uses to parse and print (`report` prints). A library
     #: function back in a CLI, under any name, fails the check.
     CLIS = {"check_spine.py": ["main", "render", "report", "timed_out_sentence"], "init_project.py": ["main"]}
@@ -515,6 +515,15 @@ class TheRecordsAreaTest(unittest.TestCase):
 
     def test_each_records_module_imports_alone(self):
         each_module_imports_alone(self, "records")
+
+    def test_onboard_parts_imports_only_records_and_core(self):
+        # P708: `onboard_parts` imported `sheet`, `loader` and `sim_project` from above; that half is the build's now
+        tree = ast.parse((self.RECORDS / "onboard_parts.py").read_text())
+        found = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module.startswith("spark")}
+        self.assertTrue(found)
+        self.assertEqual([name for name in sorted(found) if name.split(".")[1] not in ("records", "core")], [])
+        self.assertEqual([alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names
+                          if alias.name.startswith("spark")], [])
 
     def test_the_plugin_folder_is_three_folders_up(self):
         # store.PLUGIN, board_records.LIBRARY and PLUGIN_ROOT read the plugin by parents[3] since the move, and

@@ -1,30 +1,30 @@
 [
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/power_rails.py",
   "name": "the one power walk yields entries with no rail",
   "find": "            if net:\n                yield part, supply, net",
   "replace": "            if True:\n                yield part, supply, net"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_components.py",
   "name": "the placeholder filter inverted",
   "find": "    return [part for part in part_list if part_facts.has_placeholder_footprint(part)]",
   "replace": "    return [part for part in part_list if not part_facts.has_placeholder_footprint(part)]"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_sections.py",
   "name": "a rail-less MCU pad silently skipped again",
   "find": "            lines.append(\"    {/* Mcu.%s NAMES NO RAIL in the board file's power_pads, so it is\" % inert(pad))\n            lines.append(\"        wired to nothing. Add a rail to that entry. */}\")\n            continue",
   "replace": "            continue"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_sections.py",
   "name": "two sections swapped in the composition",
   "find": "             + stand_in_lines(part_list)\n             + host_requirement_lines(part_list)",
   "replace": "             + host_requirement_lines(part_list)\n             + stand_in_lines(part_list)"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_sections.py",
   "name": "the unjustified note never emitted",
   "find": "    if not unjustified:\n        return []",
   "replace": "    if True:\n        return []"

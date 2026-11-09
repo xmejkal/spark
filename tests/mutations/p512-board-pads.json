@@ -1,18 +1,18 @@
 [
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_sections.py",
   "name": "the trace names the pin, not its pad (the P512 defect)",
   "find": "% (pads.pad_of(entry[\"pin\"]), target",
   "replace": "% (entry[\"pin\"], target"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_sections.py",
   "name": "emit passes empty pads",
   "find": "signal_lines(part_list, assignments, board_pads.BoardPads.from_record(board))",
   "replace": "signal_lines(part_list, assignments, board_pads.BoardPads({}))"
  },
  {
-  "file": "scripts/spark/design/board_emitter.py",
+  "file": "scripts/spark/design/board_sections.py",
   "name": "a second raw read of the alias key",
   "find": "import board_pads",
   "replace": "import board_pads\nPAD_KEY = \"pad_aliases\""
