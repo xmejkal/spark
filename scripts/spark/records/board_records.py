@@ -4,8 +4,8 @@ The board records: which board this project is built around — resolved in one 
 Boards are drop-in: add `boards/<id>.json` and put that id in `boards/active.json`. Nothing else
 names a board. This module is the library the Python tools import, and the CLI `scripts/boards.py` is the command
 `/spark:init`, `/spark:build` and the review skill call (P718), because a second copy of "where is the board file" would
-be the exact duplication that boards/ exists to remove. `RecordFinder` and `RecordKind` (`areas/records.md`) come with
-P391's card.
+be the exact duplication that boards/ exists to remove. The contract is `BOARD`, a `record_kind.RecordKind` whose rules
+live in `board_rules` (P724). `RecordFinder` (`areas/records.md`) comes with P342.
 
 The contract is enforced rather than documented. A board definition that a person merely
 *described* correctly is how the C6 pin map nearly shipped with D3 read as GPIO3; a definition
