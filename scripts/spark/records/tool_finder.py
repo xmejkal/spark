@@ -22,12 +22,13 @@ import subprocess
 import sys
 from collections import namedtuple
 from pathlib import Path
+
+from spark.core.errors import CodedMessageError
+from spark.core.text_guards import flat_line
 from spark.records import board_records
 from spark.records import records_codes
 from spark.records import store
 from spark.records import versions
-from spark.core.errors import CodedMessageError
-from spark.core.text_guards import flat_line
 
 #: What spark says of a tool whose `--version` said nothing; check_spine writes it, and both modules read it.
 UNKNOWN_VERSION = "unknown version"

@@ -1,6 +1,6 @@
 """
 The reasons a record, a tool or the store refuses, each a code with one sentence (P716, W6-R2): board_records'
-BoardError, tools.py's ToolProblem and store's StoreProblem, wherever they are raised.
+BoardError, tool_finder's ToolProblem and store's StoreProblem, wherever they are raised.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
 sentence (no magic strings, P260). The three errors are `errors.CodedMessageError`s, so a raise cannot leave its
@@ -16,7 +16,7 @@ build_codes', and MISSING_FACT is board_codes', so `missing_facts` reads no benc
 #: board_records: the project, the board selection and the board definitions.
 NO_PROJECT_HERE, BOARD_FILE_MISSING, NO_BOARD_SELECTED = "no_project_here", "board_file_missing", "no_board_selected"
 NO_BOARD_DEFINITION, BOARD_CONTRACT_BROKEN, NO_SUCH_FIELD = "no_board_definition", "board_contract_broken", "no_such_field"
-#: tools.py: the tools lists, a tool's entry, and what finding, installing or pinning a tool meets.
+#: tool_finder: the tools lists, a tool's entry, and what finding, installing or pinning a tool meets.
 TOOLS_LIST_BROKEN, TOOL_ENTRY_BROKEN, UNKNOWN_TOOL = "tools_list_broken", "tool_entry_broken", "unknown_tool"
 CONTRACT_NOT_MET, TOOL_OFF, NEEDS_LOOP = "contract_not_met", "tool_off", "needs_loop"
 TOOL_MISSING, TOOL_TOO_OLD, NO_BUILD_FOR_PLATFORM = "tool_missing", "tool_too_old", "no_build_for_platform"

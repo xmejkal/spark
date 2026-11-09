@@ -600,7 +600,8 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
         for argv in (["--off", "wokwi-mcp"], ["--pin", "pdftotext.version=1"], ["--use", "pdf-text=pdftotext"],
                      ["--new", 'zz={"kind":"path","exe":"zz"}']):
             with self.subTest(argv=argv):
-                made = subprocess.run([sys.executable, script] + argv, env={"SPARK_HOME": str(home), "PATH": ""}, capture_output=True, text=True)
+                child = {"SPARK_HOME": str(home), "PATH": "", "PYTHONDONTWRITEBYTECODE": "1"}  # no stale .pyc
+                made = subprocess.run([sys.executable, script] + argv, env=child, capture_output=True, text=True)
                 self.assertEqual(made.returncode, 0, made.stderr)
                 self.assertIn("home?GRANTED", made.stdout)
                 self.assertEqual([line for line in made.stdout.splitlines() if line.lstrip().startswith("GRANTED")], [])
