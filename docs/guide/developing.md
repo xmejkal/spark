@@ -108,7 +108,7 @@ PO asks ([the glossary](../../GLOSSARY.md#mutation-and-the-mutation-table), [P71
 
 ```sh
 python3 tools/mutate.py --anchors tests/mutations/*.json                # a pull request: no row refused that main accepts
-python3 tools/mutate.py tests/mutations/*.json --for $changed --copy    # a sweep: changed = the files the wave changed
+python3 tools/mutate.py tests/mutations/*.json --for <the wave's files> --copy   # a sweep
 ```
 
 `--copy` removes its copy in a `finally`, and also when SIGTERM stops it (the signal becomes `SystemExit`, only in the
@@ -177,8 +177,8 @@ It reports:
   or `(no card of its 2 has a Status)`.
 
 The full run, `python3 tools/check_commit.py --full` (or `python3 tools/check_commit.py <commit> --full`), is the same
-gate with every test, the slow ones too. It prints `<commit> as committed, full run: Ran M tests in S s / OK`. Run it
-before a PR is marked ready and before an auto-mode merge: a defect only a slow test catches sits on the branch after a push, and this run closes that gap.
+gate with every test, the slow ones too. It prints `<commit> as committed, full run: Ran M tests in S s / OK`. It runs
+at a sweep: the end of a wave or an epic, or when the PO asks. A defect only a slow test catches can reach main between sweeps, and the sweep finds it (P714).
 
 Run the board part yourself — `--help` lists its rules and exit codes — and the status and the day-close beside it
 (`--dry-run` posts nothing):

@@ -55,8 +55,8 @@ Re-introduce the defect; the suite must go red. Each logic change writes the row
 them at the end of a wave or an epic, or when the PO asks. The PO, 2026-11-09: *"lets try not to overrun the
 mutations, it always takes forever, lets be smart about it"* ([P714](https://github.com/xmejkal/spark/issues/963)).
 
-The council's mutation tester ([`.claude/agents/mutation-tester.md`](../.claude/agents/mutation-tester.md)) puts the
-defects back into the changed lines, in a copy of the tree, and names each one the suite does not notice: a missing
+The council's mutation tester ([`.claude/agents/mutation-tester.md`](../.claude/agents/mutation-tester.md)) plants the
+rows of the files a wave or an epic changed, in a copy of the tree, and names each one the suite does not notice: a missing
 test. A pull request proves its rows with `tools/mutate.py --anchors` only, and the rows about a wave's or an epic's
 files run in one sweep when it is done ([the Definition of Done](README.md#definition-of-done)). When, who and how:
 [the glossary](../GLOSSARY.md#mutation-and-the-mutation-table). This holds since 2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175), the PO: *"lets limit the
@@ -159,8 +159,7 @@ A count, a hash, a verdict ("the chain runs end to end") goes into a commit mess
 update only in a later call than the command that produced it, copied from output that is on the screen — **and
 measured on the tree being committed**: `check_commit.py` archives `HEAD` and runs the suite there
 before every push. The push runs the quick run, which skips the `@slow` tests and says how many; a count that a
-commit, a card or a PR quotes as the suite's is the full run's, `check_commit.py --full`, which runs before a PR is
-marked ready (P425). A commit's message said 589 OK while the tree it held ran 562 FAILED, because the run was on the
+commit, a card or a PR quotes as the suite's is the full run's, `check_commit.py --full`, which runs at a sweep: the end of a wave or an epic, or when the PO asks (P425, P714). A commit's message said 589 OK while the tree it held ran 562 FAILED, because the run was on the
 working tree and the file it imported was staged one commit later (close audit C3). The gate measures `HEAD` even when
 another branch is pushed; measuring the ref being pushed is [P106](https://github.com/xmejkal/spark/issues/39), not
 built yet. And a commit is made only when every step before it exited 0 — a chain that commits after a failed edit

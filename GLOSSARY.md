@@ -118,7 +118,7 @@ or chooses. A change to documentation, wiring or process is not ([P208](https://
 **A pull request writes rows and runs none** (the PO, 2026-11-08: *"you test the story"*, and 2026-11-09: *"lets try not to overrun the mutations, it always takes forever, lets be smart about it"*, [P714](https://github.com/xmejkal/spark/issues/963)). The
 implementer writes the defects that the change prevents, at most 12, into `tests/mutations/<card>-<topic>.json`. It
 proves them with `python3 tools/mutate.py --anchors <table>`, which takes seconds: each `find` is there once, and each
-defect compiles. The branch also adds no refused row: `--anchors tests/mutations/*.json` refuses no row that main
+defect compiles. A pull request adds no refused row: `--anchors tests/mutations/*.json` refuses none that main
 accepts. No mutation run and no full run is a gate of a pull request.
 
 **A sweep runs them.** At the end of a wave or an epic, or when the PO asks, the council launches the **mutation
@@ -141,8 +141,8 @@ that it could not run. A person, CI and the mutation tester run the same command
 ```sh
 python3 tools/mutate.py tests/mutations/p130-wokwi-harness.json --copy                     # one table
 python3 tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy        # one file or folder
-changed=$(git diff --name-only origin/main...HEAD)                                     # a branch's files
-python3 tools/mutate.py tests/mutations/*.json --for $changed --copy                       # a branch
+changed=$(git diff --name-only <the wave's first commit>^..HEAD)                       # a sweep's files
+python3 tools/mutate.py tests/mutations/*.json --for $changed --copy                       # a sweep
 python3 tools/mutate.py tests/mutations/*.json --copy                                      # every row
 ```
 
@@ -227,7 +227,7 @@ for two sprints, enforced by nothing.
 Since P425 the hook runs the **quick run**, which skips the tests marked `@slow` (`tests/suite_runs.py`) and prints
 `quick run: Ran N of M tests in S s (K slow tests skipped; the full run is check_commit.py --full)`. That line is not the
 suite's count. The **full run**, `tools/check_commit.py [commit] --full`, runs every test and prints
-`as committed, full run: Ran M tests in S s / OK`; it runs before a PR is marked ready and before an auto-mode merge.
+`as committed, full run: Ran M tests in S s / OK`; it runs at a sweep: the end of a wave or an epic, or when the PO asks, never as a pull request's gate (P714).
 
 ---
 
