@@ -1657,7 +1657,7 @@ Keep the six handlers and `_read_json_input` in the CLI. The CLI still imports o
 about 310 lines. (c) Add a seam that reads the payload in the CLI, which is new logic. The decision (the caller,
 2026-11-09) is (b), and the plan's placement changes. Reading stdin is interface work, so by the one-core rule it
 belongs to the CLI. It needs no new key and no new logic, and the Operations card turns the six into Operations on
-`run_cli`. So `parts.py` keeps about 16 names and 310 lines, `part_handlers` 28 and `goal_handlers` 12, and the CLI
+`run_cli`. So `parts.py` keeps about 16 names and 310 lines, `part_handlers` 28 and `goal_handlers` 11, and the CLI
 still imports only down. The rows are in `p721-sourcing-move.md`.
 
 ## Records and sourcing after W6-S3b (the moved modules and their classes)
