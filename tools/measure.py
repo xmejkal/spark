@@ -318,9 +318,26 @@ def classes_of(tree, prefix=""):
 
 
 def imports_of(tree):
-    """Every module the tree imports, at the top or inside a function, by its first name."""
-    names = {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
-    return names | {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module}
+    """
+    Every module the tree imports, at the top or inside a function, by its first name, and a module of spark's packages
+    by its own name too (P721): `from spark.sourcing import drawer` names `spark`, `sourcing` and `drawer`, and
+    `from spark.sourcing.drawer import x` and `import spark.sourcing.drawer` name `spark` and `drawer` (and `x`).
+    """
+    found = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            found |= {part for alias in node.names for part in _first_and_spark_last(alias.name)}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            found |= set(_first_and_spark_last(node.module))
+            if node.module.split(".")[0] == "spark":
+                found |= {alias.name for alias in node.names}
+    return found
+
+
+def _first_and_spark_last(module):
+    """A dotted module's first name, and its last name when it is one of spark's packages' modules."""
+    parts = module.split(".")
+    return (parts[0], parts[-1]) if parts[0] == "spark" else (parts[0],)
 
 
 def _is_elif(node):
@@ -512,15 +529,28 @@ def output_in_spark(source, known):
 
 
 def old_reads(tree):
-    """Each moved name the tree reaches through its old module: `drawer.clean`, `parts_library.one_line`, `from drawer import clean`."""
+    """
+    Each moved name the tree reaches through its old module: `drawer.clean`, `parts_library.one_line`, `from drawer import
+    clean`, and the same through a package since wave 6 (P721): `from spark.sourcing import drawer` then `drawer.clean`,
+    and `from spark.sourcing.drawer import clean`.
+    """
     bound = {alias.asname or alias.name: alias.name for node in ast.walk(tree) if isinstance(node, ast.Import)
              for alias in node.names if alias.name in MOVED_GUARDS}
+    bound.update({alias.asname or alias.name: alias.name for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)
+                  and (node.module or "").split(".")[0] == "spark" for alias in node.names if alias.name in MOVED_GUARDS})
     reads = {"%s.%s" % (bound[node.value.id], node.attr) for node in ast.walk(tree)
              if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in bound
              and node.attr in MOVED_GUARDS[bound[node.value.id]]}
-    return reads | {"%s.%s" % (node.module, alias.name) for node in ast.walk(tree)
-                    if isinstance(node, ast.ImportFrom) and node.module in MOVED_GUARDS
-                    for alias in node.names if alias.name in MOVED_GUARDS[node.module]}
+    return reads | {"%s.%s" % (_moved_module(node.module), alias.name) for node in ast.walk(tree)
+                    if isinstance(node, ast.ImportFrom) and _moved_module(node.module)
+                    for alias in node.names if alias.name in MOVED_GUARDS[_moved_module(node.module)]}
+
+
+def _moved_module(module):
+    """The MOVED_GUARDS key a `from X import` names: X flat, or the last name of a module of spark's packages."""
+    parts = (module or "").split(".")
+    name = parts[-1] if parts[0] == "spark" else module
+    return name if name in MOVED_GUARDS else None
 
 
 def leaf_imports(source, known):

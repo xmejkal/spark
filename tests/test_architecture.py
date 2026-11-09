@@ -211,13 +211,20 @@ class PlantedBreachesTest(unittest.TestCase):
             "X2:scripts/spark/core/out.py:SystemExit": 1})
 
     def test_u1_a_leaf_that_imports_a_script_matching_with_drawer_a_moved_guard_and_a_missing_leaf(self):
+        # the layout since wave 6 (P721): drawer and matching in a package, imported through it
         root = planted({
-            "scripts/outcomes.py": "import drawer\n", "scripts/drawer.py": "def clean(x):\n    return x\n",
-            "scripts/matching.py": "import drawer\n", "scripts/parts.py": "def one_line(x):\n    return x\n",
-            "scripts/user.py": "import parts as library\nfrom drawer import clean\n\nlibrary.one_line(clean)\n"})
+            "scripts/outcomes.py": "from spark.sourcing import drawer\n",
+            "scripts/spark/sourcing/drawer.py": "def clean(x):\n    return x\n",
+            "scripts/spark/sourcing/matching.py": "from spark.sourcing import drawer\n",
+            "scripts/parts.py": "def one_line(x):\n    return x\n",
+            "scripts/spark/sourcing/user.py": "import parts as library\nfrom spark.sourcing.drawer import clean\n"
+                                              "from spark.sourcing import drawer\n\nlibrary.one_line(clean)\ndrawer.CONTROL\n"})
         self.assertEqual(measure.breaches(root), {
-            "U1:scripts/outcomes.py:imports-drawer": 1, "U1:scripts/matching.py:imports-drawer": 1,
-            "U1:scripts/user.py:reads-drawer.clean": 1, "U1:scripts/user.py:reads-parts.one_line": 1})
+            "U1:scripts/outcomes.py:imports-drawer": 1, "U1:scripts/outcomes.py:imports-spark": 1,
+            "U1:scripts/spark/sourcing/matching.py:imports-drawer": 1,
+            "U1:scripts/spark/sourcing/user.py:reads-drawer.CONTROL": 1,
+            "U1:scripts/spark/sourcing/user.py:reads-drawer.clean": 1,
+            "U1:scripts/spark/sourcing/user.py:reads-parts.one_line": 1})
         self.assertEqual(measure.breaches(planted({}, leaves=False))["U1:scripts:no-leaf-outcomes"], 1)
 
     def test_c1_a_basename_in_two_folders_and_an_exception_not_ending_in_error(self):
@@ -555,9 +562,11 @@ class TheSourcingAreaTest(unittest.TestCase):
         tree = ast.parse((ROOT / "scripts" / "parts.py").read_text())
         self.assertEqual(sorted(node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))),
                          self.PARTS_CLI)
+        # `import parts`, and `from parts import x` too, at the top or lazily: the flat modules are no library any more
         importers = sorted(str(path.relative_to(ROOT)) for path in (ROOT / "scripts").rglob("*.py")
-                           for node in ast.walk(ast.parse(path.read_text())) if isinstance(node, ast.Import)
-                           and any(alias.name in ("parts", "drawer") for alias in node.names))
+                           for node in ast.walk(ast.parse(path.read_text()))
+                           if isinstance(node, ast.Import) and any(alias.name in ("parts", "drawer") for alias in node.names)
+                           or isinstance(node, ast.ImportFrom) and node.level == 0 and node.module in ("parts", "drawer"))
         self.assertEqual(importers, [])
 
     def test_the_area_s_init_imports_nothing(self):
