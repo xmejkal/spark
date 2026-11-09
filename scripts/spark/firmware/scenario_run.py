@@ -34,6 +34,8 @@ DEFAULT_TIMEOUT_MS = 60000
 #: How the run says what it could not compare with the diagram (P399): the run goes on.
 NOT_CHECKED_STEP = "not checked: spark cannot read the component id of this step: %s"
 NOT_CHECKED_DIAGRAM = "not checked: the scenario's component ids, because %s"
+#: The last line of a dry run that found no problem: what it did not do.
+DRY_RUN_DONE = "dry run: no run started and nothing written. wokwi-cli and its token were not looked at."
 #: How long wokwi-cli may take beyond the simulated time: connecting, sending the image.
 STARTUP_ALLOWANCE_S = 120
 
@@ -58,14 +60,25 @@ def with_ready_wait(scenario):
 
 
 def image_in(toml):
-    """The flash image wokwi.toml names. When the build named none, this names sim_project.DEFAULT_IMAGE there first."""
-    text = toml.read_text()
-    if sim_project.firmware_in(toml).state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE in text:
-        toml.write_text(text.replace(sim_project.UNNAMED_FIRMWARE, "\n".join(sim_project.firmware_lines(sim_project.DEFAULT_IMAGE))))
+    """
+    The flash image wokwi.toml names, or sim_project.DEFAULT_IMAGE when the build named none. It writes nothing, and it raises
+    ValueError for what a real run would fail on: no place to name the image, or a file it cannot change.
+    """
     named = sim_project.firmware_in(toml)
     if named.state == outcomes.NOT_CHECKED:
         raise ValueError("wokwi.toml %s%s" % (named.why, named.fix()))
+    if named.state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE not in toml.read_text():
+        raise ValueError("wokwi.toml names no firmware, and wokwi-cli refuses that. To fix it, write it as firmware = \"name.bin\".")
+    if named.state == outcomes.NONE_RECORDED and not os.access(toml, os.W_OK):
+        raise ValueError("wokwi.toml names no firmware, and a run cannot write the name there: the file is read-only")
     return toml.parent / (named.name or sim_project.DEFAULT_IMAGE)
+
+
+def write_image_name(toml):  # --- MVP --- (P399)
+    """When the build named no image, name sim_project.DEFAULT_IMAGE in wokwi.toml: wokwi-cli refuses a wokwi.toml that names none."""
+    text = toml.read_text()
+    if sim_project.firmware_in(toml).state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE in text:
+        toml.write_text(text.replace(sim_project.UNNAMED_FIRMWARE, "\n".join(sim_project.firmware_lines(sim_project.DEFAULT_IMAGE))))
 
 
 def verdict(code, serial, out, err, timeout_ms):
@@ -127,7 +140,11 @@ class ScenarioRun:
                     else getattr(cannot, "code", RUN_INPUT_UNUSABLE))
             return Refusal("%s: %s" % (self.scenario.name, cannot), code)
         outside = sim_project.why_outside_sim(self.sim, self.image)
-        return Refusal(outside, FIRMWARE_LINE_BAD) if outside else None
+        if outside:
+            return Refusal(outside, FIRMWARE_LINE_BAD)
+        if self.image.is_dir() or not self.image.parent.is_dir():
+            return Refusal("%s: wokwi.toml names %s, and a run cannot write its image there" % (self.scenario.name, self.image.name), RUN_INPUT_UNUSABLE)
+        return None
 
     def unknown_component_ids(self):  # --- MVP --- (P399)
         """The Refusal for the component ids that the steps name and the diagram lacks, or None. A diagram that cannot be read refuses nothing."""
@@ -143,12 +160,20 @@ class ScenarioRun:
         said = [NOT_CHECKED_STEP % step for step in self.steps.unread_steps]
         return said + ([NOT_CHECKED_DIAGRAM % self.diagram_ids.why] if self.diagram_ids.state != outcomes.RECORDED else [])
 
+    def dry_run(self):  # --- MVP --- (P399)
+        """(status, the lines to print) of the checks that cost nothing. It needs no token, starts no run and writes nothing."""
+        refusal = self.problem()
+        if refusal:
+            return COULD_NOT_RUN, [refusal]
+        return OK, self.not_checked() + [self.steps.line(), DRY_RUN_DONE]
+
     def run(self, cli):
         """Run it with the firmware as it is now: (status, sentence, the log or None). Every paid run leaves a log."""
         self.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run that could not start
         problem = self.problem()
         if problem:
             return COULD_NOT_RUN, problem, None
+        write_image_name(self.sim / "wokwi.toml")
         self.image.write_bytes(self.flash)
         # Beside the original, so a step's own path (a screenshot to compare with) resolves where its author wrote it.
         as_run = self.scenario.absolute().parent / (".as-run." + self.scenario.name)  # wokwi-cli reads a relative one from sim/

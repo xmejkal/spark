@@ -91,7 +91,7 @@ envelope, with `data.written` false and the FireBeetle's hold in `data.reserved`
 These only read:
 
 - `check_all.py`, `check_physics.py`, `check_footprints.py`, `compare_design.py`, `check_bom.py`;
-- `assign_pins.py` without `--emit-pins`;
+- `assign_pins.py` without `--emit-pins`, and `run_scenario.py --dry-run`, which needs no token and starts no run;
 - `import_firmware.py`. It writes nothing. It does import the project's firmware modules. Their module-level code runs
   on this machine, each module in its own process under a time limit ([P59](https://github.com/xmejkal/spark/issues/7)).
   The stand-ins (`scripts/spark/firmware/stand_in/`) are `machine` (`Pin`, `PWM`, `ADC`, `SPI`, `SoftSPI`, `I2C`, `SoftI2C`, `I2S`),

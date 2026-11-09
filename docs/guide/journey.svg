@@ -145,7 +145,10 @@
 <text x="832" y="2250" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">build wires its own LED and</text>
 <text x="832" y="2284" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">button, 2026-11-01. There</text>
 <text x="832" y="2318" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">its button changed its</text>
-<text x="832" y="2352" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">LED's effect (walk 4).</text>
+<text x="832" y="2352" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">LED's effect (walk 4). A</text>
+<text x="832" y="2386" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">wrong component id stops</text>
+<text x="832" y="2420" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">before the run, and --dry-</text>
+<text x="832" y="2454" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">run needs no token.</text>
 <circle cx="1373" cy="1658" r="36" fill="#ffdc4a"/>
 <text x="1373" y="1669" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">8</text>
 <text x="1373" y="1740" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Bench</text>

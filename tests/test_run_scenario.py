@@ -1134,6 +1134,85 @@ class TheRunComparesTheComponentIdsTest(ProjectCase):
         self.assertIn("set-control 1", self.log.read_text())
 
 
+@needs_littlefs
+class TheDryRunTest(ProjectCase):
+    """P399: --dry-run makes the free checks with no token, starts no run and writes nothing."""
+
+    def dry_run(self):
+        return self.command(str(self.scenario.relative_to(self.project)), "--project", str(self.project), "--micropython",
+                            str(self.micropython), "--dry-run", token=None)
+
+    def tree(self):
+        return {str(each): each.read_bytes() for each in self.project.rglob("*") if each.is_file()}
+
+    def test_it_passes_with_no_token_and_changes_nothing(self):
+        (self.project / "sim" / "runs").mkdir()
+        self.log.write_text("verdict: passed\n")
+        before = self.tree()
+        code, said = self.dry_run()
+        self.assertEqual(code, EXIT_OK)
+        self.assertEqual(self.tree(), before)
+        self.assertFalse(self.seen.exists())
+        self.assertIn("step counts: expect-pin 0, set-control 1, wait-serial 2", said)
+        self.assertIn("no run started and nothing written", said)
+        self.assertEqual(self.stdout, said)
+
+    def test_a_wrong_id_exits_2_and_changes_nothing(self):
+        self.scenario.write_text('name: x\nversion: 1\nsteps:\n  - set-control: { part-id: tactilebuton, name: pressed, value: 1 }\n')
+        before = self.tree()
+        code, said = self.dry_run()
+        self.assertEqual(code, EXIT_COULD_NOT_RUN)
+        self.assertIn("tactilebuton", said)
+        self.assertEqual(self.tree(), before)
+        self.assertEqual(self.stdout, "")
+
+    def test_an_interpreter_too_large_exits_2_and_changes_nothing(self):
+        self.micropython.write_bytes(b"\xe9" * 0x400000)
+        before = self.tree()
+        code, said = self.dry_run()
+        self.assertEqual(code, EXIT_COULD_NOT_RUN)
+        self.assertIn("would pass", said)
+        self.assertEqual(self.tree(), before)
+
+    def test_a_read_only_file_with_no_name_exits_2(self):
+        (self.project / "sim" / "wokwi.toml").chmod(0o444)
+        self.assertEqual(self.dry_run()[0], EXIT_COULD_NOT_RUN)
+
+    def test_what_it_could_not_compare_is_said(self):
+        (self.project / "sim" / "diagram.json").write_text("{")
+        code, said = self.dry_run()
+        self.assertEqual(code, EXIT_OK)
+        self.assertIn("not checked: the scenario's component ids", said)
+
+
+@needs_littlefs
+class TheImageNameIsWrittenOnARealRunOnlyTest(ProjectCase):
+    """P399: a run refused before wokwi-cli leaves wokwi.toml as the build wrote it."""
+
+    def toml(self):
+        return self.project / "sim" / "wokwi.toml"
+
+    def test_a_refused_run_leaves_it_alone(self):
+        before = self.toml().read_text()
+        self.assertEqual(self.command(token=None)[0], EXIT_COULD_NOT_RUN)
+        self.assertEqual(self.toml().read_text(), before)
+
+    def test_a_read_only_file_is_a_run_that_could_not_start(self):
+        self.toml().chmod(0o444)
+        status, sentence, log = self.run_with()
+        self.assertEqual((status, sentence.code, log), (COULD_NOT_RUN, "run_input_unusable", None))
+        self.assertFalse(self.seen.exists())
+
+    def test_what_a_real_run_would_fail_on_is_a_free_check(self):
+        (self.project / "sim" / "folder.bin").mkdir()
+        for text in ("[wokwi]\nversion = 1\n", '[wokwi]\nversion = 1\nfirmware = "build/x.bin"\n', '[wokwi]\nversion = 1\nfirmware = "folder.bin"\n'):
+            with self.subTest(text):
+                self.toml().write_text(text)
+                refusal = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).problem()
+                self.assertEqual(refusal.code, "run_input_unusable")
+                self.assertIn("wokwi.toml", refusal)
+
+
 class EachRefusalHasItsCodeTest(ProjectCase):
     """P684 (W6-F2): each refusal carries its code beside the text a person reads, so an agent decides on the code (P260)."""
 
