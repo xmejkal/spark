@@ -1062,11 +1062,11 @@ class BoardInputs:
     assignments: list
 
 
-class RefusedInput(Exception):
+class RefusedInputError(Exception):
     """
     Error: the input was refused at `stage` (`SCHEMATIC_STAGE` or `FOOTPRINT_STAGE`) for `why`. `str()` is the line each
     caller prints: the schematic words around `why`, or `why` alone for a footprint gap, which has its own sentence (P407).
-    `code` (design_codes) is the refused input's own: the DesignError's or the Impossible's, or the footprint's (P700).
+    `code` (design_codes) is the refused input's own: the DesignError's or the ImpossibleError's, or the footprint's (P700).
     """
 
     def __init__(self, stage, why, code):
@@ -1078,7 +1078,7 @@ class RefusedInput(Exception):
 
 def read_inputs(path, project, board_id=None):
     """
-    The design at `path` and its pin assignments, or `RefusedInput`: a fault in the requirements first, then pins that
+    The design at `path` and its pin assignments, or `RefusedInputError`: a fault in the requirements first, then pins that
     cannot be placed, then a board record that cannot give a footprint. A fault in the requirements is said before a gap in
     the board record, because a person who fixed the board would meet the typo next (P407). Prints nothing.
     """
@@ -1088,14 +1088,14 @@ def read_inputs(path, project, board_id=None):
         # The signals are the loader's — derived once, named per instance — so `assign_pins.py`
         # and this file cannot disagree about which signals a design has.
         assignments, _ = pin_assigner.assign(board, design.signals)
-    except (loader.DesignError, pin_assigner.Impossible) as broken:
+    except (loader.DesignError, pin_assigner.ImpossibleError) as broken:
         # Everything wrong with the INPUT is could-not-run: the file was never a design. Reading
         # it used to happen above this `try`, and a malformed file was a traceback with exit 1 —
         # which reads as "problems found" to anything that knows three outcomes.
-        raise RefusedInput(SCHEMATIC_STAGE, str(broken), broken.code) from broken
+        raise RefusedInputError(SCHEMATIC_STAGE, str(broken), broken.code) from broken
     no_footprint = footprint_emitter.why_no_footprint(board) or footprint_emitter.why_wrong_kind(board)  # --- MVP --- (P434): `place` does arithmetic on them
     if no_footprint:
-        raise RefusedInput(FOOTPRINT_STAGE, no_footprint, no_footprint.code)
+        raise RefusedInputError(FOOTPRINT_STAGE, no_footprint, no_footprint.code)
     return BoardInputs(design, assignments)
 
 

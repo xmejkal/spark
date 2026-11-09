@@ -42,7 +42,7 @@ areas' `OPERATIONS`, so its flags stay as they are.
 | `sourcing/run_cost.py` | the transcript tally, moved from `cost.py`, which stays the CLI |
 | `sourcing/part_rules.py` | the rules that judge a part record's facts: the pull-up band since P717 (W6-S2), `i2c_pullup_problems` and the others since W6-S3a (P720) |
 | `sourcing/part_records.py` | the part record read and checked (`load`, `validate`, `PartError`, `function_of`), moved out of `parts.py` (W6-S3a, P720) |
-| `sourcing/sourcing_codes.py` | the leaf `sourcing_codes` (P717, moved into `sourcing/` by W6-S3a, P720): a code and its sentence for each refusal of `PartError`, `NoTranscript` and `UnknownMatcher`, `errors.CodedMessageError`s |
+| `sourcing/sourcing_codes.py` | the leaf `sourcing_codes` (P717, moved into `sourcing/` by W6-S3a, P720): a code and its sentence for each refusal of `PartError`, `NoTranscriptError` and `UnknownMatcherError`, `errors.CodedMessageError`s |
 | `sourcing/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
 
 ### Its seams and adapters

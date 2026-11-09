@@ -370,12 +370,12 @@ def names_pins(entry):
 
 
 def _power_functions(board):
-    """The function of each fact in POWER_FUNCTIONS that the board's `power` holds with a value `is_fact_value` accepts, in table order. pins.py writes no line for it."""
+    """The function of each fact in POWER_FUNCTIONS that the board's `power` holds with a value `is_pin_map_constant` accepts, in table order. pins.py writes no line for it."""
     power = board.get("power")
     if not isinstance(power, dict):
         return []
     return [dict(function) for fact, function in POWER_FUNCTIONS.items()
-            if isinstance(power.get(fact), dict) and is_fact_value(power[fact].get("value"))]
+            if isinstance(power.get(fact), dict) and is_pin_map_constant(power[fact].get("value"))]
 
 
 def onboard_functions(board):
@@ -583,18 +583,18 @@ def is_gpio(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def is_fact_value(value):
+def is_pin_map_constant(value):
     """True for a value that pins.py writes as a constant: a finite number or a word, never a bool and never a blank word."""
     if isinstance(value, str):
         return bool(value.strip())
     return isinstance(value, (int, float)) and not isinstance(value, bool) and (not isinstance(value, float) or math.isfinite(value))
 
 
-def fact_value_problems(where, fact):
+def board_fact_problems(where, fact):
     """`provenance.fact_problems` of one fact of a board record, and one more problem for a value that is none of a finite number, a word or null."""
     problems = provenance.fact_problems(where, fact)
     value = fact.get("value") if isinstance(fact, dict) else None
-    if value is not None and not is_fact_value(value):  # one rule with pins.py, so no fact is dropped in silence
+    if value is not None and not is_pin_map_constant(value):  # one rule with pins.py, so no fact is dropped in silence
         problems.append("%s.value is %r; it must be a finite number, a word or null" % (where, value))
     return problems
 
@@ -634,7 +634,7 @@ def role_entry_problems(where, role):
         elif name.upper() in labels:
             problems.append("%s.facts[%r] has the name of the label %r, so pins.py would write one constant twice"
                             % (where, name, name.upper()))
-        problems += fact_value_problems("%s.facts[%r]" % (where, name), fact)
+        problems += board_fact_problems("%s.facts[%r]" % (where, name), fact)
     return problems
 
 
@@ -645,7 +645,7 @@ def power_problems(board):
         return []
     if not isinstance(power, dict):
         return ["power is %r; it must be an object of name -> {value, verified, source}" % (power,)]
-    return [problem for fact in POWER_FUNCTIONS if fact in power for problem in fact_value_problems("power[%r]" % fact, power[fact])]
+    return [problem for fact in POWER_FUNCTIONS if fact in power for problem in board_fact_problems("power[%r]" % fact, power[fact])]
 # --- end MVP ---
 
 

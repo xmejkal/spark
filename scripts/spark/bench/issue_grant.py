@@ -73,8 +73,8 @@ class IssueGrant(Operation):
             # P430: the closed gate's sentence holds the rerun line: the project path and the port, quoted as that line quotes them
             said = guard_sentence("%s: %s" % (SCRIPT, closed), shlex.quote(str(project.resolve())), shlex.quote(port) if port else None)
             return OperationResult(None, [Finding(outcomes.STATUS_FOR[closed.code], None, closed.reason, str(closed), "")], diagnostics=[said])
-        except (tool_finder.ToolProblem, board_look.LookStopError,
-                store.StoreProblem) as cannot:  # P499: a store that refuses
+        except (tool_finder.ToolError, board_look.LookStopError,
+                store.StoreError) as cannot:  # P499: a store that refuses
             return stop_result(cannot, SCRIPT, project, port, lambda stop: board_doctor.stop_answer(SCRIPT, stop, platform, outside.run))
         lines = [guard_lines("  granted (%s): board %s (token %s) until %s" % (grant.scope, grant.mac, grant.board_token, grant.expires_at))]
         if grant.scope == board_grant.SCOPE_DEPLOY:

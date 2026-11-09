@@ -113,7 +113,7 @@ def circuit_of(inputs):
 # were loaded by file path with `importlib`, which registers nothing in `sys.modules`: in one
 # process this file's `parts` was not `emit_board`'s `parts`, and their `PartError` classes
 # were different objects, so an `except` for one could not catch the other. Audit A7.
-class RulesVsNetlist(Check):
+class RulesCheck(Check):
     def call(self, inputs):
         from spark.checks import rules_check
         circuit_of(inputs)  # refuse an empty netlist before comparing anything against it
@@ -129,7 +129,7 @@ class RulesVsNetlist(Check):
                                   "shows" % ".".join(pin) for pin in pulled])
 
 
-class Physics(Check):
+class PhysicsCheck(Check):
     def call(self, inputs):
         from spark.checks import physics_check
         from spark.checks.physics_check import PROBLEM, NEEDS_MEASUREMENT
@@ -213,7 +213,7 @@ def rail_loads_in(project, circuit):
     return board_emitter.rail_loads(matched[0].parts, matched[0].board), notes
 
 
-class Buildability(Check):
+class BuildCheck(Check):
     def call(self, inputs):
         from spark.checks import build_check
         from spark.checks.build_check import PROBLEM, ADVISORY
@@ -239,7 +239,7 @@ class Buildability(Check):
                       unmeasured=of(ADVISORY))
 
 
-class VendorTruth(Check):
+class VendorPinsCheck(Check):
     def call(self, inputs):
         from spark.checks import vendor_pins_check
         problems, unchecked = [], []
@@ -256,7 +256,7 @@ class VendorTruth(Check):
         return answer(problems=problems, unchecked=unchecked)
 
 
-class TheOrder(Check):
+class OrderCheck(Check):
     def call(self, inputs):
         from spark.checks import order_check
         try:
@@ -281,16 +281,16 @@ class TheOrder(Check):
 
 #: Ordered by how much a miss costs, so the first thing a reader sees is the most expensive.
 CHECKS = [
-    VendorTruth("vendor-truth", ["boards"],
-                "the board definition matches the vendor's own pin header"),
-    Buildability("buildability", ["circuit"],
-                 "holes take their pins, packages hold their values"),
-    TheOrder("the-order", ["package"],
-             "the fab package orders the parts the schematic specifies"),
-    Physics("physics", ["circuit", "rules"],
-            "the board obeys physics, not just itself"),
-    RulesVsNetlist("rules-vs-netlist", ["circuit", "rules"],
-                   "written rules hold in the design that was built"),
+    VendorPinsCheck("vendor-truth", ["boards"],
+                    "the board definition matches the vendor's own pin header"),
+    BuildCheck("buildability", ["circuit"],
+               "holes take their pins, packages hold their values"),
+    OrderCheck("the-order", ["package"],
+               "the fab package orders the parts the schematic specifies"),
+    PhysicsCheck("physics", ["circuit", "rules"],
+                 "the board obeys physics, not just itself"),
+    RulesCheck("rules-vs-netlist", ["circuit", "rules"],
+               "written rules hold in the design that was built"),
 ]
 
 

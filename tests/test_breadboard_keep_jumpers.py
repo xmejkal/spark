@@ -186,7 +186,7 @@ class EscapedMutantsTest(unittest.TestCase):
         project = built_full()
         edit(project, lambda drawn: drawn["connections"].append(["board:D8", "LedRed5mm:A", "green", []]))
         with base.mock.patch.object(base.kept_moves.KeepMovesFirstFitPartPlacement, "place",
-                                    side_effect=base.drawing.NotDrawn("no room")):
+                                    side_effect=base.drawing.NotDrawnError("no room")):
             written = build(project)
         self.assertEqual(codes(written), {"jumper board:D8-LedRed5mm:A": "jumper-not-on-board"})
 
@@ -194,7 +194,7 @@ class EscapedMutantsTest(unittest.TestCase):
         project = built_full()
         change_wire(project, 1, other="bb1:14t.b")
         with base.mock.patch.object(base.kept_moves.KeepMovesFirstFitPartPlacement, "place",
-                                    side_effect=base.drawing.NotDrawn("no room")):
+                                    side_effect=base.drawing.NotDrawnError("no room")):
             written = build(project)
         self.assertEqual(codes(written), {"jumper 6b.j-14t.b": "no-room"})
 

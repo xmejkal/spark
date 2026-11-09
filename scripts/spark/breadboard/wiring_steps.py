@@ -36,7 +36,7 @@ End = collections.namedtuple("End", "kind component name words pin job value", d
 #: One connection point: its ends (the board's first), the supply from off the board on it, and whether it goes on a rail.
 StepPoint = collections.namedtuple("StepPoint", "ends supply rail")
 #: One step: its words, and the two diagram names it joins (None for a step that only places something).
-Step = collections.namedtuple("Step", "words edge")
+WiringStep = collections.namedtuple("WiringStep", "words edge")
 #: What a step does: put a component in, set a point's anchor up, join an end to the anchor, or connect a supply.
 PLACE, SETUP, JOIN, SUPPLY = "place", "setup", "join", "supply"
 #: One step with what it is about: what it does, its subject (the component placed, the End set up or joined, the
@@ -55,7 +55,7 @@ class Anchor:
     name = None
 
     def setup(self):
-        """[Step]: what puts the anchor itself in, before any end joins it."""
+        """[WiringStep]: what puts the anchor itself in, before any end joins it."""
         return []
 
     def destination(self, first):
@@ -80,9 +80,9 @@ class RowAnchor(Anchor):
 
     def setup(self):
         if self.end.kind == RESISTOR:
-            return [Step("Put %s, in a free row." % self.end.words, None)]
+            return [WiringStep("Put %s, in a free row." % self.end.words, None)]
         if self.end.kind == BOARD:
-            return [Step("Run a jumper from %s to a free row." % self.end.words, None)]
+            return [WiringStep("Run a jumper from %s to a free row." % self.end.words, None)]
         return []
 
     def destination(self, first):
@@ -142,23 +142,23 @@ class BreadboardSteps:
         self.points = list(points)
 
     def walk(self):
-        """[Step], in order: each thing placed, then each point's anchor set up and its other ends joined, then its
+        """[WiringStep], in order: each thing placed, then each point's anchor set up and its other ends joined, then its
         supply."""
         return [seated.step for seated in self.anchored()]
 
     def anchored(self):
         """[Seated]: the steps of walk(), in its order, each with what it does, its subject and its anchor."""
-        walked = [Seated(Step("Put %s in the breadboard, each pin in its own row."
+        walked = [Seated(WiringStep("Put %s in the breadboard, each pin in its own row."
                               % ("the board" if placed == THE_BOARD else placed), None), PLACE, placed, None, False)
                   for placed in self.placed]
         for point in self.points:
             anchor = anchor_for(point)
             set_up = anchor.seat().end
             walked += [Seated(step, SETUP, set_up, anchor, set_up.kind == BOARD) for step in anchor.setup()]
-            walked += [Seated(Step(move(end, anchor.destination(number == 0)), (end.name, anchor.name)), JOIN, end,
+            walked += [Seated(WiringStep(move(end, anchor.destination(number == 0)), (end.name, anchor.name)), JOIN, end,
                               anchor, needs_jumper(end)) for number, end in enumerate(anchor.others(point.ends))]
             if point.supply:
-                walked.append(Seated(Step("Connect the %s supply, from off the board, to %s. Check its voltage first "
+                walked.append(Seated(WiringStep("Connect the %s supply, from off the board, to %s. Check its voltage first "
                                           "(Before you power it)." % (point.supply, anchor.destination(False)),
                                           ("%s supply" % point.supply, anchor.name)), SUPPLY, point.supply, anchor,
                                      False))

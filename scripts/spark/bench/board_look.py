@@ -445,7 +445,7 @@ class LookService:
         except project_image.DeployError as cannot:
             why, code = str(cannot), cannot.reason  # image stays set when only the logs could not be read: the fit check needs it
         # --- MVP --- P436: the image check needs a tool that is missing; image stays set, there is no token
-        except tool_finder.ToolProblem as cannot:
+        except tool_finder.ToolError as cannot:
             why, code = str(cannot), board_codes.TOOL_MISSING
         # --- end MVP ---
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
@@ -482,9 +482,9 @@ class LookService:
 
 def looker(platform, run=subprocess.run):
     """A LookService with the platform's port finder and board reader, whose hint names the project's buttons.
-    tool_finder.ToolProblem becomes a LookStopError."""
+    tool_finder.ToolError becomes a LookStopError."""
     try:
         hint = flasher.EsptoolFlasher.boot_hint_for(board_records.ButtonPlaces.of_project(platform.project))
         return LookService(platform.make_port_finder(run), platform.make_board_reader(run, hint))
-    except tool_finder.ToolProblem as cannot:
+    except tool_finder.ToolError as cannot:
         raise LookStopError("%s", cannot, reason=board_codes.TOOL_MISSING)

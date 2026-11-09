@@ -5,8 +5,8 @@ difference as one bench action. It names jumpers by their ends and colors, never
 free rows. `sheet` calls it; nothing here knows a circuit.
 
     describe(seated, colors)                       [RecordedStep], one per step of a sheet
-    WiringRecord.from_build(seated, colors, earlier, drawn)   the record of a sheet; kept connections keep their color
-    WiringRecord.read(path)                        the record on disk, None when there is none
+    WiringLog.from_build(seated, colors, earlier, drawn)   the log of a sheet; kept connections keep their color
+    WiringLog.read(path)                           the log on disk, None when there is none
     changes_between(record, seated, colors)        [WiringChange], in the order a person acts
     ChangeList().line(change) / .render(changes)   the words
 
@@ -100,7 +100,7 @@ def describe(seated, colors=None):
     return found
 
 
-class WiringRecord:
+class WiringLog:
     """
     Value: what the last sheet told the person to wire, `steps` as [RecordedStep], and `drawn_jumpers`, the pairs of
     holes (frozensets of two hole names) that spark drew itself in breadboard.json, not a jumper the person kept.

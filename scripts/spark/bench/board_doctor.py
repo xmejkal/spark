@@ -156,7 +156,7 @@ class BoardDoctorService:
 
 def after_esptool(stop, platform, run):
     """The DoctorProbeResult for a board_look.LookStopError from esptool's read, or None when the stop names no port (it
-    was no failed read). The tools come from the FirmwarePlatform `platform`. ToolProblem and UnknownStepError pass
+    was no failed read). The tools come from the FirmwarePlatform `platform`. ToolError and UnknownStepError pass
     up."""
     if stop.port is None:
         return None
@@ -174,7 +174,7 @@ def stop_answer(script, stop, platform, run):
     read, the board doctor's facts and next step follow, and the next step is the last line. `platform` as `after_esptool`."""
     try:
         result = after_esptool(stop, platform, run)
-    except (tool_finder.ToolProblem, UnknownStepError) as cannot:
+    except (tool_finder.ToolError, UnknownStepError) as cannot:
         return ["%s: %s (no doctor: %s)" % (script, stop, cannot)], None
     if result is None:
         return ["%s: %s" % (script, stop)], None

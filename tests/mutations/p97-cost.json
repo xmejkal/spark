@@ -8,7 +8,7 @@
   "find": "if isinstance(read, str) and read.lower().endswith(DOCUMENTS):", "replace": "if isinstance(read, str):"},
  {"file": "scripts/spark/sourcing/run_cost.py", "name": "a step never ends", "find": "min(later) if later else None", "replace": "None"},
  {"file": "scripts/spark/sourcing/run_cost.py", "name": "no transcript is a cost of nothing",
-  "find": "            raise NoTranscript(\"no transcript of session", "replace": "            continue\n            raise NoTranscript(\"no transcript of session"},
+  "find": "            raise NoTranscriptError(\"no transcript of session", "replace": "            continue\n            raise NoTranscriptError(\"no transcript of session"},
  {"file": "scripts/spark/sourcing/run_cost.py", "name": "a step forgets its session", "find": "\"session\": session_id()", "replace": "\"session\": None"},
  {"file": "scripts/spark/design/needs.py", "name": "every pick is owned",
   "find": "    return bool(held) and _counts([entry for _, entry in held])[0] != 0", "replace": "    return True"},

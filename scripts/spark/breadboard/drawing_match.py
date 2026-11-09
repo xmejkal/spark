@@ -65,7 +65,7 @@ class DrawnNets:
         """[DrawingDiffersResult], in the order of the points: each end not joined to its point's first end, then each
         end joined to an earlier point, one per pair of points; then each pin that no point names, nor its contact,
         whose row is in a point's net. The layout was planned from the same points and catalog,
-        so every end has a hole; `end_group` raises NotDrawn if one does not."""
+        so every end has a hole; `end_group` raises NotDrawnError if one does not."""
         found, owner, said = [], {}, set()
         for number, point in enumerate(points):
             ends = [(end, self.net_of(drawing.end_group(end, self._placed, catalog))) for end in point.ends]

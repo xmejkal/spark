@@ -1,6 +1,6 @@
 [
  {"file": "scripts/spark/firmware/image_builder.py", "name": "the list's MicroPython build is not used", "find": "    return Interpreter(Path(found.command[0]), offset_of(found.entry))", "replace": "    return Interpreter(Path(\"micropython.bin\"), 0)"},
  {"file": "scripts/spark/firmware/image_builder.py", "name": "a missing littlefs is a traceback again", "find": "        tool_finder.find(\"littlefs\", project)  # P457: a project's tools file that turns it off is named\n", "replace": ""},
- {"file": "scripts/spark/firmware/image_builder.py", "name": "a missing build is a traceback again", "find": "    except tool_finder.ToolProblem as missing:\n        return None, Refusal(str(missing), firmware_codes.TOOL_MISSING)", "replace": "    except KeyError as missing:\n        return None, Refusal(str(missing), firmware_codes.TOOL_MISSING)"},
+ {"file": "scripts/spark/firmware/image_builder.py", "name": "a missing build is a traceback again", "find": "    except tool_finder.ToolError as missing:\n        return None, Refusal(str(missing), firmware_codes.TOOL_MISSING)", "replace": "    except KeyError as missing:\n        return None, Refusal(str(missing), firmware_codes.TOOL_MISSING)"},
  {"file": "scripts/spark/records/tool_finder.py", "name": "a missing download says only 'see its entry'", "find": ", (\"download\", None), (\"apt\"", "replace": ", (\"apt\""}
 ]

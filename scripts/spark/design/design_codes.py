@@ -3,7 +3,7 @@ The reasons a design cannot be loaded, placed or emitted, each a code with one s
 pin_assigner, board_emitter and footprint_emitter.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
-sentence (no magic strings, P260). A refusal that raises gives its error a `code` (DesignError, Impossible, RefusedInput);
+sentence (no magic strings, P260). A refusal that raises gives its error a `code` (DesignError, ImpossibleError, RefusedInputError);
 one that returns a sentence returns a `Refusal` (`spark.core.result`), a str with a `code`, so every text and JSON stays
 byte-equal. No design CLI writes a code yet: the codes wait in the library for the Operation that comes later.
 
@@ -17,7 +17,7 @@ NO_REQUIREMENTS, REQUIREMENTS_UNREADABLE = "no_requirements", "requirements_unre
 REQUIREMENTS_FIELD_WRONG, NAME_USED_TWICE = "requirements_field_wrong", "name_used_twice"
 NO_PROJECT_FOLDER, PART_UNUSABLE, BOARD_UNUSABLE = "no_project_folder", "part_unusable", "board_unusable"
 RULES_REFUSED = "rules_refused"
-#: assign_pins: an Impossible, a signal no pin can take.
+#: assign_pins: an ImpossibleError, a signal no pin can take.
 UNKNOWN_BUS, NOT_A_BUS_LINE, BUS_LINE_NOT_ON_BOARD = "unknown_bus", "not_a_bus_line", "bus_line_not_on_board"
 UNKNOWN_NEED, NO_SUCH_PIN, NAMED_PIN_UNSUITABLE = "unknown_need", "no_such_pin", "named_pin_unsuitable"
 PIN_TAKEN, NO_PIN_LEFT, SIGNAL_NAME_UNUSABLE = "pin_taken", "no_pin_left", "signal_name_unusable"

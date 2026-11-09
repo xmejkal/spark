@@ -32,7 +32,7 @@ def find_wokwi_cli(project=None):
     """wokwi-cli, wherever the tools list says to look (PATH, ~/.local/bin, spark's downloads), else None."""
     try:
         return tool_finder.find("simulator", project).command[0]
-    except tool_finder.ToolProblem:
+    except tool_finder.ToolError:
         return None
 
 
@@ -40,7 +40,7 @@ def simulator_problem(project=None):
     """Why there is no wokwi-cli, in the tools list's own words with its install line — or None when it is here."""
     try:
         tool_finder.find("simulator", project)
-    except tool_finder.ToolProblem as missing:
+    except tool_finder.ToolError as missing:
         return str(missing)
     return None
 

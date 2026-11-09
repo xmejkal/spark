@@ -118,8 +118,8 @@ class ScenarioRun:
             self.image = image_in(self.sim / "wokwi.toml")
             self.files = image_builder.files_under(self.project / "firmware")
             self.flash = image_builder.interpreter_for(self.micropython, self.project).image(self.files)
-        except (OSError, ValueError, tool_finder.ToolProblem) as cannot:  # a missing tool, or image_builder's codes
-            code = (TOOL_MISSING if isinstance(cannot, tool_finder.ToolProblem)
+        except (OSError, ValueError, tool_finder.ToolError) as cannot:  # a missing tool, or image_builder's codes
+            code = (TOOL_MISSING if isinstance(cannot, tool_finder.ToolError)
                     else getattr(cannot, "code", RUN_INPUT_UNUSABLE))
             return Refusal("%s: %s" % (self.scenario.name, cannot), code)
         outside = sim_project.why_outside_sim(self.sim, self.image)
@@ -181,7 +181,7 @@ def find_simulator(project, find_tool=None):  # --- MVP --- (P684)
     None."""
     try:
         simulator = (find_tool or tool_finder.find)("simulator", project)
-    except tool_finder.ToolProblem as missing:
+    except tool_finder.ToolError as missing:
         return None, Refusal(str(missing), TOOL_MISSING)
     token = simulator.entry.get("account_env", "WOKWI_CLI_TOKEN")
     if token and not os.environ.get(token):

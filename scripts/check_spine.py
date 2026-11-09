@@ -190,7 +190,7 @@ def main(argv=None):
     if handed is not None and vouches_for_a_build(stages):
         try:
             part_facts.note_built(handed)
-        except (store.StoreProblem, OSError) as unrecorded:
+        except (store.StoreError, OSError) as unrecorded:
             print(guard_lines("  the build was not recorded in your history: %s" % unrecorded), file=sys.stderr)
 
     return report(stages, args, workdir, requirements, tabbed_page.TscircuitExport(toolchain))

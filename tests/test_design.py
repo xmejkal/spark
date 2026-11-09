@@ -586,7 +586,7 @@ class APartSignalIsPinnedByNameTest(unittest.TestCase):
 
     def test_a_pin_the_board_lacks_is_refused_by_name(self):
         loaded = loader.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D99"}]))
-        with self.assertRaises(pin_assigner.Impossible) as caught:
+        with self.assertRaises(pin_assigner.ImpossibleError) as caught:
             pin_assigner.assign(loaded.board, loaded.signals)
         self.assertEqual(str(caught.exception), "TFT_BL asks for pin 'D99', which this board does not bring out")
 
@@ -604,7 +604,7 @@ class APartSignalIsPinnedByNameTest(unittest.TestCase):
     def test_dc_on_the_cables_strap_pin_is_refused_with_the_way_out(self):
         # Close audit C4 stays (the PO, 2026-11-02): D2 is GPIO3, read at reset. The refusal says what to do.
         signals = [{"name": name, "pin": pin} for name, pin in dict(self.GDI_PINS, TFT_DC="D2").items()]
-        with self.assertRaises(pin_assigner.Impossible) as caught:
+        with self.assertRaises(pin_assigner.ImpossibleError) as caught:
             pin_assigner.pin_module_for(self.load(["dfr0664-tft-2in"], signals))
         self.assertEqual(str(caught.exception),
                          "TFT_DC asks for D2 by name, and GPIO3 is strapping — a pin this never offers, because the chip "

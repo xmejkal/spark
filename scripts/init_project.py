@@ -44,7 +44,7 @@ def main(argv=None):
         return EXIT_COULD_NOT_RUN
     try:
         listed = "on your projects list as %r" % store.add_project(project)
-    except store.StoreProblem as refused:
+    except store.StoreError as refused:
         listed = "not on your projects list: %s" % refused
 
     circuit, ambiguous = (args.circuit, None) if args.circuit else find_circuit(project)

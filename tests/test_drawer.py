@@ -67,7 +67,7 @@ class TheDrawerTest(unittest.TestCase):
     def test_a_newline_in_a_field_name_gives_one_line_in_an_entry_with_a_field_the_drawer_does_not_know(self):
         (self.home / "drawer").mkdir(parents=True)
         (self.home / "drawer" / "odd.json").write_text(json.dumps({"schema": 1, "label": "odd", NASTY: 1}))
-        with self.assertRaises(drawer.store.StoreProblem) as caught:
+        with self.assertRaises(drawer.store.StoreError) as caught:
             drawer.entries()
         self.assertEqual(caught.exception.code, "record_file_broken")
         assert_flat(self, caught.exception, NASTY)
@@ -649,7 +649,7 @@ class TheHandEditedDrawerTest(unittest.TestCase):
     def test_a_projects_list_that_is_not_an_object_of_strings_is_a_store_problem(self):
         for text in ("[]", '{"a": 3}'):
             (self.home / "projects.json").write_text(text)
-            with self.assertRaises(parts.store.StoreProblem, msg=text):
+            with self.assertRaises(parts.store.StoreError, msg=text):
                 parts.store.projects()
 
 

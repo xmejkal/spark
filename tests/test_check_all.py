@@ -374,7 +374,7 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
 
     def test_buildability_actually_uses_the_list(self):
         """
-        The integration, not the helper. A mutation that made `Buildability.call` pass an empty
+        The integration, not the helper. A mutation that made `BuildCheck.call` pass an empty
         tuple escaped every test above, because every test above exercised the derivation and
         none exercised the check that consumes it — the same way "the generator stops sizing
         traces" escaped a suite that tested the width arithmetic thoroughly.
@@ -450,7 +450,7 @@ class PlaceholdersReachTheCheckerTest(unittest.TestCase):
 
 # --- MVP ---
 class ARulesFileThatIsRefusedIsOneSentenceTest(unittest.TestCase):
-    """P454, P455: Physics, RulesVsNetlist and Buildability refuse a rules file in the same words, with no type-name prefix."""
+    """P454, P455: PhysicsCheck, RulesCheck and BuildCheck refuse a rules file in the same words, with no type-name prefix."""
     CIRCUIT = [{"type": "source_component", "source_component_id": "c", "name": "PackIn"},
                {"type": "pcb_component", "pcb_component_id": "pcb_c", "source_component_id": "c"}]
 

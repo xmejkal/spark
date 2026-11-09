@@ -64,7 +64,7 @@ class TheNeedsFileTest(unittest.TestCase):
         project = self.project.parent / NASTY
         (project / ".spark").mkdir(parents=True)
         (project / ".spark" / "needs.json").write_text("{not json")
-        with self.assertRaises(store.StoreProblem) as caught:
+        with self.assertRaises(store.StoreError) as caught:
             needs.read(project)
         assert_flat(self, caught.exception)
         self.assertEqual(caught.exception.code, "record_file_broken")
@@ -1351,7 +1351,7 @@ class ThePicksTest(unittest.TestCase):
 
         def refuse_the_history(name, target):
             if name == "history":
-                raise store.StoreProblem("%s would be inside the git work tree — what you own stays out of every repository" % target, code="store_in_repository")
+                raise store.StoreError("%s would be inside the git work tree — what you own stays out of every repository" % target, code="store_in_repository")
             return real(name, target)
         with mock.patch.object(store, "_make_ready", side_effect=refuse_the_history):
             said, code = run(["--pick", str(self.project), "soil=x-soil"])

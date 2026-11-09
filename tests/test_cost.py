@@ -459,10 +459,10 @@ class WhatIsCountedTest(AScratchStore):
 
 
 class EachCostNotKnownHasItsCodeTest(AScratchStore):
-    """P717: each NoTranscript names its sourcing code, so an agent decides on the code and never on the sentence."""
+    """P717: each NoTranscriptError names its sourcing code, so an agent decides on the code and never on the sentence."""
 
     def assert_code(self, steps, code):
-        with self.assertRaises(run_cost.NoTranscript) as refused:
+        with self.assertRaises(run_cost.NoTranscriptError) as refused:
             run_cost.cost(steps, "plant-alarm")
         self.assertEqual(refused.exception.code, code, str(refused.exception))
 

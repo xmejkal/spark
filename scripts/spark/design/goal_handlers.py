@@ -18,7 +18,7 @@ from spark.records.record_kind import Answer, _cannot, owes, _parse, _problem, _
 from spark.sourcing import datasheets, drawer, matching, run_cost
 from spark.sourcing.datasheets import catalog_matches, NEED_MATCHER
 from spark.sourcing.part_facts import _row, shelve
-from spark.sourcing.part_handlers import _brief, sellers, vendor_order, _write_lines
+from spark.sourcing.part_handlers import _part_summary, sellers, vendor_order, _write_lines
 from spark.sourcing.part_records import broken_problems, function_of
 from spark.design import footprint_emitter, needs
 
@@ -68,12 +68,12 @@ def audit(project=None):
 def _op_need(args, project):
     try:
         chosen = matching.matcher(args.matcher or NEED_MATCHER, "need")
-    except matching.UnknownMatcher as wrong:
+    except matching.UnknownMatcherError as wrong:
         return Answer(unchecked=[_cannot(str(wrong))])
     found, drafts = datasheets.need(args.need, project, chosen)
     known = [p for p in catalog_matches(args.need, chosen) if p["id"] not in drafts and p["id"] not in {q["id"] for q in found}]
-    data = {"need": args.need, "vendor_order": list(vendor_order(project)), "found": [_brief(p) for p in found],
-            "drafts": drafts, "catalog": [_brief(p) for p in known]}
+    data = {"need": args.need, "vendor_order": list(vendor_order(project)), "found": [_part_summary(p) for p in found],
+            "drafts": drafts, "catalog": [_part_summary(p) for p in known]}
     lines = [_row(p["id"], p["kind"], p["name"]) for p in found]
     lines += [_row(part_id, "(draft)", "does not yet meet the contract — being filled in") for part_id in drafts]
     lines += [_row(p["id"], p["kind"], "%s  [catalog: researched before; `--promote %s --project .` builds with it]"
@@ -113,7 +113,7 @@ def _op_needs(args, project):
 def _op_match(args, project):
     try:
         chosen = matching.matcher(args.matcher or needs.MATCHER, "match")
-    except matching.UnknownMatcher as wrong:
+    except matching.UnknownMatcherError as wrong:
         return Answer(unchecked=[_cannot(str(wrong))])
     matched, problems = needs.match(args.match, chosen)
     if not matched and not problems:
@@ -248,7 +248,7 @@ def _op_tally(args, project):
     owned = sum(1 for _, pick in picks if needs.owned(pick, entries))
     try:
         counted, unchecked = run_cost.cost([event for event in history if event.get("event") == "step"], name), []
-    except run_cost.NoTranscript as missing:
+    except run_cost.NoTranscriptError as missing:
         counted, unchecked = None, [_cannot(str(missing), "mark each step with parts.py --step <project> <step> in a Claude Code session")]
     said, unreadable = run_cost.line(len(picks), from_store, owned, counted), run_cost.unreadable_note(counted)
     built = any(event.get("event") == "built" and event.get("project") == name for event in history)

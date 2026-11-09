@@ -144,7 +144,7 @@ class DeployFlowService:
         self.report(Event.begin(DeployPhase.PLAN))
         try:
             planned = self._reached["plan"] = self.service.plan(self.asked.port)
-        except (DeployError, tool_finder.ToolProblem) as cannot:
+        except (DeployError, tool_finder.ToolError) as cannot:
             return self.refuse(cannot)
         for note in planned.notes:
             self.say(DeployPhase.PLAN, "note: %s" % note)
@@ -171,7 +171,7 @@ class DeployFlowService:
             self.consent = self.choose_consent(look, token)
             self.planned = self.service.deploy(look, token, self.consent)
             self.keep_yes()  # only now is there a yes to report
-        except (board_look.LookStopError, DeployError, tool_finder.ToolProblem) as cannot:
+        except (board_look.LookStopError, DeployError, tool_finder.ToolError) as cannot:
             if isinstance(cannot, FlashError):
                 self.keep_yes()
             reached.update(refusal=str(cannot), reason=reason_of(cannot))
@@ -219,7 +219,7 @@ class DeployFlowService:
         try:
             reached["store_record"] = str(self.service.record(result, self.consent))
             self.say(DeployPhase.VERIFY, "store record: %s" % reached["store_record"])
-        except (OSError, KeyError, store.StoreProblem) as cannot:  # KeyError: getpass before Python 3.13
+        except (OSError, KeyError, store.StoreError) as cannot:  # KeyError: getpass before Python 3.13
             reached["store_record_error"] = str(cannot)
             reached["notes"] = ["the store record was not written: %s" % cannot]
             self.say(DeployPhase.VERIFY, "store record: not written: %s" % cannot)

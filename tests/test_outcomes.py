@@ -231,7 +231,7 @@ class AnsweringParserTest(unittest.TestCase):
 
     def test_a_bad_argument_raises_before_argparse_prints_anything(self):
         out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), self.assertRaises(outcomes.BadArgument) as raised:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), self.assertRaises(outcomes.BadArgumentError) as raised:
             self.parser().parse_args(["--n", "x"])
         self.assertEqual((out.getvalue(), err.getvalue()), ("", ""))
         self.assertIn("invalid int value", str(raised.exception))

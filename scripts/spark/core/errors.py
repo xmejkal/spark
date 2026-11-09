@@ -8,7 +8,7 @@ from spark.core.text_guards import ValueMessageError
 # --- MVP ---
 class CodedMessageError(ValueMessageError):
     """Error: a ValueMessageError that names its `code`, the word an agent decides on, never the sentence (P716). Every
-    raise must give it: `raise ToolProblem("%s: no tool called %r", name, tool, code=records_codes.UNKNOWN_TOOL)`."""
+    raise must give it: `raise ToolError("%s: no tool called %r", name, tool, code=records_codes.UNKNOWN_TOOL)`."""
 
     def __init__(self, template, *values, code):
         super().__init__(template, *values)

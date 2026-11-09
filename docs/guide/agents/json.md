@@ -321,7 +321,7 @@ P423 and P430 set these rules for the text output of `parts.py`, `look.py`, `dep
 the exit code's ([the outcomes](../agents.md#the-outcomes-and-their-exit-codes)). With `--json`, deploy.py prints every line a person reads, and
 the flash tool's own output, on **stderr**, so stdout holds the envelope alone. A bad flag prints an envelope with `--json` (below).
 A crash in `look.py` or `deploy.py` prints an envelope with
-one `unchecked` item, code `crash`, and exits 2; stderr gets `<tool>: crashed, <class>`, the fix and the traceback, never the envelope. A `DeployError` or a `ToolProblem` raised in deploy's verify, after the flash, is such a crash too (exit 2, `data.board_state` set), where it once printed a traceback with exit 1.
+one `unchecked` item, code `crash`, and exits 2; stderr gets `<tool>: crashed, <class>`, the fix and the traceback, never the envelope. A `DeployError` or a `ToolError` raised in deploy's verify, after the flash, is such a crash too (exit 2, `data.board_state` set), where it once printed a traceback with exit 1.
 Without `--json` it prints the same on stderr and nothing on stdout ([P442](https://github.com/xmejkal/spark/issues/587)).
 
 **The `code` of an item** ([P433](https://github.com/xmejkal/spark/issues/575)). Every item of `problems` and `unchecked` in

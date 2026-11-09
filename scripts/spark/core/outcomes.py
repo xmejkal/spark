@@ -12,7 +12,7 @@ NOTHING_TO_DO — which is fine as a local name for "ran, and the answer is no",
 fourteen places the numbers could drift apart (sprint-4 audit B17). Scripts import the codes from
 here and alias the middle one to their own word.
 
-`AnsweringParser` is the argparse that a script with a `--json` envelope uses: a bad flag raises `BadArgument` (P433).
+`AnsweringParser` is the argparse that a script with a `--json` envelope uses: a bad flag raises `BadArgumentError` (P433).
 """
 
 import argparse
@@ -42,7 +42,7 @@ SKIPPED = "skipped"
 #: board_records.load) raises its Error: that is a refusal, not a reading, and is no reader in this rule. Three
 #: phrasings stay outside the template because each names its thing first: "last deploy not checked: %s" (board_look.py,
 #: board_envelope.py) and "spark did not read its record of this board: %s" (deploy_gate.say_last_deploy_in_question).
-#: Readers that still wait: kept_moves.EarlierDiagram.read and bench_changes.WiringRecord.read (wave 6);
+#: Readers that still wait: kept_moves.EarlierDiagram.read and bench_changes.WiringLog.read (wave 6);
 #: project_image.read_run_logs and firmware_platform.record_of refuse by design. The rule is tested by READERS in
 #: tests/test_outcomes.py, one row per reader that follows it (board_records.read_simulated_part, P397, is one of them).
 RECORDED, NONE_RECORDED, NOT_CHECKED = "recorded", "none-recorded", "not-checked"
@@ -129,16 +129,16 @@ def add_env(said, env):
 
 
 # --- MVP ---
-class BadArgument(Exception):
+class BadArgumentError(Exception):
     """An argument a script cannot run with: could-not-run, and with --json an envelope like any other answer."""
 
 
 class AnsweringParser(argparse.ArgumentParser):
-    """argparse, except that a bad argument is an answer, not an exit: `error` raises BadArgument before argparse prints
+    """argparse, except that a bad argument is an answer, not an exit: `error` raises BadArgumentError before argparse prints
     anything. A script catches it, and prints an envelope with --json or calls `exit_with_usage` without it."""
 
     def error(self, message):
-        raise BadArgument(message)
+        raise BadArgumentError(message)
 
     def exit_with_usage(self, message):
         """Print the usage and `message` on stderr as argparse does, and exit with EXIT_COULD_NOT_RUN. The message holds the

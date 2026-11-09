@@ -2,7 +2,7 @@
 The reasons `sheet.write` writes no sheet, each a code with one sentence (P692, W6-B2).
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the English
-sentence (no magic strings, P260). A NotBuilt carries its code, and `sheet.refusal_code` gives the code of each error
+sentence (no magic strings, P260). A NotBuiltError carries its code, and `sheet.refusal_code` gives the code of each error
 `main` catches. breadboard.py has no `--json`, so the codes wait in the library for the Operation that comes later. A
 drawing not written has its own codes, in drawing.CODES.
 
@@ -11,7 +11,7 @@ STORE_PROBLEM is also board_codes', as an equal literal in two leaves, with the 
 
 
 # --- MVP ---
-#: NotBuilt: the built circuit is missing, stale, failed or cannot be read. Each asks to build again, but a failed
+#: NotBuiltError: the built circuit is missing, stale, failed or cannot be read. Each asks to build again, but a failed
 #: build first asks to fix what failed.
 NOT_BUILT, BUILT_FROM_OTHER_REQUIREMENTS = "not_built", "built_from_other_requirements"
 BUILD_FAILED, BUILD_UNREADABLE = "build_failed", "build_unreadable"

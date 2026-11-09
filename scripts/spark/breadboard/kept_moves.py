@@ -162,7 +162,7 @@ class KeepMovesFirstFitPartPlacement(drawing.FirstFitPartPlacement):
     whose id and Wokwi type are in the circuit, that is not a resistor, with a quarter turn, every pin over a free hole
     in a row of its own and every covered hole free; the first part in the file wins a hole. `reasons` is
     {part id: (code, message)} for each earlier part refused. A part that does not fit after a kept part is tried again
-    from column 0. Raises NotDrawn as FirstFitPartPlacement does.
+    from column 0. Raises NotDrawnError as FirstFitPartPlacement does.
     """
 
     def __init__(self, geometry, earlier, catalog):
@@ -224,7 +224,7 @@ class KeepMovesFirstFitPartPlacement(drawing.FirstFitPartPlacement):
             return kept
         try:
             return super().place(part_id, drawn, ledger, after, pinned)
-        except drawing.NotDrawn:
+        except drawing.NotDrawnError:
             if not after:
                 raise
             return super().place(part_id, drawn, ledger, 0, pinned)

@@ -46,8 +46,9 @@ libraries live in `scripts/spark/checks/`.
 
 Checks imports design (the `Design` Value and `Netlist`), records, sourcing (the pull-up band, `part_rules`, P717) and core.
 
-Three checks are later, not MVP: `OrderCheck`, `BuildCheck` and `PhysicsCheck` (today `TheOrder`, `Buildability` and
-`Physics` in `check_all.py`, with `check_bom`, `check_footprints` and `check_physics`). They ask PCB and fab questions, which
+Three checks are later, not MVP: `OrderCheck`, `BuildCheck` and `PhysicsCheck` (in `check.py`, renamed by P709 from
+`TheOrder`, `Buildability` and `Physics`, with `check_bom`, `check_footprints` and `check_physics`). They ask PCB
+and fab questions, which
 the breadboard journey does not. They sit behind the `CHECKS` registry, and the [pruning list](../../../2026-10-25-p385-prune-and-refactor/pruning-list.md#the-verdicts)
 holds the verdict.
 

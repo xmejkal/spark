@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 from spark.core.text_guards import flat_line  # noqa: E402
 from spark.records import records_codes  # noqa: E402
-from spark.records.tool_finder import (DOWNLOADS, PERSONAL, PROJECT_FILE, ToolProblem, choose, install,  # noqa: E402
+from spark.records.tool_finder import (DOWNLOADS, PERSONAL, PROJECT_FILE, ToolError, choose, install,  # noqa: E402
                                        merged, new_entry_problem, off_sentence, pin, plan, run_checked, status,
                                        to_install, use)
 
@@ -84,7 +84,7 @@ def main(argv=None, run=None):
         elif args.on:
             choose([args.on, "on"], True, where)
             if merged(project)["tools"].get(args.on, {}).get("on") is False:
-                raise ToolProblem("%s is still off: %s", args.on, off_sentence(args.on, project), code=records_codes.TOOL_OFF)
+                raise ToolError("%s is still off: %s", args.on, off_sentence(args.on, project), code=records_codes.TOOL_OFF)
             for argv_ran in install([args.on], project if scope == "project" else None, None, run):
                 print(flat_line("  ran: %s", " ".join(argv_ran)))
             print(flat_line("  %s is on (%s)", args.on, where))
@@ -107,17 +107,17 @@ def main(argv=None, run=None):
             try:
                 entry = json.loads(text)
             except ValueError as broken:
-                raise ToolProblem("%s: the entry is not JSON (%s)", name, broken, code=records_codes.TOOL_ENTRY_BROKEN)
+                raise ToolError("%s: the entry is not JSON (%s)", name, broken, code=records_codes.TOOL_ENTRY_BROKEN)
             problem = new_entry_problem(entry)
             if problem:
-                raise ToolProblem("%s: %s — nothing written", name, problem, code=records_codes.TOOL_ENTRY_BROKEN)
+                raise ToolError("%s: %s — nothing written", name, problem, code=records_codes.TOOL_ENTRY_BROKEN)
             print(flat_line("  %s written (%s); point a job at it: /spark:setup use <role>=%s", name, choose([name], entry, where), name))
         elif args.pin:
             target, _, value = args.pin.partition("=")
             name, field, written = pin(target, value, project, where)
             print(flat_line("  %s %s pinned to %s (%s); to install it: tools.py --install %s%s",
                             name, field, value, written, name, " --project %s" % project if project else ""))
-    except ToolProblem as problem:
+    except ToolError as problem:
         print("tools.py: %s" % problem, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     if (args.on or args.off) and merged(project)["tools"].get(args.on or args.off, {}).get("kind") == "mcp":

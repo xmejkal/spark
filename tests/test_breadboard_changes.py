@@ -64,12 +64,12 @@ TWO_LEDS = seated(["board", "TactileButton", "LedRed5mm", "LedGreen5mm"], [
 
 
 def record_of(steps, earlier=None, drawn=()):
-    return changes.WiringRecord.from_build(steps, colors_of(steps), earlier, drawn)
+    return changes.WiringLog.from_build(steps, colors_of(steps), earlier, drawn)
 
 
 def lines_between(before, after, colors=True):
     """The lines from one build to the next; with colors=False neither sheet had a drawing."""
-    earlier = record_of(before) if colors else changes.WiringRecord.from_build(before, {}, None, ())
+    earlier = record_of(before) if colors else changes.WiringLog.from_build(before, {}, None, ())
     found = changes.changes_between(earlier, after, colors_of(after) if colors else {})
     return [changes.ChangeList().line(one) for one in found]
 
@@ -220,7 +220,7 @@ class RemoveAndSwapTest(unittest.TestCase):
 class BenchColorTest(unittest.TestCase):
     def test_a_kept_jumper_keeps_the_color_the_person_wired_across_two_rebuilds(self):
         first = record_of(ONE_LED)
-        second = changes.WiringRecord.from_build(TWO_LEDS, colors_of(TWO_LEDS), first, ())
+        second = changes.WiringLog.from_build(TWO_LEDS, colors_of(TWO_LEDS), first, ())
         # the GND jumper was purple on the first sheet and is orange on the second; the bench still has purple
         gnd = next(one for one in second.steps if one.key == (BOARD, "board GND"))
         self.assertEqual(gnd.color, "purple")
@@ -237,16 +237,16 @@ class BenchColorTest(unittest.TestCase):
 
 class RecordTest(unittest.TestCase):
     def test_the_record_is_read_back_as_it_was_written(self):
-        path = Path(tempfile.mkdtemp()) / changes.WiringRecord.FILE_NAME
+        path = Path(tempfile.mkdtemp()) / changes.WiringLog.FILE_NAME
         record = record_of(TWO_LEDS, drawn=[("8b.j", "17b.g")])
         path.write_text(json.dumps(record.to_dict()))
-        again = changes.WiringRecord.read(path)
+        again = changes.WiringLog.read(path)
         self.assertEqual(again.steps, record.steps)
         self.assertEqual(again.drawn_jumpers, {frozenset(("8b.j", "17b.g"))})
         self.assertIsNone(again.why_unread)
 
     def test_a_record_is_written_whole_or_not_at_all(self):
-        path = Path(tempfile.mkdtemp()) / changes.WiringRecord.FILE_NAME
+        path = Path(tempfile.mkdtemp()) / changes.WiringLog.FILE_NAME
         record_of(ONE_LED).write(path)
         earlier = path.read_text()
         with mock.patch.object(os, "replace", side_effect=OSError("disk")):
@@ -255,16 +255,16 @@ class RecordTest(unittest.TestCase):
         self.assertEqual(path.read_text(), earlier)
 
     def test_no_file_is_no_record(self):
-        self.assertIsNone(changes.WiringRecord.read(Path(tempfile.mkdtemp()) / "none.json"))
+        self.assertIsNone(changes.WiringLog.read(Path(tempfile.mkdtemp()) / "none.json"))
 
     def test_a_file_that_is_not_a_record_says_why(self):
         path = Path(tempfile.mkdtemp()) / "wiring-record.json"
         path.write_text("{not json")
-        again = changes.WiringRecord.read(path)
+        again = changes.WiringLog.read(path)
         self.assertTrue(again.why_unread)
         self.assertEqual(again.steps, [])
         path.write_text(json.dumps({"steps": [{"key": 3}], "drawn_jumpers": []}))
-        self.assertTrue(changes.WiringRecord.read(path).why_unread)
+        self.assertTrue(changes.WiringLog.read(path).why_unread)
 
 
 if __name__ == "__main__":

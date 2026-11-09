@@ -10,6 +10,6 @@
  {"file": "scripts/spark/core/result.py", "name": "a Refusal drops its code", "find": "        refusal.code = code\n", "replace": "        refusal.code = None\n"},
  {"file": "scripts/spark/firmware/firmware_codes.py", "name": "CODES misses a constant", "find": "    CONFIG_NOT_JSON: \"--config is not JSON\",\n", "replace": ""},
  {"file": "scripts/spark/bench/board_codes.py", "name": "a literal in board_codes differs from its firmware_codes twin", "find": "LOG_UNREADABLE, CHIP_UNKNOWN = \"log_unreadable\", \"chip_unknown\"", "replace": "LOG_UNREADABLE, CHIP_UNKNOWN = \"log_not_readable\", \"chip_unknown\""},
- {"file": "scripts/spark/firmware/scenario_run.py", "name": "a missing tool in a run is told as an input the run cannot use", "find": "code = (TOOL_MISSING if isinstance(cannot, tool_finder.ToolProblem)", "replace": "code = (RUN_INPUT_UNUSABLE if isinstance(cannot, tool_finder.ToolProblem)"},
+ {"file": "scripts/spark/firmware/scenario_run.py", "name": "a missing tool in a run is told as an input the run cannot use", "find": "code = (TOOL_MISSING if isinstance(cannot, tool_finder.ToolError)", "replace": "code = (RUN_INPUT_UNUSABLE if isinstance(cannot, tool_finder.ToolError)"},
  {"file": "scripts/spark/firmware/scenario_run.py", "name": "a bad build in a run loses its own code", "find": "getattr(cannot, \"code\", RUN_INPUT_UNUSABLE)", "replace": "RUN_INPUT_UNUSABLE"}
 ]

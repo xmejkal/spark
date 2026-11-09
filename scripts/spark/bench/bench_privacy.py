@@ -39,7 +39,7 @@ class AccountSecrets:
             try:
                 entries = tool_finder.merged(layers)["tools"].values()
                 break
-            except tool_finder.ToolProblem:
+            except tool_finder.ToolError:
                 continue
         names = [entry.get("account_env") for entry in entries]
         return [os.environ[name] for name in names if isinstance(name, str) and len(os.environ.get(name, "")) >= MIN_SECRET]

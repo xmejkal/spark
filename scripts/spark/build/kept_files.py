@@ -20,7 +20,7 @@ from spark.core.result import envelope_item
 #: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
 PIN_MODULE = Path("firmware") / "pins.py"
 #: What stops the pin map from being written: no pin can be placed, or the design, the store or a file cannot be read.
-PIN_MAP_REFUSALS = (pin_assigner.Impossible, loader.DesignError, store.StoreProblem, OSError, ValueError)
+PIN_MAP_REFUSALS = (pin_assigner.ImpossibleError, loader.DesignError, store.StoreError, OSError, ValueError)
 
 #: The stage that reads the requirements file; its detail is why a refused file built nothing (P280).
 REQUIREMENTS_STAGE = "requirements"

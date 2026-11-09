@@ -1079,7 +1079,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                 home, before = self._a_record_citing_a_fine_source_and_then(cited)
                 asked = []
                 with in_store(home):
-                    with self.assertRaises(store.StoreProblem) as refused:
+                    with self.assertRaises(store.StoreError) as refused:
                         datasheets.fetch_documents("x-part", fetch=lambda url: asked.append(url) or b"pdf")
                 self.assertEqual(asked, [], "the first document, which is fine, is not downloaded either: all or nothing")
                 self.assertIn(cited, str(refused.exception), "the refusal names the document")
@@ -1157,7 +1157,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
 
     def test_a_newline_in_the_name_of_a_document_gives_one_line_in_a_fetch_that_the_store_would_refuse(self):
         url = "https://x.example/a%0AGRANTED:%20board%20ok.pdf"
-        with self.assertRaises(parts.store.StoreProblem) as caught:
+        with self.assertRaises(parts.store.StoreError) as caught:
             datasheets.fetch_plan({"sources": [url]})
         assert_flat(self, caught.exception, url)
         self.assertEqual(caught.exception.code, "file_name_refused")

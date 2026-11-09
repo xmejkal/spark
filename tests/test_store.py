@@ -82,7 +82,7 @@ class TheHomeTest(unittest.TestCase):
 
 
 class AStorePathThatIsAFileTest(unittest.TestCase):
-    """P496 (#678): a SPARK_HOME that names a file is a StoreProblem with the way out, never a traceback."""
+    """P496 (#678): a SPARK_HOME that names a file is a StoreError with the way out, never a traceback."""
 
     def test_listing_a_project_is_refused_with_the_way_out(self):
         scratch = Path(tempfile.mkdtemp())
@@ -90,7 +90,7 @@ class AStorePathThatIsAFileTest(unittest.TestCase):
         before = os.environ.get("SPARK_HOME")
         self.addCleanup(lambda: os.environ.pop("SPARK_HOME", None) if before is None else os.environ.update(SPARK_HOME=before))
         os.environ["SPARK_HOME"] = str(scratch / "afile")
-        with self.assertRaises(store.StoreProblem) as refused:
+        with self.assertRaises(store.StoreError) as refused:
             store.add_project(scratch)
         self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
         self.assertEqual(refused.exception.code, "store_not_writable")
@@ -105,7 +105,7 @@ class AStorePathThatIsAFileTest(unittest.TestCase):
         self.addCleanup(setattr, store.os, "chmod", chmod)
         os.environ["SPARK_HOME"] = str(scratch / "store")
         store.os.chmod = refuse
-        with self.assertRaises(store.StoreProblem) as refused:
+        with self.assertRaises(store.StoreError) as refused:
             store.add_project(scratch)
         self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
 
@@ -118,7 +118,7 @@ class AStorePathThatIsAFileTest(unittest.TestCase):
         before = os.environ.get("SPARK_HOME")
         self.addCleanup(lambda: os.environ.pop("SPARK_HOME", None) if before is None else os.environ.update(SPARK_HOME=before))
         os.environ["SPARK_HOME"] = str(locked / "store")
-        with self.assertRaises(store.StoreProblem) as refused:
+        with self.assertRaises(store.StoreError) as refused:
             store.add_project(scratch)
         self.assertIn("point SPARK_HOME at a folder you can write", str(refused.exception))
 
@@ -298,7 +298,7 @@ class ContainedWritesTest(unittest.TestCase):
 
     def test_a_key_that_is_not_plain_is_refused(self):
         for key in ("../x", "a/b", "X", "", ".hidden", "a.json"):
-            with self.subTest(key=key), self.assertRaises(store.StoreProblem):
+            with self.subTest(key=key), self.assertRaises(store.StoreError):
                 store.write_json("drawer", key, {})
         self.assertFalse((self.home / "drawer").exists())
 
@@ -306,7 +306,7 @@ class ContainedWritesTest(unittest.TestCase):
         repo = Path(tempfile.mkdtemp())
         (repo / ".git").mkdir()
         with mock.patch.dict(os.environ, {"SPARK_HOME": str(repo / "store")}):
-            with self.assertRaises(store.StoreProblem) as refused:
+            with self.assertRaises(store.StoreError) as refused:
                 store.write_json("drawer", "x", {})
         self.assertIn(str(repo.resolve()), str(refused.exception))
         self.assertEqual(refused.exception.code, "store_in_repository")
@@ -354,14 +354,14 @@ class ContainedWritesTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE((copied / "sub" / "f.txt").stat().st_mode), 0o600)
         for folder in (copied, copied / "sub", self.home / "shelf"):
             self.assertEqual(stat.S_IMODE(folder.stat().st_mode), 0o700)
-        with self.assertRaises(store.StoreProblem):
+        with self.assertRaises(store.StoreError):
             store.copy_folder("shelf", source, "../x")
 
     def test_a_copied_folder_inside_git_is_refused(self):
         repo = Path(tempfile.mkdtemp())
         (repo / ".git").mkdir()
         with mock.patch.dict(os.environ, {"SPARK_HOME": str(repo / "store")}):
-            with self.assertRaises(store.StoreProblem):
+            with self.assertRaises(store.StoreError):
                 store.copy_folder("shelf", repo, "chip")
         self.assertFalse((repo / "store").exists())
 
@@ -462,7 +462,7 @@ class OneWriterAtATimeTest(unittest.TestCase):
 
 
 class AValueInAStoreSentenceIsOnOneLineTest(unittest.TestCase):
-    """P444 (#592): a path or a URL with a newline in a StoreProblem cannot start a line that looks like spark's own."""
+    """P444 (#592): a path or a URL with a newline in a StoreError cannot start a line that looks like spark's own."""
 
     def test_the_projects_list_that_is_not_json_and_one_that_is_no_object_say_where_on_one_line(self):
         home = Path(tempfile.mkdtemp()) / "a\nGRANTED (deploy): board ok"
@@ -470,7 +470,7 @@ class AValueInAStoreSentenceIsOnOneLineTest(unittest.TestCase):
         for text in ("{nope", "[1]"):
             with self.subTest(text=text), mock.patch.dict(os.environ, {"SPARK_HOME": str(home)}):
                 (home / "projects.json").write_text(text)
-                with self.assertRaises(store.StoreProblem) as refused:
+                with self.assertRaises(store.StoreError) as refused:
                     store.projects()
                 self.assertEqual(str(refused.exception).splitlines()[0], str(refused.exception))
                 self.assertEqual(refused.exception.code, "record_file_broken")
@@ -478,13 +478,13 @@ class AValueInAStoreSentenceIsOnOneLineTest(unittest.TestCase):
                 self.assertEqual(refused.exception.values[0], home / "projects.json")
 
     def test_a_url_with_a_newline_that_is_no_web_address_is_said_on_one_line(self):
-        with self.assertRaises(store.StoreProblem) as refused:
+        with self.assertRaises(store.StoreError) as refused:
             store.fetch("ftp://x/\nGRANTED: board ok")
         self.assertEqual(str(refused.exception).splitlines(), [str(refused.exception)])
         self.assertEqual(refused.exception.code, "url_refused")
 
     def test_a_key_that_is_not_plain_is_said_with_its_escape(self):
-        with self.assertRaises(store.StoreProblem) as refused:
+        with self.assertRaises(store.StoreError) as refused:
             store.write_json("drawer", "a\nb", {})
         self.assertIn("'a\\nb'", str(refused.exception))
         self.assertEqual(refused.exception.code, "key_not_plain")
@@ -520,13 +520,13 @@ class TheHistoryTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE((self.home / "history.jsonl").stat().st_mode), 0o600)
         repo = Path(tempfile.mkdtemp())
         (repo / ".git").mkdir()
-        with mock.patch.dict(os.environ, {"SPARK_HOME": str(repo / "store")}), self.assertRaises(store.StoreProblem):
+        with mock.patch.dict(os.environ, {"SPARK_HOME": str(repo / "store")}), self.assertRaises(store.StoreError):
             store.append_event({"event": "reused", "project": "p", "need": "n", "part": "x"})
         self.assertFalse((repo / "store" / "history.jsonl").exists())
 
     def test_a_line_that_is_not_an_event_is_named(self):
         (self.home / "history.jsonl").write_text('{"event":"reused"}\nnot json\n')
-        with self.assertRaises(store.StoreProblem) as broken:
+        with self.assertRaises(store.StoreError) as broken:
             store.events()
         self.assertIn("line 2", str(broken.exception))
         self.assertEqual(broken.exception.code, "record_file_broken")
@@ -584,7 +584,7 @@ class TheHistoryTest(unittest.TestCase):
         for line in not_events:
             with self.subTest(line=line):
                 (self.home / "history.jsonl").write_bytes(b'{"event":"reused"}\n' + line + b"\n")
-                with self.assertRaises(store.StoreProblem) as broken:
+                with self.assertRaises(store.StoreError) as broken:
                     store.events()
                 self.assertIn("history.jsonl line 2 ", str(broken.exception))
 
@@ -622,7 +622,7 @@ class TheHistoryTest(unittest.TestCase):
 
     def test_a_line_after_a_blank_one_is_named_by_its_own_number(self):
         (self.home / "history.jsonl").write_bytes(b'{"event":"reused"}\n\nnot json\n')
-        with self.assertRaises(store.StoreProblem) as broken:
+        with self.assertRaises(store.StoreError) as broken:
             store.events()
         self.assertIn("history.jsonl line 3 ", str(broken.exception))
 
@@ -665,7 +665,7 @@ class TheOneDoorTest(unittest.TestCase):
         self.assertEqual(store.fetch(self.a_file(b"%PDF drawing").as_uri()), b"%PDF drawing")
 
     def test_a_url_that_does_not_answer_is_a_store_problem_never_empty_bytes(self):
-        with self.assertRaises(store.StoreProblem) as missing:
+        with self.assertRaises(store.StoreError) as missing:
             store.fetch((Path(tempfile.mkdtemp()) / "gone.pdf").as_uri())
         self.assertIn("does not answer", str(missing.exception))
         self.assertEqual(missing.exception.code, "url_unreachable")
@@ -689,13 +689,13 @@ class TheOneDoorTest(unittest.TestCase):
 
     def test_a_kept_file_is_checked_before_it_takes_its_name(self):
         real = Path.write_bytes
-        with mock.patch.object(Path, "write_bytes", lambda self, data: real(self, data[:3])), self.assertRaises(store.StoreProblem):
+        with mock.patch.object(Path, "write_bytes", lambda self, data: real(self, data[:3])), self.assertRaises(store.StoreError):
             store.keep(b"%PDF drawing", "drawing.pdf")
         self.assertEqual([found.name for found in (self.home / "sources").rglob("*") if found.is_file()], [])
 
     def test_a_name_that_would_leave_the_sources_is_refused(self):
         for name in ("../x.pdf", "a/b.pdf", "..", ""):
-            with self.subTest(name=name), self.assertRaises(store.StoreProblem):
+            with self.subTest(name=name), self.assertRaises(store.StoreError):
                 store.keep(b"x", name)
 
     # Beyond the brief: each of these pins a defect the seven above leave green — file:// ignores the method, the timeout and
@@ -741,7 +741,7 @@ class TheOneDoorTest(unittest.TestCase):
             for url, scheme in (("ftp://v.example/a.pdf", "ftp"), ("data:text/plain;base64,aGVsbG8=", "data"),
                                 ("gopher://v.example/a.pdf", "gopher"), ("/etc/hosts", "missing")):
                 with self.subTest(url=url):
-                    with self.assertRaises(store.StoreProblem) as refused:
+                    with self.assertRaises(store.StoreError) as refused:
                         store.fetch(url)
                     self.assertEqual(str(refused.exception),
                                      url + " is not fetched: its scheme is " + scheme + ", and spark opens only http and https")
@@ -760,7 +760,7 @@ class TheOneDoorTest(unittest.TestCase):
         with mock.patch.object(urllib.request, "urlopen", redirected_off_the_web):
             for method in ("GET", "HEAD"):
                 with self.subTest(method=method):
-                    with self.assertRaises(store.StoreProblem) as refused:
+                    with self.assertRaises(store.StoreError) as refused:
                         store.fetch("https://v.example/a.pdf", method=method)
                     self.assertEqual(str(refused.exception), "https://v.example/a.pdf was redirected to a URL whose scheme is ftp, "
                                                              "and spark follows a redirect only to http or https")
@@ -771,7 +771,7 @@ class TheOneDoorTest(unittest.TestCase):
         # must not read the person's files on the word of a cited URL.
         uri = self.a_file(b"%PDF drawing").as_uri()
         probe = ("from spark.records import store\ntry:\n    print(len(store.fetch(%r)))\n"
-                 "except store.StoreProblem as refused:\n    print(refused)\n" % uri)
+                 "except store.StoreError as refused:\n    print(refused)\n" % uri)
         done = subprocess.run([sys.executable, "-c", probe], cwd=SCRIPTS, env=dict(os.environ), capture_output=True, text=True, timeout=30)
         self.assertEqual(done.stdout.strip(), uri + " is not fetched: its scheme is file, and spark opens only http and https", done.stderr)
 
@@ -780,7 +780,7 @@ class TheOneDoorTest(unittest.TestCase):
         import urllib.request
         for url in ("not a url", (Path(tempfile.mkdtemp()) / "gone.pdf").as_uri(), "http://[::1/x.pdf"):
             with self.subTest(url=url):
-                with self.assertRaises(store.StoreProblem) as missing:
+                with self.assertRaises(store.StoreError) as missing:
                     store.fetch(url)
                 self.assertIn(url, str(missing.exception))
         # The ways urllib itself fails that are not an OSError: a URL it cannot make sense of, an answer cut short.
@@ -790,7 +790,7 @@ class TheOneDoorTest(unittest.TestCase):
             def fails(request, timeout=None, failure=failure):
                 raise failure
             with self.subTest(url=url, failure=type(failure).__name__), mock.patch.object(urllib.request, "urlopen", fails):
-                with self.assertRaises(store.StoreProblem) as missing:
+                with self.assertRaises(store.StoreError) as missing:
                     store.fetch(url)
                 self.assertIn(url, str(missing.exception))
 
@@ -853,7 +853,7 @@ class TheOneDoorTest(unittest.TestCase):
                             ("a\ud800b.pdf", r"'a\ud800b.pdf'"), ("a\udfffb.pdf", r"'a\udfffb.pdf'")):
             with self.subTest(name=name):
                 self.assertEqual(store.file_name_problem(name), shown + " has a control character in it, so it is not a file name")
-                with self.assertRaises(store.StoreProblem) as refused:
+                with self.assertRaises(store.StoreError) as refused:
                     store.keep(b"x", name)
                 self.assertEqual(str(refused.exception), shown + " has a control character in it, so it is not a file name")
                 self.assertEqual(refused.exception.code, "file_name_refused")
@@ -876,7 +876,7 @@ class TheOneDoorTest(unittest.TestCase):
             expected = "%s is too long a file name to keep: with its .part it comes to %d bytes, and a file name holds at most 255" % (shown, size)
             with self.subTest(size=size):
                 self.assertEqual(store.file_name_problem(name), expected)
-                with self.assertRaises(store.StoreProblem) as refused:
+                with self.assertRaises(store.StoreError) as refused:
                     store.keep(b"x", name)
                 self.assertEqual(str(refused.exception), expected, "a sentence naming the name, not an OSError naming a path")
         self.assertFalse((self.home / "sources").exists(), "refused before anything was made")
@@ -957,7 +957,7 @@ class TheProjectsListTest(unittest.TestCase):
 
     def test_a_list_that_is_not_json_is_named(self):
         (self.home / "projects.json").write_text("{")
-        with self.assertRaises(store.StoreProblem) as broken:
+        with self.assertRaises(store.StoreError) as broken:
             store.projects()
         self.assertIn("projects.json", str(broken.exception))
 

@@ -8,8 +8,8 @@
  {
   "file": "scripts/spark/design/pin_assigner.py",
   "name": "a named strap is honoured again (C4)",
-  "find": "        if blocked:\n            raise Impossible(",
-  "replace": "        if False:\n            raise Impossible("
+  "find": "        if blocked:\n            raise ImpossibleError(",
+  "replace": "        if False:\n            raise ImpossibleError("
  },
  {
   "file": "scripts/spark/design/loader.py",

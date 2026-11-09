@@ -26,8 +26,8 @@
  {
 "file": "scripts/spark/breadboard/drawing.py",
 "name": "the last refusal loses its code",
-"find": "raise NotDrawn(\"%s does not fit on the breadboard\" % part_id, NO_HOLE_LEFT, part_id)",
-"replace": "raise NotDrawn(\"%s does not fit on the breadboard\" % part_id)"
+"find": "raise NotDrawnError(\"%s does not fit on the breadboard\" % part_id, NO_HOLE_LEFT, part_id)",
+"replace": "raise NotDrawnError(\"%s does not fit on the breadboard\" % part_id)"
 },
  {
 "file": "scripts/spark/breadboard/part_shape.py",

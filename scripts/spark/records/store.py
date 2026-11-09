@@ -152,7 +152,7 @@ FILE_NAME_MAX_BYTES = 255
 WEB_SCHEMES = ("http", "https")
 
 
-class StoreProblem(CodedMessageError):
+class StoreError(CodedMessageError):
     """Error: a store spark cannot read, or a write it will not make. The message is the whole sentence; its values are flattened (P444), and its `code` is records_codes'."""
 
 
@@ -238,7 +238,7 @@ def locked():
 def _target(name, key):
     """Where a key goes inside a place (§5.1), refusing a key that is not plain."""
     if key is not None and not PLAIN.fullmatch(key):
-        raise StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so it could leave %s", key, name, code=records_codes.KEY_NOT_PLAIN)
+        raise StoreError("%r is not a plain key — lower-case letters, digits and '-' — so it could leave %s", key, name, code=records_codes.KEY_NOT_PLAIN)
     return place(name) / (key + ".json") if key is not None else place(name)
 
 
@@ -246,7 +246,7 @@ def _make_ready(name, target):
     """Refuse a private target inside git, make its parent folder, and tighten the folders to 0700 (§5.8) — before any bytes move."""
     private = name in PRIVATE
     if private and inside_git(target):
-        raise StoreProblem("%s would be inside the git work tree at %s — what you own stays out of every repository; "
+        raise StoreError("%s would be inside the git work tree at %s — what you own stays out of every repository; "
                            "point SPARK_HOME at a folder outside it", target, inside_git(target), code=records_codes.STORE_IN_REPOSITORY)
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -254,7 +254,7 @@ def _make_ready(name, target):
             for folder in (home(), target.parent):
                 os.chmod(folder, 0o700)
     except OSError as cannot:  # P496: a SPARK_HOME that names a file, or a folder spark may not write
-        raise StoreProblem("cannot make %s for spark's store (%s): point SPARK_HOME at a folder you can write", target.parent, cannot, code=records_codes.STORE_NOT_WRITABLE)
+        raise StoreError("cannot make %s for spark's store (%s): point SPARK_HOME at a folder you can write", target.parent, cannot, code=records_codes.STORE_NOT_WRITABLE)
 
 
 def copy_folder(name, source, key):
@@ -277,9 +277,9 @@ def projects():
     try:
         listed = json.loads(path.read_text(encoding="utf-8"))
     except ValueError as broken:
-        raise StoreProblem("%s is not JSON (%s) — fix it, or delete it and run /spark:init in each project", path, broken, code=records_codes.RECORD_FILE_BROKEN)
+        raise StoreError("%s is not JSON (%s) — fix it, or delete it and run /spark:init in each project", path, broken, code=records_codes.RECORD_FILE_BROKEN)
     if not isinstance(listed, dict) or not all(isinstance(folder, str) for folder in listed.values()):
-        raise StoreProblem("%s is not an object of project folders — fix it, or delete it and run /spark:init in each project", path, code=records_codes.RECORD_FILE_BROKEN)
+        raise StoreError("%s is not an object of project folders — fix it, or delete it and run /spark:init in each project", path, code=records_codes.RECORD_FILE_BROKEN)
     return {name: Path(folder) for name, folder in listed.items()}
 
 
@@ -341,7 +341,7 @@ def events():
         except ValueError:  # not JSON, or not UTF-8 (UnicodeDecodeError is a ValueError)
             event = None
         if not (isinstance(event, dict) and isinstance(event.get("event"), str)):
-            raise StoreProblem("%s line %d is not a history event — fix it by hand", path, number, code=records_codes.RECORD_FILE_BROKEN)
+            raise StoreError("%s line %d is not a history event — fix it by hand", path, number, code=records_codes.RECORD_FILE_BROKEN)
         said.append(event)
     return said
 
@@ -379,7 +379,7 @@ def append_event(event):
 
 def _must_be_web(url, redirected_from=None):
     """
-    Raise a StoreProblem unless the door may open `url`: http or https — and `file:` only while the suite runs, whose tests
+    Raise a StoreError unless the door may open `url`: http or https — and `file:` only while the suite runs, whose tests
     fetch files, never the network (the suite guard above: no script imports unittest, so a real run never gets it).
     `redirected_from` is the URL that was asked for, when `url` is where the answer ended.
     """
@@ -387,9 +387,9 @@ def _must_be_web(url, redirected_from=None):
     if scheme in WEB_SCHEMES + (("file",) if "unittest" in sys.modules else ()):
         return
     if redirected_from:
-        raise StoreProblem("%s was redirected to a URL whose scheme is %s, and spark follows a redirect only to http or https",
+        raise StoreError("%s was redirected to a URL whose scheme is %s, and spark follows a redirect only to http or https",
                            redirected_from, scheme or "missing", code=records_codes.URL_REFUSED)
-    raise StoreProblem("%s is not fetched: its scheme is %s, and spark opens only http and https", url, scheme or "missing", code=records_codes.URL_REFUSED)
+    raise StoreError("%s is not fetched: its scheme is %s, and spark opens only http and https", url, scheme or "missing", code=records_codes.URL_REFUSED)
 
 
 def fetch(url, method="GET"):
@@ -397,7 +397,7 @@ def fetch(url, method="GET"):
     spark's one door to the network (§6.5): one download — or, with HEAD, only whether the URL answers, and then the body
     is never read. Nothing else in spark's code opens a URL, and each call is counted from the session's transcript (§6.7).
     It opens http and https URLs only, and follows a redirect only to the same. A URL that does not answer is a
-    StoreProblem, never empty bytes.
+    StoreError, never empty bytes.
     """
     import urllib.request
     try:
@@ -405,10 +405,10 @@ def fetch(url, method="GET"):
         with urllib.request.urlopen(urllib.request.Request(url, method=method, headers={"User-Agent": "spark"}), timeout=30) as answer:
             _must_be_web(answer.geturl(), redirected_from=url)
             return b"" if method == "HEAD" else answer.read()
-    except StoreProblem:
+    except StoreError:
         raise
     except Exception as unreachable:  # noqa: BLE001 — every way of not answering is the same answer here
-        raise StoreProblem("%s does not answer (%s)", url, unreachable, code=records_codes.URL_UNREACHABLE)
+        raise StoreError("%s does not answer (%s)", url, unreachable, code=records_codes.URL_UNREACHABLE)
 
 
 def file_name_problem(name):
@@ -439,7 +439,7 @@ def keep(payload, name):
     """
     problem = file_name_problem(name)
     if problem:
-        raise StoreProblem("%s", problem, code=records_codes.FILE_NAME_REFUSED)
+        raise StoreError("%s", problem, code=records_codes.FILE_NAME_REFUSED)
     digest = hashlib.sha256(payload).hexdigest()
     folder = place("sources") / digest
     folder.mkdir(parents=True, exist_ok=True)
@@ -447,7 +447,7 @@ def keep(payload, name):
     try:
         part.write_bytes(payload)
         if hashlib.sha256(part.read_bytes()).hexdigest() != digest:
-            raise StoreProblem("%s was not kept: what was written is not what was fetched", name, code=records_codes.DOCUMENT_NOT_KEPT)
+            raise StoreError("%s was not kept: what was written is not what was fetched", name, code=records_codes.DOCUMENT_NOT_KEPT)
         part.replace(folder / name)
     except BaseException:
         part.unlink(missing_ok=True)

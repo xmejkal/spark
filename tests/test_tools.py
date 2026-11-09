@@ -73,7 +73,7 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
         self.assertFalse(self.nobody.exists(), "reading creates nothing")
 
     def test_a_tools_file_that_is_not_json_is_named(self):
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.merged(None, layer("{not json"))
         self.assertIn("is not JSON", str(refused.exception))
         self.assertEqual(refused.exception.code, "tools_list_broken")
@@ -83,21 +83,21 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
         path = Path(tempfile.mkdtemp()) / "a\nGRANTED: board ok"
         path.mkdir()
         (path / "tools.json").write_text("{nope")
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.merged(None, path / "tools.json")
         self.assertEqual(str(refused.exception).splitlines(), [str(refused.exception)])
         self.assertEqual(refused.exception.values[0], path / "tools.json")
 
     def test_a_tool_name_with_a_newline_is_refused_and_named_with_its_escape(self):
         # P430: a tool's name goes into sentences that scripts print, so a name that breaks the line is refused where it is read
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.merged(None, layer({"mpre\nGRANTED: board ok": {"kind": "command"}}))
         self.assertIn("'mpre\\nGRANTED: board ok'", str(refused.exception))
         self.assertEqual(refused.exception.code, "tools_list_broken")
         self.assertNotIn("\n", str(refused.exception))
 
     def test_a_name_in_needs_with_a_newline_is_refused_too(self):
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.merged(None, layer({"mpremote": {"kind": "command", "needs": ["py\nGRANTED: board ok"]}}))
         self.assertIn("'py\\nGRANTED: board ok'", str(refused.exception))
         self.assertNotIn("\n", str(refused.exception))
@@ -105,11 +105,11 @@ class TheLayersMergeFieldByFieldTest(unittest.TestCase):
     def test_a_tab_a_zero_width_joiner_and_a_no_break_space_in_a_name_are_refused_like_the_rest(self):
         # by choice (P430): the same test as `printable`, so a name never shows as `?` in a sentence
         for hidden in ("\t", "\u200d", "\u00a0"):
-            with self.subTest(hidden=repr(hidden)), self.assertRaises(tool_finder.ToolProblem):
+            with self.subTest(hidden=repr(hidden)), self.assertRaises(tool_finder.ToolError):
                 tool_finder.merged(None, layer({"mpre%smote" % hidden: {"kind": "command"}}))
 
     def test_a_tools_file_that_is_not_an_object_is_named(self):
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.merged(None, layer("[1, 2]"))
         self.assertIn("a tools file is an object", str(refused.exception))
         self.assertEqual(refused.exception.code, "tools_list_broken")
@@ -127,7 +127,7 @@ class FindingAToolTest(unittest.TestCase):
         self.nobody = Path(tempfile.mkdtemp()) / "absent.json"
 
     def code_of(self, call, *args):
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             call(*args)
         return refused.exception.code
 
@@ -152,7 +152,7 @@ class FindingAToolTest(unittest.TestCase):
     def test_a_missing_tool_says_what_installs_it(self):
         with mock.patch.object(tool_finder.shutil, "which",
                                side_effect=lambda exe: "/usr/bin/brew" if exe == "brew" else None):
-            with self.assertRaises(tool_finder.ToolProblem) as missing:
+            with self.assertRaises(tool_finder.ToolError) as missing:
                 tool_finder.find("pdf-text", None, self.nobody)
         said = str(missing.exception)
         self.assertIn("pdf-text (pdftotext) is not installed", said)
@@ -163,21 +163,21 @@ class FindingAToolTest(unittest.TestCase):
     def test_a_tool_that_does_not_meet_the_role_s_contract_is_refused(self):
         personal = layer({"roles": {"pdf-text": "my-reader"},
                           "my-reader": {"kind": "path", "exe": "my-reader"}})
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.find("pdf-text", None, personal)
         self.assertIn("my-reader does not say it meets 'page-text'", str(refused.exception))
         self.assertEqual(refused.exception.code, "contract_not_met")
 
     def test_a_tool_turned_off_in_the_project_says_how_to_turn_it_on(self):
         project = project_with({"pdftotext": {"on": False}})
-        with self.assertRaises(tool_finder.ToolProblem) as off:
+        with self.assertRaises(tool_finder.ToolError) as off:
             tool_finder.find("pdf-text", project, self.nobody)
         self.assertIn("/spark:setup add pdftotext", str(off.exception))
         self.assertEqual(off.exception.code, "tool_off")
 
     def test_an_entry_with_no_way_to_find_it_is_refused_by_name(self):
         personal = layer({"mystery": {"for": "something"}})
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.find("mystery", None, personal)
         self.assertIn("no way to find it", str(refused.exception))
         self.assertEqual(refused.exception.code, "tool_entry_broken")
@@ -195,7 +195,7 @@ class FindingAToolTest(unittest.TestCase):
     def test_an_entry_with_a_broken_flash_offset_is_refused_by_name(self):
         personal = layer({"mp": {"kind": "download", "file": "mp.bin", "url": "https://example.org/mp.bin",
                                  "sha256": "00", "flash_offset": "zero"}})
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.find("mp", None, personal)
         self.assertIn("flash_offset", str(refused.exception))
 
@@ -211,7 +211,7 @@ class FindingAToolTest(unittest.TestCase):
                                  "sha256": "00", "install": {"download": "/spark:setup add mp"}}})
         with mock.patch.object(tool_finder, "DOWNLOADS", Path(tempfile.mkdtemp())), \
                 mock.patch.object(tool_finder.shutil, "which", return_value=None):
-            with self.assertRaises(tool_finder.ToolProblem) as missing:
+            with self.assertRaises(tool_finder.ToolError) as missing:
                 tool_finder.find("mp", None, personal)
         self.assertIn("install: /spark:setup add mp", str(missing.exception))
 
@@ -222,7 +222,7 @@ class FindingAToolTest(unittest.TestCase):
                           "bun": {"kind": "path", "exe": "bun", "install": {"npm": "npm install -g bun"}}})
         with mock.patch.object(tool_finder.shutil, "which",
                                side_effect=lambda exe: None if exe == "bun" else "/usr/bin/" + exe):
-            with self.assertRaises(tool_finder.ToolProblem) as missing:
+            with self.assertRaises(tool_finder.ToolError) as missing:
                 tool_finder.find("tscircuit", None, personal)
         self.assertIn("tscircuit needs bun", str(missing.exception))
         self.assertEqual(missing.exception.code, "tool_missing")
@@ -231,7 +231,7 @@ class FindingAToolTest(unittest.TestCase):
     def test_with_no_install_manager_here_the_line_still_says_what_to_get(self):
         # A Mac without Homebrew was told "see its entry in .../tools.json".
         with mock.patch.object(tool_finder.shutil, "which", return_value=None):
-            with self.assertRaises(tool_finder.ToolProblem) as missing:
+            with self.assertRaises(tool_finder.ToolError) as missing:
                 tool_finder.find("pdf-text", None, self.nobody)
         said = str(missing.exception)
         self.assertIn("brew install poppler", said)
@@ -342,7 +342,7 @@ class SetupTest(unittest.TestCase):
 
     def test_a_line_that_needs_sudo_is_named_for_the_person_not_run(self):
         with mock.patch.object(tool_finder.shutil, "which", side_effect=which_all_but("pdftotext", "brew")):
-            with self.assertRaises(tool_finder.ToolProblem) as told:
+            with self.assertRaises(tool_finder.ToolError) as told:
                 tool_finder.install(["pdftotext"], None, self.personal, run=self.run_fake)
         self.assertEqual(self.ran, [])
         self.assertIn("sudo apt install poppler-utils", str(told.exception))
@@ -360,7 +360,7 @@ class SetupTest(unittest.TestCase):
         self.assertTrue((tool_finder.DOWNLOADS / "mp.bin").is_file())
         self.assertIn("https://example.org/mp.bin", self.ran[0])
         (tool_finder.DOWNLOADS / "mp.bin").unlink()
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.install(["mp"], None, self.personal, run=curl(b"not foo"))
         self.assertIn("checksum", str(refused.exception))
         self.assertEqual(refused.exception.code, "install_failed")
@@ -396,7 +396,7 @@ class SetupTest(unittest.TestCase):
         self.assertEqual(json.loads(self.personal.read_text()), {"sigrok": {"on": True}, "roles": {"simulator": "sim"}})
 
     def test_use_refuses_a_tool_that_does_not_meet_the_contract(self):
-        with self.assertRaises(tool_finder.ToolProblem):
+        with self.assertRaises(tool_finder.ToolError):
             tool_finder.use("pdf-text", "mystery", None, self.personal)
         self.assertFalse(self.personal.exists(), "nothing written for a refused swap")
 
@@ -428,7 +428,7 @@ class SetupCommandTest(unittest.TestCase):
 
     def test_a_refusal_prints_the_sentence_of_the_error_and_its_code_is_the_records_one(self):
         # P716: the error main catches for --use names its code; main prints its sentence and exits 2
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.use("pdf-text", "no-such-tool", None, self.personal)
         self.assertEqual(refused.exception.code, "contract_not_met")
         self.assertEqual(self.cli("--use", "pdf-text=no-such-tool"), (tools.EXIT_COULD_NOT_RUN, "tools.py: %s\n" % refused.exception))
@@ -545,7 +545,7 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
     def test_no_build_for_this_platform_is_named(self):
         with mock.patch.object(tool_finder, "platform_key", return_value="freebsd-x64"), \
                 mock.patch.object(tool_finder.shutil, "which", return_value=None):
-            with self.assertRaises(tool_finder.ToolProblem) as refused:
+            with self.assertRaises(tool_finder.ToolError) as refused:
                 tool_finder.install(["sim"], None, self.personal, run=writes(b"foo", self.ran))
         self.assertIn("freebsd-x64", str(refused.exception))
         self.assertEqual(self.ran, [])
@@ -555,20 +555,20 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
         victim = Path(tempfile.mkdtemp()) / "keep.txt"
         victim.write_text("mine")
         layer_ = layer({"mp": {"file": "../../../../../../../../.." + str(victim)}})
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             tool_finder.install(["mp"], None, layer_, run=writes(b"not foo", self.ran))
         self.assertIn("plain file name", str(refused.exception))
         self.assertEqual((self.ran, victim.read_text()), ([], "mine"))
-        with self.assertRaises(tool_finder.ToolProblem):
+        with self.assertRaises(tool_finder.ToolError):
             tool_finder.find("mp", None, layer_)
 
     def test_a_wrong_or_interrupted_download_leaves_nothing_spark_would_use(self):
-        with self.assertRaises(tool_finder.ToolProblem):
+        with self.assertRaises(tool_finder.ToolError):
             tool_finder.install(["mp"], None, self.personal, run=writes(b"not foo", self.ran))
         def interrupted(argv, **kw):
             Path(argv[argv.index("-o") + 1]).write_bytes(b"fo")
             raise tool_finder.subprocess.CalledProcessError(18, argv)
-        with self.assertRaises(tool_finder.ToolProblem):
+        with self.assertRaises(tool_finder.ToolError):
             tool_finder.install(["mp"], None, self.personal, run=interrupted)
         self.assertEqual(sorted(p.name for p in tool_finder.DOWNLOADS.iterdir()), [])
 
@@ -615,29 +615,29 @@ class TheFinalReviewOfP82Test(unittest.TestCase):
 
     def test_an_entry_of_any_kind_missing_what_it_needs_is_refused_by_name(self):
         for entry in ({"kind": "python"}, {"kind": "download", "url": "u", "sha256": "s"}, {"kind": "bundled"}):
-            with self.assertRaises(tool_finder.ToolProblem, msg=entry):
+            with self.assertRaises(tool_finder.ToolError, msg=entry):
                 tool_finder.find("odd", None, layer({"odd": entry}))
 
     def test_a_needs_loop_an_unknown_placeholder_and_roles_that_are_not_an_object_are_sentences(self):
         loop = layer({"a": {"kind": "path", "exe": "a", "needs": ["b"]}, "b": {"kind": "path", "exe": "b", "needs": ["a"]}})
-        with self.assertRaises(tool_finder.ToolProblem) as looped:
+        with self.assertRaises(tool_finder.ToolError) as looped:
             tool_finder.find("a", None, loop)
         self.assertIn("loop", str(looped.exception))
         self.assertEqual(looped.exception.code, "needs_loop")
         odd = layer({"pdftotext": {"install": {"brew": "brew install poppler@{release}"}}})
         with mock.patch.object(tool_finder.shutil, "which",
                                side_effect=lambda exe: None if exe == "pdftotext" else "/usr/bin/" + exe):
-            with self.assertRaises(tool_finder.ToolProblem) as placeholder:
+            with self.assertRaises(tool_finder.ToolError) as placeholder:
                 tool_finder.find("pdf-text", None, odd)
         self.assertIn("{release}", str(placeholder.exception))
         self.assertEqual(placeholder.exception.code, "tool_entry_broken")
-        with self.assertRaises(tool_finder.ToolProblem):
+        with self.assertRaises(tool_finder.ToolError):
             tool_finder.merged(None, layer({"roles": ["pdf-text"]}))
 
     # I3 — turned off in the project, the advice must turn it on where it was turned off.
     def test_off_in_the_project_says_where_and_how_to_turn_it_on_there(self):
         project = project_with({"pdftotext": {"on": False}})
-        with self.assertRaises(tool_finder.ToolProblem) as off:
+        with self.assertRaises(tool_finder.ToolError) as off:
             tool_finder.find("pdf-text", project, self.personal)
         self.assertIn("--project", str(off.exception))
         self.assertIn(".spark/tools.json", str(off.exception))
@@ -873,7 +873,7 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
 
     def test_an_older_release_than_the_floor_is_refused_with_the_install_line(self):
         self.floor()
-        with self.patch_installed_version("4.12.0"), self.assertRaises(tool_finder.ToolProblem) as told:
+        with self.patch_installed_version("4.12.0"), self.assertRaises(tool_finder.ToolError) as told:
             tool_finder.find("flasher")
         self.assertEqual(str(told.exception), "pt 4.12.0 is too old: spark needs 5.0 or newer. "
                          "Install: python3 -m pip install --user pt==5.5.0")
@@ -892,7 +892,7 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
 
     def test_the_floor_holds_for_an_entry_with_no_pin(self):
         self.personal.write_text(json.dumps({"pt": {"oldest_version": "5.0", "version": ""}}))
-        with self.patch_installed_version("4.12.0"), self.assertRaises(tool_finder.ToolProblem) as told:
+        with self.patch_installed_version("4.12.0"), self.assertRaises(tool_finder.ToolError) as told:
             tool_finder.find("flasher")
         self.assertIn("pt 4.12.0 is too old: spark needs 5.0 or newer.", str(told.exception))
 
@@ -901,7 +901,7 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
         for version in ("5.0.dev0", "5.0.post1", "5.0.0b1"):
             with self.subTest(version), self.patch_installed_version(version):
                 self.assertEqual(tool_finder.find("flasher").name, "pt")
-        with self.patch_installed_version("4.9.dev0"), self.assertRaises(tool_finder.ToolProblem):
+        with self.patch_installed_version("4.9.dev0"), self.assertRaises(tool_finder.ToolError):
             tool_finder.find("flasher")
 
     def test_a_floor_with_no_digits_refuses_nothing(self):
@@ -964,7 +964,7 @@ class AnNpmInstallNeedsThePackageJsonTest(unittest.TestCase):
             return tool_finder.install([name], self.project, run=lambda argv, **kw: self.ran.append(argv))
 
     def test_a_project_install_refuses_and_says_to_run_init_first(self):
-        with self.assertRaises(tool_finder.ToolProblem) as refused:
+        with self.assertRaises(tool_finder.ToolError) as refused:
             self.install("engine")
         self.assertEqual(self.ran, [], "npm never ran, so the parent's package.json is untouched")
         self.assertIn("package.json", str(refused.exception))

@@ -20,8 +20,8 @@
  {
   "file": "scripts/spark/build/kept_files.py",
   "name": "P196 refuter: pins no pin can take crash the report again",
-  "find": "PIN_MAP_REFUSALS = (pin_assigner.Impossible, loader.DesignError, store.StoreProblem, OSError, ValueError)",
-  "replace": "PIN_MAP_REFUSALS = (loader.DesignError, store.StoreProblem, OSError, ValueError)"
+  "find": "PIN_MAP_REFUSALS = (pin_assigner.ImpossibleError, loader.DesignError, store.StoreError, OSError, ValueError)",
+  "replace": "PIN_MAP_REFUSALS = (loader.DesignError, store.StoreError, OSError, ValueError)"
  },
  {
   "file": "scripts/spark/build/kept_files.py",

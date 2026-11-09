@@ -283,7 +283,7 @@ class ANewlineInAValueGivesOneLineTest(unittest.TestCase):
         project = Path(tempfile.mkdtemp()) / NASTY
         project.mkdir()
         (project / "requirements.json").write_text("{not json")
-        with self.assertRaises(image_builder.tool_finder.ToolProblem) as caught:
+        with self.assertRaises(image_builder.tool_finder.ToolError) as caught:
             image_builder.board_build(project)
         assert_flat(self, caught.exception)
 
@@ -305,7 +305,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
 
         def find(name, project=None, personal=None):
             if name == failing:
-                raise tool_finder.ToolProblem({
+                raise tool_finder.ToolError({
                     "littlefs": "littlefs (littlefs-python) is not installed — install: python3 -m pip install --user "
                                 "littlefs-python",
                     "firmware-image": "firmware-image (micropython-esp32s3) is not installed — install: /spark:setup "
@@ -348,7 +348,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         lists = self.two_builds()
         del lists["tools"]["micropython-xiao-esp32c6"]
         with mock.patch.object(tool_finder, "merged",
-                               return_value=lists), self.assertRaises(tool_finder.ToolProblem) as said:
+                               return_value=lists), self.assertRaises(tool_finder.ToolError) as said:
             image_builder.interpreter_for(None, self.project_on("xiao-esp32-c6"))
         self.assertIn("SEEED_XIAO_ESP32C6", str(said.exception))
 
@@ -358,7 +358,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         project = self.project_on("firebeetle2-esp32s3")
         (project / ".spark").mkdir()
         (project / ".spark" / "tools.json").write_text(json.dumps({"micropython-esp32s3": {"micropython_port": "ELSEWHERE"}}))
-        with self.assertRaises(tool_finder.ToolProblem) as said:
+        with self.assertRaises(tool_finder.ToolError) as said:
             image_builder.interpreter_for(None, project)
         entry = {"kind": "download", "file": "<file>", "url": "<url>", "sha256": "<sha256>",
                  "micropython_port": "ESP32_GENERIC_S3", "meets": ["micropython-esp32-bin"]}
@@ -382,7 +382,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
     def test_a_named_board_with_no_build_in_its_record_is_refused_not_given_the_default(self):
         from spark.records import tool_finder
         with mock.patch.object(tool_finder, "merged",
-                               return_value=self.two_builds()), self.assertRaises(tool_finder.ToolProblem) as said:
+                               return_value=self.two_builds()), self.assertRaises(tool_finder.ToolError) as said:
             image_builder.interpreter_for(None, self.project_on("no-such-board"))
         self.assertIn("no-such-board", str(said.exception))
 
@@ -410,7 +410,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         from spark.records import tool_finder
         project = Path(tempfile.mkdtemp())
         (project / "requirements.json").write_text("{not json")
-        with self.assertRaises(tool_finder.ToolProblem) as said:
+        with self.assertRaises(tool_finder.ToolError) as said:
             image_builder.interpreter_for(None, project)
         self.assertIn("requirements.json", str(said.exception))
 
@@ -482,7 +482,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         from spark.records import tool_finder
 
         def not_installed(name, *rest):
-            raise tool_finder.ToolProblem("%s is not installed" % name, code="tool_missing")
+            raise tool_finder.ToolError("%s is not installed" % name, code="tool_missing")
         given = self.root / "micropython.bin"
         self.assertEqual(self.chosen_for("ESP32_GENERIC", given, not_installed), (given, ESP32_INTERPRETER_OFFSET))
 
@@ -492,7 +492,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
 
     def test_a_given_file_for_a_board_whose_record_names_no_build_is_refused(self):
         from spark.records import tool_finder
-        with self.assertRaises(tool_finder.ToolProblem) as said:
+        with self.assertRaises(tool_finder.ToolError) as said:
             image_builder.interpreter_for(self.root / "micropython.bin", self.project_on("no-such-board"))
         self.assertIn("no-such-board", str(said.exception))
 
@@ -500,7 +500,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         from spark.records import tool_finder
         project = Path(tempfile.mkdtemp())
         (project / "requirements.json").write_text("{not json")
-        with self.assertRaises(tool_finder.ToolProblem) as said:
+        with self.assertRaises(tool_finder.ToolError) as said:
             image_builder.interpreter_for(self.root / "micropython.bin", project)
         self.assertIn("requirements.json", str(said.exception))
 
@@ -515,7 +515,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
         from spark.records import tool_finder
         for broken in (4096, "-0x10", "zero"):
             with self.subTest(broken=broken):
-                with self.assertRaises(tool_finder.ToolProblem) as said:
+                with self.assertRaises(tool_finder.ToolError) as said:
                     image_builder.offset_of({"kind": "download", "flash_offset": broken})
                 self.assertIn("flash_offset", str(said.exception))
 
