@@ -1,8 +1,8 @@
 """
 The handlers of the parts records, their facts, the datasheets, the drawer and a run's steps (W6-S3b, P721): one
 `_op_<flag>` per operation of `parts.py`, each taking the parsed arguments and the project and answering an `Answer`.
-The vendors to research in and the sellers (`vendor_order`, `sellers`) wait here for `Brief`'s card, and a write that
-sets a record in its own home (`_set_in_home`) with them. Moved whole from `parts.py`, whose `main` dispatches to them.
+The vendors to research in and the sellers (`vendor_order`, `sellers`) read the project's `Brief`, and a write that
+sets a record in its own home (`_set_in_home`) is here too. Moved whole from `parts.py`, whose `main` dispatches to them.
 The handlers that read a JSON payload stay in the CLI: reading stdin is the interface's job (P721 row 6). It imports
 the records area and the sourcing modules below it, never `parts.py`. The sourcing Operations on `run_cli` come with
 their card.
