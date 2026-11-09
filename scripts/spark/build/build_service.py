@@ -21,6 +21,7 @@ from spark.design import loader
 from spark.design import needs
 from spark.design import netlist
 from spark.records import onboard_parts
+from spark.build import board_alone_input
 from spark.firmware import sim_project
 from spark.records import tool_finder
 
@@ -366,7 +367,7 @@ def board_alone(board, workdir, firmware=None, project=None):
     if not board.get("wokwi_part_type"):
         return skipped + [Stage("simulation", COULD_NOT_RUN, "the board record names no wokwi_part_type", build_codes.SIMULATION_FACT_MISSING)]
     sim_dir, project = workdir / "sim", project or board_records.PLUGIN_ROOT
-    given, own = onboard_parts.read_board_alone(board, project), find_converter(project)
+    given, own = board_alone_input.read_board_alone(board, project), find_converter(project)
     stopped = given.wired and (converter_stage_problem(project, own) or (Stage("simulation", COULD_NOT_RUN, given.why, build_codes.SIMULATION_FACT_MISSING) if given.why else None))
     if stopped:
         return skipped + [stopped]
@@ -374,7 +375,7 @@ def board_alone(board, workdir, firmware=None, project=None):
     (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml((), firmware))
     for name, data in dict(given.files, **{"board.json": board}).items():
         (sim_dir / name).write_text(json.dumps(data, indent=2) + "\n")
-    diagram, stopped, notes = (convert(project, own, ["--netlist", str(sim_dir / onboard_parts.NETLIST)], sim_dir, workdir) if given.wired
+    diagram, stopped, notes = (convert(project, own, ["--netlist", str(sim_dir / board_alone_input.NETLIST)], sim_dir, workdir) if given.wired
                                else (given.files["diagram.json"], None, ""))
     if stopped:
         return skipped + [stopped]
