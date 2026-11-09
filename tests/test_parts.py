@@ -41,6 +41,7 @@ from spark.design import pin_assigner  # noqa: E402
 from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
+from spark.records import record_kind  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -599,8 +600,8 @@ class AProjectCanExtendTheLibraryTest(unittest.TestCase):
         (self.project / "parts" / "ssd1306-oled.json").write_text(json.dumps(self.own))
 
     def test_a_projects_own_part_is_listed(self):
-        self.assertIn("ssd1306-oled", parts.available(self.project))
-        self.assertNotIn("ssd1306-oled", parts.available())
+        self.assertIn("ssd1306-oled", record_kind.available(self.project))
+        self.assertNotIn("ssd1306-oled", record_kind.available())
 
     def test_a_projects_own_part_can_be_loaded_and_asked_for_signals(self):
         self.assertEqual(parts.load("ssd1306-oled", self.project)["name"], "SSD1306 OLED")
@@ -682,7 +683,7 @@ class CountingPadsFromAFootprintNameTest(unittest.TestCase):
 
 class TheShippedLibraryTest(unittest.TestCase):
     def test_every_part_shipped_satisfies_the_contract(self):
-        for part_id in parts.available():
+        for part_id in record_kind.available():
             with self.subTest(part=part_id):
                 path = parts.definition_path(part_id)
                 problems = parts.validate(json.loads(path.read_text()), path)
@@ -701,7 +702,7 @@ class TheShippedLibraryTest(unittest.TestCase):
         rail. One that does neither is inert, and would be emitted as a component nothing can
         ever connect to.
         """
-        for part_id in parts.available():
+        for part_id in record_kind.available():
             with self.subTest(part=part_id):
                 definition = parts.load(part_id)
                 self.assertTrue(
@@ -712,14 +713,15 @@ class TheShippedLibraryTest(unittest.TestCase):
     def test_the_speaker_terminal_owes_nothing_and_says_what_it_does(self):
         # C-3 (the council on PR #98): the record an amplifier's two outputs needed, so a sound need builds end to end
         record = parts.load("speaker-terminal")
-        self.assertEqual((parts.owes(record), record["footprint"], [s["pin"] for s in record["power"]], parts.function_of(record)),
+        self.assertEqual((record_kind.owes(record), record["footprint"], [s["pin"] for s in record["power"]],
+                          parts.function_of(record)),
                          ([], "jst_ph_2", ["SPK_P", "SPK_N"],
                           [{"does": "sound", "what": "speaker-terminal"}, {"does": "connect", "what": "speaker"}]))
 
     def test_the_rangefinder_s_outline_is_read_off_pololu_s_drawing(self):
         # C-6 (the council on PR #98): the only sensor spark ships owed body_mm, and --requirements refused it for that
         record = parts.load("vl6180x-breakout")
-        self.assertEqual(parts.owes(record), [])
+        self.assertEqual(record_kind.owes(record), [])
         self.assertEqual((record["body_mm"]["width"], record["body_mm"]["height"], record["body_mm"]["verified"],
                           record["body_mm"]["cites"]["document"]), (12.7, 17.8, True, "pololu-2489-dimensions"))
 
@@ -1462,7 +1464,7 @@ class ASimulationIsDeclaredTest(unittest.TestCase):
                         "validate must carry the simulation problems, or --validate passes a record the converter cannot use")
 
     def test_every_shipped_record_says_how_it_is_simulated(self):
-        for part_id in parts.available():
+        for part_id in record_kind.available():
             record = parts.load(part_id)
             self.assertIn("simulation", record, "%s: the converter has nothing to read" % part_id)
 
@@ -1874,8 +1876,8 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
     #: One item per field of an answer that both printers must carry. A field added to `Answer` fails the first test
     #: until it has an item here, and so until `_say` prints it.
     SAMPLES = {
-        "problems": parts._problem("thing", "is wrong in a way the lines never said", "do this to mend it"),
-        "unchecked": parts._cannot("could not read the thing's file", "re-save it"),
+        "problems": record_kind._problem("thing", "is wrong in a way the lines never said", "do this to mend it"),
+        "unchecked": record_kind._cannot("could not read the thing's file", "re-save it"),
         "notes": {"subject": "thing", "sentence": "is said and does not fail"},
         "assumptions": {"fact": "thing.pitch_mm", "basis": "unverified", "assumed": 2.0, "sentence": "the socket rests on it",
                         "upgrade": "measure the pitch with calipers"},
@@ -1888,41 +1890,42 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
         return out.getvalue() + err.getvalue()
 
     def test_each_answer_field_reaches_both_the_text_and_the_envelope(self):
-        for field in set(parts.Answer._fields) - {"data", "lines", "truncated", "diagnostics"}:
+        for field in set(record_kind.Answer._fields) - {"data", "lines", "truncated", "diagnostics"}:
             item = self.SAMPLES[field]
             with self.subTest(field=field):
-                answer = parts.Answer({"x": 1}, ["  a line of the answer"], **{field: [item]})
+                answer = record_kind.Answer({"x": 1}, ["  a line of the answer"], **{field: [item]})
                 said = json.loads(self.say(answer, True))
                 self.assertEqual(said[field], [item])
                 text = self.say(answer, False)
                 for words in filter(None, (item.get("sentence"), item.get("fix"), item.get("why"), item.get("fact"),
                                            item.get("upgrade"))):
                     self.assertIn(words, text)
-        self.assertIn("could not check: could not read", self.say(parts.Answer({}, ["  a line"], unchecked=[self.SAMPLES["unchecked"]]), False))
+        self.assertIn("could not check: could not read",
+                      self.say(record_kind.Answer({}, ["  a line"], unchecked=[self.SAMPLES["unchecked"]]), False))
 
     def test_the_diagnostics_go_to_stderr_with_json_or_without_and_never_into_the_envelope(self):
         # P717 (X2): a handler returns its stderr lines and `_say` prints them, so no handler prints
         for as_json in (True, False):
             with self.subTest(as_json=as_json):
                 with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-                    answer = parts.Answer({"x": 1}, ["  a line"], diagnostics=["a crash's line", "its traceback"])
+                    answer = record_kind.Answer({"x": 1}, ["  a line"], diagnostics=["a crash's line", "its traceback"])
                     parts._say("show", answer, as_json)
                 self.assertEqual(err.getvalue(), "a crash's line\nits traceback\n")
                 self.assertNotIn("traceback", out.getvalue())
 
     def test_an_answer_with_no_lines_says_its_problems_and_fixes_on_stderr(self):
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            parts._say("show", parts.Answer(problems=[self.SAMPLES["problems"]]), False)
+            parts._say("show", record_kind.Answer(problems=[self.SAMPLES["problems"]]), False)
         self.assertEqual(err.getvalue(), "parts.py: is wrong in a way the lines never said — do this to mend it\n")
         self.assertEqual(out.getvalue(), "", "said once, on stderr")
 
     def test_an_item_with_no_sentence_is_still_said(self):
         bare = {"fact": "thing.colour", "basis": "unverified", "assumed": "red", "sentence": ""}
-        self.assertIn("thing.colour = red", self.say(parts.Answer({}, ["  a line"], assumptions=[bare]), False))
+        self.assertIn("thing.colour = red", self.say(record_kind.Answer({}, ["  a line"], assumptions=[bare]), False))
 
     def test_two_notes_that_share_a_sentence_are_both_said(self):
         notes = [{"subject": "a", "sentence": "maybe owned"}, {"subject": "b", "sentence": "maybe owned"}]
-        text = self.say(parts.Answer({}, ["  a: maybe owned"], notes=notes), False)
+        text = self.say(record_kind.Answer({}, ["  a: maybe owned"], notes=notes), False)
         self.assertEqual((text.count("a: maybe owned"), text.count("b: maybe owned")), (1, 1), text)
 
     def test_a_problem_the_lines_say_in_their_own_words_is_not_said_again(self):
@@ -1941,7 +1944,7 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
 
     def test_a_line_the_answer_already_says_is_not_said_again(self):
         note = {"subject": "thing", "sentence": "is said and does not fail"}
-        text = self.say(parts.Answer({"x": 1}, ["  thing: is said and does not fail"], notes=[note]), False)
+        text = self.say(record_kind.Answer({"x": 1}, ["  thing: is said and does not fail"], notes=[note]), False)
         self.assertEqual(text.count("is said and does not fail"), 1, text)
 
     def project_with(self, verified, unverified=(), missing=(), low=None):
@@ -2039,7 +2042,7 @@ class TheShelfIsALayerTest(unittest.TestCase):
         (home / "shelf").mkdir()
         (home / "shelf" / "x-shelved.json").write_text(json.dumps(record))
         with in_store(home):
-            self.assertIn("x-shelved", parts.available())
+            self.assertIn("x-shelved", record_kind.available())
             self.assertEqual(parts.load("x-shelved")["id"], "x-shelved")
             said, _ = run_json(["--list"])
         self.assertIn({"id": "x-shelved", "layer": "shelf"},
@@ -2203,7 +2206,7 @@ class WhatAPartDoesTest(unittest.TestCase):
         (library / "x-inlet.json").write_text(json.dumps(record))
         given = Path(tempfile.mkdtemp()) / "function.json"
         given.write_text(json.dumps([{"does": "connect", "what": "power-inlet"}]))
-        with in_store(Path(tempfile.mkdtemp())), mock.patch.object(parts, "LIBRARY", library):
+        with in_store(Path(tempfile.mkdtemp())), mock.patch.object(record_kind, "LIBRARY", library):
             said, code = run_json(["--function-set", "x-inlet", str(given)])
         self.assertEqual((said["status"], code), ("problems", 1))
         self.assertIn("spark's own library", said["problems"][0]["sentence"])
@@ -2265,9 +2268,11 @@ class WhatAPartDoesTest(unittest.TestCase):
 
     def test_every_record_in_spark_s_library_says_what_it_does(self):
         with in_store(Path(tempfile.mkdtemp())):
-            library = {part_id: path for part_id, (layer, path) in store.records("parts", parts.LIBRARY).items() if layer == "library"}
+            library = {part_id: path for part_id, (layer, path) in store.records("parts", record_kind.LIBRARY).items()
+                       if layer == "library"}
         self.assertTrue(library)
-        self.assertEqual([part_id for part_id, path in sorted(library.items()) if not parts.function_of(parts._parse(path))], [])
+        self.assertEqual([part_id for part_id, path in sorted(library.items())
+                          if not parts.function_of(record_kind._parse(path))], [])
 
     def test_function_set_refuses_a_wrong_function_and_a_part_nobody_has(self):
         home, given = self.a_probe_in_the_catalog()
@@ -2449,14 +2454,15 @@ class OwedFactsFilledInTheirHomeTest(unittest.TestCase):
             self.assertNotIn("footprint", json.loads((home / "catalog" / "x-soil.json").read_text()))
             _, code = run_json(["--fact-set", "x-soil", given])
         record = json.loads((home / "catalog" / "x-soil.json").read_text())
-        self.assertEqual((code, record["footprint"], parts.owes(record)), (0, "jst_ph_3", ["pin_order_proof", "body_mm"]))
+        self.assertEqual((code, record["footprint"], record_kind.owes(record)), (0, "jst_ph_3", ["pin_order_proof",
+                                                                                                 "body_mm"]))
 
     def test_spark_s_library_is_refused(self):
         library = Path(tempfile.mkdtemp()) / "parts"
         library.mkdir()
         record = {"schema": 1, "id": "x-amp", "name": "An amp", "kind": "audio-amplifier", "needs": []}
         (library / "x-amp.json").write_text(json.dumps(record))
-        with in_store(Path(tempfile.mkdtemp())), mock.patch.object(parts, "LIBRARY", library):
+        with in_store(Path(tempfile.mkdtemp())), mock.patch.object(record_kind, "LIBRARY", library):
             said, code = run_json(["--fact-set", "x-amp", self.facts({"footprint": "pinrow12"})])
         self.assertEqual((said["status"], code), ("problems", 1))
         self.assertIn("spark's own library", said["problems"][0]["sentence"])
@@ -2762,7 +2768,8 @@ class OwedIsNotBrokenTest(unittest.TestCase):
 
     def test_a_record_missing_what_the_chain_reads_owes_it_and_is_not_broken(self):
         definition = part(body_mm={"width": None, "height": None, "verified": False, "source": None})
-        self.assertEqual(sorted(parts.owes(definition)), ["body_mm", "footprint", "pin_order", "pin_order_proof", "simulation"])
+        self.assertEqual(sorted(record_kind.owes(definition)), ["body_mm", "footprint", "pin_order", "pin_order_proof",
+                                                                "simulation"])
         self.assertEqual(parts.broken_problems(definition, written(definition)), [])
 
     def test_a_present_wrong_value_is_broken(self):
@@ -2771,19 +2778,19 @@ class OwedIsNotBrokenTest(unittest.TestCase):
 
     def test_a_footprint_of_the_wrong_type_is_broken_and_an_absent_one_is_only_owed(self):
         wrong = part(footprint=5)
-        self.assertNotIn("footprint", parts.owes(wrong))
+        self.assertNotIn("footprint", record_kind.owes(wrong))
         self.assertEqual([p[:14] for p in parts.broken_problems(wrong, written(wrong))], ["footprint is 5"])
         absent = part(footprint=None)
-        self.assertIn("footprint", parts.owes(absent))
+        self.assertIn("footprint", record_kind.owes(absent))
         self.assertEqual(parts.broken_problems(absent, written(absent)), [])
 
     def test_a_problem_that_merely_names_an_owed_key_is_still_broken(self):
         placeholder = part(footprint=None, footprint_placeholder=True)
-        self.assertIn("footprint", parts.owes(placeholder))
+        self.assertIn("footprint", record_kind.owes(placeholder))
         self.assertTrue(any(p.startswith("footprint_placeholder is set") for p in parts.broken_problems(placeholder, written(placeholder))))
         no_needs = part(simulation={"wokwi": "x"})
         del no_needs["needs"]
-        self.assertIn("needs", parts.owes(no_needs))
+        self.assertIn("needs", record_kind.owes(no_needs))
         self.assertTrue(any(p.startswith("simulation needs wokwi") for p in parts.broken_problems(no_needs, written(no_needs))))
 
     def test_a_malformed_board_is_named_broken_never_a_traceback(self):
@@ -2820,7 +2827,7 @@ class OwedIsNotBrokenTest(unittest.TestCase):
     def test_a_pin_order_with_no_proof_owes_the_proof_and_is_not_broken(self):
         unproven = part(pin_order=["P"])
         del unproven["pin_order_proof"]
-        self.assertIn("pin_order_proof", parts.owes(unproven))
+        self.assertIn("pin_order_proof", record_kind.owes(unproven))
         self.assertEqual(parts.broken_problems(unproven, written(unproven)), [])
 
     def test_validate_does_not_run_the_checks_of_an_owed_key(self):
@@ -2831,7 +2838,7 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertEqual(parts.validate(empty, path, owed=owed), [])
         self.assertEqual(parts.broken_problems(empty, path), [])
         blank = part(pin_order="")
-        self.assertIn("pin_order", parts.owes(blank))
+        self.assertIn("pin_order", record_kind.owes(blank))
         self.assertEqual(parts.broken_problems(blank, written(blank)), [], "an owed key is not type-checked")
         unordered = part(pin_order=[])
         self.assertTrue(parts.validate(unordered, written(unordered))[0].startswith("pin_order must be"))
@@ -2851,7 +2858,7 @@ class OwedIsNotBrokenTest(unittest.TestCase):
 
     def test_a_problem_inside_a_present_list_is_broken_even_when_other_keys_are_owed(self):
         unsignalled = part(needs=[{"pin": "P", "direction": "in"}])
-        self.assertIn("simulation", parts.owes(unsignalled))
+        self.assertIn("simulation", record_kind.owes(unsignalled))
         self.assertEqual(parts.broken_problems(unsignalled, written(unsignalled)), ["needs[0] has no signal"])
 
     def test_a_pin_order_that_is_no_list_is_named_not_a_shape_line(self):
@@ -2898,7 +2905,7 @@ class OwedIsNotBrokenTest(unittest.TestCase):
     def test_a_wrong_pin_order_is_named_when_its_proof_is_owed(self):
         unlisted = part(pin_order=5)
         del unlisted["pin_order_proof"]
-        self.assertIn("pin_order_proof", parts.owes(unlisted))
+        self.assertIn("pin_order_proof", record_kind.owes(unlisted))
         self.assertEqual(parts.broken_problems(unlisted, written(unlisted)), ["pin_order is 5, but it is a list"])
 
     def test_audit_walks_every_layer_names_what_says_nothing_and_exits_1_only_on_broken(self):

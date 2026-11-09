@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/records/record_kind.py",
   "name": "an absent fact the chain reads is not owed",
   "find": "            [key for key in CHAIN_FACTS if _absent(key, record.get(key))])",
   "replace": "            [])"

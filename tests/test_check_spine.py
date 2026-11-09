@@ -1038,8 +1038,8 @@ class TheReferenceDesignTest(unittest.TestCase):
     def test_it_names_only_parts_the_library_actually_has(self):
         # If it drifts, the gate fails for a reason that has nothing to do with the chain, and
         # somebody switches it off.
-        import parts
-        available = set(parts.available())
+        from spark.records import record_kind
+        available = set(record_kind.available())
         for part_id in check_spine.REFERENCE["parts"]:
             with self.subTest(part=part_id):
                 self.assertIn(part_id, available)

@@ -19,7 +19,7 @@
   {"file": "scripts/matching.py", "name": "places: the description is not searched", "find": "\"texts\": folded([offer.about, offer.description])}", "replace": "\"texts\": folded([offer.about])}"},
   {"file": "scripts/matching.py", "name": "word-overlap also serves --need", "find": "name, serves = \"word-overlap\", (\"match\",)", "replace": "name, serves = \"word-overlap\", (\"match\", \"need\")"},
   {"file": "scripts/spark/design/needs.py", "name": "offers: a drawer entry with count 0 is offered", "find": "or entry.get(\"count\") == 0)", "replace": ")"},
-  {"file": "scripts/spark/design/needs.py", "name": "candidate: a board owes what a part owes", "find": "\"owes\": [] if offer.kind == \"board\" else parts.owes(record),", "replace": "\"owes\": parts.owes(record),"},
+  {"file": "scripts/spark/design/needs.py", "name": "candidate: a board owes what a part owes", "find": "\"owes\": [] if offer.kind == \"board\" else owes(record),", "replace": "\"owes\": owes(record),"},
   {"file": "scripts/spark/design/needs.py", "name": "candidate: what lists every verb's functions", "find": "what=sorted({f[\"what\"] for f in offer.functions if f.get(\"does\") == need[\"does\"]}),", "replace": "what=sorted({f[\"what\"] for f in offer.functions}),"},
   {"file": "scripts/spark/design/needs.py", "name": "candidate: what_matches follows the score, not SameWords", "find": "what_matches=fit.exact, score=fit.score", "replace": "what_matches=fit.score > 0, score=fit.score"},
   {"file": "scripts/spark/design/needs.py", "name": "candidates: the score does not order", "find": "(c[\"owned\"] == 0, -c[\"score\"],", "replace": "(c[\"owned\"] == 0,"},

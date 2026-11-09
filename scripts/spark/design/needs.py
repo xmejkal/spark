@@ -19,6 +19,8 @@ from spark.design import board_emitter
 from spark.design import footprint_emitter
 import matching
 import parts
+from spark.records import record_kind
+from spark.records.record_kind import _parse, _problem, _shape_problems, owes, VERBS
 from spark.records import records_codes
 from spark.records import store
 from spark.core.text_guards import clean, kept_reason, printable
@@ -29,7 +31,7 @@ MARKS = ("have", "have-unknown", "know", "gap")
 PICKS = ("part", "board", "entry")
 #: Each field of a need besides its `id` (§5.3): its test, and what is said when a value fails it — read and write alike.
 #: A pick is set only by --pick, which reserves what the person owns (§8 C).
-CHECKS = {"does": (lambda v: v in parts.VERBS, "`does` is one of %s" % ", ".join(parts.VERBS)),
+CHECKS = {"does": (lambda v: v in VERBS, "`does` is one of %s" % ", ".join(VERBS)),
           "what": (drawer._words, "`what` is a few words: soil-moisture, alarm, microcontroller"),
           "condition": (lambda v: v is None or drawer._words(v), "`condition` is words, or null"),
           "mark": (lambda v: v is None or v in MARKS, "`mark` is one of %s, or null" % ", ".join(MARKS)),
@@ -80,21 +82,21 @@ def plan_set(project, items):
     need, by `id`; a new need needs `does` and `what`. A later item sees what an earlier one set. Nothing is written here.
     """
     if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
-        return None, [], [parts._problem("the file", "a needs write is a JSON list of needs, each an object with an `id`")]
+        return None, [], [_problem("the file", "a needs write is a JSON list of needs, each an object with an `id`")]
     current = {need["id"]: dict(need) for need in read(project)}
     order, changes, problems = list(current), [], []
     for number, item in enumerate(items, 1):
         need_id = item.get("id")
         if not (isinstance(need_id, str) and store.PLAIN.fullmatch(need_id)):
-            problems.append(parts._problem("item %d" % number, "a need's `id` is lower-case letters, digits and '-', not %s"
-                                           % json.dumps(need_id, ensure_ascii=False)))
+            problems.append(_problem("item %d" % number, "a need's `id` is lower-case letters, digits and '-', not %s"
+                                     % json.dumps(need_id, ensure_ascii=False)))
             continue
         if "pick" in item:
-            problems.append(parts._problem(need_id, "a pick is set with --pick, which reserves what you own"))
+            problems.append(_problem(need_id, "a pick is set with --pick, which reserves what you own"))
             continue
         before = current.get(need_id)
         after = dict(before or {}, **{key: (clean(value) if isinstance(value, str) else value) for key, value in item.items()})
-        problems += [parts._problem(need_id, sentence) for sentence in faults(after)]
+        problems += [_problem(need_id, sentence) for sentence in faults(after)]
         changed = [key for key in NEED_FIELDS if after.get(key) != (before or {}).get(key)]
         if changed:
             changes.append({"need": need_id, "new": before is None, "was": {key: before.get(key) for key in changed}
@@ -148,7 +150,7 @@ def offers(known, entries):
     """
     pointing, built, known_keys = _pointing(entries), [], set()
     for kind, record_id, where, path in known:
-        record = parts._parse(path)
+        record = _parse(path)
         if not isinstance(record, dict):
             continue
         known_keys.add((kind, record_id))
@@ -222,8 +224,8 @@ def _candidate(need, fit, context, mine=None):
         said = {"entry": offer.key, "in": "drawer", "label": context["holding"][0].get("label")}
     else:
         said = {"id": offer.key, "kind": offer.kind, "in": context["in"], "label": record.get("name"),
-                "owes": [] if offer.kind == "board" else parts.owes(record),
-                "broken": bool(parts._shape_problems(board_records.validate, record, context["path"],
+                "owes": [] if offer.kind == "board" else owes(record),
+                "broken": bool(_shape_problems(board_records.validate, record, context["path"],
                 "board definition")) if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
         if offer.kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
             said["stops_at"] = "footprint" if footprint_emitter.footprint_gaps(record) else None
@@ -269,11 +271,11 @@ def match(project, matcher=None):
     known, entries, matched, problems, mine = (drawer.linkable(project), drawer.entries(), [], [], store.plan_listed_name(project))
     definitions = {}  # P397: each board's Wokwi definition, read once for every need
     for need in read(project):
-        if need.get("does") not in parts.VERBS:
-            problems.append(parts._problem(need.get("id"), "a need with no `does` cannot be matched — set it with --needs-set"))
+        if need.get("does") not in VERBS:
+            problems.append(_problem(need.get("id"), "a need with no `does` cannot be matched — set it with --needs-set"))
             continue
         if not need.get("what"):
-            problems.append(parts._problem(need["id"], "a need with no `what` cannot be matched — set it with --needs-set"))
+            problems.append(_problem(need["id"], "a need with no `what` cannot be matched — set it with --needs-set"))
             continue
         matched.append(dict({key: need.get(key) for key in NEED_FIELDS}, need=need["id"],
                             candidates=candidates(need, known, entries, mine, matcher, definitions)))
@@ -428,9 +430,9 @@ def plan_holds(name, after, entries):
             pieces -= taken
         holders = drawer.holders_of([entry for _, entry in held], name)
         if pieces:
-            problems.append(parts._problem(key, "%s owned%s — %d picked here" % (owned, ", held by " + ", ".join(printable(who) for who in holders) if holders else "",
-                                                                                 pieces + sum(mine[entry_id] for entry_id, _ in held)),
-                                           _how_to_free([entry_id for entry_id, _ in held], holders)))
+            problems.append(_problem(key, "%s owned%s — %d picked here" % (owned, ", held by " + ", ".join(printable(who) for who in holders) if holders else "",
+                                                                           pieces + sum(mine[entry_id] for entry_id, _ in held)),
+                                     _how_to_free([entry_id for entry_id, _ in held], holders)))
         notes += ["%s: maybe owned — check the drawer first" % key] if unsure else []
         notes += ["%s: count unknown — check the drawer" % key] if owned == "unknown" else []
     changes = []
@@ -479,9 +481,9 @@ def _picks_given(given, known, entries, ids):
         pick = _resolve(pick_id, known, entries)
         named = next(iter(pick.values())) if pick else None
         if need_id not in ids:
-            problems.append(parts._problem(need_id, "no need called %s — --needs lists them" % need_id))
+            problems.append(_problem(need_id, "no need called %s — --needs lists them" % need_id))
         elif pick is None:
-            problems.append(parts._problem(need_id, "no record or drawer entry called %s — --match lists the candidates" % pick_id))
+            problems.append(_problem(need_id, "no record or drawer entry called %s — --match lists the candidates" % pick_id))
         elif not (store.PLAIN.fullmatch(pick_id) and store.PLAIN.fullmatch(named)):  # the key given, and the id written
             raise store.StoreProblem("%r is not a plain key — lower-case letters, digits and '-' — so a pick cannot name it: "
                                      "rename the drawer entry, or the record's file, then pick it",
@@ -535,9 +537,9 @@ def _passed_over(passed_over, name, known, entries, ids):
         why, cut = kept_reason(item["why"]) if pick and isinstance(item.get("why"), str) else ("", False)
         why = why if re.search(r"[^\W\d_]", why) else ""  # F14: what is left with no letter in it is no reason either
         if not (pick and item.get("need") in ids and drawer._words(why) and item.get("by", "person") in ("person", "agent")):
-            problems.append(parts._problem("passed over %d" % number, 'a part passed over is {"need", "id", "why", "by": '
-                                           '"person" or "agent"}: a need and an id spark has, and the reason in words — a URL or '
-                                           'a price is not kept, so a reason that is only those is none'))
+            problems.append(_problem("passed over %d" % number, 'a part passed over is {"need", "id", "why", "by": '
+                                     '"person" or "agent"}: a need and an id spark has, and the reason in words — a URL or '
+                                     'a price is not kept, so a reason that is only those is none'))
             continue
         events.append(dict({"event": "passed_over", "project": name, "need": item["need"]}, **pick, why=why, by=item.get("by", "person")))
         notes += ["%s: the reason is kept without the URL or price in it — your history keeps words, never a URL or a price"
@@ -662,9 +664,9 @@ def _merge_parts(existing, wanted):
         called = _called(part_id, name)
         if _one_name(called) in held_by:
             holder, its_name = held_by[_one_name(called)]
-            problems.append(parts._problem(need_id, 'its %s would be called %s, and %s is called %s — %s; give one of them a name of '
-                                           'your own in requirements.json, {"part": "%s", "name": …}, and run this again'
-                                           % (part_id, called, holder, its_name, loader.ONE_NAME_RULE, part_id)))
+            problems.append(_problem(need_id, 'its %s would be called %s, and %s is called %s — %s; give one of them a name of '
+                                     'your own in requirements.json, {"part": "%s", "name": …}, and run this again'
+                                     % (part_id, called, holder, its_name, loader.ONE_NAME_RULE, part_id)))
             continue
         held_by[_one_name(called)] = ("need %s's %s" % (need_id, part_id), called)
         added.append(part_id if name is None else {"part": part_id, "name": name})
@@ -682,15 +684,15 @@ def _board_problems(board_picks, unfiled, project):
         return []
     if unfiled and not board_picks:
         filed = board_records.records(project)
-        stopping = {board_id: footprint_emitter.footprint_stop_line(parts._parse(path)) for board_id, (_, path) in filed.items()}
+        stopping = {board_id: footprint_emitter.footprint_stop_line(_parse(path)) for board_id, (_, path) in filed.items()}
         builds = [board_id for board_id in filed if not stopping[board_id]]  # C-7: a board that stops is never suggested
         said = "; ".join(["spark has one that builds for %s" % ", ".join(builds) if builds else "spark has no board file that builds"]
                          + ["%s %s" % (board_id, line) for board_id, line in stopping.items() if line])
-        return [parts._problem(key, "picked as the board, but a board needs a board file — a record in boards/ — before spark can "
-                                    "build with it, and it has none; %s" % said,
-                               '%swrite a board file for %s first (docs/guide/how-it-works.md, "Your own dev board")'
-                               % ("pick %s, or " % " or ".join(builds) if builds else "", key)) for key in unfiled]
-    return [parts._problem("board", "pick one board — %s" % (
+        return [_problem(key, "picked as the board, but a board needs a board file — a record in boards/ — before spark can "
+                              "build with it, and it has none; %s" % said,
+                         '%swrite a board file for %s first (docs/guide/how-it-works.md, "Your own dev board")'
+                         % ("pick %s, or " % " or ".join(builds) if builds else "", key)) for key in unfiled]
+    return [_problem("board", "pick one board — %s" % (
         "picked: " + ", ".join(board_picks) if board_picks else "none is picked"))]
 
 
@@ -725,7 +727,7 @@ def _power_gaps(listed, known):
     for entry in listed:
         part_id = _part_of(entry)
         path = known.get(("part", part_id), (None,) * 4)[3] if part_id else None
-        record = parts._parse(path) if path else None
+        record = _parse(path) if path else None
         if not isinstance(record, dict) or parts.broken_problems(record, path):
             continue
         rails = entry.get("rails") if isinstance(entry, dict) and isinstance(entry.get("rails"), dict) else None
@@ -746,7 +748,7 @@ def _power_gaps(listed, known):
 
 def _how_to_fill(path):
     """Where what a record owes is filled (§5.4): a record in spark's own library in spark's repository; any other with --fact-set."""
-    if Path(path).parent.resolve() == parts.LIBRARY.resolve():
+    if Path(path).parent.resolve() == record_kind.LIBRARY.resolve():
         return "it is in spark's own library, so it is filled in spark's repository, by a commit — --fact-set does not change the library"
     return "fill it in its own home with --fact-set"
 
@@ -759,13 +761,13 @@ def _part_picks(picks, known):
         if kind != "part":
             continue
         _, _, where, path = known.get(("part", key), (None, None, None, None))
-        record = parts._parse(path) if path else None
-        owed = parts.owes(record) if isinstance(record, dict) else []
+        record = _parse(path) if path else None
+        owed = owes(record) if isinstance(record, dict) else []
         wrong = (["no record called %s any more" % key] if path is None else
                  ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
                  ["owes %s — %s" % (", ".join(owed), _how_to_fill(path))] if set(owed) - set(LAYOUT_FACTS)
                  else parts.broken_problems(record, path))
-        problems += [parts._problem(key, sentence) for sentence in wrong]
+        problems += [_problem(key, sentence) for sentence in wrong]
         shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []
         placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []
         wanted.append((need_id, key))

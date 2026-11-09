@@ -36,6 +36,7 @@ import emit_board  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402
 import parts  # noqa: E402
+from spark.records import record_kind  # noqa: E402
 
 PARTS = ["l9110s-module", "vl6180x-breakout", "dfr0534-module"]
 
@@ -564,7 +565,7 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
     def test_no_two_outputs_of_one_part_ever_share_a_net(self):
         # The general property, so this cannot be fixed for the speaker and left broken for the
         # next differential output somebody adds.
-        for part_id in parts.available():
+        for part_id in record_kind.available():
             part = parts.load(part_id)
             nets = [board_emitter.net_for(supply) for supply in part.get("power") or []
                     if supply.get("direction") == "out"]
@@ -638,7 +639,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
     def test_every_part_in_the_library_either_has_a_pinout_or_says_why_not(self):
         # The library's own state, kept honest separately: a part may carry no pin_order, but
         # then the file has to say what would make one possible.
-        for part_id in parts.available():
+        for part_id in record_kind.available():
             part = parts.load(part_id)
             with self.subTest(part=part_id):
                 self.assertTrue(part.get("pin_order") or part.get("//pin_order"),
@@ -646,7 +647,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
 
     def test_every_pin_the_part_uses_has_a_pad(self):
         # The contract's half of it: a pin with no pad would silently connect to nothing.
-        for part_id in parts.available():
+        for part_id in record_kind.available():
             part = parts.load(part_id)
             if not part.get("pin_order"):
                 continue

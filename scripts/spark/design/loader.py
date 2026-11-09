@@ -38,6 +38,7 @@ from spark.records import board_records
 from spark.design import design_codes
 from spark.design import fab
 import parts as parts_library
+from spark.records import record_kind
 from spark.records import provenance
 from spark.core.errors import CodedMessageError
 
@@ -164,7 +165,7 @@ def refuse_bad_signals(path, signals):
         if pin == "":
             raise DesignError('%s: signals[%d].pin is an empty name; write a pin name from the board such as "D0"',
                               path, index, code=design_codes.REQUIREMENTS_FIELD_WRONG)
-        if not re.fullmatch(parts_library.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
+        if not re.fullmatch(record_kind.SELECTOR_SAFE, signal["name"]):  # P87's attribute half, as a part's signal
             raise DesignError("%s: signals[%d] is named %r, but a signal is a name — letters, digits and _ (LED_STATUS): the "
                               "pin map and the board name it, and firmware is written against it", path, index, signal["name"],
                               code=design_codes.REQUIREMENTS_FIELD_WRONG)
@@ -217,7 +218,7 @@ def requested_parts(wanted):
                 raise DesignError("parts[%d] names no `part`: %s", index, json.dumps(entry),
                                   code=design_codes.REQUIREMENTS_FIELD_WRONG)
             name = entry.get("name")
-            if name is not None and not (isinstance(name, str) and re.fullmatch(parts_library.SELECTOR_SAFE, name)):
+            if name is not None and not (isinstance(name, str) and re.fullmatch(record_kind.SELECTOR_SAFE, name)):
                 # P87's attribute half: the instance's name is the component the board is written with, `<chip name="…">`
                 raise DesignError("parts[%d] calls its instance %r, but an instance's name is a name — letters, digits and _ "
                                   "(BtnOpen): the board is written with it as code", index, name,
@@ -250,7 +251,8 @@ def rails_requested(wanted):
                 raise DesignError("parts[%d].rails must map pin names to rail names: %s",
                                   index, json.dumps(rails), code=design_codes.REQUIREMENTS_FIELD_WRONG)
             for pin, rail in rails.items():
-                if not re.fullmatch(parts_library.SELECTOR_SAFE, rail):  # P87's attribute half: the rail is the net written
+                # P87's attribute half: the rail is the net written
+                if not re.fullmatch(record_kind.SELECTOR_SAFE, rail):
                     raise DesignError("parts[%d].rails puts %s on %r, but a rail is a name — letters, digits and _ (traction, "
                                       "motor): the board is written with it as code", index, pin, rail,
                                       code=design_codes.REQUIREMENTS_FIELD_WRONG)

@@ -1,7 +1,7 @@
 [
  {"file": "scripts/parts.py", "name": "a kind that is a list is looked up",
   "find": "KIND_FUNCTION.get(kind) if isinstance(kind, str) else None", "replace": "KIND_FUNCTION.get(kind)"},
- {"file": "scripts/parts.py", "name": "a malformed record raises",
+ {"file": "scripts/spark/records/record_kind.py", "name": "a malformed record raises",
   "find": "except (AttributeError, TypeError, KeyError, ValueError) as wrong:", "replace": "except ZeroDivisionError as wrong:"},
  {"file": "scripts/parts.py", "name": "a malformed function is trusted",
   "find": "    if record.get(\"function\") and not function_problems(record):\n", "replace": "    if record.get(\"function\"):\n"},

@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import drawer  # noqa: E402
 import parts  # noqa: E402
+from spark.records import record_kind  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 
@@ -282,7 +283,7 @@ class TheDrawerTest(unittest.TestCase):
         self.assertEqual((self.entry("mosfet")["is"], said["data"]["shelved"]), ({"part": "dfr0457-mosfet"}, ["dfr0457-mosfet"]))
         shelved = json.loads((self.home / "shelf" / "dfr0457-mosfet.json").read_text())
         self.assertEqual((shelved.get("owned"), shelved.get("sourcing"), shelved["based_on"]["project"]), (None, None, "irrigation"))
-        self.assertIn("dfr0457-mosfet", parts.available(), "every project finds it now")
+        self.assertIn("dfr0457-mosfet", record_kind.available(), "every project finds it now")
 
     def test_a_dry_run_shelves_nothing(self):
         run(["--drawer-set", a_file([{"label": "MOSFET", "count": 8, "part_number": {"number": "DFR0457"}}]), "--dry-run"])
@@ -858,7 +859,8 @@ class TheHoldersTest(unittest.TestCase):
     def test_an_answer_with_no_lines_says_its_problems_on_stderr_through_the_guard(self):
         err = io.StringIO()
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
-            parts._say("drawer", parts.Answer(unchecked=[parts._cannot("a\u202eb\x1bc", "fix\u202e")]), False)
+            parts._say("drawer", record_kind.Answer(unchecked=[record_kind._cannot("a\u202eb\x1bc", "fix\u202e")]),
+                       False)
         self.assertNotIn("\u202e", err.getvalue())
         self.assertIn("a?b?c", err.getvalue())
 

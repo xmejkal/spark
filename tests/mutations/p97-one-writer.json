@@ -5,7 +5,7 @@
   "replace": "            pass"},
  {"file": "scripts/parts.py", "name": "a write takes no lock",
   "find": "        with store.locked() if writes else contextlib.nullcontext():", "replace": "        with contextlib.nullcontext():"},
- {"file": "scripts/parts.py", "name": "a project's record is written in place",
+ {"file": "scripts/spark/records/record_kind.py", "name": "a project's record is written in place",
   "find": "    return store.write_file(path, json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")",
   "replace": "    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + \"\\n\")"},
  {"file": "scripts/spark/design/needs.py", "name": "the needs file is written in place",
