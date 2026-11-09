@@ -485,8 +485,8 @@ class ABusWithNoDedicatedPinsGoesAnywhereTest(unittest.TestCase):
             pin_assigner.assign(board, [{"name": "SDA", "bus": "i2c", "needs": []}])
 
     def test_the_vocabulary_is_the_parts_librarys(self):
-        import parts
-        self.assertIs(pin_assigner.BUS_LINES, parts.BUSES)
+        from spark.sourcing import part_rules
+        self.assertIs(pin_assigner.BUS_LINES, part_rules.BUSES)
 
 
 class ANamedPinIsStillCheckedTest(unittest.TestCase):

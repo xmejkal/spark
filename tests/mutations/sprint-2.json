@@ -36,7 +36,7 @@
   "replace": "            if False:"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_rules.py",
   "name": "drop pwm from the capability vocabulary",
   "find": "CAPABILITIES = (\"wake\", \"adc\", \"pwm\")",
   "replace": "CAPABILITIES = (\"wake\", \"adc\")"

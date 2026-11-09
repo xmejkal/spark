@@ -24,7 +24,7 @@
   "replace": "        placements[name] = (-width / 2 + column_x + widest / 2, y)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_rules.py",
   "name": "a passive on a power pad passes",
   "find": "        if host_part.get(\"pin\") not in signal_pads:",
   "replace": "        if False:"

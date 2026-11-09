@@ -31,6 +31,7 @@ from spark.design import loader
 from spark.design import design_codes
 from spark.design import footprint_emitter
 import parts as parts_library
+from spark.sourcing import part_rules
 from spark.records import provenance
 
 from spark.core.result import Refusal
@@ -1028,7 +1029,7 @@ def host_requirement_lines(part_list):
     for part_name, text in requirements:
         lines.append("          - %s" % inert("%s: %s" % (part_name, text)))
     for part in part_list:  # P81: a pull this board adds that the part's own defeats, with the arithmetic
-        for conflict in parts_library.pull_conflicts(part):
+        for conflict in part_rules.pull_conflicts(part):
             lines.append("          - CONFLICT %s" % inert("%s: %s" % (part["name"], conflict)))
     lines.append("     */}")
     return lines

@@ -42,6 +42,7 @@ from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
+from spark.sourcing import part_rules  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -132,7 +133,7 @@ class TheContractTest(unittest.TestCase):
     def test_the_assigner_reads_the_same_vocabulary_this_file_validates(self):
         # The disagreement is gone structurally, not by keeping two lists in step.
         from spark.design import pin_assigner
-        self.assertIs(pin_assigner.CAPABILITIES, parts.CAPABILITIES)
+        self.assertIs(pin_assigner.CAPABILITIES, part_rules.CAPABILITIES)
 
     def test_a_placeholder_footprint_must_say_what_the_real_one_is(self):
         """
@@ -663,10 +664,10 @@ class TheFootprintAndThePinoutDescribeOnePartTest(unittest.TestCase):
 
 class CountingPadsFromAFootprintNameTest(unittest.TestCase):
     def test_a_pin_row_says_how_many(self):
-        self.assertEqual(parts.footprint_pad_count("pinrow7"), 7)
+        self.assertEqual(part_rules.footprint_pad_count("pinrow7"), 7)
 
     def test_a_module_header_says_how_many(self):
-        self.assertEqual(parts.footprint_pad_count("headermodule6"), 6)
+        self.assertEqual(part_rules.footprint_pad_count("headermodule6"), 6)
 
     def test_a_package_named_after_its_body_is_not_a_pad_count(self):
         # The trap that makes this a whitelist. `sot23` is three pads, `0603` is a size in
@@ -674,11 +675,11 @@ class CountingPadsFromAFootprintNameTest(unittest.TestCase):
         # first integer", reads them as 23, 603 and 123.
         for footprint in ("sot23", "0603", "0805", "sod123", "sot23_3"):
             with self.subTest(footprint=footprint):
-                self.assertIsNone(parts.footprint_pad_count(footprint))
+                self.assertIsNone(part_rules.footprint_pad_count(footprint))
 
     def test_a_footprint_from_a_supplier_or_a_file_says_nothing(self):
-        self.assertIsNone(parts.footprint_pad_count("jlcpcb:C12345"))
-        self.assertIsNone(parts.footprint_pad_count(None))
+        self.assertIsNone(part_rules.footprint_pad_count("jlcpcb:C12345"))
+        self.assertIsNone(part_rules.footprint_pad_count(None))
 
 
 class TheShippedLibraryTest(unittest.TestCase):
@@ -761,9 +762,9 @@ class ABusIsCheckedWhereTheRecordIsWrittenTest(unittest.TestCase):
         self.assertTrue(problems and "not one of its lines" in problems[0] and "SCK" in problems[0], problems)
 
     def test_a_bus_prefixed_signal_names_its_line(self):
-        self.assertEqual(parts.bus_line_of("i2s", "I2S_BCLK"), "BCLK")
-        self.assertEqual(parts.bus_line_of("spi", "CS"), "SS")
-        self.assertIsNone(parts.bus_line_of("spi", "XYZ"))
+        self.assertEqual(part_rules.bus_line_of("i2s", "I2S_BCLK"), "BCLK")
+        self.assertEqual(part_rules.bus_line_of("spi", "CS"), "SS")
+        self.assertIsNone(part_rules.bus_line_of("spi", "XYZ"))
         self.assertEqual(self._problems(signal="I2S_LRC", bus="i2s"), [])
 
     def test_every_shipped_record_is_still_within_the_vocabulary(self):
@@ -1388,7 +1389,7 @@ class ASimulationIsDeclaredTest(unittest.TestCase):
         import tempfile
         root = root or Path(tempfile.mkdtemp())
         path = root / "x-part.json"
-        return parts.simulation_problems(self._record(simulation=simulation), path), root
+        return part_rules.simulation_problems(self._record(simulation=simulation), path), root
 
     def test_a_skip_needs_its_reason_and_nothing_else(self):
         self.assertEqual(self._problems({"skip": "wiring, not a part"})[0], [])
@@ -1477,7 +1478,7 @@ class WhatAPartDemandsOfItsHostTest(unittest.TestCase):
                 "needs": [{"signal": "OUT", "pin": "OUT", "needs": []}],
                 "power": [{"pin": "VCC", "rail": "logic", "direction": "in"}]}
         part["host_parts"] = host_parts
-        return parts.host_part_problems(part)
+        return part_rules.host_part_problems(part)
 
     def test_a_well_said_pulldown_passes_and_each_omission_is_named(self):
         self.assertEqual(self._problems([{"kind": "pulldown", "pin": "OUT", "ohms": 10000, "why": "floats at reset"}]), [])
@@ -1564,7 +1565,7 @@ class APullTheBoardAddsAgainstTheModulesOwnIsShownWithItsArithmeticTest(unittest
                     host_parts=[{"kind": "pulldown", "pin": "AIA", "ohms": pulldown_ohms, "why": "held low"}])
 
     def test_the_divider_and_where_it_crosses_the_threshold_are_said(self):
-        said = " ".join(parts.pull_conflicts(self.record()))
+        said = " ".join(part_rules.pull_conflicts(self.record()))
         self.assertIn("AIA", said)
         self.assertIn("0.5 of the supply", said)
         self.assertIn("5 V", said, "2.5 V x (10k + 10k) / 10k: the supply above which the pin idles HIGH")
@@ -1572,7 +1573,7 @@ class APullTheBoardAddsAgainstTheModulesOwnIsShownWithItsArithmeticTest(unittest
 
     def test_a_pulldown_strong_enough_for_the_whole_supply_range_is_quiet(self):
         # 1 k against 10 k: at 12 V the pin idles at 1.09 V, under the 2.5 V threshold everywhere.
-        self.assertEqual(parts.pull_conflicts(self.record(pulldown_ohms=1000)), [])
+        self.assertEqual(part_rules.pull_conflicts(self.record(pulldown_ohms=1000)), [])
 
     def test_show_prints_it_where_a_person_reads_the_part(self):
         self.assertIn("5 V", parts.describe(self.record()))

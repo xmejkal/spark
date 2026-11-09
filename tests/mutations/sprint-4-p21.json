@@ -6,7 +6,7 @@
   "replace": "SHARED_LINES = frozenset()"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_rules.py",
   "name": "the vendor's name for the clock is forgotten",
   "find": "\"SCK\": (\"SCK\", \"CLK\", \"SCLK\")",
   "replace": "\"SCK\": (\"SCK\",)"

@@ -48,7 +48,7 @@
   "replace": "if False else"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_rules.py",
   "name": "an i2c need with no pin is joined",
   "find": "if need.get(\"bus\") == \"i2c\" and need.get(\"pin\")]",
   "replace": "if need.get(\"bus\") == \"i2c\"]"

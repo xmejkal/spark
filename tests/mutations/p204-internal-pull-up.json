@@ -48,7 +48,7 @@
   "replace": "% (name, pin) for pin in []]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_rules.py",
   "name": "internal_will_do is taken on any value",
   "find": "        if \"internal_will_do\" in host_part and (host_part[\"internal_will_do\"] is not True or kind != \"pullup\"):",
   "replace": "        if False:"
