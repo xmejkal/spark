@@ -1,5 +1,5 @@
 """
-The suite's two runs (P425): the quick run on the push hook, the full run before a PR is ready.
+The suite's runs (P425, P714): the story run on the push hook, the quick run when it cannot choose, the full run at a sweep.
 
 A test that costs more than about 2 s, with a reason anyone can check, wears `@slow(reason)`. The reason names
 what the test runs and its measured seconds with the date. `SPARK_SUITE=quick` skips every marked test, and

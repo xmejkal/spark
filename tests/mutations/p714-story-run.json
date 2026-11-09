@@ -1,0 +1,122 @@
+[
+ {
+  "file": "tools/story_tests.py",
+  "name": "the core is treated as any module",
+  "find": "if name.startswith(CORE_FOLDER) or PurePosixPath(name).name == PACKAGE_FILE:",
+  "replace": "if PurePosixPath(name).name == PACKAGE_FILE:"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a package file is treated as any module",
+  "find": "if name.startswith(CORE_FOLDER) or PurePosixPath(name).name == PACKAGE_FILE:",
+  "replace": "if name.startswith(CORE_FOLDER):"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a file nothing names adds no test and the push goes on",
+  "find": "    if not named:\n        return None\n",
+  "replace": "    if not named:\n        return set()\n"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "unread changes count as no change at all",
+  "find": "    if changed is None:\n        return _quick_run(WHY_CHANGES_UNREAD)\n",
+  "replace": "    if changed is None:\n        changed = [\"README.md\"]\n"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "an empty diff runs only the always list",
+  "find": "    if not changed:\n        return _quick_run(WHY_NO_CHANGE)\n",
+  "replace": ""
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a named test that does not exist stays in the command",
+  "find": "tuple(sorted(chosen & set(test_texts)))",
+  "replace": "tuple(sorted(chosen))"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "nothing to run becomes an empty command",
+  "find": "    if not modules:\n        return _quick_run(WHY_NOTHING_LEFT)\n",
+  "replace": ""
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a changed test does not run itself",
+  "find": "        named.add(test_file.group(1))\n",
+  "replace": "        pass\n"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a module of an area does not run the area s net",
+  "find": "        named.add(GOLDEN_NET % GOLDEN_NET_ELSEWHERE.get(area.group(1), area.group(1)))\n",
+  "replace": "        pass\n"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a build module runs a net that does not exist",
+  "find": "GOLDEN_NET_ELSEWHERE.get(area.group(1), area.group(1))",
+  "replace": "area.group(1)"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a hit in a golden helper selects nothing",
+  "find": "    return tests | {\"test_%s\" % name for name, text in golden_texts.items() if pattern.search(text)}\n",
+  "replace": "    return tests\n"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "the stem matches inside a longer word",
+  "find": "return re.compile(r\"\\b%s\\b\" % re.escape(PurePosixPath(name).stem))",
+  "replace": "return re.compile(re.escape(PurePosixPath(name).stem))"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a command page is searched by its stem",
+  "find": "    if page:\n",
+  "replace": "    if False:\n"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "a document outside the document folders needs no test",
+  "find": "(\"/\" not in name and name.endswith(ROOT_DOCUMENT_SUFFIX))",
+  "replace": "name.endswith(ROOT_DOCUMENT_SUFFIX)"
+ },
+ {
+  "file": "tools/story_tests.py",
+  "name": "the always list is not run",
+  "find": "chosen = set(ALWAYS_RUN_TESTS)",
+  "replace": "chosen = set()"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the story run runs the whole suite",
+  "find": "what = [\"tests.%s\" % module for module in story.modules] if chosen else [\"discover\", \"-s\", \"tests\"]",
+  "replace": "what = [\"discover\", \"-s\", \"tests\"]"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a quick-run answer runs an empty story",
+  "find": "chosen = story is not None and story.state == story_tests.CHOSEN",
+  "replace": "chosen = story is not None"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "a deleted or renamed file is not listed",
+  "find": "\"diff\", \"--no-renames\", \"--name-only\", since, commit]",
+  "replace": "\"diff\", \"--diff-filter=AM\", \"--name-only\", since, commit]"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the gate hides why it fell to the quick run",
+  "find": "        print(\"  no story run: \" + story.why)\n",
+  "replace": "        pass\n"
+ },
+ {
+  "file": "tools/check_commit.py",
+  "name": "the story line drops its scope",
+  "find": "\"story run: \" + counted",
+  "replace": "\"quick run: \" + counted"
+ }
+]

@@ -224,8 +224,9 @@ push (P172): one run had left 2,291 entries, 26 MB, and the hook ran it at every
 `ln -sf ../../tools/pre-push .git/hooks/pre-push`. It exists because "runs at every commit" was,
 for two sprints, enforced by nothing.
 
-Since P425 the hook runs the **quick run**, which skips the tests marked `@slow` (`tests/suite_runs.py`) and prints
-`quick run: Ran N of M tests in S s (K slow tests skipped; the full run is check_commit.py --full)`. That line is not the
+Since P714 the hook runs the **story run**: the tests that `tools/story_tests.py` chooses from what the branch changed. It prints
+`story run: Ran N tests in S s (K slow tests skipped; F of T test files for C changed files; the full run is check_commit.py --full)`. If a file gives a doubt, the hook runs the **quick run** (P425), which runs every test but the ones marked `@slow` (`tests/suite_runs.py`) and prints
+`quick run: Ran N of M tests in S s (K slow tests skipped; the full run is check_commit.py --full)`, and a line that starts `no story run:` says why. Neither line is the
 suite's count. The **full run**, `tools/check_commit.py [commit] --full`, runs every test and prints
 `as committed, full run: Ran M tests in S s / OK`; it runs at a sweep: the end of a wave or an epic, or when the PO asks, never as a pull request's gate (P714).
 

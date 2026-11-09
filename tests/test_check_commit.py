@@ -153,6 +153,11 @@ LEAKING_TEST = ("import tempfile, unittest\nclass L(unittest.TestCase):\n"
                 "    def test_leaves_a_folder(self): tempfile.mkdtemp(prefix='left-behind-')\n")
 
 
+def a_good_board():
+    """The gate's board check, stubbed to say the board is fine."""
+    return mock.patch.dict(sys.modules, {"check_backlog": mock.Mock(main=mock.Mock(return_value=0))})
+
+
 def gate(left, ok=True, board=0):
     """`main` with everything but the temp verdict stubbed: (exit code, what it printed)."""
     said = io.StringIO()
@@ -245,7 +250,7 @@ class TheGateRemovesItsOwnArchiveTest(unittest.TestCase):
         def archived(root, commit, into):
             (into / "tools" / "circuit-to-wokwi").mkdir(parents=True)
 
-        def measured(tree, full=False):
+        def measured(tree, full=False, story=None):
             check_commit.lend_node_modules(tree)
             self.assertTrue((tree / "tools" / "circuit-to-wokwi" / "node_modules").is_symlink())
             return "OK", True, []
@@ -254,10 +259,62 @@ class TheGateRemovesItsOwnArchiveTest(unittest.TestCase):
                 mock.patch.object(check_commit, "archive", side_effect=archived), \
                 mock.patch.object(check_commit, "measure", side_effect=measured), \
                 mock.patch.object(check_commit, "size_line", return_value="size"), \
-                mock.patch.dict(sys.modules, {"check_backlog": mock.Mock(main=mock.Mock(return_value=0))}), \
+                a_good_board(), \
                 contextlib.redirect_stdout(io.StringIO()):
             check_commit.main(["HEAD"])
         self.assertEqual((installed / "kept").read_text(), "the checkout's own\n")
+
+
+class TheStoryRunTest(unittest.TestCase):
+    """P714: the gate runs the tests of what the branch changed, and says so; a doubt is the quick run, and says why."""
+
+    MAIN = {"a.py": "def one(): return 1\n", "b.py": "def two(): return 2\n",
+            "tests/test_a.py": "import unittest\nimport a\nclass T(unittest.TestCase):\n    def test_one(self): self.assertEqual(a.one(), 1)\n",
+            "tests/test_b.py": "import unittest\nimport b\nclass T(unittest.TestCase):\n    def test_two(self): self.assertEqual(b.two(), 22)\n"}
+
+    def branch_changes(self, files, *, origin=True):
+        root = repo_with(self.MAIN)
+        if origin:
+            subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=str(root), check=True, env=own_env())
+        for name, text in files.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(text)
+        for command in (["git", "add", "-A"], ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "two"]):
+            subprocess.run(command, cwd=str(root), check=True, capture_output=True, env=own_env())
+        said = io.StringIO()
+        with a_good_board(), contextlib.redirect_stdout(said):
+            code = check_commit.gate(root, "HEAD", Path(tempfile.mkdtemp()))
+        return code, said.getvalue()
+
+    def test_a_failing_test_of_a_file_the_branch_left_alone_does_not_run(self):
+        code, said = self.branch_changes({"a.py": "def one(): return 1  # a comment\n"})
+        self.assertEqual(code, check_commit.EXIT_OK, said)
+        self.assertRegex(said, r"story run: Ran 1 tests in [\d.]+ s \(0 slow tests skipped; 1 of 2 test files for 1 changed files; "
+                               r"the full run is check_commit.py --full\) / OK\n")
+        self.assertRegex(said, r"story run: the seconds above")
+
+    def test_a_failing_test_of_the_changed_file_fails_the_gate_and_the_line_says_so(self):
+        code, said = self.branch_changes({"a.py": "def one(): return 11\n"})
+        self.assertEqual(code, check_commit.EXIT_PROBLEMS, said)
+        self.assertRegex(said, r"story run: Ran 1 tests .* / FAILED \(failures=1\)\n")
+
+    def test_no_origin_main_is_the_quick_run_and_says_why(self):
+        code, said = self.branch_changes({"a.py": "def one(): return 1  # a comment\n"}, origin=False)
+        self.assertEqual(code, check_commit.EXIT_PROBLEMS, said)  # the quick run reaches tests/test_b.py and its failure
+        self.assertIn("quick run: Ran 2 of 2 tests", said)
+        self.assertIn("  no story run: the changes since origin/main could not be read\n", said)
+
+    def test_a_file_no_test_names_is_the_quick_run_and_the_line_names_it(self):
+        code, said = self.branch_changes({"tools/new_thing.py": "x = 1\n"})
+        self.assertEqual(code, check_commit.EXIT_PROBLEMS, said)
+        self.assertIn("  no story run: no test names tools/new_thing.py\n", said)
+
+    def test_a_deleted_file_counts_as_changed(self):
+        root = repo_with(self.MAIN)
+        subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=str(root), check=True, env=own_env())
+        for command in (["git", "rm", "-q", "b.py"], ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "two"]):
+            subprocess.run(command, cwd=str(root), check=True, capture_output=True, env=own_env())
+        self.assertEqual(check_commit.changed_files(root, "HEAD"), ["b.py"])
 
 
 if __name__ == "__main__":
