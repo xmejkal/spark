@@ -183,8 +183,8 @@ def gate_said(argv, left=()):
     """`main` with everything but the measure stubbed: (what measure was asked, what the gate printed)."""
     said, asked = io.StringIO(), []
 
-    def measured(tree, full=False):
-        asked.append(full)
+    def measured(tree, full=False, story=None):
+        asked.append(full and story is None)  # a full run is given no story (P714)
         return "quick run: Ran 1 of 2 tests in 1.0 s (1 slow test skipped) / OK", True, list(left)
 
     archived = []
@@ -198,7 +198,7 @@ def gate_said(argv, left=()):
 
 
 class TheFullRunIsAskedForTest(unittest.TestCase):
-    def test_no_flag_is_the_quick_run_of_head(self):
+    def test_no_flag_is_not_the_full_run_and_measures_head(self):
         code, asked, archived, said = gate_said([])
         self.assertEqual((code, asked, archived), (check_commit.EXIT_OK, [False], ["HEAD"]))
 

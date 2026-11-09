@@ -2,7 +2,7 @@
 """
 The suite, on the tree as COMMITTED — not the working tree.
 
-    tools/check_commit.py                    # HEAD, the quick run: what the push hook runs
+    tools/check_commit.py                    # HEAD, the story run: what the push hook runs
     tools/check_commit.py fd25f15            # any commit
     tools/check_commit.py [commit] --full    # the full run: every test, slow ones too
 
@@ -11,8 +11,10 @@ run was on the working tree, and the file it imported was staged one commit late
 audit, C3). A number a message carries must be measured on what the message describes, so this
 archives the commit into a scratch directory and measures there. The push hook runs it.
 
-The quick run (P425) skips the tests marked `@slow` in tests/suite_runs.py and says how many it skipped; it is not the
-suite count. The full run, `--full`, runs every test, at a sweep: the end of a wave or an epic, or when the PO asks (P714).
+The story run (P714) runs the tests that tools/story_tests.py chooses from what the branch changed since origin/main, with
+the `@slow` tests skipped. A doubt about a file makes it the quick run (P425): every test but the slow ones, with a line
+that says why. Neither is the suite count. The full run, `--full`, runs every test, at a sweep: the end of a wave or an
+epic, or when the PO asks.
 
 The suite runs with a temp folder of its own, and whatever it leaves there fails the push (P172): one run
 left 2,291 entries, 26 MB, and nothing counted them. The archive itself goes when the gate ends.
@@ -35,9 +37,13 @@ sys.path.append(str(ROOT / "tests"))  # after the rest: only suite_runs is wante
 
 from spark.core.outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
 from suite_runs import SLOW_PREFIX  # noqa: E402
+import story_tests  # noqa: E402  (beside this file)
 
 #: How many of the names left behind the gate's line shows; the count says the rest.
 NAMES_SHOWN = 3
+
+#: The word for the run of every test; story_tests holds the other two.
+RUN_FULL = "full"
 
 
 def archive(root, commit, into):
@@ -94,6 +100,29 @@ def scripts_size(root, rev):
                for name in listed.stdout.split() if name.endswith(".py") and "stand_in" not in name.split("/"))
 
 
+def merge_base(root, commit, base):
+    """The commit where `commit` left `base`; None when git cannot tell."""
+    found = subprocess.run(["git", "-C", str(root), "merge-base", commit, base], capture_output=True, text=True)
+    return found.stdout.strip() if found.returncode == 0 else None
+
+
+def changed_files(root, commit, base="origin/main"):
+    """The names of the files that `commit` changed since it left `base`, a deleted one too; None when git cannot tell."""
+    since = merge_base(root, commit, base)
+    if since is None:
+        return None
+    listed = subprocess.run(["git", "-C", str(root), "diff", "--no-renames", "--name-only", since, commit],
+                            capture_output=True, text=True)
+    return listed.stdout.splitlines() if listed.returncode == 0 else None
+
+
+def story_tests_in(tree, changed):
+    """The StoryTests for the files `changed`, from the test files of the archived `tree`."""
+    def texts(pattern):
+        return {found.stem: found.read_text(errors="replace") for found in (tree / "tests").glob(pattern)}
+    return story_tests.select(changed, texts("test_*.py"), texts("golden_*.py"))
+
+
 def size_line(root, commit, base="origin/main"):
     """
     "scripts/: 5,228 code lines (+40 since origin/main)" — the product's size and what this push adds to it
@@ -104,8 +133,8 @@ def size_line(root, commit, base="origin/main"):
     now = scripts_size(root, commit)
     if now is None:
         return "scripts/: size not measured (no commit %s)" % commit
-    merge_base = subprocess.run(["git", "-C", str(root), "merge-base", commit, base], capture_output=True, text=True)
-    then = scripts_size(root, merge_base.stdout.strip()) if merge_base.returncode == 0 else None
+    since = merge_base(root, commit, base)
+    then = None if since is None else scripts_size(root, since)
     growth = "" if then is None else " (%+d since %s)" % (now - then, base)
     return "scripts/: {:,} code lines{}".format(now, growth)
 
@@ -134,30 +163,39 @@ def temp_line(left):
     return "temp: the suite left {:,} {} behind ({}) — P172".format(len(left), "entry" if len(left) == 1 else "entries", shown)
 
 
-def suite_line(said, quick, slow_skipped):
+def suite_line(said, run, slow_skipped, scope=None):
     """
     The suite's verdict line from the lines the runner said: "quick run: Ran N of M tests in S s (K slow tests skipped;
-    the full run is check_commit.py --full) / OK", or "full run: Ran M tests in S s / OK". The quick line is built so
-    that it cannot be quoted as the suite's count: it names what it left out.
+    the full run is check_commit.py --full) / OK", "full run: Ran M tests in S s / OK", or, with the `scope` that says how much
+    was chosen, "story run: Ran N tests in S s (K slow tests skipped; <scope>; the full run is check_commit.py --full) / OK".
+    The quick and story lines are built so that they cannot be quoted as the suite's count: they name what they left out.
     """
     ran = next((re.match(r"Ran (\d+) tests? in ([\d.]+)s", line) for line in said if line.startswith("Ran ")), None)
     verdict = [line for line in said if not line.startswith("Ran ")]
     if ran is None:
-        return " / ".join(["quick run" if quick else "full run"] + said)
+        return " / ".join([run + " run"] + said)
     total, seconds = int(ran.group(1)), float(ran.group(2))
-    if quick:
+    if run == story_tests.RUN_STORY:
+        counted = "Ran {:,} tests in {:.1f} s ({:,} slow {} skipped; {}; the full run is check_commit.py --full)".format(
+            total - slow_skipped, seconds, slow_skipped, "test" if slow_skipped == 1 else "tests", scope)
+        return " / ".join([run + " run: " + counted] + verdict)
+    if run == story_tests.RUN_QUICK:
         counted = "Ran {:,} of {:,} tests in {:.1f} s ({:,} slow {} skipped; the full run is check_commit.py --full)".format(
             total - slow_skipped, total, seconds, slow_skipped, "test" if slow_skipped == 1 else "tests")
         return " / ".join(["quick run: " + counted] + verdict)
     return " / ".join(["full run: Ran {:,} tests in {:.1f} s".format(total, seconds)] + verdict)
 
 
-def measure(tree, full=False):
+def measure(tree, full=False, story=None):
     """
     (suite verdict line, ok, left) for the tree at `tree`. `left` is what the suite left in
     the empty temp folder it was given (P172), None when that could not be listed; the folder goes once counted.
     The quick run (P425) sets SPARK_SUITE=quick, so the tests marked slow skip; `full` runs every test.
+    A `story` in the state CHOSEN runs only its modules (P714), as a quick run does; any other runs the whole suite.
     """
+    run = RUN_FULL if full else story.run_word() if story else story_tests.RUN_QUICK
+    what = ["tests.%s" % module for module in story.modules] if run == story_tests.RUN_STORY else ["discover", "-s", "tests"]
+    scope = None if story is None else story.scope()
     lend_node_modules(tree)
     temp = tempfile.mkdtemp(prefix="spark-commit-temp-")
     try:
@@ -165,22 +203,23 @@ def measure(tree, full=False):
         env.update(TMPDIR=temp)
         if not full:
             env["SPARK_SUITE"] = "quick"
-        suite = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests"] + ([] if full else ["-v"]),
+        suite = subprocess.run([sys.executable, "-m", "unittest"] + what + ([] if full else ["-v"]),
                                cwd=str(tree), capture_output=True, text=True, env=env)
         left = leftovers(temp)
     finally:
         shutil.rmtree(temp, ignore_errors=True)  # a plain rmtree: it never chmods and never follows a link
     suite_said = [line for line in (suite.stderr + suite.stdout).splitlines() if line.startswith(("Ran ", "OK", "FAILED"))]
+    last_line_said = (suite.stderr + suite.stdout).splitlines()[-1:]  # a test module that cannot compile stops the runner before any verdict
     # The verdict's own `skipped=N` caps the count: a failure's traceback can embed a child's -v lines.
     skipped_in_all = sum(int(count) for line in suite_said for count in re.findall(r"skipped=(\d+)", line))
     slow_skipped = min(skipped_in_all, sum(1 for line in suite.stderr.splitlines() if " ... skipped '%s" % SLOW_PREFIX in line))
     # The mutation tables' anchors are no longer checked here (P208): the tables are history, and a moved line no
     # longer blocks a push.
-    return suite_line(suite_said, not full, slow_skipped), suite.returncode == 0, left
+    return suite_line(suite_said or last_line_said, run, slow_skipped, scope), suite.returncode == 0, left
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="The suite on the tree as committed: the quick run by default.")
+    parser = argparse.ArgumentParser(description="The suite on the tree as committed: the story run by default.")
     parser.add_argument("commit", nargs="?", default="HEAD", help="the commit to measure (default HEAD)")
     parser.add_argument("--full", action="store_true",
                         help="the full run: every test, the slow ones too; a sweep at the end of a wave or an epic, or when the PO asks")
@@ -200,10 +239,13 @@ def gate(root, commit, scratch, full=False):
     except (ValueError, subprocess.CalledProcessError) as broken:
         print("could not archive %s: %s" % (commit, broken), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    suite, ok, left = measure(scratch, full=full)
+    story = None if full else story_tests_in(scratch, changed_files(root, commit))
+    suite, ok, left = measure(scratch, full=full, story=story)
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
     print("%s as committed, %s" % (short, suite))
+    if story is not None and story.state == story_tests.QUICK_RUN:
+        print("  no story run: " + story.why)
     if left != []:
         print("  " + temp_line(left))
     print("  " + size_line(root, commit))
@@ -211,8 +253,8 @@ def gate(root, commit, scratch, full=False):
     import check_backlog
     backlog = check_backlog.main()
     if not full:
-        print("  quick run: the seconds above are the tests alone; the board check and the size line come on top, "
-              "{:.0f} s for the whole gate".format(time.monotonic() - began))
+        print("  {} run: the seconds above are the tests alone; the board check and the size line come on top, "
+              "{:.0f} s for the whole gate".format(story.run_word(), time.monotonic() - began))
     return EXIT_FOR[status_of(problems=not ok or backlog != 0 or bool(left), unchecked=left is None)]
 
 
