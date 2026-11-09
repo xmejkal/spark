@@ -2,7 +2,7 @@
   {"file": "scripts/matching.py", "name": "words: digits stop being word characters", "find": "r\"[^a-z0-9]+\", str(text or \"\").lower()", "replace": "r\"[^a-z]+\", str(text or \"\").lower()"},
   {"file": "scripts/matching.py", "name": "fold: a three-letter word loses its s", "find": "len(word) > 3 and word.endswith(\"s\")", "replace": "len(word) > 2 and word.endswith(\"s\")"},
   {"file": "scripts/matching.py", "name": "need_words: a repeated word counts twice", "find": "return list(dict.fromkeys(fold(word) for word in words(what) if word not in FILLER))", "replace": "return [fold(word) for word in words(what) if word not in FILLER]"},
-  {"file": "scripts/matching.py", "name": "from_record: the entries' functions do not join the record", "find": " + [f for entry in said[1:] for f in _list(entry.get(\"function\"))]", "replace": ""},
+  {"file": "scripts/matching.py", "name": "from_record: the entries' functions do not join the record", "find": "                     + [f for entry in said[1:] for f in _list(entry.get(\"function\"))])", "replace": "                     + [])"},
   {"file": "scripts/matching.py", "name": "from_record: an entry's about wins over the record's", "find": "_first(said, \"about\")", "replace": "_first(said[::-1], \"about\")"},
   {"file": "scripts/matching.py", "name": "from_record: the record's own tags are dropped", "find": "[tag for one in said for tag in _list(one.get(\"tags\"))]", "replace": "[tag for one in said[1:] for tag in _list(one.get(\"tags\"))]"},
   {"file": "scripts/matching.py", "name": "from_entry: the label is no name", "find": "[entry.get(\"label\")], entry.get(\"about\"),", "replace": "[], entry.get(\"about\"),"},

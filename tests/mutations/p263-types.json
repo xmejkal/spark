@@ -1,12 +1,12 @@
 [
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "a wrong type runs the other checks",
   "find": "    if wrong_types:  # the checks below",
   "replace": "    if False:  # the checks below"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "an owed key is type-checked",
   "find": "if key not in owed})",
   "replace": "})"
@@ -30,13 +30,13 @@
   "replace": "if cited not in"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "a None pin is joined",
   "find": "\", \".join(map(str, pins))",
   "replace": "\", \".join(pins)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "a list rail is a key",
   "find": "elif direction == \"out\" and isinstance(supply.get(\"rail\"), (str, type(None))):",
   "replace": "elif direction == \"out\":"

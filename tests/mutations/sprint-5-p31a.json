@@ -30,7 +30,7 @@
   "replace": "        for suffix in ():"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "validate no longer looks at simulation",
   "find": "    problems.extend(simulation_problems(part, path))",
   "replace": "    pass"

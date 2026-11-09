@@ -36,7 +36,7 @@
   "replace": ""
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "re-add the use-site copy of the missing-pin rule (A3)",
   "find": "        direction = supply.get(\"direction\")",
   "replace": "        if not supply.get(\"pin\"):\n            problems.append(\"%s has no pin\" % where)\n        direction = supply.get(\"direction\")"

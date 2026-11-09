@@ -19,7 +19,7 @@ from typing import NamedTuple, Optional
 from spark.records import board_records
 from spark.design import board_emitter
 from spark.core import outcomes
-import parts as parts_library
+from spark.sourcing import part_records
 from spark.sourcing import part_rules
 from spark.firmware.scenario_steps import WHY_LOG_UNREADABLE
 from spark.records import tool_finder
@@ -75,7 +75,7 @@ def mapping_for(design):
             entry["attrs"] = wokwi["attrs"]
         if wokwi.get("chip"):
             entry["wokwiType"] = "chip-" + wokwi["chip"]
-            record = parts_library.definition_path(part["id"], design.project)
+            record = part_records.definition_path(part["id"], design.project)
             chips.append((part_rules.chip_folder(part, record), wokwi["chip"]))
         else:
             entry["wokwiType"] = wokwi.get("part")

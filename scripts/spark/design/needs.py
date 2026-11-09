@@ -18,7 +18,7 @@ import drawer
 from spark.design import board_emitter
 from spark.design import footprint_emitter
 import matching
-import parts
+from spark.sourcing.part_records import broken_problems
 from spark.records import record_kind
 from spark.records.record_kind import _parse, _problem, _shape_problems, owes, VERBS
 from spark.records import records_codes
@@ -226,7 +226,7 @@ def _candidate(need, fit, context, mine=None):
         said = {"id": offer.key, "kind": offer.kind, "in": context["in"], "label": record.get("name"),
                 "owes": [] if offer.kind == "board" else owes(record),
                 "broken": bool(_shape_problems(board_records.validate, record, context["path"],
-                "board definition")) if offer.kind == "board" else bool(parts.broken_problems(record, context["path"]))}
+                "board definition")) if offer.kind == "board" else bool(broken_problems(record, context["path"]))}
         if offer.kind == "board":  # C-7: a board owes nothing, and its file may still stop the chain at the footprint stage (P121)
             said["stops_at"] = "footprint" if footprint_emitter.footprint_gaps(record) else None
             if said["stops_at"]:  # P411: a board that builds gains no key
@@ -728,7 +728,7 @@ def _power_gaps(listed, known):
         part_id = _part_of(entry)
         path = known.get(("part", part_id), (None,) * 4)[3] if part_id else None
         record = _parse(path) if path else None
-        if not isinstance(record, dict) or parts.broken_problems(record, path):
+        if not isinstance(record, dict) or broken_problems(record, path):
             continue
         rails = entry.get("rails") if isinstance(entry, dict) and isinstance(entry.get("rails"), dict) else None
         try:
@@ -766,7 +766,7 @@ def _part_picks(picks, known):
         wrong = (["no record called %s any more" % key] if path is None else
                  ["its record at %s does not parse as a JSON object — repair the file by hand" % path] if not isinstance(record, dict) else
                  ["owes %s — %s" % (", ".join(owed), _how_to_fill(path))] if set(owed) - set(LAYOUT_FACTS)
-                 else parts.broken_problems(record, path))
+                 else broken_problems(record, path))
         problems += [_problem(key, sentence) for sentence in wrong]
         shelve += [(path, None if where == "catalog" else where)] if not wrong and where not in ("project", "shelf", "library") else []
         placeholder += [(key, _how_to_fill(path))] if owed and not wrong else []

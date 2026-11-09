@@ -12,7 +12,7 @@
   "replace": "    if False:\n        printed = printed[len(bus) + 1:]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "the contract lets an unknown bus through",
   "find": "        if bus and bus not in BUSES:",
   "replace": "        if False:"

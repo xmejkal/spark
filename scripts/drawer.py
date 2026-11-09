@@ -17,6 +17,7 @@ from collections import namedtuple
 from spark.records import board_records
 import parts
 from spark.records import record_kind
+from spark.sourcing import part_records
 from spark.records import records_codes
 from spark.records import store
 from spark.core.text_guards import LABEL_MAX, SURROGATE, TAGS_MAX, TEXT_MAX, clean, list_key_problems, printable
@@ -163,7 +164,7 @@ def numbers(record, record_id):
     word like "button" is never a number.
     """
     sku = record.get("sku")
-    aliases = parts.aliases(record)
+    aliases = part_records.aliases(record)
     stated = {s.lower() for s in (sku if isinstance(sku, list) else [sku]) + aliases if isinstance(s, str)}
     words = (token for word in [record_id] + aliases for token in re.split(r"[^a-z0-9]+", word.lower()))
     return stated, {w for w in words if re.search(r"[a-z]", w) and re.search(r"\d", w)}

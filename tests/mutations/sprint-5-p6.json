@@ -30,7 +30,7 @@
   "replace": "        if False:"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "validate no longer looks at host_parts",
   "find": "    problems.extend(host_part_problems(part))",
   "replace": "    pass"

@@ -36,7 +36,7 @@
   "replace": "    if False:\n        raise PartError(\"%s exists; a promotion never overwrites\", target,"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "a catalog draft is invisible to --sources, --show and --unverified",
   "find": "    if home == store.place(\"catalog\"):\n        return _parse(home / (part_id + DEFINITION_SUFFIX)) or {}",
   "replace": "    if False:\n        return {}"

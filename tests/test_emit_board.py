@@ -37,13 +37,14 @@ from spark.design import board_emitter  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
+from spark.sourcing import part_records  # noqa: E402
 
 PARTS = ["l9110s-module", "vl6180x-breakout", "dfr0534-module"]
 
 
 def generated():
     board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-    part_list = [parts.load(part_id) for part_id in PARTS]
+    part_list = [part_records.load(part_id) for part_id in PARTS]
     signals = parts.signals_for(PARTS)
     assignments, _ = pin_assigner.assign(board, signals)
     placements, width, height = board_emitter.place(board, part_list)
@@ -58,13 +59,13 @@ class EveryTraceReachesAFootprintPadTest(unittest.TestCase):
     """
 
     def test_a_trace_names_the_aliased_pad(self):
-        part = parts.load("tactile-button")
+        part = part_records.load("tactile-button")
         line = board_emitter.signal_lines([part], [{"signal": "BUTTON", "pin": "MOSI", "gpio": 15, "why": "w"}],
                                        board_pads.BoardPads({"MOSI": "MO"}))
         self.assertIn('<trace from=".Mcu > .MO" ', "\n".join(line))
 
     def test_every_pin_label_of_every_shipped_board_traces_to_a_footprint_pad(self):
-        part_list = [parts.load("tactile-button")]
+        part_list = [part_records.load("tactile-button")]
         for path in sorted((ROOT / "boards").glob("*.json")):
             board = json.loads(path.read_text())
             pads = {label for label, _, _ in footprint_emitter.pads(board)}
@@ -88,7 +89,7 @@ class WhatItEmitsTest(unittest.TestCase):
     def test_every_part_becomes_a_component(self):
         for part_id in PARTS:
             with self.subTest(part=part_id):
-                self.assertIn(board_emitter.component_name(parts.load(part_id)), self.tsx)
+                self.assertIn(board_emitter.component_name(part_records.load(part_id)), self.tsx)
 
     def test_every_signal_a_part_asked_for_becomes_a_trace(self):
         """
@@ -122,7 +123,7 @@ class WhatItEmitsTest(unittest.TestCase):
 
     def test_each_module_pin_appears_on_the_trace_that_reaches_it(self):
         for part_id in PARTS:
-            part = parts.load(part_id)
+            part = part_records.load(part_id)
             for need in part["needs"]:
                 with self.subTest(part=part_id, pin=need["pin"]):
                     self.assertIn('.%s > .%s"' % (board_emitter.component_name(part), need["pin"]),
@@ -240,7 +241,7 @@ class ARecordsTextStaysInsideItsCommentTest(unittest.TestCase):
     @staticmethod
     def emitted(place):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        led = parts.load("led-red-5mm")
+        led = part_records.load("led-red-5mm")
         place(led, board)
         signals = [{"name": need["signal"], "needs": need.get("needs", []), "from": led["id"]} for need in led["needs"]]
         assignments, _ = pin_assigner.assign(board, signals)
@@ -552,7 +553,7 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
 
     def _emit(self, part_ids):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        part_list = [parts.load(part_id) for part_id in part_ids]
+        part_list = [part_records.load(part_id) for part_id in part_ids]
         assignments, _ = pin_assigner.assign(board, parts.signals_for(part_ids))
         placements, width, height = board_emitter.place(board, part_list)
         return board_emitter.emit(board, part_list, assignments, placements, width, height)
@@ -566,7 +567,7 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
         # The general property, so this cannot be fixed for the speaker and left broken for the
         # next differential output somebody adds.
         for part_id in record_kind.available():
-            part = parts.load(part_id)
+            part = part_records.load(part_id)
             nets = [board_emitter.net_for(supply) for supply in part.get("power") or []
                     if supply.get("direction") == "out"]
             with self.subTest(part=part_id):
@@ -583,7 +584,8 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
         number was right only while the processor was ungrounded.
         """
         tsx = self._emit(["dfr0534-module", "l9110s-module"])
-        modules = tuple('.%s >' % board_emitter.component_name(parts.load(p)) for p in ("dfr0534-module", "l9110s-module"))
+        modules = tuple('.%s >' % board_emitter.component_name(part_records.load(p)) for p in ("dfr0534-module",
+                                                                                               "l9110s-module"))
         module_grounds = [line for line in tsx.splitlines()
                           if 'to="net.GND"' in line and any(line.startswith('    <trace from="%s' % m) for m in modules)]
         self.assertEqual(len(module_grounds), 2, "two modules, one ground pin each; the pulldowns the L9110S demands have their own")
@@ -592,7 +594,7 @@ class TwoOutputsNeverShareANetTest(unittest.TestCase):
         broken = json.loads((ROOT / "parts" / "dfr0534-module.json").read_text())
         for supply in broken["power"]:
             supply.pop("polarity", None)
-        problems = parts.validate(broken, ROOT / "parts" / "dfr0534-module.json")
+        problems = part_records.validate(broken, ROOT / "parts" / "dfr0534-module.json")
         self.assertTrue(any("short into each other" in p for p in problems), problems)
 
 
@@ -607,7 +609,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
     """
 
     def test_pads_are_numbered_from_the_module_not_from_the_file(self):
-        part = parts.load("l9110s-module")
+        part = part_records.load("l9110s-module")
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         assignments, _ = pin_assigner.assign(board, parts.signals_for(["l9110s-module"]))
         placements, width, height = board_emitter.place(board, [part])
@@ -618,7 +620,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
 
     def test_a_pad_the_part_does_not_wire_is_left_empty_not_renumbered(self):
         # The audio module has ten pads and wires five. Closing the gaps would put SPKN on pad 4.
-        part = parts.load("dfr0534-module")
+        part = part_records.load("dfr0534-module")
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         assignments, _ = pin_assigner.assign(board, parts.signals_for(["dfr0534-module"]))
         placements, width, height = board_emitter.place(board, [part])
@@ -640,7 +642,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
         # The library's own state, kept honest separately: a part may carry no pin_order, but
         # then the file has to say what would make one possible.
         for part_id in record_kind.available():
-            part = parts.load(part_id)
+            part = part_records.load(part_id)
             with self.subTest(part=part_id):
                 self.assertTrue(part.get("pin_order") or part.get("//pin_order"),
                                 "%s has neither a pinout nor a reason it lacks one" % part_id)
@@ -648,7 +650,7 @@ class PadOneIsAFactAboutTheModuleTest(unittest.TestCase):
     def test_every_pin_the_part_uses_has_a_pad(self):
         # The contract's half of it: a pin with no pad would silently connect to nothing.
         for part_id in record_kind.available():
-            part = parts.load(part_id)
+            part = part_records.load(part_id)
             if not part.get("pin_order"):
                 continue
             used = {need["pin"] for need in part.get("needs") or []}
@@ -668,18 +670,18 @@ class EveryUnroutableNetIsPredictedTest(unittest.TestCase):
     """
 
     def test_a_rail_nothing_supplies_is_named(self):
-        self.assertIn("MOTOR6V", board_emitter.rails_without_a_source([parts.load("l9110s-module")]))
+        self.assertIn("MOTOR6V", board_emitter.rails_without_a_source([part_records.load("l9110s-module")]))
 
     def test_an_output_nothing_receives_is_named_too(self):
         # The half that was missing. Excluding outputs from the rail check was right — the part
         # IS the source — but it left two unroutable nets unmentioned.
-        driven = board_emitter.outputs_with_nothing_on_them([parts.load("dfr0534-module")])
+        driven = board_emitter.outputs_with_nothing_on_them([part_records.load("dfr0534-module")])
         self.assertEqual({net for net, _, _ in driven}, {"SPEAKER_P", "SPEAKER_N"})
 
     def test_both_kinds_reach_the_generated_file(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
         ids = ["l9110s-module", "dfr0534-module"]
-        part_list = [parts.load(part_id) for part_id in ids]
+        part_list = [part_records.load(part_id) for part_id in ids]
         assignments, _ = pin_assigner.assign(board, parts.signals_for(ids))
         placements, width, height = board_emitter.place(board, part_list)
         tsx = board_emitter.emit(board, part_list, assignments, placements, width, height)
@@ -687,7 +689,7 @@ class EveryUnroutableNetIsPredictedTest(unittest.TestCase):
         self.assertIn("NOTHING ON THIS BOARD RECEIVES IT", tsx)
 
     def test_a_rail_the_module_supplies_is_not_reported_either_way(self):
-        part_list = [parts.load("vl6180x-breakout")]
+        part_list = [part_records.load("vl6180x-breakout")]
         self.assertNotIn("V33", board_emitter.rails_without_a_source(part_list))
         self.assertEqual(board_emitter.outputs_with_nothing_on_them(part_list), [])
 
@@ -706,7 +708,7 @@ class EverySignalTheAssignerPlacedIsAccountedForTest(unittest.TestCase):
 
     def _emit_with_extra_signals(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        part_list = [parts.load("l9110s-module")]
+        part_list = [part_records.load("l9110s-module")]
         signals = parts.signals_for(["l9110s-module"]) + [
             {"name": "BTN_OPEN", "needs": ["wake"]}, {"name": "LED_RED", "needs": []}]
         assignments, _ = pin_assigner.assign(board, signals)
@@ -744,12 +746,12 @@ class EverySignalTheAssignerPlacedIsAccountedForTest(unittest.TestCase):
 class RailsWithoutASourceTest(unittest.TestCase):
     def test_a_rail_the_module_supplies_is_not_reported(self):
         # The microcontroller module provides 3V3 and ground, so consuming those is fine.
-        part_list = [parts.load("vl6180x-breakout")]
+        part_list = [part_records.load("vl6180x-breakout")]
         self.assertNotIn("V33", board_emitter.rails_without_a_source(part_list))
         self.assertNotIn("GND", board_emitter.rails_without_a_source(part_list))
 
     def test_a_rail_only_consumed_is_reported(self):
-        part_list = [parts.load("l9110s-module")]
+        part_list = [part_records.load("l9110s-module")]
         self.assertIn("MOTOR6V", board_emitter.rails_without_a_source(part_list))
 
 
@@ -767,17 +769,18 @@ class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
         self.assertEqual(board_emitter.net_for({"pin": "X", "rail": "speaker", "direction": "in"}), "SPEAKER")
 
     def test_the_terminal_receives_both_outputs_and_nothing_is_left_unrouted(self):
-        part_list = [parts.load("max98357a-dfr0954"), parts.load("speaker-terminal")]
+        part_list = [part_records.load("max98357a-dfr0954"), part_records.load("speaker-terminal")]
         self.assertEqual([board_emitter.net_for(supply) for supply in part_list[1]["power"]], ["SPEAKER_P", "SPEAKER_N"])
         self.assertEqual((board_emitter.outputs_with_nothing_on_them(part_list), board_emitter.rails_without_a_source(part_list)), ([], []))
 
     def test_the_terminal_alone_is_a_rail_nothing_drives(self):
-        self.assertEqual(board_emitter.rails_without_a_source([parts.load("speaker-terminal")]), ["SPEAKER_N", "SPEAKER_P"])
+        self.assertEqual(board_emitter.rails_without_a_source([part_records.load("speaker-terminal")]), ["SPEAKER_N",
+                                                                                                         "SPEAKER_P"])
 
     def test_the_terminal_alone_is_told_to_add_what_drives_the_pair_never_a_supply(self):
         # F15's follow-up: --requirements said "never a supply", while the board's comment and emit_board's own note still
         # said to add "whatever supplies this rail (a connector, a regulator, a battery)" — into a bridged amplifier output
-        said = "\n".join(board_emitter.power_note_lines([parts.load("speaker-terminal")]))
+        said = "\n".join(board_emitter.power_note_lines([part_records.load("speaker-terminal")]))
         self.assertIn("    {/* NOTHING ON THIS BOARD DRIVES net.SPEAKER_P, one side of a driven pair. Add what\n"
                       "        drives the pair (the amplifier this terminal hangs off), never a supply,\n"
                       "        or the net has one member and will not route. */}", said)
@@ -795,15 +798,15 @@ class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
         self.assertNotIn("add whatever supplies it", err.getvalue())
 
     def test_a_load_across_a_pair_is_named_so_the_island_check_asks_it_no_ground(self):
-        part_list = [parts.load("max98357a-dfr0954"), parts.load("speaker-terminal"), parts.load("l9110s-module"),
-                     parts.load("jst-ph-2-power-inlet")]
+        part_list = [part_records.load("max98357a-dfr0954"), part_records.load("speaker-terminal"),
+                     part_records.load("l9110s-module"), part_records.load("jst-ph-2-power-inlet")]
         self.assertEqual(board_emitter.loads_across_a_pair(part_list), ["SpeakerTerminal"])
 
 
 class PlacementTest(unittest.TestCase):
     def test_nothing_is_placed_on_top_of_anything_else(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        part_list = [parts.load(part_id) for part_id in PARTS]
+        part_list = [part_records.load(part_id) for part_id in PARTS]
         placements, _, _ = board_emitter.place(board, part_list)
 
         boxes = []
@@ -819,7 +822,7 @@ class PlacementTest(unittest.TestCase):
 
     def test_the_board_is_big_enough_for_what_is_on_it(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
-        part_list = [parts.load(part_id) for part_id in PARTS]
+        part_list = [part_records.load(part_id) for part_id in PARTS]
         _, width, height = board_emitter.place(board, part_list)
         self.assertGreater(height, board["physical"]["height_mm"])
         self.assertGreater(width, board["physical"]["width_mm"])
@@ -1173,7 +1176,7 @@ class EachSectionStandsAloneTest(unittest.TestCase):
         # had no placeholder, and swapping the stand-in and host-requirement sections left the
         # output identical — a mutation the tool reported escaped. So one part is a stand-in.
         board = self.BOARD
-        part_list = [parts.load(part_id) for part_id in PARTS]
+        part_list = [part_records.load(part_id) for part_id in PARTS]
         part_list[1] = dict(part_list[1], footprint_placeholder=True, footprint_note="stand-in")
         assignments, _ = pin_assigner.assign(board, parts.signals_for(PARTS))
         placements, width, height = board_emitter.place(board, part_list)
@@ -1208,14 +1211,14 @@ class EachSectionStandsAloneTest(unittest.TestCase):
         self.assertIn("net.GND, net.V33", board_emitter.unjustified_lines({"V33", "GND"})[0])
 
     def test_stand_ins_are_listed_only_when_there_are_any(self):
-        real = parts.load("l9110s-module")
+        real = part_records.load("l9110s-module")
         fake = dict(real, id="x", name="x", footprint_placeholder=True, footprint_note="stands in")
         self.assertEqual(board_emitter.stand_in_lines([real]), [])
         self.assertIn("X drawn as %s — stands in" % real["footprint"],
                       "\n".join(board_emitter.stand_in_lines([fake])))
 
     def test_host_requirements_are_carried_per_part(self):
-        part = dict(parts.load("l9110s-module"), host_requirements=["pull both inputs down"])
+        part = dict(part_records.load("l9110s-module"), host_requirements=["pull both inputs down"])
         self.assertIn("- %s: pull both inputs down" % part["name"],
                       "\n".join(board_emitter.host_requirement_lines([part])))
         self.assertEqual(board_emitter.host_requirement_lines([dict(part, host_requirements=[])]), [])
@@ -1243,7 +1246,7 @@ class OnePowerWalkTest(unittest.TestCase):
         self.assertEqual(board_emitter.power_pins_with_no_rail([self.PART]), ["p.NC"])
 
     def test_the_placeholder_filter_is_the_one_the_names_come_from(self):
-        real = parts.load("l9110s-module")
+        real = part_records.load("l9110s-module")
         fake = dict(real, id="x", name="x", footprint_placeholder=True, footprint_note="n")
         self.assertEqual(board_emitter.placeholders([fake, real]), [fake])
         self.assertEqual(board_emitter.placeholder_components([fake, real]), ["X"])
@@ -1253,12 +1256,12 @@ class WhatAPartMustRecordTest(unittest.TestCase):
     # Three helpers the audit found untested (A15); each refusal in `main` rests on one.
 
     def test_a_part_with_no_footprint_is_named(self):
-        part = {k: v for k, v in parts.load("l9110s-module").items() if k != "footprint"}
+        part = {k: v for k, v in part_records.load("l9110s-module").items() if k != "footprint"}
         self.assertEqual(board_emitter.parts_without_a_footprint([part]), [part["name"]])
-        self.assertEqual(board_emitter.parts_without_a_footprint([parts.load("l9110s-module")]), [])
+        self.assertEqual(board_emitter.parts_without_a_footprint([part_records.load("l9110s-module")]), [])
 
     def test_a_part_with_no_outline_is_named_and_one_with_is_not(self):
-        with_outline = parts.load("l9110s-module")
+        with_outline = part_records.load("l9110s-module")
         without = {k: v for k, v in with_outline.items() if k != "body_mm"}
         self.assertTrue(board_emitter.has_an_outline(with_outline))
         self.assertFalse(board_emitter.has_an_outline(without))
@@ -1296,12 +1299,12 @@ class TwoSuppliesOnOneRailTest(unittest.TestCase):
     def test_a_ground_return_from_a_connector_is_not_a_contended_supply(self):
         # The inlet's GND is `out` — where the pack's return meets board ground. The first
         # version of the rule called that a second supply on GND, on every design with an inlet.
-        self.assertEqual(board_emitter.outputs_in_contention([parts.load("jst-ph-2-power-inlet")]), [])
+        self.assertEqual(board_emitter.outputs_in_contention([part_records.load("jst-ph-2-power-inlet")]), [])
 
     def test_one_supply_on_its_own_rail_is_not(self):
         self.assertEqual(board_emitter.outputs_in_contention([self.regulator("Buck", "servo")]), [])
         self.assertEqual(board_emitter.outputs_in_contention(
-            [parts.load(part_id) for part_id in PARTS] + [parts.load("jst-ph-2-power-inlet")]), [])
+            [part_records.load(part_id) for part_id in PARTS] + [part_records.load("jst-ph-2-power-inlet")]), [])
 
     def test_the_file_and_the_notes_both_say_it(self):
         root = Path(tempfile.mkdtemp())
@@ -1344,7 +1347,7 @@ class ThePowerHelpersEachHaveANameTest(unittest.TestCase):
         self.assertEqual(board_emitter.power_note_lines([]), [])
 
     def test_module_power_lines_traces_every_power_pin_that_names_a_rail(self):
-        lines = board_emitter.module_power_lines([parts.load("l9110s-module")], self.RULES, set())
+        lines = board_emitter.module_power_lines([part_records.load("l9110s-module")], self.RULES, set())
         self.assertEqual(len(lines), 2)
         self.assertTrue(any('from=".L9110sModule > .VCC" to="net.MOTOR6V"' in line for line in lines))
         self.assertTrue(any('from=".L9110sModule > .GND" to="net.GND"' in line for line in lines))
@@ -1363,7 +1366,7 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
         return board_emitter.emit(board, [part], assignments, placements, width, height, {}), placements
 
     def _part(self, **extra):
-        part = parts.load("l9110s-module")
+        part = part_records.load("l9110s-module")
         part.update(extra)
         return part
 
@@ -1432,7 +1435,7 @@ class WhatThePartsDemandIsDoneTest(unittest.TestCase):
 
     def test_a_shipped_button_gets_the_pull_up_its_record_asks_for(self):
         # G7 / B13: the record said "give it an external pull" in prose only; the board had none.
-        button = parts.load("tactile-button")
+        button = part_records.load("tactile-button")
         tsx, _ = self._emit(button, parts.signals_for(["tactile-button"]))
         self.assertIn('<resistor name="TactileButtonPullupA" resistance="10k"', tsx)
         self.assertIn('<trace from=".TactileButtonPullupA > .pin2" to="net.V33" />', tsx)

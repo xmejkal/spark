@@ -19,7 +19,7 @@
   "find": "\"was\": was, \"now\": values, \"written\"", "replace": "\"was\": was, \"now\": {}, \"written\""},
  {"file": "scripts/parts.py", "name": "the answer forgets what a fact was",
   "find": "\"was\": was, \"now\": values, \"written\"", "replace": "\"was\": {}, \"now\": values, \"written\""},
- {"file": "scripts/parts.py", "name": "a footprint of any type is a footprint",
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a footprint of any type is a footprint",
   "find": "    if not (_absent(\"footprint\", footprint) or (isinstance(footprint, str) and FOOTPRINT_NAME.fullmatch(footprint))):",
   "replace": "    if False:"}
 ]

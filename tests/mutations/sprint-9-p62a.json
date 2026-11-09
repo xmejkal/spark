@@ -42,7 +42,7 @@
   "replace": "        if not isinstance(entry, dict):"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "the validator never asks about documents",
   "find": "    problems.extend(document_problems(part))\n",
   "replace": ""

@@ -39,6 +39,7 @@ from spark.design import design_codes
 from spark.design import fab
 import parts as parts_library
 from spark.records import record_kind
+from spark.sourcing import part_records
 from spark.records import provenance
 from spark.core.errors import CodedMessageError
 
@@ -287,8 +288,8 @@ def record(part_id, project):
     the library resolves the path.
     """
     try:
-        return parts_library.load(part_id, project)
-    except parts_library.PartError as broken:
+        return part_records.load(part_id, project)
+    except part_records.PartError as broken:
         raise DesignError.of_error(broken, code=design_codes.PART_UNUSABLE) from broken
     except ValueError as broken:
         raise DesignError("the record for %r is not JSON: %s", part_id, broken, code=design_codes.PART_UNUSABLE) from broken
@@ -407,7 +408,7 @@ def signals_of(part_list, wanted, project):
     for part in part_list:
         try:
             asked = parts_library.signals_for([part["id"]], project)
-        except parts_library.PartError as broken:
+        except part_records.PartError as broken:
             raise DesignError.of_error(broken, code=design_codes.PART_UNUSABLE) from broken
         except (ValueError, OSError) as broken:
             raise DesignError("%s", broken, code=design_codes.PART_UNUSABLE) from broken

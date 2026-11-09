@@ -10,7 +10,7 @@ import json
 import re
 from collections import namedtuple
 
-import parts
+from spark.sourcing import part_records
 from spark.sourcing import sourcing_codes
 from spark.core.errors import CodedMessageError
 from spark.core.text_guards import TAGS_MAX, TEXT_MAX, clean
@@ -85,8 +85,10 @@ class Offer:
         """
         record = record if isinstance(record, dict) else {}
         said = [record] + [entry for entry in holding if isinstance(entry, dict)]
-        functions = parts.function_of(record, board=kind == "board") + [f for entry in said[1:] for f in _list(entry.get("function"))]
-        return cls(record_id, kind, functions, [record.get("name")] + parts.aliases(record), _first(said, "about"),
+        functions = (part_records.function_of(record, board=kind == "board")
+                     + [f for entry in said[1:] for f in _list(entry.get("function"))])
+        return cls(record_id, kind, functions, [record.get("name")] + part_records.aliases(record),
+                   _first(said, "about"),
                    _first(said, "description"), [tag for one in said for tag in _list(one.get("tags"))],
                    {key: record[key] for key in FACTS if key in record})
 

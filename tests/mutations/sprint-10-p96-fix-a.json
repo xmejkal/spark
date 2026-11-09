@@ -5,7 +5,7 @@
  {"file": "scripts/spark/design/needs.py", "name": "what matches only when written exactly alike",
   "find": "any(wanted <= _words(f.get(\"what\")) for f in functions",
   "replace": "any(str(f.get(\"what\")) == need[\"what\"] for f in functions"},
- {"file": "scripts/parts.py", "name": "aliases are trusted",
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "aliases are trusted",
   "find": "[alias for alias in said if isinstance(alias, str)] if isinstance(said, list) else []", "replace": "list(said or [])"},
  {"file": "scripts/spark/design/needs.py", "name": "a used-up entry is offered", "find": " or entry.get(\"count\") == 0", "replace": ""},
  {"file": "scripts/spark/design/needs.py", "name": "many is summed",

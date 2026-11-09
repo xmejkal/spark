@@ -48,7 +48,7 @@
   "replace": "        if False:"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/part_records.py",
   "name": "function_of trusts a malformed own function",
   "find": "    if record.get(\"function\") and not function_problems(record):",
   "replace": "    if record.get(\"function\"):"

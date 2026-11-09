@@ -317,8 +317,8 @@ class ARailBelongsToTheDesignTest(unittest.TestCase):
         # The first version of this test re-loaded the record from disk afterwards, which
         # `parts.load` does fresh every time — so an in-place edit was invisible and the mutation
         # escaped (W12). The contract is on the function: its argument is untouched.
-        import parts
-        record = parts.load("l9110s-module")
+        from spark.sourcing import part_records
+        record = part_records.load("l9110s-module")
         moved = loader.on_rails(record, {"VCC": "traction"})
         self.assertEqual([s["rail"] for s in moved["power"] if s["pin"] == "VCC"], ["traction"])
         self.assertEqual([s["rail"] for s in record["power"] if s["pin"] == "VCC"], ["motor"])
