@@ -524,10 +524,10 @@ class TheRecordsAreaTest(unittest.TestCase):
 class TheSourcingAreaTest(unittest.TestCase):
     """W6-S2 (P717): the sourcing area starts with the pull-up band in `scripts/spark/sourcing/part_rules.py`, its
     `__init__.py` imports nothing, and each module imports alone. Checks and `parts.py` read the band from there, so no
-    module imports the checks area for it. `sourcing_codes` stays flat in `scripts/` until its move (W6-S3a)."""
+    module imports the checks area for it. W6-S3a (P720) moves the leaf `sourcing_codes` here."""
     SOURCING = ROOT / "scripts" / "spark" / "sourcing"
     #: The modules of the area so far, by the names of its page (`areas/sourcing.md`).
-    MODULES = ["part_rules"]
+    MODULES = ["part_rules", "sourcing_codes"]
 
     def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):
         modules = sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py")

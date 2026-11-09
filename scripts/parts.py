@@ -218,7 +218,7 @@ from spark.records import board_records  # noqa: E402
 from spark.records import missing_facts  # noqa: E402
 from spark.records import provenance  # noqa: E402
 from spark.records import records_codes  # noqa: E402
-import sourcing_codes  # noqa: E402
+from spark.sourcing import sourcing_codes  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.core.errors import CodedMessageError  # noqa: E402
 from spark.core.text_guards import guard_lines, printable  # noqa: E402

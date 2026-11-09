@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import sourcing_codes
+from spark.sourcing import sourcing_codes
 from spark.core.errors import CodedMessageError
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN
 

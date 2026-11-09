@@ -11,7 +11,7 @@ import re
 from collections import namedtuple
 
 import parts
-import sourcing_codes
+from spark.sourcing import sourcing_codes
 from spark.core.errors import CodedMessageError
 from spark.core.text_guards import TAGS_MAX, TEXT_MAX, clean
 
