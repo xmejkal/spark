@@ -20,6 +20,8 @@ Before the erase, deploy.py looks at the board as look.py does (P219). It refuse
 board's and this image's, and a deploy with no yes: one typed in the person's own terminal, or the standing yes of a
 deploy grant (deploy_gate.py, board_grant.py). The chip comes from
 the project's board (requirements.json's `board`), and esptool refuses a board with another chip too.
+When each of the five stages starts (plan, look, gate, flash, verify), deploy.py prints one `why:` line that says why
+the stage happens (P476). With --json these lines go to stderr, like every line a person reads.
 esptool and mpremote are the tools list's `flasher` and `board-shell`, which /spark:setup installs.
 """
 
@@ -36,7 +38,9 @@ from spark.core.cli import HelpText, run_cli
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_OK  # noqa: F401  (the tests read deploy's exit codes here)
 
 #: What --help says beyond the arguments.
-EPILOG = """It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
+EPILOG = """Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).
+
+It flashes only an image that a passed run names (sim/runs/*.log), and no log there may name another image
 (--ignore-older-runs flashes anyway).
 
 --no-simulation flashes an image that no simulation tested, as the board is the test. Build the image first with

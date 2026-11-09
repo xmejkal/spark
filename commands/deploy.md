@@ -34,7 +34,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/deploy.py --dry-run
 
 The dry run prints the two esptool commands and runs nothing. It does not look at the board. The first command erases
 the board's flash. The second writes the image at `0x0`, where the simulator loaded it. The real run goes in this
-order: the look, its token, then the person's yes.
+order: the look, its token, then the person's yes. When each stage starts, deploy.py prints a `why:` line that says why
+it happens. With `--json` these lines go to stderr. Relay them.
 
 1. Run `look.py` and relay its lines. A stop means do not propose the flash.
 2. Run `deploy.py --json --token <the token>`, with `--port` only when two boards are on USB. The look's next step and the
