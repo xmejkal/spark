@@ -174,19 +174,19 @@
   "replace": "    here = None"
  },
  {
-  "file": "scripts/versions.py",
+  "file": "scripts/spark/records/versions.py",
   "name": "the floor compare is flipped, so a newer release is refused",
   "find": "release_tuple(here) < release_tuple(oldest)",
   "replace": "release_tuple(here) > release_tuple(oldest)"
  },
  {
-  "file": "scripts/versions.py",
+  "file": "scripts/spark/records/versions.py",
   "name": "a part with letters after its digits goes on to the next part",
   "find": "        if digits != part:\n            break\n",
   "replace": ""
  },
  {
-  "file": "scripts/versions.py",
+  "file": "scripts/spark/records/versions.py",
   "name": "trailing zeros stay, so 5.0 is newer than 5",
   "find": "    while parts and parts[-1] == 0:\n        parts.pop()\n",
   "replace": ""

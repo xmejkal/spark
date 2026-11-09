@@ -9,7 +9,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-import versions  # noqa: E402
+from spark.records import versions  # noqa: E402
 
 
 class ReleaseTupleTest(unittest.TestCase):
