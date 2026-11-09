@@ -12,7 +12,7 @@ audit, C3). A number a message carries must be measured on what the message desc
 archives the commit into a scratch directory and measures there. The push hook runs it.
 
 The quick run (P425) skips the tests marked `@slow` in tests/suite_runs.py and says how many it skipped; it is not the
-suite count. The full run, `--full`, runs every test: before a PR is marked ready and before an auto-mode merge.
+suite count. The full run, `--full`, runs every test, at a sweep: the end of a wave or an epic, or when the PO asks (P714).
 
 The suite runs with a temp folder of its own, and whatever it leaves there fails the push (P172): one run
 left 2,291 entries, 26 MB, and nothing counted them. The archive itself goes when the gate ends.
@@ -183,7 +183,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="The suite on the tree as committed: the quick run by default.")
     parser.add_argument("commit", nargs="?", default="HEAD", help="the commit to measure (default HEAD)")
     parser.add_argument("--full", action="store_true",
-                        help="the full run: every test, the slow ones too; before a PR is marked ready and before an auto-mode merge")
+                        help="the full run: every test, the slow ones too; a sweep at the end of a wave or an epic, or when the PO asks")
     given = parser.parse_args(sys.argv[1:] if argv is None else argv)
     scratch = Path(tempfile.mkdtemp(prefix="spark-commit-"))
     try:
