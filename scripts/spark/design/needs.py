@@ -17,7 +17,7 @@ from spark.design import loader
 import drawer
 from spark.design import board_emitter
 from spark.design import footprint_emitter
-import matching
+from spark.sourcing import matching
 from spark.sourcing.part_records import broken_problems
 from spark.records import record_kind
 from spark.records.record_kind import _parse, _problem, _shape_problems, owes, VERBS

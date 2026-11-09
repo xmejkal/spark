@@ -203,14 +203,14 @@ def catalog_records():
 def _found(words, offers, matcher=None):
     """The offers a search by words finds (P211): the need {"does": null, "what": the words, "words": as typed}, ranked by the
     `--need` matcher."""
-    import matching
+    from spark.sourcing import matching
     need = {"does": None, "what": " ".join(words), "words": list(words)}
     return matching.found((matcher or matching.matcher(NEED_MATCHER, "need")).rank(need, offers))
 
 
 def catalog_matches(words, matcher=None):
     """The catalog records a search by words finds, the way `need` finds them — researched before, unbuilt."""
-    import matching
+    from spark.sourcing import matching
     records = catalog_records()[0]
     offers = [matching.Offer.from_record(part_id, "part", record) for part_id, record in records.items()]
     return [dict(records[fit.offer.key], id=fit.offer.key) for fit in _found(words, offers, matcher)]
@@ -622,7 +622,7 @@ def need(words, project=None, matcher=None):
     before anything is researched. Backlog R11: the RC car wrote three records by hand because
     nothing looked, and "nothing looked" was the first gap its diary named (G1).
     """
-    import matching
+    from spark.sourcing import matching
     loaded, offers = {}, []
     for part_id in available(project):
         try:
@@ -898,7 +898,7 @@ def _brief(part):
 
 
 def _op_need(args, project):
-    import matching
+    from spark.sourcing import matching
     try:
         chosen = matching.matcher(args.matcher or NEED_MATCHER, "need")
     except matching.UnknownMatcher as wrong:
@@ -1240,7 +1240,7 @@ def _op_needs(args, project):
 
 
 def _op_match(args, project):
-    import matching
+    from spark.sourcing import matching
     from spark.design import needs
     try:
         chosen = matching.matcher(args.matcher or needs.MATCHER, "match")
@@ -1429,24 +1429,25 @@ def _op_requirements(args, project):
 
 
 def _op_step(args, project):
-    import cost
+    from spark.sourcing import run_cost
     target, step = args.step
-    if step not in cost.STEPS:
-        return Answer(unchecked=[_cannot("a step is one of %s (the spine, §2 of the store design)" % ", ".join(cost.STEPS))])
+    if step not in run_cost.STEPS:
+        return Answer(unchecked=[_cannot("a step is one of %s (the spine, §2 of the store design)"
+                                         % ", ".join(run_cost.STEPS))])
     listed = store.find_listed_name(target) is not None
-    event = cost.step_event(store.plan_listed_name(target) if args.dry_run else store.add_project(target), step)
+    event = run_cost.step_event(store.plan_listed_name(target) if args.dry_run else store.add_project(target), step)
     if not args.dry_run:
         store.append_event(event)
     # C-17: what a step writes is said — a line in the person's history, with the session's id, and the project on their list
     return Answer({"step": event, "written": not args.dry_run},
                   ["  %s step %s of %s — a line in your history%s" % (
                       "would start" if args.dry_run else "started", step, event["project"],
-                      ", with this Claude Code session's id" if event["session"] else cost.session_note())]
+                      ", with this Claude Code session's id" if event["session"] else run_cost.session_note())]
                   + ([] if listed else ["  %s %s on your projects" % ("would list" if args.dry_run else "listed", event["project"])]))
 
 
 def _op_tally(args, project):
-    import cost
+    from spark.sourcing import run_cost
     import drawer
     from spark.design import needs
     name = store.find_listed_name(args.tally)
@@ -1460,16 +1461,16 @@ def _op_tally(args, project):
     from_store = sum(1 for need_id, pick in picks if dict({"event": "reused", "project": name, "need": need_id}, **pick) in reused)
     owned = sum(1 for _, pick in picks if needs.owned(pick, entries))
     try:
-        counted, unchecked = cost.cost([event for event in history if event.get("event") == "step"], name), []
-    except cost.NoTranscript as missing:
+        counted, unchecked = run_cost.cost([event for event in history if event.get("event") == "step"], name), []
+    except run_cost.NoTranscript as missing:
         counted, unchecked = None, [_cannot(str(missing), "mark each step with parts.py --step <project> <step> in a Claude Code session")]
-    said, unreadable = cost.line(len(picks), from_store, owned, counted), cost.unreadable_note(counted)
+    said, unreadable = run_cost.line(len(picks), from_store, owned, counted), run_cost.unreadable_note(counted)
     built = any(event.get("event") == "built" and event.get("project") == name for event in history)
     needs_said = "%d of %d needs picked%s" % (len(listed) - len(unpicked), len(listed),
                                               " — not picked: %s" % ", ".join(unpicked) if unpicked else "")
     return Answer({"picks": len(picks), "from_store": from_store, "owned": owned, "cost": counted, "built": built, "line": said,
                    "needs": len(listed), "needs_picked": len(listed) - len(unpicked)},
-                  ["  " + said, "  " + needs_said] + ["  " + glossed for glossed in cost.gloss(counted)]
+                  ["  " + said, "  " + needs_said] + ["  " + glossed for glossed in run_cost.gloss(counted)]
                   + ["  " + item["sentence"] for item in unchecked] + (["  " + unreadable] if unreadable else [])
                   + ([] if built else ["  not built yet — check_spine records it when the chain runs end to end, and a board-only build records none"]),
                   unchecked=unchecked)

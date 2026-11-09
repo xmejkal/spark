@@ -1,6 +1,6 @@
 """
-The reasons sourcing refuses, each a code with one sentence (P717, W6-S2): parts.py's PartError and unreadable input,
-cost.py's NoTranscript and matching.py's UnknownMatcher, wherever they are raised.
+The reasons sourcing refuses, each a code with one sentence (P717, W6-S2): part_records' PartError, parts.py's
+unreadable input, run_cost's NoTranscript and matching's UnknownMatcher, wherever they are raised.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the
 English sentence (no magic strings, P260). The errors are `errors.CodedMessageError`s, so a raise cannot leave its code

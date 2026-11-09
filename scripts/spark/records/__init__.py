@@ -1,6 +1,7 @@
 """
-The records area (W6-R3a and W6-R3b): the JSON records spark reads and the person's store. The store's
-folder, its writes, its events and `fetch` (`store`), the board records (`board_records`), the project's brief
+The records area (W6-R3a, W6-R3b and W6-S3a): the JSON records spark reads and the person's store. The record
+contract (`record_kind`), the store's folder, its writes, its events and `fetch` (`store`), the board records
+(`board_records`), the project's brief
 (`brief`), what the store says of the board on USB (`deploy_record_store`), what a fact must carry (`provenance`), the
 pad aliases (`board_pads`), the onboard parts a scenario wires (`onboard_parts`), the facts a board record owes
 (`missing_facts`), the records' codes (`records_codes`), the tools list and its lookups (`tool_finder`) and version

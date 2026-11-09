@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import cost  # noqa: E402
+from spark.sourcing import run_cost  # noqa: E402
 import parts  # noqa: E402
 
 
@@ -38,7 +39,7 @@ class WhatATranscriptSaysTest(unittest.TestCase):
     """§6.7's counts, from transcript entries: names and counts, never arguments."""
 
     def test_what_reached_the_network_what_ran_and_what_was_read(self):
-        counted = cost.count([assistant(
+        counted = run_cost.count([assistant(
             "2026-10-06T10:01:00Z", ("WebSearch", {"query": "q"}), ("WebFetch", {"url": "https://v.example/"}),
             ("mcp__plugin_spark_jlcpcb__component_search", {"query": "jst"}),
             ("Bash", {"command": "curl -sO https://v.example/a.pdf"}), ("Bash", {"command": "python3 scripts/parts.py --sources x-part"}),
@@ -50,20 +51,20 @@ class WhatATranscriptSaysTest(unittest.TestCase):
 
     def test_new_tokens_leave_out_cache_reads_and_a_turn_is_counted_once(self):
         usage = {"input_tokens": 10, "cache_creation_input_tokens": 100, "cache_read_input_tokens": 5000, "output_tokens": 7}
-        self.assertEqual(cost.count([assistant("2026-10-06T10:01:00Z", usage=usage, message_id="m1"),
-                                     assistant("2026-10-06T10:01:01Z", usage=usage, message_id="m1")])["tokens"], 117)
+        self.assertEqual(run_cost.count([assistant("2026-10-06T10:01:00Z", usage=usage, message_id="m1"),
+                                         assistant("2026-10-06T10:01:01Z", usage=usage, message_id="m1")])["tokens"], 117)
 
     def test_a_message_whose_usage_streams_in_is_counted_at_its_largest_of_each_kind(self):
         for usages, tokens in ((({"output_tokens": 1}, {"output_tokens": 7}), 7), (({"output_tokens": 7}, {"output_tokens": 1}), 7),
                                (({"input_tokens": 4, "output_tokens": 1}, {"input_tokens": 2, "output_tokens": 7}), 11)):
             with self.subTest(usages=usages):
-                counted = cost.count([assistant("2026-10-06T10:01:0%dZ" % number, usage=usage, message_id="m1")
-                                      for number, usage in enumerate(usages)])
+                counted = run_cost.count([assistant("2026-10-06T10:01:0%dZ" % number, usage=usage, message_id="m1")
+                                          for number, usage in enumerate(usages)])
                 self.assertEqual(counted["tokens"], tokens)
 
     def test_turns_that_name_no_message_are_each_counted(self):
         turn = {"type": "assistant", "timestamp": "2026-10-06T10:01:00Z", "message": {"usage": {"output_tokens": 5}, "content": []}}
-        self.assertEqual(cost.count([turn, dict(turn)])["tokens"], 10)
+        self.assertEqual(run_cost.count([turn, dict(turn)])["tokens"], 10)
 
     def test_one_transcript_is_answered_on_its_own(self):
         path = Path(tempfile.mkdtemp()) / "agent-x.jsonl"
@@ -415,8 +416,8 @@ class WhatIsCountedTest(AScratchStore):
     """§6.7: the shell patterns that reach the network, and the agent runs, as the table names them."""
 
     def test_every_shell_pattern_that_reaches_the_network_counts(self):
-        counted = cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": "wget -q https://v.example/a"}),
-                                        ("Bash", {"command": "gh api repos/x/y"}), ("Bash", {"command": "git status"}))])
+        counted = run_cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": "wget -q https://v.example/a"}),
+                                            ("Bash", {"command": "gh api repos/x/y"}), ("Bash", {"command": "git status"}))])
         self.assertEqual((counted["requests"], counted["by_tool"]), (2, {"Bash": 2}))
 
     def test_a_dry_run_chained_with_the_real_run_still_counts_the_real_one(self):
@@ -426,21 +427,21 @@ class WhatIsCountedTest(AScratchStore):
                                   (fetch + " --dry-run & " + fetch, 1),
                                   (fetch + " --dry-run && python3 scripts/parts.py --sources x --dry-run", 0)):
             with self.subTest(command=command):
-                counted = cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": command}))])
+                counted = run_cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": command}))])
                 self.assertEqual(counted["requests"], requests)
 
     def test_a_path_to_read_in_quotes_is_a_document_too_and_the_same_one_once(self):
         read = "python3 scripts/parts.py --read %s --want x"
-        counted = cost.count([assistant("2026-10-06T10:01:00Z", *[("Bash", {"command": read % path}) for path in (
+        counted = run_cost.count([assistant("2026-10-06T10:01:00Z", *[("Bash", {"command": read % path}) for path in (
             '"/s/a.pdf"', "'/s/b.pdf'", '"/s/my datasheet.pdf"', "/s/c.pdf", "/s/a.pdf")])])
         self.assertEqual(counted["documents"], 4)
 
     def test_a_dry_run_opens_no_url_so_it_is_no_request(self):
         fetching = "python3 scripts/parts.py --fetch max98357a-dfr0954"
-        counted = cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": fetching + " --dry-run"})),
-                              assistant("2026-10-06T10:02:00Z", ("Bash", {"command": "python3 scripts/parts.py --sources max98357a-dfr0954 --dry-run"})),
-                              assistant("2026-10-06T10:03:00Z", ("Bash", {"command": "python3 scripts/parts.py --dry-run --fetch max98357a-dfr0954"})),
-                              assistant("2026-10-06T10:04:00Z", ("Bash", {"command": fetching}))])
+        counted = run_cost.count([assistant("2026-10-06T10:01:00Z", ("Bash", {"command": fetching + " --dry-run"})),
+                                  assistant("2026-10-06T10:02:00Z", ("Bash", {"command": "python3 scripts/parts.py --sources max98357a-dfr0954 --dry-run"})),
+                                  assistant("2026-10-06T10:03:00Z", ("Bash", {"command": "python3 scripts/parts.py --dry-run --fetch max98357a-dfr0954"})),
+                                  assistant("2026-10-06T10:04:00Z", ("Bash", {"command": fetching}))])
         self.assertEqual((counted["requests"], counted["by_tool"]), (1, {"Bash": 1}))
 
     def test_one_fetch_that_was_dry_run_first_reads_as_one_request_in_the_line(self):
@@ -452,8 +453,8 @@ class WhatIsCountedTest(AScratchStore):
         self.assertEqual((code, said["data"]["line"]), (0, "0 picks: 0 from the store (0 owned) — 1 request, 0 documents, 3 min"))
 
     def test_an_agent_run_is_counted_by_its_type_and_a_general_one_by_its_name(self):
-        counted = cost.count([assistant("2026-10-06T10:01:00Z", ("Task", {"subagent_type": "spark:part-finder"}),
-                                        ("Agent", {}), ("Agent", {"subagent_type": "spark:part-finder"}))])
+        counted = run_cost.count([assistant("2026-10-06T10:01:00Z", ("Task", {"subagent_type": "spark:part-finder"}),
+                                            ("Agent", {}), ("Agent", {"subagent_type": "spark:part-finder"}))])
         self.assertEqual(counted["runs"], {"spark:part-finder": 2, "general-purpose": 1})
 
 
@@ -461,8 +462,8 @@ class EachCostNotKnownHasItsCodeTest(AScratchStore):
     """P717: each NoTranscript names its sourcing code, so an agent decides on the code and never on the sentence."""
 
     def assert_code(self, steps, code):
-        with self.assertRaises(cost.NoTranscript) as refused:
-            cost.cost(steps, "plant-alarm")
+        with self.assertRaises(run_cost.NoTranscript) as refused:
+            run_cost.cost(steps, "plant-alarm")
         self.assertEqual(refused.exception.code, code, str(refused.exception))
 
     def test_the_history_and_its_step_lines(self):
@@ -686,7 +687,7 @@ class WhatCannotBeReadIsSaidNeverATracebackTest(AScratchStore):
                  {"type": "assistant", "timestamp": "2026-10-06T10:03:00Z",
                   "message": {"id": "m3", "usage": None, "content": [None, "text", {"type": "tool_use", "name": "WebFetch", "input": None}]}},
                  {"type": "assistant", "timestamp": "2026-10-06T10:04:00Z", "message": {"id": ["m4"], "usage": {"output_tokens": 2}, "content": []}}]
-        counted = cost.count(oddly)
+        counted = run_cost.count(oddly)
         self.assertEqual((counted["requests"], counted["tokens"]), (1, 9))
 
 
