@@ -1621,6 +1621,41 @@ nothing upward: `record_kind` (records), then `part_rules`, `part_records`, `par
 `areas/sourcing.md`, `areas/design.md`, `developing.md`. Size: 1,520 lines, est. 80 import lines, 268 rows, 9 keys. Done
 when `ls scripts/*.py` prints only the CLIs, each a `main` that parses and prints, `scripts/spark/sourcing/__init__.py`
 imports nothing, no lazy import under `scripts/spark/` points up an arrow, and `TheSourcingAreaTest` passes.
+P721 claims check (at e35f6b1a, one decision open: the build stopped here). The `ast` map was rebuilt with symtable
+(locals excluded) over the 108 top-level names of `parts.py` (1,570 lines). `FOUND`, `LABEL_ONLY` and `NOT_FOUND` are
+three names of one line. The map gives `part_facts` 17 names, `datasheets` 37, `part_handlers` 32, `goal_handlers` 13
+and the CLI 9. `part_facts` holds the list and `printed_names` and `has_placeholder_footprint`, because `board_emitter`
+reads them (the lowest module of their users). `part_handlers` holds the list, `_brief` and `_op_step`. The bodies,
+before headers and imports: `part_facts` 198 lines, `datasheets` 392, `part_handlers` 388, `goal_handlers` 279, the CLI
+215. So each is under 600, and `R1:scripts/parts.py:<module>` goes. Every reference points down: `part_handlers` to
+`datasheets` 9 and to `part_facts` 10, `goal_handlers` to `part_handlers` 8, to `datasheets` 3 and to `part_facts` 2.
+`datasheets` and `part_facts` read neither each other nor a handler module. No pair is two-way. The outside readers of
+`parts` all read `part_facts`: `drawer` (`shelvable`, `shelve`, `:315`, `:332`), `board_emitter` (`printed_names`,
+`has_placeholder_footprint`), `loader` (`signals_for`), `assign_pins` (`unverified`) and `check_spine` (`note_built`).
+After the move no module imports `parts`, and the `drawer` <-> `parts` two-way import is gone. The lazy imports become
+top imports. `datasheets` imports `matching` and `tool_finder`. `part_handlers` imports `drawer` and `run_cost`.
+`goal_handlers` imports `drawer`, `footprint_emitter`, `matching`, `needs` and `run_cost`. These claims hold:
+`_write_record` is in `record_kind`, `_op_tally` imports `needs`, `_record_path` imports `drawer`, and `_op_describe`
+reads `OPERATIONS` and `OPTIONS`. The 8 `parts` patches hold (5 on `parts`, 2 on `check_spine.parts`, 1 on
+`parts.store`), and so does `MAY_READ`'s `parts.DEFAULT_VENDOR_ORDER`. Symtable finds `datasheets`, `part_facts`,
+`part_handlers`, `goal_handlers` and `drawer` bound as a local, a parameter or an assignment nowhere in `scripts/`,
+`tests/` or `tools/`. `self.drawer` in `drop_need.py` is an attribute. The rows: `datasheets` 42, `part_facts` 18,
+`part_handlers` 81, `goal_handlers` 78, 26 stay in the CLI, 12 have no `find` (as on main), `drawer.py` 55. On main,
+`--anchors` refuses 114. Keys: 10, not 9. `C3:EXIT_INVALID` and `R1:main` 23 stay. `R2` `find_kept` and `scan_datasheet`
+go to `datasheets`, and `R3:_what_a_pick_wrote` goes to `goal_handlers`. The three `T1` keys follow their code, so none
+stays. `datetime` 2 (`keep_local`, `fetch_documents`) and `subprocess` 1 (`datasheet_pages`) go to `datasheets`, and
+`file-write` 1 (`_op_skeleton`) goes to `part_handlers`. `R1:drawer.py:plan_import` 63 follows. These corrections change
+no decision. Under `scripts/spark/`, R1 allows a function 40 lines, not 60. `audit` (42) is 40 when its two lazy imports
+go. `drawer.settle` (43) is not in the plan. It needs one Extract Function before the move, with its lines as they were
+(P703 row 3). The CLI imports the handlers by name, so `main`'s `globals()` lookup does not change and `R1:main` stays
+23. One claim is wrong, and it opens a decision. The claim "no other `print` or `sys.exit` sits outside a `main`" holds.
+But X2 also counts `sys.stdin` under `scripts/spark/`, and `_read_json_input` (`:1002`) reads it. Six handlers call it:
+`_op_drawer_set`, `_op_drawer_import`, `_op_function_set`, `_op_fact_set`, `_op_needs_set` and `_op_pick`. Under
+`scripts/spark/` it is a new key, `X2:...:sys.stdin` 1. In the CLI, it makes the handlers import upward. Each way out is
+a decision. (a) Accept the new key with `--accept-new`, name it for the PO, and file a card for a payload reader. (b)
+Keep the six handlers and `_read_json_input` in the CLI. The CLI still imports only downward, and it keeps 16 names,
+about 310 lines. (c) Add a seam that reads the payload in the CLI, which is new logic. The rows are in
+`p721-sourcing-move.md`.
 
 ## Records and sourcing after W6-S3b (the moved modules and their classes)
 
