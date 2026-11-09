@@ -996,6 +996,19 @@ class TheComponentIdsTest(unittest.TestCase):
             with self.subTest(items):
                 self.assertNotIn("ghost", self.steps(*items).component_ids)
 
+    def test_an_id_nested_deeper_is_not_the_steps_own(self):
+        read = self.steps("- set-control:", "    name: x", "    extra:", "      part-id: ghost", "    part-id: b")
+        self.assertEqual(read.component_ids, ("b",))
+
+    def test_an_id_that_runs_on_over_the_next_line_is_unread(self):
+        read = self.steps("- set-control:", "    part-id: my", "      button")
+        self.assertEqual(read.component_ids, ())
+        self.assertEqual(len(read.unread_steps), 1)
+
+    def test_a_bracket_in_a_plain_name_opens_nothing(self):
+        read = self.steps("- name: press [A", "  set-control: { part-id: b }")
+        self.assertEqual((read.count("set-control"), read.component_ids), (1, ("b",)))
+
     def test_a_log_holds_no_ids(self):
         self.assertEqual(scenario_steps.ScenarioSteps({}).component_ids, ())
 
@@ -1014,6 +1027,16 @@ class TheNamedReadyWaitTest(unittest.TestCase):
                       '  - { name: press, set-control: { part-id: b } }\n  - wait-serial: "ready"\n'):
             with self.subTest(items):
                 self.assertIn('- wait-serial: "ready"', scenario_run.with_ready_wait("name: x\nsteps:\n" + items))
+
+    def test_an_anchor_or_a_tag_before_a_wait_is_kept_alone(self):
+        for item in ('- &boot { wait-serial: "ready" }', '- &boot wait-serial: "ready"', '- !!map { wait-serial: "ready" }'):
+            with self.subTest(item):
+                scenario = "name: x\nsteps:\n  %s\n" % item
+                self.assertEqual(scenario_run.with_ready_wait(scenario), scenario)
+
+    def test_another_kind_that_says_ready_is_no_wait(self):
+        scenario = 'name: x\nsteps:\n  - write-serial: "ready"\n'
+        self.assertIn('- wait-serial: "ready"', scenario_run.with_ready_wait(scenario))
 
     def test_a_comma_in_the_ready_text_is_kept(self):
         scenario = 'name: x\nsteps:\n  - wait-serial: "boot, ready"\n'

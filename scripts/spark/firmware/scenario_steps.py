@@ -105,6 +105,8 @@ class ScenarioSteps:
     #: The kinds that must name a component, and the form of a component id that this reads.
     COMPONENT_KINDS = (SET_CONTROL, EXPECT_PIN)
     COMPONENT_ID = re.compile(r"[\w.-]+")
+    #: The anchors and tags that YAML allows before a step's own text, such as `&boot` or `!!map`.
+    NODE_PROPERTIES = re.compile(r"(?:[&!]\S*\s+)+")
 
     def __init__(self, counts, state=outcomes.RECORDED, why=None, named=None, components=None):
         self.counts, self.state, self.why = dict(counts), state, why
@@ -152,6 +154,7 @@ class ScenarioSteps:
             item = cls.ITEM.match(line)
             if item and len(item.group(1)) == width:
                 rest = line[item.end():].lstrip()
+                rest = rest[cls.NODE_PROPERTIES.match(rest).end():] if cls.NODE_PROPERTIES.match(rest) else rest
                 steps.append([[rest.lstrip("{")], len(line) - len(rest) if rest else None, rest.startswith("{")])
             elif cls._indent(line) <= width:
                 break  # the steps list ended: a key of the scenario at its own indent
@@ -183,8 +186,15 @@ class ScenarioSteps:
         for number, text in enumerate(texts):
             if not depth and (number == 0 or cls._indent(text) == indent):
                 own.append((text, number))
-            depth = cls._depth(text, depth)
+            if depth or cls._opens_bracket(text):  # a `[` inside a plain value is text, such as `name: press [A`
+                depth = cls._depth(text, depth)
         return own
+
+    @classmethod
+    def _opens_bracket(cls, text):
+        """Whether the value on this line starts with `{` or `[`."""
+        key = cls.KEY.match(text)
+        return (text[key.end():] if key else text).lstrip()[:1] in ("{", "[")
 
     @classmethod
     def _kind_and_value(cls, texts, indent, flow):
@@ -218,6 +228,8 @@ class ScenarioSteps:
             pieces = cls._pieces(joined[1:])
         else:
             pieces = [line for line in value[1:] if cls._indent(line) == cls._indent(value[1])]
+            if any(PART_ID_KEY in line and cls._indent(after) > cls._indent(line) for line, after in zip(value[1:], value[2:])):
+                return None  # the id runs on over the next line
         keyed = [(cls.KEY.match(piece), piece) for piece in pieces]
         ids = [cls._scalar(piece[key.end():].strip()) for key, piece in keyed if key and cls._key_of(key) == PART_ID_KEY]
         return ids if ids and all(cls.COMPONENT_ID.fullmatch(each) for each in ids) else None

@@ -67,7 +67,7 @@
  },
  {
   "file": "scripts/spark/firmware/scenario_steps.py",
-  "name": "a step name that says ready counts as a wait",
+  "name": "another kind of step that says ready counts as a wait",
   "find": "if kind == WAIT_SERIAL and READY in value:",
   "replace": "if READY in value:"
  },
@@ -94,5 +94,23 @@
   "name": "the code loses its sentence",
   "find": "    UNKNOWN_COMPONENT_ID: \"a step of the scenario names a component id that sim/diagram.json does not hold\",\n",
   "replace": ""
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "a bracket in a plain name hides the keys after it",
+  "find": "            if depth or cls._opens_bracket(text):",
+  "replace": "            if True:"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "an anchor before a step hides its kind",
+  "find": "(?:[&!]\\S*\\s+)+",
+  "replace": "(?:[@]\\S*\\s+)+"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_steps.py",
+  "name": "an id that runs on over the next line is read",
+  "find": "                return None  # the id runs on over the next line\n",
+  "replace": "                pass\n"
  }
 ]

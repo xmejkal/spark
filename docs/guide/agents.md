@@ -20,7 +20,7 @@ Read these rules before you run a script:
 3. **`check_all.py` exit 0 means less than it says.** No check that ran found a problem. Read `resolved` to see that
    it found the circuit and the rules ([what exit 0 means](agents/json.md#what-exit-0-means)).
 4. **Relay a "passed, but ..." answer whole.** `run_scenario.py` prints it after a pass with no set-control step. A
-   bare `passed` clears no caveat ([rule 8](agents/never-assume.md#8-a-passed-run-did-only-what-its-scenarios-steps-say)). A line that starts with `not checked:` says what spark could not compare with `sim/diagram.json`, and the run went on: tell the person, because it is no pass of that comparison.
+   bare `passed` clears no caveat ([rule 8](agents/never-assume.md#8-a-passed-run-did-only-what-its-scenarios-steps-say)). A line that holds `not checked:` says what spark could not compare with `sim/diagram.json`, and the run went on: tell the person, because it is no pass of that comparison.
 5. **Ask `parts.py --describe --json` first.** It says which `parts.py` operations write and which reach the
    network. Run each write with `--dry-run` first. A network operation needs the person's yes
    ([what reads and what writes](agents/scripts.md#what-reads-and-what-writes)).
