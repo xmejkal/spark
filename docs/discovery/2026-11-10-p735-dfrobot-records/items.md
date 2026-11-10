@@ -1,6 +1,6 @@
 # Proposed items
 
-Filing needs the PO's yes to this list. Each item becomes a sub-issue of P735 #1010, with the next free P-number read just before filing. The slice for all eight: ask the decider, "10 The store" is the closest option on the board.
+Filing needs the PO's yes to this list. Each item becomes a sub-issue of P735 #1010, with the next free P-number read just before filing. The slice for all nine: ask the decider, "10 The store" is the closest option on the board.
 
 ## The research pipeline: sources and strategies, designed with a council
 - type: story, a design that starts in plan mode with a two-round council and an architecture lens <!-- REQUIRED:item-type -->
@@ -11,6 +11,16 @@ Filing needs the PO's yes to this list. Each item becomes a sub-issue of P735 #1
 - label (the repository's type label): story <!-- REQUIRED:spark-process:label -->
 - parent (the epic, as a sub-issue): P735 #1010 <!-- REQUIRED:spark-process:parent -->
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider <!-- REQUIRED:spark-process:slice -->
+
+## The fact need tree: which consumer needs which fact
+- type: story
+- needed by: "Maybe we should actually implement some kind of dependency tree for a few things in spark and one of them would be information, like what needs what specific info for what part or bus or somethhing" (the PO, 2026-11-10)
+- value proven by: `data/fact-needs.json` holds the rows that have a reader today (council/fact-tree.md:238). `parts.py --unverified sen0526-i2s-mic` names the consumer of each open fact, and a test fails on a row whose consumer does not exist
+- depends on: the architecture direction (Q6), and Q7 for its scope
+- status: proposed
+- label (the repository's type label): story
+- parent (the epic, as a sub-issue): P735 #1010
+- slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider
 
 ## Spike: how much geometry DFRobot publishes for the owned modules
 - type: spike
@@ -83,4 +93,4 @@ Filing needs the PO's yes to this list. Each item becomes a sub-issue of P735 #1
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider
 
 ## Board actions
-- file the eight items above · pending, needs the PO's yes <!-- REQUIRED:board-actions -->
+- file the nine items above · pending, needs the PO's yes <!-- REQUIRED:board-actions -->

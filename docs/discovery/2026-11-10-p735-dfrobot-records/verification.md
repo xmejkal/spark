@@ -13,6 +13,8 @@ The refuter (Opus) read the brief as it stood before its corrections. The rows b
 - ★C9 · council/refuter.md:68 · refuter: partly, "16 of 112 drawer entries link a record; 8 of the 99 DFRobot ones do" · reproduced how: a count of the `is` key over ~/.local/share/spark/drawer/*.json printed 112 16 8 · result: reproduced, as corrected · keep: not counted
 - ★C10 · council/refuter.md:73 · refuter: partly, "3 to 10 fetches and 0 to 16 URL checks" · reproduced how: re-read the four diaries' Counts parts · result: reproduced, as corrected · keep: estimates
 
+- ★C17 · council/fact-tree.md:9 · refuter: not run on it, added after both passes · reproduced how: grep found `CHAIN_FACTS` at scripts/spark/records/record_kind.py:37, `LAYOUT_FACTS` at scripts/spark/design/need_requirements.py:71, `PART_GAPS` at scripts/spark/design/board_emitter.py:92, no file in scripts/ that reads the research.md table, and no file that reads `sel_has_pull`, `sd_pulldown_ohms` or `needs_mclk` · result: reproduced · keep: spot-checked
+
 ## Agree / split
 - Agree: the four walks, the three lenses and the refuter agree on three points. The record has no typed place for geometry, no reader draws it, and the hand steps of ★C6 repeat in every walk. <!-- REQUIRED:agree-split -->
 - Split: the PO assistant read the walks as evidence against A1 (enough published geometry), the refuter as evidence for it. The brief follows the refuter, and A1's new pass line tests content, not links · Q1

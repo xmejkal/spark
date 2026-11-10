@@ -47,6 +47,8 @@
 - [C13] The open cards disagree. P446 says a shape source never calls an AI, the PO's words on P734 list "AI generated and vectorized". P446 plans a `PartShape`, a board record holds `physical`. · E council/po-assistant.md:50 · caveat: none
 - [C14] part-data.md:51 says "DFRobot ships no KiCad footprints". The DFR1117 layout zip holds one. · E council/po-assistant.md:22, walk/dfr1117/diary.md:20 · caveat: one SKU
 
+- [★C17] No code or file says which consumer reads which fact. The need lives in four unconnected forms: tuples in code (`CHAIN_FACTS`, `PART_GAPS`, `LAYOUT_FACTS`, `ACTIVE_LEVEL_MEANING`), pointers inside records, free-text `why_it_matters`, and the 5-row prose table in commands/research.md that no code reads. Of the SEN0526 walk record's facts, `sel_has_pull`, `sd_pulldown_ohms` and `needs_mclk` have no reader. · E council/fact-tree.md:9, council/fact-tree.md:22, scripts/spark/records/record_kind.py:37 · caveat: the no-reader count is a grep over spot-checked fact names
+
 ## Options <!-- CLAIMS -->
 - Q2 what first · design the research pipeline in plan mode with a council (sources and strategies as swappable parts, one record shape for parts and boards, the bugs of ★C6, reproduced on scratch copies, as its first slices) · a plan and two council rounds · that the shape fits the v0.13 core before code · opinion (Claude's, after D2) · D the PO 2026-11-10 · caveat: none <!-- REQUIRED:options -->
 - Q2 what first · fix the bugs of ★C6 (reproduced on scratch copies) and ★C7 (zips kept by hand) first, design after · about six small cards · that the hand steps go away · opinion (the tech lead's) · E council/tech-lead.md:27 · caveat: fixes can be redone by the design
@@ -54,6 +56,8 @@
 - Q6 architecture · A: one research Operation in Python runs an ordered chain of sources (Strategy adapters per kind: vendor site, kept documents, footprint file, person, MCP tool), and a source that needs Claude, a person or an MCP server returns a next step · 6 to 8 modules · that one core serves the CLI, Claude, a LangGraph node and a person · opinion (the architect's) · H council/arch-architect.md:27 · caveat: rough module count, no walk record run through the types
 - Q6 architecture · B: the agent runs the loop, Python gives three Operations (list the gaps, gather from one source, tell facts) · 4 to 5 modules · that today's shape is enough · opinion (the architect's, not preferred) · H council/arch-architect.md:108 · caveat: keeps the order and the stop rule in prose, against AGENTS.md
 - Q6 architecture · C: A plus a source plan with scope, budget and an automatic or ask-first mode per source, a scheduler, and a conflicts list · 7 to 9 modules · that cost and conflicts are data · opinion (the architect's: C as the target, built as A first, with C's conflicts list in the MVP) · H council/arch-architect.md:169 · caveat: the risk is an over-designed plan format
+- D8 fact tree · a `FactNeed` value (fact path, consumer, stage, severity, condition) in a registry read from one data file. The gap finder plans research from it, `--unverified` says what depends on a fact from it, and a stage that stops names its need from it. The first file holds only rows that have a reader today (P94) · one data file, one small class, a cycle test with the stdlib `graphlib` · that every fact has a named consumer · opinion (the fact-tree lens's) · H council/fact-tree.md:93 · caveat: the as-is half rests on ★C17, a grep over spot-checked names
+
 Diagram of option A as the architect drew it (council/arch-architect.md:62), with C's conflicts list added. C's Scheduler, PlanEntry and Budget are left out. The architect proposes the store as a port, so that a shared store or a RAG index is a later adapter (D6), and leaves open whether the MVP pays for that port (Q-A9):
 
 ```mermaid
@@ -96,6 +100,7 @@ classDiagram
 - Q4 · Which revision is printed on the back of your three DFR1117 boards? · kind: account · decides: which regulator and sleep current the record holds · status: queued, a photo settles it
 - Q5 · Should `--need` match the drawer's functions and boards, as `--match` does, in place of the P211 name-contains default? · decides: the `--need` item in items.md · status: queued
 - Q6 · Which architecture: A, B or C? The architect's opinion is C as the target, built as A first. Its ten detail questions (council/arch-architect.md:306) go to the design council · decides: the shape of the pipeline · status: queued
+- Q7 · Is the first tree about facts only, or also the tools a stage needs and the stage hand-overs (council/fact-tree.md:227)? · decides: one registry or two · status: queued
 
 ## Decisions
 - D1 · the frame: walk a subset of the owned DFRobot parts through spark's research flow, take notes, fix gaps and bugs afterwards · the PO · 2026-11-10 · this session's first request
