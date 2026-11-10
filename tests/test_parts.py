@@ -931,25 +931,30 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         for place in ("shelf", "catalog"):
             (home / place).mkdir()
             (home / place / ("x-%s.json" % place)).write_text(json.dumps({"schema": 1, "id": "x-%s" % place, "kind": "sensor"}))
-        fixes = {"shelf": "`--promote <id> --project .` copies it into the project",
+        (root / "parts").mkdir()
+        (root / "parts" / "x-project.json").write_text(json.dumps({"schema": 1, "id": "x-project", "kind": "sensor"}))
+        fixes = {"project": "fill it in, do not overwrite it",
+                 "shelf": "`--promote <id> --project .` copies it into the project",
                  "catalog": "`--promote <id> --project .` copies the draft into the project",
                  "library": "spark ships it; name it in the requirements as it is"}
         with in_store(home):
-            for layer, part_id in (("shelf", "x-shelf"), ("catalog", "x-catalog"), ("library", "led-red-5mm")):
+            for layer, part_id in (("project", "x-project"), ("shelf", "x-shelf"), ("catalog", "x-catalog"),
+                                   ("library", "led-red-5mm")):
                 for flags in ([], ["--dry-run"]):
                     with self.subTest(layer=layer, flags=flags):
                         said, code = run_json(["--skeleton", part_id, "--kind", "sensor", "--project", str(root)] + flags)
                         self.assertEqual((said["status"], code), ("problems", parts.EXIT_INVALID))
                         problem = said["problems"][0]
                         self.assertTrue(problem["sentence"].startswith("%s already holds " % layer), problem["sentence"])
+                        self.assertTrue(problem["sentence"].endswith("would %s it" % ("overwrite" if layer == "project" else "hide")))
                         self.assertIn(part_id + ".json", problem["sentence"])
                         self.assertEqual(problem["fix"], fixes[layer].replace("<id>", part_id))
-                        if layer == "library":
+                        if layer in ("project", "library"):
                             self.assertEqual(said["next"], [])
                         else:
                             self.assertEqual(said["next"][0]["argv"], ["--promote", part_id, "--project", str(root)])
                             self.assertEqual(said["next"][0]["env"], {"SPARK_HOME": str(home.resolve())})
-        self.assertFalse((root / "parts").exists(), "a refused skeleton writes nothing")
+        self.assertEqual([p.name for p in (root / "parts").iterdir()], ["x-project.json"], "a refused skeleton writes nothing")
 
     def test_sources_are_fetched_and_a_dead_one_is_named(self):
         record = {"sources": ["https://wiki.example/a", "not a url"],

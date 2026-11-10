@@ -49,7 +49,8 @@ completely. Two small agents, in turn:
    and the board names the part after it in code`.
    If any layer already holds a record of the id, `--skeleton` refuses and names that record. It writes nothing, dry
    run or not. The layers are the project, your shelf, spark's library and the catalog. A project record wins over every
-   other layer, so an empty skeleton hides the record that exists. For a shelf or catalog record, the `next` step is
+   other layer, so an empty skeleton hides the record that exists, or overwrites the project's own. For a shelf or
+   catalog record, the `next` step is
    `--promote <id> --project .`. A library record is used as it is.
    `--fetch` downloads the datasheet, so it reaches the network. No command's `allowed-tools` lets it run unasked, so
    Claude Code asks before it does (unless the person's own settings already let it run: an allow rule of theirs, or

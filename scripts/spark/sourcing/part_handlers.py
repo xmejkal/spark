@@ -129,7 +129,8 @@ def _op_skeleton(args, project):
     held = store.records("parts", record_kind.LIBRARY, project, drafts=True).get(args.skeleton)
     if held:  # P740: the project layer wins over every other, so a skeleton here would hide the record that exists
         layer, path = held
-        return Answer(problems=[_problem(args.skeleton, "%s already holds %s; a skeleton here would hide it" % (layer, path),
+        would = "overwrite" if layer == "project" else "hide"
+        return Answer(problems=[_problem(args.skeleton, "%s already holds %s; a skeleton here would %s it" % (layer, path, would),
                                          SKELETON_FIXES[layer] % {"id": args.skeleton})],
                       next=[add_env(step("promote", ["--promote", args.skeleton] + _with_project(project),
                                          "copy the %s record into the project" % layer, ["writes"]), store.read_given_env())]
