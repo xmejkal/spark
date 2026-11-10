@@ -3,7 +3,7 @@
 
 **Ready for:** design. The PO confirmed the frame (D1), the direction (D2, D5, D6, D12), the jobs and the map (D11), the ratings (D7) and the test (D10). The design starts in plan mode with a council, in a fresh session. <!-- REQUIRED:ready -->
 **Stands on:** 6 H, 4 of which would change the decision (A1 to A4, D7) <!-- REQUIRED:debt -->
-**Decision needed:** none for the discovery. The design council picks the architecture under D12, and the PO says yes or no to filing items.md. <!-- REQUIRED:decision-needed -->
+**Decision needed:** none for the discovery. The design council picks the architecture under D12, and the filed cards P737 to P745 carry the work. <!-- REQUIRED:decision-needed -->
 
 > TL;DR. Four walks ran spark's research flow on four owned DFRobot parts. All four made a valid record. DFRobot published hole and header coordinates in full for 2 of 4, but the record has no typed field for them, and the breadboard drawing reads none of them. Eight reproduced tool bugs and several flow gaps make each record a hand job. The PO's direction (D2, D5, D6) is a designed research pipeline with ordered, swappable sources of many kinds, DFRobot first, usable later from LangGraph, RAG, agents and people. The PO rated A1 to A4 high (D7) and asked for a dependency tree of information needs (D8).
 
@@ -97,9 +97,9 @@ classDiagram
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 (the PO's request names the frame) <!-- REQUIRED:q0 -->
 - Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D7 and D10 <!-- REQUIRED:q1 -->
 - Q2 · What goes first: the design, the bug fixes, or a batch? · decides: the order · options above · status: answered D2 (design with a council) <!-- REQUIRED:q2 -->
-- Q3 · Which owned parts are in scope: PCB modules and boards only, or also cables, motors and panels? · decides: the size of the run and the meaning of "done" · status: queued
+- Q3 · Which owned parts are in scope: PCB modules and boards only, or also cables, motors and panels? · decides: the size of the run and the meaning of "done" · status: answered D14
 - Q4 · Which revision is printed on the back of your three DFR1117 boards? · kind: account · decides: which regulator and sleep current the record holds · status: queued, a photo settles it
-- Q5 · Should `--need` match the drawer's functions and boards, as `--match` does, in place of the P211 name-contains default? · decides: the `--need` item in items.md · status: queued
+- Q5 · Should `--need` match the drawer's functions and boards, as `--match` does, in place of the P211 name-contains default? · decides: the `--need` item in items.md · status: answered D15
 - Q6 · Which architecture: A, B or C? The architect's opinion is C as the target, built as A first. Its ten detail questions (council/arch-architect.md:306) go to the design council · decides: the shape of the pipeline · status: answered D12, the pick goes to the design
 - Q7 · Is the first tree about facts only, or also the tools a stage needs and the stage hand-overs (council/fact-tree.md:227)? · decides: one registry or two · status: answered D9
 
@@ -117,6 +117,10 @@ classDiagram
 - D10 · the pass line of the geometry spike: of 10 owned PCB modules picked at random, at least 7 give hole and header coordinates (Q1 part 2) · the PO · 2026-11-10 · this session · confirms a test
 - D11 · the jobs and the to-be story map match what the PO wants, and the design starts · the PO · 2026-11-10 · this session · confirms the jobs and the understanding
 - D12 · in place of a Q6 pick: "I mean this is kinda the general proble of how to make it be able to be both interactve like when a human or ai uses spark and can reply live, or when its kinda scripted, so it also needs to allow not interactive grants or interactions like replies. Do we have some interface or delegate or anything that we could reuse ? I feel like we've already been doing something like that and maybe we could just refactor it for whole spark to be able to reuse. Let's replan and order the plan in steps, first to test and mvp and then step by step refactor and test and document etc so that the communication with the board in spark can be done in multiple modes." · the PO · 2026-11-10 · this session · confirms a direction: one interaction mechanism for all of spark, the architecture pick goes to the design
+- D13 · yes to filing items.md: "yes, lets go" · the PO · 2026-11-10 · this session · confirms items.md, filed as P737 #1013 to P745 #1021
+- D14 · Q3: "Everything with pins" is in scope, the option that reads "Modules and boards, plus connectors and cables, which then need pin orders too". A part with no pins is out · the PO · 2026-11-10 · this session
+- D15 · Q5: "Yes, change the default" of `--need` to match the drawer's function and boards · the PO · 2026-11-10 · this session · changes the P211 default
+- D16 · the nine cards take Slice "10 The store" · the PO · 2026-11-10 · this session
 
 ## Found on the way <!-- CLAIMS -->
 - [C15] The DFR0457 shelf record holds irrigation wording (signal `VALVE_CTRL`, "four valves", "ESP32-S3") in a record every project finds. · E walk/dfr0457/diary.md:69 · caveat: none <!-- REQUIRED:found -->
@@ -127,7 +131,7 @@ classDiagram
 - set Waiting on: the PO on #1010 · not needed, Q1 answered the same day
 - comment on #1010 with the brief's link and the PR · taken 2026-11-10, D4
 - move #1010 from Discovery to Design · taken 2026-11-10, D11 and D4
-- file the items in items.md · pending, needs the PO's yes
+- file the items in items.md · taken 2026-11-10, D13: P737 #1013 to P745 #1021, sub-issues of #1010, Idea, Slice 10 The store (D16)
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
