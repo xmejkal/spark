@@ -1,0 +1,451 @@
+{
+  "schema": 1,
+  "id": "dfr0457-mosfet-power-controller",
+  "name": "DFRobot DFR0457 Gravity MOSFET Power Controller",
+  "kind": "mosfet-driver",
+  "//": "Written by /spark:research on 2026-09-29. A null is a fact nobody has recorded; a fact is unverified until a person checks it against the source it names. WHAT THIS IS: a single-channel, optically isolated, HIGH-SIDE switch. A P-channel MOSFET connects the screw terminal's VOUT to its VIN while the Gravity signal is high; the load hangs between VOUT and the terminal's GND. The screw terminal (VIN, GND, VOUT) is not a pad on the host: only the three-pin Gravity header is, and the record's pin_order/footprint describe the PH2.0 socket the HOST carries for it. There is no flyback diode on board. Brought into this project from the shelf on 2026-11-10 with `parts.py --promote` (the shelf copy came from the irrigation project; its valve wording in notes and host_requirements is that project's load). Upgraded here: cites on the schematic facts, mounting_holes rechecked against the wiki table, legs, the DC-only warning, document versions; the signal renamed LOAD_CTRL for the need 'switch a 12 V load from an ESP32'.",
+  "vendor": "dfrobot",
+  "sku": "DFR0457",
+  "//variant": "WHICH BOARD THIS DESCRIBES. DFRobot's schematic (V1.0, 2016-09-02) and dimension drawing (V1.0, 2016-09-09) are the only revision they publish, and the silkscreen in their photos reads 'MOSFET Power Controller (V1.0)'. The chip identities come from a product photo of ONE unit, so a later batch could carry a different MOSFET or optocoupler under the same SKU; the resistor values come from the schematic drawing.",
+  "variant": "DFRobot DFR0457, silkscreen 'Gravity MOSFET Power Controller (V1.0)', schematic and dimension drawing V1.0",
+  "also_known_as": [
+    "Gravity: MOSFET Power Control Module",
+    "Gravity: MOSFET Power Controller",
+    "MOSFET Power Controller (V1.0)"
+  ],
+  "//sources": "Everything read online, chosen or not. In order: the current wiki page (specs table, pinout table, document links); the older wiki slug for the same page; the wiki's Arduino example (proves active-high); the product page (shipping list, price); DFRobot's V1.0 schematic; DFRobot's V1.0 dimension drawing; DFRobot's product photo Detail_06, the only place the chip markings can be read; the H&M Semiconductor HM70P04K datasheet (the MOSFET the photo shows, TO-252); the Everlight EL357N datasheet, DPC-0000014 Rev. 9 (the optocoupler the photo shows); VBsemi's HM70P04K-VB datasheet, a different maker's part with the same number and different numbers, cited only so nobody mistakes it for the H&M part (LCSC's datasheet.lcsc.com link is an HTML interstitial; this is the direct PDF); the H&M HM70P04 datasheet, the same die in TO-220, read before the K sheet was found and identical in every electrical figure; product photos Detail_05 and Main_01, looked at for the socket and the D-PAK but carrying no marking readable; DFRobot's FIT0627 PH2.0-3P female-to-female cable page and DFRobot's Gravity landing page, both read for the connector's pin-to-pin mapping and both silent on it — which is why gravity_header_pin_order stays unverified.",
+  "sources": [
+    "https://wiki.dfrobot.com/dfr0457/",
+    "https://wiki.dfrobot.com/Gravity__MOSFET_Power_Controller_SKU__DFR0457",
+    "https://wiki.dfrobot.com/dfr0457/docs/18202",
+    "https://www.dfrobot.com/product-1567.html",
+    "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_dimension_V1.0.pdf",
+    "https://dfimg.dfrobot.com/enshop/DFR0457_Detail_06.jpg",
+    "https://hmsemi.com/downfile/HM70P04K.PDF",
+    "https://www.everlighteurope.com/custom/files/datasheets/DPC-0000014.pdf",
+    "https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2008191910_VBsemi-Elec-HM70P04K_C725058.pdf",
+    "https://hmsemi.com/downfile/HM70P04.PDF",
+    "https://dfimg.dfrobot.com/enshop/DFR0457_Detail_05.jpg",
+    "https://dfimg.dfrobot.com/enshop/DFR0457/DFR0457_Main_01.jpg",
+    "https://www.dfrobot.com/product-1888.html",
+    "https://www.dfrobot.com/gravity",
+    "https://dfimg.dfrobot.com/60191ece025a892c98c6b90b/wikien/06da2b5111fb5c246e976be2c0f8741c_0x0.png"
+  ],
+  "//needs": "What this part asks of the host. `signal` is the name the host will use; `pin` is the module's name for it. The signal is a CURRENT load — two LEDs behind resistors — not a CMOS input.",
+  "needs": [
+    {
+      "signal": "LOAD_CTRL",
+      "pin": "SIGNAL",
+      "direction": "in",
+      "needs": [],
+      "note": "Gravity pin 1; any GPIO output. ACTIVE HIGH: high lights the optocoupler's LED, whose transistor pulls the P-channel gate low, and VOUT connects to VIN. Sources about 5 mA at 3.3 V (see facts.signal_input_current_ma_at_3v3). PWM to the vendor's 1 kHz limit is allowed but nothing here requires a PWM pin. The schematic labels the pin 'Single' (sic); the silkscreen marks the socket 'D', Gravity's digital-interface mark, and numbers nothing."
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "note": "Gravity pin 2. On the V1.0 schematic this pin ends in a stub — the module draws NOTHING from it (facts.gravity_vcc_pin_unconnected). Tie it to the logic rail anyway, as the Gravity convention expects, so a revision that does use it still works; the wiki's 'Logic Operating Voltage 3.3~10 V' is the range it would accept.",
+      "draws": "vcc_pin_current_ma"
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in",
+      "note": "Gravity pin 3: the CONTROL-side ground, schematic net GND. It returns only the two LEDs' few milliamps. The load current returns through the screw terminal's GND, schematic net GND1, which the optocoupler separates from this one — see facts.grounds_isolated_on_module."
+    }
+  ],
+  "unused_pins": [],
+  "pin_order": [
+    "SIGNAL",
+    "VCC",
+    "GND"
+  ],
+  "pin_order_proof": {
+    "verified": false,
+    "source": "Pads 1..3 of the HOST's PH2.0 3-pin socket, in the module's P1 order: 1 Single (signal), 2 VCC, 3 GND — read from DFRobot's V1.0 schematic, which is the only document that numbers them. This presumes a straight PH2.0-3P to PH2.0-3P cable, pin 1 to pin 1, which is what a Gravity cable is but which no DFRobot page states in words. On the module, pin 1 is the pad nearest the bottom-right mounting hole when the screw terminal is on the left and VIN at the top; pin 3 is beside the 'D' mark (dimension drawing pad designators P1-1 bottom, P1-3 top). Gravity wire colours: green signal, red VCC, black GND. Strengthened 2026-11-10, still unverified: DFRobot's product page ships the module with a 'Gravity Digital Sensor Cable x1' (https://www.dfrobot.com/product-1567.html), so the cable a person uses is DFRobot's own; the wiki's pinout image (https://dfimg.dfrobot.com/60191ece025a892c98c6b90b/wikien/06da2b5111fb5c246e976be2c0f8741c_0x0.png) labels the socket only as a whole ('4 PH2.0-3Pin Gravity",
+    "cites": {
+      "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+      "at": "page 1 of 1 (Revision V1.0), P1 symbol at grid B2"
+    }
+  },
+  "legs": {
+    "SIGNAL": "the module's Gravity socket pin 1: the pin farthest from the 'D' mark, nearest the bottom-right mounting hole (screw terminal on the left, VIN at the top); the green wire of the Gravity cable",
+    "VCC": "the middle pin of the module's Gravity socket",
+    "GND": "the module's Gravity socket pin 3: the pin beside the 'D' mark, nearest the top-right mounting hole"
+  },
+  "//footprint": "The HOST end: a JST PH 2.0 mm 3-pin socket, because this module connects by cable rather than plugging in. footprinter 'jst_ph_3' yields 3 pads at 2.0 mm pitch (checked in @tscircuit/footprinter 0.0.426). The module's own P1 is a PH2.0-3P side-entry socket whose opening faces off the board edge.",
+  "footprint": "jst_ph_3",
+  "body_mm": {
+    "width": 44,
+    "height": 32,
+    "verified": true,
+    "source": "https://wiki.dfrobot.com/dfr0457/",
+    "note": "'Dimension 44x32 mm / 1.73x1.26 inches' in the wiki table, and dimensioned identically on DFRobot's V1.0 drawing (DFR0457_mosfet-power-control-module_dimension_V1.0.pdf). 44 x 32 mm PCB with rounded corners. The screw terminal runs along one 32 mm edge, the PH2.0 socket (side-entry, opening outward) sits on the opposite edge, the D-PAK MOSFET stands between them. Four mounting holes, none on the terminal edge — see facts.mounting_holes. Height above the board is not given; the screw terminal is the tallest part."
+  },
+  "//facts": "Every entry says where it came from; `verified` is false until someone has actually checked. Numbers read from the schematic DRAWING or the product PHOTO are unverified on purpose; numbers read from a datasheet or the wiki table are verified as vendor statements, but the chip datasheets apply only if the chips really are the ones the photo shows.",
+  "facts": {
+    "load_supply_range_v": {
+      "value": [
+        5,
+        36
+      ],
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0457/",
+      "note": "'VIN Operating Voltage 5V-36V DC', the screw terminal. The MOSFET's gate is driven from VIN itself (33k pull-up to VIN; the optocoupler pulls it toward the load ground), so below 5 V the P-channel is not fully enhanced. At 12 V the gate sees about -10.9 V, far past the HM70P04K's -2.5 V worst-case threshold."
+    },
+    "load_current_max_a": {
+      "value": 20,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0457/",
+      "note": "'VIN Operating Current 0A-20A (Suggest external heat sink when the current over 10A)'. The MOSFET itself is rated -70 A at TC = 25 C, so 20 A is a trace-and-terminal limit, not a silicon one. A 0.3-0.5 A solenoid is 2.5 percent of it: no heat sink, no derating."
+    },
+    "logic_signal_range_v": {
+      "value": [
+        3.3,
+        10
+      ],
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0457/",
+      "note": "'Logic Control Signal 3.3~10V DC'. Because the signal drives an LED through 470 R this is a current range in disguise: about 4.5 mA at 3.3 V, about 19 mA at 10 V, against the EL357N's 50 mA forward-current limit."
+    },
+    "active_high": {
+      "value": true,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0457/docs/18202",
+      "note": "DFRobot's Arduino example: digitalWrite(LampControl, HIGH) lights the lamp, LOW turns it off. Consistent with the schematic: a high signal lights the opto LED, the phototransistor pulls the P-channel gate toward the load ground, VOUT rises to VIN."
+    },
+    "switching_frequency_max_hz": {
+      "value": 1000,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0457/",
+      "note": "'Switching Frequency 0-1KHz'. The gate is discharged through 3.3k but recharged only through 33k, so the OFF edge is the slow one and the MOSFET dissipates during every transition. At 1 kHz the vendor's 20 + 50 us edges are 7 percent of the period. For a valve that opens and closes, irrelevant."
+    },
+    "switch_on_time_us": {
+      "value": 20,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0457/",
+      "note": "'T(on)=20us' from the wiki's switching-character line."
+    },
+    "switch_off_time_us": {
+      "value": 50,
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0457/",
+      "note": "'T(off)=50us'. Slower than turn-on because only the 33k pull-up recharges the 6.5 nF gate."
+    },
+    "operating_temperature_c": {
+      "value": [
+        -55,
+        155
+      ],
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0457/",
+      "note": "The wiki's figure, and NOT plausible for the assembled module: the EL357N optocoupler is rated -55 to +110 C and the HM70P04K's junction -55 to 150 C. Treat the optocoupler's +110 C as the real ceiling — in a garden box in the sun that is the number that matters."
+    },
+    "switch_topology": {
+      "value": "high-side P-channel MOSFET between VIN and VOUT; load between VOUT and the terminal's GND",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "Decides where the load and its flyback diode go: the valve hangs from VOUT to the terminal's GND, not from VIN to VOUT, and the diode goes across the valve with its cathode at VOUT. Read from the V1.0 schematic drawing — Q1's source on the VIN rail, drain to P2 pin 3, gate pulled to VIN by R3, the symbol's arrow pointing out of the channel — and consistent with the 'P04' in the part marking. Confirm on the module: with the signal high VOUT reads VIN; with it low VOUT floats.",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0, 2016/9/2), Q1, R3, D1, P2 at grid B3-C4"
+      }
+    },
+    "flyback_diode_on_board": {
+      "value": false,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "The only diode on the V1.0 schematic is D1, a 12 V zener between gate and source; nothing sits across VOUT and GND. So a solenoid's turn-off spike goes straight at the MOSFET's -40 V drain rating, and the body diode is no help because it points the wrong way for a VOUT that swings negative. This is why DFRobot's own wiki says to add a freewheeling diode for solenoids. Read from the schematic drawing; confirm on the module.",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0), the only diode is D1 12V at grid B3"
+      }
+    },
+    "gate_drive_network": {
+      "value": {
+        "pullup_to_vin_ohm": 33000,
+        "series_from_optocoupler_ohm": 3300,
+        "gate_source_zener_v": 12
+      },
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "Read from the V1.0 schematic drawing (R3 33k, R2 3.3k, D1 12V). They set the gate swing: with the opto saturated the gate sits at about VIN x 3.3/36.3 above the load ground, so Vgs is about -0.91 x VIN — -10.9 V at 12 V — and above about 13 V the zener clamps it at -12 V. Below 5 V VIN the P-channel is not fully on, which is where the wiki's 5 V minimum comes from. With the switch on, VIN feeds about VIN/36.3k through the network: 0.33 mA at 12 V. R3 alone recharges the gate at turn-off, which is why the off edge is the slow one.",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0), R3 33k, R2 3.3k, D1 12V at grid B3"
+      }
+    },
+    "signal_input_network": {
+      "value": {
+        "optocoupler_led_series_ohm": 470,
+        "indicator_led_series_ohm": 2000
+      },
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "Read from the V1.0 schematic drawing (R4 470R to the EL357N's LED, R1 2k to the indicator LED L1, both from the signal pin to the control ground). They set what the host GPIO must source and whether 3.3 V is enough — the next fact.",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0), R1 2k, R4 470R, L1 at grid B2"
+      }
+    },
+    "signal_input_current_ma_at_3v3": {
+      "value": 5,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "Computed, not measured: (3.3 - 1.2 V) / 470 R = 4.5 mA into the opto LED plus about 0.6 mA into the indicator LED through 2k — about 5 mA per channel, 20 mA for four valves, sourced by the ESP32-S3's GPIOs directly. At the S3's worst-case VOH of 0.8 x 3.3 = 2.64 V and the LED's 1.4 V maximum Vf the opto current falls to 2.6 mA, still six times what the gate network asks the phototransistor to sink. Measure it once on a real module.",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0), R4 470R at grid B2"
+      }
+    },
+    "mosfet_part": {
+      "value": "HM70P04K, H&M Semiconductor (Shenzhen Huazhimei), P-channel, TO-252-2L",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/enshop/DFR0457_Detail_06.jpg",
+      "why_it_matters": "Read from DFRobot's product photo of one unit — the D-PAK is marked 'H&M SEMI / HM70P04K' — because the schematic gives Q1 no value. Nothing binds a later batch to this part, and every mosfet_* rating below rests on it. Beware the look-alike: VBsemi sell an 'HM70P04K-VB' with different numbers (-50 A, 12 mOhm, Vth -1.0 to -3.5 V, 175 C); the photo says H&M, so H&M's sheet is the one used here."
+    },
+    "mosfet_vds_max_v": {
+      "value": -40,
+      "verified": true,
+      "source": "https://hmsemi.com/downfile/HM70P04K.PDF",
+      "note": "Absolute maximum, H&M HM70P04K datasheet. A 12 V supply is fine; an un-clamped solenoid's turn-off spike is what would exceed it. VGS is rated +/-20 V, and the on-board 12 V zener keeps the gate inside that up to 36 V VIN."
+    },
+    "mosfet_rds_on_mohm_max": {
+      "value": 10,
+      "verified": true,
+      "source": "https://hmsemi.com/downfile/HM70P04K.PDF",
+      "note": "At VGS = -10 V, ID = -20 A; typical 7.5 mOhm. At 12 V VIN the gate drive is about -10.9 V so this figure applies: a 0.5 A valve dissipates 2.5 mW in the MOSFET. Nothing to cool."
+    },
+    "mosfet_vgs_threshold_v": {
+      "value": [
+        -1.2,
+        -2.5
+      ],
+      "verified": true,
+      "source": "https://hmsemi.com/downfile/HM70P04K.PDF",
+      "note": "Min to max at ID = -250 uA, typical -1.9 V. The -10.9 V gate drive at 12 V VIN is four times the worst case."
+    },
+    "mosfet_gate_charge_nc": {
+      "value": 106,
+      "verified": true,
+      "source": "https://hmsemi.com/downfile/HM70P04K.PDF",
+      "note": "Typical Qg at VDS = -20 V, ID = -20 A, VGS = -10 V; Ciss 6460 pF. A big gate for a 0.5 A load, and it is recharged through 33k at turn-off — the reason the vendor's off time is 50 us and PWM is capped at 1 kHz."
+    },
+    "mosfet_continuous_current_a": {
+      "value": -70,
+      "verified": true,
+      "source": "https://hmsemi.com/downfile/HM70P04K.PDF",
+      "note": "At TC = 25 C; -35 A at TC = 100 C; PD 65 W; TJ -55 to 150 C. The module's 20 A is the board's limit, not this."
+    },
+    "optocoupler_part": {
+      "value": "EL357N, Everlight, SOP-4, unranked CTR",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/enshop/DFR0457_Detail_06.jpg",
+      "why_it_matters": "Read from the product photo — the SOP-4 is marked 'EL / 357N' — because the schematic gives U1 no value. The CTR margin and the isolation rating below rest on it; a substitute PC817-class part would have similar numbers but nobody has checked."
+    },
+    "optocoupler_ctr_percent": {
+      "value": [
+        50,
+        600
+      ],
+      "verified": true,
+      "source": "https://www.everlighteurope.com/custom/files/datasheets/DPC-0000014.pdf",
+      "note": "Unranked EL357N at IF = 5 mA, VCE = 5 V (Everlight DPC-0000014 Rev. 9). The gate network asks the phototransistor to sink only VIN/36.3k — 0.33 mA at 12 V, 1 mA at 36 V — so at 4.5 mA of LED current a CTR of 8 percent would do; the 50 percent minimum is a margin of about six times. Above about 13 V the zener holds the gate at -12 V whether or not the transistor saturates, so the MOSFET is fully on at any VIN in range."
+    },
+    "optocoupler_led_forward_voltage_v": {
+      "value": 1.2,
+      "verified": true,
+      "source": "https://www.everlighteurope.com/custom/files/datasheets/DPC-0000014.pdf",
+      "note": "Typical at IF = 20 mA, 1.4 V maximum. IF max 50 mA, so 10 V logic (19 mA) is inside it and 12 V logic is not."
+    },
+    "isolation_v_rms": {
+      "value": 3750,
+      "verified": true,
+      "source": "https://www.everlighteurope.com/custom/files/datasheets/DPC-0000014.pdf",
+      "note": "The EL357N's input-to-output rating. The schematic keeps the control ground (GND, Gravity pin 3) and the load ground (GND1, screw terminal) as separate nets with only the optocoupler between them, so the Gravity side and the 12 V side are galvanically separate on the module — as far as the schematic shows; see grounds_isolated_on_module."
+    },
+    "grounds_isolated_on_module": {
+      "value": true,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "The V1.0 schematic names the control ground GND and the load ground GND1 and joins them only through the optocoupler. Whether the PCB's copper joins them anywhere is not visible in any published document. Harmless in this design, where the buck already ties the 12 V return to logic ground — but it means the screw terminal's GND MUST be wired to the 12 V return, because the Gravity GND does not carry the valve current and is not necessarily the same net. Confirm with a meter between Gravity pin 3 and the terminal's GND on an unpowered module.",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0), nets GND (P1) and GND1 (C3)"
+      }
+    },
+    "gravity_vcc_pin_unconnected": {
+      "value": true,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "The P1 symbol's VCC pin ends in a stub on the V1.0 schematic. If true, the module takes no current from the logic rail and the wiki's 'Logic Operating Voltage 3.3~10 V' describes only the signal. Cheap to confirm: Gravity pin 2 should read open-circuit to every other pad on an unpowered module.",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0), P1 pin 2 VCC at grid B2"
+      }
+    },
+    "gravity_header_pin_order": {
+      "value": "1 signal, 2 VCC, 3 GND",
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "Read from the V1.0 schematic's P1 symbol, with the physical position from the dimension drawing's pad designators; the silkscreen numbers nothing. The host socket's pin_order copies it and assumes a straight PH2.0-3P cable, pin 1 to pin 1 — DFRobot's FIT0627 cable page and their Gravity landing page were both read for a statement of that and neither gives one. Swapped, the GPIO drives the opto LED backwards — no damage at 3.3 V, but the valve never opens. Confirm with the green wire: on the module it must land on the pad nearest the bottom-right mounting hole (terminal on the left, VIN at the top).",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0), P1 symbol: 1 Single, 2 VCC, 3 GND at grid B2"
+      }
+    },
+    "off_state_current_ua": {
+      "value": 1,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "Computed from the schematic, not measured: with the signal low nothing conducts on the control side, VCC is unconnected, and on the load side only the MOSFET's IDSS (1 uA maximum at -40 V) flows from VIN through the 33k. So four idle channels cost the sleep budget nothing measurable — if the schematic is complete.",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0)"
+      }
+    },
+    "mounting_holes": {
+      "value": {
+        "count": 4,
+        "inner_diameter_mm": 3.1,
+        "outer_diameter_mm": 6,
+        "spacing_mm": [
+          20,
+          25
+        ]
+      },
+      "verified": false,
+      "source": "https://wiki.dfrobot.com/dfr0457/",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-dimension-v1-0",
+        "at": "page 1, the dimension lines 20 (mm) and 25 (mm)"
+      },
+      "why_it_matters": "Hole size 'inner diameter 3.1mm/0.12\"; outer diameter 6mm/0.24\"' is the wiki's own spec-table row (read 2026-11-10); count 4 and the 20 mm and 25 mm spans are printed on DFRobot's V1.0 dimension drawing. No hole is dimensioned from a board edge: scaled from the drawing, each hole centre is about 3.5 mm in from the top or bottom edge and about 3.5 mm (right pair) or 20.5 mm (middle pair) from the right edge, and the terminal edge has none. Bolting it down needs one module measured."
+    },
+    "vcc_pin_current_ma": {
+      "value": 0,
+      "verified": false,
+      "source": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "why_it_matters": "Follows from facts.gravity_vcc_pin_unconnected and is exactly as verified as it: the V1.0 schematic's VCC ends in a stub, so the module takes nothing from the logic rail. Added 2026-10-01 for spark P52, so the rail's sum can name this pin's figure instead of calling it unstated.",
+      "cites": {
+        "document": "dfr0457-mosfet-power-control-module-schematics-v1-0",
+        "at": "page 1 of 1 (Revision V1.0), P1 pin 2 VCC at grid B2"
+      }
+    }
+  },
+  "//host_requirements": "Things the host board must do that are not pins. Prose on purpose: these are design rules, written as their consequence.",
+  "host_requirements": [
+    "Put a flyback diode across EACH solenoid, cathode to the module's VOUT and anode to the screw terminal's GND. The module has none — its only diode is a gate zener — and DFRobot's wiki says to add one; without it the coil's turn-off spike goes straight at the MOSFET's -40 V drain rating, and the body diode does not help because it points the wrong way for a VOUT that swings negative.",
+    "Wire the valve between VOUT and the screw terminal's GND, not between VIN and VOUT: this is a HIGH-SIDE switch. VOUT is connected to VIN while the signal is high and floats, pulled to ground through the coil, while it is low.",
+    "Bring the 12 V return to the screw terminal's GND. The Gravity header's GND is the control-side ground, separated from the load ground by the optocoupler; it returns a few milliamps of LED current and must not be asked to return the valve's.",
+    "Budget about 5 mA of GPIO source current per channel at 3.3 V — about 20 mA for four valves — because the signal pin drives two LEDs through resistors, not a CMOS gate. Do not add a series resistor: at 3.3 V the opto LED current is already the minimum the vendor rates the module for.",
+    "No pull-down is needed on the signal: the input is an LED behind 470 R to the module's ground, which a floating pin cannot light. But a pin that is driven HIGH during reset — a strapping pin held up, or a pin the bootloader toggles — opens a valve for as long as it is high, so keep valve signals off those.",
+    "The host's PH2.0 socket must present signal on pin 1, VCC on pin 2 and GND on pin 3 to match the module through a straight cable. A cable crimped the other way round puts 3.3 V on the module's GND and ground on its LEDs — no damage, but no valve either. Check that the green wire reaches the signal pad.",
+    "Switch it on and off, or PWM it at no more than 1 kHz. The gate recharges through 33k, so the off edge is slow and the MOSFET dissipates during every transition; for a valve, plain on/off.",
+    "VIN must be at least 5 V because the gate is driven from it; 12 V gives about -11 V of gate drive and the on-board 12 V zener takes over above about 13 V, so 12 V is the comfortable case. Nothing on the Gravity header carries 12 V, and the module takes nothing from the logic rail.",
+    "Switch DC only. DFRobot's product page says 'Note: it works with direct current (DC) only!' (https://www.dfrobot.com/product-1567.html): a mains or AC load on the screw terminal is outside what the module is made for."
+  ],
+  "documents": {
+    "dfr0457-mosfet-power-control-module-schematics-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "sha256": "899d0500c5988eed4f10d02aa9283400586dc98b33e55240d83d0e83e06fe675",
+      "file": "DFR0457_mosfet-power-control-module_schematics_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": "Gravity:MOSFET Power Controller, SKU DFR0457 (schematic)",
+      "version": "Revision V1.0, dated 2016/9/2 in the title block, 1 page"
+    },
+    "dfr0457-mosfet-power-control-module-dimension-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/17549/DFR0457_mosfet-power-control-module_dimension_V1.0.pdf",
+      "sha256": "9f576104b8318a6e410e05c26d349f96fdaebe5bd2d61db7a025af212e609f59",
+      "file": "DFR0457_mosfet-power-control-module_dimension_V1.0.pdf",
+      "retrieved": "2026-09-29",
+      "title": "DFR0457 dimension drawing, silkscreen 'MOSFET Power Controller (V1.0)'",
+      "version": "V1.0 (file name); PDF created 2016-09-09, 1 page"
+    },
+    "dfr0457-detail-06": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR0457_Detail_06.jpg",
+      "sha256": "45d7dc514d986042dcc7a5cf019594a590e56812ad32b85de422e4e0490209ef",
+      "file": "DFR0457_Detail_06.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "hm70p04k": {
+      "url": "https://hmsemi.com/downfile/HM70P04K.PDF",
+      "sha256": "0b19f36ba00e7daf9dc9944b08f3c0689d66fe4a05789e6362ff72ecf244b91b",
+      "file": "HM70P04K.PDF",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dpc-0000014": {
+      "url": "https://www.everlighteurope.com/custom/files/datasheets/DPC-0000014.pdf",
+      "sha256": "feae46b4e0b5b619a7ef6bb882c1a3ab9e8d98cfc878d4d0b6fb53fbfa96241b",
+      "file": "DPC-0000014.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "2008191910-vbsemi-elec-hm70p04k-c725058": {
+      "url": "https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2008191910_VBsemi-Elec-HM70P04K_C725058.pdf",
+      "sha256": "92898eddbb3cddd5e9617fbce2119bde943280abdcb7452a194e19f5bf365ef1",
+      "file": "2008191910_VBsemi-Elec-HM70P04K_C725058.pdf",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "hm70p04": {
+      "url": "https://hmsemi.com/downfile/HM70P04.PDF",
+      "sha256": "08b0991784d931ed73266bf33c060b6959797452b492640f66365408ee585093",
+      "file": "HM70P04.PDF",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0457-detail-05": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR0457_Detail_05.jpg",
+      "sha256": "64b969e800ed236e4ab2ce8374d035f45fbe0db6394b4615520f63fc365468dd",
+      "file": "DFR0457_Detail_05.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "dfr0457-main-01": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR0457/DFR0457_Main_01.jpg",
+      "sha256": "904221b5165848659466aef9088c8e1e28b926ef8a3511f4a2d00c4dac211f56",
+      "file": "DFR0457_Main_01.jpg",
+      "retrieved": "2026-09-29",
+      "title": null,
+      "version": null
+    },
+    "06da2b5111fb5c246e976be2c0f8741c-0x0": {
+      "url": "https://dfimg.dfrobot.com/60191ece025a892c98c6b90b/wikien/06da2b5111fb5c246e976be2c0f8741c_0x0.png",
+      "sha256": "134c7154633a5eea66141a2c958cc48576cedb06f2b59344106845171b32d142",
+      "file": "06da2b5111fb5c246e976be2c0f8741c_0x0.png",
+      "retrieved": "2026-11-10",
+      "title": null,
+      "version": null
+    }
+  },
+  "simulation": {
+    "wokwi": {
+      "part": "wokwi-led",
+      "pins": {
+        "SIGNAL": "A",
+        "GND": "C",
+        "VCC": null
+      },
+      "attrs": {
+        "color": "red"
+      },
+      "stand_in": "an LED on the gate drive: lit means the valve is commanded open. No opto, no MOSFET, no 12 V load and no flyback transient are modelled; a scenario asserts the MCU's pin"
+    }
+  },
+  "based_on": {
+    "project": "irrigation",
+    "digest": "d49211f92b39c0a38ac5ec4d5af16e3a53f000fb30ef18c6268b3c9f22241698"
+  }
+}

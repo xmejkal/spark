@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "id": "beetle-esp32-c6",
+  "name": "DFRobot Beetle ESP32-C6 Mini Development Board",
+  "//sku": "DFR1117. Two hardware revisions are sold under it: V1.0 (RT9080 3.3 V LDO, schematic dated 2024-01-17) and V1.1 (TPS62A02DRLR 3.3 V buck, schematic dated 2024-12-06). Everything here is true of both except the regulator, its current and the deep-sleep current, which say which revision they hold for. Which revision the PO's three boards are is NOT known (the back silkscreen prints it, e.g. 'V1.0.0' on DFRobot's pin diagram).",
+  "sku": "DFR1117",
+  "chip": "esp32c6",
+  "//": "Written in walk P735 from DFRobot's wiki, both schematics, DFRobot's own KiCad footprint (layout zip) and the Arduino variant header. One side only: no photo of the boards in hand.",
+  "//flash_mb": "DFRobot wiki, Specifications: 'Flash: 4MB' (documents.dfr1117-wiki). The schematic's chip is ESP32-C6-FH4 (flash in package).",
+  "flash_mb": 4,
+  "//wokwi_part_type": "Wokwi has no Beetle ESP32-C6. The stand-in is Espressif's ESP32-C6 DevKitC-1; its Wokwi definition was NOT read in this walk, so wokwi_power_pins and documents.wokwi-board are missing.",
+  "wokwi_part_type": "board-esp32-c6-devkitc-1",
+  "wokwi_is_stand_in": true,
+  "wokwi_pin_naming": "gpio",
+  "//physical": "DFRobot's own footprint 'Beetle ESP32-C6.kicad_mod' (documents.dfr1117-layout-v1-0, KiCad 8): outline 20.5 x 25 mm with 1.5 mm corner arcs; 16 round through-holes, drill 0.9 mm, pad 1.8 mm, two columns of 8 at 2.54 mm pitch, x = 1.345 and 19.125 (17.78 mm apart), y = -4.56 to -22.34. The dimension drawing (documents.dfr1117-dimension) gives 20.50 x 25.00 mm and puts the USB-C at the y = -25 edge. The footprint is the V1.0 layout; that V1.1 kept it is UNVERIFIED.",
+  "physical": {
+    "footprint_export": "BeetleEsp32C6",
+    "//footprint_module": "Left out on purpose: DFRobot's footprint is named 'Beetle ESP32-C6' (a space, not a name), and no footprint has been drawn and checked for this board, so --for-fab should refuse it.",
+    "width_mm": 20.5,
+    "height_mm": 25.0,
+    "corner_radius_mm": 1.5,
+    "//thickness_mm": "Not stated in any source read.",
+    "header": {
+      "rows": 2,
+      "pins": [8, 8],
+      "pitch_mm": 2.54,
+      "row_spacing_mm": 17.78,
+      "drill_mm": 0.9,
+      "pad_mm": 1.8,
+      "//first_pad_from_edge_mm": "Footprint: the last pad of each column (8 and 9) is at y = -4.56 and the outline edge away from the USB-C at y = 0. From the USB-C edge, pads 1 and 16 sit 25 - 22.34 = 2.66 mm in. Both columns end at the same y, so they are flush at both ends.",
+      "first_pad_from_edge_mm": 4.56,
+      "flush_edge": "+y"
+    },
+    "//mounting_holes": "None: the footprint has no hole but the 16 header pads, the dimension drawing shows none, and the schematic's FD7/FD8 are fiducials.",
+    "mounting_holes": {"count": 0},
+    "//buttons": "DFRobot's dimension drawing and pin diagram: 'B' left of the USB-C, 'R' right of it, component side up. The wiki: BOOT is IO9. Not checked on a board in hand.",
+    "buttons": {
+      "seen_from": "the component side facing you, USB-C at the top",
+      "boot": {"silkscreen": "B", "place": "top left, beside the USB-C"},
+      "reset": {"silkscreen": "R", "place": "top right, beside the USB-C"}
+    },
+    "//header_order": "Schematic (both revisions): P3 pins 1-8 = GND, 3V3, IO4, IO5, IO23, IO22, IO21, IO7; P4 pins 1-8 = BAT, GND, VUSB, IO17/RX, IO16/TX, IO19, IO20, IO6. DFRobot's KiCad symbol numbers the same pads 1-16 (P3 = 1-8, P4 reversed = 9-16: 9 GPIO6 ... 14 VIN, 15 GND, 16 BAT), and the footprint puts pad 1 and pad 16 at the USB-C end. The silkscreen (dimension drawing) prints 'VIN' for the VUSB net, and bare GPIO numbers for the rest. Each row is listed from the end away from the USB-C, as spark's other boards do. GND1 is P3 pin 1, GND2 is P4 pin 2; the silkscreen prints both as GND.",
+    "header_order": {
+      "row_left": ["7", "21", "22", "23", "5", "4", "3V3", "GND1"],
+      "row_right": ["6", "20", "19", "16", "17", "VIN", "GND2", "BAT"]
+    },
+    "//pad_aliases": "Function names from the Arduino variant (documents.arduino-variant-beetle-c6). The silkscreen prints GPIO numbers only.",
+    "pad_aliases": {"SDA": "19", "SCL": "20", "TX": "16", "RX": "17", "MOSI": "22", "MISO": "21", "SCK": "23", "SS": "4"}
+  },
+  "//pins": "The silkscreen prints the GPIO number itself (dimension drawing, pin diagram). Function names from the Arduino variant header dfrobot_beetle_esp32c6/pins_arduino.h at tag 3.3.12.",
+  "pins": {
+    "4": 4, "5": 5, "23": 23, "22": 22, "21": 21, "7": 7,
+    "17": 17, "16": 16, "19": 19, "20": 20, "6": 6,
+    "SDA": 19, "SCL": 20, "TX": 16, "RX": 17, "MOSI": 22, "MISO": 21, "SCK": 23, "SS": 4
+  },
+  "//wake_capable_gpio": "GPIO0-7 on an ESP32-C6 (LP IO), as the XIAO ESP32-C6 record has it from soc_caps.h (documents.esp-idf-soc-caps-v5-5-1). On this header: 4, 5, 6, 7. GPIO0 is the battery-sense pin, not on the header.",
+  "wake_capable_gpio": [0, 1, 2, 3, 4, 5, 6, 7],
+  "//adc_gpio": "GPIO0-6: ESP32-C6 datasheet v1.5 Table 2-8 (page 23), ADC1_CH0-6, as the XIAO record cites it. On this header: 4, 5, 6 (DFRobot's pin diagram: ADC1_4, ADC1_5, ADC1_6).",
+  "adc_gpio": [0, 1, 2, 3, 4, 5, 6],
+  "pin_roles": {
+    "strapping": {
+      "gpio": [4, 5, 8, 9, 15],
+      "note": "ESP32-C6 strapping pins (MTMS, MTDI, GPIO8, GPIO9, GPIO15), as the XIAO record cites Espressif's GPIO reference. GPIO4 and GPIO5 are on this header. GPIO8 has a 10K pull-up R11 to 3V3, GPIO9 a 10K pull-up R10 (schematics V1.0 and V1.1). GPIO15 is the LED, held low through it."
+    },
+    "console_uart": {
+      "gpio": [16],
+      "note": "U0TXD, header pad '16', through a 499 R series resistor R7 (schematic). The ROM bootloader prints here on every reset."
+    },
+    "onboard_led": {
+      "gpio": [15],
+      "active_level": 1,
+      "note": "LED1 'L', lit by a 1: on both schematics GPIO15 drives R16 2.7K into LED1's anode, the cathode on GND. The wiki: 'Onboard LED pin IO15/D13'; the variant: LED_BUILTIN = 15. Not on the header. (The XIAO's LED is lit by a 0; this one is not.)"
+    },
+    "onboard_button": {
+      "gpio": [9],
+      "active_level": 0,
+      "note": "BOOT, silkscreened B, reads 0 when pressed: on both schematics IO9 has the 10K pull-up R10 to 3V3, 1 uF C21 to GND and the switch S1 to GND. The wiki names it 'IO9/D9/BOOT'. Held at reset it enters the bootloader."
+    },
+    "onboard_battery_sense": {
+      "gpio": [0],
+      "facts": {
+        "divider": {"value": 2, "verified": true, "source": "Schematics V1.0 and V1.1: BAT through R1 1M/1% to IO0, R2 1M/1% to GND, C3 100 nF across R2 (documents.dfr1117-schematics-zip, DFR1117-Schematics-V1.1.pdf, zone D2)."}
+      },
+      "note": "The battery voltage halved, on GPIO0 (ADC1_CH0), from both schematics. The wiki says 'lithium battery charging/monitoring' but names no pin; the schematic does."
+    },
+    "usb": {
+      "gpio": [12, 13],
+      "note": "USB D- (GPIO12) and D+ (GPIO13) through 22 R (R6, R8) to the USB-C (schematic). Driving one drops the USB Serial/JTAG port. Not on the header."
+    },
+    "flash": {
+      "gpio": [24, 25, 26, 27, 28, 29, 30],
+      "note": "The ESP32-C6-FH4's in-package flash, as the XIAO record cites the C6 datasheet v1.5 (Table 2-4, page 20). Not on the header."
+    },
+    "i2c": {"gpio": [19, 20], "note": "SDA 19, SCL 20 (variant header; the wiki pin diagram agrees). No I2C pull-ups on the board (schematic)."},
+    "spi": {"gpio": [22, 21, 23, 4], "note": "MOSI 22, MISO 21, SCK 23, SS 4 (variant header)."}
+  },
+  "//deep_sleep": "The ESP32-C6's wake API under MicroPython, as the XIAO record holds it (same chip): wake_on_ext0 does not exist on the C6.",
+  "deep_sleep": {
+    "wake_api": "esp32.wake_on_ext1",
+    "single_polarity_for_all_pins": true,
+    "simulated_by_wokwi": false
+  },
+  "vendor": {"arduino_variant": "dfrobot_beetle_esp32c6"},
+  "power": {
+    "charger": {"value": "TP4057", "verified": true, "source": "Schematics V1.0 and V1.1: U7 TP4057, VCC from VUSB, BAT to the BAT net; the wiki: 'TP4057 lithium battery charge management chip'.", "cites": {"document": "dfr1117-schematics-zip", "at": "DFR1117-Schematics-V1.1.pdf, zone D1"}},
+    "charge_current_a": {"value": 0.5, "verified": true, "source": "DFRobot wiki, Specifications: 'Max charging current: 0.5A'. The schematic sets PROG with R20 2K.", "cites": {"document": "dfr1117-wiki", "at": "Specifications"}},
+    "regulator": {"value": "V1.1: TPS62A02DRLR 3.3 V buck; V1.0: RT9080 3.3 V LDO", "verified": true, "source": "Schematic V1.1 U1 TPS62A02DRLR, schematic V1.0 U1 RT9080; the wiki: 'V1.0: RT9080 3.3V LDO V1.1: TPS62A02DRLR 3.3V DC-DC'.", "cites": {"document": "dfr1117-schematics-zip", "at": "both PDFs, zone D3"}},
+    "regulator_3v3_a": {"value": 0.6, "verified": false, "source": "The lower of the two revisions: RT9080 'up to 600mA of output current' (RT9080 datasheet page 1, in documents.dfr1117-datasheet-zip); TPS62A02 IOUT 0-2 A (TPS62A02DRLR datasheet, 7.3 Recommended Operating Conditions, page 4, same zip).", "why_it_matters": "What everything on 3V3 is summed against. 0.6 A holds for V1.0; a V1.1 board gives 2 A. Read the revision off the back of the PO's boards.", "cites": {"document": "dfr1117-datasheet-zip", "at": "RT9080 Chip Datasheet.pdf, page 1"}},
+    "module_peak_a": {"value": 0.354, "verified": true, "source": "ESP32-C6 Series Datasheet v1.5, Table 5-7 (page 66): 802.11b 1 Mbps @ 21.0 dBm TX, 354 mA peak, the bare chip's figure; the citation the XIAO record holds, reused.", "cites": {"document": "esp32-c6-datasheet-v1-5", "at": "Table 5-7, page 66"}},
+    "deep_sleep_ua": {"value": 37, "verified": false, "source": "DFRobot wiki, Specifications: 'Sleep Current (Deep Sleep Mode, Battery-Powered) Version 1.0: 14μA Version 1.1: 37μA'. The higher one is held.", "why_it_matters": "The battery life of the project. 14 uA on V1.0, 37 uA on V1.1; the PO's revision is unknown.", "cites": {"document": "dfr1117-wiki", "at": "Specifications"}},
+    "internal_pull_up_ohms": {"value": 45000, "verified": true, "source": "ESP32-C6 Series Datasheet v1.5, DC characteristics (page 65): RPU 45 kOhm typical; the XIAO record's citation, reused.", "cites": {"document": "esp32-c6-datasheet-v1-5", "at": "page 65"}},
+    "io_volts": {"value": 3.3, "verified": true, "source": "DFRobot wiki: 'Operating voltage: 3.3V'; the regulator makes 3V3 (schematic).", "cites": {"document": "dfr1117-wiki", "at": "Specifications"}},
+    "battery_input": {"value": "header pads, no connector: BAT (right row, pad 16, at the USB-C end) and GND beside it (pad 15)", "verified": true, "source": "Schematics: P4 pin 1 BAT, pin 2 GND; the footprint and DFRobot's symbol: pad 16 BAT, pad 15 GND; the board drawing shows no battery connector.", "cites": {"document": "dfr1117-schematics-zip", "at": "P4, zone C4"}}
+  },
+  "//power_pads": "VIN is the VUSB net itself (schematic P4 pin 3 = VUSB): with USB plugged in it carries the USB 5 V, and a supply on VIN meets the USB host's VBUS with no diode between them. VUSB reaches the regulator through the Schottky D3 1N5819W; BAT reaches it through the P-FET Q1 AO3407, which turns off when VUSB is present (R17 10K gate pull-down).",
+  "power_pads": {
+    "GND1": {"rail": "ground", "direction": "out"},
+    "GND2": {"rail": "ground", "direction": "out"},
+    "3V3": {"rail": "logic", "direction": "out", "can_supply": "regulator_3v3_a", "own_draw": "module_peak_a", "volts": "io_volts"},
+    "VIN": {"rail": "5v", "direction": "in", "feeds": "3V3"},
+    "BAT": {"rail": "battery", "direction": "in", "feeds": "3V3"}
+  },
+  "documents": {
+    "dfr1117-wiki": {"url": "https://wiki.dfrobot.com/SKU_DFR1117_Beetle_ESP32_C6", "sha256": "36a80b4e03d744bd805e4581827ad9defd2f17f3b85180b86069e95341ba5d3f", "file": "SKU_DFR1117_Beetle_ESP32_C6", "retrieved": "2026-11-10", "title": "Beetle ESP32 C6 Mini Dev Board", "version": "dateModified 2025-12-03"},
+    "dfr1117-schematics-zip": {"url": "https://dfimg.dfrobot.com/wiki/19405/DFR1117_beetle-esp32-c6_schematics_V1.1.zip", "sha256": "eb880ecaa06eecbb60641172c8141884e6069822c83a6f82b35a49c4413c0dc2", "file": "DFR1117_beetle-esp32-c6_schematics_V1.1.zip", "retrieved": "2026-11-10", "title": "Beetle ESP32-C6 schematics", "version": "holds V1.0 (2024-01-17) and V1.1 (2024-12-06)"},
+    "dfr1117-dimension": {"url": "https://dfimg.dfrobot.com/wiki/19405/DFR1117_beetle-esp32-c6_dimension_V1.0.png", "sha256": "b6574228fc5d83d0c54b7446ebf20f687cad440b618d6c16ca06fdbae021617a", "file": "DFR1117_beetle-esp32-c6_dimension_V1.0.png", "retrieved": "2026-11-10", "title": "Dimension", "version": "V1.0"},
+    "dfr1117-layout-v1-0": {"url": "https://dfimg.dfrobot.com/wiki/19405/DFR1117_beetle-esp32-c6_layout_V1.0.zip", "sha256": "826869588e7a8655dc6ba0e35dda9c27014781e4bfad1a532a3d743c65cd726e", "file": "layout.zip", "retrieved": "2026-11-10", "title": "Beetle ESP32-C6 KiCad footprint and symbol", "version": "V1.0, KiCad 8"},
+    "dfr1117-datasheet-zip": {"url": "https://dfimg.dfrobot.com/wiki/19405/DFR1117_beetle-esp32-c6_datasheet_V1.0.zip", "sha256": "068d6820af66d45e8ed6bb19261861e12f642f76175a724e5893890b20d4ad80", "file": "DFR1117_beetle-esp32-c6_datasheet_V1.0.zip", "retrieved": "2026-11-10", "title": "ESP32-C6, RT9080 and TPS62A02DRLR datasheets", "version": "V1.0"},
+    "dfr1117-pin-diagram": {"url": "https://dfimg.dfrobot.com/60c1e008bddfc41c3293de80/wiki/51ab86bba659126748111cb59bb4b12a_0x0.png.webp", "sha256": "1ade6183d522b00de8da8f309db79285379e0169720357d54cd08b39a38d2a9c", "file": "51ab86bba659126748111cb59bb4b12a_0x0.png.webp", "retrieved": "2026-11-10", "title": "Pin diagram", "version": null},
+    "arduino-variant-beetle-c6": {"url": "https://raw.githubusercontent.com/espressif/arduino-esp32/3.3.12/variants/dfrobot_beetle_esp32c6/pins_arduino.h", "sha256": "a603d215783a026445b416233d664b27c2106d5830600729a7fc076018b40398", "file": "dfrobot_beetle_esp32c6.pins_arduino.h", "retrieved": "2026-11-10", "title": null, "version": "tag 3.3.12"},
+    "esp32-c6-datasheet-v1-5": {"url": "https://documentation.espressif.com/esp32-c6_datasheet_en.pdf", "sha256": "372a5b42b2900c83ef4309149c8835e9ae2d1be19244995bf2fb83af4dc5edf1", "file": "esp32-c6_datasheet_en.pdf", "retrieved": "2026-10-13", "title": "ESP32-C6 Series Datasheet", "version": "1.5"},
+    "esp-idf-soc-caps-v5-5-1": {"url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32c6/include/soc/soc_caps.h", "sha256": "43e1668e045daf9b419fff29c4c647d8f48b065b744a48a2ffebfaf8bb358169", "file": "esp-idf-v5.5.1-esp32c6-soc_caps.h", "retrieved": "2026-10-13", "title": null, "version": "tag v5.5.1"}
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "schema": 1,
+  "id": "dfr0995-lcd-1in47",
+  "name": "DFRobot 1.47\" 172x320 IPS LCD Display Module (ST7789V3), 8-pin header and 18-pin GDI FPC",
+  "kind": "display",
+  "//": "True of SKU DFR0995, board silkscreen 'V1.0', schematic V1.0 (2022/6/20). The pad list is the 8-pad header J1; the 18-pin GDI FPC (P1) carries the same signals and is not a pad list here. Header pitch is not published: pinrow8 assumes 2.54 mm. Only one side of the board was seen (DFRobot's back render and a front photo), never the part in hand.",
+  "vendor": "dfrobot",
+  "sku": "DFR0995",
+  "sources": [
+    "https://wiki.dfrobot.com/dfr0995/",
+    "https://dfimg.dfrobot.com/wiki/19389/DFR0995_1-47-inch-display_schematics_V1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/19389/DFR0995_1-47-inch-display_dimension_V1.0.png",
+    "https://img.dfrobot.com.cn/wiki/60c1e008bddfc41c3293de80/61568405ff77f1944899d596020e1af6.png",
+    "https://dfimg.dfrobot.com/enshop/DFR0995/DFR0995_Main_01_1200x630.jpg",
+    "https://wiki.dfrobot.com/dfr0995/docs/19750",
+    "https://www.dfrobot.com/product-2073.html"
+  ],
+  "needs": [
+    {
+      "signal": "SCLK",
+      "pin": "SCLK",
+      "direction": "out",
+      "bus": "spi"
+    },
+    {
+      "signal": "MOSI",
+      "pin": "MOSI",
+      "direction": "out",
+      "bus": "spi"
+    },
+    {
+      "signal": "TFT_CS",
+      "pin": "CS",
+      "direction": "out"
+    },
+    {
+      "signal": "TFT_DC",
+      "pin": "DC",
+      "direction": "out"
+    },
+    {
+      "signal": "TFT_RST",
+      "pin": "RES",
+      "direction": "out"
+    },
+    {
+      "signal": "TFT_BL",
+      "pin": "BLK",
+      "direction": "out",
+      "needs": [
+        "pwm"
+      ],
+      "optional": true,
+      "note": "the backlight is on with BLK open (R1 10k to VCC on the transistor's base); drive it to dim or switch off"
+    }
+  ],
+  "power": [
+    {
+      "pin": "VCC",
+      "rail": "logic",
+      "direction": "in",
+      "draws": "peak_current_ma",
+      "note": "an on-board regulator U1 makes the 3 V the panel, buffer and backlight run at"
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    }
+  ],
+  "unused_pins": [],
+  "pin_order": [
+    "BLK",
+    "DC",
+    "RES",
+    "CS",
+    "MOSI",
+    "SCLK",
+    "GND",
+    "VCC"
+  ],
+  "footprint": "pinrow8",
+  "body_mm": {
+    "width": 44.5,
+    "height": 19.5,
+    "verified": true,
+    "source": "https://wiki.dfrobot.com/dfr0995/ specification table: Module Dimension 19.5mm x 44.5mm; the dimension drawing gives 44.5 x 19.5, PCB 1.6, 4.7 overall",
+    "cites": {
+      "document": "dfr0995-1-47-inch-display-dimension-v1-0",
+      "at": "page 1, top and side views"
+    }
+  },
+  "facts": {
+    "supply_range_v": {
+      "value": [
+        3.3,
+        5.0
+      ],
+      "verified": false,
+      "source": "https://wiki.dfrobot.com/dfr0995/ pinout table: VCC 'DC3.3V-5V'; the same page's specification table says 'Operating Voltage 3.3V'",
+      "why_it_matters": "DFRobot's two texts disagree; 3.3 V is the only supply both name. The schematic's regulator U1 (part not named) suggests 5 V in is meant, but its limit is not published"
+    },
+    "full_screen_current_ma": {
+      "value": null,
+      "verified": false,
+      "source": "not published on https://wiki.dfrobot.com/dfr0995/ or the schematic",
+      "why_it_matters": "the rail sum cannot count the display; measure with the backlight on"
+    },
+    "peak_current_ma": {
+      "value": null,
+      "verified": false,
+      "source": "not published: no figure for the backlight (3 white LEDs in parallel) at full brightness",
+      "why_it_matters": "the rail sum names this part instead of summing it; measure on the bench with BLK open and a full white screen"
+    },
+    "input_high_v": {
+      "value": null,
+      "verified": false,
+      "source": "not published: the inputs go through a 6-channel buffer U3 (part not named) powered from the 3 V regulator output",
+      "why_it_matters": "that a 3.3 V host drives a safe high is assumed from the buffer's 3 V supply"
+    },
+    "input_low_v": {
+      "value": null,
+      "verified": false,
+      "source": "not published, as input_high_v",
+      "why_it_matters": "the low threshold is unknown; an ESP32 drives 0 V, which a 3 V buffer reads low"
+    },
+    "bus": {
+      "value": "spi",
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0995/ specification table: Interface SPI; write-only, no MISO on the header"
+    },
+    "driver_chip": {
+      "value": "ST7789V3",
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0995/ description: 'The ST7789V3 1.47 inch IPS Color Display Module'"
+    },
+    "resolution_px": {
+      "value": [
+        172,
+        320
+      ],
+      "verified": true,
+      "source": "https://wiki.dfrobot.com/dfr0995/ specification table: Pixels 172x320"
+    },
+    "on_board_pulls": {
+      "value": {
+        "RES": "10k to VCC (R5)",
+        "CS": "100k to VCC (R10)",
+        "BLK": "10k to VCC (R1) through 1k (R3): backlight on when BLK is open"
+      },
+      "verified": false,
+      "source": "module schematic R5, R10, R1 and R3, read from the drawing image",
+      "why_it_matters": "RES and CS idle high without the host; with VCC at 5 V these pull the host's 3.3 V pins towards 5 V",
+      "cites": {
+        "document": "dfr0995-1-47-inch-display-schematics-v1-0",
+        "at": "page 1, P1, U3 and Q1"
+      }
+    },
+    "series_resistors_ohm": {
+      "value": 390,
+      "verified": false,
+      "source": "module schematic R4, R6-R9 390R between the buffer U3 and the panel, read from the drawing image",
+      "why_it_matters": "slows the edges; a high SPI clock may need testing",
+      "cites": {
+        "document": "dfr0995-1-47-inch-display-schematics-v1-0",
+        "at": "page 1, U3 outputs"
+      }
+    }
+  },
+  "host_requirements": [
+    "Power it from the host's 3V3: DFRobot's wiki says 'Operating Voltage 3.3V' in one table and 'DC3.3V-5V' in the other, and the schematic pulls RES, CS and BLK up to VCC, so at 5 V those pulls push a 3.3 V ESP32's pins above its supply.",
+    "The header's pad 1 end is read from the schematic image (J1: 1 BLK ... 8 VCC); match the silkscreen names on the board in hand before wiring, as a reversed row puts VCC on BLK.",
+    "The header pitch is not published; the record assumes 2.54 mm (pinrow8). Measure the board before a PCB is made.",
+    "The 18-pin GDI FPC (0.5 mm, reverse cable) carries the same signals: on a host's GDI socket the display takes that socket's SCLK, MOSI, DC, RES, CS and BLK pins; do not give them to another part.",
+    "Peak current (backlight at full) is not published; do not run it from a rail with no margin."
+  ],
+  "documents": {
+    "dfr0995-1-47-inch-display-schematics-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/19389/DFR0995_1-47-inch-display_schematics_V1.0.pdf",
+      "sha256": "20cfbe18d894411a00947b059783b497ad4121cd0712cab9ce8373fe44b55008",
+      "file": "DFR0995_1-47-inch-display_schematics_V1.0.pdf",
+      "retrieved": "2026-11-10",
+      "title": "DFR0995 schematic, \"1.47\" IPS LCD Display Moudle(172x320)\"",
+      "version": "Revision V1.0, 2022/6/20"
+    },
+    "dfr0995-1-47-inch-display-dimension-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/19389/DFR0995_1-47-inch-display_dimension_V1.0.png",
+      "sha256": "365a87fecff21d237d4462c943b0669760c239e8e2e8d9f97fdbd48d419c658e",
+      "file": "DFR0995_1-47-inch-display_dimension_V1.0.png",
+      "retrieved": "2026-11-10",
+      "title": "DFR0995 dimension drawing (unit mm)",
+      "version": "prints none; file name says V1.0"
+    },
+    "61568405ff77f1944899d596020e1af6": {
+      "url": "https://img.dfrobot.com.cn/wiki/60c1e008bddfc41c3293de80/61568405ff77f1944899d596020e1af6.png",
+      "sha256": "114ef7bb5cca16678e2b73a56367a981c25f8d0a9f4e245e15614232103cb527",
+      "file": "61568405ff77f1944899d596020e1af6.png",
+      "retrieved": "2026-11-10",
+      "title": "DFR0995 pinout render, back of the board",
+      "version": "board silkscreen V1.0"
+    },
+    "dfr0995-main-01-1200x630": {
+      "url": "https://dfimg.dfrobot.com/enshop/DFR0995/DFR0995_Main_01_1200x630.jpg",
+      "sha256": "cdf4ca0f4a41a09905ad462334bf61a85866fad2c64e759a6fc09dc9f3b3a0d5",
+      "file": "DFR0995_Main_01_1200x630.jpg",
+      "retrieved": "2026-11-10",
+      "title": "DFR0995 product photo, front with FPC cable",
+      "version": "prints none"
+    }
+  },
+  "pin_order_proof": {
+    "verified": false,
+    "source": "schematic J1 (CON8) numbers 1 BLK, 2 DC, 3 RES, 4 CS, 5 MOSI, 6 SCLK, 7 GND, 8 VCC, read from the drawing image; DFRobot's pinout render shows the silkscreen BLK DC RES CS MOSI SCLK GND VCC left to right, the same line. The wiki's text table lists the names VCC..BLK with no numbers.",
+    "why_it_matters": "a row numbered from the wrong end puts VCC on BLK and GND on DC; read the silkscreen on the board in hand before wiring",
+    "cites": {
+      "document": "dfr0995-1-47-inch-display-schematics-v1-0",
+      "at": "page 1, J1"
+    }
+  },
+  "legs": {
+    "VCC": "the pad at the end of the row nearest the GND pad, silkscreen VCC",
+    "BLK": "the pad at the other end, nearest the DFRobot logo, silkscreen BLK"
+  },
+  "alternatives": []
+}
