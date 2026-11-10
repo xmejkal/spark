@@ -3,7 +3,8 @@
 Card [P737 #1013](https://github.com/xmejkal/spark/issues/1013), epic P735 [#1010](https://github.com/xmejkal/spark/issues/1010).
 Built on [the discovery brief](brief.md) (its Hand-off and D12) and the architect's options in
 [council/arch-architect.md](council/arch-architect.md). 2026-11-10. The fact need tree is
-[P738 #1014](https://github.com/xmejkal/spark/issues/1014), and it feeds the gap list.
+[P738 #1014](https://github.com/xmejkal/spark/issues/1014), and it feeds the gap list. The ★C and D numbers
+are the brief's claims and decisions.
 
 ## Council
 
@@ -17,7 +18,7 @@ Built on [the discovery brief](brief.md) (its Hand-off and D12) and the architec
 
 Every row is in [docs/observations/rows/p737-research-pipeline.md](../../observations/rows/p737-research-pipeline.md).
 
-> **TL;DR.** One new Operation, `ResearchPart`, runs ordered, swappable research sources over the gaps that the
+> **TL;DR.** One new Operation (spark's unit of work), `ResearchPart`, runs ordered, swappable research sources over the gaps that the
 > fact need tree names. It writes one part record. Each question that a source cannot answer itself becomes a
 > typed `Question`. A `ReplyStrategy` answers it: scripted from a replies file, live in a terminal (step R2), or "not
 > now". A deferred question goes on the run's open list, and the next run takes the replies. `ConsentStrategy` keeps
@@ -199,10 +200,10 @@ P734). If the sheet needs `header_order` and `flush_edge`, slice 3 adds them. `p
 Measured against [docs/guide/patterns-and-names.md](../../guide/patterns-and-names.md): `ResearchPart` (Operation, verb
 and object), `research.py` (topic noun), op `research-part`, module `research_part.py` (one set of words).
 `ResearchSource`, `ReplyStrategy` (Strategy, the suffix because the noun alone does not say it acts). `Question`,
-`Reply`, `SourceOffer`, `FactNeed`, `FactNeeds` (Values, plain nouns). `RepliesStore` (Store: the noun of what it keeps,
+`Reply`, `SourceOffer`, `FactNeed`, `FactNeeds` (Values, plain nouns, the last two P738's). `RepliesStore` (Store: the noun of what it keeps,
 then Store, with a docstring that says it keeps one project file). `GivenReplyStrategy`, `DeferringReplyStrategy`,
 `TerminalReplyStrategy`, `ChainedReplyStrategy` (what varies, then the base name). `KeptDocumentsSource` matches the
-name `kept-documents`. `FETCHES` joins the effect words in operation.py and the list at patterns-and-names.md:29.
+name `kept-documents`. `FETCHES` joins the effect words in operation.py and the effects sentence at patterns-and-names.md:29.
 `needs_reply` beside `needs_yes` and `needs_person`. `asked_of` and `answered_by` say who, in one pattern.
 `answer_form`, not `shape`, because shape means an outline. No new row in the names table.
 

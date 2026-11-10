@@ -2,7 +2,7 @@
 
 The design in `docs/discovery/2026-11-10-p735-dfrobot-records/design.md`. Card: [P737 #1013](https://github.com/xmejkal/spark/issues/1013).
 Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter on Fable), rows 25 to 38 its round 2
-(one lens on Sonnet, the refuter on Fable). 2026-11-10.
+(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet). 2026-11-10.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -44,3 +44,6 @@ Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter
 | 36 | `SOURCES` collides with the four meanings of source; `kept-documents` and `KeptDocumentSource` disagree in number | plan architecture lens round 2 | acted | `RESEARCH_SOURCES`, `KeptDocumentsSource` |
 | 37 | R1 should run right after step 2 to prove the family on real code; step 2b should split | plan architecture lens round 2 | acted in part | the record step split off (step 3); R1 stays after the MVP, because the PO's order is the MVP first, then the refactor (D12) |
 | 38 | after step 5 the commodity path, other vendors and the budgets stay prose; no slot lets an agent answer in-process | plan architecture lens round 2 | acted | said in step 5; both in the later list |
+| 39 | the ★C, D and P numbers and "Operation" appear with no gloss | PR reviewer | acted | one line under the title names the brief; the TL;DR glosses Operation |
+| 40 | patterns-and-names.md:29 is a sentence, not a list; `FactNeed` is in Names but not in the diagram | PR reviewer | acted | "the effects sentence"; Names says the two Values are P738's |
+| 41 | the later list is far-future text in a plan that shrinks with distance | PR reviewer | closed | one line each, as the reviewer accepted |
