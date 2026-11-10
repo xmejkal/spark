@@ -1,0 +1,49 @@
+# P737 the research pipeline, live or scripted: rows
+
+The design in `docs/discovery/2026-11-10-p735-dfrobot-records/design.md`. Card: [P737 #1013](https://github.com/xmejkal/spark/issues/1013).
+Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter on Fable), rows 25 to 38 its round 2
+(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet). 2026-11-10.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | R1 forced `ConsentStrategy` onto `ReplyStrategy`: `opens_erase`, `require_ready` and `yes_kind` have no home in a Reply, so it adds code | plan architecture lens | acted | R1 keeps every Consent member and adds one `reply()` for YES_NO; the gate reads `opens_erase` as today |
+| 2 | "grants as given replies" is a stretch: a grant is a scoped, expiring authorisation, not an answer | plan architecture lens | acted | "a grant stays a Consent" in R1 and the later list |
+| 3 | the replies file had no shape and no owner; `--replies` must be one shared Argument | plan architecture lens | acted | `RepliesStore` owns the shape; `--replies` in `COMMON_ARGUMENTS` |
+| 4 | the open list had three homes (a Finding, a NextStep, `data`) | plan architecture lens | acted | `data.open` is the one home; the Finding and the step point at it |
+| 5 | `ChainedReplyStrategy` is not needed with two strategies | plan architecture lens | acted | moved to R2 |
+| 6 | `SourcePlan` as a Value of names needs a resolver; `GapFinder` and `RecordMerge` are functions over data | plan architecture lens | acted | `RESEARCH_SOURCES` dict, `find_gaps`, `fold_replies`, `fold_facts` |
+| 7 | names: module `research_part.py`, `Gathered` is a participle, `answerer` and `by` are two words for who | plan architecture lens | acted | `research_part.py`, `SourceOffer` (after row 30), `asked_of` and `answered_by` |
+| 8 | the MVP step bundles the core change, the research package, the script and the record | plan architecture lens, plan scope lens | acted | steps 2, 3, 4, 5 |
+| 9 | a `Finding` cannot carry a typed question; Claude would parse prose | plan UX lens | acted | `Question.to_dict()` in `data.open`, the Finding holds the sentence and the key |
+| 10 | `could-not-run` for "waiting on replies" needs a readable reason, else Claude reads it as broken | plan UX lens | acted | sentence "waiting on a reply:", `notes` "record written, N facts unverified", one line in never-assume.md |
+| 11 | an open item must be answerable with no other reading | plan UX lens | acted | `cites` (document, page), `unit`, `answer_form`, `example`; run 1 writes a template with null values |
+| 12 | failures of a reply (unknown key, wrong unit, a key not open) were undefined | plan UX lens | acted | `unknown_reply`, `bad_reply`, a problem for a key not open, idempotent reruns |
+| 13 | `asked_of` needs a rule: an AGENT question is never put to a person | plan UX lens | acted | the "who answers what" paragraph; R2 shows PERSON and EITHER only |
+| 14 | live mode needs a defined screen | plan UX lens | acted | R2: one question at a time, Enter defers, Ctrl-C keeps the record, one summary line |
+| 15 | "not published" alone reads as an error; the source order needs kind and cost | plan UX lens | acted | `physical_proof.not_published` with the source that was checked; `sources: 1 dfrobot-wiki (web, free), 2 kept-documents (local)` |
+| 16 | the proof needs no network: the SEN0526 drawing is kept in the store, the walk record is in the discovery folder only | plan scope lens | acted | step 4 reads kept documents only; the wiki is step 5 |
+| 17 | `physical` with per-key provenance cannot share a reader with the board's bare values | plan scope lens, plan refuter | acted | bare `physical` plus one `physical_proof` block |
+| 18 | "not published" must not be a null or an empty list | plan scope lens | acted | the key is omitted and listed in `not_published` |
+| 19 | P740 is not a blocker; P738 thin should hold only the geometry rows | plan scope lens | acted | step 0 is independent; step 1 holds `body_mm` and three `physical` rows, `CHAIN_FACTS` later |
+| 20 | the wiki parser is a risk: no vendor page in the repository, no network in unit tests | plan scope lens | acted | a regex over `href`, a ten-line hand-written fixture, one live test skipped by default |
+| 21 | a link that exists but cannot be kept (a zip, a STEP) is neither kept nor "not published" | plan scope lens, plan refuter | acted | `documents` entry with `url` and `kept: false` |
+| 22 | the MVP step, not R1, moves the p655 and p657 anchors at outside.py:55 | plan refuter | acted | step 2 keeps the expression verbatim and appends `replies=`; anchors run in step 2 |
+| 23 | `TerminalReplyStrategy` breaks rule X2 unless `tools/measure.py` TERMINAL_CLASSES lists it | plan refuter | acted | R2 lists it |
+| 24 | `needs_reply` is a new code; `tests/fakes.py:353` builds `OutsideWorld` positionally; a drawing reading has two `verified` rules in the diaries | plan refuter | acted | codes.py and json.md in step 2; namedtuple defaults; a reply read off a drawing is `verified: false` unless it cites a datasheet row |
+| 25 | `body_mm` already holds the width and height; `physical.width_mm` would be a second home | plan refuter round 2 | acted | `physical` holds only `thickness_mm`, `mounting_holes`, `header`; `body_mm` filled counts as the outline need filled |
+| 26 | `Offer` and `fold` exist in sourcing/matching.py:70 and :45 | plan refuter round 2 | acted | `SourceOffer`, `fold_replies`, `fold_facts` |
+| 27 | `store.find_kept` does not exist; `datasheets.find_kept` returns prose | plan refuter round 2 | acted | `KeptDocumentsSource` builds `store.place("sources") / sha256 / file` |
+| 28 | `--unverified` lists a block only in `PROOF_BLOCKS`; "finite and above 0" is new logic, not `list_type_problems` | plan refuter round 2 | acted | `physical_proof` enters `PROOF_BLOCKS`; `part_records.physical_problems` with its mutation row |
+| 29 | all four P738 rows name a consumer that does not read a module record today; an import test cannot catch it | plan refuter round 2 | acted | `FactNeed.status` is `reads` or `will read: <card>`; a `reads` row's key must appear in the consumer's source |
+| 30 | `RecordShapeSource` demands `header`, `header_order` and `flush_edge` before it draws anything | plan refuter round 2 | acted | a module's `physical` is not drawn in this epic; slice 3 adds what the sheet needs |
+| 31 | `COMMON_ARGUMENTS` is opt-in, so "every Operation that asks takes the flag" holds only when each adds it | plan refuter round 2 | acted | the sentence says so |
+| 32 | `RepliesFile` is a Value that writes; a Value changes nothing | plan architecture lens round 2 | acted | `RepliesStore`, one project file, said in its docstring |
+| 33 | `DeferringReplyStrategy.deferred` is hidden state and duplicates what the Operation must do | plan architecture lens round 2 | acted | a stateless null object; the Operation computes the open list |
+| 34 | `FactNeedRegistry` fits no names row | plan architecture lens round 2 | acted | `FactNeeds`, a Value with `of_kind` |
+| 35 | `Question.shape` breaks one word one thing: shape means an outline | plan architecture lens round 2 | acted | `answer_form`; `example` holds placeholders only |
+| 36 | `SOURCES` collides with the four meanings of source; `kept-documents` and `KeptDocumentSource` disagree in number | plan architecture lens round 2 | acted | `RESEARCH_SOURCES`, `KeptDocumentsSource` |
+| 37 | R1 should run right after step 2 to prove the family on real code; step 2b should split | plan architecture lens round 2 | acted in part | the record step split off (step 3); R1 stays after the MVP, because the PO's order is the MVP first, then the refactor (D12) |
+| 38 | after step 5 the commodity path, other vendors and the budgets stay prose; no slot lets an agent answer in-process | plan architecture lens round 2 | acted | said in step 5; both in the later list |
+| 39 | the ★C, D and P numbers and "Operation" appear with no gloss | PR reviewer | acted | one line under the title names the brief; the TL;DR glosses Operation |
+| 40 | patterns-and-names.md:29 is a sentence, not a list; `FactNeed` is in Names but not in the diagram | PR reviewer | acted | "the effects sentence"; Names says the two Values are P738's |
+| 41 | the later list is far-future text in a plan that shrinks with distance | PR reviewer | closed | one line each, as the reviewer accepted |
