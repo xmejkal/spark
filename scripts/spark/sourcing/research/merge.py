@@ -90,30 +90,37 @@ def fold_replies(record, replies, questions, whys):
 
 
 DOCUMENTS, SOURCES = "documents", "sources"
-#: The key under which a dict `sources` (four library records keep one) gets a URL a source read; a list appends it.
-SOURCE_KEY = "dfrobot-wiki"
-#: The `source` of a proof that says what a vendor's page did not publish.
-NOT_LISTED = "the DFRobot wiki page %s lists no dimension drawing (read %s)"
+#: The key under which a dict `sources` (four library records keep one) gets a URL research read; a list appends it.
+READ_KEY = "research"
+
+
+def _free_key(taken):
+    key, number = READ_KEY, 2
+    while key in taken:
+        key, number = "%s-%d" % (READ_KEY, number), number + 1
+    return key
 
 
 def fold_documents(record, offer):
     """
     A deep copy of `record` with the offer's `documents` added under their keys (a key the record holds is left as it is,
     so a hand-written title survives) and its `urls_read` added to `sources` once each (appended to a list, keyed in a dict),
-    and the sorted top-level keys it changed.
+    and the sorted top-level keys it changed. A `documents` or `sources` that is neither absent nor of its shape is left as
+    it is: the record's rules say what is wrong with it.
     """
     after, written = copy.deepcopy(record), set()
-    documents = after[DOCUMENTS] if isinstance(after.get(DOCUMENTS), dict) else {}
-    new = {key: entry for key, entry in offer.documents.items() if key not in documents}
-    if new:
-        after[DOCUMENTS] = dict(documents, **new)
-        written.add(DOCUMENTS)
+    documents = after.get(DOCUMENTS)
+    if documents is None or isinstance(documents, dict):
+        new = {key: entry for key, entry in offer.documents.items() if key not in (documents or {})}
+        if new:
+            after[DOCUMENTS] = dict(documents or {}, **new)
+            written.add(DOCUMENTS)
     sources = after.get(SOURCES)
     for url in offer.urls_read:
         if isinstance(sources, dict) and url not in sources.values():
-            sources[SOURCE_KEY if SOURCE_KEY not in sources else "%s-%d" % (SOURCE_KEY, len(sources))] = url
-        elif not isinstance(sources, dict) and url not in (sources if isinstance(sources, list) else []):
-            sources = (sources if isinstance(sources, list) else []) + [url]
+            sources[_free_key(sources)] = url
+        elif (sources is None or isinstance(sources, list)) and url not in (sources or []):
+            sources = (sources or []) + [url]
         else:
             continue
         after[SOURCES] = sources

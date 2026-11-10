@@ -24,9 +24,8 @@ from spark.records.fact_needs import FactNeeds
 from spark.records.record_kind import _write_record
 from spark.sourcing.part_records import PHYSICAL_KEYS, PartError, definition_path, validate
 from spark.sourcing.research import PHASE, REFUSED_LINE
-from spark.sourcing.research.merge import (
-    BODY, DOCUMENTS, NOT_LISTED, body_sizes, fold_documents, fold_not_published, fold_replies, not_published_of)
-from spark.sourcing.research.research_source import RESEARCH_SOURCES, names_a_drawing, question_for
+from spark.sourcing.research.merge import BODY, DOCUMENTS, body_sizes, fold_documents, fold_not_published, fold_replies, not_published_of
+from spark.sourcing.research.research_source import RESEARCH_SOURCES, DfrobotWikiSource, names_a_drawing, question_for
 from spark.sourcing.sourcing_codes import PART_CONTRACT_BROKEN
 
 # --- MVP ---
@@ -43,7 +42,7 @@ IN_LIBRARY_FIX = "spark's library is changed in spark's repository; research a c
 CONTRACT_FIX = "fix the value in the replies file so the record meets its contract, then run again"
 WROTE = "record written: %s (unverified)"
 NO_GAPS = "no gaps: every fact the needs file lists is held or named in physical_proof.not_published"
-KEPT = "documents: %d kept in the store, %d listed but not keepable"
+KEPT_LINE = "documents: %d kept in the store, %d listed but not keepable"
 NONE_ASKED = "none asked"
 PART_HELP = "the id of the part record to research: in the project's parts/ or the person's shelf"
 PROJECT_HELP = "the project whose parts/ holds the record (default: here)"
@@ -130,7 +129,8 @@ class ResearchPart(Operation):
                                   self.effects, needs_person=True if any(q.asked_of == PERSON for q in open_questions) else None)]
         data = {"part": part, "sources": held.sources, "gaps": [need.fact_path for need in gaps], "written": written,
                 "open": [question.to_dict() for question in open_questions]}
-        return OperationResult(data, findings, following, self._lines(data, replies_path, held), notes=[WROTE % ", ".join(written)] if written else None)
+        return OperationResult(data, findings, following, self._lines(data, replies_path, self._added(record, held)),
+                               notes=[WROTE % ", ".join(written)] if written else None)
 
     @staticmethod
     def _record(part, project, outside):
@@ -149,21 +149,22 @@ class ResearchPart(Operation):
         """One round of the sources, in order, each offer folded into the record before the next asks; then, when a page was
         read with no problem and the documents name no drawing, the physical gaps go to `not_published`; then one EITHER
         question with no citation per gap no source asked about, so no gap is silent. With no gaps, no source runs."""
-        questions, remaining, sources, problems, written, pages = [], list(gaps), [], [], set(), []
+        questions, remaining, sources, problems, written, pages, offered = [], list(gaps), [], [], set(), [], {}
         for name in SOURCE_ORDER if gaps else ():
             source = RESEARCH_SOURCES[name](needs)
             offer = source.offer(remaining, record, outside)
             record, changed = fold_documents(record, offer)
             written |= set(changed)
+            offered.update(offer.documents)
             problems += [(name, problem) for problem in offer.problems]
             pages += offer.urls_read if not offer.problems else ()
             questions += offer.questions
             asked = {question.key for question in questions}
             remaining = [need for need in find_gaps(record, needs) if need.fact_path not in asked]
             sources.append({"name": name, "where": source.where})
-        if pages and not names_a_drawing(record.get(DOCUMENTS)):
+        if pages and not names_a_drawing(record.get(DOCUMENTS)) and not names_a_drawing(offered):  # `offered` too: an odd `documents` takes no fold
             unpublished = [need.fact_name for need in remaining if need.fact_name in PHYSICAL_KEYS]
-            record, changed = fold_not_published(record, unpublished, NOT_LISTED % (pages[0], outside.clock.now().date().isoformat()))
+            record, changed = fold_not_published(record, unpublished, DfrobotWikiSource.NOT_LISTED % (pages[0], outside.clock.now().date().isoformat()))
             written |= set(changed)
             remaining = [need for need in remaining if need.fact_name not in unpublished]
         questions += [question_for(need, needs.question_of(need.fact_path)) for need in remaining]
@@ -186,12 +187,18 @@ class ResearchPart(Operation):
         return [], written
 
     @staticmethod
-    def _lines(data, replies_path, held):
-        """What a person reads: the source order first, then what the sources kept, the gaps, what was written and what is open."""
+    def _added(record, held):
+        """The document entries the sources added this run: the round's objects whose key the record as read did not hold."""
+        before = record.get(DOCUMENTS) if isinstance(record.get(DOCUMENTS), dict) else {}
+        after = held.record.get(DOCUMENTS) if isinstance(held.record.get(DOCUMENTS), dict) else {}
+        return [entry for key, entry in after.items() if key not in before and isinstance(entry, dict)]
+
+    @staticmethod
+    def _lines(data, replies_path, added):
+        """What a person reads: the source order first, then what the sources kept this run, the gaps, what was written and what is open."""
         lines = ["sources: " + (", ".join("%d %s (%s)" % (index, source["name"], source["where"]) for index, source in enumerate(data["sources"], 1)) or NONE_ASKED)]
-        if DOCUMENTS in held.written:
-            entries = held.record[DOCUMENTS].values()
-            lines.append(KEPT % (sum(1 for entry in entries if entry.get("kept") is not False), sum(1 for entry in entries if entry.get("kept") is False)))
+        if added:
+            lines.append(KEPT_LINE % (sum(1 for entry in added if entry.get("kept") is not False), sum(1 for entry in added if entry.get("kept") is False)))
         lines.append("gaps: " + ", ".join(data["gaps"]) if data["gaps"] else NO_GAPS)
         lines += ["written: " + ", ".join(data["written"])] if data["written"] else []
         lines += ["open: %d, fill %s" % (len(data["open"]), replies_path)] if data["open"] else []

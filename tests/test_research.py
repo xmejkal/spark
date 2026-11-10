@@ -243,15 +243,40 @@ class DfrobotWikiSourceTest(unittest.TestCase):
         self.assertEqual(([problem.code for problem in offer.problems], sorted(offer.documents)), (["url_unreachable"], ["x1-cad-v1-0", "x1-schematics-v1-0"]))
         self.assertIn(PDF_DRAWING, str(offer.problems[0]))
 
-    def test_a_page_with_no_document_list_is_a_problem_and_more_than_twelve_files_names_the_rest(self):
-        for html in (b"<html>no list</html>", b"<script type=\"application/ld+json\">not json</script>", listing(()).replace(b'"subjectOf"', b'"other"')):
-            with self.subTest(html=html[:30]):
-                offer, _ = self.offer(pages={PAGE: html})
-                self.assertEqual(([problem.code for problem in offer.problems], offer.urls_read), (["no_document_list"], (PAGE,)))
-        many = [("File %d" % index, FILES + "X1_f%d.zip" % index, "application/zip") for index in range(13)]
-        offer, _ = self.offer(pages={PAGE: listing(many)})
-        self.assertEqual((len(offer.documents), [problem.code for problem in offer.problems]), (12, ["more_documents"]))
-        self.assertIn("X1_f12.zip", str(offer.problems[0]))
+    def test_a_page_with_no_document_list_is_a_problem_and_is_not_marked_as_read(self):
+        # a challenge page, broken JSON, a graph with no subjectOf, a graph that is not a list, a subjectOf that is a string
+        odd = (b"<html>Just a moment...</html>", b"<script type=\"application/ld+json\">not json</script>", listing(()).replace(b'"subjectOf"', b'"other"'),
+               b'<script type="application/ld+json">{"@graph": "x"}</script>', b'<script type="application/ld+json">{"@type": "TechArticle", "subjectOf": "x"}</script>')
+        for html in odd:
+            with self.subTest(html=html[:40]):
+                offer, outside = self.offer(pages={PAGE: html})
+                self.assertEqual(([problem.code for problem in offer.problems], offer.urls_read, offer.documents, outside.fetched), (["no_document_list"], (), {}, [PAGE]))
+
+    def test_a_subject_of_given_as_one_object_and_a_top_level_article_list_their_document(self):
+        one = {"@type": "TechArticle", "subjectOf": {"@type": "DigitalDocument", "name": "Dimension", "url": PDF_DRAWING, "fileFormat": "application/pdf"}}
+        for data in (one, {"@context": "x", "@graph": [one]}):
+            with self.subTest(graph="@graph" in data):
+                html = ("<script type=\"application/ld+json\">%s</script>" % json.dumps(data)).encode()
+                offer, _ = self.offer(pages={PAGE: html, PDF_DRAWING: b"%PDF drawing"})
+                self.assertEqual((sorted(offer.documents), offer.problems, offer.urls_read), (["x1-dimension-v1-0"], (), (PAGE,)))
+
+    def test_only_fetched_files_count_toward_the_cap_and_a_malformed_or_odd_url_is_skipped(self):
+        many = [("File %d" % index, FILES + "X1_f%d.pdf" % index, "application/pdf") for index in range(13)]
+        zips = [("Zip %d" % index, FILES + "X1_z%d.zip" % index, "application/zip") for index in range(13)]
+        pages = dict({PAGE: listing(zips + many)}, **{url: b"%PDF" for _, url, _ in many})
+        offer, outside = self.offer(pages=pages)
+        self.assertEqual((len(offer.documents), [problem.code for problem in offer.problems], len(outside.fetched)), (25, ["more_documents"], 13))
+        self.assertIn("X1_f12.pdf", str(offer.problems[0]))
+        odd = [("Bad", "http://[x/a.pdf", "application/pdf"), ("Root", "https://files.example/", None), ("Query", FILES + "X1_q.pdf?v=2", "application/pdf"), (3, PDF_DRAWING, "application/pdf")]
+        offer, outside = self.offer(pages={PAGE: listing(odd), FILES + "X1_q.pdf?v=2": b"%PDF q", PDF_DRAWING: b"%PDF drawing"})
+        self.assertEqual((sorted(offer.documents), offer.problems), (["x1-dimension-v1-0", "x1-q"], ()))
+        self.assertEqual((offer.documents["x1-q"]["file"], offer.documents["x1-dimension-v1-0"]["title"]), ("X1_q.pdf", None))
+
+    def test_a_page_in_sources_with_another_slash_or_case_is_not_fetched_again_and_an_odd_sources_fetches_once(self):
+        for sources in (["https://wiki.dfrobot.com/x1"], {"wiki": "https://wiki.dfrobot.com/X1/"}, "https://wiki.dfrobot.com/x1/"):
+            with self.subTest(sources=sources):
+                offer, outside = self.offer(dict(BARE, sources=sources))
+                self.assertEqual(outside.fetched, [] if not isinstance(sources, str) else [PAGE, PDF_DRAWING, PDF_SCHEMATIC])
 
     def test_an_empty_list_offers_nothing_and_no_problem(self):
         offer, outside = self.offer(pages={PAGE: listing(())})
@@ -268,11 +293,17 @@ class FoldDocumentsTest(unittest.TestCase):
         self.assertEqual((written, again["documents"]["x1-cad-v1-0"]["title"]), ([], "my zip"))
         self.assertNotIn("documents", BARE)
 
-    def test_a_dict_sources_gains_the_url_under_a_key_and_an_odd_sources_becomes_a_list(self):
-        after, _ = fold_documents(dict(BARE, sources={"shop": "https://shop.example"}), self.OFFER)
-        self.assertEqual(after["sources"], {"shop": "https://shop.example", "dfrobot-wiki": PAGE})
+    def test_a_dict_sources_gains_the_url_under_a_free_key_and_an_odd_sources_or_documents_is_left_alone(self):
+        after, _ = fold_documents(dict(BARE, sources={"shop": "https://shop.example", "research": "https://other.example"}), self.OFFER)
+        self.assertEqual(after["sources"], {"shop": "https://shop.example", "research": "https://other.example", "research-2": PAGE})
         after, _ = fold_documents(dict(BARE, sources=None), self.OFFER)
         self.assertEqual(after["sources"], [PAGE])
+        for odd in ("https://x.example", 3):
+            with self.subTest(sources=odd):
+                after, written = fold_documents(dict(BARE, sources=odd), self.OFFER)
+                self.assertEqual((after["sources"], written), (odd, ["documents"]))
+        after, written = fold_documents(dict(BARE, documents=["x"]), self.OFFER)
+        self.assertEqual((after["documents"], written), (["x"], ["sources"]))
 
     def test_not_published_merges_with_an_old_proof_and_skips_a_key_physical_holds(self):
         after, written = fold_not_published(BARE, ["thickness_mm", "header"], "the page lists no drawing")
@@ -375,6 +406,9 @@ class ResearchPartTest(unittest.TestCase):
         self.assertEqual([(found.code, found.subject) for found in result.findings], [("needs_reply", key) for key in ANSWERS])
         self.assertEqual({question["cites"]["document"] for question in result.data["open"]}, {"x1-dimension-v1-0"})
         self.assertEqual(result.lines[1], "documents: 2 kept in the store, 1 listed but not keepable")
+        self.bare(dict(BARE, documents=RECORD["documents"], sources=[]))  # a drawing kept by hand earlier: the line counts this run's three only
+        result = self.research(DeferringReplyStrategy(), fetch=PAGES.__getitem__)
+        self.assertEqual(result.lines[1], "documents: 2 kept in the store, 1 listed but not keepable")
         cites = {"document": "x1-dimension-v1-0", "at": "page 1"}
         again = self.research(GivenReplyStrategy({key: reply(key, answer.value, cites) for key, answer in ANSWERS.items()}), fetch=unreachable)
         self.assertEqual((again.status(), self.outside.fetched, again.data["written"]), ("ok", [], ["physical", "physical_proof"]))
@@ -400,13 +434,17 @@ class ResearchPartTest(unittest.TestCase):
         self.bare()
         result = self.research(DeferringReplyStrategy(), fetch={PAGE: listing([("Dimension", ZIP_CAD, "application/zip")])}.__getitem__)
         self.assertEqual(("physical_proof" in self.record(), len(result.data["open"])), (False, 3))
+        self.bare(dict(BARE, documents=["odd"]))  # a record written by hand: the fold leaves it, the line counts nothing, the rule says what is wrong
+        result = self.research(DeferringReplyStrategy(), fetch=PAGES.__getitem__)
+        self.assertEqual((result.status(), self.record()["documents"], "physical_proof" in self.record(), [line for line in result.lines if line.startswith("documents:")]),
+                         ("could-not-run", ["odd"], False, []))
 
     def test_a_page_that_does_not_answer_is_one_unchecked_item_and_the_kept_drawing_is_still_asked(self):
         self.path.write_text(json.dumps(dict(RECORD, vendor="dfrobot")))
         result = self.research(DeferringReplyStrategy(), fetch=unreachable)
         self.assertEqual(result.status(), "could-not-run")
         self.assertEqual([(found.code, found.subject) for found in result.findings][:1], [("url_unreachable", "dfrobot-wiki")])
-        self.assertEqual((len(result.data["open"]), self.outside.fetched, self.record()), (3, [PAGE.replace("x1", "x1")], dict(RECORD, vendor="dfrobot")))
+        self.assertEqual((len(result.data["open"]), self.outside.fetched, self.record()), (3, [PAGE], dict(RECORD, vendor="dfrobot")))
         full = self.research(GivenReplyStrategy(ANSWERS), fetch=unreachable)
         self.assertEqual((full.status(), full.data["written"]), ("could-not-run", ["physical", "physical_proof"]))
 

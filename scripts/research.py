@@ -15,7 +15,8 @@ mounting holes, the header), minus what physical_proof.not_published names. With
 the sources in order, and folds each answer into the record before the next source looks:
   1 dfrobot-wiki (web, free): for a record whose vendor is dfrobot, it fetches the wiki page https://wiki.dfrobot.com/<sku>/
     once per record (never again once the URL is in the record's sources), reads the page's document list, keeps each
-    PDF or image in your store and writes it into documents; a zip or a STEP file is listed with kept: false. When the
+    PDF, PNG, JPEG, WebP or SVG in your store (at most twelve) and writes it into documents; a zip or a STEP file is
+    listed with kept: false, with no fetch. A page that lists no documents spark can read is read again next run. When the
     page lists no dimension drawing, the thickness, holes and header go into physical_proof.not_published. A page that
     does not answer is one unchecked item (url_unreachable); a record with no sku is one too (no_sku).
   2 kept-documents (local): when the record keeps a dimension drawing in your store, each gap becomes one question

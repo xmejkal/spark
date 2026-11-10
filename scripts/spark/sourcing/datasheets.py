@@ -313,10 +313,15 @@ def document_key(name, taken):
     return key
 
 
+def keepable_url(url):
+    """Whether the store keeps what this URL names, by its ending (`KEEPABLE`), the query left aside."""
+    return url.split("?")[0].lower().endswith(KEEPABLE)
+
+
 def to_fetch(record):
     """The cited datasheet and image URLs a record does not keep yet — what `--fetch` would download."""
     known = {entry.get("url") for entry in (record.get("documents") or {}).values()}
-    return [url for url in cited_urls(record) if url.split("?")[0].lower().endswith(KEEPABLE) and url not in known]
+    return [url for url in cited_urls(record) if keepable_url(url) and url not in known]
 
 
 def document_name(url):

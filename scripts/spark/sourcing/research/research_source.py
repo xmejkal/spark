@@ -10,13 +10,13 @@ import abc
 import json
 import re
 from collections import namedtuple
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from spark.core.errors import SparkError
 from spark.core.replies import AGENT, EITHER, VALUE, Question
 from spark.records import store
 from spark.records.store import StoreError
-from spark.sourcing.datasheets import KEEPABLE, document_entry, document_key, document_name, keep_in_store
+from spark.sourcing.datasheets import document_entry, document_key, document_name, keep_in_store, keepable_url
 from spark.sourcing.sourcing_codes import MORE_DOCUMENTS, NO_DOCUMENT_LIST, NO_SKU
 
 # --- MVP ---
@@ -123,6 +123,8 @@ class DfrobotWikiSource(ResearchSource):
     KEEPABLE_FORMATS = ("application/pdf", "image/png", "image/jpeg", "image/webp", "image/svg+xml")
     #: The most files kept from one page: the researcher's own fetch budget (agents/parts-researcher.md).
     MOST_DOCUMENTS = 12
+    #: The `source` of a proof that says what the page did not publish: the page, and the date it was read.
+    NOT_LISTED = "the DFRobot wiki page %s lists no dimension drawing (read %s)"
     RETRY_FIX = "run again when the page answers; the other sources still ran"
     NO_SKU_FIX = "write the maker's part number as the record's sku (parts.py --skeleton --sku, or by hand), then run again"
     NO_LIST_FIX = "keep the page's documents by hand: parts.py --fetch after their URLs are in the record's sources"
@@ -133,7 +135,7 @@ class DfrobotWikiSource(ResearchSource):
         sku = record.get("sku")
         skus = sku if isinstance(sku, list) else [sku]
         first = next((one for one in skus if isinstance(one, str) and one.strip()), None)
-        return self.PAGE % first.strip().lower() if first else None
+        return self.PAGE % quote(first.strip().lower(), safe="") if first else None
 
     @staticmethod
     def listed_documents(html):
@@ -147,25 +149,31 @@ class DfrobotWikiSource(ResearchSource):
         if not isinstance(data, dict):
             return None
         nodes = data.get("@graph") if isinstance(data.get("@graph"), list) else [data]
-        listed = [(doc.get("name"), doc["url"], doc.get("fileFormat")) for node in nodes if isinstance(node, dict)
-                  for doc in (node.get("subjectOf") or []) if isinstance(doc, dict)
-                  and doc.get("@type") == "DigitalDocument" and isinstance(doc.get("url"), str)]
-        return listed if any(isinstance(node, dict) and "subjectOf" in node for node in nodes) else None
+        subjects = [node.get("subjectOf") for node in nodes if isinstance(node, dict) and isinstance(node.get("subjectOf"), (list, dict))]
+        if not subjects:
+            return None
+        documents = [doc for subject in subjects for doc in (subject if isinstance(subject, list) else [subject])]
+        return [(doc.get("name") if isinstance(doc.get("name"), str) else None, doc["url"], doc.get("fileFormat")) for doc in documents
+                if isinstance(doc, dict) and doc.get("@type") == "DigitalDocument" and isinstance(doc.get("url"), str)]
 
     @staticmethod
     def _sources_hold(record, url):
+        """Whether the record's `sources` (a list, or a dict read by its values) hold the page, however the slash and the case were written."""
         sources = record.get("sources")
         held = sources.values() if isinstance(sources, dict) else (sources if isinstance(sources, list) else ())
-        return url in held
+        return url.rstrip("/") in {one.lower().rstrip("/") for one in held if isinstance(one, str)}
 
     @staticmethod
     def _keepable(url, file_format):
-        return file_format in DfrobotWikiSource.KEEPABLE_FORMATS or url.split("?")[0].lower().endswith(KEEPABLE)
+        return file_format in DfrobotWikiSource.KEEPABLE_FORMATS or keepable_url(url)
 
     @staticmethod
     def _is_file(url):
-        """A URL whose path ends in a file extension: a page (a GitHub repository) is not a document."""
-        return "." in urlsplit(url).path.rsplit("/", 1)[-1]
+        """A URL whose path ends in a file extension: a page (a GitHub repository) is not a document, and neither is a URL that is not one."""
+        try:
+            return "." in urlsplit(url).path.rsplit("/", 1)[-1]
+        except ValueError:
+            return False
 
     @staticmethod
     def _problem(error, fix):
@@ -184,24 +192,31 @@ class DfrobotWikiSource(ResearchSource):
         except StoreError as unreached:
             return SourceOffer(problems=(self._problem(unreached, self.RETRY_FIX),))
         listed = self.listed_documents(html)
-        if listed is None:
-            return SourceOffer(problems=(SparkError("%s lists no documents spark can read", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),), urls_read=(url,))
+        if listed is None:  # not marked as read: a challenge page or a changed page shape is read again next run
+            return SourceOffer(problems=(SparkError("%s lists no documents spark can read", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),))
         documents, problems = self._keep(listed, record, outside)
         return SourceOffer(documents=documents, problems=tuple(problems), urls_read=(url,))
 
     def _keep(self, listed, record, outside):
-        """The entries for the first `MOST_DOCUMENTS` listed files: kept ones through the store, the rest `kept: false`;
-        a file that does not answer, or that the store refuses, is one problem and no entry."""
-        documents, problems = {}, []
+        """The entries for the listed files the record does not hold yet: the first `MOST_DOCUMENTS` keepable ones fetched
+        and kept through the store, every other keepable one named in one problem, and the rest `kept: false` (no fetch).
+        A file that does not answer, or that the store refuses, is one problem and no entry."""
+        documents, problems, left = {}, [], []
         taken = dict(record.get("documents") or {}) if isinstance(record.get("documents"), dict) else {}
         held = {entry.get("url") for entry in taken.values() if isinstance(entry, dict)}
-        files = [(title, url, file_format) for title, url, file_format in listed if self._is_file(url) and url not in held]
-        for title, url, file_format in files[:self.MOST_DOCUMENTS]:
+        fetched = 0
+        for title, url, file_format in listed:
+            if not self._is_file(url) or url in held:
+                continue
             name = document_name(url)
             key = document_key(name, taken)
             if not self._keepable(url, file_format):
                 documents[key] = {"url": url, "kept": False, "title": title}
+            elif fetched >= self.MOST_DOCUMENTS:
+                left.append(url)
+                continue
             else:
+                fetched += 1
                 try:
                     digest = keep_in_store(outside.fetch(url), name)
                 except StoreError as refused:
@@ -209,9 +224,9 @@ class DfrobotWikiSource(ResearchSource):
                     continue
                 documents[key] = document_entry(url, digest, name, outside.clock.now().date().isoformat(), title)
             taken[key] = documents[key]
-        if len(files) > self.MOST_DOCUMENTS:
-            problems.append(SparkError("the page lists %d files; the first %d were taken and these were not: %s", len(files), self.MOST_DOCUMENTS,
-                                       ", ".join(url for _, url, _ in files[self.MOST_DOCUMENTS:]), code=MORE_DOCUMENTS, fix=self.NO_LIST_FIX))
+        if left:
+            problems.append(SparkError("the page lists more than %d files to keep; these were not fetched: %s", self.MOST_DOCUMENTS,
+                                       ", ".join(left), code=MORE_DOCUMENTS, fix=self.NO_LIST_FIX))
         return documents, problems
 
 

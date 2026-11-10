@@ -1,25 +1,164 @@
 [
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "the vendor gate is dropped: every record's wiki page is fetched", "find": "        if str(record.get(\"vendor\") or \"\").strip().lower() != self.VENDOR:\n            return SourceOffer()\n", "replace": ""},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a page already in sources is fetched again every run", "find": "        if self._sources_hold(record, url):\n            return SourceOffer()\n", "replace": ""},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a zip is kept as if it were a PDF", "find": "            if not self._keepable(url, file_format):", "replace": "            if False:"},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a file that does not answer is silent, not a problem", "find": "                    problems.append(self._problem(refused, self.RETRY_FIX))\n                    continue", "replace": "                    continue"},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a page that does not answer crashes the run instead of one unchecked item", "find": "        except StoreError as unreached:\n            return SourceOffer(problems=(self._problem(unreached, self.RETRY_FIX),))", "replace": "        except ValueError as unreached:\n            return SourceOffer(problems=(self._problem(unreached, self.RETRY_FIX),))"},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "the twelve cap is dropped", "find": "        for title, url, file_format in files[:self.MOST_DOCUMENTS]:", "replace": "        for title, url, file_format in files:"},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a page without a document list offers nothing and says nothing", "find": "        if listed is None:\n            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),), urls_read=(url,))\n", "replace": "        if listed is None:\n            return SourceOffer(urls_read=(url,))\n"},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a repository page is listed as a document", "find": "if self._is_file(url) and url not in held]", "replace": "if url not in held]"},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a kept: false entry counts as the drawing to cite", "find": "        if _says_drawing(key, entry) and (kept / str(entry.get(\"sha256\")) / str(entry.get(\"file\"))).is_file():", "replace": "        if _says_drawing(key, entry):"},
- {"file": "scripts/spark/sourcing/research/research_part.py", "name": "the sources run with no gaps, so a finished record fetches its page", "find": "        for name in SOURCE_ORDER if gaps else ():", "replace": "        for name in SOURCE_ORDER:"},
- {"file": "scripts/spark/sourcing/research/research_part.py", "name": "the offers are not folded between sources, so the kept documents never see the wiki's drawing", "find": "            record, changed = fold_documents(record, offer)\n", "replace": "            _, changed = fold_documents(record, offer)\n"},
- {"file": "scripts/spark/sourcing/research/research_part.py", "name": "not_published is written although the page had a problem", "find": "            pages += offer.urls_read if not offer.problems else ()", "replace": "            pages += offer.urls_read"},
- {"file": "scripts/spark/sourcing/research/research_part.py", "name": "not_published is written although a document names a drawing", "find": "        if pages and not names_a_drawing(record.get(DOCUMENTS)):", "replace": "        if pages:"},
- {"file": "scripts/spark/sourcing/research/research_part.py", "name": "a source's problem is not an unchecked item", "find": "        findings += [Finding(outcomes.COULD_NOT_RUN, name, problem.code, printable(str(problem)), problem.fix) for name, problem in held.problems]\n", "replace": ""},
- {"file": "scripts/spark/sourcing/research/research_part.py", "name": "what the sources wrote is not written when no reply came", "find": "        written = sorted(set(written) | set(held.written))", "replace": "        written = sorted(written)"},
- {"file": "scripts/spark/sourcing/research/research_part.py", "name": "the Operation declares no FETCHES, so the real run refuses the fetch", "find": "    effects = (READS, WRITES, ASKS, FETCHES)", "replace": "    effects = (READS, WRITES, ASKS)"},
- {"file": "scripts/spark/sourcing/research/merge.py", "name": "the page's URL never enters sources, so it is fetched every run", "find": "        after[SOURCES] = sources\n        written.add(SOURCES)\n", "replace": ""},
- {"file": "scripts/spark/sourcing/research/merge.py", "name": "a held document key is overwritten by the page's entry", "find": "    new = {key: entry for key, entry in offer.documents.items() if key not in documents}", "replace": "    new = dict(offer.documents)"},
- {"file": "scripts/spark/sourcing/research/merge.py", "name": "not_published names a key physical holds", "find": "    left = [key for key in named if key not in held]", "replace": "    left = list(named)"},
- {"file": "scripts/spark/core/outside.py", "name": "fetch is given without FETCHES", "find": "                        fetch=fetch if FETCHES in effects and fetch else refuse_fetch)", "replace": "                        fetch=fetch or refuse_fetch)"},
- {"file": "scripts/spark/records/record_kind.py", "name": "a kept: false entry with no url passes the contract", "find": "            if not isinstance(entry.get(\"url\"), str) or not entry[\"url\"]:", "replace": "            if False:"},
- {"file": "scripts/spark/records/record_kind.py", "name": "a citation of a kept: false document passes", "find": "        elif isinstance(documents[cited], dict) and documents[cited].get(\"kept\") is False:", "replace": "        elif False:"},
- {"file": "scripts/spark/sourcing/datasheets.py", "name": "--kept walks the store for an entry with no sha256 and prints MISSING", "find": "            if not entry.get(\"sha256\"):  # P737: a document the page listed but the store cannot keep (a zip, a STEP)", "replace": "            if False:"}
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "the vendor gate is dropped: every record's wiki page is fetched",
+  "find": "        if str(record.get(\"vendor\") or \"\").strip().lower() != self.VENDOR:\n            return SourceOffer()\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a page already in sources is fetched again every run",
+  "find": "        if self._sources_hold(record, url):\n            return SourceOffer()\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a zip is kept as if it were a PDF",
+  "find": "            if not self._keepable(url, file_format):",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a file that does not answer is silent, not a problem",
+  "find": "                    problems.append(self._problem(refused, self.RETRY_FIX))\n                    continue",
+  "replace": "                    continue"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a page that does not answer crashes the run instead of one unchecked item",
+  "find": "        except StoreError as unreached:\n            return SourceOffer(problems=(self._problem(unreached, self.RETRY_FIX),))",
+  "replace": "        except ValueError as unreached:\n            return SourceOffer(problems=(self._problem(unreached, self.RETRY_FIX),))"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "the twelve cap is dropped",
+  "find": "            elif fetched >= self.MOST_DOCUMENTS:",
+  "replace": "            elif False:"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a page without a document list offers nothing and says nothing",
+  "find": "        if listed is None:  # not marked as read: a challenge page or a changed page shape is read again next run\n            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),))\n",
+  "replace": "        if listed is None:\n            return SourceOffer()\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a repository page is listed as a document",
+  "find": "            if not self._is_file(url) or url in held:",
+  "replace": "            if url in held:"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a kept: false entry counts as the drawing to cite",
+  "find": "        if _says_drawing(key, entry) and (kept / str(entry.get(\"sha256\")) / str(entry.get(\"file\"))).is_file():",
+  "replace": "        if _says_drawing(key, entry):"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "the sources run with no gaps, so a finished record fetches its page",
+  "find": "        for name in SOURCE_ORDER if gaps else ():",
+  "replace": "        for name in SOURCE_ORDER:"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "the offers are not folded between sources, so the kept documents never see the wiki's drawing",
+  "find": "            record, changed = fold_documents(record, offer)\n",
+  "replace": "            _, changed = fold_documents(record, offer)\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "not_published is written although the page had a problem",
+  "find": "            pages += offer.urls_read if not offer.problems else ()",
+  "replace": "            pages += offer.urls_read"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "not_published is written although a document names a drawing",
+  "find": "        if pages and not names_a_drawing(record.get(DOCUMENTS)) and not names_a_drawing(offered):",
+  "replace": "        if pages and not names_a_drawing(offered):"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "a source's problem is not an unchecked item",
+  "find": "        findings += [Finding(outcomes.COULD_NOT_RUN, name, problem.code, printable(str(problem)), problem.fix) for name, problem in held.problems]\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "what the sources wrote is not written when no reply came",
+  "find": "        written = sorted(set(written) | set(held.written))",
+  "replace": "        written = sorted(written)"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "the Operation declares no FETCHES, so the real run refuses the fetch",
+  "find": "    effects = (READS, WRITES, ASKS, FETCHES)",
+  "replace": "    effects = (READS, WRITES, ASKS)"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/merge.py",
+  "name": "the page's URL never enters sources, so it is fetched every run",
+  "find": "        after[SOURCES] = sources\n        written.add(SOURCES)\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/sourcing/research/merge.py",
+  "name": "a held document key is overwritten by the page's entry",
+  "find": "        new = {key: entry for key, entry in offer.documents.items() if key not in (documents or {})}",
+  "replace": "        new = dict(offer.documents)"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/merge.py",
+  "name": "not_published names a key physical holds",
+  "find": "    left = [key for key in named if key not in held]",
+  "replace": "    left = list(named)"
+ },
+ {
+  "file": "scripts/spark/core/outside.py",
+  "name": "fetch is given without FETCHES",
+  "find": "                        fetch=fetch if FETCHES in effects and fetch else refuse_fetch)",
+  "replace": "                        fetch=fetch or refuse_fetch)"
+ },
+ {
+  "file": "scripts/spark/records/record_kind.py",
+  "name": "a kept: false entry with no url passes the contract",
+  "find": "            if not isinstance(entry.get(\"url\"), str) or not entry[\"url\"]:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/records/record_kind.py",
+  "name": "a citation of a kept: false document passes",
+  "find": "        elif isinstance(documents[cited], dict) and documents[cited].get(\"kept\") is False:",
+  "replace": "        elif False:"
+ },
+ {
+  "file": "scripts/spark/sourcing/datasheets.py",
+  "name": "--kept walks the store for an entry with no sha256 and prints MISSING",
+  "find": "            if not entry.get(\"sha256\"):  # P737: a document the page listed but the store cannot keep (a zip, a STEP)",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a page with no document list is marked as read, so the real page is never fetched again",
+  "find": "            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),))\n",
+  "replace": "            return SourceOffer(problems=(SparkError(\"%s lists no documents spark can read\", url, code=NO_DOCUMENT_LIST, fix=self.NO_LIST_FIX),), urls_read=(url,))\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a subjectOf given as one object lists no document, so not_published is written falsely",
+  "find": "        documents = [doc for subject in subjects for doc in (subject if isinstance(subject, list) else [subject])]",
+  "replace": "        documents = [doc for subject in subjects for doc in (subject if isinstance(subject, list) else [])]"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_source.py",
+  "name": "a malformed URL in the list crashes the run",
+  "find": "        except ValueError:\n            return False",
+  "replace": "        except KeyError:\n            return False"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "a record whose documents is no object gets not_published although the page listed a drawing",
+  "find": "and not names_a_drawing(offered):",
+  "replace": ":"
+ }
 ]
