@@ -2,7 +2,7 @@
 
 The design in `docs/discovery/2026-11-10-p735-dfrobot-records/design.md`. Card: [P737 #1013](https://github.com/xmejkal/spark/issues/1013).
 Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter on Fable), rows 25 to 38 its round 2
-(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet). 2026-11-10.
+(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet), rows 42 to 51 the step 2 implementer's rulings (Fable, PR p737-replies), rows 52 to 58 its reviewer (Sonnet) and refuter (Fable). 2026-11-10.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -47,3 +47,20 @@ Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter
 | 39 | the ★C, D and P numbers and "Operation" appear with no gloss | PR reviewer | acted | one line under the title names the brief; the TL;DR glosses Operation |
 | 40 | patterns-and-names.md:29 is a sentence, not a list; `FactNeed` is in Names but not in the diagram | PR reviewer | acted | "the effects sentence"; Names says the two Values are P738's |
 | 41 | the later list is far-future text in a plan that shrinks with distance | PR reviewer | closed | one line each, as the reviewer accepted |
+| 42 | `OutsideWorld` holds callables, so `replies` is the strategy's `reply`, not the strategy | step 2 implementer | acted | `outside.replies(question)`; `build_outside_world(replies=<ReplyStrategy>)` stores `.reply`, `refuse_replies` without ASKS |
+| 43 | `build_outside_world` reached six parameters (rule R3) | architecture test | acted | the `clock` parameter went: the bench passed the default, and the one test `_replace`s its FakeClock |
+| 44 | a Store in the core wrote a file with no Adapter (rule T1) | architecture test | acted | `replies.TextFileWriter`, the core's file-write Adapter as `outside.ProgramRunner` is its program Adapter; `RepliesStore.dump` writes through it |
+| 45 | a SparkError template that is a module constant is no constant to rule V1 | architecture test | acted | the literal template in `RepliesStore.load` |
+| 46 | json.md (427), never-assume.md (227) and agents.md (185) were each at their line budget | docs test | acted | the shape and the three codes are a new page, docs/guide/agents/replies.md, linked from agents.md's JSON row, AGENTS.md, json.md and never-assume.md item 1 |
+| 47 | `bad_reply` cannot check "fits `answer_form`", which is words | step 2 implementer | acted | `Question.misfit` checks the kind: a bool, one of the choices, not empty, finite; the record's rule (step 3) checks the fact |
+| 48 | a reply from a file carries no time | step 2 implementer | acted | `Reply.at` is None for a file reply; the Operation stamps the record from its clock (step 4) |
+| 49 | `RepliesStore(path)` holds its path; the design wrote `load(path)` | step 2 implementer | acted | `for_project(project)` gives the default path; one object per file |
+| 50 | `dump` on a rerun would wipe the answered values | step 2 implementer | acted | `dump` keeps the file's entries and adds a null entry per open key it lacks; a mutation row proves it |
+| 51 | replies.py was an orphan until step 4 imports it (tests/test_orphans.py), and a test read the code's own codes as its expectations | orphan and self-confirmation tests | acted | `COMMON_ARGUMENTS` names the replies file from `replies.REPLIES_FILE`, one word for one thing; test_replies.py uses the literal codes, as test_core.py does |
+| 52 | `RepliesStore.dump` read an existing file with no guard: a malformed file was a crash on the rerun path, where `load` gives `bad_argument` | PR reviewer (Sonnet), PR refuter (Fable) | acted | one `_read()` with the guard, used by `load` and `dump`; the bad-file test runs both |
+| 53 | the `bad_reply` fix printed "for example null" for a question with no `example` | PR reviewer, PR refuter | acted | `misfit_fix(question)`: the example, else the `answer_form`, else what the kind takes (`KIND_FORMS`); tested |
+| 54 | `misfit` checks the kind only, not `answer_form` or `unit`; a nested NaN passes | PR reviewer | rejected | row 47: `answer_form` is words; the record's rule (step 3, `physical_problems`) checks each number of the fact, so the check lives once |
+| 55 | `RepliesStore` keeps a project file, and the roles table said a Store writes the person's store; `TextFileWriter` is beyond the design | PR reviewer | acted in part | the Store row now says "in the person's store or in the project" and names `RepliesStore`; rule T1 itself names Adapter as the role of a file write, so the class stays (row 44) |
+| 56 | no test covered an unknown key with no near match, an empty open list, or the `bad_reply` fix text | PR reviewer | acted | three assertions and two tests added |
+| 57 | `data.open`, the `notes` line, `next[0]` with `--replies` and `needs_person` on the step have no code; replies.md said them in the present tense | PR refuter | acted | they are the Operation's (step 4, as the Steps list says); replies.md marks the two envelope lines as step 4's; this row records the ruling |
+| 58 | `bad_reply` also rejects a non-finite number, and codes.py and replies.md did not say so; the anchor expression is not verbatim (`clock or SystemClock()` became `SystemClock()`) | PR refuter | acted | both say "or not a finite number"; the anchors hold (row 43 says why the clock went) |

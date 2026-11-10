@@ -336,21 +336,26 @@ class FakeOutsideWorld:
     gives, and keeps each command in `ran`; `find_tool` gives a Tool by its name with the callable given (a dict's
     `get`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program.
     `report` is its `reporter`'s, a FakeReporter of its own unless the test gives one (P507). `clock` is a FakeClock unless
-    given, and `make_consent` the callable given, or one that fails the test on its first call (P655)."""
+    given, and `make_consent` the callable given, or one that fails the test on its first call (P655). `replies` is the
+    given ReplyStrategy's `reply`, or one that fails the test on its first call (P737)."""
 
-    def __init__(self, run=None, find_tool=None, reporter=None, clock=None, make_consent=None):
+    def __init__(self, run=None, find_tool=None, reporter=None, clock=None, make_consent=None, replies=None):
         self.ran, self._run, self._find_tool = [], run, find_tool
         self.reporter = reporter or FakeReporter()
         self.report = self.reporter.report
-        self.clock, self._make_consent = clock or FakeClock(), make_consent
+        self.clock, self._make_consent, self._replies = clock or FakeClock(), make_consent, replies
 
     def make_consent(self, line):
         assert self._make_consent, "the test gave no make_consent, and the Operation asked for the yes"
         return self._make_consent(line)
 
+    def replies(self, question):
+        assert self._replies, "the test gave no replies, and the Operation asked %r" % (question.key,)
+        return self._replies.reply(question)
+
     def _replace(self, **changes):
         """As the OutsideWorld namedtuple's: the same world with `changes`, a real OutsideWorld."""
-        return OutsideWorld(self.run, self.find_tool, self.report, self.clock, self.make_consent)._replace(**changes)
+        return OutsideWorld(self.run, self.find_tool, self.report, self.clock, self.make_consent, self.replies)._replace(**changes)
 
     def run(self, command, **options):
         self.ran.append(command)

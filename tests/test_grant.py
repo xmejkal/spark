@@ -666,8 +666,8 @@ class GrantModesTest(GrantCase):
 
     def test_an_issue_without_the_asks_effect_is_refused_before_the_board_is_touched(self):
         from spark.core.operation import BOARD, READS, RUNS
-        outside = build_outside_world((READS, RUNS, BOARD), TerminalReporter(io.StringIO()), find_tool=found, clock=self.clock,
-                                      make_consent=lambda line: FakeConsent(True))
+        outside = build_outside_world((READS, RUNS, BOARD), TerminalReporter(io.StringIO()), find_tool=found,
+                                      make_consent=lambda line: FakeConsent(True))._replace(clock=self.clock)
         result = run_operation(IssueGrant(), dict(minutes=30, scope="live", project=Path("."), port=None), outside)
         self.assertEqual(([finding.code for finding in result.findings], self.ran), (["undeclared_effect"], []))
         self.assertIn("declares no `asks` effect", result.findings[0].sentence)

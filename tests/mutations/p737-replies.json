@@ -1,0 +1,9 @@
+[
+ {"file": "scripts/spark/core/replies.py", "name": "load keeps a null as an answer", "find": "for key, entry in entries.items() if entry.get(\"value\") is not None}", "replace": "for key, entry in entries.items()}"},
+ {"file": "scripts/spark/core/replies.py", "name": "dump overwrites an answered key with the template", "find": "held.setdefault(question.key,", "replace": "held.__setitem__(question.key,"},
+ {"file": "scripts/spark/core/replies.py", "name": "a person's question is not first", "find": "key=lambda question: question.asked_of != PERSON", "replace": "key=lambda question: question.asked_of == PERSON"},
+ {"file": "scripts/spark/core/replies.py", "name": "any truthy value is a choice", "find": "return None if value in self.choices else NOT_A_CHOICE", "replace": "return None if value else NOT_A_CHOICE"},
+ {"file": "scripts/spark/core/replies.py", "name": "a reply to a filled fact is not told apart", "find": "        elif key in filled:", "replace": "        elif key in ():"},
+ {"file": "scripts/spark/core/replies.py", "name": "a yes or no takes any value", "find": "return None if isinstance(value, bool) else NOT_YES_NO", "replace": "return None if value is not None else NOT_YES_NO"},
+ {"file": "scripts/spark/core/outside.py", "name": "replies are given without ASKS", "find": "replies=replies.reply if ASKS in effects and replies else refuse_replies", "replace": "replies=replies.reply if replies else refuse_replies"}
+]

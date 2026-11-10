@@ -18,9 +18,18 @@ from spark.core.operation import ASKS, RUNS
 #: `report(event)` gives an `events.Event` to the Reporter the frontend picked (P507), and is not an effect: every Operation has it.
 #: `clock` has `now`, `monotonic` and `sleep` (`clock.SystemClock`). `make_consent(line)` gives the ConsentStrategy that asks
 #: the person for the yes, given the line that runs the Operation again in the person's own terminal; it needs ASKS (P657).
+#: `replies(question)` is a `replies.ReplyStrategy`'s `reply`: the Reply to a Question, or None for "not now" (P737); it needs
+#: ASKS too, and its default refuses, so the two callers that build the tuple positionally stand.
 #: Each is the real thing, a Fake or a refusing stub, as `build_outside_world` chose.
-OutsideWorld = namedtuple("OutsideWorld", "run find_tool report clock make_consent")
 UNDECLARED_FIX = "a defect in spark: report it, with the command"
+
+
+def refuse_replies(question):
+    """The `replies` of an Operation whose effects hold no ASKS: a SparkError with code `undeclared_effect`, and nobody is asked."""
+    raise SparkError("the operation declares no `%s` effect, so it cannot ask %r", ASKS, question.key, code=UNDECLARED_EFFECT, fix=UNDECLARED_FIX)
+
+
+OutsideWorld = namedtuple("OutsideWorld", "run find_tool report clock make_consent replies", defaults=(refuse_replies,))
 
 
 class ProgramRunner:
@@ -47,10 +56,12 @@ def refuse_consent(line):
     raise SparkError("the operation declares no `%s` effect, so it cannot ask the person for a yes", ASKS, code=UNDECLARED_EFFECT, fix=UNDECLARED_FIX)
 
 
-def build_outside_world(effects, reporter, find_tool=None, clock=None, make_consent=None):
+def build_outside_world(effects, reporter, find_tool=None, make_consent=None, replies=None):
     """The OutsideWorld for these effects: `run` is a ProgramRunner's, echoing where the Reporter says, with RUNS and `refuse_run`
-    without; `make_consent` the given one with ASKS and `refuse_consent` without; `find_tool` the given one; `report` the
-    given Reporter's; `clock` the given one, or the computer's."""
+    without; `make_consent` the given one with ASKS and `refuse_consent` without; `replies` the given ReplyStrategy's `reply`
+    with ASKS and `refuse_replies` without; `find_tool` the given one; `report` the given Reporter's; `clock` the computer's
+    (a test `_replace`s it with a FakeClock, P737 took the parameter out: rule R3)."""
     return OutsideWorld(ProgramRunner(reporter.echo_fd()).run if RUNS in effects else refuse_run, find_tool, reporter.report,
-                        clock or SystemClock(), make_consent if ASKS in effects and make_consent else refuse_consent)
+                        SystemClock(), make_consent if ASKS in effects and make_consent else refuse_consent,
+                        replies=replies.reply if ASKS in effects and replies else refuse_replies)
 # --- end MVP ---
