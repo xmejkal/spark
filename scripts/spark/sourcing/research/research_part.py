@@ -136,14 +136,16 @@ class ResearchPart(Operation):
 
     @staticmethod
     def _fold(path, record, answers, questions, part):
-        """The replies folded into the record and written, or the contract problems as Findings and nothing written."""
+        """The replies folded into the record and written, or the contract problems the fold added (as `_set_in_home` judges a
+        write: the problems of the result minus the record's own) as Findings, and nothing written."""
         given = {key: reply for key, reply in answers.items() if reply is not None}
         after, written = fold_replies(record, given, questions, {question.key: question.why for question in questions})
-        broken = validate(after, path)
+        if not written:
+            return [], []
+        broken = sorted(set(validate(after, path)) - set(validate(record, path)))
         if broken:
             return [Finding(outcomes.PROBLEMS, part, PART_CONTRACT_BROKEN, sentence, CONTRACT_FIX) for sentence in broken], []
-        if written:
-            _write_record(path, after)
+        _write_record(path, after)
         return [], written
 
     @staticmethod

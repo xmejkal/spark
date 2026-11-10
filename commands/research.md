@@ -1,6 +1,6 @@
 ---
 description: Research a part or module the library lacks. Reuse first, then find the exact part, then read only the datasheet pages a decision needs. Write it down as a record with every fact cited, so the chain can use it and the next project finds it.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --keep *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --read *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --promote *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --keep *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --read *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --promote *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/research.py *)
 ---
 
 # spark:research
@@ -103,6 +103,22 @@ motor, 5v): the board is written with it as code`.
 
 Then run `/spark:build`. `parts.py --promote <id> --project .` copies a verified record into the plugin's library, and
 the next project finds it with `--need`.
+
+## 5. A module with kept documents: research.py
+
+When a module's record keeps its dimension drawing (`documents`, with the file in the person's store), `research.py`
+fills the geometry the breadboard sheet needs, with no network and no hand edit of the record (P737).
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/research.py --part <id> --project . --json
+```
+
+Run 1 lists the gaps and asks one question per gap that cites the drawing at page 1. It writes the template
+`.spark/research-replies.json` and exits 2 with `needs_reply`. Read the cited drawing, fill each value, and leave a
+value null when the drawing does not give it. Then run the `next[0]` step, the same line with `--replies`. Run 2 writes
+`physical` and `physical_proof` (`verified: false`, read off a drawing), and `parts.py --show <id>` prints them. The
+file's shape and the codes are in [docs/guide/agents/replies.md](../docs/guide/agents/replies.md). Today the one
+source is the kept documents; the DFRobot wiki source is step 5 of P737.
 
 ## Candidates not chosen
 
