@@ -219,13 +219,22 @@ def document_problems(part: dict) -> list:
     if "attachments" in part:
         problems.append("`attachments` was replaced by `documents` (P62a): the file goes to the "
                         "store, the record keeps the pointer — run parts.py --fetch to redo it")
-    for key, entry in (part.get("documents") or {}).items():
-        if not isinstance(entry, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256"))):
+    documents = part.get("documents") or {}
+    for key, entry in documents.items():
+        if isinstance(entry, dict) and entry.get("kept") is False:  # P737: a document a page listed that the store cannot keep
+            if not isinstance(entry.get("url"), str) or not entry["url"]:
+                problems.append("documents.%s is not kept and names no url, so it points at nothing" % key)
+            if "sha256" in entry:
+                problems.append("documents.%s says kept: false and holds a sha256: one of the two is wrong" % key)
+        elif not isinstance(entry, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256"))):
             problems.append("documents.%s has no sha256 that is one, so the store cannot find it" % key)
         elif not entry.get("file"):
             problems.append("documents.%s names no file" % key)
-    problems += ["%s cites %r, which documents does not hold — a pointer to nothing" % (where, cited)
-                 for where, cited in _citations(part) if not isinstance(cited, str) or cited not in (part.get("documents") or {})]
+    for where, cited in _citations(part):
+        if not isinstance(cited, str) or cited not in documents:
+            problems.append("%s cites %r, which documents does not hold — a pointer to nothing" % (where, cited))
+        elif isinstance(documents[cited], dict) and documents[cited].get("kept") is False:
+            problems.append("%s cites %r, which is not kept, so nobody can read it there" % (where, cited))
     return problems
 
 

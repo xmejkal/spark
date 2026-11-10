@@ -20,6 +20,8 @@ NO_TRANSCRIPT, TRANSCRIPT_UNREADABLE = "no_transcript", "transcript_unreadable"
 TRANSCRIPT_ENDS_EARLY = "transcript_ends_early"
 #: matching: a matcher name.
 UNKNOWN_MATCHER = "unknown_matcher"
+#: research: what the DFRobot wiki source needs and did not find (P737).
+NO_SKU, NO_DOCUMENT_LIST, MORE_DOCUMENTS = "no_sku", "no_document_list", "more_documents"
 
 #: Each code and the one sentence that says what it means.
 CODES = {
@@ -34,5 +36,8 @@ CODES = {
     TRANSCRIPT_UNREADABLE: "the session's transcripts cannot be opened, or name no time spark can read",
     TRANSCRIPT_ENDS_EARLY: "the session's transcripts end before one of its steps began, so its cost is not known",
     UNKNOWN_MATCHER: "the name is no matcher, or none that serves this flag; the message lists the names that fit",
+    NO_SKU: "a DFRobot record names no sku, so its wiki page has no address",
+    NO_DOCUMENT_LIST: "the wiki page holds no document list spark can read (its JSON-LD block), so no document was kept from it",
+    MORE_DOCUMENTS: "the wiki page lists more files than one run takes (twelve); the message names the rest",
 }
 # --- end MVP ---

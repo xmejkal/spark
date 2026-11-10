@@ -162,9 +162,10 @@ def promote(part_id, project, to=None, dry_run=False):
     return target
 
 
-def skeleton(part_id, kind, vendor=None):
+def skeleton(part_id, kind, vendor=None, sku=None):
     """
-    A record with every field present and nothing guessed: what research fills in.
+    A record with every field present and nothing guessed: what research fills in. `sku` is the maker's exact part
+    number when the person knows it (P737: the DFRobot wiki source finds the page by it).
 
     Nulls are facts nobody has recorded, and `validate` refuses the file until they are — the
     same rule `init` applies to the rules file. A fact is `verified: true` only when its value
@@ -176,7 +177,7 @@ def skeleton(part_id, kind, vendor=None):
         "schema": 1, "id": part_id, "name": None, "kind": kind,
         "//": ("Written by /spark:research. A null is a fact nobody has recorded. verified: true = the "
                "vendor's own text at the cited URL; read off an image, inferred or computed = false."),
-        "vendor": vendor, "sku": None, "sources": [],
+        "vendor": vendor, "sku": sku, "sources": [],
         "needs": [], "power": [], "unused_pins": [], "pin_order": [], "footprint": None,
         "body_mm": {"width": None, "height": None, "verified": False, "source": None,
                     "why_it_matters": "every placement is arranged around it"},

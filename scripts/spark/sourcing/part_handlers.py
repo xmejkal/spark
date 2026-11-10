@@ -149,7 +149,7 @@ def _op_skeleton(args, project):
                                          "copy the %s record into the project" % layer, ["writes"]), store.read_given_env())]
                       if layer in PROMOTABLE else ())
     target = project / "parts" / (args.skeleton + DEFINITION_SUFFIX)
-    record = skeleton(args.skeleton, args.kind, args.vendor)
+    record = skeleton(args.skeleton, args.kind, args.vendor, args.sku)
     if not args.dry_run:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")

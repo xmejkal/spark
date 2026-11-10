@@ -18,9 +18,10 @@ from spark.core.result import output_schema
 Argument = namedtuple("Argument", "flags dest kind help default group required choices", defaults=(None, None, False, None))
 
 #: What an Operation does outside spark: it reads the project's files, runs a program, touches the board, erases what is
-#: on it, writes to it, asks the person for a yes. They are the words of a step's `effects` (`outcomes.step`); DELETES and
-#: WRITES came with deploy (P655), ASKS with grant (P657): `build_outside_world` gives `make_consent` to an Operation that declares it.
-READS, RUNS, BOARD, DELETES, WRITES, ASKS = "reads", "runs", "board", "deletes", "writes", "asks"
+#: on it, writes to it, asks the person for a yes, fetches a URL. They are the words of a step's `effects` (`outcomes.step`); DELETES and
+#: WRITES came with deploy (P655), ASKS with grant (P657), FETCHES with research (P737): `build_outside_world` gives `make_consent`,
+#: `replies` and `fetch` only to an Operation that declares the effect.
+READS, RUNS, BOARD, DELETES, WRITES, ASKS, FETCHES = "reads", "runs", "board", "deletes", "writes", "asks", "fetches"
 #: The flag that asks for the envelope. `run_cli` reads it, and the Operation never sees it.
 JSON_FLAG, JSON_DEST = "--json", "json"
 #: The arguments every Operation on a project takes, by `dest`, with the words of the first Operation, look.py. An
