@@ -276,13 +276,13 @@ def _physical_value_problems(physical):
     problems += ["physical.%s is not one of %s: a size the sheet reads goes under the board record's key name, and a note "
                  "under a key that starts with //" % (key, ", ".join(PHYSICAL_KEYS))
                  for key in physical if key not in PHYSICAL_KEYS and not str(key).startswith("//")]
-    if "thickness_mm" in physical and not _above_zero(physical["thickness_mm"]):
+    if not _unpublished(physical.get("thickness_mm")) and not _above_zero(physical["thickness_mm"]):
         problems.append("physical.thickness_mm is %r, but it is a number above 0" % (physical["thickness_mm"],))
     holes = physical.get("mounting_holes")
     if isinstance(holes, list):
         problems += ["physical.mounting_holes[%d] has no %s above 0" % (index, key) for index, hole in enumerate(holes)
                      for key in HOLE_KEYS if not (isinstance(hole, dict) and _above_zero(hole.get(key)))]
-    elif holes is not None and holes != []:
+    elif not _unpublished(holes):
         problems.append("physical.mounting_holes is %r, but it is a list of {x_mm, y_mm, drill_mm}" % (holes,))
     header = physical.get("header")
     if isinstance(header, dict):
@@ -296,7 +296,7 @@ def _physical_value_problems(physical):
             problems.append("physical.header.pins is %r, but it is a list of whole pin counts above 0, one per row" % (pins,))
         elif not _unpublished(pins) and _count(header.get("rows")) and len(pins) != header["rows"]:
             problems.append("physical.header.pins counts %d row(s), but rows says %r" % (len(pins), header["rows"]))
-    elif header is not None:
+    elif not _unpublished(header):
         problems.append("physical.header is %r, but it is an object" % (header,))
     return problems
 
@@ -314,9 +314,11 @@ def physical_problems(part, validation):
         return ["physical is %r, but it is an object of %s" % (physical, ", ".join(PHYSICAL_KEYS))]
     if physical == {}:
         return ["physical is empty; leave the block out, and name what was not published in physical_proof.not_published"]
-    if not isinstance(proof, dict):
+    if proof is None:
         return ["physical states no physical_proof {verified, source, cites, not_published}: where the sizes were read, "
                 "because %s" % PHYSICAL_WHY]
+    if not isinstance(proof, dict):
+        return ["physical_proof is %r, but it is an object {verified, source, cites, not_published}" % (proof,)]
     problems = ["physical_proof has no %r — a size with no provenance is a guess" % key
                 for key in ("verified", "source") if key not in proof]
     problems += provenance.list_type_problems("physical_proof", proof)
@@ -328,6 +330,8 @@ def physical_problems(part, validation):
         problems.append("physical_proof.not_published is %r, but it is a list of the keys the vendor did not publish"
                         % (not_published,))
         not_published = []
+    problems += ["physical_proof.not_published names %s, which is not one of %s" % (key, ", ".join(PHYSICAL_KEYS))
+                 for key in not_published if key not in PHYSICAL_KEYS]
     if physical is None:
         return problems + ([] if not_published else ["physical_proof vouches for no physical and names nothing in "
                                                       "not_published: leave both out, or say what was not published"])

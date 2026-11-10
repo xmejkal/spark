@@ -2,7 +2,7 @@
 
 The design in `docs/discovery/2026-11-10-p735-dfrobot-records/design.md`. Card: [P737 #1013](https://github.com/xmejkal/spark/issues/1013).
 Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter on Fable), rows 25 to 38 its round 2
-(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet), rows 42 to 51 the step 2 implementer's rulings (Fable, PR p737-replies), rows 52 to 58 its reviewer (Sonnet) and refuter (Fable), rows 59 to 64 the step 3 implementer's rulings (Fable, PR p737-physical), rows 65 to 70 its reviewer (Sonnet). 2026-11-10.
+(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet), rows 42 to 51 the step 2 implementer's rulings (Fable, PR p737-replies), rows 52 to 58 its reviewer (Sonnet) and refuter (Fable), rows 59 to 64 the step 3 implementer's rulings (Fable, PR p737-physical), rows 65 to 70 its reviewer (Sonnet), rows 71 to 75 its refuter (Fable). 2026-11-10.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -76,3 +76,8 @@ Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter
 | 68 | `rows: 2.5` and `pins: [8.5]` passed: counts took any number | PR reviewer | acted | `_count` is a whole number above 0; tested; a mutation row |
 | 69 | `header: {}` and a key outside the three (`width_mm`, `thickness`) passed | PR reviewer | acted | `{}` is unpublished like `[]`; a key outside `PHYSICAL_KEYS` is refused unless it starts with `//`, the records' note convention; tested; a mutation row |
 | 70 | row 61 read as the opposite of the code | PR reviewer | acted | reworded: an empty `not_published` is refused |
+| 71 | a `physical_proof` that is a list or a string, with no `physical`, said "physical states no physical_proof" | PR refuter (Fable) | acted | a proof that is no object has its own sentence; a null size said two sentences, now one (`_unpublished` guards each size check); tested |
+| 72 | `not_published: ["colour"]` passed, a key that is not one of the three | PR refuter | acted | refused, naming the three keys; tested |
+| 73 | `header` takes unknown keys while `physical` refuses them | PR refuter | rejected | the design says slice 3 adds `header_order` and `flush_edge` to the header if the sheet needs them, and a board's header carries `drill_mm`, `pad_mm`, `doubtful_pads`; the header's key set is not fixed in this epic |
+| 74 | `cites: "p1"` (not an object) passes every rule | PR refuter | raised | `record_kind._citations` reads a `cites` that is an object only, for every block (`body_mm`, `pin_order_proof` too); a card for the records area, not this step |
+| 75 | the `--fact-set` refusal sentence and the golden `parts-fact-set-problems-not-a-fact.txt` listed the chain facts only | PR refuter (not checked), the story run | acted | the sentence names `physical` with its `physical_proof`; the golden rewritten with `SPARK_ACCEPT=parts` |

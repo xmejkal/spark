@@ -1727,6 +1727,18 @@ class AModulesPhysicalSaysHowItWasReadTest(unittest.TestCase):
         self.assertEqual(self.problems(physical_proof=dict(self.PROOF, not_published="thickness_mm")),
                          ["physical_proof.not_published is 'thickness_mm', but it is a list of the keys the vendor did not publish"])
 
+    def test_a_proof_that_is_no_object_and_a_null_size_are_each_one_sentence(self):
+        self.assertEqual(self.problems(physical_proof=["the wiki"]),
+                         ["physical_proof is ['the wiki'], but it is an object {verified, source, cites, not_published}"])
+        self.assertEqual(self.problems(physical=None, physical_proof="the wiki"),
+                         ["physical_proof is 'the wiki', but it is an object {verified, source, cites, not_published}"])
+        self.assertEqual(len(self.problems(physical=dict(self.PHYSICAL, thickness_mm=[]))), 1)
+        self.assertEqual(len(self.problems(physical=dict(self.PHYSICAL, header=None))), 1)
+
+    def test_not_published_names_only_the_three_keys(self):
+        self.assertEqual(self.problems(physical_proof=dict(self.PROOF, not_published=["colour"])),
+                         ["physical_proof.not_published names colour, which is not one of thickness_mm, mounting_holes, header"])
+
     def test_a_proof_with_no_block_holds_only_when_it_names_what_was_not_published(self):
         self.assertEqual(self.problems(physical=None, physical_proof=dict(self.PROOF, not_published=["thickness_mm", "mounting_holes", "header"])), [])
         self.assertEqual(self.problems(physical=None),
