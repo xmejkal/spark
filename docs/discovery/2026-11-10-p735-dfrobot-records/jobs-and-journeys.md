@@ -62,15 +62,15 @@ flowchart LR
 ### The PO, to-be: from an owned DFRobot part to a wired part (proposal)
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
-| 0 | sets once which sources spark can use and in what order, and says yes to any paid source | H council/arch-ux.md:65 | one conversation, once | not yet | the default order |
-| 1 | says "make full records for my DFRobot modules", or names one part | H council/arch-ux.md:66 | no commands to learn | not yet | none |
-| 2 | reads one plan screen: the parts in scope, the source order with its cost, what will stop | H council/arch-ux.md:67 | one yes, no prompt per fetch | not yet | Q3, the scope |
-| 3 | reads one progress line per part, with facts per source kind | H council/arch-ux.md:68 | no silent 25 minutes | not yet | none |
-| 4 | answers one open list at the end: revisions, soldered headers, conflicts | H council/arch-ux.md:69 | he must hold the boards | not yet | none |
-| 5 | opens a part: picture, outline, holes, connectors, each with its source kind or "not published", conflicts side by side | H council/arch-ux.md:70 | no hand edits | not yet | none |
+| 0 | sets once which sources spark can use and in what order, and says yes to any paid source | H council/arch-ux.md:67 | one conversation, once | not yet | the default order |
+| 1 | says "make full records for my DFRobot modules", or names one part | H council/arch-ux.md:68 | no commands to learn | not yet | none |
+| 2 | reads one plan screen: the parts in scope, the source order with its cost, what will stop | H council/arch-ux.md:69 | one yes, no prompt per fetch | not yet | Q3, the scope |
+| 3 | reads one progress line per part, with facts per source kind | H council/arch-ux.md:70 | no silent 25 minutes | not yet | none |
+| 4 | answers one open list at the end: revisions, soldered headers, conflicts | H council/arch-ux.md:71 | he must hold the boards | not yet | none |
+| 5 | opens a part: picture, outline, holes, connectors, each with its source kind or "not published", conflicts side by side | H council/arch-ux.md:72 | no hand edits | not yet | none |
 | 6 | `/spark:idea` finds the owned part by what it does | E ★C4 | no "Research it" for an owned part | not yet | Q5 |
 | 7 | wires it from the sheet, unverified facts marked | E ★C3 | needs P734 | not yet | none |
-| 8 | checks one unverified pin order on the bench and writes the result back | H council/arch-ux.md:73 | a bench step | partly, `--fact-set` | none |
+| 8 | checks one unverified pin order on the bench and writes the result back | H council/arch-ux.md:75 | a bench step | partly, `--fact-set` | none |
 
 ```mermaid
 flowchart LR

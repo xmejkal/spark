@@ -14,11 +14,13 @@ The refuter (Opus) read the brief as it stood before its corrections. The rows b
 - ★C10 · council/refuter.md:73 · refuter: partly, "3 to 10 fetches and 0 to 16 URL checks" · reproduced how: re-read the four diaries' Counts parts · result: reproduced, as corrected · keep: estimates
 
 - ★C17 · council/fact-tree.md:9 · refuter: not run on it, added after both passes · reproduced how: grep found `CHAIN_FACTS` at scripts/spark/records/record_kind.py:37, `LAYOUT_FACTS` at scripts/spark/design/need_requirements.py:71, `PART_GAPS` at scripts/spark/design/board_emitter.py:92, no file in scripts/ that reads the research.md table, and no file that reads `sel_has_pull`, `sd_pulldown_ohms` or `needs_mclk` · result: reproduced · keep: spot-checked
-- ★C18 · scripts/spark/core/result.py:50 · refuter: not run on it, added at the close · reproduced how: grep for class names found OperationResult at result.py:50, GrantStore at board_grant.py:147 and GrantService at :211 · result: reproduced · keep: not yet read in full
+- ★C18 · scripts/spark/core/result.py:50 · refuter: not run on it, added at the close · reproduced how: grep for class names found OperationResult at result.py:50, GrantStore at board_grant.py:147 and GrantService at :211 · refuter third pass: partly, wording replaced, ConsentStrategy added · result: reproduced as corrected · keep: not yet read in full
 
 ## Agree / split
 - Agree: the four walks, the three lenses and the refuter agree on three points. The record has no typed place for geometry, no reader draws it, and the hand steps of ★C6 repeat in every walk. <!-- REQUIRED:agree-split -->
-- Split: the PO assistant read the walks as evidence against A1 (enough published geometry), the refuter as evidence for it. The brief follows the refuter, and A1's new pass line tests content, not links · Q1
+- Split: the PO assistant read the walks as evidence against A1 (enough published geometry), the refuter as for it on 2 of 4 and mixed on 2. The brief follows the refuter, and A1's new pass line tests content, not links · Q1
 - Split: the tech lead treats `--need` as a bug, the refuter as the PO's P211 default · Q5 in the brief's queue
 - Split: P446 forbids an AI-made shape, the PO's words on P734 allow one (C13) · a design council question
 - Second pass (council/refuter.md, Second pass): the reader came too late for A2, slice 0 could not meet its proof, A1's evidence and pass line counted differently, and the diagram said more than the architect. All four are fixed in the brief, the map and the risks. The DFR0457 rename reason was wrong, because irrigation keeps its own copy (`~/Development/irrigation/parts/` listed 2026-11-10).
+- Third pass (council/refuter.md, Third pass): ★C17 and ★C18 were partly right and are reworded, `ConsentStrategy` joins ★C18, the Hand-off now marks the proposals as H, the stale status lines cite D10, and C16 is fixed.
+- Open after the third pass: story-map.md slices 1, 4 and 6 lack the notes the UX and reuse lenses gave them (council/refuter.md, Third pass, part 3). The design council reads them from the lens reports.

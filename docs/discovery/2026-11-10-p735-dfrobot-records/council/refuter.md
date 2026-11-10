@@ -252,3 +252,51 @@ The Outcome line:
 ### Searches
 
 No search.
+
+## Third pass
+
+Model: Opus. Read brief.md, verification.md, story-map.md, items.md, risks-and-tests.md and the cited code. Commands were read-only (`sed`, `grep`). Nothing in the tree changed except this section.
+
+### 1. ★C17 and ★C18 against their sources
+
+- **★C17 · partly.**
+  - council/fact-tree.md:9 reads "Spark has no single place that says \"this consumer reads this fact\"". The brief says "No code or file says which consumer reads which fact", which drops "single". Code does say it in places: scripts/spark/records/missing_facts.py:15 reads "#: Each role whose active level a stage needs, and what the level means for it", and scripts/spark/records/record_kind.py:36 reads "#: The facts the chain reads from a part record (§5.4)".
+  - "tuples in code": `ACTIVE_LEVEL_MEANING` is a dict (missing_facts.py:16, `ACTIVE_LEVEL_MEANING = {`), and `PART_GAPS` is a tuple of (finder function, code, sentence) (board_emitter.py:92), not of fact names.
+  - Holds: record_kind.py:37 reads `CHAIN_FACTS = ("footprint", "pin_order", "pin_order_proof", "body_mm", "simulation")`. commands/research.md:65 reads "## 3. The facts each kind needs — and nothing else", with 5 rows (:69-73). No .py in scripts/ or tools/ reads it: the three files that name research.md use it in a docstring or a length budget. `grep -rn --include=*.py -e sel_has_pull -e sd_pulldown_ohms -e needs_mclk scripts tools tests` returned nothing (exit 1).
+  - Change to: "No single place says which consumer reads which fact. The need lives in four unconnected forms: tables in code (`CHAIN_FACTS`, `LAYOUT_FACTS`, `PART_GAPS`, `ACTIVE_LEVEL_MEANING`), pointers …"
+- **★C18 · partly.**
+  - "`OperationResult.next` returns the step a caller must do": result.py:52-53 reads "`next` the NextSteps", and :17 reads "#: Value: a step an agent may take next". "may", not "must". result.py:50 is `class OperationResult(...)`, as cited.
+  - "an Operation declares effect words such as `asks`": holds. scripts/spark/core/operation.py:22 reads `READS, RUNS, BOARD, DELETES, WRITES, ASKS = "reads", "runs", "board", "deletes", "writes", "asks"`.
+  - "every Operation reaches the outside only through `OutsideWorld`": refuted by the cited page. docs/guide/patterns-and-names.md:69-70 reads "The rest of the outside (the project's files, the store, and the child Python that `image_evidence.CompileCheck` starts) still goes direct, and moves behind the outside with its own card." outside.py:4 reads "the other fields (`write`, `fetch`, `environ`) enter with their first Operation". A research Operation needs `fetch` and the store, which OutsideWorld does not hold yet (ARCH-16's condition).
+  - `FakeOutsideWorld`: holds, tests/fakes.py:334.
+  - "`GrantStore` with `GrantService` keep a prepared, expiring yes per board for deploy": board_grant.py:147 is `class GrantStore:`, :211 `class GrantService:`. Its docstring (:148) reads "one JSON file per board and scope … grants/…json (live) and grants/…-deploy.json (deploy)". Two scopes, live and deploy, not deploy only.
+  - Missed, and the closest fit to D12: the consent Strategy. scripts/spark/bench/deploy_gate.py:50 reads `class ConsentStrategy(abc.ABC):` with "Strategy: how the person says yes to a question". Its subclasses are `TerminalConsentStrategy` (:82, typed live), `RelayedConsentStrategy` (:110, "a yes that another program collected … as MCP's elicitation asks through the client") and `StandingConsentStrategy` (board_grant.py:178, "the yes a valid deploy grant gives … in place of a yes typed per run"). outside.py:19 reads "`make_consent(line)` gives the ConsentStrategy that asks the person for the yes". That is a live, relayed and prepared (scripted) yes behind one interface, which is what D12 asks about.
+  - Change to: "… `OperationResult.next` lists the steps a caller may take (`NextStep` has `needs_yes` and `needs_person`), an Operation declares effect words such as `asks`, `OutsideWorld.make_consent` gives it a `ConsentStrategy` (typed in a terminal, relayed by another program, or standing from a grant), and `GrantStore` with `GrantService` keep an expiring yes per board and scope (live or deploy). Files, the store and fetches still go direct, not through `OutsideWorld`. · E … scripts/spark/bench/deploy_gate.py:50, scripts/spark/core/outside.py:19, docs/guide/patterns-and-names.md:69 · caveat: read for this claim, not for a design". verification.md row ★C18 then reads "refuter: partly".
+
+### 2. Hand-off against the D rows
+
+- The D rows' quotes match the other copies: D8 is word for word the quote at council/fact-tree.md:5. D5, D6 and D12 are given verbatim with the typos.
+- "A reader shows the geometry within the first four slices (D7, A2)": D7 reads "confirms the ratings, not the pass line". The A2 pass line in risks-and-tests.md:26 ("set 2026-11-10: a reader is in the first four slices") names no decider. The Hand-off states as the PO's what no D holds. Change to "(A2's proposed pass line, not decided)", or get a D.
+- "conflicts are kept side by side" in Outcome: this is option C's conflicts list (the architect's H, brief :59), not a D. Mark it H or move it under Options.
+- Constraints, "one interaction mechanism for all of spark … built from the parts in ★C18": D12 asks a question and says "maybe" ("Do we have some interface or delegate or anything that we could reuse ? … maybe we could just refactor it for whole spark"), and its last sentence names "the communication with the board in spark". "Built from the parts in ★C18" is Claude's answer to the question, made a constraint, and it rests on a claim that is partly (part 1). Change to "reuse what spark has where it fits (★C18; the PO asked, D12)".
+- "Confirmed by the PO (D11)": D11 confirms the jobs and the to-be map, not the Constraints or the Outcome lines above. Say "the jobs and the map confirmed (D11)".
+- Stale status after D7 and D10: brief :93 Riskiest still reads "proposed — the PO assistant's opinion, pending Q1", :94 Test reads "proposed — Claude's opinion, after the refuter, pending Q1", and risks-and-tests.md:25 reads "proposed, set 2026-11-10". D10 confirmed that line. Cite D10 and drop "pending Q1".
+
+### 3. Second-pass findings
+
+verification.md:24 says four were fixed. Checked:
+- Fixed: TL;DR number and "typed field"; the usability, viability and Q2 batch rows; the as-is row "16 of 112"; the slice proof moved from DFR0995 to SEN0526; the store port shown as open (Q-A9); "ten detail questions"; `outside` back in `run`; the reader now in slice 3 (within A2's line); slice 0 has two source kinds and a geometry home; the irrigation reason in items.md:88; brief Riskiest counts with "and".
+- Not fixed:
+  - C16 (brief :123) and items.md:88 still say both library records mark a drawn pin order true. `vl6180x-breakout` has `pin_order_proof.verified: false` (first and second pass).
+  - verification.md:21 still says the refuter read the walks "as evidence for it". The first pass said "for A1 on 2 of 4, mixed on 2".
+  - risks-and-tests.md:8 and :25 still count A1's evidence with "or" (3 of 4) against a pass line with "and".
+  - Option A's "rests on" (brief :57) still drops ARCH-16's condition ("only if it is an `Operation` and reaches the outside through `OutsideWorld` alone"). Part 1 shows that condition is not met today for files, the store and fetches.
+  - Option C's caveat still drops "the per-source budget duplicates `run_cost`".
+  - story-map.md slice 4 (MCP) still carries no REUSE-10 note (no DFRobot MCP found), slice 6 no "neither starts before v0.13" (arch-ux.md:157), slice 1 still settles "per person and per project" (UX open question 5), and story-map.md:5 still cites arch-architect.md:275 (the comparison heading).
+  - jobs-and-journeys.md:65-73 still cite arch-ux.md:65 to :73. Row 0 is at :67 and step 8 at :75.
+  - Outcome (brief :13) still proves a board with "`boards.py`", which names no subcommand that shows a record.
+- New in slice 0: "Geometry has a typed home (the board record's `physical` keys)" for SEN0526, a part. `physical` is read for boards only (council/fact-tree.md:19, TREE-11). Say whether a part record gains `physical` or what its home is.
+
+### Searches
+
+No search.

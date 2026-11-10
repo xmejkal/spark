@@ -2,7 +2,7 @@
 
 **Status:** proposed, not applied <!-- REQUIRED:map-status -->
 
-The to-be map for the research pipeline (D2, D5, D6). It joins the UX lens's backbone (council/arch-ux.md:112) with the architect's walking skeleton (council/arch-architect.md:275). The design council refines it.
+The to-be map for the research pipeline (D2, D5, D6). It joins the UX lens's backbone (council/arch-ux.md:112) with the architect's walking skeleton (council/arch-architect.md:102). The design council refines it.
 
 ## Backbone
 Decide the sources → Find what I own → Gather from sources → Read facts → Write the record → Ask what only I can answer → Show the part and hand over <!-- REQUIRED:backbone -->
@@ -14,7 +14,7 @@ Slice 0 is the thinnest run that ends in something the PO can read. Each later s
 
 | slice | activity | story | job | tag | proof |
 | --- | --- | --- | --- | --- | --- |
-| 0 walking skeleton <!-- REQUIRED:slices --> | all seven | one owned module (SEN0526) runs through one research Operation. The gap finder reads the fact need tree (D8) for its path. Two source kinds run, the DFRobot site and the kept documents (Claude reads the dimension drawing as a next step). The run prints the resolved source order. Geometry has a typed home (the board record's `physical` keys). Each fact names its source kind or says "not published", conflicts are a list, and the run ends with one open list | Job 4, Job 3 | D2, E ★C1 | the printed order, then `parts.py --show sen0526-i2s-mic` with the outline, holes and header row, then the open list |
+| 0 walking skeleton <!-- REQUIRED:slices --> | all seven | one owned module (SEN0526) runs through one research Operation. The gap finder reads the fact need tree (D8) for its path. Two source kinds run, the DFRobot site and the kept documents (Claude reads the dimension drawing as a next step). The run prints the resolved source order. Geometry has a typed home: a `physical` block on the part record with the board record's keys, read by P446's one shape reader (the architect's proposal). Each fact names its source kind or says "not published", conflicts are a list, and the run ends with one open list | Job 4, Job 3 | D2, E ★C1 | the printed order, then `parts.py --show sen0526-i2s-mic` with the outline, holes and header row, then the open list |
 | 1 | Decide the sources | the person sets the source order in `/spark:setup` words, per person and per project, and a run can override it once | Job 4 | D5 | `/spark:setup` prints the sources block, and a change changes the printed order |
 | 2 | Gather from sources | the person is a source (a photo, a revision, a measurement), and a zip is kept and read (a footprint file) | Job 4 | D2, E ★C7 | the DFR1117 record filled from its footprint and the PO's photo of the back |
 | 3 | Show the part and hand over | a reader shows the geometry: the board page prints the outline, holes and connectors, and the sheet draws SEN0526 with its real header (P734, P446) | Job 2, Job 3 | E ★C3, D7 | the sheet draws SEN0526 from its record |
