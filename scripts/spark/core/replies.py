@@ -150,9 +150,9 @@ class RepliesStore:
             raise SparkError("the replies file %s cannot be read: %s", self.path, why, code=BAD_ARGUMENT, fix=UNREADABLE_FIX)
 
     def load(self):
-        """The replies in the file, by key, each with `answered_by` set. A bare `"<key>": value` is read as `{"value": value}`.
-        A file that cannot be read is `_read`'s SparkError."""
-        entries = {key: entry if isinstance(entry, dict) else {"value": entry} for key, entry in self._read().items()}
+        """The replies in the file, by key, each with `answered_by` set. A bare `"<key>": value` is read as `{"value": value}`, an
+        object too unless it carries `value` (the template always writes one). A file that cannot be read is `_read`'s SparkError."""
+        entries = {key: entry if isinstance(entry, dict) and "value" in entry else {"value": entry} for key, entry in self._read().items()}
         return {key: Reply(key, entry["value"], FROM_FILE % self.path.name, None, entry.get("note"), entry.get("cites"))
                 for key, entry in entries.items() if entry.get("value") is not None}
 

@@ -12,15 +12,17 @@ from pathlib import Path
 from spark.core import outcomes
 from spark.core.codes import BAD_ARGUMENT
 from spark.core.errors import SparkError
+from spark.core.events import Event
 from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_FLAG, READS, WRITES, Argument, Operation
 from spark.core.replies import PERSON, RepliesStore, needs_reply_findings, order_open, reply_problems
 from spark.core.result import Finding, NextStep, OperationResult
-from spark.core.text_guards import guard_lines
+from spark.core.text_guards import guard_lines, printable
 from spark.records import record_kind
 from spark.records.fact_needs import FactNeeds
 from spark.records.record_kind import _write_record
-from spark.sourcing.part_records import definition_path, validate
-from spark.sourcing.research.merge import BODY, BODY_KEYS, NOT_PUBLISHED, PROOF, fold_replies
+from spark.sourcing.part_records import PartError, definition_path, validate
+from spark.sourcing.research import PHASE, REFUSED_LINE
+from spark.sourcing.research.merge import BODY, body_sizes, fold_replies, not_published_of
 from spark.sourcing.research.research_source import RESEARCH_SOURCES, question_for
 from spark.sourcing.sourcing_codes import PART_CONTRACT_BROKEN
 
@@ -36,6 +38,13 @@ WROTE = "record written: %s (unverified)"
 NO_GAPS = "no gaps: every fact the needs file lists is held or named in physical_proof.not_published"
 PART_HELP = "the id of the part record to research: in the project's parts/ or the person's shelf"
 PROJECT_HELP = "the project whose parts/ holds the record (default: here)"
+NO_SUCH_PART_FIX = "parts.py --need <words> finds what exists; a new record starts with parts.py --skeleton"
+
+
+def refusal(outside, refused):
+    """The SparkError `refused`, said once through `outside.report` as a LINE, for the caller to raise."""
+    outside.report(Event.line(PHASE, REFUSED_LINE % (refused.code, printable(str(refused)), refused.fix)))
+    return refused
 
 
 def has_fact(record, fact_path):
@@ -51,17 +60,18 @@ def _walk(record, fact_path):
 
 
 def held_value(record, fact_path):
-    """What the record holds at the path, as a reply would say it: for `body_mm`, the width and height alone, because
-    the block carries its provenance too."""
-    value = _walk(record, fact_path)
-    return {key: value.get(key) for key in BODY_KEYS} if fact_path == BODY and isinstance(value, dict) else value
+    """What the record holds at the path, as a reply says it: for `body_mm`, the width and height alone (`merge.body_sizes`)."""
+    return _comparable(fact_path, _walk(record, fact_path))
+
+
+def _comparable(fact_path, value):
+    return body_sizes(value) if fact_path == BODY else value
 
 
 def find_gaps(record, needs):
     """The FactNeed rows, one per fact path in file order, whose fact the record lacks, minus the keys that
     `physical_proof.not_published` names. A present but unverified fact is no gap: a drawing cannot verify what was read off it."""
-    proof = record.get(PROOF)
-    not_published = proof.get(NOT_PUBLISHED) or [] if isinstance(proof, dict) else []
+    not_published = not_published_of(record)
     gaps, seen = [], set()
     for need in needs.of_kind(MODULE_KIND):
         if need.fact_path not in seen and not has_fact(record, need.fact_path) and need.fact_name not in not_published:
@@ -74,7 +84,7 @@ def settle(given, record):
     """`(rest, filled)`: the given replies minus the keys whose value the record already holds, and the keys of the rest
     that the record holds with another value. A rerun with the same file adds nothing twice and flags nothing; a reply that
     would change a held fact is in `filled`, so `reply_problems` names it."""
-    rest = {key: reply for key, reply in given.items() if not (has_fact(record, key) and held_value(record, key) == reply.value)}
+    rest = {key: reply for key, reply in given.items() if not (has_fact(record, key) and held_value(record, key) == _comparable(key, reply.value))}
     return rest, [key for key in rest if has_fact(record, key)]
 
 
@@ -91,7 +101,7 @@ class ResearchPart(Operation):
     effects = (READS, WRITES, ASKS)
 
     def run(self, part, project, replies, *, outside):
-        path, record = self._record(part, project)
+        path, record = self._record(part, project, outside)
         needs = FactNeeds.from_file()
         gaps = find_gaps(record, needs)
         questions, sources = self._questions(gaps, record, outside, needs)
@@ -113,11 +123,15 @@ class ResearchPart(Operation):
         return OperationResult(data, findings, following, self._lines(data, replies_path), notes=[WROTE % ", ".join(written)] if written else None)
 
     @staticmethod
-    def _record(part, project):
-        """The record's path and the record. A record in spark's library is a SparkError `bad_argument`."""
-        path = definition_path(part, project)
+    def _record(part, project, outside):
+        """The record's path and the record. No record of that id is a SparkError with `definition_path`'s code (`no_such_part`),
+        and a record in spark's library is a SparkError `bad_argument`; each is said as an Event first."""
+        try:
+            path = definition_path(part, project)
+        except PartError as missing:
+            raise refusal(outside, SparkError("%s", missing, code=missing.code, fix=NO_SUCH_PART_FIX))
         if path.parent.resolve() == record_kind.LIBRARY.resolve():
-            raise SparkError("%s is a record of spark's own library", part, code=BAD_ARGUMENT, fix=IN_LIBRARY_FIX)
+            raise refusal(outside, SparkError("%s is a record of spark's own library", part, code=BAD_ARGUMENT, fix=IN_LIBRARY_FIX))
         return path, json.loads(path.read_text(encoding="utf-8"))
 
     @staticmethod
@@ -151,7 +165,7 @@ class ResearchPart(Operation):
     @staticmethod
     def _lines(data, replies_path):
         """What a person reads: the source order first, then the gaps, what was written and what is open."""
-        lines = ["sources: " + ", ".join("%d %s (%s)" % (index + 1, source["name"], source["where"]) for index, source in enumerate(data["sources"], 0))]
+        lines = ["sources: " + ", ".join("%d %s (%s)" % (index, source["name"], source["where"]) for index, source in enumerate(data["sources"], 1))]
         lines.append("gaps: " + ", ".join(data["gaps"]) if data["gaps"] else NO_GAPS)
         lines += ["written: " + ", ".join(data["written"])] if data["written"] else []
         lines += ["open: %d, fill %s" % (len(data["open"]), replies_path)] if data["open"] else []

@@ -5,8 +5,14 @@ ReplyStrategy from `--replies`, so the Operation never builds its own and `outsi
 or, in step R2, a terminal fills.
 """
 
+from spark.core.errors import SparkError
+from spark.core.events import Event
 from spark.core.outside import build_outside_world
 from spark.core.replies import DeferringReplyStrategy, GivenReplyStrategy, RepliesStore
+
+#: The code of a research run's Events, and the line a refusal says before it is raised (the bench's pattern: a text run
+#: reads it on stdout, a --json run on stderr), because a raised SparkError prints no line of its own.
+PHASE, REFUSED_LINE = "research", "%s: %s. %s"
 
 
 # --- MVP ---
@@ -17,6 +23,12 @@ def reply_strategy_for(path):
 
 def build_research_outside_world(project, effects, reporter, values):
     """Core's OutsideWorld for a research run: `replies` answers from the `--replies` file in `values`. A file that cannot be
-    read is `RepliesStore.load`'s SparkError `bad_argument`, which `run_operation` answers as one Finding."""
-    return build_outside_world(effects, reporter, replies=reply_strategy_for(values.get("replies")))
+    read is `RepliesStore.load`'s SparkError `bad_argument`, said once through the Reporter (a text run reads it) and then
+    raised, which `run_operation` answers as one Finding."""
+    try:
+        strategy = reply_strategy_for(values.get("replies"))
+    except SparkError as refused:
+        reporter.report(Event.line(PHASE, REFUSED_LINE % (refused.code, str(refused), refused.fix)))
+        raise
+    return build_outside_world(effects, reporter, replies=strategy)
 # --- end MVP ---

@@ -21,8 +21,8 @@ DRAWING_TITLE_WORDS = ("dimension", "drawing")
 #: The `why` of a Question, from its FactNeed: who reads the fact today, or will, and the card that makes it read.
 READS_WHY, WILL_READ_WHY = "%s reads it", "%s will read it (%s)"
 
-#: Value: what one source offers for the gaps it was given. `facts` and `documents` are step 5's; `questions` are the
-#: Questions the source cannot answer itself, each citing where the answer is when the source knows.
+#: Value: what one source offers for the gaps it was given: the Questions the source cannot answer itself, each citing where
+#: the answer is when the source knows. --- Later, not MVP: `facts` and `documents` are step 5's, the wiki source fills them ---
 SourceOffer = namedtuple("SourceOffer", "facts documents questions", defaults=((), (), ()))
 
 
@@ -69,8 +69,11 @@ class KeptDocumentsSource(ResearchSource):
 
     def drawing_of(self, record):
         """The key of the first kept document that is a drawing, or None."""
-        for key, entry in (record.get("documents") or {}).items():
-            said = ("%s %s" % (key, (entry.get("title") if isinstance(entry, dict) else None) or "")).lower()
+        documents = record.get("documents")
+        for key, entry in (documents.items() if isinstance(documents, dict) else ()):
+            if not isinstance(entry, dict):
+                continue  # the record's rules say what is wrong with it; a source cites nothing it cannot find
+            said = ("%s %s" % (key, entry.get("title") or "")).lower()
             if any(word in said for word in DRAWING_TITLE_WORDS) and (self.kept / str(entry.get("sha256")) / str(entry.get("file"))).is_file():
                 return key
         return None

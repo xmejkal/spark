@@ -17,13 +17,15 @@ that cites that drawing at page 1. A gap no source can place becomes a question 
 
 Run 1 answers nothing itself. It writes the template <project>/.spark/research-replies.json with a null value per
 question, prints the questions in data.open, one unchecked item per question with the code needs_reply, and exits 2.
-Exit 2 here means "run again with replies", not "broken". Read the cited drawing, fill the values, invent no key, and
-leave a value null when the drawing does not give it.
+Exit 2 here means "run again with replies", not "broken". Read the cited drawing, fill the values, and invent no key. A
+value the drawing does not give stays null and its question stays open; a size the vendor did not publish goes into
+physical_proof.not_published with parts.py --fact-set.
 
 Run 2, with --replies <file>, reads the file, writes each value as a fact (verified: false, with the document, the page
 and who read it as its source), validates the record and writes it in place. A key no question has, or a reply that
-would change a fact the record holds, is a problem (unknown_reply) and nothing is written. A value the record's
-contract refuses (part_contract_broken) is a problem too. A rerun with the same file adds nothing twice.
+changes a fact the record holds, is a problem (unknown_reply) and nothing is written. A value the record's contract
+refuses (part_contract_broken) is a problem too. An id no record has is no_such_part. A rerun with the same file adds
+nothing twice.
 
 The store is SPARK_HOME (default ~/.local/share/spark). No network: the DFRobot wiki source is step 5 of P737.
 Exit codes: 0 every gap is filled or not published, 1 a problem in the replies or the record, 2 questions are open or

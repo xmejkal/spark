@@ -27,9 +27,10 @@ The file is the project's `.spark/research-replies.json`. Run 1 writes it as a t
 ```
 
 Fill `value` for each key that you can answer. When you read the value off a document, add a `note` and `cites`.
-Invent no key. A null stays "not answered yet", and the question stays open. A bare `"<key>": value` is accepted too,
-unless the value is an object: then write the long form, because a bare object reads as an entry with no `value`. A
-rerun with the same file adds nothing twice.
+Invent no key. A null stays "not answered yet", and the question stays open on every run. If the vendor did not publish
+the size, the record says so in `physical_proof.not_published`, written with `parts.py --fact-set`; a reply form for it
+is a later card. A bare `"<key>": value` is accepted too, an object as well, unless the object has a key named `value`:
+then write the long form. A rerun with the same file adds nothing twice.
 
 ## The research run
 
@@ -38,11 +39,12 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/research.py --part <id> --project . --json
 ```
 
 It reads the record from the project's `parts/` or the person's shelf, never from spark's library. `data.gaps` lists
-the facts that `data/fact-needs.json` says the chain reads and the record lacks, minus what `physical_proof.not_published`
-names. `data.sources` is the order the run asked, today `kept-documents` alone: with a kept dimension drawing in the
+the facts that `data/fact-needs.json` says the chain reads and the record lacked when the run started, minus what
+`physical_proof.not_published` names. `data.sources` is the order the run asked, today `kept-documents` alone: with a kept dimension drawing in the
 record's `documents`, each gap is an `agent` question that cites it at page 1. Run 1 writes the template and exits 2.
-Run 2, with `--replies`, writes each value as a fact. The fact has `verified: false` and a `source` that names the
-document, the page and who read it. `data.written` names the keys, and `notes` repeat them. A key the record already holds with the
+Run 2, with `--replies`, writes each value as a fact: `physical` with its `physical_proof`, or `body_mm`. The fact has
+`verified: false` and a `source` that names the document, the page and who read it. An older proof is merged, not
+lost. `data.written` names the keys, and `notes` repeat them. In text mode a refusal prints its code, sentence and fix. A key the record already holds with the
 same value is settled and flags nothing. A run with no gaps is `ok` and writes no file.
 
 ## The codes

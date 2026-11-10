@@ -25,7 +25,7 @@ from spark.core.replies import DeferringReplyStrategy, GivenReplyStrategy, Reply
 from spark.records.fact_needs import FactNeed, FactNeeds  # noqa: E402
 from spark.sourcing.part_records import validate  # noqa: E402
 from spark.sourcing.research import reply_strategy_for  # noqa: E402
-from spark.sourcing.research.merge import fold_replies  # noqa: E402
+from spark.sourcing.research.merge import fold_replies, not_published_of  # noqa: E402
 from spark.sourcing.research.research_part import ResearchPart, find_gaps, has_fact, held_value, settle  # noqa: E402
 from spark.sourcing.research.research_source import KeptDocumentsSource, question_for  # noqa: E402
 
@@ -82,6 +82,12 @@ class GapsTest(unittest.TestCase):
         unverified = dict(RECORD, body_mm=dict(RECORD["body_mm"], verified=False))
         self.assertNotIn("body_mm", [gap.fact_path for gap in find_gaps(unverified, NEEDS)])
 
+    def test_an_odd_proof_or_not_published_is_read_as_nothing(self):
+        self.assertEqual(not_published_of(dict(RECORD, physical_proof=["x"])), [])
+        self.assertEqual(not_published_of(dict(RECORD, physical_proof={"not_published": "header"})), [])
+        self.assertEqual(not_published_of(dict(RECORD, physical_proof={"not_published": ["header", 3]})), ["header"])
+        self.assertEqual(len(find_gaps(dict(RECORD, physical_proof={"not_published": "header"}), NEEDS)), 3)
+
     def test_only_the_module_kind_rows_count(self):
         needs = FactNeeds((need("physical.header"), FactNeed("board", "physical.buttons", "spark.x", "reads")))
         self.assertEqual([gap.fact_path for gap in find_gaps(RECORD, needs)], ["physical.header"])
@@ -94,6 +100,10 @@ class SettleTest(unittest.TestCase):
         self.assertEqual(settle(given, record), ({"physical.header": given["physical.header"]}, []))
         changed = {"physical.thickness_mm": reply("physical.thickness_mm", 2)}
         self.assertEqual(settle(changed, record), (changed, ["physical.thickness_mm"]))
+
+    def test_a_body_mm_reply_with_an_extra_key_is_settled_by_its_sizes(self):
+        given = {"body_mm": reply("body_mm", {"width": 16, "height": 11, "depth": 3})}
+        self.assertEqual(settle(given, RECORD), ({}, []))
 
     def test_a_body_mm_reply_equal_to_the_block_s_sizes_drops(self):
         self.assertEqual(held_value(RECORD, "body_mm"), {"width": 16, "height": 11})
@@ -128,6 +138,12 @@ class KeptDocumentsSourceTest(unittest.TestCase):
         self.assertEqual([(q.key, q.asked_of, q.cites) for q in questions],
                          [(gap.fact_path, "agent", CITES) for gap in self.gaps])
 
+    def test_an_odd_documents_block_gives_no_question_and_no_crash(self):
+        self.keep()
+        for documents in (["x"], {DRAWING: "a string"}, {DRAWING: None}):
+            with self.subTest(documents=documents):
+                self.assertEqual(self.source.offer(self.gaps, dict(RECORD, documents=documents), FakeOutsideWorld()).questions, ())
+
     def test_no_kept_file_or_no_drawing_word_gives_no_question(self):
         self.assertEqual(self.source.offer(self.gaps, RECORD, FakeOutsideWorld()).questions, ())
         self.keep()
@@ -157,6 +173,24 @@ class FoldRepliesTest(unittest.TestCase):
         self.assertEqual((after["physical_proof"]["not_published"], written), (["header"], ["physical", "physical_proof"]))
         self.assertNotIn("facts.x", after)
         self.assertEqual(after["physical"], {"mounting_holes": HOLES, "thickness_mm": 1})
+
+    def test_an_older_proof_is_merged_not_lost_and_an_odd_physical_is_replaced(self):
+        old = {"verified": True, "source": "measured on the bench", "cites": {"document": DRAWING, "at": "page 2"}, "note": "calipers"}
+        record = dict(RECORD, physical={"thickness_mm": 1}, physical_proof=old)
+        replies = {"physical.header": ANSWERS["physical.header"]}
+        after, written = fold_replies(record, replies, self.QUESTIONS, {})
+        self.assertEqual(after["physical"], {"thickness_mm": 1, "header": HEADER})
+        self.assertEqual(after["physical_proof"], {"verified": False, "source": "measured on the bench; read from x-dimension-v1 page 1 by " + BY,
+                                                   "why_it_matters": "a hole or a header placed wrong puts the module where its pins miss the breadboard",
+                                                   "cites": CITES, "note": "calipers"})
+        for odd in (None, [1], "thin"):
+            with self.subTest(physical=odd):
+                after, written = fold_replies(dict(RECORD, physical=odd, physical_proof=[old]), replies, self.QUESTIONS, {})
+                self.assertEqual((after["physical"], written), ({"header": HEADER}, ["physical", "physical_proof"]))
+        incomplete = {"physical.header": reply("physical.header", HEADER, cites={"at": "page 1"})}
+        after, _ = fold_replies(RECORD, incomplete, self.QUESTIONS, {})
+        self.assertEqual(after["physical_proof"]["source"], "read from None page 1 by " + BY)
+        self.assertTrue(validate(after, Path("x-mod.json")), "a citation with no document is the record's rule to refuse")
 
     def test_body_mm_takes_the_sizes_with_its_why_and_a_reply_with_no_cites_says_given_by(self):
         question = question_for(need("body_mm", "reads", None), NEEDS.question_of("body_mm"))
@@ -228,11 +262,39 @@ class ResearchPartTest(unittest.TestCase):
         self.assertIn("physical.thickness_mm", result.findings[0].fix)
         self.assertEqual(self.record(), RECORD)
 
+    def test_a_mixed_run_writes_the_answered_and_keeps_the_rest_open(self):
+        two = {key: answer for key, answer in ANSWERS.items() if key != "physical.header"}
+        result = self.research(GivenReplyStrategy(two))
+        self.assertEqual((result.status(), result.data["written"], [q["key"] for q in result.data["open"]]),
+                         ("could-not-run", ["physical", "physical_proof"], ["physical.header"]))
+        self.assertEqual(self.record()["physical"], {"thickness_mm": 1, "mounting_holes": HOLES})
+        self.assertEqual(list(json.loads(self.replies_file.read_text())["replies"]), ["physical.header"])
+
+    def test_a_record_broken_before_research_is_still_written_when_the_fold_adds_no_problem(self):
+        broken = {key: value for key, value in RECORD.items() if key != "pin_order_proof"}
+        self.path.write_text(json.dumps(broken))
+        result = self.research(GivenReplyStrategy(ANSWERS))
+        self.assertEqual((result.status(), result.data["written"]), ("ok", ["physical", "physical_proof"]))
+        self.assertEqual(self.record()["physical"]["header"], HEADER)
+
     def test_a_value_the_contract_refuses_is_a_problem_and_nothing_is_written(self):
         bad = dict(ANSWERS, **{"physical.thickness_mm": reply("physical.thickness_mm", -1)})
         result = self.research(GivenReplyStrategy(bad))
         self.assertEqual((result.status(), [found.code for found in result.findings]), ("problems", ["part_contract_broken"]))
         self.assertEqual(self.record(), RECORD)
+
+    def test_an_unknown_id_is_no_such_part_not_a_crash_and_the_text_run_says_it(self):
+        result = run_operation(ResearchPart(), {"part": "nope", "project": self.project, "replies": None}, FakeOutsideWorld(replies=DeferringReplyStrategy()))
+        self.assertEqual([(found.code, found.severity) for found in result.findings], [("no_such_part", "could-not-run")])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = research.main(["--part", "nope", "--project", str(self.project)])
+        self.assertEqual(code, 2)
+        self.assertTrue(out.getvalue().startswith("  no_such_part: no part called 'nope'"), out.getvalue())
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = research.main(["--part", "x-mod", "--project", str(self.project), "--replies", str(self.project / "none.json")])
+        self.assertEqual((code, out.getvalue()[:33], "cannot be read" in out.getvalue()), (2, "  bad_argument: the replies file ", True))
 
     def test_a_library_record_is_refused_and_a_record_with_no_gaps_writes_no_file(self):
         result = run_operation(ResearchPart(), {"part": "led-red-5mm", "project": self.project, "replies": None},

@@ -18,8 +18,22 @@ NOT_PUBLISHED = "not_published"
 
 
 def source_of(reply):
-    """One sentence: where this reply was read, by whom."""
-    return READ_FROM % (reply.cites["document"], reply.cites["at"], reply.answered_by) if reply.cites else GIVEN_BY % (reply.answered_by,)
+    """One sentence: where this reply was read, by whom. A citation the file left incomplete is read as it is; the record's
+    rules judge it."""
+    cites = reply.cites if isinstance(reply.cites, dict) else None
+    return READ_FROM % (cites.get("document"), cites.get("at"), reply.answered_by) if cites else GIVEN_BY % (reply.answered_by,)
+
+
+def not_published_of(record):
+    """The keys `physical_proof.not_published` names: a list of strings, else nothing (the rule says what is wrong with the rest)."""
+    proof = record.get(PROOF)
+    named = proof.get(NOT_PUBLISHED) if isinstance(proof, dict) else None
+    return [key for key in named if isinstance(key, str)] if isinstance(named, list) else []
+
+
+def body_sizes(value):
+    """A `body_mm` value as a reply says it: its width and height alone, because the block carries its provenance too."""
+    return {key: value.get(key) for key in BODY_KEYS} if isinstance(value, dict) else value
 
 
 def _distinct(sentences):
@@ -37,6 +51,14 @@ def provenance_of(replies, why):
     return block
 
 
+def merge_proof(old, new):
+    """The new proof over an old one: nothing an earlier reading said is lost. The sources and notes join, `verified` is
+    False (one block vouches for every key, and the new keys are read off a drawing), the citation is the new one, else the old."""
+    joined = {key: "; ".join(_distinct([old.get(key), new.get(key)])) for key in ("source", "note") if old.get(key) or new.get(key)}
+    cites = new.get("cites") or old.get("cites")
+    return dict(new, **joined, **({"cites": cites} if cites else {}))
+
+
 def fold_replies(record, replies, questions, whys):
     """
     A deep copy of `record` with each reply (key to Reply) to one of the open `questions` written as a fact, and the sorted
@@ -49,15 +71,17 @@ def fold_replies(record, replies, questions, whys):
     folded = [reply for key, reply in replies.items() if key in open_keys]
     physical = [reply for reply in folded if reply.key.startswith(PHYSICAL + ".")]
     if physical:
-        block = after.setdefault(PHYSICAL, {})
+        block = after[PHYSICAL] if isinstance(after.get(PHYSICAL), dict) else {}
         keys = [reply.key.split(".", 1)[1] for reply in physical]
         block.update({key: reply.value for key, reply in zip(keys, physical)})
-        proof = provenance_of(physical, PHYSICAL_WHY)
-        left = [key for key in (after.get(PROOF) or {}).get(NOT_PUBLISHED, []) if key not in keys]
+        after[PHYSICAL] = block
+        old = after.get(PROOF) if isinstance(after.get(PROOF), dict) else {}
+        proof = merge_proof(old, provenance_of(physical, PHYSICAL_WHY))
+        left = [key for key in not_published_of(after) if key not in keys]
         after[PROOF] = dict(proof, **{NOT_PUBLISHED: left}) if left else proof
         written |= {PHYSICAL, PROOF}
     for reply in (reply for reply in folded if reply.key == BODY):
-        sizes = {key: reply.value[key] for key in BODY_KEYS if key in reply.value} if isinstance(reply.value, dict) else {}
+        sizes = {key: value for key, value in body_sizes(reply.value).items() if value is not None} if isinstance(reply.value, dict) else {}
         after[BODY] = dict(sizes, **provenance_of([reply], whys.get(BODY)))
         written.add(BODY)
     return after, sorted(written)

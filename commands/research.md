@@ -114,9 +114,11 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/research.py --part <id> --project . --json
 ```
 
 Run 1 lists the gaps and asks one question per gap that cites the drawing at page 1. It writes the template
-`.spark/research-replies.json` and exits 2 with `needs_reply`. Read the cited drawing, fill each value, and leave a
-value null when the drawing does not give it. Then run the `next[0]` step, the same line with `--replies`. Run 2 writes
-`physical` and `physical_proof` (`verified: false`, read off a drawing), and `parts.py --show <id>` prints them. The
+`.spark/research-replies.json` and exits 2 with `needs_reply`. Read the cited drawing and fill each value. A value the
+drawing does not give stays null, and its question stays open; if the vendor did not publish it, say so in
+`physical_proof.not_published` with `parts.py --fact-set`. Then run the `next[0]` step, the same line with `--replies`.
+Run 2 writes `physical` and `physical_proof` (`verified: false`, read off a drawing), or `body_mm` when the outline was
+the gap, and `parts.py --show <id>` prints them. The
 file's shape and the codes are in [docs/guide/agents/replies.md](../docs/guide/agents/replies.md). Today the one
 source is the kept documents; the DFRobot wiki source is step 5 of P737.
 
