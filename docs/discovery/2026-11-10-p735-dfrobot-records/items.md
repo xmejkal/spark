@@ -53,7 +53,7 @@ Filing needs the PO's yes to this list. Each item becomes a sub-issue of P735 #1
 - slice (one Slice option of the board, or "ask the decider for a new one"): ask the decider
 
 ## `--need` finds an owned part by what it does, and finds boards
-- type: story
+- type: story, a P211 matcher default that changes only with the PO's yes (council/refuter.md:38)
 - needed by: "full records of my DFRobot parts" (the PO, 2026-11-10), Job 1
 - value proven by: `--need "load switch"` names DFR0457 and the drawer count, `--need ESP32-C6` names the XIAO ESP32-C6 board (TL-12)
 - depends on: none
@@ -75,7 +75,7 @@ Filing needs the PO's yes to this list. Each item becomes a sub-issue of P735 #1
 ## Wrong claims in kept records and docs
 - type: chore
 - needed by: "we'll fix gaps and bugs afterwards" (the PO, 2026-11-10)
-- value proven by: the DFR0457 shelf record loses the irrigation wording and the wrong 12 V note (C11, C15), part-data.md:51 no longer says DFRobot ships no KiCad footprints (C14), the two library records follow one rule for a pin order read off a drawing (C16)
+- value proven by: the DFR0457 shelf record loses the wrong 12 V note (C11). Its irrigation wording (C15) is renamed only with the PO, because the signal `VALVE_CTRL` is in the irrigation pin map, part-data.md:51 no longer says DFRobot ships no KiCad footprints (C14), the two library records follow one rule for a pin order read off a drawing (C16)
 - depends on: none
 - status: proposed
 - label (the repository's type label): chore

@@ -5,7 +5,7 @@
 | --- | --- | --- | --- |
 | value <!-- REQUIRED:risk-value --> | H the records change nothing on screen until a reader exists (A2, ★C3) | order the slices so that a reader ships with slice 0 | open |
 | usability <!-- REQUIRED:risk-usability --> | E the PO meets about 20 hand steps per part (walk diaries) | the walk of slice 0 with no hand edit | open |
-| feasibility <!-- REQUIRED:risk-feasibility --> | E 0 of 4 walks reached verified holes and pins (★C1, A1) | the geometry count spike | open |
+| feasibility <!-- REQUIRED:risk-feasibility --> | E 3 of 4 walked parts have dimensioned holes or headers, but no typed field holds them (★C1, ★C2, A1) | the geometry count spike | open |
 | viability <!-- REQUIRED:risk-viability --> | E 300 to 800 fetches for 99 records (★C10, A5) | size the batch to the scope of Q3 | open |
 | ethics and safety <!-- REQUIRED:risk-ethics --> | E vendor tables swap supply pins and disagree on voltage (★C8, A6). H the licence of DFRobot downloads is unknown (PO-15) | keep vendor files in the store only, carry conflicts as a field | open |
 | power and battery <!-- REQUIRED:electronics-firmware:power --> | E DFR1117 revisions differ in sleep current, 14 µA against 37 µA, stated (C12) | a photo of the board's back (Q4) | open |
@@ -22,11 +22,11 @@
 ## Assumptions
 | id | belief | type | evidence now | importance | cheapest test | pass line, dated | result that would change the decision | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A1 <!-- REQUIRED:assumptions --> | DFRobot publishes enough geometry (a dimension drawing with holes and header positions, or a footprint) for most owned PCB modules | feasibility | E against it, 0 of 4 (★C1). H the rest behave the same | — (decider) | the geometry count spike | proposed, set 2026-11-10: at least half link a dimension drawing, and 3 of 5 read drawings give hole positions | under that line, the pipeline needs a second strategy (the person measures, or a photo) before the batch | open |
+| A1 <!-- REQUIRED:assumptions --> | DFRobot publishes enough geometry (a dimension drawing with holes and header positions, or a footprint) for most owned PCB modules | feasibility | E for it, 3 of 4 walked parts have dimensioned holes or headers (★C1). H the rest behave the same | — (decider) | the geometry count spike | proposed, set 2026-11-10: of 10 random owned PCB modules, at least 7 give hole and header coordinates | under that line, the pipeline needs a second strategy (the person measures, or a photo) before the batch | open |
 | A2 | A full record changes what the PO sees only when the sheet or the board page reads it | value | E ★C3, PO-17 | — (decider) | read P734's plan for a record-geometry reader | set 2026-11-10: the reader is in slice 0 or 4 | if no reader comes soon, the geometry fields wait | open |
 | A3 | Swappable strategies (site, datasheet, clicking through, a text description) fill one record shape, so a reader does not care which strategy filled a field | feasibility | D2. H no second strategy exists yet | — (decider) | slice 2: one part filled by two strategies | set 2026-11-10: the same keys from both | if the shapes differ, the record needs a per-strategy layer | open |
 | A4 | Parts and boards fit one geometry model (P446 `PartShape`) without a second model | feasibility | E a board has `physical`, a part has `body_mm` (★C2, TL-1) | — (decider) | the design council reads both | set 2026-11-10: one model holds both | two models mean two pipelines | open |
-| A5 | A batch over the owned modules fits "free, few and local" | viability | E 3 to 8 fetches a record (★C10) | — (decider) | count the scope (Q3) and multiply | set 2026-11-10: under one day of runs | over that, the batch runs on demand per goal | open |
+| A5 | A batch over the owned modules fits "free, few and local" | viability | E 3 to 10 fetches a record (★C10) | — (decider) | count the scope (Q3) and multiply | set 2026-11-10: under one day of runs | over that, the batch runs on demand per goal | open |
 | A6 | A full record with conflicts and "not published" marked keeps the PO from wiring harm | ethics | E ★C8 | — (decider) | the sheet prints each conflict for the walked parts | set 2026-11-10: each conflict printed | a conflict nobody sees changes the record design | open |
 
 ## Collection plan
