@@ -75,7 +75,7 @@ Filing needs the PO's yes to this list. Each item becomes a sub-issue of P735 #1
 ## Wrong claims in kept records and docs
 - type: chore
 - needed by: "we'll fix gaps and bugs afterwards" (the PO, 2026-11-10)
-- value proven by: the DFR0457 shelf record loses the wrong 12 V note (C11). Its irrigation wording (C15) is renamed only with the PO, because the signal `VALVE_CTRL` is in the irrigation pin map, part-data.md:51 no longer says DFRobot ships no KiCad footprints (C14), the two library records follow one rule for a pin order read off a drawing (C16)
+- value proven by: the DFR0457 shelf record loses the wrong 12 V note (C11). Its irrigation wording (C15) goes too, because the irrigation project keeps its own copy in its parts/ folder, part-data.md:51 no longer says DFRobot ships no KiCad footprints (C14), the two library records follow one rule for a pin order read off a drawing (C16)
 - depends on: none
 - status: proposed
 - label (the repository's type label): chore

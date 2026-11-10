@@ -5,7 +5,7 @@
 **Stands on:** 6 H, — of which would change the decision, until Q1 rates them <!-- REQUIRED:debt -->
 **Decision needed:** the PO rates A1 to A6 and sets the pass line of the geometry count (Q1). Then the design of the research pipeline starts in plan mode with a council (D2). <!-- REQUIRED:decision-needed -->
 
-> TL;DR. Four walks ran spark's research flow on four owned DFRobot parts. All four made a valid record. DFRobot published most of the geometry, but the record has no typed place for it. The record has no field for a picture, a schematic, holes or connectors, and the breadboard drawing reads none of them. Twelve tool bugs and gaps make each record a hand job. The PO's direction (D2) is a designed research pipeline with swappable sources and strategies, DFRobot first.
+> TL;DR. Four walks ran spark's research flow on four owned DFRobot parts. All four made a valid record. DFRobot published hole and header coordinates in full for 2 of 4, but the record has no typed field for them, and the breadboard drawing reads none of them. Eight reproduced tool bugs and several flow gaps make each record a hand job. The PO's direction (D2, D5, D6) is a designed research pipeline with ordered, swappable sources of many kinds, DFRobot first, usable later from LangGraph, RAG, agents and people. The PO rated A1 to A4 high (D7) and asked for a dependency tree of information needs (D8).
 
 ## Frame
 - Request, verbatim: "Run the product discovery for P735 (#1010): full records of my DFRobot parts, or at least a subset, and take notes, we'll fix gaps and bugs afterwards." Then, during the run: "So it might be a good idea to plan it with the council so that it fits our acrchitecture and usage cases and is ready for the after refactoring state, to be fully reusablew, with interchangable sources or strtegies, etc, we can just do MVP now of DFRobot, later we can add other search sources, probably it should also be configurable what it uses to get it from the online info, whether the datasheets, just site search, clcking through, a text description for a human or ai, or something elese. Let's really have it well designed so it becaomes a good base for all modules, parts and boards" (the PO, 2026-11-10, this session, spelling as typed). The card's words are in #1010. <!-- REQUIRED:request -->
@@ -28,7 +28,7 @@
 - The item: P735 #1010, an epic in Discovery · still open elsewhere: P733 #1003 waits on the PO's bench (sound lane), no open PR · push check: the push hook and `tools/check_backlog.py`. <!-- REQUIRED:spark-process:item -->
 <!-- EXTEND:frame -->
 - Depth: TRIO (PO assistant, user, tech lead), three agents on Sonnet, plus four walk agents (spark's parts-researcher, Opus) and one refuter. <!-- REQUIRED:depth -->
-- Search budget: 22 searches for the council (3 PO assistant, 2 tech lead, 8 reuse, 3 architect, 2 UX, 4 refuter, none for the user), and 8 searches and 12 fetches per walk (the researcher's own rule). Used: 13 in council/, 5 over the walks. <!-- REQUIRED:budget -->
+- Search budget: 22 searches for the council (3 PO assistant, 2 tech lead, 8 reuse, 3 architect, 2 UX, 4 refuter, none for the user), and 8 searches and 12 fetches per walk (the researcher's own rule). Used: 10 web searches in council/ by the reports' own lists (the check counts 13 lines), 5 over the walks. <!-- REQUIRED:budget -->
 - Appetite: unknown, asked at the design council. <!-- REQUIRED:appetite -->
 
 ## What we found <!-- CLAIMS -->
@@ -50,15 +50,15 @@
 ## Options <!-- CLAIMS -->
 - Q2 what first · design the research pipeline in plan mode with a council (sources and strategies as swappable parts, one record shape for parts and boards, the bugs of ★C6, reproduced on scratch copies, as its first slices) · a plan and two council rounds · that the shape fits the v0.13 core before code · opinion (Claude's, after D2) · D the PO 2026-11-10 · caveat: none <!-- REQUIRED:options -->
 - Q2 what first · fix the bugs of ★C6 (reproduced on scratch copies) and ★C7 (zips kept by hand) first, design after · about six small cards · that the hand steps go away · opinion (the tech lead's) · E council/tech-lead.md:27 · caveat: fixes can be redone by the design
-- Q2 what first · batch the remaining owned parts now with today's tools · 300 to 800 fetches · nothing new, it copies each bug into every record · opinion (none holds it) · E council/tech-lead.md:49 · caveat: none
+- Q2 what first · batch the remaining owned parts now with today's tools · 3 to 10 fetches a record times the scope of Q3 (★C10, estimates) · nothing new, it copies each bug into every record · opinion (none holds it) · E council/tech-lead.md:49 · caveat: none
 - Q6 architecture · A: one research Operation in Python runs an ordered chain of sources (Strategy adapters per kind: vendor site, kept documents, footprint file, person, MCP tool), and a source that needs Claude, a person or an MCP server returns a next step · 6 to 8 modules · that one core serves the CLI, Claude, a LangGraph node and a person · opinion (the architect's) · H council/arch-architect.md:27 · caveat: rough module count, no walk record run through the types
 - Q6 architecture · B: the agent runs the loop, Python gives three Operations (list the gaps, gather from one source, tell facts) · 4 to 5 modules · that today's shape is enough · opinion (the architect's, not preferred) · H council/arch-architect.md:108 · caveat: keeps the order and the stop rule in prose, against AGENTS.md
 - Q6 architecture · C: A plus a source plan with scope, budget and an automatic or ask-first mode per source, a scheduler, and a conflicts list · 7 to 9 modules · that cost and conflicts are data · opinion (the architect's: C as the target, built as A first, with C's conflicts list in the MVP) · H council/arch-architect.md:169 · caveat: the risk is an over-designed plan format
-Diagram of A with C's additions (from council/arch-architect.md:62 and :189). The store is a port, so a shared store or a RAG index is a later adapter (D6):
+Diagram of option A as the architect drew it (council/arch-architect.md:62), with C's conflicts list added. C's Scheduler, PlanEntry and Budget are left out. The architect proposes the store as a port, so that a shared store or a RAG index is a later adapter (D6), and leaves open whether the MVP pays for that port (Q-A9):
 
 ```mermaid
 classDiagram
-  class ResearchPart { <<Operation>> run(subject, project) }
+  class ResearchPart { <<Operation>> run(subject, project, outside) }
   class SourcePlan { <<Value>> entries from_settings() }
   class GapFinder { find_gaps(record, kind) }
   class Source { <<Strategy>> offer(gaps, subject, kept) Offer }
@@ -76,24 +76,26 @@ classDiagram
   Source ..> Offer
   Source ..> DocumentKeeper
   Source <|-- VendorSiteSource
-  Source <|-- DocumentSource
+  Source <|-- DatasheetSource
+  Source <|-- FootprintFileSource
+  Source <|-- DrawingSource
   Source <|-- PersonSource
   Source <|-- McpToolSource
 ```
 - Proposed no-gos and rabbit holes: no vendor file in the repository, keep it in the store only, because the licence is unknown. No AI-made shape until the PO settles C13. No batch before the pipeline. Rabbit hole: reading hole positions out of STEP B-splines (the DFR0995 STEP has 0 circles). · E council/po-assistant.md:50, walk/dfr0995/diary.md:22 · caveat: proposals until the PO confirms them <!-- REQUIRED:nogos -->
 
 ## Riskiest assumption and its test
-- Riskiest: A1, DFRobot publishes enough geometry (hole and header coordinates) for most owned PCB modules. The walks support it for 3 of 4 (★C1, 4 parts picked by Claude) · proposed — the PO assistant's opinion, pending Q1 <!-- REQUIRED:riskiest -->
-- Test · kind · pass line: a script with no AI reads the wiki page of each owned PCB module and counts which link a dimension drawing, a schematic, a STEP and a layout zip. Then a person reads 5 drawings at random for hole and header coordinates · a spike · proposed pass line (set 2026-11-10, after the refuter, before the spike): of 10 owned PCB modules picked at random, at least 7 have a drawing or footprint that gives hole and header coordinates · proposed — Claude's opinion, after the refuter, pending Q1 <!-- REQUIRED:test -->
+- Riskiest: A1, DFRobot publishes enough geometry (hole and header coordinates) for most owned PCB modules. The walks give full hole and header coordinates for 2 of 4 (SEN0526, and DFR1117, which has no holes), holes only for DFR0995, and neither for DFR0457 (★C1, 4 parts picked by Claude) · proposed — the PO assistant's opinion, pending Q1 <!-- REQUIRED:riskiest -->
+- Test · kind · pass line: a script with no AI reads the wiki page of each owned PCB module and counts which link a dimension drawing, a schematic, a STEP and a layout zip. Then a person reads the drawings of 10 modules picked at random for hole and header coordinates · a spike · proposed pass line (set 2026-11-10, after the refuter, before the spike): of 10 owned PCB modules picked at random, at least 7 have a drawing or footprint that gives hole and header coordinates · proposed — Claude's opinion, after the refuter, pending Q1 <!-- REQUIRED:test -->
 
 ## Questions
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 (the PO's request names the frame) <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: queued <!-- REQUIRED:q1 -->
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: asked 2026-11-10, importance answered D7, the pass line open after D8 <!-- REQUIRED:q1 -->
 - Q2 · What goes first: the design, the bug fixes, or a batch? · decides: the order · options above · status: answered D2 (design with a council) <!-- REQUIRED:q2 -->
 - Q3 · Which owned parts are in scope: PCB modules and boards only, or also cables, motors and panels? · decides: the size of the run and the meaning of "done" · status: queued
 - Q4 · Which revision is printed on the back of your three DFR1117 boards? · kind: account · decides: which regulator and sleep current the record holds · status: queued, a photo settles it
 - Q5 · Should `--need` match the drawer's functions and boards, as `--match` does, in place of the P211 name-contains default? · decides: the `--need` item in items.md · status: queued
-- Q6 · Which architecture: A, B or C? The architect's opinion is C as the target, built as A first. Its nine detail questions (council/arch-architect.md:306) go to the design council · decides: the shape of the pipeline · status: queued
+- Q6 · Which architecture: A, B or C? The architect's opinion is C as the target, built as A first. Its ten detail questions (council/arch-architect.md:306) go to the design council · decides: the shape of the pipeline · status: queued
 
 ## Decisions
 - D1 · the frame: walk a subset of the owned DFRobot parts through spark's research flow, take notes, fix gaps and bugs afterwards · the PO · 2026-11-10 · this session's first request
@@ -103,6 +105,8 @@ classDiagram
 
 - D5 · the direction widens: "various sources should be usable like MCP , I know that there are also parts MCPs from manufacturesrs, so also multiple kinds of sources, again, reusable/interchangable/interactive/automatic etc.. And maybe some order of the sources, so it knows where to look first, etc.. Let's have the council rethink the architectre given this. Also we should have an up to date sotry map for it and journey." · the PO · 2026-11-10 · this session · confirms a direction and asks for an architecture council, an updated story map and journey
 - D6 · later interfaces and stores: "And remember later it should all be usable with other interfaces and stores, so langgraph, RAG, agents, humans.." · the PO · 2026-11-10 · this session · confirms a direction (P417 LangGraph, P419 RAG)
+- D7 · A1, A2, A3 and A4 are high importance, A5 and A6 low · the PO · 2026-11-10 · this session, Q1 part 1 · confirms the ratings, not the pass line
+- D8 · "Maybe we should actually implement some kind of dependency tree for a few things in spark and one of them would be information, like what needs what specific info for what part or bus or somethhing, let's also analyze that and add it" · the PO · 2026-11-10 · this session, in place of an answer to Q1 part 2 · asks for an analysis, council/fact-tree.md
 
 ## Found on the way <!-- CLAIMS -->
 - [C15] The DFR0457 shelf record holds irrigation wording (signal `VALVE_CTRL`, "four valves", "ESP32-S3") in a record every project finds. · E walk/dfr0457/diary.md:69 · caveat: none <!-- REQUIRED:found -->

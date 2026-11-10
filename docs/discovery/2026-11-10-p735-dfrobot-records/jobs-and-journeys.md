@@ -26,7 +26,7 @@ The as-is journeys come first, then the to-be journeys (proposals from council/a
 ### The PO: from an owned DFRobot part to a wired part <!-- REQUIRED:journey -->
 | step | what they do | evidence | friction or harm | today | open question |
 | --- | --- | --- | --- | --- | --- |
-| 1 | owns the part, it is in the drawer | E drawer, ★C9 | about 19 of 112 entries link a record | partly | which entries are in scope (Q3) |
+| 1 | owns the part, it is in the drawer | E drawer, ★C9 | 16 of 112 entries link a record | partly | which entries are in scope (Q3) |
 | 2 | asks spark for a part that does the job | E ★C4 | the owned part is not found, spark says "Research it" | not yet | none |
 | 3 | spark researches the part | E walk diaries | about 20 steps, hand edits, zips cannot be kept, boards have no flow | partly | none |
 | 4 | the record is checked | E ★C6 | `--validate` passes a bent record (SEL as a ground pin), `--read` picks the wrong row | partly | none |

@@ -18,3 +18,4 @@ The refuter (Opus) read the brief as it stood before its corrections. The rows b
 - Split: the PO assistant read the walks as evidence against A1 (enough published geometry), the refuter as evidence for it. The brief follows the refuter, and A1's new pass line tests content, not links · Q1
 - Split: the tech lead treats `--need` as a bug, the refuter as the PO's P211 default · Q5 in the brief's queue
 - Split: P446 forbids an AI-made shape, the PO's words on P734 allow one (C13) · a design council question
+- Second pass (council/refuter.md, Second pass): the reader came too late for A2, slice 0 could not meet its proof, A1's evidence and pass line counted differently, and the diagram said more than the architect. All four are fixed in the brief, the map and the risks. The DFR0457 rename reason was wrong, because irrigation keeps its own copy (`~/Development/irrigation/parts/` listed 2026-11-10).

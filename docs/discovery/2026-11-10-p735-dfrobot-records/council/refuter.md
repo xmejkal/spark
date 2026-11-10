@@ -175,3 +175,80 @@ No web search was made.
 - DFR1117 V1.1: I read the schematic's VIN wiring by text extraction only and did not view a render.
 - The SEN0526 and DFR0457 wiki pages: not re-fetched. Their quotes come from the diaries and records.
 - The irrigation project's use of the DFR0457 shelf signal name: not checked.
+
+## Second pass
+
+Model: Opus. Read the sections changed in commits ef5ab9e3 and 3fbebe9b, the three arch reports and verification.md. Commands were read-only: `git diff`, `boards.py --help`, a grep in `~/Development/irrigation` and in `scripts/spark/sourcing/matching.py`. Nothing in the tree changed except this section.
+
+### 2. Changed sections against their detail
+
+First-pass corrections:
+- Applied as worded: ★C1, ★C2, ★C5, ★C7, ★C9 and ★C10. ★C4's caveat is applied too, and "`--match` already reads drawer functions" holds: matching.py:84 reads "with the live drawer entries that say they are it: their functions and tags join".
+- Not applied, though the files around them changed:
+  - The TL;DR still says "Twelve tool bugs and gaps". It also says "The record has no field for a picture, a schematic, holes or connectors", which contradicts the corrected ★C2 ("no *typed* field").
+  - risks-and-tests.md "usability" still reads "the PO meets about 20 hand steps". The PO met none (USER-34).
+  - risks-and-tests.md "viability" ("300 to 800 fetches for 99 records") and the Q2 batch option ("300 to 800 fetches") still multiply by 99, which the corrected ★C10 says not to do.
+  - C16 and the chore item still say "the two library records". `vl6180x-breakout` has `pin_order_proof.verified: false`.
+  - The as-is journey row 1 still reads "about 19 of 112".
+  - story-map.md slice 8 still proves "the sheet draws DFR0995 with its real header". walk/dfr0995/diary.md:62 reads "Header pitch and pad positions: not on the wiki page, the dimension PNG … or the schematic".
+- verification.md "the refuter [read the walks] as evidence for it [A1]" is stronger than my first pass, which said "for A1 on 2 of 4, mixed on 2".
+
+Q6 and the class diagram against council/arch-architect.md:
+- The diagram is titled "A with C's additions", but it leaves out C's own additions: `Scheduler`, `PlanEntry` and `Budget` (architect :192-210). It also drops A's `RecordWriter`, `DatasheetSource`, `FootprintFileSource` and `DrawingSource`, and it adds a `DocumentSource` that no report names.
+- The diagram drops `outside` from `run(subject, project, outside)`. ARCH-16 makes the four interfaces conditional on it: "gets these interfaces for free only if it is an `Operation` and reaches the outside through `OutsideWorld` alone". Option A's "rests on" line ("one core serves the CLI, Claude, a LangGraph node and a person") drops that condition too.
+- "The store is a port, so a shared store or a RAG index is a later adapter (D6)" is stated as fact. The architect leaves it open (Q-A9: "is the store port … part of this epic's MVP"), and ARCH-17 says that no port exists today.
+- Q6 says "nine detail questions". arch-architect.md:308-317 holds ten (Q-A1 to Q-A10), and Q-A1 is Q6 itself.
+- C's caveat keeps "over-designed plan format". It drops the architect's second risk: "the per-source budget duplicates `run_cost`".
+
+The story map against council/arch-ux.md and the architect:
+- Slice 0 ("one source kind, the DFRobot site") does not support the proof items.md expects of slice 0 ("`--show sen0526-i2s-mic` with the picture, outline, holes and header row"):
+  - The typed geometry home arrives only in slice 3.
+  - SEN0526's holes come from a dimension drawing. The architect's `VendorSiteSource` reads "HTML, no AI", and `DrawingSource` answers a `NextStep`.
+  - The architect's MVP (:102) has four source kinds and the `physical` block. The UX slice 0 has one kind and no geometry. The map joined the two and kept neither one's proof consistent.
+- Slice 6 drops the UX caveat that the LangGraph and RAG slices start no earlier than v0.13: "Neither starts before v0.13" (arch-ux.md:157).
+- Slice 4 (an MCP source) drops REUSE-10: "do not plan on a vendor MCP for DFRobot MVP". The reuse lens found no DFRobot MCP, so slice 4 has no DFRobot proof part.
+- Slice 1 settles "per person and per project". That is the UX lens's open question 5.
+- The pointers are loose:
+  - arch-architect.md:275 is the comparison heading. The walking skeleton is at :102 and :269.
+  - In jobs-and-journeys.md, the to-be PO rows cite arch-ux.md:65 to :73. Those are two lines early: row 0 is at :67, and step 8 is at :75, not :73.
+
+risks-and-tests.md and the brief:
+- The value row says "a reader ships with slice 0". A2's pass line says "the reader is in slice 0 or 4". The rewritten story map puts the reader in slice 8, so A2's line is missed by the map that was proposed at the same time.
+- A1's evidence ("3 of 4 … holes or headers") counts with *or*. The pass line ("give hole and header coordinates") counts with *and*. Under the pass line's own rule, the walked sample meets it for 1 of 4 (SEN0526). For DFR1117, a board with no holes, the line cannot be met unless "not applicable" counts.
+- The test reads "5 drawings at random". The pass line counts "10 owned PCB modules picked at random, at least 7". items.md's spike says five, so the test cannot produce the count its line needs.
+- The Riskiest line is still labelled "the PO assistant's opinion". It now asserts the opposite reading of the walks to the PO assistant's (verification.md Split 1).
+- The TL;DR says "DFRobot published most of the geometry". ★C1's caveat says "not how often".
+
+items.md, the chore:
+- "renamed only with the PO, because the signal `VALVE_CTRL` is in the irrigation pin map". `~/Development/irrigation/parts/dfr0457-mosfet-power-controller.json` is a project copy, and the project layer is read before the shelf (ARCH-8). So renaming the shelf record leaves irrigation's `firmware/pins.py` untouched. The reason given is not the operative one, and my first pass raised this risk without checking it.
+
+The Outcome line:
+- "`boards.py` for a board" names no subcommand. `boards.py --help` lists `--path --id --list --paths --validate --get --resolve`, and `--get` reads the active board only. The proof for DFR1117 stays unreachable as worded.
+
+### 3. Rival explanations for the new interpretations
+
+- **Architect: "C as the target, built as A first", and the batch as "one CLI loop".** Rival: the walk cost is dominated by Claude reading images (UX-11: 3 of 4 walks rendered pages by hand). A and C hand that to the agent as a `NextStep` too, so A's saving over B on a batch is unmeasured. No walk was run through the types (architect :303).
+- **Architect: the conflicts list goes in the MVP "because the walks found a conflict in 3 of 4 parts (★C8)".** Rival: only DFR0995 is two sources disagreeing. SEN0526 is a table against a drawing, read as harm, and DFR1117's VIN is a single-source hazard, not a conflict. The basis is 1 to 2 of 4.
+- **D5, "parts MCPs from manufacturers".** Rival: none serves DFRobot (REUSE-10). The MCP slot then serves only distributors that need keys, which runs against "free, few and local".
+- **Job 5: "stops and questions as data".** Rival: D6 asks for reuse by other interfaces. It does not ask that every stop be typed data. That reading is the UX lens's H, and the architect's `NextStep` already covers it without a typed open list.
+- **The story map's split of geometry into slice 3.** Rival: this followed the UX lens's slice order. It was not a decision that slice 0 shows no geometry, and items.md shows the authors still expect geometry in slice 0.
+- **The chore's irrigation risk.** Rival: no risk, because irrigation reads its own project copy (part 2).
+
+### 4. Numbers that lack a unit, population, period or provenance
+
+- "Used: 13 in council/": the Searches sections count 10. That is PO assistant 2, tech lead 1, reuse 6, architect 1, UX 0 and refuter 0.
+- "22 searches for the council": no source for the per-agent caps. Where the 8 for reuse and the 4 for the refuter come from is not written.
+- "nine detail questions": there are ten.
+- "6 to 8 / 4 to 5 / 7 to 9 modules": the architect's rough estimate, and "module" is undefined. Only A keeps "rough".
+- "3 of 4" (A1, Riskiest, feasibility row): counted with *or*. It is 1 of 4 by the pass line's *and*.
+- "10 … at least 7" against "5 drawings": two populations for one test.
+- "about 20 hand steps" (usability row, Job 4 today, as-is row 3): the unit is undefined. The diaries hold 17 to 31 numbered steps, with 1 to 3 hand edits.
+- "300 to 800 fetches" (Q2 batch option, viability row): multiplied by 99 entries.
+- "about 19 of 112" (as-is journey row 1): 16 by the `is` key.
+- "no silent 25 minutes" (to-be step 3): one walk's estimate (SEN0526), stated as general.
+- "five end states", and "budget 4 requests" in the architect's sequence: design values, not measured.
+- UX-16 and REUSE-14 still carry the old "3-8 fetches" and "5-16 URL checks". The brief does not use them, but story-map and Job 5 cite the UX lens.
+
+### Searches
+
+No search.
