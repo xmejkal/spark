@@ -33,7 +33,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_all.py" --project . --json
 Today's output also carries `"unmeasured": 0`, after `status`.
 
 One exception to "read `unchecked`": `check_spine.py --json` can answer `ok` with a top-level `missing_facts` list,
-which is never in `unchecked` ([when and how](json.md#check_spinepy)). Say what is missing, and never guess it.
+which is never in `unchecked` ([when and how](json.md#check_spinepy)). Say what is missing, and never guess it. An exit 2 with `needs_reply` is a question, not a broken run: answer it in the replies file ([open questions and replies](replies.md)), and never fill a value you did not read where `cites` says.
 
 ## 2. A `null` is unknown, never a value to fill in
 

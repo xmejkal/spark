@@ -2,7 +2,7 @@
 
 The design in `docs/discovery/2026-11-10-p735-dfrobot-records/design.md`. Card: [P737 #1013](https://github.com/xmejkal/spark/issues/1013).
 Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter on Fable), rows 25 to 38 its round 2
-(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet). 2026-11-10.
+(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet), rows 42 to 50 the step 2 implementer's rulings (Fable, PR p737-replies). 2026-11-10.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -47,3 +47,12 @@ Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter
 | 39 | the ★C, D and P numbers and "Operation" appear with no gloss | PR reviewer | acted | one line under the title names the brief; the TL;DR glosses Operation |
 | 40 | patterns-and-names.md:29 is a sentence, not a list; `FactNeed` is in Names but not in the diagram | PR reviewer | acted | "the effects sentence"; Names says the two Values are P738's |
 | 41 | the later list is far-future text in a plan that shrinks with distance | PR reviewer | closed | one line each, as the reviewer accepted |
+| 42 | `OutsideWorld` holds callables, so `replies` is the strategy's `reply`, not the strategy | step 2 implementer | acted | `outside.replies(question)`; `build_outside_world(replies=<ReplyStrategy>)` stores `.reply`, `refuse_replies` without ASKS |
+| 43 | `build_outside_world` reached six parameters (rule R3) | architecture test | acted | the `clock` parameter went: the bench passed the default, and the one test `_replace`s its FakeClock |
+| 44 | a Store in the core wrote a file with no Adapter (rule T1) | architecture test | acted | `outside.TextFileWriter`, beside `ProgramRunner`; `RepliesStore.dump` writes through it |
+| 45 | a SparkError template that is a module constant is no constant to rule V1 | architecture test | acted | the literal template in `RepliesStore.load` |
+| 46 | json.md (427), never-assume.md (227) and agents.md (185) were each at their line budget | docs test | acted | the shape and the three codes are a new page, docs/guide/agents/replies.md, linked from agents.md's JSON row, AGENTS.md, json.md and never-assume.md item 1 |
+| 47 | `bad_reply` cannot check "fits `answer_form`", which is words | step 2 implementer | acted | `Question.misfit` checks the kind: a bool, one of the choices, not empty, finite; the record's rule (step 3) checks the fact |
+| 48 | a reply from a file carries no time | step 2 implementer | acted | `Reply.at` is None for a file reply; the Operation stamps the record from its clock (step 4) |
+| 49 | `RepliesStore(path)` holds its path; the design wrote `load(path)` | step 2 implementer | acted | `for_project(project)` gives the default path; one object per file |
+| 50 | `dump` on a rerun would wipe the answered values | step 2 implementer | acted | `dump` keeps the file's entries and adds a null entry per open key it lacks; a mutation row proves it |

@@ -29,6 +29,8 @@ COMMON_ARGUMENTS = {
     "port": Argument(("--port",), "port", str, "the board's serial port, e.g. /dev/cu.usbmodem1101. Needed with two or more boards on USB "
                      "(one board on two nodes named by its serial counts once)"),
     JSON_DEST: Argument((JSON_FLAG,), JSON_DEST, bool, "print one envelope on stdout (docs/guide/agents/json.md)"),
+    "replies": Argument(("--replies",), "replies", Path, "the replies file a run that left questions open wrote (.spark/research-replies.json): "
+                        "its filled values answer them (P737)"),
 }
 
 

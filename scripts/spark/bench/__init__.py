@@ -11,7 +11,6 @@ from spark.bench.issue_grant import IssueGrant
 from spark.bench.look_at_board import LookAtBoard
 from spark.bench.reach_board import ReachBoard
 from spark.bench.run_live_code import RunLiveCode
-from spark.core.clock import SystemClock
 from spark.core.outside import build_outside_world
 
 # --- MVP ---
@@ -24,6 +23,5 @@ def build_project_outside_world(project, effects, reporter):
     `make_consent` asks in the terminal, on the Reporter's stream (P655), the question masked as the Reporter masks (P677)."""
     return build_outside_world(effects, reporter,
                                find_tool=lambda name, project=project: tool_finder.find(name, project),
-                               clock=SystemClock(),
                                make_consent=lambda line: deploy_gate.TerminalConsentStrategy(line, stdout=reporter.stream, mask=reporter.mask))
 # --- end MVP ---

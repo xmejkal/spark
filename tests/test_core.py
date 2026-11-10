@@ -20,7 +20,8 @@ from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
 from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Argument, Operation  # noqa: E402
 from spark.core.privacy import Privacy  # noqa: E402
-from spark.core.outside import ProgramRunner, build_outside_world  # noqa: E402
+from spark.core.outside import OutsideWorld, ProgramRunner, build_outside_world, refuse_replies  # noqa: E402
+from spark.core.replies import AGENT, VALUE, GivenReplyStrategy, Question, Reply  # noqa: E402
 from spark.core.result import Finding, NextStep, OperationResult, envelope_item, output_schema  # noqa: E402
 
 PROBLEM = Finding(outcomes.PROBLEMS, "flash", "flash_differs", "the flash differs", "accept it")
@@ -101,8 +102,8 @@ class CodesTest(unittest.TestCase):
         self.assertTrue(all(sentence.strip() for sentence in sentences))
         self.assertEqual(len(set(sentences)), len(sentences))
 
-    def test_the_core_codes_are_its_own_crash_bad_argument_and_undeclared_effect(self):
-        self.assertEqual(sorted(codes.CODES), ["bad_argument", "crash", "undeclared_effect"])
+    def test_the_core_codes_are_its_own_crash_bad_argument_undeclared_effect_and_the_reply_codes(self):
+        self.assertEqual(sorted(codes.CODES), ["bad_argument", "bad_reply", "crash", "needs_reply", "undeclared_effect", "unknown_reply"])
 
 
 class Toy(Operation):
@@ -323,6 +324,23 @@ class RunOperationTest(unittest.TestCase):
         code, out, err = cli("--what", "run", "--json", outside=outside)
         self.assertEqual((code, json.loads(out)["unchecked"][0]["code"], err), (2, "undeclared_effect", ""))
         self.assertIn("cannot run ['ls']", json.loads(out)["unchecked"][0]["sentence"])
+
+    def test_replies_are_refused_without_asks_and_are_the_given_strategy_s_reply_with_it(self):
+        # P737: the fifth field keeps its place, so the two positional builders stand; `replies` is a keyword with a refusing default
+        question = Question("revision", "Which revision?", VALUE, AGENT)
+        given = GivenReplyStrategy({"revision": Reply("revision", "V2.0", "a test")})
+        self.assertIs(OutsideWorld(None, None, None, None, None).replies, refuse_replies)
+        with self.assertRaises(SparkError) as refused:
+            build_outside_world((READS,), FakeReporter(), replies=given).replies(question)
+        self.assertEqual((refused.exception.code, refused.exception.status), ("undeclared_effect", outcomes.COULD_NOT_RUN))
+        self.assertIn("cannot ask 'revision'", str(refused.exception))
+        with self.assertRaises(SparkError):
+            build_outside_world((READS, ASKS), FakeReporter()).replies(question)  # ASKS with no strategy given
+        self.assertEqual(build_outside_world((READS, ASKS), FakeReporter(), replies=given).replies(question).value, "V2.0")
+        with self.assertRaises(AssertionError):
+            FakeOutsideWorld().replies(question)
+        self.assertEqual(FakeOutsideWorld(replies=given).replies(question).value, "V2.0")
+        self.assertEqual(FakeOutsideWorld(replies=given)._replace(clock=None).replies(question).value, "V2.0")
 
     def test_a_declared_run_is_a_program_runner_and_the_finder_is_the_given_one(self):
         outside = build_outside_world((READS, RUNS), FakeReporter(), find_tool={"flasher": TOOL}.get)

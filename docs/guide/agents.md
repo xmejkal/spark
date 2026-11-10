@@ -8,7 +8,7 @@ This guide has four pages. Open the one you need:
 | --- | --- |
 | this page | you start: the contract, Claude Code, the outcomes and their exit codes, and whether a design is ready |
 | [the scripts](agents/scripts.md) | you run spark outside Claude Code: set up, the store, what reads and what writes |
-| [the JSON](agents/json.md) | you read an answer: check_all's results, each script's keys, `missing_facts`, the look and deploy envelope, and the [firmware codes](agents/firmware-codes.md) |
+| [the JSON](agents/json.md) | you read an answer: check_all's results, each script's keys, `missing_facts`, the look and deploy envelope, the [firmware codes](agents/firmware-codes.md), and the [open questions and replies](agents/replies.md) of a run that exits 2 with `needs_reply` |
 | [what never to assume](agents/never-assume.md) | before you report a pass: each answer that looks like one and is not |
 
 Read these rules before you run a script:
