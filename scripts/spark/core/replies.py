@@ -17,7 +17,6 @@ from pathlib import Path
 from spark.core import outcomes
 from spark.core.codes import BAD_ARGUMENT, BAD_REPLY, NEEDS_REPLY, UNKNOWN_REPLY
 from spark.core.errors import SparkError
-from spark.core.outside import TextFileWriter
 from spark.core.result import Finding
 
 # --- MVP ---
@@ -111,6 +110,16 @@ class DeferringReplyStrategy(ReplyStrategy):
 
     def reply(self, question):
         return None
+
+
+class TextFileWriter:
+    """Adapter: `write(path, text)` writes a text file, making its folder first; the one place in the core that may (rule T1).
+    `RepliesStore` writes through it. It is not an OutsideWorld field yet: `write` enters there with its first Operation."""
+
+    def write(self, path, text):
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
 
 
 class RepliesStore:

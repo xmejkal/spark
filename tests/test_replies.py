@@ -13,7 +13,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.core import codes, outcomes  # noqa: E402
+from spark.core import outcomes  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.replies import (AGENT, CHOICE, EITHER, PERSON, VALUE, YES_NO, DeferringReplyStrategy, GivenReplyStrategy,  # noqa: E402
                                 Question, RepliesStore, Reply, ReplyStrategy, needs_reply_findings, order_open, reply_problems)
@@ -106,7 +106,7 @@ class RepliesStoreTest(unittest.TestCase):
                 self.store.path.write_text(text)
             with self.assertRaises(SparkError, msg=text) as refused:
                 self.store.load()
-            self.assertEqual(refused.exception.code, codes.BAD_ARGUMENT, text)
+            self.assertEqual(refused.exception.code, "bad_argument", text)
 
 
 class OpenListTest(unittest.TestCase):
@@ -116,7 +116,7 @@ class OpenListTest(unittest.TestCase):
     def test_one_needs_reply_finding_per_open_question_with_the_key_the_text_and_the_file(self):
         found = needs_reply_findings([SOLDERED, HOLES], Path(".spark/research-replies.json"), "research.py --part x")
         self.assertEqual([(f.severity, f.subject, f.code) for f in found],
-                         [(outcomes.COULD_NOT_RUN, "header.soldered", codes.NEEDS_REPLY), (outcomes.COULD_NOT_RUN, "physical.mounting_holes", codes.NEEDS_REPLY)])
+                         [(outcomes.COULD_NOT_RUN, "header.soldered", "needs_reply"), (outcomes.COULD_NOT_RUN, "physical.mounting_holes", "needs_reply")])
         self.assertEqual(found[0].sentence, "waiting on a reply: Is the header soldered on?")
         self.assertEqual(found[0].fix, "fill .spark/research-replies.json and run research.py --part x --replies .spark/research-replies.json")
 
@@ -127,11 +127,11 @@ class OpenListTest(unittest.TestCase):
         by_subject = {f.subject: f for f in found}
         self.assertEqual(sorted(by_subject), ["body_mm.width", "header.soldered", "physical.mounting_hole"])
         self.assertTrue(all(f.severity == outcomes.PROBLEMS for f in found))
-        self.assertEqual(by_subject["physical.mounting_hole"].code, codes.UNKNOWN_REPLY)
+        self.assertEqual(by_subject["physical.mounting_hole"].code, "unknown_reply")
         self.assertIn("physical.mounting_holes", by_subject["physical.mounting_hole"].fix)
-        self.assertEqual(by_subject["body_mm.width"].code, codes.UNKNOWN_REPLY)
+        self.assertEqual(by_subject["body_mm.width"].code, "unknown_reply")
         self.assertIn("not open", by_subject["body_mm.width"].sentence)
-        self.assertEqual(by_subject["header.soldered"].code, codes.BAD_REPLY)
+        self.assertEqual(by_subject["header.soldered"].code, "bad_reply")
         self.assertIn("yes or no", by_subject["header.soldered"].sentence)
 
 

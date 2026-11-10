@@ -6,7 +6,6 @@ gives the real one, and no Operation imports subprocess or the tools list itself
 
 import subprocess
 from collections import namedtuple
-from pathlib import Path
 
 from spark.core.clock import SystemClock
 from spark.core.codes import UNDECLARED_EFFECT
@@ -45,17 +44,6 @@ class ProgramRunner:
         if self.echo_fd is not None and "stdout" not in options and not options.get("capture_output"):
             options["stdout"] = self.echo_fd
         return subprocess.run(command, **options)
-
-
-class TextFileWriter:
-    """Adapter: `write(path, text)` writes a text file, making its folder first; the one place in the core that may (rule T1).
-    A core Store (`replies.RepliesStore`) writes through it. It is not an OutsideWorld field yet: `write` enters there with
-    its first Operation."""
-
-    def write(self, path, text):
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
 
 
 def refuse_run(command, **options):
