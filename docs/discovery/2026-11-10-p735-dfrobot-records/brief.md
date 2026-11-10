@@ -118,7 +118,7 @@ classDiagram
 - D11 · the jobs and the to-be story map match what the PO wants, and the design starts · the PO · 2026-11-10 · this session · confirms the jobs and the understanding
 - D12 · in place of a Q6 pick: "I mean this is kinda the general proble of how to make it be able to be both interactve like when a human or ai uses spark and can reply live, or when its kinda scripted, so it also needs to allow not interactive grants or interactions like replies. Do we have some interface or delegate or anything that we could reuse ? I feel like we've already been doing something like that and maybe we could just refactor it for whole spark to be able to reuse. Let's replan and order the plan in steps, first to test and mvp and then step by step refactor and test and document etc so that the communication with the board in spark can be done in multiple modes." · the PO · 2026-11-10 · this session · confirms a direction: one interaction mechanism for all of spark, the architecture pick goes to the design
 - D13 · yes to filing items.md: "yes, lets go" · the PO · 2026-11-10 · this session · confirms items.md, filed as P737 #1013 to P745 #1021
-- D14 · Q3: "Everything with pins" is in scope · the PO · 2026-11-10 · this session
+- D14 · Q3: "Everything with pins" is in scope, the option that reads "Modules and boards, plus connectors and cables, which then need pin orders too". A part with no pins is out · the PO · 2026-11-10 · this session
 - D15 · Q5: "Yes, change the default" of `--need` to match the drawer's function and boards · the PO · 2026-11-10 · this session · changes the P211 default
 - D16 · the nine cards take Slice "10 The store" · the PO · 2026-11-10 · this session
 

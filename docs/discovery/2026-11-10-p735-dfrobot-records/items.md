@@ -1,6 +1,6 @@
 # Proposed items
 
-Filing needs the PO's yes to this list. Each item becomes a sub-issue of P735 #1010, with the next free P-number read just before filing. The slice for all nine: "10 The store" (D16).
+The PO said yes to this list (D13). Each item is filed as a sub-issue of P735 #1010, with Slice "10 The store" (D16).
 
 ## The research pipeline: sources and strategies, designed with a council
 - type: story, a design that starts in plan mode with a two-round council and an architecture lens <!-- REQUIRED:item-type -->
