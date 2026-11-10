@@ -1,0 +1,343 @@
+{
+  "schema": 1,
+  "id": "sen0526-i2s-mic",
+  "name": "DFRobot SEN0526 Fermion I2S MEMS Microphone (Breakout)",
+  "kind": "microphone",
+  "//": "True of DFRobot SEN0526, schematic Rev V1.0, PCB SEN0526 [V0.0.3] (2022-08-08, dimension drawing v1.0): MEMSensing MSM261S4030H0R, 6 through-holes in one row, two 2 mm mounting holes. Other MSM261 or INMP441 breakouts share the I2S idea, not this pin order. verified: true = the maker's text at the cited page; read off the schematic or the dimension drawing = false.",
+  "vendor": "dfrobot",
+  "sku": "SEN0526",
+  "sources": [
+    "https://wiki.dfrobot.com/sen0526/",
+    "https://dfimg.dfrobot.com/wiki/19409/SEN0526_i2s-mems-microphone_dimension_v1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/19409/SEN0526_i2s-mems-microphone_schematics_v1.0.pdf",
+    "https://dfimg.dfrobot.com/wiki/19409/SEN0526_i2s-mems-microphone_datasheet_v1.0.pdf",
+    "https://img.dfrobot.com.cn/wiki/60c1e008bddfc41c3293de80/38fcb541ed109957203c88c3caecec50.png",
+    "https://dfimg.dfrobot.com/enshop/SEN0526/SEN0526_Main_01_360x240.jpg.webp"
+  ],
+  "needs": [
+    {
+      "signal": "I2S_SCK",
+      "pin": "SCK",
+      "direction": "in",
+      "bus": "i2s"
+    },
+    {
+      "signal": "I2S_WS",
+      "pin": "WS",
+      "direction": "in",
+      "bus": "i2s"
+    },
+    {
+      "signal": "I2S_SD",
+      "pin": "DO",
+      "direction": "out",
+      "bus": "i2s",
+      "note": "tri-stated outside its channel; a 100k pull-down on the module discharges it"
+    }
+  ],
+  "power": [
+    {
+      "pin": "3V3",
+      "rail": "logic",
+      "direction": "in",
+      "draws": "supply_current_max_ua",
+      "note": "3.3 V only: no regulator on the module, chip absolute max 4.0 V"
+    },
+    {
+      "pin": "GND",
+      "rail": "ground",
+      "direction": "in"
+    },
+    {
+      "pin": "SEL",
+      "rail": "ground",
+      "direction": "in",
+      "note": "NOT a supply: a strap. SEL low selects the LEFT I2S channel and the module has no pull on it, so the board ties it to ground. Tie it to 3V3 instead for the right channel (a second mic on the same bus)."
+    }
+  ],
+  "unused_pins": [],
+  "pin_order": [
+    "DO",
+    "SCK",
+    "SEL",
+    "WS",
+    "3V3",
+    "GND"
+  ],
+  "footprint": "pinrow6",
+  "body_mm": {
+    "width": 16,
+    "height": 11,
+    "verified": true,
+    "source": "DFRobot wiki spec list 'Dimension: 11mm x 16mm' https://wiki.dfrobot.com/sen0526/; the dimension drawing v1.0 agrees",
+    "cites": {
+      "document": "sen0526-i2s-mems-microphone-dimension-v1-0",
+      "at": "page 1"
+    },
+    "note": "PCB 1.0 mm (PCB information block, schematic PDF page 2), 2.01 mm over all with the mic can, corners R1 (drawing)."
+  },
+  "facts": {
+    "supply_voltage_v": {
+      "value": 3.3,
+      "verified": true,
+      "source": "DFRobot wiki spec 'Operating Voltage: DC 3.3V' https://wiki.dfrobot.com/sen0526/"
+    },
+    "supply_voltage_min_v": {
+      "value": 1.6,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Operation voltage min, Vdd of the chip",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Specifications, page 3"
+      },
+      "note": "Page 7's pin table says VDD 1.8 to 3.3 V; page 3 says 1.6-3.6 V. The datasheet disagrees with itself."
+    },
+    "supply_voltage_max_v": {
+      "value": 3.6,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Operation voltage max",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Specifications, page 3"
+      }
+    },
+    "absolute_max_supply_v": {
+      "value": 4.0,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Absolute maximum ratings, Supply Voltage -0.3 to 4.0 V",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Absolute Maximum Ratings, page 3"
+      },
+      "why_it_matters": "5 V on the 3V3 pad is past it, and the module has no regulator"
+    },
+    "module_has_regulator": {
+      "value": false,
+      "verified": false,
+      "source": "read from DFRobot schematic SEN0526 Rev V1.0 2022-08-08 (a drawing); confirm on the bench: VCC from header pin 5 goes straight to U1 VDD with C1 10uF and C2 100nF",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-schematics-v1-0",
+        "at": "page 1"
+      },
+      "why_it_matters": "whether the 3V3 pad tolerates 5 V; check: no regulator part on the board"
+    },
+    "supply_current_typ_ua": {
+      "value": 750,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Current consumption Normal mode typ, at Vdd = 1.8 V, SCK 3.072 MHz",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Specifications, page 3"
+      }
+    },
+    "supply_current_max_ua": {
+      "value": 1000,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Current consumption Normal mode max, at Vdd = 1.8 V, SCK 3.072 MHz",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Specifications, page 3"
+      },
+      "note": "Tabulated at 1.8 V only; at 3.3 V nobody publishes a figure."
+    },
+    "low_power_mode_current_ua": {
+      "value": 400,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Current consumption Low power mode typ, SCK 150-800 kHz",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Specifications, page 3"
+      }
+    },
+    "standby_current_ua": {
+      "value": null,
+      "verified": false,
+      "source": "not published: the datasheet gives no figure with SCK stopped, and CHIPEN is tied high on this module",
+      "why_it_matters": "what the mic costs while the ESP32 deep-sleeps with the 3V3 rail still on; measure it on the bench"
+    },
+    "chipen_tied_to_vcc": {
+      "value": true,
+      "verified": false,
+      "source": "read from DFRobot schematic SEN0526 Rev V1.0 2022-08-08 (a drawing); confirm on the bench: U1 pin 4 CHIPEN goes to VCC",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-schematics-v1-0",
+        "at": "page 1"
+      },
+      "why_it_matters": "the mic cannot be put into power-down from a pin; only switching its supply stops it"
+    },
+    "input_high_fraction_vdd": {
+      "value": 0.7,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Logic table VIH min 0.7 x VDD (L/R, WS, SCK)",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Logic table, page 4"
+      }
+    },
+    "input_low_fraction_vdd": {
+      "value": 0.25,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Logic table VIL max 0.25 x VDD (L/R, WS, SCK)",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Logic table, page 4"
+      }
+    },
+    "sck_min_mhz": {
+      "value": 1.0,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Clock frequency Normal mode min",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Specifications, page 3"
+      }
+    },
+    "sck_max_mhz": {
+      "value": 4.0,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Clock frequency Normal mode max",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Specifications, page 3"
+      }
+    },
+    "sck_per_ws": {
+      "value": 64,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, 'The Mic must always have 64 clock cycles for every stereo data-word (Fsck = 64 x Fws)'",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "I2S Data Interface, page 10"
+      }
+    },
+    "data_bits": {
+      "value": 24,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, '24-bit depth in a 32 bit word'",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "I2S Data Interface, page 10"
+      },
+      "note": "Read 32-bit slots on the ESP32 and keep the top 24 bits."
+    },
+    "needs_mclk": {
+      "value": false,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, the pin table has 8 pins and no master clock",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Pin description, page 7"
+      }
+    },
+    "power_up_time_ms": {
+      "value": 20,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Power-up time max (typ 6)",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Specifications, page 3"
+      }
+    },
+    "sensitivity_dbfs": {
+      "value": -26,
+      "verified": true,
+      "source": "MEMSensing MSM261S4030H0R datasheet V1.7 Dec 2018 (DS-050), as hosted by DFRobot, Sensitivity nom at 1 kHz 1 Pa (min -27, max -25), Vdd 1.8 V",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Specifications, page 3"
+      }
+    },
+    "sd_pulldown_ohms": {
+      "value": 100000,
+      "verified": false,
+      "source": "read from DFRobot schematic SEN0526 Rev V1.0 2022-08-08 (a drawing); confirm on the bench: R1 100K from U1 SD (DOUT) to ground, as the datasheet recommends",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-schematics-v1-0",
+        "at": "page 1"
+      },
+      "why_it_matters": "the host adds no pull-down on DO; a second one in parallel is harmless"
+    },
+    "sel_has_pull": {
+      "value": false,
+      "verified": false,
+      "source": "read from DFRobot schematic SEN0526 Rev V1.0 2022-08-08 (a drawing); confirm on the bench: U1 pin 5 L/R goes only to header SEL; no resistor",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-schematics-v1-0",
+        "at": "page 1"
+      },
+      "why_it_matters": "why the record ties SEL to ground; if a pull exists after all, the strap is still correct"
+    },
+    "left_channel_when_sel_low": {
+      "value": true,
+      "verified": true,
+      "source": "DFRobot wiki pinout: SEL low outputs on the left channel, high on the right https://wiki.dfrobot.com/sen0526/; datasheet pin 5 L/R says the same",
+      "cites": {
+        "document": "sen0526-i2s-mems-microphone-datasheet-v1-0",
+        "at": "Pin description, page 7"
+      }
+    }
+  },
+  "host_requirements": [
+    "Feed 3V3 from the 3.3 V rail only: the module has no regulator and the chip's absolute maximum is 4.0 V, so 5 V on the 3V3 pad destroys the microphone.",
+    "Wire by the silkscreen, not by the wiki's pinout table: the table lists 3V3, GND, SCK, SEL, WS, DO, but the pads run GND, 3V3, WS, SEL, SCK, DO (mic up, holes at the bottom). Wiring the first two by the table swaps 3V3 and GND.",
+    "SEL floats on this module: tie it to GND (left channel, as this record wires it) or to 3V3 (right channel). The firmware must read the same channel, or it records silence.",
+    "The ESP32 I2S must give SCK = 64 x WS with SCK between 1.0 and 4.0 MHz (about 16 to 62 kHz sample rate) and read 32-bit slots: the data is 24 bits in a 32-bit word.",
+    "The microphone is always on (CHIPEN tied to 3V3, about 0.75-1 mA): to stop it drawing in deep sleep, switch its supply.",
+    "The sound port is on top of the mic can (top-ported, the component side): face that side to the enclosure's opening."
+  ],
+  "documents": {
+    "sen0526-i2s-mems-microphone-dimension-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/19409/SEN0526_i2s-mems-microphone_dimension_v1.0.pdf",
+      "sha256": "aff604c1545f640c502ccc14b57c8ce9c72d988180552d814add51f89faec4f3",
+      "file": "SEN0526_i2s-mems-microphone_dimension_v1.0.pdf",
+      "retrieved": "2026-11-10",
+      "title": "SEN0526 dimension drawing (Unit: mm)",
+      "version": null
+    },
+    "sen0526-i2s-mems-microphone-schematics-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/19409/SEN0526_i2s-mems-microphone_schematics_v1.0.pdf",
+      "sha256": "46b270abe2ceb8e361903b10330422f6dc072fe3c0e038b6d63e04776d288c6a",
+      "file": "SEN0526_i2s-mems-microphone_schematics_v1.0.pdf",
+      "retrieved": "2026-11-10",
+      "title": "I2S MEMS Microphone, Code SEN0526",
+      "version": "Revision V1.0, 2022/8/8"
+    },
+    "sen0526-i2s-mems-microphone-datasheet-v1-0": {
+      "url": "https://dfimg.dfrobot.com/wiki/19409/SEN0526_i2s-mems-microphone_datasheet_v1.0.pdf",
+      "sha256": "bd2a5507eea390942ea60707b418bcfddb3ff41e561ed2e69c63a80ca2390cd5",
+      "file": "SEN0526_i2s-mems-microphone_datasheet_v1.0.pdf",
+      "retrieved": "2026-11-10",
+      "title": "MSM261S4030H0R I2S digital output MEMS microphone with Multi-modes",
+      "version": "V 1.7 / Dec. 2018, DOC NO: DS-050"
+    },
+    "38fcb541ed109957203c88c3caecec50": {
+      "url": "https://img.dfrobot.com.cn/wiki/60c1e008bddfc41c3293de80/38fcb541ed109957203c88c3caecec50.png",
+      "sha256": "e5f3fcfb63d3b67fe7855ea6eb51ce0317b2c6a3bfea6eaef45301df4d05fd23",
+      "file": "38fcb541ed109957203c88c3caecec50.png",
+      "retrieved": "2026-11-10",
+      "title": "DFRobot wiki pinout render (silkscreen labels)",
+      "version": null
+    },
+    "sen0526-main-01-360x240-jpg": {
+      "url": "https://dfimg.dfrobot.com/enshop/SEN0526/SEN0526_Main_01_360x240.jpg.webp",
+      "sha256": "b07e7976befadd267853c6fbec29b9f6f196b9a2636a4687a622dc1cb53dc598",
+      "file": "SEN0526_Main_01_360x240.jpg.webp",
+      "retrieved": "2026-11-10",
+      "title": "DFRobot product main image",
+      "version": null
+    }
+  },
+  "also_known_as": [
+    "DF-SEN0526",
+    "Fermion: I2S MEMS Microphone",
+    "MSM261 I2S MEMS microphone breakout"
+  ],
+  "pin_order_proof": {
+    "verified": false,
+    "source": "read from two DFRobot drawings that agree: the schematic Rev V1.0 numbers header P1 1 DOUT, 2 BCLK, 3 SEL, 4 WS, 5 VCC, 6 GND; the dimension drawing v1.0 shows the silkscreen left to right GND 3V3 WS SEL SCK DO (mic up, holes at the bottom edge), i.e. pad 6..1. The wiki's pinout TABLE lists another order (3V3 GND SCK SEL WS DO) - not the pad order. Confirm against the module's silkscreen. A third agrees: the schematic PDF's page 2 copper print (PCB 'SEN0526 [V0.0.3]') shows the end pad beside the left mounting hole tied to the ground pour with thermal spokes.",
+    "cites": {
+      "document": "sen0526-i2s-mems-microphone-schematics-v1-0",
+      "at": "page 1, header P1"
+    }
+  }
+}
