@@ -112,14 +112,29 @@ def _part_summary(part):
     return {"id": part["id"], "kind": part["kind"], "name": part["name"]}
 
 
+#: The layers `--promote` copies a record out of, into the project (`part_facts.promote`).
+PROMOTABLE = ("shelf", "catalog")
+#: What to do instead of a skeleton, by the layer that holds the record (P740).
+SKELETON_FIXES = {"project": "fill it in, do not overwrite it",
+                  "shelf": "`--promote %(id)s --project .` copies it into the project",
+                  "catalog": "`--promote %(id)s --project .` copies the draft into the project",
+                  "library": "spark ships it; name it in the requirements as it is"}
+
+
 def _op_skeleton(args, project):
     if not project or not args.kind:
         return Answer(unchecked=[_cannot("--skeleton needs --project (the record belongs to a project's parts/) and --kind")])
     if not store.PLAIN.fullmatch(args.skeleton):  # P87: a file every reader would refuse is never written
         return Answer(problems=[_problem(args.skeleton, NOT_A_PLAIN_ID % args.skeleton)])
+    held = store.records("parts", record_kind.LIBRARY, project, drafts=True).get(args.skeleton)
+    if held:  # P740: the project layer wins over every other, so a skeleton here would hide the record that exists
+        layer, path = held
+        return Answer(problems=[_problem(args.skeleton, "%s already holds %s; a skeleton here would hide it" % (layer, path),
+                                         SKELETON_FIXES[layer] % {"id": args.skeleton})],
+                      next=[add_env(step("promote", ["--promote", args.skeleton] + _with_project(project),
+                                         "copy the %s record into the project" % layer, ["writes"]), store.read_given_env())]
+                      if layer in PROMOTABLE else ())
     target = project / "parts" / (args.skeleton + DEFINITION_SUFFIX)
-    if target.exists():
-        return Answer(problems=[_problem(args.skeleton, "%s exists; fill it in, do not overwrite it" % target)])
     record = skeleton(args.skeleton, args.kind, args.vendor)
     if not args.dry_run:
         target.parent.mkdir(parents=True, exist_ok=True)

@@ -22,7 +22,5 @@
     "why_it_matters": "every placement is arranged around it"
   },
   "facts": {},
-  "host_requirements": [],
-  "sourcing": [],
-  "//sourcing": "Where it can be bought, one entry per listing actually fetched: {seller, url, price_czk, checked}. Local sellers first, from the brief."
+  "host_requirements": []
 }

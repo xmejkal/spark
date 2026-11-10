@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/spark/sourcing/part_handlers.py",
+  "name": "skeleton walk skips the catalog, so a draft is hidden",
+  "find": "store.records(\"parts\", record_kind.LIBRARY, project, drafts=True).get(args.skeleton)",
+  "replace": "store.records(\"parts\", record_kind.LIBRARY, project, drafts=False).get(args.skeleton)"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_handlers.py",
+  "name": "skeleton dry run says it would write over a held record",
+  "find": "    if held:  # P740:",
+  "replace": "    if held and not args.dry_run:  # P740:"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_handlers.py",
+  "name": "skeleton offers --promote for a library record too",
+  "find": "                      if layer in PROMOTABLE else ())",
+  "replace": "                      if layer != \"project\" else ())"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_facts.py",
+  "name": "skeleton writes the forbidden sourcing block again",
+  "find": "        \"facts\": {}, \"host_requirements\": [],\n    }",
+  "replace": "        \"facts\": {}, \"host_requirements\": [], \"sourcing\": [],\n    }"
+ }
+]

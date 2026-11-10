@@ -4,7 +4,7 @@
   --signals          the signals these parts ask for, as assign_pins.py input
   --unverified       what nobody has checked about these parts, one assumption a fact
   --need             what exists for a need, before researching: words matched in id, name, kind, alias; --matcher picks the matcher
-  --skeleton         write a record to fill in, to the project's parts/  [writes]
+  --skeleton         write a record to fill in, to the project's parts/ (refused when any layer holds the id)  [writes]
   --sources          ask every URL a record cites whether it answers  [network]
   --fetch            download the datasheets and images a record cites, into your store  [network, writes]
   --keep             put a file you already have into your store; answers its documents entry  [writes]

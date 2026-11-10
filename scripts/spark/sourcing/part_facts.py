@@ -169,7 +169,8 @@ def skeleton(part_id, kind, vendor=None):
     Nulls are facts nobody has recorded, and `validate` refuses the file until they are — the
     same rule `init` applies to the rules file. A fact is `verified: true` only when its value
     is the vendor's own text at the cited URL; read off an image, scaled, inferred or computed,
-    it is `verified: false` with `why_it_matters` (the rule `commands/research.md` states).
+    it is `verified: false` with `why_it_matters` (the rule `commands/research.md` states). No `sourcing`: the
+    rules keep no seller listing and no price (W21, P740).
     """
     return {
         "schema": 1, "id": part_id, "name": None, "kind": kind,
@@ -180,9 +181,6 @@ def skeleton(part_id, kind, vendor=None):
         "body_mm": {"width": None, "height": None, "verified": False, "source": None,
                     "why_it_matters": "every placement is arranged around it"},
         "facts": {}, "host_requirements": [],
-        "sourcing": [],
-        "//sourcing": ("Where it can be bought, one entry per listing actually fetched: "
-                       "{seller, url, price_czk, checked}. Local sellers first, from the brief."),
     }
 
 

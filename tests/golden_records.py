@@ -142,6 +142,8 @@ CASES = [
          + WITH, 0, written=("parts/golden-sensor.json",)),
     Case("parts-skeleton-could-not-run-no-project.txt", "parts.py", ["--skeleton", "golden-sensor", "--kind", "sensor"],
          2),
+    Case("parts-skeleton-problems-library-holds-it.txt", "parts.py", ["--skeleton", "led-red-5mm", "--kind", "led"] + WITH,
+         1),
     Case("parts-sources-problems-unreachable.txt", "parts.py", ["--sources", "golden-led"] + WITH, 1, (LOCAL_LED,)),
     Case("parts-sources-ok-dry-run.txt", "parts.py", ["--sources", "golden-led", "--dry-run"] + WITH, 0, (LOCAL_LED,)),
     Case("parts-fetch-ok-unreachable.txt", "parts.py", ["--fetch", "golden-led"] + WITH, 0, (SMALL_LED,),
