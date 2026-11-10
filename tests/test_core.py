@@ -342,6 +342,24 @@ class RunOperationTest(unittest.TestCase):
         self.assertEqual(FakeOutsideWorld(replies=given).replies(question).value, "V2.0")
         self.assertEqual(FakeOutsideWorld(replies=given)._replace(clock=None).replies(question).value, "V2.0")
 
+    def test_fetch_is_refused_without_fetches_and_is_the_given_callable_with_it(self):
+        # P737 step 5: the seventh field has a refusing default too, so the positional builders stand; the core imports no store
+        from spark.core.operation import FETCHES
+        from spark.core.outside import refuse_fetch
+        self.assertIs(OutsideWorld(None, None, None, None, None).fetch, refuse_fetch)
+        pages = {"https://x.example/p": b"<html>"}
+        with self.assertRaises(SparkError) as refused:
+            build_outside_world((READS,), FakeReporter(), fetch=pages.__getitem__).fetch("https://x.example/p")
+        self.assertEqual((refused.exception.code, refused.exception.status), ("undeclared_effect", outcomes.COULD_NOT_RUN))
+        self.assertIn("cannot fetch 'https://x.example/p'", str(refused.exception))
+        with self.assertRaises(SparkError):
+            build_outside_world((READS, FETCHES), FakeReporter()).fetch("https://x.example/p")  # FETCHES with nothing given
+        self.assertEqual(build_outside_world((READS, FETCHES), FakeReporter(), fetch=pages.__getitem__).fetch("https://x.example/p"), b"<html>")
+        with self.assertRaises(AssertionError):
+            FakeOutsideWorld().fetch("https://x.example/p")
+        fake = FakeOutsideWorld(fetch=pages.__getitem__)
+        self.assertEqual((fake.fetch("https://x.example/p"), fake.fetched, fake._replace().fetch), (b"<html>", ["https://x.example/p"], fake.fetch))
+
     def test_a_declared_run_is_a_program_runner_and_the_finder_is_the_given_one(self):
         outside = build_outside_world((READS, RUNS), FakeReporter(), find_tool={"flasher": TOOL}.get)
         self.assertEqual((outside.run.__func__, outside.run.__self__.echo_fd), (ProgramRunner.run, None))

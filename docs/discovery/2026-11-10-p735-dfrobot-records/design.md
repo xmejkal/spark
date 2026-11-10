@@ -184,17 +184,24 @@ P734). If the sheet needs `header_order` and `flush_edge`, slice 3 adds them. `p
   - `KeptDocumentsSource` (step 4): no network. If the record's `documents` hold a drawing whose file
     `store.place("sources") / sha256 / file` exists, it asks one AGENT Question per geometry gap, with `cites` to that
     document and page 1. Else it asks nothing.
-  - `DfrobotWikiSource` (step 5): `outside.fetch` gets the wiki page by the record's `sku`. A small regex over `href`
-    values ending in .pdf, .png, .jpg, .webp, .svg, .zip or .step finds the links. Each KEEPABLE link is kept with
-    `store.keep` and enters `documents`. A link that exists but cannot be kept (a zip, a STEP) enters `documents` with
-    its `url` and `kept: false`. A gap with no link at all enters `physical_proof.not_published`. The unit test fixture
-    is a ten-line HTML page written by hand with spark's own words, never a vendor page. One test marked live, skipped
-    by default, reads the real page.
+  - `DfrobotWikiSource` (step 5, as built on 2026-11-10 after its plan council). For a record whose `vendor` is dfrobot,
+    `outside.fetch` gets the wiki page `https://wiki.dfrobot.com/<sku>/` once per record. When the record's `sources`
+    hold the URL, nothing is fetched. The page's JSON-LD block lists its documents as `DigitalDocument` entries under
+    `TechArticle.subjectOf`, each with `name`, `url` and `fileFormat`. That typed list replaced the regex over `href`
+    that the first draft named. Each keepable file is kept with `keep_in_store` and enters `documents` through
+    `datasheets.document_entry`, titled by the page's name for it. A listed file the store cannot keep (a zip, a STEP)
+    enters `documents` as `{url, kept: false, title}`. The contract accepts it and refuses a citation of it. The sources
+    run as a pipeline. Each offer is folded into the record before the next source asks. So the kept-documents source
+    cites the drawing the wiki just kept, and `SOURCE_ORDER` is a dependency. When the page was read with no problem
+    and no document names a drawing, the physical gaps enter `physical_proof.not_published`. A failed download never
+    writes it. A page that does not answer is one unchecked item, and the run goes on. The unit test fixture is a
+    JSON-LD page written with spark's own words.
 - `merge.py`: `fold_replies(record, replies, questions)` in step 4 writes replies as facts. A reply by an AGENT read
   off a drawing is `verified: false`, source "read from <document> page N by <answered_by>", per the researcher's rule
-  (★C16). If a reply carries `cites` to a datasheet row, it is `verified: true`. Otherwise it is `verified: false`. `fold_facts(record, offer)` in
-  step 5: two sources with different values for one key never overwrite each other. The pair goes to the record's
-  `conflicts` list, each side with its source (★C8).
+  (★C16). If a reply carries `cites` to a datasheet row, it is `verified: true`. Otherwise it is `verified: false`.
+  `fold_documents` and `fold_not_published` (step 5) write what a source kept and what a page did not publish. No source
+  offers a fact value yet. So `fold_facts` and the conflicts list wait for the first source that does: the spec table,
+  or the person in slice 2. The list is named `fact_conflicts`, because `conflicts_of` already means pin conflicts (★C8 stands).
 
 ### Names
 
@@ -235,8 +242,9 @@ works after each. Sizes are the scope lens's estimates.
    commands/research.md (a short section: run research.py for a module with kept documents). Mutation rows for
    `find_gaps` and `fold_replies`.
 5. The wiki (about 250 lines): `DfrobotWikiSource`, `FETCHES`, `OutsideWorld.fetch` over `store.fetch`, `refuse_fetch`,
-   `kept: false` documents, `not_published`, `fold_facts` and `conflicts`. commands/research.md and
-   agents/parts-researcher.md drive research.py for a DFRobot module, and that prose loop goes. The commodity path
+   `kept: false` documents, `not_published`, `fold_documents`, and `--skeleton --sku`, so the walk needs no hand edit.
+   `fold_facts` and the conflicts list moved to the first source that offers a value (see merge.py above).
+   commands/research.md and agents/parts-researcher.md drive research.py for a DFRobot module, and that prose loop goes. The commodity path
    (part-finder, datasheet-reader), other vendors and the budgets stay prose until a later card. If the step's status
    changes, README "What works today" and tools/journey.py change.
 R1. `ConsentStrategy` joins the family (about 40 lines): it subclasses `ReplyStrategy` and gains `reply(question)`.

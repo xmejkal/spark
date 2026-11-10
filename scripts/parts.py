@@ -147,6 +147,7 @@ def _not_negative(text):
 OPTIONS = (
     ("kind", {}, "with --skeleton: the part's kind (motor-driver, sensor, regulator, …)"),
     ("vendor", {}, "with --skeleton: who makes it"),
+    ("sku", {}, "with --skeleton: the maker's exact part number (SEN0526); research.py finds a DFRobot module's wiki page by it"),
     ("url", {}, "with --keep: where the file came from, if anyone knows"),
     ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
     ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),

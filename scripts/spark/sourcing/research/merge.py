@@ -1,7 +1,9 @@
 """
-Folding what research found into the part record (P737, step 4). `fold_replies` writes each reply to an open question as
-a fact: unverified, with a source that says who read it where (★C16 of the discovery brief: a value read off a drawing is
-never `verified: true`). `fold_facts`, for the facts a source offers itself, follows in step 5 with the `conflicts` list.
+Folding what research found into the part record (P737, steps 4 and 5). `fold_replies` writes each reply to an open
+question as a fact: unverified, with a source that says who read it where (★C16 of the discovery brief: a value read off
+a drawing is never `verified: true`). `fold_documents` writes what a source kept and read: its `documents` and the URLs
+into `sources`. `fold_not_published` writes the keys a vendor's page did not publish into `physical_proof`. No source
+offers a fact value yet; the first that does brings `fold_facts` and a `fact_conflicts` list (two sources, two values, neither overwritten).
 """
 
 import copy
@@ -85,4 +87,59 @@ def fold_replies(record, replies, questions, whys):
         after[BODY] = dict(sizes, **provenance_of([reply], whys.get(BODY)))
         written.add(BODY)
     return after, sorted(written)
+
+
+DOCUMENTS, SOURCES = "documents", "sources"
+#: The key under which a dict `sources` (four library records keep one) gets a URL research read; a list appends it.
+READ_KEY = "research"
+
+
+def _free_key(taken):
+    key, number = READ_KEY, 2
+    while key in taken:
+        key, number = "%s-%d" % (READ_KEY, number), number + 1
+    return key
+
+
+def fold_documents(record, offer):
+    """
+    A deep copy of `record` with the offer's `documents` added under their keys (a key the record holds is left as it is,
+    so a hand-written title survives) and its `urls_read` added to `sources` once each (appended to a list, keyed in a dict),
+    and the sorted top-level keys it changed. A `documents` or `sources` that is neither absent nor of its shape is left as
+    it is: the record's rules say what is wrong with it.
+    """
+    after, written = copy.deepcopy(record), set()
+    documents = after.get(DOCUMENTS)
+    if documents is None or isinstance(documents, dict):
+        new = {key: entry for key, entry in offer.documents.items() if key not in (documents or {})}
+        if new:
+            after[DOCUMENTS] = dict(documents or {}, **new)
+            written.add(DOCUMENTS)
+    sources = after.get(SOURCES)
+    for url in offer.urls_read:
+        if isinstance(sources, dict) and url not in sources.values():
+            sources[_free_key(sources)] = url
+        elif (sources is None or isinstance(sources, list)) and url not in (sources or []):
+            sources = (sources or []) + [url]
+        else:
+            continue
+        after[SOURCES] = sources
+        written.add(SOURCES)
+    return after, sorted(written)
+
+
+def fold_not_published(record, keys, source):
+    """A deep copy of `record` whose `physical_proof` names `keys` in `not_published` (the old keys kept, no repeats, minus
+    what `physical` holds), with `source` the sentence that says which page lacks them and `verified: true` (it is the
+    vendor's own page), merged over an older proof as `merge_proof` merges; and the keys it changed."""
+    after = copy.deepcopy(record)
+    held = after[PHYSICAL] if isinstance(after.get(PHYSICAL), dict) else {}
+    named = _distinct(not_published_of(after) + list(keys))
+    left = [key for key in named if key not in held]
+    if not left:
+        return after, []
+    old = after.get(PROOF) if isinstance(after.get(PROOF), dict) else {}
+    verified = bool(old.get("verified")) if old else True  # one block vouches for every key: an older unverified reading keeps it unverified
+    after[PROOF] = dict(merge_proof(old, {"verified": verified, "source": source, "why_it_matters": PHYSICAL_WHY}), **{NOT_PUBLISHED: left})
+    return after, [PROOF]
 # --- end MVP ---

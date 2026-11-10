@@ -282,13 +282,16 @@ def find_kept(words, project=None):
                                                    entry.get("url"), entry.get("version"))).lower()
             if not all(word in said for word in wanted):
                 continue
-            path = kept / str(entry.get("sha256")) / str(entry.get("file"))
-            lines.append("%s %s: %s %s" % (owner, key, entry.get("title") or entry.get("file"),
+            lines.append("%s %s: %s %s" % (owner, key, entry.get("title") or entry.get("file") or entry.get("url"),
                                            entry.get("version") or "(version not read)"))
+            if not entry.get("sha256"):  # P737: a document the page listed but the store cannot keep (a zip, a STEP)
+                lines.append("    not kept (%s)" % entry.get("url"))
+                continue
+            path = kept / str(entry.get("sha256")) / str(entry.get("file"))
             lines.append("    %s  %s" % (path, "present" if path.is_file() else "MISSING"))
             for other, other_record in records_with_documents(project):
                 same_file = {name for name, held in other_record["documents"].items()
-                             if isinstance(held, dict) and held.get("sha256") == entry.get("sha256")}
+                             if isinstance(held, dict) and held.get("sha256") and held.get("sha256") == entry.get("sha256")}
                 for field, locator in citing(other_record, same_file, entry.get("url")):
                     lines.append("    cited by %s %s — %s" % (other, field, locator))
     # The store itself: a file another project kept, or an interrupted run left, is still kept (P80).
@@ -310,15 +313,27 @@ def document_key(name, taken):
     return key
 
 
+def keepable_url(url):
+    """Whether the store keeps what this URL names, by its ending (`KEEPABLE`), the query left aside."""
+    return url.split("?")[0].lower().endswith(KEEPABLE)
+
+
 def to_fetch(record):
     """The cited datasheet and image URLs a record does not keep yet — what `--fetch` would download."""
     known = {entry.get("url") for entry in (record.get("documents") or {}).values()}
-    return [url for url in cited_urls(record) if url.split("?")[0].lower().endswith(KEEPABLE) and url not in known]
+    return [url for url in cited_urls(record) if keepable_url(url) and url not in known]
 
 
 def document_name(url):
     """The file name a cited URL is kept under: the last segment of its path, decoded — never its query."""
     return urllib.parse.unquote(url.split("?")[0].rsplit("/", 1)[-1]) or "document"
+
+
+def document_entry(url, sha256, name, retrieved, title=None):
+    """A record's `documents` entry for a kept file: its URL, checksum, file name and the date it was fetched. `title`
+    is what the page that listed it calls it, else null, and `version` stays null until someone reads what the document
+    PRINTS (P61). `--fetch` and the research sources write every entry through this one function."""
+    return {"url": url, "sha256": sha256, "file": name, "retrieved": retrieved, "title": title, "version": None}
 
 
 def fetch_plan(record):
@@ -352,9 +367,7 @@ def fetch_documents(part_id, project=None, fetch=None):
     for url, name in fetch_plan(record):
         payload = (fetch or _download)(url)
         if payload is not None:
-            documents[document_key(name, documents)] = {
-                "url": url, "sha256": keep_in_store(payload, name), "file": name,
-                "retrieved": datetime.date.today().isoformat(), "title": None, "version": None}
+            documents[document_key(name, documents)] = document_entry(url, keep_in_store(payload, name), name, datetime.date.today().isoformat())
     record["documents"] = documents
     _write_record(path, record)
     return documents
