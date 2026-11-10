@@ -16,7 +16,7 @@ UNDECLARED_EFFECT = "undeclared_effect"
 NEEDS_REPLY = "needs_reply"
 #: A reply to a key that no open question has, or to a fact the record already holds (P737).
 UNKNOWN_REPLY = "unknown_reply"
-#: A reply whose value does not fit its question's kind: not a yes or no, not one of the choices, or empty (P737).
+#: A reply whose value does not fit its question's kind: not a yes or no, not one of the choices, empty, or not a finite number (P737).
 BAD_REPLY = "bad_reply"
 
 #: Each code and the one sentence that says what it means.

@@ -47,6 +47,9 @@ NOT_OPEN = "the key %s is a fact already filled, not open; a reply to it would o
 NEAREST_FIX = "did you mean %s? Keys are in the run's data.open"
 NO_NEAREST_FIX = "remove it, or take a key from the run's data.open"
 MISFIT_FIX = "answer as the question's answer_form says, for example %s"
+MISFIT_FORM_FIX = "answer as the question asks: %s"
+#: What a kind takes, for a question with no `answer_form` and no `example`.
+KIND_FORMS = {YES_NO: "true or false", VALUE: "a value that is not empty", CHOICE: "one of the choices"}
 UNREADABLE_FIX = "run once without --replies to write the template, then fill its values"
 WRONG_SHAPE = 'a replies file is {"replies": {"<key>": {"value": ..., "note": "...", "cites": {...}}}}, or a bare "<key>": value'
 
@@ -136,22 +139,26 @@ class RepliesStore:
     def for_project(cls, project):
         return cls(Path(project) / REPLIES_FILE)
 
-    def load(self):
-        """The replies in the file, by key, each with `answered_by` set. A file that is missing, is not JSON or has
-        another shape is a SparkError `bad_argument`. A bare `"<key>": value` is read as `{"value": value}`."""
+    def _read(self):
+        """The file's `replies` object. A file that is missing, is not JSON or has another shape is a SparkError `bad_argument`."""
         try:
-            given = json.loads(self.path.read_text())[REPLIES_KEY]
+            given = json.loads(self.path.read_text(encoding="utf-8"))[REPLIES_KEY]
             if not isinstance(given, dict):
                 raise TypeError(WRONG_SHAPE)
+            return given
         except (OSError, ValueError, KeyError, TypeError) as why:
             raise SparkError("the replies file %s cannot be read: %s", self.path, why, code=BAD_ARGUMENT, fix=UNREADABLE_FIX)
-        entries = {key: entry if isinstance(entry, dict) else {"value": entry} for key, entry in given.items()}
+
+    def load(self):
+        """The replies in the file, by key, each with `answered_by` set. A bare `"<key>": value` is read as `{"value": value}`.
+        A file that cannot be read is `_read`'s SparkError."""
+        entries = {key: entry if isinstance(entry, dict) else {"value": entry} for key, entry in self._read().items()}
         return {key: Reply(key, entry["value"], FROM_FILE % self.path.name, None, entry.get("note"), entry.get("cites"))
                 for key, entry in entries.items() if entry.get("value") is not None}
 
     def dump(self, questions):
         """Write the template: the file's entries as they are, plus `{"value": null, "note": "", "cites"}` per open key it lacks."""
-        held = json.loads(self.path.read_text())[REPLIES_KEY] if self.path.exists() else {}
+        held = self._read() if self.path.exists() else {}
         for question in questions:
             held.setdefault(question.key, {"value": None, "note": "", "cites": question.cites})
         TextFileWriter().write(self.path, json.dumps({REPLIES_KEY: held}, indent=1, ensure_ascii=False) + "\n")
@@ -169,6 +176,13 @@ def needs_reply_findings(questions, replies_path, line):
             for question in questions]
 
 
+def misfit_fix(question):
+    """The fix of a `bad_reply`: the question's `example` when it has one, else its `answer_form`, else what its kind takes."""
+    if question.example is not None:
+        return MISFIT_FIX % (json.dumps(question.example),)
+    return MISFIT_FORM_FIX % (question.answer_form or KIND_FORMS[question.kind])
+
+
 def reply_problems(replies, questions, filled=()):
     """The problems in `replies` (key to Reply) against the open `questions`: a key no question has is `unknown_reply`
     with the nearest open key, a key in `filled` (a fact the record holds) is `unknown_reply` too, because a stray reply
@@ -179,7 +193,7 @@ def reply_problems(replies, questions, filled=()):
         if key in open_by_key:
             lacks = open_by_key[key].misfit(reply.value)
             if lacks:
-                found.append(Finding(outcomes.PROBLEMS, key, BAD_REPLY, lacks, MISFIT_FIX % (json.dumps(open_by_key[key].example),)))
+                found.append(Finding(outcomes.PROBLEMS, key, BAD_REPLY, lacks, misfit_fix(open_by_key[key])))
         elif key in filled:
             found.append(Finding(outcomes.PROBLEMS, key, UNKNOWN_REPLY, NOT_OPEN % key, NO_NEAREST_FIX))
         else:

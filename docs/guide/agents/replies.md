@@ -14,8 +14,8 @@ it reads the same in every script that asks. No script asks today. The research 
 - `answer_form` says the shape of the answer in words. `example` holds placeholders, never a value to copy.
 - `cites` is `{document, at}`: the kept document and the page that hold the answer. Read that document and nothing else.
 - One `unchecked` item per open question, with the code `needs_reply` and the key as `subject`. The status is
-  `could-not-run` and the exit is 2 while a question is open. The `notes` say what the run wrote, so nothing is lost.
-- `next[0]` is the same run with `--replies <file>`.
+  `could-not-run` and the exit is 2 while a question is open.
+- Step 4 adds two things. The `notes` say what the run wrote, so nothing is lost. `next[0]` is the same run with `--replies <file>`.
 
 ## The replies file
 
@@ -35,4 +35,4 @@ A rerun with the same file adds nothing twice.
 | --- | --- | --- |
 | `needs_reply` | an `unchecked` item per question that the run did not answer itself. `subject` is the key, the question is in `data.open` | answer it in the replies file, then run the `next[0]` step. Exit 2 here means "run again with replies", not "broken". Relay a `person` question to the person |
 | `unknown_reply` | a `problems` item: a reply to a key that no open question has (the `fix` names the nearest), or to a fact that the record already holds | fix the key in the replies file. Never reply to a fact that is not open |
-| `bad_reply` | a `problems` item: a reply that does not fit its question's `kind` (not a yes or no, not one of the `choices`, or empty) | answer as the question's `answer_form` and `example` say |
+| `bad_reply` | a `problems` item: a reply that does not fit its question's `kind`. It is not a yes or no, not one of the `choices`, empty, or not a finite number | answer as the question's `answer_form` and `example` say |

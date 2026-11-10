@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.core import outcomes  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.replies import (AGENT, CHOICE, EITHER, PERSON, VALUE, YES_NO, DeferringReplyStrategy, GivenReplyStrategy,  # noqa: E402
-                                Question, RepliesStore, Reply, ReplyStrategy, needs_reply_findings, order_open, reply_problems)
+                                Question, RepliesStore, Reply, ReplyStrategy, misfit_fix, needs_reply_findings, order_open, reply_problems)
 
 DRAWING = {"document": "SEN0526 dimension drawing", "at": "page 1"}
 HOLES = Question("physical.mounting_holes", "Where are the mounting holes?", VALUE, AGENT, why="the sheet places the module",
@@ -107,6 +107,10 @@ class RepliesStoreTest(unittest.TestCase):
             with self.assertRaises(SparkError, msg=text) as refused:
                 self.store.load()
             self.assertEqual(refused.exception.code, "bad_argument", text)
+            if text is not None:  # a rerun's dump reads the same file: the same coded answer, never a crash
+                with self.assertRaises(SparkError, msg=text) as refused:
+                    self.store.dump([THICK])
+                self.assertEqual(refused.exception.code, "bad_argument", text)
 
 
 class OpenListTest(unittest.TestCase):
@@ -133,6 +137,19 @@ class OpenListTest(unittest.TestCase):
         self.assertIn("not open", by_subject["body_mm.width"].sentence)
         self.assertEqual(by_subject["header.soldered"].code, "bad_reply")
         self.assertIn("yes or no", by_subject["header.soldered"].sentence)
+        self.assertEqual(by_subject["header.soldered"].fix, "answer as the question asks: true or false")  # no example: never "null"
+
+    def test_a_bad_reply_s_fix_quotes_the_example_or_the_answer_form(self):
+        self.assertEqual(misfit_fix(HOLES), 'answer as the question\'s answer_form says, for example [{"x_mm": "<number>", "y_mm": "<number>", "drill_mm": "<number>"}]')
+        self.assertEqual(misfit_fix(THICK._replace(answer_form="a number in mm")), "answer as the question asks: a number in mm")
+        self.assertEqual(misfit_fix(REVISION), "answer as the question asks: one of the choices")
+
+    def test_an_unknown_key_far_from_every_open_key_and_a_reply_with_no_question_open(self):
+        far = {"zzz": Reply("zzz", 1, "a test")}
+        found = reply_problems(far, [HOLES, THICK])
+        self.assertEqual([(f.code, f.fix) for f in found], [("unknown_reply", "remove it, or take a key from the run's data.open")])
+        self.assertEqual([f.code for f in reply_problems(far, [])], ["unknown_reply"])
+        self.assertEqual(reply_problems({}, [HOLES]), [])
 
 
 if __name__ == "__main__":
