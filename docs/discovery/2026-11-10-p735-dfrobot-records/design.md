@@ -171,8 +171,9 @@ P734). If the sheet needs `header_order` and `flush_edge`, slice 3 adds them. `p
   source in `RESEARCH_SOURCES` order and collects each offer's facts, documents and questions. It answers the
   questions through `outside.replies`. It folds the replies and facts into the record and writes it. It prints the
   source order first, then the open list.
-- `find_gaps(record, needs)` is a function: the `FactNeeds` rows for the record's kind whose fact is absent or
-  unverified, minus the keys in `physical_proof.not_published`. `body_mm` filled counts as the outline need filled.
+- `find_gaps(record, needs)` is a function: the `FactNeeds` rows for the record's kind whose fact is absent, minus the
+  keys in `physical_proof.not_published`. A present but unverified fact is no gap: a drawing cannot verify what was read
+  off it (step 4's ruling, row 78). `body_mm` filled counts as the outline need filled.
 - `RESEARCH_SOURCES` is a dict from source name to class, as bench/__init__.py lists its Operations. The order is a
   constant tuple in `research_part.py`: `("kept-documents",)` in step 4, `("dfrobot-wiki", "kept-documents")` in step
   5. The run prints it as `sources: 1 dfrobot-wiki (web, free), 2 kept-documents (local)`. Settings come later (slice 1).
@@ -230,7 +231,7 @@ works after each. Sizes are the scope lens's estimates.
    `--show`, `--unverified`. Proof: a hand-written fixture record passes `--validate` and `--show` prints the block.
    Docs: the page that describes `body_mm`, and the json.md record section. Mutation rows for `physical_problems`.
 4. The MVP (about 300 lines): the research package with `ResearchPart`, `KeptDocumentsSource`, `find_gaps`,
-   `fold_replies`, `scripts/research.py`. The proof below. Docs: agents.md, agents/scripts.md, agents/json.md,
+   `fold_replies`, `scripts/research.py`, and the question texts in `data/fact-needs.json` under `questions`. The proof below. Docs: agents.md, agents/scripts.md, agents/json.md,
    commands/research.md (a short section: run research.py for a module with kept documents). Mutation rows for
    `find_gaps` and `fold_replies`.
 5. The wiki (about 250 lines): `DfrobotWikiSource`, `FETCHES`, `OutsideWorld.fetch` over `store.fetch`, `refuse_fetch`,

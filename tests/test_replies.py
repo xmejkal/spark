@@ -92,9 +92,11 @@ class RepliesStoreTest(unittest.TestCase):
         self.store.path.write_text(json.dumps({"replies": {
             "physical.thickness_mm": {"value": 1.6, "note": "read off the side view", "cites": {"document": "SEN0526 dimension drawing", "at": "page 1"}},
             "physical.mounting_holes": {"value": None},
-            "revision": "V2.0"}}))
+            "revision": "V2.0",
+            "physical.header": {"pitch_mm": 2.54, "rows": 1}}}))
         replies = self.store.load()
-        self.assertEqual(sorted(replies), ["physical.thickness_mm", "revision"])
+        self.assertEqual(sorted(replies), ["physical.header", "physical.thickness_mm", "revision"])
+        self.assertEqual(replies["physical.header"].value, {"pitch_mm": 2.54, "rows": 1}, "a bare object with no `value` key is the value (P737 step 4)")
         self.assertEqual(replies["physical.thickness_mm"], Reply("physical.thickness_mm", 1.6, "replies file research-replies.json", None,
                                                                  "read off the side view", {"document": "SEN0526 dimension drawing", "at": "page 1"}))
         self.assertEqual(replies["revision"], Reply("revision", "V2.0", "replies file research-replies.json"))

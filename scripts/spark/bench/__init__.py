@@ -17,10 +17,11 @@ from spark.core.outside import build_outside_world
 OPERATIONS = {operation.name: operation for operation in (LookAtBoard, DeployImage, IssueGrant, CheckGrant, RunLiveCode, ReachBoard)}
 
 
-def build_project_outside_world(project, effects, reporter):
+def build_project_outside_world(project, effects, reporter, values=None):
     """Core's OutsideWorld for an Operation on `project`: `find_tool` finds a role or a tool as the project's tools list says,
     and as the shared lists alone say with `project=None`; `report` is the given Reporter's (P507); `clock` the computer's;
-    `make_consent` asks in the terminal, on the Reporter's stream (P655), the question masked as the Reporter masks (P677)."""
+    `make_consent` asks in the terminal, on the Reporter's stream (P655), the question masked as the Reporter masks (P677).
+    `values`, the parsed arguments `run_cli` hands every builder, pick nothing here: no bench Operation asks a Question."""
     return build_outside_world(effects, reporter,
                                find_tool=lambda name, project=project: tool_finder.find(name, project),
                                make_consent=lambda line: deploy_gate.TerminalConsentStrategy(line, stdout=reporter.stream, mask=reporter.mask))
