@@ -74,7 +74,7 @@ OPERATIONS = (
      (), ("parts",)),
     ("need", {"nargs": "+", "metavar": "WORD"}, "what exists for a need, before researching: words matched in id, name, kind, alias; "
      "--matcher picks the matcher", (), ("need", "vendor_order", "found", "drafts", "catalog")),
-    ("skeleton", {"metavar": "PART"}, "write a record to fill in, to the project's parts/", ("writes",), ("path", "record", "written")),
+    ("skeleton", {"metavar": "PART"}, "write a record to fill in, to the project's parts/ (refused when any layer holds the id)", ("writes",), ("path", "record", "written")),
     ("sources", {"metavar": "PART"}, "ask every URL a record cites whether it answers", ("network",), ("part", "sources")),
     ("fetch", {"metavar": "PART"}, "download the datasheets and images a record cites, into your store", ("network", "writes"),
      ("documents", "would_fetch")),

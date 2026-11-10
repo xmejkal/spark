@@ -1,0 +1,2 @@
+--- stderr ---
+parts.py: library already holds <repo>/parts/led-red-5mm.json; a skeleton here would hide it — spark ships it; name it in the requirements as it is

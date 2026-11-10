@@ -892,7 +892,6 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         (root / ".spark").mkdir()
         (root / ".spark" / "project.json").write_text(json.dumps({"sellers": ["LaskaKit", "gme"]}))
         self.assertEqual(part_handlers.sellers(root), ("laskakit", "gme"))
-        self.assertIn("sourcing", part_facts.skeleton("x", "connector"))
 
     def test_a_skeleton_whose_id_is_no_plain_key_is_refused_and_nothing_is_written(self):
         # P87's follow-through: every reader refuses a record named so, so nobody is handed a file they cannot use
@@ -918,10 +917,44 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertIsNone(written["name"])
         self.assertIsNone(written["footprint"])
         self.assertFalse(written["body_mm"]["verified"])
+        self.assertNotIn("sourcing", written, "the rules keep no seller listing and no price (W21, P740)")
         problems = part_records.validate(written, root / "parts" / "sg90-servo.json")
         self.assertTrue(problems, "a skeleton full of nulls must not pass the contract")
         self.assertEqual(parts.main(["--skeleton", "sg90-servo", "--kind", "actuator", "--project", str(root)]),
                          parts.EXIT_INVALID, "an existing record is never overwritten")
+
+    def test_a_skeleton_is_refused_when_a_layer_holds_the_id_and_names_that_record(self):
+        # P740 (TL-13): the project layer wins over the shelf, the library and the catalog, so an empty skeleton
+        # would hide a researched record. The refusal names the layer and, where --promote applies, is the step.
+        import tempfile
+        root, home = Path(tempfile.mkdtemp()).resolve(), Path(tempfile.mkdtemp())  # resolved: `main` resolves --project
+        for place in ("shelf", "catalog"):
+            (home / place).mkdir()
+            (home / place / ("x-%s.json" % place)).write_text(json.dumps({"schema": 1, "id": "x-%s" % place, "kind": "sensor"}))
+        (root / "parts").mkdir()
+        (root / "parts" / "x-project.json").write_text(json.dumps({"schema": 1, "id": "x-project", "kind": "sensor"}))
+        fixes = {"project": "fill it in, do not overwrite it",
+                 "shelf": "`--promote <id> --project .` copies it into the project",
+                 "catalog": "`--promote <id> --project .` copies the draft into the project",
+                 "library": "spark ships it; name it in the requirements as it is"}
+        with in_store(home):
+            for layer, part_id in (("project", "x-project"), ("shelf", "x-shelf"), ("catalog", "x-catalog"),
+                                   ("library", "led-red-5mm")):
+                for flags in ([], ["--dry-run"]):
+                    with self.subTest(layer=layer, flags=flags):
+                        said, code = run_json(["--skeleton", part_id, "--kind", "sensor", "--project", str(root)] + flags)
+                        self.assertEqual((said["status"], code), ("problems", parts.EXIT_INVALID))
+                        problem = said["problems"][0]
+                        self.assertTrue(problem["sentence"].startswith("%s already holds " % layer), problem["sentence"])
+                        self.assertTrue(problem["sentence"].endswith("would %s it" % ("overwrite" if layer == "project" else "hide")))
+                        self.assertIn(part_id + ".json", problem["sentence"])
+                        self.assertEqual(problem["fix"], fixes[layer].replace("<id>", part_id))
+                        if layer in ("project", "library"):
+                            self.assertEqual(said["next"], [])
+                        else:
+                            self.assertEqual(said["next"][0]["argv"], ["--promote", part_id, "--project", str(root)])
+                            self.assertEqual(said["next"][0]["env"], {"SPARK_HOME": str(home.resolve())})
+        self.assertEqual([p.name for p in (root / "parts").iterdir()], ["x-project.json"], "a refused skeleton writes nothing")
 
     def test_sources_are_fetched_and_a_dead_one_is_named(self):
         record = {"sources": ["https://wiki.example/a", "not a url"],

@@ -4,7 +4,7 @@ Record: `project/boards/beetle-esp32-c6.json` (a board definition, not `parts/<i
 
 ## Steps
 1. Read `commands/research.md`, `part-data.md`, `boards/README.md`, `boards/xiao-esp32-c6.json`, how-it-works "Your own dev board". Research.md has no word about boards.
-2. `ls ~/.local/share/spark/boards/` returned `34-85-18-42-e4-10.json` and others: per-MAC deploy history, not board definitions.
+2. `ls ~/.local/share/spark/boards/` returned `34-85-18-xx-xx-xx.json` and others: per-MAC deploy history, not board definitions.
 3. `parts.py --need tiny ESP32-C6 board battery --project $P` returned "nothing in the library matches 'tiny ESP32-C6 board battery'".
 4. `parts.py --kept DFR1117` and `--kept Beetle ESP32 C6` both returned "nothing kept matches …".
 5. `parts.py --need ESP32-C6 --project $P` returned "nothing in the library matches 'ESP32-C6'", although library `boards/xiao-esp32-c6.json` is an ESP32-C6 board.
@@ -39,7 +39,7 @@ Record: `project/boards/beetle-esp32-c6.json` (a board definition, not `parts/<i
 - research.md covers parts only: kinds indicator, button, connector, regulator and module, with records at `parts/<id>.json`. It does not cover a dev board. The board flow lives in boards/README.md (steps name a Makefile, config.py and `make check`) and in how-it-works "Your own dev board" ("copy the closest definition"). Neither tells you how to research one.
 - research.md's `allowed-tools` lists no `boards.py`, `init_project.py`, `emit_footprint.py` or `check_vendor_pins.py`.
 - `parts.py --skeleton` has no board kind. I copied the board record's shape from xiao and FireBeetle. I guessed three fields: `mounting_holes` `{count: 0}`, `corner_radius_mm`, and `flush_edge "+y"` as the end away from the USB-C.
-- The `boards/` in the store holds per-MAC deploy history (`34-85-18-42-e4-10.json`), not definitions. The name suggests the second.
+- The `boards/` in the store holds per-MAC deploy history (`34-85-18-xx-xx-xx.json`), not definitions. The name suggests the second.
 - `--fetch` works only from a parts record's documents. For a board I had to curl and then `--keep`, which needs a hand-made scratch dir.
 - DFRobot ships documents as zips (schematic, datasheets, layout). `--keep` keeps the zip, because its sha256 matches the URL. `--read` needs a PDF, so a cite has to name "zip → inner file, page" by hand. No command reads inside a kept zip.
 - `parts.py --read` cannot read a schematic, which has no table rows. Schematics must be rendered and read as images, and no spark command does that.
