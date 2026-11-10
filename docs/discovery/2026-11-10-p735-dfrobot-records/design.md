@@ -18,8 +18,8 @@ are the brief's claims and decisions.
 
 Every row is in [docs/observations/rows/p737-research-pipeline.md](../../observations/rows/p737-research-pipeline.md).
 
-> **TL;DR.** One new Operation (spark's unit of work), `ResearchPart`, runs ordered, swappable research sources over the gaps that the
-> fact need tree names. It writes one part record. Each question that a source cannot answer itself becomes a
+> **TL;DR.** One new Operation (spark's unit of work), `ResearchPart`, runs ordered, swappable research sources.
+> It fills the gaps that the fact need tree names and writes one part record. Each question that a source cannot answer itself becomes a
 > typed `Question`. A `ReplyStrategy` answers it: scripted from a replies file, live in a terminal (step R2), or "not
 > now". A deferred question goes on the run's open list, and the next run takes the replies. `ConsentStrategy` keeps
 > its erase guard and joins the same family in step R1. The MVP proves one owned part, SEN0526, from its kept drawing,
@@ -246,7 +246,7 @@ R1. `ConsentStrategy` joins the family (about 40 lines): it subclasses `ReplyStr
    in patterns-and-names.md gains the edge. A grant stays a Consent.
 R2. Live mode (about 150 lines): `TerminalReplyStrategy` asks VALUE and CHOICE questions in a tty, one at a time,
    `[2/4] <text> (<unit>, Enter = later)`, then `why` and the cited page. Enter defers. Ctrl-C keeps what was written.
-   It never shows an AGENT question. It shares the tty check and the mask with `TerminalConsentStrategy` through one
+   It never shows an AGENT question. It shares the tty test and the mask with `TerminalConsentStrategy` through one
    small helper, and `tools/measure.py` TERMINAL_CLASSES lists it. `ChainedReplyStrategy` asks each in order and stops
    at the first Reply. The CLI picks Given, Terminal, Deferring with a tty and no `--json`, and Given, Deferring
    otherwise. One summary line: "3 answered, 1 left".
