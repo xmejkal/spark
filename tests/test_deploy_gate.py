@@ -29,6 +29,7 @@ from spark.bench import board_look  # noqa: E402
 from spark.records import deploy_record_store  # noqa: E402
 import deploy  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
+from spark.bench.deploy_stages import PHASE_WHY, DeployPhase  # noqa: E402
 from spark.bench import board_grant  # noqa: E402
 from spark.bench import deploy_gate  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
@@ -410,7 +411,7 @@ class TheGateTest(GateCase):
     def test_no_board_on_usb_is_a_sentence_and_erases_nothing(self):
         self.run_the_scenario()
         code, said, problems = self.deploy("--token", "aaaa-bbbb", devs_text="\n", consent=FakeConsent(True))
-        self.assertEqual((code, said, self.flashed()), (2, "", []))
+        self.assertEqual((code, said, self.flashed()), (2, "  %s\n  %s\n" % (PHASE_WHY[DeployPhase.PLAN], PHASE_WHY[DeployPhase.LOOK]), []))
         self.assertIn("deploy.py: no board found.", problems)
 
     def test_the_dry_run_never_touches_usb(self):
@@ -501,6 +502,8 @@ class TheBoardAfterTheFlashTest(GateCase):
         image = self.image.read_bytes()
         write = ["/opt/python3", "-m", "esptool", "--chip", "esp32c6", "--port", port, "--after", "watchdog-reset", "write-flash", "0x0", str(self.image)]
         self.assertEqual(stream.getvalue().splitlines(), [
+            "  " + PHASE_WHY[DeployPhase.PLAN],
+            "  " + PHASE_WHY[DeployPhase.LOOK],
             "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.",
             "  port   %s" % port,
             "  mac    8c:bf:ea:xx:xx:xx",
@@ -510,8 +513,11 @@ class TheBoardAfterTheFlashTest(GateCase):
             "  simulation: passed",
             "  " + CAVEAT_OF_A_RUN_THAT_PRESSED_NOTHING,
             "  all fields match the board record xiao-esp32-c6.",
+            "  " + PHASE_WHY[DeployPhase.GATE],
+            "  " + PHASE_WHY[DeployPhase.FLASH],
             "  running: /opt/python3 -m esptool --chip esp32c6 --port %s erase-flash" % port,
             "  running: %s" % shlex.join(write),
+            "  " + PHASE_WHY[DeployPhase.VERIFY],
             "  facts file spark.json sha256: %s" % hashlib.sha256(self.copied["spark.json"].encode()).hexdigest(),
             "  image sha256: %s, yes: a test" % hashlib.sha256(image).hexdigest(),
             "  ready seen: the firmware printed 'ready' and the board's 1 files match the image",

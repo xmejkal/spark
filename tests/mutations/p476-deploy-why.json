@@ -1,0 +1,9 @@
+[
+ {"file": "scripts/spark/bench/deploy_image.py", "name": "P476: the why line is never reported", "find": "            self.report_on(Event.line(event.code, PHASE_WHY[event.code]))\n", "replace": "            pass\n"},
+ {"file": "scripts/spark/bench/deploy_image.py", "name": "P476: the why line comes before its BEGIN", "find": "        self.report_on(event)\n        if event.kind == BEGIN and event.code in PHASE_WHY:\n            self.report_on(Event.line(event.code, PHASE_WHY[event.code]))\n", "replace": "        if event.kind == BEGIN and event.code in PHASE_WHY:\n            self.report_on(Event.line(event.code, PHASE_WHY[event.code]))\n        self.report_on(event)\n"},
+ {"file": "scripts/spark/bench/deploy_image.py", "name": "P476: every event gets a why line", "find": "        if event.kind == BEGIN and event.code in PHASE_WHY:\n", "replace": "        if event.code in PHASE_WHY:\n"},
+ {"file": "scripts/spark/bench/deploy_image.py", "name": "P476: the BEGIN is not passed on", "find": "    def report(self, event):\n        self.report_on(event)\n        if event.kind == BEGIN and", "replace": "    def report(self, event):\n        if event.kind == BEGIN and"},
+ {"file": "scripts/spark/bench/deploy_image.py", "name": "P476: the decorator is left out of the flow", "find": "StageTrackingReporter(WhyLineReporter(outside.report).report)", "replace": "StageTrackingReporter(outside.report)"},
+ {"file": "scripts/spark/bench/deploy_stages.py", "name": "P476: the flash why loses the watchdog", "find": "esptool then restarts the chip with its watchdog where it has one, because", "replace": "esptool then restarts the chip where it has one, because"},
+ {"file": "scripts/spark/bench/deploy_stages.py", "name": "P476: the gate has no why", "find": "    DeployPhase.GATE: \"why: the erase cannot be undone, so the write needs a yes for this board\",\n", "replace": ""}
+]

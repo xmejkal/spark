@@ -1,8 +1,8 @@
 """
 The deploy as an Operation on the core (P655, W4-2, E2): put the flash image onto the board, after the look, the token
 and the person's yes. deploy.py is its CLI. Every line a person read while deploy.py ran is an Event now, each phase
-reports a BEGIN, and the result is `board_envelope.deploy_result`, so no golden changed; a crash after the gate, which
-says the board may be erased, is the one new output.
+reports a BEGIN, and the result is `board_envelope.deploy_result`. A crash after the gate, which says the board may be
+erased, and the one `why:` line after each BEGIN (P476) are the new output.
 """
 
 import shlex
@@ -19,7 +19,7 @@ from spark.bench import ready_probe
 from spark.records import store
 from spark.records import tool_finder
 from spark.bench.board_console import LEAVE_CONSOLE
-from spark.bench.deploy_stages import DeployPhase
+from spark.bench.deploy_stages import PHASE_WHY, DeployPhase
 from spark.bench.deploy_service import DeployService, FlashError
 from spark.bench.firmware_platform import MicroPythonPlatform
 from spark.bench.image_evidence import IGNORE_OLDER_RUNS_FLAG, NO_SIMULATION_FLAG, evidence_for
@@ -90,6 +90,19 @@ class StageTrackingReporter(Reporter):
         self.report_on(event)
 
 
+class WhyLineReporter(Reporter):
+    """Decorator: a Reporter that passes every event on to `report_on`, and after the BEGIN of a stage reports one LINE that says
+    why the stage happens (P476), from `PHASE_WHY`. Any other event passes as it is."""
+
+    def __init__(self, report_on):
+        self.report_on = report_on
+
+    def report(self, event):
+        self.report_on(event)
+        if event.kind == BEGIN and event.code in PHASE_WHY:
+            self.report_on(Event.line(event.code, PHASE_WHY[event.code]))
+
+
 #: Value: what the person asked of this deploy: the port, the token look.py printed, and whether it is a dry run.
 Asked = namedtuple("Asked", "port token dry_run")
 #: Value: what the result says of the board after a crash in `stage`: `data.board_state`, the words of the sentence, the fix.
@@ -112,7 +125,7 @@ class DeployFlowService:
         """`service_for(world)` builds the DeployService over `world`, the outside whose `report` tracks the stage. `asked`
         is the Asked of this run."""
         self.outside, self.grants, self.asked = outside, grants, asked
-        self.stages = StageTrackingReporter(outside.report)
+        self.stages = StageTrackingReporter(WhyLineReporter(outside.report).report)
         self.service = service_for(outside._replace(report=self.stages.report))
         self._reached = {"project": self.service.project.resolve(), "evidence": self.service.evidence,
                          "token": asked.token, "port": asked.port, "dry_run": asked.dry_run}

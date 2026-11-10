@@ -28,7 +28,9 @@ from spark.records import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from fakes import FakeBoardReader, FakeClock, FakeConsent, FakeDeployRecordStore, FakeFirmwarePlatform, FakeOutsideWorld  # noqa: E402
-from spark.core.events import LINE  # noqa: E402
+from spark.core.events import BEGIN, LINE, Event  # noqa: E402
+from spark.bench.deploy_image import StageTrackingReporter, WhyLineReporter  # noqa: E402
+from spark.bench.deploy_stages import PHASE_WHY, DeployPhase  # noqa: E402
 from test_board_look import FOUND, found  # noqa: E402
 from test_deploy_gate import GateCase  # noqa: E402
 
@@ -317,6 +319,41 @@ class TheFirmwarePlatformTest(ServiceCase):
             with self.assertRaises(project_image.DeployError):
                 firmware_platform.MicroPythonPlatform(self.project).make_flasher()
         self.assertEqual(asked, [])
+
+
+class TheWhyLineTest(unittest.TestCase):
+    """P476: a BEGIN of a deploy stage is followed by one line that says why the stage happens."""
+
+    PHASES = (DeployPhase.PLAN, DeployPhase.LOOK, DeployPhase.GATE, DeployPhase.FLASH, DeployPhase.VERIFY)
+
+    def reported(self, events):
+        seen = []
+        why = WhyLineReporter(seen.append)
+        for event in events:
+            why.report(event)
+        return seen
+
+    def test_each_stage_has_one_why_that_starts_with_why(self):
+        self.assertEqual(set(PHASE_WHY), set(self.PHASES))
+        for phase in self.PHASES:
+            self.assertTrue(PHASE_WHY[phase].startswith("why: "), phase)
+
+    def test_the_why_line_follows_its_begin(self):
+        for phase in self.PHASES:
+            self.assertEqual(self.reported([Event.begin(phase)]), [Event.begin(phase), Event.line(phase, PHASE_WHY[phase])])
+
+    def test_a_line_and_a_begin_without_a_why_pass_unchanged(self):
+        events = [Event.line(DeployPhase.FLASH, "running: x"), Event.begin("other")]
+        self.assertEqual(self.reported(events), events)
+
+    def test_the_flash_line_names_the_watchdog_restart(self):
+        self.assertIn("restarts the chip with its watchdog", PHASE_WHY[DeployPhase.FLASH])
+
+    def test_the_tracker_keeps_the_stage_and_the_why_line_stays_out_of_it(self):
+        seen = []
+        tracker = StageTrackingReporter(WhyLineReporter(seen.append).report)
+        tracker.report(Event.begin(DeployPhase.GATE))
+        self.assertEqual((tracker.stage, [event.kind for event in seen]), (DeployPhase.GATE, [BEGIN, LINE]))
 
 
 class TheServiceHoldsNoPrintTest(unittest.TestCase):

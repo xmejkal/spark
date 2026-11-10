@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from spark.bench import board_envelope  # noqa: E402
 import deploy  # noqa: E402
 from spark.bench import deploy_service  # noqa: E402
+from spark.bench.deploy_stages import PHASE_WHY, DeployPhase  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 from spark.bench import firmware_platform  # noqa: E402
 from spark.firmware.project_image import DeployError  # noqa: E402
@@ -116,6 +117,7 @@ class TheDryRunTest(ProjectCase):
         code, said, problems, ran = self.deploy("--port", PORT, "--dry-run")
         self.assertEqual((code, problems, ran), (deploy.EXIT_OK, "", []))
         self.assertEqual(said.splitlines(), [
+            "  " + PHASE_WHY[DeployPhase.PLAN],
             "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s erase-flash" % PORT,
             "  would run: /opt/python3 -m esptool --chip esp32s3 --port %s --after watchdog-reset write-flash 0x0 %s" % (PORT, shlex.quote(str(self.image))),
             "  board: not looked at: run look.py",
@@ -297,7 +299,7 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
     def test_a_scenario_that_failed_on_an_older_image_refuses_the_flash(self):
         self.run_two_scenarios()
         code, said, problems, ran = self.deploy("--dry-run")
-        self.assertEqual((code, said, ran), (deploy.EXIT_COULD_NOT_RUN, "", []))
+        self.assertEqual((code, said, ran), (deploy.EXIT_COULD_NOT_RUN, "  %s\n" % PHASE_WHY[DeployPhase.PLAN], []))
         self.assertIn("s.log tested another image, not this one: run that scenario again to test this one", problems)
         self.assertIn("pass --ignore-older-runs", problems)
 

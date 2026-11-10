@@ -1,3 +1,5 @@
+  why: spark checks the image and finds its tools first, so a wrong image stops before the board is touched
+  why: spark reads the chip and flash size, so another chip or too little flash for the image is stopped
   the board restarts while it is read: a running program stops and starts again. Nothing is erased or written.
   port   /dev/cu.usbmodem101
   mac    dc:da:0c:xx:xx:xx
@@ -9,7 +11,9 @@
   what this simulation cannot show, so test it on the board:
   - ONBOARD_DISPLAY — spark adds no part to the diagram for the board's own display, so a passed run does not test what it shows. Test it on the board.
   all fields match the board record firebeetle2-esp32s3.
+  why: the erase cannot be undone, so the write needs a yes for this board
   yes: standing yes typed by tester at <time>, until <time>
+  why: the erase and the write replace what the board runs, and esptool then restarts the chip with its watchdog where it has one, because a plain reset can leave an ESP32-S3 in download mode
   running: <python> -m esptool --chip esp32s3 --port /dev/cu.usbmodem101 erase-flash
 fake esptool: erase-flash failed
   retry in 5 s: <python> -m esptool --chip esp32s3 --port /dev/cu.usbmodem101 erase-flash stopped with exit 2 (esptool's exit for any stop, a failed connect among them)

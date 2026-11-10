@@ -20,6 +20,8 @@ Before the erase, deploy.py looks at the board as look.py does (P219). It refuse
 board's and this image's, and a deploy with no yes: one typed in the person's own terminal, or the standing yes of a
 deploy grant (deploy_gate.py, board_grant.py). The chip comes from
 the project's board (requirements.json's `board`), and esptool refuses a board with another chip too.
+When each of the five stages starts (plan, look, gate, flash, verify), deploy.py prints one `why:` line that says why
+the stage happens (P476). With --json these lines go to stderr, like every line a person reads.
 esptool and mpremote are the tools list's `flasher` and `board-shell`, which /spark:setup installs.
 """
 
@@ -93,7 +95,9 @@ with --json prints an envelope (status could-not-run, code bad_argument, exit 2)
 the error on stderr and exits 2.
 
 Exit codes: 0 ready seen (with --dry-run: printed), 1 the look found a stop, or the board's files differ or no `ready`
-came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.""" % (
+came, 2 it could not run, you answered no, there was no terminal, or ready is unknown, and the sentence says why.
+
+Each stage prints a `why:` line when it starts (plan, look, gate, flash, verify).""" % (
     NO_SIMULATION_CAVEAT, ready_probe.READY_WAIT_S, download_mode.RESET_WAIT_S)
 
 
