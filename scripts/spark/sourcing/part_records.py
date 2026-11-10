@@ -250,14 +250,32 @@ PHYSICAL_WHY = "a hole or a header placed wrong puts the module where its pins m
 
 
 def _above_zero(value):
-    """A finite number above 0, and not a bool: the only kind of size a record carries."""
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+    """A finite number above 0, and not a bool: the only kind of size a record carries. An int is finite at any size (P434)."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and (isinstance(value, int) or math.isfinite(value)) and value > 0
+
+
+def _count(value):
+    """A whole number above 0: a row or a pin count."""
+    return isinstance(value, int) and _above_zero(value)
+
+
+def _unpublished(value):
+    """Null or empty: what a record must not carry in place of a size the vendor did not publish."""
+    return value is None or value == [] or value == {}
+
+
+def _empty_key_problems(where, block):
+    """Each key of `block` that is null or empty: the vendor did not publish it, so it is left out and named in `not_published`."""
+    return ["%s.%s is %r; leave the key out and name it in physical_proof.not_published" % (where, key, value)
+            for key, value in block.items() if _unpublished(value)]
 
 
 def _physical_value_problems(physical):
     """Each key of `physical` that is null or empty, each size that is not finite and above 0, and each hole missing a coordinate."""
-    problems = ["physical.%s is %r; leave the key out and name it in physical_proof.not_published" % (key, value)
-                for key, value in physical.items() if value is None or value == []]
+    problems = _empty_key_problems("physical", physical)
+    problems += ["physical.%s is not one of %s: a size the sheet reads goes under the board record's key name, and a note "
+                 "under a key that starts with //" % (key, ", ".join(PHYSICAL_KEYS))
+                 for key in physical if key not in PHYSICAL_KEYS and not str(key).startswith("//")]
     if "thickness_mm" in physical and not _above_zero(physical["thickness_mm"]):
         problems.append("physical.thickness_mm is %r, but it is a number above 0" % (physical["thickness_mm"],))
     holes = physical.get("mounting_holes")
@@ -268,12 +286,15 @@ def _physical_value_problems(physical):
         problems.append("physical.mounting_holes is %r, but it is a list of {x_mm, y_mm, drill_mm}" % (holes,))
     header = physical.get("header")
     if isinstance(header, dict):
+        problems += _empty_key_problems("physical.header", header)
         problems += ["physical.header.%s is %r, but it is a number above 0" % (key, header[key])
-                     for key in HEADER_SIZES + ("rows",) if key in header and not _above_zero(header[key])]
+                     for key in HEADER_SIZES if key in header and not _above_zero(header[key])]
+        if "rows" in header and not _count(header["rows"]):
+            problems.append("physical.header.rows is %r, but it is a whole number above 0" % (header["rows"],))
         pins = header.get("pins")
-        if pins is not None and not (isinstance(pins, list) and pins and all(_above_zero(count) for count in pins)):
-            problems.append("physical.header.pins is %r, but it is a list of pin counts above 0, one per row" % (pins,))
-        elif pins is not None and _above_zero(header.get("rows")) and len(pins) != header["rows"]:
+        if not _unpublished(pins) and not (isinstance(pins, list) and all(_count(count) for count in pins)):
+            problems.append("physical.header.pins is %r, but it is a list of whole pin counts above 0, one per row" % (pins,))
+        elif not _unpublished(pins) and _count(header.get("rows")) and len(pins) != header["rows"]:
             problems.append("physical.header.pins counts %d row(s), but rows says %r" % (len(pins), header["rows"]))
     elif header is not None:
         problems.append("physical.header is %r, but it is an object" % (header,))

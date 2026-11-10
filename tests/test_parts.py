@@ -1665,11 +1665,51 @@ class AModulesPhysicalSaysHowItWasReadTest(unittest.TestCase):
         header = dict(self.PHYSICAL["header"], pins=[8])
         self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=header)),
                          ["physical.header.pins counts 1 row(s), but rows says 2"])
-        for pins in ([], [4, 0], 8):
+        for pins in ([4, 0], [True], 8):
             with self.subTest(pins=pins):
                 said = self.problems(physical=dict(self.PHYSICAL, header=dict(self.PHYSICAL["header"], pins=pins)))
-                self.assertEqual(said, ["physical.header.pins is %r, but it is a list of pin counts above 0, one per row" % (pins,)])
+                self.assertEqual(said, ["physical.header.pins is %r, but it is a list of whole pin counts above 0, one per row" % (pins,)])
         self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=2.54)), ["physical.header is 2.54, but it is an object"])
+
+    def test_counts_are_whole_numbers_and_a_header_key_is_never_null_or_empty(self):
+        header = dict(self.PHYSICAL["header"], rows=2.0)
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=header)),
+                         ["physical.header.rows is 2.0, but it is a whole number above 0"])
+        header = dict(self.PHYSICAL["header"], pins=[8.5, 4])
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=header)),
+                         ["physical.header.pins is [8.5, 4], but it is a list of whole pin counts above 0, one per row"])
+        for value in (None, [], {}):
+            with self.subTest(value=value):
+                header = dict(self.PHYSICAL["header"], pins=value)
+                self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=header)),
+                                 ["physical.header.pins is %r; leave the key out and name it in physical_proof.not_published" % (value,)])
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header={})),
+                         ["physical.header is {}; leave the key out and name it in physical_proof.not_published"])
+
+    def test_a_huge_integer_is_a_size_and_never_a_traceback(self):
+        huge = 10 ** 400  # valid JSON; math.isfinite raises OverflowError on it (P434)
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, thickness_mm=huge)), [])
+        holes = [{"x_mm": huge, "y_mm": 2.0, "drill_mm": 2.2}]
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, mounting_holes=holes)), [])
+
+    def test_the_block_holds_the_three_keys_and_notes_under_double_slash(self):
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, **{"width_mm": 16, "//header": "two rows"})),
+                         ["physical.width_mm is not one of thickness_mm, mounting_holes, header: a size the sheet reads goes under "
+                          "the board record's key name, and a note under a key that starts with //"])
+
+    def test_fact_set_writes_the_block_with_its_proof_and_refuses_a_wrong_one(self):
+        home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
+        (home / "catalog" / "x-mic.json").write_text(json.dumps(self.record(physical=None, physical_proof=None)))
+        given = home / "write.json"
+        given.write_text(json.dumps({"physical": self.PHYSICAL, "physical_proof": self.PROOF}))
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-mic", str(given)])
+            after = json.loads((home / "catalog" / "x-mic.json").read_text())
+            given.write_text(json.dumps({"physical": {"thickness_mm": 0}, "physical_proof": self.PROOF}))
+            refused, bad = run_json(["--fact-set", "x-mic", str(given)])
+        self.assertEqual((code, after["physical"], after["physical_proof"]), (0, self.PHYSICAL, self.PROOF))
+        self.assertEqual((bad, [p["sentence"] for p in refused["problems"]]),
+                         (1, ["physical.thickness_mm is 0, but it is a number above 0"]))
 
     def test_the_proof_carries_verified_and_source_and_an_unverified_one_its_why(self):
         self.assertEqual(len(self.problems(physical_proof={})), 2)
