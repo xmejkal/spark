@@ -1,6 +1,6 @@
 ---
 description: Research a part or module the library lacks. Reuse first, then find the exact part, then read only the datasheet pages a decision needs. Write it down as a record with every fact cited, so the chain can use it and the next project finds it.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --keep *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --read *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --promote *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/research.py *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --need *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --keep *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --read *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --validate *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --unverified *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --promote *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --catalog *)
 ---
 
 # spark:research
@@ -62,8 +62,10 @@ small agents work on it, in turn:
    person's answer to that question is the yes.
 
 A module, or a part identified from a photo with `/spark:identify`, has variants, a chip inside and a schematic to
-read. Launch `parts-researcher` with the need and the vendor order (the brief's `prefer`, default DFRobot then Seeed).
-Give it the project directory, the plugin directory (`${CLAUDE_PLUGIN_ROOT}`) and the record schema
+read. For a DFRobot module, write the skeleton with its part number and run `research.py` first (section 5). It keeps
+the wiki's documents and asks the geometry questions. Then launch `parts-researcher` for the rest: the needs, the power
+pins, the pin order and the facts. Give it the need and the vendor order (the brief's `prefer`, default DFRobot then
+Seeed). Give it the project directory, the plugin directory (`${CLAUDE_PLUGIN_ROOT}`) and the record schema
 (`skills/spark-design/references/part-data.md`).
 
 ## 3. The facts each kind needs, and nothing else
@@ -104,23 +106,31 @@ motor, 5v): the board is written with it as code`.
 Then run `/spark:build`. `parts.py --promote <id> --project .` copies a verified record into the plugin's library, and
 the next project finds it with `--need`.
 
-## 5. A module with kept documents: research.py
+## 5. A DFRobot module: research.py
 
-When a module's record keeps its dimension drawing (`documents`, with the file in the person's store), `research.py`
-fills the geometry the breadboard sheet needs, with no network and no hand edit of the record (P737).
+`research.py` fills the geometry that the breadboard sheet needs, with no hand edit of the record (P737). It asks two
+sources in order. The DFRobot wiki source reads the module's wiki page by its `sku` and keeps the documents that the
+page lists. The kept-documents source asks one question per gap that cites the kept dimension drawing.
 
 ```
+${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton <id> --kind <kind> --vendor dfrobot --sku <SKU> --project .
 ${CLAUDE_PLUGIN_ROOT}/scripts/research.py --part <id> --project . --json
 ```
 
-Run 1 lists the gaps and asks one question per gap that cites the drawing at page 1. It writes the template
-`.spark/research-replies.json` and exits 2 with `needs_reply`. Read the cited drawing and fill each value. A value the
-drawing does not give stays null, and its question stays open; if the vendor did not publish it, say so in
-`physical_proof.not_published` with `parts.py --fact-set`. Then run the `next[0]` step, the same line with `--replies`.
-Run 2 writes `physical` and `physical_proof` (`verified: false`, read off a drawing), or `body_mm` when the outline was
-the gap, and `parts.py --show <id>` prints them. The
-file's shape and the codes are in [docs/guide/agents/replies.md](../docs/guide/agents/replies.md). Today the one
-source is the kept documents; the DFRobot wiki source is step 5 of P737.
+The wiki source fetches the page once per record, and never again once its URL is in the record's `sources`. It
+reaches the network, so no command's `allowed-tools` lists `research.py`. Claude Code asks before it runs, and that
+answer is the yes. Run 1 keeps each PDF and image in the person's store and writes them into `documents`. A zip or a
+STEP file is listed with `kept: false`. If the page lists no dimension drawing, the thickness, the holes and the header
+go into `physical_proof.not_published`. Then run 1 asks one question per remaining gap, and each cites the drawing at
+page 1. It writes the template `.spark/research-replies.json` and exits 2 with `needs_reply`. A page that does not
+answer is one unchecked item, `url_unreachable`, and the run goes on with the documents that the record keeps.
+
+Read the cited drawing and fill each value. A value that the drawing does not give stays null, and its question stays
+open. If the vendor did not publish it, say so in `physical_proof.not_published` with `parts.py --fact-set`. Then run
+the `next[0]` step, the same line with `--replies`. Run 2 writes `physical` and `physical_proof` (`verified: false`,
+read off a drawing). When the outline was the gap, it writes `body_mm`. `parts.py --show <id>` prints them. If the page
+did not answer in that run, the run still ends with exit 2, because the unchecked item stays. The file's shape and the
+codes are in [docs/guide/agents/replies.md](../docs/guide/agents/replies.md).
 
 ## Candidates not chosen
 
@@ -133,5 +143,5 @@ record's `alternatives`. (W21, P83.)
 
 ## What this does not do
 
-It does not pick for you between two fitting parts. It shows both, with what each is missing. It does not verify a
+It does not pick for you between two fitting parts. It shows both, with what each is missing. It does not prove a
 pinout. No software can, from a picture. It does not track prices.

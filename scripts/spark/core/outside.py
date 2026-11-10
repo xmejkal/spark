@@ -64,11 +64,20 @@ def refuse_consent(line):
     raise SparkError("the operation declares no `%s` effect, so it cannot ask the person for a yes", ASKS, code=UNDECLARED_EFFECT, fix=UNDECLARED_FIX)
 
 
-def build_outside_world(effects, reporter, find_tool=None, make_consent=None, replies=None, fetch=None):
-    """The OutsideWorld for these effects: `run` is a ProgramRunner's, echoing where the Reporter says, with RUNS and `refuse_run`
-    without; `make_consent` the given one with ASKS and `refuse_consent` without; `replies` the given ReplyStrategy's `reply`
-    with ASKS and `refuse_replies` without; `fetch` the given callable with FETCHES and `refuse_fetch` without; `find_tool` the
-    given one; `report` the given Reporter's; `clock` the computer's (a test `_replace`s it with a FakeClock, P737 took the parameter out: rule R3)."""
+#: The slots a frontend may fill in `build_outside_world`, each by keyword: the rest of the tuple the core builds itself.
+SLOTS = ("find_tool", "make_consent", "replies", "fetch")
+
+
+def build_outside_world(effects, reporter, **slots):
+    """The OutsideWorld for these effects, the `SLOTS` given by keyword (rule R3 keeps the signature at five): `run` is a
+    ProgramRunner's, echoing where the Reporter says, with RUNS and `refuse_run` without; `make_consent` the given one with ASKS
+    and `refuse_consent` without; `replies` the given ReplyStrategy's `reply` with ASKS and `refuse_replies` without; `fetch` the
+    given callable with FETCHES and `refuse_fetch` without; `find_tool` the given one; `report` the given Reporter's; `clock` the
+    computer's (a test `_replace`s it with a FakeClock). A slot name outside `SLOTS` is a TypeError, as a wrong keyword was."""
+    unknown = set(slots) - set(SLOTS)
+    if unknown:
+        raise TypeError("build_outside_world() got an unexpected keyword argument %r" % sorted(unknown)[0])
+    find_tool, make_consent, replies, fetch = (slots.get(name) for name in SLOTS)
     return OutsideWorld(ProgramRunner(reporter.echo_fd()).run if RUNS in effects else refuse_run, find_tool, reporter.report,
                         SystemClock(), make_consent if ASKS in effects and make_consent else refuse_consent,
                         replies=replies.reply if ASKS in effects and replies else refuse_replies,

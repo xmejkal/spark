@@ -921,11 +921,11 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
     def test_a_skeleton_has_every_field_and_no_guess_and_the_contract_refuses_it_until_filled(self):
         import tempfile
         root = Path(tempfile.mkdtemp())
-        code = parts.main(["--skeleton", "sg90-servo", "--kind", "actuator", "--vendor", "dfrobot",
+        code = parts.main(["--skeleton", "sg90-servo", "--kind", "actuator", "--vendor", "dfrobot", "--sku", "SER0006",
                            "--project", str(root)])
         self.assertEqual(code, parts.EXIT_OK)
         written = json.loads((root / "parts" / "sg90-servo.json").read_text())
-        self.assertEqual(written["id"], "sg90-servo")
+        self.assertEqual((written["id"], written["vendor"], written["sku"]), ("sg90-servo", "dfrobot", "SER0006"))
         self.assertIsNone(written["name"])
         self.assertIsNone(written["footprint"])
         self.assertFalse(written["body_mm"]["verified"])
@@ -1266,6 +1266,18 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                                                "retrieved": "2026-10-03", "title": None, "version": None}})
         self.assertEqual([p for p in part_records.validate(definition, written(definition)) if "documents" in p], [])
 
+    def test_a_document_not_kept_needs_a_url_and_no_sha256_and_nothing_cites_it(self):
+        # P737 step 5: a file the wiki lists that the store cannot keep (a zip) is in `documents` as a pointer with `kept: false`
+        definition = part(documents={"cad": {"url": "https://v.example/cad.zip", "kept": False, "title": "CAD"}})
+        self.assertEqual([p for p in part_records.validate(definition, written(definition)) if "documents" in p or "cad" in p], [])
+        for odd in ({"kept": False, "title": "CAD"}, {"url": "", "kept": False}, {"url": "https://v.example/cad.zip", "kept": False, "sha256": "a" * 64}):
+            with self.subTest(odd=odd):
+                problems = part_records.validate(part(documents={"cad": odd}), written(definition))
+                self.assertEqual(len([p for p in problems if p.startswith("documents.cad")]), 1, problems)
+        cited = dict(definition, facts={"rating_a": {"value": 2, "verified": True, "source": "the CAD", "cites": {"document": "cad", "at": "page 1"}}})
+        self.assertEqual([p for p in part_records.validate(cited, written(definition)) if "cad" in p],
+                         ["facts.rating_a cites 'cad', which is not kept, so nobody can read it there"])
+
     def _kept_world(self, stored=True):
         """A catalog record and a project board that both point at one datasheet, the board citing a page."""
         import tempfile
@@ -1274,7 +1286,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         digest = "b" * 64
         document = {"url": "https://v.example/wroom.pdf", "sha256": digest, "file": "wroom_v1.1.pdf",
                     "retrieved": "2026-09-24", "title": "ESP32-S3-WROOM-1 Datasheet", "version": "v1.1"}
-        self._catalog_record(catalog, "x-rtc", documents={"wroom": document},
+        self._catalog_record(catalog, "x-rtc", documents={"wroom": document, "cad": {"url": "https://v.example/rtc_cad.zip", "kept": False, "title": "CAD files"}},
                              facts={"idle_ua": {"value": 8, "verified": True, "source": "https://v.example/wroom.pdf"}})
         # A record with a document of its own and nothing resting on the WROOM: it must not be named.
         self._catalog_record(catalog, "x-jack", body_mm={"value": [9, 14], "verified": True, "source": "drawing"},
@@ -1320,6 +1332,14 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
     def test_kept_says_missing_when_the_store_does_not_hold_it(self):
         _, said, _ = self._kept(["wroom"], stored=False)
         self.assertIn("MISSING", said)
+
+    def test_kept_says_not_kept_for_a_listed_file_the_store_cannot_keep(self):
+        # P737 step 5: a zip the wiki lists is in `documents` with `kept: false` and no sha256, so there is no file to find
+        code, said, _ = self._kept(["cad"])
+        self.assertEqual(code, 0, said)
+        self.assertIn("x-rtc cad: CAD files (version not read)", said)
+        self.assertIn("    not kept (https://v.example/rtc_cad.zip)", said)
+        self.assertNotIn("MISSING", said)
 
     def test_kept_finds_a_stored_file_no_record_here_cites(self):
         """P80: the L-7113ID kept by the quickstart was invisible to every other project, so the next

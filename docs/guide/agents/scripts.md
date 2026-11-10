@@ -81,7 +81,7 @@ A scratch store hides three things, so tell the person:
 ### What reads and what writes
 
 `parts.py --describe --json` lists every `parts.py` operation with its effects, including which ones write and which
-use the network; read it before calling `parts.py`. `research.py --part <id>` writes two files and nothing else: the project's `.spark/research-replies.json` (the template of its open questions) and, with `--replies`, the record in place ([replies.md](replies.md), P737).
+use the network; read it before calling `parts.py`. `research.py --part <id>` writes the project's `.spark/research-replies.json` (the template of its open questions) and the record in place, and keeps the documents a DFRobot module's wiki page lists in the person's store. It fetches that page once per record, so no command pre-approves it ([replies.md](replies.md), P737).
 
 Run each `parts.py` write with `--dry-run` first. For example, in a project whose needs are set
 (`parts.py --needs-set`) and with the FireBeetle in the person's drawer,

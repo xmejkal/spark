@@ -49,9 +49,11 @@ unverified facts, five of them wrong once the back was seen; if you have one sid
 
 ## What to keep (W21)
 
-Run `parts.py --fetch <id> --project <project>` for the chosen record: it keeps every cited datasheet
-in the person's store (`~/.local/share/spark/sources`), pointed at from the record's `documents` —
-never beside the record, because the plugin is public and cannot carry vendor files. A fact read
+For a DFRobot module, `research.py --part <id> --project <project>` has already kept the documents its wiki page
+lists (the drawing, the schematic, the datasheet) in the person's store (`~/.local/share/spark/sources`), pointed at
+from the record's `documents`, and asked the geometry questions; read them with `parts.py --kept`, never fetch them
+again. For a URL you found elsewhere, `parts.py --fetch <id> --project <project>` keeps every cited datasheet the same
+way — never beside the record, because the plugin is public and cannot carry vendor files. A fact read
 from a kept document says where: `"cites": {"document": "<key>", "at": "Table 12, page 15"}`.
 
 **Candidates not chosen:** one whose datasheet you kept gets a catalog record, written to the person's

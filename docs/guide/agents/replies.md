@@ -40,8 +40,13 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/research.py --part <id> --project . --json
 
 It reads the record from the project's `parts/` or the person's shelf, never from spark's library. `data.gaps` lists
 the facts that `data/fact-needs.json` says the chain reads and the record lacked when the run started, minus what
-`physical_proof.not_published` names. `data.sources` is the order the run asked, today `kept-documents` alone: with a kept dimension drawing in the
-record's `documents`, each gap is an `agent` question that cites it at page 1. Run 1 writes the template and exits 2.
+`physical_proof.not_published` names. `data.sources` is the order the run asked. The first source is `dfrobot-wiki`. For a
+record whose `vendor` is dfrobot, it fetches `https://wiki.dfrobot.com/<sku>/` once per record. It keeps the PDFs and
+images that the page lists in the store and writes them into `documents`. A zip or a STEP file is written as `{url,
+kept: false, title}`. The page's URL goes into `sources`. When the page lists no dimension drawing, the thickness, the
+holes and the header go into `physical_proof.not_published`. The second source is `kept-documents`. With a kept dimension
+drawing in the record's `documents`, each gap is an `agent` question that cites it at page 1. With no gap, no source
+runs. Run 1 writes the documents it kept and the template, and exits 2.
 Run 2, with `--replies`, writes each value as a fact: `physical` with its `physical_proof`, or `body_mm`. The fact has
 `verified: false` and a `source` that names the document, the page and who read it. An older proof is merged, not
 lost. `data.written` names the keys, and `notes` repeat them. In text mode a refusal prints its code, sentence and fix. A key the record already holds with the
@@ -55,3 +60,7 @@ same value is settled and flags nothing. A run with no gaps is `ok` and writes n
 | `unknown_reply` | a `problems` item: a reply to a key that no open question has, and the `fix` names the nearest. Also a reply to a fact that the record holds with another value | fix the key in the replies file. Never reply to a fact that is not open |
 | `bad_reply` | a `problems` item: a reply that does not fit its question's `kind`. It is not a yes or no, not one of the `choices`, empty, or not a finite number | answer as the question's `answer_form` and `example` say |
 | `part_contract_broken` | a `problems` item of `research.py`: the folded record breaks a rule that the record did not break before, for example a size that is not above 0. Nothing is written | fix the value in the replies file, then run again |
+| `url_unreachable`, `url_refused`, `file_name_refused`, `document_not_kept` | an `unchecked` item of `research.py`, `subject` the source name. The wiki page, or one file it lists, did not answer, or the store refused it. The sentence names the URL. The other sources still ran. Even a run that wrote every reply ends with exit 2 | when the page answers, run again. A wrong page address shows here too |
+| `no_sku` | an `unchecked` item. The record's `vendor` is dfrobot and it has no `sku`, so the wiki page has no address | write the maker's part number as `sku` (`parts.py --skeleton --sku`), then run again |
+| `no_document_list` | an `unchecked` item. The page answered but holds no document list spark can read (its JSON-LD block), so nothing was kept | keep the documents by hand. Put their URLs in the record's `sources` and run `parts.py --fetch` |
+| `more_documents` | an `unchecked` item. The page lists more than twelve files. The first twelve were taken, and the sentence names the rest | if a decision needs one of the named files, keep it by hand, as for `no_document_list` |

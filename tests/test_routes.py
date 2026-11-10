@@ -325,6 +325,8 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
     TOOLS_NETWORK = ("--install", "--on")
     #: P181: a live vendor-pin check fetches a header through gh; only `--offline` stays on the machine.
     VENDOR = "${CLAUDE_PLUGIN_ROOT}/scripts/check_vendor_pins.py"
+    #: P737 step 5: research.py fetches a DFRobot module's wiki page and its documents (the FETCHES effect); every line of it reaches the network.
+    RESEARCH = "${CLAUDE_PLUGIN_ROOT}/scripts/research.py"
 
     @staticmethod
     def allowed():
@@ -366,6 +368,8 @@ class TheNetworkIsThePersonsYesTest(unittest.TestCase):
         lines += ["%s boards/x.json" % self.VENDOR, "%s --json boards/x.json" % self.VENDOR,
                   "%s boards/x.json --json" % self.VENDOR, "%s --repo o/r boards/x.json" % self.VENDOR,
                   "%s ${CLAUDE_PLUGIN_ROOT}/boards/x.json" % self.VENDOR]
+        lines += ["%s --part x-part" % self.RESEARCH, "%s --part x-part --project ." % self.RESEARCH, "%s --json --part x-part" % self.RESEARCH,
+                  "%s --part x-part --project . --replies .spark/research-replies.json --json" % self.RESEARCH]
         return network, lines
 
     def test_the_model_of_the_matcher(self):
