@@ -51,7 +51,7 @@ small agents work on it, in turn:
    catalog record, the `next` step is `--promote <id> --project .`. A library record is used as it is.
    `--fetch` downloads the datasheet, so it reaches the network. No command's `allowed-tools` lets it run unasked, so
    Claude Code asks before it does. The exception is the person's own settings: an allow rule of theirs, or auto mode.
-   The person's answer there is the yes. `--keep` puts a file you already have into the store and does not
+   The person's answer to that question is the yes. `--keep` puts a file you already have into the store and does not
    reach the network.
 3. Launch `datasheet-reader` with the record's path, the kept datasheet and the facts for its kind (below). It reads
    with `parts.py --read`, page by page, and stops where the facts are.
@@ -59,7 +59,7 @@ small agents work on it, in turn:
    `${CLAUDE_PLUGIN_ROOT}/scripts/tools.py --install <name> --project .`, and launch the reader again. `/spark:setup`
    does the same for everything at once. `--install` downloads, so no command's `allowed-tools` lists it. Claude Code
    asks before it runs. The exception is the person's own settings: an allow rule of theirs, or auto mode. The
-   person's answer there is the yes.
+   person's answer to that question is the yes.
 
 A module, or a part identified from a photo with `/spark:identify`, has variants, a chip inside and a schematic to
 read. Launch `parts-researcher` with the need and the vendor order (the brief's `prefer`, default DFRobot then Seeed).
@@ -99,7 +99,7 @@ name of letters, digits and `_`. The board is written with a rail as code, and t
 name a signal: `power[0] rail is 'gnd rail', but a rail is a name — letters, digits and _ (ground, logic,
 motor, 5v): the board is written with it as code`.
 `--unverified` is the list to hand a person: each item, and what depends on it. Write a bench result back with
-`parts.py --fact-set <id> <file>`. Put it under the `write` key of its row, and give a `source` that names the person, the date and the method.
+`parts.py --fact-set <id> <file>`. Put it under the `write` key of its row, and give a `source` that names who did it, the date and the method.
 
 Then run `/spark:build`. `parts.py --promote <id> --project .` copies a verified record into the plugin's library, and
 the next project finds it with `--need`.
@@ -115,5 +115,5 @@ record's `alternatives`. (W21, P83.)
 
 ## What this does not do
 
-It does not pick for you between two fitting parts. It shows both, with what each is missing. It does not make sure
-that a pinout is right, because no software can, from a picture. It does not track prices.
+It does not pick for you between two fitting parts. It shows both, with what each is missing. It does not verify a
+pinout. No software can, from a picture. It does not track prices.
