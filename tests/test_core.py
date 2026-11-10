@@ -214,14 +214,14 @@ class RunCliTest(unittest.TestCase):
     def test_the_builder_gets_the_project_and_the_effects_when_no_outside_is_given(self):
         asked = []
 
-        def builder(project, effects, reporter):
-            asked.append((project, effects, type(reporter)))
+        def builder(project, effects, reporter, values):
+            asked.append((project, effects, type(reporter), values["what"]))
             return FakeOutsideWorld(find_tool={"flasher": TOOL}.get)
         import contextlib
         import io
         with contextlib.redirect_stdout(io.StringIO()):
             code = run_cli(TEXT, Toy(), ["--project", "here", "--what", "ok"], outside_builder=builder)
-        self.assertEqual((code, asked), (0, [(Path("here"), (READS,), TerminalReporter)]))
+        self.assertEqual((code, asked), (0, [(Path("here"), (READS,), TerminalReporter, "ok")]))  # P737: the parsed values reach the builder
 
     def test_the_builder_gets_the_effects_the_operation_narrows_to_for_these_values(self):
         asked = []
@@ -306,7 +306,7 @@ class RunOperationTest(unittest.TestCase):
                 self.assertEqual(lines.count("Traceback (most recent call last):"), 2 if what == "context" else 1)  # a cause raised by `from` has no frames
 
     def test_a_builder_that_crashes_is_a_crash_envelope_too(self):
-        def builder(project, effects, reporter):
+        def builder(project, effects, reporter, values):
             raise OSError("no tools file")
         import contextlib
         import io
@@ -576,7 +576,7 @@ class TheWorldReportsTest(unittest.TestCase):
         import io
         out, err = io.StringIO(), io.StringIO()
 
-        def builder(project, effects, reporter):
+        def builder(project, effects, reporter, values):
             return build_outside_world(effects, reporter, find_tool={"flasher": TOOL}.get)
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = run_cli(TEXT, Reporting(), list(argv), outside_builder=builder)

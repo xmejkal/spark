@@ -1,10 +1,23 @@
 {
-  "//": "What reads which fact of a part record (P738). One row per (kind, fact_path, consumer). status: reads = the consumer reads the fact today; will read = the card in `card` makes it read. RecordShapeSource reads a board's physical.header today, and a module's physical waits for P734. --unverified joins a row on its fact_path only, not on the record's kind, until a second kind has rows. Validators that only require a key (CHAIN_FACTS, part_records, matching) are not consumers and are not listed.",
+  "//": "What reads which fact of a part record (P738). One row per (kind, fact_path, consumer). status: reads = the consumer reads the fact today; will read = the card in `card` makes it read. RecordShapeSource reads a board's physical.header today, and a module's physical waits for P734. --unverified joins a row on its fact_path only, not on the record's kind, until a second kind has rows. Validators that only require a key (CHAIN_FACTS, part_records, matching) are not consumers and are not listed. `questions` (P737) is what research.py asks for a fact path it finds absent: text, unit, answer_form and example, with placeholders only in example, never a number to copy.",
   "needs": [
     {"kind": "module", "fact_path": "body_mm", "consumer": "spark.design.board_components", "status": "reads", "card": null},
     {"kind": "module", "fact_path": "body_mm", "consumer": "spark.design.need_requirements", "status": "reads", "card": null},
     {"kind": "module", "fact_path": "physical.thickness_mm", "consumer": "spark.breadboard.part_shape.RecordShapeSource", "status": "will read", "card": "P734"},
     {"kind": "module", "fact_path": "physical.mounting_holes", "consumer": "spark.breadboard.part_shape.RecordShapeSource", "status": "will read", "card": "P734"},
     {"kind": "module", "fact_path": "physical.header", "consumer": "spark.breadboard.part_shape.RecordShapeSource", "status": "will read", "card": "P734"}
-  ]
+  ],
+  "questions": {
+    "body_mm": {"text": "What are the module's outline width and height?", "unit": "mm",
+                "answer_form": "an object {width, height}, the board's outline without parts that stick out",
+                "example": {"width": "<mm>", "height": "<mm>"}},
+    "physical.thickness_mm": {"text": "How thick is the module's board, without its parts?", "unit": "mm",
+                              "answer_form": "a number", "example": "<mm>"},
+    "physical.mounting_holes": {"text": "Where are the mounting holes, and how wide is each drill?", "unit": "mm",
+                                "answer_form": "a list of {x_mm, y_mm, drill_mm}, each from the board's top-left corner",
+                                "example": [{"x_mm": "<mm>", "y_mm": "<mm>", "drill_mm": "<mm>"}]},
+    "physical.header": {"text": "What is the header's geometry?", "unit": "mm",
+                        "answer_form": "an object {pitch_mm, row_spacing_mm, pins, rows, first_pad_from_edge_mm}; pins is a list of whole counts, one per row; leave out a key the drawing does not give",
+                        "example": {"pitch_mm": "<mm>", "row_spacing_mm": "<mm>", "pins": ["<count>"], "rows": "<count>", "first_pad_from_edge_mm": "<mm>"}}
+  }
 }

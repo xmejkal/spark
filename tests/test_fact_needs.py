@@ -2,6 +2,7 @@
 
 import importlib
 import inspect
+import json
 import re
 import sys
 import unittest
@@ -64,6 +65,16 @@ class FactNeedsAnswerTest(unittest.TestCase):
         self.assertEqual(NEEDS.of_fact("physical"), [], "a block's write key is the block, and its rows are per key")
         self.assertEqual(NEEDS.of_fact("facts.x"), [])
         self.assertEqual(NEEDS.of_fact("header"), [], "a leaf name alone is no write key: the match is on the whole path")
+
+    def test_every_module_fact_has_a_question_with_placeholders_only(self):
+        """P737: research asks the file's question for an absent fact; its example holds no number Claude can copy."""
+        for need in NEEDS.of_kind("module"):
+            with self.subTest(fact=need.fact_path):
+                question = NEEDS.question_of(need.fact_path)
+                self.assertEqual(set(question), {"text", "unit", "answer_form", "example"})
+                self.assertIsNone(re.search(r"\d", json.dumps(question["example"])), "the example holds a number")
+        self.assertIsNone(NEEDS.question_of("facts.x"))
+        self.assertIsNone(FactNeeds(()).question_of("body_mm"), "a FactNeeds with no questions answers None")
 
     def test_a_need_knows_its_fact_name_and_its_envelope_entry(self):
         need = FactNeed("module", "physical.header", "spark.x.Y", WILL_READ, "P734")

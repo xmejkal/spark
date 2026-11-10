@@ -44,14 +44,21 @@ class FactNeed:
 
 @dataclass(frozen=True)
 class FactNeeds:
-    """Value: every row of the file, asked by kind or by the fact an open row writes back to."""
+    """Value: every row of the file, asked by kind or by the fact an open row writes back to, and the question research
+    asks for a fact path it finds absent (P737): `{text, unit, answer_form, example}` by fact path."""
 
     rows: tuple
+    questions: dict = None
 
     @classmethod
     def from_file(cls, path=FILE):
-        """The rows under `needs`; the file's `//` key is prose beside them."""
-        return cls(tuple(FactNeed(**row) for row in json.loads(Path(path).read_text())["needs"]))
+        """The rows under `needs` and the `questions` by fact path; the file's `//` key is prose beside them."""
+        held = json.loads(Path(path).read_text())
+        return cls(tuple(FactNeed(**row) for row in held["needs"]), dict(held.get("questions") or {}))
+
+    def question_of(self, fact_path):
+        """The question research asks for this fact path, or None when the file has none."""
+        return (self.questions or {}).get(fact_path)
 
     def of_kind(self, kind):
         """The needs of a part of this kind."""
