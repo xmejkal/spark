@@ -1,9 +1,9 @@
 <!-- Resume: invoke product-discovery again. `discovery.py check <this folder>` names the next step. -->
 # P735 full records of the PO's DFRobot parts: discovery brief
 
-**Ready for:** collecting evidence. The frame (D1) and the direction (D2) are the PO's. The jobs, the importance of each assumption and the pass line of A1 wait on Q1. <!-- REQUIRED:ready -->
-**Stands on:** 6 H, — of which would change the decision, until Q1 rates them <!-- REQUIRED:debt -->
-**Decision needed:** the PO rates A1 to A6 and sets the pass line of the geometry count (Q1). Then the design of the research pipeline starts in plan mode with a council (D2). <!-- REQUIRED:decision-needed -->
+**Ready for:** collecting evidence. The frame (D1), the direction (D2, D5, D6) and the ratings (D7) are the PO's. The fact tree (D8), the pass line of A1, the architecture (Q6) and the jobs wait. <!-- REQUIRED:ready -->
+**Stands on:** 6 H, 4 of which would change the decision (A1 to A4, D7) <!-- REQUIRED:debt -->
+**Decision needed:** the PO reads the fact tree analysis (D8), sets the pass line of the geometry count (Q1) and picks the architecture direction (Q6). Then the design of the research pipeline starts in plan mode with a council (D2). <!-- REQUIRED:decision-needed -->
 
 > TL;DR. Four walks ran spark's research flow on four owned DFRobot parts. All four made a valid record. DFRobot published hole and header coordinates in full for 2 of 4, but the record has no typed field for them, and the breadboard drawing reads none of them. Eight reproduced tool bugs and several flow gaps make each record a hand job. The PO's direction (D2, D5, D6) is a designed research pipeline with ordered, swappable sources of many kinds, DFRobot first, usable later from LangGraph, RAG, agents and people. The PO rated A1 to A4 high (D7) and asked for a dependency tree of information needs (D8).
 
