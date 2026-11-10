@@ -2,7 +2,7 @@
 
 The design in `docs/discovery/2026-11-10-p735-dfrobot-records/design.md`. Card: [P737 #1013](https://github.com/xmejkal/spark/issues/1013).
 Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter on Fable), rows 25 to 38 its round 2
-(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet), rows 42 to 51 the step 2 implementer's rulings (Fable, PR p737-replies), rows 52 to 58 its reviewer (Sonnet) and refuter (Fable). 2026-11-10.
+(one lens on Sonnet, the refuter on Fable), rows 39 to 41 the PR reviewer (Sonnet), rows 42 to 51 the step 2 implementer's rulings (Fable, PR p737-replies), rows 52 to 58 its reviewer (Sonnet) and refuter (Fable), rows 59 to 64 the step 3 implementer's rulings (Fable, PR p737-physical). 2026-11-10.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -64,3 +64,9 @@ Rows 1 to 24 are the plan council's round 1 (three lenses on Sonnet, the refuter
 | 56 | no test covered an unknown key with no near match, an empty open list, or the `bad_reply` fix text | PR reviewer | acted | three assertions and two tests added |
 | 57 | `data.open`, the `notes` line, `next[0]` with `--replies` and `needs_person` on the step have no code; replies.md said them in the present tense | PR refuter | acted | they are the Operation's (step 4, as the Steps list says); replies.md marks the two envelope lines as step 4's; this row records the ruling |
 | 58 | `bad_reply` also rejects a non-finite number, and codes.py and replies.md did not say so; the anchor expression is not verbatim (`clock or SystemClock()` became `SystemClock()`) | PR refuter | acted | both say "or not a finite number"; the anchors hold (row 43 says why the clock went) |
+| 59 | the design wrote `mounting_holes` "with the board record's key names", but a board's `mounting_holes` is `{count, diameter_mm, inset_mm, spacing_x_mm, spacing_y_mm}`, not a list of points | step 3 implementer | acted | the design's list of `{x_mm, y_mm, drill_mm}` is kept: a point per hole is what a drawing gives and what a sheet draws; the board's summary shape is a later unification, if `RecordShapeSource` wants one (P734) |
+| 60 | `PROOF_BLOCKS` put its constant `why` over the block's own `why_it_matters`, but the design gives `physical_proof` its own | step 3 implementer | acted | `_unverified_row` reads the block's `why_it_matters` first and the constant as the fallback; the pin-order test still sees the constant, because the joystick's proof carries none; a mutation row proves the order |
+| 61 | a module whose vendor publishes none of the three sizes has no `physical` to write, yet the fact "not published" must be kept | step 3 implementer | acted | `physical_proof` with no `physical` holds when `not_published` is not empty, and is refused when it is; tested |
+| 62 | `physical_proof.cites` needed no new rule | step 3 implementer | closed | `record_kind.document_problems` reads every `cites` at any depth and refuses one that names no kept document; the fixture carries a `documents` entry |
+| 63 | `--unverified` names no reader for `physical`, though `data/fact-needs.json` has three `physical.*` rows | step 3 implementer | closed | row 21 and P738's test pin `of_fact` to an exact match on the `write` key; the join widens with P734, when the sheet reads a module's `physical` |
+| 64 | json.md and scripts.md were each at their budget, so the record's shape is said in one sentence each; the full shape lives in the design | step 3 implementer | acted | json.md names `physical_proof` as a `write` key and what it vouches for; scripts.md says a `physical` is written with its proof in one file; step 4's commands/research.md describes the shape for a researcher |

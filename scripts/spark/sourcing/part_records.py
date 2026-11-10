@@ -9,6 +9,7 @@ to, what a record does (`function_of`, `function_problems`, `aliases`), and a br
 
 import functools
 import json
+import math
 import re
 from pathlib import Path
 
@@ -240,6 +241,80 @@ def body_problems(part, validation):
     return problems
 
 
+#: What `physical` holds beside the outline in `body_mm` (P737): bare values under the board record's key names. A key
+#: the vendor did not publish is left out and named in `physical_proof.not_published`, never null and never an empty list.
+PHYSICAL_KEYS = ("thickness_mm", "mounting_holes", "header")
+#: A hole is a point and a drill, from the board's top-left corner; a header's sizes are the pitch and the row geometry.
+HOLE_KEYS, HEADER_SIZES = ("x_mm", "y_mm", "drill_mm"), ("pitch_mm", "row_spacing_mm", "first_pad_from_edge_mm")
+PHYSICAL_WHY = "a hole or a header placed wrong puts the module where its pins miss the breadboard"
+
+
+def _above_zero(value):
+    """A finite number above 0, and not a bool: the only kind of size a record carries."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+
+
+def _physical_value_problems(physical):
+    """Each key of `physical` that is null or empty, each size that is not finite and above 0, and each hole missing a coordinate."""
+    problems = ["physical.%s is %r; leave the key out and name it in physical_proof.not_published" % (key, value)
+                for key, value in physical.items() if value is None or value == []]
+    if "thickness_mm" in physical and not _above_zero(physical["thickness_mm"]):
+        problems.append("physical.thickness_mm is %r, but it is a number above 0" % (physical["thickness_mm"],))
+    holes = physical.get("mounting_holes")
+    if isinstance(holes, list):
+        problems += ["physical.mounting_holes[%d] has no %s above 0" % (index, key) for index, hole in enumerate(holes)
+                     for key in HOLE_KEYS if not (isinstance(hole, dict) and _above_zero(hole.get(key)))]
+    elif holes is not None and holes != []:
+        problems.append("physical.mounting_holes is %r, but it is a list of {x_mm, y_mm, drill_mm}" % (holes,))
+    header = physical.get("header")
+    if isinstance(header, dict):
+        problems += ["physical.header.%s is %r, but it is a number above 0" % (key, header[key])
+                     for key in HEADER_SIZES + ("rows",) if key in header and not _above_zero(header[key])]
+        pins = header.get("pins")
+        if pins is not None and not (isinstance(pins, list) and pins and all(_above_zero(count) for count in pins)):
+            problems.append("physical.header.pins is %r, but it is a list of pin counts above 0, one per row" % (pins,))
+        elif pins is not None and _above_zero(header.get("rows")) and len(pins) != header["rows"]:
+            problems.append("physical.header.pins counts %d row(s), but rows says %r" % (len(pins), header["rows"]))
+    elif header is not None:
+        problems.append("physical.header is %r, but it is an object" % (header,))
+    return problems
+
+
+def physical_problems(part, validation):
+    """
+    A `physical` (the module's thickness, holes and header, beside `body_mm`'s outline) with no `physical_proof`, a null
+    or an empty key, a size that is not finite and above 0, a hole missing a coordinate, or a proof that names a key the
+    block holds (P737). A proof with no block holds only when it names what was not published.
+    """
+    physical, proof = part.get("physical"), part.get("physical_proof")
+    if physical is None and proof is None:
+        return []
+    if physical is not None and not isinstance(physical, dict):
+        return ["physical is %r, but it is an object of %s" % (physical, ", ".join(PHYSICAL_KEYS))]
+    if physical == {}:
+        return ["physical is empty; leave the block out, and name what was not published in physical_proof.not_published"]
+    if not isinstance(proof, dict):
+        return ["physical states no physical_proof {verified, source, cites, not_published}: where the sizes were read, "
+                "because %s" % PHYSICAL_WHY]
+    problems = ["physical_proof has no %r — a size with no provenance is a guess" % key
+                for key in ("verified", "source") if key not in proof]
+    problems += provenance.list_type_problems("physical_proof", proof)
+    if proof.get("verified") is False and not proof.get("why_it_matters"):
+        problems.append("physical_proof is unverified with no why_it_matters; say what depends on it — here, where "
+                        "the module's holes and pins land")
+    not_published = proof.get("not_published", [])
+    if not (isinstance(not_published, list) and all(isinstance(key, str) for key in not_published)):
+        problems.append("physical_proof.not_published is %r, but it is a list of the keys the vendor did not publish"
+                        % (not_published,))
+        not_published = []
+    if physical is None:
+        return problems + ([] if not_published else ["physical_proof vouches for no physical and names nothing in "
+                                                      "not_published: leave both out, or say what was not published"])
+    problems += ["physical_proof.not_published names %s, but physical holds it: one of the two is wrong" % key
+                 for key in not_published if key in physical]
+    return problems + _physical_value_problems(physical)
+
+
 def placeholder_problems(part, validation):
     """A footprint placeholder that says nothing of the real footprint."""
     # A footprint standing in for the real one. `facts` and `body_mm` carry `verified`; the footprint carried no
@@ -385,7 +460,8 @@ def part_function_problems(part, validation):
 
 
 RULES = (id_problems, field_type_problems, retired_key_problems, need_problems, missing_pin_problems,
-         selector_pin_problems, rail_and_signal_problems, body_problems, placeholder_problems, footprint_name_problems,
+         selector_pin_problems, rail_and_signal_problems, body_problems, physical_problems, placeholder_problems,
+         footprint_name_problems,
          pin_order_pad_problems, pad_count_problems, power_direction_problems, part_fact_problems,
          part_host_part_problems, part_i2c_pullup_problems, part_document_problems, pin_order_proof_problems,
          part_simulation_problems, part_function_problems)

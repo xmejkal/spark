@@ -231,13 +231,13 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
   is not empty. Each entry says what it is about (`fact`), why nobody has checked it (`basis`) and what depends on it (`sentence`).
   - `--unverified` lists one per fact whose `verified` is not true: `fact` is `<part>.<fact>`, `basis` is `unverified`,
     `assumed` is the value taken for now, `source` is where it came from, and `write` is the key a result goes back to
-    with `--fact-set`: `facts.<name>`, `pin_order_proof` or `body_mm`. A guessed outline (`body_mm`) is listed, with its
-    width and height as `assumed`. A skeleton outline (verified false, width and height null) is listed too, with nulls:
-    it must be measured, and a null is never a value to copy back. `read_by` lists who reads the fact (`data/fact-needs.json`):
+    with `--fact-set`: `facts.<name>`, `pin_order_proof`, `body_mm` or `physical_proof` (it vouches for `physical`, a
+    module's thickness, holes and header; a key the vendor did not publish is in its `not_published`). A guessed outline
+    is listed with its width and height as `assumed`; a skeleton outline with nulls, never a value to copy back.
+    `read_by` lists who reads the fact (`data/fact-needs.json`):
     each reader's `consumer`, `status` (`reads` today, or `will read`) and `card` (what makes it read, null for `reads`).
-    A `write` of null means the record's `facts` is no object: repair the file by hand. `next` holds one
-    `--fact-set <part> <file>` step, for the first part that has a row with a `write` key; with no such row it is empty,
-    and the row's sentence already says to repair the file by hand. The text ends with the same step as a `next:` line.
+    A `write` of null means the record's `facts` is no object: repair the file by hand. `next` holds one `--fact-set <part>
+    <file>` step, for the first part with a `write` key; with no such row it is empty. The text ends with the same `next:` line.
   - `--show` lists a CONFLICT that rests on an unverified fact: `fact` is `<part>.<pin>`, `basis` is `unmeasured`,
     `rests_on` names the facts to verify as `<part>.<fact>`, and `upgrade` says how. This `unmeasured` is a basis, not
     `check_all`'s `unmeasured[]` list.
