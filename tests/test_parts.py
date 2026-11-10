@@ -1599,6 +1599,183 @@ class APinOrderSaysHowItWasReadTest(unittest.TestCase):
         self.assertEqual(len(listed), 1)
         self.assertEqual(listed[0]["source"], "read off a photo")
 
+class AModulesPhysicalSaysHowItWasReadTest(unittest.TestCase):
+    """
+    P737 step 3. `physical` holds what `body_mm` does not (the thickness, the holes, the header) as bare values under the
+    board record's key names, and one `physical_proof` beside it says where they were read. A key the vendor did not
+    publish is left out and named in the proof's `not_published`, never null and never an empty list.
+    """
+
+    PHYSICAL = {"thickness_mm": 1.6,
+                "mounting_holes": [{"x_mm": 2.0, "y_mm": 2.0, "drill_mm": 2.2}, {"x_mm": 14.0, "y_mm": 2.0, "drill_mm": 2.2}],
+                "header": {"pitch_mm": 2.54, "row_spacing_mm": 7.62, "pins": [4, 4], "rows": 2, "first_pad_from_edge_mm": 1.27}}
+    PROOF = {"verified": True, "source": "the vendor's dimension drawing",
+             "cites": {"document": "sen0526-dimensions", "at": "page 1"}, "not_published": []}
+
+    DOCUMENTS = {"sen0526-dimensions": {"url": "https://example.test/sen0526.pdf", "file": "sen0526.pdf", "sha256": "a" * 64}}
+
+    def record(self, **extra):
+        definition = part("x-mic", physical=dict(self.PHYSICAL), physical_proof=dict(self.PROOF), documents=self.DOCUMENTS)
+        definition.update(extra)
+        return definition
+
+    def problems(self, **extra):
+        return [p for p in part_records.validate(self.record(**extra), written(self.record(**extra))) if "physical" in p]
+
+    def test_a_block_with_its_proof_passes_and_a_record_with_neither_is_not_asked(self):
+        self.assertEqual(self.problems(), [])
+        self.assertEqual(self.problems(physical=None, physical_proof=None), [])
+
+    def test_a_block_without_its_proof_is_refused_with_why_it_matters(self):
+        said = self.problems(physical_proof=None)
+        self.assertEqual(len(said), 1)
+        self.assertIn("physical states no physical_proof", said[0])
+        self.assertIn("pins miss the breadboard", said[0])
+
+    def test_a_block_that_is_no_object_or_is_empty_is_one_problem(self):
+        self.assertEqual(self.problems(physical=[1.6]), ["physical is [1.6], but it is an object of thickness_mm, mounting_holes, header"])
+        self.assertEqual(self.problems(physical={}), ["physical is empty; leave the block out, and name what was not "
+                                                       "published in physical_proof.not_published"])
+
+    def test_a_null_or_an_empty_key_is_refused_and_sent_to_not_published(self):
+        for value in (None, []):
+            with self.subTest(value=value):
+                said = self.problems(physical=dict(self.PHYSICAL, mounting_holes=value))
+                self.assertEqual(said, ["physical.mounting_holes is %r; leave the key out and name it in "
+                                        "physical_proof.not_published" % (value,)])
+
+    def test_every_size_is_a_finite_number_above_zero(self):
+        for bad in (0, -1.6, float("nan"), float("inf"), "1.6", True):
+            with self.subTest(bad=bad):
+                self.assertEqual(self.problems(physical=dict(self.PHYSICAL, thickness_mm=bad)),
+                                 ["physical.thickness_mm is %r, but it is a number above 0" % (bad,)])
+        header = dict(self.PHYSICAL["header"], pitch_mm=0)
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=header)),
+                         ["physical.header.pitch_mm is 0, but it is a number above 0"])
+
+    def test_each_hole_has_its_two_coordinates_and_its_drill(self):
+        holes = [{"x_mm": 2.0, "y_mm": 2.0, "drill_mm": 2.2}, {"x_mm": 14.0, "y_mm": 2.0}, 7]
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, mounting_holes=holes)),
+                         ["physical.mounting_holes[1] has no drill_mm above 0"] +
+                         ["physical.mounting_holes[2] has no %s above 0" % key for key in ("x_mm", "y_mm", "drill_mm")])
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, mounting_holes={"count": 4})),
+                         ["physical.mounting_holes is {'count': 4}, but it is a list of {x_mm, y_mm, drill_mm}"])
+
+    def test_a_header_counts_its_pins_per_row(self):
+        header = dict(self.PHYSICAL["header"], pins=[8])
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=header)),
+                         ["physical.header.pins counts 1 row(s), but rows says 2"])
+        for pins in ([4, 0], [True], 8):
+            with self.subTest(pins=pins):
+                said = self.problems(physical=dict(self.PHYSICAL, header=dict(self.PHYSICAL["header"], pins=pins)))
+                self.assertEqual(said, ["physical.header.pins is %r, but it is a list of whole pin counts above 0, one per row" % (pins,)])
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=2.54)), ["physical.header is 2.54, but it is an object"])
+
+    def test_counts_are_whole_numbers_and_a_header_key_is_never_null_or_empty(self):
+        header = dict(self.PHYSICAL["header"], rows=2.0)
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=header)),
+                         ["physical.header.rows is 2.0, but it is a whole number above 0"])
+        header = dict(self.PHYSICAL["header"], pins=[8.5, 4])
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=header)),
+                         ["physical.header.pins is [8.5, 4], but it is a list of whole pin counts above 0, one per row"])
+        for value in (None, [], {}):
+            with self.subTest(value=value):
+                header = dict(self.PHYSICAL["header"], pins=value)
+                self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header=header)),
+                                 ["physical.header.pins is %r; leave the key out and name it in physical_proof.not_published" % (value,)])
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, header={})),
+                         ["physical.header is {}; leave the key out and name it in physical_proof.not_published"])
+
+    def test_a_huge_integer_is_a_size_and_never_a_traceback(self):
+        huge = 10 ** 400  # valid JSON; math.isfinite raises OverflowError on it (P434)
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, thickness_mm=huge)), [])
+        holes = [{"x_mm": huge, "y_mm": 2.0, "drill_mm": 2.2}]
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, mounting_holes=holes)), [])
+
+    def test_the_block_holds_the_three_keys_and_notes_under_double_slash(self):
+        self.assertEqual(self.problems(physical=dict(self.PHYSICAL, **{"width_mm": 16, "//header": "two rows"})),
+                         ["physical.width_mm is not one of thickness_mm, mounting_holes, header: a size the sheet reads goes under "
+                          "the board record's key name, and a note under a key that starts with //"])
+
+    def test_fact_set_writes_the_block_with_its_proof_and_refuses_a_wrong_one(self):
+        home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
+        (home / "catalog" / "x-mic.json").write_text(json.dumps(self.record(physical=None, physical_proof=None)))
+        given = home / "write.json"
+        given.write_text(json.dumps({"physical": self.PHYSICAL, "physical_proof": self.PROOF}))
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-mic", str(given)])
+            after = json.loads((home / "catalog" / "x-mic.json").read_text())
+            given.write_text(json.dumps({"physical": {"thickness_mm": 0}, "physical_proof": self.PROOF}))
+            refused, bad = run_json(["--fact-set", "x-mic", str(given)])
+        self.assertEqual((code, after["physical"], after["physical_proof"]), (0, self.PHYSICAL, self.PROOF))
+        self.assertEqual((bad, [p["sentence"] for p in refused["problems"]]),
+                         (1, ["physical.thickness_mm is 0, but it is a number above 0"]))
+
+    def test_the_proof_carries_verified_and_source_and_an_unverified_one_its_why(self):
+        self.assertEqual(len(self.problems(physical_proof={})), 2)
+        self.assertEqual(self.problems(physical_proof={"verified": False, "source": "a photo"}),
+                         ["physical_proof is unverified with no why_it_matters; say what depends on it — here, where "
+                          "the module's holes and pins land"])
+        self.assertEqual(self.problems(physical_proof={"verified": False, "source": "a photo", "why_it_matters": "the fit"}), [])
+        self.assertTrue(self.problems(physical_proof={"verified": "yes", "source": ""}))
+
+    def test_not_published_names_only_keys_the_block_leaves_out(self):
+        self.assertEqual(self.problems(physical_proof=dict(self.PROOF, not_published=["thickness_mm"])),
+                         ["physical_proof.not_published names thickness_mm, but physical holds it: one of the two is wrong"])
+        without = {key: value for key, value in self.PHYSICAL.items() if key != "thickness_mm"}
+        self.assertEqual(self.problems(physical=without, physical_proof=dict(self.PROOF, not_published=["thickness_mm"])), [])
+        self.assertEqual(self.problems(physical_proof=dict(self.PROOF, not_published="thickness_mm")),
+                         ["physical_proof.not_published is 'thickness_mm', but it is a list of the keys the vendor did not publish"])
+
+    def test_a_proof_that_is_no_object_and_a_null_size_are_each_one_sentence(self):
+        self.assertEqual(self.problems(physical_proof=["the wiki"]),
+                         ["physical_proof is ['the wiki'], but it is an object {verified, source, cites, not_published}"])
+        self.assertEqual(self.problems(physical=None, physical_proof="the wiki"),
+                         ["physical_proof is 'the wiki', but it is an object {verified, source, cites, not_published}"])
+        self.assertEqual(len(self.problems(physical=dict(self.PHYSICAL, thickness_mm=[]))), 1)
+        self.assertEqual(len(self.problems(physical=dict(self.PHYSICAL, header=None))), 1)
+
+    def test_not_published_names_only_the_three_keys(self):
+        self.assertEqual(self.problems(physical_proof=dict(self.PROOF, not_published=["colour"])),
+                         ["physical_proof.not_published names colour, which is not one of thickness_mm, mounting_holes, header"])
+
+    def test_a_proof_with_no_block_holds_only_when_it_names_what_was_not_published(self):
+        self.assertEqual(self.problems(physical=None, physical_proof=dict(self.PROOF, not_published=["thickness_mm", "mounting_holes", "header"])), [])
+        self.assertEqual(self.problems(physical=None),
+                         ["physical_proof vouches for no physical and names nothing in not_published: leave both out, "
+                          "or say what was not published"])
+
+    def test_an_unverified_block_is_listed_with_its_own_why_and_goes_back_under_physical_proof(self):
+        proof = {"verified": False, "source": "read off the wiki's drawing", "why_it_matters": "where the holes land"}
+        listed = [q for q in part_facts.open_questions_of(self.record(physical_proof=proof)) if q["fact"] == "physical"]
+        self.assertEqual(listed, [{"part": "x-mic", "fact": "physical", "assumed": self.PHYSICAL, "write": "physical_proof",
+                                   "source": "read off the wiki's drawing", "why_it_matters": "where the holes land"}])
+        self.assertEqual(part_facts.open_questions_of(self.record()), [], "a verified block is not an open question")
+
+    def test_show_prints_the_block_its_proof_and_what_was_not_published(self):
+        home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
+        without = {key: value for key, value in self.PHYSICAL.items() if key != "thickness_mm"}
+        proof = {"verified": False, "source": "the wiki table", "why_it_matters": "where the holes land", "not_published": ["thickness_mm"]}
+        (home / "catalog" / "x-mic.json").write_text(json.dumps(self.record(physical=without, physical_proof=proof)))
+        with in_store(home):
+            said, code = run_json(["--show", "x-mic"])
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                parts.main(["--show", "x-mic"])
+        self.assertEqual((code, said["data"]["record"]["physical"]), (0, without))
+        text = out.getvalue()
+        self.assertIn("  physical: UNVERIFIED (the wiki table)\n", text)
+        self.assertIn("    mounting_holes               [{\"x_mm\": 2.0, \"y_mm\": 2.0, \"drill_mm\": 2.2}, ", text)
+        self.assertIn("    header                       {\"pitch_mm\": 2.54, ", text)
+        self.assertIn("    not published: thickness_mm\n      where the holes land\n", text)
+        self.assertNotIn("thickness_mm ", text.split("not published")[0])
+
+    def test_validate_passes_a_project_record_with_the_block(self):
+        project = Path(tempfile.mkdtemp()); (project / "parts").mkdir()
+        (project / "parts" / "x-mic.json").write_text(json.dumps(self.record()))
+        said, code = run_json(["--validate", "--project", str(project)])
+        self.assertEqual((code, [one["problems"] for one in said["data"]["checked"] if one["part"] == "x-mic"]), (0, [[]]))
+
+
 class APullTheBoardAddsAgainstTheModulesOwnIsShownWithItsArithmeticTest(unittest.TestCase):
     """
     P81 increment 2, B11. The L9110S record states, verified, 10 k pull-ups to VCC on its inputs, and

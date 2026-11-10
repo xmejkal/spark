@@ -184,6 +184,20 @@ def skeleton(part_id, kind, vendor=None):
     }
 
 
+def _physical_lines(part):
+    """The `physical` block and its proof, as `--show` prints them (P737): each size, the mark, the source, the keys not published."""
+    physical, proof = part.get("physical"), part.get("physical_proof")
+    if not isinstance(proof, dict):
+        return []
+    lines = ["\n  physical: %s (%s)" % ("verified" if proof.get("verified") else "UNVERIFIED", proof.get("source", ""))]
+    lines += ["    %-28s %s" % (key, json.dumps(value)) for key, value in (physical.items() if isinstance(physical, dict) else ())]
+    if proof.get("not_published"):
+        lines.append("    not published: %s" % ", ".join(map(str, proof["not_published"])))
+    if not proof.get("verified") and proof.get("why_it_matters"):
+        lines.append("      %s" % proof["why_it_matters"])
+    return lines
+
+
 def describe(part):
     lines = ["%s — %s" % (part["name"], part["kind"]), ""]
     lines.append("  asks the host for:")
@@ -201,6 +215,7 @@ def describe(part):
             if not fact.get("verified") and fact.get("why_it_matters"):
                 lines.append("      %s" % fact["why_it_matters"])
 
+    lines += _physical_lines(part)
     for requirement in part.get("host_requirements") or []:
         lines.append("\n  the board must: %s" % requirement)
     for conflict in conflicts_of(part):

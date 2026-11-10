@@ -91,9 +91,11 @@ def list_entry_problems(entries, held):
     return problems + list_fact_problems(entries)
 
 
-#: A top-level block that vouches for a fact of the record (`pin_order_proof` for `pin_order`): the fact it vouches for,
-#: and the sentence that says what depends on it. Its row comes right after the facts.
-PROOF_BLOCKS = {"pin_order_proof": ("pin_order", "a pin order read wrong reverses a supply or swaps a signal")}
+#: A top-level block that vouches for a fact of the record (`pin_order_proof` for `pin_order`, `physical_proof` for
+#: `physical`, P737): the fact it vouches for, and the sentence that says what depends on it when the block itself
+#: carries no `why_it_matters`. Its row comes right after the facts.
+PROOF_BLOCKS = {"pin_order_proof": ("pin_order", "a pin order read wrong reverses a supply or swaps a signal"),
+                "physical_proof": ("physical", "a hole or a header placed wrong puts the module where its pins miss the breadboard")}
 
 #: What a top-level block carries besides the value it vouches for. The rest of the block is its `assumed`.
 BLOCK_NOTES = ("verified", "source", "why_it_matters", "cites")
@@ -101,7 +103,7 @@ BLOCK_NOTES = ("verified", "source", "why_it_matters", "cites")
 
 def _unverified_row(fact, assumed, block, write, why=None):
     """One row of `list_unverified_facts`: `write` is the key a result goes back to, a constant and never English."""
-    return {"fact": fact, "assumed": assumed, "why_it_matters": why or block.get("why_it_matters") or "",
+    return {"fact": fact, "assumed": assumed, "why_it_matters": block.get("why_it_matters") or why or "",
             "source": block.get("source", ""), "write": write}
 
 

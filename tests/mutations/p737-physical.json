@@ -1,0 +1,19 @@
+[
+ {"file": "scripts/spark/records/provenance.py", "name": "the physical proof block is not listed by --unverified", "find": "                \"physical_proof\": (\"physical\", \"a hole or a header placed wrong puts the module where its pins miss the breadboard\")}", "replace": "                }"},
+ {"file": "scripts/spark/records/provenance.py", "name": "the constant why hides the block's own why", "find": "\"why_it_matters\": block.get(\"why_it_matters\") or why or \"\",", "replace": "\"why_it_matters\": why or block.get(\"why_it_matters\") or \"\","},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a block without its proof passes", "find": "    if proof is None:\n        return [\"physical states no physical_proof", "replace": "    if False:\n        return [\"physical states no physical_proof"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "zero and a negative size pass", "find": "(isinstance(value, int) or math.isfinite(value)) and value > 0", "replace": "(isinstance(value, int) or math.isfinite(value))"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a NaN or an infinite size passes", "find": "not isinstance(value, bool) and (isinstance(value, int) or math.isfinite(value))", "replace": "not isinstance(value, bool)"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a hole may miss its drill", "find": "HOLE_KEYS, HEADER_SIZES = (\"x_mm\", \"y_mm\", \"drill_mm\"),", "replace": "HOLE_KEYS, HEADER_SIZES = (\"x_mm\", \"y_mm\"),"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a null key passes", "find": "for key, value in block.items() if _unpublished(value)]", "replace": "for key, value in block.items() if value == []]"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "not_published may name a key the block holds", "find": "                 for key in not_published if key in physical]", "replace": "                 for key in not_published if False]"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a proof with no block and nothing not published passes", "find": "        return problems + ([] if not_published else [\"physical_proof vouches for no physical", "replace": "        return problems + ([] if True else [\"physical_proof vouches for no physical"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "the pin counts need not match the rows", "find": "elif not _unpublished(pins) and _count(header.get(\"rows\")) and len(pins) != header[\"rows\"]:", "replace": "elif False:"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "the physical rule is not run by validate", "find": "body_problems, physical_problems, placeholder_problems,", "replace": "body_problems, placeholder_problems,"},
+ {"file": "scripts/spark/sourcing/part_facts.py", "name": "--show prints no physical block", "find": "    lines += _physical_lines(part)\n", "replace": ""},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a huge integer size crashes validate", "find": "(isinstance(value, int) or math.isfinite(value)) and value > 0", "replace": "math.isfinite(value) and value > 0"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a fractional count passes", "find": "    return isinstance(value, int) and _above_zero(value)", "replace": "    return _above_zero(value)"},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a header key may be null or empty", "find": "        problems += _empty_key_problems(\"physical.header\", header)\n", "replace": ""},
+ {"file": "scripts/spark/sourcing/part_records.py", "name": "a key outside the three passes", "find": "for key in physical if key not in PHYSICAL_KEYS and not str(key).startswith(\"//\")]", "replace": "for key in physical if False]"},
+ {"file": "scripts/spark/sourcing/drawer.py", "name": "--fact-set refuses a physical write", "find": "\"pin_roles\", \"physical\", \"physical_proof\")", "replace": "\"pin_roles\")"}
+]

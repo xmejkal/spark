@@ -293,8 +293,8 @@ These write:
     `now` show `verified` and the `source` in full, with control characters cleaned. Three writes, each in a file:
     `{"facts": {"runs_at_3v3": {"value": true, "verified": true, "source": "<who, when, how>"}}}` replaces that one
     entry whole and keeps the others; `{"body_mm": {"width": 33.5, "height": 25.8, "verified": true, "source": "<…>"}}`;
-    `{"pin_order_proof": {"verified": true, "source": "<…>"}}`. A write replaces the whole entry or block, so
-    it drops what the file leaves out: copy the row's current block into the file first (the `assumed` keys, `note`,
+    `{"pin_order_proof": {"verified": true, "source": "<…>"}}`; a `physical` goes with its `physical_proof` in one file.
+    A write replaces the whole entry or block, so it drops what the file leaves out: copy the row's current block into the file first (the `assumed` keys, `note`,
     `where`), and keep a `cites` only if that source still backs the written value. A bench result keeps the manual's
     citation when the manual states the same value, and loses it when the bench differs. The text is cleaned as the
     dry run's `now` shows: a control character, a newline too, becomes a space, and a text is cut at 1000 characters

@@ -209,9 +209,10 @@ def _op_fact_set(args, project):
     """Fill a record's chain facts, write `facts` entries by name (a bench result and its source, P374), or set what it says of itself (about, description, tags)."""
     part_id, name = args.fact_set
     facts = _read_json_input(name)
-    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + ("facts", "pin_roles"))):
-        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s, or `facts` entries by name; or of what a "
-                                                  "record says of itself: %s" % (", ".join(CHAIN_FACTS), ", ".join(drawer.DESCRIBING)))])
+    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + drawer.PROVENANCE_KEYS)):
+        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s, or `facts` entries by name, or `physical` "
+                                                  "with its `physical_proof`; or of what a record says of itself: %s"
+                                                  % (", ".join(CHAIN_FACTS), ", ".join(drawer.DESCRIBING)))])
     facts = {key: drawer.scrub(key, value) if key in drawer.DESCRIBING + drawer.PROVENANCE_KEYS else value for key, value in facts.items()}
     wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])] + drawer.list_provenance_key_problems(facts)
     if wrong:

@@ -111,6 +111,19 @@ class ListUnverifiedFactsTest(unittest.TestCase):
         self.assertEqual(rows[2]["assumed"], ["GND", "VCC", "X"])
         self.assertEqual(rows[2]["why_it_matters"], "a pin order read wrong reverses a supply or swaps a signal")
 
+    def test_a_physical_block_s_row_comes_with_the_proofs_and_its_own_why_wins_over_the_constant(self):
+        record = joystick(physical={"thickness_mm": 1.6},
+                          physical_proof={"verified": False, "source": "the wiki", "why_it_matters": "where the holes land"})
+        rows = provenance.list_unverified_facts(record)
+        self.assertEqual([(row["fact"], row["write"]) for row in rows],
+                         [("runs_at_3v3", "facts.runs_at_3v3"), ("pin_order", "pin_order_proof"), ("physical", "physical_proof"),
+                          ("body_mm", "body_mm")])
+        self.assertEqual((rows[2]["assumed"], rows[2]["why_it_matters"], rows[2]["source"]),
+                         ({"thickness_mm": 1.6}, "where the holes land", "the wiki"))
+        del record["physical_proof"]["why_it_matters"]
+        self.assertEqual(provenance.list_unverified_facts(record)[2]["why_it_matters"],
+                         "a hole or a header placed wrong puts the module where its pins miss the breadboard")
+
     def test_a_facts_that_is_no_object_is_one_row_with_no_write_key_and_never_a_traceback(self):
         rows = provenance.list_unverified_facts(joystick(facts=5))
         self.assertEqual([(row["fact"], row["write"]) for row in rows], [("facts", None)])
