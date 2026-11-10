@@ -14,6 +14,7 @@ The refuter (Opus) read the brief as it stood before its corrections. The rows b
 - ★C10 · council/refuter.md:73 · refuter: partly, "3 to 10 fetches and 0 to 16 URL checks" · reproduced how: re-read the four diaries' Counts parts · result: reproduced, as corrected · keep: estimates
 
 - ★C17 · council/fact-tree.md:9 · refuter: not run on it, added after both passes · reproduced how: grep found `CHAIN_FACTS` at scripts/spark/records/record_kind.py:37, `LAYOUT_FACTS` at scripts/spark/design/need_requirements.py:71, `PART_GAPS` at scripts/spark/design/board_emitter.py:92, no file in scripts/ that reads the research.md table, and no file that reads `sel_has_pull`, `sd_pulldown_ohms` or `needs_mclk` · result: reproduced · keep: spot-checked
+- ★C18 · scripts/spark/core/result.py:50 · refuter: not run on it, added at the close · reproduced how: grep for class names found OperationResult at result.py:50, GrantStore at board_grant.py:147 and GrantService at :211 · result: reproduced · keep: not yet read in full
 
 ## Agree / split
 - Agree: the four walks, the three lenses and the refuter agree on three points. The record has no typed place for geometry, no reader draws it, and the hand steps of ★C6 repeat in every walk. <!-- REQUIRED:agree-split -->

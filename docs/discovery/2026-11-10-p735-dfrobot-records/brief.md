@@ -1,9 +1,9 @@
 <!-- Resume: invoke product-discovery again. `discovery.py check <this folder>` names the next step. -->
 # P735 full records of the PO's DFRobot parts: discovery brief
 
-**Ready for:** collecting evidence. The frame (D1), the direction (D2, D5, D6) and the ratings (D7) are the PO's. The fact tree (D8), the pass line of A1, the architecture (Q6) and the jobs wait. <!-- REQUIRED:ready -->
+**Ready for:** design. The PO confirmed the frame (D1), the direction (D2, D5, D6, D12), the jobs and the map (D11), the ratings (D7) and the test (D10). The design starts in plan mode with a council, in a fresh session. <!-- REQUIRED:ready -->
 **Stands on:** 6 H, 4 of which would change the decision (A1 to A4, D7) <!-- REQUIRED:debt -->
-**Decision needed:** the PO reads the fact tree analysis (D8), sets the pass line of the geometry count (Q1) and picks the architecture direction (Q6). Then the design of the research pipeline starts in plan mode with a council (D2). <!-- REQUIRED:decision-needed -->
+**Decision needed:** none for the discovery. The design council picks the architecture under D12, and the PO says yes or no to filing items.md. <!-- REQUIRED:decision-needed -->
 
 > TL;DR. Four walks ran spark's research flow on four owned DFRobot parts. All four made a valid record. DFRobot published hole and header coordinates in full for 2 of 4, but the record has no typed field for them, and the breadboard drawing reads none of them. Eight reproduced tool bugs and several flow gaps make each record a hand job. The PO's direction (D2, D5, D6) is a designed research pipeline with ordered, swappable sources of many kinds, DFRobot first, usable later from LangGraph, RAG, agents and people. The PO rated A1 to A4 high (D7) and asked for a dependency tree of information needs (D8).
 
@@ -48,6 +48,7 @@
 - [C14] part-data.md:51 says "DFRobot ships no KiCad footprints". The DFR1117 layout zip holds one. · E council/po-assistant.md:22, walk/dfr1117/diary.md:20 · caveat: one SKU
 
 - [★C17] No code or file says which consumer reads which fact. The need lives in four unconnected forms: tuples in code (`CHAIN_FACTS`, `PART_GAPS`, `LAYOUT_FACTS`, `ACTIVE_LEVEL_MEANING`), pointers inside records, free-text `why_it_matters`, and the 5-row prose table in commands/research.md that no code reads. Of the SEN0526 walk record's facts, `sel_has_pull`, `sd_pulldown_ohms` and `needs_mclk` have no reader. · E council/fact-tree.md:9, council/fact-tree.md:22, scripts/spark/records/record_kind.py:37 · caveat: the no-reader count is a grep over spot-checked fact names
+- [★C18] Spark already has the parts of an interaction mechanism: `OperationResult.next` returns the step a caller must do, an Operation declares effect words such as `asks`, every Operation reaches the outside only through `OutsideWorld` (swapped for `FakeOutsideWorld` in tests), and `GrantStore` with `GrantService` keep a prepared, expiring yes per board for deploy. · E scripts/spark/core/result.py:50, scripts/spark/bench/board_grant.py:147, scripts/spark/bench/board_grant.py:211, docs/guide/patterns-and-names.md:67 · caveat: found by a grep for class names, not yet read in full
 
 ## Options <!-- CLAIMS -->
 - Q2 what first · design the research pipeline in plan mode with a council (sources and strategies as swappable parts, one record shape for parts and boards, the bugs of ★C6, reproduced on scratch copies, as its first slices) · a plan and two council rounds · that the shape fits the v0.13 core before code · opinion (Claude's, after D2) · D the PO 2026-11-10 · caveat: none <!-- REQUIRED:options -->
@@ -94,13 +95,13 @@ classDiagram
 
 ## Questions
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 (the PO's request names the frame) <!-- REQUIRED:q0 -->
-- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: asked 2026-11-10, importance answered D7, the pass line open after D8 <!-- REQUIRED:q1 -->
+- Q1 · How important is each assumption, and what pass line must the riskiest test meet? · decides: importance and pass lines · status: answered D7 and D10 <!-- REQUIRED:q1 -->
 - Q2 · What goes first: the design, the bug fixes, or a batch? · decides: the order · options above · status: answered D2 (design with a council) <!-- REQUIRED:q2 -->
 - Q3 · Which owned parts are in scope: PCB modules and boards only, or also cables, motors and panels? · decides: the size of the run and the meaning of "done" · status: queued
 - Q4 · Which revision is printed on the back of your three DFR1117 boards? · kind: account · decides: which regulator and sleep current the record holds · status: queued, a photo settles it
 - Q5 · Should `--need` match the drawer's functions and boards, as `--match` does, in place of the P211 name-contains default? · decides: the `--need` item in items.md · status: queued
-- Q6 · Which architecture: A, B or C? The architect's opinion is C as the target, built as A first. Its ten detail questions (council/arch-architect.md:306) go to the design council · decides: the shape of the pipeline · status: queued
-- Q7 · Is the first tree about facts only, or also the tools a stage needs and the stage hand-overs (council/fact-tree.md:227)? · decides: one registry or two · status: queued
+- Q6 · Which architecture: A, B or C? The architect's opinion is C as the target, built as A first. Its ten detail questions (council/arch-architect.md:306) go to the design council · decides: the shape of the pipeline · status: answered D12, the pick goes to the design
+- Q7 · Is the first tree about facts only, or also the tools a stage needs and the stage hand-overs (council/fact-tree.md:227)? · decides: one registry or two · status: answered D9
 
 ## Decisions
 - D1 · the frame: walk a subset of the owned DFRobot parts through spark's research flow, take notes, fix gaps and bugs afterwards · the PO · 2026-11-10 · this session's first request
@@ -112,6 +113,10 @@ classDiagram
 - D6 · later interfaces and stores: "And remember later it should all be usable with other interfaces and stores, so langgraph, RAG, agents, humans.." · the PO · 2026-11-10 · this session · confirms a direction (P417 LangGraph, P419 RAG)
 - D7 · A1, A2, A3 and A4 are high importance, A5 and A6 low · the PO · 2026-11-10 · this session, Q1 part 1 · confirms the ratings, not the pass line
 - D8 · "Maybe we should actually implement some kind of dependency tree for a few things in spark and one of them would be information, like what needs what specific info for what part or bus or somethhing, let's also analyze that and add it" · the PO · 2026-11-10 · this session, in place of an answer to Q1 part 2 · asks for an analysis, council/fact-tree.md
+- D9 · the first dependency tree is about facts only (Q7) · the PO · 2026-11-10 · this session
+- D10 · the pass line of the geometry spike: of 10 owned PCB modules picked at random, at least 7 give hole and header coordinates (Q1 part 2) · the PO · 2026-11-10 · this session · confirms a test
+- D11 · the jobs and the to-be story map match what the PO wants, and the design starts · the PO · 2026-11-10 · this session · confirms the jobs and the understanding
+- D12 · in place of a Q6 pick: "I mean this is kinda the general proble of how to make it be able to be both interactve like when a human or ai uses spark and can reply live, or when its kinda scripted, so it also needs to allow not interactive grants or interactions like replies. Do we have some interface or delegate or anything that we could reuse ? I feel like we've already been doing something like that and maybe we could just refactor it for whole spark to be able to reuse. Let's replan and order the plan in steps, first to test and mvp and then step by step refactor and test and document etc so that the communication with the board in spark can be done in multiple modes." · the PO · 2026-11-10 · this session · confirms a direction: one interaction mechanism for all of spark, the architecture pick goes to the design
 
 ## Found on the way <!-- CLAIMS -->
 - [C15] The DFR0457 shelf record holds irrigation wording (signal `VALVE_CTRL`, "four valves", "ESP32-S3") in a record every project finds. · E walk/dfr0457/diary.md:69 · caveat: none <!-- REQUIRED:found -->
@@ -119,13 +124,24 @@ classDiagram
 
 ## Board actions <!-- REQUIRED:spark-process:board-actions -->
 - #1010 is in Discovery · taken before this session, D3
-- set Waiting on: the PO and Waiting since 2026-11-10 on #1010 while Q1 waits · pending, D4
-- comment on #1010 with the brief's link and the PR · pending, D4
+- set Waiting on: the PO on #1010 · not needed, Q1 answered the same day
+- comment on #1010 with the brief's link and the PR · taken 2026-11-10, D4
+- move #1010 from Discovery to Design · pending, D11 and D4
 - file the items in items.md · pending, needs the PO's yes
 <!-- EXTEND:brief-sections -->
 
 ## Hand-off
-not yet: the jobs, the importance of A1 to A6 and the pass line of A1 wait on Q1. <!-- REQUIRED:handoff -->
+Confirmed by the PO (D11), 2026-11-10. <!-- REQUIRED:handoff -->
+
+- Outcome: a record of an owned DFRobot part holds its picture, schematic, outline, holes and connectors. Each fact names its source kind or says "not published", and conflicts are kept side by side. A reader shows the geometry within the first four slices (D7, A2).
+- Who: the PO (n = 1), Claude, and later a LangGraph node, a RAG reader and other people (D6).
+- Success and its proof: slice 0 of story-map.md, `parts.py --show sen0526-i2s-mic` after one run with no hand edit.
+- Constraints: one interaction mechanism for all of spark, live or scripted (D12), built from the parts in ★C18, found in the code and not yet read in full. Ordered, swappable sources of many kinds, DFRobot first (D2, D5). A fact tree, facts only (D8, D9). The steps: a tested MVP first, then refactor, test and document step by step (D12). No vendor file in the repository. Spark's principles in AGENTS.md hold.
+- What the PO said (D) against what we assume (H): D1 to D12 above. The architecture options A, B and C are the architect's opinion (H).
+- Journeys and map: [jobs-and-journeys.md](jobs-and-journeys.md), [story-map.md](story-map.md).
+- Riskiest assumptions and tests: A1 to A4 are high (D7). A1's spike has the pass line of D10.
+- Options considered: Q2 and Q6 above, council/arch-architect.md, council/arch-ux.md, council/fact-tree.md.
+- The design council's first questions: the interaction mechanism under D12, the architecture (Q6), the store port (Q-A9), and the names, because "source" and "need" each have several meanings today.
 
 ## Files
 [Jobs and journeys](jobs-and-journeys.md) · [Story map](story-map.md) · [Risks and tests](risks-and-tests.md) · [Verification](verification.md) · [Items](items.md) · council/ · walk/
