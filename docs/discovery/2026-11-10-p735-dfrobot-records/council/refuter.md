@@ -165,8 +165,8 @@ What could break for current users, which no section covers:
 
 ## Searches
 
-- WebFetch https://wiki.dfrobot.com/dfr0995/ (read 2026-11-10): it served ★C8's DFR0995 half, whether the two voltage rows exist. Used.
-- No web search was made.
+- WebFetch https://wiki.dfrobot.com/dfr0995/ (read 2026-11-10) · the decision it served: ★C8 holds or not. It served ★C8's DFR0995 half, whether the two voltage rows exist. Used.
+No web search was made.
 
 ## What I could not check, and why
 

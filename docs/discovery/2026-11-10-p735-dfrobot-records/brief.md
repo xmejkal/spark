@@ -28,13 +28,13 @@
 - The item: P735 #1010, an epic in Discovery · still open elsewhere: P733 #1003 waits on the PO's bench (sound lane), no open PR · push check: the push hook and `tools/check_backlog.py`. <!-- REQUIRED:spark-process:item -->
 <!-- EXTEND:frame -->
 - Depth: TRIO (PO assistant, user, tech lead), three agents on Sonnet, plus four walk agents (spark's parts-researcher, Opus) and one refuter. <!-- REQUIRED:depth -->
-- Search budget: 8 searches and 12 fetches per walk (the researcher's own rule), 3 for the PO assistant, 2 for the tech lead, none for the user. Used: 5 searches over the walks, 1 by the tech lead, 3 by the PO assistant. <!-- REQUIRED:budget -->
+- Search budget: 22 searches for the council (3 PO assistant, 2 tech lead, 8 reuse, 3 architect, 2 UX, 4 refuter, none for the user), and 8 searches and 12 fetches per walk (the researcher's own rule). Used: 13 in council/, 5 over the walks. <!-- REQUIRED:budget -->
 - Appetite: unknown, asked at the design council. <!-- REQUIRED:appetite -->
 
 ## What we found <!-- CLAIMS -->
 - [★C1] None of the 4 records holds hole and pin positions marked verified, because a part record has no field for them and the rule marks a drawing read unverified. DFRobot dimensioned holes for 2 of 4 (SEN0526, DFR0995) and header positions for 2 of 4 (the SEN0526 drawing, the DFR1117 KiCad footprint). Height or thickness was missing in 2 of 4 (DFR0457, DFR1117). · E council/refuter.md:20, walk/dfr1117/diary.md:20, walk/dfr0457/diary.md:89 · caveat: 4 parts picked by Claude for shape variety, shows what DFRobot publishes for these 4, not how often <!-- REQUIRED:findings -->
 - [★C2] A part record has no typed field for a picture, a schematic, hole or header coordinates or connectors. They go in only as ad hoc `facts` entries or `documents`, which no reader uses. The validator accepts unknown keys without a word. · E council/tech-lead.md:9, council/refuter.md:29 · caveat: none
-- [★C3] The breadboard sheet draws a part only if its record names a Wokwi part that `data/wokwi-geometry.json` holds, and that file holds 4 types. One undrawable part stops the whole drawing. · E council/tech-lead.md:12 · caveat: fuller records alone change nothing on screen until P446 or P734 adds a reader
+- [★C3] The breadboard sheet draws a part only if its record names a Wokwi part that `data/wokwi-geometry.json` holds, and that file holds 4 types. One undrawable part stops the whole drawing. · E council/tech-lead.md:12 · caveat: fuller records alone change nothing on screen until a reader exists (P446 or P734)
 - [★C4] Reuse-first misses parts the PO owns. `parts.py --need "load switch"` finds nothing, though the drawer holds 8 DFR0457 with function load-switch and the shelf holds its record. `--need ESP32-C6` misses the shipped XIAO ESP32-C6 board. `--need mosfet` does find DFR0457. · E council/tech-lead.md:26, council/refuter.md:38, `parts.py --need load switch` run 2026-11-10 · caveat: by the words of the need, not by kind. `--need` uses the name-contains matcher, a P211 default that changes only with the PO's yes, and `--match` already reads drawer functions
 - [★C5] Spark has no research flow for a dev board. research.md covers parts only, `--skeleton` writes only `parts/<id>.json` and nothing writes a `boards/<id>.json` skeleton, and `--unverified` and `--sources` answer "no part called …" for a board. · E walk/dfr1117/diary.md:39, council/tech-lead.md:30, council/refuter.md:45 · caveat: none
 - [★C6] Eight walk bugs reproduce: `--skeleton` writes the forbidden `sourcing` block with prices, `--skeleton` hides a shelf record with no warning, `--fact-set` refuses `legs` and `host_requirements`, `--read` answers FOUND on the absolute-maximum row and on a revision-history row, `check_vendor_pins` fails bare GPIO labels, `boards.py --validate` passes a stand-in with no Wokwi document. · E council/tech-lead.md:27, council/tech-lead.md:33 · caveat: reproduced on scratch copies, nothing changed
@@ -48,14 +48,43 @@
 - [C14] part-data.md:51 says "DFRobot ships no KiCad footprints". The DFR1117 layout zip holds one. · E council/po-assistant.md:22, walk/dfr1117/diary.md:20 · caveat: one SKU
 
 ## Options <!-- CLAIMS -->
-- Q2 what first · design the research pipeline in plan mode with a council (sources and strategies as swappable parts, one record shape for parts and boards, the bugs of ★C6 as its first slices) · a plan and two council rounds · that the shape fits the v0.13 core before code · opinion (Claude's, after D2) · D the PO 2026-11-10 · caveat: none <!-- REQUIRED:options -->
-- Q2 what first · fix the bugs of ★C6 and ★C7 first, design after · about six small cards · that the hand steps go away · opinion (the tech lead's) · E council/tech-lead.md:27 · caveat: fixes can be redone by the design
+- Q2 what first · design the research pipeline in plan mode with a council (sources and strategies as swappable parts, one record shape for parts and boards, the bugs of ★C6, reproduced on scratch copies, as its first slices) · a plan and two council rounds · that the shape fits the v0.13 core before code · opinion (Claude's, after D2) · D the PO 2026-11-10 · caveat: none <!-- REQUIRED:options -->
+- Q2 what first · fix the bugs of ★C6 (reproduced on scratch copies) and ★C7 (zips kept by hand) first, design after · about six small cards · that the hand steps go away · opinion (the tech lead's) · E council/tech-lead.md:27 · caveat: fixes can be redone by the design
 - Q2 what first · batch the remaining owned parts now with today's tools · 300 to 800 fetches · nothing new, it copies each bug into every record · opinion (none holds it) · E council/tech-lead.md:49 · caveat: none
+- Q6 architecture · A: one research Operation in Python runs an ordered chain of sources (Strategy adapters per kind: vendor site, kept documents, footprint file, person, MCP tool), and a source that needs Claude, a person or an MCP server returns a next step · 6 to 8 modules · that one core serves the CLI, Claude, a LangGraph node and a person · opinion (the architect's) · H council/arch-architect.md:27 · caveat: rough module count, no walk record run through the types
+- Q6 architecture · B: the agent runs the loop, Python gives three Operations (list the gaps, gather from one source, tell facts) · 4 to 5 modules · that today's shape is enough · opinion (the architect's, not preferred) · H council/arch-architect.md:108 · caveat: keeps the order and the stop rule in prose, against AGENTS.md
+- Q6 architecture · C: A plus a source plan with scope, budget and an automatic or ask-first mode per source, a scheduler, and a conflicts list · 7 to 9 modules · that cost and conflicts are data · opinion (the architect's: C as the target, built as A first, with C's conflicts list in the MVP) · H council/arch-architect.md:169 · caveat: the risk is an over-designed plan format
+Diagram of A with C's additions (from council/arch-architect.md:62 and :189). The store is a port, so a shared store or a RAG index is a later adapter (D6):
+
+```mermaid
+classDiagram
+  class ResearchPart { <<Operation>> run(subject, project) }
+  class SourcePlan { <<Value>> entries from_settings() }
+  class GapFinder { find_gaps(record, kind) }
+  class Source { <<Strategy>> offer(gaps, subject, kept) Offer }
+  class Offer { <<Value>> facts next_step spent }
+  class Merge { fold(record, offer) }
+  class ConflictLog { <<Value>> conflicts }
+  class RecordRepository { <<Repository>> find write_back link }
+  class DocumentKeeper { keep(url) }
+  ResearchPart --> SourcePlan
+  ResearchPart --> GapFinder
+  ResearchPart --> Source
+  ResearchPart --> Merge
+  ResearchPart --> RecordRepository
+  Merge --> ConflictLog
+  Source ..> Offer
+  Source ..> DocumentKeeper
+  Source <|-- VendorSiteSource
+  Source <|-- DocumentSource
+  Source <|-- PersonSource
+  Source <|-- McpToolSource
+```
 - Proposed no-gos and rabbit holes: no vendor file in the repository, keep it in the store only, because the licence is unknown. No AI-made shape until the PO settles C13. No batch before the pipeline. Rabbit hole: reading hole positions out of STEP B-splines (the DFR0995 STEP has 0 circles). · E council/po-assistant.md:50, walk/dfr0995/diary.md:22 · caveat: proposals until the PO confirms them <!-- REQUIRED:nogos -->
 
 ## Riskiest assumption and its test
-- Riskiest: A1, DFRobot publishes enough geometry (hole and header coordinates) for most owned PCB modules. The walks support it for 3 of 4 (★C1) · proposed — the PO assistant's opinion, pending Q1 <!-- REQUIRED:riskiest -->
-- Test · kind · pass line: a script with no AI reads the wiki page of each owned PCB module and counts which link a dimension drawing, a schematic, a STEP and a layout zip. Then a person reads 5 drawings at random for hole and header coordinates · a spike · proposed pass line (set 2026-11-10, after the refuter, before the spike): of 10 owned PCB modules picked at random, at least 7 have a drawing or footprint that gives hole and header coordinates · proposed <!-- REQUIRED:test -->
+- Riskiest: A1, DFRobot publishes enough geometry (hole and header coordinates) for most owned PCB modules. The walks support it for 3 of 4 (★C1, 4 parts picked by Claude) · proposed — the PO assistant's opinion, pending Q1 <!-- REQUIRED:riskiest -->
+- Test · kind · pass line: a script with no AI reads the wiki page of each owned PCB module and counts which link a dimension drawing, a schematic, a STEP and a layout zip. Then a person reads 5 drawings at random for hole and header coordinates · a spike · proposed pass line (set 2026-11-10, after the refuter, before the spike): of 10 owned PCB modules picked at random, at least 7 have a drawing or footprint that gives hole and header coordinates · proposed — Claude's opinion, after the refuter, pending Q1 <!-- REQUIRED:test -->
 
 ## Questions
 - Q0 · Is this frame right: the decision, the start and reach, the extensions and the depth? · decides: the frame · status: answered D1 (the PO's request names the frame) <!-- REQUIRED:q0 -->
@@ -64,6 +93,7 @@
 - Q3 · Which owned parts are in scope: PCB modules and boards only, or also cables, motors and panels? · decides: the size of the run and the meaning of "done" · status: queued
 - Q4 · Which revision is printed on the back of your three DFR1117 boards? · kind: account · decides: which regulator and sleep current the record holds · status: queued, a photo settles it
 - Q5 · Should `--need` match the drawer's functions and boards, as `--match` does, in place of the P211 name-contains default? · decides: the `--need` item in items.md · status: queued
+- Q6 · Which architecture: A, B or C? The architect's opinion is C as the target, built as A first. Its nine detail questions (council/arch-architect.md:306) go to the design council · decides: the shape of the pipeline · status: queued
 
 ## Decisions
 - D1 · the frame: walk a subset of the owned DFRobot parts through spark's research flow, take notes, fix gaps and bugs afterwards · the PO · 2026-11-10 · this session's first request
