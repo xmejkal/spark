@@ -94,6 +94,11 @@ def _op_signals(args, project):
     return Answer(found, [json.dumps(found, indent=2)])
 
 
+def _reader_line(need):
+    """One reader of an open fact: who, and whether it reads the fact today or which card makes it read (P738)."""
+    return "      read by %s (%s)" % (need.consumer, need.status if need.reads else "%s, %s" % (need.status, need.card))
+
+
 def _op_unverified(args, project):
     questions = unverified(args.unverified, project)
     needs = FactNeeds.from_file()  # P738: who reads each open fact, joined on its `write` key, never on English
@@ -107,8 +112,7 @@ def _op_unverified(args, project):
         entry = {"fact": "%s.%s" % (q["part"], q["fact"]), "basis": "unverified", "assumed": q["assumed"],
                  "sentence": q["why_it_matters"], "source": q["source"], "write": q["write"]}
         read_by = needs.of_fact(q["write"] or "")
-        for need in read_by:
-            lines.append("      read by %s (%s)" % (need.consumer, need.status if need.reads else "%s, %s" % (need.status, need.card)))
+        lines.extend(_reader_line(need) for need in read_by)
         if read_by:
             entry["read_by"] = [need.to_dict() for need in read_by]
         assumptions.append(entry)

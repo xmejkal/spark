@@ -63,6 +63,7 @@ class FactNeedsAnswerTest(unittest.TestCase):
                          ["spark.design.board_components", "spark.design.need_requirements"])
         self.assertEqual(NEEDS.of_fact("physical"), [], "a block's write key is the block, and its rows are per key")
         self.assertEqual(NEEDS.of_fact("facts.x"), [])
+        self.assertEqual(NEEDS.of_fact("header"), [], "a leaf name alone is no write key: the match is on the whole path")
 
     def test_a_need_knows_its_fact_name_and_its_envelope_entry(self):
         need = FactNeed("module", "physical.header", "spark.x.Y", WILL_READ, "P734")

@@ -2,7 +2,7 @@
 
 Card: [P738 #1014](https://github.com/xmejkal/spark/issues/1014). Plan: `~/.claude/plans/distributed-doodling-kernighan.md`.
 Rows 1 to 11 are the plan council's architecture lens (Sonnet), 12 to 20 its refuter (Fable), 21 to 23 round 2 (the
-refuter on Fable), 24 to 27 the implementer. The PR rows follow. 2026-11-10.
+refuter on Fable), 24 to 27 the implementer, 28 to 31 the PR review (a reviewer on Sonnet, the refuter on Fable). 2026-11-10.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -33,3 +33,7 @@ refuter on Fable), 24 to 27 the implementer. The PR rows follow. 2026-11-10.
 | 25 | no library record has `kind: module`; how a record's kind maps to `module` is P737 step 4's question | implementer | raised | a note for step 4 |
 | 26 | the architecture lens read the design's `card` as part of `status`; the file now holds both | implementer | closed | rows 6 and 13 |
 | 27 | validators that require `body_mm` (`CHAIN_FACTS`, `part_records`, `matching`) are not consumers | implementer | raised | `CHAIN_FACTS` moves later (design.md:224) |
+| 28 | mutation row 2 (match on the leaf name) survives: no test's write key ends in a listed leaf | PR reviewer, PR refuter | acted | `of_fact("header") == []` in test_fact_needs |
+| 29 | the `(will read, P734)` text line is unreachable today and had no test | PR reviewer, PR refuter | acted | a test with a patched `FactNeeds` proves the line; the branch stays for P734 |
+| 30 | `of_fact` ignores the record's kind: a sensor record gets the `module` rows | PR refuter | raised | the file's `//` says so; a join on kind when a second kind has rows (P737 step 4 maps kinds) |
+| 31 | the consumer-missing test, the two `read by` lines, the golden, the map and the data loaders all hold | PR refuter | verified | scratch runs, rows 1, 2, 4, 6, 7 of its report |

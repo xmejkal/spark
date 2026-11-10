@@ -14,8 +14,8 @@
  {
   "file": "scripts/spark/sourcing/part_handlers.py",
   "name": "unverified prints no reader line",
-  "find": "        for need in read_by:\n            lines.append(",
-  "replace": "        for need in ():\n            lines.append("
+  "find": "        lines.extend(_reader_line(need) for need in read_by)",
+  "replace": "        lines.extend(_reader_line(need) for need in ())"
  },
  {
   "file": "scripts/spark/sourcing/part_handlers.py",

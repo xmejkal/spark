@@ -359,6 +359,14 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
         self.assertTrue(out.getvalue().rstrip().splitlines()[-1].startswith("  next: parts.py --fact-set x-joy <file> — "), out.getvalue())
         self.assertIn("      read by spark.design.board_components (reads)\n", out.getvalue())
 
+    def test_a_reader_that_will_read_a_fact_prints_its_card(self):
+        # P738: no record reaches a `will read` row today (a block's write key is the block), so the line is proved here.
+        from spark.records.fact_needs import FactNeed, READS, WILL_READ
+        self.assertEqual(part_handlers._reader_line(FactNeed("module", "body_mm", "spark.x.Y", WILL_READ, "P734")),
+                         "      read by spark.x.Y (will read, P734)")
+        self.assertEqual(part_handlers._reader_line(FactNeed("module", "body_mm", "spark.x.Y", READS)),
+                         "      read by spark.x.Y (reads)")
+
     def test_the_next_step_names_the_first_part_with_a_row_that_can_go_back_and_none_when_no_row_can(self):
         # P373: a record whose facts is no object has one row with `write` null, and `--fact-set` would refuse it.
         home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()

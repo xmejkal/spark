@@ -1,5 +1,5 @@
 {
-  "//": "What reads which fact of a part record (P738). One row per (kind, fact_path, consumer). status: reads = the consumer reads the fact today; will read = the card in `card` makes it read. RecordShapeSource reads a board's physical.header today, and a module's physical waits for P734. Validators that only require a key (CHAIN_FACTS, part_records, matching) are not consumers and are not listed.",
+  "//": "What reads which fact of a part record (P738). One row per (kind, fact_path, consumer). status: reads = the consumer reads the fact today; will read = the card in `card` makes it read. RecordShapeSource reads a board's physical.header today, and a module's physical waits for P734. --unverified joins a row on its fact_path only, not on the record's kind, until a second kind has rows. Validators that only require a key (CHAIN_FACTS, part_records, matching) are not consumers and are not listed.",
   "needs": [
     {"kind": "module", "fact_path": "body_mm", "consumer": "spark.design.board_components", "status": "reads", "card": null},
     {"kind": "module", "fact_path": "body_mm", "consumer": "spark.design.need_requirements", "status": "reads", "card": null},
