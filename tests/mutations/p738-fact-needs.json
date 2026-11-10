@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/spark/records/fact_needs.py",
+  "name": "of_kind answers every row whatever the kind",
+  "find": "        return [need for need in self.rows if need.kind == kind]",
+  "replace": "        return list(self.rows)"
+ },
+ {
+  "file": "scripts/spark/records/fact_needs.py",
+  "name": "of_fact matches the fact name, so a block key joins its per-key rows",
+  "find": "        return [need for need in self.rows if need.fact_path == write]",
+  "replace": "        return [need for need in self.rows if need.fact_name == write.rpartition(\".\")[2]]"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_handlers.py",
+  "name": "unverified prints no reader line",
+  "find": "        for need in read_by:\n            lines.append(",
+  "replace": "        for need in ():\n            lines.append("
+ },
+ {
+  "file": "scripts/spark/sourcing/part_handlers.py",
+  "name": "unverified writes read_by for a fact nothing reads",
+  "find": "        if read_by:\n            entry[\"read_by\"]",
+  "replace": "        if True:\n            entry[\"read_by\"]"
+ }
+]

@@ -346,7 +346,10 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
             said, code = run_json(["--unverified", "x-joy"])
         self.assertEqual((code, len(said["assumptions"])), (0, 10))
         self.assertEqual(said["assumptions"][-1], {"fact": "x-joy.body_mm", "basis": "unverified", "assumed": {"width": 34, "height": 26},
-                                                   "sentence": "the fit", "source": "a guess from the photo", "write": "body_mm"})
+                                                   "sentence": "the fit", "source": "a guess from the photo", "write": "body_mm",
+                                                   "read_by": [{"consumer": "spark.design.board_components", "status": "reads", "card": None},
+                                                               {"consumer": "spark.design.need_requirements", "status": "reads", "card": None}]})
+        self.assertNotIn("read_by", said["assumptions"][7], "a fact nothing reads names no reader (P738)")
         self.assertEqual([row["write"] for row in said["assumptions"][7:]], ["facts.fact_7", "pin_order_proof", "body_mm"])
         self.assertEqual([(step["op"], step["argv"], step["effects"]) for step in said["next"]],
                          [("fact-set", ["--fact-set", "x-joy", "<file>"], ["writes"])])
@@ -354,6 +357,7 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
         with in_store(home), contextlib.redirect_stdout(io.StringIO()) as out:
             parts.main(["--unverified", "x-joy"])
         self.assertTrue(out.getvalue().rstrip().splitlines()[-1].startswith("  next: parts.py --fact-set x-joy <file> — "), out.getvalue())
+        self.assertIn("      read by spark.design.board_components (reads)\n", out.getvalue())
 
     def test_the_next_step_names_the_first_part_with_a_row_that_can_go_back_and_none_when_no_row_can(self):
         # P373: a record whose facts is no object has one row with `write` null, and `--fact-set` would refuse it.

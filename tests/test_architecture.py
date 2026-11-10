@@ -488,7 +488,7 @@ class TheRecordsAreaTest(unittest.TestCase):
     `boards.py` and `tools.py`."""
     RECORDS = ROOT / "scripts" / "spark" / "records"
     #: The modules of the area so far, by the names of its page (`areas/records.md`).
-    MODULES = ["board_pads", "board_records", "board_rules", "brief", "deploy_record_store", "missing_facts", "onboard_parts",
+    MODULES = ["board_pads", "board_records", "board_rules", "brief", "deploy_record_store", "fact_needs", "missing_facts", "onboard_parts",
                "provenance", "record_kind", "records_codes", "store", "tool_finder", "versions"]
     #: Each CLI's own top-level functions: `main`, what only it uses to print (`_validate_all` and `print_status`) and
     #: the lazy read of design's `footprint_stop`. A library function back in a CLI, under any name, fails the check.

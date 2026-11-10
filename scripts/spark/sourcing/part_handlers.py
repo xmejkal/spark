@@ -15,6 +15,7 @@ from spark.core.outcomes import add_env, step
 from spark.core.text_guards import printable
 from spark.records import board_records, missing_facts, record_kind, store
 from spark.records.brief import Brief
+from spark.records.fact_needs import FactNeeds
 from spark.records.record_kind import (
     Answer, available, _cannot, DEFINITION_SUFFIX, _parse, _problem, record_home, _with_project, WRITE_BACK_HINT,
     _write_record)
@@ -95,14 +96,22 @@ def _op_signals(args, project):
 
 def _op_unverified(args, project):
     questions = unverified(args.unverified, project)
+    needs = FactNeeds.from_file()  # P738: who reads each open fact, joined on its `write` key, never on English
     lines = ["  everything these parts claim has been checked."] if not questions else \
         ["  %d thing(s) nobody has checked:\n" % len(questions)]
-    for question in questions:
-        lines.append("  %s.%s = %s" % (question["part"], question["fact"], question["assumed"]))
-        if question["why_it_matters"]:
-            lines.append("      %s" % question["why_it_matters"])
-    assumptions = [{"fact": "%s.%s" % (q["part"], q["fact"]), "basis": "unverified", "assumed": q["assumed"],
-                    "sentence": q["why_it_matters"], "source": q["source"], "write": q["write"]} for q in questions]
+    assumptions = []
+    for q in questions:
+        lines.append("  %s.%s = %s" % (q["part"], q["fact"], q["assumed"]))
+        if q["why_it_matters"]:
+            lines.append("      %s" % q["why_it_matters"])
+        entry = {"fact": "%s.%s" % (q["part"], q["fact"]), "basis": "unverified", "assumed": q["assumed"],
+                 "sentence": q["why_it_matters"], "source": q["source"], "write": q["write"]}
+        read_by = needs.of_fact(q["write"] or "")
+        for need in read_by:
+            lines.append("      read by %s (%s)" % (need.consumer, need.status if need.reads else "%s, %s" % (need.status, need.card)))
+        if read_by:
+            entry["read_by"] = [need.to_dict() for need in read_by]
+        assumptions.append(entry)
     owners = [q["part"] for q in questions if q["write"]]  # a row with no `write` cannot go back by --fact-set
     follow = [add_env(step("fact-set", ["--fact-set", owners[0], "<file>"], WRITE_BACK_HINT, ["writes"]), store.read_given_env())] if owners else []
     return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions, next=follow)
