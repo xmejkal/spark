@@ -46,8 +46,8 @@ from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
 from spark.core.operation import ASKS  # noqa: E402
 from spark.core.outside import build_outside_world  # noqa: E402
-from spark.core.replies import AGENT, EITHER, PERSON, VALUE, YES_NO, Question, Reply, ReplyStrategy  # noqa: E402
 from spark.core.privacy import MaskingReporter, Privacy  # noqa: E402
+from spark.core.replies import AGENT, EITHER, PERSON, VALUE, YES_NO, Question, Reply, ReplyStrategy  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 

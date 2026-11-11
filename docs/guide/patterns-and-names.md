@@ -13,7 +13,7 @@ namedtuple is a small record whose fields have names, so a caller writes `result
 | Role | What it is | Its name | Example |
 |---|---|---|---|
 | Service | runs the steps of one flow over objects it was given | ends in `Service` | `LookService`, `DeployService` |
-| Strategy | a base class that a caller can swap for another | ends in `Strategy` when the noun alone does not say it does something | `ConsentStrategy`, a `ReplyStrategy` for a yes or no; `BoardReader`, `Flasher` and `Reporter` stay plain, and their docstrings say Strategy |
+| Strategy | a base class that a caller can swap for another | ends in `Strategy` when the noun alone does not say it does something | `ConsentStrategy` (a `ReplyStrategy` that answers a yes or no); `BoardReader`, `Flasher` and `Reporter` stay plain, and their docstrings say Strategy |
 | Adapter | wraps an outside program behind spark's own interface | a plain noun; the docstring says Adapter | `BoardConnection` wraps mpremote, the tool that talks to MicroPython on a board |
 | Result | what a method returns, as a namedtuple | ends in `Result` | `ReadyResult`, `DeployResult` |
 | Error | an exception | ends in `Error` (rule C1, under `scripts/`) | `GateClosedError`, `DeployError`, `PackageError` |
