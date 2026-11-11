@@ -131,6 +131,6 @@ verified: per-SKU (build from the wiki pinout + schematic + the DFRobot_<Part> G
 - **Gravity** modules: record {connector = 3-pin or 4-pin, colour}. 3-pin: green=digital, blue=analog.
   4-pin: red=I2C, blue=UART. PH2.0 pitch. This replaces a bespoke pinout for plug-and-play parts.
 - Footprint: derive from the dimension PDF (2.54 mm pitch on FireBeetle/Beetle) + the STEP model;
-  mark "derived, needs verification". DFRobot ships no KiCad/Eagle footprints.
+  mark "derived, needs verification". For some SKUs a layout zip holds a KiCad footprint and symbol (DFR1117 for one). Eagle files were not looked for.
 - Example — DFR0044 (Gravity TB6612FNG 2x1.2A motor driver) is DFRobot's own driver board; if used,
   it replaces the bare TB6612 wiring with a Gravity 4-pin interface.
