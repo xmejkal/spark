@@ -114,7 +114,8 @@ classDiagram
   Under `SameWords` that is today's cut. The JSON adds `score` and `why` per candidate. The text output adds the
   `about` line under each candidate.
 - `parts.py --need` and `catalog_matches` build the need `{"does": null, "what": "<the words>"}` and call the
-  `--need` matcher.
+  `--need` matcher. (P743, 2026-11-11: `--need` builds its offers as `--match` does, `spark.sourcing.offers`, over every record
+  and the drawer; its default is `word-overlap`, `catalog_matches` is gone, and the catalog is one layer of the offers.)
 - `parts.py --offer KEY` is new. It prints `describe()` for a record id or a drawer entry key, so a chooser reads the
   full paragraph of the parts it weighs. The list stays short, inside the 4 KB page of `--json`.
 - `--matcher NAME` on `--match` and `--need` picks another class. If the name is unknown, or the class does not serve

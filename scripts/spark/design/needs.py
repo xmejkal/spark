@@ -114,7 +114,7 @@ def write(project, needs):
 
 
 #: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, after these.
-LAYERS = ("drawer", "project", "shelf", "library", "catalog")
+LAYERS = (offers.DRAWER, "project", "shelf", "library", "catalog")
 
 #: `--match`'s matcher (P211). A default changes only with the PO's yes, after he reads `tools/match_eval.py`'s numbers.
 MATCHER = "same-words"
@@ -177,7 +177,7 @@ def _candidate(need, fit, context, mine=None):
     offer, record = fit.offer, context["record"]
     owned, free, unsure = offers.counts(context["holding"], mine)
     if record is None:
-        said = {"entry": offer.key, "in": "drawer", "label": context["holding"][0].get("label")}
+        said = {"entry": offer.key, "in": offers.DRAWER, "label": context["holding"][0].get("label")}
     else:
         said = {"id": offer.key, "kind": offer.kind, "in": context["in"], "label": record.get("name"),
                 "owes": [] if offer.kind == "board" else owes(record),

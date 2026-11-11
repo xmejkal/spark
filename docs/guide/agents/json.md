@@ -241,17 +241,6 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
   - `--show` lists a CONFLICT that rests on an unverified fact: `fact` is `<part>.<pin>`, `basis` is `unmeasured`,
     `rests_on` names the facts to verify as `<part>.<fact>`, and `upgrade` says how. This `unmeasured` is a basis, not
     `check_all`'s `unmeasured[]` list.
-- `--need WORD... --json` ([P743](https://github.com/xmejkal/spark/issues/1019)) searches what the person owns and what spark
-  knows: every part and board record of every layer, with the drawer entries that say they are it, and the record-less
-  entries. `data.found` is one row per hit, owned first, then the best score: `id` (null for an entry), `entry` (the drawer key,
-  null for a record), `is` (`part`, `board` or `entry`), `kind` (the record's own kind, null for an entry), `name`, `in` (the layer:
-  `project`, `shelf`, `library`, `drawer`, or another project's name), `owned` (a number, `"many"` or `"unknown"`, as `--match`
-  gives it; 0 when the drawer holds none), `score` and `why` (one sentence per word found, naming the place). A row with `entry`
-  set has no record: it goes to `/spark:research`, or to `--pick` as the drawer entry it is. `data.catalog` holds the hits of the
-  catalog layer, each promotable with `--promote`; `data.drafts` the ids of records still being filled in; `data.more` how
-  many fits the cutoff dropped (the first eight, an exact one, or a score of 0.5 are shown, as `--match` shows); `data.matcher`
-  the matcher that ran (`word-overlap`, or `name-contains` with `--matcher`: the words as substrings of the names alone). A
-  two-word need shows a one-word hit at 0.3 among the first eight.
 - A **CONFLICT** is a pull the board adds that the module's own pull overrules, said with its arithmetic. When every fact
   it rests on is verified, `--show` lists it under `problems`, with a `fix`, and exits 1; `data.record` is there
   whatever the exit. Say it to the person. Never clear it by marking a fact unverified ([P124](https://github.com/xmejkal/spark/issues/58)).

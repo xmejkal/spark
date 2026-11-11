@@ -1,6 +1,6 @@
 """
-The datasheets and the catalog (W6-S3b, P721): what exists for a need before research (`need`, `catalog_records`), a document kept in the store with no location in it (`keep_in_store`, `keep_local`,
-`without_location`), a datasheet read page by page (`read_datasheet`, `scan_datasheet`), a kept document found by its
+The datasheets and the catalog (W6-S3b, P721): what exists for a need before research (`need`, `catalog_records`), a
+document kept in the store with no location in it (`keep_in_store`, `keep_local`, `without_location`), a datasheet read page by page (`read_datasheet`, `scan_datasheet`), a kept document found by its
 words (`find_kept`), the documents a record cites fetched (`fetch_plan`, `fetch_documents`), and every cited URL asked
 whether it answers (`cited_urls`, `sources_resolve`). Moved whole from `parts.py`. It imports the records area,
 `matching` and `part_records` below it, never `parts.py`. `DatasheetService` comes with its card.
@@ -16,7 +16,7 @@ from pathlib import Path
 
 from spark.records import board_records, record_kind, records_codes, store, tool_finder
 from spark.records.record_kind import (
-    Answer, available, _cannot, DEFINITION_SUFFIX, _parse, _problem, record_home, _write_record)
+    Answer, _cannot, DEFINITION_SUFFIX, _parse, _problem, record_home, _write_record)
 from spark.sourcing import matching, offers, sourcing_codes
 from spark.sourcing.part_records import load, PartError
 
@@ -395,8 +395,9 @@ def need(words, project=None, matcher=None):
 
 
 def _need_row(fit, context):
-    """One `--need` row (P743), its keys the words `--match`'s candidates use: `id` or `entry`, `is` (part, board or entry), the
-    record's own `kind`, `name`, `in` (the layer), `owned` (the drawer count: a number, "many" or "unknown"), `score`, `why`."""
+    """One `--need` row (P743): `id` or `entry`, `in` (the layer), `owned` (the drawer count: a number, "many" or "unknown"), `score`
+    and `why` as `--match`'s candidates say them; `is` (part, board or entry) and the record's own `kind` and `name`, kept as `--need`
+    always said them (`kind` is the record's here, where `--match` says part or board; on purpose, for the agents that read `found`)."""
     offer, record, holding = fit.offer, context["record"], context["holding"]
     return {"id": None if record is None else offer.key, "entry": offer.key if record is None else None,
             "is": "entry" if record is None else offer.kind, "kind": None if record is None else record.get("kind"),

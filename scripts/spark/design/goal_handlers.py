@@ -67,6 +67,12 @@ def audit(project=None):
     return counts, owed, broken, silent, dangling, stops
 
 
+#: `--need`'s closing lines (P743): the fits the cutoff dropped, and nothing found.
+NEED_MORE = "  and %d more with fewer of the words: add a word, or --matcher name-contains for the names alone"
+NEED_NOTHING = ("  nothing in the drawer, the boards or the part records matches %r.\n"
+                "  Research it: /spark:research \"%s\"  — vendors in order: %s; sellers: %s")
+
+
 def _op_need(args, project):
     try:
         chosen = matching.matcher(args.matcher or NEED_MATCHER, "need")
@@ -86,11 +92,6 @@ def _op_need(args, project):
                                  ", ".join(sellers(project)) or "none named in the brief")]
     return Answer(data, lines)
 
-
-#: `--need`'s closing lines (P743): the fits the cutoff dropped, and nothing found.
-NEED_MORE = "  and %d more with fewer of the words: add a word, or --matcher name-contains for the names alone"
-NEED_NOTHING = ("  nothing in the drawer, the boards or the part records matches %r.\n"
-                "  Research it: /spark:research \"%s\"  — vendors in order: %s; sellers: %s")
 
 
 def _need_line(row):

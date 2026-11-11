@@ -121,9 +121,6 @@ def _op_unverified(args, project):
     return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions, next=follow)
 
 
-def _part_summary(part):
-    return {"id": part["id"], "kind": part["kind"], "name": part["name"]}
-
 
 #: The layers `--promote` copies a record out of, into the project (`part_facts.promote`).
 PROMOTABLE = ("shelf", "catalog")

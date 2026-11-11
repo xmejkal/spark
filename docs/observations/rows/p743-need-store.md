@@ -2,7 +2,7 @@
 
 Card: [P743 #1019](https://github.com/xmejkal/spark/issues/1019), story, under P735, D15. Plan `~/.claude/plans/p743-need-store.md`. Rows 1 to 13 are
 the plan reviewer (Sonnet: architecture, names, UX, callers), 14 to 19 the plan refuter (Fable), 20 to 24 its second round, 25 to 29 the
-implementer. 2026-11-11.
+implementer, 30 to 37 the PR reviewer (Sonnet) and the PR refuter (Fable), 38 the implementer. 2026-11-11.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -35,3 +35,12 @@ implementer. 2026-11-11.
 | 27 | the plural fold turns "switches" into "switche", so "Reed switches" never matches "switch" | implementer | raised | the test's label is "Reed switch, a bag"; a matcher card may fold `-es` |
 | 28 | `--need button` now finds the FireBeetle board too: a board offers its parts' functions (its boot button) | implementer | verified | parts-need-ok.json read; the board scores below the tactile button |
 | 29 | `python3 -m unittest tests.test_matching tests.test_needs tests.test_parts tests.test_match_eval tests.test_golden_records tests.test_journey tests.test_map`: OK; `--anchors` on p743-need plus the five tables: 139 rows, the 7 of row 25 refused, the rest present once | implementer | verified | this PR |
+| 30 | `datasheets.py` still imported `available`; `_part_summary` lost its one caller; the module docstring's first line was joined | PR reviewer, PR refuter 7 | acted | import dropped (ruff clean), function deleted, docstring re-wrapped |
+| 31 | `_need_row`'s docstring claimed its keys are `--match`'s words, but `kind` is the record's here and part/board there, `name` here is `label` there | PR reviewer | acted | the docstring says which keys match `--match` and that `kind` and `name` stay as `--need` always said them, on purpose |
+| 32 | `_need_row` and `needs._candidate` both build an id/entry/in/owned/score/why row and both sort owned first, then score | PR reviewer | raised | a later refactor: one `offers.row` and one sort key; `_candidate` carries owes, broken and limits too, so not in this card |
+| 33 | `offers.DRAWER` exists but needs.py spelled "drawer" twice; `NEED_MORE` and `NEED_NOTHING` stood below their user | PR reviewer | acted | both use `offers.DRAWER`; the constants stand above `_op_need` |
+| 34 | commands/research.md said "what each does and its names"; the code counts tags and text too | PR reviewer | acted | "what each does, its tags, names and text" |
+| 35 | the story test proves the mechanism (a record the drawer points at, owned 8), not DFR0457 by name | PR reviewer | verified | the refuter ran the sentence on the real store: `owned 8   dfr0457-mosfet-power-controller mosfet-driver … in shelf  [load: in functions]` and `owned 1   xiao-esp32-c6  board`; the library ships no DFR0457 record, so the fixture stands in |
+| 36 | drafts, the cutoff and `--match`'s scores hold on the real store: a scratch skeleton is a draft and not found; `--need sensor` 24 rows all at 0.6, more 0; `--need ESP32-C6` 8 owned, 2 unowned at 0.6, more 3; with a verb `places` is the old filter | PR refuter (Fable) | verified | run in a scratch project, removed after |
+| 37 | the seven stale anchors of row 25 are stale on main too (a main worktree, same names); `in` cannot tell the layer "project" from a project registered as `project`: the PO's projects.json holds scratch projects `project`, `b`, `p`, `p138`, `walk` | PR refuter (Fable) | raised | housekeeping: drop the scratch projects from projects.json; a chore for the stale anchors |
+| 38 | the hook's quick run failed three tests the story suites do not hold: the sourcing area's module list (test_architecture), two pages over their budget (json.md 438 of 427, research.md 41 of 40), ruff on the unused import | implementer | acted | `offers` joins MODULES; the `--need` keys moved to scripts.md's parts.py bullet (re-wrapped, 308 lines kept), json.md back at 427, research.md at 40 |

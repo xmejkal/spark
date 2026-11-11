@@ -546,7 +546,7 @@ class TheSourcingAreaTest(unittest.TestCase):
     the CLIs `cost.py`, `main` alone, and `parts.py`, its parser, its printers and the handlers that read a payload."""
     SOURCING = ROOT / "scripts" / "spark" / "sourcing"
     #: The modules of the area, by the names of its page (`areas/sourcing.md`).
-    MODULES = ["datasheets", "drawer", "matching", "part_facts", "part_handlers", "part_records", "part_rules", "run_cost",
+    MODULES = ["datasheets", "drawer", "matching", "offers", "part_facts", "part_handlers", "part_records", "part_rules", "run_cost",
                "sourcing_codes"]
     #: `parts.py`'s own top-level functions: its parser and printers, `_op_describe`, `_op_needs_drop` on the core, and
     #: the handlers that read a JSON payload, because reading stdin is the interface's job (P721 row 6).

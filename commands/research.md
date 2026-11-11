@@ -21,8 +21,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept <part number or words> --project .
 ```
 
 `--need` searches what the person owns and what spark knows: every part and board record (the project, the shelf, the library, the
-catalog, the other projects) with the drawer entries that say they are it, and the record-less entries, by what each does and its
-names; what is owned comes first. A match is the answer. `--kept` searches the
+catalog, the other projects) with the drawer entries that say they are it, and the record-less entries, by what each does, its tags,
+names and text; what is owned comes first. A match is the answer. `--kept` searches the
 person's store, which includes a datasheet that another project kept or that an interrupted run left. A kept document
 is never fetched again. If you already have a file, put it in with `parts.py --keep <file> --url <url>`.
 
