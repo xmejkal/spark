@@ -3346,9 +3346,10 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertEqual((code, said["data"]["dangling"]), (1, ["x"]))
 
 
-class TheAuditIsAnOperationOnTheCoreTest(unittest.TestCase):
-    """P707 (N19): `parts.py --audit` runs design's `AuditRecords` through `run_cli`, with parts.py's envelope: eleven keys on
-    every path, `tool` parts, paging with --from, and a store it cannot read as could-not-run, never a traceback."""
+class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
+    """P707 (N19) and P726: `parts.py --audit` and the six goal flags run design Operations through `run_cli`, with parts.py's
+    envelope: eleven keys on every path, `tool` parts, paging with --from, a store it cannot read as could-not-run, never a
+    traceback, and the flags picked as argparse picks them (an exact flag first, then a prefix that fits one flag)."""
 
     def test_an_abbreviation_runs_the_audit_and_the_envelope_is_parts_py_s(self):
         with in_store(Path(tempfile.mkdtemp())):
@@ -3411,12 +3412,85 @@ class TheAuditIsAnOperationOnTheCoreTest(unittest.TestCase):
         self.assertIn("--from START", err.getvalue())
         self.assertNotIn("--list", err.getvalue())
 
-    def test_the_describe_row_and_the_operation_agree(self):
+    def test_each_describe_row_and_its_operation_agree(self):
         from spark.core.operation import WRITES
-        from spark.design.audit_records import AuditRecords
-        row = next(row for row in parts.OPERATIONS if row[0] == "audit")
-        self.assertEqual(row[2], next(a.help for a in AuditRecords.arguments if a.dest == "audit"))
-        self.assertEqual("writes" in row[3], WRITES in AuditRecords.effects)
+        from spark.design import design_operations
+        rows = {row[0]: row for row in parts.OPERATIONS}
+        for op, operation in design_operations.OPERATIONS.items():
+            if op not in rows:
+                continue  # list-boards is boards.py's
+            with self.subTest(op=op):
+                self.assertEqual(rows[op][2], next(a.help for a in operation.arguments if a.flags == ("--" + op,)))
+                self.assertEqual("writes" in rows[op][3], WRITES in operation.effects)
+        self.assertEqual(sorted(set(design_operations.OPERATIONS) & set(rows)), ["audit", "match", "need", "needs", "offer", "requirements", "tally"])
+
+    def test_an_exact_flag_wins_over_the_flags_it_is_a_prefix_of(self):
+        project = Path(tempfile.mkdtemp())
+        with in_store(Path(tempfile.mkdtemp())):
+            need, _ = run_json(["--need", "unobtainium"])
+            needs, _ = run_json(["--needs", str(project)])
+            equals, _ = run_json(["--match=" + str(project)])
+            ambiguous, code = run_json(["--ne", str(project)])
+        self.assertEqual((need["op"], needs["op"], equals["op"]), ("need", "needs", "match"))
+        self.assertEqual((code, ambiguous["status"], ambiguous["unchecked"][0]["sentence"][:16]), (2, "could-not-run", "ambiguous option"))
+
+    def test_a_unique_prefix_picks_its_operation_as_argparse_did(self):
+        project = Path(tempfile.mkdtemp())
+        with in_store(Path(tempfile.mkdtemp())):
+            said, _ = run_json(["--req", str(project)])
+            tally, _ = run_json(["--tal", str(project)])
+        self.assertEqual((said["op"], tally["op"]), ("requirements", "tally"))
+
+    def test_a_flag_the_operation_does_not_take_is_a_bad_argument_with_every_key(self):
+        project = Path(tempfile.mkdtemp())
+        with in_store(Path(tempfile.mkdtemp())):
+            said, code = run_json(["--needs", str(project), "--project", str(project)])
+            start, start_code = run_json(["--match", str(project), "--from", "-1"])
+        self.assertEqual((code, sorted(said), said["unchecked"][0]["code"]), (2, ENVELOPE_KEYS, "bad_argument"))
+        self.assertEqual((start_code, start["unchecked"][0]["code"], start["unchecked"][0]["fix"]), (2, "bad_argument", "--from takes a whole number from 0 up"))
+
+    def test_the_refusals_the_goal_operations_word_carry_their_codes(self):
+        project = Path(tempfile.mkdtemp())
+        with in_store(Path(tempfile.mkdtemp())):
+            matcher, _ = run_json(["--need", "x", "--matcher", "nosuch"])
+            tally, _ = run_json(["--tally", str(project)])
+            offer, offer_code = run_json(["--offer", "nothing-like-this"])
+            match, _ = run_json(["--match", str(project)])
+        self.assertEqual(matcher["unchecked"][0]["code"], "unknown_matcher")
+        self.assertEqual(tally["unchecked"][0]["code"], "project_not_listed")
+        self.assertEqual((offer_code, offer["problems"][0]["code"], offer["problems"][0]["subject"]), (1, "offer_unknown", "nothing-like-this"))
+        self.assertEqual(match["unchecked"][0]["code"], "no_needs_yet")
+
+    def test_a_needs_file_that_is_not_json_is_could_not_run_with_the_store_s_code(self):
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / ".spark" / "needs.json").write_text("{not json")
+        err = io.StringIO()
+        with in_store(Path(tempfile.mkdtemp())):
+            said, code = run_json(["--needs", str(project)])
+            with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(err):
+                text_code = parts.main(["--needs", str(project)])
+        self.assertEqual((code, said["status"], said["unchecked"][0]["code"]), (2, "could-not-run", "record_file_broken"))
+        self.assertEqual((text_code, out.getvalue()), (2, ""))
+        self.assertTrue(err.getvalue().startswith("parts.py: %s is not JSON" % (project / ".spark" / "needs.json")), err.getvalue())
+        self.assertNotIn("Traceback", err.getvalue())
+
+    def test_a_needs_drop_problem_carries_the_operation_s_code(self):
+        # P726: `Answer.from_result` keeps a Finding's code, so --needs-drop's items gain `code` as the six's do
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "light", "does": "indicate", "what": "status"}]}))
+        with in_store(Path(tempfile.mkdtemp())):
+            said, code = run_json(["--needs-drop", str(project), "nosuch"])
+        self.assertEqual((code, said["problems"][0]["code"], said["problems"][0]["subject"]), (1, "need_unknown", "nosuch"))
+
+    def test_a_goal_operation_s_help_lists_its_own_arguments_with_their_words(self):
+        out = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stdout(out):
+            parts.main(["--match", "x", "--help"])
+        self.assertIn("--match PROJECT", out.getvalue())
+        self.assertIn("--from N", out.getvalue())
+        self.assertNotIn("--list", out.getvalue())
 
 
 if __name__ == "__main__":

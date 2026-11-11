@@ -4,9 +4,9 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): `PinAssigner`, `PinMap`, `BoardEmitter`, `NeedsService`, `ImpossibleError`, the modules
-`loader`, `pin_assigner`, `board_emitter`, `board_sections`, `power_rails`, `board_components`, `need_requirements`, `footprint_emitter`, `goal_handlers` (the goal handlers of `parts.py` as
-functions, a stopgap until the "one module per Operation" card: C1 refuses a second `operations.py`, P710), and the
-Operation names below.
+`loader`, `pin_assigner`, `board_emitter`, `board_sections`, `power_rails`, `board_components`, `need_requirements`, `footprint_emitter`, one module per
+Operation of `parts.py` since P726 (`find_offers`, `list_needs`, `match_needs`, `show_offer`, `write_requirements`, `tally_cost`; `goal_handlers`
+keeps the pick's helpers), and the Operation names below.
 
 ## Level 2: what design does
 
@@ -17,7 +17,8 @@ the board file that wires them. It writes facts only, the pin map and the board 
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `need`, `needs`, `needs-set`, `match`, `offer`, `pick`, `requirements` | `parts.py` with that flag | reads, writes for `needs-set`, `pick`, `requirements` |
+| `need`, `needs`, `match`, `offer`, `requirements`, `tally` | `parts.py` with that flag, on `run_cli` since P726 (`find_offers.FindOffers`, `list_needs.ListNeeds`, `match_needs.MatchNeeds`, `show_offer.ShowOffer`, `write_requirements.WriteRequirements`, `tally_cost.TallyCost`, each on records' `AnswerOperation`) | reads, writes for `requirements` |
+| `needs-set`, `pick` | `parts.py` with that flag: they read a JSON payload, so they stay in the CLI until P726's CLI PR | reads, writes |
 | `audit` | `parts.py --audit`, on `run_cli` since P707 (`audit_records.AuditRecords`) | reads |
 | `list-boards` | `boards.py --list`, on `run_cli` since P707 (`list_boards.ListBoards`) | reads |
 | `assign-pins` | `assign_pins.py requirements.json` | reads, writes `pins.py` with `--out` |
@@ -33,7 +34,13 @@ down into records and sourcing would be a parameter with one value.
 | Module | Holds |
 |---|---|
 | `design/loader.py` | `load` and the `Design` Value, moved from `design.py` in P702 (the name avoids `design/design.py`) |
-| `design/goal_handlers.py` | the handlers of the goal Operations, moved out of `parts.py` (W6-S3b, P721), and `tally`'s handler of the cost group, because it reads `needs`, which sourcing may not import. `--needs-set` and `--pick` read a JSON payload, so they stay in the CLI |
+| `design/goal_handlers.py` | the pick's helpers, `_what_a_pick_wrote` and `_names_your_entries` (W6-S3b, P721). Its six goal handlers became the Operation modules below (P726); `--needs-set` and `--pick` read a JSON payload, so they stay in the CLI |
+| `design/find_offers.py` | `FindOffers` (`need`): what you own and what spark knows for a need, the words against every record and drawer entry (P743, P726) |
+| `design/list_needs.py` | `ListNeeds` (`needs`): a project's needs, one line each (P726) |
+| `design/match_needs.py` | `MatchNeeds` (`match`): each need with the store's candidates, paged from `--from` (P726) |
+| `design/show_offer.py` | `ShowOffer` (`offer`): what one offer says of itself (P211, P726) |
+| `design/write_requirements.py` | `WriteRequirements` (`requirements`): the picks as the project's requirements.json, reads and writes, a dry run reads (P726) |
+| `design/tally_cost.py` | `TallyCost` (`tally`): the cost line of the cost group, here because it reads `needs`, which sourcing may not import (P721, P726) |
 | `design/needs.py` | a goal's needs, matched against the store, the holds and the pick, moved from `scripts/needs.py` in P704 with the extractions P700 left. Its reason guard `kept_reason` went to `core/text_guards.py` |
 | `design/need_requirements.py` | the requirements file from the picks, `unserved_keys` and `parts_left_listed` (P708) |
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is in P702 |
@@ -45,7 +52,7 @@ down into records and sourcing would be a parameter with one value.
 | `design/board_components.py` | the parts: their names, their gaps and their place on the first-draft layout (P708) |
 | `design/audit_records.py` | `AuditRecords` (`audit`) and `walk`, the audit of every record and drawer link, moved from `goal_handlers` (P707) |
 | `design/list_boards.py` | `ListBoards` (`list-boards`): the boards a project can switch to, each with its layer, the active mark and `stops_why`; it was `boards.py --list`'s branch (P707) |
-| `design/design_operations.py` | `OPERATIONS`, the two Operations by their printed `op` (P707). A module, because the `__init__` imports nothing |
+| `design/design_operations.py` | `OPERATIONS`, the eight Operations by their printed `op` (P707, P726). A module, because the `__init__` imports nothing. `parts.py` routes a flag with a row in its own table to the core by this table |
 | `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, moved from `emit_footprint.py` in P703. The CLI `emit_footprint.py` stays in `scripts/` with `main` and `_report`, which prints. `footprint_stop` came from `boards.py` in W6-R3a (P718) |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is in P702 |
 | `design/design_codes.py` | the leaf of codes (P700): one per refusal of `load`, `assign_pins`, `emit_board` and `emit_footprint`, moved as it is in P703. A `DesignError`, an `ImpossibleError` and a `RefusedInputError` carry a `code`, and `why_no_footprint`, `why_wrong_kind`, `why_header_disagrees`, `board_file` and `board_to_draw` return a `Refusal`. No CLI writes a code yet |
@@ -54,7 +61,7 @@ down into records and sourcing would be a parameter with one value.
 
 ### Its seams
 
-Design runs no outside program, so it has no Adapter. Its only effect is `OutsideWorld.write`; its two Operations on `run_cli` take the core's `build_bare_outside_world`. It reads part and
+Design runs no outside program, so it has no Adapter. Its only effect is `OutsideWorld.write`; its Operations on `run_cli` take the core's `build_bare_outside_world`, and the six of `parts.py` answer through records' `AnswerOperation` and `Answer.to_result` (P726). It reads part and
 board records through records, and offers through sourcing's `Matcher`.
 
 Design imports sourcing, records and core.

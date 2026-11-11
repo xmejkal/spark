@@ -8,7 +8,7 @@
  {"file": "scripts/spark/bench/run_live_code.py", "name": "a failed reset has the answer's code, not reset_failed", "find": "code = board_codes.RESET_FAILED if result.reset == board_live.RESET_FAILED_STATE else result.answer", "replace": "code = result.answer"},
  {"file": "scripts/spark/bench/issue_grant.py", "name": "a closed gate is always a problem", "find": "Finding(outcomes.STATUS_FOR[closed.code],", "replace": "Finding(outcomes.PROBLEMS,"},
  {"file": "scripts/spark/bench/run_live_code.py", "name": "--code is not required", "find": "\"the code to run on the board, e.g. 'print(1)'\", required=True)", "replace": "\"the code to run on the board, e.g. 'print(1)'\")"},
- {"file": "scripts/spark/core/cli.py", "name": "the parser takes any value for a choice", "find": "required=argument.required, choices=argument.choices)", "replace": "required=argument.required)"},
+ {"file": "scripts/spark/core/cli.py", "name": "the parser takes any value for a choice", "find": "required=argument.required, choices=argument.choices, **counted)", "replace": "required=argument.required, **counted)"},
  {"file": "scripts/grant.py", "name": "an abbreviation of --check picks the issue", "find": "CHECK_FLAG.startswith(item)", "replace": "item == CHECK_FLAG"},
  {"file": "scripts/spark/core/operation.py", "name": "an integer argument has no type in the schema", "find": "bool: \"boolean\", int: \"integer\"}", "replace": "bool: \"boolean\"}"},
  {"file": "scripts/spark/bench/reach_board.py", "name": "the reach's time is the machine's, not the outside clock's", "find": "outside.clock.now().strftime(AT_FORMAT)", "replace": "__import__('time').strftime(AT_FORMAT)"},

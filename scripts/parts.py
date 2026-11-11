@@ -26,7 +26,8 @@ document quietly assumed.
 
 This file is the CLI (W6-S3b, P721): the parser, the printers, `--describe`, `--needs-drop` on the core and the
 handlers that read a JSON payload. The rest lives in `spark/sourcing/` (`part_facts`, `datasheets`, `part_handlers`,
-`drawer`) and in `spark/design/goal_handlers.py`.
+`drawer`). `--audit` and the six goal operations (`--need`, `--needs`, `--match`, `--offer`, `--requirements`, `--tally`)
+are design Operations that `main` runs on the core through `run_cli` (P707, P726: `on_the_core`).
 """
 
 import argparse
@@ -38,7 +39,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import AnsweringParser, BadArgumentError, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope  # noqa: E402, F401
-from spark.core import outcomes  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.errors import CodedMessageError  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
@@ -56,9 +56,7 @@ from spark.idea.drop_need import DropNeed  # noqa: E402
 from spark.sourcing.part_handlers import (  # noqa: E402, F401
     _op_catalog, _op_drawer, _op_fetch, _op_keep, _op_kept, _op_list, _op_promote, _op_read, _op_show, _op_signals,
     _op_skeleton, _op_sources, _op_step, _op_unverified, _op_validate)
-from spark.design.goal_handlers import (  # noqa: E402, F401
-    _op_match, _op_need, _op_needs, _op_offer, _op_requirements, _op_tally)
-from spark.design.audit_records import AuditRecords  # noqa: E402
+from spark.design import design_operations, find_offers, match_needs, write_requirements  # noqa: E402
 from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
 
@@ -147,7 +145,8 @@ def _not_negative(text):
     return int(text)
 
 
-#: The options an operation reads, in the same columns but effects.
+#: The options an operation reads, in the same columns but effects. An option a design Operation on the core also takes
+#: reads its help from that Operation's module, so `--help` of both and `--describe` say one text (P726).
 OPTIONS = (
     ("kind", {}, "with --skeleton: the part's kind (motor-driver, sensor, regulator, …)"),
     ("vendor", {}, "with --skeleton: who makes it"),
@@ -156,11 +155,10 @@ OPTIONS = (
     ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
     ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
     ("passed-over", {"metavar": "FILE"}, "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"),
-    ("matcher", {"metavar": "NAME"}, "with --match or --need: the matcher that ranks the offers (--match: same-words, word-overlap; "
-     "--need: word-overlap, name-contains); a name that does not fit is refused with the names that do"),
-    ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
-    ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
-    ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
+    ("matcher", {"metavar": "NAME"}, find_offers.MATCHER_HELP),
+    ("project", {"type": Path}, find_offers.PROJECT_HELP),
+    ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, match_needs.START_HELP),
+    ("dry-run", {"action": "store_true"}, write_requirements.DRY_RUN_HELP),
     ("json", {"action": "store_true"}, "answer in one envelope: problems, unchecked, notes, assumptions, next "
      "(docs/guide/agents/json.md, \"parts.py's envelope\")"),
 )
@@ -243,9 +241,7 @@ def _op_needs_drop(args, project):
     target, need = args.needs_drop
     result = run_operation(DropNeed(), {"project": Path(target), "need": need, "dry_run": args.dry_run},
                            build_outside=lambda effects: build_outside_world(effects, Reporter()))
-    return Answer(result.data, result.lines, notes=result.notes or (), diagnostics=result.diagnostics,
-                  problems=[_problem(found.subject, found.sentence, found.fix) for found in result.findings if found.severity == outcomes.PROBLEMS],
-                  unchecked=[_cannot(found.sentence, found.fix) for found in result.findings if found.severity == outcomes.COULD_NOT_RUN])
+    return Answer.from_result(result)
 
 
 def _op_pick(args, project):
@@ -292,38 +288,10 @@ def _op_describe(args, project):
     return Answer({"operations": operations, "options": options, "exits": exits}, lines)
 
 
-def _text_of(answer):
-    """
-    The person's lines, then what the answer carries that they do not say yet: each problem and could-not-run item
-    with its fix, each note and assumption, and the next steps (P124, #58). A line already said is not said again, so a
-    handler that prints an item its own way keeps its wording; one that forgets an item no longer drops it.
-    """
-    lines = list(answer.lines)
-    said = lambda words: bool(words) and any(words in line for line in answer.lines)  # noqa: E731 — the handler's own
-    for heading, items in (("", answer.problems), ("could not check: ", answer.unchecked)):
-        for item in items:
-            if not (said(item["sentence"]) or said(item.get("subject"))):  # a handler may word an item its own way
-                lines.append("  %s%s%s" % (heading, "%s: " % item["subject"] if item.get("subject") else "", item["sentence"]))
-            if item.get("fix") and not said(item["fix"]):
-                lines.append("  fix%s: %s" % (" for %s" % item["subject"] if item.get("subject") else "", item["fix"]))
-    for note in answer.notes:
-        shown = "%s: %s" % (note["subject"], note["sentence"]) if note.get("subject") else note["sentence"]
-        if not said(shown):
-            lines.append("  " + shown)
-    for assumption in answer.assumptions:
-        if not (said(assumption["fact"]) or said(assumption.get("sentence"))):
-            lines.append("  ? %s%s%s" % (assumption["fact"], " = %s" % assumption["assumed"] if "assumed" in assumption else "",
-                                         " — " + assumption["sentence"] if assumption.get("sentence") else ""))
-        if assumption.get("upgrade") and not said(assumption["upgrade"]):
-            lines.append("    to settle it: %s" % assumption["upgrade"])
-    lines += ["  next: parts.py %s — %s" % (" ".join(step["argv"]), step["why"]) for step in answer.next]
-    return lines
-
-
 def _say(op, answer, as_json):
     """
     Print one answer and return its exit code (§6.4.1): with --json the envelope, compact, on stdout; without, the
-    person's lines and whatever the answer carries that they leave out (`_text_of`). An answer with no lines says its
+    person's lines and whatever the answer carries that they leave out (`Answer.text_lines`). An answer with no lines says its
     problems and could-not-run items on stderr, as before.
     """
     said = envelope("parts", op, answer.data, answer.problems, answer.unchecked, answer.next, answer.truncated,
@@ -338,23 +306,40 @@ def _say(op, answer, as_json):
                 said_here = "parts.py: %s%s" % (item["sentence"], " — " + item["fix"] if item.get("fix") else "")
                 print(guard_lines(said_here), file=sys.stderr)
             answer = answer._replace(problems=(), unchecked=())
-        for line in _text_of(answer):
+        for line in answer.text_lines():
             # P403, P423: every field, once, at the edge: a control or a right-to-left character shows as `?`. A line's own
             # newlines stay. A name that can hold a newline (a holder, a used_in key) is guarded where it is put in.
             print(guard_lines(line))  # --json stays raw, as data
     return EXIT_FOR[said["status"]]
 
 
-#: The Operations of parts.py that run on the core, by the flag that picks each (P707): the rest come with P726.
-ON_THE_CORE = {"--audit": AuditRecords}
+#: The Operations of parts.py that run on the core, by the flag that picks each (P707, P726): the design Operations that
+#: have a row in OPERATIONS (`list-boards` is boards.py's). The rest come with the sourcing PR and the CLI PR of P726.
+ON_THE_CORE = {"--" + name: operation for name, operation in design_operations.OPERATIONS.items()
+               if any(row[0] == name for row in OPERATIONS)}
+#: Every long flag parts.py knows, for the prefix rule.
+FLAGS = ["--" + name for name, *_ in OPERATIONS] + ["--" + name for name, *_ in OPTIONS]
+
+
+def asked_on_the_core(argv):
+    """The Operation `argv` asks for on the core, picked as argparse picks a long option (P726): an item (its text before
+    `=`) that equals a core flag, else one longer than `--` that is a prefix of exactly one of parts.py's flags, when that
+    flag is a core one (`--need` is a prefix of `--needs`, so the exact match comes first; `--ne` fits four flags and goes
+    to the parser, whose own answer names the ambiguity). None when `argv` asks for none."""
+    for item in argv:
+        flag = item.split("=", 1)[0]
+        if flag in ON_THE_CORE:
+            return ON_THE_CORE[flag]
+        fitting = [known for known in FLAGS if known.startswith(flag)] if len(flag) > len("--") else []
+        if len(fitting) == 1 and fitting[0] in ON_THE_CORE:
+            return ON_THE_CORE[fitting[0]]
+    return None
 
 
 def on_the_core(argv):
-    """The exit code of the Operation `argv` asks for on the core, picked by its flag or a prefix of it longer than `--`
-    (argparse's abbreviations take `--aud`, so this does; `--audit` is the one flag that starts with `--a`), run through
-    `run_cli` with parts.py's `tool`; None when `argv` asks for none, and the parser's own handlers answer (P707)."""
-    operation = next((operation for flag, operation in ON_THE_CORE.items()
-                      if any(len(item) > len("--") and flag.startswith(item) for item in argv)), None)
+    """The exit code of the Operation `argv` asks for on the core (`asked_on_the_core`), run through `run_cli` with
+    parts.py's `tool`; None when `argv` asks for none, and the parser's own handlers answer (P707)."""
+    operation = asked_on_the_core(argv)
     return None if operation is None else run_cli(HelpText("parts.py", "What a part needs, and what is known about it.", "", tool="parts"),
                                                   operation(), argv, outside_builder=build_bare_outside_world)
 

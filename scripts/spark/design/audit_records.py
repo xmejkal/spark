@@ -13,7 +13,8 @@ from spark.core.renderers import FullEnvelope
 from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines
 from spark.records import board_records, record_kind, records_codes, store
-from spark.records.record_kind import owes, _parse, _shape_problems, _with_project
+from spark.records.answer_operation import START_FIX, START_SENTENCE
+from spark.records.record_kind import Answer, _cannot, owes, _parse, _shape_problems, _with_project
 from spark.sourcing import drawer
 from spark.sourcing.part_records import broken_problems, function_of
 from spark.design import design_codes, footprint_emitter
@@ -21,8 +22,6 @@ from spark.design import design_codes, footprint_emitter
 # --- MVP ---
 #: The fix of a store that could not be read: the file is named in the sentence.
 UNREADABLE_FIX = "fix the file the sentence names, then run --audit again"
-#: The fix of a negative --from.
-START_FIX = "--from takes a whole number from 0 up"
 #: The sentence of a drawer entry that points at a record nobody has.
 DANGLING_SENTENCE = "points at a record nobody has"
 
@@ -69,15 +68,10 @@ def walk(project=None):
     return counts, owed, broken, silent, dangling, stops
 
 
-#: What a run that could not look prints beside the empty answer, on stderr, as parts.py printed it for an answer with no lines.
-REFUSED_LINE = "parts.py: %s — %s"
-
-
 def refused(sentence, code, fix):
-    """The could-not-run result of an audit that could not look: one unchecked Finding, the sentence on stderr through
-    `diagnostics` (the text run prints no empty answer), and parts.py's every key."""
-    return OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, code, sentence, fix)],
-                           diagnostics=[REFUSED_LINE % (sentence, fix)], notes=(), assumptions=())
+    """The could-not-run result of an audit that could not look: one unchecked item, its sentence on stderr (the text run
+    prints no empty answer), through `Answer.to_result` (P726), the rule every parts.py Operation on the core shares."""
+    return Answer(unchecked=[_cannot(sentence, fix, code)]).to_result()
 
 
 class AuditRecords(Operation):
@@ -98,7 +92,7 @@ class AuditRecords(Operation):
 
     def run(self, project, start, *, outside, audit=True):
         if start < 0:
-            return refused("--from %d: a listing cannot start before its first item" % start, codes.BAD_ARGUMENT, START_FIX)
+            return refused(START_SENTENCE % start, codes.BAD_ARGUMENT, START_FIX)
         project = project.resolve() if project else None
         try:
             counts, owed, broken, silent, dangling, stops = walk(project)

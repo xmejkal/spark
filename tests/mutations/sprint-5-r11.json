@@ -6,7 +6,7 @@
   "replace": "    haystack = \" \".join([part_id, record.get(\"name\") or \"\"]).lower()"
  },
  {
-  "file": "scripts/spark/design/goal_handlers.py",
+  "file": "scripts/spark/design/find_offers.py",
   "name": "no match no longer names the research command",
   "find": "Research it: /spark:research",
   "replace": "Research it: "

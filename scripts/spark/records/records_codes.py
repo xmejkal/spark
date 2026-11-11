@@ -26,6 +26,8 @@ KEY_NOT_PLAIN, STORE_IN_REPOSITORY, STORE_NOT_WRITABLE = "key_not_plain", "store
 RECORD_FILE_BROKEN, NOT_A_BOARD_RECORD = "record_file_broken", "not_a_board_record"
 URL_REFUSED, URL_UNREACHABLE = "url_refused", "url_unreachable"
 FILE_NAME_REFUSED, DOCUMENT_NOT_KEPT = "file_name_refused", "document_not_kept"
+#: answer_operation (P726): a file an Operation reads or writes, a project's or the store's, that the disk refused or that is not JSON.
+FILE_REFUSED = "file_refused"
 #: missing_facts: a stage needs a fact the record lacks (P464).
 MISSING_FACT = "missing_fact"
 
@@ -52,6 +54,7 @@ CODES = {
     STORE_IN_REPOSITORY: "the store would be inside a git work tree, and what the person owns stays out of every repository",
     STORE_NOT_WRITABLE: "spark's store cannot be made or written where SPARK_HOME points",
     RECORD_FILE_BROKEN: "a file spark reads a record from is not JSON, or not in its shape: fix it by hand",
+    FILE_REFUSED: "a file the operation reads or writes could not be read or written, or is not JSON: the sentence names it",
     NOT_A_BOARD_RECORD: "the record a deploy is kept in is not a board record, so it was left as it is",
     URL_REFUSED: "a URL's scheme, or the scheme it was redirected to, is not http or https, so spark does not open it",
     URL_UNREACHABLE: "a URL does not answer",

@@ -106,8 +106,9 @@ def envelope(tool, op, data=None, problems=(), unchecked=(), next_steps=(), trun
 
 
 def dumps(envelope):
-    """The envelope as the one compact line a script prints (it was board_envelope.dumps, which now calls this)."""
-    return json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
+    """The envelope as the one compact line a script prints. A lone surrogate in a value is written as a JSON escape, so
+    `print` never fails on it (P445; parts.py did this alone before P726)."""
+    return json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8", "backslashreplace").decode("utf-8")
 
 
 def step(op, argv, why, effects=(), needs_yes=False, needs_person=None):

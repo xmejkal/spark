@@ -13,9 +13,11 @@ from spark.core.result import output_schema
 # --- MVP ---
 #: Value: one argument of an Operation, as argparse adds it. `flags` are its option strings, `dest` the keyword `run`
 #: takes, `kind` the type of the value (`Path`, `str`) or `bool` for a flag that is on when given, `group` the name of
-#: the group whose arguments exclude each other, or None, `required` whether the person must give it, and `choices` the
-#: values it may take, or None.
-Argument = namedtuple("Argument", "flags dest kind help default group required choices", defaults=(None, None, False, None))
+#: the group whose arguments exclude each other, or None, `required` whether the person must give it, `choices` the
+#: values it may take, or None, `nargs` argparse's count of values (`"+"`, `"*"` or an int; None for one value, P726), and
+#: `metavar` the word `--help` shows for the value (`PROJECT`), or None for argparse's.
+Argument = namedtuple("Argument", "flags dest kind help default group required choices nargs metavar",
+                      defaults=(None, None, False, None, None, None))
 
 #: What an Operation does outside spark: it reads the project's files, runs a program, touches the board, erases what is
 #: on it, writes to it, asks the person for a yes, fetches a URL. They are the words of a step's `effects` (`outcomes.step`); DELETES and
@@ -41,10 +43,11 @@ JSON_TYPE_OF_KIND = {Path: "string", str: "string", bool: "boolean", int: "integ
 
 
 def _argument_schema(argument):
-    """One Argument as a JSON Schema property: its type, its help, its `enum` when it has choices, and its default when it
-    has one (a flag's is False)."""
+    """One Argument as a JSON Schema property: its type (an array of it when `nargs` takes several values), its help, its
+    `enum` when it has choices, and its default when it has one (a flag's is False)."""
     default = False if argument.kind is bool else argument.default
-    said = {"type": JSON_TYPE_OF_KIND[argument.kind], "description": argument.help}
+    kind = {"type": JSON_TYPE_OF_KIND[argument.kind]}
+    said = dict({"type": "array", "items": kind} if argument.nargs is not None else kind, description=argument.help)
     said.update({"enum": list(argument.choices)} if argument.choices else {})
     return said if default is None else dict(said, default=str(default) if isinstance(default, Path) else default)
 

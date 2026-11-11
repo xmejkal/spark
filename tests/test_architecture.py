@@ -412,8 +412,8 @@ class TheDesignAreaTest(unittest.TestCase):
     DESIGN = ROOT / "scripts" / "spark" / "design"
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
     MODULES = ["audit_records", "board_components", "board_emitter", "board_sections", "copper", "design_codes", "design_operations", "fab",
-               "footprint_emitter", "goal_handlers", "list_boards", "loader", "need_requirements", "needs", "netlist", "pin_assigner",
-               "power_rails", "restricted_pins"]
+               "find_offers", "footprint_emitter", "goal_handlers", "list_boards", "list_needs", "loader", "match_needs", "need_requirements",
+               "needs", "netlist", "pin_assigner", "power_rails", "restricted_pins", "show_offer", "tally_cost", "write_requirements"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print. A library function back in a CLI, under
     #: any name, fails the check.
     CLIS = {"assign_pins.py": ["main"], "emit_board.py": ["main"], "emit_footprint.py": ["_report", "main"]}
@@ -444,7 +444,7 @@ class TheDesignAreaTest(unittest.TestCase):
         code = ("from spark.core.operation import Operation; from spark.design import design_operations as d; "
                 "print(sorted(d.OPERATIONS)); print([op for op, cls in d.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-        self.assertEqual(run.stdout.split("\n")[:2], ["['audit', 'list-boards']", "[]"], run.stderr)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['audit', 'list-boards', 'match', 'need', 'needs', 'offer', 'requirements', 'tally']", "[]"], run.stderr)
 # --- end MVP ---
 
 
@@ -496,8 +496,8 @@ class TheRecordsAreaTest(unittest.TestCase):
     `boards.py` and `tools.py`."""
     RECORDS = ROOT / "scripts" / "spark" / "records"
     #: The modules of the area so far, by the names of its page (`areas/records.md`).
-    MODULES = ["board_pads", "board_records", "board_rules", "brief", "deploy_record_store", "fact_needs", "missing_facts", "onboard_parts",
-               "provenance", "record_kind", "records_codes", "store", "tool_finder", "versions"]
+    MODULES = ["answer_operation", "board_pads", "board_records", "board_rules", "brief", "deploy_record_store", "fact_needs", "missing_facts",
+               "onboard_parts", "provenance", "record_kind", "records_codes", "store", "tool_finder", "versions"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print (`_validate_all` and `print_status`).
     #: `boards.py --list` runs design's `ListBoards`, imported inside `main` (P707). A library function back in a CLI,
     #: under any name, fails the check.
@@ -557,10 +557,12 @@ class TheSourcingAreaTest(unittest.TestCase):
     #: The modules of the area, by the names of its page (`areas/sourcing.md`).
     MODULES = ["datasheets", "drawer", "matching", "offers", "part_facts", "part_handlers", "part_records", "part_rules", "run_cost",
                "sourcing_codes"]
-    #: `parts.py`'s own top-level functions: its parser and printers, `_op_describe`, `_op_needs_drop` on the core, and
-    #: the handlers that read a JSON payload, because reading stdin is the interface's job (P721 row 6).
+    #: `parts.py`'s own top-level functions: its parser and printer, `_op_describe`, `_op_needs_drop` on the core, the route
+    #: to the Operations on the core (P707, P726), and the handlers that read a JSON payload, because reading stdin is the
+    #: interface's job (P721 row 6). The text printer's rule is `record_kind.Answer.text_lines` since P726.
     PARTS_CLI = ["_not_negative", "_op_describe", "_op_drawer_import", "_op_drawer_set", "_op_fact_set", "_op_function_set",
-                 "_op_needs_drop", "_op_needs_set", "_op_pick", "_parser", "_part_problem", "_read_json_input", "_say", "_text_of", "main", "on_the_core"]
+                 "_op_needs_drop", "_op_needs_set", "_op_pick", "_parser", "_part_problem", "_read_json_input", "_say", "asked_on_the_core", "main",
+                 "on_the_core"]
 
     def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):
         modules = sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py")
