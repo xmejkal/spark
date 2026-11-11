@@ -3,7 +3,8 @@ The sources of research (P737, steps 4 and 5). A `ResearchSource` offers what it
 documents, Questions it cannot answer itself, the URLs it read and the problems it met. `ResearchPart` runs the sources
 in its order as a pipeline: each offer is folded into the record before the next source asks. `DfrobotWikiSource` reads
 the module's wiki page by its `sku` and keeps the documents the page lists. `KeptDocumentsSource` reads no network:
-when the record keeps a dimension drawing, it asks one AGENT Question per geometry gap that cites that drawing.
+when the record keeps a dimension drawing, it asks one Question per geometry gap that cites that drawing, of whoever is
+there (EITHER): a person at the terminal reads the drawing, and under `--json` Claude does (P763).
 """
 
 import abc
@@ -13,7 +14,7 @@ from collections import namedtuple
 from urllib.parse import quote, urlsplit
 
 from spark.core.errors import SparkError
-from spark.core.replies import AGENT, EITHER, VALUE, Question
+from spark.core.replies import EITHER, VALUE, Question
 from spark.records import store
 from spark.records.store import StoreError
 from spark.sourcing.datasheets import document_entry, document_key, document_name, keep_in_store, keepable_url
@@ -42,9 +43,10 @@ def why_of(need):
 
 
 def question_for(need, question, cites=None):
-    """The Question for one gap: the file's `question` (text, unit, answer_form, example) for the need's fact path. With
-    `cites`, an AGENT reads the answer off the cited document; without, EITHER answers, because nobody knows where it is."""
-    return Question(need.fact_path, question["text"], VALUE, AGENT if cites else EITHER, why_of(need),
+    """The Question for one gap: the file's `question` (text, unit, answer_form, example) for the need's fact path, asked of
+    whoever is there (EITHER). With `cites`, the citation tells the reader which document and page hold the answer; without,
+    nobody knows where it is."""
+    return Question(need.fact_path, question["text"], VALUE, EITHER, why_of(need),
                     question["unit"], question["answer_form"], question["example"], None, cites)
 
 
@@ -95,8 +97,8 @@ class ResearchSource(abc.ABC):
 class KeptDocumentsSource(ResearchSource):
     """
     Strategy: the documents the record already keeps in the person's store, with no network. When one of them is a
-    drawing (`DRAWING_TITLE_WORDS` in its key or title) and its file is kept, it asks one AGENT Question per gap, each
-    citing that drawing at page 1. Otherwise it offers nothing.
+    drawing (`DRAWING_TITLE_WORDS` in its key or title) and its file is kept, it asks one Question per gap, of whoever is
+    there, each citing that drawing at page 1. Otherwise it offers nothing.
     """
 
     def offer(self, gaps, record, outside):
