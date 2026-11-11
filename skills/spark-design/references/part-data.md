@@ -1,14 +1,13 @@
-# Part-data backbone — real footprints, 3D models, datasheets
+# Part-data backbone: real footprints, 3D models, datasheets
 
-The single most important thing separating a working tool from a toy: for **every part**, resolve
-the authoritative footprint + 3D model + pinout + datasheet from a real source, cache it, and mark
-it `verified`. Never ship a generic placeholder footprint to fabrication. This is the verified-parts
-waterfall (see `verified-parts.md`) made comprehensive.
+A working tool differs from a toy in one thing. For **every part**, it resolves the footprint, the 3D model, the
+pinout and the datasheet from a real source. It caches them and marks them `verified`. Never ship a generic placeholder
+footprint to fabrication. This page extends the waterfall of `verified-parts.md` to every part.
 
 ## Start from a worked record
 
-Researchers spent about one call in eight learning the schema from spark's source (P80). Read this
-one instead — `parts/led-red-5mm.json`, the Kingbright L-7113ID, written from one kept datasheet:
+Researchers spent about one call in eight learning the schema from spark's source (P80). Read this record instead.
+It is `parts/led-red-5mm.json`, the Kingbright L-7113ID, written from one kept datasheet:
 
 ```json
 {
@@ -30,51 +29,60 @@ one instead — `parts/led-red-5mm.json`, the Kingbright L-7113ID, written from 
 }
 ```
 
-What makes it a good record: every fact cites a page of a kept document; the pin order says how it
-was read; the warning a person must see is in `host_requirements`, which spark prints; the series
-resistor is asked for by the current it is for, and spark computes the value; `legs`, optional and keyed by the pin names in
-`pin_order`, names each pin as a person finds it on the part, and the breadboard sheet prints it. A pull-up the board's
-internal one can do says `"internal_will_do": true`: on a board that states `internal_pull_up_ohms`, spark places no
-resistor and `pins.py` tells the firmware to pull the pin up, unless the pin wakes the chip ([P204](https://github.com/xmejkal/spark/issues/167)).
-What it leaves out on purpose (W21): prices, stock, and facts no decision reads.
+What makes it a good record:
 
-## Source waterfall (try in order; record which source + a link as provenance)
-1. **tscircuit registry** — `tsci add <author>/<part>` (e.g. `seeed/xiao-esp32-c6`). Brings a real
-   footprint AND a 3D model AND the pin map, usable directly in the `.tsx`. First choice when a part exists.
-2. **JLCPCB / LCSC** — the largest single library. Key on the **LCSC part number (C…)**:
-   `footprint="jlcpcb:C…"` in tscircuit, or `easyeda2kicad` / the `@jlcpcb/mcp` server → real
-   footprint + 3D + parametric data + stock/price. Best for jellybean and catalog parts.
-3. **Manufacturer** — the authoritative pinout/dimensions/3D STEP:
-   - Espressif: `pins_arduino.h` variant header + the Espressif Docs MCP (datasheets/HDG).
-   - Seeed: OPL_Kicad_Library (symbols/footprints; the XIAO family shares one 14-pad footprint) +
-     OSHW-XIAO-Series (schematic + STEP + pinout per variant).
-   - DFRobot: per-SKU wiki pinout + schematic ZIP + STEP + dimension PDF (a layout zip holds a KiCad
-     footprint and symbol for some SKUs, DFR1117 for one, else derive the footprint from the dimension PDF) + the `DFRobot_<Part>` GitHub examples.
-   - Bare ICs (TB6612, MAX98357A, DRV8833…): the manufacturer datasheet pinout + KiCad official lib.
-4. **Aggregators** — SnapEDA / Ultra Librarian / ComponentSearchEngine: per-part symbol + footprint
-   + 3D, fetched on demand. Do NOT mirror wholesale (licensing).
-5. **KiCad official libraries** — footprints + 3D for standard passives, connectors, common ICs.
+- Every fact cites a page of a kept document.
+- The pin order says how it was read.
+- The series resistor is asked for by the current it is for, and spark computes the value.
+- `host_requirements` holds each warning that a person must see, and spark prints it. It is in the record format
+  since parts became data (2026-09-24).
+- `legs` is optional and keyed by the pin names in `pin_order`. It names each pin as a person finds it on the part,
+  and the breadboard sheet prints it ([P191](https://github.com/xmejkal/spark/issues/143)).
+- `parts.py --fact-set` writes both keys: `legs` leg by leg, and `host_requirements` as one whole list
+  ([P741](https://github.com/xmejkal/spark/issues/1017)).
 
-## What to store per part (the cache = the verified-parts library)
-- symbolic pin label → physical pin/pad number/GPIO (the indirection AI gets wrong)
-- footprint reference (registry id / LCSC C-number / KiCad lib id) and its source
-- 3D model reference (registry / STEP file)
+A pull-up that the board's own internal pull-up can replace carries `"internal_will_do": true`. On a board that states
+`internal_pull_up_ohms`, spark places no resistor, and `pins.py` tells the firmware to pull the pin up. A pin that
+wakes the chip is the exception ([P204](https://github.com/xmejkal/spark/issues/167)).
+What the record leaves out on purpose (W21): prices, stock, and facts no decision reads.
+
+## Source waterfall (try in order, and record the source and a link as provenance)
+1. **tscircuit registry**: `tsci add <author>/<part>`, for example `seeed/xiao-esp32-c6`. It brings a real
+   footprint, a 3D model and the pin map, usable directly in the `.tsx`. If a part exists there, use it first.
+2. **JLCPCB / LCSC**: the largest single library. Key on the **LCSC part number (C…)**:
+   `footprint="jlcpcb:C…"` in tscircuit, or `easyeda2kicad` or the `@jlcpcb/mcp` server. These give a real
+   footprint, 3D, parametric data, stock and price. Best for jellybean and catalog parts.
+3. **Manufacturer**: the authoritative pinout, dimensions and 3D STEP.
+   - Espressif: the `pins_arduino.h` variant header and the Espressif Docs MCP (datasheets, HDG).
+   - Seeed: OPL_Kicad_Library (symbols and footprints, and the XIAO family shares one 14-pad footprint) and
+     OSHW-XIAO-Series (schematic, STEP and pinout per variant).
+   - DFRobot: the per-SKU wiki pinout, the schematic ZIP, the STEP, the dimension PDF and the `DFRobot_<Part>`
+     GitHub examples. For some SKUs a layout zip holds a KiCad footprint and symbol (DFR1117 for one). For the
+     others, derive the footprint from the dimension PDF.
+   - Bare ICs (TB6612, MAX98357A, DRV8833…): the manufacturer datasheet pinout and the KiCad official lib.
+4. **Aggregators**: SnapEDA, Ultra Librarian, ComponentSearchEngine. They give a symbol, a footprint and 3D per part,
+   fetched on demand. Do NOT mirror them wholesale (licensing).
+5. **KiCad official libraries**: footprints and 3D for standard passives, connectors and common ICs.
+
+## What to store per part (the cache is the verified-parts library)
+- symbolic pin label → physical pin, pad number or GPIO (the indirection AI gets wrong)
+- footprint reference (registry id, LCSC C-number or KiCad lib id) and its source
+- 3D model reference (registry or STEP file)
 - datasheet URL, operating voltage, key ratings
-- `verified: true|false` + provenance link. Nothing goes to fab while any pin is unverified.
+- `verified: true|false` and a provenance link. Nothing goes to fab while any pin is unverified.
 
 ## Honest environment note
-Fetching any of the above needs outbound network to those registries. A **restricted sandbox
-(like some cloud sessions) blocks them** — `npm.tscircuit.com`, jsdelivr, easyeda can be denied by
-egress policy — so the design falls back to **generic footprints** (soic8/soic14/pinrow) as
-placeholders and the 3D looks like anonymous chips. Run the plugin where the network is open (the
-user's own machine) to pull the real parts; then the footprints, pad layouts and 3D become the
-actual modules. State this to the user rather than pretending the placeholder is the real part.
+Fetching any of the above needs outbound network to those registries. **A restricted sandbox, such as some cloud
+sessions, blocks them**: egress policy can deny `npm.tscircuit.com`, jsdelivr and easyeda. Then the design falls
+back to **generic footprints** (soic8, soic14, pinrow) as placeholders, and the 3D looks like anonymous chips. Run
+the plugin where the network is open, on the user's own machine, to pull the real parts. Then the footprints, pad
+layouts and 3D become the actual modules. Tell the user this, and do not pretend that the placeholder is the real
+part.
 
 ## Auto-solve or ask (layout)
-When placement/DRC errors appear (part off-board, decoupling too far from its pin, overlap), the
-plugin should FIX them automatically where the fix is unambiguous — snap decoupling caps hard
-against their IC power pin, pull parts inside the board edge, spread overlaps — and only ASK the
-user when the intent is ambiguous (board outline, connector positions, which side a part goes).
-Never leave the user hand-nudging coordinates. tscircuit's own autorouter is too beta for this
-(its 1 mm decoupling-proximity rule can't be satisfied for multi-cap pins); own the
-placement + Freerouting + `kicad-cli` DRC-fix loop from `pcb-layout.md` instead.
+Placement and DRC errors include a part off the board, decoupling too far from its pin, and overlap. If the fix is
+unambiguous, the plugin fixes them automatically. It snaps decoupling caps hard against their IC power pin, pulls
+parts inside the board edge and spreads overlaps. If the intent is ambiguous, it asks the user: the board outline,
+the connector positions, which side a part goes. Never leave the user hand-nudging coordinates. tscircuit's own
+autorouter is too beta for this. Its 1 mm decoupling-proximity rule cannot be met for pins with more than one cap.
+Own the placement, Freerouting and `kicad-cli` DRC-fix loop from `pcb-layout.md` instead.
