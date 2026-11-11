@@ -1,7 +1,7 @@
 # P741 `--fact-set` writes `legs` and `host_requirements`: rows
 
 Card: [P741 #1017](https://github.com/xmejkal/spark/issues/1017), XS, under P735. Plan `~/.claude/plans/p741-wiring-keys.md`. Rows 1 to 8 are the plan
-refuter (Fable), 9 to 12 the implementer's rulings, 13 on the PR refuter (Fable). 2026-11-11.
+refuter (Fable), 9 to 12 the implementer's rulings, 13 to 20 the PR refuter (Fable), 21 the implementer. 2026-11-11.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -17,3 +17,12 @@ refuter (Fable), 9 to 12 the implementer's rulings, 13 on the PR refuter (Fable)
 | 10 | a leg key with a control character is refused, never cleaned, through `list_key_problems` | implementer | closed | as for the provenance keys (P374); test |
 | 11 | the records guide documents neither `legs` nor `host_requirements` (only archives do) | implementer | raised | a docs card for the records guide; the `--help` text and scripts.md say what `--fact-set` writes |
 | 12 | the breadboard sheet printing a written line was not walked, only the readers were read | implementer | closed | the unit tests prove the write; the sheet's reader is unchanged |
+| 13 | `legs` reaches the catalog record, a listed project's record and its shelf copy like any fact; the refuse lambda's `record` is the raw file, so `pin_order` is a list in every layer | PR refuter | verified | part_handlers.py:355, :363; a scratch store with three layers |
+| 14 | a skeleton with no `pin_order` refuses `legs` with "pin_order (none)", which tells the person to fill it first | PR refuter | verified | reproduced |
+| 15 | one sentence for two failures: a leg whose pin is in `pin_order` but whose text is empty or not words read "each pin one of pin_order (A, K); A is not", which contradicts itself | PR refuter | acted | LEGS_SHAPE reads "legs is {pin of pin_order (A, K): words that tell the leg apart}; A is not"; the two test strings follow |
+| 16 | `scrub` runs before the key check and never touches dict keys | PR refuter | verified | parts.py scrub then the refuse lambda; drawer.py `_scrubbed` keeps keys |
+| 17 | a host requirement that is a number, null, an object, or a non-list is refused | PR refuter | verified | `_words` |
+| 18 | the 6 mutants are caught and the 58 anchors of the four tables hold | PR refuter | verified | `mutate.py --copy` 6 of 6, `--anchors` |
+| 19 | `--show` prints a written `host_requirements` but has no reader for `legs`, so a person reads a written leg back only in the file | PR refuter | acted | `--show` prints "leg A: …" per leg after the physical lines; test |
+| 20 | the help text, the golden and scripts.md claim only what the code does | PR refuter | verified | parts.py:102, scripts.md:288 |
+| 21 | an integer entry in `pin_order` would read "pin_order (1, 2); 1 is not" | implementer | closed | the contract takes `pin_order` as strings; a near miss of row 15, not reachable through a valid record |

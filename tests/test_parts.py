@@ -1658,8 +1658,8 @@ class FactSetWritesTheSheetKeysTest(unittest.TestCase):
         said, code, after = self.write(home, {"legs": {"B": "a third leg", "K": ""}, "host_requirements": [self.LINE, " "]})
         self.assertEqual((code, "legs" in after, "host_requirements" in after), (1, False, False))
         self.assertEqual([p["sentence"] for p in said["problems"]],
-                         ["legs is {pin: how to tell the leg apart}, each pin one of pin_order (A, K); B is not",
-                          "legs is {pin: how to tell the leg apart}, each pin one of pin_order (A, K); K is not",
+                         ["legs is {pin of pin_order (A, K): words that tell the leg apart}; B is not",
+                          "legs is {pin of pin_order (A, K): words that tell the leg apart}; K is not",
                           "host_requirements is a list of lines that are not empty; item 1 is not"])
 
     def test_an_empty_legs_a_string_for_the_lines_and_a_control_character_in_a_leg_key_are_refused(self):
@@ -1670,6 +1670,13 @@ class FactSetWritesTheSheetKeysTest(unittest.TestCase):
         self.assertEqual((code, said["problems"][0]["sentence"]), (1, "host_requirements is a list of lines that are not empty; item the value is not"))
         said, code, after = self.write(home, {"legs": {"A\x07": "a leg"}})
         self.assertEqual((code, len(said["problems"]), "legs" in after), (1, 2, False))
+
+    def test_show_reads_a_written_leg_back(self):
+        home = self.a_store()
+        self.write(home, {"legs": self.LEGS})
+        with in_store(home):
+            printed, code = run_text(["--show", "x-led"])
+        self.assertEqual((code, [line for line in printed.splitlines() if line.startswith("  leg ")]), (0, ["  leg A: the anode, the longer leg", "  leg K: the cathode, by the flat of the rim"]))
 
     def test_a_text_in_a_leg_or_a_line_is_cleaned_and_cut_at_the_provenance_cap(self):
         home = self.a_store()

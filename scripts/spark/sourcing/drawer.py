@@ -45,7 +45,7 @@ PROVENANCE_MAX = 1000
 #: The keys the breadboard sheet reads as text (P741): `legs`, how to tell each leg apart, by a pin of `pin_order`, and
 #: `host_requirements`, the lines the host board must meet. `--fact-set` writes them: legs leg by leg, the lines as a whole (like tags).
 SHEET_KEYS = ("legs", "host_requirements")
-LEGS_SHAPE = "legs is {pin: how to tell the leg apart}, each pin one of pin_order (%s); %s is not"
+LEGS_SHAPE = "legs is {pin of pin_order (%s): words that tell the leg apart}; %s is not"
 LINES_SHAPE = "host_requirements is a list of lines that are not empty; item %s is not"
 
 
