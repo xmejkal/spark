@@ -549,13 +549,35 @@ class ResearchPartTest(unittest.TestCase):
             code = research.main(["--part", "x-mod", "--project", str(self.project), "--replies", str(self.project / "none.json"), "--json"])
         self.assertEqual((code, json.loads(out.getvalue())["unchecked"][0]["code"]), (2, "bad_argument"))
 
+    #: A record of another vendor with no documents: no wiki fetch, and its three questions are EITHER, so a terminal is asked.
+    PLAIN = dict(BARE, vendor="Seeed", sku="S1")
+
+    def test_a_file_with_a_problem_asks_nobody_so_no_typed_answer_is_lost_with_it(self):
+        self.bare(self.PLAIN)
+        self.replies_file.parent.mkdir()
+        self.replies_file.write_text(json.dumps({"replies": {"physical.stray": 1}}))
+        shown = Stream()
+        strategy = TerminalReplyStrategy(Terminal(Stream("1.6\n"), shown), user_name=lambda: "ada")
+        result = self.research(strategy, self.replies_file)
+        self.assertEqual(([found.code for found in result.findings][:2], shown.getvalue(), self.record()), (["unknown_reply", "needs_reply"], "", self.PLAIN))
+
+    def test_a_value_the_contract_refuses_keeps_every_typed_value_in_the_file_for_the_fix(self):
+        self.bare(self.PLAIN)
+        shown = Stream()
+        strategy = TerminalReplyStrategy(Terminal(Stream("-1\n\n" + json.dumps(HEADER) + "\n"), shown), user_name=lambda: "ada")
+        result = self.research(strategy)
+        self.assertEqual(([found.code for found in result.findings], self.record(), shown.getvalue().count("Enter = later")), (["part_contract_broken", "needs_reply"], self.PLAIN, 3))
+        self.assertEqual({key: entry["value"] for key, entry in json.loads(self.replies_file.read_text())["replies"].items()},
+                         {"physical.thickness_mm": -1, "physical.mounting_holes": None, "physical.header": HEADER})
+
     def test_the_frontend_chains_the_file_before_a_live_terminal_and_builds_no_terminal_under_json(self):
         RepliesStore(self.replies_file).dump([])
         live, dead = Terminal(Stream(), Stream()), Terminal(Stream(tty=False), Stream())
         chain = reply_strategy_for(self.replies_file, live)
         self.assertEqual([type(part) for part in chain.strategies], [GivenReplyStrategy, TerminalReplyStrategy])
-        self.assertEqual((type(reply_strategy_for(self.replies_file, dead)), type(reply_strategy_for(None, live)), type(reply_strategy_for(None, dead)), type(reply_strategy_for(None))),
-                         (GivenReplyStrategy, TerminalReplyStrategy, DeferringReplyStrategy, DeferringReplyStrategy))
+        self.assertEqual([type(part) for part in reply_strategy_for(self.replies_file, dead).strategies], [GivenReplyStrategy])
+        self.assertEqual([type(part) for part in reply_strategy_for(None, live).strategies], [TerminalReplyStrategy])
+        self.assertEqual((type(reply_strategy_for(None, dead)), type(reply_strategy_for(None))), (DeferringReplyStrategy, DeferringReplyStrategy))
         shown, revision = Stream(), Question("revision", "Which revision is printed on the board?", CHOICE, EITHER, choices=["V1.0", "V2.0"])
         kept, sys.stdin = sys.stdin, Stream("V1.0\n")  # the terminal reads the process's stdin at the call; no mock.patch (rule T2)
         try:

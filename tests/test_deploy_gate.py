@@ -1501,6 +1501,10 @@ class TerminalConsentTest(unittest.TestCase):
     def test_yes_in_a_terminal_is_the_yes(self):
         self.assertEqual(self.ask("yes\n"), (True, "erase ALL of this board's flash? type yes to go on: "))
 
+    def test_a_closed_input_is_a_no_not_a_traceback(self):
+        consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream(interrupt=True), Stream())
+        self.assertEqual((consent.ask("erase?"), self.ask("")[0]), (False, False))  # Ctrl-C, then Ctrl-D (P737 R2)
+
     def test_the_question_shows_a_character_a_terminal_does_not_print_as_a_question_mark(self):
         stdout = Stream()
         consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout)

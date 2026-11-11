@@ -24,7 +24,7 @@ def reply_strategy_for(path, terminal=None):
     neither, nothing answered now."""
     parts = [GivenReplyStrategy(RepliesStore(path).load())] if path else []
     parts += [TerminalReplyStrategy(terminal)] if terminal is not None and terminal.live else []
-    return parts[0] if len(parts) == 1 else ChainedReplyStrategy(parts) if parts else DeferringReplyStrategy()
+    return ChainedReplyStrategy(parts) if parts else DeferringReplyStrategy()
 
 
 def build_research_outside_world(project, effects, reporter, values):

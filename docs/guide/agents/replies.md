@@ -35,10 +35,13 @@ then write the long form. A rerun with the same file adds nothing twice.
 ## Live mode
 
 In a terminal, with no `--json`, `research.py` asks each question whose `asked_of` is `person` or `either`, one at a time,
-after the replies file answered what it could. Enter leaves a question open. Ctrl-C keeps the answers typed so far and leaves
-the rest open. An answer that does not fit the question's `kind` is said and the question stays open. A question with `cites` is
-an `agent` question: it is never asked live, so a record with a kept drawing writes its template as before. You run with
-`--json`, so you never see a prompt. The template is written for what stays open, as in run 1.
+after the replies file answered what it could. Enter leaves a question open. Ctrl-C or Ctrl-D keeps the answers typed so far
+and leaves the rest open. An answer that does not fit the question's `kind`, or a word where the question names a unit, is said
+and the question stays open. A value the record's contract refuses is a `part_contract_broken` problem: nothing is written, and
+every typed value is kept in the replies file, where you fix the one and run again with `--replies`. A replies file with a
+problem asks nobody. A question with `cites` is an `agent` question: it is never asked live, so a record with a kept drawing
+writes its template as before. You run with `--json`, or with no tty, so you never see a prompt. The template is written for
+what stays open, as in run 1.
 
 ## The research run
 

@@ -88,9 +88,10 @@ class TerminalTest(unittest.TestCase):
         terminal.say("done /srv/person")
         self.assertEqual(shown.getvalue(), "read ~/a?.pdf: done ~\n")
 
-    def test_ctrl_c_is_none_and_ctrl_d_is_an_empty_line(self):
+    def test_ctrl_c_and_ctrl_d_are_none_and_enter_is_an_empty_line(self):
         self.assertEqual(Terminal(Stream(interrupt=True), Stream()).ask("? "), None)
-        self.assertEqual(Terminal(Stream(""), Stream()).ask("? "), "")
+        self.assertEqual(Terminal(Stream(""), Stream()).ask("? "), None)  # the end of the input: readline gives "" with no newline
+        self.assertEqual(Terminal(Stream("\n"), Stream()).ask("? "), "")
 
 
 class TerminalReplyStrategyTest(unittest.TestCase):
@@ -117,12 +118,19 @@ class TerminalReplyStrategyTest(unittest.TestCase):
         strategy, reply, shown = self.live("about two\n", thick)
         self.assertEqual((reply.value, shown.startswith("How thick is the board? (a number, Enter = later)\n> ")), ("about two", True))
 
+    def test_a_question_with_a_unit_refuses_a_line_that_is_not_a_number_or_json_and_says_the_form(self):
+        thick = THICK._replace(asked_of=EITHER, cites=None, answer_form="a number")
+        strategy, reply, shown = self.live("1,6\n", thick)
+        self.assertEqual((reply, shown.endswith("> the reply is '1,6', and the question takes a number or JSON in mm: a number\n")), (None, True))
+        self.assertEqual(self.live("[1.6]\n", thick)[1].value, [1.6])
+
     def test_enter_leaves_the_question_open_and_the_person_is_not_marked_as_left(self):
         strategy, reply, shown = self.live("\n", REVISION)
         self.assertEqual((reply, strategy.left, shown.endswith("> ")), (None, False, True))
 
     def test_a_choice_by_number_or_by_text_and_a_stray_choice_is_said_and_stays_open(self):
         self.assertEqual(self.live("2\n", REVISION)[1].value, "V2.0")
+        self.assertEqual([self.live(typed, REVISION)[1] for typed in ("0\n", "3\n", "\u00b2\n")], [None, None, None])  # out of range, a unicode digit
         strategy, reply, shown = self.live("V1.0\n", REVISION)
         self.assertEqual((reply.value, "  1 V1.0\n  2 V2.0\n> " in shown), ("V1.0", True))
         strategy, reply, shown = self.live("V3.0\n", REVISION)
@@ -132,6 +140,10 @@ class TerminalReplyStrategyTest(unittest.TestCase):
         self.assertEqual([self.live(typed, SOLDERED)[1].value for typed in ("yes\n", "Y\n", "no\n", "n\n")], [True, True, False, False])
         strategy, reply, shown = self.live("maybe\n", SOLDERED)
         self.assertEqual((reply, "(yes or no, Enter = later)" in shown, shown.endswith("takes yes or no (true or false)\n")), (None, True, True))
+
+    def test_ctrl_d_leaves_this_and_every_later_question_open_like_ctrl_c(self):
+        strategy, reply, shown = self.live("", REVISION)
+        self.assertEqual((reply, strategy.left, shown.endswith("> " + LEFT_LINE + "\n")), (None, True, True))
 
     def test_ctrl_c_says_the_rest_stays_open_once_and_every_later_question_is_silent(self):
         strategy, reply, shown = self.live("", REVISION, interrupt=True)
@@ -147,6 +159,10 @@ class RepliesStoreTest(unittest.TestCase):
 
     def test_the_file_is_the_project_s_spark_folder_s(self):
         self.assertEqual(self.store.path, self.project / ".spark" / "research-replies.json")
+
+    def test_dump_with_answers_keeps_a_typed_value_and_a_null_for_the_rest(self):
+        self.store.dump([THICK, HOLES], {THICK.key: Reply(THICK.key, 1.6, "typed in a terminal by ada"), HOLES.key: None})
+        self.assertEqual({key: entry["value"] for key, entry in json.loads(self.store.path.read_text())["replies"].items()}, {THICK.key: 1.6, HOLES.key: None})
 
     def test_dump_writes_a_template_with_a_null_per_open_key_and_keeps_what_is_answered(self):
         self.store.dump([HOLES, THICK])

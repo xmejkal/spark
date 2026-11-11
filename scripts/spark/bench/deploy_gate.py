@@ -90,7 +90,7 @@ class ConsentStrategy(ReplyStrategy):
 
 class TerminalConsentStrategy(ConsentStrategy):
     """Strategy: `yes` typed in a real terminal. With no terminal, GateClosedError gives `line`, the command to run
-    in one."""
+    in one. Anything but `yes` is a no, a closed input (Ctrl-C, Ctrl-D) too: the gate stays shut and says so."""
 
     yes_kind = TYPED
     opens_erase = True

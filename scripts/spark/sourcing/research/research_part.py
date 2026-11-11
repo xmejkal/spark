@@ -113,13 +113,16 @@ class ResearchPart(Operation):
         needs = FactNeeds.from_file()
         gaps = find_gaps(record, needs)
         held = self._round(gaps, record, outside, needs)
-        answers = {question.key: outside.replies(question) for question in held.questions}
-        open_questions = order_open([question for question in held.questions if answers[question.key] is None])
         replies_path = Path(replies) if replies else RepliesStore.for_project(project).path
         rest, filled = settle(RepliesStore(replies_path).load() if replies else {}, held.record)
         findings, written = reply_problems(rest, held.questions, filled), []
+        # a file with a problem asks nobody: a typed answer would be thrown away with it (R2's refuter)
+        answers = {question.key: None if findings else outside.replies(question) for question in held.questions}
+        open_questions = order_open([question for question in held.questions if answers[question.key] is None])
         if not findings:
             findings, written = self._fold(path, record, held, answers, part)
+            if findings:  # the contract refused a value: the typed values survive in the file, where the fix is made
+                RepliesStore(replies_path).dump(held.questions, answers)
         findings += [Finding(outcomes.COULD_NOT_RUN, name, problem.code, printable(str(problem)), problem.fix) for name, problem in held.problems]
         following = []
         if open_questions:

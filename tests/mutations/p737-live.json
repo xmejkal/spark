@@ -38,7 +38,7 @@
  {
   "file": "scripts/spark/core/replies.py",
   "name": "a choice typed by number is kept as the digit",
-  "find": "            return question.choices[int(typed) - 1] if typed.isdigit() and 0 < int(typed) <= len(question.choices) else typed\n",
+  "find": "            return question.choices[numbers.index(typed)] if typed in numbers else typed\n",
   "replace": "            return typed\n"
  },
  {
@@ -50,8 +50,8 @@
  {
   "file": "scripts/spark/core/replies.py",
   "name": "Ctrl-C in the terminal is a traceback, not None",
-  "find": "        try:\n            return self.stdin.readline().strip()\n        except KeyboardInterrupt:\n            return None\n",
-  "replace": "        return self.stdin.readline().strip()\n"
+  "find": "        try:\n            line = self.stdin.readline()\n        except KeyboardInterrupt:\n            return None\n",
+  "replace": "        line = self.stdin.readline()\n"
  },
  {
   "file": "scripts/spark/sourcing/research/__init__.py",
@@ -70,5 +70,35 @@
   "name": "the builder's values lose the json flag",
   "find": "reporter, dict(values, **{JSON_DEST: as_json})),",
   "replace": "reporter, values),"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "the end of the input is read as Enter, so every later question is prompted into a closed input",
+  "find": "        return None if line == \"\" else line.strip()  #",
+  "replace": "        return line.strip()  #"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "a word typed for a question with a unit is written as the fact",
+  "find": "        if not lacks and question.kind == VALUE and question.unit and isinstance(value, str):\n            lacks = NOT_IN_FORM % (typed, question.unit, question.answer_form or KIND_FORMS[VALUE])\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "dump forgets the typed values, so a contract problem loses them",
+  "find": "            held.setdefault(question.key, {\"value\": reply.value if reply else None, \"note\": \"\", \"cites\": question.cites})\n",
+  "replace": "            held.setdefault(question.key, {\"value\": None, \"note\": \"\", \"cites\": question.cites})\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "the person is asked although the replies file has a problem, and the answers are thrown away with it",
+  "find": "        answers = {question.key: None if findings else outside.replies(question) for question in held.questions}\n",
+  "replace": "        answers = {question.key: outside.replies(question) for question in held.questions}\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/research_part.py",
+  "name": "a contract problem writes no template, so the typed values are lost",
+  "find": "            if findings:  # the contract refused a value: the typed values survive in the file, where the fix is made\n                RepliesStore(replies_path).dump(held.questions, answers)\n",
+  "replace": ""
  }
 ]

@@ -35,14 +35,17 @@ ASKED_OF = (PERSON, AGENT, EITHER)
 REPLIES_FILE = Path(".spark") / "research-replies.json"
 #: The top key of the replies file.
 REPLIES_KEY = "replies"
-#: `Reply.answered_by` of a reply read from a file, and of one typed in a terminal (the deploy's yes says it too).
+#: `Reply.answered_by` of a reply read from a file.
 FROM_FILE = "replies file %s"
+#: `Reply.answered_by` of a reply typed in a terminal. The deploy's yes says it too.
 TYPED_BY = "typed in a terminal by %s"
-#: The words of a question asked live: the hint after the text, what a yes or no takes, the cited page, and what Ctrl-C did.
+#: The words of a question asked live: the hint after the text, what a yes or no takes, the cited page, what closed the input,
+#: and what a typed line lacks when the question names a unit.
 LATER_HINT = "(%s, Enter = later)"
 YES_OR_NO = "yes or no"
 SEE_PAGE = "see %s, page %s"
-LEFT_LINE = "Ctrl-C: the rest stays open"
+LEFT_LINE = "input closed (Ctrl-C or Ctrl-D): the rest stays open"
+NOT_IN_FORM = "the reply is %r, and the question takes a number or JSON in %s: %s"
 YES_WORDS, NO_WORDS = ("yes", "y"), ("no", "n")
 #: The sentence and the fix of an open question's Finding.
 WAITING = "waiting on a reply: %s"
@@ -142,10 +145,11 @@ class ChainedReplyStrategy(ReplyStrategy):
 
 
 class Terminal:
-    """Adapter: the person's terminal, stdin and stdout, behind spark's interface, read at the call so a redirected stream is the one
-    used. `live` says whether both are a tty. `say` shows masked, guarded text; `ask` shows a prompt and reads one line, stripped, or
-    None when the person pressed Ctrl-C (the caller keeps what it has; Ctrl-D reads as ""). The one class that reads a tty (rule X2);
-    `TerminalConsentStrategy` and `TerminalReplyStrategy` go through it. `mask` is the run's Privacy, so a line shows no home path."""
+    """Adapter: the person's terminal, stdin and stdout, behind spark's interface. The streams are bound when it is built, so a
+    stream redirected before that is the one used. `live` says whether both are a tty. `say` shows masked, guarded text. `ask` shows a
+    prompt and reads one line, stripped. It gives None when the input closed: Ctrl-C, or Ctrl-D (the end of the input). The caller
+    keeps what it has. The one class that reads a tty (rule X2): `TerminalConsentStrategy` and `TerminalReplyStrategy` go through it.
+    `mask` is the run's Privacy where the caller has one (the deploy), so a line shows no home path. Research gives none yet."""
 
     def __init__(self, stdin=None, stdout=None, mask=None):
         self.stdin, self.stdout = stdin or sys.stdin, stdout or sys.stdout
@@ -163,15 +167,17 @@ class Terminal:
         self.stdout.write(guard_lines(self.mask(prompt)))
         self.stdout.flush()
         try:
-            return self.stdin.readline().strip()
+            line = self.stdin.readline()
         except KeyboardInterrupt:
             return None
+        return None if line == "" else line.strip()  # "" with no newline is the end of the input; Enter is "\n"
 
 
 class TerminalReplyStrategy(ReplyStrategy):
-    """Strategy: the questions asked live, one at a time, in a `Terminal`. It never shows an AGENT question. Enter leaves a question
-    open; so does an answer that does not fit its kind, after the misfit is said, with no second try. Ctrl-C says LEFT_LINE once and
-    leaves this and every later question open, so what was answered before is kept. `who` is the login of the person at the terminal."""
+    """Strategy: the questions asked live, one at a time, in a `Terminal`, one strategy per run. It never shows an AGENT question.
+    Enter leaves a question open. An answer that does not fit its kind, or a line that is not a number or JSON for a question with a
+    unit, is said and leaves the question open, with no second try. A closed input (Ctrl-C, Ctrl-D) says LEFT_LINE once and leaves
+    this and every later question open, so what was answered before is kept. `who` is the login of the person at the terminal."""
 
     def __init__(self, terminal, user_name=getpass.getuser):
         self.terminal, self.user_name, self.left = terminal, user_name, False
@@ -192,6 +198,8 @@ class TerminalReplyStrategy(ReplyStrategy):
             return None
         value = self._value(question, typed)
         lacks = question.misfit(value)
+        if not lacks and question.kind == VALUE and question.unit and isinstance(value, str):
+            lacks = NOT_IN_FORM % (typed, question.unit, question.answer_form or KIND_FORMS[VALUE])
         if lacks:
             self.terminal.say(lacks)
             return None
@@ -214,7 +222,8 @@ class TerminalReplyStrategy(ReplyStrategy):
         if question.kind == YES_NO:
             return True if typed.lower() in YES_WORDS else False if typed.lower() in NO_WORDS else typed
         if question.kind == CHOICE:
-            return question.choices[int(typed) - 1] if typed.isdigit() and 0 < int(typed) <= len(question.choices) else typed
+            numbers = [str(number) for number in range(1, len(question.choices) + 1)]
+            return question.choices[numbers.index(typed)] if typed in numbers else typed
         try:
             return json.loads(typed)
         except ValueError:
@@ -262,11 +271,14 @@ class RepliesStore:
         return {key: Reply(key, entry["value"], FROM_FILE % self.path.name, None, entry.get("note"), entry.get("cites"))
                 for key, entry in entries.items() if entry.get("value") is not None}
 
-    def dump(self, questions):
-        """Write the template: the file's entries as they are, plus `{"value": null, "note": "", "cites"}` per open key it lacks."""
+    def dump(self, questions, answers=None):
+        """Write the template: the file's entries as they are, plus `{"value": null, "note": "", "cites"}` per open key it lacks. With
+        `answers` (key to Reply or None), a key answered this run gets that value instead of null, so a typed answer survives a run
+        that wrote nothing."""
         held = self._read() if self.path.exists() else {}
         for question in questions:
-            held.setdefault(question.key, {"value": None, "note": "", "cites": question.cites})
+            reply = (answers or {}).get(question.key)
+            held.setdefault(question.key, {"value": reply.value if reply else None, "note": "", "cites": question.cites})
         TextFileWriter().write(self.path, json.dumps({REPLIES_KEY: held}, indent=1, ensure_ascii=False) + "\n")
 
 
