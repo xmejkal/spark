@@ -327,8 +327,12 @@ def _refresh_shelf_copy(path, record, project_name, dry_run):
 
 
 def _set_by_name(record, values):
-    """`record` with `values` set, and the values it had: `facts` takes the written names over the held ones, the other names stay (P374)."""
+    """`record` with `values` set, and the values it had: `facts` takes the written names over the held ones, the other names stay
+    (P374); `legs` the same, leg by leg (P741)."""
     after, was = dict(record, **values), {key: record.get(key) for key in values}
+    if isinstance(values.get("legs"), dict):
+        held = record.get("legs") if isinstance(record.get("legs"), dict) else {}
+        after["legs"], was["legs"] = dict(held, **values["legs"]), {pin: held.get(pin) for pin in values["legs"]}
     if isinstance(values.get("pin_roles"), dict):  # P464: role by role, so a role keeps its gpio and note
         after["pin_roles"], was["pin_roles"] = missing_facts.merged_roles(record, values)
     if isinstance(values.get("facts"), dict):

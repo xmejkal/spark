@@ -92,8 +92,8 @@
  {
   "file": "scripts/spark/sourcing/drawer.py",
   "name": "the text and keys of pin_roles are written raw",
-  "find": "\"pin_order_proof\", \"pin_roles\")",
-  "replace": "\"pin_order_proof\")"
+  "find": "\"pin_order_proof\", \"pin_roles\", \"physical\"",
+  "replace": "\"pin_order_proof\", \"physical\""
  },
  {
   "file": "scripts/spark/records/missing_facts.py",

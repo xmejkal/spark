@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/spark/sourcing/drawer.py",
+  "name": "a leg for a pin outside pin_order is written, and the sheet never reads it",
+  "find": "        bad = [key for key, text in legs.items() if key not in pins or not _words(text)] if isinstance(legs, dict) else [\"the value\"]\n",
+  "replace": "        bad = [key for key, text in legs.items() if not _words(text)] if isinstance(legs, dict) else [\"the value\"]\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/drawer.py",
+  "name": "an empty leg text is written",
+  "find": "        bad = [key for key, text in legs.items() if key not in pins or not _words(text)] if isinstance(legs, dict) else [\"the value\"]\n",
+  "replace": "        bad = [key for key, text in legs.items() if key not in pins] if isinstance(legs, dict) else [\"the value\"]\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/drawer.py",
+  "name": "an empty host requirement line is written",
+  "find": "        bad = [index for index, line in enumerate(lines) if not _words(line)] if isinstance(lines, list) else [\"the value\"]\n",
+  "replace": "        bad = [] if isinstance(lines, list) else [\"the value\"]\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/drawer.py",
+  "name": "a sheet key's text is cut at the label cap, not the provenance cap",
+  "find": "    return _scrubbed(value, PROVENANCE_MAX) if key in PROVENANCE_KEYS + SHEET_KEYS else _scrubbed(value)\n",
+  "replace": "    return _scrubbed(value, PROVENANCE_MAX) if key in PROVENANCE_KEYS else _scrubbed(value)\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_handlers.py",
+  "name": "a second legs write drops the legs it does not name",
+  "find": "    if isinstance(values.get(\"legs\"), dict):\n        held = record.get(\"legs\") if isinstance(record.get(\"legs\"), dict) else {}\n        after[\"legs\"], was[\"legs\"] = dict(held, **values[\"legs\"]), {pin: held.get(pin) for pin in values[\"legs\"]}\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "the sheet keys are accepted but never checked against the record",
+  "find": "        + drawer.list_sheet_key_problems(facts, record)\n",
+  "replace": ""
+ }
+]
