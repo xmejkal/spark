@@ -3375,11 +3375,24 @@ class TheAuditIsAnOperationOnTheCoreTest(unittest.TestCase):
         home = Path(tempfile.mkdtemp())
         (home / "drawer").mkdir()
         (home / "drawer" / "bad.json").write_text("{not json")
+        err = io.StringIO()
         with in_store(home):
             said, code = run_json(["--audit"])
-            text, _ = run_text(["--audit"])
+            with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(err):
+                text_code = parts.main(["--audit"])
         self.assertEqual((code, said["status"], said["unchecked"][0]["code"], said["problems"]), (2, "could-not-run", "record_file_broken", []))
-        self.assertNotIn("Traceback", text)
+        self.assertEqual((text_code, out.getvalue()), (2, ""))
+        self.assertTrue(err.getvalue().startswith("parts.py: %s is not JSON" % (home / "drawer" / "bad.json")), err.getvalue())
+        self.assertNotIn("Traceback", err.getvalue())
+
+    def test_a_control_character_in_a_record_s_name_does_not_reach_the_terminal(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x\x1b[31mred.json").write_text(json.dumps({"schema": 1, "id": "x\x1b[31mred", "name": "R", "kind": "sensor"}))
+        with in_store(home):
+            text, _ = run_text(["--audit"])
+        self.assertIn("BROKEN x?[31mred", text)
+        self.assertNotIn("\x1b", text)
 
     def test_a_broken_record_and_a_dangling_entry_are_problems_with_codes(self):
         home = Path(tempfile.mkdtemp())

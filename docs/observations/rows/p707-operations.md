@@ -2,7 +2,7 @@
 
 Card: [P707 #954](https://github.com/xmejkal/spark/issues/954), story, under #94 (v0.13, one core), N19. Plan
 `~/.claude/plans/p707-operations.md`. Rows 1 to 9 are the plan refuter (Opus), 10 to 21 the plan reviewer (Sonnet:
-architecture, names, UX and AI-UX, callers), 22 on the plan refuter's second round (Fable). 2026-11-11.
+architecture, names, UX and AI-UX, callers), 22 to 26 the plan refuter's second round (Fable), 27 to 30 the PR reviewer (Sonnet), 31 on the PR refuter (Fable). 2026-11-11.
 
 | # | claim | source | status | evidence / where it went |
 | --- | --- | --- | --- | --- |
@@ -32,3 +32,13 @@ architecture, names, UX and AI-UX, callers), 22 on the plan refuter's second rou
 | 24 | `json.JSONDecodeError` cannot reach `--audit` (every `json.loads` on the path catches ValueError); `PartError` cannot either | plan refuter 2 | acted | `AuditRecords.run` catches `CodedMessageError` and `OSError` alone |
 | 25 | ten goal_handlers rows move (p411 x2, p97 x2, p124-every-field, sprint-10-p96-2, sprint-10-p96-fix-b, sprint-10-p96-fix-c x3); p715-records-net and p716-records-codes mutate the BoardError branch that stays in `main` | plan refuter 2 | verified | proved with `--anchors` after the move |
 | 26 | `board-list` also sits at design.md:27 and records.md:23; `HelpText` needs `defaults=(None,)` for its six positional callers | plan refuter 2 | acted | the docs sweep; the namedtuple default |
+| 27 | `audit_records` imports `_parse`, `_shape_problems`, `_with_project` from `record_kind`, and `list_boards` calls `board_records._read_json`: underscore names across modules | PR reviewer | rejected | moved as they were: `goal_handlers` imported the same three and `boards.py` called `_read_json` on main; the names' promotion is P726's rename list |
+| 28 | `run(..., list=True)` shadows the builtin, `audit=True` is only the flag's dest | PR reviewer | verified | the selector pattern of `CheckGrant.run(..., check=True)`; neither body uses the builtin |
+| 29 | `list_boards.LIBRARY`/`PROJECT` spell the two words that `_validate_all` still writes inline in `boards.py` | PR reviewer | rejected | `--validate` must load no design module (the lazy-import reason); one word in two places until P726 moves `_validate_all` onto the core |
+| 30 | `boards.py --list --for-fab` was taken and is a bad argument now | PR reviewer | verified | named in the plan and the PR body, with the test `test_a_prefix_of_list_picks_the_operation_as_argparse_would` |
+| 31 | the text of `boards.py --list` (a `null` board, a file that is not JSON, the library alone, `--li`) and of `parts.py --audit` (with and without `--project`) is byte-equal to main's, exit codes equal | PR refuter | verified | six empty diffs against a worktree of main, one scratch store |
+| 32 | `FullEnvelope` put `notes` and `assumptions` first; main printed them last | PR refuter | acted | the two keys are added only when missing, after the rest; the `--from -1` sentence change is named in the PR body |
+| 33 | a store refusal and `--from -1` printed nothing in the text run (a SparkError result has no `lines`, and `TextReport` prints lines alone), where parts.py printed `parts.py: <sentence>` on stderr | PR refuter | acted | `audit_records.refused`: one unchecked Finding and the line in `diagnostics` (stderr); the drawer test asserts the stderr sentence and the empty stdout; a core row: `TextReport` says nothing for a bare Finding, bench Operations put the sentence in their lines |
+| 34 | the twelve anchors `--anchors` refuses in the eight tables are the same twelve on main | PR refuter | verified | 221 mutations in 8 tables on the branch, 201 in 7 on main, 12 refused in both |
+| 35 | row 16 (the lines lose their text guard) had no test with a control character on an audit path | PR refuter | acted | `test_a_control_character_in_a_record_s_name_does_not_reach_the_terminal` |
+| 36 | `build_bare_outside_world` refuses `run`, `make_consent` and `fetch` for (READS,); `records()` reads paths only, so one `_read_json` per board; `footprint_stop` keeps its four callers; the callers in commands/, skills/ and the guides pass only flags the new parsers take | PR refuter | verified | the refuter's probes |

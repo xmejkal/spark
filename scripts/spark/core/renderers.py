@@ -30,7 +30,7 @@ class FullEnvelope:
     @staticmethod
     def render(result, tool, op):
         said = result.to_envelope(tool, op)
-        return outcomes.dumps(dict({"notes": [], "assumptions": []}, **said))
+        return outcomes.dumps(dict(said, **{key: [] for key in ("notes", "assumptions") if key not in said}))
 
     @staticmethod
     def render_bad_argument(result, tool, op):

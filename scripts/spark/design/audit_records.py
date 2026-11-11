@@ -7,7 +7,7 @@ Operation, because it says which board stops the chain at the footprint stage (`
 import shlex
 
 from spark.core import codes, outcomes
-from spark.core.errors import CodedMessageError, SparkError
+from spark.core.errors import CodedMessageError
 from spark.core.operation import JSON_DEST, COMMON_ARGUMENTS, READS, Argument, Operation
 from spark.core.renderers import FullEnvelope
 from spark.core.result import Finding, OperationResult
@@ -69,11 +69,23 @@ def walk(project=None):
     return counts, owed, broken, silent, dangling, stops
 
 
+#: What a run that could not look prints beside the empty answer, on stderr, as parts.py printed it for an answer with no lines.
+REFUSED_LINE = "parts.py: %s — %s"
+
+
+def refused(sentence, code, fix):
+    """The could-not-run result of an audit that could not look: one unchecked Finding, the sentence on stderr through
+    `diagnostics` (the text run prints no empty answer), and parts.py's every key."""
+    return OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, code, sentence, fix)],
+                           diagnostics=[REFUSED_LINE % (sentence, fix)], notes=(), assumptions=())
+
+
 class AuditRecords(Operation):
     """
     Operation: `audit` as parts.py answers it: the counts per layer, the records that owe facts (paged from `--from`), the
     broken ones and the dangling drawer entries as problems, the silent ones, and the boards that stop at the footprint.
-    A store that cannot be read is one could-not-run Finding with the store's own code, as parts.py answered it before.
+    A store that cannot be read is one could-not-run Finding with the store's own code and its sentence on stderr, as
+    parts.py answered it before (`refused`).
     """
 
     name = "audit"
@@ -86,14 +98,14 @@ class AuditRecords(Operation):
 
     def run(self, project, start, *, outside, audit=True):
         if start < 0:
-            raise SparkError("--from %d: a listing cannot start before its first item", start, code=codes.BAD_ARGUMENT, fix=START_FIX)
+            return refused("--from %d: a listing cannot start before its first item" % start, codes.BAD_ARGUMENT, START_FIX)
         project = project.resolve() if project else None
         try:
             counts, owed, broken, silent, dangling, stops = walk(project)
         except CodedMessageError as unreadable:  # a store's refusal: could-not-run, never a traceback
-            raise SparkError("%s", unreadable, code=unreadable.code, fix=UNREADABLE_FIX)
+            return refused(str(unreadable), unreadable.code, UNREADABLE_FIX)
         except OSError as unreadable:
-            raise SparkError("--audit: %s", unreadable, code=design_codes.RECORD_UNREADABLE, fix=UNREADABLE_FIX)
+            return refused("--audit: %s" % unreadable, design_codes.RECORD_UNREADABLE, UNREADABLE_FIX)
         shown, truncated = store.page_with_store(owed, start, "audit", ["--audit"] + _with_project(project))
         lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
                  for layer, row in counts.items()]
