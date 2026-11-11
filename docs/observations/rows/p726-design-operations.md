@@ -2,7 +2,7 @@
 
 Card: [P726 #989](https://github.com/xmejkal/spark/issues/989), chore, under #94 (v0.13, one core). Plan
 `~/.claude/plans/p726-design-operations.md`. Rows 1 to 16 are the plan reviewer (Sonnet: architecture, names, UX and
-AI-UX, callers), 17 to 23 the plan refuter (Opus), 24 on the plan refuter's second round (Fable), then the PR round.
+AI-UX, callers), 17 to 23 the plan refuter (Opus), 24 to 27 the plan refuter's second round (Fable), 28 to 35 the PR reviewer (Sonnet), 36 on the PR refuter (Opus: Fable hit its limit).
 2026-11-11.
 
 | # | claim | source | status | evidence / where it went |
@@ -34,3 +34,11 @@ AI-UX, callers), 17 to 23 the plan refuter (Opus), 24 on the plan refuter's seco
 | 25 | the plan says the base resolves `project` when not None in one place and only a `Path` in another; `ListNeeds`' text would change on a `str` | plan refuter 2 | acted | one rule: resolved only when it is a `Path` |
 | 26 | `from_result(to_result(a)) == a` fails on `lines`, which `text_lines` grows; the hand conversion also drops `next`, `truncated` and `assumptions` | plan refuter 2 | acted | the test compares one field at a time; `from_result` carries the three fields (DropNeed returns none) |
 | 27 | four parts.py citations are stale (`_text_of` :295 to :320, `_say` :323 to :345, the refusal line :338) | plan refuter 2 | acted | the plan's numbers |
+| 28 | with `--json`, a refusal with no lines also prints its sentence on stderr, which `_say` never did | PR reviewer | acted | kept, as `--audit` since P707 (row 20); json.md says it on the line it already changed |
+| 29 | `_say`'s docstring names `_text_of`, which is gone | PR reviewer | acted | it names `Answer.text_lines` |
+| 30 | the help of `--matcher`, `--project`, `--from` and `--dry-run` is written twice, in parts.py's OPTIONS and in the Operations, so `--describe` can drift | PR reviewer | acted | OPTIONS reads each from the Operation's module (`find_offers.MATCHER_HELP`, `PROJECT_HELP`, `match_needs.START_HELP`, `write_requirements.DRY_RUN_HELP`): one text |
+| 31 | underscore names cross modules: `_cannot`, `_problem`, `_names_your_entries`, `_what_a_pick_wrote` | PR reviewer | raised | the convention predates P726 (parts.py imports them since W6-S3a); a rename of the record_kind item builders and the pick helpers is a card for the end of #94, not this move |
+| 32 | `START_FIX` sits in records but only `match` and `audit` read it; `NO_NEEDS_SENTENCE` and `NO_NEEDS_LINE` say the same in two modules; `--needs` on an empty project exits 0 where `--match` is could-not-run | PR reviewer | verified | old behaviour, moved as it was; the sourcing PR's `--list` reads `START_FIX` too, so records is its home |
+| 33 | `FILE_UNREADABLE` also names a failed write of `--requirements` | PR reviewer | acted | the code is `file_refused`, "read or written"; `file_unusable` is breadboard's, and the codes test refuses a word in two tables |
+| 34 | the six exit 2 for an option they do not take; prefix routing and the ambiguity message work | PR reviewer | verified | named in scripts.md and the plan |
+| 35 | json.md says the items of the seven carry `code` and an `unchecked` item has no `subject` | PR reviewer | verified | the envelope seen matches |

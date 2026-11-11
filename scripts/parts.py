@@ -56,7 +56,7 @@ from spark.idea.drop_need import DropNeed  # noqa: E402
 from spark.sourcing.part_handlers import (  # noqa: E402, F401
     _op_catalog, _op_drawer, _op_fetch, _op_keep, _op_kept, _op_list, _op_promote, _op_read, _op_show, _op_signals,
     _op_skeleton, _op_sources, _op_step, _op_unverified, _op_validate)
-from spark.design import design_operations  # noqa: E402
+from spark.design import design_operations, find_offers, match_needs, write_requirements  # noqa: E402
 from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
 
@@ -145,7 +145,8 @@ def _not_negative(text):
     return int(text)
 
 
-#: The options an operation reads, in the same columns but effects.
+#: The options an operation reads, in the same columns but effects. An option a design Operation on the core also takes
+#: reads its help from that Operation's module, so `--help` of both and `--describe` say one text (P726).
 OPTIONS = (
     ("kind", {}, "with --skeleton: the part's kind (motor-driver, sensor, regulator, …)"),
     ("vendor", {}, "with --skeleton: who makes it"),
@@ -154,11 +155,10 @@ OPTIONS = (
     ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
     ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
     ("passed-over", {"metavar": "FILE"}, "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"),
-    ("matcher", {"metavar": "NAME"}, "with --match or --need: the matcher that ranks the offers (--match: same-words, word-overlap; "
-     "--need: word-overlap, name-contains); a name that does not fit is refused with the names that do"),
-    ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
-    ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
-    ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),
+    ("matcher", {"metavar": "NAME"}, find_offers.MATCHER_HELP),
+    ("project", {"type": Path}, find_offers.PROJECT_HELP),
+    ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, match_needs.START_HELP),
+    ("dry-run", {"action": "store_true"}, write_requirements.DRY_RUN_HELP),
     ("json", {"action": "store_true"}, "answer in one envelope: problems, unchecked, notes, assumptions, next "
      "(docs/guide/agents/json.md, \"parts.py's envelope\")"),
 )
@@ -291,7 +291,7 @@ def _op_describe(args, project):
 def _say(op, answer, as_json):
     """
     Print one answer and return its exit code (§6.4.1): with --json the envelope, compact, on stdout; without, the
-    person's lines and whatever the answer carries that they leave out (`_text_of`). An answer with no lines says its
+    person's lines and whatever the answer carries that they leave out (`Answer.text_lines`). An answer with no lines says its
     problems and could-not-run items on stderr, as before.
     """
     said = envelope("parts", op, answer.data, answer.problems, answer.unchecked, answer.next, answer.truncated,

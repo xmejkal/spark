@@ -71,10 +71,10 @@ class AnAnswerBecomesAResultTest(unittest.TestCase):
     def test_each_item_is_a_finding_with_its_code_and_a_step_round_trips(self):
         step = outcomes.step("show", ["--show", "thing"], "to read the thing")
         answer = Answer({"x": 1}, ["  a line"], problems=[_problem("thing", "is wrong", "mend it")],
-                        unchecked=[_cannot("could not read", code="file_unreadable")], next=[step])
+                        unchecked=[_cannot("could not read", code="file_refused")], next=[step])
         result = answer.to_result()
         self.assertEqual([(f.severity, f.subject, f.code, f.sentence, f.fix) for f in result.findings],
-                         [("problems", "thing", None, "is wrong", "mend it"), ("could-not-run", None, "file_unreadable", "could not read", None)])
+                         [("problems", "thing", None, "is wrong", "mend it"), ("could-not-run", None, "file_refused", "could not read", None)])
         self.assertEqual(result.to_envelope("parts", "show")["next"], [step])
         self.assertEqual(result.lines, ["  a line", "  thing: is wrong", "  fix for thing: mend it", "  could not check: could not read",
                                         "  next: parts.py --show thing — to read the thing"])
