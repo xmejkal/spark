@@ -7,6 +7,6 @@
 {"file": "scripts/spark/sourcing/datasheets.py", "name": "the drawer count leaves the row, so nothing is owned", "find": "\"owned\": offers.counts(holding)[0], \"score\": fit.score", "replace": "\"owned\": 0, \"score\": fit.score"},
 {"file": "scripts/spark/sourcing/datasheets.py", "name": "the cutoff is dropped: every fit is shown and none counted", "find": "if matching.shown(rank, fit.exact, fit.score)]", "replace": "if True]"},
 {"file": "scripts/spark/sourcing/datasheets.py", "name": "what is owned is no longer first", "find": "key=lambda pair: (pair[1][\"owned\"] == 0, -pair[0].score))", "replace": "key=lambda pair: -pair[0].score)"},
-{"file": "scripts/spark/design/goal_handlers.py", "name": "a catalog row lands in found, with no --promote hint", "find": "found = [row for row in rows if row[\"in\"] != \"catalog\"]", "replace": "found = list(rows)"},
+{"file": "scripts/spark/design/find_offers.py", "name": "a catalog row lands in found, with no --promote hint", "find": "found = [row for row in rows if row[\"in\"] != \"catalog\"]", "replace": "found = list(rows)"},
 {"file": "scripts/spark/sourcing/datasheets.py", "name": "a board or an entry is tried as a draft, so load raises on it", "find": "if row[\"is\"] != \"part\" or row[\"in\"] not in LOADABLE:", "replace": "if row[\"in\"] not in LOADABLE:"}
 ]

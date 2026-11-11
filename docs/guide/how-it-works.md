@@ -150,7 +150,7 @@ Imported by the scripts above, and not run on their own:
 - `spark/core/outcomes.py`: the exit codes and the three outcomes, defined once;
 - `spark/records/store.py`: where spark keeps what it keeps;
 - `spark/sourcing/`: the drawer (what you own), the part facts, the datasheets and the handlers `parts.py` runs;
-- `spark/design/needs.py`: what a goal needs, and what the store offers for each (`goal_handlers.py` answers them); `need_requirements.py` beside it builds the requirements file from the picks;
+- `spark/design/needs.py`: what a goal needs, and what the store offers for each (the Operations `find_offers.py`, `list_needs.py`, `match_needs.py`, `show_offer.py`, `write_requirements.py` and `tally_cost.py` answer `parts.py`'s goal flags); `need_requirements.py` beside it builds the requirements file from the picks;
 - `spark/sourcing/run_cost.py`: what a project's run cost, read from the transcripts of the sessions its steps ran in,
   tool names and counts only. `parts.py --step` and `--tally` use it. The CLI `cost.py` reads one transcript:
   `cost.py <transcript.jsonl>` says what that run cost;

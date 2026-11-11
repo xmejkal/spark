@@ -47,11 +47,6 @@ def look_argv(project, port, evidence):
     return ["--project", str(project)] + (["--port", port] if port else []) + (evidence.argv() if evidence else [])
 
 
-def dumps(envelope):
-    """The envelope as the one compact line a script prints: `outcomes.dumps`."""
-    return outcomes.dumps(envelope)
-
-
 def look_step(project, port, evidence=None, why="read the board first: the board restarts while it is read"):
     """The step that runs look.py. It writes nothing. With no evidence, its arguments are the project's alone."""
     return outcomes.add_env(outcomes.step("look", look_argv(project, port, evidence), why), store.read_given_env())

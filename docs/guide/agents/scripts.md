@@ -147,7 +147,7 @@ These only read:
   board; never change it for the person. When the board record holds `physical.buttons`, a step and a `fix` that name BOOT
   or RESET say where each button is: relay the sentence as printed;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`, `--need`, `--match`, `--needs`, `--audit`,
-  `--drawer` and `--tally` among them. `--sources` writes nothing, but reaches the network. `--need --json` (P743) searches what the person owns and what spark
+  `--drawer` and `--tally` among them. `--audit`, `--need`, `--needs`, `--match`, `--offer`, `--requirements` and `--tally` run on the core (P707, P726): `parts.py --match <project> --help` lists that operation's own arguments, and a flag it does not take exits 2. `--sources` writes nothing, but reaches the network. `--need --json` (P743) searches what the person owns and what spark
   knows: a `found` row has `id` or `entry`, `is` (part, board, entry), the record's own `kind`, `name`, `in` (the layer or a project), `owned` (a number, "many" or
   "unknown"), `score`, `why`; `data.more` counts the fits past the cutoff, `data.matcher` names the matcher; an `entry` row has no record. `--match --json` gives each
   candidate `held_by`, and `--drawer --json` gives each entry `held_by`: the other projects that hold any of it, sorted, as they are stored. The text prints each name

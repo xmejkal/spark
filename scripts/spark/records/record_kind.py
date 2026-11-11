@@ -6,7 +6,8 @@ file (`_parse`, `_write_record`). Every finding is an `Answer` item made by `_pr
 (P724) validates one kind of record by its named rules, and `board_records.BOARD` and `part_records.PART` are its two.
 
 Moved whole from `parts.py`, which reads these names, as do `drawer`, `needs` and `board_records`. It imports `store`
-alone of spark, so the records area reads nothing above it. `RecordFinder` (`areas/records.md`) comes with P342.
+and the core alone of spark, so the records area reads nothing above it. `RecordFinder` (`areas/records.md`) comes with P342.
+`Answer.to_result` and `from_result` (P726) are the seam between a handler's `Answer` and the core's `OperationResult`.
 """
 
 import json
@@ -14,6 +15,9 @@ import re
 from collections import namedtuple
 from pathlib import Path
 
+from spark.core import outcomes
+from spark.core.result import Finding, NextStep, OperationResult
+from spark.core.text_guards import guard_lines
 from spark.records import store
 
 #: Parts ship with the plugin, and a project may keep its own in `parts/`. A project's own wins,
@@ -70,20 +74,85 @@ def _shape_problems(check, record, path, what):
 SELECTOR_SAFE = "^[A-Za-z0-9_]+$"
 
 
-#: What one operation found (§6.4.1): its `data`, the lines a person reads without --json, and the rest of the
-#: envelope. A handler returns one; `main` prints it either way and exits by its status. `notes` are said and never
-#: fail ({subject, sentence}); `assumptions` are what the answer rests on that nobody has checked ({fact, basis, …}).
-#: `diagnostics` are lines for stderr, with --json or without, so no handler prints (X2).
-Answer = namedtuple("Answer", "data lines problems unchecked next truncated notes assumptions diagnostics",
-                    defaults=(None, (), (), (), (), None, (), (), ()))
+#: What a refusal line on stderr starts with when an answer has no lines (parts.py's rule, P726: `Answer.to_result`).
+REFUSED_PREFIX = "parts.py: "
 
 
-def _problem(subject, sentence, fix=None):
-    return {"subject": subject, "sentence": sentence, "fix": fix}
+class Answer(namedtuple("Answer", "data lines problems unchecked next truncated notes assumptions diagnostics",
+                        defaults=(None, (), (), (), (), None, (), (), ()))):
+    """
+    Result: what one operation found (§6.4.1): its `data`, the `lines` a person reads without --json, and the rest of the
+    envelope. A handler returns one; `main` prints it either way and exits by its status. `notes` are said and never
+    fail ({subject, sentence}); `assumptions` are what the answer rests on that nobody has checked ({fact, basis, …}).
+    `diagnostics` are lines for stderr, with --json or without, so no handler prints (X2). `text_lines` is the text
+    printer's rule, `to_result` the OperationResult of this answer for the core, and `from_result` the way back (P726).
+    """
+
+    def text_lines(self):
+        """
+        The person's lines, then what the answer carries that they do not say yet: each problem and could-not-run item
+        with its fix, each note and assumption, and the next steps (P124, #58). A line already said is not said again, so a
+        handler that prints an item its own way keeps its wording; one that forgets an item no longer drops it.
+        """
+        lines = list(self.lines)
+        said = lambda words: bool(words) and any(words in line for line in self.lines)  # noqa: E731 — the handler's own
+        for heading, items in (("", self.problems), ("could not check: ", self.unchecked)):
+            for item in items:
+                if not (said(item["sentence"]) or said(item.get("subject"))):  # a handler may word an item its own way
+                    lines.append("  %s%s%s" % (heading, "%s: " % item["subject"] if item.get("subject") else "", item["sentence"]))
+                if item.get("fix") and not said(item["fix"]):
+                    lines.append("  fix%s: %s" % (" for %s" % item["subject"] if item.get("subject") else "", item["fix"]))
+        for note in self.notes:
+            shown = "%s: %s" % (note["subject"], note["sentence"]) if note.get("subject") else note["sentence"]
+            if not said(shown):
+                lines.append("  " + shown)
+        for assumption in self.assumptions:
+            if not (said(assumption["fact"]) or said(assumption.get("sentence"))):
+                lines.append("  ? %s%s%s" % (assumption["fact"], " = %s" % assumption["assumed"] if "assumed" in assumption else "",
+                                             " — " + assumption["sentence"] if assumption.get("sentence") else ""))
+            if assumption.get("upgrade") and not said(assumption["upgrade"]):
+                lines.append("    to settle it: %s" % assumption["upgrade"])
+        lines += ["  next: parts.py %s — %s" % (" ".join(step["argv"]), step["why"]) for step in self.next]
+        return lines
+
+    def to_result(self):
+        """
+        The OperationResult of this answer, parts.py's text rules kept: with lines, `text_lines` each guarded; with none,
+        each problem and unchecked item is one stderr line (`REFUSED_PREFIX`, the sentence, ` — ` and the fix when there is
+        one) in `diagnostics` after the answer's own, and the lines are what else the answer says. An item's `code` is
+        its Finding's, None when it has none.
+        """
+        findings = [Finding(outcomes.PROBLEMS, item["subject"], item.get("code"), item["sentence"], item.get("fix")) for item in self.problems]
+        findings += [Finding(outcomes.COULD_NOT_RUN, None, item.get("code"), item["sentence"], item.get("fix")) for item in self.unchecked]
+        steps = [NextStep(step["op"], step["argv"], step["why"], step["effects"], step["needs_yes"], step.get("needs_person"), step.get("env"))
+                 for step in self.next]
+        said, diagnostics = self, list(self.diagnostics)
+        if not self.lines:
+            diagnostics += [REFUSED_PREFIX + item["sentence"] + (" — " + item["fix"] if item.get("fix") else "")
+                            for item in list(self.problems) + list(self.unchecked)]
+            said = self._replace(problems=(), unchecked=())
+        return OperationResult(self.data, findings, steps, [guard_lines(line) for line in said.text_lines()], diagnostics,
+                               self.notes, self.truncated, self.assumptions)
+
+    @classmethod
+    def from_result(cls, result):
+        """The Answer of an OperationResult: each Finding an item by its severity, each NextStep a step dict, so a handler
+        that runs an Operation on the core answers as the others do (`parts.py --needs-drop`, P514)."""
+        return cls(result.data, result.lines,
+                   problems=[_problem(found.subject, found.sentence, found.fix, found.code) for found in result.findings if found.severity == outcomes.PROBLEMS],
+                   unchecked=[_cannot(found.sentence, found.fix, found.code) for found in result.findings if found.severity == outcomes.COULD_NOT_RUN],
+                   next=[outcomes.add_env(outcomes.step(s.op, s.argv, s.why, s.effects, s.needs_yes, s.needs_person), s.env) for s in result.next],
+                   truncated=result.truncated, notes=result.notes or (), assumptions=result.assumptions or (), diagnostics=result.diagnostics)
 
 
-def _cannot(sentence, fix=None):
-    return {"sentence": sentence, "fix": fix}
+def _problem(subject, sentence, fix=None, code=None):
+    """A problem item; `code` (P726) is in it only when given, so the envelopes of the handlers on parts.py do not change."""
+    return dict({"subject": subject, "sentence": sentence, "fix": fix}, **({"code": code} if code is not None else {}))
+
+
+def _cannot(sentence, fix=None, code=None):
+    """A could-not-run item; `code` as `_problem`'s."""
+    return dict({"sentence": sentence, "fix": fix}, **({"code": code} if code is not None else {}))
 
 
 def _note(line):

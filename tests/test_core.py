@@ -550,6 +550,16 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual(schema["properties"]["scope"], {"type": "string", "description": "what for", "enum": ["live", "deploy"], "default": "live"})
         self.assertNotIn("required", Toy().input_schema(), "[] is invalid in JSON Schema draft 4")
 
+    def test_an_argument_with_several_values_is_an_array_and_shows_its_word(self):
+        # P726: `parts.py --need WORD [WORD ...]`, the first Operation with a list value
+        class Words(Toy):
+            arguments = (Argument(("--need",), "words", str, "the words", nargs="+", metavar="WORD"), COMMON_ARGUMENTS["json"])
+        self.assertEqual(Words().input_schema()["properties"]["words"], {"type": "array", "items": {"type": "string"}, "description": "the words"})
+        from spark.core.cli import parser_for
+        parser = parser_for(TEXT, Words())
+        self.assertEqual(vars(parser.parse_args(["--need", "a", "b"]))["words"], ["a", "b"])
+        self.assertIn("--need WORD [WORD ...]", parser.format_usage())
+
     def test_the_output_schema_requires_the_keys_of_a_real_envelope(self):
         schema = Toy().output_schema()
         self.assertEqual(schema, output_schema())
@@ -678,6 +688,16 @@ class FakeReporterTest(ReporterContract, unittest.TestCase):
         reporter = FakeReporter()
         reporter.report(Event.begin("toy"))
         self.assertEqual(reporter.events, [Event("begin", "toy", None)])
+
+
+class DumpsTest(unittest.TestCase):
+    """P726 (P445): the one JSON writer of every envelope writes a lone surrogate as an escape, so `print` never fails."""
+
+    def test_a_lone_surrogate_is_written_as_a_json_escape(self):
+        line = outcomes.dumps({"data": {"name": "x\ud800y"}})
+        line.encode("utf-8")  # a raw surrogate cannot be encoded, so this is what `print` does
+        self.assertIn("\\ud800", line)
+        self.assertEqual(json.loads(line), {"data": {"name": "x\ud800y"}})
 
 
 class AMultiOperationCliTest(unittest.TestCase):

@@ -28,6 +28,8 @@ SERIES_RESISTOR_UNSIZED = "series_resistor_unsized"
 BOARD_LACKS_FOOTPRINT, BOARD_DISAGREES = "board_lacks_footprint", "board_disagrees"
 #: audit_records (P707): a drawer entry whose record nobody has, and a record or drawer file the disk would not give.
 DRAWER_ENTRY_DANGLING, RECORD_UNREADABLE = "drawer_entry_dangling", "record_unreadable"
+#: the goal Operations (P726): a project nobody listed, an offer key nothing has, a project with no needs yet.
+PROJECT_NOT_LISTED, OFFER_UNKNOWN, NO_NEEDS_YET = "project_not_listed", "offer_unknown", "no_needs_yet"
 
 #: Each code and the one sentence that says what it means.
 CODES = {
@@ -55,6 +57,9 @@ CODES = {
     BOARD_LACKS_FOOTPRINT: "the board record lacks the facts its footprint is drawn from",
     DRAWER_ENTRY_DANGLING: "a drawer entry points at a record nobody has: fix its `is`, or research the part",
     RECORD_UNREADABLE: "a record or drawer file could not be read from disk: the sentence names it",
+    PROJECT_NOT_LISTED: "the folder is not on your list of projects, so no step of it was marked",
+    OFFER_UNKNOWN: "no record and no live drawer entry has that key",
+    NO_NEEDS_YET: "the project has no needs yet: /spark:idea writes them",
     BOARD_DISAGREES: "the board record disagrees with itself: a value of the wrong kind, or a pad order that does not fit",
 }
 # --- end MVP ---

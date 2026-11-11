@@ -2237,7 +2237,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         said, code = run(["--requirements", str(project)])
         self.assertEqual((picked, said["status"], code, said["problems"], said["data"]["unplaced"]), (0, "problems", 1, [
             {"subject": "x-soil", "sentence": "owes footprint, pin_order, pin_order_proof, body_mm, simulation — fill it in its own "
-                                              "home with --fact-set", "fix": None}], []))
+                                              "home with --fact-set", "fix": None, "code": None}], []))
 
     def test_a_pick_written_as_the_drawer_entry_of_a_record_is_read_as_that_record(self):
         # a needs file from before a pick of an entry key became its record's, or edited by hand
@@ -2274,7 +2274,8 @@ class TheRequirementsFileTest(unittest.TestCase):
                     "its board file lacks physical.header")
         self.assertEqual((said["status"], code, said["problems"]), ("problems", 1, [
             {"subject": "beetle-c6", "sentence": sentence,
-             "fix": 'pick x-lib-board, or write a board file for beetle-c6 first (docs/guide/how-it-works.md, "Your own dev board")'}]))
+             "fix": 'pick x-lib-board, or write a board file for beetle-c6 first (docs/guide/how-it-works.md, "Your own dev board")',
+             "code": None}]))  # P726: the item is a Finding's now, so `code` is a key, None where need_requirements worded it
         self.assertEqual(text, "  refused, so nothing was written: beetle-c6 — %s\n  fix for beetle-c6: %s\n"  # P124: with its fix
                          % (sentence, said["problems"][0]["fix"]))
         self.assertFalse((project / "requirements.json").exists())
@@ -2317,12 +2318,12 @@ class TheRequirementsFileTest(unittest.TestCase):
     def test_with_no_board_picked_a_drawer_entry_of_another_need_is_no_board(self):
         _, project = self.project([("alarm", [{"entry": "speaker"}])])
         said, code = run(["--requirements", str(project)])
-        self.assertEqual((code, said["problems"]), (1, [{"subject": "board", "sentence": "pick one board — none is picked", "fix": None}]))
+        self.assertEqual((code, said["problems"]), (1, [{"subject": "board", "sentence": "pick one board — none is picked", "fix": None, "code": None}]))
 
     def test_two_needs_whose_names_differ_only_in_capitals_are_refused_by_need_id(self):
         _, project = self.project([self.BOARD, ("open-lid", [{"part": "tactile-button"}]), ("openlid", [{"part": "tactile-button"}])])
         said, code = run(["--requirements", str(project)])
-        self.assertEqual((said["status"], code, said["problems"]), ("problems", 1, [{"subject": "openlid", "fix": None, "sentence":
+        self.assertEqual((said["status"], code, said["problems"]), ("problems", 1, [{"subject": "openlid", "fix": None, "code": None, "sentence":
             "its tactile-button would be called Openlid, and need open-lid's tactile-button is called OpenLid — the build refuses two "
             "components of one name, and capitals do not make two names; give one of them a name of your own in requirements.json, "
             '{"part": "tactile-button", "name": …}, and run this again'}]))

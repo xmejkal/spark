@@ -23,12 +23,13 @@ the offers that match a need. It also tallies what a project's run cost, read fr
 | facts | `fact-set`, `function-set`, `promote` | writes |
 | datasheets | `sources`, `fetch`, `keep`, `read`, `kept`, `catalog` | reads, writes, network, runs the `pdf-text` tool for `read` (`datasheets.read_datasheet`) |
 | drawer | `drawer`, `drawer-set`, `drawer-import` | reads, writes |
-| cost | `step`, `tally`, and `cost.py` | reads, writes. `tally`'s handler lives in `design/goal_handlers.py`, because it reads `needs` (design), and sourcing imports no design module (P721) |
+| cost | `step`, `tally`, and `cost.py` | reads, writes. `tally` is design's `tally_cost.TallyCost` (P726), because it reads `needs` (design), and sourcing imports no design module (P721) |
 
 The goal Operations of `parts.py` (`need`, `needs`, `needs-set`, `match`, `offer`, `pick`, `requirements`) live in
-design, because `needs` and `need_requirements` import `loader`, `power_rails` and `footprint_emitter`. `audit` lives in design too: it asks
-`footprint_emitter.footprint_gaps` whether a board stops the chain (`goal_handlers.audit`). `parts.py` imports both
-areas' `OPERATIONS`, so its flags stay as they are.
+design, because `needs` and `need_requirements` import `loader`, `power_rails` and `footprint_emitter`; six of them run on `run_cli` since P726,
+each on records' `AnswerOperation`. `audit` lives in design too: it asks
+`footprint_emitter.footprint_gaps` whether a board stops the chain (`audit_records.walk`). `parts.py` routes a flag to the core by
+design's `OPERATIONS` and keeps its own table for `--describe`, so its flags stay as they are.
 
 ### Its components
 
