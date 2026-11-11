@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/bench/deploy_gate.py",
+  "name": "the gate is dropped: a consent asks a VALUE question and an agent's question of the person",
+  "find": "        if question.kind != YES_NO or question.asked_of == AGENT:\n            return None\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/bench/deploy_gate.py",
+  "name": "the AGENT half is dropped: an agent's yes or no question is shown to the person",
+  "find": "        if question.kind != YES_NO or question.asked_of == AGENT:\n",
+  "replace": "        if question.kind != YES_NO:\n"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_gate.py",
+  "name": "answered_by is a constant, not the consent's who",
+  "find": "        return Reply(question.key, bool(self.ask(question.text)), self.who)\n",
+  "replace": "        return Reply(question.key, bool(self.ask(question.text)), \"nobody\")\n"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_gate.py",
+  "name": "the value is always yes, whatever the person answered",
+  "find": "        return Reply(question.key, bool(self.ask(question.text)), self.who)\n",
+  "replace": "        return Reply(question.key, True, self.who)\n"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_gate.py",
+  "name": "the base is dropped: a consent is no ReplyStrategy",
+  "find": "class ConsentStrategy(ReplyStrategy):\n",
+  "replace": "class ConsentStrategy(abc.ABC):\n"
+ }
+]

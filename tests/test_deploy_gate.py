@@ -45,6 +45,8 @@ from spark.bench import build_project_outside_world, deploy_image  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.events import Event, TerminalReporter  # noqa: E402
 from spark.core.operation import ASKS  # noqa: E402
+from spark.core.outside import build_outside_world  # noqa: E402
+from spark.core.replies import AGENT, EITHER, PERSON, VALUE, YES_NO, Question, Reply, ReplyStrategy  # noqa: E402
 from spark.core.privacy import MaskingReporter, Privacy  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
 from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
@@ -1032,6 +1034,37 @@ class TheConsentTest(unittest.TestCase):
     def test_the_terminal_says_who_typed_the_yes(self):
         terminal = deploy_gate.TerminalConsentStrategy("x", user_name=lambda: "ada")
         self.assertEqual(terminal.who, "typed in a terminal by ada")
+
+    def consent(self, answer):
+        """A consent that answers `answer` and keeps each question text it was asked (P737 R1)."""
+        class Answering(deploy_gate.ConsentStrategy):
+            who, yes_kind = "a test", "typed"
+
+            def __init__(self):
+                self.asked = []
+
+            def ask(self, question):
+                self.asked.append(question)
+                return answer
+        return Answering()
+
+    def test_a_consent_answers_a_yes_no_question_as_a_reply(self):
+        consent = self.consent(True)
+        self.assertIsInstance(consent, ReplyStrategy)
+        question = Question("erase", "erase it?", YES_NO, PERSON)
+        self.assertEqual(consent.reply(question), Reply("erase", True, "a test"))
+        self.assertEqual(consent.asked, ["erase it?"])
+        self.assertEqual(self.consent(False).reply(question), Reply("erase", False, "a test"))
+
+    def test_a_consent_leaves_a_value_question_and_an_agent_s_question_open(self):
+        consent = self.consent(True)
+        self.assertIsNone(consent.reply(Question("physical.pcb_thickness_mm", "how thick?", VALUE, EITHER)))
+        self.assertIsNone(consent.reply(Question("erase", "erase it?", YES_NO, AGENT)))
+        self.assertEqual(consent.asked, [])
+
+    def test_a_consent_fills_the_replies_slot(self):
+        outside = build_outside_world((ASKS,), TerminalReporter(io.StringIO()), replies=self.consent(True))
+        self.assertEqual(outside.replies(Question("erase", "erase it?", YES_NO, PERSON)), Reply("erase", True, "a test"))
 
 
 @needs_littlefs
