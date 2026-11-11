@@ -8,7 +8,7 @@
  {"file": "scripts/spark/sourcing/research/research_part.py", "name": "body_mm is compared whole, so a rerun flags it", "find": "    return body_sizes(value) if fact_path == BODY else value", "replace": "    return value"},
  {"file": "scripts/spark/sourcing/research/research_part.py", "name": "the template is not written", "find": "            RepliesStore(replies_path).dump(open_questions)\n", "replace": ""},
  {"file": "scripts/spark/sourcing/research/research_part.py", "name": "a library record is researched", "find": "        if path.parent.resolve() == record_kind.LIBRARY.resolve():", "replace": "        if False:"},
- {"file": "scripts/spark/sourcing/research/research_part.py", "name": "the stray check reads an empty file, so a stray key is silent", "find": "rest, filled = settle(RepliesStore(replies_path).load() if replies else {}, record)", "replace": "rest, filled = settle({}, record)"},
+ {"file": "scripts/spark/sourcing/research/research_part.py", "name": "the stray check reads an empty file, so a stray key is silent", "find": "rest, filled = settle(RepliesStore(replies_path).load() if replies else {}, held.record)", "replace": "rest, filled = settle({}, held.record)"},
  {"file": "scripts/spark/sourcing/research/research_part.py", "name": "the fold's problems are not the delta: the record's own problems read as the reply's", "find": "broken = sorted(set(validate(after, path)) - set(validate(record, path)))", "replace": "broken = sorted(set(validate(after, path)))"},
  {"file": "scripts/spark/sourcing/research/research_part.py", "name": "a gap no source asked about is silent", "find": "        questions += [question_for(need, needs.question_of(need.fact_path)) for need in remaining]\n", "replace": ""},
  {"file": "scripts/spark/sourcing/research/merge.py", "name": "a reply read off a drawing is written verified", "find": "block = {\"verified\": False,", "replace": "block = {\"verified\": True,"},
@@ -17,6 +17,6 @@
  {"file": "scripts/spark/sourcing/research/merge.py", "name": "body_mm has no why_it_matters", "find": "after[BODY] = dict(sizes, **provenance_of([reply], whys.get(BODY)))", "replace": "after[BODY] = dict(sizes, **provenance_of([reply], None))"},
  {"file": "scripts/spark/sourcing/research/merge.py", "name": "a reply to a key no question has is written", "find": "folded = [reply for key, reply in replies.items() if key in open_keys]", "replace": "folded = list(replies.values())"},
  {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a question with a citation is asked of either, so a terminal shows an agent's question", "find": "VALUE, AGENT if cites else EITHER,", "replace": "VALUE, EITHER,"},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a document that is not kept is cited", "find": "and (self.kept / str(entry.get(\"sha256\")) / str(entry.get(\"file\"))).is_file():", "replace": ":"},
+ {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a document that is not kept is cited", "find": "and (kept / str(entry.get(\"sha256\")) / str(entry.get(\"file\"))).is_file():", "replace": ":"},
  {"file": "scripts/spark/records/fact_needs.py", "name": "question_of answers nothing", "find": "        return (self.questions or {}).get(fact_path)", "replace": "        return None"}
 ]

@@ -215,13 +215,15 @@ class RunCliTest(unittest.TestCase):
         asked = []
 
         def builder(project, effects, reporter, values):
-            asked.append((project, effects, type(reporter), values["what"]))
+            asked.append((project, effects, type(reporter), values["what"], values["json"]))
             return FakeOutsideWorld(find_tool={"flasher": TOOL}.get)
         import contextlib
         import io
         with contextlib.redirect_stdout(io.StringIO()):
             code = run_cli(TEXT, Toy(), ["--project", "here", "--what", "ok"], outside_builder=builder)
-        self.assertEqual((code, asked), (0, [(Path("here"), (READS,), TerminalReporter, "ok")]))  # P737: the parsed values reach the builder
+            again = run_cli(TEXT, Toy(), ["--project", "here", "--what", "ok", "--json"], outside_builder=builder)
+        # P737: the parsed values reach the builder, with the json flag the Operation never sees, so a frontend keeps a terminal out of an envelope run
+        self.assertEqual((code, again, asked), (0, 0, [(Path("here"), (READS,), TerminalReporter, "ok", False), (Path("here"), (READS,), TerminalReporter, "ok", True)]))
 
     def test_the_builder_gets_the_effects_the_operation_narrows_to_for_these_values(self):
         asked = []

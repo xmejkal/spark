@@ -44,6 +44,6 @@
  {"file": "scripts/spark/core/privacy.py", "name": "a pasted Finding's fix is masked in the line that holds it", "find": "for text in (found.sentence, found.fix) if text]", "replace": "for text in (found.sentence,) if text]"},
  {"file": "scripts/spark/core/privacy.py", "name": "the project folder's trailing slash vanishes", "find": "MaskRule(form + \"/\", NAME_FOLLOWS, \"\")", "replace": "MaskRule(form + \"/\", \"\", \"\")"},
  {"file": "scripts/spark/core/privacy.py", "name": "the masking reporter shows the yes question raw", "find": "    def mask(self, text):\n        return self.privacy.mask_text(text)", "replace": "    def mask(self, text):\n        return text"},
- {"file": "scripts/spark/bench/deploy_gate.py", "name": "the yes question skips the mask", "find": "guard_lines(self.mask(question))", "replace": "guard_lines(question)"},
+ {"file": "scripts/spark/core/replies.py", "name": "the yes question skips the mask", "find": "self.stdout.write(guard_lines(self.mask(prompt)))", "replace": "self.stdout.write(guard_lines(prompt))"},
  {"file": "scripts/spark/bench/__init__.py", "name": "the bench's consent gets no mask", "find": "stdout=reporter.stream, mask=reporter.mask))", "replace": "stdout=reporter.stream))"}
 ]

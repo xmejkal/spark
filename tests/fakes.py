@@ -1,6 +1,7 @@
 """P239 PR 2 (#238): the fakes of the deploy area's swappable parts, one per part of spark's core."""
 
 import datetime
+import io
 import json
 import os
 import shlex
@@ -57,6 +58,22 @@ class FakeBoardConnection:
         if self.reset_raises:
             raise self.reset_raises
         self.resets += 1
+
+
+class Stream(io.StringIO):
+    """A stdin or stdout that is a terminal or not. With `interrupt`, its `readline` raises KeyboardInterrupt: the person pressed Ctrl-C."""
+
+    def __init__(self, text="", tty=True, interrupt=False):
+        super().__init__(text)
+        self.tty, self.interrupt = tty, interrupt
+
+    def isatty(self):
+        return self.tty
+
+    def readline(self, *size):
+        if self.interrupt:
+            raise KeyboardInterrupt
+        return super().readline(*size)
 
 
 class FakeConsent:

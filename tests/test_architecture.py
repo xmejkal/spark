@@ -190,7 +190,7 @@ class PlantedBreachesTest(unittest.TestCase):
             "if \"a\" in (1 if \"b\" in sys.modules else 2):\n    pass\n")})
         self.assertEqual(measure.breaches(root), {"T4:scripts/branch.py:sys.modules": 3})
 
-    def test_x2_output_in_spark_outside_a_renderer_the_terminal_consent_and_run_cli(self):
+    def test_x2_output_in_spark_outside_a_renderer_the_terminal_adapter_and_run_cli(self):
         root = planted({
             "scripts/spark/core/cli.py": "import sys\n\n\ndef run_cli():\n    print(sys.stderr)\n\n\ndef other():\n    def run_cli():\n        print(1)\n",
             "scripts/spark/core/out.py": (
@@ -200,7 +200,7 @@ class PlantedBreachesTest(unittest.TestCase):
                 "    sys.stdout.write(answer)\n    system.stderr.write(answer)\n    sys.exit(1)\n    sys.stdin.readline()\n"
                 "    raise SystemExit(2)\n\n\n"
                 'class Draw:\n    """Renderer: draws lines."""\n\n    def draw(self):\n        print("ok")\n\n\n'
-                'class TerminalConsentStrategy:\n    """Strategy: asks on the terminal."""\n\n    def ask(self):\n        return input()\n'),
+                'class Terminal:\n    """Adapter: the tty."""\n\n    def ask(self):\n        return input()\n'),
             "scripts/other.py": "def run():\n    print(\"x\")\n"})
         self.assertEqual(measure.breaches(root), {
             "X2:scripts/spark/core/cli.py:print": 1,  # the nested run_cli; the top-level one in cli.py is X2's named function

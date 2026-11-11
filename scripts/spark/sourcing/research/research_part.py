@@ -39,7 +39,7 @@ SOURCE_ORDER = ("dfrobot-wiki", "kept-documents")
 #: the run prints, the problems the sources met as (source name, SparkError) and the record keys the fold changed.
 Round = namedtuple("Round", "record questions sources problems written")
 IN_LIBRARY_FIX = "spark's library is changed in spark's repository; research a copy of the record in the project's parts/"
-CONTRACT_FIX = "fix the value in the replies file so the record meets its contract, then run again"
+CONTRACT_FIX = "fix the value in %s so the record meets its contract (the typed values are kept there), then run %s --replies %s"
 WROTE = "record written: %s (unverified)"
 NO_GAPS = "no gaps: every fact the needs file lists is held or named in physical_proof.not_published"
 KEPT_LINE = "documents: %d kept in the store, %d listed but not keepable"
@@ -113,18 +113,23 @@ class ResearchPart(Operation):
         needs = FactNeeds.from_file()
         gaps = find_gaps(record, needs)
         held = self._round(gaps, record, outside, needs)
-        answers = {question.key: outside.replies(question) for question in held.questions}
-        open_questions = order_open([question for question in held.questions if answers[question.key] is None])
         replies_path = Path(replies) if replies else RepliesStore.for_project(project).path
+        line = "%s --part %s --project %s" % (SCRIPT, part, shlex.quote(str(project)))
         rest, filled = settle(RepliesStore(replies_path).load() if replies else {}, held.record)
         findings, written = reply_problems(rest, held.questions, filled), []
+        # a file with a problem asks nobody: a typed answer would be thrown away with it (R2's refuter)
+        answers = {question.key: None if findings else outside.replies(question) for question in held.questions}
+        open_questions = order_open([question for question in held.questions if answers[question.key] is None])
         if not findings:
-            findings, written = self._fold(path, record, held, answers, part)
+            broken, written = self._fold(path, record, held, answers)
+            if broken:  # the contract refused a value: the typed values survive in the file, where the fix is made
+                RepliesStore(replies_path).dump(held.questions, answers)
+                findings = [Finding(outcomes.PROBLEMS, part, PART_CONTRACT_BROKEN, sentence, CONTRACT_FIX % (replies_path, line, replies_path)) for sentence in broken]
         findings += [Finding(outcomes.COULD_NOT_RUN, name, problem.code, printable(str(problem)), problem.fix) for name, problem in held.problems]
         following = []
         if open_questions:
             RepliesStore(replies_path).dump(open_questions)
-            findings += needs_reply_findings(open_questions, replies_path, "%s --part %s --project %s" % (SCRIPT, part, shlex.quote(str(project))))
+            findings += needs_reply_findings(open_questions, replies_path, line)
             following = [NextStep(OP, ["--part", part, "--project", str(project), "--replies", str(replies_path), JSON_FLAG], "%d open" % len(open_questions),
                                   self.effects, needs_person=True if any(q.asked_of == PERSON for q in open_questions) else None)]
         data = {"part": part, "sources": held.sources, "gaps": [need.fact_path for need in gaps], "written": written,
@@ -171,10 +176,10 @@ class ResearchPart(Operation):
         return Round(record, questions, sources, problems, sorted(written))
 
     @staticmethod
-    def _fold(path, record, held, answers, part):
-        """The replies folded into the round's record and written, with what the sources changed, or the contract problems the
-        fold added (as `_set_in_home` judges a write: the problems of the result minus the record's own, `record` as read
-        from disk) as Findings, and nothing written."""
+    def _fold(path, record, held, answers):
+        """`(broken, written)`: the replies folded into the round's record and written, with what the sources changed; or the
+        contract sentences the fold added (as `_set_in_home` judges a write: the problems of the result minus the record's own,
+        `record` as read from disk), and nothing written."""
         given = {key: reply for key, reply in answers.items() if reply is not None}
         after, written = fold_replies(held.record, given, held.questions, {question.key: question.why for question in held.questions})
         written = sorted(set(written) | set(held.written))
@@ -182,7 +187,7 @@ class ResearchPart(Operation):
             return [], []
         broken = sorted(set(validate(after, path)) - set(validate(record, path)))
         if broken:
-            return [Finding(outcomes.PROBLEMS, part, PART_CONTRACT_BROKEN, sentence, CONTRACT_FIX) for sentence in broken], []
+            return broken, []
         _write_record(path, after)
         return [], written
 

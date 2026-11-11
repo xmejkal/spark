@@ -23,7 +23,9 @@ the sources in order, and folds each answer into the record before the next sour
     that cites that drawing at page 1.
 A gap no source can place becomes a question with no citation.
 
-Run 1 writes the documents and the sources it found, and answers no question itself. It writes the template
+Run 1 writes the documents and the sources it found, and answers no question itself. In a terminal without --json it asks
+you each question that is not an agent's (one with no cited drawing), one at a time: Enter leaves it open, Ctrl-C keeps
+what you typed so far, and a value the record refuses is kept in the replies file for the fix. Then it writes the template
 <project>/.spark/research-replies.json with a null value per question, prints the questions in data.open, one unchecked
 item per question with the code needs_reply, and exits 2. Exit 2 here means "run again with replies", not "broken".
 Read the cited drawing, fill the values, and invent no key. A value the drawing does not give stays null and its

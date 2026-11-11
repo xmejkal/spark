@@ -1,5 +1,5 @@
-"""P737 step 2: the interaction mechanism. A typed Question, a Reply, the ReplyStrategy family (given ahead, or deferring), the
-project's replies file, and the Findings an open list makes. No network, no terminal."""
+"""P737: the interaction mechanism. A typed Question, a Reply, the ReplyStrategy family (given ahead, deferring, live in a terminal,
+chained), the one tty adapter, the project's replies file, and the Findings an open list makes. No network; the terminal is a fake."""
 
 import json
 import sys
@@ -15,8 +15,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.core import outcomes  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
-from spark.core.replies import (AGENT, CHOICE, EITHER, PERSON, VALUE, YES_NO, DeferringReplyStrategy, GivenReplyStrategy,  # noqa: E402
-                                Question, RepliesStore, Reply, ReplyStrategy, misfit_fix, needs_reply_findings, order_open, reply_problems)
+from fakes import Stream  # noqa: E402
+from spark.core.replies import (AGENT, CHOICE, EITHER, LEFT_LINE, PERSON, TYPED_BY, VALUE, YES_NO, ChainedReplyStrategy,  # noqa: E402
+                                DeferringReplyStrategy, GivenReplyStrategy, Question, RepliesStore, Reply, ReplyStrategy, Terminal,
+                                TerminalReplyStrategy, misfit_fix, needs_reply_findings, order_open, reply_problems)
 
 DRAWING = {"document": "SEN0526 dimension drawing", "at": "page 1"}
 HOLES = Question("physical.mounting_holes", "Where are the mounting holes?", VALUE, AGENT, why="the sheet places the module",
@@ -67,6 +69,88 @@ class StrategyTest(unittest.TestCase):
         self.assertEqual([strategy.reply(question) for question in (HOLES, THICK, SOLDERED)], [None, None, None])
         self.assertEqual(vars(strategy), {})
 
+    def test_chained_takes_the_first_reply_and_none_when_no_part_answers_or_the_chain_is_empty(self):
+        first, second = Reply(THICK.key, 1.6, "replies file a"), Reply(THICK.key, 2.0, "replies file b")
+        chain = ChainedReplyStrategy([GivenReplyStrategy({THICK.key: first}), GivenReplyStrategy({THICK.key: second, HOLES.key: second})])
+        self.assertIsInstance(chain, ReplyStrategy)
+        self.assertEqual((chain.reply(THICK), chain.reply(HOLES), chain.reply(SOLDERED)), (first, second, None))
+        self.assertEqual(ChainedReplyStrategy([]).reply(THICK), None)
+
+
+class TerminalTest(unittest.TestCase):
+    def test_live_needs_both_streams_to_be_a_tty(self):
+        self.assertEqual([Terminal(Stream(tty=a), Stream(tty=b)).live for a, b in ((True, True), (True, False), (False, True))], [True, False, False])
+
+    def test_ask_shows_the_masked_guarded_prompt_and_reads_one_stripped_line_and_say_adds_a_newline(self):
+        shown = Stream()
+        terminal = Terminal(Stream("  1.6 \n"), shown, mask=lambda text: text.replace("/srv/person", "~"))
+        self.assertEqual(terminal.ask("read /srv/person/a\x1b.pdf: "), "1.6")
+        terminal.say("done /srv/person")
+        self.assertEqual(shown.getvalue(), "read ~/a?.pdf: done ~\n")
+
+    def test_ctrl_c_and_ctrl_d_are_none_and_enter_is_an_empty_line(self):
+        self.assertEqual(Terminal(Stream(interrupt=True), Stream()).ask("? "), None)
+        self.assertEqual(Terminal(Stream(""), Stream()).ask("? "), None)  # the end of the input: readline gives "" with no newline
+        self.assertEqual(Terminal(Stream("\n"), Stream()).ask("? "), "")
+
+
+class TerminalReplyStrategyTest(unittest.TestCase):
+    """The questions asked live. Every test gives `user_name`, so no test reads the login."""
+
+    def live(self, typed, question, interrupt=False):
+        shown = Stream()
+        strategy = TerminalReplyStrategy(Terminal(Stream(typed, interrupt=interrupt), shown), user_name=lambda: "ada")
+        return strategy, strategy.reply(question), shown.getvalue()
+
+    def test_an_agent_question_is_never_shown_and_stays_open(self):
+        strategy, reply, shown = self.live("1.6\n", THICK)
+        self.assertEqual((reply, shown, strategy.left), (None, "", False))
+
+    def test_a_value_question_shows_the_text_the_hint_the_why_and_the_cited_page_and_reads_json(self):
+        holes = HOLES._replace(asked_of=EITHER)
+        strategy, reply, shown = self.live('[{"x_mm": 2.5, "y_mm": 2.5, "drill_mm": 3.2}]\n', holes)
+        self.assertEqual(shown, "Where are the mounting holes? (mm, Enter = later)\nthe sheet places the module\nsee SEN0526 dimension drawing, page page 1\n> ")
+        self.assertEqual(reply, Reply(holes.key, [{"x_mm": 2.5, "y_mm": 2.5, "drill_mm": 3.2}], TYPED_BY % "ada", None, None, DRAWING))
+
+    def test_a_value_that_is_not_json_stays_text_and_a_number_is_a_number(self):
+        thick = THICK._replace(asked_of=EITHER, cites=None, unit=None, answer_form="a number")
+        self.assertEqual(self.live("1.6\n", thick)[1].value, 1.6)
+        strategy, reply, shown = self.live("about two\n", thick)
+        self.assertEqual((reply.value, shown.startswith("How thick is the board? (a number, Enter = later)\n> ")), ("about two", True))
+
+    def test_a_question_with_a_unit_refuses_a_line_that_is_not_a_number_or_json_and_says_the_form(self):
+        thick = THICK._replace(asked_of=EITHER, cites=None, answer_form="a number")
+        strategy, reply, shown = self.live("1,6\n", thick)
+        self.assertEqual((reply, shown.endswith("> the reply is '1,6', and the question takes a number or JSON in mm: a number\n")), (None, True))
+        self.assertEqual(self.live("[1.6]\n", thick)[1].value, [1.6])
+
+    def test_enter_leaves_the_question_open_and_the_person_is_not_marked_as_left(self):
+        strategy, reply, shown = self.live("\n", REVISION)
+        self.assertEqual((reply, strategy.left, shown.endswith("> ")), (None, False, True))
+
+    def test_a_choice_by_number_or_by_text_and_a_stray_choice_is_said_and_stays_open(self):
+        self.assertEqual(self.live("2\n", REVISION)[1].value, "V2.0")
+        self.assertEqual([self.live(typed, REVISION)[1] for typed in ("0\n", "3\n", "\u00b2\n")], [None, None, None])  # out of range, a unicode digit
+        strategy, reply, shown = self.live("V1.0\n", REVISION)
+        self.assertEqual((reply.value, "  1 V1.0\n  2 V2.0\n> " in shown), ("V1.0", True))
+        strategy, reply, shown = self.live("V3.0\n", REVISION)
+        self.assertEqual((reply, shown.endswith("> the reply is 'V3.0', and the choices are V1.0, V2.0\n")), (None, True))
+
+    def test_a_yes_or_no_takes_yes_y_no_n_and_anything_else_is_said_and_stays_open(self):
+        self.assertEqual([self.live(typed, SOLDERED)[1].value for typed in ("yes\n", "Y\n", "no\n", "n\n")], [True, True, False, False])
+        strategy, reply, shown = self.live("maybe\n", SOLDERED)
+        self.assertEqual((reply, "(yes or no, Enter = later)" in shown, shown.endswith("takes yes or no (true or false)\n")), (None, True, True))
+
+    def test_ctrl_d_leaves_this_and_every_later_question_open_like_ctrl_c(self):
+        strategy, reply, shown = self.live("", REVISION)
+        self.assertEqual((reply, strategy.left, shown.endswith("> " + LEFT_LINE + "\n")), (None, True, True))
+
+    def test_ctrl_c_says_the_rest_stays_open_once_and_every_later_question_is_silent(self):
+        strategy, reply, shown = self.live("", REVISION, interrupt=True)
+        self.assertEqual((reply, strategy.left, shown.endswith("> " + LEFT_LINE + "\n")), (None, True, True))
+        later = strategy.reply(SOLDERED)
+        self.assertEqual((later, strategy.terminal.stdout.getvalue()), (None, shown))
+
 
 class RepliesStoreTest(unittest.TestCase):
     def setUp(self):
@@ -75,6 +159,10 @@ class RepliesStoreTest(unittest.TestCase):
 
     def test_the_file_is_the_project_s_spark_folder_s(self):
         self.assertEqual(self.store.path, self.project / ".spark" / "research-replies.json")
+
+    def test_dump_with_answers_keeps_a_typed_value_and_a_null_for_the_rest(self):
+        self.store.dump([THICK, HOLES], {THICK.key: Reply(THICK.key, 1.6, "typed in a terminal by ada"), HOLES.key: None})
+        self.assertEqual({key: entry["value"] for key, entry in json.loads(self.store.path.read_text())["replies"].items()}, {THICK.key: 1.6, HOLES.key: None})
 
     def test_dump_writes_a_template_with_a_null_per_open_key_and_keeps_what_is_answered(self):
         self.store.dump([HOLES, THICK])

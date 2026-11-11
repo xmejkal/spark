@@ -38,7 +38,7 @@ from spark.records import store  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform, FakeReporter,  # noqa: E402
-                   FakeOutsideWorld, FakeProbePlatform,
+                   FakeOutsideWorld, FakeProbePlatform, Stream,
                    line_made_at_import, pin_time_zone)
 from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import build_project_outside_world, deploy_image  # noqa: E402
@@ -61,17 +61,6 @@ NONE_RECORDED = "spark's store record names no deploy here"
 
 #: A fixed zone for a deploy moment, so a test reads the same on every machine (P291).
 PRAGUE_SUMMER = datetime.timezone(datetime.timedelta(hours=2))
-
-
-class Stream(io.StringIO):
-    """A stdin or stdout that is a terminal or not."""
-
-    def __init__(self, text="", tty=True):
-        super().__init__(text)
-        self.tty = tty
-
-    def isatty(self):
-        return self.tty
 
 
 class GateCase(LookCase):
@@ -1512,6 +1501,10 @@ class TerminalConsentTest(unittest.TestCase):
     def test_yes_in_a_terminal_is_the_yes(self):
         self.assertEqual(self.ask("yes\n"), (True, "erase ALL of this board's flash? type yes to go on: "))
 
+    def test_a_closed_input_is_a_no_not_a_traceback(self):
+        consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream(interrupt=True), Stream())
+        self.assertEqual((consent.ask("erase?"), self.ask("")[0]), (False, False))  # Ctrl-C, then Ctrl-D (P737 R2)
+
     def test_the_question_shows_a_character_a_terminal_does_not_print_as_a_question_mark(self):
         stdout = Stream()
         consent = deploy_gate.TerminalConsentStrategy(self.LINE, Stream("no\n"), stdout)
@@ -1528,7 +1521,7 @@ class TerminalConsentTest(unittest.TestCase):
     def test_the_bench_asks_through_the_masking_reporter(self):
         reporter = MaskingReporter(TerminalReporter(Stream()), Privacy.of("/p", "/s", "/srv/person", ()))
         consent = build_project_outside_world(None, (ASKS,), reporter).make_consent(self.LINE)
-        self.assertEqual(consent.mask("erase /srv/person/lamp?"), "erase ~/lamp?")
+        self.assertEqual(consent.terminal.mask("erase /srv/person/lamp?"), "erase ~/lamp?")
 
     def test_anything_else_is_no(self):
         for typed in ("y\n", "YES please\n", "\n", ""):

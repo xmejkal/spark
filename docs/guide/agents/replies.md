@@ -32,6 +32,17 @@ the size, the record says so in `physical_proof.not_published`, written with `pa
 is a later card. A bare `"<key>": value` is accepted too, an object as well, unless the object has a key named `value`:
 then write the long form. A rerun with the same file adds nothing twice.
 
+## Live mode
+
+In a terminal, with no `--json`, `research.py` asks each question whose `asked_of` is `person` or `either`, one at a time,
+after the replies file answered what it could. Enter leaves a question open. Ctrl-C or Ctrl-D keeps the answers typed so far
+and leaves the rest open. An answer that does not fit the question's `kind`, or a word where the question names a unit, is said
+and the question stays open. A value the record's contract refuses is a `part_contract_broken` problem: nothing is written, and
+every typed value is kept in the replies file, where you fix the one and run again with `--replies`. A replies file with a
+problem asks nobody. A question with `cites` is an `agent` question: it is never asked live, so a record with a kept drawing
+writes its template as before. You run with `--json`, or with no tty, so you never see a prompt. The template is written for
+what stays open, as in run 1.
+
 ## The research run
 
 ```
@@ -59,7 +70,7 @@ same value is settled and flags nothing. A run with no gaps is `ok` and writes n
 | `needs_reply` | an `unchecked` item per question that the run did not answer itself. `subject` is the key, the question is in `data.open` | answer it in the replies file, then run the `next[0]` step. Exit 2 here means "run again with replies", not "broken". Relay a `person` question to the person |
 | `unknown_reply` | a `problems` item: a reply to a key that no open question has, and the `fix` names the nearest. Also a reply to a fact that the record holds with another value | fix the key in the replies file. Never reply to a fact that is not open |
 | `bad_reply` | a `problems` item: a reply that does not fit its question's `kind`. It is not a yes or no, not one of the `choices`, empty, or not a finite number | answer as the question's `answer_form` and `example` say |
-| `part_contract_broken` | a `problems` item of `research.py`: the folded record breaks a rule that the record did not break before, for example a size that is not above 0. Nothing is written | fix the value in the replies file, then run again |
+| `part_contract_broken` | a `problems` item of `research.py`: the folded record breaks a rule that the record did not break before, for example a size that is not above 0. Nothing is written, and every typed value is kept in the replies file that the `fix` names | fix the value in that file, then run the `fix` line with `--replies` |
 | `url_unreachable`, `url_refused`, `file_name_refused`, `document_not_kept` | an `unchecked` item of `research.py`, `subject` the source name. The wiki page, or one file it lists, did not answer, or the store refused it. The sentence names the URL. The other sources still ran. Even a run that wrote every reply ends with exit 2 | when the page answers, run again. A wrong page address shows here too |
 | `no_sku` | an `unchecked` item. The record's `vendor` is dfrobot and it has no `sku`, so the wiki page has no address | write the maker's part number as `sku` (`parts.py --skeleton --sku`), then run again |
 | `no_document_list` | an `unchecked` item. The page answered but holds no document list spark can read (its JSON-LD block), so nothing was kept | keep the documents by hand. Put their URLs in the record's `sources` and run `parts.py --fetch` |
