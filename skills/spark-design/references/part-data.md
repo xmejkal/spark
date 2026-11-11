@@ -41,7 +41,7 @@ What makes it a good record:
 - `parts.py --fact-set` writes both keys: `legs` leg by leg, and `host_requirements` as one whole list
   ([P741](https://github.com/xmejkal/spark/issues/1017)).
 
-A pull-up that the board's internal one can do says `"internal_will_do": true`. On a board that states
+A pull-up that the board's own internal pull-up can replace carries `"internal_will_do": true`. On a board that states
 `internal_pull_up_ohms`, spark places no resistor, and `pins.py` tells the firmware to pull the pin up. A pin that
 wakes the chip is the exception ([P204](https://github.com/xmejkal/spark/issues/167)).
 What the record leaves out on purpose (W21): prices, stock, and facts no decision reads.

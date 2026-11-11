@@ -12,8 +12,8 @@ are resolved.
 
 ## Reuse waterfall (never hand-invent a part)
 1. Vendor or ecosystem: tscircuit registry (`tsci add`), atopile packages, vendor KiCad libs (Seeed, SparkFun, Adafruit).
-2. Bare-IC canonical: KiCad official libraries, or `easyeda2kicad` from an LCSC part number. The second stays
-   `verified: false` until it is confirmed.
+2. Bare-IC canonical: KiCad official libraries, or `easyeda2kicad` from an LCSC part number. A part from
+   `easyeda2kicad` stays `verified: false` until it is confirmed.
 3. Aggregators: SnapEDA, Ultra Librarian. Fetch per part and do not mirror (licensing).
 
 ---
@@ -133,6 +133,6 @@ verified: per-SKU (build from the wiki pinout, the schematic and the DFRobot_<Pa
 - **Gravity** modules: record {connector = 3-pin or 4-pin, colour}. 3-pin: green=digital, blue=analog.
   4-pin: red=I2C, blue=UART. PH2.0 pitch. This replaces a bespoke pinout for plug-and-play parts.
 - Footprint: derive it from the dimension PDF (2.54 mm pitch on FireBeetle/Beetle) and the STEP model.
-  Mark it "derived, needs confirmation". For some SKUs a layout zip holds a KiCad footprint and symbol (DFR1117 for one). Eagle files were not looked for.
+  Mark it "derived, needs verification". For some SKUs a layout zip holds a KiCad footprint and symbol (DFR1117 for one). Eagle files were not looked for.
 - Example: DFR0044 (Gravity TB6612FNG 2x1.2A motor driver) is DFRobot's own driver board. If you use it,
   it replaces the bare TB6612 wiring with a Gravity 4-pin interface.
