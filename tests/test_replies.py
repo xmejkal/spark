@@ -109,7 +109,7 @@ class TerminalReplyStrategyTest(unittest.TestCase):
     def test_a_value_question_shows_the_text_the_hint_the_why_and_the_cited_page_and_reads_json(self):
         holes = HOLES._replace(asked_of=EITHER)
         strategy, reply, shown = self.live('[{"x_mm": 2.5, "y_mm": 2.5, "drill_mm": 3.2}]\n', holes)
-        self.assertEqual(shown, "Where are the mounting holes? (mm, Enter = later)\nthe sheet places the module\nsee SEN0526 dimension drawing, page page 1\n> ")
+        self.assertEqual(shown, "Where are the mounting holes? (mm, Enter = later)\nthe sheet places the module\nsee SEN0526 dimension drawing, page 1\n> ")
         self.assertEqual(reply, Reply(holes.key, [{"x_mm": 2.5, "y_mm": 2.5, "drill_mm": 3.2}], TYPED_BY % "ada", None, None, DRAWING))
 
     def test_a_value_that_is_not_json_stays_text_and_a_number_is_a_number(self):

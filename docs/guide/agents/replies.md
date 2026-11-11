@@ -10,9 +10,11 @@ it reads the same in every script that asks. The first script that asks is `rese
 - `key` is the fact path that the answer fills, for example `physical.mounting_holes`, or the name of a decision.
 - `kind` is `yes_no`, `value` or `choice`. A `choice` question lists its `choices`.
 - `asked_of` is `agent`, `person` or `either`. You answer an `agent` question. Never put it to a person in a terminal.
-  A `person` question needs the person's hands or eyes, and comes first in the list.
+  A `person` question needs the person's hands or eyes, and comes first in the list. An `either` question goes to whoever
+  is there: a person at the terminal, or you under `--json`. Every question `research.py` asks today is `either`.
 - `answer_form` says the shape of the answer in words. `example` holds placeholders, never a value to copy.
-- `cites` is `{document, at}`: the kept document and the page that hold the answer. Read that document and nothing else.
+- `cites` is `{document, at}`: the kept document and the page that hold the answer, `at` in the words `page 1`, as the
+  prompt and the source repeat it. Read that document and nothing else.
   A question with `cites: null` is one that no source placed. Find the fact where you can, and name the place in your reply's `note`.
 - One `unchecked` item per open question, with the code `needs_reply` and the key as `subject`. The status is
   `could-not-run` and the exit is 2 while a question is open.
@@ -39,9 +41,10 @@ after the replies file answered what it could. Enter leaves a question open. Ctr
 and leaves the rest open. An answer that does not fit the question's `kind`, or a word where the question names a unit, is said
 and the question stays open. A value the record's contract refuses is a `part_contract_broken` problem: nothing is written, and
 every typed value is kept in the replies file, where you fix the one and run again with `--replies`. A replies file with a
-problem asks nobody. A question with `cites` is an `agent` question: it is never asked live, so a record with a kept drawing
-writes its template as before. You run with `--json`, or with no tty, so you never see a prompt. The template is written for
-what stays open, as in run 1.
+problem asks nobody. A question with `cites` is asked live too, with the line `see <document>, <at>` under it, so the person
+reads the kept drawing at that page ([P763](https://github.com/xmejkal/spark/issues/1050)). The value they type gets the
+source `read from <document> <at>, typed in a terminal by <login>`. You run with `--json`, or with no tty, so you never see
+a prompt. The template is written for what stays open, as in run 1.
 
 ## The research run
 
@@ -56,7 +59,7 @@ record whose `vendor` is dfrobot, it fetches `https://wiki.dfrobot.com/<sku>/` o
 images that the page lists in the store and writes them into `documents`. A zip or a STEP file is written as `{url,
 kept: false, title}`. The page's URL goes into `sources`. When the page lists no dimension drawing, the thickness, the
 holes and the header go into `physical_proof.not_published`. The second source is `kept-documents`. With a kept dimension
-drawing in the record's `documents`, each gap is an `agent` question that cites it at page 1. With no gap, no source
+drawing in the record's `documents`, each gap is an `either` question that cites it at page 1. With no gap, no source
 runs. Run 1 writes the documents it kept and the template, and exits 2.
 Run 2, with `--replies`, writes each value as a fact: `physical` with its `physical_proof`, or `body_mm`. The fact has
 `verified: false` and a `source` that names the document, the page and who read it. An older proof is merged, not

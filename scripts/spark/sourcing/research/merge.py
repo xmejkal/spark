@@ -11,8 +11,8 @@ import copy
 from spark.sourcing.part_records import PHYSICAL_WHY
 
 # --- MVP ---
-#: The `source` of a fact a reply gave: read off the cited document, or given with no citation.
-READ_FROM, GIVEN_BY = "read from %s %s by %s", "given by %s"
+#: The `source` of a fact a reply gave: read off the cited document by whom (`answered_by` says it), or given with no citation.
+READ_FROM, GIVEN_BY = "read from %s %s, %s", "given by %s"
 #: The blocks a reply fills, and the two sizes a `body_mm` reply carries (its provenance is the block's own).
 PHYSICAL, PROOF, BODY = "physical", "physical_proof", "body_mm"
 BODY_KEYS = ("width", "height")

@@ -150,10 +150,10 @@ class SettleTest(unittest.TestCase):
 
 
 class QuestionTest(unittest.TestCase):
-    def test_a_question_with_cites_is_an_agent_s_and_without_is_either_s(self):
+    def test_a_question_is_either_s_with_or_without_a_citation(self):
         question = question_for(need("physical.header"), NEEDS.question_of("physical.header"), CITES)
         self.assertEqual((question.key, question.kind, question.asked_of, question.unit, question.cites),
-                         ("physical.header", "value", "agent", "mm", CITES))
+                         ("physical.header", "value", "either", "mm", CITES))
         self.assertEqual(question.why, "spark.x.Y will read it (P734)")
         either = question_for(need("body_mm", "reads", None), NEEDS.question_of("body_mm"))
         self.assertEqual((either.asked_of, either.cites, either.why), ("either", None, "spark.x.Y reads it"))
@@ -169,11 +169,11 @@ class KeptDocumentsSourceTest(unittest.TestCase):
         (self.kept / sha).mkdir()
         (self.kept / sha / file).write_bytes(b"%PDF")
 
-    def test_a_kept_drawing_gives_one_agent_question_per_gap_citing_page_1(self):
+    def test_a_kept_drawing_gives_one_question_per_gap_of_either_citing_page_1(self):
         self.keep()
         questions = self.source.offer(self.gaps, RECORD, FakeOutsideWorld()).questions
         self.assertEqual([(q.key, q.asked_of, q.cites) for q in questions],
-                         [(gap.fact_path, "agent", CITES) for gap in self.gaps])
+                         [(gap.fact_path, "either", CITES) for gap in self.gaps])
 
     def test_an_odd_documents_block_gives_no_question_and_no_crash(self):
         self.keep()
@@ -330,7 +330,7 @@ class FoldRepliesTest(unittest.TestCase):
         after, written = fold_replies(RECORD, ANSWERS, self.QUESTIONS, {})
         self.assertEqual(written, ["physical", "physical_proof"])
         self.assertEqual(after["physical"], {"thickness_mm": 1, "mounting_holes": HOLES, "header": HEADER})
-        self.assertEqual(after["physical_proof"], {"verified": False, "source": "read from x-dimension-v1 page 1 by " + BY,
+        self.assertEqual(after["physical_proof"], {"verified": False, "source": "read from x-dimension-v1 page 1, " + BY,
                                                    "why_it_matters": "a hole or a header placed wrong puts the module where its pins miss the breadboard",
                                                    "cites": CITES, "note": "the side view"})
         self.assertEqual(validate(after, Path("x-mod.json")), [])
@@ -351,7 +351,7 @@ class FoldRepliesTest(unittest.TestCase):
         replies = {"physical.header": ANSWERS["physical.header"]}
         after, written = fold_replies(record, replies, self.QUESTIONS, {})
         self.assertEqual(after["physical"], {"thickness_mm": 1, "header": HEADER})
-        self.assertEqual(after["physical_proof"], {"verified": False, "source": "measured on the bench; read from x-dimension-v1 page 1 by " + BY,
+        self.assertEqual(after["physical_proof"], {"verified": False, "source": "measured on the bench; read from x-dimension-v1 page 1, " + BY,
                                                    "why_it_matters": "a hole or a header placed wrong puts the module where its pins miss the breadboard",
                                                    "cites": CITES, "note": "calipers"})
         for odd in (None, [1], "thin"):
@@ -360,7 +360,7 @@ class FoldRepliesTest(unittest.TestCase):
                 self.assertEqual((after["physical"], written), ({"header": HEADER}, ["physical", "physical_proof"]))
         incomplete = {"physical.header": reply("physical.header", HEADER, cites={"at": "page 1"})}
         after, _ = fold_replies(RECORD, incomplete, self.QUESTIONS, {})
-        self.assertEqual(after["physical_proof"]["source"], "read from None page 1 by " + BY)
+        self.assertEqual(after["physical_proof"]["source"], "read from None page 1, " + BY)
         self.assertTrue(validate(after, Path("x-mod.json")), "a citation with no document is the record's rule to refuse")
 
     def test_body_mm_takes_the_sizes_with_its_why_and_a_reply_with_no_cites_says_given_by(self):
@@ -571,6 +571,16 @@ class ResearchPartTest(unittest.TestCase):
                          % (self.replies_file, self.project, self.replies_file))
         self.assertEqual({key: entry["value"] for key, entry in json.loads(self.replies_file.read_text())["replies"].items()},
                          {"physical.thickness_mm": -1, "physical.mounting_holes": None, "physical.header": HEADER})
+
+    def test_a_cited_question_is_asked_live_with_its_drawing_and_page_and_the_typed_value_names_both(self):
+        shown = Stream()  # P763: the fixture record keeps its drawing, so each question cites it; the person is asked all the same
+        strategy = TerminalReplyStrategy(Terminal(Stream("1.6\n\n\n"), shown), user_name=lambda: "ada")  # one value, Enter twice
+        result = self.research(strategy)
+        self.assertEqual(shown.getvalue().count("see x-dimension-v1, page 1\n> "), 3)
+        self.assertEqual(self.record()["physical"]["thickness_mm"], 1.6)
+        self.assertEqual(self.record()["physical_proof"]["source"], "read from x-dimension-v1 page 1, typed in a terminal by ada")
+        self.assertEqual(([found.code for found in result.findings], [q["key"] for q in result.data["open"]]),
+                         (["needs_reply", "needs_reply"], ["physical.mounting_holes", "physical.header"]))
 
     def test_the_frontend_chains_the_file_before_a_live_terminal_and_builds_no_terminal_under_json(self):
         RepliesStore(self.replies_file).dump([])

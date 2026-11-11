@@ -40,10 +40,10 @@ FROM_FILE = "replies file %s"
 #: `Reply.answered_by` of a reply typed in a terminal. The deploy's yes says it too.
 TYPED_BY = "typed in a terminal by %s"
 #: The words of a question asked live: the hint after the text, what a yes or no takes, the cited page, what closed the input,
-#: and what a typed line lacks when the question names a unit.
+#: and what a typed line lacks when the question names a unit. A citation's `at` says the page itself ("page 1").
 LATER_HINT = "(%s, Enter = later)"
 YES_OR_NO = "yes or no"
-SEE_PAGE = "see %s, page %s"
+SEE_PAGE = "see %s, %s"
 LEFT_LINE = "input closed (Ctrl-C or Ctrl-D): the rest stays open"
 NOT_IN_FORM = "the reply is %r, and the question takes a number or JSON in %s: %s"
 YES_WORDS, NO_WORDS = ("yes", "y"), ("no", "n")

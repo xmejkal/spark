@@ -16,7 +16,7 @@
  {"file": "scripts/spark/sourcing/research/merge.py", "name": "not_published keeps a key the fold wrote", "find": "if key not in keys]", "replace": "]"},
  {"file": "scripts/spark/sourcing/research/merge.py", "name": "body_mm has no why_it_matters", "find": "after[BODY] = dict(sizes, **provenance_of([reply], whys.get(BODY)))", "replace": "after[BODY] = dict(sizes, **provenance_of([reply], None))"},
  {"file": "scripts/spark/sourcing/research/merge.py", "name": "a reply to a key no question has is written", "find": "folded = [reply for key, reply in replies.items() if key in open_keys]", "replace": "folded = list(replies.values())"},
- {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a question with a citation is asked of either, so a terminal shows an agent's question", "find": "VALUE, AGENT if cites else EITHER,", "replace": "VALUE, EITHER,"},
+ {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a cited question is an agent's again, so the terminal never asks it (P763)", "find": "VALUE, EITHER, why_of(need),", "replace": "VALUE, AGENT if cites else EITHER, why_of(need),"},
  {"file": "scripts/spark/sourcing/research/research_source.py", "name": "a document that is not kept is cited", "find": "and (kept / str(entry.get(\"sha256\")) / str(entry.get(\"file\"))).is_file():", "replace": ":"},
  {"file": "scripts/spark/records/fact_needs.py", "name": "question_of answers nothing", "find": "        return (self.questions or {}).get(fact_path)", "replace": "        return None"}
 ]
