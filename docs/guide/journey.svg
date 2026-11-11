@@ -57,14 +57,17 @@
 <text x="832" y="632" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">for every fact.</text>
 <rect x="832" y="696" width="96" height="36" rx="18" fill="#fff6b6"/>
 <text x="880" y="721" font-size="20" font-weight="bold" fill="#af7e04" text-anchor="middle">partly</text>
-<text x="832" y="766" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The library search and</text>
-<text x="832" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">research.py run: the</text>
-<text x="832" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">DFRobot wiki's documents</text>
-<text x="832" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">and the geometry questions,</text>
-<text x="832" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">answered live in a terminal</text>
-<text x="832" y="936" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">or by a replies file,</text>
-<text x="832" y="970" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-11-11. Research by</text>
-<text x="832" y="1004" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">agents was not run.</text>
+<text x="832" y="766" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">The store search (--need</text>
+<text x="832" y="800" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">over your drawer, the</text>
+<text x="832" y="834" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">boards and the records,</text>
+<text x="832" y="868" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">owned first) and</text>
+<text x="832" y="902" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">research.py run: the</text>
+<text x="832" y="936" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">DFRobot wiki's documents</text>
+<text x="832" y="970" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">and the geometry questions,</text>
+<text x="832" y="1004" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">answered live in a terminal</text>
+<text x="832" y="1038" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">or by a replies file,</text>
+<text x="832" y="1072" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">2026-11-11. Research by</text>
+<text x="832" y="1106" font-size="24" font-weight="normal" fill="#595959" text-anchor="start">agents was not run.</text>
 <circle cx="1373" cy="276" r="36" fill="#2dc75c"/>
 <text x="1373" y="287" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">4</text>
 <text x="1373" y="358" font-size="30" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Build</text>

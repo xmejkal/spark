@@ -1,0 +1,12 @@
+[
+{"file": "scripts/spark/sourcing/datasheets.py", "name": "the default goes back to name-contains, so a function's words find nothing", "find": "NEED_MATCHER = \"word-overlap\"", "replace": "NEED_MATCHER = \"name-contains\""},
+{"file": "scripts/spark/sourcing/matching.py", "name": "a search by words counts no function", "find": "if verb is None or f.get(\"does\") == verb)", "replace": "if f.get(\"does\") == verb)"},
+{"file": "scripts/spark/sourcing/matching.py", "name": "the kind's words leave the names place for a search", "find": "+ ([offer.facts.get(\"kind\")] if verb is None else [])", "replace": "+ []"},
+{"file": "scripts/spark/sourcing/matching.py", "name": "word-overlap serves --match alone, so --need is refused its default", "find": "name, serves = \"word-overlap\", (\"match\", \"need\")", "replace": "name, serves = \"word-overlap\", (\"match\",)"},
+{"file": "scripts/spark/sourcing/offers.py", "name": "the boards and the other projects leave the store's offers: parts of the three layers alone", "find": "    return build(drawer.linkable(project), drawer.entries())", "replace": "    return build([row for row in drawer.linkable(project) if row[0] == \"part\" and row[2] in (\"project\", \"shelf\", \"library\")], drawer.entries())"},
+{"file": "scripts/spark/sourcing/datasheets.py", "name": "the drawer count leaves the row, so nothing is owned", "find": "\"owned\": offers.counts(holding)[0], \"score\": fit.score", "replace": "\"owned\": 0, \"score\": fit.score"},
+{"file": "scripts/spark/sourcing/datasheets.py", "name": "the cutoff is dropped: every fit is shown and none counted", "find": "if matching.shown(rank, fit.exact, fit.score)]", "replace": "if True]"},
+{"file": "scripts/spark/sourcing/datasheets.py", "name": "what is owned is no longer first", "find": "key=lambda pair: (pair[1][\"owned\"] == 0, -pair[0].score))", "replace": "key=lambda pair: -pair[0].score)"},
+{"file": "scripts/spark/design/goal_handlers.py", "name": "a catalog row lands in found, with no --promote hint", "find": "found = [row for row in rows if row[\"in\"] != \"catalog\"]", "replace": "found = list(rows)"},
+{"file": "scripts/spark/sourcing/datasheets.py", "name": "a board or an entry is tried as a draft, so load raises on it", "find": "if row[\"is\"] != \"part\" or row[\"in\"] not in LOADABLE:", "replace": "if row[\"in\"] not in LOADABLE:"}
+]

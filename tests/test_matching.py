@@ -154,6 +154,14 @@ class TheMatchersTest(unittest.TestCase):
                                            an_offer(functions=[{"does": "sense", "what": "range"}], tags=["laser"]))
         self.assertEqual(fit.why, ["laser: in tags", "range: in functions"])
 
+    def test_a_need_with_no_verb_counts_every_function_and_the_kind_s_words(self):
+        offer = matching.Offer.from_record("x", "part", {"name": "A probe", "kind": "rangefinder", "function": [{"does": "sense", "what": "distance"}]})
+        search = {"does": None, "what": "distance rangefinder"}
+        fit = matching.WordOverlap().score(search, offer)
+        self.assertEqual((fit.score, fit.why), (0.8, ["distance: in functions", "rangefinder: in names"]))
+        self.assertEqual(matching.WordOverlap().score({"does": "input", "what": "distance rangefinder"}, offer).score, 0.0,
+                         "with a verb nothing changes: another verb's function and the kind do not count")
+
     def test_same_words_is_the_old_rule(self):
         offer = an_offer(functions=[{"does": "sense", "what": "soil-moisture"}], names=["A probe"])
         self.assertTrue(matching.same_words({"does": "sense", "what": "soil moisture"}, offer))
@@ -210,6 +218,9 @@ class TheMatchersTest(unittest.TestCase):
         self.assertIsInstance(matching.matcher("word-overlap", "match"), matching.WordOverlap)
         with self.assertRaises(matching.UnknownMatcherError) as refused:
             matching.matcher("name-contains", "match")
+        self.assertEqual(type(matching.matcher("word-overlap", "need")), matching.WordOverlap)
+        with self.assertRaises(matching.UnknownMatcherError):
+            matching.matcher("same-words", "need")
         self.assertIn("same-words, word-overlap", str(refused.exception))
         self.assertEqual(refused.exception.code, "unknown_matcher")  # P717
         self.assertIsInstance(refused.exception, ValueError)  # tools/match_eval.py catches it as one

@@ -1,2 +1,2 @@
 --- stderr ---
-parts.py: nosuch is no matcher for --need; the names that fit: name-contains
+parts.py: nosuch is no matcher for --need; the names that fit: name-contains, word-overlap

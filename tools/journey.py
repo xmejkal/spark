@@ -32,7 +32,7 @@ STEPS = [
      "Needs matched to your drawer, a part per need, and a requirements file.",
      "The scripts ran from needs to a requirements file. A board offers its own parts for a need, and says what a run cannot test of them. The conversation was not run.", "partly"),
     ("Research", "/spark:research", "Pick a part for a real gap.", "A part record with a source for every fact.",
-     "The library search and research.py run: the DFRobot wiki's documents and the geometry questions, answered live in a terminal or by a replies file, 2026-11-11. Research by agents was not run.", "partly"),
+     "The store search (--need over your drawer, the boards and the records, owned first) and research.py run: the DFRobot wiki's documents and the geometry questions, answered live in a terminal or by a replies file, 2026-11-11. Research by agents was not run.", "partly"),
     ("Build", "/spark:build", "Run it on the requirements file.",
      "A board that builds, a Wokwi diagram, a sheet, a page of tabs.",
      "Ran end to end on 2026-10-11. Drawn on a half breadboard for the XIAO C6 (a Wokwi diagram). A picture alone for the FireBeetle 2 S3, from its record, 2026-10-29. The page of tabs ran, 2026-10-16. A moved part, jumper or resistor is kept, 2026-10-18. The library's XIAO record builds button + LED, 2026-10-18. An SPI and an I2C part build with 0 errors on the FireBeetle 2 and the XIAO C6, 2026-11-01 (P512). A display on the XIAO still stops at the simulation: it has no Wokwi part.", "works"),

@@ -849,29 +849,65 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
     vendor order, and sources that must answer. The reading is the agent's.
     """
 
-    def test_need_matches_id_name_kind_and_alias(self):
-        self.assertIn("l9110s-module", [p["id"] for p in datasheets.need(["motor"])[0]])
+    def setUp(self):
+        """A scratch store (P743): the library's parts and boards, a drawer entry that is the l9110s (8 owned, drives a load-switch)
+        and a record-less entry. The PO's own store never enters a test."""
+        self.home = Path(tempfile.mkdtemp())
+        (self.home / "drawer").mkdir()
+        self.entry("dfrobot-dfr0457", {"label": "Gravity: MOSFET Power Controller", "count": 8, "is": {"part": "l9110s-module"},
+                                       "function": [{"does": "drive", "what": "load-switch"}]})
+        self.entry("a-bag-of-reed-switches", {"label": "Reed switch, a bag", "count": "many", "function": [{"does": "sense", "what": "magnet"}]})
+        patcher = in_store(self.home)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def entry(self, key, fields):
+        (self.home / "drawer" / (key + ".json")).write_text(json.dumps(dict({"schema": 1}, **fields)))
+
+    def test_need_matches_what_a_record_or_an_entry_does_and_puts_what_is_owned_first(self):
+        rows, drafts, more = datasheets.need(["load", "switch"])
+        self.assertEqual([(r["id"], r["is"], r["kind"], r["in"], r["owned"], r["score"], r["why"]) for r in rows][:1],
+                         [("l9110s-module", "part", "motor-driver", "library", 8, 1.0, ["load: in functions", "switch: in functions"])])
+        self.assertEqual((drafts, more), ([], 0))
+        reed = [r for r in datasheets.need(["reed", "switch"])[0] if r["entry"]]
+        self.assertEqual([(r["id"], r["entry"], r["is"], r["kind"], r["name"], r["in"], r["owned"]) for r in reed],
+                         [(None, "a-bag-of-reed-switches", "entry", None, "Reed switch, a bag", "drawer", "many")])
+
+    def test_need_finds_a_board_by_its_name(self):
+        rows = datasheets.need(["ESP32-C6"])[0]
+        self.assertEqual([(r["id"], r["is"], r["in"], r["owned"]) for r in rows if r["id"] == "xiao-esp32-c6"], [("xiao-esp32-c6", "board", "library", 0)])
+
+    def test_need_matches_name_kind_and_alias_and_ranks_the_best_first(self):
+        self.assertEqual(datasheets.need(["motor"])[0][0]["id"], "l9110s-module")
         self.assertIn("vl6180x-breakout", [p["id"] for p in datasheets.need(["rangefinder"])[0]])
-        self.assertEqual(datasheets.need(["unobtainium"]), ([], []))
-        self.assertEqual([p["id"] for p in datasheets.need(["motor", "driver"])[0]], ["l9110s-module"])
+        self.assertEqual(datasheets.need(["unobtainium"]), ([], [], 0))
+        self.assertEqual(datasheets.need(["motor", "driver"])[0][0]["id"], "l9110s-module")
         self.assertIn("l9110s-module", [p["id"] for p in datasheets.need(["motor-driver"])[0]],
-                      "the kind alone matches — the name says 'motor driver' without the hyphen")
+                      "the kind's words count for a search: the name says 'motor driver' without the hyphen")
         self.assertIn("l9110s-module", [p["id"] for p in datasheets.need(["hg7881"])[0]],
                       "an alias alone matches — HG7881 appears nowhere but also_known_as")
 
+    def test_fits_past_the_first_eight_with_half_the_words_are_counted_not_shown(self):
+        for n in range(10):
+            self.entry("widget-%d" % n, {"label": "Widget %d" % n, "count": 1})
+        rows, drafts, more = datasheets.need(["widget", "sprocket"])
+        self.assertEqual((len(rows), more, rows[0]["score"]), (8, 2, 0.3))
+        said, code = run_json(["--need", "widget", "sprocket"])
+        self.assertEqual((code, said["data"]["more"], said["data"]["matcher"]), (0, 2, "word-overlap"))
+
     def test_need_takes_a_matcher_and_refuses_one_that_does_not_serve_it(self):
-        said, code = run_json(["--need", "motor", "--matcher", "word-overlap"])
+        said, code = run_json(["--need", "motor", "--matcher", "same-words"])
         self.assertEqual(code, 2)
-        self.assertIn("name-contains", said["unchecked"][0]["sentence"])
+        self.assertIn("name-contains, word-overlap", said["unchecked"][0]["sentence"])
         said, code = run_json(["--need", "motor", "--matcher", "name-contains"])
-        self.assertIn("l9110s-module", [p["id"] for p in said["data"]["found"]])
+        self.assertEqual(([p["id"] for p in said["data"]["found"]], said["data"]["matcher"]), (["l9110s-module"], "name-contains"))
 
     def test_a_draft_still_being_filled_in_is_named_and_does_not_stop_the_search(self):
         # I3: `--need` died on a researcher's skeleton while five researchers were running.
         import tempfile
         root = Path(tempfile.mkdtemp())
         parts.main(["--skeleton", "dfr0457-mosfet-driver", "--kind", "mosfet-driver", "--project", str(root)])
-        found, drafts = datasheets.need(["mosfet"], root)
+        found, drafts, _ = datasheets.need(["mosfet"], root)
         self.assertEqual(found, [])
         self.assertEqual(drafts, ["dfr0457-mosfet-driver"])
         self.assertIn("l9110s-module", [p["id"] for p in datasheets.need(["motor"], root)[0]],
@@ -1015,9 +1051,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         (catalog / "broken.json").write_text("{not json")
         (catalog / "nameless.json").write_text(json.dumps({"schema": 1, "id": "nameless", "kind": "sensor"}))
         with in_store(home):
-            known = datasheets.catalog_matches(["Soil", "moisture"])
+            rows = datasheets.need(["Soil", "moisture"])[0]
             records, broken = datasheets.catalog_records()
-        self.assertEqual([p["id"] for p in known], ["sen0193-soil-moisture"])
+        self.assertEqual([(p["id"], p["in"]) for p in rows if p["in"] == "catalog"], [("sen0193-soil-moisture", "catalog")])
         self.assertEqual((sorted(records), broken), (["dfr0831-buck-5v", "sen0193-soil-moisture"], ["broken.json", "nameless.json"]),
                          "a record that parses but does not say what it is, is broken too")
 

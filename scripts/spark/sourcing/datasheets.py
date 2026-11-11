@@ -1,6 +1,5 @@
 """
-The datasheets and the catalog (W6-S3b, P721): what exists for a need before research (`need`, `catalog_matches`,
-`catalog_records`), a document kept in the store with no location in it (`keep_in_store`, `keep_local`,
+The datasheets and the catalog (W6-S3b, P721): what exists for a need before research (`need`, `catalog_records`), a document kept in the store with no location in it (`keep_in_store`, `keep_local`,
 `without_location`), a datasheet read page by page (`read_datasheet`, `scan_datasheet`), a kept document found by its
 words (`find_kept`), the documents a record cites fetched (`fetch_plan`, `fetch_documents`), and every cited URL asked
 whether it answers (`cited_urls`, `sources_resolve`). Moved whole from `parts.py`. It imports the records area,
@@ -18,12 +17,15 @@ from pathlib import Path
 from spark.records import board_records, record_kind, records_codes, store, tool_finder
 from spark.records.record_kind import (
     Answer, available, _cannot, DEFINITION_SUFFIX, _parse, _problem, record_home, _write_record)
-from spark.sourcing import matching, sourcing_codes
+from spark.sourcing import matching, offers, sourcing_codes
 from spark.sourcing.part_records import load, PartError
 
 
-#: `--need`'s matcher (P211). A default changes only with the PO's yes.
-NEED_MATCHER = "name-contains"
+#: `--need`'s matcher (P211). A default changes only with the PO's yes: word-overlap since P743 (D15, 2026-11-10).
+NEED_MATCHER = "word-overlap"
+#: The layers `load` resolves a part id over, so a part row there that `load` refuses is a draft (P743); a catalog row,
+#: another project's row, a board or an entry is never one.
+LOADABLE = ("project", "shelf", "library")
 
 
 CATALOG_KEYS = ("schema", "id", "name", "kind")
@@ -58,18 +60,11 @@ def catalog_records():
     return records, broken
 
 
-def _found(words, offers, matcher=None):
+def _found(words, built, matcher=None):
     """The offers a search by words finds (P211): the need {"does": null, "what": the words, "words": as typed}, ranked by the
     `--need` matcher."""
     need = {"does": None, "what": " ".join(words), "words": list(words)}
-    return matching.found((matcher or matching.matcher(NEED_MATCHER, "need")).rank(need, offers))
-
-
-def catalog_matches(words, matcher=None):
-    """The catalog records a search by words finds, the way `need` finds them — researched before, unbuilt."""
-    records = catalog_records()[0]
-    offers = [matching.Offer.from_record(part_id, "part", record) for part_id, record in records.items()]
-    return [dict(records[fit.offer.key], id=fit.offer.key) for fit in _found(words, offers, matcher)]
+    return matching.found((matcher or matching.matcher(NEED_MATCHER, "need")).rank(need, built))
 
 
 #: EXIF's pointer to the GPS block, and the size in bytes of each EXIF value type (TIFF 6.0).
@@ -383,23 +378,42 @@ def _download(url):
 
 def need(words, project=None, matcher=None):
     """
-    The records matching every word — in id, name, kind or an alias — so what exists is known
-    before anything is researched. Backlog R11: the RC car wrote three records by hand because
-    nothing looked, and "nothing looked" was the first gap its diary named (G1).
+    What the store holds for a search by words (P743, D15), so what exists is known before anything is researched: the rows
+    the matcher finds and `matching.shown` keeps, owned first, then the best score; the drafts among them; and how many fits
+    the cutoff dropped. An offer is a part or a board record of any layer with the drawer entries that say they are it, or a
+    record-less entry (`offers.from_store`). Backlog R11: the RC car wrote three records by hand because nothing looked, and
+    "nothing looked" was the first gap its diary named (G1).
     """
-    loaded, offers = {}, []
-    for part_id in available(project):
-        try:
-            loaded[part_id] = load(part_id, project)
-        except PartError:
-            # A record still being filled in — research writes a skeleton first — must not stop
-            # the search for everyone: `--need` died on a researcher's draft while five ran (I3).
-            # Named as a draft, matched by its id alone, never returned as usable.
-            loaded[part_id] = None
-        offers.append(matching.Offer.from_record(part_id, "part", loaded[part_id] or {}))
-    fits = _found(words, offers, matcher)
-    return ([dict(loaded[fit.offer.key], id=fit.offer.key) for fit in fits if loaded[fit.offer.key] is not None],
-            [fit.offer.key for fit in fits if loaded[fit.offer.key] is None])
+    built = offers.from_store(project)
+    context = {(offer.kind, offer.key): said for offer, said in built}
+    fits = _found(words, [offer for offer, _ in built], matcher)
+    ranked = sorted(((fit, _need_row(fit, context[(fit.offer.kind, fit.offer.key)])) for fit in fits),
+                    key=lambda pair: (pair[1]["owned"] == 0, -pair[0].score))
+    kept = [row for rank, (fit, row) in enumerate(ranked) if matching.shown(rank, fit.exact, fit.score)]
+    drafts = [row["id"] for row in kept if _is_draft(row, project)]
+    return [row for row in kept if row["id"] not in drafts], drafts, len(ranked) - len(kept)
+
+
+def _need_row(fit, context):
+    """One `--need` row (P743), its keys the words `--match`'s candidates use: `id` or `entry`, `is` (part, board or entry), the
+    record's own `kind`, `name`, `in` (the layer), `owned` (the drawer count: a number, "many" or "unknown"), `score`, `why`."""
+    offer, record, holding = fit.offer, context["record"], context["holding"]
+    return {"id": None if record is None else offer.key, "entry": offer.key if record is None else None,
+            "is": "entry" if record is None else offer.kind, "kind": None if record is None else record.get("kind"),
+            "name": holding[0].get("label") if record is None else record.get("name"), "in": context["in"],
+            "owned": offers.counts(holding)[0], "score": fit.score, "why": fit.why}
+
+
+def _is_draft(row, project):
+    """Whether a row is a record still being filled in: a part of a layer `load` resolves over that the contract refuses. Research
+    writes a skeleton first, and `--need` died on a researcher's draft while five ran (I3): named as a draft, never usable."""
+    if row["is"] != "part" or row["in"] not in LOADABLE:
+        return False
+    try:
+        load(row["id"], project)
+    except PartError:
+        return True
+    return False
 
 
 def cited_urls(record):

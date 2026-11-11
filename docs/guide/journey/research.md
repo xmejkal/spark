@@ -2,7 +2,8 @@
 
 Step 3 of 8 in [the journey](../journey.md). Next: [Build](build.md).
 
-**Partly.** The library comes first:
+**Partly.** What you own and what spark knows come first: `--need` searches your drawer, the boards and the part records of
+every layer by what each does and its names, and puts what you own first ([P743](https://github.com/xmejkal/spark/issues/1019)):
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --need motor driver --project .

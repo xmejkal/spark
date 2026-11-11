@@ -16,9 +16,9 @@ from spark.core.text_guards import printable
 from spark.records import board_records, record_kind, store
 from spark.records.record_kind import Answer, _cannot, owes, _parse, _problem, _shape_problems, _with_project
 from spark.sourcing import datasheets, drawer, matching, run_cost
-from spark.sourcing.datasheets import catalog_matches, NEED_MATCHER
+from spark.sourcing.datasheets import NEED_MATCHER
 from spark.sourcing.part_facts import _row, shelve
-from spark.sourcing.part_handlers import _part_summary, sellers, vendor_order, _write_lines
+from spark.sourcing.part_handlers import sellers, vendor_order, _write_lines
 from spark.sourcing.part_records import broken_problems, function_of
 from spark.design import board_components
 from spark.design import footprint_emitter, needs
@@ -72,19 +72,35 @@ def _op_need(args, project):
         chosen = matching.matcher(args.matcher or NEED_MATCHER, "need")
     except matching.UnknownMatcherError as wrong:
         return Answer(unchecked=[_cannot(str(wrong))])
-    found, drafts = datasheets.need(args.need, project, chosen)
-    known = [p for p in catalog_matches(args.need, chosen) if p["id"] not in drafts and p["id"] not in {q["id"] for q in found}]
-    data = {"need": args.need, "vendor_order": list(vendor_order(project)), "found": [_part_summary(p) for p in found],
-            "drafts": drafts, "catalog": [_part_summary(p) for p in known]}
-    lines = [_row(p["id"], p["kind"], p["name"]) for p in found]
+    rows, drafts, more = datasheets.need(args.need, project, chosen)
+    found = [row for row in rows if row["in"] != "catalog"]
+    known = [row for row in rows if row["in"] == "catalog"]
+    data = {"need": args.need, "vendor_order": list(vendor_order(project)), "found": found, "drafts": drafts, "catalog": known,
+            "more": more, "matcher": chosen.name}
+    lines = [_need_line(row) for row in found]
     lines += [_row(part_id, "(draft)", "does not yet meet the contract — being filled in") for part_id in drafts]
-    lines += [_row(p["id"], p["kind"], "%s  [catalog: researched before; `--promote %s --project .` builds with it]"
-                   % (p["name"], p["id"])) for p in known]
+    lines += [_need_line(row) + "  [catalog: researched before; `--promote %s --project .` builds with it]" % row["id"] for row in known]
+    lines += [NEED_MORE % more] if more else []
     if not lines:
-        lines = ["  nothing in the library matches %r.\n  Research it: /spark:research \"%s\"  — vendors in order: %s; sellers: %s"
-                 % (" ".join(args.need), " ".join(args.need), ", ".join(vendor_order(project)),
-                    ", ".join(sellers(project)) or "none named in the brief")]
+        lines = [NEED_NOTHING % (" ".join(args.need), " ".join(args.need), ", ".join(vendor_order(project)),
+                                 ", ".join(sellers(project)) or "none named in the brief")]
     return Answer(data, lines)
+
+
+#: `--need`'s closing lines (P743): the fits the cutoff dropped, and nothing found.
+NEED_MORE = "  and %d more with fewer of the words: add a word, or --matcher name-contains for the names alone"
+NEED_NOTHING = ("  nothing in the drawer, the boards or the part records matches %r.\n"
+                "  Research it: /spark:research \"%s\"  — vendors in order: %s; sellers: %s")
+
+
+def _need_line(row):
+    """One text row of `--need` (P743): `owned N` first when the drawer holds it, the id or the entry key, the kind (`drawer entry`
+    for an entry, `board` for a board with no kind), the name, the layer when it is not the library, the first reason."""
+    owned = "owned %s" % row["owned"] if row["owned"] != 0 else ""
+    kind = "drawer entry" if row["is"] == "entry" else row["kind"] or row["is"]
+    where = "" if row["in"] == "library" else "in %s" % row["in"]
+    why = "[%s]" % row["why"][0] if row["why"] else ""
+    return "  %-9s %-28s %-14s %s" % (owned, row["id"] or row["entry"], kind, "  ".join(filter(None, [row["name"] or "", where, why])))
 
 
 def _op_audit(args, project):
