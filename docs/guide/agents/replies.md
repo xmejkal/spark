@@ -13,7 +13,8 @@ it reads the same in every script that asks. The first script that asks is `rese
   A `person` question needs the person's hands or eyes, and comes first in the list. An `either` question goes to whoever
   is there: a person at the terminal, or you under `--json`. Every question `research.py` asks today is `either`.
 - `answer_form` says the shape of the answer in words. `example` holds placeholders, never a value to copy.
-- `cites` is `{document, at}`: the kept document and the page that hold the answer. Read that document and nothing else.
+- `cites` is `{document, at}`: the kept document and the page that hold the answer, `at` in the words `page 1`, as the
+  prompt and the source repeat it. Read that document and nothing else.
   A question with `cites: null` is one that no source placed. Find the fact where you can, and name the place in your reply's `note`.
 - One `unchecked` item per open question, with the code `needs_reply` and the key as `subject`. The status is
   `could-not-run` and the exit is 2 while a question is open.
