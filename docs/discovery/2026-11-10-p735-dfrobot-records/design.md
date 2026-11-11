@@ -251,8 +251,9 @@ R1. `ConsentStrategy` joins the family (about 40 lines): it subclasses `ReplyStr
    For a YES_NO question, `reply` calls `ask(question.text)` and returns a Reply with `answered_by = who`. For any
    other kind it returns None. `ask`, `who`, `yes_kind`, `opens_erase`, `require_ready` and `granted_by` stay. So
    deploy_gate.py and board_grant.py change no call, and the erase guard stays where it is. The tests' `Silent` and `NoKind` subclasses
-   (test_deploy_gate.py:1018) keep passing. Goldens and the rows p242, p655, p657 pass unchanged. The class diagram
-   in patterns-and-names.md gains the edge. A grant stays a Consent.
+   (test_deploy_gate.py:1018) keep passing. Goldens and the rows p242, p655, p657 pass unchanged. The Strategy row of
+   patterns-and-names.md names the edge (its diagram draws the Operation shapes, and the page is at its budget, changed in
+   R1). A question asked of AGENT gets None too, because every consent asks a person (R1's plan check). A grant stays a Consent.
 R2. Live mode (about 150 lines): `TerminalReplyStrategy` asks VALUE and CHOICE questions in a tty, one at a time,
    `[2/4] <text> (<unit>, Enter = later)`, then `why` and the cited page. Enter defers. Ctrl-C keeps what was written.
    It never shows an AGENT question. It shares the tty test and the mask with `TerminalConsentStrategy` through one

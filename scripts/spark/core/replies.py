@@ -3,8 +3,9 @@ The questions an Operation cannot answer itself, and who answers them (P737). A 
 reads what is asked, how to answer it and where the answer is. A `ReplyStrategy` answers it: from replies given ahead
 (scripted), live in a terminal (step R2), or not now. `RepliesStore` keeps the project's replies file, the one scripted
 channel. An unanswered question is unchecked: the run's status is `could-not-run`, and `data.open` holds the questions.
-`OutsideWorld.replies` is the strategy's `reply`, given to an Operation that declares ASKS. `ConsentStrategy` joins the
-family in step R1. The first Operation that asks is `ResearchPart` (step 4).
+`OutsideWorld.replies` is the strategy's `reply`, given to an Operation that declares ASKS. `ConsentStrategy`
+(`spark.bench.deploy_gate`) is the member that answers a yes or no: the deploy's yes. The first Operation that asks is
+`ResearchPart` (step 4).
 """
 
 import abc

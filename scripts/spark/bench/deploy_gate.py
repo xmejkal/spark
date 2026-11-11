@@ -2,8 +2,9 @@
 The gate before deploy.py erases a board (P219): the look found no stop, the token is this board's and this image's,
 and there is a yes. It is the only way to the erase (D8).
 
-The yes is a strategy (`ConsentStrategy`). `TerminalConsentStrategy` asks in a real terminal only: a pipe, a
-heredoc or Claude Code's `!` is none, so the person runs the line in their own terminal window.
+The yes is a strategy (`ConsentStrategy`), the `ReplyStrategy` that answers a yes or no question (`spark.core.replies`,
+P737 R1). `TerminalConsentStrategy` asks in a real terminal only: a pipe, a heredoc or Claude Code's `!` is none, so the
+person runs the line in their own terminal window.
 `board_grant.StandingConsentStrategy` is the yes the person gave once, as a deploy grant (P242).
 `RelayedConsentStrategy` is a yes that another program collected (an MCP or web yes, D19; P675): it makes a live grant
 only, and it never opens the erase (decision 6 of the refactor plan, the PO's to change).
@@ -17,6 +18,7 @@ from spark.bench import board_codes
 from spark.records.store import format_rerun_line  # noqa: F401  (board_grant, grant and deploy take it from here)
 from spark.core import outcomes
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
+from spark.core.replies import AGENT, YES_NO, Reply, ReplyStrategy
 from spark.core.text_guards import guard_lines, printable
 
 #: How the store's record says a yes was given in a terminal: %s is the person's login name.
@@ -47,12 +49,13 @@ class GateClosedError(Exception):
 # --- end MVP ---
 
 
-class ConsentStrategy(abc.ABC):
+class ConsentStrategy(ReplyStrategy):
     """Strategy: how the person says yes to a question. A subclass supplies `ask`, which returns True for yes, `who`, the
     phrase that tells the store's record whose yes it was, and `yes_kind`, TYPED, GRANT or RELAYED (P655, P675).
     `opens_erase` says whether this yes can open the erase or make a deploy grant. It is False unless a subclass sets it,
     so a new kind stays shut until it chooses. The gate trusts the strategy's own attribute, so it guards against a
-    frontend's mistake, not against code in the same process."""
+    frontend's mistake, not against code in the same process. As a `ReplyStrategy`, `reply` answers a YES_NO Question
+    asked of a person, so a frontend can hand a consent as `OutsideWorld.replies` (P737 R1)."""
 
     opens_erase = False
 
@@ -69,6 +72,14 @@ class ConsentStrategy(abc.ABC):
     @abc.abstractmethod
     def ask(self, question):
         """True when the person said yes to `question`. It may raise GateClosedError when it cannot ask."""
+
+    def reply(self, question):
+        """A YES_NO Question asked of a person: its Reply, `ask(question.text)` as the value and `who` as `answered_by`
+        (P737 R1). Any other kind, or a question asked of AGENT, is None, so the question stays open: a consent asks a
+        person for a yes or no only. A GateClosedError from `ask` propagates."""
+        if question.kind != YES_NO or question.asked_of == AGENT:
+            return None
+        return Reply(question.key, bool(self.ask(question.text)), self.who)
 
     def require_ready(self):
         """Raises GateClosedError when it could not ask now, so a caller stops before it touches the board. The default
