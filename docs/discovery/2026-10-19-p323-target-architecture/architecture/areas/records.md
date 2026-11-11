@@ -20,9 +20,9 @@ the store and the project. It also builds `Backends` once per run, so every back
 | `board-get`, `board-validate`, `board-resolve`, and `--path`, `--id`, `--paths` | `boards.py` (`main`) | reads |
 | `tool-status`, `tool-install`, `tool-on`, `tool-off`, `tool-use`, `tool-pin`, `tool-new` | `tools.py --status` and the rest (`main`) | reads, writes, network and runs for install |
 
-The flags stay as they are. `boards.py --list` is design's `board-list` Operation, because it says which board stops at
-the footprint (`footprint_emitter.footprint_stop`, read by `main` and wherever a board is chosen; it moved to design in
-W6-R3a, P718), a design fact. `boards.py` imports both areas' `OPERATIONS`, as `parts.py` does.
+The flags stay as they are. `boards.py --list` is design's `list-boards` Operation on `run_cli` (P707), because it says
+which board stops at the footprint (`footprint_emitter`, a design fact). `main` imports `ListBoards` inside the `--list`
+branch alone, so the other flags load no design module.
 
 ### Its components
 

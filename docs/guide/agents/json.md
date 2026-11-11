@@ -293,8 +293,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --unverified jst-ph-2-power-inlet
 ### Which scripts take --json
 
 These take it: `assign_pins.py`, `check_all.py`, `check_footprints.py`, `check_physics.py`,
-`check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py`, `look.py`, `parts.py` and `research.py` (its `data.open` and `needs_reply` are in [replies.md](replies.md)). `grant.py`, `live.py` and `reach.py` print one flat line of JSON, not the envelope (P657): the keys of `data` below, and no line at all after a crash or a reach that could not start. A bad argument with `--json` prints the usage on stderr, exit 2. These do not take
-it: `boards.py`, `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
+`boards.py` (with `--list`: `data.boards` rows of `id`, `layer`, `active` and `stops_why`), `check_spine.py`, `check_vendor_pins.py`, `compare_design.py`, `emit_footprint.py`, `deploy.py`, `grant.py` (with `--check`), `import_firmware.py`, `live.py`, `look.py`, `parts.py` and `research.py` (its `data.open` and `needs_reply` are in [replies.md](replies.md)). `grant.py`, `live.py` and `reach.py` print one flat line of JSON, not the envelope (P657): the keys of `data` below, and no line at all after a crash or a reach that could not start. A bad argument with `--json` prints the usage on stderr, exit 2. These do not take
+it: `boards.py` (but `--list`), `breadboard.py`, `check_bom.py`, `emit_board.py`, `flash_image.py`, `init_project.py`, `run_scenario.py` and `tools.py`. `tools.py
 --status` taking `--json` is not built yet ([P92](https://github.com/xmejkal/spark/issues/23)).
 
 ### What the text output shows

@@ -3346,5 +3346,65 @@ class OwedIsNotBrokenTest(unittest.TestCase):
         self.assertEqual((code, said["data"]["dangling"]), (1, ["x"]))
 
 
+class TheAuditIsAnOperationOnTheCoreTest(unittest.TestCase):
+    """P707 (N19): `parts.py --audit` runs design's `AuditRecords` through `run_cli`, with parts.py's envelope: eleven keys on
+    every path, `tool` parts, paging with --from, and a store it cannot read as could-not-run, never a traceback."""
+
+    def test_an_abbreviation_runs_the_audit_and_the_envelope_is_parts_py_s(self):
+        with in_store(Path(tempfile.mkdtemp())):
+            said, code = run_json(["--aud"])
+        self.assertEqual((code, sorted(said), said["tool"], said["op"]), (0, ENVELOPE_KEYS, "parts", "audit"))
+
+    def test_a_negative_from_is_a_bad_argument_with_every_key(self):
+        with in_store(Path(tempfile.mkdtemp())):
+            said, code = run_json(["--audit", "--from", "-1"])
+        self.assertEqual((code, sorted(said), said["unchecked"][0]["code"]), (2, ENVELOPE_KEYS, "bad_argument"))
+
+    def test_the_owed_rows_page_from_the_item_asked_for(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        for n in range(25):
+            (home / "catalog" / ("x-%02d.json" % n)).write_text(json.dumps({"schema": 1, "id": "x-%02d" % n, "name": "A probe %d" % n, "kind": "sensor"}))
+        with in_store(home):
+            said, _ = run_json(["--audit"])
+            later, _ = run_json(["--audit", "--from", "20"])
+        self.assertEqual((len(said["data"]["owed"]), said["truncated"]["total"], said["truncated"]["next"]["argv"][:3]), (20, 25, ["--audit", "--from", "20"]))
+        self.assertEqual(([o["id"] for o in later["data"]["owed"]][:1], later["truncated"]["next"]), (["x-20"], None))
+
+    def test_a_drawer_file_that_is_not_json_is_could_not_run_with_the_store_s_code(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "drawer").mkdir()
+        (home / "drawer" / "bad.json").write_text("{not json")
+        with in_store(home):
+            said, code = run_json(["--audit"])
+            text, _ = run_text(["--audit"])
+        self.assertEqual((code, said["status"], said["unchecked"][0]["code"], said["problems"]), (2, "could-not-run", "record_file_broken", []))
+        self.assertNotIn("Traceback", text)
+
+    def test_a_broken_record_and_a_dangling_entry_are_problems_with_codes(self):
+        home = Path(tempfile.mkdtemp())
+        (home / "catalog").mkdir()
+        (home / "catalog" / "x-bad.json").write_text(json.dumps({"schema": 2, "id": "x-bad", "name": "B", "kind": "rtc"}))
+        (home / "drawer").mkdir()
+        (home / "drawer" / "x.json").write_text(json.dumps({"schema": 1, "label": "x", "count": 1, "is": {"part": "gone-part"}}))
+        with in_store(home):
+            said, code = run_json(["--audit"])
+        self.assertEqual((code, [(p["subject"], p["code"]) for p in said["problems"]]), (1, [("x-bad", "record_file_broken"), ("x", "drawer_entry_dangling")]))
+
+    def test_audit_s_help_lists_its_own_arguments_alone(self):
+        err = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stdout(err):
+            parts.main(["--audit", "--help"])
+        self.assertIn("--from START", err.getvalue())
+        self.assertNotIn("--list", err.getvalue())
+
+    def test_the_describe_row_and_the_operation_agree(self):
+        from spark.core.operation import WRITES
+        from spark.design.audit_records import AuditRecords
+        row = next(row for row in parts.OPERATIONS if row[0] == "audit")
+        self.assertEqual(row[2], next(a.help for a in AuditRecords.arguments if a.dest == "audit"))
+        self.assertEqual("writes" in row[3], WRITES in AuditRecords.effects)
+
+
 if __name__ == "__main__":
     unittest.main()

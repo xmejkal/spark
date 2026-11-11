@@ -28,6 +28,7 @@ Registry = namedtuple("Registry", "label module attribute key")
 REGISTRIES = (
     Registry("spark.bench.OPERATIONS", "spark.bench", "OPERATIONS", str),
     Registry("spark.idea.OPERATIONS", "spark.idea", "OPERATIONS", str),
+    Registry("spark.design.design_operations.OPERATIONS", "spark.design.design_operations", "OPERATIONS", str),
     Registry("parts.OPERATIONS", "parts", "OPERATIONS", operator.itemgetter(0)),
     Registry("spark.breadboard.sheet.WIRING_VIEWS", "spark.breadboard.sheet", "WIRING_VIEWS", operator.itemgetter(0)),
     Registry("spark.breadboard.sheet.DRAWING_RENDERERS", "spark.breadboard.sheet", "DRAWING_RENDERERS", operator.attrgetter("FILE_NAME")),

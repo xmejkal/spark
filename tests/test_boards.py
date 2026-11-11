@@ -1316,5 +1316,46 @@ class TheFireBeetleCitesItsStandInsDefinitionTest(unittest.TestCase):
 # --- end MVP ---
 
 
+class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
+    """P707 (N19): `boards.py --list` runs design's `ListBoards` through `run_cli`: the text is as it was, and `--json` is one
+    envelope whose rows carry the board's layer, the active mark and why it stops at the footprint, or null."""
+
+    def listed(self, *argv):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = boards.main(list(argv))
+        return code, out.getvalue()
+
+    def test_json_is_one_envelope_with_the_cli_s_tool_and_a_row_per_board(self):
+        from board_library import board_missing
+        with board_missing("physical.header"):
+            code, out = self.listed("--list", "--project", str(project()), "--json")
+        said = json.loads(out)
+        self.assertEqual((code, said["envelope"], said["tool"], said["op"], said["status"]), (0, 1, "boards", "list-boards", "ok"))
+        rows = {row["id"]: row for row in said["data"]["boards"]}
+        self.assertEqual(rows["firebeetle2-esp32s3"], {"id": "firebeetle2-esp32s3", "layer": "library", "active": True, "stops_why": None})
+        self.assertEqual((rows["xiao-esp32-c6"]["active"], rows["xiao-esp32-c6"]["layer"]), (False, "library"))
+        self.assertIn("physical.header", rows["xiao-esp32-c6"]["stops_why"])
+
+    def test_a_board_file_that_is_not_an_object_is_listed_and_not_said_to_stop(self):
+        root = project()
+        (root / "boards" / "null-board.json").write_text("null")
+        code, out = self.listed("--list", "--project", str(root), "--json")
+        rows = {row["id"]: row for row in json.loads(out)["data"]["boards"]}
+        self.assertEqual((code, rows["null-board"]["stops_why"], rows["null-board"]["layer"]), (0, None, "project"))
+        _, text = self.listed("--list", "--project", str(root))
+        self.assertIn("    null-board (project)\n", text)
+
+    def test_a_prefix_of_list_picks_the_operation_as_argparse_would(self):
+        code, out = self.listed("--li", "--project", str(project()))
+        self.assertEqual(code, 0)
+        self.assertIn("  * firebeetle2-esp32s3 (library)", out)
+        with self.assertRaises(SystemExit) as refused:
+            self.listed("--list", "--for-fab", "--project", str(project()))
+        self.assertEqual(refused.exception.code, 2, "the Operation's parser knows no --for-fab: the usage, exit 2")
+
+
 if __name__ == "__main__":
     unittest.main()

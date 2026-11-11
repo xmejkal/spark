@@ -7,7 +7,7 @@
   "find": "\"now\": values, \"written\": not dry_run, \"shelf_copy\": shelf_copy}", "replace": "\"now\": values, \"written\": changes and not dry_run, \"shelf_copy\": shelf_copy}"},
  {"file": "scripts/spark/sourcing/part_handlers.py", "name": "a retry says it set something",
   "find": "            if changes else \"  nothing to change", "replace": "            if True else \"  nothing to change"},
- {"file": "scripts/spark/design/goal_handlers.py", "name": "the audit's hint drops the project",
+ {"file": "scripts/spark/design/audit_records.py", "name": "the audit's hint drops the project",
   "find": "(\" --project %s\" % shlex.quote(str(project)) if project else \"\", \", \".join(silent))",
   "replace": "(\"\", \", \".join(silent))"}
 ]

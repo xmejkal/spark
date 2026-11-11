@@ -26,6 +26,8 @@ NO_PART_FOOTPRINT, NO_PIN_ORDER, NO_OUTLINE = "no_part_footprint", "no_pin_order
 SERIES_RESISTOR_UNSIZED = "series_resistor_unsized"
 #: footprint_emitter, and board_emitter's footprint stage: the board record cannot give a footprint.
 BOARD_LACKS_FOOTPRINT, BOARD_DISAGREES = "board_lacks_footprint", "board_disagrees"
+#: audit_records (P707): a drawer entry whose record nobody has, and a record or drawer file the disk would not give.
+DRAWER_ENTRY_DANGLING, RECORD_UNREADABLE = "drawer_entry_dangling", "record_unreadable"
 
 #: Each code and the one sentence that says what it means.
 CODES = {
@@ -51,6 +53,8 @@ CODES = {
     NO_OUTLINE: "a part record states no outline, and --assume-missing-sizes was not given",
     SERIES_RESISTOR_UNSIZED: "a series resistor cannot be sized: a fact it needs is missing, or the pin cannot light the part",
     BOARD_LACKS_FOOTPRINT: "the board record lacks the facts its footprint is drawn from",
+    DRAWER_ENTRY_DANGLING: "a drawer entry points at a record nobody has: fix its `is`, or research the part",
+    RECORD_UNREADABLE: "a record or drawer file could not be read from disk: the sentence names it",
     BOARD_DISAGREES: "the board record disagrees with itself: a value of the wrong kind, or a pad order that does not fit",
 }
 # --- end MVP ---

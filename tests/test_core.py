@@ -701,7 +701,7 @@ class AMultiOperationCliTest(unittest.TestCase):
         _, said = self.run_cli(TEXT._replace(tool="toys"), Toy(), "--what", "ok", "--json")
         self.assertEqual((said["tool"], said["op"]), ("toys", "toy"))
         _, said = self.run_cli(TEXT._replace(tool="toys"), Toy(), "--left", "--right", "--json")
-        self.assertEqual((said["tool"], said["unchecked"][0]["code"]), ("toys", codes.BAD_ARGUMENT))
+        self.assertEqual((said["tool"], said["unchecked"][0]["code"]), ("toys", "bad_argument"))
 
     def test_truncated_and_assumptions_reach_the_envelope_and_assumptions_is_a_key_only_when_given(self):
         cut = {"shown": 1, "total": 2, "next": outcomes.step("toy", ["--from", "1"], "the rest")}
@@ -724,7 +724,7 @@ class AMultiOperationCliTest(unittest.TestCase):
         outside = build_bare_outside_world(Path("."), (READS,), FakeReporter(), {"json": False})
         with self.assertRaises(SparkError) as refused:
             outside.run(["true"])
-        self.assertEqual(refused.exception.code, codes.UNDECLARED_EFFECT)
+        self.assertEqual(refused.exception.code, "undeclared_effect")
         self.assertEqual(build_bare_outside_world(None, (RUNS,), FakeReporter()).run.__name__, "run")
 
 
