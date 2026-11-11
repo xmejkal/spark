@@ -48,8 +48,8 @@ What it leaves out on purpose (W21): prices, stock, and facts no decision reads.
    - Espressif: `pins_arduino.h` variant header + the Espressif Docs MCP (datasheets/HDG).
    - Seeed: OPL_Kicad_Library (symbols/footprints; the XIAO family shares one 14-pad footprint) +
      OSHW-XIAO-Series (schematic + STEP + pinout per variant).
-   - DFRobot: per-SKU wiki pinout + schematic ZIP + STEP + dimension PDF (derive footprint from the
-     dimension PDF; DFRobot ships no KiCad footprints) + the `DFRobot_<Part>` GitHub examples.
+   - DFRobot: per-SKU wiki pinout + schematic ZIP + STEP + dimension PDF (for some SKUs a layout zip holds a
+     KiCad footprint and symbol, DFR1117 for one. Otherwise derive the footprint from the dimension PDF) + the `DFRobot_<Part>` GitHub examples.
    - Bare ICs (TB6612, MAX98357A, DRV8833…): the manufacturer datasheet pinout + KiCad official lib.
 4. **Aggregators** — SnapEDA / Ultra Librarian / ComponentSearchEngine: per-part symbol + footprint
    + 3D, fetched on demand. Do NOT mirror wholesale (licensing).

@@ -28,6 +28,17 @@
       "why_it_matters": "a pin order read wrong reverses a supply or swaps a signal",
       "source": "A 6x6 tactile switch has four legs in two pairs, and each pair is one terminal \u2014 so a 2-pin footprint is the electrical truth and a 4-pad footprint is the mechanical one. `pushbutton` in footprinter gives four pads wired as two nets, which is what a board wants; this record describes the two terminals.",
       "write": "pin_order_proof"
+    },
+    {
+      "part": "led-red-5mm",
+      "fact": "pin_order",
+      "assumed": [
+        "A",
+        "K"
+      ],
+      "why_it_matters": "a pin order read wrong reverses a supply or swaps a signal",
+      "source": "Pad 1 = anode, pad 2 = cathode. Datasheet page 1, Package Dimensions: the lead labelled 'Cathode' is drawn 1.5 (+/-1) mm SHORTER than the other, so the LONGER lead is the anode; the end view draws a flat on the flange rim (diameter 5.9 mm) on the cathode lead's side. The drawing labels the cathode lead and draws the flat but does not label the flat in words. Read off the package drawing, so unverified by the researcher's rule; confirm on the part: the longer lead is the anode, the flat of the rim is on the cathode's side.",
+      "write": "pin_order_proof"
     }
   ],
   "assignments": [

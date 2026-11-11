@@ -33,3 +33,5 @@ DFRobot FireBeetle 2 ESP32-S3 — 2 signal(s) placed
       the only dimension that decides whether the enclosure closes
     tactile-button.pin_order
       a pin order read wrong reverses a supply or swaps a signal
+    led-red-5mm.pin_order
+      a pin order read wrong reverses a supply or swaps a signal

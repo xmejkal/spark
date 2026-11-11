@@ -1,0 +1,19 @@
+# P745 kept records and docs say what their sources say: rows
+
+Card: [P745 #1021](https://github.com/xmejkal/spark/issues/1021), chore, XS, under P735, claims C11, C14, C15, C16. Plan
+`~/.claude/plans/p745-wrong-claims.md`. Rows 1 to 6 are the plan refuter (Fable), 7 to 11 the implementer, then the PR refuter (Fable).
+2026-11-11.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | the arithmetic holds (23 mA at 12 V, the 50 mA limit at 24.7 V), but the plan named a key the record does not hold: the 470 R is `facts.signal_input_network.value.optocoupler_led_series_ohm`, unverified, and the new note would repeat `logic_signal_range_v`'s figures | plan refuter F1 | acted | the note names the schematic's 470 R and the 24.7 V limit once, and points at logic_signal_range_v for the per-voltage currents |
+| 2 | `verified: false` on led-red-5mm's proof breaks two goldens the plan did not list: tests/golden-design/assign-pins-ok.{json,txt} list the proof among the assumptions (provenance.PROOF_BLOCKS) | plan refuter F2 | acted | test_golden_design joined the gates; `SPARK_ACCEPT=assign-pins` rewrote both goldens; the diff adds `led-red-5mm.pin_order` with its why, read |
+| 3 | datasheet-reader.md:36 came in with P80 (d2979a66) and no decision backs it; design.md:200, commands/research.md:132 and test_parts.py:3040 side with the researcher's rule; vl6180x's proof is already false, so brief C16 was stale there | plan refuter F3 | verified | the agent line now states the researcher's rule; vl6180x untouched |
+| 4 | the valve grep missed "in a garden box in the sun" (line 135) and "four idle channels cost the sleep budget" (line 262); `based_on` is right to keep, the irrigation copy differs from the shelf only by it | plan refuter F4 | acted | both reworded; the gate grep over valve, garden, sleep budget, idle channels, S3, buck, "this design" finds nothing left of the project |
+| 5 | skills/spark-design/references/verified-parts.md:134 repeats "DFRobot ships no KiCad/Eagle footprints" | plan refuter F5 | acted | it says what the walk saw (a KiCad footprint and symbol for DFR1117) and that Eagle files were not looked for |
+| 6 | LOAD_CTRL fits the other signals (I2S_BCLK, MOTOR_IA, TOF_INT, STATUS_LED: object plus role); the plan's "a verb and its object" was wrong | plan refuter F6 | acted | the plan's Names section says object plus role |
+| 7 | the simple-english lint hook lists 28, 17 and 41 hits on part-data.md, datasheet-reader.md and verified-parts.md, all in text older than this card (em dashes, semicolons, long sentences) | implementer | raised | out of this chore's scope; a docs card for the three pages, with the documentation council's pass |
+| 8 | the shelf record's `operating_temperature_c` [-55, 155] is `verified: true` while its own note calls the value implausible (the EL357N stops at +110 C); walk diary dfr0457:71 | implementer | raised | not one of the card's claims; a card: a flag that says trust it beside a note that says do not |
+| 9 | the walk record's upgrades (cites on the schematic facts, legs, the DC-only warning, document versions, mounting_holes re-sourced) live in a scratch project's copy, not in the shelf | implementer | raised | the scratch project is listed in projects.json as `project` (p743 row); a card decides whether the shelf takes them |
+| 10 | every design that uses led-red-5mm now lists `led-red-5mm.pin_order` under "still unverified about these parts" | implementer | verified | the rule's consequence, intended: the line a person reads says to confirm the longer lead and the flat on the part |
+| 11 | the irrigation project's own copy keeps `VALVE_CTRL` and its wording | implementer | verified | `~/Development/irrigation/parts/dfr0457-mosfet-power-controller.json` untouched, 1 hit |
