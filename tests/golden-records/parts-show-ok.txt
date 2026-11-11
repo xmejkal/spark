@@ -9,6 +9,8 @@ Kingbright L-7113ID 5 mm red LED — indicator
     max_continuous_current_ma    30         verified
     peak_wavelength_nm           627        verified
     viewing_angle_deg            30         verified
+  leg A: the anode, the longer leg
+  leg K: the cathode, the shorter leg, by the flat of the rim
 
   the board must: A series resistor between the GPIO and the anode, always: without it the LED's current is set only by the pin's drive strength, and it either runs far past 30 mA or droops the pin's level.
 

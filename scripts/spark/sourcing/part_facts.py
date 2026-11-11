@@ -217,6 +217,8 @@ def describe(part):
                 lines.append("      %s" % fact["why_it_matters"])
 
     lines += _physical_lines(part)
+    for pin, leg in (part.get("legs") or {}).items() if isinstance(part.get("legs"), dict) else ():
+        lines.append("  leg %s: %s" % (pin, leg))  # P741: what --fact-set wrote, read back
     for requirement in part.get("host_requirements") or []:
         lines.append("\n  the board must: %s" % requirement)
     for conflict in conflicts_of(part):

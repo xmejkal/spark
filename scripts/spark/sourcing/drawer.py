@@ -42,6 +42,11 @@ Link = namedtuple("Link", "target where path question")
 PROVENANCE_KEYS = ("facts", "body_mm", "pin_order_proof", "pin_roles", "physical", "physical_proof")
 #: A source is a sentence ("bench, date, tool, who"), so these keys keep up to this many characters of a text, above the longest record text.
 PROVENANCE_MAX = 1000
+#: The keys the breadboard sheet reads as text (P741): `legs`, how to tell each leg apart, by a pin of `pin_order`, and
+#: `host_requirements`, the lines the host board must meet. `--fact-set` writes them: legs leg by leg, the lines as a whole (like tags).
+SHEET_KEYS = ("legs", "host_requirements")
+LEGS_SHAPE = "legs is {pin of pin_order (%s): words that tell the leg apart}; %s is not"
+LINES_SHAPE = "host_requirements is a list of lines that are not empty; item %s is not"
 
 
 def scrub(key, value):
@@ -55,12 +60,29 @@ def scrub(key, value):
         return clean(value, TEXT_MAX[key])
     if key == "is":  # an id is a file name in the store, up to the name limit, and only control characters and surrogates go (P445)
         return _in_bytes(_scrubbed(value, store.FILE_NAME_MAX_BYTES), store.FILE_NAME_MAX_BYTES)
-    return _scrubbed(value, PROVENANCE_MAX) if key in PROVENANCE_KEYS else _scrubbed(value)
+    return _scrubbed(value, PROVENANCE_MAX) if key in PROVENANCE_KEYS + SHEET_KEYS else _scrubbed(value)
 
 
 def list_provenance_key_problems(values):
     """Why a key inside the `PROVENANCE_KEYS` of `values` cannot be written: scrub cleans a text, never a key (P374)."""
     return [problem for key in PROVENANCE_KEYS if key in values for problem in list_key_problems(key, values[key])]
+
+
+def list_sheet_key_problems(values, record):
+    """Why the `SHEET_KEYS` in `values` cannot be written to `record` (P741): a leg's pin is not in the record's `pin_order` or its
+    text is empty, a leg key holds a control character, or a host requirement is not a text or is empty. An empty `legs` or an
+    empty list is the caller's "a write fills a fact" refusal, not this one."""
+    problems, pins = [], record.get("pin_order") if isinstance(record.get("pin_order"), list) else []
+    if "legs" in values:
+        legs = values["legs"]
+        problems += list_key_problems("legs", legs)
+        bad = [key for key, text in legs.items() if key not in pins or not _words(text)] if isinstance(legs, dict) else ["the value"]
+        problems += [LEGS_SHAPE % (", ".join(map(str, pins)) or "none", key) for key in bad]
+    if "host_requirements" in values:
+        lines = values["host_requirements"]
+        bad = [index for index, line in enumerate(lines) if not _words(line)] if isinstance(lines, list) else ["the value"]
+        problems += [LINES_SHAPE % item for item in bad]
+    return problems
 
 
 def _in_bytes(value, size):

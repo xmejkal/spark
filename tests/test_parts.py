@@ -1619,6 +1619,71 @@ class APinOrderSaysHowItWasReadTest(unittest.TestCase):
         self.assertEqual(len(listed), 1)
         self.assertEqual(listed[0]["source"], "read off a photo")
 
+class FactSetWritesTheSheetKeysTest(unittest.TestCase):
+    """P741 (#1017): `--fact-set` writes `legs` (leg by leg, each pin one of pin_order) and `host_requirements` (the list as a whole),
+    the two keys the breadboard sheet reads as text, so no hand edit is needed for them."""
+
+    LEGS = {"A": "the anode, the longer leg", "K": "the cathode, by the flat of the rim"}
+    LINE = "A series resistor between the GPIO and the anode, always."
+
+    def a_store(self, **extra):
+        home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
+        record = part("x-led", pin_order=["A", "K"], footprint="led5mm", body_mm={"width": 5, "height": 5}, **extra)
+        (home / "catalog" / "x-led.json").write_text(json.dumps(record))
+        return home
+
+    def write(self, home, values):
+        given = home / "write.json"
+        given.write_text(json.dumps(values))
+        with in_store(home):
+            said, code = run_json(["--fact-set", "x-led", str(given)])
+        return said, code, json.loads((home / "catalog" / "x-led.json").read_text())
+
+    def test_legs_are_written_and_a_second_write_merges_leg_by_leg(self):
+        home = self.a_store()
+        said, code, after = self.write(home, {"legs": self.LEGS})
+        self.assertEqual((code, after["legs"], said["data"]["was"]["legs"]), (0, self.LEGS, {"A": None, "K": None}))
+        said, code, after = self.write(home, {"legs": {"K": "the shorter leg"}})
+        self.assertEqual((code, after["legs"], said["data"]["was"]["legs"]), (0, dict(self.LEGS, K="the shorter leg"), {"K": self.LEGS["K"]}))
+
+    def test_host_requirements_are_written_as_a_whole_and_a_rerun_changes_nothing(self):
+        home = self.a_store(host_requirements=["an old line"])
+        said, code, after = self.write(home, {"host_requirements": [self.LINE]})
+        self.assertEqual((code, after["host_requirements"], said["data"]["was"]["host_requirements"]), (0, [self.LINE], ["an old line"]))
+        said, code, after = self.write(home, {"host_requirements": [self.LINE]})
+        self.assertEqual((code, said["data"]["was"]["host_requirements"], after["host_requirements"]), (0, [self.LINE], [self.LINE]))
+
+    def test_a_leg_for_a_pin_the_record_does_not_name_an_empty_leg_and_an_empty_line_are_refused(self):
+        home = self.a_store()
+        said, code, after = self.write(home, {"legs": {"B": "a third leg", "K": ""}, "host_requirements": [self.LINE, " "]})
+        self.assertEqual((code, "legs" in after, "host_requirements" in after), (1, False, False))
+        self.assertEqual([p["sentence"] for p in said["problems"]],
+                         ["legs is {pin of pin_order (A, K): words that tell the leg apart}; B is not",
+                          "legs is {pin of pin_order (A, K): words that tell the leg apart}; K is not",
+                          "host_requirements is a list of lines that are not empty; item 1 is not"])
+
+    def test_an_empty_legs_a_string_for_the_lines_and_a_control_character_in_a_leg_key_are_refused(self):
+        home = self.a_store()
+        said, code, after = self.write(home, {"legs": {}})
+        self.assertEqual((code, said["problems"][0]["sentence"]), (1, "legs is absent — a write fills a fact, it never empties one"))
+        said, code, after = self.write(home, {"host_requirements": "one line"})
+        self.assertEqual((code, said["problems"][0]["sentence"]), (1, "host_requirements is a list of lines that are not empty; item the value is not"))
+        said, code, after = self.write(home, {"legs": {"A\x07": "a leg"}})
+        self.assertEqual((code, len(said["problems"]), "legs" in after), (1, 2, False))
+
+    def test_show_reads_a_written_leg_back(self):
+        home = self.a_store()
+        self.write(home, {"legs": self.LEGS})
+        with in_store(home):
+            printed, code = run_text(["--show", "x-led"])
+        self.assertEqual((code, [line for line in printed.splitlines() if line.startswith("  leg ")]), (0, ["  leg A: the anode, the longer leg", "  leg K: the cathode, by the flat of the rim"]))
+
+    def test_a_text_in_a_leg_or_a_line_is_cleaned_and_cut_at_the_provenance_cap(self):
+        home = self.a_store()
+        said, code, after = self.write(home, {"legs": {"A": "the\x1banode"}, "host_requirements": ["x" * 1200]})
+        self.assertEqual((code, after["legs"]["A"], len(after["host_requirements"][0])), (0, "the anode", 1000))
+
+
 class AModulesPhysicalSaysHowItWasReadTest(unittest.TestCase):
     """
     P737 step 3. `physical` holds what `body_mm` does not (the thickness, the holes, the header) as bare values under the

@@ -285,7 +285,7 @@ These write:
 - `parts.py`:
   - **`--promote` copies a project's record into the plugin's own library: never run it unasked.**
   - `--drawer-set`, `--needs-set`, `--needs-drop`, `--pick`, `--function-set`, `--fact-set`, `--requirements`, `--step`, `--drawer-import`, `--skeleton`, `--keep`, and `--fetch`, which
-    also uses the network.
+    also uses the network. `--fact-set` writes `legs` (leg by leg, each pin one of `pin_order`) and `host_requirements` (the list as a whole) too ([P741](https://github.com/xmejkal/spark/issues/1017)).
   - **A bench result goes back with `--fact-set`** ([P374](https://github.com/xmejkal/spark/issues/479)), under the `write`
     key of the `--unverified` row. Write `verified: true` only for a result the person stated in this conversation, and
     put in `source` who measured it, when and how, in the person's own zone: `bench, 2026-10-29, meter on the owned
