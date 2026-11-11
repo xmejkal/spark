@@ -3475,6 +3475,15 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         self.assertTrue(err.getvalue().startswith("parts.py: %s is not JSON" % (project / ".spark" / "needs.json")), err.getvalue())
         self.assertNotIn("Traceback", err.getvalue())
 
+    def test_a_needs_drop_problem_carries_the_operation_s_code(self):
+        # P726: `Answer.from_result` keeps a Finding's code, so --needs-drop's items gain `code` as the six's do
+        project = Path(tempfile.mkdtemp())
+        (project / ".spark").mkdir()
+        (project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [{"id": "light", "does": "indicate", "what": "status"}]}))
+        with in_store(Path(tempfile.mkdtemp())):
+            said, code = run_json(["--needs-drop", str(project), "nosuch"])
+        self.assertEqual((code, said["problems"][0]["code"], said["problems"][0]["subject"]), (1, "need_unknown", "nosuch"))
+
     def test_a_goal_operation_s_help_lists_its_own_arguments_with_their_words(self):
         out = io.StringIO()
         with self.assertRaises(SystemExit), contextlib.redirect_stdout(out):

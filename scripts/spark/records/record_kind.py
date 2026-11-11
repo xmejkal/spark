@@ -146,7 +146,7 @@ class Answer(namedtuple("Answer", "data lines problems unchecked next truncated 
 
 
 def _problem(subject, sentence, fix=None, code=None):
-    """A problem item; `code` (P726) is in it only when given, so the envelopes of the handlers on parts.py do not change."""
+    """A problem item; `code` (P726) is in it only when given, so the envelopes of the handlers that give none do not change."""
     return dict({"subject": subject, "sentence": sentence, "fix": fix}, **({"code": code} if code is not None else {}))
 
 

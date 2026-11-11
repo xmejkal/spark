@@ -226,7 +226,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/scripts/check_vendor_pins.py" "$CLAUDE_PLUGIN_ROOT/
 
 ### parts.py's envelope
 
-- `problems` and `unchecked` hold items `{subject, sentence, fix}`; an `unchecked` item has no `subject`. `fix` says what to do, and may be null. The items of `--audit`, `--need`, `--needs`, `--match`, `--offer`, `--requirements` and `--tally` carry `code` too (P726): the word to decide on, null where the refusal has none yet. A refusal of theirs with no text lines also says its sentence on stderr, with `--json` too.
+- `problems` and `unchecked` hold items `{subject, sentence, fix}`; an `unchecked` item has no `subject`. `fix` says what to do, and may be null. The items of `--audit`, `--need`, `--needs`, `--match`, `--offer`, `--requirements`, `--tally` and `--needs-drop` carry `code` too (P726): the word to decide on, null where the refusal has none yet. A refusal of theirs with no text lines also says its sentence on stderr, with `--json` too.
 - `assumptions` is what an answer rests on that nobody has checked. It never changes the status, so read it whenever it
   is not empty. Each entry says what it is about (`fact`), why nobody has checked it (`basis`) and what depends on it (`sentence`).
   - `--unverified` lists one per fact whose `verified` is not true: `fact` is `<part>.<fact>`, `basis` is `unverified`,
