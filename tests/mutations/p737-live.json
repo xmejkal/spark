@@ -98,7 +98,7 @@
  {
   "file": "scripts/spark/sourcing/research/research_part.py",
   "name": "a contract problem writes no template, so the typed values are lost",
-  "find": "            if findings:  # the contract refused a value: the typed values survive in the file, where the fix is made\n                RepliesStore(replies_path).dump(held.questions, answers)\n",
+  "find": "                RepliesStore(replies_path).dump(held.questions, answers)\n",
   "replace": ""
  }
 ]

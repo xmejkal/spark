@@ -567,6 +567,8 @@ class ResearchPartTest(unittest.TestCase):
         strategy = TerminalReplyStrategy(Terminal(Stream("-1\n\n" + json.dumps(HEADER) + "\n"), shown), user_name=lambda: "ada")
         result = self.research(strategy)
         self.assertEqual(([found.code for found in result.findings], self.record(), shown.getvalue().count("Enter = later")), (["part_contract_broken", "needs_reply"], self.PLAIN, 3))
+        self.assertEqual(result.findings[0].fix, "fix the value in %s so the record meets its contract (the typed values are kept there), then run research.py --part x-mod --project %s --replies %s"
+                         % (self.replies_file, self.project, self.replies_file))
         self.assertEqual({key: entry["value"] for key, entry in json.loads(self.replies_file.read_text())["replies"].items()},
                          {"physical.thickness_mm": -1, "physical.mounting_holes": None, "physical.header": HEADER})
 
