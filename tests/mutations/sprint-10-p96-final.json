@@ -66,13 +66,13 @@
   "replace": "    pass\n"
  },
  {
-  "file": "scripts/spark/design/needs.py",
+  "file": "scripts/spark/sourcing/offers.py",
   "name": "a record that does not parse is known anyway",
   "find": "        known_keys.add((kind, record_id))\n",
   "replace": "        pass\n"
  },
  {
-  "file": "scripts/spark/design/needs.py",
+  "file": "scripts/spark/sourcing/offers.py",
   "name": "a dead entry's function counts for its record",
   "find": "        if not entry.get(\"skip\") and isinstance(entry.get(\"is\"), dict)",
   "replace": "        if isinstance(entry.get(\"is\"), dict)"

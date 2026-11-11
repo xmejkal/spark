@@ -72,8 +72,9 @@ OPERATIONS = (
     ("signals", {"nargs": "+", "metavar": "PART"}, "the signals these parts ask for, as assign_pins.py input", (), ("signals",)),
     ("unverified", {"nargs": "+", "metavar": "PART"}, "what nobody has checked about these parts, one assumption a fact",
      (), ("parts",)),
-    ("need", {"nargs": "+", "metavar": "WORD"}, "what exists for a need, before researching: words matched in id, name, kind, alias; "
-     "--matcher picks the matcher", (), ("need", "vendor_order", "found", "drafts", "catalog")),
+    ("need", {"nargs": "+", "metavar": "WORD"}, "what you own and what spark knows for a need, before researching: the words against "
+     "what each record (parts and boards, every layer) or drawer entry does, its tags, names and text, owned first (word-overlap); "
+     "--matcher name-contains for the names alone", (), ("need", "vendor_order", "found", "drafts", "catalog", "more", "matcher")),
     ("skeleton", {"metavar": "PART"}, "write a record to fill in, to the project's parts/ (refused when any layer holds the id)", ("writes",), ("path", "record", "written")),
     ("sources", {"metavar": "PART"}, "ask every URL a record cites whether it answers", ("network",), ("part", "sources")),
     ("fetch", {"metavar": "PART"}, "download the datasheets and images a record cites, into your store", ("network", "writes"),
@@ -152,8 +153,8 @@ OPTIONS = (
     ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
     ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
     ("passed-over", {"metavar": "FILE"}, "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"),
-    ("matcher", {"metavar": "NAME"}, "with --match or --need: the matcher that ranks the offers; a name that does not fit "
-     "is refused with the names that do"),
+    ("matcher", {"metavar": "NAME"}, "with --match or --need: the matcher that ranks the offers (--match: same-words, word-overlap; "
+     "--need: word-overlap, name-contains); a name that does not fit is refused with the names that do"),
     ("project", {"type": Path}, "a project whose own parts/ beats the shipped library"),
     ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, "with a listing: start at item N (truncated.next says where)"),
     ("dry-run", {"action": "store_true"}, "with an operation that has an effect: say what it would do, and do nothing"),

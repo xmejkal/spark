@@ -13,10 +13,10 @@ import re
 from pathlib import Path
 
 from spark.design import footprint_emitter
-from spark.sourcing import drawer, matching
+from spark.sourcing import drawer, matching, offers
 from spark.sourcing.part_records import broken_problems
 from spark.records import board_records, records_codes, store
-from spark.records.record_kind import _parse, _problem, _shape_problems, owes, VERBS
+from spark.records.record_kind import _problem, _shape_problems, owes, VERBS
 from spark.core.text_guards import clean, kept_reason, printable
 
 #: How a need stands against the store (§3).
@@ -114,48 +114,10 @@ def write(project, needs):
 
 
 #: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, after these.
-LAYERS = ("drawer", "project", "shelf", "library", "catalog")
+LAYERS = (offers.DRAWER, "project", "shelf", "library", "catalog")
 
 #: `--match`'s matcher (P211). A default changes only with the PO's yes, after he reads `tools/match_eval.py`'s numbers.
 MATCHER = "same-words"
-
-
-def _counts(holding, mine=None):
-    """
-    (owned, free, unsure) over the live drawer entries (callers pass none said to be dead) — `many` stays many, an entry
-    with no count is owned, count unknown (the PO, 2026-10-06), and what `mine`, the asking project, holds is free to it:
-    only other projects' reservations are not free.
-    """
-    unsure = any(entry.get("unsure") for entry in holding)
-    if any(entry.get("count") == "many" for entry in holding):
-        return "many", "many", unsure
-    if any("count" not in entry for entry in holding):
-        return "unknown", "unknown", unsure
-    owned = sum(entry["count"] for entry in holding)
-    held = sum(n for entry in holding for who, n in (entry.get("used_in") or {}).items() if who != mine)
-    return owned, max(owned - held, 0), unsure
-
-
-def offers(known, entries):
-    """
-    Every offer in the store (P211) as [(Offer, context)]: each readable record with the live drawer entries that say they
-    are it, then each live record-less entry that holds any. Context is {"record", "in", "path", "holding"}. Nothing costly
-    runs here: what a record owes is asked only of an offer a matcher admits.
-    """
-    pointing, built, known_keys = _pointing(entries), [], set()
-    for kind, record_id, where, path in known:
-        record = _parse(path)
-        if not isinstance(record, dict):
-            continue
-        known_keys.add((kind, record_id))
-        holding = [entry for _, entry in pointing.get((kind, record_id), [])]
-        built.append((matching.Offer.from_record(record_id, kind, record, holding),
-                      {"record": record, "in": where, "path": path, "holding": holding}))
-    for entry_id, entry in entries.items():
-        points_at_a_record = isinstance(entry.get("is"), dict) and bool(entry["is"]) and next(iter(entry["is"].items())) in known_keys
-        if not (points_at_a_record or entry.get("skip") or entry.get("count") == 0):
-            built.append((matching.Offer.from_entry(entry_id, entry), {"record": None, "in": "drawer", "path": None, "holding": [entry]}))
-    return built
 
 
 def offer(key, project=None):
@@ -166,7 +128,7 @@ def offer(key, project=None):
     if pick is None:
         return None
     wanted = next(iter(pick.items()))
-    return next((found for found, _ in offers(rows, entries) if (found.kind, found.key) == wanted), None)
+    return next((found for found, _ in offers.build(rows, entries) if (found.kind, found.key) == wanted), None)
 
 
 # --- MVP ---
@@ -213,9 +175,9 @@ def board_limits(need, record, functions, definitions=None, key=None):
 def _candidate(need, fit, context, mine=None):
     """One candidate (§6.2): where it lives and what it owes, what its verb's functions say, its counts and its fit."""
     offer, record = fit.offer, context["record"]
-    owned, free, unsure = _counts(context["holding"], mine)
+    owned, free, unsure = offers.counts(context["holding"], mine)
     if record is None:
-        said = {"entry": offer.key, "in": "drawer", "label": context["holding"][0].get("label")}
+        said = {"entry": offer.key, "in": offers.DRAWER, "label": context["holding"][0].get("label")}
     else:
         said = {"id": offer.key, "kind": offer.kind, "in": context["in"], "label": record.get("name"),
                 "owes": [] if offer.kind == "board" else owes(record),
@@ -248,7 +210,7 @@ def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
     `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397); `definitions` is the dict that
     `role_limits` fills, so a caller that matches several needs reads each board's Wokwi definition once.
     """
-    built = offers(known, entries)
+    built = offers.build(known, entries)
     found = _rank(need, built, mine, matcher)
     seen = {(offer.kind, offer.key): (offer, said["record"]) for offer, said in built}
     for one in found:
@@ -274,15 +236,6 @@ def match(project, matcher=None):
         matched.append(dict({key: need.get(key) for key in NEED_FIELDS}, need=need["id"],
                             candidates=candidates(need, known, entries, mine, matcher, definitions)))
     return matched, problems
-
-
-def _pointing(entries):
-    """{(kind, id): [(entry key, entry)]} for every live drawer entry that says what it is — one said to be dead holds nothing."""
-    pointing = {}
-    for entry_id, entry in entries.items():
-        if not entry.get("skip") and isinstance(entry.get("is"), dict) and entry["is"]:
-            pointing.setdefault(next(iter(entry["is"].items())), []).append((entry_id, entry))
-    return pointing
 
 
 def _held(pick, entries, pointing):
@@ -362,7 +315,7 @@ def _limits_notes(after, picked, rows, entries, mine):
                     for kind, key in pick.items() if kind == "board"), key=lambda asked: (asked[0], asked[1]["id"]))
     if not asked:
         return []
-    built, definitions, notes = offers(rows, entries), {}, []
+    built, definitions, notes = offers.build(rows, entries), {}, []
     boards_built = {offer.key: (offer, said["record"]) for offer, said in built if offer.kind == "board"}
     for key, need in asked:
         if key not in boards_built:
@@ -388,11 +341,11 @@ def plan_holds(name, after, entries):
     wanted = collections.Counter(next(iter(pick.items())) for need in after for pick in need.get("pick") or [])
     # --- MVP --- P387: a project has one board, however many needs its own LED or button serves
     wanted = collections.Counter({asked: 1 if asked[0] == "board" else pieces for asked, pieces in wanted.items()})
-    pointing, mine = _pointing(entries), collections.Counter()
+    pointing, mine = offers.pointing_at(entries), collections.Counter()
     # a pick of one drawer entry has nowhere else to go: it takes its piece before a pick of a record, which may take another entry
     for (kind, key), pieces in sorted(wanted.items(), key=lambda asked: (asked[0][0] != "entry", asked[0])):
         held = _held({kind: key}, entries, pointing)
-        owned, _, unsure = _counts([entry for _, entry in held], name)
+        owned, _, unsure = offers.counts([entry for _, entry in held], name)
         if owned == 0:
             notes.append("%s: to get — known, not owned" % key)
             continue
@@ -524,5 +477,5 @@ def _passed_over(passed_over, name, known, entries, ids):
 
 def owned(pick, entries):
     """Whether the drawer holds a pick (§6.7's "owned"): a live entry with a count above 0, many, or a count nobody gave."""
-    held = _held(pick, entries, _pointing(entries))
-    return bool(held) and _counts([entry for _, entry in held])[0] != 0
+    held = _held(pick, entries, offers.pointing_at(entries))
+    return bool(held) and offers.counts([entry for _, entry in held])[0] != 0

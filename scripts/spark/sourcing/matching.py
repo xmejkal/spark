@@ -2,8 +2,8 @@
 Matching a need, or a search word, to what the store offers (P211; docs/2026-10-12-p211-matching-design.md).
 
 A matcher ranks the offers, and a chooser picks one: Claude in the conversation, or the person. This is the one place
-for the rules. `needs.candidates` (`parts.py --match`), `datasheets.need` and `catalog_matches` (`--need`), `--offer`
-and `tools/match_eval.py` call it, and it reads no store: callers build the offers. Part numbers stay in
+for the rules. `needs.candidates` (`parts.py --match`), `datasheets.need` (`--need`), `--offer` and `tools/match_eval.py`
+call it, and it reads no store: callers build the offers (`spark.sourcing.offers`). Part numbers stay in
 `drawer._match`.
 """
 
@@ -200,8 +200,9 @@ class NameContains(Matcher):
 
 
 class WordOverlap(Matcher):
-    """The share of the need's words the offer holds, each word worth the best place that holds it (P211, WEIGHTS)."""
-    name, serves = "word-overlap", ("match",)
+    """The share of the need's words the offer holds, each word worth the best place that holds it (P211, WEIGHTS). `--need`'s
+    default since P743 (D15): a search by words has no verb, so every function and the kind count for it."""
+    name, serves = "word-overlap", ("match", "need")
 
     def score(self, need, offer):
         """The mean worth of the need's words; each is worth the best place of the offer that holds it, or nothing."""
@@ -217,11 +218,13 @@ class WordOverlap(Matcher):
 
     @staticmethod
     def places(need, offer):
-        """Each place's folded words: the same-verb `what`s, the tags, the names with the key, the about and description."""
+        """Each place's folded words: the same-verb `what`s, the tags, the names with the key, the about and description. For a
+        need with no verb (a search by words, P743) every function's `what` counts, and the kind's words join the names."""
         def folded(texts):
             return {fold(word) for text in texts for word in words(text)}
-        return {"functions": folded(f.get("what") for f in offer.functions if f.get("does") == need.get("does")),
-                "tags": folded(offer.tags), "names": folded(offer.names + [offer.key]),
+        verb = need.get("does")
+        return {"functions": folded(f.get("what") for f in offer.functions if verb is None or f.get("does") == verb),
+                "tags": folded(offer.tags), "names": folded(offer.names + [offer.key] + ([offer.facts.get("kind")] if verb is None else [])),
                 "texts": folded([offer.about, offer.description])}
 
 

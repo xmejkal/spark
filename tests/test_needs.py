@@ -338,9 +338,9 @@ class TheMatcherTest(unittest.TestCase):
         self.catalog({"id": "y-seven", "name": "Quirky probe", "also_known_as": 7},
                      {"id": "y-mixed", "name": "Mixed probe", "also_known_as": ["QZ5520", 7]})
         said, code = run(["--need", "quirky"])
-        self.assertEqual((code, said["data"]["catalog"]), (0, [{"id": "y-seven", "kind": "sensor", "name": "Quirky probe"}]))
+        self.assertEqual((code, [(c["id"], c["kind"], c["name"], c["in"]) for c in said["data"]["catalog"]]), (0, [("y-seven", "sensor", "Quirky probe", "catalog")]))
         said, code = run(["--need", "qz5520"])
-        self.assertEqual((code, said["data"]["catalog"]), (0, [{"id": "y-mixed", "kind": "sensor", "name": "Mixed probe"}]),
+        self.assertEqual((code, [(c["id"], c["kind"], c["name"]) for c in said["data"]["catalog"]]), (0, [("y-mixed", "sensor", "Mixed probe")]),
                          "the word in the list names it; the 7 beside it is passed over")
 
     def test_a_used_up_part_without_a_record_is_not_offered(self):

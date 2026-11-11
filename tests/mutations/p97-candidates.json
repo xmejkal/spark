@@ -5,7 +5,7 @@
  {"file": "scripts/spark/design/needs.py", "name": "a broken board is never marked",
   "find": "bool(parts._shape_problems(boards.validate, record, path, \"board definition\")) if kind == \"board\"",
   "replace": "False if kind == \"board\""},
- {"file": "scripts/spark/design/needs.py", "name": "a project's own reservation is not free to it", "find": " if who != mine)", "replace": ")"},
+ {"file": "scripts/spark/sourcing/offers.py", "name": "a project's own reservation is not free to it", "find": " if who != mine)", "replace": ")"},
  {"file": "scripts/spark/design/needs.py", "name": "the match does not know whose project it is",
   "find": "store.plan_listed_name(project))",
   "replace": "None)"},
