@@ -1,0 +1,74 @@
+[
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "an agent's question is shown to the person in the terminal",
+  "find": "        if question.asked_of == AGENT or self.left:\n",
+  "replace": "        if self.left:\n"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "after Ctrl-C the next question is asked again",
+  "find": "        if question.asked_of == AGENT or self.left:\n",
+  "replace": "        if question.asked_of == AGENT:\n"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "Ctrl-C is not remembered, so every later question asks again",
+  "find": "            self.left = True\n            self.terminal.say(LEFT_LINE)\n",
+  "replace": "            self.terminal.say(LEFT_LINE)\n"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "Enter is taken as an empty answer and reaches the misfit",
+  "find": "        if typed == \"\":\n            return None\n",
+  "replace": ""
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "a misfit is written as a Reply instead of staying open",
+  "find": "        if lacks:\n            self.terminal.say(lacks)\n            return None\n",
+  "replace": "        if lacks:\n            self.terminal.say(lacks)\n"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "a yes typed live is kept as the text, not a bool",
+  "find": "            return True if typed.lower() in YES_WORDS else False if typed.lower() in NO_WORDS else typed\n",
+  "replace": "            return typed\n"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "a choice typed by number is kept as the digit",
+  "find": "            return question.choices[int(typed) - 1] if typed.isdigit() and 0 < int(typed) <= len(question.choices) else typed\n",
+  "replace": "            return typed\n"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "the chain takes the last strategy's answer, not the first Reply",
+  "find": "            if reply is not None:\n                return reply\n        return None\n",
+  "replace": "            pass\n        return reply if self.strategies else None\n"
+ },
+ {
+  "file": "scripts/spark/core/replies.py",
+  "name": "Ctrl-C in the terminal is a traceback, not None",
+  "find": "        try:\n            return self.stdin.readline().strip()\n        except KeyboardInterrupt:\n            return None\n",
+  "replace": "        return self.stdin.readline().strip()\n"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/__init__.py",
+  "name": "a --json run builds a terminal too, so a prompt lands in the envelope",
+  "find": "None if values.get(JSON_DEST) else Terminal(stdout=reporter.stream)",
+  "replace": "Terminal(stdout=reporter.stream)"
+ },
+ {
+  "file": "scripts/spark/sourcing/research/__init__.py",
+  "name": "a terminal that is not live is asked anyway",
+  "find": "    parts += [TerminalReplyStrategy(terminal)] if terminal is not None and terminal.live else []\n",
+  "replace": "    parts += [TerminalReplyStrategy(terminal)] if terminal is not None else []\n"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "the builder's values lose the json flag",
+  "find": "reporter, dict(values, **{JSON_DEST: as_json})),",
+  "replace": "reporter, values),"
+ }
+]

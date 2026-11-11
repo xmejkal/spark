@@ -113,8 +113,8 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     Operation's arguments and answers a bad flag with the Renderer's `render_bad_argument` under --json (an envelope with
     `bad_argument`, or None for a flat Operation: then the usage), the usage on stderr without (P433). It builds the
     outside with `outside_builder(project, effects, reporter, values)`, the effects those of `operation.effects_of(values)`
-    and `values` the parsed arguments, from which a frontend picks what the Operation never builds itself (the
-    ReplyStrategy of `--replies`, P737), unless a test gave `outside`, the reporter `TerminalReporter.for_json(as_json)`
+    and `values` the parsed arguments plus `json`, from which a frontend picks what the Operation never builds itself (the
+    ReplyStrategy of `--replies`, and no terminal under --json, P737), unless a test gave `outside`, the reporter `TerminalReporter.for_json(as_json)`
     (P507: the events on stdout, on stderr with --json), runs,
     prints the rendering on stdout as it is (--json keeps every value raw, and the report's lines guard themselves) and
     the diagnostics on stderr through `guard_lines`, and returns the exit code of the result's status. The one place in
@@ -137,7 +137,7 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     if operation.privacy_for:
         privacy = operation.privacy_for(values.get("project"))
         reporter = MaskingReporter(reporter, privacy)
-    result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter, values),
+    result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})),
                            DEFAULT_RUN._replace(privacy=privacy))
     said = renderer.render(result, operation.name, operation.name) if as_json else TextReport.render(result)
     if said:

@@ -26,12 +26,11 @@
  {
   "file": "scripts/spark/bench/deploy_gate.py",
   "name": "accept y",
-  "find": ".strip() == \"yes\"",
-  ".replace": "x",
-  "replace": ".strip() in (\"yes\", \"y\")"
+  "find": ") == \"yes\"  # P423",
+  "replace": ") in (\"yes\", \"y\")  # P423"
  },
  {
-  "file": "scripts/spark/bench/deploy_gate.py",
+  "file": "scripts/spark/core/replies.py",
   "name": "one tty enough",
   "find": "self.stdin.isatty() and self.stdout.isatty()",
   "replace": "self.stdin.isatty() or self.stdout.isatty()"

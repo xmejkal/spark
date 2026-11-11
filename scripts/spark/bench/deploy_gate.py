@@ -12,17 +12,15 @@ only, and it never opens the erase (decision 6 of the refactor plan, the PO's to
 
 import abc
 import getpass
-import sys
 
 from spark.bench import board_codes
 from spark.records.store import format_rerun_line  # noqa: F401  (board_grant, grant and deploy take it from here)
 from spark.core import outcomes
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_PROBLEMS
-from spark.core.replies import AGENT, YES_NO, Reply, ReplyStrategy
-from spark.core.text_guards import guard_lines, printable
+from spark.core.replies import AGENT, TYPED_BY, YES_NO, Reply, ReplyStrategy, Terminal
+from spark.core.text_guards import printable
 
 #: How the store's record says a yes was given in a terminal: %s is the person's login name.
-TYPED_BY = "typed in a terminal by %s"
 NO_TERMINAL = "no terminal to ask you in. Run this line in your own terminal window (Claude Code's ! has none):\n  %s"
 
 #: What an agent does next (P213), for a GateClosedError: `deploy.py`'s `--json` turns it into a step.
@@ -98,23 +96,20 @@ class TerminalConsentStrategy(ConsentStrategy):
     opens_erase = True
 
     def __init__(self, line, stdin=None, stdout=None, user_name=getpass.getuser, mask=None):
-        self.line, self.stdin, self.stdout = line, stdin or sys.stdin, stdout or sys.stdout
+        self.line, self.terminal = line, Terminal(stdin, stdout, mask)  # P677: `mask` is the run's Privacy, so the question shows no home path
         self.user_name = user_name  # who types the yes: a test gives a name
-        self.mask = mask or (lambda text: text)  # P677: the run's Privacy, so the question shows no home path
 
     @property
     def who(self):
         return TYPED_BY % self.user_name()
 
     def require_ready(self):
-        if not (self.stdin.isatty() and self.stdout.isatty()):
+        if not self.terminal.live:
             raise GateClosedError(NO_TERMINAL % self.line, next_op=NEXT_DEPLOY, reason=board_codes.NO_TERMINAL)
 
     def ask(self, question):
         self.require_ready()
-        self.stdout.write("%s type yes to go on: " % guard_lines(self.mask(question)))  # P423: the one place a person types yes
-        self.stdout.flush()
-        return self.stdin.readline().strip() == "yes"
+        return self.terminal.ask("%s type yes to go on: " % question) == "yes"  # P423: the one place a person types yes
 
 
 # --- MVP ---

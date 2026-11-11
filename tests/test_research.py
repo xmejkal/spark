@@ -20,14 +20,17 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import research  # noqa: E402
-from fakes import FakeOutsideWorld  # noqa: E402
+from fakes import FakeOutsideWorld, Stream  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.core.renderers import JsonEnvelope  # noqa: E402
-from spark.core.replies import DeferringReplyStrategy, GivenReplyStrategy, Reply, RepliesStore  # noqa: E402
+from spark.core.events import TerminalReporter  # noqa: E402
+from spark.core.operation import ASKS  # noqa: E402
+from spark.core.replies import (CHOICE, EITHER, DeferringReplyStrategy, GivenReplyStrategy, Question, Reply, RepliesStore, Terminal,  # noqa: E402
+                                TerminalReplyStrategy)
 from spark.records.fact_needs import FactNeed, FactNeeds  # noqa: E402
 from spark.records.store import StoreError  # noqa: E402
 from spark.sourcing.part_records import validate  # noqa: E402
-from spark.sourcing.research import reply_strategy_for  # noqa: E402
+from spark.sourcing.research import build_research_outside_world, reply_strategy_for  # noqa: E402
 from spark.sourcing.research.merge import fold_documents, fold_not_published, fold_replies, not_published_of  # noqa: E402
 from spark.sourcing.research.research_part import ResearchPart, find_gaps, has_fact, held_value, settle  # noqa: E402
 from spark.sourcing.research.research_source import (  # noqa: E402
@@ -545,6 +548,24 @@ class ResearchPartTest(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             code = research.main(["--part", "x-mod", "--project", str(self.project), "--replies", str(self.project / "none.json"), "--json"])
         self.assertEqual((code, json.loads(out.getvalue())["unchecked"][0]["code"]), (2, "bad_argument"))
+
+    def test_the_frontend_chains_the_file_before_a_live_terminal_and_builds_no_terminal_under_json(self):
+        RepliesStore(self.replies_file).dump([])
+        live, dead = Terminal(Stream(), Stream()), Terminal(Stream(tty=False), Stream())
+        chain = reply_strategy_for(self.replies_file, live)
+        self.assertEqual([type(part) for part in chain.strategies], [GivenReplyStrategy, TerminalReplyStrategy])
+        self.assertEqual((type(reply_strategy_for(self.replies_file, dead)), type(reply_strategy_for(None, live)), type(reply_strategy_for(None, dead)), type(reply_strategy_for(None))),
+                         (GivenReplyStrategy, TerminalReplyStrategy, DeferringReplyStrategy, DeferringReplyStrategy))
+        shown, revision = Stream(), Question("revision", "Which revision is printed on the board?", CHOICE, EITHER, choices=["V1.0", "V2.0"])
+        kept, sys.stdin = sys.stdin, Stream("V1.0\n")  # the terminal reads the process's stdin at the call; no mock.patch (rule T2)
+        try:
+            outside = build_research_outside_world(self.project, (ASKS,), TerminalReporter(shown), {"replies": None, "json": True})
+            self.assertEqual(outside.replies(revision), None)  # --json: no terminal, nothing shown
+            outside = build_research_outside_world(self.project, (ASKS,), TerminalReporter(shown), {"replies": None, "json": False})
+            self.assertEqual(outside.replies(revision).value, "V1.0")  # a tty and no --json: the person is asked
+        finally:
+            sys.stdin = kept
+        self.assertEqual(shown.getvalue().count("Which revision"), 1)
 
 
 if __name__ == "__main__":

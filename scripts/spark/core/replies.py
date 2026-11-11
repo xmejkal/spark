@@ -10,8 +10,10 @@ channel. An unanswered question is unchecked: the run's status is `could-not-run
 
 import abc
 import difflib
+import getpass
 import json
 import math
+import sys
 from collections import namedtuple
 from pathlib import Path
 
@@ -19,6 +21,7 @@ from spark.core import outcomes
 from spark.core.codes import BAD_ARGUMENT, BAD_REPLY, NEEDS_REPLY, UNKNOWN_REPLY
 from spark.core.errors import SparkError
 from spark.core.result import Finding
+from spark.core.text_guards import guard_lines
 
 # --- MVP ---
 #: The kinds of a Question: a yes or no, a value in `answer_form` and `unit`, or one of `choices`.
@@ -32,8 +35,15 @@ ASKED_OF = (PERSON, AGENT, EITHER)
 REPLIES_FILE = Path(".spark") / "research-replies.json"
 #: The top key of the replies file.
 REPLIES_KEY = "replies"
-#: `Reply.answered_by` of a reply read from a file.
+#: `Reply.answered_by` of a reply read from a file, and of one typed in a terminal (the deploy's yes says it too).
 FROM_FILE = "replies file %s"
+TYPED_BY = "typed in a terminal by %s"
+#: The words of a question asked live: the hint after the text, what a yes or no takes, the cited page, and what Ctrl-C did.
+LATER_HINT = "(%s, Enter = later)"
+YES_OR_NO = "yes or no"
+SEE_PAGE = "see %s, page %s"
+LEFT_LINE = "Ctrl-C: the rest stays open"
+YES_WORDS, NO_WORDS = ("yes", "y"), ("no", "n")
 #: The sentence and the fix of an open question's Finding.
 WAITING = "waiting on a reply: %s"
 FILL_AND_RUN = "fill %s and run %s --replies %s"
@@ -114,6 +124,101 @@ class DeferringReplyStrategy(ReplyStrategy):
 
     def reply(self, question):
         return None
+
+
+class ChainedReplyStrategy(ReplyStrategy):
+    """Strategy: the strategies in order, and the first Reply wins. None when none answers. The frontend chains the replies
+    file before the terminal, so a person is asked only what the file left open."""
+
+    def __init__(self, strategies):
+        self.strategies = list(strategies)
+
+    def reply(self, question):
+        for strategy in self.strategies:
+            reply = strategy.reply(question)
+            if reply is not None:
+                return reply
+        return None
+
+
+class Terminal:
+    """Adapter: the person's terminal, stdin and stdout, behind spark's interface, read at the call so a redirected stream is the one
+    used. `live` says whether both are a tty. `say` shows masked, guarded text; `ask` shows a prompt and reads one line, stripped, or
+    None when the person pressed Ctrl-C (the caller keeps what it has; Ctrl-D reads as ""). The one class that reads a tty (rule X2);
+    `TerminalConsentStrategy` and `TerminalReplyStrategy` go through it. `mask` is the run's Privacy, so a line shows no home path."""
+
+    def __init__(self, stdin=None, stdout=None, mask=None):
+        self.stdin, self.stdout = stdin or sys.stdin, stdout or sys.stdout
+        self.mask = mask or (lambda text: text)
+
+    @property
+    def live(self):
+        return self.stdin.isatty() and self.stdout.isatty()
+
+    def say(self, text):
+        self.stdout.write(guard_lines(self.mask(text)) + "\n")
+        self.stdout.flush()
+
+    def ask(self, prompt):
+        self.stdout.write(guard_lines(self.mask(prompt)))
+        self.stdout.flush()
+        try:
+            return self.stdin.readline().strip()
+        except KeyboardInterrupt:
+            return None
+
+
+class TerminalReplyStrategy(ReplyStrategy):
+    """Strategy: the questions asked live, one at a time, in a `Terminal`. It never shows an AGENT question. Enter leaves a question
+    open; so does an answer that does not fit its kind, after the misfit is said, with no second try. Ctrl-C says LEFT_LINE once and
+    leaves this and every later question open, so what was answered before is kept. `who` is the login of the person at the terminal."""
+
+    def __init__(self, terminal, user_name=getpass.getuser):
+        self.terminal, self.user_name, self.left = terminal, user_name, False
+
+    @property
+    def who(self):
+        return TYPED_BY % self.user_name()
+
+    def reply(self, question):
+        if question.asked_of == AGENT or self.left:
+            return None
+        typed = self.terminal.ask(self._prompt(question))
+        if typed is None:
+            self.left = True
+            self.terminal.say(LEFT_LINE)
+            return None
+        if typed == "":
+            return None
+        value = self._value(question, typed)
+        lacks = question.misfit(value)
+        if lacks:
+            self.terminal.say(lacks)
+            return None
+        return Reply(question.key, value, self.who, None, None, question.cites)
+
+    @staticmethod
+    def _prompt(question):
+        """The question as the person reads it: the text and the hint, `why`, the cited page, the numbered choices, then `> `."""
+        hint = YES_OR_NO if question.kind == YES_NO else question.unit or question.answer_form or KIND_FORMS[question.kind]
+        lines = ["%s %s" % (question.text, LATER_HINT % hint)]
+        lines += [question.why] if question.why else []
+        lines += [SEE_PAGE % (question.cites.get("document"), question.cites.get("at"))] if isinstance(question.cites, dict) else []
+        lines += ["  %d %s" % (number, choice) for number, choice in enumerate(question.choices or (), 1)]
+        return "\n".join(lines) + "\n> "
+
+    @staticmethod
+    def _value(question, typed):
+        """What the typed line means for the question's kind: yes or no as a bool, a choice by number or by its text, a value as JSON
+        when it parses (a number, a list, an object as `answer_form` asks) and the text itself when it does not."""
+        if question.kind == YES_NO:
+            return True if typed.lower() in YES_WORDS else False if typed.lower() in NO_WORDS else typed
+        if question.kind == CHOICE:
+            return question.choices[int(typed) - 1] if typed.isdigit() and 0 < int(typed) <= len(question.choices) else typed
+        try:
+            return json.loads(typed)
+        except ValueError:
+            return typed
 
 
 class TextFileWriter:
