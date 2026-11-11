@@ -1,70 +1,26 @@
 """
 The handlers of a project's goal (W6-S3b, P721): what exists for a need (`_op_need`), a project's needs matched against
 the store (`_op_needs`, `_op_match`, `_op_offer`), the picks as its requirements (`_op_requirements`), the cost line
-(`_op_tally`), and every record and drawer link audited (`audit`, `_op_audit`). One `_op_<flag>` per operation of
-`parts.py`, each taking the parsed arguments and the project and answering an `Answer`. Moved whole from `parts.py`,
-whose `main` dispatches to them; `--needs-set` and `--pick` read a JSON payload, so they stay in the CLI (P721 row 6).
-It imports the records and sourcing areas and `needs` and `footprint_emitter` beside it, never `parts.py`. The design
-Operations on `run_cli` come with their card.
+(`_op_tally`). One `_op_<flag>` per operation of `parts.py`, each taking the parsed arguments and the project and
+answering an `Answer`. Moved whole from `parts.py`, whose `main` dispatches to them; `--needs-set` and `--pick` read a
+JSON payload, so they stay in the CLI (P721 row 6). `audit` went to `audit_records` as an Operation on `run_cli` (P707);
+the other handlers follow with P726. It imports the records and sourcing areas and `needs` and `footprint_emitter`
+beside it, never `parts.py`.
 """
 
 import json
-import shlex
 from pathlib import Path
 
 from spark.core.text_guards import printable
-from spark.records import board_records, record_kind, store
-from spark.records.record_kind import Answer, _cannot, owes, _parse, _problem, _shape_problems, _with_project
+from spark.records import store
+from spark.records.record_kind import Answer, _cannot, _problem
 from spark.sourcing import datasheets, drawer, matching, run_cost
 from spark.sourcing.datasheets import NEED_MATCHER
 from spark.sourcing.part_facts import _row, shelve
 from spark.sourcing.part_handlers import sellers, vendor_order, _write_lines
-from spark.sourcing.part_records import broken_problems, function_of
 from spark.design import board_components
 from spark.design import footprint_emitter, needs
 from spark.design import need_requirements
-
-
-def audit(project=None):
-    """
-    Every record in every layer — the catalog included — every drawer link, and each record a link reaches in the person's
-    other projects, walked once (§5.4, P89): per layer how many are current, owe facts, or are broken; which say nothing
-    of what they do (spark's layers and this project only); which entries point at nothing; which boards stop the chain at
-    the footprint stage, their files lacking what the footprint is drawn from (C-7, P121).
-    """
-    walked = [("part", found, layer, path) for found, (layer, path) in store.records("parts", record_kind.LIBRARY,
-                                                                                     project, drafts=True).items()]
-    walked += [("board", found, layer, path) for found, (layer, path) in board_records.records(project).items()]
-    known, mine, seen = drawer.linkable(project), store.projects(), {row[3].resolve() for row in walked}
-    dangling, linked = [], []
-    for entry, said in drawer.entries().items():
-        if not (isinstance(said.get("is"), dict) and said["is"]):
-            continue
-        where, path = drawer.resolve(said["is"], known)
-        if where is None:
-            dangling.append(entry)
-        elif where in mine and path.resolve() not in seen:
-            seen.add(path.resolve())
-            linked.append((next(iter(said["is"])), path.stem, where, path))
-    counts, owed, broken, silent, stops = {}, [], [], [], []
-    for kind, found, layer, path in walked + linked:
-        row = counts.setdefault(layer, {"current": 0, "owed": 0, "broken": 0})
-        record = _parse(path)
-        wrong = (["does not parse as a JSON object"] if not isinstance(record, dict) else _shape_problems(
-            board_records.validate, record, path, "board definition") if kind == "board"
-            else broken_problems(record, path))
-        owing = [] if wrong or kind == "board" else owes(record)
-        row["broken" if wrong else "owed" if owing else "current"] += 1
-        if wrong:
-            broken.append({"id": found, "layer": layer, "problems": wrong})
-        elif owing:
-            owed.append({"id": found, "layer": layer, "owes": owing})
-        elif kind == "board" and footprint_emitter.footprint_gaps(record):  # C-7: a board owes nothing, and may still stop the chain
-            stops.append({"id": found, "layer": layer, "stops_why": footprint_emitter.why_no_footprint(record),
-                          "stop_line": footprint_emitter.footprint_stop_line(record)})  # P411: the text shows the line; `--audit` drops it from the JSON
-        if isinstance(record, dict) and not function_of(record, board=kind == "board") and (kind, found, layer, path) not in linked:
-            silent.append(found)
-    return counts, owed, broken, silent, dangling, stops
 
 
 #: `--need`'s closing lines (P743): the fits the cutoff dropped, and nothing found.
@@ -102,23 +58,6 @@ def _need_line(row):
     where = "" if row["in"] == "library" else "in %s" % row["in"]
     why = "[%s]" % row["why"][0] if row["why"] else ""
     return "  %-9s %-28s %-14s %s" % (owned, row["id"] or row["entry"], kind, "  ".join(filter(None, [row["name"] or "", where, why])))
-
-
-def _op_audit(args, project):
-    counts, owed, broken, silent, dangling, stops = audit(project)
-    shown, truncated = store.page_with_store(owed, args.start, "audit", ["--audit"] + _with_project(project))
-    lines = ["  %-12s %3d current, %3d owe facts, %3d broken" % (layer, row["current"], row["owed"], row["broken"])
-             for layer, row in counts.items()]
-    lines += ["  BROKEN %s (%s): %s" % (b["id"], b["layer"], "; ".join(b["problems"])) for b in broken]  # each, once
-    lines += ["  %s (%s) owes: %s" % (o["id"], o["layer"], ", ".join(o["owes"])) for o in owed]
-    lines += ["  says nothing of what it does — set it once with --function-set <part> <file>%s: %s"
-              % (" --project %s" % shlex.quote(str(project)) if project else "", ", ".join(silent))] if silent else []
-    lines += ["  drawer entry %s points at a record nobody has" % entry for entry in dangling]
-    lines += ["  %s (%s) %s" % (s["id"], s["layer"], s["stop_line"]) for s in stops]
-    return Answer({"layers": counts, "owed": shown, "broken": broken, "no_function": silent, "dangling": dangling,
-                   "stops_at_footprint": [{key: s[key] for key in ("id", "layer", "stops_why")} for s in stops]}, lines,
-                  truncated=truncated, problems=[_problem(b["id"], "broken: " + "; ".join(b["problems"])) for b in broken]
-                  + [_problem(entry, "points at a record nobody has") for entry in dangling])
 
 
 def _op_needs(args, project):

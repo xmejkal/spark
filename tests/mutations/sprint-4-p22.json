@@ -12,10 +12,10 @@
   "replace": "    if False:\n        print(loader.LIBRARY_NOTE, file=sys.stderr)"
  },
  {
-  "file": "scripts/boards.py",
+  "file": "scripts/spark/design/list_boards.py",
   "name": "--list from nowhere refuses again",
-  "find": "                   else project_root() if args.resolve else project_or_library())",
-  "replace": "                   else project_root())"
+  "find": "project = project.resolve() if project else board_records.project_or_library()",
+  "replace": "project = project.resolve() if project else board_records.project_root()"
  },
  {
   "file": "commands/build.md",

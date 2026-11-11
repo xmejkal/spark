@@ -300,7 +300,7 @@ the area map. So removing the eight ends every cycle. Wave 2 removes none of the
 | `parts -> emit_footprint` | `audit` | the `audit` Operation moves to design (N19, wave 6) |
 | `parts -> tools` | the handlers that find a tool | `tools` becomes `ToolFinder` in records (wave 6) |
 | `boards -> parts` | `footprint_stop` (`STOPS_AT_FOOTPRINT`), `validate` (`document_problems`, `SELECTOR_SAFE`, the rail rule) | P411 [#537](https://github.com/xmejkal/spark/issues/537) removes the constant. `RecordKind.validate` (P391's stage 2, in the records move) takes the shape rules |
-| `boards -> emit_footprint` | `footprint_stop` | `footprint_stop` moves to design with the `board-list` Operation (N19) |
+| `boards -> emit_footprint` | `footprint_stop` | `footprint_stop` moves to design with the `list-boards` Operation (N19, spelled by rule 4 of the names page in P707) |
 
 Two top-level edges are upward in the area map and go earlier. `matching -> drawer` (for `clean`, `TEXT_MAX`,
 `TAGS_MAX`) goes in OC8, and `matching` keeps its `parts` import (`function_of`, `aliases`) until wave 6.

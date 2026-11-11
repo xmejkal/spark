@@ -57,7 +57,10 @@ from spark.sourcing.part_handlers import (  # noqa: E402, F401
     _op_catalog, _op_drawer, _op_fetch, _op_keep, _op_kept, _op_list, _op_promote, _op_read, _op_show, _op_signals,
     _op_skeleton, _op_sources, _op_step, _op_unverified, _op_validate)
 from spark.design.goal_handlers import (  # noqa: E402, F401
-    _op_audit, _op_match, _op_need, _op_needs, _op_offer, _op_requirements, _op_tally)
+    _op_match, _op_need, _op_needs, _op_offer, _op_requirements, _op_tally)
+from spark.design.audit_records import AuditRecords  # noqa: E402
+from spark.core.cli import HelpText, run_cli  # noqa: E402
+from spark.core.outside import build_bare_outside_world  # noqa: E402
 
 
 #: Every operation parts.py offers — the ONE table the argument parser and `--describe` are built from, so what an
@@ -342,8 +345,30 @@ def _say(op, answer, as_json):
     return EXIT_FOR[said["status"]]
 
 
+#: The Operations of parts.py that run on the core, by the flag that picks each (P707): the rest come with P726.
+ON_THE_CORE = {"--audit": AuditRecords}
+
+
+def on_the_core(argv):
+    """The exit code of the Operation `argv` asks for on the core, picked by its flag or a prefix of it longer than `--`
+    (argparse's abbreviations take `--aud`, so this does; `--audit` is the one flag that starts with `--a`), run through
+    `run_cli` with parts.py's `tool`; None when `argv` asks for none, and the parser's own handlers answer (P707)."""
+    operation = next((operation for flag, operation in ON_THE_CORE.items()
+                      if any(len(item) > len("--") and flag.startswith(item) for item in argv)), None)
+    return None if operation is None else run_cli(HelpText("parts.py", "What a part needs, and what is known about it.", "", tool="parts"),
+                                                  operation(), argv, outside_builder=build_bare_outside_world)
+
+
+def _part_problem(args, op, broken):
+    """A PartError's Answer: one problem on the operation's value (a list joined, a string, else no subject)."""
+    value = getattr(args, op.replace("-", "_"))
+    return Answer(problems=[_problem(" ".join(value) if isinstance(value, list) else (value if isinstance(value, str) else None), str(broken))])
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
+    if (code := on_the_core(argv)) is not None:
+        return code
     asked = next((name for name, *_ in OPERATIONS if "--" + name in argv), None)
     try:
         args = _parser().parse_args(argv)
@@ -359,9 +384,7 @@ def main(argv=None):
     except (OSError, json.JSONDecodeError) as unreadable:
         answer = Answer(unchecked=[_cannot("--%s: %s" % (op, unreadable))])
     except PartError as broken:
-        value = getattr(args, op.replace("-", "_"))
-        answer = Answer(problems=[_problem(" ".join(value) if isinstance(value, list) else
-                                           (value if isinstance(value, str) else None), str(broken))])
+        answer = _part_problem(args, op, broken)
     except CodedMessageError as broken:  # a store's refusal, an unreadable input: could-not-run, never a traceback
         answer = Answer(unchecked=[_cannot(str(broken))])
     return _say(op, answer, args.json)

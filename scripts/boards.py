@@ -4,7 +4,7 @@ Which board this project is built around — resolved in one place, and checked 
 
     python3 scripts/boards.py --path        the active board's definition file
     python3 scripts/boards.py --id          the active board's id
-    python3 scripts/boards.py --list        every board available to switch to
+    python3 scripts/boards.py --list        every board available to switch to (--json: one envelope, op list-boards)
     python3 scripts/boards.py --paths       their file paths, for tools that take a list
     python3 scripts/boards.py --get chip    one field, by dotted path
     python3 scripts/boards.py --validate    check every board file against the contract
@@ -12,7 +12,8 @@ Which board this project is built around — resolved in one place, and checked 
                                             also require what the PCB needs, not just the firmware
 
 The command `/spark:init`, `/spark:build` and the review skill call. The library is `spark/records/board_records.py`
-(P718), and `--list` says each board that stops at the footprint by `footprint_emitter.footprint_stop`, read lazily.
+(P718). `--list` is design's `list-boards` Operation on `run_cli` (P707), imported only when asked, because it loads the
+parts library and the fabrication data, which `--id`, `--path` and `--get` do not need.
 """
 
 import sys
@@ -24,13 +25,6 @@ from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: 
 from spark.records import board_records  # noqa: E402
 from spark.records.board_records import (BoardError, _read_json, active_id, available, definition_path,  # noqa: E402
                                          get, project_or_library, project_root, resolve, validate)
-
-
-def _footprint_stop(board_id: str, project: Path) -> str:
-    """`footprint_emitter.footprint_stop`, imported here as before the move: only `--list` needs the design area, which
-    loads the parts library and the fabrication data, so `--id`, `--path` and `--get` do not."""
-    from spark.design import footprint_emitter
-    return footprint_emitter.footprint_stop(board_id, project)
 
 
 def _validate_all(project: Path, for_fab: bool) -> int:
@@ -57,15 +51,31 @@ def _validate_all(project: Path, for_fab: bool) -> int:
     return EXIT_INVALID if failed else EXIT_OK
 
 
-def main(argv=None) -> int:
+#: The flag that picks the Operation on the core. argparse takes a prefix of it too (`--li`), so the pick does (P707).
+LIST_FLAG = "--list"
+EPILOG = """--list marks the active board with * and says which board stops the chain at the footprint stage (P121): its
+file lacks what the footprint is drawn from, and it is still a choice for pin-map work. --json prints one envelope
+(docs/guide/agents/json.md): data.boards rows with id, layer (library or project), active and stops_why (the sentence that
+names the missing fields, or null)."""
+
+
+def main(argv=None, outside=None) -> int:
+    """The exit code. `outside` is the OutsideWorld a test gives `--list` (a run builds the bare one)."""
     import argparse
 
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if any(len(item) > len("--") and LIST_FLAG.startswith(item) for item in argv):
+        from spark.core.cli import HelpText, run_cli
+        from spark.core.outside import build_bare_outside_world
+        from spark.design.list_boards import ListBoards
+        return run_cli(HelpText("boards.py", "Every board available to switch to.", EPILOG, tool="boards"), ListBoards(), argv,
+                       outside_builder=build_bare_outside_world, outside=outside)
     parser = argparse.ArgumentParser(
         prog="boards.py", description="Resolve and check the project's board definitions.")
     what = parser.add_mutually_exclusive_group(required=True)
     what.add_argument("--path", action="store_true", help="the active board's definition file")
     what.add_argument("--id", action="store_true", help="the active board's id")
-    what.add_argument("--list", action="store_true", help="every board available to switch to")
+    what.add_argument(LIST_FLAG, action="store_true", help="every board available to switch to (--json: one envelope)")
     what.add_argument("--paths", action="store_true",
                       help="every board definition file, for tools that take a list")
     what.add_argument("--validate", action="store_true", help="check every board file")
@@ -94,16 +104,6 @@ def main(argv=None) -> int:
             print(" ".join(str(definition_path(project, b)) for b in available(project)))
         elif args.get:
             print(get(project, args.get))
-        elif args.list:
-            try:
-                current = active_id(project)
-            except BoardError:
-                current = None          # nothing chosen — the library, or a project before init
-            for board_id in available(project):
-                where = "library" if definition_path(project, board_id).parent == board_records.LIBRARY \
-                    else "project"
-                stop = _footprint_stop(board_id, project)
-                print(f"  {'*' if board_id == current else ' '} {board_id} ({where}){' ' + stop if stop else ''}")
         else:
             return _validate_all(project, for_fab=args.for_fab)
     except BoardError as broken:

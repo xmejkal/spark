@@ -411,8 +411,9 @@ class TheDesignAreaTest(unittest.TestCase):
     `scripts/` keeps the three CLIs."""
     DESIGN = ROOT / "scripts" / "spark" / "design"
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
-    MODULES = ["board_components", "board_emitter", "board_sections", "copper", "design_codes", "fab", "footprint_emitter", "goal_handlers",
-               "loader", "need_requirements", "needs", "netlist", "pin_assigner", "power_rails", "restricted_pins"]
+    MODULES = ["audit_records", "board_components", "board_emitter", "board_sections", "copper", "design_codes", "design_operations", "fab",
+               "footprint_emitter", "goal_handlers", "list_boards", "loader", "need_requirements", "needs", "netlist", "pin_assigner",
+               "power_rails", "restricted_pins"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print. A library function back in a CLI, under
     #: any name, fails the check.
     CLIS = {"assign_pins.py": ["main"], "emit_board.py": ["main"], "emit_footprint.py": ["_report", "main"]}
@@ -437,6 +438,13 @@ class TheDesignAreaTest(unittest.TestCase):
 
     def test_each_design_module_imports_alone(self):
         each_module_imports_alone(self, "design")
+
+    def test_the_operations_table_maps_each_op_to_its_operation_class(self):
+        # P707 (N19): the table is a module, because the area's __init__ imports nothing; a frontend reads it as bench.OPERATIONS
+        code = ("from spark.core.operation import Operation; from spark.design import design_operations as d; "
+                "print(sorted(d.OPERATIONS)); print([op for op, cls in d.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['audit', 'list-boards']", "[]"], run.stderr)
 # --- end MVP ---
 
 
@@ -490,9 +498,10 @@ class TheRecordsAreaTest(unittest.TestCase):
     #: The modules of the area so far, by the names of its page (`areas/records.md`).
     MODULES = ["board_pads", "board_records", "board_rules", "brief", "deploy_record_store", "fact_needs", "missing_facts", "onboard_parts",
                "provenance", "record_kind", "records_codes", "store", "tool_finder", "versions"]
-    #: Each CLI's own top-level functions: `main`, what only it uses to print (`_validate_all` and `print_status`) and
-    #: the lazy read of design's `footprint_stop`. A library function back in a CLI, under any name, fails the check.
-    CLIS = {"boards.py": ["_footprint_stop", "_validate_all", "main"], "tools.py": ["main", "print_status"]}
+    #: Each CLI's own top-level functions: `main` and what only it uses to print (`_validate_all` and `print_status`).
+    #: `boards.py --list` runs design's `ListBoards`, imported inside `main` (P707). A library function back in a CLI,
+    #: under any name, fails the check.
+    CLIS = {"boards.py": ["_validate_all", "main"], "tools.py": ["main", "print_status"]}
 
     def test_scripts_holds_the_cli_and_no_records_library_module(self):
         modules = sorted(path.stem for path in self.RECORDS.glob("*.py") if path.name != "__init__.py")
@@ -551,7 +560,7 @@ class TheSourcingAreaTest(unittest.TestCase):
     #: `parts.py`'s own top-level functions: its parser and printers, `_op_describe`, `_op_needs_drop` on the core, and
     #: the handlers that read a JSON payload, because reading stdin is the interface's job (P721 row 6).
     PARTS_CLI = ["_not_negative", "_op_describe", "_op_drawer_import", "_op_drawer_set", "_op_fact_set", "_op_function_set",
-                 "_op_needs_drop", "_op_needs_set", "_op_pick", "_parser", "_read_json_input", "_say", "_text_of", "main"]
+                 "_op_needs_drop", "_op_needs_set", "_op_pick", "_parser", "_part_problem", "_read_json_input", "_say", "_text_of", "main", "on_the_core"]
 
     def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):
         modules = sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py")

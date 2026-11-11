@@ -47,12 +47,15 @@ def output_schema():
             "properties": {"envelope": {"const": 1}, "status": {"enum": [outcomes.OK, outcomes.PROBLEMS, outcomes.COULD_NOT_RUN]}}}
 
 
-class OperationResult(namedtuple("OperationResult", "data findings next lines diagnostics notes", defaults=(None, (), (), (), (), None))):
+class OperationResult(namedtuple("OperationResult", "data findings next lines diagnostics notes truncated assumptions",
+                                 defaults=(None, (), (), (), (), None, None, None))):
     """
     Result: what `Operation.run` returns. `data` is the answer as JSON values, `findings` the Findings, `next` the
     NextSteps, `lines` the report a person reads (stdout in a CLI), `diagnostics` the lines for the person beside the
     answer, such as the board doctor's or a crash's traceback (stderr in a CLI, a log in a server), and `notes` what
-    was said and never failing, or None.
+    was said and never failing, or None. `truncated` is `outcomes.page`'s note when a listing was cut, else None, and
+    `assumptions` what the answer rests on that nobody has checked, or None (P707: both keys of `outcomes.envelope`, for
+    `audit` and the Operations P726 moves onto the core).
     """
 
     def status(self):
@@ -63,7 +66,8 @@ class OperationResult(namedtuple("OperationResult", "data findings next lines di
         """The `outcomes.envelope` of this result, each item made by `envelope_item`."""
         problems = [envelope_item(found) for found in self._of(outcomes.PROBLEMS)]
         unchecked = [envelope_item(found) for found in self._of(outcomes.COULD_NOT_RUN)]
-        return outcomes.envelope(tool, op, self.data, problems, unchecked, [outcomes.add_env(outcomes.step(s.op, s.argv, s.why, s.effects, s.needs_yes, s.needs_person), s.env) for s in self.next], notes=self.notes)
+        return outcomes.envelope(tool, op, self.data, problems, unchecked, [outcomes.add_env(outcomes.step(s.op, s.argv, s.why, s.effects, s.needs_yes, s.needs_person), s.env) for s in self.next],
+                                 self.truncated, notes=self.notes, assumptions=self.assumptions)
 
     def _of(self, severity):
         return [found for found in self.findings if found.severity == severity]

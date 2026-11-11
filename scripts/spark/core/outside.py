@@ -82,4 +82,10 @@ def build_outside_world(effects, reporter, **slots):
                         SystemClock(), make_consent if ASKS in effects and make_consent else refuse_consent,
                         replies=replies.reply if ASKS in effects and replies else refuse_replies,
                         fetch=fetch if FETCHES in effects and fetch else refuse_fetch)
+
+
+def build_bare_outside_world(project, effects, reporter, values=None):
+    """The OutsideWorld of an Operation that runs no program, finds no tool and asks nothing (READS, WRITES): `run_cli`'s
+    builder for an area with no Adapter, design first (P707). `project` and `values` pick nothing here."""
+    return build_outside_world(effects, reporter)
 # --- end MVP ---

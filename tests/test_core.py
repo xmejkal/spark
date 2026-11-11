@@ -15,12 +15,12 @@ from spark.records import tool_finder  # noqa: E402
 from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
 from spark.core.cli import DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
-from spark.core.renderers import FlatJsonLine, JsonEnvelope  # noqa: E402
+from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
 from spark.core.errors import SparkError  # noqa: E402
 from spark.core.events import BEGIN, LINE, Event, TerminalReporter  # noqa: E402
 from spark.core.operation import ASKS, COMMON_ARGUMENTS, JSON_DEST, READS, RUNS, Argument, Operation  # noqa: E402
 from spark.core.privacy import Privacy  # noqa: E402
-from spark.core.outside import OutsideWorld, ProgramRunner, build_outside_world, refuse_replies  # noqa: E402
+from spark.core.outside import OutsideWorld, ProgramRunner, build_bare_outside_world, build_outside_world, refuse_replies  # noqa: E402
 from spark.core.replies import AGENT, VALUE, GivenReplyStrategy, Question, Reply  # noqa: E402
 from spark.core.result import Finding, NextStep, OperationResult, envelope_item, output_schema  # noqa: E402
 
@@ -678,6 +678,54 @@ class FakeReporterTest(ReporterContract, unittest.TestCase):
         reporter = FakeReporter()
         reporter.report(Event.begin("toy"))
         self.assertEqual(reporter.events, [Event("begin", "toy", None)])
+
+
+class AMultiOperationCliTest(unittest.TestCase):
+    """P707: what a CLI with several Operations (parts.py) needs of the core: its own `tool` in the envelope, the `truncated`
+    and `assumptions` keys, a Renderer that keeps every key on a refusal, and a builder with `run_cli`'s signature."""
+
+    class Full(Toy):
+        json_renderer = FullEnvelope
+
+    def run_cli(self, text, operation, *argv):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = run_cli(text, operation, list(argv), outside_builder=None, outside=FakeOutsideWorld(find_tool={"flasher": TOOL}.get))
+        return code, json.loads(out.getvalue())
+
+    def test_the_tool_is_the_help_text_s_when_given_and_the_operation_s_name_without(self):
+        _, said = self.run_cli(TEXT, Toy(), "--what", "ok", "--json")
+        self.assertEqual((said["tool"], said["op"]), ("toy", "toy"))
+        _, said = self.run_cli(TEXT._replace(tool="toys"), Toy(), "--what", "ok", "--json")
+        self.assertEqual((said["tool"], said["op"]), ("toys", "toy"))
+        _, said = self.run_cli(TEXT._replace(tool="toys"), Toy(), "--left", "--right", "--json")
+        self.assertEqual((said["tool"], said["unchecked"][0]["code"]), ("toys", "bad_argument"))
+
+    def test_truncated_and_assumptions_reach_the_envelope_and_assumptions_is_a_key_only_when_given(self):
+        cut = {"shown": 1, "total": 2, "next": outcomes.step("toy", ["--from", "1"], "the rest")}
+        said = OperationResult({"a": 1}, truncated=cut, assumptions=[{"fact": "x"}]).to_envelope("toys", "toy")
+        self.assertEqual((said["truncated"], said["assumptions"]), (cut, [{"fact": "x"}]))
+        said = OperationResult({"a": 1}).to_envelope("toys", "toy")
+        self.assertEqual((said["truncated"], "assumptions" in said, "notes" in said), (None, False, False))
+
+    def test_the_full_envelope_has_every_key_on_an_answer_a_refusal_a_crash_and_a_bad_argument(self):
+        keys = ["assumptions", "data", "envelope", "next", "notes", "op", "problems", "status", "tool", "truncated", "unchecked"]
+        for argv in (("--what", "ok"), ("--what", "error"), ("--what", "crash"), ("--left", "--right")):
+            with self.subTest(argv=argv):
+                _, said = self.run_cli(TEXT, self.Full(), *argv, "--json")
+                self.assertEqual(sorted(said), keys)
+                self.assertEqual((said["notes"], said["assumptions"]), ([], []))
+        _, said = self.run_cli(TEXT, Toy(), "--what", "error", "--json")
+        self.assertNotIn("notes", said, "JsonEnvelope keeps today's keys")
+
+    def test_the_bare_builder_takes_run_cli_s_four_arguments_and_refuses_a_program(self):
+        outside = build_bare_outside_world(Path("."), (READS,), FakeReporter(), {"json": False})
+        with self.assertRaises(SparkError) as refused:
+            outside.run(["true"])
+        self.assertEqual(refused.exception.code, "undeclared_effect")
+        self.assertEqual(build_bare_outside_world(None, (RUNS,), FakeReporter()).run.__name__, "run")
 
 
 if __name__ == "__main__":

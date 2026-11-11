@@ -18,22 +18,22 @@ the board file that wires them. It writes facts only, the pin map and the board 
 | Operation | CLI | Effects |
 |---|---|---|
 | `need`, `needs`, `needs-set`, `match`, `offer`, `pick`, `requirements` | `parts.py` with that flag | reads, writes for `needs-set`, `pick`, `requirements` |
-| `audit` | `parts.py --audit` | reads |
-| `board-list` | `boards.py --list` | reads |
+| `audit` | `parts.py --audit`, on `run_cli` since P707 (`audit_records.AuditRecords`) | reads |
+| `list-boards` | `boards.py --list`, on `run_cli` since P707 (`list_boards.ListBoards`) | reads |
 | `assign-pins` | `assign_pins.py requirements.json` | reads, writes `pins.py` with `--out` |
 | `emit-board` | `emit_board.py` | reads, writes `board.tsx` |
 | `emit-footprint` | `emit_footprint.py` | reads, writes a footprint file |
 
-`audit` and `board-list` live here because both ask whether a board stops the chain at the footprint
-(`footprint_gaps`, `footprint_stop`). That is a design fact, so the Operations move up to it. A callback passed down
-into records and sourcing would be a parameter with one value.
+`audit` and `list-boards` live here because both ask whether a board stops the chain at the footprint
+(`footprint_gaps`, `footprint_stop_line`). That is a design fact, so the Operations moved up to it (P707). A callback passed
+down into records and sourcing would be a parameter with one value.
 
 ### Its components
 
 | Module | Holds |
 |---|---|
 | `design/loader.py` | `load` and the `Design` Value, moved from `design.py` in P702 (the name avoids `design/design.py`) |
-| `design/goal_handlers.py` | `audit` and the handlers of the goal Operations, moved out of `parts.py` (W6-S3b, P721), and `tally`'s handler of the cost group, because it reads `needs`, which sourcing may not import. `--needs-set` and `--pick` read a JSON payload, so they stay in the CLI |
+| `design/goal_handlers.py` | the handlers of the goal Operations, moved out of `parts.py` (W6-S3b, P721), and `tally`'s handler of the cost group, because it reads `needs`, which sourcing may not import. `--needs-set` and `--pick` read a JSON payload, so they stay in the CLI |
 | `design/needs.py` | a goal's needs, matched against the store, the holds and the pick, moved from `scripts/needs.py` in P704 with the extractions P700 left. Its reason guard `kept_reason` went to `core/text_guards.py` |
 | `design/need_requirements.py` | the requirements file from the picks, `unserved_keys` and `parts_left_listed` (P708) |
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is in P702 |
@@ -43,15 +43,18 @@ into records and sourcing would be a parameter with one value.
 | `design/board_sections.py` | `emit` and every `*_lines` function: each section of the tscircuit file (P708) |
 | `design/power_rails.py` | the rails and the power nets: their names, who drives them and what loads them (P708) |
 | `design/board_components.py` | the parts: their names, their gaps and their place on the first-draft layout (P708) |
+| `design/audit_records.py` | `AuditRecords` (`audit`) and `walk`, the audit of every record and drawer link, moved from `goal_handlers` (P707) |
+| `design/list_boards.py` | `ListBoards` (`list-boards`): the boards a project can switch to, each with its layer, the active mark and `stops_why`; it was `boards.py --list`'s branch (P707) |
+| `design/design_operations.py` | `OPERATIONS`, the two Operations by their printed `op` (P707). A module, because the `__init__` imports nothing |
 | `design/footprint_emitter.py` | the footprint writer, with `why_no_footprint`, moved from `emit_footprint.py` in P703. The CLI `emit_footprint.py` stays in `scripts/` with `main` and `_report`, which prints. `footprint_stop` came from `boards.py` in W6-R3a (P718) |
 | `design/fab.py`, `design/copper.py` | the fab house's numbers and the copper rules, moved as is in P702 |
 | `design/design_codes.py` | the leaf of codes (P700): one per refusal of `load`, `assign_pins`, `emit_board` and `emit_footprint`, moved as it is in P703. A `DesignError`, an `ImpossibleError` and a `RefusedInputError` carry a `code`, and `why_no_footprint`, `why_wrong_kind`, `why_header_disagrees`, `board_file` and `board_to_draw` return a `Refusal`. No CLI writes a code yet |
 | not here: `part_shape.py` | it went to `breadboard/part_shape.py` in P703 (P698, the U1 edge) |
-| `design/__init__.py` | the index docstring alone since P702: it imports nothing. The area's `OPERATIONS` come with the N19 card, one module per Operation, named after it |
+| `design/__init__.py` | the index docstring alone since P702: it imports nothing. The area's `OPERATIONS` sit in `design_operations.py` (P707) |
 
 ### Its seams
 
-Design runs no outside program, so it has no Adapter. Its only effect is `OutsideWorld.write`. It reads part and
+Design runs no outside program, so it has no Adapter. Its only effect is `OutsideWorld.write`; its two Operations on `run_cli` take the core's `build_bare_outside_world`. It reads part and
 board records through records, and offers through sourcing's `Matcher`.
 
 Design imports sourcing, records and core.

@@ -19,8 +19,10 @@ from spark.core.result import Finding, OperationResult
 from spark.core.text_guards import guard_lines, printable
 
 # --- MVP ---
-#: Value: what a CLI says of itself in `--help`: its file name, one sentence, and the text after the arguments.
-HelpText = namedtuple("HelpText", "prog description epilog")
+#: Value: what a CLI says of itself in `--help`: its file name, one sentence, and the text after the arguments. `tool` is
+#: the envelope's `tool`, the script that answered (P707): a CLI with several Operations gives its own name (`parts`), and
+#: None means the Operation's name, as the one-Operation CLIs print it.
+HelpText = namedtuple("HelpText", "prog description epilog tool", defaults=(None,))
 #: The sentence of a crash's Finding holds the class only, because the message can carry a home path.
 CRASH_MESSAGE = "%s: the traceback is on stderr"
 CRASH_FIX = "report this to the spark maintainers with the stderr traceback"
@@ -111,7 +113,8 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     """
     The exit code of `operation` run as a CLI. It parses `argv` (sys.argv without the script when None) from the
     Operation's arguments and answers a bad flag with the Renderer's `render_bad_argument` under --json (an envelope with
-    `bad_argument`, or None for a flat Operation: then the usage), the usage on stderr without (P433). It builds the
+    `bad_argument`, or None for a flat Operation: then the usage), the usage on stderr without (P433). The envelope's `tool`
+    is `text.tool`, or the Operation's name when the CLI gave none (P707). It builds the
     outside with `outside_builder(project, effects, reporter, values)`, the effects those of `operation.effects_of(values)`
     and `values` the parsed arguments plus `json`, from which a frontend picks what the Operation never builds itself (the
     ReplyStrategy of `--replies`, and no terminal under --json, P737), unless a test gave `outside`, the reporter `TerminalReporter.for_json(as_json)`
@@ -121,13 +124,13 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     the core that prints (rule X2). The Operation's `privacy_for(project)` gives the run's Privacy (P677), which masks
     the result and, through a MaskingReporter, each Event; None passes everything through.
     """
-    parser, renderer = parser_for(text, operation), operation.json_renderer
+    parser, renderer, tool = parser_for(text, operation), operation.json_renderer, text.tool or operation.name
     argv = sys.argv[1:] if argv is None else list(argv)
     try:
         values = vars(parser.parse_args(argv))
     except outcomes.BadArgumentError as bad:
         refused = OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.BAD_ARGUMENT, str(bad), BAD_ARGUMENT_FIX % text.prog)])
-        line = renderer.render_bad_argument(refused, operation.name, operation.name) if JSON_FLAG in argv else None
+        line = renderer.render_bad_argument(refused, tool, operation.name) if JSON_FLAG in argv else None
         if line is None:
             parser.exit_with_usage(guard_lines(str(bad)))
         print(line)
@@ -139,7 +142,7 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
         reporter = MaskingReporter(reporter, privacy)
     result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})),
                            DEFAULT_RUN._replace(privacy=privacy))
-    said = renderer.render(result, operation.name, operation.name) if as_json else TextReport.render(result)
+    said = renderer.render(result, tool, operation.name) if as_json else TextReport.render(result)
     if said:
         print(said)
     if result.diagnostics:

@@ -100,6 +100,8 @@ MAY_READ = {
     "wiring_steps.THE_BOARD": "the name a component has, used to find the board among the parts: vocabulary, not a value",
     "part_pictures.FALLBACK": "the name of the fallback pictogram, compared with itself: sameness, not a value",
     "tool_finder.DOWNLOADS": STRUCTURE + " — the test points it at a scratch folder and looks for the download there",
+    "parts.OPERATIONS": "the --describe row of audit is compared with AuditRecords' own help and effects: two sources that must agree, "
+                        "neither the expectation (P707, until P726 deletes the row)",
 }
 
 
