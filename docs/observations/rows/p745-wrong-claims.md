@@ -1,7 +1,7 @@
 # P745 kept records and docs say what their sources say: rows
 
 Card: [P745 #1021](https://github.com/xmejkal/spark/issues/1021), chore, XS, under P735, claims C11, C14, C15, C16. Plan
-`~/.claude/plans/p745-wrong-claims.md`. Rows 1 to 6 are the plan refuter (Fable), 7 to 11 the implementer, then the PR refuter (Fable).
+`~/.claude/plans/p745-wrong-claims.md`. Rows 1 to 6 are the plan refuter (Fable), 7 to 11 the implementer, 12 to 16 the PR refuter (Fable).
 2026-11-11.
 
 | # | claim | source | status | evidence / where it went |
@@ -17,3 +17,8 @@ Card: [P745 #1021](https://github.com/xmejkal/spark/issues/1021), chore, XS, und
 | 9 | the walk record's upgrades (cites on the schematic facts, legs, the DC-only warning, document versions, mounting_holes re-sourced) live in a scratch project's copy, not in the shelf | implementer | raised | the scratch project is listed in projects.json as `project` (p743 row); a card decides whether the shelf takes them |
 | 10 | every design that uses led-red-5mm now lists `led-red-5mm.pin_order` under "still unverified about these parts" | implementer | verified | the rule's consequence, intended: the line a person reads says to confirm the longer lead and the flat on the part |
 | 11 | the irrigation project's own copy keeps `VALVE_CTRL` and its wording | implementer | verified | `~/Development/irrigation/parts/dfr0457-mosfet-power-controller.json` untouched, 1 hit |
+| 12 | row 4's "finds nothing" was false: the gate grep still hit "sleep budget" on line 262, generic by then | PR refuter F3 | acted | "costs the host's sleep current nothing measurable"; the grep prints 0. "the coil's turn-off spike" in the flyback-diode warning (line 287) stays: it names an inductive load as a kind, not the project |
+| 13 | host_requirements line 288 "pulled to ground through the coil" assumed an inductive load in a sentence now said for any load | PR refuter F4 | acted | "through the load" |
+| 14 | part-data.md:51 held a full stop inside a parenthesis; the plan cited walk diary dfr1117:20 for the KiCad zip, the line is :15 | PR refuter F5 | acted | one parenthesis with "else"; the plan cites :15 |
+| 15 | the new note, the rule line, the goldens, the irrigation copy and `based_on.digest` hold; test_parts, test_golden_records, test_golden_design, test_docs and test_architecture: Ran 525 tests, OK; `--validate --project irrigation` exits 0 | PR refuter F1, F2, F6, F7 | verified | nothing to change |
+| 16 | design.md:201 makes a reply with `cites` to a datasheet row verified: true, and the LED proof keeps `cites` (Package Dimensions, page 1) with false: consistent only if a drawing is not a row, which no line said | PR refuter F8 | acted | the datasheet-reader line says "a drawing is not a cited datasheet row" |
