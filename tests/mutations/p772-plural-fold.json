@@ -1,0 +1,6 @@
+[
+  {"file": "scripts/spark/sourcing/matching.py", "name": "fold: -ies drops only the s (batteries stays batterie)", "find": "        return word[:-3] + \"y\"", "replace": "        return word[:-1]"},
+  {"file": "scripts/spark/sourcing/matching.py", "name": "fold: -es after a hissing sound drops only the s (switches stays switche)", "find": "return word[:-2] if word.endswith(HISSING_ES) else word[:-1]", "replace": "return word[:-1]"},
+  {"file": "scripts/spark/sourcing/matching.py", "name": "fold: -ies becomes y in a short word too (dies folds to dy)", "find": "if len(word) > 4 and word.endswith(\"ies\"):", "replace": "if word.endswith(\"ies\"):"},
+  {"file": "scripts/spark/sourcing/matching.py", "name": "fold: -shes keeps its e (brushes stays brushe)", "find": "HISSING_ES = (\"ches\", \"shes\", \"xes\", \"sses\")", "replace": "HISSING_ES = (\"ches\", \"xes\", \"sses\")"}
+]
