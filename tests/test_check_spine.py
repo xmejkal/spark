@@ -1298,8 +1298,8 @@ class AnSpiOrI2cPartBuildsOnEveryShippedBoardTest(unittest.TestCase):
     """
     P512: the emitter traced `.Mcu > .MOSI` where the pad is MO (FireBeetle 2) and `.Mcu > .SDA` where it is D4 (XIAO
     C6), so these builds ended with 2 to 4 errors. The display's record is a fixture copied into a temp project's
-    parts/; the store is never read. The build step is asserted, not the whole chain: the XIAO display run still
-    stops at the simulation (the display has no Wokwi part).
+    parts/; the store is never read. The build step is asserted, not the whole chain: the XIAO display run's simulation
+    stage is skipped (the display has no Wokwi part, P778), exit 0.
     """
 
     def build_stage(self, board, part, signals=()):
@@ -2587,3 +2587,30 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AnAllSkippedSimulationKeepsTheBuildTest(unittest.TestCase):
+    """P778 PR round: a full build whose simulation stage is skipped (every part's record skips the simulation) built its
+    board, so the kept dist/ stays, the page is drawn and the closing line says what happened; only a board-only build
+    (its build stage skipped) drops an older dist/."""
+
+    FULL = [Stage("build", check_spine.OK, "3 trace(s)"), Stage("simulation", check_spine.SKIPPED, "every part is skipped")]
+    ALONE = [Stage("build", check_spine.SKIPPED, "board only: nothing to wire"), Stage("simulation", check_spine.OK, "4 wire(s)")]
+
+    def test_the_kept_dist_stays_and_nothing_says_no_board_was_built(self):
+        workdir = Path(tempfile.mkdtemp())
+        (workdir / "dist").mkdir()
+        self.assertEqual(kept_files.drop_an_older_build(workdir, self.FULL), [])
+        self.assertTrue((workdir / "dist").is_dir())
+        self.assertIsNone(kept_files.why_not_built(self.FULL, "board only: nothing to draw"))
+        self.assertEqual(kept_files.why_not_built(self.ALONE, "board only: nothing to draw"), "board only: nothing to draw")
+        self.assertEqual(kept_files.drop_an_older_build(workdir, self.ALONE)[0]["did"], "removed")
+
+    def test_the_closing_line_says_every_part_is_skipped_and_the_board_only_line_stays(self):
+        self.assertEqual(check_spine.render(self.FULL, check_spine.EXIT_OK).splitlines()[-1],
+                         "  the chain runs end to end; every part is skipped from the simulation, so the diagram holds the board alone")
+        self.assertEqual(check_spine.render(self.ALONE, check_spine.EXIT_OK).splitlines()[-1],
+                         "  the chain runs end to end for the board alone: nothing to wire, so no board was built")
+        self.assertEqual(check_spine.render([Stage("build", check_spine.OK, "x"), Stage("simulation", check_spine.OK, "y")], check_spine.EXIT_OK).splitlines()[-1],
+                         "  the chain runs end to end")
+

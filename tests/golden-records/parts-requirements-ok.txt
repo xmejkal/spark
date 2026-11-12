@@ -1,4 +1,5 @@
   wrote <project-dir>/requirements.json: board firebeetle2-esp32s3; parts led-red-5mm
+  part led-red-5mm: Wokwi's LED: lights on current; its forward voltage and brightness are not this part's
 --- requirements.json ---
 {
   "board": "firebeetle2-esp32s3",

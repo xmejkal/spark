@@ -50,6 +50,31 @@ def firebeetle(**roles):
     return board
 
 
+class TheLimitsOfABoardAreOneAnswerTest(unittest.TestCase):
+    """P778: `limits_of_board` is what the pick, the build and the look say of the board's own parts, wired or not."""
+
+    def test_the_firebeetle_s_pairs_are_the_board_only_build_s_with_its_wired_gpios(self):
+        board = firebeetle()
+        wired = onboard_parts.say_wired_gpios(OnboardPartReader(board).parts())
+        built = board_records.onboard_limits(board, wired)
+        self.assertEqual([sentence for _, sentence in built], [NOT_CHECKED, WIRED_LED, WIRED_BUTTON])
+        self.assertEqual(onboard_parts.limits_of_board(board, None, wired), built)
+        self.assertEqual(onboard_parts.limits_of_board(board, None, None), built, "None computes the board's own wired GPIOs")
+
+    def test_a_board_that_is_no_stand_in_wires_nothing_and_keeps_its_pairs(self):
+        xiao = board_records.load(ROOT, "xiao-esp32-c6")
+        self.assertEqual(onboard_parts.limits_of_board(xiao, None, None), board_records.onboard_limits(xiao))
+
+    def test_the_roles_form_is_role_limits_with_the_same_wired_gpios(self):
+        board, definitions = firebeetle(), {}
+        said = onboard_parts.limits_of_board(board, [board_records.ONBOARD_BUTTON], None, definitions, "fb")
+        self.assertEqual(said, {board_records.ONBOARD_BUTTON: [("onboard GPIOs", NOT_CHECKED), ("ONBOARD_BUTTON (GPIO47)", WIRED_BUTTON)]})
+        self.assertEqual(list(definitions), ["fb"])
+        # without `wired`, an unkept definition gives the one not-checked pair: the wired sentence is what `wired` adds
+        self.assertEqual(board_records.role_limits(board, [board_records.ONBOARD_BUTTON], definitions, "fb"),
+                         {board_records.ONBOARD_BUTTON: [("onboard GPIOs", NOT_CHECKED)]})
+
+
 class TheReaderPicksTheRowsSparkCanWireTest(unittest.TestCase):
     def test_the_firebeetle_gives_its_led_and_button_with_the_record_s_pin_keys(self):
         self.assertEqual(OnboardPartReader(firebeetle()).parts(), [LED, BUTTON])

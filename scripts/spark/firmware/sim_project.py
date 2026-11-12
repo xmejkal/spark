@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple, Optional
 
-from spark.records import board_records
+from spark.records import onboard_parts
 from spark.design import board_components
 from spark.design import board_sections
 from spark.core import outcomes
@@ -102,17 +102,9 @@ def limits_of(design):
     whatever about the thing that switches 12 V.
 
     A custom chip's `note` counts too: a chip is closer to the part than a stand-in is, and still
-    not the part.
+    not the part. `part_records.limits_of_part` reads each record (P778: the pick and the look read it too).
     """
-    said = []
-    for part in design.parts:
-        wokwi = ((part.get("simulation") or {}).get("wokwi") or {})
-        sentence = wokwi.get("stand_in") or wokwi.get("note")
-        if sentence:
-            said.append((board_components.component_name(part), sentence))
-        skip = (part.get("simulation") or {}).get("skip")
-        if skip:
-            said.append((board_components.component_name(part), "not simulated at all: %s" % skip))
+    said = [limit for part in design.parts for limit in part_records.limits_of_part(part, board_components.component_name(part))]
     # Grouped by the sentence, because three identical soil probes printed three identical
     # paragraphs and a finding that long gets scrolled past — which is how this one was invisible
     # in the first place.
@@ -231,10 +223,10 @@ def write_limits(sim_dir, design, board, wired=None):
     """
     Put the note beside the diagram and hand back what it said, or [] when there is nothing. The design's records and the
     board's own GPIOs both count (P396). A board-only build passes no design, and its wired GPIOs as `wired` (P484,
-    `onboard_parts.say_wired_gpios`). `board` has no default: no test reaches the full build's simulation stage
+    `onboard_parts.say_wired_gpios`); the full build passes {}: it wires none of them (P778; P792 will). `board` has no default: no test reaches the full build's simulation stage
     (`build_service.simulation_detail`), so a call that drops it fails at once.
     """
-    limits = (limits_of(design) if design is not None else []) + board_records.onboard_limits(board, wired)
+    limits = (limits_of(design) if design is not None else []) + onboard_parts.limits_of_board(board, None, wired)
     if limits:
         (Path(sim_dir) / LIMITS_NOTE).write_text(limits_note(limits))
     return limits

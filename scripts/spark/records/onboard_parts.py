@@ -1,7 +1,8 @@
 """
 Library for the board's own LED and button as wired parts of a board-only build's Wokwi diagram (P484, #663): which rows
 of the board record's `pin_roles` spark wires, and the sentence each wired GPIO gives the limits. The build area reads it:
-`board_alone_input` makes the converter's input from these parts.
+`board_alone_input` makes the converter's input from these parts. `limits_of_board` is what a passed run does not test
+of the board's own parts, the one answer the pick, the build and the look give (P778).
 """
 
 from typing import NamedTuple
@@ -85,6 +86,22 @@ GROUND_PREFIX = "GND"
 def say_wired_gpios(parts):
     """{gpio: sentence} for each part `OnboardPartReader.parts` gave, the `wired` of `board_records.onboard_limits`."""
     return {part["gpio"]: ONBOARD_PARTS[part["_instance"]].wired % {"gpio": part["gpio"]} for part in parts}
+
+
+def limits_of_board(board, roles, wired, definitions=None, key=None):
+    """
+    What a passed run does not test of the board's own parts, for the pick, the build and the look alike (P778):
+    `board_records.role_limits`, {role: [(component, sentence)]}, when `roles` is a list, else `board_records.onboard_limits`,
+    the pairs of every role. `wired` is {gpio: sentence} for the GPIOs spark wires in the diagram (`say_wired_gpios`): {} when
+    nothing is wired (the full build, whose diagram holds no stand-in until P792 #1100), None for those `OnboardPartReader`
+    gives this board (the board-only build, and the pick, which says the board-only build's truth). `definitions` and `key`
+    are `role_limits`'s memo. It reads the board's Wokwi definition from the store and nothing else, and never raises.
+    """
+    if wired is None:
+        wired = say_wired_gpios(OnboardPartReader(board).parts())
+    if roles is not None:
+        return board_records.role_limits(board, roles, definitions, key, wired)
+    return board_records.onboard_limits(board, wired)
 
 
 # --- end MVP ---

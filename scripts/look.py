@@ -23,10 +23,12 @@ no MAC, no image or no evidence for the image, there is no token, and the line s
 For an image that a passed run tested, the look also prints what that run did not test (the caveats), and under "what this
 simulation cannot show, so test it on the board:" the limits of the project that sim/WHAT-THIS-CANNOT-SHOW.md holds, read
 from the limits section of every passed log. --json has them as data.limits, a list of {component, sentence}. With
---no-simulation no log is read, so no limits are printed, and an empty list is not a pass: it never means the project has none.
+--no-simulation no log is read: the limits come from the project's records (requirements.json's parts and board, what the pick
+and the build read too), and a requirements file or board that does not load gives a caveat that contains "not checked:". An
+empty list is not a pass: it never means the project has none.
 Under "no scenario named these must lines, so test them on the board:" it lists each must line of .spark/project.json that no passed
-scenario named in a step's own name: key (--json: data.unnamed_must). [] is not a pass: when a log cannot say, a caveat that contains
-"not checked:" says so.
+scenario named in a step's own name: key (--json: data.unnamed_must); with --no-simulation, every must line. [] is not a pass: when a
+log cannot say, a caveat that contains "not checked:" says so.
 
 With two or more boards on USB, --port is needed: the look lists them and reads none. --ignore-older-runs gives a token
 even when a log in sim/runs/ tested another image, as deploy.py --ignore-older-runs flashes it. --no-simulation gives a

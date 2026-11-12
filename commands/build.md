@@ -58,7 +58,10 @@ pin and to ground, through the converter, and merges into your kept `sim/diagram
 ([P484](https://github.com/xmejkal/spark/issues/663)). It wires a part only when the record names it on one header pin, and only
 an LED that a 1 lights and a button that reads 0 when pressed. When only one of them qualifies, only that one is wired. That
 build needs Node, as a full build does. Any other board-only build, such as the XIAO ESP32-C6's (its Wokwi part is the board
-itself), holds the board alone and needs no converter.
+itself), holds the board alone and needs no converter. A full build whose every part's record skips the simulation
+(`simulation.skip`) builds and keeps its board, and its simulation stage is `skipped`, with the records' reasons under what it
+cannot show; the closing line is `the chain runs end to end; every part is skipped from the simulation, so the diagram holds the
+board alone`, exit 0, and the store notes no build (P778).
 
 A scenario presses `onboard_button` and waits for the line the firmware prints, then releases it:
 

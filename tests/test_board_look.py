@@ -724,7 +724,8 @@ class TheLookStatesTheSimulationTest(LookCase):
         self.assertEqual(report.caveats, ["not checked: the project's brief cannot be read"])
 
     @needs_littlefs
-    def test_no_simulation_names_no_unnamed_must_line(self):
+    def test_no_simulation_lists_every_must_line_and_the_records_limits(self):
+        # P778: no run named a line, and the limits are the project's records' (the XIAO's definition is not in this store)
         (self.project / ".spark").mkdir()
         (self.project / ".spark" / "project.json").write_text(json.dumps({"must": ["a"]}))
         self.run_the_scenario()
@@ -734,7 +735,9 @@ class TheLookStatesTheSimulationTest(LookCase):
                 return None
 
         report = self.look(evidence=Ready(self.project))
-        self.assertEqual((report.unnamed_must, report.caveats), ([], ["no simulation tested this image"]))
+        self.assertEqual((report.unnamed_must, report.caveats), (["a"], ["no simulation tested this image"]))
+        self.assertEqual([limit.component for limit in report.limits], ["onboard GPIOs"])
+        self.assertEqual(report.question_caveats(), ["no simulation tested this image", "1 must line was not named by any scenario (see the look)"])
 
     def test_no_limits_print_no_heading(self):
         lines = board_look.report_lines(self.limited(), token=False)
@@ -768,8 +771,10 @@ class TheLookStatesTheSimulationTest(LookCase):
         with mock.patch.object(image_evidence.NoSimulationEvidence, "why_not_ready", return_value=None):
             report = self.look(evidence=image_evidence.NoSimulationEvidence(self.project))
         self.assertEqual((report.simulation, report.caveats), ("none", ["no simulation tested this image"]))
-        self.assertEqual(board_look.report_lines(report, token=False)[-3:-1],
-                         ["  simulation: none", "  no simulation tested this image"])
+        lines = board_look.report_lines(report, token=False)
+        after = lines.index("  simulation: none")  # P778: the records' limits follow the caveat, so the two are no longer last
+        self.assertEqual(lines[after:after + 3], ["  simulation: none", "  no simulation tested this image",
+                                                  "  what this simulation cannot show, so test it on the board:"])
 
     def test_the_last_deploy_is_there_also_when_the_evidence_refuses_the_image(self):
         self.record_a_deploy()

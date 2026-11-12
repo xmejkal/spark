@@ -8,13 +8,14 @@ import shutil
 from pathlib import Path
 
 from spark.build import build_codes
+from spark.build.stages import skipped_the_build
 from spark.breadboard import drawing, sheet, tabbed_page
 from spark.design import loader
 from spark.design import pin_assigner
 from spark.firmware import sim_project
 from spark.records import store
 
-from spark.core.outcomes import OK, SKIPPED
+from spark.core.outcomes import OK
 from spark.core.result import envelope_item
 
 #: Where --keep puts the pin map, the path every document gives `--emit-pins` (P196).
@@ -107,7 +108,7 @@ def drop_an_older_build(destination, stages):
     is removed and said, as the breadboard sheet is. Returns the kept entries, none when there is nothing to remove.
     """
     old = Path(destination) / "dist"
-    if not any(stage.status == SKIPPED for stage in stages) or not old.is_dir():
+    if not skipped_the_build(stages) or not old.is_dir():
         return []
     shutil.rmtree(old)
     why = "board only: no board was built, and it described an earlier build"
@@ -164,7 +165,7 @@ def why_not_built(stages, board_only_why):
     refused = next((stage.detail for stage in stages if stage.name == REQUIREMENTS_STAGE and stage.status != OK), None)
     if refused:
         return refused
-    if any(stage.status == SKIPPED for stage in stages):
+    if skipped_the_build(stages):
         return board_only_why
     return "the build did not finish in this run"
 

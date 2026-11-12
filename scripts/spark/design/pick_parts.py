@@ -55,7 +55,7 @@ class PickParts(AnswerOperation):
     arguments = (Argument(("--pick",), "project_and_picks", str,
                           "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
                           "what it notes is under `notes`: a board given a need that its own part serves says what a run does not test of the part, "
-                          "and the other choice", nargs="+", metavar=("PROJECT", "NEED=ID")),
+                          "and the other choice; a part whose record skips the simulation or names a stand-in says so", nargs="+", metavar=("PROJECT", "NEED=ID")),
                  Argument(("--passed-over",), "passed_over", str, PASSED_OVER_HELP, NO_PASSED_OVER, metavar="FILE", payload=0),
                  ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES)

@@ -2,6 +2,8 @@
   press: tactile-button
   led-red-5mm: to get — known, not owned
   tactile-button: to get — known, not owned
+  part led-red-5mm for light: Wokwi's LED: lights on current; its forward voltage and brightness are not this part's
+  part tactile-button for press: Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled
   listed button light on your projects
   wrote to your history: 2 reused
 --- .spark/needs.json ---

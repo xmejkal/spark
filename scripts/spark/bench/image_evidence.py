@@ -16,7 +16,10 @@ from pathlib import Path
 from spark.bench import board_codes
 from spark.bench import board_grant
 from spark.records.brief import UnnamedMust
+from spark.design import loader
 from spark.firmware import image_builder
+from spark.firmware import sim_project
+from spark.records import onboard_parts
 from spark.firmware.project_image import BUILD_IMAGE_HINT, NO_SIMULATION_FLAG
 from spark.core import outcomes
 from spark.core import text_guards
@@ -353,7 +356,8 @@ class NoSimulationEvidence(ImageEvidence):
     Strategy: no simulation tested the image, so firmware/ stands for it. The image is ready when firmware/ has a
     main.py, every .py file under it compiles and the image file holds firmware/ as it is now. It does not run the
     firmware: the board is the test. `run` starts the compile child (the Operation's `outside.run`; None runs it on this
-    machine, `ProgramRunner`, for a direct caller). It writes nothing.
+    machine, `ProgramRunner`, for a direct caller). Its limits come from the project's records, not a log, and every must
+    line is unnamed (P778). It writes nothing.
     """
 
     simulation = SIMULATION_NONE
@@ -366,6 +370,8 @@ class NoSimulationEvidence(ImageEvidence):
         self.find_tool = find_tool
         #: what runs the compile child, as `subprocess.run` does, or None: resolved at the call, as board_engine does (P458)
         self.run = run
+        #: (the loader.Design of the project's requirements.json, None) or (None, why it does not load); None until `_design` reads it
+        self._loaded = None
 
     def why_not_ready(self, image):
         """None, or one sentence. A broken file is a sentence; a missing tool raises a ToolError (P436)."""
@@ -373,7 +379,35 @@ class NoSimulationEvidence(ImageEvidence):
                 or self._why_board_build_unknown(image) or self._why_image_differs(image))
 
     def caveats(self, image):
-        return [NO_SIMULATION_CAVEAT]
+        design, why = self._design()
+        return [NO_SIMULATION_CAVEAT] + ([] if why is None else [outcomes.NOT_CHECKED_MESSAGE % why])
+
+    # --- MVP ---
+    def find_limits(self, image):
+        """The sim_project.Limit list of the project from its records (P778): `sim_project.limits_of` of the design its
+        requirements.json loads, then `onboard_parts.limits_of_board` of its board, as the build of that design says them
+        (nothing wired with parts, the board's own parts wired without). [] when the file or the board does not load, and
+        then `caveats` says so."""
+        design, _ = self._design()
+        if design is None:
+            return []
+        wired = {} if design.parts else None  # a full build wires none of the board's own parts; a board-only build wires them (P778)
+        return [sim_project.Limit(component, sentence)
+                for component, sentence in sim_project.limits_of(design) + onboard_parts.limits_of_board(design.board, None, wired)]
+
+    def find_unnamed_must(self, image, must):
+        """The UnnamedMust of every `must` line: no run, so no scenario named any of them."""
+        return UnnamedMust(list(must))
+
+    def _design(self):
+        """(the loader.Design of the project's requirements.json, None), or (None, why it does not load) as one line; read once."""
+        if self._loaded is None:
+            try:
+                self._loaded = (loader.load(self.project / "requirements.json", self.project), None)
+            except loader.DesignError as broken:
+                self._loaded = (None, " ".join(str(broken).split()))
+        return self._loaded
+    # --- end MVP ---
 
     def _why_no_main(self):
         if not (self.project / "firmware" / "main.py").is_file():

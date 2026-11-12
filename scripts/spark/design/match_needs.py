@@ -1,7 +1,7 @@
 """
 `parts.py --match`: each of a project's needs with the store's candidates, owned first, each with its score and why, as an
 Operation on the core (P726). It was `goal_handlers._op_match`. A board that serves a need through its own LED, button or
-display has `limits` (P397). It writes nothing.
+display has `limits` (P397), and so has a part whose record skips the simulation or names a stand-in (P778). It writes nothing.
 """
 
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, Argument
@@ -26,7 +26,7 @@ class MatchNeeds(AnswerOperation):
     data_keys = ('needs',)
     arguments = (Argument(("--match",), "project", str, "each of a project's needs with the store's candidates: owned first, what each owes, "
                           "each with its score and why; --matcher picks the matcher that ranks them; a board that serves a need through its own "
-                          "LED, button or display has `limits`, the sentences for what a passed run does not test of it", metavar="PROJECT"),
+                          "LED, button or display has `limits`, the sentences for what a passed run does not test of it, and so has a part whose record skips the simulation or names a stand-in", metavar="PROJECT"),
                  Argument(("--matcher",), "matcher", str, MATCHER_HELP, metavar="NAME"),
                  ANSWER_ARGUMENTS["start"],
                  COMMON_ARGUMENTS[JSON_DEST])

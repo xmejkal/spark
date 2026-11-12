@@ -69,7 +69,7 @@ from spark.build.board_engine import modules_for  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService, verdict, vouches_for_a_build  # noqa: E402
 from spark.build.kept_files import (REQUIREMENTS_STAGE, _kept, _kept_pins, design_handed_to, drop_an_older_build,  # noqa: E402
                                     keep_breadboard, keep_simulation, keep_tabbed_page, left_off, simulation_dir)
-from spark.build.stages import Stage  # noqa: E402
+from spark.build.stages import Stage, skipped_the_build  # noqa: E402
 from spark.design import loader  # noqa: E402
 from spark.sourcing import part_facts  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
@@ -85,6 +85,10 @@ REFERENCE = {"board": "firebeetle2-esp32s3",
              "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
 
 
+#: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
+EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds the board alone"
+
+
 def render(stages, code, unserved=()):
     mark = {OK: "ok  ", PROBLEMS: "!!  ", COULD_NOT_RUN: "????", SKIPPED: "--  "}
     lines = ["", "  idea -> parts -> pin map -> schematic -> footprint -> build -> simulation", ""]
@@ -92,8 +96,8 @@ def render(stages, code, unserved=()):
         lines.append("  [%s] %-16s %s" % (mark[stage.status], stage.name, stage.detail))
     lines.append("")
     lines.append({
-        EXIT_OK: "  the chain runs end to end" + (" for the board alone: nothing to wire, so no board was built"
-                                                  if any(stage.status == SKIPPED for stage in stages) else ""),
+        EXIT_OK: "  the chain runs end to end" + (" for the board alone: nothing to wire, so no board was built" if skipped_the_build(stages)
+                                                  else EVERY_PART_SKIPPED_LINE if any(stage.status == SKIPPED for stage in stages) else ""),
         EXIT_PROBLEMS: "  the chain is broken",
         EXIT_COULD_NOT_RUN: "  the chain was NOT exercised — this is not a pass",
     }[code] + (" — but not every need is on the board: %s" % ", ".join(unserved) if unserved and code == EXIT_OK else ""))

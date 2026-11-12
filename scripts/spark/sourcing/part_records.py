@@ -484,6 +484,23 @@ def part_function_problems(part, validation):
     return function_problems(part)
 
 
+def limits_of_part(record, name):
+    """
+    What a simulation cannot show of the part `name` that `record` describes, as [(name, sentence)] in the record's own
+    words (P37, P778): a stand-in's `simulation.wokwi.stand_in` or a chip's `note`, then "not simulated at all: <reason>"
+    for `simulation.skip`. [] for a real Wokwi part, or a record with no `simulation` table. It reads no file.
+    """
+    simulation = record.get("simulation") if isinstance(record, dict) else None
+    if not isinstance(simulation, dict):
+        return []
+    wokwi = simulation.get("wokwi") if isinstance(simulation.get("wokwi"), dict) else {}
+    sentence = wokwi.get("stand_in") or wokwi.get("note")
+    said = [(name, sentence)] if sentence else []
+    if simulation.get("skip"):
+        said.append((name, "not simulated at all: %s" % simulation["skip"]))
+    return said
+
+
 RULES = (id_problems, field_type_problems, retired_key_problems, need_problems, missing_pin_problems,
          selector_pin_problems, rail_and_signal_problems, body_problems, physical_problems, placeholder_problems,
          footprint_name_problems,
