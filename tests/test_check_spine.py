@@ -58,7 +58,7 @@ from spark.sourcing import part_facts  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
 import test_converter  # noqa: E402
-from fakes import FakeBuildService, FakeToolFinder  # noqa: E402
+from fakes import FakeBuildService, FakeToolFinder, FakeTscircuitEngine  # noqa: E402
 
 
 def build_stages(requirements, workdir, toolchain=None, find_tool=None, **inputs):
@@ -2509,7 +2509,18 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         real = subprocess.run
         self.addCleanup(setattr, check_spine.subprocess, "run", real)
         check_spine.subprocess.run = lambda command, *rest, **named: broken if "--circuit" in command else real(command, *rest, **named)
-        stages = build_stages(requirements, workdir, toolchain=board_engine.find_toolchain(ROOT), project=ROOT)
+        # P723: a fake engine, so no real tsci runs on a machine that has one; its circuit passes the build stage (one
+        # trace, the MCU grounded and its 3V3 on the net the design feeds it from), and the faked converter is what fails
+        circuit = [{"type": "source_net", "source_net_id": "n_gnd", "name": "GND"},
+                   {"type": "source_net", "source_net_id": "n_v33", "name": "V33"},
+                   {"type": "source_component", "source_component_id": "c_mcu", "name": "Mcu"},
+                   {"type": "source_port", "source_port_id": "p_3v3", "source_component_id": "c_mcu", "name": "3V3"},
+                   {"type": "source_port", "source_port_id": "p_gnd", "source_component_id": "c_mcu", "name": "GND"},
+                   {"type": "source_trace", "source_trace_id": "t1", "connected_source_port_ids": ["p_3v3"], "connected_source_net_ids": ["n_v33"]},
+                   {"type": "source_trace", "source_trace_id": "t2", "connected_source_port_ids": ["p_gnd"], "connected_source_net_ids": ["n_gnd"]},
+                   {"type": "pcb_trace"}]
+        service = build_service.BuildService(FakeTscircuitEngine(circuit=circuit), board_emitter.BoardEmitter(assume_missing_sizes=True))
+        stages = service.build(build_service.BuildInputs(requirements, workdir, project=ROOT))
         self.assertEqual((stages[-1].name, stages[-1].status), ("simulation", check_spine.PROBLEMS))
         self.assertIn("no diagram was produced", stages[-1].detail)
 

@@ -137,6 +137,7 @@ class WhatItWritesTest(unittest.TestCase):
         self.assertEqual((package["name"], package["private"], "@tscircuit/cli" in package["dependencies"]),
                          (self.root.name, True, True))
         note = package["//"]
+        self.assertIn("see project_setup.PINNED_TSCI and PINNED_CORE", note)  # P723: it named init_project, gone since P705
         self.assertEqual(("npx --no tsci" in note, "bun" in note, note.replace("npx --no tsci", "").count("npx tsci")),
                          (True, True, 0), "a bare `npx tsci` fetches npm's unrelated tsci package (P138)")
         (self.root / "package.json").write_text('{"name": "mine", "dependencies": {"tscircuit": "*"}}')
