@@ -746,7 +746,7 @@ class TheLedgerTest(unittest.TestCase):
         self.assertEqual(mutate.caught_by(False), ledger.SUITE, "a plain bool from a stand-in")
 
 
-@slow("mutation runs of a tiny tree under --tier, 1 test, 2.0 s on 2026-11-12")
+@slow("mutation runs of a tiny tree under --tier and --tier-count, 3 tests, 1.4 s on 2026-11-12")
 class TheTiersTest(unittest.TestCase):
     """P787 PR 2: --tier runs only the rows the ledger puts in the named tiers, and --tier-count runs nothing."""
 
