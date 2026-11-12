@@ -59,8 +59,8 @@ THE LEDGER (P787) is `tests/mutations/ledger.jsonl`, in git: one line per row ke
 rows, with or without `--copy` (`--anchors` and `--retarget` write none). It says which rows were caught, when, by which
 test, at which content of their file, so a sweep runs rows in tiers (THE TIERS below) instead of all 3000 at once. The run
 writes it in the tree it was given, never in the copy: the copy is removed, and the real tree's ledger is merged with
-the run's lines, the newer date winning, so a line a person wrote during the run is kept. Only a run whose files are
-restored writes it: a verdict nothing can trust records nothing. `--ledger` prints the counts by status. `tools/ledger.py`
+the run's lines, the newer date winning, so a line a person wrote during the run is kept. In the real tree only a run whose
+files are restored writes it (a verdict nothing can trust records nothing); a copy writes each row's line at once, below. `--ledger` prints the counts by status. `tools/ledger.py`
 holds the words and the store.
 
 THE TIERS (P787) put each row of the given tables under one of the plan's words, each a fact the tool reads from the row
