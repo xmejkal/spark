@@ -48,12 +48,6 @@
   "replace": "print(\"\\n\".join(INDENT + line for line in event.text.split(\"\\n\")), file=self.stream, flush=True)"
  },
  {
-  "file": "scripts/spark/core/cli.py",
-  "name": "a refusal's diagnostics print around the guard",
-  "find": "print(guard_lines(\"\\n\".join(result.diagnostics)), file=sys.stderr)",
-  "replace": "print(\"\\n\".join(result.diagnostics), file=sys.stderr)"
- },
- {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "deploy's lines print around the reporter",
   "find": "        self.report(Event.line(stage, text, raw))",

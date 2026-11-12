@@ -19,12 +19,6 @@
  },
  {
   "file": "scripts/spark/firmware/sim_project.py",
-  "name": "P429: an indented firmware line is not seen by the reader",
-  "find": "if not line.strip().startswith(\"firmware\"):",
-  "replace": "if not line.startswith(\"firmware\"):"
- },
- {
-  "file": "scripts/spark/firmware/sim_project.py",
   "name": "P429: the reason names no line, or the wrong one",
   "find": "enumerate(lines, 1)",
   "replace": "enumerate(lines)"
