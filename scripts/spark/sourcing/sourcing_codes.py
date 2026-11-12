@@ -1,6 +1,6 @@
 """
-The reasons sourcing refuses, each a code with one sentence (P717, W6-S2): part_records' PartError, parts.py's
-unreadable input, run_cost's NoTranscriptError and matching's UnknownMatcherError, wherever they are raised.
+The reasons sourcing refuses, each a code with one sentence (P717, W6-S2): part_records' PartError, run_cost's
+NoTranscriptError and matching's UnknownMatcherError, wherever they are raised.
 
 A leaf: it imports nothing of spark. Each refusal names its code, so an agent decides on the code and never on the
 English sentence (no magic strings, P260). The errors are `errors.CodedMessageError`s, so a raise cannot leave its code
@@ -11,9 +11,10 @@ the codes wait in the library for the Operation that comes later. No code is an 
 
 
 # --- MVP ---
-#: part_records: a part record asked for by name, its contract, a promotion, and the JSON a write reads.
+#: part_records: a part record asked for by name, its contract and a promotion (the JSON a write reads is the core's
+#: `codes.INPUT_UNREADABLE` since P726 PR 3).
 NO_SUCH_PART, PART_CONTRACT_BROKEN = "no_such_part", "part_contract_broken"
-PROMOTION_WOULD_OVERWRITE, INPUT_UNREADABLE = "promotion_would_overwrite", "input_unreadable"
+PROMOTION_WOULD_OVERWRITE = "promotion_would_overwrite"
 #: run_cost: what a project's history and its session transcripts lack, so the cost of its steps is not known.
 STEP_LINE_BROKEN, NO_STEP_MARKED, STEP_WITHOUT_SESSION = "step_line_broken", "no_step_marked", "step_without_session"
 NO_TRANSCRIPT, TRANSCRIPT_UNREADABLE = "no_transcript", "transcript_unreadable"
@@ -28,7 +29,6 @@ CODES = {
     NO_SUCH_PART: "neither the project nor spark's library has a part record of the id asked for",
     PART_CONTRACT_BROKEN: "a part record does not meet the part contract",
     PROMOTION_WOULD_OVERWRITE: "the library already holds a record of this id, and a promotion never overwrites one",
-    INPUT_UNREADABLE: "the JSON a write reads, from a file or from stdin, cannot be read or is not JSON",
     STEP_LINE_BROKEN: "a step line in the history has no start spark can read as a time: fix it by hand",
     NO_STEP_MARKED: "the history marks no step of the project, so there is no cost to count",
     STEP_WITHOUT_SESSION: "a step was marked in no Claude Code session, so its cost cannot be counted",

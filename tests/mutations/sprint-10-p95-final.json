@@ -60,27 +60,21 @@
   "replace": "[\\x00-\\x1f\\x7f]+"
  },
  {
-  "file": "scripts/parts.py",
-  "name": "a negative --from is accepted",
-  "find": "    if int(text) < 0:",
-  "replace": "    if False:"
- },
- {
   "file": "scripts/spark/sourcing/drawer.py",
   "name": "a read of no lines is accepted",
   "find": "    if payload.get(\"lines\") == 0 == payload.get(\"stated\"):",
   "replace": "    if False:"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "a refused write says it was written",
   "find": "\"written\": not (problems or dry_run)}",
   "replace": "\"written\": not dry_run}"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "a refused write's change lines are not marked",
-  "find": "(\"  not written: \" + _change_line(change, False).strip()) if problems else _change_line(change, dry_run)",
-  "replace": "_change_line(change, dry_run)"
+  "find": "(\"  not written: \" + change_line(change, False).strip()) if problems else change_line(change, dry_run)",
+  "replace": "change_line(change, dry_run)"
  }
 ]

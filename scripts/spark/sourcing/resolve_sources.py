@@ -19,6 +19,7 @@ class ResolveSources(PartOperation):
     with no URL says so; a part nobody has is a problem on its id."""
 
     name = "sources"
+    data_keys = ('part', 'sources')
     arguments = (Argument(("--sources",), "part_id", str, "ask every URL a record cites whether it answers", metavar="PART"),
                  ANSWER_ARGUMENTS["project"], ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, FETCHES)

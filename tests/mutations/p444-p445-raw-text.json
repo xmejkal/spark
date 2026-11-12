@@ -96,12 +96,6 @@
   "replace": "[]"
  },
  {
-  "file": "scripts/parts.py",
-  "name": "the json output ends in a traceback on a surrogate",
-  "find": ".encode(\"utf-8\", \"backslashreplace\").decode(\"utf-8\"))",
-  "replace": ")"
- },
- {
   "file": "tools/measure.py",
   "name": "V1 counts nothing",
   "find": "if name not in known.value_messages:",

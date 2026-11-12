@@ -19,6 +19,7 @@ class ShowPart(PartOperation):
     nobody has is a problem on its id."""
 
     name = "show"
+    data_keys = ('record',)
     arguments = (Argument(("--show",), "part_id", str, "one record, wherever it lives, and its CONFLICT lines: on verified facts a problem "
                           "(exit 1), on unverified ones an assumption", metavar="PART"),
                  ANSWER_ARGUMENTS["project"], COMMON_ARGUMENTS[JSON_DEST])

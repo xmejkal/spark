@@ -18,6 +18,6 @@
  {"file": "scripts/spark/design/audit_records.py", "name": "P707: the audit's lines lose their text guard", "find": "[guard_lines(line) for line in lines]", "replace": "lines"},
  {"file": "scripts/spark/design/audit_records.py", "name": "P707: --project is not resolved", "find": "        project = project.resolve() if project else None", "replace": "        project = project if project else None"},
  {"file": "scripts/parts.py", "name": "P707: an abbreviation of --audit falls to the old path", "find": "fitting = [known for known in FLAGS if known.startswith(flag)] if len(flag) > len(\"--\") else []", "replace": "fitting = []"},
- {"file": "scripts/parts.py", "name": "P707: the audit's envelope names the op as its tool", "find": "HelpText(\"parts.py\", \"What a part needs, and what is known about it.\", \"\", tool=\"parts\")", "replace": "HelpText(\"parts.py\", \"What a part needs, and what is known about it.\", \"\")"},
+ {"file": "scripts/parts.py", "name": "P707: the audit's envelope names the op as its tool", "find": "HelpText(\"parts.py\", \"What a part needs, and what is known about it.\", \"\", tool=\"parts\",", "replace": "HelpText(\"parts.py\", \"What a part needs, and what is known about it.\", \"\","},
  {"file": "scripts/boards.py", "name": "P707: an abbreviation of --list falls to argparse", "find": "    if any(len(item) > len(\"--\") and LIST_FLAG.startswith(item) for item in argv):", "replace": "    if LIST_FLAG in argv:"}
 ]

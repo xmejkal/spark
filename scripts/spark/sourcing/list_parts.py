@@ -18,6 +18,7 @@ class ListParts(PartOperation):
     off the contract is a problem on it (`load`)."""
 
     name = "list"
+    data_keys = ('parts',)
     arguments = (Argument(("--list",), "list", bool, "every record a project can build with, and where it comes from"),
                  ANSWER_ARGUMENTS["project"], ANSWER_ARGUMENTS["start"], COMMON_ARGUMENTS[JSON_DEST])
 

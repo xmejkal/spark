@@ -21,6 +21,7 @@ class PromoteRecord(PartOperation):
     item; a record nobody has, or a target that exists, is a problem on the id (`part_facts.promote`)."""
 
     name = "promote"
+    data_keys = ('path', 'written')
     arguments = (Argument(("--promote",), "part_id", str, "catalog → the project's parts/, or the project's parts/ → the plugin's library",
                           metavar="PART"),
                  ANSWER_ARGUMENTS["project"], ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])

@@ -103,7 +103,7 @@ class CodesTest(unittest.TestCase):
         self.assertEqual(len(set(sentences)), len(sentences))
 
     def test_the_core_codes_are_its_own_crash_bad_argument_undeclared_effect_and_the_reply_codes(self):
-        self.assertEqual(sorted(codes.CODES), ["bad_argument", "bad_reply", "crash", "needs_reply", "undeclared_effect", "unknown_reply"])
+        self.assertEqual(sorted(codes.CODES), ["bad_argument", "bad_reply", "crash", "input_unreadable", "needs_reply", "undeclared_effect", "unknown_reply"])
 
 
 class Toy(Operation):
@@ -569,6 +569,68 @@ class SchemaTest(unittest.TestCase):
         parsed = vars(parser_for(TEXT, Labels()).parse_args(["--label", "a=x", "--label", "b=y"]))
         self.assertEqual(parsed["labels"], ["a=x", "b=y"])
         self.assertIsNone(vars(parser_for(TEXT, Labels()).parse_args([]))["labels"])
+
+    def test_a_payload_token_is_read_by_the_cli_and_handed_to_the_operation_as_a_value(self):
+        # P726 PR 3: reading a file or stdin is the adapter's job (rule X2); the Operation takes the parsed JSON
+        import io
+        import tempfile
+        from pathlib import Path
+        from spark.core.cli import load_payloads
+        from spark.core.errors import CodedMessageError
+        from spark.core import codes
+        class Writes(Toy):
+            arguments = (Argument(("--set",), "items", str, "a JSON list", metavar="FILE", payload=0),
+                         Argument(("--fact-set",), "part_and_facts", str, "a part and a JSON object", nargs=2, metavar=("PART", "FILE"), payload=1),
+                         COMMON_ARGUMENTS["json"])
+        given = Path(tempfile.mkdtemp()) / "in.json"
+        given.write_text('{"a": 1}')
+        values = load_payloads(Writes(), {"items": str(given), "part_and_facts": ["x", "-"]}, io.StringIO("[1, 2]"))
+        self.assertEqual(values, {"items": {"a": 1}, "part_and_facts": ["x", [1, 2]]})
+        self.assertEqual(load_payloads(Writes(), {"items": None, "part_and_facts": None}, io.StringIO()), {"items": None, "part_and_facts": None})
+        given.write_text("{")
+        with self.assertRaises(CodedMessageError) as refused:
+            load_payloads(Writes(), {"items": str(given), "part_and_facts": None}, io.StringIO())
+        self.assertEqual(refused.exception.code, codes.INPUT_UNREADABLE)
+        self.assertIn("is not readable JSON", str(refused.exception))
+        schema = Writes().input_schema()["properties"]
+        self.assertEqual(schema["items"]["type"], ["object", "array"])
+        self.assertEqual(schema["part_and_facts"]["prefixItems"], [{"type": "string"}, {"type": ["object", "array"]}])
+
+    def test_a_required_flag_refuses_an_empty_argv_with_the_cli_s_own_fix(self):
+        # P726 PR 3: parts.py's --describe is required, so `parts.py` alone exits 2 and the fix names --describe
+        import io
+        import json
+        import contextlib
+        from spark.core.cli import HelpText, run_cli
+        from spark.core.outside import build_bare_outside_world
+        class Describe(Toy):
+            arguments = (Argument(("--describe",), "describe", bool, "the list", required=True), COMMON_ARGUMENTS["json"])
+        text = HelpText("x.py", "", "", bad_argument_fix="x.py --describe lists the operations")
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = run_cli(text, Describe(), ["--json"], outside_builder=build_bare_outside_world)
+        said = json.loads(out.getvalue())
+        self.assertEqual((code, said["unchecked"][0]["code"], said["unchecked"][0]["fix"]), (2, "bad_argument", "x.py --describe lists the operations"))
+
+    def test_describe_operations_reflects_over_a_registry(self):
+        # P726 PR 3: the rows come from the classes (flag, summary, effect words in a fixed order, the schema), not a table
+        from spark.core.describe_operations import DescribeOperations
+        from spark.core.operation import FETCHES, READS, WRITES
+        class Fetch(Toy):
+            name = "fetch"
+            effects = (READS, WRITES, FETCHES)
+            arguments = (Argument(("--fetch",), "part_id", str, "download what a record cites", metavar="PART"), COMMON_ARGUMENTS["json"])
+        class Quiet(Toy):
+            name = "quiet"
+            summary = "says nothing"
+            arguments = (Argument(("--project",), "project", str, "a project"), COMMON_ARGUMENTS["json"])
+        result = DescribeOperations({"fetch": Fetch, "quiet": Quiet}).run(outside=None)
+        rows = result.data["operations"]
+        self.assertEqual([(r["flag"], r["summary"], r["effects"], r["dry_run"]) for r in rows],
+                         [("--fetch", "download what a record cites", ["network", "writes"], True), ("--quiet", "says nothing", [], False)])
+        self.assertEqual(rows[0]["arguments"]["part_id"]["metavar"], "PART")
+        self.assertEqual([o["flag"] for o in result.data["options"]], ["--json", "--project"])
+        self.assertEqual(result.lines[0], "  --fetch            download what a record cites  [network, writes]")
+        self.assertEqual(result.data["exits"], {"0": "ok", "1": "problems", "2": "could-not-run"})
 
     def test_the_output_schema_requires_the_keys_of_a_real_envelope(self):
         schema = Toy().output_schema()

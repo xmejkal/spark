@@ -54,7 +54,7 @@
   "replace": "    if record.get(\"function\"):"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "text mode hides a refused needs-set",
   "find": "    lines += [\"  refused, so nothing was written: %s — %s\" % (p[\"subject\"], p[\"sentence\"]) for p in problems]\n    return lines or [\"  nothing to change\"]",
   "replace": "    return lines or [\"  nothing to change\"]"
@@ -78,7 +78,7 @@
   "replace": "        if isinstance(entry.get(\"is\"), dict)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/set_function.py",
   "name": "--function-set accepts null",
   "find": "if function else [\"a function is a non-empty list [{does, what}]\"]",
   "replace": "if True else [\"a function is a non-empty list [{does, what}]\"]"

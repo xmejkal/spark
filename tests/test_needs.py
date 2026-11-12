@@ -2468,7 +2468,7 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertIn("  net SPEAKER_P is one side of a driven pair and nothing listed drives it — pick what drives the pair (the "
                       "amplifier this terminal hangs off), never a supply (speaker-terminal.SPK_P is on it)\n", dry)
         self.assertNotIn("power inlet", dry)
-        listed, _ = run(["--describe"])  # and the answer's keys are the ones --describe names
+        listed, _ = run(["--describe"])  # and the answer's keys are the ones --describe names (Operation.data_keys, P726)
         self.assertEqual(sorted(said["data"]), sorted(next(op["data"] for op in listed["data"]["operations"] if op["op"] == "requirements")))
 
     def test_every_terminal_on_a_side_nothing_drives_is_named(self):

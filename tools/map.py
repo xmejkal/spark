@@ -30,7 +30,7 @@ REGISTRIES = (
     Registry("spark.idea.OPERATIONS", "spark.idea", "OPERATIONS", str),
     Registry("spark.design.design_operations.OPERATIONS", "spark.design.design_operations", "OPERATIONS", str),
     Registry("spark.sourcing.sourcing_operations.OPERATIONS", "spark.sourcing.sourcing_operations", "OPERATIONS", str),
-    Registry("parts.OPERATIONS", "parts", "OPERATIONS", operator.itemgetter(0)),
+    Registry("parts.OPERATIONS", "parts", "OPERATIONS", str),
     Registry("spark.breadboard.sheet.WIRING_VIEWS", "spark.breadboard.sheet", "WIRING_VIEWS", operator.itemgetter(0)),
     Registry("spark.breadboard.sheet.DRAWING_RENDERERS", "spark.breadboard.sheet", "DRAWING_RENDERERS", operator.attrgetter("FILE_NAME")),
 )

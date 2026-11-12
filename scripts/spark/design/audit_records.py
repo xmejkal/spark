@@ -83,6 +83,7 @@ class AuditRecords(Operation):
     """
 
     name = "audit"
+    data_keys = ('layers', 'owed', 'broken', 'no_function', 'dangling', 'stops_at_footprint')
     arguments = (Argument(("--audit",), "audit", bool, "every record in every layer and every drawer link: what owes facts, what is broken"),
                  Argument(("--project",), "project", COMMON_ARGUMENTS["project"].kind, "a project whose own parts/ beats the shipped library"),
                  Argument(("--from",), "start", int, "with a listing: start at item N (truncated.next says where)", 0),

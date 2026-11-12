@@ -5,10 +5,11 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 
 New names: the area name `sourcing` (`parts` already names the record folder and the CLI `parts.py`),
 `UnknownMatcherError`, `NoTranscriptError`, the modules `datasheets`, `part_facts`, `part_rules`, `part_records`, `run_cost`
-and `part_handlers` (the write helpers), and since P726 PR 2 one module per Operation on `part_operation.PartOperation`
-(`show_part.ShowPart`, `keep_file.KeepFile`, `mark_step.MarkStep`, twelve more), listed in `sourcing_operations.OPERATIONS`.
-Still proposed: `MatcherContract`; the `DrawerService`, `DatasheetService` and `RunCostService` wraps of the three function
-modules, which no card builds yet (the Operations call the modules' functions).
+and since P726 one module per Operation on `part_operation.PartOperation` (`show_part.ShowPart`, `keep_file.KeepFile`,
+`set_facts.SetFacts`, sixteen more), listed in `sourcing_operations.OPERATIONS`, with the helpers by role: `record_home`,
+`write_answers`, `brief_choices` (PR 3). Still proposed: `MatcherContract`. Dropped (the council, 2026-11-12): the
+`DrawerService`, `DatasheetService` and `RunCostService` wraps, a Middle Man over stateless module functions that the
+Operations call directly; a Service enters when two Operations share one flow with swappable collaborators.
 
 ## Level 2: what sourcing does
 
@@ -41,7 +42,10 @@ design's `OPERATIONS` and keeps its own table for `--describe`, so its flags sta
 | `sourcing/matching.py` | `Matcher` and its subclasses, `Offer`, `MATCHERS`, moved from `scripts/matching.py` |
 | `sourcing/datasheets.py` | the catalog and `need`, fetching, keeping and reading a datasheet, and asking the cited URLs, moved out of `parts.py` (W6-S3b, P721) |
 | `sourcing/part_facts.py` | what is known about a part: its signals, what nobody checked, the shelf copy and its digest, `promote`, `skeleton` and `describe`, moved out of `parts.py` (W6-S3b, P721) |
-| `sourcing/part_handlers.py` | the write helpers (`_set_in_home`, `_drawer_answer`, `_write_lines`, the shelf-copy finders) with `vendor_order` and `sellers`, moved out of `parts.py` (W6-S3b, P721). The fifteen handlers it held are the Operations below since P726 PR 2; the handlers that read a JSON payload stay in the CLI until PR 3, because reading stdin is the interface's job |
+| `sourcing/record_home.py` | a record's own home (P726 PR 3; `part_handlers`' since W6-S3b): `record_path`, `shelved_from`, `refresh_shelf_copy`, `merge_values`, `set_fields`, the write of fields into a record's home, never spark's library |
+| `sourcing/write_answers.py` | what a set-only write says (P726 PR 3): `change_line`, `write_lines`, `drawer_answer`, and `names_your_entries`, shared by `--pick` and `--requirements` |
+| `sourcing/brief_choices.py` | what the brief chooses for the sourcing (P726 PR 3): `vendor_order`, `sellers`, `DEFAULT_VENDOR_ORDER` |
+| `sourcing/set_drawer.py`, `import_drawer.py`, `set_function.py`, `set_facts.py` | `SetDrawer` (`drawer-set`), `ImportDrawer` (`drawer-import`), `SetFunction` (`function-set`), `SetFacts` (`fact-set`): the payload writes on the core (P726 PR 3); the CLI adapter reads the JSON file or stdin and hands the value in (`Argument.payload`) |
 | `sourcing/part_operation.py` | `PartOperation` (P726 PR 2): records' `AnswerOperation` with the one rule `parts.main` kept for the part handlers, a `PartError` is a problem on the part the flag names (`answer_refusal`) |
 | `sourcing/list_parts.py`, `show_part.py`, `validate_parts.py`, `list_signals.py`, `list_unverified.py` | `ListParts` (`list`), `ShowPart` (`show`), `ValidateParts` (`validate`), `ListSignals` (`signals`), `ListUnverified` (`unverified`): the records group on the core (P726 PR 2) |
 | `sourcing/write_skeleton.py`, `promote_record.py` | `WriteSkeleton` (`skeleton`), `PromoteRecord` (`promote`): the writes of the records and facts groups (P726 PR 2) |
@@ -61,7 +65,7 @@ design's `OPERATIONS` and keeps its own table for `--describe`, so its flags sta
 | `Matcher` Strategy, chosen by `--matcher` | `SameWords`, `NameContains`, `WordOverlap` (`matching.py:166-195`) | a Matcher subclass in the test |
 | part records | `RecordFinder("part")` from records | `RecordFolders(tmp)` over `tests/data/` |
 | `Retriever` Strategy: `search(words, project)`, proposed with the sourcing move | today's `datasheets.need` with the `Matcher` registry. The datasheet reader and a vector store come with the learning spike, where a second real adapter exists | a Retriever subclass in the test |
-| the project's brief | `Brief` from records (`prefer`, `sellers`), which replaces `part_handlers.vendor_order` and `part_handlers.sellers` | a `Brief` built in the test |
+| the project's brief | `Brief` from records (`prefer`, `sellers`), which `brief_choices.vendor_order` and `brief_choices.sellers` read | a `Brief` built in the test |
 | network | `OutsideWorld.fetch` | a dict from URL to bytes |
 | transcripts | a reader of the harness's files, the session from `OutsideWorld.environ` | transcript files in `tests/data/` |
 

@@ -18,6 +18,7 @@ class ListSignals(PartOperation):
     the ids given."""
 
     name = "signals"
+    data_keys = ('signals',)
     arguments = (Argument(("--signals",), "part_ids", str, "the signals these parts ask for, as assign_pins.py input", nargs="+", metavar="PART"),
                  ANSWER_ARGUMENTS["project"], COMMON_ARGUMENTS[JSON_DEST])
 

@@ -20,6 +20,7 @@ class FetchDocuments(PartOperation):
     fetch; a record that cites no URL says so; a part nobody has is a problem on its id."""
 
     name = "fetch"
+    data_keys = ('documents', 'would_fetch')
     arguments = (Argument(("--fetch",), "part_id", str, "download the datasheets and images a record cites, into your store", metavar="PART"),
                  ANSWER_ARGUMENTS["project"], ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES, FETCHES)

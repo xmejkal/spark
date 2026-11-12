@@ -18,6 +18,8 @@ NEEDS_REPLY = "needs_reply"
 UNKNOWN_REPLY = "unknown_reply"
 #: A reply whose value does not fit its question's kind: not a yes or no, not one of the choices, empty, or not a finite number (P737).
 BAD_REPLY = "bad_reply"
+#: The JSON a payload Argument names, a file or stdin, cannot be read or is not JSON (P726 PR 3; it was sourcing_codes' since P717).
+INPUT_UNREADABLE = "input_unreadable"
 
 #: Each code and the one sentence that says what it means.
 CODES = {
@@ -27,5 +29,6 @@ CODES = {
     NEEDS_REPLY: "a question nobody answered yet: run again with --replies once the file is filled",
     UNKNOWN_REPLY: "a reply to a key that no open question has, or to a fact already filled",
     BAD_REPLY: "a reply whose value does not fit its question's kind",
+    INPUT_UNREADABLE: "the JSON a write reads, from a file or from stdin, cannot be read or is not JSON",
 }
 # --- end MVP ---

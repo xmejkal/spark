@@ -25,6 +25,7 @@ class KeepFile(PartOperation):
     file, a name the store refuses and a store that cannot be written are could-not-run items, each with its code."""
 
     name = "keep"
+    data_keys = ('document', 'location_removed', 'written')
     arguments = (Argument(("--keep",), "file", str, "put a file you already have into your store; answers its documents entry", metavar="FILE"),
                  Argument(("--url",), "url", str, URL_HELP),
                  ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])

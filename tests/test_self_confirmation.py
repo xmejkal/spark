@@ -47,6 +47,8 @@ MAY_READ = {
     "board_live.EXIT_FOR_ANSWER": STRUCTURE, "board_live.RAN": STRUCTURE,
     "design_operations.OPERATIONS": STRUCTURE + " (P726: the ops on the core, each checked against its parts.OPERATIONS row)",
     "sourcing_operations.OPERATIONS": STRUCTURE + " (P726 PR 2: the fifteen part ops on the core, each checked against its parts.OPERATIONS row)",
+    "codes.INPUT_UNREADABLE": "a code's NAME, the word an agent decides on — vocabulary, not a value",
+    "parts.HELP": "parts.py's own HelpText, given to run_cli so a test prints as parts.py prints — a fixture, not a value",
     "board_console.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
     "ready_probe.HASH_FILES": "the board code under test, rendered; the words it must print are literals in the test (P260)",
     "pin_assigner.BUS_LINES": SAMENESS, "part_rules.BUSES": SAMENESS,
@@ -63,7 +65,7 @@ MAY_READ = {
     "copper.DEFAULT_RISE_C": "an input to the arithmetic under test, whose expected result (2.9 A) is a literal",
     "footprint_emitter.PLATING_THICKNESS_MM": "the plated-hole rule's own inputs, which test_fab pins to the data file",
     "footprint_emitter.HEADER_PIN_DIAGONAL_MM": "the plated-hole rule's own inputs, which test_fab pins to the data file",
-    "part_handlers.DEFAULT_VENDOR_ORDER":
+    "brief_choices.DEFAULT_VENDOR_ORDER":
         "the claim is the FALLBACK: with nothing configured, the default is what is used",
     "pin_assigner.ROLE_PENALTY": RELATION, "pin_assigner.CAPABILITY_COST": RELATION,
     "pin_assigner.CONFLICTING_ROLES": RELATION + "; and every priced role must be a role boards may declare",

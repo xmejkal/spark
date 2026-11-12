@@ -48,7 +48,7 @@
   "replace": ""
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/design/pick_parts.py",
   "name": "a pick's notes leave the envelope",
   "find": "                  notes=[_note(note) for note in notes])",
   "replace": "                  notes=[])"
@@ -142,11 +142,5 @@
   "name": "the audit keeps three problems of a broken record",
   "find": "\"; \".join(b[\"problems\"])) for b in broken]  # each, once",
   "replace": "\"; \".join(b[\"problems\"][:3])) for b in broken]  # each, once"
- },
- {
-  "file": "scripts/parts.py",
-  "name": "an answer with no lines says its problems twice",
-  "find": "            answer = answer._replace(problems=(), unchecked=())",
-  "replace": "            pass"
  }
 ]

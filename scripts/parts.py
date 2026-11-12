@@ -24,355 +24,112 @@ VISIBLE, because the unverified ones are what decide whether a design works. On 
 most consequential number in the whole build was an audio module's idle current, which nobody had measured and every
 document quietly assumed.
 
-This file is the CLI (W6-S3b, P721): the parser, the printers, `--describe`, `--needs-drop` on the core and the
-handlers that read a JSON payload (`--drawer-set`, `--drawer-import`, `--function-set`, `--fact-set`, `--needs-set`,
-`--pick`). Every other operation is an Operation on the core that `main` runs through `run_cli` (P707, P726:
-`on_the_core`): `--audit` and the six goal operations in `spark/design/` (`design_operations.OPERATIONS`), the fifteen part
-operations in `spark/sourcing/` (`sourcing_operations.OPERATIONS`). The write helpers live in `spark/sourcing/part_handlers`.
+This file is the CLI (W6-S3b, P721; P726 PR 3): the ordered registry of the thirty Operations `parts.py` offers, the route
+from a flag to its Operation (exact flag, else a unique prefix, as argparse picks a long option), the one flag shape the CLI
+owns (`--needs-drop PROJECT NEED` runs the idea area's `DropNeed`) and `main`, which hands the argv to `run_cli`. Every
+operation is an Operation on the core: the design area's (`design_operations.OPERATIONS`), the sourcing area's
+(`sourcing_operations.OPERATIONS`) and `--describe`, the core's `DescribeOperations` over this registry. A flag that names a
+JSON file (`--drawer-set FILE`, `--fact-set PART FILE`) is read by the core's CLI adapter and handed to the Operation as a
+value (`Argument.payload`): reading stdin is the interface's job (P721 row 6).
 """
 
-import argparse
-import contextlib
-import json
 import sys
 from pathlib import Path
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from spark.core.outcomes import AnsweringParser, BadArgumentError, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, envelope  # noqa: E402, F401
-from spark.core.cli import run_operation  # noqa: E402
-from spark.core.errors import CodedMessageError  # noqa: E402
+from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR  # noqa: E402, F401
+from spark.core.cli import HelpText, run_cli, run_operation  # noqa: E402
+from spark.core.describe_operations import OPERATION_LINE, DescribeOperations, effect_words_of, options_of, summary_of  # noqa: E402
+from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
-from spark.core.outside import build_outside_world  # noqa: E402
-from spark.core.text_guards import guard_lines  # noqa: E402
-from spark.records import missing_facts, provenance, store  # noqa: E402
-from spark.records.record_kind import _absent, Answer, _cannot, CHAIN_FACTS, _note, _problem  # noqa: E402
-from spark.sourcing import drawer, sourcing_codes  # noqa: E402
-from spark.sourcing.part_handlers import _drawer_answer, _set_in_home, _write_lines  # noqa: E402
-from spark.sourcing.part_records import broken_problems, function_problems, PartError  # noqa: E402
-from spark.design import needs  # noqa: E402
-from spark.design.goal_handlers import _what_a_pick_wrote  # noqa: E402
-from spark.idea.drop_need import DropNeed  # noqa: E402
-from spark.records.answer_operation import DRY_RUN_HELP, PROJECT_HELP, START_HELP  # noqa: E402
-from spark.sourcing import keep_file, read_datasheet, sourcing_operations, write_skeleton  # noqa: E402
-from spark.design import design_operations, find_offers  # noqa: E402
-from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
+from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation  # noqa: E402
+from spark.records.record_kind import Answer  # noqa: E402
+from spark.sourcing import sourcing_operations  # noqa: E402
+from spark.design import design_operations  # noqa: E402
+from spark.idea.drop_need import DropNeed  # noqa: E402
 
 
-#: Every operation parts.py offers — the ONE table the argument parser and `--describe` are built from, so what an
-#: agent reads about an operation cannot drift from what runs (§6.4.3). A row: the flag, its argparse keywords,
-#: what it answers, its effects (`writes`, `network`, `deletes`), the keys of its `data`. An operation with an
-#: effect takes --dry-run (§6.4.5).
-OPERATIONS = (
-    ("list", {"action": "store_true"}, "every record a project can build with, and where it comes from", (), ("parts",)),
-    ("show", {"metavar": "PART"}, "one record, wherever it lives, and its CONFLICT lines: on verified facts a problem "
-     "(exit 1), on unverified ones an assumption", (), ("record",)),
-    ("validate", {"action": "store_true"}, "every record a project can build with, against the contract", (), ("checked",)),
-    ("signals", {"nargs": "+", "metavar": "PART"}, "the signals these parts ask for, as assign_pins.py input", (), ("signals",)),
-    ("unverified", {"nargs": "+", "metavar": "PART"}, "what nobody has checked about these parts, one assumption a fact",
-     (), ("parts",)),
-    ("need", {"nargs": "+", "metavar": "WORD"}, "what you own and what spark knows for a need, before researching: the words against "
-     "what each record (parts and boards, every layer) or drawer entry does, its tags, names and text, owned first (word-overlap); "
-     "--matcher name-contains for the names alone", (), ("need", "vendor_order", "found", "drafts", "catalog", "more", "matcher")),
-    ("skeleton", {"metavar": "PART"}, "write a record to fill in, to the project's parts/ (refused when any layer holds the id)", ("writes",), ("path", "record", "written")),
-    ("sources", {"metavar": "PART"}, "ask every URL a record cites whether it answers", ("network",), ("part", "sources")),
-    ("fetch", {"metavar": "PART"}, "download the datasheets and images a record cites, into your store", ("network", "writes"),
-     ("documents", "would_fetch")),
-    ("keep", {"metavar": "FILE"}, "put a file you already have into your store; answers its documents entry", ("writes",),
-     ("document", "location_removed", "written")),
-    ("read", {"metavar": "PDF"}, "read a datasheet page by page and stop where every --want fact is on a table row", (),
-     ("facts", "pages_read")),
-    ("kept", {"nargs": "+", "metavar": "WORD"}, "find a kept document by every word, with no network, and every fact resting on it",
-     (), ("found",)),
-    ("promote", {"metavar": "PART"}, "catalog → the project's parts/, or the project's parts/ → the plugin's library", ("writes",),
-     ("path", "written")),
-    ("catalog", {"action": "store_true"}, "every record research has kept, chosen or not", (), ("records", "broken")),
-    ("drawer", {"action": "store_true"}, "what you own: label, count, the record it is, unsure, skip — 20 at a time", (),
-     ("entries",)),
-    ("drawer-set", {"metavar": "FILE"}, "set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds; with --project, an `is` may "
-     "name a record in that project, such as one /spark:research just wrote; an entry may also say its about, description and tags",
-     ("writes",), ("changes", "questions", "shelved")),
-    ("drawer-import", {"nargs": 2, "metavar": ("SOURCE", "FILE")},
-     "apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule",
-     ("writes",), ("changes", "questions", "shelved", "smaller")),
-    ("function-set", {"nargs": 2, "metavar": ("PART", "FILE")},
-     "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
-     ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
-    ("fact-set", {"nargs": 2, "metavar": ("PART", "FILE")},
-     "fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how; a text in it has its control characters turned into a space and is cut at 1000 characters, and a key with a control character is refused), or its about, description and tags, or a board's onboard LED or button level, `pin_roles` {onboard_led|onboard_button: {active_level: {value, verified, source}}} (a board of the project's own, merged role by role), or what the sheet reads, `legs` {pin of pin_order: how to tell the leg apart} (merged leg by leg) and `host_requirements` [the lines the host board must meet] (replaced as a whole, like tags), in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
-     ("writes",), ("part", "path", "was", "now", "written", "shelf_copy")),
-    ("audit", {"action": "store_true"}, "every record in every layer and every drawer link: what owes facts, what is broken",
-     (), ("layers", "owed", "broken", "no_function", "dangling", "stops_at_footprint")),
-    ("needs", {"metavar": "PROJECT"}, "a project's needs: what each does, its condition, its mark", (), ("needs",)),
-    ("needs-set", {"nargs": 2, "metavar": ("PROJECT", "FILE")},
-     "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds", ("writes",),
-     ("changes", "written")),
-    ("match", {"metavar": "PROJECT"}, "each of a project's needs with the store's candidates: owned first, what each owes, "
-     "each with its score and why; --matcher picks the matcher that ranks them; a board that serves a need through its own "
-     "LED, button or display has `limits`, the sentences for what a passed run does not test of it", (), ("needs",)),
-    ("offer", {"metavar": "KEY"}, "what one offer says of itself, for the chooser to read: a record's id or a drawer entry's "
-     "key — about, description, tags, what it does, its names, power and size. --project reads the project's own records", (),
-     ("offer",)),
-    ("pick", {"nargs": "+", "metavar": ("PROJECT", "NEED=ID")},
-     "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
-     "what it notes is under `notes`: a board given a need that its own part serves says what a run does not test of the part, "
-     "and the other choice",
-     ("writes",), ("project", "picks", "reserved", "released", "written")),
-    ("needs-drop", {"nargs": 2, "metavar": ("PROJECT", "NEED")},
-     "drop a need and its pick from .spark/needs.json and release only the holds of the dropped pick (every other hold stays); --dry-run "
-     "says what it would do; history stays, and requirements.json is not changed: a note says when it still lists the part",
-     ("writes",), ("project", "need", "dropped", "released", "written")),
-    ("requirements", {"metavar": "PROJECT"},
-     "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; board_only when the board itself serves every need",
-     ("writes",), ("path", "requirements", "shelved", "unplaced", "kept", "board_was", "placeholder_outline", "unserved", "no_supply",
-                   "no_driver", "no_receiver", "written")),
-    ("step", {"nargs": 2, "metavar": ("PROJECT", "STEP")},
-     "a spine step of a project starts now, in this Claude Code session — the cost line counts its transcript from here",
-     ("writes",), ("step", "written")),
-    ("tally", {"metavar": "PROJECT"},
-     "the cost line: the picks, how many came from the store (known to spark before the project: its library, your store, your projects) and how many you own, and what the project's steps cost",
-     (), ("picks", "from_store", "owned", "cost", "built", "line", "needs", "needs_picked")),
-    ("describe", {"action": "store_true"}, "every operation, its arguments, effects and output — this list", (),
-     ("operations", "options", "exits")),
-)
-
-def _not_negative(text):
-    """An argparse type: a whole number from 0 up — a listing cannot start before its first item."""
-    if int(text) < 0:
-        raise argparse.ArgumentTypeError("%s is below 0" % text)
-    return int(text)
-
-
-#: The options an operation reads, in the same columns but effects. An option an Operation on the core takes reads its
-#: help from that Operation's module (or from records' `answer_operation` when several share it), so `--help` of both and
-#: `--describe` say one text (P726).
-OPTIONS = (
-    ("kind", {}, write_skeleton.KIND_HELP),
-    ("vendor", {}, write_skeleton.VENDOR_HELP),
-    ("sku", {}, write_skeleton.SKU_HELP),
-    ("url", {}, keep_file.URL_HELP),
-    ("want", {"nargs": "+", "metavar": "FACT"}, read_datasheet.WANT_HELP),
-    ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, read_datasheet.LABEL_HELP),
-    ("passed-over", {"metavar": "FILE"}, "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"),
-    ("matcher", {"metavar": "NAME"}, find_offers.MATCHER_HELP),
-    ("project", {"type": Path}, PROJECT_HELP),
-    ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, START_HELP),
-    ("dry-run", {"action": "store_true"}, DRY_RUN_HELP),
-    ("json", {"action": "store_true"}, "answer in one envelope: problems, unchecked, notes, assumptions, next "
-     "(docs/guide/agents/json.md, \"parts.py's envelope\")"),
-)
-
-
-def _parser():
-    """The argument parser, built from OPERATIONS and OPTIONS so that `--describe` cannot drift from it."""
-    parser = AnsweringParser(prog="parts.py", description="What a part needs, and what is known about it.")
-    what = parser.add_mutually_exclusive_group(required=True)
-    for name, keywords, summary, _, _ in OPERATIONS:
-        what.add_argument("--" + name, help=summary, **keywords)
-    for name, keywords, summary in OPTIONS:
-        parser.add_argument("--" + name, help=summary, **keywords)
-    return parser
-
-
-def _read_json_input(name):
-    """A payload from a file, or from stdin for '-' — the way labels and names travel, never argv (§6.4.2). A refusal
-    with the code `input_unreadable` when it is not readable JSON, which `main` answers as could-not-run."""
-    try:
-        return json.loads(sys.stdin.read() if name == "-" else Path(name).read_text())
-    except (OSError, ValueError) as broken:
-        raise CodedMessageError("%s is not readable JSON: %s", "stdin" if name == "-" else name, broken,
-                                code=sourcing_codes.INPUT_UNREADABLE) from None
-
-
-def _op_drawer_set(args, project):
-    items = _read_json_input(args.drawer_set)
-    return _drawer_answer(*drawer.plan_set(items, project), args.dry_run)
-
-
-def _op_drawer_import(args, project):
-    source, name = args.drawer_import
-    payload = _read_json_input(name)
-    changes, questions, problems, smaller = drawer.plan_import(source, payload)
-    answer = _drawer_answer(changes, questions, problems, args.dry_run)
-    if not problems and not args.dry_run:
-        store.write_json("drawer-import", store.slug(source), drawer.kept_payload(payload))
-    return answer._replace(data=dict(answer.data, smaller=smaller), lines=list(answer.lines) + ["  %s" % s for s in smaller])
-
-
-def _op_function_set(args, project):
-    part_id, name = args.function_set
-    function = _read_json_input(name)
-    answer = _set_in_home(part_id, project, {"function": function}, args.dry_run, lambda record, after, path:
-                          function_problems(after) if function else ["a function is a non-empty list [{does, what}]"])
-    return answer._replace(data=dict(answer.data, was=answer.data["was"]["function"], now=function)) if answer.data else answer
-
-
-def _op_fact_set(args, project):
-    """Fill a record's chain facts, write `facts` entries by name (a bench result and its source, P374), or set what it says of itself (about, description, tags)."""
-    part_id, name = args.fact_set
-    facts = _read_json_input(name)
-    if not (isinstance(facts, dict) and facts and set(facts) <= set(CHAIN_FACTS + drawer.DESCRIBING + drawer.PROVENANCE_KEYS + drawer.SHEET_KEYS)):
-        return Answer(problems=[_problem(part_id, "a fact write is a JSON object of facts the chain reads: %s, or `facts` entries by name, or `physical` "
-                                                  "with its `physical_proof`, or what the sheet reads: %s; or of what a record says of itself: %s"
-                                                  % (", ".join(CHAIN_FACTS), ", ".join(drawer.SHEET_KEYS), ", ".join(drawer.DESCRIBING)))])
-    facts = {key: drawer.scrub(key, value) if key in drawer.DESCRIBING + drawer.PROVENANCE_KEYS + drawer.SHEET_KEYS else value for key, value in facts.items()}
-    wrong = [drawer.CHECKS[key][1] for key in drawer.DESCRIBING if key in facts and not drawer.CHECKS[key][0](facts[key])] + drawer.list_provenance_key_problems(facts)
-    if wrong:
-        return Answer(problems=[_problem(part_id, sentence) for sentence in wrong])
-    return _set_in_home(part_id, project, facts, args.dry_run, lambda record, after, path: missing_facts.board_write_problems(record, after, path, facts, project) if "pin_roles" in facts else (
-        ["%s is absent — a write fills a fact, it never empties one" % key for key in facts if _absent(key, facts[key])]
-        + drawer.list_sheet_key_problems(facts, record)
-        + sorted(set(provenance.list_entry_problems(facts.get("facts"), record.get("facts"))) | set(broken_problems(after, path)) - set(broken_problems(record, path)))))
-
-
-def _op_needs_set(args, project):
-    target, name = args.needs_set
-    items = _read_json_input(name)
-    after, changes, problems = needs.plan_set(target, items)
-    written = not (problems or args.dry_run)
-    if written and changes:
-        needs.write(target, after)
-    return Answer({"changes": changes, "written": written}, _write_lines(changes, problems, args.dry_run), problems=problems)
-
-
-def _op_needs_drop(args, project):
-    """The drop of a need, run on the core (P514): DropNeed through `run_operation`, its result as parts.py's Answer."""
-    target, need = args.needs_drop
-    result = run_operation(DropNeed(), {"project": Path(target), "need": need, "dry_run": args.dry_run},
-                           build_outside=lambda effects: build_outside_world(effects, Reporter()))
-    return Answer.from_result(result)
-
-
-def _op_pick(args, project):
-    target, given = args.pick[0], args.pick[1:]
-    pairs = [tuple(one.split("=", 1)) for one in given if "=" in one]
-    if not pairs or len(pairs) != len(given):
-        return Answer(unchecked=[_cannot("--pick takes the project, then NEED=ID for each pick: light=led-red-5mm",
-                                         "parts.py --match <project> lists each need's candidates and their ids")])
-    reasons = _read_json_input(args.passed_over) if args.passed_over else []
-    history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
-    listed, keys_before = store.find_listed_name(target) is not None, needs.entry_keys(needs.read(target))
-    after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)
-    if not problems and not args.dry_run:
-        store.add_project(target)
-        drawer.apply(changes)
-        for event in events:
-            store.append_event(event)
-        # the project's own file last: a store that refuses leaves it as it was, and the same pick, retried, finishes the rest
-        needs.write(target, after)
-    asked, name = dict(pairs), store.plan_listed_name(target)
-    picks = [{"need": need["id"], "pick": need.get("pick") or []} for need in after if need["id"] in asked]
-    said = [] if problems else ["  %s: %s" % (one["need"], ", ".join(next(iter(pick.values())) for pick in one["pick"])) for one in picks]
-    released = needs.released_holds(changes, name)
-    said += [] if problems else ["  %s%s: %s — no pick of this project explains it" % (
-        "would release" if args.dry_run else "released", "" if hold["now"] == 0 else " %d of %d" % (hold["was"] - hold["now"], hold["was"]),
-        hold["entry"]) for hold in released]
-    wrote = [] if problems else _what_a_pick_wrote(name, listed, history, events, needs.entry_keys(after) - keys_before, args.dry_run)
-    return Answer({"project": name, "picks": picks,
-                   "reserved": [{"entry": change["entry"], "used_in": change["now"]["used_in"]} for change in changes],
-                   "released": released, "written": not problems and not args.dry_run},
-                  _write_lines(changes, problems, args.dry_run, said + ["  %s" % note for note in notes] + wrote), problems=problems,
-                  notes=[_note(note) for note in notes])
-
-
-def _op_describe(args, project):
-    operations = [{"op": name, "flag": "--" + name, "summary": summary, "effects": list(effects), "dry_run": bool(effects),
-                   "arguments": {key: (list(value) if isinstance(value, tuple) else value)
-                                 for key, value in keywords.items() if key in ("nargs", "metavar")},
-                   "data": list(keys)} for name, keywords, summary, effects, keys in OPERATIONS]
-    options = [{"flag": "--" + name, "summary": summary} for name, _, summary in OPTIONS]
-    exits = {str(code): status for status, code in EXIT_FOR.items()}
-    lines = ["  %-18s %s%s" % (op["flag"], op["summary"], "  [%s]" % ", ".join(op["effects"]) if op["effects"] else "")
-             for op in operations]
-    return Answer({"operations": operations, "options": options, "exits": exits}, lines)
-
-
-def _say(op, answer, as_json):
+# --- MVP ---
+class DropNeedFlag(AnswerOperation):
     """
-    Print one answer and return its exit code (§6.4.1): with --json the envelope, compact, on stdout; without, the
-    person's lines and whatever the answer carries that they leave out (`Answer.text_lines`). An answer with no lines says its
-    problems and could-not-run items on stderr, as before.
+    Operation: the CLI's flag shape of the idea area's `DropNeed` (an Adapter at the edge, P726 PR 3): `--needs-drop PROJECT
+    NEED` runs `DropNeed` with `--project PROJECT --need NEED` through `run_operation` and answers as every parts.py
+    Operation does (`Answer.from_result`), as the handler did since P514.
     """
-    said = envelope("parts", op, answer.data, answer.problems, answer.unchecked, answer.next, answer.truncated,
-                    notes=answer.notes, assumptions=answer.assumptions)
-    if answer.diagnostics:
-        print(guard_lines("\n".join(answer.diagnostics)), file=sys.stderr)
-    if as_json:
-        print(json.dumps(said, ensure_ascii=False, separators=(",", ":")).encode("utf-8", "backslashreplace").decode("utf-8"))  # P445: a lone surrogate is written as a JSON escape
-    else:
-        if not answer.lines:
-            for item in list(answer.problems) + list(answer.unchecked):
-                said_here = "parts.py: %s%s" % (item["sentence"], " — " + item["fix"] if item.get("fix") else "")
-                print(guard_lines(said_here), file=sys.stderr)
-            answer = answer._replace(problems=(), unchecked=())
-        for line in answer.text_lines():
-            # P403, P423: every field, once, at the edge: a control or a right-to-left character shows as `?`. A line's own
-            # newlines stay. A name that can hold a newline (a holder, a used_in key) is guarded where it is put in.
-            print(guard_lines(line))  # --json stays raw, as data
-    return EXIT_FOR[said["status"]]
+
+    name = "needs-drop"
+    data_keys = ('project', 'need', 'dropped', 'released', 'written')
+    arguments = (Argument(("--needs-drop",), "project_and_need", str,
+                          "drop a need and its pick from .spark/needs.json and release only the holds of the dropped pick (every other hold stays); --dry-run "
+                          "says what it would do; history stays, and requirements.json is not changed: a note says when it still lists the part",
+                          nargs=2, metavar=("PROJECT", "NEED")),
+                 ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
+    effects = (READS, WRITES)
+
+    def effects_of(self, values):
+        return (READS,) if values["dry_run"] else self.effects
+
+    def build_answer(self, project_and_need, dry_run):
+        target, need = project_and_need
+        result = run_operation(DropNeed(), {"project": Path(target), "need": need, "dry_run": dry_run},
+                               build_outside=lambda effects: build_bare_outside_world(None, effects, Reporter()))
+        return Answer.from_result(result)
 
 
-#: The Operations of parts.py that run on the core, by the flag that picks each (P707, P726): the design and the sourcing
-#: Operations that have a row in OPERATIONS (`list-boards` is boards.py's). The payload handlers come with PR 3 of P726.
-ON_THE_CORE = {"--" + name: operation for name, operation in {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS}.items()
-               if any(row[0] == name for row in OPERATIONS)}
-#: Every long flag parts.py knows, for the prefix rule.
-FLAGS = ["--" + name for name, *_ in OPERATIONS] + ["--" + name for name, *_ in OPTIONS]
+#: The order `--describe` lists the operations in: the order of the old table, so the page and the golden read as before.
+ORDER = ("list", "show", "validate", "signals", "unverified", "need", "skeleton", "sources", "fetch", "keep", "read", "kept", "promote",
+         "catalog", "drawer", "drawer-set", "drawer-import", "function-set", "fact-set", "audit", "needs", "needs-set", "match", "offer",
+         "pick", "needs-drop", "requirements", "step", "tally", "describe")
+#: Every Operation parts.py offers, by the `op` it prints, in `ORDER`: the ONE registry the route and `--describe` read, so
+#: what an agent reads about an operation cannot drift from what runs (§6.4.3). `list-boards` is boards.py's and stays out.
+OPERATIONS = {name: {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag,
+                     DescribeOperations.name: DescribeOperations}[name] for name in ORDER}
+#: The flags, for the prefix rule.
+FLAGS = ["--" + name for name in OPERATIONS]
+#: What parts.py says of itself, and the fix of an argv that names no operation.
+HELP = HelpText("parts.py", "What a part needs, and what is known about it.", "", tool="parts",
+                bad_argument_fix="parts.py --describe --json lists every operation and its arguments")
 
 
 def asked_on_the_core(argv):
-    """The Operation `argv` asks for on the core, picked as argparse picks a long option (P726): an item (its text before
-    `=`) that equals a core flag, else one longer than `--` that is a prefix of exactly one of parts.py's flags, when that
-    flag is a core one (`--need` is a prefix of `--needs`, so the exact match comes first; `--ne` fits four flags and goes
-    to the parser, whose own answer names the ambiguity). None when `argv` asks for none."""
+    """The Operation `argv` asks for, picked as argparse picks a long option (P726): an item (its text before `=`) that equals
+    a flag, else one longer than `--` that is a prefix of exactly one flag (`--need` is a prefix of `--needs`, so the exact
+    match comes first; `--ne` fits several and goes to the describe parser, which refuses it as an unrecognized argument).
+    None when `argv` names no operation."""
     for item in argv:
         flag = item.split("=", 1)[0]
-        if flag in ON_THE_CORE:
-            return ON_THE_CORE[flag]
+        if flag in FLAGS:
+            return OPERATIONS[flag[2:]]
         fitting = [known for known in FLAGS if known.startswith(flag)] if len(flag) > len("--") else []
-        if len(fitting) == 1 and fitting[0] in ON_THE_CORE:
-            return ON_THE_CORE[fitting[0]]
+        if len(fitting) == 1:
+            return OPERATIONS[fitting[0][2:]]
     return None
 
 
+def catalog_epilog():
+    """The text under `parts.py --help`: every operation with its summary and effects, and the options the operations share,
+    so a reader of the describe route sees what the Operations offer (each Operation's own `--help` lists its arguments)."""
+    lines = ["operations (each takes --help):"]
+    lines += [OPERATION_LINE % ("--" + op, summary_of(cls), "  [%s]" % ", ".join(effect_words_of(cls)) if effect_words_of(cls) else "")
+              for op, cls in OPERATIONS.items()]
+    return "\n".join(lines + ["", "options, by the operations that take them:"] + [OPERATION_LINE % (flag, help, "") for flag, help in options_of(OPERATIONS).items()])
+
+
 def on_the_core(argv):
-    """The exit code of the Operation `argv` asks for on the core (`asked_on_the_core`), run through `run_cli` with
-    parts.py's `tool`; None when `argv` asks for none, and the parser's own handlers answer (P707)."""
+    """The exit code of the Operation `argv` asks for, run through `run_cli` with parts.py's `tool`; an argv that names no
+    operation goes to `--describe`: an unknown flag is its `bad_argument` with the describe fix, and no argument at all
+    lists the operations (P707, P726)."""
     operation = asked_on_the_core(argv)
-    return None if operation is None else run_cli(HelpText("parts.py", "What a part needs, and what is known about it.", "", tool="parts"),
-                                                  operation(), argv, outside_builder=build_bare_outside_world)
-
-
-def _part_problem(args, op, broken):
-    """A PartError's Answer: one problem on the operation's value (a list joined, a string, else no subject)."""
-    value = getattr(args, op.replace("-", "_"))
-    return Answer(problems=[_problem(" ".join(value) if isinstance(value, list) else (value if isinstance(value, str) else None), str(broken))])
+    if operation in (None, DescribeOperations):
+        return run_cli(HELP._replace(epilog=catalog_epilog()), DescribeOperations(OPERATIONS), argv, outside_builder=build_bare_outside_world)
+    return run_cli(HELP, operation(), argv, outside_builder=build_bare_outside_world)
 
 
 def main(argv=None):
-    argv = sys.argv[1:] if argv is None else list(argv)
-    if (code := on_the_core(argv)) is not None:
-        return code
-    asked = next((name for name, *_ in OPERATIONS if "--" + name in argv), None)
-    try:
-        args = _parser().parse_args(argv)
-    except BadArgumentError as bad:
-        return _say(asked, Answer(unchecked=[_cannot(str(bad), "parts.py --describe --json lists every operation and its arguments")]),
-                    "--json" in argv)
-    op = next(name for name, *_ in OPERATIONS if getattr(args, name.replace("-", "_")) not in (None, False))
-    project = args.project.resolve() if args.project else None
-    writes = "writes" in next(effects for name, _, _, effects, _ in OPERATIONS if name == op)
-    try:
-        with store.locked() if writes else contextlib.nullcontext():
-            answer = globals()["_op_" + op.replace("-", "_")](args, project)
-    except (OSError, json.JSONDecodeError) as unreadable:
-        answer = Answer(unchecked=[_cannot("--%s: %s" % (op, unreadable))])
-    except PartError as broken:
-        answer = _part_problem(args, op, broken)
-    except CodedMessageError as broken:  # a store's refusal, an unreadable input: could-not-run, never a traceback
-        answer = Answer(unchecked=[_cannot(str(broken))])
-    return _say(op, answer, args.json)
+    return on_the_core(sys.argv[1:] if argv is None else list(argv))
+# --- end MVP ---
 
 
 if __name__ == "__main__":

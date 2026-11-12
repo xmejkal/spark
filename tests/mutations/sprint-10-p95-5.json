@@ -48,13 +48,13 @@
   "replace": "            continue"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "the valid half of a refused write is written",
   "find": "    if not problems and not dry_run:\n        drawer.apply(changes)",
   "replace": "    if not dry_run:\n        drawer.apply(changes)"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "a dry run writes",
   "find": "    if not problems and not dry_run:\n        drawer.apply(changes)",
   "replace": "    if not problems:\n        drawer.apply(changes)"

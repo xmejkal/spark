@@ -60,10 +60,10 @@
   "replace": "PULLUP_MIN_OHM, PULLUP_MAX_OHM = 1000, 10000\n"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/core/cli.py",
   "name": "_say drops a handler's stderr line",
-  "find": "    if answer.diagnostics:\n        print(guard_lines(\"\\n\".join(answer.diagnostics)), file=sys.stderr)",
-  "replace": "    if False:\n        print(guard_lines(\"\\n\".join(answer.diagnostics)), file=sys.stderr)"
+  "find": "    if result.diagnostics:\n        print(guard_lines(\"\\n\".join(result.diagnostics)), file=sys.stderr)",
+  "replace": "    if False:\n        print(guard_lines(\"\\n\".join(result.diagnostics)), file=sys.stderr)"
  },
  {
   "file": "scripts/spark/sourcing/part_rules.py",
@@ -78,13 +78,13 @@
   "replace": ""
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/core/cli.py",
   "name": "an unreadable input is told as no such part",
-  "find": "                                code=sourcing_codes.INPUT_UNREADABLE) from None",
-  "replace": "                                code=sourcing_codes.NO_SUCH_PART) from None"
+  "find": "code=codes.INPUT_UNREADABLE) from None",
+  "replace": "code=codes.BAD_ARGUMENT) from None"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/records/answer_operation.py",
   "name": "main lets an unreadable input crash",
   "find": "    except CodedMessageError as broken:",
   "replace": "    except store.StoreError as broken:"

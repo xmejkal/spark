@@ -24,7 +24,7 @@
   "replace": "\"?\" if not e[\"count\"] else e[\"count\"]"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "the write of an entry with no count says None",
   "find": "now.get(\"count\", \"?\")",
   "replace": "now.get(\"count\")"
