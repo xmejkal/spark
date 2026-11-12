@@ -58,13 +58,13 @@ from spark.sourcing import part_facts  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
 import test_converter  # noqa: E402
-from fakes import FakeBuildService  # noqa: E402
+from fakes import FakeBuildService, FakeToolFinder  # noqa: E402
 
 
-def build_stages(requirements, workdir, toolchain=None, **inputs):
+def build_stages(requirements, workdir, toolchain=None, find_tool=None, **inputs):
     """The build as `main` runs it: the real engine over `toolchain` (None: found from the project) and the real emitter,
-    on `BuildInputs(requirements, workdir, **inputs)`; the stages."""
-    return build_service.BuildService.for_toolchain(toolchain).build(build_service.BuildInputs(requirements, workdir, **inputs))
+    with `find_tool` (a test's finder; None: the real one), on `BuildInputs(requirements, workdir, **inputs)`; the stages."""
+    return build_service.BuildService.for_toolchain(toolchain, find_tool).build(build_service.BuildInputs(requirements, workdir, **inputs))
 from fakes import FakeTscircuitExport, fake_tsci  # noqa: E402
 
 
@@ -2000,9 +2000,9 @@ class AMissingBoardEngineSaysWhatTheToolsListSaysTest(unittest.TestCase):
         requirements = dict(check_spine.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         said = "tscircuit needs bun: bun (bun) is not installed — install: npm install -g bun"
-        with mock.patch.object(board_engine, "find_toolchain", return_value=None), \
-                mock.patch.object(tool_finder, "find", side_effect=tool_finder.ToolError(said, code="tool_missing")):
-            stages = build_stages(requirements, workdir, from_library=True)
+        missing = FakeToolFinder({"board-engine": tool_finder.ToolError(said, code="tool_missing")}).find
+        with mock.patch.object(board_engine, "find_toolchain", return_value=None):
+            stages = build_stages(requirements, workdir, from_library=True, find_tool=missing)
         build = [stage for stage in stages if stage.name == "build"][0]
         self.assertEqual(build.status, check_spine.COULD_NOT_RUN)
         self.assertIn("npm install -g bun", build.detail)
@@ -2066,9 +2066,9 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
         from spark.records import tool_finder
         own = Path(tempfile.mkdtemp()) / "cli.ts"
         bun = tool_finder.Tool("bun", "ts-runtime", {"kind": "path"}, ["/opt/bun"])
-        with mock.patch.object(tool_finder, "find", return_value=bun) as asked:
-            self.assertEqual(board_engine.converter_command(None, own), ["/opt/bun", "run", str(own)])
-        self.assertEqual(asked.call_args[0][0], "ts-runtime")
+        finder = FakeToolFinder({"ts-runtime": bun})
+        self.assertEqual(board_engine.converter_command(None, own, finder.find), ["/opt/bun", "run", str(own)])
+        self.assertEqual(finder.asked[0][0], "ts-runtime")
 
     def test_the_converter_the_list_names_is_the_one_that_runs(self):
         from spark.records import tool_finder
@@ -2076,12 +2076,10 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
         node = tool_finder.Tool("node", "js-runtime", {"kind": "path"}, ["/opt/node"])
         bundled = tool_finder.Tool("circuit-to-wokwi", "diagram-converter", {"kind": "bundled"},
                                    ["/plugin/converter.mjs"])
-        with mock.patch.object(tool_finder, "find",
-                               side_effect=lambda role, *rest: swapped if role == "diagram-converter" else node):
-            self.assertEqual(board_engine.converter_command(None, None), ["/opt/my-conv"])
-        with mock.patch.object(tool_finder, "find",
-                               side_effect=lambda role, *rest: bundled if role == "diagram-converter" else node):
-            self.assertEqual(board_engine.converter_command(None, None), ["/opt/node", "/plugin/converter.mjs"])
+        self.assertEqual(board_engine.converter_command(None, None, FakeToolFinder({"diagram-converter": swapped, "js-runtime": node}).find),
+                         ["/opt/my-conv"])
+        self.assertEqual(board_engine.converter_command(None, None, FakeToolFinder({"diagram-converter": bundled, "js-runtime": node}).find),
+                         ["/opt/node", "/plugin/converter.mjs"])
 
 class TheConverterShipsAsOneFileTest(unittest.TestCase):
     """B10 / P82: an installed spark has no node_modules in tools/circuit-to-wokwi, so the converter ships built."""
@@ -2112,8 +2110,7 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
         from spark.records import tool_finder
         missing = tool_finder.ToolError("js-runtime (node) is not installed — install: brew install node",
                                           code="tool_missing")
-        with mock.patch.object(tool_finder, "find", side_effect=missing):
-            stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()))
+        stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()), find_tool=FakeToolFinder({"diagram-converter": missing}).find)
         self.assertEqual(stage.status, check_spine.COULD_NOT_RUN)
         self.assertIn("brew install node", stage.detail)
 
@@ -2121,13 +2118,9 @@ class TheConverterShipsAsOneFileTest(unittest.TestCase):
         from spark.records import tool_finder
         real = tool_finder.find
 
-        def no_node(name, *rest):
-            if name == "js-runtime":
-                raise tool_finder.ToolError("js-runtime (node) is not installed — install: brew install node",
-                                              code="tool_missing")
-            return real(name, *rest)
-        with mock.patch.object(tool_finder, "find", side_effect=no_node):
-            stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()))
+        no_node = FakeToolFinder({"js-runtime": tool_finder.ToolError("js-runtime (node) is not installed — install: brew install node",
+                                                                      code="tool_missing")}, fall_back=real)
+        stage = board_engine.converter_stage_problem(Path(tempfile.mkdtemp()), find_tool=no_node.find)
         self.assertIsNotNone(stage, "the bundle is here and Node is not: the converter cannot run")
         self.assertIn("brew install node", stage.detail)
 

@@ -26,7 +26,8 @@ from spark.firmware import sim_project  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from test_deploy import FOUND, ProjectCase, found  # noqa: E402
+from test_deploy import FOUND, ProjectCase, found  # noqa: E402,F401  (test_deploy_gate, test_look and test_reach take `found` from here)
+from fakes import FakeToolFinder  # noqa: E402
 
 #: The C6 and the mpremote lines are P228's bench outputs, trimmed. The S3, classic ESP32, KB and CH340 files are
 #: written by hand, as tests/data/board_look/README.md says: no such board was on the bench.
@@ -82,10 +83,8 @@ class LookCase(ProjectCase):
                 return done(data(devs))
             return done(text or data(esptool), esptool_code)
 
-        flasher = flasher or FOUND["flasher"]
-        with mock.patch.object(tool_finder, "find",
-                               side_effect=lambda name, *a, **k: flasher if name == "flasher" else found(name)):
-            return board_look.looker(MicroPythonPlatform(self.project), run).run(self.project, port, evidence or image_evidence.PassedRunEvidence(ignore_older_runs))
+        find_tool = FakeToolFinder({**FOUND, "flasher": flasher or FOUND["flasher"]}).find
+        return board_look.looker(MicroPythonPlatform(self.project, find_tool), run).run(self.project, port, evidence or image_evidence.PassedRunEvidence(ignore_older_runs))
 
 
 class PortFinderTest(LookCase):

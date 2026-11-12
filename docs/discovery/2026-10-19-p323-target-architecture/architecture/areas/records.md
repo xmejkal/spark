@@ -4,14 +4,16 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 New names (proposed): `RecordFolders`, `RecordFinder`, `RecordKind`, `Record`, `ShelveRecord`, `Brief`, `DeployRecordStore`,
-`ToolFinder`, `ToolMissingError`, `Backends`, `Choice`, `build_outside`, `FakeToolFinder` and the Operation names below.
+`ToolFinder`, `ToolMissingError` and `FakeToolFinder` (real since P725), and the Operation names below. `Backends`, `Choice` and
+`build_outside` were dropped in P725: the choice of tools comes from `outside.find_tool`, built once per run by the area's builder.
 `Records` and `RecordSchema` are the names of plan version 1. They are now `RecordFinder` and `RecordKind`, and the
 role word Records is gone.
 
 ## Level 2: what records does
 
 Records reads and writes every JSON record, the person's store and the tool rows, from one walk over the library,
-the store and the project. It also builds `Backends` once per run, so every backend choice comes from one place.
+the store and the project. An area's builder hands each run `ToolFinder(project).find` as `outside.find_tool`, so every
+tool comes from one place (P725).
 
 ### Its operations
 
@@ -42,16 +44,15 @@ branch alone, so the other flags load no design module.
 | `records/onboard_parts.py` | the onboard parts a scenario wires (`ONBOARD_PARTS`, P484). It imports only records and core since P708, and the converter's input is `build/board_alone_input.py` |
 | `records/missing_facts.py` | the facts a board record owes a stage, as Findings, and what refuses a write of them (P464) |
 | `records/records_codes.py` | the leaf `records_codes` (P716, moved in W6-R3a): a code and its sentence for each refusal of `BoardError`, `ToolError` and `StoreError`, `errors.CodedMessageError`s |
-| `records/tool_finder.py` | the three `tools.json` layers merged, `find`, `status`, `plan`, `install` and the install lines, moved from `tools.py` in W6-R3b (P719). The CLI `tools.py` keeps `main` and `print_status`, which prints. `ToolFinder` comes with its card |
+| `records/tool_finder.py` | the three `tools.json` layers merged, `find`, `status`, `plan`, `install` and the install lines, moved from `tools.py` in W6-R3b (P719). The CLI `tools.py` keeps `main` and `print_status`, which prints. Since P725 `ToolFinder(project).find` is the Adapter an area's builder hands an Operation as `outside.find_tool`, and `ToolMissingError` the `ToolError` of a tool not installed |
 | `records/versions.py` | version numbers compared: a pin against the release installed, and a release against the oldest one spark runs, moved from `scripts/versions.py` in W6-R3b (P719) |
-| `records/backends.py` | `Backends` and `build_outside` |
 
 ### Its seams and adapters
 
 | Seam | Real adapter | Fake | Configured in |
 |---|---|---|---|
 | record folders | `RecordFolders.from_environ()` | `RecordFolders(tmp)` | `SPARK_HOME`, then `XDG_DATA_HOME`, then `~/.local/share/spark` (`store.home`) |
-| tool finder: `find(role) -> Tool` | `ToolFinder` over `data/tools.json`, the store's and the project's `tools.json` | `FakeToolFinder({role: argv})` | the three layers, the project wins (`tool_finder.merged`) |
+| tool finder: `find_tool(name) -> Tool` | `ToolFinder(project).find` over `data/tools.json`, the store's and the project's `tools.json` (P725) | `FakeToolFinder(answers)`: a name -> Tool or the exception to raise, with `asked` | the three layers, the project wins (`tool_finder.merged`) |
 | network: `fetch(url) -> bytes` | `store.fetch`, the only `urlopen` | a dict from URL to bytes | none |
 | file writes | `store.write_file` | a recording writer | none |
 
@@ -89,36 +90,22 @@ classDiagram
     digest(record)
   }
   class ToolFinder {
-    <<Service>>
-    find(role) Tool
-    status() list
+    <<Adapter>>
+    project
+    find(name) Tool
   }
-  class Backends {
-    <<Value>>
-    folders
-    tools
-    platform
-    simulator
-    privacy()
-    for_project(project, environ)$
-  }
-  class Choice {
-    <<Value>>
-    name
-    chosen_by
+  class ToolMissingError {
+    <<Error>>
   }
   RecordFinder --> RecordFolders
   RecordFinder --> RecordKind
-  Backends --> RecordFolders
-  Backends --> ToolFinder
-  Backends --> Choice : platform, simulator
+  ToolFinder ..> ToolMissingError : find raises, a ToolError
 ```
 
-`Backends` holds choices, not built objects, and it names no backend of its own. `platform` is a `Choice` with the
-name that `requirements.json` gives, or none and `chosen_by: default`. Each area's Operation modules turn a choice into
-a Strategy with its own registry and its own default, such as bench's `DEFAULT_PLATFORM`. So records never imports
-bench or firmware. S8 adds a `backends` key to the envelope with each choice and its `chosen_by`, so a person and Claude
-see which backend ran and why.
+`Backends` was dropped in P725. `ToolFinder(project).find` goes in as `outside.find_tool`, built by the area's builder
+(`bench.build_project_outside_world`); the build and firmware functions take the same callable as a `find_tool` keyword
+until their Operations come. Each area keeps its own platform default, such as bench's `DEFAULT_PLATFORM`, so records
+never imports bench or firmware.
 
 A record reader refuses a newer schema with code `schema_too_new`. A schema bump ships one tested `migrate(record)`.
 
@@ -127,25 +114,19 @@ A record reader refuses a newer schema with code `schema_too_new`. A schema bump
 ```mermaid
 sequenceDiagram
   participant RC as run_cli (core)
-  participant BO as build_outside
-  participant BK as Backends
-  participant RF as RecordFolders
+  participant BO as build_project_outside_world (the area)
   participant TF as ToolFinder
-  RC->>BO: build_outside(project, effects)
-  BO->>BK: Backends.for_project(project, environ)
-  BK->>RF: from_environ(project)
-  BK->>TF: ToolFinder(folders)
-  BK->>BK: read the requirements platform, or none
-  BK-->>BO: Backends
-  BO->>BO: OutsideWorld with only the declared effects
-  BO-->>RC: OutsideWorld, Backends, Privacy
+  RC->>BO: build_project_outside_world(project, effects, reporter)
+  BO->>TF: ToolFinder(project)
+  BO->>BO: build_outside_world(effects, reporter, find_tool=TF.find)
+  BO-->>RC: OutsideWorld with only the declared effects
 ```
 
 ### How records is tested alone
 
 - `RecordFolders(tmp)` over records copied from `tests/data/`. No test sets `os.environ` for the store.
-- `FakeToolFinder` replaces about 39 `mock.patch.object(tools, "find")` lines and 29 patches of `shutil.which`
-  (grep, 2026-10-21). The suite's patch count then falls.
+- `FakeToolFinder` replaced the 31 `mock.patch.object(tool_finder, "find")` lines in P725 (about 39 on 2026-10-21); the
+  29 patches of `shutil.which` stay. The suite's T2 baseline fell by 31.
 - A `RecordKind` contract test runs every record in `boards/` and `parts/` through `validate` and expects none.
 - When every test passes a `RecordFolders`, the test branches in `store` (the `unittest` guard at import, and `store._must_be_web`) go (rule T4).
 

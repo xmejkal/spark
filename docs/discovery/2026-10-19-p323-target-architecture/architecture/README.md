@@ -51,7 +51,7 @@ flowchart LR
     OPS --> AREAS["areas: Services over Strategies"]
     AREAS --> PORTS["seams: Strategy bases and Values"]
   end
-  CFG["Backends, built once from tools.json layers, requirements platform, SPARK_HOME"] --> OPS
+  CFG["outside.find_tool, ToolFinder(project).find built once per run from the tools.json layers (P725; Backends dropped)"] --> OPS
   PORTS --> AD["Adapters"]
   AD --> T["tools: esptool, mpremote, tsci, wokwi-cli"]
   AD --> PL["platform: MicroPython"]
@@ -85,7 +85,7 @@ flowchart TB
 | Area | Its job in one line | Page |
 |---|---|---|
 | core | the contract: Operation, result, Finding, errors, the CLI runner | [core](areas/core.md) |
-| records | reads and writes records, the store and tool rows, builds Backends | [records](areas/records.md) |
+| records | reads and writes records, the store and tool rows, hands each run `ToolFinder(project).find` as `outside.find_tool` (P725) | [records](areas/records.md) |
 | sourcing | the drawer, matching needs to parts, cost, datasheets | [sourcing](areas/sourcing.md) |
 | design | the pin map, the netlist and the board file from the requirements | [design](areas/design.md) |
 | firmware | the flash image and the simulation | [firmware](areas/firmware.md) |
@@ -124,7 +124,7 @@ test that reads the code with Python's `ast` module. A breach that exists today 
 |---|---|---|
 | 1. Readable | R1 short functions (40 lines in `spark/`), R2 nesting at most 3, R3 at most 5 parameters, R4 public code first, R5 short comments, R6 role word first in a docstring, R7 sentences as constants | `ArchitectureRules` counts R1 to R6. `test_no_magic_strings.py` and review cover R7. |
 | 2. Testable | T1 only Adapters touch the outside, T2 no new `mock.patch`, T3 a contract test per Strategy, T4 no hidden test mode, T5 goldens per Operation | AST for T1 to T4. The golden test for T5. |
-| 3. Exchangeable | X1 a backend is picked only from Backends in an Operation module, X2 a frontend only parses and renders, X3 one registry form | AST, plus a parity test: text and `--json` carry the same codes. |
+| 3. Exchangeable | X1 a backend is picked only through `outside.find_tool` in an Operation module (Backends dropped, P725), X2 a frontend only parses and renders, X3 one registry form | AST, plus a parity test: text and `--json` carry the same codes. |
 | 4. Reusable | U1 an area imports only areas it reaches along the map's arrows, U2 import modules, never private names, U3 one home per shared flag, code and shape | AST, plus the contract test of allowed keys. |
 | 5. Consistent | C1 the glossary's words, C2 one envelope from every Operation, C3 exit codes only from `EXIT_FOR`, C4 effects declared and gated | AST and the contract test. |
 
@@ -157,7 +157,7 @@ sequenceDiagram
   P->>CLI: look.py --project p
   C->>CLI: look.py --project p --json
   CLI->>RC: run_cli(prog, OPERATIONS, argv, build_outside, outside)
-  RC->>RC: parse, build OutsideWorld and Backends
+  RC->>RC: parse, build OutsideWorld (its find_tool, P725)
   RC->>RO: run_operation(LookAtBoard, values, outside, backends)
   RO->>O: run(project, port, ...)
   O->>RC: outside.report(Event), through the Reporter run_cli picked

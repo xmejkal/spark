@@ -1,6 +1,6 @@
 [
- {"file": "scripts/spark/firmware/scenario_run.py", "name": "run_scenario drops the project", "find": "interpreter_for(self.micropython, self.project)", "replace": "interpreter_for(self.micropython)"},
- {"file": "scripts/spark/firmware/image_builder.py", "name": "main drops its project", "find": "interpreter = interpreter_for(given, project)", "replace": "interpreter = interpreter_for(given)"},
+ {"file": "scripts/spark/firmware/scenario_run.py", "name": "run_scenario drops the project", "find": "interpreter_for(self.micropython, self.project,", "replace": "interpreter_for(self.micropython, None,"},
+ {"file": "scripts/spark/firmware/image_builder.py", "name": "main drops its project", "find": "interpreter = interpreter_for(given, project, find_tool)", "replace": "interpreter = interpreter_for(given, None, find_tool)"},
  {"file": "scripts/flash_image.py", "name": "main ignores --project", "find": "make_image(args.micropython, args.project or project_here(),", "replace": "make_image(args.micropython, project_here(),"},
  {"file": "scripts/flash_image.py", "name": "the project is not found from a folder inside it", "find": "        return board_records.project_root()", "replace": "        return Path(\".\")"},
  {"file": "scripts/spark/firmware/image_builder.py", "name": "skip the meets check", "find": " and \"micropython-esp32-bin\" in (entry.get(\"meets\") or [])", "replace": ""},

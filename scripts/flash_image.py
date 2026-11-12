@@ -33,7 +33,7 @@ MICROPYTHON_HELP = ("the interpreter .bin from micropython.org for the board's c
                     "with this file, so to use your own build, name it there")
 
 
-def main(argv=None):
+def main(argv=None, find_tool=None):  # find_tool: a test's (a name -> Tool), into make_image (P725)
     parser = argparse.ArgumentParser(prog="flash_image.py", description=__doc__.split("\n\n")[0])
     parser.add_argument("--micropython", type=Path, help=MICROPYTHON_HELP)
     parser.add_argument("--project", type=Path,
@@ -44,7 +44,7 @@ def main(argv=None):
     parser.add_argument("--config", help="JSON written as /config.json into the image")
     parser.add_argument("-o", "--output", required=True, type=Path)
     args = parser.parse_args(argv)
-    made, refusal = make_image(args.micropython, args.project or project_here(), args.files, args.config)
+    made, refusal = make_image(args.micropython, args.project or project_here(), args.files, args.config, find_tool)
     if refusal:
         print("flash_image.py: %s" % refusal, file=sys.stderr)
         return EXIT_COULD_NOT_RUN

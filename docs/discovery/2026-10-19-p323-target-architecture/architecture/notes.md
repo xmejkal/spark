@@ -20,7 +20,7 @@ five stages (rows 232 to 255). Version 2 of the plan (P385, 2026-10-25) has six 
 | N2 | One result shape, `OperationResult(data, findings, next, lines)`. | Six shapes cross boundaries today, and a reader learns one. |
 | N3 | One `Finding(severity, subject, code, sentence, fix)`. `fix` stays a string. | Five problem shapes today, and one class holds them without changing a key's type (`board_envelope.look_envelope`). `fix_step` was dropped on 2026-10-27: it would be null at every look site. |
 | N4 | One `OutsideWorld(run, write, fetch, clock, consent, environ)`, with only the declared effects filled. `runs` gates `run`. | Dry run, consent and the test seams become one mechanism, and every effect is gated. |
-| N5 | `Backends` holds choices, and each area's registry turns a choice into a Strategy, with the area's own default (`DEFAULT_PLATFORM` in bench). | records sits at the bottom and names no backend, so it cannot build a bench or firmware object. |
+| N5 | `Backends` holds choices, and each area's registry turns a choice into a Strategy, with the area's own default (`DEFAULT_PLATFORM` in bench). | records sits at the bottom and names no backend, so it cannot build a bench or firmware object. P725 dropped `Backends`: `outside.find_tool` holds the tool choice. |
 | N6 | An Operation is a class with one public method `run()`, whose keyword parameters are its arguments' `dest` names, not a `values` bag (v2: the class, from the standard). | A typo in a flag name fails at load, and a reader sees the inputs. |
 | N7 | One registry form: a dict in capitals from the class attribute `name` to the class. | `MATCHERS` already has it (`matching.py:222`), and it greps well. |
 | N8 | `FirmwarePlatform` becomes a Strategy base, and it also makes the port finder and the board reader. | 8 tool lookups bypass it today, so a platform swap would edit 5 callers. |
@@ -57,7 +57,7 @@ five stages (rows 232 to 255). Version 2 of the plan (P385, 2026-10-25) has six 
 | Result name: `Answer` (architect), `OperationResult` (naming), "the answer" with 9 keys (UX) | `OperationResult` with four fields | "Result" is the role word, and `parts.Answer` already holds "Answer". |
 | Problem name: `Finding` (architect), `Problem` (naming), `Item` (UX) | `Finding` | An unchecked item is not a problem, and "finding" covers all three lists. |
 | Collaborators: `Outside` (architect), one `<Area>Dependencies` per area (readability), separate seams (testability) | one `OutsideWorld` in core | One Value is smaller than eight, and "Outside" alone did not say its role. |
-| `Backends` builds objects (architect) or holds choices (testability) | holds choices | records cannot import bench without a cycle. |
+| `Backends` builds objects (architect) or holds choices (testability) | holds choices | records cannot import bench without a cycle. P725 dropped `Backends` for `outside.find_tool`. |
 | `Frontend` as a Strategy with three subclasses (UX) or a function (architect) | a function, `run_cli`, plus two Renderers | One frontend exists in code, and a base needs two cases (rule T3). |
 | `lines` (architect) or `diagnostics` (UX, design.md) | `lines` | `parts.Answer` already says `lines`, and it is not a JSON key. |
 | Function limit: 60 (design.md D7) or 40 (readability) | 40 in `spark/`, 60 for scripts not yet moved | New code fits 40, and old code pays down by ratchet. |
@@ -86,7 +86,7 @@ in `tests/architecture_baseline.json`, which only shrinks. The old ids are in br
 | T3 | A Strategy base has two subclasses or a Fake in `tests/fakes.py`, and a `<Name>Contract` test that each subclass test inherits. [S13, S14] | AST |
 | T4 | Code never branches on what is imported, such as `"unittest" in sys.modules`. | AST |
 | T5 | Every Operation has a golden per status. A golden changes only in an output slice, never in a move. | the golden test |
-| X1 | A concrete Adapter is named only in its area's Operation modules, picked from `Backends` through a registry. | AST |
+| X1 | A concrete Adapter is named only in its area's Operation modules, picked through `outside.find_tool` (P725 dropped `Backends`). | AST |
 | X2 | No `main`, `print` or `sys.exit` in `spark/`. A CLI calls `run_cli`. [S5] | AST |
 | X3 | A registry is a dict in capitals beside its base class, keyed by the class attribute `name`. | AST |
 | U1 | An area imports only the areas it reaches along the area map's arrows, with no cycle. Another area is reached only through its public modules. [S4] | AST |

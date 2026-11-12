@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-from spark.records import store  # noqa: E402
+from spark.records import records_codes, store, tool_finder  # noqa: E402
 from spark.build.board_engine import BuildResult  # noqa: E402
 from spark.bench.firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
@@ -398,8 +398,8 @@ class FakeReporter(Reporter):
 
 class FakeOutsideWorld:
     """Fake OutsideWorld (spark.core.outside): `run` answers a command as `subprocess.run` would, with the callable a test
-    gives, and keeps each command in `ran`; `find_tool` gives a Tool by its name with the callable given (a dict's
-    `get`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program.
+    gives, and keeps each command in `ran`; `find_tool` gives a Tool by its name with the callable given (a
+    `FakeToolFinder(answers).find`, or test_deploy's `found`). A test that gives neither gets an AssertionError on the first call, never a program.
     `report` is its `reporter`'s, a FakeReporter of its own unless the test gives one (P507). `clock` is a FakeClock unless
     given, and `make_consent` the callable given, or one that fails the test on its first call (P655). `replies` is the
     given ReplyStrategy's `reply`, or one that fails the test on its first call (P737). `fetch` answers a URL with the
@@ -437,3 +437,25 @@ class FakeOutsideWorld:
     def find_tool(self, name, **where):
         assert self._find_tool, "the test gave no find_tool, and the Operation asked for %r" % (name,)
         return self._find_tool(name, **where)
+
+
+class FakeToolFinder:
+    """Fake tool_finder.ToolFinder (P725): `find(name, project=None)` answers from `answers` (a role or a name -> a Tool,
+    or an exception to raise), keeps each `(name, project)` asked in `asked`, and for a name it lacks calls `fall_back(name,
+    project)` when given (the real `tool_finder.find`, for a test that lets littlefs be real), else raises a
+    `ToolMissingError` with its own sentence, never the real one. It goes in as `FakeOutsideWorld(find_tool=...find)`,
+    a Platform's `find_tool`, or the `find_tool` keyword of a Service or a function."""
+
+    def __init__(self, answers, fall_back=None):
+        self.answers, self.fall_back, self.asked = answers, fall_back, []
+
+    def find(self, name, project=None):
+        self.asked.append((name, project))
+        if name in self.answers:
+            answer = self.answers[name]
+            if isinstance(answer, BaseException):
+                raise answer
+            return answer
+        if self.fall_back:
+            return self.fall_back(name, project)
+        raise tool_finder.ToolMissingError("%s is not installed — the test gave no entry for it", name, code=records_codes.TOOL_MISSING)

@@ -152,13 +152,28 @@ class FindingAToolTest(unittest.TestCase):
     def test_a_missing_tool_says_what_installs_it(self):
         with mock.patch.object(tool_finder.shutil, "which",
                                side_effect=lambda exe: "/usr/bin/brew" if exe == "brew" else None):
-            with self.assertRaises(tool_finder.ToolError) as missing:
+            with self.assertRaises(tool_finder.ToolMissingError) as missing:  # P725: told apart by class, not by code alone
                 tool_finder.find("pdf-text", None, self.nobody)
         said = str(missing.exception)
         self.assertIn("pdf-text (pdftotext) is not installed", said)
         self.assertEqual(missing.exception.code, "tool_missing")
         self.assertIn("brew install poppler", said)
         self.assertNotIn("sudo", said)
+
+    def test_the_finder_finds_in_its_project_as_the_module_find_does(self):
+        # P725: ToolFinder(project).find is the Adapter the bench hands an Operation as OutsideWorld.find_tool; the
+        # project's entry points at this Python, a program that is here, so nothing is patched (T2)
+        project = project_with({"pdftotext": {"kind": "path", "exe": sys.executable}})
+        found = tool_finder.ToolFinder(project).find("pdf-text")
+        self.assertEqual(found, tool_finder.find("pdf-text", project))
+        self.assertEqual((found.name, found.command), ("pdftotext", [sys.executable]))
+
+    def test_a_need_that_is_not_installed_stays_a_missing_tool_through_the_chain(self):
+        needs = layer({"a": {"kind": "path", "exe": sys.executable, "needs": ["b"]}, "b": {"kind": "path", "exe": "no-such-program-p725"}})
+        with self.assertRaises(tool_finder.ToolMissingError) as missing:
+            tool_finder.find("a", None, needs)
+        self.assertTrue(str(missing.exception).startswith("a needs b: b (b) is not installed"), str(missing.exception))
+        self.assertEqual(missing.exception.code, "tool_missing")
 
     def test_a_tool_that_does_not_meet_the_role_s_contract_is_refused(self):
         personal = layer({"roles": {"pdf-text": "my-reader"},
@@ -878,6 +893,7 @@ class APythonToolIsComparedWithItsPinTest(unittest.TestCase):
         self.assertEqual(str(told.exception), "pt 4.12.0 is too old: spark needs 5.0 or newer. "
                          "Install: python3 -m pip install --user pt==5.5.0")
         self.assertEqual(told.exception.code, "tool_too_old")
+        self.assertNotIsInstance(told.exception, tool_finder.ToolMissingError)  # P725: only "not installed" is one
 
     def test_the_floor_and_newer_are_kept(self):
         self.floor()

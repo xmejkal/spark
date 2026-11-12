@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "a tool that is not installed is a plain ToolError again",
+  "find": "raise ToolMissingError(\"%s (%s) is not installed",
+  "replace": "raise ToolError(\"%s (%s) is not installed"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "a needs chain loses the inner error's class",
+  "find": "raise type(inner)(\"%s needs %s: %s\", tool_name, need, inner, code=inner.code)",
+  "replace": "raise ToolError(\"%s needs %s: %s\", tool_name, need, inner, code=inner.code)"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "ToolFinder.find drops its project",
+  "find": "        return find(name, self.project)",
+  "replace": "        return find(name)"
+ }
+]

@@ -367,7 +367,7 @@ the code at `d064a65` under this name.
 | `LookStopError` | plan v1 | `bench/board_look.py` | Error | exists (renamed from `LookStop` in W5-3b, P680) |
 | `RunLog`, `status_of_run` | plan v1 | `firmware/scenario_run.py` | Value, a function | not built yet (`run_record` builds a tuple, `verdict` stays) |
 | `Brief` | comment 4 | `records/brief.py` | Value | not built yet (exists as `parts.vendor_order` and `parts.sellers`) |
-| `OutsideWorld`, `Backends` | plan v1 | `core/outside.py`, `records/backends.py` | Values | `OutsideWorld` exists (P442, `run` and `find_tool`); `Backends` is not built, `find_tool` serves the look |
+| `OutsideWorld`, `Backends` | plan v1 | `core/outside.py`, `records/backends.py` | Values | `OutsideWorld` exists (P442, `run` and `find_tool`); P725 dropped `Backends`: `ToolFinder(project).find` is the bench's `find_tool` |
 | the "not checked" note in `needs.plan_pick` | P397 PR 2 [#513](https://github.com/xmejkal/spark/issues/513) | `design/needs.py` | a sentence | not built yet. The `SimulatedPart` reader's state is built (PR 1) |
 | `ScenarioSteps.component_ids`, the id check in `ScenarioRun.problem`, `--dry-run` | P399 [#515](https://github.com/xmejkal/spark/issues/515) | `firmware/scenario_steps.py`, `firmware/scenario_run.py` | a method, a check, an argument | not built yet |
 | the must lines a scenario names, and the look's list of unnamed ones | P345 PR 2 [#440](https://github.com/xmejkal/spark/issues/440) | `firmware/scenario_steps.py`, `bench/board_look.py` | a Value field, a line | exists in `run_scenario` (`StepNames`), `image_evidence` (`UnnamedMust`) and `board_look` (`RunGaps`); `Brief` is `scripts/brief.py`. The modules are not built yet |

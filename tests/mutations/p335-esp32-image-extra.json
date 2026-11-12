@@ -8,6 +8,6 @@
  {"file": "scripts/spark/records/tool_finder.py", "name": "a zero offset is refused",
   "find": "int(value, 0) >= 0", "replace": "int(value, 0) > 0"},
  {"file": "scripts/spark/firmware/scenario_run.py", "name": "the scenario run builds at offset 0",
-  "find": "self.flash = image_builder.interpreter_for(self.micropython, self.project).image(self.files)",
-  "replace": "self.flash = image_builder.image(image_builder.interpreter_for(self.micropython, self.project).path.read_bytes(), self.files)"}
+  "find": "lambda name: self.find_tool(name, self.project)).image(self.files)",
+  "replace": "lambda name: self.find_tool(name, self.project)).path.read_bytes(); self.flash = image_builder.image(self.flash, self.files)"}
 ]

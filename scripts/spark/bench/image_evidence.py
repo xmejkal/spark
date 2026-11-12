@@ -399,8 +399,9 @@ class NoSimulationEvidence(ImageEvidence):
     def _why_image_differs(self, image):
         try:
             # P457: a missing or turned-off littlefs names its own fix
-            (self.find_tool or tool_finder.find)("littlefs", project=self.project)
-            built = image_builder.interpreter_for(None, self.project, self.find_tool).image(image_builder.files_under(self.project / "firmware"))
+            find_tool = self.find_tool or (lambda name: tool_finder.find(name, self.project))  # a name -> Tool (P725)
+            find_tool("littlefs")
+            built = image_builder.interpreter_for(None, self.project, find_tool).image(image_builder.files_under(self.project / "firmware"))
             held = image.path.read_bytes()
         except (tool_finder.ToolError, ImportError) as cannot:
             raise cannot_check(image.path.name, cannot, tool_finder.ToolError,
