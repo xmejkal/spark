@@ -11,7 +11,7 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 INDEX = ROOT / "docs" / "observations" / "INDEX.md"
 ROWS = ROOT / "docs" / "observations" / "rows"
-INDEX_LINES = 1076  # every table line, frozen on 2026-10-18 at AT459; a status may change, but no row is added
+INDEX_LINES = 24  # the status table and the 15 rows P776 kept on 2026-11-12; a status may change, but no row is added
 HEADER = "| # | claim | source | status | evidence / where it went |"
 FILE_NAME = re.compile(r"(p\d+|\d{4}-\d\d-\d\d)-[a-z0-9-]+\.md")  # card or date, then topic
 

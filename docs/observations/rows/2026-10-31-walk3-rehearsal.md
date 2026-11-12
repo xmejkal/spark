@@ -8,40 +8,4 @@ New cards, all in Idea under their epics: P461 (#629), P462 (#630), P463 (#631),
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
-| 1 | `--match` lists a joystick before the onboard button and five LED matrices before the onboard LED | diary | acted | P467 (#635) |
-| 2 | The firmware guessed the LED polarity and the button's pressed level, and the pin map names only the LED's gap | diary | acted | P464 (#632), first slice |
-| 3 | The simulation cannot press the onboard button or see the onboard LED: no Wokwi definition | diary | closed | comment on P447 (#599), parked — P776: tracked by #599 (open), P447 #599 (open) |
-| 4 | A board-only diagram has no serial monitor, so `wait-serial` hears nothing | diary, lead | acted | P468 (#636). The rehearsal's `diagram.json` has no connections. `check_spine.py:606-608` only warns about it |
-| 5 | The look's no-token line names only a scenario run, not `--no-simulation` | diary | acted | P463 (#631) |
-| 6 | `commands/deploy.md` says `sim/wokwi.toml` names the image, but only a comment does | diary | acted | P463 (#631) |
-| 7 | `init_project.py` takes `--project .`, `import_firmware.py` a bare folder | diary, tech lead | closed | comment on P382 (#489), the names pass — P776: tracked by #489 (open), P382 #489 (open) |
-| 8 | The import check teaches the module convention only by refusal | diary | closed | comment on P339 (#433), the guide — P776: tracked by #433 (open), P339 #433 (open) |
-| 9 | Spark cannot say which unit is on USB, and ties no MAC to a hold | diary, the PO's words | acted | P466 (#634) |
-| 10 | The look restarts the board at each read | diary, lead | acted | P469 (#637). `board_look.py:195` runs `esptool flash_id` with esptool's default restart |
-| 11 | The printed deploy line drops `SPARK_HOME` | diary, refuter | acted | P463 (#631). `deploy_gate.py:30`. Low weight: the PO's store is the default |
-| 12 | Claude called the board "FireBeetle-like". The name matters | diary, the PO | acted | learned rule, no card |
-| 13 | The flash verified, then no USB device | diary | closed | explained by row 29 |
-| 14 | After a failed read-back, deploy prints the mpremote line on a gone port, with no next step | diary, refuter | acted | P462 (#630). `deploy.py:278-279` |
-| 15 | esptool v5.5.0 warns that `erase_flash` and `write_flash` are deprecated | diary, refuter | acted | P463 (#631). `flasher.py:43` |
-| 16 | The DFR0975 needs the octal build, and the record names only the default build | diary | closed | comment on P349 (#445). The refuter: the default build sets `CONFIG_SPIRAM_IGNORE_NOTFOUND`, so it most likely starts without PSRAM. Not the flash's cause — P776: tracked by #445 (open), P349 #445 (open) |
-| 17 | The look refuses an image made with another build, and no output names `tools.py --new` | diary, refuter | acted | the words in P463 (#631), the lookup in P457 (#617), comment there |
-| 18 | The PO: spark looks for the settings and the firmware on its own | diary, the PO's words | closed | comment on P349 (#445) — P776: tracked by #445 (open), P349 #445 (open) |
-| 19 | Did the board only need more time? | diary | closed | no: the boot loop of row 29 does not end |
-| 20 | The PO: get every board fact from the seller, and first say what is missing, then let the person tell it or find it | diary, the PO's words | acted | the stop in P464 (#632), the research in a comment on P340 (#434) |
-| 21 | Deploy printed "press RESET" and read at once | diary | rejected | refuter: deploy waits (`deploy_service.py:156`). The real bug is row 37 |
-| 22 | MicroPython opens its own USB port, and deploy does not look for it | diary, refuter | acted | P462 (#630). No product ID check in `scripts/` |
-| 23 | No picture of the board, and no button or LED positions in the record | diary | closed | comments on P340 (#434) and P332 (#426) — P776: tracked by #426 (open), #434 (open), P332 #426 (open), P340 #434 (open) |
-| 24 | The charge LED blinks with no battery (DFRobot wiki) | diary | closed | comment on P340 (#434) — P776: tracked by #434 (open), P340 #434 (open) |
-| 25 | The GDI backlight LCD_BL shares GPIO21 with the onboard LED | diary | closed | comment on P460 (#628). Walk 3 part 2 cannot keep the LED — P776: tracked by #628 (open), P460 #628 (open) |
-| 26 | After the second flash and a replug, no USB device at all | diary | closed | explained by row 29 |
-| 27 | esptool's restart most likely left the bare build in download mode (only the chip's own port showed) | diary, refuter | closed | outside spark, row 28 |
-| 28 | esptool's RTS restart leaves the FireBeetle 2 in download mode, and only a power-up or RESET starts the firmware | diary | acted | P462 (#630) |
-| 29 | The image writes a 2 MB littlefs, and MicroPython mounts 14 MB on a 16 MB board | diary, refuter | acted | P461 (#629). `flash_image.py:33,50`. MicroPython v1.29 `main.c:255-275` sizes the vfs to the end of flash, `lfs2.c:4607-4613` refuses the mount (reproduced: `LFS_ERR_INVAL`), `_boot.py` loops in `fs_corrupted()` before USB starts. The UART0 text is not yet seen |
-| 30 | The button idles at 1 and reads 0 while held | diary, bench | raised | a bench fact. Written only on the PO's yes — P776: waits on the PO: bench fact written only on PO's yes (P490 #669 seen_on_bench open) — P776: waits on the PO: bench fact written only on PO's yes (P490 #669 seen_on_bench open) |
-| 31 | Part 1 works on the board by hand: the LED lights on 1 | diary, bench | closed | a bench fact, and evidence on P383 (#491) — P776: done by #491 (closed), P383 #491 (closed) |
-| 32 | The PO: a board that does not start needs spark's help, automatic and step by step, through every interface | diary, the PO's words | acted | P465 (#633). Spark cannot read the UART0 loop text, a step for this card |
-| 33 | No golden proves spark's image has the layout MicroPython expects on a 16 MB board | council | acted | in P461 (#629)'s Done when |
-| 34 | The 16 MB image is also built for Wokwi, whose S3 flash size nobody checked | refuter | acted | in P461 (#629)'s plan question |
-| 35 | The rehearsal ran the scripts, not the `/spark:*` commands or the agents | diary, council | closed | the free walk runs the commands — P776: stale note: walk-rehearsal note |
-| 36 | The first B2 card (the build per SKU) before the walk | lead | rejected | the refuter: no evidence that the build caused the failure. It goes to P349 (#445) |
-| 37 | `wait_for_reset` counts any time the port goes and comes back. The log shows `rst:0x15 (USB_UART_CHIP_RESET)` before "reset seen" | refuter, lead | acted | P462 (#630). `board_console.py:139-148`. Comment on P379 (#486), the same failure family. Unproven on the bench which tool caused it |
+| 1 | The button idles at 1 and reads 0 while held | diary, bench | raised | a bench fact. Written only on the PO's yes — P776: waits on the PO: bench fact written only on PO's yes (P490 #669 seen_on_bench open) — P776: waits on the PO: bench fact written only on PO's yes (P490 #669 seen_on_bench open) |
