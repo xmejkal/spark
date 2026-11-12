@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/bench/image_evidence.py",
+  "name": "the compile child starts past the Operation's run",
+  "find": "done = self.run(command, input=json.dumps(self.files),",
+  "replace": "done = subprocess.run(command, input=json.dumps(self.files),"
+ },
+ {
+  "file": "scripts/spark/bench/board_look.py",
+  "name": "the look reads the store's own record, not the store it was given",
+  "find": "self.records.read_last_deploy(reading.mac)",
+  "replace": "deploy_record_store.DeployRecordStore().read_last_deploy(reading.mac)"
+ },
+ {
+  "file": "scripts/spark/bench/look_at_board.py",
+  "name": "the evidence gets no run, so a real child starts",
+  "find": "evidence_for(project, no_simulation, ignore_older_runs, find_tool=outside.find_tool, run=outside.run)",
+  "replace": "evidence_for(project, no_simulation, ignore_older_runs, find_tool=outside.find_tool)"
+ }
+]

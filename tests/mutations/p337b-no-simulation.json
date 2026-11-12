@@ -56,7 +56,7 @@
  {
   "file": "scripts/spark/bench/image_evidence.py",
   "name": "look-ignores-flag",
-  "find": "return NoSimulationEvidence(project, find_tool) if no_simulation else",
+  "find": "return NoSimulationEvidence(project, find_tool, run) if no_simulation else",
   "replace": "return PassedRunEvidence(ignore_older_runs) if no_simulation else"
  },
  {
