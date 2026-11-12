@@ -15,7 +15,11 @@ rejected findings only (rules.md). 2026-11-12.
 | 7 | the plan said the look's sentence becomes "<image> could not be checked: …"; `CANNOT_CHECK_MESSAGE` is "cannot check %s against firmware/: %s" (`image_evidence.py:47`) | build | acted | `test_image_evidence`'s big-file test asserts the real form |
 | 8 | `test_json_contracts.test_agents_md_names_every_code` wants every firmware code in a guide page | build | acted | `firmware-codes.md` names `files_not_written` in both rows |
 | 9 | `--anchors` refused `p130-followup.json`'s row on `image_in` (`raise ValueError(` after NOT_CHECKED) | build | acted | re-aimed on `raise FirmwareLineError(` |
-| 10 | R2 (nesting at most three deep) refused `filesystem` at four with the try around the loop | build | acted | the per-file write is `write_file(fs, destination, content)`, the try wraps the loop alone |
+| 10 | R2 (nesting at most three deep) refused `filesystem` at four with the try around the loop | build | acted | the per-file write is its own function, the try wraps the loop alone (named in row 14) |
 | 11 | `test_docs`: a table cell of 379 characters in `firmware-codes.md:13`, over 300 | build | acted | shortened to the codes and a few words each |
 | 12 | `run_scenario.py` prints the sentence alone, so no run-scenario golden can show a code; the flash-image golden shows the traceback gone, `flash-image-could-not-run-files-not-written.txt` | build | closed | the golden: one stderr line, exit 2 |
 | 13 | the README's journey table and `tools/journey.py` do not move: no step's status changes | build | closed | nothing to edit |
+| 14 | `write_file` is `records/store.py:174`'s name for a real-file write (8 sites); image_builder's `write_file(fs, destination, content)` was a second thing under one word | PR refuter | acted | `put_in_filesystem(fs, destination, content)` |
+| 15 | `CODES[RUN_INPUT_UNUSABLE]` and firmware-codes.md omit `problem()`'s last case, the named image's place is a directory or its folder is missing (`scenario_run.py:154-155`) | PR refuter | acted | both say "the image's place is no folder" |
+| 16 | the lost `except Exception` branch of the look re-raised everything but a LittleFSError; the only littlefs call outside `filesystem()`'s try is the constructor with constant settings | PR refuter | closed | nothing escapes that was caught before |
+| 17 | the refuter's brief said 8 text goldens; tests/golden-firmware holds 7 text and 2 JSON on main (8 text with the new one) | PR refuter | closed | the brief's count, not the change |

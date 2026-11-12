@@ -39,8 +39,8 @@ CODES = {
     TOOL_MISSING: "a tool the step needs is missing or cannot be used",
     NO_SIM_PROJECT: "sim/ holds no diagram.json or no wokwi.toml, so there is nothing to simulate",
     NO_MAIN_PY: "firmware/ has no main.py, so the board would boot to a bare prompt and never print ready",
-    RUN_INPUT_UNUSABLE: "the scenario or the firmware's files cannot be read, or sim/wokwi.toml names no image and a run "
-                        "cannot name one there",
+    RUN_INPUT_UNUSABLE: "the scenario or the firmware's files cannot be read, sim/wokwi.toml names no image and a run cannot "
+                        "name one there, or the image's place is no folder",
     NO_TOKEN: "the simulator's account token is not set, and a run spends Wokwi CI minutes",
     UNKNOWN_COMPONENT_ID: "a step of the scenario names a component id that sim/diagram.json does not hold",
     SIMULATOR_CANNOT_START: "wokwi-cli could not be started",

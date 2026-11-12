@@ -42,7 +42,7 @@ def files_under(root):
             for path in sorted(root.rglob("*")) if path.is_file() and "__pycache__" not in path.parts]
 
 
-def write_file(fs, destination, content):
+def put_in_filesystem(fs, destination, content):
     """`content` at `destination` in the littlefs `fs`, its folders made first."""
     parent = destination.rsplit("/", 1)[0]
     if parent and parent not in ("", "/"):
@@ -64,7 +64,7 @@ def filesystem(files, overrides=None):
         files = list(files) + [("/config.json", json.dumps(overrides).encode())]
     try:
         for destination, content in files:
-            write_file(fs, destination, content)
+            put_in_filesystem(fs, destination, content)
     except LittleFSError as cannot:
         raise FilesystemError("the files were not written into the image's %d MB file system: %s"
                               % ((FLASH_SIZE - FILESYSTEM_OFFSET) >> 20, cannot))

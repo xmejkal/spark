@@ -16,8 +16,8 @@ sentence alone, with the same exit code as before. Their codes wait in the libra
 | `import_firmware.py` | `import_failed`, `import_timeout` (in `--json`), `nothing_to_import`, `no_firmware_folder` (in the library only) |
 | the image a deploy reads | `no_sim_toml`, `firmware_line_bad`, `no_image`, `log_unreadable`: a `DeployError`'s `reason` |
 
-Before the paid call, `run_input_unusable` is a scenario or a firmware file that cannot be read, or a `sim/wokwi.toml` with no
-place to name the image; `firmware_line_bad` is a firmware line that cannot be read, or one that names an image outside `sim/`,
+Before the paid call, `run_input_unusable` is a scenario or a firmware file that cannot be read, a `sim/wokwi.toml` with no
+place to name the image, or an image whose place in `sim/` is no folder; `firmware_line_bad` is a firmware line that cannot be read, or one that names an image outside `sim/`,
 the same code as the deploy's for the same line ([P689](https://github.com/xmejkal/spark/issues/930)). `files_not_written`, in
 both scripts, is a file that littlefs did not take into the image's 2 MB file system (no space, or a name too long); its
 sentence carries littlefs' own error. It was a traceback with exit 1.
