@@ -45,7 +45,8 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    `s`, else the median of this run's rows, else the pre-check suite's) would cross 20 minutes from the run's start,
    the PO's budget for a sweep a person waits for (180 for a night slice). Its last line is `  budget 20 min: ran 42 of
    61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5); 19 left for the next sweep`; quote it byte for
-   byte. A left row is not a pass: it did not run. Quote the left count in your report, never fold it into `caught`.
+   byte. A left row is not a pass: it did not run. Quote the left count in your report, never fold it into `caught`. A
+   budget run that ran no row exits 2: report it as could not run, with the line.
 4. Report `N planted, M caught`, and the left count when the budget stopped the run. For each escape, give the row and the test that it shows is missing: which input,
    and which assertion.
 5. The run wrote `tests/mutations/ledger.jsonl` in the tree (P787): one line per row it planted, with the test that

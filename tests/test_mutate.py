@@ -831,8 +831,13 @@ class TheBudgetValueTest(unittest.TestCase):
 
     def test_the_expected_seconds_are_the_ledger_s_then_this_run_s_median_then_the_suite_s(self):
         known = {ledger.row_key(BREAK_ADD): 42}
-        self.assertEqual(mutate.expected_seconds(BREAK_ADD, known, [1, 2, 3], 180), 42, "its ledger line, whatever ran")
-        self.assertEqual(mutate.expected_seconds(BREAK_SUB, known, [1, 9, 2], 180), 2, "no line: the median of this run's rows")
+        ran = [ledger.line(BREAK_ADD, "b", "d", ledger.CAUGHT, "test_m", 1), ledger.line(BREAK_ADD, "b", "d", ledger.ESCAPED, ledger.ESCAPE, 9),
+               ledger.line(BREAK_ADD, "b", "d", ledger.CAUGHT, "test_m", 2)]
+        refused = [ledger.line(BREAK_ADD, "b", "d", ledger.REFUSED, None, 0)] * 2
+        self.assertEqual(mutate.expected_seconds(BREAK_ADD, known, ran, 180), 42, "its ledger line, whatever ran")
+        self.assertEqual(mutate.expected_seconds(BREAK_SUB, known, ran, 180), 2, "no line: the median of this run's caught and escaped rows")
+        self.assertEqual(mutate.expected_seconds(BREAK_SUB, known, refused + ran, 180), 2, "a refused row ran nothing: not in the median")
+        self.assertEqual(mutate.expected_seconds(BREAK_SUB, known, refused, 180), 180, "two refused rows, nothing ran: the suite's seconds, not 0")
         self.assertEqual(mutate.expected_seconds(BREAK_SUB, known, [], 180), 180, "nothing ran yet: the pre-check suite's seconds")
 
 
@@ -842,7 +847,7 @@ def budget_ledger(root, *rows_and_seconds):
                                        ledger.CAUGHT, "test_m", seconds) for row, seconds in rows_and_seconds])
 
 
-@slow("mutation runs of a tiny tree under --budget, 5 tests, 5.2 s on 2026-11-12")
+@slow("mutation runs of a tiny tree under --budget, 7 tests, 5.6 s on 2026-11-13")
 class TheBudgetTest(unittest.TestCase):
     """P787 PR 3: --budget stops before the row whose expected seconds would cross it, counted from the run's start."""
 
@@ -869,14 +874,15 @@ class TheBudgetTest(unittest.TestCase):
         import contextlib
         import io
         root = tiny_project()
-        rows = table(root, BREAK_SUB, BREAK_ADD)  # sub has no line (new; the suite's seconds, under a second); add is proven at 60 s
+        rows = table(root, BREAK_ADD, BREAK_SUB)  # add, first in the table, is proven at 60 s; sub has no line (new; the suite's seconds)
         ledger_of(root).write([ledger.line(BREAK_ADD, ledger.blob_of((root / "m.py").read_bytes()), "2026-11-12T10:00:00+01:00",
                                            ledger.CAUGHT, "test_m", 60) | {"caught": 2}])
         with contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(mutate.main([str(rows), "--root", str(root), "--budget", "1"]), mutate.EXIT_OK)
         said = out.getvalue().splitlines()
         self.assertEqual(said[-1], "  budget 1 min: ran 1 of 2 selected (critical 0/0, new 1/1, proving 0/0, proven 0/1); 1 left for the next sweep")
-        self.assertEqual([line for line in said if line.startswith("  [")], ["  [caught near] sub adds"])
+        self.assertEqual([line for line in said if line.startswith("  [")], ["  [caught near] sub adds"],
+                         "under a budget the new row runs before the proven one that the table lists first (the tiers' order, no --tier)")
         with contextlib.redirect_stdout(io.StringIO()) as out:
             mutate.main([str(rows), "--root", str(root), "--budget", "1", "--tier", "proving", "--json"])  # sub, caught once above
         report = json.loads(out.getvalue())
@@ -889,7 +895,18 @@ class TheBudgetTest(unittest.TestCase):
             mutate.main([str(rows), "--root", str(root), "--json"])
         self.assertNotIn("budget", json.loads(out.getvalue()), "without --budget no budget key")
 
-    def test_a_copy_writes_each_row_s_line_as_soon_as_it_is_done_and_a_sigterm_keeps_them(self):
+    def test_a_budget_run_that_ran_no_row_is_could_not_run(self):
+        import contextlib
+        import io
+        root = tiny_project()
+        budget_ledger(root, (BREAK_ADD, 60))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = mutate.main([str(table(root, BREAK_ADD)), "--root", str(root), "--budget", "1", "--json"])
+        report = json.loads(out.getvalue())
+        self.assertEqual((code, report["status"], report["budget"]["ran"], report["budget"]["left"]), (mutate.EXIT_COULD_NOT_RUN, "could-not-run", 0, 1),
+                         "a 0 would say a pass about a run that tested nothing")
+
+    def test_a_copy_writes_each_row_s_line_as_soon_as_it_is_done_and_the_real_tree_waits_for_the_after_suite(self):
         root = tiny_project()
         with self.assertRaises(KeyError):  # the second row is malformed: the run crashes after the first
             mutate.run(root, "tests", [BREAK_ADD, {"file": "m.py"}], copied=True, ledger_store=ledger_of(root))
@@ -898,11 +915,14 @@ class TheBudgetTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             mutate.run(root, "tests", [BREAK_ADD, {"file": "m.py"}], ledger_store=ledger_of(root))
         self.assertEqual(ledger_of(root).read(), [], "in the real tree the lines wait for the after-suite, which never ran")
-        # SIGTERM in the middle of a --copy run, the file's existing way: the project's test blocks while the second row is planted.
+
+    def test_a_sigterm_in_a_copy_run_keeps_the_lines_recorded_before_it(self):
+        # The file's existing way: the project's test blocks while the second row is planted, and the parent sends SIGTERM once
+        # the first row's line is on disk. `subprocess.run` kills the blocked suite when the SystemExit passes through it.
         root = tiny_project_that_finds_itself()
         test = root / "tests" / "test_m.py"
-        test.write_text(test.read_text() + "    def test_sub_blocks(self):\n"  # for a minute at most: the orphan ends on its own
-                        "        for _ in range(6000):\n            if m.sub(5, 3) == 2: break\n            __import__('time').sleep(0.01)\n")
+        test.write_text(test.read_text() + "    def test_sub_blocks(self):\n"
+                        "        while m.sub(5, 3) != 2: __import__('time').sleep(0.01)\n")
         mine = Path(tempfile.mkdtemp())
         child = subprocess.Popen([sys.executable, str(ROOT / "tools" / "mutate.py"), str(table(root, BREAK_ADD, BREAK_SUB)), "--root",
                                   str(root), "--copy"], env=dict(os.environ, TMPDIR=str(mine)),

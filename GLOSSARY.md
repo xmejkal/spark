@@ -165,7 +165,7 @@ and the ledger, never guessed ([P787](https://github.com/xmejkal/spark/issues/10
 current blob (never run, or the file changed since), or a line there that says `escaped` (a missing test: it runs
 again) or `refused` (`--anchors`' business). *Proving*: caught once at the current blob. *Proven*: caught twice or more
 there; an edit of the file makes it new again, by the blob rule alone. *Retired*: refused in two sweeps, listed for a
-deleting PR; not yet decided by the tool. `python3 tools/mutate.py tests/mutations/*.json --tier critical,new --copy`
+deleting PR; not yet decided by the tool. `python3 tools/mutate.py tests/mutations/*.json --tier critical,new --budget 20 --copy`
 runs the named tiers in the sweep's order, critical, new in the tables' given order (name the oldest table first),
 proving, proven oldest date first, and its first line says which tiers and how many rows; `--tier-count` counts the
 rows of each tier and runs nothing. A row with no line is new, never proven.
@@ -173,11 +173,11 @@ rows of each tier and runs nothing. A row with no line is new, never proven.
 **The budget.** `--budget MINUTES` counts from the run's start, the fixed overhead inside it (the copy, the pre-check
 suite). Before each row the tool asks whether the row's expected seconds would cross what is left, and stops there:
 that row and every one after it are *left* for the next sweep. The expected seconds are a fact, never a guess: the
-row's ledger line's `s` (its last duration), else the median of the rows run so far in this run, else the pre-check
-suite's measured seconds. The closing line is `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35,
+row's ledger line's `s` (its last duration), else the median of the caught and escaped rows of this run, else the
+pre-check suite's measured seconds. Under a budget the rows run in the tiers' order also without `--tier`. The closing line is `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35,
 proving 0/9, proven 0/5); 19 left for the next sweep`, and `--json` has the same facts under `budget` (`minutes`,
 `ran`, `selected`, `left`, `by_tier`). A left row is not a pass: it did not run, and the exit code speaks for the rows
-that did; the mutation tester quotes the left count. The PO's defaults (2026-11-12): 20 minutes for a wave-end sweep a
+that did; a budget run that ran no row exits 2. The mutation tester quotes the left count. The PO's defaults (2026-11-12): 20 minutes for a wave-end sweep a
 person waits for, 180 for an unattended night slice. In a copy each row's ledger line is written as soon as the row is
 done, so a run that SIGTERM stops keeps what it recorded; in the real tree the lines wait for the after-suite.
 

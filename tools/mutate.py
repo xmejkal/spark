@@ -8,9 +8,8 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py tests/mutations/*.json --for $changed --copy   # a branch's: changed=$(git diff --name-only origin/main...HEAD)
     tools/mutate.py tests/mutations/*.json --retarget scripts/a.py scripts/spark/a.py   # a file moved: its rows follow
     tools/mutate.py --ledger                              # the ledger's lines, counted by status
-    tools/mutate.py tests/mutations/*.json --tier critical,new --copy   # a sweep: only the rows of these tiers
+    tools/mutate.py tests/mutations/*.json --tier critical,new --budget 20 --copy   # a sweep: these tiers, within 20 minutes
     tools/mutate.py tests/mutations/*.json --tier-count   # how many rows each tier holds; runs nothing
-    tools/mutate.py tests/mutations/*.json --tier critical,new --budget 20 --copy   # a sweep that stops within 20 minutes
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -78,13 +77,16 @@ stops keeps every line it recorded (PR 1's review, row 50: a 180-minute slice ki
 real tree the lines wait for the after-suite, which says whether anything can be trusted, and carry the run's end.
 
 THE BUDGET (P787) `--budget MINUTES` counts from the run's start, the fixed overhead inside it: the copy, the pre-check
-suite, the near sets. Before each row the run asks whether the row's expected seconds would cross what is left, and stops
-there: every row from that one on is left for the next sweep. The expected seconds are a fact, never a guess
-(`expected_seconds`): the row's ledger line's `s` (its last duration, at whatever blob), else the median of the rows run
-so far in this run, else the pre-check suite's measured seconds (a row with no near test costs a whole suite). The
+suite, the near sets. The rows run in the tiers' order also without `--tier` (every tier is selected then), so the
+budget goes to the critical and new rows first. Before each row the run asks whether the row's expected seconds would
+cross what is left, and stops there: every row from that one on is left for the next sweep. The expected seconds are a
+fact, never a guess (`expected_seconds`): the row's ledger line's `s` (its last duration, at whatever blob), else the
+median of the caught and escaped rows of this run (a refused row ran nothing and took no time), else the pre-check
+suite's measured seconds (a row with no near test costs a whole suite). The
 closing line says what ran, as `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5);
 19 left for the next sweep`, and `--json` gains `budget` with the same facts (`minutes, ran, selected, left, by_tier`).
-A left row is not a pass: it was not run, and the exit code speaks for the rows that were. The PO's defaults (2026-11-12):
+A left row is not a pass: it was not run, and the exit code speaks for the rows that were; a budget run that ran no row
+exits 2 (could not run), because a 0 says a pass about nothing. The PO's defaults (2026-11-12):
 20 minutes for a wave-end sweep a person waits for, 180 for an unattended night slice.
 
 WHAT PASSING MEANS
@@ -471,15 +473,17 @@ class Budget:
         return seconds <= self.left(now)
 
 
-def expected_seconds(row, known, durations, suite_seconds):
+def expected_seconds(row, known, lines, suite_seconds):
     """
     The seconds `row` is expected to take, a fact and never a guess (P787): its ledger line's `s` (`known`, by key: the
-    row's last duration, at whatever blob), else the median of `durations`, the rows run so far in this run, else
-    `suite_seconds`, the pre-check suite's measured time, which a row with no near test costs.
+    row's last duration, at whatever blob), else the median `s` of this run's `lines` that ran, the caught and escaped
+    ones (a refused row ran nothing and took no time, so it would call the next row free), else `suite_seconds`, the
+    pre-check suite's measured time, which a row with no near test costs.
     """
     key = ledger.row_key(row)
     if key in known:
         return known[key]
+    durations = [entry["s"] for entry in lines if entry["status"] != REFUSED]
     if durations:
         return statistics.median(durations)
     return suite_seconds
@@ -526,7 +530,7 @@ def _run(root, tests, mutations, near_by_file, copied, ledger_store=None, budget
     results, imports_before, lines = [], {}, []
     known = {entry["key"]: entry["s"] for entry in ledger_store.read()} if budget is not None and ledger_store is not None else {}
     for mutation in mutations:
-        if budget is not None and not budget.allows(time.monotonic(), expected_seconds(mutation, known, [entry["s"] for entry in lines], suite_seconds)):
+        if budget is not None and not budget.allows(time.monotonic(), expected_seconds(mutation, known, lines, suite_seconds)):
             break  # this row and every one after it are left for the next sweep
         started = time.monotonic()
         path = root / mutation["file"]
@@ -632,8 +636,9 @@ def main(argv=None):
     parser.add_argument("--budget", type=int, metavar="MINUTES",
                         help="stop before the row that would cross this many minutes, counted from the run's start (the copy "
                              "and the pre-check suite inside); a row's expected seconds are its ledger line's `s`, else the "
-                             "median of this run's rows, else the pre-check suite's; the closing line says how many rows ran, "
-                             "how many are left, per tier. A left row is not a pass. The PO's defaults: 20 for a sweep, 180 for a night")
+                             "median of this run's caught and escaped rows, else the pre-check suite's; the rows run in the tiers' order "
+                             "also without --tier; the closing line says how many rows ran and how many are left, per tier. A left "
+                             "row is not a pass, and a run that ran no row exits 2. The PO's defaults: 20 for a sweep, 180 for a night")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -675,8 +680,8 @@ def main(argv=None):
     header = tiers = None
     if wanted or args.budget is not None:  # before the run: the run's own lines would move rows to proving
         tiers = ledger.tiers_of(root, mutations, ledger_store.read())
+        mutations = tiers.selected(wanted or ledger.TIERS)  # under a budget the tiers' order, --tier or not
     if wanted:
-        mutations = tiers.selected(wanted)
         header = {"selected": wanted, "rows": len(mutations), "counts": tiers.counts()}
         if not mutations:
             print("  no row is in the tier(s) %s: nothing to run" % args.tier, file=sys.stderr)
@@ -716,6 +721,8 @@ def main(argv=None):
     recorded = {"path": str(ledger_store.path.relative_to(root)), "recorded": len(results) if restored else 0,
                 "rows": len(ledger_store.read())}
     spent = budget_report(budget, tiers, wanted or ledger.TIERS, mutations[:len(results)]) if budget is not None else None
+    if spent and spent["ran"] == 0:
+        code = EXIT_COULD_NOT_RUN  # a 0 would say a pass about nothing; the budget line says what is left
     if args.json:
         print(json.dumps({"tool": "mutate", "restored": restored,
                           "status": {EXIT_OK: OK, EXIT_ESCAPED: "escaped",
