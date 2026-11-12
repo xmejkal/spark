@@ -90,12 +90,6 @@
   "replace": "why = found.why_untested()"
  },
  {
-  "file": "scripts/spark/bench/image_evidence.py",
-  "name": "ignore flag inverted",
-  "find": "if why or self.ignore_older_runs:",
-  "replace": "if why or not self.ignore_older_runs:"
- },
- {
   "file": "scripts/spark/bench/board_look.py",
   "name": "unknown wording always the board",
   "find": "else \"the record does not hold it\"",

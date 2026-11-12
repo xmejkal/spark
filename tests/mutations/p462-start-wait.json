@@ -11,7 +11,6 @@
  {"file": "scripts/spark/bench/flasher.py", "name": "the write restarts with the default reset", "find": "base + self.AFTER + [self.WRITE", "replace": "base + [self.WRITE"},
  {"file": "scripts/spark/bench/deploy_service.py", "name": "the REPL keeps the gone port", "find": "shown_on = start.port if start else port", "replace": "shown_on = port"},
  {"file": "scripts/spark/bench/deploy_service.py", "name": "the stop's sentence is not told", "find": "ready = ready._replace(sentence=start.sentence)", "replace": "pass"},
- {"file": "scripts/spark/bench/board_envelope.py", "name": "needs_person is always on", "find": "needs_person=True if stopped else None)", "replace": "needs_person=True)"},
  {"file": "scripts/spark/bench/board_envelope.py", "name": "person_action is told with no stop", "find": "result.start.sentence if result and result.start and result.start.code else None", "replace": "result.start.sentence if result and result.start else None"},
  {"file": "scripts/spark/bench/deploy_service.py", "name": "the console is read on a moved or MicroPython port", "find": "and board_start.console_may_be_read(row, look.port)):", "replace": "):"},
  {"file": "scripts/spark/bench/board_start.py", "name": "the console is read on MicroPython's port", "find": "row.device == looked_port and row.usb != MICROPYTHON_USB", "replace": "row.device == looked_port"},

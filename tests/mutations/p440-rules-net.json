@@ -22,7 +22,7 @@
  {"file": "tools/mutate.py", "name": "P440: --retarget does not prove its edit", "find": "    if json.loads(changed) != [", "replace": "    if False and json.loads(changed) != ["},
  {"file": "tools/mutate.py", "name": "P440: a package module is never named by its package's import", "find": "package, _, module = dotted.rpartition(\".\")", "replace": "package, module = \"\", dotted"},
  {"file": "tools/mutate.py", "name": "P440: a package module is imported from its own folder", "find": "return Path(root) / \"scripts\", \".\".join(dotted)", "replace": "return (Path(root) / file).parent, \".\".join(dotted)"},
- {"file": "tools/mutate.py", "name": "P440: a copy's after-suite still runs", "find": "return results, copied or suite_is_green(root, tests)", "replace": "return results, suite_is_green(root, tests)"},
+ {"file": "tools/mutate.py", "name": "P440: a copy's after-suite still runs", "find": "return results, copied or bool(suite_is_green(root, tests))", "replace": "return results, bool(suite_is_green(root, tests))"},
  {"file": "tools/mutate.py", "name": "P440: a folder without an __init__.py is a package", "find": "all((Path(root).joinpath(*parts[:i + 1]) / \"__init__.py\").is_file() for i in range(1, len(parts) - 1))", "replace": "True"},
  {"file": "tools/mutate.py", "name": "P440: --retarget that moves no row exits ok", "find": "    if not moved:", "replace": "    if False:"},
  {"file": "tools/mutate.py", "name": "P440: --retarget runs with --anchors", "find": "if args.anchors or args.paths or args.copy:", "replace": "if False:"},

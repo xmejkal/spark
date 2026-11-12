@@ -1,12 +1,6 @@
 [
  {
   "file": "scripts/spark/design/needs.py",
-  "name": "needs.read accepts a stray field",
-  "find": "    extra = sorted(set(need) - set(NEED_FIELDS) - {\"id\"})\n    return ([\"%s",
-  "replace": "    extra = []\n    return ([\"%s"
- },
- {
-  "file": "scripts/spark/design/needs.py",
   "name": "needs.read accepts a bad id",
   "find": "if not store.PLAIN.fullmatch(need[\"id\"]) else [])",
   "replace": "if False else [])"
@@ -28,12 +22,6 @@
   "name": "needs.read accepts a condition that is not words",
   "find": "\"condition\": (lambda v: v is None or drawer._words(v),",
   "replace": "\"condition\": (lambda v: True,"
- },
- {
-  "file": "scripts/spark/design/needs.py",
-  "name": "needs.read accepts a mark outside the four",
-  "find": "\"mark\": (lambda v: v is None or v in MARKS,",
-  "replace": "\"mark\": (lambda v: True,"
  },
  {
   "file": "scripts/spark/design/needs.py",

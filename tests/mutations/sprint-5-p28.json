@@ -8,7 +8,7 @@
  {
   "file": "tools/mutate.py",
   "name": "the pre-check runs outside the lock again (C8)",
-  "find": "        if not suite_is_green(root, tests):\n            raise RedBeforeMutation(\"the suite is not green BEFORE any mutation; a red suite catches nothing\")",
-  "replace": "        pass"
+  "find": "        before = suite_is_green(root, tests)\n        if not before:",
+  "replace": "        before = True\n        if not before:"
  }
 ]

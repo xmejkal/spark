@@ -1,0 +1,4 @@
+[
+ {"file": "tools/mutate.py", "name": "P787: the red lines no longer name a FAIL, only an ERROR (test_a_red_pre_check_names_the_tests_that_are_red)", "find": "RED_LINE = re.compile(r\"^(?:(?:FAIL|ERROR): .*|", "replace": "RED_LINE = re.compile(r\"^(?:(?:ERROR): .*|"},
+ {"file": "tools/mutate.py", "name": "P787: a red run names nothing again, as before (test_a_red_pre_check_names_the_tests_that_are_red)", "find": "    return SuiteResult(green, () if green else tuple(RED_LINE.findall(verdict)) or (verdict.strip().splitlines() or [\"no output\"])[-1:])", "replace": "    return SuiteResult(green, ())"}
+]

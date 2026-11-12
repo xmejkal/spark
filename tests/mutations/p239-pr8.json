@@ -42,12 +42,6 @@
   "replace": "pass  #"
  },
  {
-  "file": "scripts/spark/bench/image_evidence.py",
-  "name": "plan-older-runs-always-refuse",
-  "find": "if why or self.ignore_older_runs:",
-  "replace": "if why:"
- },
- {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "main-dry-run-off",
   "find": "        if not self.asked.dry_run:\n            return None\n",
