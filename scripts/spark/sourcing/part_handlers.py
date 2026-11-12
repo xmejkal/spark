@@ -1,32 +1,25 @@
 """
-The handlers of the parts records, their facts, the datasheets, the drawer and a run's steps (W6-S3b, P721): one
-`_op_<flag>` per operation of `parts.py`, each taking the parsed arguments and the project and answering an `Answer`.
-The vendors to research in and the sellers (`vendor_order`, `sellers`) read the project's `Brief`, and a write that
-sets a record in its own home (`_set_in_home`) is here too. Moved whole from `parts.py`, whose `main` dispatches to them.
-The handlers that read a JSON payload stay in the CLI: reading stdin is the interface's job (P721 row 6). It imports
-the records area and the sourcing modules below it, never `parts.py`. The sourcing Operations on `run_cli` come with
-their card.
+The helpers of the parts writes and of the goal Operations (W6-S3b, P721; P726 PR 2): the vendors to research in and the
+sellers (`vendor_order`, `sellers`) read the project's `Brief`; a set-only write says what it did one way (`_change_line`,
+`_write_lines`, `_drawer_answer`); a write that sets a record in its own home (`_set_in_home`) finds that home behind a
+shelf copy (`_record_path`, `_shelved_from`) and refreshes the copy (`_refresh_shelf_copy`). The fifteen `_op_` handlers
+that were here are Operations on the core since P726 PR 2, one module each (`sourcing_operations.OPERATIONS`); the CLI's
+payload handlers still call these helpers until PR 3, which decides this module's name. It imports the records area and the
+sourcing modules below it, never `parts.py`.
 """
 
 import json
 from pathlib import Path
 
-from spark.core.outcomes import add_env, step
 from spark.core.text_guards import printable
 from spark.records import board_records, missing_facts, record_kind, store
 from spark.records.brief import Brief
-from spark.records.fact_needs import FactNeeds
 from spark.records.record_kind import (
-    Answer, available, _cannot, DEFINITION_SUFFIX, _parse, _problem, record_home, _with_project, WRITE_BACK_HINT,
-    _write_record)
-from spark.sourcing import drawer, run_cost, sourcing_codes
-from spark.sourcing.datasheets import (
-    catalog_records, cited_urls, fetch_documents, fetch_plan, find_kept, keep_local, read_datasheet, sources_resolve,
-    without_location)
+    Answer, _parse, _problem, _write_record)
+from spark.sourcing import drawer, sourcing_codes
 from spark.sourcing.part_facts import (
-    describe, promote, _row, _shelf_copy, shelvable, shelve, signals_for, skeleton, unverified)
-from spark.sourcing.part_records import any_record, definition_path, load, NOT_A_PLAIN_ID, PartError, validate
-from spark.sourcing.part_rules import conflicts_of
+    _shelf_copy, shelvable, shelve)
+from spark.sourcing.part_records import PartError, validate
 
 
 #: Vendors to research in, in order, when a project's brief does not say. DFRobot first because
@@ -46,177 +39,6 @@ def sellers(project=None):
     researcher reports as "no sellers named" rather than choosing a shop for them.
     """
     return Brief.from_project(project).sellers or ()
-
-
-def _op_list(args, project):
-    listing = []
-    for part_id, (layer, path) in store.records("parts", record_kind.LIBRARY, project).items():
-        record = load(part_id, project)
-        listing.append({"id": part_id, "kind": record["kind"], "name": record["name"], "layer": layer, "from": str(path.parent)})
-    shown, truncated = store.page_with_store(listing, args.start, "list", ["--list"] + _with_project(project))
-    lines = [_row(p["id"], p["kind"], "%-9s %s" % (p["layer"], p["name"])) for p in listing]
-    return Answer({"parts": shown}, lines, truncated=truncated)
-
-
-def _op_show(args, project):
-    """The record, and each CONFLICT it holds: a problem on verified facts, an assumption on unverified ones (P124)."""
-    part, problems, assumptions = any_record(args.show, project), [], []
-    for conflict in conflicts_of(part):
-        where = "%s.%s" % (args.show, conflict["pin"])  # the part and the pin the CONFLICT is about
-        if conflict["rests_on"]:
-            assumptions.append({"fact": where, "basis": "unmeasured", "rests_on": conflict["rests_on"],
-                                "sentence": "CONFLICT: " + conflict["line"], "upgrade": conflict["upgrade"]})
-        else:
-            problems.append(_problem(where, "CONFLICT: " + conflict["line"], conflict["fix"]))
-    return Answer({"record": part}, [describe(part)], problems=problems, assumptions=assumptions)
-
-
-def _op_validate(args, project):
-    checked = []
-    for part_id in available(project):
-        path = definition_path(part_id, project)
-        try:
-            record = json.loads(path.read_text())
-        except json.JSONDecodeError as bad:
-            return Answer(unchecked=[_cannot("--validate: %s is not JSON: %s" % (path, bad))])
-        checked.append({"part": part_id, "path": str(path), "problems": validate(record, path)})
-    shown, truncated = store.page_with_store(checked, args.start, "validate", ["--validate"] + _with_project(project))
-    lines = []
-    for one in checked:
-        lines.append("  %-28s %s" % (one["part"], "ok" if not one["problems"] else "%d problem(s)" % len(one["problems"])))
-        lines += ["      - %s" % problem for problem in one["problems"]]
-    return Answer({"checked": shown}, lines, truncated=truncated,
-                  problems=[_problem(one["part"], problem) for one in checked for problem in one["problems"]])
-
-
-def _op_signals(args, project):
-    found = {"signals": signals_for(args.signals, project)}
-    return Answer(found, [json.dumps(found, indent=2)])
-
-
-def _reader_line(need):
-    """One reader of an open fact: who, and whether it reads the fact today or which card makes it read (P738)."""
-    return "      read by %s (%s)" % (need.consumer, need.status if need.reads else "%s, %s" % (need.status, need.card))
-
-
-def _op_unverified(args, project):
-    questions = unverified(args.unverified, project)
-    needs = FactNeeds.from_file()  # P738: who reads each open fact, joined on its `write` key, never on English
-    lines = ["  everything these parts claim has been checked."] if not questions else \
-        ["  %d thing(s) nobody has checked:\n" % len(questions)]
-    assumptions = []
-    for q in questions:
-        lines.append("  %s.%s = %s" % (q["part"], q["fact"], q["assumed"]))
-        if q["why_it_matters"]:
-            lines.append("      %s" % q["why_it_matters"])
-        entry = {"fact": "%s.%s" % (q["part"], q["fact"]), "basis": "unverified", "assumed": q["assumed"],
-                 "sentence": q["why_it_matters"], "source": q["source"], "write": q["write"]}
-        read_by = needs.of_fact(q["write"] or "")
-        lines.extend(_reader_line(need) for need in read_by)
-        if read_by:
-            entry["read_by"] = [need.to_dict() for need in read_by]
-        assumptions.append(entry)
-    owners = [q["part"] for q in questions if q["write"]]  # a row with no `write` cannot go back by --fact-set
-    follow = [add_env(step("fact-set", ["--fact-set", owners[0], "<file>"], WRITE_BACK_HINT, ["writes"]), store.read_given_env())] if owners else []
-    return Answer({"parts": list(args.unverified)}, lines, assumptions=assumptions, next=follow)
-
-
-
-#: The layers `--promote` copies a record out of, into the project (`part_facts.promote`).
-PROMOTABLE = ("shelf", "catalog")
-#: What to do instead of a skeleton, by the layer that holds the record (P740).
-SKELETON_FIXES = {"project": "fill it in, do not overwrite it",
-                  "shelf": "`--promote %(id)s --project .` copies it into the project",
-                  "catalog": "`--promote %(id)s --project .` copies the draft into the project",
-                  "library": "spark ships it; name it in the requirements as it is"}
-
-
-def _op_skeleton(args, project):
-    if not project or not args.kind:
-        return Answer(unchecked=[_cannot("--skeleton needs --project (the record belongs to a project's parts/) and --kind")])
-    if not store.PLAIN.fullmatch(args.skeleton):  # P87: a file every reader would refuse is never written
-        return Answer(problems=[_problem(args.skeleton, NOT_A_PLAIN_ID % args.skeleton)])
-    held = store.records("parts", record_kind.LIBRARY, project, drafts=True).get(args.skeleton)
-    if held:  # P740: the project layer wins over every other, so a skeleton here would hide the record that exists
-        layer, path = held
-        would = "overwrite" if layer == "project" else "hide"
-        return Answer(problems=[_problem(args.skeleton, "%s already holds %s; a skeleton here would %s it" % (layer, path, would),
-                                         SKELETON_FIXES[layer] % {"id": args.skeleton})],
-                      next=[add_env(step("promote", ["--promote", args.skeleton] + _with_project(project),
-                                         "copy the %s record into the project" % layer, ["writes"]), store.read_given_env())]
-                      if layer in PROMOTABLE else ())
-    target = project / "parts" / (args.skeleton + DEFINITION_SUFFIX)
-    record = skeleton(args.skeleton, args.kind, args.vendor, args.sku)
-    if not args.dry_run:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
-    return Answer({"path": str(target), "record": record, "written": not args.dry_run},
-                  ["  %s %s — every null is a fact to record; `parts.py --validate --project .` says what is missing"
-                   % ("would write" if args.dry_run else "wrote", target)])
-
-
-def _op_sources(args, project):
-    record = any_record(args.sources, project)
-    if args.dry_run:
-        urls = cited_urls(record)
-        return Answer({"part": args.sources, "sources": [{"url": url, "reachable": None} for url in urls]},
-                      ["  would ask %s" % url for url in urls])
-    answers = sources_resolve(record)
-    lines = ["  %s  %s" % ("ok  " if ok else "NO  ", url) for url, ok in answers] or \
-        ["  %s cites no URL — every fact rests on prose sources a person has to find" % args.sources]
-    return Answer({"part": args.sources, "sources": [{"url": url, "reachable": ok} for url, ok in answers]}, lines,
-                  problems=[_problem(url, "does not answer") for url, ok in answers if not ok])
-
-
-def _op_fetch(args, project):
-    if args.dry_run:
-        home = record_home(args.fetch, project)
-        if home is None:
-            raise PartError("no record called %r to fetch for", args.fetch, code=sourcing_codes.NO_SUCH_PART)
-        wanted = [url for url, _ in fetch_plan(json.loads((home / (args.fetch + DEFINITION_SUFFIX)).read_text()))]
-        return Answer({"documents": None, "would_fetch": wanted}, ["  would fetch %s" % url for url in wanted]
-                      or ["  %s cites no datasheet or image URL to keep" % args.fetch])
-    kept = fetch_documents(args.fetch, project)
-    lines = ["  %s/%s  <-  %s" % (entry["sha256"][:12], entry["file"], entry["url"]) for entry in kept.values()]
-    return Answer({"documents": kept, "would_fetch": []}, lines or ["  %s cites no datasheet or image URL to keep" % args.fetch])
-
-
-def _op_keep(args, project):
-    path = Path(args.keep)
-    if not path.is_file():
-        return Answer(unchecked=[_cannot("--keep: no file at %s" % path)])
-    located = path.name.lower().endswith((".jpg", ".jpeg")) and without_location(path.read_bytes())[1]
-    said = (["  removed the location (EXIF GPS) from %s before keeping it" % printable(path.name)]
-            if located and not args.json else ())
-    try:  # P423: a store that refuses the file, or cannot be written, refuses it after the line was said
-        entry = keep_local(path, args.url, dry_run=args.dry_run)
-    except store.StoreError as refused:
-        return Answer(unchecked=[_cannot(str(refused))], diagnostics=said)
-    except OSError as unwritable:
-        return Answer(unchecked=[_cannot("--keep: %s" % unwritable)], diagnostics=said)
-    return Answer({"document": entry, "location_removed": located, "written": not args.dry_run},
-                  [json.dumps(entry, indent=2, ensure_ascii=False)], diagnostics=said)
-
-
-def _op_read(args, project):
-    labels = {}
-    for given in args.label or []:
-        fact, _, words = given.partition("=")
-        labels[fact] = [word.strip().lower() for word in words.split("|") if word.strip()]
-    return read_datasheet(args.read, args.want or [], labels, project)
-
-
-def _op_kept(args, project):
-    found = find_kept(args.kept, project)
-    return Answer({"found": found}, found or ["nothing kept matches %s — fetch it, or --keep a file you have" % " ".join(args.kept)])
-
-
-def _op_promote(args, project):
-    if not project:
-        return Answer(unchecked=[_cannot("--promote needs --project")])
-    target = promote(args.promote, project, dry_run=args.dry_run)
-    return Answer({"path": str(target), "written": not args.dry_run},
-                  ["  %s %s" % ("would promote to" if args.dry_run else "promoted to", target)])
 
 
 def _change_line(change, dry_run):
@@ -265,18 +87,6 @@ def _drawer_answer(changes, questions, problems, dry_run):
     return Answer({"changes": [{key: change[key] for key in ("entry", "new", "was", "now")} for change in made],
                    "questions": questions, "shelved": shelved, "not_shelved": left, "written": not (problems or dry_run)},
                   _write_lines(made, problems, dry_run, said), problems=problems)
-
-
-def _op_drawer(args, project):
-    entries = drawer.listing()
-    shown, truncated = store.page_with_store(entries, args.start, "drawer", ["--drawer"])
-    lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], "?" if e["count"] is None else e["count"],
-                                         "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
-                                         "  ".join(filter(None, ["maybe owned — check the drawer" if e["unsure"] else ("skip: %s" % e["skip"] if e["skip"] else ""),
-                                                               "held by " + ", ".join(map(printable, e["held_by"])) if e["held_by"] else ""])))
-             for e in entries]
-    lines.append("  %d entr%s" % (len(entries), "y" if len(entries) == 1 else "ies"))
-    return Answer({"entries": shown}, lines, truncated=truncated)
 
 
 def _shelved_from(path):
@@ -369,31 +179,3 @@ def _set_in_home(part_id, project, values, dry_run, refuse):
             if changes else "  nothing to change: %s (%s) already says this" % (part_id, path))
     return Answer({"part": part_id, "path": str(path), "was": was, "now": values, "written": not dry_run, "shelf_copy": shelf_copy},
                   [said] + (["  " + shelf_copy] if shelf_copy not in (None, "current") else []))
-
-
-def _op_catalog(args, project):
-    records, broken = catalog_records()
-    listing = [{"id": part_id, "kind": record["kind"], "name": record["name"]} for part_id, record in records.items()]
-    shown, truncated = store.page_with_store(listing, args.start, "catalog", ["--catalog"])
-    lines = [_row(r["id"], r["kind"], r["name"]) for r in listing]
-    lines += [_row(name, "BROKEN", "does not parse, or names no schema/id/name/kind") for name in broken]
-    lines.append("  %d record(s), %d broken" % (len(records), len(broken)))
-    return Answer({"records": shown, "broken": broken}, lines, truncated=truncated,
-                  problems=[_problem(name.split(" — ")[0], "a broken catalog record: %s" % name) for name in broken])
-
-
-def _op_step(args, project):
-    target, step = args.step
-    if step not in run_cost.STEPS:
-        return Answer(unchecked=[_cannot("a step is one of %s (the spine, §2 of the store design)"
-                                         % ", ".join(run_cost.STEPS))])
-    listed = store.find_listed_name(target) is not None
-    event = run_cost.step_event(store.plan_listed_name(target) if args.dry_run else store.add_project(target), step)
-    if not args.dry_run:
-        store.append_event(event)
-    # C-17: what a step writes is said — a line in the person's history, with the session's id, and the project on their list
-    return Answer({"step": event, "written": not args.dry_run},
-                  ["  %s step %s of %s — a line in your history%s" % (
-                      "would start" if args.dry_run else "started", step, event["project"],
-                      ", with this Claude Code session's id" if event["session"] else run_cost.session_note())]
-                  + ([] if listed else ["  %s %s on your projects" % ("would list" if args.dry_run else "listed", event["project"])]))

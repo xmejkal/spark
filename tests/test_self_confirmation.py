@@ -46,6 +46,7 @@ MAY_READ = {
     "drawing.CODES": PINNED,
     "board_live.EXIT_FOR_ANSWER": STRUCTURE, "board_live.RAN": STRUCTURE,
     "design_operations.OPERATIONS": STRUCTURE + " (P726: the ops on the core, each checked against its parts.OPERATIONS row)",
+    "sourcing_operations.OPERATIONS": STRUCTURE + " (P726 PR 2: the fifteen part ops on the core, each checked against its parts.OPERATIONS row)",
     "board_console.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
     "ready_probe.HASH_FILES": "the board code under test, rendered; the words it must print are literals in the test (P260)",
     "pin_assigner.BUS_LINES": SAMENESS, "part_rules.BUSES": SAMENESS,

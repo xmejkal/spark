@@ -24,10 +24,10 @@
   "replace": "    return [(url, True) for url in cited_urls(record)]"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/write_skeleton.py",
   "name": "a skeleton overwrites an existing record",
-  "find": "    if target.exists():\n        return Answer(problems=[_problem(args.skeleton,",
-  "replace": "    if False:\n        return Answer(problems=[_problem(args.skeleton,"
+  "find": "        held = store.records(\"parts\", record_kind.LIBRARY, project, drafts=True).get(part_id)",
+  "replace": "        held = None"
  },
  {
   "file": "scripts/spark/sourcing/datasheets.py",

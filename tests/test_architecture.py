@@ -548,15 +548,19 @@ class TheRecordsAreaTest(unittest.TestCase):
 
 # --- MVP ---
 class TheSourcingAreaTest(unittest.TestCase):
-    """W6-S2 (P717), W6-S3a (P720) and W6-S3b (P721): the sourcing area holds the pull-up band and the part rules in
-    `scripts/spark/sourcing/part_rules.py`, the part records, the part facts, the datasheets, the drawer, the part
-    handlers, the matchers, the cost of a run and the leaf `sourcing_codes`. Its `__init__.py` imports nothing, and each
-    module imports alone. Checks read the band from there, so no module imports the checks area for it. `scripts/` keeps
-    the CLIs `cost.py`, `main` alone, and `parts.py`, its parser, its printers and the handlers that read a payload."""
+    """W6-S2 (P717), W6-S3a (P720), W6-S3b (P721) and P726 PR 2: the sourcing area holds the pull-up band and the part rules in
+    `scripts/spark/sourcing/part_rules.py`, the part records, the part facts, the datasheets, the drawer, the write
+    helpers, the fifteen part Operations on the core (one module each, on `part_operation.PartOperation`, in
+    `sourcing_operations.OPERATIONS`), the matchers, the cost of a run and the leaf `sourcing_codes`. Its `__init__.py`
+    imports nothing, and each module imports alone. Checks read the band from there, so no module imports the checks area
+    for it. `scripts/` keeps the CLIs `cost.py`, `main` alone, and `parts.py`, its parser, its printers and the handlers
+    that read a payload."""
     SOURCING = ROOT / "scripts" / "spark" / "sourcing"
     #: The modules of the area, by the names of its page (`areas/sourcing.md`).
-    MODULES = ["datasheets", "drawer", "matching", "offers", "part_facts", "part_handlers", "part_records", "part_rules", "run_cost",
-               "sourcing_codes"]
+    MODULES = ["datasheets", "drawer", "fetch_documents", "find_kept", "keep_file", "list_catalog", "list_drawer", "list_parts",
+               "list_signals", "list_unverified", "mark_step", "matching", "offers", "part_facts", "part_handlers", "part_operation",
+               "part_records", "part_rules", "promote_record", "read_datasheet", "resolve_sources", "run_cost", "show_part",
+               "sourcing_codes", "sourcing_operations", "validate_parts", "write_skeleton"]
     #: `parts.py`'s own top-level functions: its parser and printer, `_op_describe`, `_op_needs_drop` on the core, the route
     #: to the Operations on the core (P707, P726), and the handlers that read a JSON payload, because reading stdin is the
     #: interface's job (P721 row 6). The text printer's rule is `record_kind.Answer.text_lines` since P726.
@@ -596,6 +600,20 @@ class TheSourcingAreaTest(unittest.TestCase):
 
     def test_each_sourcing_module_imports_alone(self):
         each_module_imports_alone(self, "sourcing")
+    def test_the_operations_table_maps_each_op_to_its_operation_class(self):
+        # P726 PR 2: the table is a module, as design's; each class is named by the op it prints, its flag first
+        code = ("from spark.core.operation import Operation; from spark.sourcing import sourcing_operations as s; "
+                "print(sorted(s.OPERATIONS)); print([op for op, cls in s.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['catalog', 'drawer', 'fetch', 'keep', 'kept', 'list', 'promote', 'read', 'show', 'signals', "
+                                                     "'skeleton', 'sources', 'step', 'unverified', 'validate']", "[]"], run.stderr)
+
+    def test_the_first_argument_of_every_parts_operation_is_its_flag(self):
+        # P726 PR 2: parts.py routes by that flag, and a PartError's subject is its value (`PartOperation.answer_refusal`)
+        code = ("from spark.design import design_operations as d; from spark.sourcing import sourcing_operations as s; "
+                "print([op for op, cls in {**d.OPERATIONS, **s.OPERATIONS}.items() if cls.arguments[0].flags != ('--' + op,) and op != 'list-boards'])")
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout.strip(), "[]", run.stderr)
 # --- end MVP ---
 
 

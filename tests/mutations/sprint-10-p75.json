@@ -24,9 +24,9 @@
   "replace": "        if False:\n            return payload, False"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/keep_file.py",
   "name": "--keep removes the location and says nothing",
-  "find": "    said = ([\"  removed the location (EXIF GPS) from %s before keeping it\" % printable(path.name)]\n            if located and not args.json else ())",
-  "replace": "    said = ()"
+  "find": "        said = ([\"  removed the location (EXIF GPS) from %s before keeping it\" % printable(path.name)]\n                if located else ())",
+  "replace": "        said = ()"
  }
 ]

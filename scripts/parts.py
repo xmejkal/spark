@@ -25,9 +25,10 @@ most consequential number in the whole build was an audio module's idle current,
 document quietly assumed.
 
 This file is the CLI (W6-S3b, P721): the parser, the printers, `--describe`, `--needs-drop` on the core and the
-handlers that read a JSON payload. The rest lives in `spark/sourcing/` (`part_facts`, `datasheets`, `part_handlers`,
-`drawer`). `--audit` and the six goal operations (`--need`, `--needs`, `--match`, `--offer`, `--requirements`, `--tally`)
-are design Operations that `main` runs on the core through `run_cli` (P707, P726: `on_the_core`).
+handlers that read a JSON payload (`--drawer-set`, `--drawer-import`, `--function-set`, `--fact-set`, `--needs-set`,
+`--pick`). Every other operation is an Operation on the core that `main` runs through `run_cli` (P707, P726:
+`on_the_core`): `--audit` and the six goal operations in `spark/design/` (`design_operations.OPERATIONS`), the fifteen part
+operations in `spark/sourcing/` (`sourcing_operations.OPERATIONS`). The write helpers live in `spark/sourcing/part_handlers`.
 """
 
 import argparse
@@ -52,11 +53,9 @@ from spark.sourcing.part_records import broken_problems, function_problems, Part
 from spark.design import needs  # noqa: E402
 from spark.design.goal_handlers import _what_a_pick_wrote  # noqa: E402
 from spark.idea.drop_need import DropNeed  # noqa: E402
-#: `main` runs each operation's handler by its name (`_op_` and the flag), so the handlers are imported by name.
-from spark.sourcing.part_handlers import (  # noqa: E402, F401
-    _op_catalog, _op_drawer, _op_fetch, _op_keep, _op_kept, _op_list, _op_promote, _op_read, _op_show, _op_signals,
-    _op_skeleton, _op_sources, _op_step, _op_unverified, _op_validate)
-from spark.design import design_operations, find_offers, match_needs, write_requirements  # noqa: E402
+from spark.records.answer_operation import DRY_RUN_HELP, PROJECT_HELP, START_HELP  # noqa: E402
+from spark.sourcing import keep_file, read_datasheet, sourcing_operations, write_skeleton  # noqa: E402
+from spark.design import design_operations, find_offers  # noqa: E402
 from spark.core.cli import HelpText, run_cli  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
 
@@ -145,20 +144,21 @@ def _not_negative(text):
     return int(text)
 
 
-#: The options an operation reads, in the same columns but effects. An option a design Operation on the core also takes
-#: reads its help from that Operation's module, so `--help` of both and `--describe` say one text (P726).
+#: The options an operation reads, in the same columns but effects. An option an Operation on the core takes reads its
+#: help from that Operation's module (or from records' `answer_operation` when several share it), so `--help` of both and
+#: `--describe` say one text (P726).
 OPTIONS = (
-    ("kind", {}, "with --skeleton: the part's kind (motor-driver, sensor, regulator, …)"),
-    ("vendor", {}, "with --skeleton: who makes it"),
-    ("sku", {}, "with --skeleton: the maker's exact part number (SEN0526); research.py finds a DFRobot module's wiki page by it"),
-    ("url", {}, "with --keep: where the file came from, if anyone knows"),
-    ("want", {"nargs": "+", "metavar": "FACT"}, "with --read: the facts to find, named as records name them (forward_voltage_v …)"),
-    ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, "with --read: extra words a datasheet uses for a fact"),
+    ("kind", {}, write_skeleton.KIND_HELP),
+    ("vendor", {}, write_skeleton.VENDOR_HELP),
+    ("sku", {}, write_skeleton.SKU_HELP),
+    ("url", {}, keep_file.URL_HELP),
+    ("want", {"nargs": "+", "metavar": "FACT"}, read_datasheet.WANT_HELP),
+    ("label", {"action": "append", "metavar": "FACT=WORD|WORD"}, read_datasheet.LABEL_HELP),
     ("passed-over", {"metavar": "FILE"}, "with --pick: the parts passed over and why, a JSON list in FILE (- for stdin) of {need, id, why, by}"),
     ("matcher", {"metavar": "NAME"}, find_offers.MATCHER_HELP),
-    ("project", {"type": Path}, find_offers.PROJECT_HELP),
-    ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, match_needs.START_HELP),
-    ("dry-run", {"action": "store_true"}, write_requirements.DRY_RUN_HELP),
+    ("project", {"type": Path}, PROJECT_HELP),
+    ("from", {"type": _not_negative, "default": 0, "dest": "start", "metavar": "N"}, START_HELP),
+    ("dry-run", {"action": "store_true"}, DRY_RUN_HELP),
     ("json", {"action": "store_true"}, "answer in one envelope: problems, unchecked, notes, assumptions, next "
      "(docs/guide/agents/json.md, \"parts.py's envelope\")"),
 )
@@ -313,9 +313,9 @@ def _say(op, answer, as_json):
     return EXIT_FOR[said["status"]]
 
 
-#: The Operations of parts.py that run on the core, by the flag that picks each (P707, P726): the design Operations that
-#: have a row in OPERATIONS (`list-boards` is boards.py's). The rest come with the sourcing PR and the CLI PR of P726.
-ON_THE_CORE = {"--" + name: operation for name, operation in design_operations.OPERATIONS.items()
+#: The Operations of parts.py that run on the core, by the flag that picks each (P707, P726): the design and the sourcing
+#: Operations that have a row in OPERATIONS (`list-boards` is boards.py's). The payload handlers come with PR 3 of P726.
+ON_THE_CORE = {"--" + name: operation for name, operation in {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS}.items()
                if any(row[0] == name for row in OPERATIONS)}
 #: Every long flag parts.py knows, for the prefix rule.
 FLAGS = ["--" + name for name, *_ in OPERATIONS] + ["--" + name for name, *_ in OPTIONS]

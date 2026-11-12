@@ -1,1 +1,3 @@
-{"envelope":1,"tool":"parts","op":"list","status":"could-not-run","data":null,"problems":[],"unchecked":[{"sentence":"argument --from: -1 is below 0","fix":"parts.py --describe --json lists every operation and its arguments"}],"next":[],"truncated":null,"notes":[],"assumptions":[]}
+{"envelope":1,"tool":"parts","op":"list","status":"could-not-run","data":null,"problems":[],"unchecked":[{"code":"bad_argument","sentence":"--from -1: a listing cannot start before its first item","fix":"--from takes a whole number from 0 up"}],"next":[],"truncated":null,"notes":[],"assumptions":[]}
+--- stderr ---
+parts.py: --from -1: a listing cannot start before its first item — --from takes a whole number from 0 up

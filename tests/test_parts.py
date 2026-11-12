@@ -42,7 +42,7 @@ from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
-from spark.sourcing import datasheets, part_facts, part_handlers, part_records  # noqa: E402
+from spark.sourcing import datasheets, list_unverified, part_facts, part_handlers, part_records  # noqa: E402
 from spark.sourcing import part_rules  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
@@ -362,9 +362,9 @@ class WhatNobodyHasCheckedTest(unittest.TestCase):
     def test_a_reader_that_will_read_a_fact_prints_its_card(self):
         # P738: no record reaches a `will read` row today (a block's write key is the block), so the line is proved here.
         from spark.records.fact_needs import FactNeed, READS, WILL_READ
-        self.assertEqual(part_handlers._reader_line(FactNeed("module", "body_mm", "spark.x.Y", WILL_READ, "P734")),
+        self.assertEqual(list_unverified._reader_line(FactNeed("module", "body_mm", "spark.x.Y", WILL_READ, "P734")),
                          "      read by spark.x.Y (will read, P734)")
-        self.assertEqual(part_handlers._reader_line(FactNeed("module", "body_mm", "spark.x.Y", READS)),
+        self.assertEqual(list_unverified._reader_line(FactNeed("module", "body_mm", "spark.x.Y", READS)),
                          "      read by spark.x.Y (reads)")
 
     def test_the_next_step_names_the_first_part_with_a_row_that_can_go_back_and_none_when_no_row_can(self):
@@ -1103,7 +1103,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self._catalog_record(catalog, "x-part", sources=["https://v.example/x.pdf"],
                              facts={"pitch_mm": {"value": 2.0, "verified": False, "why_it_matters": "the socket", "source": "the maker's page"}})
         answered = lambda record: [(url, True) for url in datasheets.cited_urls(record)]  # noqa: E731 — no network
-        with in_store(home), mock.patch.object(part_handlers, "sources_resolve", answered):
+        with in_store(home), mock.patch.object(datasheets, "sources_resolve", answered):
             self.assertEqual(part_records.any_record("x-part")["id"], "x-part")
             self.assertEqual([q["fact"] for q in part_facts.unverified(["x-part"])], ["pitch_mm"])
             with contextlib.redirect_stdout(io.StringIO()) as out:
@@ -1284,7 +1284,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                 with self.subTest(what=what, flags=flags):
                     with in_store(home):
                         said, code = run_json(["--keep", str(local)] + flags)
-                    self.assertEqual((said["status"], code), ("could-not-run", 2))
+                    self.assertEqual((said["status"], code, said["unchecked"][0]["code"]), ("could-not-run", 2, "file_name_refused"))  # P726 PR 2: the store's own code
         self.assertFalse((home / "sources").exists(), "nothing was kept")
 
     def test_a_dry_run_of_keep_says_what_the_real_run_would_record_and_keeps_nothing(self):
@@ -2177,7 +2177,7 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         # `sources_resolve` binds `reachable` as a default argument, so it is the function patched here.
         def no_network(*_):
             raise AssertionError("a dry run asked the network")
-        with mock.patch.object(part_handlers, "sources_resolve", no_network), \
+        with mock.patch.object(datasheets, "sources_resolve", no_network), \
                 mock.patch.object(datasheets, "_download", no_network):
             said, code = run_json(["--sources", "l9110s-module", "--dry-run"])
         self.assertEqual((code, bool(said["data"]["sources"])), (0, True))
@@ -2288,7 +2288,7 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
         unreachable = lambda record: asked.append(1) or [("https://unreachable.example/a.pdf", False)]  # noqa: E731
         project = Path(tempfile.mkdtemp()); (project / "parts").mkdir()
         (project / "parts" / "cited.json").write_text(record.read_text())
-        with mock.patch.object(part_handlers, "sources_resolve", unreachable):
+        with mock.patch.object(datasheets, "sources_resolve", unreachable):
             text, code = run_text(["--sources", "cited", "--project", str(project)])
         self.assertEqual((code, text.count("unreachable.example"), asked), (1, 1, [1]), text)
         home = Path(tempfile.mkdtemp()); (home / "catalog").mkdir()
@@ -3413,16 +3413,81 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         self.assertNotIn("--list", err.getvalue())
 
     def test_each_describe_row_and_its_operation_agree(self):
-        from spark.core.operation import WRITES
+        from spark.core.operation import FETCHES, WRITES
         from spark.design import design_operations
+        from spark.sourcing import sourcing_operations
         rows = {row[0]: row for row in parts.OPERATIONS}
-        for op, operation in design_operations.OPERATIONS.items():
+        on_the_core = {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS}
+        for op, operation in on_the_core.items():
             if op not in rows:
                 continue  # list-boards is boards.py's
             with self.subTest(op=op):
                 self.assertEqual(rows[op][2], next(a.help for a in operation.arguments if a.flags == ("--" + op,)))
                 self.assertEqual("writes" in rows[op][3], WRITES in operation.effects)
-        self.assertEqual(sorted(set(design_operations.OPERATIONS) & set(rows)), ["audit", "match", "need", "needs", "offer", "requirements", "tally"])
+                self.assertEqual("network" in rows[op][3], FETCHES in operation.effects)  # P726 PR 2: --describe keeps its older word
+        self.assertEqual(sorted(set(on_the_core) & set(rows)),
+                         ["audit", "catalog", "drawer", "fetch", "keep", "kept", "list", "match", "need", "needs", "offer", "promote", "read",
+                          "requirements", "show", "signals", "skeleton", "sources", "step", "tally", "unverified", "validate"])
+
+    def test_each_part_operation_s_help_lists_its_own_arguments_alone(self):
+        # P726 PR 2: `parts.py --list --help` is ListParts' parser, not the whole CLI's
+        out = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stdout(out):
+            parts.main(["--list", "--help"])
+        self.assertIn("--from N", out.getvalue())
+        self.assertIn("--project PROJECT", out.getvalue())
+        self.assertNotIn("--kind", out.getvalue())
+        out = io.StringIO()
+        with self.assertRaises(SystemExit), contextlib.redirect_stdout(out):
+            parts.main(["--step", "p", "S", "--help"])
+        self.assertIn("--step PROJECT STEP", out.getvalue())
+        said, code = run_json(["--list", "--dry-run"])
+        self.assertEqual((code, said["op"], said["unchecked"][0]["code"]), (2, "list", "bad_argument"))
+
+    def test_a_part_nobody_has_is_a_problem_on_every_id_the_flag_named(self):
+        # P726 PR 2: PartOperation.answer_refusal keeps parts._part_problem's rule
+        said, code = run_json(["--signals", "led-red-5mm", "nosuch"])
+        self.assertEqual((code, said["problems"][0]["subject"], said["problems"][0]["code"]), (1, "led-red-5mm nosuch", "no_such_part"))
+
+    def test_a_listing_on_the_core_refuses_a_negative_start_and_takes_zero(self):
+        with in_store(Path(tempfile.mkdtemp())):
+            refused, code = run_json(["--catalog", "--from", "-1"])
+            taken, taken_code = run_json(["--catalog", "--from", "0"])
+        self.assertEqual((code, refused["unchecked"][0]["code"], refused["unchecked"][0]["fix"]),
+                         (2, "bad_argument", "--from takes a whole number from 0 up"))
+        self.assertEqual((taken_code, taken["status"]), (0, "ok"))
+
+    def test_the_refusals_the_part_operations_word_carry_a_code(self):
+        project = Path(tempfile.mkdtemp())
+        with in_store(Path(tempfile.mkdtemp())):
+            for argv, word in ((["--promote", "x"], "bad_argument"), (["--step", str(project), "nap"], "bad_argument"),
+                               (["--skeleton", "x", "--project", str(project)], "bad_argument"),
+                               (["--keep", str(project / "missing.pdf")], "file_refused")):
+                with self.subTest(argv=argv):
+                    said, code = run_json(argv)
+                    self.assertEqual((code, said["unchecked"][0]["code"]), (2, word))
+
+    def test_every_write_operation_narrows_its_effects_on_a_dry_run(self):
+        from spark.core.operation import READS, WRITES
+        from spark.design import design_operations
+        from spark.sourcing import sourcing_operations
+        writers = [op for op, cls in {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS}.items() if WRITES in cls.effects]
+        self.assertEqual(sorted(writers), ["fetch", "keep", "promote", "requirements", "skeleton", "step"])
+        for op in writers:
+            with self.subTest(op=op):
+                operation = sourcing_operations.OPERATIONS.get(op, design_operations.OPERATIONS.get(op))()
+                self.assertEqual(operation.effects_of({"dry_run": True}), (READS,))
+                self.assertEqual(operation.effects_of({"dry_run": False}), operation.effects)
+
+    def test_two_labels_both_reach_the_datasheet_reader(self):
+        # P726 PR 2: Argument.repeats; nargs="+" would keep the last --label alone
+        from spark.core.cli import HelpText, parser_for
+        from spark.sourcing import read_datasheet
+        parsed = vars(parser_for(HelpText("parts.py", "", ""), read_datasheet.ReadDatasheet()).parse_args(
+            ["--read", "x.pdf", "--want", "a", "b", "--label", "a=x| Y", "--label", "b=z"]))
+        self.assertEqual((parsed["datasheet"], parsed["wanted"], parsed["labels"]), ("x.pdf", ["a", "b"], ["a=x| Y", "b=z"]))
+        self.assertEqual(read_datasheet.words_by_fact(parsed["labels"]), {"a": ["x", "y"], "b": ["z"]})
+        self.assertEqual(read_datasheet.words_by_fact(None), {})
 
     def test_an_exact_flag_wins_over_the_flags_it_is_a_prefix_of(self):
         project = Path(tempfile.mkdtemp())
@@ -3433,6 +3498,10 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
             ambiguous, code = run_json(["--ne", str(project)])
         self.assertEqual((need["op"], needs["op"], equals["op"]), ("need", "needs", "match"))
         self.assertEqual((code, ambiguous["status"], ambiguous["unchecked"][0]["sentence"][:16]), (2, "could-not-run", "ambiguous option"))
+        with in_store(Path(tempfile.mkdtemp())):  # P726 PR 2: the fifteen join the rule
+            show, show_code = run_json(["--sh", "nosuch"])
+            promote_or_project, code = run_json(["--pro", "x"])
+        self.assertEqual((show["op"], show_code, code, promote_or_project["unchecked"][0]["sentence"][:16]), ("show", 1, 2, "ambiguous option"))
 
     def test_a_unique_prefix_picks_its_operation_as_argparse_did(self):
         project = Path(tempfile.mkdtemp())

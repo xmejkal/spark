@@ -1,1 +1,4 @@
-{"envelope":1,"tool":"parts","op":"show","status":"problems","data":null,"problems":[{"subject":"no-such-part","sentence":"no part called 'no-such-part'.\n  available: dfr0534-module, jst-ph-2-power-inlet, l9110s-module, led-red-5mm, max98357a-dfr0954, speaker-terminal, tactile-button, vl6180x-breakout","fix":null}],"unchecked":[],"next":[],"truncated":null,"notes":[],"assumptions":[]}
+{"envelope":1,"tool":"parts","op":"show","status":"problems","data":null,"problems":[{"subject":"no-such-part","code":"no_such_part","sentence":"no part called 'no-such-part'.\n  available: dfr0534-module, jst-ph-2-power-inlet, l9110s-module, led-red-5mm, max98357a-dfr0954, speaker-terminal, tactile-button, vl6180x-breakout","fix":null}],"unchecked":[],"next":[],"truncated":null,"notes":[],"assumptions":[]}
+--- stderr ---
+parts.py: no part called 'no-such-part'.
+  available: dfr0534-module, jst-ph-2-power-inlet, l9110s-module, led-red-5mm, max98357a-dfr0954, speaker-terminal, tactile-button, vl6180x-breakout

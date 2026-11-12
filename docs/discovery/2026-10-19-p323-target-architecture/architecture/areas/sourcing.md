@@ -3,10 +3,12 @@
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
-New names (proposed): the area name `sourcing` (`parts` already names the record folder and the CLI `parts.py`),
-`DrawerService`, `DatasheetService`, `RunCostService`, `UnknownMatcherError`, `NoTranscriptError`,
-`MatcherContract`, and the modules `datasheets`, `part_facts`, `part_rules`, `part_records`, `run_cost` and `part_handlers` (the handlers of
-`parts.py` as functions, a stopgap until the "one module per Operation" card: C1 refuses a second `operations.py`, P710).
+New names: the area name `sourcing` (`parts` already names the record folder and the CLI `parts.py`),
+`UnknownMatcherError`, `NoTranscriptError`, the modules `datasheets`, `part_facts`, `part_rules`, `part_records`, `run_cost`
+and `part_handlers` (the write helpers), and since P726 PR 2 one module per Operation on `part_operation.PartOperation`
+(`show_part.ShowPart`, `keep_file.KeepFile`, `mark_step.MarkStep`, twelve more), listed in `sourcing_operations.OPERATIONS`.
+Still proposed: `MatcherContract`; the `DrawerService`, `DatasheetService` and `RunCostService` wraps of the three function
+modules, which no card builds yet (the Operations call the modules' functions).
 
 ## Level 2: what sourcing does
 
@@ -39,12 +41,18 @@ design's `OPERATIONS` and keeps its own table for `--describe`, so its flags sta
 | `sourcing/matching.py` | `Matcher` and its subclasses, `Offer`, `MATCHERS`, moved from `scripts/matching.py` |
 | `sourcing/datasheets.py` | the catalog and `need`, fetching, keeping and reading a datasheet, and asking the cited URLs, moved out of `parts.py` (W6-S3b, P721) |
 | `sourcing/part_facts.py` | what is known about a part: its signals, what nobody checked, the shelf copy and its digest, `promote`, `skeleton` and `describe`, moved out of `parts.py` (W6-S3b, P721) |
-| `sourcing/part_handlers.py` | the handlers of the records, facts, datasheets, drawer and cost groups, with `vendor_order`, `sellers` and `_set_in_home`, moved out of `parts.py` (W6-S3b, P721). The handlers that read a JSON payload stay in the CLI, because reading stdin is the interface's job |
+| `sourcing/part_handlers.py` | the write helpers (`_set_in_home`, `_drawer_answer`, `_write_lines`, the shelf-copy finders) with `vendor_order` and `sellers`, moved out of `parts.py` (W6-S3b, P721). The fifteen handlers it held are the Operations below since P726 PR 2; the handlers that read a JSON payload stay in the CLI until PR 3, because reading stdin is the interface's job |
+| `sourcing/part_operation.py` | `PartOperation` (P726 PR 2): records' `AnswerOperation` with the one rule `parts.main` kept for the part handlers, a `PartError` is a problem on the part the flag names (`answer_refusal`) |
+| `sourcing/list_parts.py`, `show_part.py`, `validate_parts.py`, `list_signals.py`, `list_unverified.py` | `ListParts` (`list`), `ShowPart` (`show`), `ValidateParts` (`validate`), `ListSignals` (`signals`), `ListUnverified` (`unverified`): the records group on the core (P726 PR 2) |
+| `sourcing/write_skeleton.py`, `promote_record.py` | `WriteSkeleton` (`skeleton`), `PromoteRecord` (`promote`): the writes of the records and facts groups (P726 PR 2) |
+| `sourcing/resolve_sources.py`, `fetch_documents.py`, `keep_file.py`, `read_datasheet.py`, `find_kept.py`, `list_catalog.py` | `ResolveSources` (`sources`), `FetchDocuments` (`fetch`), `KeepFile` (`keep`), `ReadDatasheet` (`read`), `FindKept` (`kept`), `ListCatalog` (`catalog`): the datasheets group on the core (P726 PR 2); `sources` and `fetch` declare `fetches` and reach the network through `datasheets` themselves |
+| `sourcing/list_drawer.py`, `mark_step.py` | `ListDrawer` (`drawer`), `MarkStep` (`step`): the drawer listing and the cost group's write (P726 PR 2) |
+| `sourcing/sourcing_operations.py` | `OPERATIONS`, the fifteen Operations by their printed `op` (P726 PR 2). A module, because the area's `__init__` imports nothing |
 | `sourcing/run_cost.py` | the transcript tally, moved from `cost.py`, which stays the CLI |
 | `sourcing/part_rules.py` | the rules that judge a part record's facts: the pull-up band since P717 (W6-S2), `i2c_pullup_problems` and the others since W6-S3a (P720) |
 | `sourcing/part_records.py` | the part record read and checked (`load`, `validate`, `PartError`, `function_of`), moved out of `parts.py` (W6-S3a, P720) |
 | `sourcing/sourcing_codes.py` | the leaf `sourcing_codes` (P717, moved into `sourcing/` by W6-S3a, P720): a code and its sentence for each refusal of `PartError`, `NoTranscriptError` and `UnknownMatcherError`, `errors.CodedMessageError`s |
-| `sourcing/__init__.py` | the area's `OPERATIONS` and its index docstring. One module per Operation, named after it |
+| `sourcing/__init__.py` | the index docstring alone: it imports nothing (the wave 5 cycles), so the table is `sourcing_operations.py` |
 
 ### Its seams and adapters
 
@@ -79,28 +87,37 @@ classDiagram
     functions
     names
   }
-  class DrawerService {
-    <<Service>>
-    entries()
-    set(entry_id, values)
-    import_order(file)
+  class AnswerOperation {
+    <<Operation, records>>
+    run(outside, **values)
+    build_answer(**values)*
+    answer_refusal(broken, values)
   }
-  class DatasheetService {
-    <<Service>>
-    fetch(part_id)
-    keep(file)
-    read(part_id, pages)
+  class PartOperation {
+    answer_refusal(broken, values): a PartError is a problem on the part
   }
-  class RunCostService {
-    <<Service>>
-    step(project)
-    tally(project)
+  class ShowPart {
+    name = "show"
+    build_answer(part_id, project)
+  }
+  class KeepFile {
+    name = "keep"
+    effects = reads, writes
+    build_answer(file, url, dry_run)
+  }
+  class MarkStep {
+    name = "step"
+    build_answer(project_and_step, dry_run)
   }
   Matcher <|-- SameWords
   Matcher <|-- NameContains
   Matcher <|-- WordOverlap
   Matcher ..> Offer
-  DrawerService ..> Offer
+  AnswerOperation <|-- PartOperation
+  PartOperation <|-- ShowPart
+  PartOperation <|-- KeepFile
+  PartOperation <|-- MarkStep
+  PartOperation <|-- "twelve more"
 ```
 
 `Matcher` already has the target form: a
@@ -110,20 +127,24 @@ classDiagram
 
 ```mermaid
 sequenceDiagram
-  participant OP as keep Operation
-  participant DS as DatasheetService
-  participant OW as OutsideWorld
+  participant P as parts.main
+  participant C as run_cli
+  participant OP as KeepFile (PartOperation)
+  participant DS as datasheets.keep_local
   participant ST as records store
-  OP->>DS: keep(file)
+  P->>P: asked_on_the_core(argv): "--keep" is in ON_THE_CORE
+  P->>C: run_cli(HelpText(tool="parts"), KeepFile(), argv)
+  C->>OP: run(file, url, dry_run, outside), the store locked
+  OP->>DS: keep_local(path, url, dry_run)
   DS->>DS: name check, sha256, printed version
-  DS->>ST: is it already kept?
-  alt already kept
-    DS-->>OP: OperationResult, data names the kept copy
-  else new
-    DS->>OW: write(store path, bytes)
-    DS-->>OP: OperationResult, documents entry in data
-  end
+  DS->>ST: is it already kept? else write the copy
+  DS-->>OP: the documents entry
+  OP-->>C: Answer(...).to_result()
+  C-->>P: the envelope or the lines, the exit code
 ```
+
+The sequence of the other fourteen is the same but the library function called; `ResolveSources` and `FetchDocuments` reach
+the network through `datasheets` and declare `fetches`.
 
 ### How sourcing is tested alone
 

@@ -105,6 +105,7 @@ def parser_for(text, operation):
             target.add_argument(*argument.flags, dest=argument.dest, action="store_true", help=argument.help)
         else:
             counted = {key: value for key, value in (("nargs", argument.nargs), ("metavar", argument.metavar)) if value is not None}
+            counted.update({"action": "append"} if argument.repeats else {})
             target.add_argument(*argument.flags, dest=argument.dest, type=argument.kind, default=argument.default, help=argument.help,
                                 required=argument.required, choices=argument.choices, **counted)
     return parser
