@@ -39,8 +39,8 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    `--tier critical,new` runs the rows the ledger puts in those tiers (P787; the glossary has the five words): the
    critical rows run every sweep, whatever the ledger says of them, because each carries `"tier": "critical"`, a mark
    written by hand on a row that guards a store write, a deploy, an erase or a refusal that protects the person (at most
-   40; you never write one). The run's first line says which tiers and how many rows, as `  tiers critical,new: 42 row(s) selected (critical 12,
-   new 30, proving 9, proven 10)`; quote it byte for byte. The new rows run in the tables' given order, and the glob
+   40; you never write one). The run's first line says which tiers and how many rows, as `  tiers critical,new: 42
+   row(s) selected (critical 12, new 30, proving 9, proven 10)`; quote it byte for byte. The new rows run in the tables' given order, and the glob
    `tests/mutations/*.json` lists the newest tables first (`p…` before `sprint-…`): a sweep that wants the oldest first
    lists them first. `python3 tools/mutate.py tests/mutations/*.json --tier-count` says beforehand how many rows each
    tier holds, and runs nothing. `--budget 20` stops the run before the row whose expected seconds (its ledger line's
