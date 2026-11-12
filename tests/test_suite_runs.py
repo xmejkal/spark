@@ -124,6 +124,7 @@ class TheSlowMarkTest(unittest.TestCase):
             ("test_mutate.py", "AnEscapedMutationTest"),
             ("test_mutate.py", "NearTestsFirstTest"),
             ("test_mutate.py", "StaleBytecodeTest"),
+            ("test_mutate.py", "TheLedgerTest"),
             ("test_needs.py", "test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert"),
             ("test_tabbed_page.py", "test_the_real_tsci_exports_a_circuit"),
             ("test_xiao_record.py", "TheLibraryXiaoBuildsAButtonAndAnLedTest"),

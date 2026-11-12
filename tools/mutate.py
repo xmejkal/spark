@@ -7,6 +7,7 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py tests/mutations/*.json --for scripts/run_scenario.py --copy    # one file's rows, in a copy
     tools/mutate.py tests/mutations/*.json --for $changed --copy   # a branch's: changed=$(git diff --name-only origin/main...HEAD)
     tools/mutate.py tests/mutations/*.json --retarget scripts/a.py scripts/spark/a.py   # a file moved: its rows follow
+    tools/mutate.py --ledger                              # the ledger's lines, counted by status
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -51,6 +52,14 @@ in parallel: `--jobs 4` saved 24 s on 8 rows (rows file of P440), under the minu
 A red pre-check names its tests: the `FAIL:`, `ERROR:` and `FAILED` lines of the verdict (P787), so a red copy is never
 guessed at.
 
+THE LEDGER (P787) is `tests/mutations/ledger.jsonl`, in git: one line per row key, written after every run that plants
+rows, with or without `--copy` (`--anchors` and `--retarget` write none). It says which rows were caught, when, by which
+test, at which content of their file, so a sweep can run rows in tiers (PR 2) instead of all 3000 at once. The run
+writes it in the tree it was given, never in the copy: the copy is removed, and the real tree's ledger is merged with
+the run's lines, the newer date winning, so a line a person wrote during the run is kept. Only a run whose files are
+restored writes it: a verdict nothing can trust records nothing. `--ledger` prints the counts by status. `tools/ledger.py`
+holds the words and the store.
+
 WHAT PASSING MEANS
 
 Every mutation turned the suite red, and the suite is green again with the files restored. A
@@ -69,6 +78,7 @@ import tempfile
 import threading
 import time
 from collections import namedtuple
+from datetime import datetime
 from pathlib import Path
 
 #: A developer's tool, not the product: it lives in tools/ and reaches the product's modules by path.
@@ -76,6 +86,7 @@ SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scratch  # noqa: E402  (P435) stdlib only: removes the old folders a killed run left
+import ledger  # noqa: E402  (P787) stdlib only: the ledger's lines and their store
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK  # noqa: E402
 
@@ -121,6 +132,20 @@ class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
 
 #: A line of unittest's verdict that names a red test or sums the red run.
 RED_LINE = re.compile(r"^(?:(?:FAIL|ERROR): .*|FAILED \(.*|Ran \d+ tests? in .*|[\w.]+Error: .*)$", re.M)
+#: The test module in a `FAIL:` or `ERROR:` line: `FAIL: test_add (test_m.T)` names `test_m` (3.11+: `(test_m.T.test_add)`).
+RED_TEST = re.compile(r"^(?:FAIL|ERROR): \S+ \((\w+)")
+
+
+def caught_by(result):
+    """
+    The ledger's `by` for a near run that went red: the module of the first test the verdict names, or `suite` when no
+    line names one (a crash before any test). A plain `False` (a test's stand-in for the run) names none either.
+    """
+    for red in getattr(result, "red_lines", ()):
+        found = RED_TEST.match(red)
+        if found:
+            return found.group(1)
+    return ledger.SUITE
 
 
 def suite_is_green(root, tests, only=(), failfast=False):
@@ -406,12 +431,13 @@ class RedBeforeMutation(Exception):
     """The suite is not green before any mutation: a red suite catches nothing. The message names the red tests."""
 
 
-def run(root, tests, mutations, copied=False):
+def run(root, tests, mutations, copied=False, ledger_store=None):
     """
     Every mutation, each restored before the next, and the suite confirmed green at the end.
 
     `copied` says `root` is a copy that is deleted after the run, so there is nothing to restore and the end check is
-    skipped (P424: it cost a whole suite, 207 s on 2026-10-28).
+    skipped (P424: it cost a whole suite, 207 s on 2026-10-28). `ledger_store`, a `ledger.LedgerStore`, gets one line per
+    row when the run's files are restored (P787); None records nothing.
     """
     lock = root / LOCK_NAME
     if lock.exists():
@@ -426,22 +452,30 @@ def run(root, tests, mutations, copied=False):
         if not before:
             raise RedBeforeMutation("the suite is not green BEFORE any mutation; a red suite catches nothing"
                                     + "".join("\n  " + line for line in getattr(before, "red_lines", ())))
-        return _run(root, tests, mutations, near_sets(root, tests, mutations), copied)
+        return _run(root, tests, mutations, near_sets(root, tests, mutations), copied, ledger_store)
     finally:
         lock.unlink(missing_ok=True)
 
 
-def _run(root, tests, mutations, near_by_file, copied):
-    results, imports_before = [], {}
+def _run(root, tests, mutations, near_by_file, copied, ledger_store=None):
+    results, imports_before, lines = [], {}, []
+    date = None  # the run's end stamps every line at once, when the facts are known (P787; the review of PR 1)
     for mutation in mutations:
+        started = time.monotonic()
         path = root / mutation["file"]
         file = mutation["file"]
+        blob = ledger.blob_of(path.read_bytes()) if path.is_file() else None  # the file as the run read it, before the row
+
+        def noted(status, which_run=None, who=None, detail=""):
+            """The row's result for the report, and its ledger line: `which_run` is near or full, `who` the ledger's `by`."""
+            results.append({"name": mutation.get("name", mutation["find"]), "status": status, "by": which_run, "detail": detail})
+            lines.append(ledger.line(mutation, blob, date, status, who, round(time.monotonic() - started)))
+
         if file.endswith(".py") and file not in imports_before:  # a file that never imported alone cannot be judged so
             imports_before[file] = path.is_file() and _import_error(root, file) is None
         original, refusal = apply(root, mutation)
         if refusal:
-            results.append({"name": mutation.get("name", mutation["find"]),
-                            "status": REFUSED, "by": None, "detail": refusal})
+            noted(REFUSED, detail=refusal)
             continue
         try:
             refusal = _loads(file, path.read_text())
@@ -449,21 +483,24 @@ def _run(root, tests, mutations, near_by_file, copied):
                 failed = _import_error(root, file)
                 refusal = failed and "the mutant of %s does not import: %s" % (file, failed)
             if refusal:
-                results.append({"name": mutation.get("name", mutation["find"]),
-                                "status": REFUSED, "by": None, "detail": refusal})
+                noted(REFUSED, detail=refusal)
                 continue
             near = near_by_file.get(mutation["file"], ())
-            caught_near = bool(near) and not suite_is_green(root, tests, only=near, failfast=True)
+            near_run = suite_is_green(root, tests, only=near, failfast=True) if near else None
+            caught_near = bool(near) and not near_run
             green = False if caught_near else suite_is_green(root, tests, failfast=True)
         finally:
             path.write_text(original)
-        results.append({"name": mutation.get("name", mutation["find"]),
-                        "status": ESCAPED if green else CAUGHT,
-                        "by": None if green else (NEAR if caught_near else FULL),
-                        "detail": "" if not green else
-                        "the suite stayed green — no test notices this defect"})
+        if green:
+            noted(ESCAPED, who=ledger.ESCAPE, detail="the suite stayed green — no test notices this defect")
+        else:
+            noted(CAUGHT, NEAR if caught_near else FULL, caught_by(near_run) if caught_near else ledger.SUITE)
 
-    return results, copied or bool(suite_is_green(root, tests))
+    restored = copied or bool(suite_is_green(root, tests))
+    if ledger_store is not None and restored:  # a verdict nothing can trust records nothing
+        ended = datetime.now().astimezone().isoformat(timespec="seconds")  # the run's end, with its zone
+        ledger_store.record([dict(entry, date=ended) for entry in lines])
+    return results, restored
 
 
 def verdict(results, restored):
@@ -495,7 +532,7 @@ def render(results, restored, code):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
-    parser.add_argument("table", nargs="+", help="JSON lists of {file, find, replace, name?}")
+    parser.add_argument("table", nargs="*", help="JSON lists of {file, find, replace, name?}")
     parser.add_argument("--anchors", action="store_true",
                         help="only check that every `find` occurs exactly once and that each mutant compiles (.py) "
                              "or parses (.json); run nothing. A run also imports each mutated module")
@@ -509,14 +546,24 @@ def main(argv=None):
     parser.add_argument("--retarget", nargs=2, metavar=("OLD", "NEW"),
                         help="instead of a run: in these tables, move every row whose `file` is OLD to NEW (the text is "
                              "edited, so the tables keep their alignment); then prove them with --anchors")
+    parser.add_argument("--ledger", action="store_true",
+                        help="instead of a run: count the lines of the ledger (tests/mutations/ledger.jsonl under --root) "
+                             "by status; every run that plants rows writes the ledger, --anchors and --retarget do not")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
+    root = Path(args.root).resolve()
+    ledger_store = ledger.LedgerStore(root / args.tests / "mutations" / ledger.LEDGER_NAME)
+    if args.ledger:
+        if args.table or args.anchors or args.paths or args.copy or args.retarget:
+            parser.error("--ledger runs alone: it takes no table, --anchors, --for, --copy or --retarget")
+        return print_ledger(ledger_store, root, args.json)
+    if not args.table:
+        parser.error("the following arguments are required: table")
     if args.retarget:
         if args.anchors or args.paths or args.copy:
             parser.error("--retarget runs alone: it takes no --anchors, --for or --copy")
         return retarget_tables(args.table, *args.retarget)
-    root = Path(args.root).resolve()
     mutations = []
     for table in args.table:
         try:
@@ -549,7 +596,7 @@ def main(argv=None):
     with sigterm_as_exit():  # also around the copy's removal: no window back at the default handler
         try:
             where = copy_of(root) if args.copy else root
-            results, restored = run(where, args.tests, mutations, copied=where is not root)
+            results, restored = run(where, args.tests, mutations, copied=where is not root, ledger_store=ledger_store)
         except (AnotherRunIsActive, RedBeforeMutation) as stopped:
             print(str(stopped), file=sys.stderr)
             return EXIT_COULD_NOT_RUN
@@ -558,15 +605,30 @@ def main(argv=None):
                 with sigterm_held():
                     scratch.remove_tree(where.parent)
     code = verdict(results, restored)
+    recorded = {"path": str(ledger_store.path.relative_to(root)), "recorded": len(results) if restored else 0,
+                "rows": len(ledger_store.read())}
     if args.json:
         print(json.dumps({"tool": "mutate", "restored": restored,
                           "status": {EXIT_OK: OK, EXIT_ESCAPED: "escaped",
                                      EXIT_COULD_NOT_RUN: COULD_NOT_RUN}[code],
-                          "seconds": round(time.monotonic() - started), "mutations": results}, indent=2))
+                          "seconds": round(time.monotonic() - started), "mutations": results, "ledger": recorded}, indent=2))
     else:
         sys.stdout.write(render(results, restored, code))
         print("  %d mutation(s) in %.0f s" % (len(results), time.monotonic() - started))
+        print("  %d row(s) recorded in %s (%d in all)" % (recorded["recorded"], recorded["path"], recorded["rows"]))
     return code
+
+
+def print_ledger(ledger_store, root, as_json):
+    """`--ledger`: the ledger's lines counted by status, as one line or as JSON; exit 0 (an empty ledger is empty)."""
+    counts = ledger_store.counts()
+    path = str(ledger_store.path.relative_to(root))
+    if as_json:
+        print(json.dumps({"tool": "mutate", "ledger": path, "rows": sum(counts.values()), "statuses": counts}, indent=2))
+    else:
+        said = ", ".join("%d %s" % (count, status) for status, count in counts.items())
+        print("  ledger %s: %d row(s)%s" % (path, sum(counts.values()), ": " + said if said else ""))
+    return EXIT_OK
 
 
 if __name__ == "__main__":
