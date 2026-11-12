@@ -8,9 +8,9 @@ per project today. The reason names the first design's absolute path for `--circ
 its own folder with its own `parts/` and to run init in it. Many boards in one project come with v0.13
 ([#94](https://github.com/xmejkal/spark/issues/94)).
 
-**Works.** After a build, running init again with `--force` names the rails from the board. It lists the fields it
-writes as `null`. Until a bug is fixed, it lists them even when `.spark/rules.json` already holds your answer
-([P114](https://github.com/xmejkal/spark/issues/48)), so the values in that file are what count:
+**Works.** After a build, running init again with `--force` names the rails from the board. Every run lists the fields
+still null in both files, answered ones left out ([P777](https://github.com/xmejkal/spark/issues/1075)); this run, from
+before the brief could be answered, has nothing answered yet:
 
 ```sh
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/init_project.py" --project . --board firebeetle2-esp32s3 --force

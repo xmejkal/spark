@@ -1,6 +1,6 @@
 ---
 description: From a goal in words to needs, each matched against what you own and what spark knows — store first; research only for a real gap — then a part picked per need with what you own reserved, a requirements file for /spark:build, and one cost line.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-drop *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --offer *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --needs-drop *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --match *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --offer *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --audit *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --function-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --pick *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fact-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --drawer-set *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --requirements *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --tally *), Bash(${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py *)
 ---
 
 # spark:idea
@@ -29,9 +29,12 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    Read tool ([P402](https://github.com/xmejkal/spark/issues/519)). A `goal`
    that is set is the goal: say it back in one line, and do not ask for it again. Each `must` line is a promise that
    the needs must keep. If a need serves one, name the line. If the goal is `null`, ask for it. If the list is empty,
-   ask for the must lines. Each of these questions counts as one of the three in item 2. Write each answer into
-   `project.json` with the Write tool, and keep its other fields as they are. The goal the person gave at the start is
-   the first answer.
+   ask for the must lines. Each of these questions counts as one of the three in item 2. Write the answers as a JSON
+   object of the brief's fields (`{"goal": "…", "must": […]}`) to a file in the system's temp folder, outside any
+   repository, with the Write tool, then run `${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --answers <file>`:
+   what the file states wins (a list replaces the list: give the whole `must` list), the brief's other fields are kept, and
+   exit 0 says the brief holds it ([P777](https://github.com/xmejkal/spark/issues/1075)). The goal the person gave at the
+   start is the first answer.
 1. A need is a verb and a few words: `does` one of sense, input, indicate, sound, move, drive, power, keep-time, store,
    compute, communicate, connect, mount (`drive` is the driver, `move` the thing driven), and `what` (soil-moisture,
    alarm, microcontroller). Add a `condition` only when it decides a part ("indoor pot, short probe; low power").

@@ -44,6 +44,19 @@ already in rules.json. Without `--force` it leaves an existing rules.json alone,
 ${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id> --force
 ```
 
+**When the person answers the brief** (`/spark:idea` step S is the first time), run it with `--answers <file>`: a JSON
+object of the brief's fields (`goal`, `must`, `prefer`, `sellers`, `decided`) in the person's words, written with the Write
+tool in the system's temp folder, outside any repository, never on a command line. It merges them into `project.json`:
+what the file states wins (a list replaces the list, so give the whole list; an empty list is a statement), what it leaves
+out or states as null is kept. It prints `wrote goal into project.json from <file>` and exits 0, or `project.json already
+says what <file> says`, also exit 0: the brief holds what you asked. A key the brief lacks, a value of the wrong shape, a
+file that is not a JSON object, or a brief that cannot be read is refused: exit 2, nothing written, the project not listed
+([P777](https://github.com/xmejkal/spark/issues/1075)).
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --answers <file>
+```
+
 It writes `.spark/rules.json`, `.spark/project.json`, `boards/active.json` and a `package.json`
 naming tscircuit's cli (so `npm install && npx --no tsci build` works in the project; without the file
 tsci climbs to your home folder looking for a root — never rewritten once you add to it), and names the
@@ -72,8 +85,8 @@ answer until somebody measures it. Not every check does yet: a null rail voltage
 word (it blocks the resistor bound under a `!` line), and a null bus capacitance stops check_physics ([P107](https://github.com/xmejkal/spark/issues/41));
 [what never to assume](../docs/guide/agents/never-assume.md) lists each field.
 
-Go through the list with the user. After `--force` it still names fields they answered
-([P114](https://github.com/xmejkal/spark/issues/48)), so read the values in the files. Two kinds of field:
+Go through the list with the user. Every run ends with the fields still null in both files, answered ones left out
+([P777](https://github.com/xmejkal/spark/issues/1075)). Two kinds of field:
 
 - **Decisions they can make now.** `i2c_hz` is whatever the firmware configures. `nominal_volts`
   is what the supply is. `capacitor_chemistry` is what is on the board. Fill these in together.
@@ -90,7 +103,7 @@ Each field, and how to find it out:
 | `physics.rails.<RAIL>.max_current_a` | the most the rail carries | a meter; on a motor rail, the stall current |
 | `physics.rails.<RAIL>.capacitor_chemistry` | what the rail's capacitors are made of | what is on the board; with no capacitor, it does not apply |
 | `physics.rails.<RAIL>.served_by_pour` | whether a copper pour feeds the rail | the layout; with no pour, it does not apply |
-| `goal`, `prefer`, `sellers` in `project.json` | the brief | the person: the goal, whose modules to research first, where they buy |
+| `goal`, `prefer`, `sellers` in `project.json` | the brief | the person: the goal, whose modules to research first, where they buy; written with `--answers <file>` |
 
 A field that does not apply stays `null`; say so to the person. An explicit not-applicable value is
 [P111](https://github.com/xmejkal/spark/issues/45). Never write a typical value in: the file would carry a guess as an

@@ -331,6 +331,90 @@ def write(path, payload, force, brief=False, merge=False, unstated=None):
     return True, "wrote %s" % path.name
 
 
+def object_in(path):
+    """The JSON object in `path`; ValueError when the file is no JSON or holds no object (a list, a number, a text)."""
+    data = json.loads(Path(path).read_text())
+    if not isinstance(data, dict):
+        raise ValueError("not a JSON object")
+    return data
+
+
+def answers_in(answers_path, brief_path):
+    """
+    The brief's answers in `answers_path`, a JSON object whose keys are the brief's own fields (PROJECT_TEMPLATE's, the `//`
+    notes aside), as a dict; or a Refusal with build_codes.ANSWERS_UNUSABLE when the file cannot be read as one, names a field
+    the brief lacks or holds a value of the wrong shape (`goal` a non-empty text; `must`, `prefer`, `sellers` lists of texts;
+    `decided` a list), or when the brief at `brief_path` exists and is no JSON object, so nothing could be merged into it.
+    Nothing is written either way. A null is no answer: `write_brief` keeps the brief's value.
+    """
+    fields = [key for key in PROJECT_TEMPLATE if not key.startswith("//")]
+    name = Path(answers_path).name
+
+    def texts(value):
+        return isinstance(value, list) and all(isinstance(each, str) for each in value)
+    shapes = {"goal": ("a text", lambda value: isinstance(value, str) and value.strip() != ""),
+              "must": ("a list of texts", texts), "prefer": ("a list of texts", texts),
+              "sellers": ("a list of texts", texts), "decided": ("a list", lambda value: isinstance(value, list))}
+    try:
+        answers = object_in(answers_path)
+    except (OSError, ValueError) as why:
+        return Refusal("%s could not be read as the brief's answers: %s. Write a JSON object of the brief's fields: %s"
+                       % (name, why, ", ".join(fields)), build_codes.ANSWERS_UNUSABLE)
+    unknown = [key for key in answers if key not in fields]
+    if unknown:
+        return Refusal("%s: no field called %r in the brief. Its fields: %s" % (name, unknown[0], ", ".join(fields)),
+                       build_codes.ANSWERS_UNUSABLE)
+    wrong = [(key, shapes[key][0]) for key, value in answers.items() if value is not None and not shapes[key][1](value)]
+    if wrong:
+        return Refusal("%s: %s" % (name, ", ".join("%s is not %s" % each for each in wrong)), build_codes.ANSWERS_UNUSABLE)
+    if Path(brief_path).exists():
+        try:
+            object_in(brief_path)
+        except (OSError, ValueError) as why:
+            return Refusal("%s could not be read as the brief, so %s was not merged into it: %s. Fix that file, or move it away"
+                           % (Path(brief_path).name, name, why), build_codes.ANSWERS_UNUSABLE)
+    return answers
+
+
+def write_brief(path, answers, answers_name):
+    """
+    Writes the brief at `path` as `merged(merged(answers, existing), PROJECT_TEMPLATE)`, in the template's key order: a field
+    the answers state wins, one they leave out or state as null is kept from the brief (the template when there is none), an
+    empty list in the answers erases nothing, and the template's `//` notes are current. Returns (True, a note naming the
+    fields the answers stated and `answers_name`, the answers file's name), or (False, a note) when the brief says it already
+    and nothing was written. `answers_in` has checked both files, so the brief is read here without a guard, and
+    `write(path, payload, force=True)` writes the payload as it is.
+    """
+    existing = json.loads(path.read_text()) if path.exists() else PROJECT_TEMPLATE
+    payload = merged(merged(answers, existing), PROJECT_TEMPLATE)
+    payload = {key: payload[key] for key in [*PROJECT_TEMPLATE, *payload]}
+    if path.exists() and payload == existing:
+        return False, "%s already says what %s says" % (path.name, answers_name)
+    did, note = write(path, payload, force=True)
+    stated = ", ".join(key for key, value in answers.items() if value is not None)
+    return did, "wrote %s into %s from %s" % (stated, path.name, answers_name) if stated else note
+
+
+def unanswered_fields(project):
+    """
+    Every field still null in `.spark/rules.json` and `.spark/project.json` as they are on disk, as
+    ([(file name, field), ...], notes): what init's closing list names, whatever this run wrote (P777). A file that is
+    not there lists nothing; one that cannot be read, or holds no JSON object, lists nothing and gets a note, never a guess.
+    """
+    fields, notes = [], []
+    for name in ("rules.json", "project.json"):
+        path = Path(project) / ".spark" / name
+        if not path.exists():
+            continue
+        try:
+            found = nulls_in(object_in(path))
+        except (OSError, ValueError) as why:
+            notes.append("%s could not be read, so its unanswered fields are not listed: %s" % (name, why))
+            continue
+        fields += [(name, field) for field in found]
+    return fields, notes
+
+
 #: What a new project installs. TWO packages, and the second is the one that decides anything.
 #:
 #: `@tscircuit/cli` declares **`tscircuit: "*"` as a peer dependency**, and npm installs the newest

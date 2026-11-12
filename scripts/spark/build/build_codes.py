@@ -28,6 +28,7 @@ CONVERTER_LACKS_PART, NO_DIAGRAM, DIAGRAM_UNWIRED = "converter_lacks_part", "no_
 #: init_project.main.
 NO_PROJECT_FOLDER, TOOLS_FILE_UNREADABLE = "no_project_folder", "tools_file_unreadable"
 UNKNOWN_BOARD, NOTHING_TO_DO, INPUT_AMBIGUOUS = "unknown_board", "nothing_to_do", "input_ambiguous"
+ANSWERS_UNUSABLE = "answers_unusable"
 
 #: Each code and the one sentence that says what it means.
 CODES = {
@@ -51,6 +52,8 @@ CODES = {
     NO_PROJECT_FOLDER: "--project names no folder, or the folder a project is looked for from is gone",
     TOOLS_FILE_UNREADABLE: "the project's tools file cannot be read, so nothing was written",
     UNKNOWN_BOARD: "--board names a board neither the project nor spark has",
+    ANSWERS_UNUSABLE: "--answers names a file that is not a JSON object of the brief's fields: goal a text, must, prefer, "
+                      "sellers and decided lists",
     NOTHING_TO_DO: "every file init writes is there already, and --force was not given",
     INPUT_AMBIGUOUS: "an input matched more than one file, and nothing chose between them",
 }

@@ -58,7 +58,7 @@ How physics treats each null today:
 about it ([P122](https://github.com/xmejkal/spark/issues/56)). rules-vs-netlist still checks that a pull-up exists and is 1–10 kΩ.
 
 So an `ok` can rest on nulls. Read `unmeasured`, and report every null left in `.spark/rules.json` as unchecked.
-Report the brief's nulls too: `goal`, `prefer` and `sellers` in `.spark/project.json`. With an empty `must` list, a
+Report the brief's nulls too, which a rerun of `init_project.py` lists: `goal`, `prefer` and `sellers` in `.spark/project.json`. With an empty `must` list, a
 review has nothing to judge consequence against.
 
 **Fields that apply only when the design has the thing.**

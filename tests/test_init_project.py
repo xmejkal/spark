@@ -614,6 +614,188 @@ class EachRefusalOfInitCarriesItsCodeTest(unittest.TestCase):
         self.assertEqual(project_setup.find_circuit(one), (str(one / "dist/car/circuit.json"), None))
         self.assertEqual(project_setup.find_circuit(Path(tempfile.mkdtemp())), (None, None))
         self.assertEqual(project_setup.NOTHING_TO_DO.code, "nothing_to_do")
+
+
+class WhatIsStillOpenTest(unittest.TestCase):
+    """
+    P777 (G5, G21, P114): init's closing list, "N field(s) nobody has answered", read what this run wrote, so a second
+    run listed nothing while the files held five nulls, and `--force` listed a field the person had answered in
+    rules.json and not the brief's still-null `prefer` and `sellers`. The list reads both files as they are on disk.
+    """
+
+    def _init(self, root, *extra):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = init_project.main(["--project", str(root), *extra])
+        return code, out.getvalue()
+
+    def _answered(self, root, name, **fields):
+        path = root / ".spark" / name
+        data = json.loads(path.read_text())
+        for key, value in fields.items():
+            data[key] = value
+        path.write_text(json.dumps(data))
+
+    def test_a_second_plain_run_lists_every_field_still_null_in_both_files(self):
+        root = Path(tempfile.mkdtemp())
+        self._init(root)
+        code, text = self._init(root)
+        self.assertEqual(code, 1, "nothing to do")
+        self.assertIn("5 field(s) nobody has answered", text)
+        for line in ("rules.json  physics.i2c_hz", "rules.json  physics.i2c_bus_capacitance_pf", "project.json  goal",
+                     "project.json  prefer", "project.json  sellers"):
+            self.assertIn("  %s\n" % line, text)
+        self.assertTrue(text.rstrip().endswith("keeps your answers."), text)
+
+    def test_force_lists_the_brief_fields_still_null_and_not_the_answered_goal(self):
+        root = Path(tempfile.mkdtemp())
+        self._init(root)
+        self._answered(root, "project.json", goal="a bin that opens when waved at")
+        code, text = self._init(root, "--force")
+        self.assertEqual(code, init_project.EXIT_OK)
+        self.assertIn("4 field(s) nobody has answered", text)
+        self.assertIn("  project.json  prefer\n", text)
+        self.assertIn("  project.json  sellers\n", text)
+        self.assertNotIn("project.json  goal", text)
+
+    def test_a_rules_file_that_cannot_be_read_is_said_and_left_out_of_the_list(self):
+        root = Path(tempfile.mkdtemp())
+        self._init(root)
+        (root / ".spark" / "rules.json").write_text("{not json")
+        code, text = self._init(root)
+        self.assertEqual(code, 1, "nothing to do")
+        self.assertIn("  rules.json could not be read, so its unanswered fields are not listed: ", text)
+        self.assertIn("3 field(s) nobody has answered", text)
+        self.assertNotIn("rules.json  physics", text)
+        (root / ".spark" / "rules.json").write_text("[1]")  # parses, holds no object: its nulls are not hidden in silence
+        code, text = self._init(root)
+        self.assertIn("  rules.json could not be read, so its unanswered fields are not listed: not a JSON object", text)
+
+    def test_force_after_an_answered_rules_field_does_not_list_it(self):
+        # P114 (#48) was closed without this test: --force appended the pre-merge payload, so the answered field stayed listed.
+        root = Path(tempfile.mkdtemp())
+        self._init(root)
+        rules = root / ".spark" / "rules.json"
+        data = json.loads(rules.read_text())
+        data["physics"]["i2c_hz"] = 400000
+        rules.write_text(json.dumps(data))
+        code, text = self._init(root, "--force")
+        self.assertEqual(code, init_project.EXIT_OK)
+        self.assertIn("4 field(s) nobody has answered", text)
+        self.assertNotIn("physics.i2c_hz", text)
+        self.assertIn("  rules.json  physics.i2c_bus_capacitance_pf\n", text)
+        self.assertEqual(json.loads(rules.read_text())["physics"]["i2c_hz"], 400000)
+
+
+
+class TheBriefAnswersTest(unittest.TestCase):
+    """
+    P777 (G4, walk 4's row 9): no command wrote the brief, so the goal the person gave reached `project.json` only through
+    a prompt's instruction to the agent. `--answers <file>` merges a JSON object of the brief's fields into the brief:
+    what it states wins, what it leaves out is kept, and a file that is not the brief's answers writes nothing.
+    """
+
+    def _init(self, root, *extra):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = init_project.main(["--project", str(root), *extra])
+        return code, out.getvalue(), err.getvalue()
+
+    def _answers(self, root, payload):
+        path = root / "answers.json"
+        path.write_text(payload if isinstance(payload, str) else json.dumps(payload))
+        return str(path)
+
+    def _brief(self, root):
+        return json.loads((root / ".spark" / "project.json").read_text())
+
+    def test_the_goal_is_written_into_a_new_brief_with_the_template_around_it(self):
+        root = Path(tempfile.mkdtemp())
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"goal": "tell me when my plant is thirsty"}))
+        self.assertEqual(code, init_project.EXIT_OK)
+        brief = self._brief(root)
+        self.assertEqual(brief["goal"], "tell me when my plant is thirsty")
+        self.assertEqual(brief["must"], [])
+        self.assertEqual([key for key in brief if key.startswith("//")],
+                         [key for key in project_setup.PROJECT_TEMPLATE if key.startswith("//")])
+        self.assertEqual(list(brief), list(project_setup.PROJECT_TEMPLATE))
+        self.assertIn("  wrote goal into project.json from answers.json\n", text)
+        self.assertIn("4 field(s) nobody has answered", text)
+        self.assertNotIn("project.json  goal", text)
+
+    def test_an_answer_wins_over_the_brief_and_an_empty_must_erases_nothing(self):
+        root = Path(tempfile.mkdtemp())
+        self._init(root, "--answers", self._answers(root, {"goal": "first words", "must": ["runs a year on one charge"]}))
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"goal": "the goal said again", "must": []}))
+        self.assertEqual(code, init_project.EXIT_OK)
+        brief = self._brief(root)
+        self.assertEqual((brief["goal"], brief["must"]), ("the goal said again", ["runs a year on one charge"]))
+        self.assertIn("  wrote goal, must into project.json from answers.json\n", text)
+        # said a third time: the brief already says it, so the job holds and the run exits 0, not "nothing to do"
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"goal": "the goal said again"}))
+        self.assertEqual(code, init_project.EXIT_OK)
+        self.assertIn("  project.json already says what answers.json says\n", text)
+        self.assertNotIn("nothing to do", text)
+
+    def test_a_key_the_brief_lacks_is_refused_and_nothing_is_written(self):
+        root = Path(tempfile.mkdtemp())
+        listed = store.projects()
+        code, _, err = self._init(root, "--answers", self._answers(root, {"gaol": "a typo"}))
+        self.assertEqual(code, init_project.EXIT_COULD_NOT_RUN)
+        self.assertIn("'gaol'", err)
+        self.assertFalse((root / ".spark" / "project.json").exists())
+        self.assertFalse((root / ".spark" / "rules.json").exists())
+        self.assertEqual(store.projects(), listed, "a refused run puts the project on no list")
+        said = project_setup.answers_in(root / "answers.json", root / ".spark" / "project.json")
+        self.assertEqual(said.code, "answers_unusable")
+
+    def test_a_brief_that_cannot_be_read_is_not_replaced_and_the_rules_are_not_touched(self):
+        root = Path(tempfile.mkdtemp())
+        self._init(root)
+        brief = root / ".spark" / "project.json"
+        brief.write_text("{half-written")
+        rules = root / ".spark" / "rules.json"
+        rules.write_text("{}")
+        code, _, err = self._init(root, "--force", "--answers", self._answers(root, {"goal": "words"}))
+        self.assertEqual(code, init_project.EXIT_COULD_NOT_RUN)
+        self.assertIn("project.json could not be read as the brief", err)
+        self.assertEqual(brief.read_text(), "{half-written")
+        self.assertEqual(rules.read_text(), "{}", "rules.json was merged before the refusal")
+
+    def test_an_answers_file_that_is_not_json_or_not_an_object_is_refused(self):
+        for payload in ("{not json", "[1]", '"a text"'):
+            with self.subTest(payload=payload):
+                root = Path(tempfile.mkdtemp())
+                code, _, err = self._init(root, "--answers", self._answers(root, payload))
+                self.assertEqual(code, init_project.EXIT_COULD_NOT_RUN)
+                self.assertIn("answers.json could not be read as the brief's answers: ", err)
+                self.assertFalse((root / ".spark").exists())
+        root = Path(tempfile.mkdtemp())
+        code, _, err = self._init(root, "--answers", str(root / "missing.json"))
+        self.assertEqual(code, init_project.EXIT_COULD_NOT_RUN)
+        self.assertIn("missing.json could not be read as the brief's answers: ", err)
+
+    def test_a_value_of_the_wrong_shape_is_refused(self):
+        for payload, said in (({"goal": ""}, "goal is not a text"), ({"must": "low power"}, "must is not a list of texts"),
+                              ({"goal": 3, "prefer": "seeed"}, "goal is not a text, prefer is not a list of texts"),
+                              ({"sellers": ["gme", 1]}, "sellers is not a list of texts"), ({"decided": "yes"}, "decided is not a list")):
+            with self.subTest(payload=payload):
+                root = Path(tempfile.mkdtemp())
+                code, _, err = self._init(root, "--answers", self._answers(root, payload))
+                self.assertEqual(code, init_project.EXIT_COULD_NOT_RUN)
+                self.assertIn("answers.json: %s" % said, err)
+                self.assertFalse((root / ".spark").exists())
+
+    def test_a_second_run_keeps_a_filled_prefer_the_answers_leave_out(self):
+        root = Path(tempfile.mkdtemp())
+        self._init(root, "--answers", self._answers(root, {"prefer": ["DFRobot"], "goal": "words"}))
+        code, text, _ = self._init(root, "--answers", self._answers(root, {"goal": "other words", "prefer": None}))
+        self.assertEqual(code, init_project.EXIT_OK)
+        brief = self._brief(root)
+        self.assertEqual((brief["goal"], brief["prefer"]), ("other words", ["DFRobot"]))
+        self.assertIn("  wrote goal into project.json from answers.json\n", text)
+        self.assertNotIn("project.json  prefer", text)
+        self.assertIn("  project.json  sellers\n", text)
 # --- end MVP ---
 
 
