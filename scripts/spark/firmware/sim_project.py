@@ -102,17 +102,9 @@ def limits_of(design):
     whatever about the thing that switches 12 V.
 
     A custom chip's `note` counts too: a chip is closer to the part than a stand-in is, and still
-    not the part.
+    not the part. `part_records.limits_of_part` reads each record (P778: the pick and the look read it too).
     """
-    said = []
-    for part in design.parts:
-        wokwi = ((part.get("simulation") or {}).get("wokwi") or {})
-        sentence = wokwi.get("stand_in") or wokwi.get("note")
-        if sentence:
-            said.append((board_components.component_name(part), sentence))
-        skip = (part.get("simulation") or {}).get("skip")
-        if skip:
-            said.append((board_components.component_name(part), "not simulated at all: %s" % skip))
+    said = [limit for part in design.parts for limit in part_records.limits_of_part(part, board_components.component_name(part))]
     # Grouped by the sentence, because three identical soil probes printed three identical
     # paragraphs and a finding that long gets scrolled past — which is how this one was invisible
     # in the first place.

@@ -1484,6 +1484,27 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertTrue(any("sha256" in p for p in part_records.validate(definition, written(definition))))
 
 
+class WhatAPartsSimulationCannotShowTest(unittest.TestCase):
+    """P778: `limits_of_part` says, in the record's own words, what a simulation cannot show of one part; the build, the
+    pick and the look read the one function, so they say one thing."""
+
+    def test_a_skipped_part_is_not_simulated_at_all_with_its_reason(self):
+        self.assertEqual(part_records.limits_of_part({"simulation": {"skip": "a connector is wiring"}}, "Jack"),
+                         [("Jack", "not simulated at all: a connector is wiring")])
+
+    def test_a_stand_in_s_sentence_and_a_chip_s_note_are_the_limit(self):
+        self.assertEqual(part_records.limits_of_part({"simulation": {"wokwi": {"part": "wokwi-led", "stand_in": "an LED"}}}, "Valve"),
+                         [("Valve", "an LED")])
+        self.assertEqual(part_records.limits_of_part({"simulation": {"wokwi": {"chip": "vl6180x", "note": "no optics"}}}, "Tof"),
+                         [("Tof", "no optics")])
+
+    def test_a_real_wokwi_part_and_a_record_with_no_simulation_table_say_nothing(self):
+        self.assertEqual(part_records.limits_of_part({"simulation": {"wokwi": {"part": "wokwi-pushbutton", "pins": {}}}}, "Btn"), [])
+        self.assertEqual(part_records.limits_of_part({"id": "x-part"}, "X"), [])
+        self.assertEqual(part_records.limits_of_part({"simulation": "yes"}, "X"), [])
+        self.assertEqual(part_records.limits_of_part({"simulation": {"wokwi": "led"}}, "X"), [])
+
+
 class ASimulationIsDeclaredTest(unittest.TestCase):
     """P31: a record says how it is simulated, and the contract refuses a half-said one."""
 
