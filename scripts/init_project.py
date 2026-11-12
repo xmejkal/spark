@@ -4,6 +4,7 @@ Everything a project needs before any check can run.
 
     init_project.py                        # here
     init_project.py --project ../thing --board firebeetle2-esp32s3
+    init_project.py --project . --answers answers.json   # the brief's answers, in the person's words
 
 The library is `spark/build/project_setup.py` (P705).
 """
@@ -18,11 +19,12 @@ sys.path.insert(0, str(SCRIPTS))
 from spark.build import ai_files  # noqa: E402
 from spark.design import footprint_emitter  # noqa: E402
 from spark.records import store  # noqa: E402
-from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, boards_offered, design_in, find_circuit,  # noqa: E402
-                                       nets_in, nulls_in, package_file, rules_for, why_board_refused,
-                                       why_project_refused, write)
+from spark.build.project_setup import (NOTHING_TO_DO, PROJECT_TEMPLATE, answers_in, boards_offered, design_in,  # noqa: E402
+                                       find_circuit, nets_in, package_file, rules_for, unanswered_fields,
+                                       why_board_refused, why_project_refused, write, write_brief)
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_NOTHING_TO_DO  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
 
 
 def main(argv=None):
@@ -36,6 +38,10 @@ def main(argv=None):
                         help="work on files that exist too: merge what is derived into rules.json (answers stay), "
                              "rewrite project.json only if it has no answers, set boards/active.json when --board "
                              "names one; package.json is never rewritten")
+    parser.add_argument("--answers", metavar="FILE",
+                        help="a JSON object with the brief's answers in the person's words — goal, must, prefer, sellers, "
+                             "decided — merged into project.json: what it states wins, what it leaves out is kept, and a "
+                             "null un-answers nothing")
     args = parser.parse_args(argv)
 
     project = Path(args.project).resolve()
@@ -46,6 +52,11 @@ def main(argv=None):
         listed = "on your projects list as %r" % store.add_project(project)
     except store.StoreError as refused:
         listed = "not on your projects list: %s" % refused
+    brief_path = project / ".spark" / "project.json"
+    answers = answers_in(Path(args.answers), brief_path) if args.answers else None
+    if isinstance(answers, Refusal):
+        print(answers, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
 
     circuit, ambiguous = (args.circuit, None) if args.circuit else find_circuit(project)
 
@@ -58,14 +69,18 @@ def main(argv=None):
     written = []
 
     for path, payload, brief, merge in ((project / ".spark" / "rules.json", rules_for(nets, part_list), False, True),
-                                 (project / ".spark" / "project.json", PROJECT_TEMPLATE, True, False)):
-        did, note = write(path, payload, args.force, brief=brief, merge=merge,
-                          unstated=unstated)
+                                 (brief_path, PROJECT_TEMPLATE, True, False)):
+        if brief and answers is not None:
+            did, note = write_brief(path, answers, Path(args.answers).name)
+        else:
+            did, note = write(path, payload, args.force, brief=brief, merge=merge, unstated=unstated)
         notes.append(note)
         if did:
-            written.append((path, payload))
+            written.append(path)
     notes.append(write(project / "package.json", package_file(project), force=False)[1])
     notes.extend(unstated)
+    unanswered, unread = unanswered_fields(project)
+    notes.extend(unread)
     ai_did, ai_notes = ai_files.AiFiles(project).write()
     notes.extend(ai_notes)
 
@@ -89,14 +104,11 @@ def main(argv=None):
     if not args.board:
         print("  no board chosen. Available: %s" % boards_offered(project))
 
-    unanswered = [(path, nulls_in(payload)) for path, payload in written]
-    total = sum(len(fields) for _, fields in unanswered)
-    if total:
+    if unanswered:
         print("\n%d field(s) nobody has answered. Nothing here is guessed, and a check reading a "
-              "null\nreports it as unverifiable rather than passing it:\n" % total)
-        for path, fields in unanswered:
-            for field in fields:
-                print("  %s  %s" % (path.name, field))
+              "null\nreports it as unverifiable rather than passing it:\n" % len(unanswered))
+        for name, field in unanswered:
+            print("  %s  %s" % (name, field))
 
     if not written and not args.board and not ai_did:
         print(NOTHING_TO_DO)

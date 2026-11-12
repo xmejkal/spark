@@ -1,6 +1,7 @@
 """
 The project's brief: what `.spark/project.json` says, read on each call.
 
+    goal     what the person wants, in their words (a string), or None when the brief does not say (P777)
     must     lines the design must meet (strings; anything else is dropped)
     prefer   vendors to research in, lower-cased, or None when the brief does not say
     sellers  where the person buys, lower-cased, or None when the brief does not say
@@ -35,6 +36,7 @@ class Brief:
 
     must: tuple = ()
     prefer: tuple = None
+    goal: str = None
     sellers: tuple = None
     problem: str = None
 
@@ -52,8 +54,9 @@ class Brief:
             return cls(problem=PROBLEM_BAD_JSON)
         if not isinstance(data, dict):
             return cls(problem=PROBLEM_NOT_OBJECT)
-        must = data.get("must")
+        must, goal = data.get("must"), data.get("goal")
         return cls(
+            goal=goal if isinstance(goal, str) else None,
             must=tuple(each for each in must if isinstance(each, str)) if isinstance(must, list) else (),
             prefer=_names(data.get("prefer")),
             sellers=_names(data.get("sellers")),

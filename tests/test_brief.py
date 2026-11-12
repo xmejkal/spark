@@ -31,14 +31,19 @@ def brief_of(text):
 
 class BriefTest(unittest.TestCase):
     def test_every_field_is_read(self):
-        brief = brief_of('{"must": ["A", "B"], "prefer": ["Seeed"], "sellers": ["GME", "Hadex"]}')
+        brief = brief_of('{"goal": "a bin that opens when waved at", "must": ["A", "B"], "prefer": ["Seeed"], "sellers": ["GME", "Hadex"]}')
+        self.assertEqual(brief.goal, "a bin that opens when waved at")
         self.assertEqual(brief.must, ("A", "B"))
         self.assertEqual(brief.prefer, ("seeed",))
         self.assertEqual(brief.sellers, ("gme", "hadex"))
 
     def test_no_project_a_missing_file_and_bad_json_read_as_empty(self):
         for brief in (Brief.from_project(None), brief_of(None), brief_of("{not json"), brief_of("[1]")):
-            self.assertEqual((brief.must, brief.prefer, brief.sellers), ((), None, None))
+            self.assertEqual((brief.goal, brief.must, brief.prefer, brief.sellers), (None, (), None, None))
+
+    def test_a_goal_that_is_not_a_text_reads_as_none(self):
+        for text in ('{"goal": null}', '{"goal": 3}', '{"goal": ["a"]}', '{}'):
+            self.assertIsNone(brief_of(text).goal, text)
 
     def test_a_file_that_gives_no_brief_has_a_problem_code_and_no_file_has_none(self):
         self.assertEqual([brief_of(text).problem for text in (None, '{"must": []}', '{}', "{not json", "[1]", '{"must": "A"}', '{"must": null}')],
