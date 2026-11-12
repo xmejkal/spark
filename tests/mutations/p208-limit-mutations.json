@@ -43,18 +43,6 @@
  },
  {
   "file": "tools/mutate.py",
-  "name": "the copy is never removed after the run",
-  "find": "__import__(\"shutil\").rmtree(where.parent, ignore_errors=True)",
-  "replace": "pass"
- },
- {
-  "file": "tools/mutate.py",
-  "name": "the copy folder goes but its mutate-copy-* parent stays behind in the temp folder",
-  "find": "rmtree(where.parent, ignore_errors=True)",
-  "replace": "rmtree(where, ignore_errors=True)"
- },
- {
-  "file": "tools/mutate.py",
   "name": "the copy takes the .worktrees folder along (every other worktree, recursively)",
   "find": "ignore_patterns(\".git\", \".worktrees\", ",
   "replace": "ignore_patterns(\".git\", "

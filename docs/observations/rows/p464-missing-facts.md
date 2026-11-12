@@ -4,10 +4,10 @@ What the P464 build (PR #655), its review and its refuter found, and what the pl
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
-| 1 | A `pins.py` that spark left alone (someone edited it) gets no missing-fact items, so the gap is not said | plan cut | raised | later row: `_kept_pins` returns "left alone" before the pin map is built |
-| 2 | A build without `--keep` gives no missing-fact signal: only the kept `pins.py` entry and the top-level key carry it | plan cut | raised | `check_spine.report`; later row |
+| 1 | A `pins.py` that spark left alone (someone edited it) gets no missing-fact items, so the gap is not said | plan cut | closed | later row: `_kept_pins` returns "left alone" before the pin map is built — P776: tracked by card  (?): P125 (#59) parts.py says what each missing fact does to the build, open; P464 (#632) closed. |
+| 2 | A build without `--keep` gives no missing-fact signal: only the kept `pins.py` entry and the top-level key carry it | plan cut | closed | `check_spine.report`; later row — P776: tracked by card  (?): P125 (#59) missing-fact signal on a build, open. |
 | 3 | The `_kept_pins` duplicate-target fold was not needed once two imports merged | plan | rejected | line budget held without it |
-| 4 | Only the onboard LED and button levels are missing facts today; other facts a stage needs (display size, divider) are not listed | plan | raised | `missing_facts.ACTIVE_LEVEL_MEANING` is the one table to grow |
+| 4 | Only the onboard LED and button levels are missing facts today; other facts a stage needs (display size, divider) are not listed | plan | closed | `missing_facts.ACTIVE_LEVEL_MEANING` is the one table to grow — P776: stale note: table grows by need (missing_facts.ACTIVE_LEVEL_MEANING) |
 | 5 | Refuter 1: the missing facts lived only inside `kept[]`, so an agent that reads `status` and `unchecked` never saw them | refuter | acted | top-level `missing_facts` beside `unserved`, only when there are items; agents.md says `ok` is not "no facts missing"; test_json_contracts pins the key |
 | 6 | Refuter 2: `--fact-set --project other` wrote another listed project's board | refuter | acted | `board_write_problems` refuses a board outside this project's `boards/`; test in test_parts |
 | 7 | Refuter 3: `pin_roles` skipped the text scrub and the key check (control characters, 5000-char source, a key with NUL written raw) | refuter | acted | `pin_roles` joined `drawer.PROVENANCE_KEYS`; tests in test_parts |

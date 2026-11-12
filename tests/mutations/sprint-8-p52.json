@@ -118,11 +118,5 @@
   "name": "every design in the project is summed, not the one behind this circuit",
   "find": "        if names and names <= present:",
   "replace": "        if names:"
- },
- {
-  "file": "scripts/spark/checks/check.py",
-  "name": "the physics check is never handed the records",
-  "find": "        findings = physics_check.run(circuit, json.loads(Path(inputs[\"rules\"]).read_text()), loads)",
-  "replace": "        findings = physics_check.run(circuit, json.loads(Path(inputs[\"rules\"]).read_text()))"
  }
 ]

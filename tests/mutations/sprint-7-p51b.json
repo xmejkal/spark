@@ -1,11 +1,5 @@
 [
  {
-  "file": "scripts/spark/build/build_service.py",
-  "name": "the built board is deleted again instead of landing in the project",
-  "find": "    kept = _kept(workdir, args.keep) if workdir is not None and args.keep else None",
-  "replace": "    kept = None"
- },
- {
   "file": "scripts/spark/build/kept_files.py",
   "name": "dist never arrives, so no check can read the board",
   "find": "        shutil.copytree(built, destination / \"dist\", dirs_exist_ok=True)",

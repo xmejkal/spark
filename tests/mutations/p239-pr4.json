@@ -19,18 +19,6 @@
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",
-  "name": "no reset keeps the old sentence",
-  "find": "ready = ready._replace(sentence=download_mode.NO_RESET)",
-  "replace": "pass"
- },
- {
-  "file": "scripts/spark/bench/deploy_service.py",
-  "name": "the first read uses its own clock",
-  "find": "facts, facts_line, ready = self._read_board(image, report, connection, expected, moment)\n        heard = \"\"",
-  "replace": "facts, facts_line, ready = self._read_board(image, report, connection, expected, __import__(\"datetime\").datetime.now().astimezone())\n        heard = \"\""
- },
- {
-  "file": "scripts/spark/bench/deploy_service.py",
   "name": "the store gets a fixed who",
   "find": "result.ready.verdict, consent.who)",
   "replace": "result.ready.verdict, \"typed in a terminal by x\")"

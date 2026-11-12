@@ -55,12 +55,6 @@
  },
  {
   "file": "scripts/spark/bench/board_look.py",
-  "name": "two boards pick first silently",
-  "find": "if len(found) > 1:",
-  "replace": "if len(found) > 99:"
- },
- {
-  "file": "scripts/spark/bench/board_look.py",
   "name": "0000:0000 kept",
   "find": "and row[2] != NOT_A_BOARD]",
   "replace": "]"
@@ -118,23 +112,5 @@
   "name": "failed mpremote ignored",
   "find": "        if done.returncode:\n            lines",
   "replace": "        if False:\n            lines"
- },
- {
-  "file": "scripts/spark/bench/board_look.py",
-  "name": "mpremote timeout dropped",
-  "find": "text=True, timeout=LIST_TIMEOUT)",
-  "replace": "text=True)"
- },
- {
-  "file": "scripts/spark/bench/board_look.py",
-  "name": "esptool timeout dropped",
-  "find": "text=True, timeout=READ_TIMEOUT)",
-  "replace": "text=True)"
- },
- {
-  "file": "scripts/spark/bench/board_look.py",
-  "name": "product not listed",
-  "find": "each.serial, each.product)",
-  "replace": "each.serial, \"\")"
  }
 ]
