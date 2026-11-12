@@ -10,6 +10,7 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py --ledger                              # the ledger's lines, counted by status
     tools/mutate.py tests/mutations/*.json --tier critical,new --copy   # a sweep: only the rows of these tiers
     tools/mutate.py tests/mutations/*.json --tier-count   # how many rows each tier holds; runs nothing
+    tools/mutate.py tests/mutations/*.json --tier critical,new --budget 20 --copy   # a sweep that stops within 20 minutes
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -72,6 +73,20 @@ critical, new in the tables' given order (name the oldest table first), proving,
 line says which tiers and how many rows, and the rest of the output is as without it. Without `--tier` every row runs.
 `--tier-count` prints how many rows each tier holds and runs nothing.
 
+In a copy each row's ledger line is written as soon as the row is done, dated then, so a run that SIGTERM or a crash
+stops keeps every line it recorded (PR 1's review, row 50: a 180-minute slice killed at minute 179 lost everything). In the
+real tree the lines wait for the after-suite, which says whether anything can be trusted, and carry the run's end.
+
+THE BUDGET (P787) `--budget MINUTES` counts from the run's start, the fixed overhead inside it: the copy, the pre-check
+suite, the near sets. Before each row the run asks whether the row's expected seconds would cross what is left, and stops
+there: every row from that one on is left for the next sweep. The expected seconds are a fact, never a guess
+(`expected_seconds`): the row's ledger line's `s` (its last duration, at whatever blob), else the median of the rows run
+so far in this run, else the pre-check suite's measured seconds (a row with no near test costs a whole suite). The
+closing line says what ran, as `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5);
+19 left for the next sweep`, and `--json` gains `budget` with the same facts (`minutes, ran, selected, left, by_tier`).
+A left row is not a pass: it was not run, and the exit code speaks for the rows that were. The PO's defaults (2026-11-12):
+20 minutes for a wave-end sweep a person waits for, 180 for an unattended night slice.
+
 WHAT PASSING MEANS
 
 Every mutation turned the suite red, and the suite is green again with the files restored. A
@@ -84,6 +99,7 @@ import contextlib
 import json
 import re
 import signal
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -435,6 +451,40 @@ def sigterm_held():
         signal.pthread_sigmask(signal.SIG_SETMASK, held)
 
 
+class Budget:
+    """
+    Value: the minutes a run may take, counted from `started` (a monotonic second taken at the run's start, so the copy
+    and the pre-check suite count inside), as `--budget` gives them (P787). `left(now)` is what remains; `allows(now,
+    seconds)` says whether a row expected to take `seconds` ends within it. Not a clock: the run reads `time.monotonic`
+    as the rest of this tool does, and a test fakes the durations through the ledger's `s` and through `started`.
+    """
+
+    def __init__(self, minutes, started):
+        self.minutes, self.started = minutes, started
+
+    def left(self, now):
+        """The seconds left at `now`, negative once the budget is crossed."""
+        return self.minutes * 60 - (now - self.started)
+
+    def allows(self, now, seconds):
+        """A row that takes `seconds` fits when it ends within the budget; one that would cross it does not."""
+        return seconds <= self.left(now)
+
+
+def expected_seconds(row, known, durations, suite_seconds):
+    """
+    The seconds `row` is expected to take, a fact and never a guess (P787): its ledger line's `s` (`known`, by key: the
+    row's last duration, at whatever blob), else the median of `durations`, the rows run so far in this run, else
+    `suite_seconds`, the pre-check suite's measured time, which a row with no near test costs.
+    """
+    key = ledger.row_key(row)
+    if key in known:
+        return known[key]
+    if durations:
+        return statistics.median(durations)
+    return suite_seconds
+
+
 class AnotherRunIsActive(Exception):
     """A lock is held: some other mutate run is rewriting these files right now."""
 
@@ -443,13 +493,14 @@ class RedBeforeMutation(Exception):
     """The suite is not green before any mutation: a red suite catches nothing. The message names the red tests."""
 
 
-def run(root, tests, mutations, copied=False, ledger_store=None):
+def run(root, tests, mutations, copied=False, ledger_store=None, budget=None):
     """
     Every mutation, each restored before the next, and the suite confirmed green at the end.
 
     `copied` says `root` is a copy that is deleted after the run, so there is nothing to restore and the end check is
     skipped (P424: it cost a whole suite, 207 s on 2026-10-28). `ledger_store`, a `ledger.LedgerStore`, gets one line per
-    row when the run's files are restored (P787); None records nothing.
+    row when the run's files are restored (P787); None records nothing. `budget`, a `Budget`, stops the run before the
+    row that would cross it; None runs every row.
     """
     lock = root / LOCK_NAME
     if lock.exists():
@@ -460,19 +511,23 @@ def run(root, tests, mutations, copied=False, ledger_store=None):
     try:
         # The pre-check ran BEFORE the lock was taken, so two runs started within its six
         # seconds both passed the lock test and both took the lock (audit C8). Under it now.
+        checked = time.monotonic()
         before = suite_is_green(root, tests)
         if not before:
             raise RedBeforeMutation("the suite is not green BEFORE any mutation; a red suite catches nothing"
                                     + "".join("\n  " + line for line in getattr(before, "red_lines", ())))
-        return _run(root, tests, mutations, near_sets(root, tests, mutations), copied, ledger_store)
+        suite_seconds = time.monotonic() - checked  # what a row with no near test costs: the budget's last fact
+        return _run(root, tests, mutations, near_sets(root, tests, mutations), copied, ledger_store, budget, suite_seconds)
     finally:
         lock.unlink(missing_ok=True)
 
 
-def _run(root, tests, mutations, near_by_file, copied, ledger_store=None):
+def _run(root, tests, mutations, near_by_file, copied, ledger_store=None, budget=None, suite_seconds=None):
     results, imports_before, lines = [], {}, []
-    date = None  # the run's end stamps every line at once, when the facts are known (P787; the review of PR 1)
+    known = {entry["key"]: entry["s"] for entry in ledger_store.read()} if budget is not None and ledger_store is not None else {}
     for mutation in mutations:
+        if budget is not None and not budget.allows(time.monotonic(), expected_seconds(mutation, known, [entry["s"] for entry in lines], suite_seconds)):
+            break  # this row and every one after it are left for the next sweep
         started = time.monotonic()
         path = root / mutation["file"]
         file = mutation["file"]
@@ -481,7 +536,9 @@ def _run(root, tests, mutations, near_by_file, copied, ledger_store=None):
         def noted(status, which_run=None, who=None, detail=""):
             """The row's result for the report, and its ledger line: `which_run` is near or full, `who` the ledger's `by`."""
             results.append({"name": mutation.get("name", mutation["find"]), "status": status, "by": which_run, "detail": detail})
-            lines.append(ledger.line(mutation, blob, date, status, who, round(time.monotonic() - started)))
+            lines.append(ledger.line(mutation, blob, _stamp(), status, who, round(time.monotonic() - started)))
+            if ledger_store is not None and copied:  # a copy has no after-suite to distrust the row later: written now (row 50)
+                ledger_store.record(lines[-1:])
 
         if file.endswith(".py") and file not in imports_before:  # a file that never imported alone cannot be judged so
             imports_before[file] = path.is_file() and _import_error(root, file) is None
@@ -509,10 +566,15 @@ def _run(root, tests, mutations, near_by_file, copied, ledger_store=None):
             noted(CAUGHT, NEAR if caught_near else FULL, caught_by(near_run) if caught_near else ledger.SUITE)
 
     restored = copied or bool(suite_is_green(root, tests))
-    if ledger_store is not None and restored:  # a verdict nothing can trust records nothing
-        ended = datetime.now().astimezone().isoformat(timespec="seconds")  # the run's end, with its zone
+    if ledger_store is not None and restored and not copied:  # a verdict nothing can trust records nothing
+        ended = _stamp()  # the run's end, when the facts are known (the review of PR 1), on every line at once
         ledger_store.record([dict(entry, date=ended) for entry in lines])
     return results, restored
+
+
+def _stamp():
+    """Now, with the machine's zone, in whole seconds: the ledger's `date`."""
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 def verdict(results, restored):
@@ -567,23 +629,32 @@ def main(argv=None):
                              "blob, or an escaped or refused one; proving was caught once there, proven twice or more)" % ",".join(ledger.TIERS))
     parser.add_argument("--tier-count", action="store_true",
                         help="instead of a run: how many rows of the given tables each tier holds; runs nothing")
+    parser.add_argument("--budget", type=int, metavar="MINUTES",
+                        help="stop before the row that would cross this many minutes, counted from the run's start (the copy "
+                             "and the pre-check suite inside); a row's expected seconds are its ledger line's `s`, else the "
+                             "median of this run's rows, else the pre-check suite's; the closing line says how many rows ran, "
+                             "how many are left, per tier. A left row is not a pass. The PO's defaults: 20 for a sweep, 180 for a night")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
     ledger_store = ledger.LedgerStore(root / args.tests / "mutations" / ledger.LEDGER_NAME)
     if args.ledger:
-        if args.table or args.anchors or args.paths or args.copy or args.retarget or args.tier is not None or args.tier_count:
-            parser.error("--ledger runs alone: it takes no table, --anchors, --for, --copy, --retarget, --tier or --tier-count")
+        if args.table or args.anchors or args.paths or args.copy or args.retarget or args.tier is not None or args.tier_count or args.budget is not None:
+            parser.error("--ledger runs alone: it takes no table, --anchors, --for, --copy, --retarget, --tier, --tier-count or --budget")
         return print_ledger(ledger_store, root, args.json)
     if not args.table:
         parser.error("the following arguments are required: table")
     if args.retarget:
-        if args.anchors or args.paths or args.copy or args.tier is not None or args.tier_count:
-            parser.error("--retarget runs alone: it takes no --anchors, --for, --copy, --tier or --tier-count")
+        if args.anchors or args.paths or args.copy or args.tier is not None or args.tier_count or args.budget is not None:
+            parser.error("--retarget runs alone: it takes no --anchors, --for, --copy, --tier, --tier-count or --budget")
         return retarget_tables(args.table, *args.retarget)
-    if args.tier_count and (args.anchors or args.copy or args.tier is not None):
-        parser.error("--tier-count runs alone: it takes the tables and --for, no --anchors, --copy or --tier")
+    if args.tier_count and (args.anchors or args.copy or args.tier is not None or args.budget is not None):
+        parser.error("--tier-count runs alone: it takes the tables and --for, no --anchors, --copy, --tier or --budget")
+    if args.budget is not None and args.budget <= 0:
+        parser.error("--budget takes a whole number of minutes above 0, not %d" % args.budget)
+    if args.budget is not None and args.anchors:
+        parser.error("--anchors runs no row: it takes no --budget")
     wanted = list(dict.fromkeys(args.tier.split(","))) if args.tier is not None else []  # `--tier ""` is an error; `new,new` is new
     if args.tier is not None and any(tier not in ledger.TIERS for tier in wanted):
         parser.error("--tier takes a comma list of %s, not %s" % (",".join(ledger.TIERS), args.tier))
@@ -601,9 +672,10 @@ def main(argv=None):
             return EXIT_OK
     if args.tier_count:
         return print_tier_counts(ledger.tiers_of(root, mutations, ledger_store.read()), len(args.table), args.json)
-    header = None
-    if wanted:
+    header = tiers = None
+    if wanted or args.budget is not None:  # before the run: the run's own lines would move rows to proving
         tiers = ledger.tiers_of(root, mutations, ledger_store.read())
+    if wanted:
         mutations = tiers.selected(wanted)
         header = {"selected": wanted, "rows": len(mutations), "counts": tiers.counts()}
         if not mutations:
@@ -626,12 +698,13 @@ def main(argv=None):
         return EXIT_ESCAPED if wrong else EXIT_OK
 
     started = time.monotonic()
+    budget = Budget(args.budget, started) if args.budget is not None else None  # the overhead below counts inside it
     remove_old_scratch()
     where = None
     with sigterm_as_exit():  # also around the copy's removal: no window back at the default handler
         try:
             where = copy_of(root) if args.copy else root
-            results, restored = run(where, args.tests, mutations, copied=where is not root, ledger_store=ledger_store)
+            results, restored = run(where, args.tests, mutations, copied=where is not root, ledger_store=ledger_store, budget=budget)
         except (AnotherRunIsActive, RedBeforeMutation) as stopped:
             print(str(stopped), file=sys.stderr)
             return EXIT_COULD_NOT_RUN
@@ -642,17 +715,42 @@ def main(argv=None):
     code = verdict(results, restored)
     recorded = {"path": str(ledger_store.path.relative_to(root)), "recorded": len(results) if restored else 0,
                 "rows": len(ledger_store.read())}
+    spent = budget_report(budget, tiers, wanted or ledger.TIERS, mutations[:len(results)]) if budget is not None else None
     if args.json:
         print(json.dumps({"tool": "mutate", "restored": restored,
                           "status": {EXIT_OK: OK, EXIT_ESCAPED: "escaped",
                                      EXIT_COULD_NOT_RUN: COULD_NOT_RUN}[code],
                           "seconds": round(time.monotonic() - started), "mutations": results, "ledger": recorded,
-                          **({"tiers": header} if header else {})}, indent=2))
+                          **({"tiers": header} if header else {}), **({"budget": spent} if spent else {})}, indent=2))
     else:
         sys.stdout.write(render(results, restored, code))
         print("  %d mutation(s) in %.0f s" % (len(results), time.monotonic() - started))
         print("  %d row(s) recorded in %s (%d in all)" % (recorded["recorded"], recorded["path"], recorded["rows"]))
+        if spent:
+            print(budget_line(spent))
     return code
+
+
+def budget_report(budget, tiers, wanted, ran):
+    """
+    `--budget`'s facts, for the JSON and the closing line: the minutes, how many rows `ran` of the selected, how many are
+    left (selected and not run: not a pass), and the same per tier. `wanted` names the selected tiers (all four without
+    `--tier`); a tier not wanted selected nothing. A row is counted under its tier by its key.
+    """
+    by_tier = {}
+    for tier in ledger.TIERS:
+        rows = tiers.rows[tier] if tier in wanted else []
+        keys = {ledger.row_key(row) for row in rows}
+        by_tier[tier] = {"ran": sum(1 for row in ran if ledger.row_key(row) in keys), "selected": len(rows)}
+    selected = sum(counts["selected"] for counts in by_tier.values())
+    return {"minutes": budget.minutes, "ran": len(ran), "selected": selected, "left": selected - len(ran), "by_tier": by_tier}
+
+
+def budget_line(report):
+    """`budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5); 19 left for the next sweep`."""
+    return "  budget %d min: ran %d of %d selected (%s); %d left for the next sweep" % (
+        report["minutes"], report["ran"], report["selected"],
+        ", ".join("%s %d/%d" % (tier, counts["ran"], counts["selected"]) for tier, counts in report["by_tier"].items()), report["left"])
 
 
 def tier_header(header):
