@@ -233,7 +233,7 @@ records them. It copies each project that uses spark, and the store, runs the pr
 the copy, and keeps every exit, stdout and stderr. The projects are the bin, irrigation and plant-alarm, plus the five
 small cases in [`tests/data/snapshot/`](../../tests/data/snapshot/README.md). The originals are only read.
 
-It records six scripts as the projects run them, with what they call, such as the chain's `emit_board.py`: `boards.py`,
+It records six scripts as the projects run them, with what they call, such as the chain's `tsci`: `boards.py`,
 `check_bom.py`, `check_vendor_pins.py`, `check_physics.py`, `check_spine.py` and `check_all.py`. No `--json` answer is
 kept, and no `parts.py` command runs (drawer and needs too), so a change only in their answers does not show here.
 

@@ -33,7 +33,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 BASELINE = "tests/architecture_baseline.json"
 #: The role words of `docs/guide/patterns-and-names.md`.
 ROLES = ("Service", "Strategy", "Adapter", "Result", "Error", "Value", "Store",
-         "Decorator", "Renderer", "Platform", "Fake", "Operation")
+         "Decorator", "Renderer", "Platform", "Fake", "Operation", "Facade")
 THIN_MAIN = 40       # lines: a main() this long or shorter only parses and prints
 THIN_FUNCTIONS = 3   # top-level functions besides main() a thin CLI may keep
 FAT_MAIN = 80        # lines: a main() this long holds logic

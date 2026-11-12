@@ -30,12 +30,12 @@ from spark.core.outcomes import EXIT_FOR, EXIT_OK, COULD_NOT_RUN, OK, PROBLEMS, 
 from spark.core.text_guards import clean
 
 
-def said_of_a_crash(program, crash):
+def said_of_a_crash(what, crash):
     """
-    How a crash in `program` (the board emitter, the footprint emitter) reads as a stage's detail, raw (P430, F5): its kind
-    and its message. The text is guarded when it is printed (`render`), and `--json` keeps it as it stands.
+    How a crash in `what` (a phrase: "the board emitter", "the footprint emitter") reads as a stage's detail, raw (P430, F5):
+    its kind and its message. The text is guarded when it is printed (`render`), and `--json` keeps it as it stands.
     """
-    return "%s crashed: %s: %s" % (program, type(crash).__name__, str(crash))
+    return "%s crashed: %s: %s" % (what, type(crash).__name__, str(crash))
 
 
 #: Wokwi's serial monitor, as a diagram names it: its two wires are the board's own, never a design's (P190).
@@ -260,7 +260,7 @@ class BuildService:
         try:
             board_inputs = self.emitter.read(workdir / "requirements.json", project)
             text, refusal = self.emitter.emit(board_inputs)
-            notes = self.emitter.notes(board_inputs)
+            notes = [] if refusal else self.emitter.notes(board_inputs)
         except board_emitter.RefusedInputError as refused:
             hint = "\n" + NO_FOOTPRINT_HINT if refused.stage == board_emitter.FOOTPRINT_STAGE else ""
             stages.append(Stage(refused.stage, COULD_NOT_RUN, str(refused) + hint, refused.code))

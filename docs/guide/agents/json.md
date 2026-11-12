@@ -168,7 +168,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   `the chain was NOT exercised — this is not a pass`, exit 2.
   - The board emitter's refusal of a board that states no `power.io_volts` shows as `[????] schematic` with that sentence
     ([P121](https://github.com/xmejkal/spark/issues/55)).
-  - A crash inside the board emitter (`spark/design/board_emitter.py`, called in process since P706) is could-not-run
+  - A crash inside the board emitter (`spark/design/board_emitter.py`, called in process) is could-not-run
     too: the `schematic` stage's detail is `the board emitter crashed: <Type>: <message>`.
   - A crash in the footprint drawing reads `the footprint emitter crashed: <Type>: <message>`, such as
     `the footprint emitter crashed: RuntimeError: boom`. Such a detail is a crash, not a defect in the design.

@@ -164,8 +164,8 @@ def design_notes(inputs):
 
 class BoardEmitter:
     """
-    Service: the board file's three steps as one object, a facade (GoF) over this module's `read_inputs`, `board_file` and
-    `design_notes`, so `BuildService` is given one collaborator and the CLI `emit_board.py` calls the same three (P706).
+    Facade: the board file's three steps as one object over this module's `read_inputs`, `board_file` and `design_notes`,
+    so `BuildService` is given one collaborator and the CLI `emit_board.py` calls the same three (P706).
     It prints nothing, so it is no Renderer. `assume_missing_sizes` is the CLI's flag: lay out around a guessed size for a
     part whose outline nobody recorded, saying so in the file.
     """

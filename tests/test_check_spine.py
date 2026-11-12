@@ -58,20 +58,7 @@ from spark.sourcing import part_facts  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
 import test_converter  # noqa: E402
-
-
-class ABuildServiceThat:
-    """Stands in for `check_spine.BuildService` (P706): `for_toolchain` gives itself, and `build(inputs)` hands the
-    requirements, the work folder and the firmware to what the test gave, as the stand-ins of the old `run` took them."""
-
-    def __init__(self, build):
-        self._build = build
-
-    def for_toolchain(self, toolchain):
-        return self
-
-    def build(self, inputs):
-        return self._build(inputs.requirements, inputs.workdir, firmware=inputs.firmware)
+from fakes import FakeBuildService  # noqa: E402
 
 
 def build_stages(requirements, workdir, toolchain=None, **inputs):
@@ -622,7 +609,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             return [Stage("build", check_spine.OK, "fine")]
 
         into, elsewhere = Path(tempfile.mkdtemp()) / "project", Path(tempfile.mkdtemp()) / "sim"
-        with mock.patch.object(check_spine, "BuildService", ABuildServiceThat(a_build_that_simulated)), \
+        with mock.patch.object(check_spine, "BuildService", FakeBuildService(a_build_that_simulated)), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(fixture / "requirements.json"), "--keep", str(into)])
             self.assertTrue((into / "sim" / "diagram.json").is_file())
@@ -683,7 +670,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             (workdir / "sim" / "diagram.json").write_text('{"parts": []}')
             return [Stage("build", check_spine.OK, "fine")]
 
-        with mock.patch.object(check_spine, "BuildService", ABuildServiceThat(a_build_that_simulated)), \
+        with mock.patch.object(check_spine, "BuildService", FakeBuildService(a_build_that_simulated)), \
                 contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(requirements or fixture / "requirements.json"), "--json"] + [str(a) for a in argv])
         return json.loads(out.getvalue()), handed.get("firmware")
@@ -763,7 +750,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
                 (workdir / "sim" / "wokwi.toml").write_text("[wokwi]\n")
             return [Stage("build", check_spine.OK, "fine")]
 
-        with mock.patch.object(check_spine, "BuildService", ABuildServiceThat(a_build_that_simulated)), \
+        with mock.patch.object(check_spine, "BuildService", FakeBuildService(a_build_that_simulated)), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
             check_spine.main([str(fixture / "requirements.json"), "--keep", str(into)] + list(argv))
         return handed["firmware"], err.getvalue()
@@ -872,7 +859,7 @@ class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
         patches = [mock.patch.object(check_spine.subprocess, "run", a_child_that_ran_late),
                    mock.patch.object(board_engine, "find_toolchain", lambda start: Path("/x/node_modules/.bin/tsci"))]
         if build:
-            patches.append(mock.patch.object(check_spine, "BuildService", ABuildServiceThat(build)))
+            patches.append(mock.patch.object(check_spine, "BuildService", FakeBuildService(build)))
         with contextlib.ExitStack() as stack:
             for patch in patches:
                 stack.enter_context(patch)
@@ -2164,7 +2151,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 
     def spine(self, last):
         stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build")] + [stage("simulation", last)]
-        with mock.patch.object(check_spine, "BuildService", ABuildServiceThat(lambda *_, **__: stages)), \
+        with mock.patch.object(check_spine, "BuildService", FakeBuildService(lambda *_, **__: stages)), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(self.project / "requirements.json")])
         path = self.home / "history.jsonl"
@@ -2174,7 +2161,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         """What `check_spine.main` returned and said, stdout then stderr, for a chain whose every stage ended ok."""
         stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
         out, err = io.StringIO(), io.StringIO()
-        with mock.patch.object(check_spine, "BuildService", ABuildServiceThat(lambda *_, **__: stages)), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        with mock.patch.object(check_spine, "BuildService", FakeBuildService(lambda *_, **__: stages)), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = check_spine.main([str(self.project / "requirements.json")] if argv is None else argv)
         return code, out.getvalue(), err.getvalue()
 
@@ -2185,7 +2172,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         def build(*_, **__):
             happens()
             return stages
-        with mock.patch.object(check_spine, "BuildService", ABuildServiceThat(build)), \
+        with mock.patch.object(check_spine, "BuildService", FakeBuildService(build)), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(self.project / "requirements.json")])
         path = self.home / "history.jsonl"
@@ -2350,7 +2337,7 @@ class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
         path.write_text(json.dumps(requirements))
         stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
         out = io.StringIO()
-        with mock.patch.object(check_spine, "BuildService", ABuildServiceThat(lambda *_, **__: stages)), contextlib.redirect_stdout(out), \
+        with mock.patch.object(check_spine, "BuildService", FakeBuildService(lambda *_, **__: stages)), contextlib.redirect_stdout(out), \
                 contextlib.redirect_stderr(io.StringIO()):
             code = check_spine.main([str(path)] + list(flags))
         return code, out.getvalue()

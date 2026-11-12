@@ -40,7 +40,7 @@ a new project with the files every check and reviewer needs.
 
 | Seam | Real adapter | Fake | Chosen by |
 |---|---|---|---|
-| board emitter: `read(path, project)`, `emit(inputs)`, `notes(inputs)` | design's `BoardEmitter`, a facade of `read_inputs`, `board_file` and `design_notes` | a subclass whose `read` or `emit` raises (`tests/test_build_service.py`) | `BuildService(engine, emitter)`; `for_toolchain` builds the real pair |
+| board emitter: `read(path, project)`, `emit(inputs)`, `notes(inputs)` | design's `BoardEmitter`, a Facade of `read_inputs`, `board_file` and `design_notes` | a subclass whose `read` or `emit` raises (`tests/test_build_service.py`) | `BuildService(engine, emitter)`; `for_toolchain` builds the real pair |
 | board engine: `found_from(start)`, `build(workdir) -> BuildResult`, `version()`, `probe(workdir)` | `TscircuitEngine` over `tsci` (`run=` is the runner, `subprocess.run` when None, resolved at each call) | `FakeTscircuitEngine` (`tests/fakes.py`) with a canned `circuit.json` | the `board-engine` role (`data/tools.json:6`) |
 | diagram converter | `DiagramConverter` (`converter_command` and `convert` in `board_engine`) | the same | the `diagram-converter` role (`data/tools.json:7`) |
 
@@ -87,7 +87,7 @@ classDiagram
     probe(workdir)
   }
   class BoardEmitter {
-    <<Service>>
+    <<Facade>>
     assume_missing_sizes
     read(path, project) BoardInputs
     emit(inputs)

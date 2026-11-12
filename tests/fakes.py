@@ -12,6 +12,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from spark.records import store  # noqa: E402
+from spark.build.board_engine import BuildResult  # noqa: E402
 from spark.bench.firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
 from spark.core.outside import OutsideWorld  # noqa: E402
@@ -323,7 +324,6 @@ class FakeTscircuitEngine:
         return self if self.found else None
 
     def build(self, workdir):
-        from spark.build.board_engine import BuildResult
         self.built_in.append(workdir)
         circuit_path = workdir / "dist" / "board" / "circuit.json"
         if self.circuit is not None:
@@ -336,6 +336,20 @@ class FakeTscircuitEngine:
 
     def probe(self, workdir):
         return self._probe
+
+
+class FakeBuildService:
+    """Fake: stands in for `check_spine.BuildService` (P706): `for_toolchain` gives itself, and `build(inputs)` hands the
+    requirements, the work folder and the firmware to the callable the test gave."""
+
+    def __init__(self, build):
+        self._build = build
+
+    def for_toolchain(self, toolchain):
+        return self
+
+    def build(self, inputs):
+        return self._build(inputs.requirements, inputs.workdir, firmware=inputs.firmware)
 
 
 #: The fake pdf-text tool: one canned page for `-f 1`, and exit 1 for any other page, so a read stops after page 1.

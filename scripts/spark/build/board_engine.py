@@ -76,35 +76,32 @@ class TscircuitEngine:
     """
     Adapter: tscircuit's `tsci` for the build (P706): `build` runs it on `board.tsx` under the build's limit, `version` asks
     it, and `probe` asks whether it builds a trivial board at all. `toolchain` is its path, or None for an engine nobody has
-    found yet: `found_from(start)` then looks where `find_toolchain` looks. `run` is the runner, `subprocess.run` when None,
-    resolved at each call so a test's patch of `subprocess.run` reaches it; `tests/fakes.py` has `FakeTscircuitEngine`.
+    found yet: `found_from(start)` then looks where `find_toolchain` looks. `runner` is what runs a command, `subprocess.run`
+    when None, resolved at each call so a test's patch of `subprocess.run` reaches it; `tests/fakes.py` has `FakeTscircuitEngine`.
     """
 
-    def __init__(self, toolchain, run=None):
+    def __init__(self, toolchain, runner=None):
         self.toolchain = toolchain
-        self._run = run
-
-    def _runner(self):
-        return self._run or subprocess.run
+        self._runner = runner
 
     def found_from(self, start):
         """This engine when it has its toolchain, else one over the `tsci` found up from `start`, or None (tool_missing)."""
         if self.toolchain is not None:
             return self
         toolchain = find_toolchain(start)
-        return None if toolchain is None else TscircuitEngine(toolchain, self._run)
+        return None if toolchain is None else TscircuitEngine(toolchain, self._runner)
 
     def build(self, workdir):
         """`tsci build board.tsx` in `workdir`; a run past BUILD_TIMEOUT_S raises `subprocess.TimeoutExpired` to the CLI."""
-        built = self._runner()([str(self.toolchain), "build", "board.tsx"], cwd=str(workdir), capture_output=True, text=True,
-                               timeout=BUILD_TIMEOUT_S)
+        built = (self._runner or subprocess.run)([str(self.toolchain), "build", "board.tsx"], cwd=str(workdir), capture_output=True,
+                                                 text=True, timeout=BUILD_TIMEOUT_S)
         return BuildResult(workdir / "dist" / "board" / "circuit.json", built.stderr)
 
     def version(self):
         """What `tsci --version` says, or "unknown version" — never an exception, never nothing."""
         try:
-            said = self._runner()([str(self.toolchain), "--version"], capture_output=True, text=True,
-                                  timeout=60).stdout.strip().splitlines()
+            said = (self._runner or subprocess.run)([str(self.toolchain), "--version"], capture_output=True, text=True,
+                                                    timeout=60).stdout.strip().splitlines()
             return said[-1].strip() if said else tool_finder.UNKNOWN_VERSION
         except (OSError, subprocess.TimeoutExpired):
             return tool_finder.UNKNOWN_VERSION
@@ -120,8 +117,8 @@ class TscircuitEngine:
         probe = workdir / "spark-probe"
         probe.mkdir(exist_ok=True)
         (probe / "board.tsx").write_text(TRIVIAL_BOARD)
-        result = self._runner()([str(self.toolchain), "build", "board.tsx"], cwd=str(probe),
-                                capture_output=True, text=True, timeout=PROBE_TIMEOUT_S)
+        result = (self._runner or subprocess.run)([str(self.toolchain), "build", "board.tsx"], cwd=str(probe),
+                                                  capture_output=True, text=True, timeout=PROBE_TIMEOUT_S)
         return (probe / "dist" / "board" / "circuit.json").is_file(), result.stderr.strip()[-400:]
 
 

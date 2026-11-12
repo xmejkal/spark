@@ -98,13 +98,15 @@ class ACrashInTheEmitterIsAStageTest(unittest.TestCase):
 
 
 class TheNotesAreOneStageTest(unittest.TestCase):
-    def test_a_design_with_notes_has_one_schematic_notes_stage_with_the_lines_joined(self):
-        requirements = {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]}
+    def test_a_design_with_notes_has_one_schematic_notes_stage_with_a_line_per_note(self):
+        requirements = {"board": "firebeetle2-esp32s3", "parts": ["speaker-terminal"]}  # the two sides of the pair, nothing drives either
         workdir, stages = a_build(requirements)
         notes = board_emitter.design_notes(board_emitter.read_inputs(workdir / "requirements.json", ROOT))
-        self.assertTrue(notes and all(note.startswith("note: ") for note in notes), notes)
+        self.assertEqual(len(notes), 2, notes)
+        self.assertTrue(all(note.startswith("note: ") for note in notes), notes)
         said = [stage for stage in stages if stage.name == "schematic-notes"]
         self.assertEqual([(s.status, s.code, s.detail) for s in said], [(PROBLEMS, "schematic_noted", "\n".join(notes))])
+        self.assertEqual(said[0].detail.count("\n"), 1)
         self.assertEqual([stage.name for stage in stages[:3]], ["board", "schematic", "schematic-notes"])
 
     def test_a_design_without_notes_has_none(self):
@@ -121,16 +123,16 @@ class TheEngineRunsWithTheRunnerItIsGivenTest(unittest.TestCase):
             return subprocess.CompletedProcess(command, 0, "", "routed")
 
         workdir = Path(tempfile.mkdtemp())
-        built = board_engine.TscircuitEngine(Path("/x/tsci"), run=a_runner).build(workdir)
+        built = board_engine.TscircuitEngine(Path("/x/tsci"), runner=a_runner).build(workdir)
         self.assertEqual(built, (workdir / "dist" / "board" / "circuit.json", "routed"))
         self.assertEqual(asked[0][0], ["/x/tsci", "build", "board.tsx"])
         self.assertEqual((asked[0][1]["cwd"], asked[0][1]["timeout"]), (str(workdir), 900))
 
     def test_found_from_keeps_its_toolchain_and_its_runner(self):
         runner = object()
-        engine = board_engine.TscircuitEngine(Path("/x/tsci"), run=runner)
+        engine = board_engine.TscircuitEngine(Path("/x/tsci"), runner=runner)
         self.assertIs(engine.found_from(ROOT), engine)
-        self.assertIs(board_engine.TscircuitEngine(None, run=runner)._run, runner)
+        self.assertIs(board_engine.TscircuitEngine(None, runner=runner)._runner, runner)
 
 
 if __name__ == "__main__":
