@@ -30,9 +30,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --step <project> S
    that is set is the goal: say it back in one line, and do not ask for it again. Each `must` line is a promise that
    the needs must keep. If a need serves one, name the line. If the goal is `null`, ask for it. If the list is empty,
    ask for the must lines. Each of these questions counts as one of the three in item 2. Write the answers as a JSON
-   object of the brief's fields (`{"goal": "…", "must": […]}`) to a file outside any repository with the Write tool, then
-   run `${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --answers <file>`: what the file states wins, and the
-   brief's other fields are kept ([P777](https://github.com/xmejkal/spark/issues/1075)). The goal the person gave at the
+   object of the brief's fields (`{"goal": "…", "must": […]}`) to a file in the system's temp folder, outside any
+   repository, with the Write tool, then run `${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --answers <file>`:
+   what the file states wins (a list replaces the list: give the whole `must` list), the brief's other fields are kept, and
+   exit 0 says the brief holds it ([P777](https://github.com/xmejkal/spark/issues/1075)). The goal the person gave at the
    start is the first answer.
 1. A need is a verb and a few words: `does` one of sense, input, indicate, sound, move, drive, power, keep-time, store,
    compute, communicate, connect, mount (`drive` is the driver, `move` the thing driven), and `what` (soil-moisture,

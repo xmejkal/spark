@@ -46,10 +46,11 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/init_project.py --project . --board <id> --force
 
 **When the person answers the brief** (`/spark:idea` step S is the first time), run it with `--answers <file>`: a JSON
 object of the brief's fields (`goal`, `must`, `prefer`, `sellers`, `decided`) in the person's words, written with the Write
-tool outside any repository, never on a command line. It merges them into `project.json`: what the file states wins,
-what it leaves out is kept, and a null un-answers nothing. It prints `wrote goal into project.json from <file>`, or
-`project.json already says what <file> says`. A key the brief lacks, a value of the wrong shape, a file that is not a
-JSON object, or a brief that cannot be read is refused: exit 2 and nothing written
+tool in the system's temp folder, outside any repository, never on a command line. It merges them into `project.json`:
+what the file states wins (a list replaces the list, so give the whole list; an empty list is a statement), what it leaves
+out or states as null is kept. It prints `wrote goal into project.json from <file>` and exits 0, or `project.json already
+says what <file> says`, also exit 0: the brief holds what you asked. A key the brief lacks, a value of the wrong shape, a
+file that is not a JSON object, or a brief that cannot be read is refused: exit 2, nothing written, the project not listed
 ([P777](https://github.com/xmejkal/spark/issues/1075)).
 
 ```

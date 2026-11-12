@@ -615,6 +615,7 @@ class EachRefusalOfInitCarriesItsCodeTest(unittest.TestCase):
         self.assertEqual(project_setup.find_circuit(Path(tempfile.mkdtemp())), (None, None))
         self.assertEqual(project_setup.NOTHING_TO_DO.code, "nothing_to_do")
 
+
 class WhatIsStillOpenTest(unittest.TestCase):
     """
     P777 (G5, G21, P114): init's closing list, "N field(s) nobody has answered", read what this run wrote, so a second
@@ -666,6 +667,9 @@ class WhatIsStillOpenTest(unittest.TestCase):
         self.assertIn("  rules.json could not be read, so its unanswered fields are not listed: ", text)
         self.assertIn("3 field(s) nobody has answered", text)
         self.assertNotIn("rules.json  physics", text)
+        (root / ".spark" / "rules.json").write_text("[1]")  # parses, holds no object: its nulls are not hidden in silence
+        code, text = self._init(root)
+        self.assertIn("  rules.json could not be read, so its unanswered fields are not listed: not a JSON object", text)
 
     def test_force_after_an_answered_rules_field_does_not_list_it(self):
         # P114 (#48) was closed without this test: --force appended the pre-merge payload, so the answered field stayed listed.
@@ -681,6 +685,7 @@ class WhatIsStillOpenTest(unittest.TestCase):
         self.assertNotIn("physics.i2c_hz", text)
         self.assertIn("  rules.json  physics.i2c_bus_capacitance_pf\n", text)
         self.assertEqual(json.loads(rules.read_text())["physics"]["i2c_hz"], 400000)
+
 
 
 class TheBriefAnswersTest(unittest.TestCase):
@@ -726,18 +731,21 @@ class TheBriefAnswersTest(unittest.TestCase):
         brief = self._brief(root)
         self.assertEqual((brief["goal"], brief["must"]), ("the goal said again", ["runs a year on one charge"]))
         self.assertIn("  wrote goal, must into project.json from answers.json\n", text)
-        # said a third time, the brief already says it, and nothing else was written: nothing to do
+        # said a third time: the brief already says it, so the job holds and the run exits 0, not "nothing to do"
         code, text, _ = self._init(root, "--answers", self._answers(root, {"goal": "the goal said again"}))
-        self.assertEqual(code, 1, "nothing to do")
+        self.assertEqual(code, init_project.EXIT_OK)
         self.assertIn("  project.json already says what answers.json says\n", text)
+        self.assertNotIn("nothing to do", text)
 
     def test_a_key_the_brief_lacks_is_refused_and_nothing_is_written(self):
         root = Path(tempfile.mkdtemp())
+        listed = store.projects()
         code, _, err = self._init(root, "--answers", self._answers(root, {"gaol": "a typo"}))
         self.assertEqual(code, init_project.EXIT_COULD_NOT_RUN)
-        self.assertIn("answers.json: no field called 'gaol' in the brief. Its fields: goal, must, prefer, sellers, decided", err)
+        self.assertIn("'gaol'", err)
         self.assertFalse((root / ".spark" / "project.json").exists())
         self.assertFalse((root / ".spark" / "rules.json").exists())
+        self.assertEqual(store.projects(), listed, "a refused run puts the project on no list")
         said = project_setup.answers_in(root / "answers.json", root / ".spark" / "project.json")
         self.assertEqual(said.code, "answers_unusable")
 
@@ -768,9 +776,9 @@ class TheBriefAnswersTest(unittest.TestCase):
         self.assertIn("missing.json could not be read as the brief's answers: ", err)
 
     def test_a_value_of_the_wrong_shape_is_refused(self):
-        for payload, said in (({"goal": ""}, "goal must be a text"), ({"must": "low power"}, "must must be a list of texts"),
-                              ({"goal": 3, "prefer": "seeed"}, "goal must be a text, prefer a list of texts"),
-                              ({"sellers": ["gme", 1]}, "sellers must be a list of texts"), ({"decided": "yes"}, "decided must be a list")):
+        for payload, said in (({"goal": ""}, "goal is not a text"), ({"must": "low power"}, "must is not a list of texts"),
+                              ({"goal": 3, "prefer": "seeed"}, "goal is not a text, prefer is not a list of texts"),
+                              ({"sellers": ["gme", 1]}, "sellers is not a list of texts"), ({"decided": "yes"}, "decided is not a list")):
             with self.subTest(payload=payload):
                 root = Path(tempfile.mkdtemp())
                 code, _, err = self._init(root, "--answers", self._answers(root, payload))

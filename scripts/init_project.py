@@ -39,23 +39,23 @@ def main(argv=None):
                              "rewrite project.json only if it has no answers, set boards/active.json when --board "
                              "names one; package.json is never rewritten")
     parser.add_argument("--answers", metavar="FILE", help="a JSON object with the brief's answers in the person's words — "
-                        "goal, must, prefer, sellers, decided — merged into project.json: what it states wins, what it leaves "
-                        "out is kept, and a null un-answers nothing")
+                        "goal, must, prefer, sellers, decided — merged into project.json: what it states wins (a list replaces "
+                        "the list, so give the whole list; an empty list is a statement), what it leaves out or states as null "
+                        "is kept; when project.json already says it, exit 0")
     args = parser.parse_args(argv)
 
     project = Path(args.project).resolve()
     if (refused := why_project_refused(project)):
         print(refused, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
+    answers = answers_in(Path(args.answers), project / ".spark" / "project.json") if args.answers else None
+    if isinstance(answers, Refusal):  # before the projects list, so a refused run changes nothing
+        print(answers, file=sys.stderr)
+        return EXIT_COULD_NOT_RUN
     try:
         listed = "on your projects list as %r" % store.add_project(project)
     except store.StoreError as refused:
         listed = "not on your projects list: %s" % refused
-    brief_path = project / ".spark" / "project.json"
-    answers = answers_in(Path(args.answers), brief_path) if args.answers else None
-    if isinstance(answers, Refusal):
-        print(answers, file=sys.stderr)
-        return EXIT_COULD_NOT_RUN
 
     circuit, ambiguous = (args.circuit, None) if args.circuit else find_circuit(project)
 
@@ -67,7 +67,7 @@ def main(argv=None):
     unstated, written = [], []
 
     for path, payload, brief, merge in ((project / ".spark" / "rules.json", rules_for(nets, part_list), False, True),
-                                 (brief_path, PROJECT_TEMPLATE, True, False)):
+                                 (project / ".spark" / "project.json", PROJECT_TEMPLATE, True, False)):
         did, note = (write_brief(path, answers, Path(args.answers).name) if brief and answers is not None
                      else write(path, payload, args.force, brief=brief, merge=merge, unstated=unstated))
         notes.append(note)
@@ -100,7 +100,7 @@ def main(argv=None):
         for name, field in unanswered:
             print("  %s  %s" % (name, field))
 
-    if not written and not args.board and not ai_did:
+    if not written and not args.board and not ai_did and answers is None:  # with --answers the brief says it: done
         print(NOTHING_TO_DO)
         return EXIT_NOTHING_TO_DO
     # Part of the job could not be done, and W1 applies to this tool as much as to a check: the
