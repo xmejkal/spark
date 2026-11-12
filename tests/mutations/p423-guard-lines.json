@@ -3,7 +3,8 @@
   "file": "scripts/spark/core/text_guards.py",
   "name": "guard_lines prints the text as it is, so a control character in a printed line reaches the terminal",
   "find": "    return \"\\n\".join(printable(line) for line in text.split(\"\\n\"))",
-  "replace": "    return text"
+  "replace": "    return text",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/core/text_guards.py",

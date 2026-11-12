@@ -41,7 +41,7 @@
  {"file": "scripts/spark/records/store.py", "name": "a HEAD reads the document, so a redirect turns a question into a download",
   "find": "            return b\"\" if method == \"HEAD\" else answer.read()\n", "replace": "            return answer.read()\n"},
  {"file": "scripts/spark/records/store.py", "name": "the door opens any scheme a cited URL names",
-  "find": "        _must_be_web(url)\n", "replace": "        pass\n"},
+  "find": "        _must_be_web(url)\n", "replace": "        pass\n", "tier": "critical"},
  {"file": "scripts/spark/records/store.py", "name": "a file: URL is opened by a real run, not only by the suite",
   "find": "((\"file\",) if \"unittest\" in sys.modules else ())", "replace": "((\"file\",))"},
  {"file": "scripts/spark/records/store.py", "name": "a redirect that leaves the web is followed and read",

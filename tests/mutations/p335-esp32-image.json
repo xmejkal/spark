@@ -1,6 +1,6 @@
 [
  {"file": "scripts/spark/firmware/image_builder.py", "name": "the interpreter is written at 0, not at its offset",
-  "find": "flash[offset:offset + len(interpreter)] = interpreter", "replace": "flash[:len(interpreter)] = interpreter"},
+  "find": "flash[offset:offset + len(interpreter)] = interpreter", "replace": "flash[:len(interpreter)] = interpreter", "tier": "critical"},
  {"file": "scripts/spark/firmware/image_builder.py", "name": "the size check forgets the offset",
   "find": "if offset + len(interpreter) > FILESYSTEM_OFFSET:", "replace": "if len(interpreter) > FILESYSTEM_OFFSET:"},
  {"file": "scripts/spark/firmware/image_builder.py", "name": "the size check refuses an interpreter that ends where the files start",

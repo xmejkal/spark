@@ -3,13 +3,15 @@
   "file": "scripts/spark/records/store.py",
   "name": "a write is made in place",
   "find": "        part.replace(path)\n    except BaseException:",
-  "replace": "        path.write_text(text, encoding=\"utf-8\")\n    except BaseException:"
+  "replace": "        path.write_text(text, encoding=\"utf-8\")\n    except BaseException:",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/records/store.py",
   "name": "the store is never locked",
   "find": "            fcntl.flock(held, fcntl.LOCK_EX)",
-  "replace": "            pass"
+  "replace": "            pass",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/records/record_kind.py",

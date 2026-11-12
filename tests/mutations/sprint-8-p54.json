@@ -3,7 +3,8 @@
   "file": "scripts/spark/firmware/image_builder.py",
   "name": "the filesystem is written where MicroPython does not look",
   "find": "FILESYSTEM_OFFSET = 0x200000",
-  "replace": "FILESYSTEM_OFFSET = 0x100000"
+  "replace": "FILESYSTEM_OFFSET = 0x100000",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/firmware/image_builder.py",
@@ -21,7 +22,8 @@
   "file": "scripts/spark/firmware/image_builder.py",
   "name": "an interpreter that overwrites the filesystem is accepted",
   "find": "    if offset + len(interpreter) > FILESYSTEM_OFFSET:",
-  "replace": "    if False:"
+  "replace": "    if False:",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/firmware/image_builder.py",

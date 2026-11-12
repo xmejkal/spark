@@ -3,7 +3,8 @@
   "file": "scripts/spark/bench/deploy_gate.py",
   "name": "drop stop check",
   "find": "    if report.stops:\n",
-  "replace": "    if False:\n"
+  "replace": "    if False:\n",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/deploy_gate.py",
@@ -15,7 +16,8 @@
   "file": "scripts/spark/bench/deploy_gate.py",
   "name": "accept missing token",
   "find": "    if not token:\n",
-  "replace": "    if False:\n"
+  "replace": "    if False:\n",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/deploy_gate.py",
@@ -27,7 +29,8 @@
   "file": "scripts/spark/bench/deploy_gate.py",
   "name": "accept y",
   "find": ") == \"yes\"  # P423",
-  "replace": ") in (\"yes\", \"y\")  # P423"
+  "replace": ") in (\"yes\", \"y\")  # P423",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/core/replies.py",
@@ -45,19 +48,22 @@
   "file": "scripts/spark/bench/deploy_gate.py",
   "name": "no answer ignored",
   "find": "    if not consent.ask(question):\n",
-  "replace": "    if not (consent.ask(question) or True):\n"
+  "replace": "    if not (consent.ask(question) or True):\n",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "erase on args.port",
   "find": "planned = self.plan(look.port)",
-  "replace": "planned = self.plan(None)"
+  "replace": "planned = self.plan(None)",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "look in dry run",
   "find": "        if not self.asked.dry_run:\n            return None",
-  "replace": "        if self.asked.dry_run:\n            return None"
+  "replace": "        if self.asked.dry_run:\n            return None",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",

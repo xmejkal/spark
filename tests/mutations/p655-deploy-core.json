@@ -1,6 +1,6 @@
 [
  {"file": "scripts/spark/bench/deploy_image.py", "name": "a dry run keeps RUNS", "find": "return (READS, RUNS) if values[\"no_simulation\"] else (READS,)", "replace": "return self.effects"},
- {"file": "scripts/spark/bench/deploy_service.py", "name": "the gate is skipped before the erase", "find": "deploy_gate.require_open_gate(look, token, consent, image_path, look.question_caveats())", "replace": "None"},
+ {"file": "scripts/spark/bench/deploy_service.py", "name": "the gate is skipped before the erase", "find": "deploy_gate.require_open_gate(look, token, consent, image_path, look.question_caveats())", "replace": "None", "tier": "critical"},
  {"file": "scripts/spark/bench/board_grant.py", "name": "yes_kind is wrong for a grant", "find": "    yes_kind = GRANT", "replace": "    yes_kind = \"typed\""},
  {"file": "scripts/spark/core/outside.py", "name": "the echo goes to stdout under --json", "find": "options[\"stdout\"] = self.echo_fd", "replace": "options[\"stdout\"] = None"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "DELETES is undeclared", "find": "effects = (READS, RUNS, BOARD, DELETES, WRITES, ASKS)", "replace": "effects = (READS, RUNS, BOARD, WRITES, ASKS)"},
@@ -11,7 +11,7 @@
  {"file": "scripts/spark/bench/deploy_image.py", "name": "dry run with no_simulation drops RUNS", "find": "        return (READS, RUNS) if values[\"no_simulation\"] else (READS,)", "replace": "        return (READS,)"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "a dry run is not narrowed", "find": "        if not values[\"dry_run\"]:\n            return self.effects", "replace": "        if values[\"dry_run\"]:\n            return self.effects"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "verify crash says may be erased", "find": "CrashState(board_envelope.FLASHED_NOT_VERIFIED,", "replace": "CrashState(board_envelope.MAY_BE_ERASED,"},
- {"file": "scripts/spark/bench/deploy_image.py", "name": "flash crash says flashed", "find": "CrashState(board_envelope.MAY_BE_ERASED,", "replace": "CrashState(board_envelope.FLASHED_NOT_VERIFIED,"},
+ {"file": "scripts/spark/bench/deploy_image.py", "name": "flash crash says flashed", "find": "CrashState(board_envelope.MAY_BE_ERASED,", "replace": "CrashState(board_envelope.FLASHED_NOT_VERIFIED,", "tier": "critical"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "stage never tracked", "find": "            self.stage = event.code", "replace": "            pass"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "keep_yes after crash result dropped", "find": "        flow.keep_yes()  # a crash in the flash loop still says whose yes it was", "replace": "        pass"},
  {"file": "scripts/spark/bench/deploy_image.py", "name": "look step uses no port", "find": "board_envelope.look_step(reached[\"project\"], reached.get(\"port\"),", "replace": "board_envelope.look_step(reached[\"project\"], None,"},

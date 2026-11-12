@@ -57,7 +57,8 @@
   "file": "scripts/spark/core/text_guards.py",
   "name": "C1 and bidi controls stay",
   "find": "[\\x00-\\x1f\\x7f-\\x9f\\u200e\\u200f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069\\ud800-\\udfff]+",
-  "replace": "[\\x00-\\x1f\\x7f]+"
+  "replace": "[\\x00-\\x1f\\x7f]+",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/sourcing/drawer.py",

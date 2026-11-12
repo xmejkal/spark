@@ -3,7 +3,8 @@
   "file": "scripts/spark/bench/deploy_gate.py",
   "name": "the gate lets a relayed yes reach the question",
   "find": "    if not consent.opens_erase:  # P675",
-  "replace": "    if False:  # P675"
+  "replace": "    if False:  # P675",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/deploy_gate.py",
@@ -39,7 +40,8 @@
   "file": "scripts/spark/bench/board_grant.py",
   "name": "a relayed yes makes a deploy grant",
   "find": "        if scope == SCOPE_DEPLOY and not consent.opens_erase:  # P675: before the board is touched\n            raise GrantRefusedError(WHY_RELAYED_YES)\n",
-  "replace": ""
+  "replace": "",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_grant.py",
