@@ -30,7 +30,7 @@ class TheWordsTest(unittest.TestCase):
         self.assertEqual([matching.fold(w) for w in ("switches", "brushes", "boxes", "glasses", "batteries", "dies")],
                          ["switch", "brush", "box", "glass", "battery", "die"])
 
-    def test_a_plural_need_scores_as_its_singular(self):
+    def test_a_plural_need_folds_to_its_singular_words(self):
         self.assertEqual(matching.need_words("load switches"), matching.need_words("load switch"))
 
     def test_filler_words_go_and_each_word_counts_once(self):

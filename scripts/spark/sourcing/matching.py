@@ -26,7 +26,7 @@ MIN_SHOWN = 0.5
 SHOWN_FIRST = 8
 #: What a record says that places it, kept on its offer for `describe` and for NameContains (`kind`).
 FACTS = ("kind", "power", "body_mm")
-#: The plural endings that take -es in English spelling, after a hissing sound: switches, brushes, boxes, glasses (P772).
+#: The plural endings whose -es goes in the fold: after ch, sh, x and ss (switches, brushes, boxes, glasses) (P772).
 HISSING_ES = ("ches", "shes", "xes", "sses")
 
 Fit = namedtuple("Fit", "offer score exact why")
@@ -48,8 +48,8 @@ def fold(word):
     """
     The plural fold (P211, P772): a word longer than three letters loses its plural ending, unless it ends in `ss` or
     `us`. `-ies` becomes `y` (batteries), the S-stemmer's rule (Harman 1991), in a word longer than four letters, so
-    that "dies" stays "die". `-es` after a hissing sound goes (switches, boxes). Else the final `s` goes. The fold runs
-    on the need and the offer alike, so a plural and its singular meet.
+    that "dies" stays "die". `-es` after ch, sh, x or ss goes (switches, boxes). Else the final `s` goes, so "buses" and
+    "lenses" still miss "bus" and "lens". The fold runs on the need and the offer alike.
     """
     if len(word) <= 3 or not word.endswith("s") or word.endswith(("ss", "us")):
         return word
