@@ -806,6 +806,40 @@ class ASpeakerTerminalEndsTheAmplifiersNetsTest(unittest.TestCase):
         self.assertEqual(power_rails.loads_across_a_pair(part_list), ["SpeakerTerminal"])
 
 
+class DesignNotesTest(unittest.TestCase):
+    """P706: the six note loops of `emit_board.main` are `board_emitter.design_notes`, so the build carries them in process
+    with today's sentences (no golden prints a note, so these guard the move)."""
+
+    def inputs_of(self, requirements, root=None):
+        root = root or Path(tempfile.mkdtemp())
+        (root / ".spark").mkdir(exist_ok=True)
+        (root / "requirements.json").write_text(json.dumps(requirements))
+        return board_emitter.read_inputs(root / "requirements.json", root)
+
+    def test_a_side_of_a_pair_nobody_drives_is_told_to_add_what_drives_it_never_a_supply(self):
+        notes = board_emitter.design_notes(self.inputs_of({"board": "firebeetle2-esp32s3", "parts": ["speaker-terminal"]}))
+        self.assertIn("note: nothing drives net.SPEAKER_P, one side of a driven pair — add what drives the pair (the amplifier "
+                      "this terminal hangs off), never a supply, or that net has one member and the board will not route", notes)
+        self.assertFalse([note for note in notes if "add whatever supplies it" in note], notes)
+
+    def test_two_supplies_on_one_rail_are_a_note(self):
+        root = Path(tempfile.mkdtemp())
+        (root / "parts").mkdir()
+        (root / "parts" / "buck.json").write_text(json.dumps(TwoSuppliesOnOneRailTest.regulator("Buck", "logic")))
+        notes = board_emitter.design_notes(self.inputs_of({"board": "firebeetle2-esp32s3", "parts": ["buck"]}, root))
+        self.assertTrue([note for note in notes if note.startswith("note: net.V33 is driven by more than one supply (")], notes)
+
+    def test_the_notes_are_the_same_after_the_board_was_emitted(self):
+        inputs = self.inputs_of({"board": "firebeetle2-esp32s3", "parts": ["l9110s-module"]})
+        emitter = board_emitter.BoardEmitter()
+        before = emitter.notes(inputs)
+        text, refused = emitter.emit(inputs)
+        self.assertIsNone(refused)
+        self.assertEqual(emitter.notes(inputs), before)
+        self.assertIn("note: nothing sources net.MOTOR6V — add whatever supplies it, or that net has one member and the board "
+                      "will not route", before)
+
+
 class PlacementTest(unittest.TestCase):
     def test_nothing_is_placed_on_top_of_anything_else(self):
         board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())

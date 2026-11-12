@@ -1,0 +1,5 @@
+[
+ {"file": "scripts/spark/build/board_engine.py", "name": "P706: the engine runs tsci through subprocess.run, never the runner it was given", "find": "        return self._run or subprocess.run", "replace": "        return subprocess.run"},
+ {"file": "scripts/spark/build/build_service.py", "name": "P706: the notes are joined with a space, not one per line", "find": "stages.append(Stage(\"schematic-notes\", PROBLEMS, \"\\n\".join(notes), build_codes.SCHEMATIC_NOTED))", "replace": "stages.append(Stage(\"schematic-notes\", PROBLEMS, \" \".join(notes), build_codes.SCHEMATIC_NOTED))"},
+ {"file": "scripts/spark/build/build_service.py", "name": "P706: the engine is looked for from the work folder, not the project", "find": "        engine = self.engine.found_from(project)", "replace": "        engine = self.engine.found_from(inputs.workdir)"}
+]

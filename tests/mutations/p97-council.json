@@ -397,27 +397,15 @@
  },
  {
   "file": "scripts/spark/build/build_service.py",
-  "name": "F5: an emit_board crash reads as problems again",
-  "find": "        return stages + [Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, \"emit_board.py crashed: %s\" % (",
-  "replace": "        return stages + [Stage(board_emitter.SCHEMATIC_STAGE, PROBLEMS, \"emit_board.py crashed: %s\" % ("
+  "name": "F5: a board emitter crash reads as problems again",
+  "find": "stages.append(Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, said_of_a_crash(\"the board emitter\", crash), build_codes.STAGE_CRASHED))",
+  "replace": "stages.append(Stage(board_emitter.SCHEMATIC_STAGE, PROBLEMS, said_of_a_crash(\"the board emitter\", crash), build_codes.STAGE_CRASHED))"
  },
  {
   "file": "scripts/spark/build/build_service.py",
-  "name": "F5: a crash's detail is the whole traceback, not its last line",
-  "find": "            said[-1] if said else \"exit %d, and nothing said\" % emitted.returncode), build_codes.STAGE_CRASHED)]",
-  "replace": "            \"\\n\".join(said) if said else \"exit %d, and nothing said\" % emitted.returncode), build_codes.STAGE_CRASHED)]"
- },
- {
-  "file": "scripts/spark/build/build_service.py",
-  "name": "F5: a crash that said nothing breaks the chain itself",
-  "find": "said[-1] if said else \"exit %d, and nothing said\" % emitted.returncode",
-  "replace": "said[-1]"
- },
- {
-  "file": "scripts/spark/build/build_service.py",
-  "name": "F5: emit_board refusing the input reads as problems",
-  "find": "        return stages + [Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, emitted.stderr.strip(), build_codes.SCHEMATIC_REFUSED)]",
-  "replace": "        return stages + [Stage(board_emitter.SCHEMATIC_STAGE, PROBLEMS, emitted.stderr.strip(), build_codes.SCHEMATIC_REFUSED)]"
+  "name": "F5: the board emitter refusing the input reads as problems",
+  "find": "stages.append(Stage(board_emitter.SCHEMATIC_STAGE, COULD_NOT_RUN, str(refusal), build_codes.SCHEMATIC_REFUSED))",
+  "replace": "stages.append(Stage(board_emitter.SCHEMATIC_STAGE, PROBLEMS, str(refusal), build_codes.SCHEMATIC_REFUSED))"
  },
  {
   "file": "scripts/spark/design/power_rails.py",
@@ -612,8 +600,8 @@
   "replace": "        if False:\n            lines.append(\"    {/* NOTHING ON THIS BOARD DRIVES"
  },
  {
-  "file": "scripts/emit_board.py",
-  "name": "F15 follow-up: emit_board's note tells a side of a pair to add a supply again",
+  "file": "scripts/spark/design/board_emitter.py",
+  "name": "F15 follow-up: the board emitter's note tells a side of a pair to add a supply again",
   "find": "        if net in pair_sides:  # F15: what drives a side of a pair",
   "replace": "        if False:  # F15: what drives a side of a pair"
  },

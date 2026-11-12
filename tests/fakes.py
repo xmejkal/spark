@@ -304,6 +304,40 @@ def fake_tsci(root, builds_when, circuit=(), binary=None):
     return binary
 
 
+class FakeTscircuitEngine:
+    """
+    Fake: stands in for board_engine.TscircuitEngine in process (P706), where `fake_tsci` above makes a `tsci` script for a
+    child. `build` writes `circuit` (a list of elements) as dist/board/circuit.json, or nothing when `circuit` is None, and
+    returns a BuildResult with `stderr`; `version` and `probe` answer what the test gave; `found_from` returns self, or None
+    when `found` is False (the engine nobody has). What it was asked is kept in `built_in` and `looked_from`.
+    """
+
+    toolchain = "fake-tsci"
+
+    def __init__(self, circuit=(), stderr="", version="0.0.0-fake", probe=(True, ""), found=True):
+        self.circuit, self.stderr, self._version, self._probe, self.found = circuit, stderr, version, probe, found
+        self.built_in, self.looked_from = [], []
+
+    def found_from(self, start):
+        self.looked_from.append(start)
+        return self if self.found else None
+
+    def build(self, workdir):
+        from spark.build.board_engine import BuildResult
+        self.built_in.append(workdir)
+        circuit_path = workdir / "dist" / "board" / "circuit.json"
+        if self.circuit is not None:
+            circuit_path.parent.mkdir(parents=True, exist_ok=True)
+            circuit_path.write_text(json.dumps(list(self.circuit)))
+        return BuildResult(circuit_path, self.stderr)
+
+    def version(self):
+        return self._version
+
+    def probe(self, workdir):
+        return self._probe
+
+
 #: The fake pdf-text tool: one canned page for `-f 1`, and exit 1 for any other page, so a read stops after page 1.
 PDFTOTEXT = """#!/bin/sh
 # A fake pdftotext (P715): page 1 is a canned table, every other page is past the end.

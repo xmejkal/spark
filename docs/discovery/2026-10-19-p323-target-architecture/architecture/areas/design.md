@@ -22,7 +22,7 @@ the board file that wires them. It writes facts only, the pin map and the board 
 | `audit` | `parts.py --audit`, on `run_cli` since P707 (`audit_records.AuditRecords`) | reads |
 | `list-boards` | `boards.py --list`, on `run_cli` since P707 (`list_boards.ListBoards`) | reads |
 | `assign-pins` | `assign_pins.py requirements.json` | reads, writes `pins.py` with `--out` |
-| `emit-board` | `emit_board.py` | reads, writes `board.tsx` |
+| `emit-board` | `emit_board.py`, over `BoardEmitter` since P706 (`read`, `emit`, `notes`) | reads, writes `board.tsx` |
 | `emit-footprint` | `emit_footprint.py` | reads, writes a footprint file |
 
 `audit` and `list-boards` live here because both ask whether a board stops the chain at the footprint
@@ -46,7 +46,7 @@ down into records and sourcing would be a parameter with one value.
 | `design/restricted_pins.py` | `RestrictedPins`, moved as is in P702 |
 | `design/pin_assigner.py` | the pin assignment, moved from `assign_pins.py` in P702. The CLI `assign_pins.py` stays in `scripts/` and defines `main` only |
 | `design/netlist.py` | `Netlist`, moved as is in P702 |
-| `design/board_emitter.py` | what stops a bad input and gives the board file: `read_inputs`, `BoardInputs`, `RefusedInputError`, `PART_GAPS`, `board_file`, `REFUSED_INPUT_MESSAGE` and the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE`. The file writer moved from `emit_board.py` in P703, and P708 split it. The CLI `emit_board.py` stays in `scripts/` and defines `main` only |
+| `design/board_emitter.py` | what stops a bad input and gives the board file: `read_inputs`, `BoardInputs`, `RefusedInputError`, `PART_GAPS`, `board_file`, `REFUSED_INPUT_MESSAGE`, the stage names `SCHEMATIC_STAGE` and `FOOTPRINT_STAGE`, and since P706 `design_notes` (the six note loops that were `emit_board.main`'s) and `BoardEmitter`, a facade of the three (`read`, `emit`, `notes`) that the build calls in process. The file writer moved from `emit_board.py` in P703, and P708 split it. The CLI `emit_board.py` stays in `scripts/` and defines `main` only |
 | `design/board_sections.py` | `emit` and every `*_lines` function: each section of the tscircuit file (P708) |
 | `design/power_rails.py` | the rails and the power nets: their names, who drives them and what loads them (P708) |
 | `design/board_components.py` | the parts: their names, their gaps and their place on the first-draft layout (P708) |
@@ -99,7 +99,10 @@ classDiagram
   }
   class BoardEmitter {
     <<Service>>
-    emit(design, pin_map) str
+    assume_missing_sizes
+    read(path, project) BoardInputs
+    emit(inputs)
+    notes(inputs) list
   }
   class NeedsService {
     <<Service>>
@@ -152,7 +155,8 @@ sequenceDiagram
 ### How design is tested alone
 
 - Records from `tests/data/`, read through `RecordFolders(tmp)`. No tool and no network.
-- `PinAssigner` and `BoardEmitter` are pure: a `Design` in, a value or a text out. They need no Fake.
+- `PinAssigner` and `BoardEmitter` are pure: a `Design` in, a value or a text out. They need no Fake; a build test subclasses
+  `BoardEmitter` to make `read` or `emit` raise (`tests/test_build_service.py`).
 - The goldens of `assign_pins.py --json` and `emit_board.py` on fixture projects stay unchanged through the move.
 - `no_board` (D16): only when neither the requirements nor `boards/active.json` names a board. Its callers are
   `live.py:91`, `emit_footprint.main` and `design.load`.

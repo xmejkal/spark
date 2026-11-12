@@ -12,10 +12,10 @@
   "replace": "        if False:\n            contended.append((net, who + [\"the microcontroller module's own %s\" % net]))"
  },
  {
-  "file": "scripts/emit_board.py",
+  "file": "scripts/spark/design/board_emitter.py",
   "name": "the file says it and the notes do not",
-  "find": "    for net, who in outputs_in_contention(part_list):\n        print(",
-  "replace": "    for net, who in []:\n        print("
+  "find": "    for net, who in outputs_in_contention(part_list):\n        notes.append(",
+  "replace": "    for net, who in []:\n        notes.append("
  },
  {
   "file": "scripts/spark/design/power_rails.py",

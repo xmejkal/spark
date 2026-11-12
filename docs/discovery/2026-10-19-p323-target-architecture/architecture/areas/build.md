@@ -3,9 +3,11 @@
 Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). The files that move here are in the
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
-New names (proposed): `BuildService`, `BuildInputs`, `BuildStage` and its six subclasses, `BUILD_STAGES`,
-`goes_on`, `TscircuitEngine`, `DiagramConverter`, `ProjectSetupService`, `build/__init__.py` with `OPERATIONS`, and the
-Operation names `build` and `init`.
+Names real since P706: `BuildService`, `BuildInputs`, `TscircuitEngine`, `BuildResult` (and design's `BoardEmitter`, which
+the build calls in process). Still proposed: `DiagramConverter` (the renames card), `ProjectSetupService`,
+`build/__init__.py` with `OPERATIONS`, and the Operation names `build` and `init`. The `BuildStage` family (six subclasses,
+`BUILD_STAGES`, `goes_on`) was dropped as YAGNI at P706: six methods on one Service are the small version, and a base class
+with one implementation per stage waits for a second implementation of a stage.
 
 ## Level 2: what build does
 
@@ -24,9 +26,9 @@ a new project with the files every check and reviewer needs.
 
 | Module | Holds |
 |---|---|
-| `build/build_service.py` | `run` as a function since W6-U3 (P705), with `board_alone`, `islands_in`, `verdict` and the stage sentences; later `BuildService`, `BuildInputs` |
-| `build/stages.py` | `Stage` (one link's result) and `NO_FOOTPRINT_HINT`, imported by name (P705); later one `BuildStage` subclass per stage, under 600 lines |
-| `build/board_engine.py` | the tool functions, `find_toolchain` to `convert` (P705); later the Adapters `TscircuitEngine` and `DiagramConverter` |
+| `build/build_service.py` | `BuildService` (P706): `build(inputs)` runs the six stage methods over the engine and the emitter it is given, with `BuildInputs`, `board_alone`, `islands_in`, `verdict` and the stage sentences |
+| `build/stages.py` | `Stage` (one link's result) and `NO_FOOTPRINT_HINT`, imported by name (P705) |
+| `build/board_engine.py` | the Adapter `TscircuitEngine` with `BuildResult` (P706: `found_from`, `build`, `version`, `probe`, the runner resolved at each call), `find_toolchain`, and the converter functions to `convert`; later the Adapter `DiagramConverter` |
 | `build/kept_files.py` | the files `--keep` writes into DIR and what an earlier build left there (P705). `kept_` means what a run keeps between runs, as breadboard's `kept_moves.py` |
 | `build/project_setup.py` | `init_project.py`'s library (P705); later `ProjectSetupService` |
 | `build/build_codes.py` | the leaf of codes (P701): one per stage that stops the build and per refusal of init. A `Stage` carries a `code` (a design error's own when one stopped it), and `project_setup`'s `why_project_refused`, `why_board_refused` and `find_circuit` return a `Refusal`. Only the sheet's `not written` entry in `kept` writes its code |
@@ -38,14 +40,14 @@ a new project with the files every check and reviewer needs.
 
 | Seam | Real adapter | Fake | Chosen by |
 |---|---|---|---|
-| `BuildStage` Strategy: `applies(inputs)`, `run(inputs) -> OperationResult`, `goes_on(result)` | six stages | a fake stage per area below | `BUILD_STAGES`, an ordered tuple, because order is the point |
-| board engine: `build(board_file) -> Circuit`, `version()` | `TscircuitEngine` over `tsci build` (the build stage of `build_service.run`, `toolchain_can_build`, `tsci_version`) | a recording `run` with a canned `circuit.json` | the `board-engine` role (`data/tools.json:6`) |
+| board emitter: `read(path, project)`, `emit(inputs)`, `notes(inputs)` | design's `BoardEmitter`, a facade of `read_inputs`, `board_file` and `design_notes` | a subclass whose `read` or `emit` raises (`tests/test_build_service.py`) | `BuildService(engine, emitter)`; `for_toolchain` builds the real pair |
+| board engine: `found_from(start)`, `build(workdir) -> BuildResult`, `version()`, `probe(workdir)` | `TscircuitEngine` over `tsci` (`run=` is the runner, `subprocess.run` when None, resolved at each call) | `FakeTscircuitEngine` (`tests/fakes.py`) with a canned `circuit.json` | the `board-engine` role (`data/tools.json:6`) |
 | diagram converter | `DiagramConverter` (`converter_command` and `convert` in `board_engine`) | the same | the `diagram-converter` role (`data/tools.json:7`) |
 
 Build imports breadboard, firmware, design, records and core, each reachable along the area map's arrows (rule U1).
-It calls each area's Service in process, so the board emitter no longer runs as a child process
-(`EMIT_BOARD_SCRIPT`, the call in `build_service.run`). The breadboard sheet stays a side output of `--keep`
-(`keep_breadboard`), not a stage.
+It calls each area's Service in process: since P706 the board emitter is `BoardEmitter`, called by `_schematic`, and no
+child Python runs (the requirements file is read twice, not three times). The breadboard sheet stays a side output of
+`--keep` (`keep_breadboard`), not a stage.
 
 ## Level 3: how build is built
 
@@ -53,84 +55,93 @@ It calls each area's Service in process, so the board emitter no longer runs as 
 classDiagram
   class BuildService {
     <<Service>>
-    run(inputs) list
+    engine
+    emitter
+    for_toolchain(toolchain)$
+    build(inputs) list~Stage~
   }
   class BuildInputs {
     <<Value>>
     requirements
     workdir
-    design
-    engine
+    project
+    from_library
     firmware
   }
-  class BuildStage {
-    <<Strategy>>
-    name$
-    applies(inputs) bool
-    run(inputs) OperationResult
-    goes_on(result) bool
+  class BoardInputs {
+    <<Value>>
+    design
+    assignments
+  }
+  class BuildResult {
+    <<Result>>
+    circuit_path
+    stderr
   }
   class TscircuitEngine {
     <<Adapter>>
-    build(board_file)
+    toolchain
+    found_from(start)
+    build(workdir) BuildResult
     version()
+    probe(workdir)
   }
-  BuildService o-- BuildStage
+  class BoardEmitter {
+    <<Service>>
+    assume_missing_sizes
+    read(path, project) BoardInputs
+    emit(inputs)
+    notes(inputs)
+  }
+  BuildService --> TscircuitEngine
+  BuildService --> BoardEmitter
   BuildService ..> BuildInputs
-  BuildStage <|-- PartsStage
-  BuildStage <|-- BoardStage
-  BuildStage <|-- SchematicStage
-  BuildStage <|-- FootprintStage
-  BuildStage <|-- CircuitStage
-  BuildStage <|-- SimulationStage
-  CircuitStage --> TscircuitEngine
+  BuildService ..> BoardInputs
+  TscircuitEngine ..> BuildResult
 ```
 
-Today one function, `build_service.run` (186 lines, 6 parameters), runs every stage inline
-and returns `stages + [Stage(...)]` from 23 places. `Stage(name, status, detail)` holds each
-result. `BUILD_STAGES` keeps today's order and JSON names: `parts`, `board`, `schematic`, `schematic-notes`,
-`footprint`, `build`, `simulation`. `SchematicStage` runs the board emitter and adds `schematic-notes`. `FootprintStage` calls
-`footprint_emitter.render`, not the CLI's `emit_footprint.main` (OC2).
-`CircuitStage` prints as `build`. The stop rule stays: `goes_on(result)` is true only for `ok`, except that
-`SchematicStage` goes on over its notes, which report `problems` (the `schematic-notes` stage in `run`). The board engine's trivial-board probe (`toolchain_can_build`) moves into `TscircuitEngine`, so a
-broken tool reads as `could-not-run` with code `tool_cannot_build`, never as a design problem.
+`BuildService.build(inputs)` resolves the project once (`inputs.project`, or the plugin's library) and runs six private
+stage methods in the code's order, each under 40 lines, each appending its `Stage` and returning its product or None when
+the build ends: `_board`, `_parts` (a board-only project ends through `board_alone`), `_schematic` (the emitter's `read`,
+`emit` and `notes`: `board.tsx` and the `schematic-notes` stage), `_footprint` (`footprint_emitter.render`, not the CLI,
+OC2), `_build_circuit` (`found_from`, `build`, `version`, and `probe` when nothing came out, so a broken tool reads as
+`could-not-run` with code `tool_cannot_build`, never as a design problem; `_circuit_verdict` reads the circuit) and
+`_simulation`. The stage names and order stay: `board`, `parts`, `schematic`, `schematic-notes`, `footprint`, `build`,
+`simulation`. A `TimeoutExpired` from the engine propagates to `check_spine.main`, which keeps `timed_out_sentence`.
+`BuildInputs` holds no design and no engine: the design is read by a stage, and the engine is a collaborator.
 
 ### The main flow: one build
 
 ```mermaid
 sequenceDiagram
-  participant OP as build Operation
-  participant BS as BuildService
-  participant ST as each BuildStage
-  participant OW as OutsideWorld
-  OP->>BS: run(BuildInputs)
-  loop each stage in BUILD_STAGES
-    alt the stage does not apply
-      BS-->>BS: skipped, such as no firmware for the board alone
-    else
-      BS->>ST: run(inputs)
-      ST->>OW: run a tool or write a file, if it needs one
-      ST-->>BS: OperationResult
-      alt goes_on(result) is false
-        BS-->>BS: stop, later stages are not run
-      end
-    end
-  end
-  BS-->>OP: one result per stage
-  OP-->>OP: OperationResult, data.stages keeps today's shape
+  participant M as check_spine.main
+  participant S as BuildService
+  participant E as BoardEmitter
+  participant T as TscircuitEngine
+  M->>S: for_toolchain(toolchain).build(BuildInputs)
+  S->>S: _board, _parts (board_alone ends a board-only build)
+  S->>E: read(requirements.json, project)
+  E-->>S: BoardInputs, or RefusedInputError (a stage), or a crash (F5: could-not-run)
+  S->>E: emit(board_inputs); notes(board_inputs)
+  S->>S: board.tsx written; schematic ok; schematic-notes when notes
+  S->>S: _footprint (footprint_emitter, pure)
+  S->>T: found_from(project).build(workdir); version(); probe(workdir)
+  T-->>S: BuildResult (TimeoutExpired propagates to main)
+  S->>S: _simulation (converter functions, loader.load as today)
+  S-->>M: stages; main reports
 ```
 
 ### How build is tested alone
 
-- A fake stage per lower area: the test gives `BuildService` three stages and checks the stop rule and `skipped`.
-- Each real stage gets a `BuildInputs` from `tests/data/` and a recording `run` with a canned `circuit.json`.
-- The 8 patches of `check_spine.run` and the 9 of `board_engine.find_toolchain` go when the engine Adapter takes `run`.
-- The golden of `check_spine.py --json` on the fixture project stays unchanged through the move. It is the net.
+- `tests/test_build_service.py` (P706): `BuildService` with `FakeTscircuitEngine` and the real `BoardEmitter`, or a
+  subclass whose `read` or `emit` raises: the stop rule, `tool_missing`, the probe, the crash sentences, the notes stage.
+- `TscircuitEngine(toolchain, run=a_recorder)` is asked what it ran and with which `timeout=`.
+- The 15 goldens of `tests/golden_design.py` ran the CLIs as children through the move, byte for byte. They are the net.
 - One real `tsci build` test is marked `@slow` (`tests/suite_runs.py`, P425), so the full run alone runs it, with `test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert` in `test_needs.py`.
 
 ### How a new implementation is added
 
-- A new stage is one `BuildStage` subclass and one place in `BUILD_STAGES`. It changes the `check_spine` golden, so it lands in an envelope-additions slice.
+- A new stage is one private method of `BuildService` and one call in `build`. It changes the `check_spine` golden, so it lands in an envelope-additions slice.
 - A new board engine, such as KiCad, is one Adapter for the `board-engine` role. KiCad stays optional.
 - A new AI tool's files are one entry in `AiFiles`.
 

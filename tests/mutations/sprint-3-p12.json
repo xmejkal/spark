@@ -8,8 +8,8 @@
  {
   "file": "scripts/spark/build/build_service.py",
   "name": "the two outcomes swapped",
-  "find": "        if not can:\n            return stages + [Stage(\"build\", COULD_NOT_RUN,",
-  "replace": "        if can:\n            return stages + [Stage(\"build\", COULD_NOT_RUN,"
+  "find": "            if not can:\n                stages.append(Stage(\"build\", COULD_NOT_RUN,",
+  "replace": "            if can:\n                stages.append(Stage(\"build\", COULD_NOT_RUN,"
  },
  {
   "file": "scripts/spark/build/board_engine.py",

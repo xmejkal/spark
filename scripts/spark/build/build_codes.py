@@ -14,9 +14,9 @@ design_codes', TOOL_MISSING board_codes' and firmware_codes', INPUT_AMBIGUOUS ch
 
 
 # --- MVP ---
-#: check_spine.run: the requirements and the parts.
+#: BuildService: the requirements and the parts.
 BOARD_UNUSABLE, BOARD_ONLY_WITH_PARTS, NO_PARTS = "board_unusable", "board_only_with_parts", "no_parts"
-#: A stage that crashed or ran past its limit, and the board emitter that refused or noted in a child.
+#: A stage that crashed or ran past its limit, and the board emitter that refused or noted.
 STAGE_CRASHED, STAGE_TIMED_OUT = "stage_crashed", "stage_timed_out"
 SCHEMATIC_REFUSED, SCHEMATIC_NOTED = "schematic_refused", "schematic_noted"
 #: The build: the board engine, and what it built.
