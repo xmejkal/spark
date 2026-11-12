@@ -465,10 +465,10 @@ def onboard_limits(board, wired=None):
     return said + [(spec.constant, spec.not_in_diagram) for _, spec, _ in entries if spec.not_in_diagram]
 
 
-def role_limits(board, roles, definitions=None, key=None):
+def role_limits(board, roles, definitions=None, key=None, wired=None):
     """
     {role: [(component, sentence)]} for each of `roles` that the board's `pin_roles` names, in table order (P397): the
-    pairs `onboard_limits` gives for that role alone. The Wokwi definition is read only for a role with a scenario verb,
+    pairs `onboard_limits` gives for that role alone, with the same `wired` ({gpio: sentence}, P778). The Wokwi definition is read only for a role with a scenario verb,
     and once per board when the caller passes the same `definitions`, a dict from `key` to the SimulatedPart already read.
     `key` names the board for that dict: the caller's own (an offer's key), else the record's `id`, which a record may lack.
     A verb role whose definition spark could not compare has the one ONBOARD_GPIOS pair, as in `onboard_limits`.
@@ -482,7 +482,7 @@ def role_limits(board, roles, definitions=None, key=None):
         if spec.scenario_verb:
             if key not in definitions:
                 definitions[key] = read_simulated_part(board)
-            said[role] = gpio_limits(definitions[key], [(spec, entry)])
+            said[role] = gpio_limits(definitions[key], [(spec, entry)], wired)
         else:
             said[role] = [(spec.constant, spec.not_in_diagram)]
     return said

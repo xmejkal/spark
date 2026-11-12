@@ -263,9 +263,11 @@ class PassedRunEvidenceTest(unittest.TestCase):
         found = PassedRunEvidence().find_unnamed_must(self.image, [])
         self.assertEqual((found.lines, found.caveats), ([], ()))
 
-    def test_the_base_evidence_and_no_simulation_name_nothing(self):
+    def test_no_simulation_leaves_every_must_line_unnamed(self):
+        # P778: no run, so no scenario named any line; the base class still names nothing
         found = NoSimulationEvidence(self.project).find_unnamed_must(self.image, ["A"])
-        self.assertEqual((found.lines, found.caveats), ([], ()))
+        self.assertEqual((found.lines, found.caveats), (["A"], ()))
+        self.assertEqual(ImageEvidence.find_unnamed_must(PassedRunEvidence(), self.image, ["A"]).lines, [])
 
     def with_section(self, name, note_text):
         """The log `name` with this text as its limits section, where write_log puts it (right after the header)."""
@@ -317,10 +319,34 @@ class PassedRunEvidenceTest(unittest.TestCase):
         (self.project / "sim" / "runs" / "a.log").unlink()
         self.assertEqual(PassedRunEvidence(ignore_older_runs=True).find_limits(self.image), [])
 
-    def test_no_simulation_evidence_gives_the_base_default_empty_list(self):
+    SKIPPED_DISPLAY = ("Display", "not simulated at all: Wokwi has no ST7789V part for a 240x320 panel (its parts are wokwi-ili9341, an "
+                       "ILI9341 with other init commands and no ST7789 colour inversion and offsets, and an unmerged 240x240 ST7789 "
+                       "custom chip in a PR); a stand-in would pass firmware that fails on the real glass")
+    NOT_KEPT = ("onboard GPIOs", "not checked: spark's store lacks the Wokwi definition that the board record names, its sha256 differs, "
+                "or it does not parse")
+
+    def test_no_simulation_reads_the_limits_from_the_project_s_records_not_a_log(self):
+        # P778: the log says the display, the records say the XIAO and the display's skip; the records win, each a Limit
         self.counted(self.CONTROL)
         self.with_section("a.log", sim_project.limits_note([self.DISPLAY]))
-        self.assertEqual(NoSimulationEvidence(self.project).find_limits(self.image), [])
+        (self.project / "parts").mkdir()
+        shutil.copy(ROOT / "tests" / "data" / "parts" / "dfr0664-tft-2in.json", self.project / "parts")
+        (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": [{"part": "dfr0664-tft-2in", "name": "Display"}]}))
+        evidence = NoSimulationEvidence(self.project)
+        found = evidence.find_limits(self.image)
+        self.assertEqual(found, [self.SKIPPED_DISPLAY, self.NOT_KEPT])
+        self.assertEqual((found[0].component, found[0].sentence), self.SKIPPED_DISPLAY)
+        self.assertEqual(evidence.caveats(self.image), ["no simulation tested this image"])
+
+    def test_no_simulation_with_no_requirements_file_has_no_limits_and_one_not_checked_caveat(self):
+        evidence = NoSimulationEvidence(self.project)
+        self.assertEqual(evidence.find_limits(self.image), [])
+        caveats = evidence.caveats(self.image)
+        self.assertEqual(caveats[0], "no simulation tested this image")
+        self.assertEqual(len(caveats), 2)
+        self.assertTrue(caveats[1].startswith("not checked: no requirements at "), caveats[1])
+        self.assertTrue(caveats[1].endswith("; fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"), caveats[1])
+        self.assertTrue(caveats[1].isprintable(), caveats[1])
 
     def test_a_section_with_no_limit_line_is_a_caveat_with_the_hint(self):
         self.counted(self.CONTROL)
@@ -600,6 +626,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
                                     "/main.py": hashlib.sha256((self.firmware / "main.py").read_bytes()).hexdigest()})
 
     def test_it_says_none_with_its_caveat_flag_and_no_notes_and_never_answers_for_a_grant(self):
+        (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6", "parts": []}))  # P778: the limits read it
         evidence = NoSimulationEvidence(self.project)
         self.assertEqual((evidence.simulation, evidence.caveats(self.image), evidence.argv(), evidence.notes(self.image)),
                          ("none", ["no simulation tested this image"], ["--no-simulation"], []))
