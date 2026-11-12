@@ -26,6 +26,13 @@ class TheWordsTest(unittest.TestCase):
         self.assertEqual([matching.fold(w) for w in ("sensors", "gps", "bus", "glass", "status", "leds")],
                          ["sensor", "gps", "bus", "glass", "status", "led"])
 
+    def test_the_fold_takes_es_after_a_hissing_sound_and_ies_to_y(self):
+        self.assertEqual([matching.fold(w) for w in ("switches", "brushes", "boxes", "glasses", "batteries", "dies")],
+                         ["switch", "brush", "box", "glass", "battery", "die"])
+
+    def test_a_plural_need_scores_as_its_singular(self):
+        self.assertEqual(matching.need_words("load switches"), matching.need_words("load switch"))
+
     def test_filler_words_go_and_each_word_counts_once(self):
         self.assertEqual(matching.need_words("The sensors for a range, range"), ["sensor", "range"])
 

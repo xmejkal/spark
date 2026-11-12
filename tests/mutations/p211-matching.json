@@ -1,6 +1,6 @@
 [
   {"file": "scripts/spark/sourcing/matching.py", "name": "words: digits stop being word characters", "find": "r\"[^a-z0-9]+\", str(text or \"\").lower()", "replace": "r\"[^a-z]+\", str(text or \"\").lower()"},
-  {"file": "scripts/spark/sourcing/matching.py", "name": "fold: a three-letter word loses its s", "find": "len(word) > 3 and word.endswith(\"s\")", "replace": "len(word) > 2 and word.endswith(\"s\")"},
+  {"file": "scripts/spark/sourcing/matching.py", "name": "fold: a three-letter word loses its s", "find": "if len(word) <= 3 or", "replace": "if len(word) <= 2 or"},
   {"file": "scripts/spark/sourcing/matching.py", "name": "need_words: a repeated word counts twice", "find": "return list(dict.fromkeys(fold(word) for word in words(what) if word not in FILLER))", "replace": "return [fold(word) for word in words(what) if word not in FILLER]"},
   {"file": "scripts/spark/sourcing/matching.py", "name": "from_record: the entries' functions do not join the record", "find": "                     + [f for entry in said[1:] for f in _list(entry.get(\"function\"))])", "replace": "                     + [])"},
   {"file": "scripts/spark/sourcing/matching.py", "name": "from_record: an entry's about wins over the record's", "find": "_first(said, \"about\")", "replace": "_first(said[::-1], \"about\")"},
