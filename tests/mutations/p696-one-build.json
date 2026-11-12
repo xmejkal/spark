@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "start runs the free checks twice, so the image is built twice",
+  "find": "return StartResult(*self.simulate(simulator.command), True)",
+  "replace": "return StartResult(*self.run(simulator.command), True)"
+ }
+]

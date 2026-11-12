@@ -398,7 +398,8 @@ class ProjectCase(unittest.TestCase):
             return scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
 
     def command(self, *argv, token="t", tool=FAKE_SIMULATOR, exit_code=0, **fake):
-        find_tool = FakeToolFinder({"simulator": tool}, fall_back=tool_finder.find).find  # `tool` may be the exception to raise
+        self.finder = FakeToolFinder({"simulator": tool}, fall_back=tool_finder.find)  # `tool` may be the exception to raise
+        find_tool = self.finder.find
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_OUT": READY_MATCHED, "FAKE_WOKWI_EXIT": str(exit_code),
                 "FAKE_WOKWI_SEEN": str(self.seen), **fake}
         env = {name: value for name, value in os.environ.items() if name != "WOKWI_CLI_TOKEN"}
@@ -412,6 +413,13 @@ class ProjectCase(unittest.TestCase):
 
 
 class TheRunTest(ProjectCase):
+    @needs_littlefs
+    def test_a_command_builds_the_image_once(self):
+        # P696: main ran the free checks and run() ran them again, so each command built the flash image twice
+        code, said = self.command()
+        self.assertEqual(code, 0, said)
+        self.assertEqual([name for name, _ in self.finder.asked if name == "littlefs"], ["littlefs"])
+
     @needs_littlefs
     def test_a_pass_is_logged_with_its_date_the_scenario_as_run_and_what_wokwi_cli_printed(self):
         status, said, log = self.run_with("boot\nready\nLED on\n")

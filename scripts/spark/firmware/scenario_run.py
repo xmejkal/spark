@@ -8,6 +8,7 @@ import hashlib
 import os
 import subprocess
 import tempfile
+from collections import namedtuple
 from pathlib import Path
 
 from spark.core import outcomes, zone_time
@@ -176,12 +177,31 @@ class ScenarioRun:
             return COULD_NOT_RUN, [refusal]
         return OK, self.not_checked() + [self.steps.line(), DRY_RUN_DONE]
 
+    def start(self, say):
+        """
+        The whole order of a paid run, each step once (P696): the older log goes, the free checks build the one image and find the
+        simulator and its token, `say` gets the lines said before the run (a refusal, or the not-checked lines), then the run.
+        A StartResult; `ran` is False when the free checks refused it.
+        """
+        self.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here
+        simulator, said = free_checks(self, self.project)
+        if said:
+            say(said)
+        if simulator is None:
+            return StartResult(COULD_NOT_RUN, None, None, False)
+        return StartResult(*self.simulate(simulator.command), True)
+
     def run(self, cli):
-        """Run it with the firmware as it is now: (status, sentence, the log or None). Every paid run leaves a log."""
+        """The free checks, then the run with the simulator `cli`: (status, sentence, the log or None). The tests' door;
+        run_scenario.py goes through `start`, which finds the simulator itself."""
         self.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run that could not start
         problem = self.problem()
         if problem:
             return COULD_NOT_RUN, problem, None
+        return self.simulate(cli)
+
+    def simulate(self, cli):
+        """The paid run of the image `problem()` built, with the simulator `cli`: (status, sentence, the log or None). Every paid run leaves a log."""
         write_image_name(self.sim / "wokwi.toml")
         self.image.write_bytes(self.flash)
         # Beside the original, so a step's own path (a screenshot to compare with) resolves where its author wrote it.
@@ -226,6 +246,11 @@ class ScenarioRun:
                                self.timeout_ms, sentence, self.steps.log_lines(), IMAGE_LINE,
                                hashlib.sha256(self.flash).hexdigest(), files, shown, sim_project.SCENARIO_SECTION, self.steps_text, said.strip()))
         return self.log
+
+
+class StartResult(namedtuple("StartResult", "status sentence log ran")):
+    """Result of ScenarioRun.start: the status, the sentence a person reads and the log (both None when `ran` is False, the free
+    checks refused the run before any Wokwi minute), and `ran`."""
 
 
 def free_checks(run, project):  # --- MVP --- (P399)

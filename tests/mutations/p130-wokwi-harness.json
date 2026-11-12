@@ -98,7 +98,7 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "an older run's passed log outlives a run that could not start",
-  "find": "self.log.unlink(missing_ok=True)",
+  "find": "self.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run that could not start",
   "replace": "pass"
  },
  {
@@ -150,9 +150,9 @@
   "replace": "return None if True else"
  },
  {
-  "file": "scripts/run_scenario.py",
+  "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a refusal in the command leaves an older run's passed log in place",
-  "find": "run.log.unlink(missing_ok=True)",
+  "find": "self.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here",
   "replace": "pass"
  }
 ]
