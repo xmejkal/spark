@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple, Optional
 
-from spark.records import board_records
+from spark.records import onboard_parts
 from spark.design import board_components
 from spark.design import board_sections
 from spark.core import outcomes
@@ -223,10 +223,10 @@ def write_limits(sim_dir, design, board, wired=None):
     """
     Put the note beside the diagram and hand back what it said, or [] when there is nothing. The design's records and the
     board's own GPIOs both count (P396). A board-only build passes no design, and its wired GPIOs as `wired` (P484,
-    `onboard_parts.say_wired_gpios`). `board` has no default: no test reaches the full build's simulation stage
+    `onboard_parts.say_wired_gpios`); the full build passes None, the board's own (P778: the pick says the same). `board` has no default: no test reaches the full build's simulation stage
     (`build_service.simulation_detail`), so a call that drops it fails at once.
     """
-    limits = (limits_of(design) if design is not None else []) + board_records.onboard_limits(board, wired)
+    limits = (limits_of(design) if design is not None else []) + onboard_parts.limits_of_board(board, None, wired)
     if limits:
         (Path(sim_dir) / LIMITS_NOTE).write_text(limits_note(limits))
     return limits

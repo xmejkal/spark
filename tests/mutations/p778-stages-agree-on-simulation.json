@@ -1,5 +1,17 @@
 [
  {
+  "file": "scripts/spark/sourcing/part_records.py",
+  "name": "a skipped part's limit is dropped, so the pick says nothing of a skip",
+  "find": "    if simulation.get(\"skip\"):\n        said.append((name, \"not simulated at all: %s\" % simulation[\"skip\"]))",
+  "replace": "    if simulation.get(\"skip\") and not simulation.get(\"skip\"):\n        said.append((name, \"not simulated at all: %s\" % simulation[\"skip\"]))"
+ },
+ {
+  "file": "scripts/spark/design/needs.py",
+  "name": "the pick passes no wired GPIOs, so a stand-in board's button reads as a bare header pin again",
+  "find": "    said = onboard_parts.limits_of_board(record, serving_roles(need, functions), None, definitions, key)",
+  "replace": "    said = board_records.role_limits(record, serving_roles(need, functions), definitions, key)"
+ },
+ {
   "file": "scripts/spark/build/build_service.py",
   "name": "a skip beside a real part counts as every part skipped (any for all)",
   "find": "return bool(mapping) and all(\"skip\" in entry for entry in mapping.values())",

@@ -22,7 +22,7 @@ from board_library import board_missing  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.records import board_records  # noqa: E402
+from spark.records import board_records, onboard_parts  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.design import loader  # noqa: E402
@@ -1472,6 +1472,19 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         (self.project / "boards").mkdir(parents=True, exist_ok=True)
         shutil.copy(self.TDISPLAY, self.project / "boards" / "lilygo-t-display.json")
 
+    def simulate(self, part_id, simulation):
+        """The project's record of `part_id` with this `simulation` table."""
+        path = self.project / "parts" / (part_id + ".json")
+        path.write_text(json.dumps(dict(json.loads(path.read_text()), simulation=simulation)))
+
+    def own_skipped_screen(self):
+        """A display part the person owns, the dfr0664 record as x-screen, whose record skips the simulation (P778)."""
+        self.own("screens", "x-screen", function=[{"does": "indicate", "what": "display"}], simulated=False)
+        record = json.loads((ROOT / "tests" / "data" / "parts" / "dfr0664-tft-2in.json").read_text())
+        (self.project / "parts" / "x-screen.json").write_text(json.dumps(dict(record, id="x-screen", name="A screen x-screen",
+                                                                             function=[{"does": "indicate", "what": "display"}])))
+        self.simulate("x-screen", {"skip": "no glass in Wokwi"})
+
     def own(self, entry, part_id, simulated=True, function=None, **fields):
         """A button part (or the `function` given) in the project, owned in the drawer under `entry`, with a Wokwi stand-in unless `simulated` is False."""
         record = {"schema": 1, "id": part_id, "name": ("A part " if function else "A button ") + part_id, "kind": "button"}
@@ -1584,10 +1597,38 @@ class TheBoardsLimitsNoteTest(unittest.TestCase):
         self.assertEqual(self.matched("show", "lilygo-t-display")["limits"], [self.DISPLAY])
         self.assertEqual(self.matched("charge", "lilygo-t-display")["limits"], [])
 
-    def test_a_board_admitted_by_the_verb_alone_and_a_part_have_no_limits(self):
+    STAND_IN_BUTTON = "Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled"
+    WIRED_BUTTON = ("the Wokwi stand-in has no button on GPIO47, so spark wires Wokwi's pushbutton to GPIO47 in its place: a "
+                    "scenario presses that part, not the board's own button. Test it on the board.")
+
+    def test_a_board_admitted_by_the_verb_alone_has_no_limits_and_a_part_has_its_record_s(self):
+        # P778: a part's limits are its record's own words, as the build prints them; a real Wokwi part has none
         self.assertEqual(self.matched("joy")["limits"], [])
-        self.assertEqual(self.matched("press", "tactile-button")["limits"], [])
+        self.assertEqual(self.matched("press", "tactile-button")["limits"], [self.STAND_IN_BUTTON])
         self.assertEqual(self.matched("press")["limits"], [self.NO_PIN])
+        self.own_skipped_screen()
+        self.own("real", "x-real")
+        self.simulate("x-real", {"wokwi": {"part": "wokwi-pushbutton", "pins": {"A": "1.l", "B": "2.l"}}})
+        self.assertEqual(self.matched("show", "x-screen")["limits"], ["not simulated at all: no glass in Wokwi"])
+        self.assertEqual(self.matched("press", "x-real")["limits"], [])
+
+    def test_the_firebeetle_s_button_is_the_wired_stand_in_in_the_pick_as_in_the_build(self):
+        # P778 (walk 4 row 10): the pick says what the board-only build says, from `onboard_parts.limits_of_board`
+        self.assertEqual(self.WIRED_BUTTON, onboard_parts.ONBOARD_PARTS[board_records.ONBOARD_BUTTON].wired % {"gpio": 47})
+        self.assertEqual(self.matched("press", "firebeetle2-esp32s3")["limits"], [self.NOT_KEPT, self.WIRED_BUTTON])
+        said, _ = run(["--pick", str(self.project), "press=firebeetle2-esp32s3", "--dry-run"])  # the drawer's one is held: the note is said all the same
+        self.assertIn({"subject": "board firebeetle2-esp32s3 for press", "sentence": self.NOT_KEPT + " " + self.WIRED_BUTTON}, said["notes"])
+
+    def test_a_picked_part_with_a_skip_gets_a_note_and_a_line_in_the_requirements(self):
+        # P778 (walk 4 row 28): the pick and --requirements say the display's skip, in the record's words
+        self.own_skipped_screen()
+        said, code = run(["--pick", str(self.project), "press=xiao-esp32-c6", "show=x-screen"])
+        self.assertEqual(code, 0, said)
+        self.assertIn({"subject": "part x-screen for show", "sentence": "not simulated at all: no glass in Wokwi"}, said["notes"])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            parts.main(["--requirements", str(self.project), "--dry-run"])
+        self.assertIn("  part x-screen: not simulated at all: no glass in Wokwi", out.getvalue().splitlines())
 
     def test_the_text_of_match_shows_each_sentence_on_a_line_under_the_board(self):
         (self.project / ".spark" / "needs.json").write_text(json.dumps({"schema": 1, "needs": [self.NEEDS["press"]]}))
@@ -1828,6 +1869,8 @@ class TheRequirementsFileTest(unittest.TestCase):
     DRIVER_AND_TWO_BUTTONS = [BOARD, ("drive", [{"part": "l9110s-module"}]), ("open-lid", [{"part": "tactile-button"}]),
                               ("mode", [{"part": "tactile-button"}])]
 
+    LED_LIMIT = "  part led-red-5mm: Wokwi's LED: lights on current; its forward voltage and brightness are not this part's\n"
+
     def project(self, picks):
         home, project = a_project_with_picks(picks)
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
@@ -2064,6 +2107,9 @@ class TheRequirementsFileTest(unittest.TestCase):
                 with contextlib.redirect_stdout(out):
                     parts.main(["--requirements", str(project)] + extra)
                 self.assertEqual(out.getvalue(), "  %s %s: board firebeetle2-esp32s3; parts tactile-button (OpenLid), tactile-button (Mode), x-led\n"
+                                 "  part tactile-button (OpenLid): Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled\n"  # P778: each part's own limit
+                                 "  part tactile-button (Mode): Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled\n"
+                                 "  part x-led: Wokwi's LED: lights on current; its forward voltage and brightness are not this part's\n"
                                  "  onto the shelf, so every project builds with it: x-led\n"
                                  "  reserved, not placed — no record: speaker\n"
                                  "  not on the board: alarm — speaker has no record: fine for what is wired off the board (a speaker, "
@@ -2091,6 +2137,12 @@ class TheRequirementsFileTest(unittest.TestCase):
                          "  would write %s: board firebeetle2-esp32s3; parts l9110s-module, jst-ph-2-power-inlet, "
                          "tactile-button (BtnOpen), tactile-button (BtnMode)\n"
                          '  board: "xiao-esp32-c6" → "firebeetle2-esp32s3"\n'
+                         "  part l9110s-module: one channel: reads IA/IB and prints MOTOR: opening/closing/stopped; models no current, "
+                         "so a stall cannot be simulated\n"  # P778: each part's own limit, the kept one's too
+                         "  part jst-ph-2-power-inlet: not simulated at all: a connector is wiring, not a part to simulate; the simulator "
+                         "powers the board itself\n"
+                         "  part tactile-button (BtnOpen): Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled\n"
+                         "  part tactile-button (BtnMode): Wokwi's pushbutton: either side of a pair is the same contact; no bounce is modelled\n"
                          "  kept, not from a pick: jst-ph-2-power-inlet\n"
                          "  rail TRACTION has no supply — pick a power inlet or a supply (l9110s-module.VCC draws from it)\n"
                          "  net MOTOR6V is driven by jst-ph-2-power-inlet.VCC and nothing listed receives it — pick what it drives "
@@ -2117,8 +2169,9 @@ class TheRequirementsFileTest(unittest.TestCase):
     def test_a_run_that_changes_nothing_says_unchanged_not_wrote(self):
         _, project = self.project([self.BOARD, ("light", [{"part": "led-red-5mm"}])])
         first, again = self.text(["--requirements", str(project)]), self.text(["--requirements", str(project)])
-        self.assertEqual((first, again), ("  wrote %s: board firebeetle2-esp32s3; parts led-red-5mm\n" % (project / "requirements.json"),
-                                          "  unchanged %s: board firebeetle2-esp32s3; parts led-red-5mm\n" % (project / "requirements.json")))
+        # P778: the part's own limit follows the write line, on a run that writes and on one that changes nothing
+        self.assertEqual((first, again), ("  wrote %s: board firebeetle2-esp32s3; parts led-red-5mm\n%s" % (project / "requirements.json", self.LED_LIMIT),
+                                          "  unchanged %s: board firebeetle2-esp32s3; parts led-red-5mm\n%s" % (project / "requirements.json", self.LED_LIMIT)))
 
     def test_the_names_it_checks_are_the_ones_the_generator_gives(self):
         for part_id, name in (("tactile-button", None), ("led-1", None), ("led1", None), ("jst_ph_2", None), ("tactile-button", "BtnOpen")):

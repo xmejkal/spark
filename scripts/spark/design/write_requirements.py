@@ -13,6 +13,7 @@ from spark.records import store
 from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer
 from spark.sourcing.part_facts import shelve
+from spark.sourcing.part_records import PartError, any_record, limits_of_part
 from spark.sourcing.write_answers import names_your_entries, write_lines
 from spark.design import board_components, footprint_emitter, need_requirements
 
@@ -69,6 +70,7 @@ class WriteRequirements(AnswerOperation):
         said += ["  board_only removed: the file lists parts"] if isinstance(held, dict) and need_requirements.BOARD_ONLY in held and content["parts"] and not problems else []
         stop = "" if problems else footprint_emitter.footprint_stop(content["board"], Path(project))
         said += ["  board %s: %s" % (content["board"], stop)] if stop else []  # F12 (C-7): said, never refused
+        said += [] if problems else _part_limit_lines(content["parts"], Path(project))  # P778: what the simulation cannot show of each part
         said += ["  onto the shelf, so every project builds with it: %s" % ", ".join(Path(r).stem for r, _ in shelving)] if shelving and not problems else []
         said += ["  placeholder outline — %s owes body_mm, so the PCB step lays it out at a placeholder %g x %g mm: a dimension drawing "
                  "(fetched after the person's yes) or a measurement fills it — %s" % ((part_id,) + board_components.DEFAULT_BODY_MM + (how,))
@@ -84,4 +86,20 @@ class WriteRequirements(AnswerOperation):
                        "unserved": unserved, "no_supply": no_supply, "no_driver": no_driver,
                        "no_receiver": no_receiver, "written": not problems and not dry_run},
                       write_lines([], problems, dry_run, said), problems=problems)
+
+
+def _part_limit_lines(entries, project):
+    """One line per part of `entries` whose record has limits (`limits_of_part`, P778): `  part <label>: <sentence>`, the
+    pick's note in the file's words. An entry with no record, or none that names a part, gives no line."""
+    said = []
+    for entry in entries:
+        part_id = entry if isinstance(entry, str) else (entry.get("part") if isinstance(entry, dict) else None)
+        if not part_id:
+            continue
+        try:
+            record = any_record(part_id, project)
+        except PartError:
+            continue
+        said += ["  part %s: %s" % (need_requirements.entry_label(entry), sentence) for _, sentence in limits_of_part(record, part_id)]
+    return said
 # --- end MVP ---

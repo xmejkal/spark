@@ -14,8 +14,8 @@ from pathlib import Path
 
 from spark.design import footprint_emitter
 from spark.sourcing import drawer, matching, offers
-from spark.sourcing.part_records import broken_problems
-from spark.records import board_records, records_codes, store
+from spark.sourcing.part_records import broken_problems, limits_of_part
+from spark.records import board_records, onboard_parts, records_codes, store
 from spark.records.record_kind import _problem, _shape_problems, owes, VERBS
 from spark.core.text_guards import clean, kept_reason, printable
 
@@ -160,7 +160,7 @@ def board_limits(need, record, functions, definitions=None, key=None):
     part a scenario could reach has no pin in the definition, or only a stand-in's bare header pin: the only limit that a part on a header pad would lift.
     `definitions` and `key` are `role_limits`'s: the caller's memo, and the offer's key that names the board in it.
     """
-    said = board_records.role_limits(record, serving_roles(need, functions), definitions, key)
+    said = onboard_parts.limits_of_board(record, serving_roles(need, functions), None, definitions, key)
     pairs = [pair for each in said.values() for pair in each]
     sentences = [("%s. %s" % (sentence, board_records.BENCH)) if component == board_records.ONBOARD_GPIOS else sentence
                  for component, sentence in pairs]
@@ -207,7 +207,8 @@ def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
     """
     The store's candidates for one need (§6.2's code half): every offer the matcher admits, owned first, then the best
     score, then nearest. The matcher is MATCHER's unless one is given (P211). Similar enough is the chooser's call. What
-    `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397); `definitions` is the dict that
+    `mine`, the asking project, holds is free to it. A board candidate gets its `limits` (P397), and a part candidate those of its
+    record (`limits_of_part`: a stand-in, a chip's note, a skip; P778); `definitions` is the dict that
     `role_limits` fills, so a caller that matches several needs reads each board's Wokwi definition once.
     """
     built = offers.build(known, entries)
@@ -217,6 +218,8 @@ def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
         if one["kind"] == "board":
             offer, record = seen[("board", one["id"])]
             one["limits"] = board_limits(need, record, offer.functions, definitions, offer.key).sentences
+        elif one["kind"] == "part":
+            one["limits"] = [sentence for _, sentence in limits_of_part(seen[("part", one["id"])][1], one["id"])]
     return found
 
 
@@ -309,22 +312,26 @@ def _limits_notes(after, picked, rows, entries, mine):
     """
     One note for each board this pick gives to a need that the board's own parts serve, when the board has limits (P397):
     `board <key> for <need>: <the limits>`, the sentences of the build's own text, then the other choice when a missing pin
-    is the limit. It sits after the F12 note. The Wokwi definition is read once per board.
+    is the limit; and one for each part picked whose record has limits (`limits_of_part`, P778): `part <key> for <need>: <the
+    limits>`. They sit after the F12 note. The Wokwi definition is read once per board.
     """
-    asked = sorted(((key, need) for need in after if need["id"] in picked for pick in picked[need["id"]]
-                    for kind, key in pick.items() if kind == "board"), key=lambda asked: (asked[0], asked[1]["id"]))
+    asked = sorted(((kind, key, need) for need in after if need["id"] in picked for pick in picked[need["id"]]
+                    for kind, key in pick.items() if kind in ("board", "part")), key=lambda asked: (asked[0], asked[1], asked[2]["id"]))
     if not asked:
         return []
     built, definitions, notes = offers.build(rows, entries), {}, []
-    boards_built = {offer.key: (offer, said["record"]) for offer, said in built if offer.kind == "board"}
-    for key, need in asked:
-        if key not in boards_built:
+    records = {(offer.kind, offer.key): (offer, said["record"]) for offer, said in built}
+    for kind, key, need in asked:
+        if (kind, key) not in records:
             continue
-        offer, record = boards_built[key]
-        limits = board_limits(need, record, offer.functions, definitions, key)
-        if limits.sentences:
-            other = _other_choice(need, built, mine) if limits.no_pin else ""
-            notes.append("board %s for %s: %s" % (key, need["id"], " ".join(limits.sentences + ([other] if other else []))))
+        offer, record = records[(kind, key)]
+        if kind == "part":
+            sentences, other = [sentence for _, sentence in limits_of_part(record, key)], ""
+        else:
+            limits = board_limits(need, record, offer.functions, definitions, key)
+            sentences, other = limits.sentences, _other_choice(need, built, mine) if limits.no_pin else ""
+        if sentences:
+            notes.append("%s %s for %s: %s" % (kind, key, need["id"], " ".join(sentences + ([other] if other else []))))
     return notes
 
 
