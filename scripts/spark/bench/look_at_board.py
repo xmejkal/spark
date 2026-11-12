@@ -34,7 +34,9 @@ class LookAtBoard(Operation):
     returns the LookReport as an OperationResult: its stops and warnings are problems, its unknown fields, a missing token
     and a last deploy it could not check are unchecked, and a token brings the deploy step. A LookStopError is one unchecked
     Finding with the stop's reason, and the board doctor's lines are the diagnostics. It writes nothing on the board. It
-    reports one BEGIN of the look, before the read (P507).
+    reports one BEGIN of the look, before the read (P507). `records` is the DeployRecordStore the look reads the last deploy
+    from (None: the store's own), the collaborator a test swaps whole; the compile child of --no-simulation and the board tools
+    run through `outside.run`, and the project's files are read direct (P458).
     """
 
     name = "look"
@@ -48,13 +50,16 @@ class LookAtBoard(Operation):
     effects = (READS, RUNS, BOARD)
     privacy_for = staticmethod(bench_privacy.privacy_for)
 
+    def __init__(self, records=None):
+        self.records = records
+
     def run(self, project, port, ignore_older_runs, no_simulation, *, outside):
-        evidence = evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)
+        evidence = evidence_for(project, no_simulation, ignore_older_runs, find_tool=outside.find_tool, run=outside.run)
         platform = MicroPythonPlatform(project, outside.find_tool)
         # P507: after the evidence and the platform, which touch no board, and right before the esptool read
         outside.report(Event.begin(DeployPhase.LOOK))
         try:
-            report = board_look.looker(platform, outside.run).run(project, port, evidence)
+            report = board_look.looker(platform, outside.run, self.records).run(project, port, evidence)
         except board_look.LookStopError as stop:
             return self._stopped(stop, platform, port, outside)
         return self._found(report, project.resolve(), evidence)

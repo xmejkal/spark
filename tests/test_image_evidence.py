@@ -29,6 +29,7 @@ import flash_image  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from fakes import FakeToolFinder  # noqa: E402
+from spark.core.outside import ProgramRunner  # noqa: E402
 from spark.bench.image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
 from spark.firmware.scenario_steps import ScenarioSteps  # noqa: E402
 from spark.firmware.project_image import DeployError, ProjectImage  # noqa: E402
@@ -428,8 +429,8 @@ class NoSimulationEvidenceTest(unittest.TestCase):
             image_builder.image(fake_interpreter(offset=offset), image_builder.files_under(self.firmware), offset=offset))
         self.image = ProjectImage(self.project)
 
-    def why(self, find_tool=None):
-        return NoSimulationEvidence(self.project, find_tool).why_not_ready(ProjectImage(self.project))
+    def why(self, find_tool=None, run=None):
+        return NoSimulationEvidence(self.project, find_tool, run).why_not_ready(ProjectImage(self.project))
 
     def test_it_is_an_image_evidence(self):
         self.assertIsInstance(NoSimulationEvidence(self.project), ImageEvidence)
@@ -545,9 +546,13 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         for number in range(3):
             (self.firmware / ("more%d.py" % number)).write_text("n = %d\n" % number)
         self.build()
-        with mock.patch.object(subprocess, "run", wraps=subprocess.run) as run:
-            self.assertIsNone(self.why())
-        self.assertEqual(run.call_count, 1)
+        ran = []
+
+        def run(command, **options):  # P458: the child comes through the `run` the evidence was given
+            ran.append(command)
+            return ProgramRunner().run(command, **options)
+        self.assertIsNone(self.why(run=run))
+        self.assertEqual(len(ran), 1)
 
     def test_the_child_does_not_import_a_json_py_from_the_folder_it_runs_in(self):
         marker = self.project / "decoy-ran"
@@ -642,21 +647,23 @@ class TheOwnBuildHintTest(unittest.TestCase):
 class CompileCheckTest(unittest.TestCase):
     """What the parent makes of the child's answer, with the child's stdout and exit code given (P427)."""
 
-    def why(self, stdout="", returncode=0, **raised):
-        with mock.patch.object(subprocess, "run", return_value=answered(stdout, returncode), **raised) as run:
-            why = image_evidence.CompileCheck([("firmware/a.py", "/p/firmware/a.py"), ("firmware/b.py", "/p/firmware/b.py")]).why_not()
-        self.run = run
-        return why
+    def why(self, stdout="", returncode=0, raises=None):
+        """`why_not` with a `run` that answers `stdout` and `returncode`, or raises `raises`; self.command and self.options keep its call (P458)."""
+        def run(command, **options):
+            self.command, self.options = command, options
+            if raises:
+                raise raises
+            return answered(stdout, returncode)
+        return image_evidence.CompileCheck([("firmware/a.py", "/p/firmware/a.py"), ("firmware/b.py", "/p/firmware/b.py")], run).why_not()
 
     def lines(self, *entries):
         return "".join(json.dumps(entry) + "\n" for entry in entries)
 
     def test_the_child_gets_the_names_and_paths_as_json_on_stdin_and_runs_isolated_for_30_s(self):
         self.why(self.lines({"ok": True}))
-        command = self.run.call_args[0][0]
-        self.assertEqual((command[0], command[1:3]), (sys.executable, ["-I", "-B"]))
-        self.assertEqual(self.run.call_args[1]["input"], '[["firmware/a.py", "/p/firmware/a.py"], ["firmware/b.py", "/p/firmware/b.py"]]')
-        self.assertEqual(self.run.call_args[1]["timeout"], 30)
+        self.assertEqual((self.command[0], self.command[1:3]), (sys.executable, ["-I", "-B"]))
+        self.assertEqual(self.options["input"], '[["firmware/a.py", "/p/firmware/a.py"], ["firmware/b.py", "/p/firmware/b.py"]]')
+        self.assertEqual(self.options["timeout"], 30)
 
     def test_an_ok_answer_is_none(self):
         self.assertIsNone(self.why(self.lines({"checking": "firmware/a.py"}, {"checking": "firmware/b.py"}, {"ok": True})))
@@ -679,11 +686,11 @@ class CompileCheckTest(unittest.TestCase):
     def test_a_timeout_names_the_last_file_the_child_began_from_bytes_or_text(self):
         said = self.lines({"checking": "firmware/a.py"}, {"checking": "firmware/b.py"})
         for output in (said.encode(), said):
-            why = self.why(side_effect=subprocess.TimeoutExpired([], 30, output=output))
+            why = self.why(raises=subprocess.TimeoutExpired([], 30, output=output))
             self.assertEqual(why, "firmware/b.py did not compile in 30 s")
 
     def test_a_timeout_before_any_file_names_the_folder(self):
-        self.assertEqual(self.why(side_effect=subprocess.TimeoutExpired([], 30, output=None)), "firmware/ did not compile in 30 s")
+        self.assertEqual(self.why(raises=subprocess.TimeoutExpired([], 30, output=None)), "firmware/ did not compile in 30 s")
 
     def test_each_failure_kind_has_its_own_sentence(self):
         for entry, sentence in (

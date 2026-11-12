@@ -31,7 +31,7 @@ from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from fakes import FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
+from fakes import FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun  # noqa: E402
 from spark.bench import build_project_outside_world  # noqa: E402
 from spark.core.operation import READS  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
@@ -107,8 +107,8 @@ class ProjectCase(unittest.TestCase):
         ran = []
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            outside = FakeOutsideWorld(run or (lambda argv, **kw: ran.append(argv)), find_tool=find,
-                                       reporter=TerminalReporter.for_json("--json" in argv))
+            outside = FakeOutsideWorld(run or RealChildRun(lambda argv, **kw: ran.append(argv)), find_tool=find,
+                                       reporter=TerminalReporter.for_json("--json" in argv))  # P458: the compile child is real, and not in `ran`
             code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=DeployImage())
         return code, out.getvalue(), err.getvalue(), ran
 

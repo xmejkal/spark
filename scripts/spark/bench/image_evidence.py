@@ -2,7 +2,8 @@
 What tested an image before a deploy (P337): the strategy that deploy.py and look.py ask whether an image is ready.
 
 `ImageEvidence` holds settings, never an image: each method takes a fresh `ProjectImage`. `PassedRunEvidence` is
-today's evidence, a run in sim/runs/ that passed on the image's sha256. It writes nothing.
+today's evidence, a run in sim/runs/ that passed on the image's sha256. `NoSimulationEvidence` stands firmware/ in for a run,
+and its `CompileCheck` starts the compile child through the Operation's `outside.run` (P458). It writes nothing.
 """
 
 import abc
@@ -19,6 +20,7 @@ from spark.firmware import image_builder
 from spark.firmware.project_image import BUILD_IMAGE_HINT, NO_SIMULATION_FLAG
 from spark.core import outcomes
 from spark.core import text_guards
+from spark.core.outside import ProgramRunner
 from spark.records import tool_finder
 from spark.firmware.scenario_steps import (NO_MAIN, ONE_RUN_MESSAGE, PASSED, READY, SET_CONTROL, WHY_LOG_UNREADABLE, ScenarioSteps,
                                             file_hashes)
@@ -120,18 +122,20 @@ class CompileCheck:
     The .py files compiled in one child process, so that a source which kills the compiler (a stack overflow, signal 11)
     kills the child and not spark (P427). `why_not` is None, or one sentence. It started like import_probe.import_one:
     this interpreter with -I -B, in spark's own working directory: -I keeps a json.py planted there out, and a relative path
-    means what it meant to the parent.
+    means what it meant to the parent. The child starts through `run`, the Operation's `outside.run` (P458), so a fake world
+    sees it as one more command; `subprocess` is named here for `TimeoutExpired` alone.
     """
 
-    def __init__(self, files):
-        """`files`: [(name shown, path)] in the order to compile."""
+    def __init__(self, files, run):
+        """`files`: [(name shown, path)] in the order to compile. `run` runs a command as `subprocess.run` does."""
         self.files = [[str(name), str(path)] for name, path in files]
+        self.run = run
 
     def why_not(self):
         command = [sys.executable, "-I", "-B", "-c", COMPILE_CHILD]
         try:
-            done = subprocess.run(command, input=json.dumps(self.files), capture_output=True, text=True, errors="replace",
-                                  timeout=COMPILE_TIMEOUT_S)
+            done = self.run(command, input=json.dumps(self.files), capture_output=True, text=True, errors="replace",
+                            timeout=COMPILE_TIMEOUT_S)
         except subprocess.TimeoutExpired as late:
             said = late.stdout.decode(errors="replace") if isinstance(late.stdout, bytes) else late.stdout
             return TIMEOUT_REASON % (text_guards.printable(self._read(said)[0] or NO_FILE_YET), COMPILE_TIMEOUT_S)
@@ -348,17 +352,20 @@ class NoSimulationEvidence(ImageEvidence):
     """
     Strategy: no simulation tested the image, so firmware/ stands for it. The image is ready when firmware/ has a
     main.py, every .py file under it compiles and the image file holds firmware/ as it is now. It does not run the
-    firmware: the board is the test. It writes nothing.
+    firmware: the board is the test. `run` starts the compile child (the Operation's `outside.run`; None runs it on this
+    machine, `ProgramRunner`, for a direct caller). It writes nothing.
     """
 
     simulation = SIMULATION_NONE
     grant_refusal = board_grant.WHY_NO_SIMULATION
 
-    def __init__(self, project, find_tool=None):
+    def __init__(self, project, find_tool=None, run=None):
         self.project = Path(project)
         #: a name -> Tool for the image check's MicroPython build, or None for the project's tools list. littlefs is
         #: asked without the project either way, as flash_image.main asks it; the project-aware lookup is a later card
         self.find_tool = find_tool
+        #: what runs the compile child, as `subprocess.run` does, or None: resolved at the call, as board_engine does (P458)
+        self.run = run
 
     def why_not_ready(self, image):
         """None, or one sentence. A broken file is a sentence; a missing tool raises a ToolError (P436)."""
@@ -377,7 +384,7 @@ class NoSimulationEvidence(ImageEvidence):
         firmware = self.project / "firmware"
         files = [(source.relative_to(self.project), source) for source in sorted(firmware.rglob("*.py"))
                  if "__pycache__" not in source.parts]
-        return CompileCheck(files).why_not() if files else None
+        return CompileCheck(files, self.run or ProgramRunner().run).why_not() if files else None
 
     def _why_run_failed(self, image):
         """A run that did not pass on this image refuses here too: a passed run is not needed, a failed one still counts."""
@@ -430,7 +437,8 @@ class NoSimulationEvidence(ImageEvidence):
         return [NO_SIMULATION_FLAG]
 
 
-def evidence_for(project, no_simulation, ignore_older_runs, find_tool=None):
-    """The evidence the flags of look.py and deploy.py select (they exclude each other in argparse). `find_tool` is the
-    NoSimulationEvidence's (a name -> tool_finder.Tool), the project's tools list when None."""
-    return NoSimulationEvidence(project, find_tool) if no_simulation else PassedRunEvidence(ignore_older_runs)
+def evidence_for(project, no_simulation, ignore_older_runs, find_tool=None, run=None):
+    """The evidence the flags of look.py and deploy.py select (they exclude each other in argparse). `find_tool` and `run`
+    are the NoSimulationEvidence's: a name -> tool_finder.Tool (the project's tools list when None) and what starts its
+    compile child (the Operation's `outside.run`; this machine when None). PassedRunEvidence takes neither."""
+    return NoSimulationEvidence(project, find_tool, run) if no_simulation else PassedRunEvidence(ignore_older_runs)

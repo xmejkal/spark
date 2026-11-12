@@ -24,9 +24,11 @@ import look  # noqa: E402
 from spark.bench import look_at_board  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
+from spark.records import deploy_record_store  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from fakes import FakeConsent, FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
+from spark.bench import board_codes, image_evidence  # noqa: E402
+from fakes import FakeConsent, FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event  # noqa: E402
 from suite_runs import needs_littlefs  # noqa: E402
@@ -50,7 +52,7 @@ class LookScriptCase(LookCase):
             self.ran.append(command)
             return done(data(devs)) if "devs" in command else done(text or data(esptool), 1 if fail else 0)
 
-        return self.go_with(FakeOutsideWorld(run=run, find_tool=found), *argv)
+        return self.go_with(FakeOutsideWorld(run=RealChildRun(run), find_tool=found), *argv)  # P458: the compile child is real
 
     def go_with(self, outside, *argv):
         """(exit code, stdout lines, stderr) of look.py on `outside`, a FakeOutsideWorld, so no test patches
@@ -271,8 +273,8 @@ class WhatThePersonSeesTest(LookScriptCase):
         (self.project / ".spark").mkdir(exist_ok=True)
         (self.project / ".spark" / "tools.json").write_text(json.dumps({"littlefs-python": {"on": False}}))
         self.image.write_bytes(b"x")
-        code, said, _ = self.go_with(FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
-                                                      else done(data("c6-flash-id.txt")), find_tool=real_littlefs(self.project)), "--no-simulation")
+        code, said, _ = self.go_with(FakeOutsideWorld(run=RealChildRun(lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
+                                                                       else done(data("c6-flash-id.txt"))), find_tool=real_littlefs(self.project)), "--no-simulation")
         self.assertEqual(code, 2)
         self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", said[-1])
 
@@ -283,8 +285,8 @@ class WhatThePersonSeesTest(LookScriptCase):
 
         not_installed = tool_finder.ToolError("not-installed is not installed — install: /spark:setup add not-installed", code="tool_missing")
         finder = FakeToolFinder({**FOUND, "littlefs": not_installed})
-        code, said, _ = self.go_with(FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
-                                                      else done(data("c6-flash-id.txt")), find_tool=finder.find), "--no-simulation", "--json")
+        code, said, _ = self.go_with(FakeOutsideWorld(run=RealChildRun(lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
+                                                                       else done(data("c6-flash-id.txt"))), find_tool=finder.find), "--no-simulation", "--json")
         self.assertEqual(code, 2)
         # P457, P725: by name alone; the finder the world holds is the project's, so a tools file that turns littlefs off is named
         self.assertIn(("littlefs", None), finder.asked)
@@ -515,8 +517,8 @@ class TheOperationTest(LookScriptCase):
             def report(self, event):
                 super().report(event)
                 ran_at_the_begin.append(list(outside.ran))
-        outside = FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
-                                   else done(data("c6-flash-id.txt")), find_tool=without_littlefs, reporter=Watching())
+        outside = FakeOutsideWorld(run=RealChildRun(lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
+                                                    else done(data("c6-flash-id.txt"))), find_tool=without_littlefs, reporter=Watching())
         self.go_with(outside, "--no-simulation", "--json")
         self.assertEqual(outside.reporter.events, [Event.begin("look")])
         self.assertEqual(ran_at_the_begin, [[]], "the BEGIN comes before the look runs anything")
@@ -555,6 +557,68 @@ class TheOperationTest(LookScriptCase):
             find_tool=found))
         self.assertEqual((result.status(), [(f.severity, f.subject, f.code) for f in result.findings]),
                          ("could-not-run", [("could-not-run", None, "field_unknown")]))
+
+    def values(self, no_simulation=False):
+        return {"project": self.project, "port": None, "ignore_older_runs": False, "no_simulation": no_simulation}
+
+    @staticmethod
+    def fake_tools(child=None):
+        """A `run` for a FakeOutsideWorld: mpremote devs and esptool from the fixtures, and the compile child answered with
+        `child` (its stdout), so no real child starts (P458)."""
+        def run(command, **options):
+            if image_evidence.COMPILE_CHILD in command:
+                return done(child)
+            return done(data("mpremote-devs-one.txt")) if "devs" in command else done(data("c6-flash-id.txt"))
+        return run
+
+    @needs_littlefs
+    def test_no_simulation_starts_the_compile_child_through_the_world_and_reads_the_store_it_was_given(self):
+        # P458, the card's done-when: no child process and no store read bypasses what the Operation was given
+        self.build_from_firmware()
+        asked = []
+
+        def run(command, **options):
+            if image_evidence.COMPILE_CHILD in command:
+                asked.append(options)
+            return self.fake_tools('{"ok": true}\n')(command, **options)
+        records = FakeDeployRecordStore()
+        outside = FakeOutsideWorld(run=run, find_tool=found)
+        result = run_operation(look_at_board.LookAtBoard(records=records), self.values(no_simulation=True), outside)
+        self.assertEqual((result.status(), result.data["token"]), ("ok", self.token()))
+        self.assertEqual(len(outside.ran), 3)
+        self.assertIn("devs", outside.ran[0])
+        self.assertIn("flash-id", outside.ran[1])
+        self.assertEqual(outside.ran[2], [sys.executable, "-I", "-B", "-c", image_evidence.COMPILE_CHILD])
+        self.assertEqual([json.loads(options["input"]) for options in asked],
+                         [[["firmware/main.py", str(self.project / "firmware" / "main.py")]]])
+        self.assertEqual(records.asked, [MAC])
+
+    def test_a_fake_child_that_names_a_syntax_error_is_the_no_token_sentence_and_no_real_child_runs(self):
+        # P458: the parent reads what the world's `run` answers; firmware/main.py itself compiles, so the sentence is the fake's
+        self.image.write_bytes(b"x")
+        broken = '{"checking": "firmware/main.py"}\n{"name": "firmware/main.py", "kind": "syntax", "line": 3, "msg": "invalid syntax"}\n'
+        result = run_operation(look_at_board.LookAtBoard(records=FakeDeployRecordStore()), self.values(no_simulation=True),
+                               FakeOutsideWorld(run=self.fake_tools(broken), find_tool=found))
+        self.assertEqual([(finding.code, finding.sentence) for finding in result.findings],
+                         [(board_codes.EVIDENCE_REFUSES, "no token: firmware/main.py, line 3 does not compile: invalid syntax")])
+        self.assertIn("  no token: firmware/main.py, line 3 does not compile: invalid syntax", result.lines)
+
+    def test_the_last_deploy_line_and_its_fix_come_from_the_store_the_look_was_given(self):
+        # P458: the look reads `records`, never a store of its own, and the fix line names the path the LastDeploy carries
+        self.image.write_bytes(b"x")
+        recorded = deploy_record_store.LastDeploy(outcomes.RECORDED, "p", "ready", "2026-10-17T09:00:00+02:00")
+        unreadable = deploy_record_store.LastDeploy(outcomes.NOT_CHECKED, why=deploy_record_store.WHY_UNREADABLE,
+                                                    record_path=Path("/the/store/boards/record.json"))
+        lines = []
+        for last in (recorded, unreadable):
+            records = FakeDeployRecordStore(last=last)
+            result = run_operation(look_at_board.LookAtBoard(records=records), self.values(),
+                                   FakeOutsideWorld(run=self.fake_tools(), find_tool=found))
+            self.assertEqual(records.asked, [MAC])
+            lines.append(result.lines)
+        self.assertIn("  spark's last deploy here: p, ready, 2026-10-17T09:00:00+02:00 (its store record, not read from the board)", lines[0])
+        self.assertIn("  last deploy not checked: spark's record of it cannot be read: repair or remove /the/store/boards/record.json, "
+                      "then run look.py again.", lines[1])
 
 
 class ACrashTest(LookScriptCase):

@@ -9,6 +9,7 @@ zone note of a time, and no line or question words: `board_look.say_last_deploy`
 `board_facts`.
 """
 
+import collections
 import datetime
 import json
 
@@ -24,13 +25,11 @@ WHY_UNREADABLE = "spark's record of it cannot be read"
 ZONE_NOT_STORED = "(zone not stored)"
 
 
-class LastDeploy:
-    """Value. What spark's store says of the board on USB. `project`, `verdict` and `deployed` are as `write_deploy` stored
-    them, with outcomes.RECORDED. `why` is the reason, with outcomes.NOT_CHECKED. The rest are None."""
-
-    def __init__(self, state, project=None, verdict=None, deployed=None, why=None):
-        # `state` is what the store says of the board on USB: one of the three words of `outcomes` (the reader rule is there).
-        self.state, self.project, self.verdict, self.deployed, self.why = state, project, verdict, deployed, why
+class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict deployed why record_path", defaults=(None,) * 5)):
+    """Value. What spark's store says of the board on USB. `state` is one of the three words of `outcomes` (the reader rule is
+    there). `project`, `verdict` and `deployed` are as `write_deploy` stored them, with outcomes.RECORDED. `why` is the reason,
+    with outcomes.NOT_CHECKED. The rest are None. `record_path` is the path of the record the store read (None when no MAC
+    named one); it is not in `to_dict` (P458)."""
 
     def time_said(self):
         """The stored time. With a zone it is said in the machine's zone. With none it is as stored, and says so,
@@ -51,7 +50,8 @@ class LastDeploy:
 class DeployRecordStore:
     """
     Store. The person's record of each physical board, one file per MAC in `boards/`, written after a deploy (`write_deploy`)
-    and read by the look (`read_last_deploy`). It keeps nothing in memory, so a caller makes one where it needs one.
+    and read by the look (`read_last_deploy`). It keeps nothing in memory; `LookAtBoard(records=)` and `DeployImage(records=)`
+    take it as a collaborator, and build the store's own when given None (P475, P458).
     """
 
     @staticmethod
@@ -71,16 +71,16 @@ class DeployRecordStore:
         path = self.find_path(mac)
         try:
             if not path.exists() and not path.is_symlink():  # a folder or a broken link in its place is no "none"
-                return LastDeploy(outcomes.NONE_RECORDED)
+                return LastDeploy(outcomes.NONE_RECORDED, record_path=path)
             record = json.loads(path.read_text())
         except (OSError, ValueError, RecursionError):
-            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)
+            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)
         deploys = record.get("deploys") if isinstance(record, dict) else None
         newest = deploys[-1] if isinstance(deploys, list) and deploys else None  # write_deploy appends
         kept = [newest.get(key) for key in ("project", "verdict", "deployed")] if isinstance(newest, dict) else []
         if not kept or not all(isinstance(each, str) and each.strip() for each in kept):
-            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE)
-        return LastDeploy(outcomes.RECORDED, *kept)
+            return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)
+        return LastDeploy(outcomes.RECORDED, *kept, record_path=path)
 
     def write_deploy(self, facts, verdict, who):
         """
