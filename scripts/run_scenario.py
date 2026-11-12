@@ -38,7 +38,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from spark.firmware.scenario_run import DEFAULT_TIMEOUT_MS, ScenarioRun, free_checks
+from spark.firmware.scenario_run import DEFAULT_TIMEOUT_MS, ScenarioRun
 from spark.core.outcomes import EXIT_COULD_NOT_RUN, EXIT_FOR, OK
 from spark.core.text_guards import guard_lines
 
@@ -72,13 +72,11 @@ def main(argv=None, find_tool=None):  # find_tool: a test's (a name, a project -
         status, said = run.dry_run()
         print(guard_lines("\n".join(map(str, said))), file=sys.stdout if status == OK else sys.stderr)
         return EXIT_FOR[status]
-    run.log.unlink(missing_ok=True)  # an older run's verdict must not outlive a run refused here
-    simulator, said = free_checks(run, args.project)
-    if said:
-        print(guard_lines("\n".join("run_scenario.py: %s" % each for each in said)), file=sys.stderr)
-    if simulator is None:
+    def say(lines):  # the free checks' lines, before the paid run
+        print(guard_lines("\n".join("run_scenario.py: %s" % each for each in lines)), file=sys.stderr)
+    status, sentence, log, ran = run.start(say)
+    if not ran:
         return EXIT_COULD_NOT_RUN
-    status, sentence, log = run.run(simulator.command)
     print(guard_lines("%s: %s%s" % (args.scenario.name, sentence, "\nlog: %s" % log if log else "")),
           file=sys.stdout if status == OK else sys.stderr)  # the log file in sim/runs keeps the raw text
     return EXIT_FOR[status]
