@@ -1,5 +1,6 @@
 """
-Stops a bad input and gives the board file, from a pin map and a module list. The CLI `emit_board.py` asks it.
+Stops a bad input and gives the board file, from a pin map and a module list, with the notes about the design the file
+cannot carry as a refusal. The build (`BuildService`) and the CLI `emit_board.py` ask it through `BoardEmitter` (P706).
 
 This is the last step of "I have these modules, wire them up". Everything before it — which board,
 what each module asks for, which pin each signal goes on — is settled by `board_records.py`,
@@ -32,6 +33,8 @@ from spark.core.result import Refusal
 from spark.design.board_components import (duplicate_component_names, parts_without_a_footprint,
                                            parts_without_a_pinout, parts_without_an_outline, place)
 from spark.design.board_sections import emit
+from spark.design.power_rails import (outputs_in_contention, outputs_with_nothing_on_them, pair_sides_without_a_driver,
+                                      rails_without_a_source)
 
 #: What this script prints for input it refuses, before any board is emitted; `check_spine` says the same (P407).
 REFUSED_INPUT_MESSAGE = "cannot emit a board: %s"
@@ -130,3 +133,54 @@ def board_file(inputs, assume_missing_sizes=False):
         # a number the resistor needs is missing, or the pin cannot light it: the input's, not a traceback and exit 1 (F9)
         return None, Refusal(REFUSED_INPUT_MESSAGE % refused, design_codes.SERIES_RESISTOR_UNSIZED)
 # --- end MVP ---
+
+
+def design_notes(inputs):
+    """
+    The notes about a design that stop nothing, each one line led by `note: ` (P706): a pin no part claims, an output nothing
+    receives, a rail nothing sources (one side of a driven pair in its own words, F15), and a rail two supplies drive. The
+    build's `schematic-notes` stage and the CLI's stderr carry them; nothing here changes `inputs`.
+    """
+    part_list = inputs.design.parts
+    placed = {entry["signal"] for entry in inputs.assignments}
+    claimed = {loader.signal_name(part, need) for part in part_list for need in part.get("needs") or []}
+    notes = ["note: %s was assigned a pin and no part claims it, so nothing in the emitted board connects to it" % signal
+             for signal in sorted(placed - claimed)]
+    notes += ["note: %s.%s drives net.%s and nothing on this board receives it — add whatever it drives, or that net has one "
+              "member and will not route" % (part_name, pin, net) for net, part_name, pin in outputs_with_nothing_on_them(part_list)]
+    pair_sides = pair_sides_without_a_driver(part_list)
+    for net in rails_without_a_source(part_list):
+        if net in pair_sides:  # F15: what drives a side of a pair is an amplifier, and a supply into it destroys it
+            notes.append("note: nothing drives net.%s, one side of a driven pair — add what drives the pair (the amplifier this "
+                         "terminal hangs off), never a supply, or that net has one member and the board will not route" % net)
+            continue
+        notes.append("note: nothing sources net.%s — add whatever supplies it, or that net has one member and the board will "
+                     "not route" % net)
+    for net, who in outputs_in_contention(part_list):
+        notes.append("note: net.%s is driven by more than one supply (%s) — two supplies on one rail short into each other; "
+                     "move one to its own rail or state the arrangement" % (net, ", ".join(who)))
+    return notes
+
+
+class BoardEmitter:
+    """
+    Facade: the board file's three steps as one object over this module's `read_inputs`, `board_file` and `design_notes`,
+    so `BuildService` is given one collaborator and the CLI `emit_board.py` calls the same three (P706).
+    It prints nothing, so it is no Renderer. `assume_missing_sizes` is the CLI's flag: lay out around a guessed size for a
+    part whose outline nobody recorded, saying so in the file.
+    """
+
+    def __init__(self, assume_missing_sizes=False):
+        self.assume_missing_sizes = assume_missing_sizes
+
+    def read(self, path, project, board_id=None):
+        """The design at `path` and its pin assignments (`BoardInputs`), or `RefusedInputError`."""
+        return read_inputs(path, project, board_id)
+
+    def emit(self, inputs):
+        """(the board file's text, None), or (None, the Refusal that stops it)."""
+        return board_file(inputs, self.assume_missing_sizes)
+
+    def notes(self, inputs):
+        """The design's notes, each one line."""
+        return design_notes(inputs)

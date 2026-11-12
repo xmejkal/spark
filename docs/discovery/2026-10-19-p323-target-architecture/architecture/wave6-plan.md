@@ -889,10 +889,10 @@ under `scripts/`, 26 of them lazy, and 55 in 28 test files), and 27 sit among th
 The 14 test files hold 10,578 lines. This is three times W6-F3 in lines and 2.3 times in rows (267), so the group gets
 seven PRs, none bigger than W6-F3. Two decisions, with the reason:
 
-- `BuildService` and the six `BuildStage`s are not in the move. They replace `check_spine.run` (189 lines,
-  `check_spine.py:362`), which 126 rows guard, and the in-process `BoardEmitter` call replaces a child process
-  (`:415`). Both are logic, and a move PR adds none. "No base class with one implementation" does not stop them, because
-  six stages implement one Strategy. They are one card after W6-U3, with W6-D1's goldens as its net.
+- `BuildService` is not in the move. It replaces `check_spine.run` (189 lines, `check_spine.py:362`), which 126 rows
+  guard, and the in-process `BoardEmitter` call replaces a child process (`:415`). Both are logic, and a move PR adds
+  none. It is one card after W6-U3, with W6-D1's goldens as its net: P706, which dropped the six `BuildStage`s as YAGNI
+  (six stage methods on one Service; a base class with one implementation per stage waits for a second implementation).
 - The `board-list` and `audit` Operations (N19) wait too. No design Operation runs on `run_cli` today, `boards.py`
   and `parts.py` are the next group's files, and the firmware Operations waited the same way.
 

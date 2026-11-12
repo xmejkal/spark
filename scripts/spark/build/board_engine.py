@@ -1,9 +1,11 @@
 """
-The build's two tools (P705): the board engine, tscircuit's `tsci`, found where the tools list says, asked its version
-and whether it builds a trivial board; and the diagram converter, found and run. `build_service.run` and
-`check_spine.main` read `find_toolchain` through this module, so one patch reaches both.
+The build's two tools (P705, P706): the board engine, tscircuit's `tsci`, as the Adapter `TscircuitEngine` (found where
+the tools list says, run on `board.tsx`, asked its version and whether it builds a trivial board); and the diagram
+converter, found and run as functions until its own Adapter. `BuildService` and `check_spine.main` read `find_toolchain`
+through this module, so one patch reaches both.
 """
 
+import collections
 import json
 import os
 import subprocess
@@ -17,7 +19,9 @@ from spark.records import tool_finder
 
 from spark.core.outcomes import COULD_NOT_RUN, PROBLEMS
 
-#: The probe and the converter are small jobs with their own limit, beside the build's (P659).
+#: A real tsci build of a five-part board took 496 s on the P581 bench (the autorouter 231.6 s), so the limit is
+#: about 1.8 times that (P659). The probe and the converter are small jobs with their own limit.
+BUILD_TIMEOUT_S = 900
 PROBE_TIMEOUT_S = 120
 CONVERTER_TIMEOUT_S = 120
 
@@ -63,30 +67,59 @@ TRIVIAL_BOARD = """export default () => (
 """
 
 
-def toolchain_can_build(toolchain, workdir):
+class BuildResult(collections.namedtuple("BuildResult", "circuit_path stderr")):
+    """Result: what one `tsci build` left: where its circuit.json is when it built (the file is absent when it did not),
+    and the tool's stderr, for the stage sentence."""
+
+
+class TscircuitEngine:
     """
-    Whether this tsci builds a trivial board from this working directory at all.
-
-    Run only after a build produced no circuit.json, so the happy path pays nothing. Returns
-    (built, the tool's last words) — the words matter, because "Cannot find package 'react'"
-    names a broken install where "no circuit.json" names nothing.
+    Adapter: tscircuit's `tsci` for the build (P706): `build` runs it on `board.tsx` under the build's limit, `version` asks
+    it, and `probe` asks whether it builds a trivial board at all. `toolchain` is its path, or None for an engine nobody has
+    found yet: `found_from(start)` then looks where `find_toolchain` looks. `runner` is what runs a command, `subprocess.run`
+    when None, resolved at each call so a test's patch of `subprocess.run` reaches it; `tests/fakes.py` has `FakeTscircuitEngine`.
     """
-    probe = workdir / "spark-probe"
-    probe.mkdir(exist_ok=True)
-    (probe / "board.tsx").write_text(TRIVIAL_BOARD)
-    result = subprocess.run([str(toolchain), "build", "board.tsx"], cwd=str(probe),
-                            capture_output=True, text=True, timeout=PROBE_TIMEOUT_S)
-    return (probe / "dist" / "board" / "circuit.json").is_file(), result.stderr.strip()[-400:]
 
+    def __init__(self, toolchain, runner=None):
+        self.toolchain = toolchain
+        self._runner = runner
 
-def tsci_version(toolchain):
-    """What `tsci --version` says, or "unknown version" — never an exception, never nothing."""
-    try:
-        said = subprocess.run([str(toolchain), "--version"], capture_output=True, text=True,
-                              timeout=60).stdout.strip().splitlines()
-        return said[-1].strip() if said else tool_finder.UNKNOWN_VERSION
-    except (OSError, subprocess.TimeoutExpired):
-        return tool_finder.UNKNOWN_VERSION
+    def found_from(self, start):
+        """This engine when it has its toolchain, else one over the `tsci` found up from `start`, or None (tool_missing)."""
+        if self.toolchain is not None:
+            return self
+        toolchain = find_toolchain(start)
+        return None if toolchain is None else TscircuitEngine(toolchain, self._runner)
+
+    def build(self, workdir):
+        """`tsci build board.tsx` in `workdir`; a run past BUILD_TIMEOUT_S raises `subprocess.TimeoutExpired` to the CLI."""
+        built = (self._runner or subprocess.run)([str(self.toolchain), "build", "board.tsx"], cwd=str(workdir), capture_output=True,
+                                                 text=True, timeout=BUILD_TIMEOUT_S)
+        return BuildResult(workdir / "dist" / "board" / "circuit.json", built.stderr)
+
+    def version(self):
+        """What `tsci --version` says, or "unknown version" — never an exception, never nothing."""
+        try:
+            said = (self._runner or subprocess.run)([str(self.toolchain), "--version"], capture_output=True, text=True,
+                                                    timeout=60).stdout.strip().splitlines()
+            return said[-1].strip() if said else tool_finder.UNKNOWN_VERSION
+        except (OSError, subprocess.TimeoutExpired):
+            return tool_finder.UNKNOWN_VERSION
+
+    def probe(self, workdir):
+        """
+        Whether this tsci builds a trivial board from this working directory at all.
+
+        Run only after a build produced no circuit.json, so the happy path pays nothing. Returns
+        (built, the tool's last words) — the words matter, because "Cannot find package 'react'"
+        names a broken install where "no circuit.json" names nothing.
+        """
+        probe = workdir / "spark-probe"
+        probe.mkdir(exist_ok=True)
+        (probe / "board.tsx").write_text(TRIVIAL_BOARD)
+        result = (self._runner or subprocess.run)([str(self.toolchain), "build", "board.tsx"], cwd=str(probe),
+                                                  capture_output=True, text=True, timeout=PROBE_TIMEOUT_S)
+        return (probe / "dist" / "board" / "circuit.json").is_file(), result.stderr.strip()[-400:]
 
 
 #: Where a project may carry its own converter, for its developer; otherwise the tools list's diagram-converter, the

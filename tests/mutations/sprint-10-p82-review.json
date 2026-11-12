@@ -104,8 +104,8 @@
  {
   "file": "scripts/spark/build/build_service.py",
   "name": "I1: a missing engine is looked for from the scratch directory, not the project",
-  "find": "            tool_finder.find(\"board-engine\", project or workdir)",
-  "replace": "            tool_finder.find(\"board-engine\", workdir)"
+  "find": "                tool_finder.find(\"board-engine\", project)",
+  "replace": "                tool_finder.find(\"board-engine\", inputs.workdir)"
  },
  {
   "file": "scripts/spark/firmware/sim_project.py",

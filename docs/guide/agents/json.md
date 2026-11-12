@@ -166,12 +166,12 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   `wait-serial`, not a failure.
 - Refusals and crashes. Each stage that could not run shows as `[????] <stage>` with its sentence, then
   `the chain was NOT exercised — this is not a pass`, exit 2.
-  - `emit_board.py`'s refusal of a board that states no `power.io_volts` shows as `[????] schematic` with that sentence
+  - The board emitter's refusal of a board that states no `power.io_volts` shows as `[????] schematic` with that sentence
     ([P121](https://github.com/xmejkal/spark/issues/55)).
-  - An `emit_board.py` that crashes inside `check_spine.py` is could-not-run too: the `schematic` stage's detail is
-    `emit_board.py crashed: ` and the traceback's last line.
-  - A crash in the spine's own read of the input or in the footprint drawing reads `<script> crashed: <Type>: <message>`,
-    such as `emit_footprint.py crashed: RuntimeError: boom`. Such a detail is a crash, not a defect in the design.
+  - A crash inside the board emitter (`spark/design/board_emitter.py`, called in process) is could-not-run
+    too: the `schematic` stage's detail is `the board emitter crashed: <Type>: <message>`.
+  - A crash in the footprint drawing reads `the footprint emitter crashed: <Type>: <message>`, such as
+    `the footprint emitter crashed: RuntimeError: boom`. Such a detail is a crash, not a defect in the design.
   - A board whose file cannot give a footprint stops at `[????] footprint`, before the schematic. The detail names each
     missing fact (the gaps `emit_footprint.py` names), then says what the build still gives: with `--keep`, the kept
     lines say whether `firmware/pins.py` was written.

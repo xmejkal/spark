@@ -146,7 +146,8 @@ class ABoardOnlyBuildWiresThemTest(unittest.TestCase):
         workdir = workdir or Path(tempfile.mkdtemp())
         requirements = {"board": board_id, "parts": [], "board_only": True}
         (workdir / "requirements.json").write_text(json.dumps(requirements))
-        return workdir, build_service.run(requirements, workdir, toolchain=Path("/nonexistent/tsci"))
+        service = build_service.BuildService.for_toolchain(Path("/nonexistent/tsci"))
+        return workdir, service.build(build_service.BuildInputs(requirements, workdir))
 
     def test_walk_3_s_requirements_give_the_led_and_the_button_wired_to_the_board(self):
         if not shutil.which("node"):

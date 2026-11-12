@@ -43,6 +43,9 @@ that fails on a resistor is not reporting on the design, and "the chain is broke
 tool sends somebody to debug a design nobody examined — the mirror image of a false pass, and as
 misleading. Every build verdict names the tsci that produced it, because "exit 0" once depended
 on which one PATH found first, and nothing said so.
+
+The build is `spark/build/build_service.BuildService` over `board_engine.TscircuitEngine` and
+`spark/design/board_emitter.BoardEmitter`, all in process (P706); this CLI parses, runs it and reports.
 """
 
 import argparse
@@ -63,7 +66,7 @@ from spark.breadboard import tabbed_page  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.build import build_codes  # noqa: E402
 from spark.build.board_engine import modules_for  # noqa: E402
-from spark.build.build_service import run, verdict, vouches_for_a_build  # noqa: E402
+from spark.build.build_service import BuildInputs, BuildService, verdict, vouches_for_a_build  # noqa: E402
 from spark.build.kept_files import (REQUIREMENTS_STAGE, _kept, _kept_pins, design_handed_to, drop_an_older_build,  # noqa: E402
                                     keep_breadboard, keep_simulation, keep_tabbed_page, left_off, simulation_dir)
 from spark.build.stages import Stage  # noqa: E402
@@ -163,14 +166,14 @@ def main(argv=None):
 
     # A rebuild runs the flash image the kept wokwi.toml already names, unless --firmware names another.
     simulation = simulation_dir(args)
-    if simulation and (simulation / "diagram.json").is_file():  # P482: run() merges into a copy, never the person's file
+    if simulation and (simulation / "diagram.json").is_file():  # P482: the build merges into a copy, never the person's file
         shutil.copy(simulation / "diagram.json", workdir / sim_project.KEPT_DIAGRAM)
     firmware, kept = args.firmware, None
     if not firmware and simulation:
         kept = sim_project.firmware_in(simulation / "wokwi.toml")
         firmware = kept.name
     try:
-        stages = run(requirements, workdir, toolchain, project, from_library, firmware=firmware)
+        stages = BuildService.for_toolchain(toolchain).build(BuildInputs(requirements, workdir, project, from_library, firmware))
     except subprocess.TimeoutExpired as late:
         stages = [Stage("build", COULD_NOT_RUN, timed_out_sentence(late), build_codes.STAGE_TIMED_OUT)]
     except Exception as exc:  # noqa: BLE001

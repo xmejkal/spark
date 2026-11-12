@@ -8,7 +8,7 @@
  {
   "file": "scripts/emit_board.py",
   "name": "a design built from nowhere is not told so",
-  "find": "    if not args.project and loader.is_library(design.project):\n        print(loader.LIBRARY_NOTE, file=sys.stderr)",
+  "find": "    if not args.project and loader.is_library(inputs.design.project):\n        print(loader.LIBRARY_NOTE, file=sys.stderr)",
   "replace": "    if False:\n        print(loader.LIBRARY_NOTE, file=sys.stderr)"
  },
  {

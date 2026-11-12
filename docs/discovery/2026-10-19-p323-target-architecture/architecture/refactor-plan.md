@@ -573,9 +573,9 @@ The `firmware` move adds `scenario_steps.py` and takes `stand_in/machine.py` as 
 stage 2 (its own word: `RecordKind`, `RecordFinder`, `Record`, `ShelveRecord`). It moves `deploy_record_store.py` in, adds `Brief`, and applies the renames of section 3 in `board_records.py`. The `sourcing` move splits `parts.py` by
 the job groups of the pruning list and adds the `Retriever` Strategy. The `design` move takes `footprint_stop` and the
 `board-list` Operation, `BoardEmitter` with `read_inputs`, and `PinAssigner`. The `build` move replaces
-`check_spine.run` with `BuildService` and the `BuildStage`s (the spine names seven stages in a run: `parts`, `board`,
-`schematic`, `schematic-notes`, `footprint`, `build`, `simulation`, and `areas/build.md` maps them to six classes). The
-spine then calls `BoardEmitter` in process.
+`check_spine.run` with `BuildService` (the spine names seven stages in a run: `parts`, `board`, `schematic`,
+`schematic-notes`, `footprint`, `build`, `simulation`, and `areas/build.md` maps them to six stage methods; the
+`BuildStage` family was dropped as YAGNI at P706). The spine then calls `BoardEmitter` in process.
 
 ## 11. The cites
 

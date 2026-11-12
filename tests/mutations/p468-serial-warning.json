@@ -32,7 +32,7 @@
  {
   "file": "scripts/spark/build/build_service.py",
   "name": "a full build reads only the diagram's wires again, so the XIAO gets the serial warning",
-  "find": "simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes)]",
-  "replace": "simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)) + notes)]"
+  "find": "simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes))",
+  "replace": "simulation_detail(wires, staged, compiled, limits, serial_wired(diagram)) + notes))"
  }
 ]

@@ -452,7 +452,8 @@ class TheDesignAreaTest(unittest.TestCase):
 # --- MVP ---
 class TheBuildAreaTest(unittest.TestCase):
     """W6-U3 (P705): the build's modules live in `scripts/spark/build/`, its `__init__.py` imports nothing, and each module
-    imports alone. `scripts/` keeps the two CLIs."""
+    imports alone. `scripts/` keeps the two CLIs. P706: `build_service.BuildService` runs the stages over
+    `board_engine.TscircuitEngine` and `board_emitter.BoardEmitter` in process, so no build module starts a child."""
     BUILD = ROOT / "scripts" / "spark" / "build"
     #: The modules of the area, by the names of its page (`areas/build.md`).
     MODULES = ["ai_files", "board_alone_input", "board_engine", "build_codes", "build_service", "kept_files", "project_setup", "stages"]
@@ -480,13 +481,13 @@ class TheBuildAreaTest(unittest.TestCase):
     def test_each_build_module_imports_alone(self):
         each_module_imports_alone(self, "build")
 
-    def test_the_build_runs_the_emit_board_cli_in_scripts(self):
-        # run's child is the CLI two folders up from build_service, and the plugin's own library is the plugin folder
-        code = ("from spark.records import board_records; from spark.build import build_service; "
-                "print(build_service.EMIT_BOARD_SCRIPT); print(board_records.PLUGIN_ROOT)")
+    def test_the_build_service_imports_no_subprocess_and_the_plugin_root_is_the_plugin_folder(self):
+        # P706: the board file is written in process and `tsci` runs through the engine Adapter, so build_service starts nothing
+        code = ("import sys; from spark.records import board_records; from spark.build import build_service; "
+                "print('subprocess' in dir(build_service)); print(board_records.PLUGIN_ROOT)")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True,
                              timeout=60, stdin=subprocess.DEVNULL)
-        self.assertEqual(run.stdout.split("\n")[:2], [str(ROOT / "scripts" / "emit_board.py"), str(ROOT)], run.stderr)
+        self.assertEqual(run.stdout.split("\n")[:2], ["False", str(ROOT)], run.stderr)
 # --- end MVP ---
 
 
