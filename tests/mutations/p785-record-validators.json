@@ -1,0 +1,10 @@
+[
+  {"file": "scripts/spark/records/record_kind.py", "name": "P785: _citations collects an object cites only, so a string or a list cites is never seen (test_parts.TheContractTest.test_a_cites_that_is_a_string_is_one_problem_that_states_the_form)",
+   "find": "            if name == \"cites\":", "replace": "            if name == \"cites\" and isinstance(inner, dict):"},
+  {"file": "scripts/spark/sourcing/research/research_part.py", "name": "P785: has_fact reads a present block as held again, so a skeleton's outline of nulls is no gap (test_research.GapsTest.test_a_skeleton_s_outline_of_nulls_is_not_held_so_the_outline_question_comes_first)",
+   "find": "        return not _absent(fact_path, value)", "replace": "        return value is not None"},
+  {"file": "scripts/spark/sourcing/validate_parts.py", "name": "P785: --validate's items carry no code (test_parts.EachPartRefusalHasItsCodeTest.test_validate_s_items_carry_the_contract_s_code)",
+   "find": "code=sourcing_codes.PART_CONTRACT_BROKEN) for one in checked", "replace": "code=None) for one in checked"},
+  {"file": "scripts/spark/sourcing/datasheets.py", "name": "P785: citing reads a cites that is no object as an object, so --kept crashes on a string (test_parts.EverythingFoundIsKeptTest.test_kept_reads_a_cites_that_is_no_object_as_no_citation_and_the_fact_still_cites_its_url)",
+   "find": "        cited = cites.get(\"document\") if isinstance(cites, dict) else None  # a `cites` that is no object cites nothing (P785)", "replace": "        cited = (cites or {}).get(\"document\")"}
+]

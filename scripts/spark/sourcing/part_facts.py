@@ -176,7 +176,8 @@ def skeleton(part_id, kind, vendor=None, sku=None):
     return {
         "schema": 1, "id": part_id, "name": None, "kind": kind,
         "//": ("Written by /spark:research. A null is a fact nobody has recorded. verified: true = the "
-               "vendor's own text at the cited URL; read off an image, inferred or computed = false."),
+               "vendor's own text at the cited URL; read off an image, inferred or computed = false. A pin is a wiring "
+               "name of letters, digits and _; what the silkscreen prints goes in printed (\"pin\": \"VCC\", \"printed\": \"+5V\")."),
         "vendor": vendor, "sku": sku, "sources": [],
         "needs": [], "power": [], "unused_pins": [], "pin_order": [], "footprint": None,
         "body_mm": {"width": None, "height": None, "verified": False, "source": None,

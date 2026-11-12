@@ -29,6 +29,7 @@ from spark.core.replies import (CHOICE, EITHER, DeferringReplyStrategy, GivenRep
                                 TerminalReplyStrategy)
 from spark.records.fact_needs import FactNeed, FactNeeds  # noqa: E402
 from spark.records.store import StoreError  # noqa: E402
+from spark.sourcing.part_facts import skeleton  # noqa: E402
 from spark.sourcing.part_records import validate  # noqa: E402
 from spark.sourcing.research import build_research_outside_world, reply_strategy_for  # noqa: E402
 from spark.sourcing.research.merge import fold_documents, fold_not_published, fold_replies, not_published_of  # noqa: E402
@@ -51,6 +52,8 @@ RECORD = {
     "documents": {DRAWING: {"url": "https://example.org/x_dimension.pdf", "sha256": SHA, "file": FILE, "retrieved": "2026-11-10",
                             "title": "X dimension drawing (Unit: mm)", "version": None}},
 }
+#: The outline block `parts.py --skeleton` writes: every size null, a fact nobody has recorded (P785).
+SKELETON_BODY = skeleton("x-mod", "module")["body_mm"]
 HOLES = [{"x_mm": 2, "y_mm": 2, "drill_mm": 2}]
 HEADER = {"pitch_mm": 2.54, "pins": [3], "rows": 1, "first_pad_from_edge_mm": 1.35}
 BY = "replies file research-replies.json"
@@ -103,7 +106,14 @@ class GapsTest(unittest.TestCase):
     def test_has_fact_walks_a_block_a_nested_key_a_missing_key_and_a_null(self):
         record = {"body_mm": {"width": 1}, "physical": {"header": {"rows": 1}, "thickness_mm": None}}
         self.assertEqual([has_fact(record, path) for path in ("body_mm", "physical.header", "physical.header.rows", "physical.mounting_holes", "physical.thickness_mm", "facts.x")],
-                         [True, True, True, False, False, False])
+                         [False, True, True, False, False, False], "a width without a height is owed (P785)")
+
+    def test_a_skeleton_s_outline_of_nulls_is_not_held_so_the_outline_question_comes_first(self):
+        # P785 (P737 row 129): the block was present as itself, so research never asked the one question a skeleton exists for
+        self.assertFalse(has_fact(dict(RECORD, body_mm=SKELETON_BODY), "body_mm"))
+        self.assertFalse(has_fact({"body_mm": {"width": 10, "height": None, "verified": False}}, "body_mm"))
+        self.assertEqual([gap.fact_path for gap in find_gaps(dict(RECORD, body_mm=SKELETON_BODY), NEEDS)],
+                         ["body_mm", "physical.thickness_mm", "physical.mounting_holes", "physical.header"])
 
     def test_the_fixture_has_the_three_physical_gaps_and_body_mm_once_when_absent(self):
         self.assertEqual([gap.fact_path for gap in find_gaps(RECORD, NEEDS)], ["physical.thickness_mm", "physical.mounting_holes", "physical.header"])
@@ -141,6 +151,10 @@ class SettleTest(unittest.TestCase):
     def test_a_body_mm_reply_with_an_extra_key_is_settled_by_its_sizes(self):
         given = {"body_mm": reply("body_mm", {"width": 16, "height": 11, "depth": 3})}
         self.assertEqual(settle(given, RECORD), ({}, []))
+
+    def test_a_body_mm_reply_on_a_skeleton_s_outline_stays_and_fills_nothing(self):
+        given = {"body_mm": reply("body_mm", {"width": 16, "height": 11})}
+        self.assertEqual(settle(given, dict(RECORD, body_mm=SKELETON_BODY)), (given, []))
 
     def test_a_body_mm_reply_equal_to_the_block_s_sizes_drops(self):
         self.assertEqual(held_value(RECORD, "body_mm"), {"width": 16, "height": 11})
@@ -370,6 +384,17 @@ class FoldRepliesTest(unittest.TestCase):
         self.assertEqual((written, after["body_mm"]), (["body_mm"], {"width": 16, "height": 11, "verified": False, "source": "given by " + BY,
                                                                       "why_it_matters": "spark.x.Y reads it"}))
         self.assertEqual(validate(after, Path("x-mod.json")), [])
+
+    def test_body_mm_on_a_skeleton_s_outline_is_the_reply_s_sizes_and_provenance_and_null_sizes_leave_it_not_held(self):
+        # P785: the fold replaces the whole block, so the skeleton's nulls are never merged with a reply
+        question = question_for(need("body_mm", "reads", None), NEEDS.question_of("body_mm"))
+        on_skeleton = dict(RECORD, body_mm=SKELETON_BODY)
+        after, _ = fold_replies(on_skeleton, {"body_mm": reply("body_mm", {"width": 16, "height": 11}, cites=None)}, [question], {"body_mm": question.why})
+        self.assertEqual(after["body_mm"], {"width": 16, "height": 11, "verified": False, "source": "given by " + BY, "why_it_matters": "spark.x.Y reads it"})
+        after, _ = fold_replies(on_skeleton, {"body_mm": reply("body_mm", {"width": None, "height": None}, cites=None, note="not on the drawing")},
+                                [question], {"body_mm": question.why})
+        self.assertEqual(after["body_mm"], {"verified": False, "source": "given by " + BY, "why_it_matters": "spark.x.Y reads it", "note": "not on the drawing"})
+        self.assertFalse(has_fact(after, "body_mm"))
 
 
 class ResearchPartTest(unittest.TestCase):

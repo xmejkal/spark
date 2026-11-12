@@ -37,7 +37,8 @@ trusting either.
 ## 3. Identify and record
 
 Launch the `parts-researcher` agent with: the photo's path, the markings you read, the project
-directory, the plugin directory (`${CLAUDE_PLUGIN_ROOT}`) and the record schema. The chip's datasheet is the fact source — supply range, I2C
+directory, the plugin directory (`${CLAUDE_PLUGIN_ROOT}`) and the record schema; a pin is a wiring name and what the
+silkscreen prints goes in `printed`, as the record form in `agents/parts-researcher.md` says. The chip's datasheet is the fact source — supply range, I2C
 address, accuracy, thresholds — with its URL. Everything only the photo supports — pin order, the
 presence of pull-ups, a charging diode, dimensions — is `verified: false` with "read from the
 photo; confirm on the bench", and the record says nothing about owning it — the drawer does.

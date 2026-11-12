@@ -252,9 +252,10 @@ def citing(record, keys, url, where=""):
         here = "%s.%s" % (where, name) if where else name
         if not isinstance(value, dict):
             continue
-        cited = (value.get("cites") or {}).get("document")
+        cites = value.get("cites")
+        cited = cites.get("document") if isinstance(cites, dict) else None  # a `cites` that is no object cites nothing (P785)
         if cited is not None and cited in keys:
-            found.append((here, value["cites"].get("at") or "no page given"))
+            found.append((here, cites.get("at") or "no page given"))
         elif url and isinstance(value.get("source"), str) and url in value["source"]:
             found.append((here, "cites its URL"))
         else:

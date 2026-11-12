@@ -128,7 +128,7 @@
  {
   "file": "scripts/spark/records/record_kind.py",
   "name": "a citation of a kept: false document passes",
-  "find": "        elif isinstance(documents[cited], dict) and documents[cited].get(\"kept\") is False:",
+  "find": "        elif isinstance(documents[document], dict) and documents[document].get(\"kept\") is False:",
   "replace": "        elif False:"
  },
  {

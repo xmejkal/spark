@@ -21,7 +21,7 @@ from spark.core.result import Finding, NextStep, OperationResult
 from spark.core.text_guards import guard_lines, printable
 from spark.records import record_kind
 from spark.records.fact_needs import FactNeeds
-from spark.records.record_kind import _write_record
+from spark.records.record_kind import _absent, _write_record
 from spark.sourcing.part_records import PHYSICAL_KEYS, PartError, definition_path, validate
 from spark.sourcing.research import PHASE, REFUSED_LINE
 from spark.sourcing.research.merge import BODY, DOCUMENTS, body_sizes, fold_documents, fold_not_published, fold_replies, not_published_of
@@ -56,8 +56,13 @@ def refusal(outside, refused):
 
 
 def has_fact(record, fact_path):
-    """Whether the record holds a value at this dotted path. A block (`body_mm`, `physical.header`) is present as itself."""
-    return _walk(record, fact_path) is not None
+    """Whether the record holds a value at this dotted path. A top-level fact the chain reads (`body_mm`) is held when the
+    contract does not owe it (`record_kind._absent`: a block of nulls is a fact nobody has recorded); any other path
+    (`physical.header`) when its value is not null."""
+    value = _walk(record, fact_path)
+    if fact_path in record_kind.CHAIN_FACTS:
+        return not _absent(fact_path, value)
+    return value is not None
 
 
 def _walk(record, fact_path):
