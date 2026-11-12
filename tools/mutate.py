@@ -48,8 +48,8 @@ tables and moves no other row; run `--anchors` after it. It exits 2 when no row 
 meets the tests that import it; `scripts/spark/firmware/stand_in/machine.py` stays `machine`. Rows do not run
 in parallel: `--jobs 4` saved 24 s on 8 rows (rows file of P440), under the minute that would pay for the flag.
 
-A red pre-check names its tests (the `FAIL:`, `ERROR:` and `FAILED` lines): on 2026-11-12 a sweep in a copy stopped at 429 s
-on "not green" alone, and the council read it as a bug of `--copy` (P787).
+A red pre-check names its tests: the `FAIL:`, `ERROR:` and `FAILED` lines of the verdict (P787), so a red copy is never
+guessed at.
 
 WHAT PASSING MEANS
 
@@ -108,9 +108,10 @@ def _from_source(prefix):
 
 class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
     """
-    Result: one suite run, true when green. `red_lines` are the lines of unittest's verdict that name what went red
-    (`FAIL:`, `ERROR:`, `FAILED (...)`), so a red run can say which tests (P787: a red pre-check in a copy was read as a
-    bug of `--copy`, because the tool hid the tests; they were the tree's). Empty when green.
+    Result: one suite run, true when green. `red_lines` are the lines of unittest's verdict that say what went red: each
+    `FAIL:` and `ERROR:` line, each traceback's last `...Error:` line, the `Ran N tests` line and the `FAILED (...)` line
+    (`RED_LINE`), so a red run names its tests (P787: a red pre-check that said only "not green" was read as a bug of
+    `--copy`, which it was not shown to be). Empty when green.
     """
     __slots__ = ()
 
@@ -119,7 +120,7 @@ class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
 
 
 #: A line of unittest's verdict that names a red test or sums the red run.
-RED_LINE = re.compile(r"^(?:(?:FAIL|ERROR): .*|FAILED \(.*|Ran \d+ tests? in .*|\w+Error: .*)$", re.M)
+RED_LINE = re.compile(r"^(?:(?:FAIL|ERROR): .*|FAILED \(.*|Ran \d+ tests? in .*|[\w.]+Error: .*)$", re.M)
 
 
 def suite_is_green(root, tests, only=(), failfast=False):

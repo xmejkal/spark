@@ -266,6 +266,7 @@ class TheToolIsHonestAboutItselfTest(unittest.TestCase):
         self.assertEqual([line for line in said if "test_add" in line], ["  FAIL: test_add (test_m.T)"])
         self.assertIn("  FAILED (failures=1)", said)
         self.assertEqual(mutate.suite_is_green(tiny_project(), "tests").red_lines, (), "a green run names nothing")
+        self.assertEqual(mutate.RED_LINE.findall("x\nsubprocess.CalledProcessError: exit 1\ny"), ["subprocess.CalledProcessError: exit 1"])
 
     def test_all_caught_is_only_reported_when_the_suite_is_green_afterwards(self):
         # `restored=False` means something is left mutated or broke; nothing can be trusted.
