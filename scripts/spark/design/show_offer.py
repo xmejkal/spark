@@ -3,13 +3,11 @@
 was `goal_handlers._op_offer`. It writes nothing.
 """
 
-from pathlib import Path
 
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, Argument
-from spark.records.answer_operation import AnswerOperation
+from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer, _problem
 from spark.design import design_codes, needs
-from spark.design.find_offers import PROJECT_HELP
 
 # --- MVP ---
 #: The sentence of a key nothing live has.
@@ -24,7 +22,7 @@ class ShowOffer(AnswerOperation):
     arguments = (Argument(("--offer",), "key", str, "what one offer says of itself, for the chooser to read: a record's id or a drawer entry's "
                           "key — about, description, tags, what it does, its names, power and size. --project reads the project's own records",
                           metavar="KEY"),
-                 Argument(("--project",), "project", Path, PROJECT_HELP),
+                 ANSWER_ARGUMENTS["project"],
                  COMMON_ARGUMENTS[JSON_DEST])
 
     def build_answer(self, key, project):

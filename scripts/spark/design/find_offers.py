@@ -4,10 +4,9 @@
 text, owned first; a catalog row says how to build with it. It writes nothing.
 """
 
-from pathlib import Path
 
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, Argument
-from spark.records.answer_operation import AnswerOperation
+from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation, PROJECT_HELP  # noqa: F401 — parts.py read PROJECT_HELP here until PR 2
 from spark.records.record_kind import Answer, _cannot
 from spark.sourcing import datasheets, matching
 from spark.sourcing.datasheets import NEED_MATCHER
@@ -22,7 +21,6 @@ NEED_NOTHING = ("  nothing in the drawer, the boards or the part records matches
 #: The help of the options the goal Operations share, worded as parts.py's OPTIONS rows.
 MATCHER_HELP = ("with --match or --need: the matcher that ranks the offers (--match: same-words, word-overlap; "
                 "--need: word-overlap, name-contains); a name that does not fit is refused with the names that do")
-PROJECT_HELP = "a project whose own parts/ beats the shipped library"
 
 
 def _need_line(row):
@@ -44,7 +42,7 @@ class FindOffers(AnswerOperation):
                           "what each record (parts and boards, every layer) or drawer entry does, its tags, names and text, owned first (word-overlap); "
                           "--matcher name-contains for the names alone", nargs="+", metavar="WORD"),
                  Argument(("--matcher",), "matcher", str, MATCHER_HELP, metavar="NAME"),
-                 Argument(("--project",), "project", Path, PROJECT_HELP),
+                 ANSWER_ARGUMENTS["project"],
                  COMMON_ARGUMENTS[JSON_DEST])
 
     def build_answer(self, words, matcher, project):

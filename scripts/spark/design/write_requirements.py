@@ -10,7 +10,7 @@ from pathlib import Path
 
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument
 from spark.records import store
-from spark.records.answer_operation import AnswerOperation
+from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer
 from spark.sourcing.part_facts import shelve
 from spark.sourcing.part_handlers import _write_lines
@@ -18,10 +18,6 @@ from spark.design import board_components, footprint_emitter, need_requirements
 from spark.design.goal_handlers import _names_your_entries
 
 # --- MVP ---
-#: The help of `--dry-run`, worded as parts.py's OPTIONS row.
-DRY_RUN_HELP = "with an operation that has an effect: say what it would do, and do nothing"
-
-
 def _gap_lines(problems, no_supply, no_receiver, no_driver):
     """What `--requirements` says of a rail with no supply, a net with no receiver or no driver: none on a refusal."""
     said = []
@@ -45,7 +41,7 @@ class WriteRequirements(AnswerOperation):
                           "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline "
                           "is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; "
                           "board_only when the board itself serves every need", metavar="PROJECT"),
-                 Argument(("--dry-run",), "dry_run", bool, DRY_RUN_HELP),
+                 ANSWER_ARGUMENTS["dry_run"],
                  COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES)
 

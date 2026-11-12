@@ -1,1 +1,3 @@
-{"envelope":1,"tool":"parts","op":"fetch","status":"problems","data":null,"problems":[{"subject":"no-such-part","sentence":"no record called 'no-such-part' to fetch for","fix":null}],"unchecked":[],"next":[],"truncated":null,"notes":[],"assumptions":[]}
+{"envelope":1,"tool":"parts","op":"fetch","status":"problems","data":null,"problems":[{"subject":"no-such-part","code":"no_such_part","sentence":"no record called 'no-such-part' to fetch for","fix":null}],"unchecked":[],"next":[],"truncated":null,"notes":[],"assumptions":[]}
+--- stderr ---
+parts.py: no record called 'no-such-part' to fetch for

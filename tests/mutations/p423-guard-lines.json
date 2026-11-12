@@ -24,10 +24,10 @@
   "replace": "print(line)  # --json stays raw, as data"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/keep_file.py",
   "name": "--keep prints the photo's name as it is",
-  "find": "% printable(path.name)]\n            if located and not args.json else ())",
-  "replace": "% path.name]\n            if located and not args.json else ())"
+  "find": "% printable(path.name)]\n                if located else ())",
+  "replace": "% path.name]\n                if located else ())"
  },
  {
   "file": "scripts/spark/bench/board_look.py",

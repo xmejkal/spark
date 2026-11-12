@@ -12,15 +12,15 @@
   "replace": "        return [need for need in self.rows if need.fact_name == write.rpartition(\".\")[2]]"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/list_unverified.py",
   "name": "unverified prints no reader line",
   "find": "        lines.extend(_reader_line(need) for need in read_by)",
   "replace": "        lines.extend(_reader_line(need) for need in ())"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/list_unverified.py",
   "name": "unverified writes read_by for a fact nothing reads",
-  "find": "        if read_by:\n            entry[\"read_by\"]",
-  "replace": "        if True:\n            entry[\"read_by\"]"
+  "find": "            if read_by:\n                entry[\"read_by\"]",
+  "replace": "            if True:\n                entry[\"read_by\"]"
  }
 ]

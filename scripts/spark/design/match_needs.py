@@ -4,19 +4,16 @@ Operation on the core (P726). It was `goal_handlers._op_match`. A board that ser
 display has `limits` (P397). It writes nothing.
 """
 
-from spark.core import codes
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, Argument
 from spark.core.text_guards import printable
 from spark.records import store
-from spark.records.answer_operation import AnswerOperation, START_FIX, START_SENTENCE
+from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer, _cannot
 from spark.sourcing import matching
 from spark.design import design_codes, needs
 from spark.design.find_offers import MATCHER_HELP
 
 # --- MVP ---
-#: The help of `--from`, worded as parts.py's OPTIONS row.
-START_HELP = "with a listing: start at item N (truncated.next says where)"
 #: The sentence of a project with no needs yet.
 NO_NEEDS_SENTENCE = "%s has no needs yet — /spark:idea writes them"
 
@@ -30,12 +27,10 @@ class MatchNeeds(AnswerOperation):
                           "each with its score and why; --matcher picks the matcher that ranks them; a board that serves a need through its own "
                           "LED, button or display has `limits`, the sentences for what a passed run does not test of it", metavar="PROJECT"),
                  Argument(("--matcher",), "matcher", str, MATCHER_HELP, metavar="NAME"),
-                 Argument(("--from",), "start", int, START_HELP, 0, metavar="N"),
+                 ANSWER_ARGUMENTS["start"],
                  COMMON_ARGUMENTS[JSON_DEST])
 
     def build_answer(self, project, matcher, start):
-        if start < 0:
-            return Answer(unchecked=[_cannot(START_SENTENCE % start, START_FIX, code=codes.BAD_ARGUMENT)])
         try:
             chosen = matching.matcher(matcher or needs.MATCHER, "match")
         except matching.UnknownMatcherError as wrong:

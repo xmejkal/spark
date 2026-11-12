@@ -30,9 +30,9 @@
   "replace": "            lines.append(\"    %s  %s\" % (path, \"present\"))"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/find_kept.py",
   "name": "finding nothing says nothing",
-  "find": "found or [\"nothing kept matches %s — fetch it, or --keep a file you have\" % \" \".join(args.kept)])",
+  "find": "found or [\"nothing kept matches %s — fetch it, or --keep a file you have\" % \" \".join(words)])",
   "replace": "found or [])"
  },
  {
