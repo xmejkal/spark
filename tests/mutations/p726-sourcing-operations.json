@@ -1,22 +1,62 @@
 [
-  {"file": "scripts/spark/sourcing/part_operation.py", "name": "P726 PR 2: a PartError is a could-not-run item, not a problem on the part",
-   "find": "        if not isinstance(broken, PartError):", "replace": "        if True:"},
-  {"file": "scripts/spark/sourcing/part_operation.py", "name": "P726 PR 2: the subject of a list of ids is the first id alone",
-   "find": "        subject = \" \".join(value) if isinstance(value, list)", "replace": "        subject = value[0] if isinstance(value, list)"},
-  {"file": "scripts/spark/records/answer_operation.py", "name": "P726 PR 2: a --from of 0 is refused as negative",
-   "find": "        if start is not None and start < 0:", "replace": "        if start is not None and start <= 0:"},
-  {"file": "scripts/spark/core/cli.py", "name": "P726 PR 2: a flag that repeats keeps its last value alone",
-   "find": "            counted.update({\"action\": \"append\"} if argument.repeats else {})", "replace": "            counted.update({})"},
-  {"file": "scripts/spark/sourcing/resolve_sources.py", "name": "P726 PR 2: --sources declares no network",
-   "find": "    effects = (READS, FETCHES)", "replace": "    effects = (READS,)"},
-  {"file": "scripts/spark/sourcing/keep_file.py", "name": "P726 PR 2: a dry run of --keep declares a write",
-   "find": "        return (READS,) if values[\"dry_run\"] else self.effects", "replace": "        return self.effects"},
-  {"file": "scripts/spark/sourcing/keep_file.py", "name": "P726 PR 2: the store's refusal of a name loses its code",
-   "find": "            return Answer(unchecked=[_cannot(str(refused), code=refused.code)], diagnostics=said)", "replace": "            return Answer(unchecked=[_cannot(str(refused))], diagnostics=said)"},
-  {"file": "scripts/spark/sourcing/write_skeleton.py", "name": "P726 PR 2: a skeleton with no kind is refused with no code",
-   "find": "            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND, code=codes.BAD_ARGUMENT)])", "replace": "            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND)])"},
-  {"file": "scripts/spark/sourcing/mark_step.py", "name": "P726 PR 2: a word that is no step is refused with no code",
-   "find": "            return Answer(unchecked=[_cannot(NOT_A_STEP % \", \".join(run_cost.STEPS), code=codes.BAD_ARGUMENT)])", "replace": "            return Answer(unchecked=[_cannot(NOT_A_STEP % \", \".join(run_cost.STEPS))])"},
-  {"file": "scripts/parts.py", "name": "P726 PR 2: the sourcing table is not routed to the core",
-   "find": "{**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS}.items()", "replace": "design_operations.OPERATIONS.items()"}
+ {
+  "file": "scripts/spark/sourcing/part_operation.py",
+  "name": "P726 PR 2: a PartError is a could-not-run item, not a problem on the part",
+  "find": "        if not isinstance(broken, PartError):",
+  "replace": "        if True:"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_operation.py",
+  "name": "P726 PR 2: the subject of a list of ids is the first id alone",
+  "find": "        subject = \" \".join(token for token in value if isinstance(token, str)) if isinstance(value, list)",
+  "replace": "        subject = value[0] if isinstance(value, list)"
+ },
+ {
+  "file": "scripts/spark/records/answer_operation.py",
+  "name": "P726 PR 2: a --from of 0 is refused as negative",
+  "find": "        if start is not None and start < 0:",
+  "replace": "        if start is not None and start <= 0:"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P726 PR 2: a flag that repeats keeps its last value alone",
+  "find": "            counted.update({\"action\": \"append\"} if argument.repeats else {})",
+  "replace": "            counted.update({})"
+ },
+ {
+  "file": "scripts/spark/sourcing/resolve_sources.py",
+  "name": "P726 PR 2: --sources declares no network",
+  "find": "    effects = (READS, FETCHES)",
+  "replace": "    effects = (READS,)"
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P726 PR 2: a dry run of --keep declares a write",
+  "find": "        return (READS,) if values[\"dry_run\"] else self.effects",
+  "replace": "        return self.effects"
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P726 PR 2: the store's refusal of a name loses its code",
+  "find": "            return Answer(unchecked=[_cannot(str(refused), code=refused.code)], diagnostics=said)",
+  "replace": "            return Answer(unchecked=[_cannot(str(refused))], diagnostics=said)"
+ },
+ {
+  "file": "scripts/spark/sourcing/write_skeleton.py",
+  "name": "P726 PR 2: a skeleton with no kind is refused with no code",
+  "find": "            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND, code=codes.BAD_ARGUMENT)])",
+  "replace": "            return Answer(unchecked=[_cannot(NEEDS_PROJECT_AND_KIND)])"
+ },
+ {
+  "file": "scripts/spark/sourcing/mark_step.py",
+  "name": "P726 PR 2: a word that is no step is refused with no code",
+  "find": "            return Answer(unchecked=[_cannot(NOT_A_STEP % \", \".join(run_cost.STEPS), code=codes.BAD_ARGUMENT)])",
+  "replace": "            return Answer(unchecked=[_cannot(NOT_A_STEP % \", \".join(run_cost.STEPS))])"
+ },
+ {
+  "file": "scripts/parts.py",
+  "name": "P726 PR 2: the sourcing table is not routed to the core",
+  "find": "{**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag}.get(_name)",
+  "replace": "{**design_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag}.get(_name)"
+ }
 ]

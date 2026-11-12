@@ -12,16 +12,16 @@
   "replace": "\\u200f\\u202a"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/core/cli.py",
   "name": "parts says a problem on stderr without the guard",
-  "find": "print(guard_lines(said_here), file=sys.stderr)",
-  "replace": "print(said_here, file=sys.stderr)"
+  "find": "        print(guard_lines(\"\\n\".join(result.diagnostics)), file=sys.stderr)",
+  "replace": "        print(\"\\n\".join(result.diagnostics), file=sys.stderr)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/records/record_kind.py",
   "name": "parts prints its lines without the guard",
-  "find": "print(guard_lines(line))  # --json stays raw, as data",
-  "replace": "print(line)  # --json stays raw, as data"
+  "find": "[guard_lines(line) for line in said.text_lines()]",
+  "replace": "[line for line in said.text_lines()]"
  },
  {
   "file": "scripts/spark/sourcing/keep_file.py",

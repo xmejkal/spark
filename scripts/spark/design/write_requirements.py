@@ -13,9 +13,8 @@ from spark.records import store
 from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer
 from spark.sourcing.part_facts import shelve
-from spark.sourcing.part_handlers import _write_lines
+from spark.sourcing.write_answers import names_your_entries, write_lines
 from spark.design import board_components, footprint_emitter, need_requirements
-from spark.design.goal_handlers import _names_your_entries
 
 # --- MVP ---
 def _gap_lines(problems, no_supply, no_receiver, no_driver):
@@ -78,10 +77,10 @@ class WriteRequirements(AnswerOperation):
         said += _gap_lines(problems, no_supply, no_receiver, no_driver)
         said += ["  not on the board: %s — %s" % (item["need"], need_requirements.NOT_ON_THE_BOARD[item["why"]].format(picks=", ".join(item["picks"])))
                  for item in ([] if problems else unserved)]
-        said += [] if problems else _names_your_entries(need_requirements.REQUIREMENTS, need_requirements.unserved_keys(content) - named, dry_run)
+        said += [] if problems else names_your_entries(need_requirements.REQUIREMENTS, need_requirements.unserved_keys(content) - named, dry_run)
         return Answer({"path": str(path), "requirements": content, "shelved": [Path(r).stem for r, _ in shelving],
                        "unplaced": unplaced, "kept": kept, "board_was": board_was, "placeholder_outline": [part_id for part_id, _ in placeholder],
                        "unserved": unserved, "no_supply": no_supply, "no_driver": no_driver,
                        "no_receiver": no_receiver, "written": not problems and not dry_run},
-                      _write_lines([], problems, dry_run, said), problems=problems)
+                      write_lines([], problems, dry_run, said), problems=problems)
 # --- end MVP ---

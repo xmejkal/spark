@@ -412,8 +412,9 @@ class TheDesignAreaTest(unittest.TestCase):
     DESIGN = ROOT / "scripts" / "spark" / "design"
     #: The modules of the area so far, by the names of its page (`areas/design.md`).
     MODULES = ["audit_records", "board_components", "board_emitter", "board_sections", "copper", "design_codes", "design_operations", "fab",
-               "find_offers", "footprint_emitter", "goal_handlers", "list_boards", "list_needs", "loader", "match_needs", "need_requirements",
-               "needs", "netlist", "pin_assigner", "power_rails", "restricted_pins", "show_offer", "tally_cost", "write_requirements"]
+               "find_offers", "footprint_emitter", "list_boards", "list_needs", "loader", "match_needs", "need_requirements",
+               "needs", "netlist", "pick_parts", "pin_assigner", "power_rails", "restricted_pins", "set_needs", "show_offer", "tally_cost",
+               "write_requirements"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print. A library function back in a CLI, under
     #: any name, fails the check.
     CLIS = {"assign_pins.py": ["main"], "emit_board.py": ["main"], "emit_footprint.py": ["_report", "main"]}
@@ -444,7 +445,7 @@ class TheDesignAreaTest(unittest.TestCase):
         code = ("from spark.core.operation import Operation; from spark.design import design_operations as d; "
                 "print(sorted(d.OPERATIONS)); print([op for op, cls in d.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-        self.assertEqual(run.stdout.split("\n")[:2], ["['audit', 'list-boards', 'match', 'need', 'needs', 'offer', 'requirements', 'tally']", "[]"], run.stderr)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['audit', 'list-boards', 'match', 'need', 'needs', 'needs-set', 'offer', 'pick', 'requirements', 'tally']", "[]"], run.stderr)
 # --- end MVP ---
 
 
@@ -557,16 +558,15 @@ class TheSourcingAreaTest(unittest.TestCase):
     that read a payload."""
     SOURCING = ROOT / "scripts" / "spark" / "sourcing"
     #: The modules of the area, by the names of its page (`areas/sourcing.md`).
-    MODULES = ["datasheets", "drawer", "fetch_documents", "find_kept", "keep_file", "list_catalog", "list_drawer", "list_parts",
-               "list_signals", "list_unverified", "mark_step", "matching", "offers", "part_facts", "part_handlers", "part_operation",
-               "part_records", "part_rules", "promote_record", "read_datasheet", "resolve_sources", "run_cost", "show_part",
-               "sourcing_codes", "sourcing_operations", "validate_parts", "write_skeleton"]
+    MODULES = ["brief_choices", "datasheets", "drawer", "fetch_documents", "find_kept", "import_drawer", "keep_file", "list_catalog",
+               "list_drawer", "list_parts", "list_signals", "list_unverified", "mark_step", "matching", "offers", "part_facts",
+               "part_operation", "part_records", "part_rules", "promote_record", "read_datasheet", "record_home", "resolve_sources",
+               "run_cost", "set_drawer", "set_facts", "set_function", "show_part", "sourcing_codes", "sourcing_operations",
+               "validate_parts", "write_answers", "write_skeleton"]
     #: `parts.py`'s own top-level functions: its parser and printer, `_op_describe`, `_op_needs_drop` on the core, the route
     #: to the Operations on the core (P707, P726), and the handlers that read a JSON payload, because reading stdin is the
     #: interface's job (P721 row 6). The text printer's rule is `record_kind.Answer.text_lines` since P726.
-    PARTS_CLI = ["_not_negative", "_op_describe", "_op_drawer_import", "_op_drawer_set", "_op_fact_set", "_op_function_set",
-                 "_op_needs_drop", "_op_needs_set", "_op_pick", "_parser", "_part_problem", "_read_json_input", "_say", "asked_on_the_core", "main",
-                 "on_the_core"]
+    PARTS_CLI = ["DropNeedFlag", "asked_on_the_core", "catalog_epilog", "main", "on_the_core"]
 
     def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):
         modules = sorted(path.stem for path in self.SOURCING.glob("*.py") if path.name != "__init__.py")
@@ -605,8 +605,8 @@ class TheSourcingAreaTest(unittest.TestCase):
         code = ("from spark.core.operation import Operation; from spark.sourcing import sourcing_operations as s; "
                 "print(sorted(s.OPERATIONS)); print([op for op, cls in s.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-        self.assertEqual(run.stdout.split("\n")[:2], ["['catalog', 'drawer', 'fetch', 'keep', 'kept', 'list', 'promote', 'read', 'show', 'signals', "
-                                                     "'skeleton', 'sources', 'step', 'unverified', 'validate']", "[]"], run.stderr)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['catalog', 'drawer', 'drawer-import', 'drawer-set', 'fact-set', 'fetch', 'function-set', 'keep', 'kept', 'list', "
+                                                     "'promote', 'read', 'show', 'signals', 'skeleton', 'sources', 'step', 'unverified', 'validate']", "[]"], run.stderr)
 
     def test_the_first_argument_of_every_parts_operation_is_its_flag(self):
         # P726 PR 2: parts.py routes by that flag, and a PartError's subject is its value (`PartOperation.answer_refusal`)

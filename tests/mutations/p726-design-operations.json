@@ -1,8 +1,8 @@
 [
   {"file": "scripts/parts.py", "name": "P726: a prefix wins over the exact flag, so --need runs needs",
-   "find": "        if flag in ON_THE_CORE:\n            return ON_THE_CORE[flag]\n", "replace": ""},
+   "find": "        if flag in FLAGS:\n            return OPERATIONS[flag[2:]]\n", "replace": ""},
   {"file": "scripts/parts.py", "name": "P726: an ambiguous prefix picks the first flag it fits",
-   "find": "        if len(fitting) == 1 and fitting[0] in ON_THE_CORE:", "replace": "        if fitting and fitting[0] in ON_THE_CORE:"},
+   "find": "        if len(fitting) == 1:", "replace": "        if fitting:"},
   {"file": "scripts/parts.py", "name": "P726: --match=. is not split at the equals sign",
    "find": "        flag = item.split(\"=\", 1)[0]", "replace": "        flag = item"},
   {"file": "scripts/spark/records/answer_operation.py", "name": "P726: a negative --from is paged",

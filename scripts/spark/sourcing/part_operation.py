@@ -22,7 +22,7 @@ class PartOperation(AnswerOperation):
     def answer_refusal(self, broken, values):
         if not isinstance(broken, PartError):
             return super().answer_refusal(broken, values)
-        value = values.get(self.arguments[0].dest)
-        subject = " ".join(value) if isinstance(value, list) else (value if isinstance(value, str) else None)
+        value = values.get(self.arguments[0].dest)  # the str tokens alone: a loaded payload (PR 3) never names the part
+        subject = " ".join(token for token in value if isinstance(token, str)) if isinstance(value, list) else (value if isinstance(value, str) else None)
         return Answer(problems=[_problem(subject, str(broken), code=broken.code)])
 # --- end MVP ---

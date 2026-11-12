@@ -5,13 +5,15 @@ script's `main` calls `run_cli` and nothing else, so an agent or an MCP tool can
 """
 
 import argparse
+import json
+from pathlib import Path
 import sys
 import traceback
 from collections import namedtuple
 
 from spark.core import codes, outcomes
 from spark.core.clock import SystemClock
-from spark.core.errors import SparkError
+from spark.core.errors import CodedMessageError, SparkError
 from spark.core.events import TerminalReporter
 from spark.core.operation import JSON_DEST, JSON_FLAG
 from spark.core.privacy import MaskingReporter, Privacy
@@ -21,8 +23,9 @@ from spark.core.text_guards import guard_lines, printable
 # --- MVP ---
 #: Value: what a CLI says of itself in `--help`: its file name, one sentence, and the text after the arguments. `tool` is
 #: the envelope's `tool`, the script that answered (P707): a CLI with several Operations gives its own name (`parts`), and
-#: None means the Operation's name, as the one-Operation CLIs print it.
-HelpText = namedtuple("HelpText", "prog description epilog tool", defaults=(None,))
+#: None means the Operation's name, as the one-Operation CLIs print it. `bad_argument_fix` is the fix sentence of a bad
+#: argument when the CLI has a better one than `BAD_ARGUMENT_FIX` (parts.py's describe route, P726 PR 3); None takes the default.
+HelpText = namedtuple("HelpText", "prog description epilog tool bad_argument_fix", defaults=(None, None))
 #: The sentence of a crash's Finding holds the class only, because the message can carry a home path.
 CRASH_MESSAGE = "%s: the traceback is on stderr"
 CRASH_FIX = "report this to the spark maintainers with the stderr traceback"
@@ -102,13 +105,54 @@ def parser_for(text, operation):
             groups[argument.group] = parser.add_mutually_exclusive_group()
         target = groups[argument.group] if argument.group else parser
         if argument.kind is bool:
-            target.add_argument(*argument.flags, dest=argument.dest, action="store_true", help=argument.help)
+            target.add_argument(*argument.flags, dest=argument.dest, action="store_true", help=argument.help, required=argument.required)
         else:
             counted = {key: value for key, value in (("nargs", argument.nargs), ("metavar", argument.metavar)) if value is not None}
             counted.update({"action": "append"} if argument.repeats else {})
             target.add_argument(*argument.flags, dest=argument.dest, type=argument.kind, default=argument.default, help=argument.help,
                                 required=argument.required, choices=argument.choices, **counted)
     return parser
+
+
+def load_payloads(operation, values, stdin):
+    """
+    The parsed `values` with each payload token replaced by the JSON it names (P726 PR 3): for an Argument with `payload`,
+    the file at that token, or `stdin` for `-`, read and parsed; a one-value flag (`nargs` None) holds the token itself, a
+    counted flag holds a list and the token sits at the index. A None (the flag not given) stays. The frontend reads, the
+    Operation takes a value: reading stdin is the interface's job (P721 row 6). A file that cannot be read or is not JSON
+    raises `CodedMessageError` with `codes.INPUT_UNREADABLE`.
+    """
+    for argument in operation.arguments:
+        if argument.payload is None or values.get(argument.dest) is None or values[argument.dest] is argument.default:
+            continue  # the flag was not given (None, or the Argument's own default object)
+        token = values[argument.dest] if argument.nargs is None else values[argument.dest][argument.payload]
+        try:
+            loaded = json.loads(stdin.read() if token == "-" else Path(token).read_text())
+        except (OSError, ValueError) as broken:
+            raise CodedMessageError("%s is not readable JSON: %s", "stdin" if token == "-" else token, broken, code=codes.INPUT_UNREADABLE) from None
+        if argument.nargs is None:
+            values[argument.dest] = loaded
+        else:
+            values[argument.dest] = list(values[argument.dest])
+            values[argument.dest][argument.payload] = loaded
+    return values
+
+
+def _reporter_and_privacy(operation, values, as_json):
+    """The run's Privacy and Reporter: the Operation's `privacy_for(project)` masks the result and each Event (P677), else
+    the default passes everything through; the reporter prints events on stdout, on stderr with --json (P507)."""
+    privacy, reporter = DEFAULT_RUN.privacy, TerminalReporter.for_json(as_json)
+    if operation.privacy_for:
+        privacy = operation.privacy_for(values.get("project"))
+        reporter = MaskingReporter(reporter, privacy)
+    return privacy, reporter
+
+
+def _unreadable_payload(prog, unreadable):
+    """The result of a payload the frontend could not read (P726 PR 3): one could-not-run Finding with the error's code and
+    the sentence as a diagnostics line (`<prog>: <sentence>`), never the usage: a broken file is not a wrong flag."""
+    return OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, unreadable.code, str(unreadable), None)],
+                           diagnostics=["%s: %s" % (prog, unreadable)])
 
 
 def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
@@ -131,19 +175,20 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
     try:
         values = vars(parser.parse_args(argv))
     except outcomes.BadArgumentError as bad:
-        refused = OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.BAD_ARGUMENT, str(bad), BAD_ARGUMENT_FIX % text.prog)])
+        refused = OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.BAD_ARGUMENT, str(bad), text.bad_argument_fix or BAD_ARGUMENT_FIX % text.prog)])
         line = renderer.render_bad_argument(refused, tool, operation.name) if JSON_FLAG in argv else None
         if line is None:
             parser.exit_with_usage(guard_lines(str(bad)))
         print(line)
         return outcomes.EXIT_COULD_NOT_RUN
     as_json = values.pop(JSON_DEST, False)
-    privacy, reporter = DEFAULT_RUN.privacy, TerminalReporter.for_json(as_json)
-    if operation.privacy_for:
-        privacy = operation.privacy_for(values.get("project"))
-        reporter = MaskingReporter(reporter, privacy)
-    result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})),
-                           DEFAULT_RUN._replace(privacy=privacy))
+    privacy, reporter = _reporter_and_privacy(operation, values, as_json)
+    try:
+        values = load_payloads(operation, values, sys.stdin)
+        result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})),
+                               DEFAULT_RUN._replace(privacy=privacy))
+    except CodedMessageError as unreadable:
+        result = _unreadable_payload(text.prog, unreadable)
     said = renderer.render(result, tool, operation.name) if as_json else TextReport.render(result)
     if said:
         print(said)

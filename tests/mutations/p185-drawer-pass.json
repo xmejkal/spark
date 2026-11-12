@@ -18,16 +18,16 @@
   "replace": "]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/set_drawer.py",
   "name": "--drawer-set drops --project before it reaches plan_set",
-  "find": "drawer.plan_set(items, project), args.dry_run",
-  "replace": "drawer.plan_set(items), args.dry_run"
+  "find": "drawer_answer(*drawer.plan_set(items, project), dry_run)",
+  "replace": "drawer_answer(*drawer.plan_set(items), dry_run)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/set_drawer.py",
   "name": "--drawer-set hands plan_set no project even when one was given",
-  "find": "drawer.plan_set(items, project), args.dry_run",
-  "replace": "drawer.plan_set(items, None), args.dry_run"
+  "find": "drawer_answer(*drawer.plan_set(items, project), dry_run)",
+  "replace": "drawer_answer(*drawer.plan_set(items, None), dry_run)"
  },
  {
   "file": "scripts/spark/sourcing/drawer.py",
@@ -54,13 +54,13 @@
   "replace": "if False:"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "a write that puts a record on the shelf does not say so",
   "find": "\"  %s %s on your shelf, so every project finds it%s\" % (",
   "replace": "\"%s%s%s\" and \"\" % ("
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "a folder on no list is not said to leave the shelf copy behind (refuter RX2)",
   "find": "\"\" if project else \". Its folder",
   "replace": "\"\" if True else \". Its folder"

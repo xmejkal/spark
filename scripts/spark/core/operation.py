@@ -15,10 +15,13 @@ from spark.core.result import output_schema
 #: takes, `kind` the type of the value (`Path`, `str`) or `bool` for a flag that is on when given, `group` the name of
 #: the group whose arguments exclude each other, or None, `required` whether the person must give it, `choices` the
 #: values it may take, or None, `nargs` argparse's count of values (`"+"`, `"*"` or an int; None for one value, P726),
-#: `metavar` the word `--help` shows for the value (`PROJECT`), or None for argparse's, and `repeats` whether the flag may
-#: be given more than once, each value kept in a list (`--label a=x --label b=y`; argparse's `append`, P726 PR 2).
-Argument = namedtuple("Argument", "flags dest kind help default group required choices nargs metavar repeats",
-                      defaults=(None, None, False, None, None, None, False))
+#: `metavar` the word `--help` shows for the value (`PROJECT`), or None for argparse's, `repeats` whether the flag may
+#: be given more than once, each value kept in a list (`--label a=x --label b=y`; argparse's `append`, P726 PR 2), and
+#: `payload` the index of the token that names a JSON file the frontend reads for the Operation (0 for a one-value flag,
+#: 1 for `--function-set PART FILE`; None for none): the CLI reads the file, or stdin for `-`, and hands the Operation the
+#: parsed value (`cli.load_payloads`), an MCP frontend hands it the object (P726 PR 3).
+Argument = namedtuple("Argument", "flags dest kind help default group required choices nargs metavar repeats payload",
+                      defaults=(None, None, False, None, None, None, False, None))
 
 #: What an Operation does outside spark: it reads the project's files, runs a program, touches the board, erases what is
 #: on it, writes to it, asks the person for a yes, fetches a URL. They are the words of a step's `effects` (`outcomes.step`); DELETES and
@@ -41,6 +44,8 @@ COMMON_ARGUMENTS = {
 
 #: The JSON Schema `type` of each Argument kind (P605). A kind enters with its first Operation.
 JSON_TYPE_OF_KIND = {Path: "string", str: "string", bool: "boolean", int: "integer"}
+#: The JSON Schema of a payload token: the parsed JSON, an object or a list (P726 PR 3).
+PAYLOAD_SCHEMA = {"type": ["object", "array"]}
 
 
 def _argument_schema(argument):
@@ -48,7 +53,11 @@ def _argument_schema(argument):
     `repeats`), its help, its `enum` when it has choices, and its default when it has one (a flag's is False)."""
     default = False if argument.kind is bool else argument.default
     kind = {"type": JSON_TYPE_OF_KIND[argument.kind]}
+    if argument.payload is not None and argument.nargs is None:
+        kind = dict(PAYLOAD_SCHEMA)
     said = dict({"type": "array", "items": kind} if argument.nargs is not None or argument.repeats else kind, description=argument.help)
+    if argument.payload is not None and isinstance(argument.nargs, int):  # the payload token among the others (JSON Schema 2020-12)
+        said = dict(said, prefixItems=[dict(PAYLOAD_SCHEMA) if i == argument.payload else dict(kind) for i in range(argument.nargs)])
     said.update({"enum": list(argument.choices)} if argument.choices else {})
     return said if default is None else dict(said, default=str(default) if isinstance(default, Path) else default)
 
@@ -62,6 +71,9 @@ class Operation:
     """
 
     name = None
+    #: The one sentence a catalogue or an MCP tool description prints (P726 PR 3); None takes the help of the Argument whose
+    #: flag is `--<name>`, which every parts.py Operation has.
+    summary = None
     arguments = ()
     effects = ()
     #: The Renderer of the `--json` line: `JsonEnvelope`, or a class with `render` and `render_bad_argument`, such as

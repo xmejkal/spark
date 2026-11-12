@@ -198,19 +198,19 @@
   "replace": "             % (gap[\"net\"], gap[\"driven_by\"]) for gap in []]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/design/pick_parts.py",
   "name": "C-4: what a pick releases is not said",
   "find": "        hold[\"entry\"]) for hold in released]",
   "replace": "        hold[\"entry\"]) for hold in []]"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/design/pick_parts.py",
   "name": "C-4: a dry run says it released",
-  "find": "\"would release\" if args.dry_run else \"released\"",
+  "find": "\"would release\" if dry_run else \"released\"",
   "replace": "\"released\""
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/design/pick_parts.py",
   "name": "C-4: part of a hold released is said as all of it",
   "find": "\"\" if hold[\"now\"] == 0 else \" %d of %d\" % (hold[\"was\"] - hold[\"now\"], hold[\"was\"])",
   "replace": "\"\""
@@ -246,31 +246,31 @@
   "replace": "                  % item[\"id\"]] if False else []"
  },
  {
-  "file": "scripts/spark/design/goal_handlers.py",
+  "file": "scripts/spark/design/pick_parts.py",
   "name": "C-17: a reason already in the history is said to be noted",
   "find": "(\"would note\" if dry_run else \"noted\", passed) if event in new else",
   "replace": "(\"would note\" if dry_run else \"noted\", passed) if True else"
  },
  {
-  "file": "scripts/spark/design/goal_handlers.py",
+  "file": "scripts/spark/design/pick_parts.py",
   "name": "C-17: a pick says nothing of the reused lines it writes",
   "find": "    lines += [\"  %s to your history: %d reused\" % (\"would write\" if dry_run else \"wrote\", reused)] if reused else []",
   "replace": "    lines += []"
  },
  {
-  "file": "scripts/spark/design/goal_handlers.py",
+  "file": "scripts/spark/design/pick_parts.py",
   "name": "C-17: a pick says nothing of the project it lists",
   "find": "    lines = [] if listed else [\"  %s %s on your projects\" % (\"would list\" if dry_run else \"listed\", name)]",
   "replace": "    lines = []"
  },
  {
-  "file": "scripts/spark/design/goal_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "C-17: a pick says nothing of the drawer key it writes into needs.json",
   "find": "\"names\", \"y\" if len(new_keys) == 1 else \"ies\", \", \".join(sorted(new_keys)))] if new_keys else []",
   "replace": "\"names\", \"y\" if len(new_keys) == 1 else \"ies\", \", \".join(sorted(new_keys)))] if False else []"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/design/pick_parts.py",
   "name": "C-17: the drawer key in needs.json is said on every pick, not once",
   "find": "needs.entry_keys(after) - keys_before",
   "replace": "needs.entry_keys(after)"
@@ -342,10 +342,10 @@
   "replace": "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/parts.py *)"
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/fetch_documents.py",
   "name": "C-5: --fetch is described as staying on the machine",
-  "find": "\"download the datasheets and images a record cites, into your store\", (\"network\", \"writes\"),",
-  "replace": "\"download the datasheets and images a record cites, into your store\", (\"writes\",),"
+  "find": "    effects = (READS, WRITES, FETCHES)",
+  "replace": "    effects = (READS, WRITES)"
  },
  {
   "file": "scripts/spark/design/board_sections.py",
@@ -462,19 +462,13 @@
   "replace": "\"no_supply\": no_supply,"
  },
  {
-  "file": "scripts/parts.py",
-  "name": "F15: --describe does not name no_driver",
-  "find": "\"no_driver\", \"no_receiver\", \"written\")),",
-  "replace": "\"no_receiver\", \"written\")),"
- },
- {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/record_home.py",
   "name": "F10: the refusal of spark's library names no part",
   "find": "\"not by parts.py\" % part_id)])",
   "replace": "\"not by parts.py\" % \"\")])"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/record_home.py",
   "name": "F10: the refusal of a record that is no object names no part",
   "find": "\"%s is not a JSON object (%s) — repair the file by hand first\" % (part_id, path))])",
   "replace": "\"%s is not a JSON object (%s) — repair the file by hand first\" % (\"\", path))])"
@@ -548,7 +542,7 @@
  {
   "file": "scripts/spark/design/write_requirements.py",
   "name": "F16: --requirements says nothing of the drawer keys it writes into the file",
-  "find": "    said += [] if problems else _names_your_entries(need_requirements.REQUIREMENTS, need_requirements.unserved_keys(content) - named, dry_run)",
+  "find": "    said += [] if problems else names_your_entries(need_requirements.REQUIREMENTS, need_requirements.unserved_keys(content) - named, dry_run)",
   "replace": "    said += []"
  },
  {
@@ -560,11 +554,11 @@
  {
   "file": "scripts/spark/design/write_requirements.py",
   "name": "F16: --requirements says the keys are in needs.json",
-  "find": "_names_your_entries(need_requirements.REQUIREMENTS, ",
-  "replace": "_names_your_entries(\"needs.json\", "
+  "find": "names_your_entries(need_requirements.REQUIREMENTS, ",
+  "replace": "names_your_entries(\"needs.json\", "
  },
  {
-  "file": "scripts/spark/design/goal_handlers.py",
+  "file": "scripts/spark/sourcing/write_answers.py",
   "name": "F16: several drawer keys are said as one entry",
   "find": "\"y\" if len(new_keys) == 1 else \"ies\"",
   "replace": "\"y\""

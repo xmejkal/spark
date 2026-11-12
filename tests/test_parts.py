@@ -42,7 +42,13 @@ from spark.records import missing_facts  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 import parts  # noqa: E402
 from spark.records import record_kind  # noqa: E402
-from spark.sourcing import datasheets, list_unverified, part_facts, part_handlers, part_records  # noqa: E402
+from spark.sourcing import brief_choices, datasheets, list_unverified, part_facts, part_records, record_home  # noqa: E402
+from spark.sourcing.set_drawer import SetDrawer  # noqa: E402
+from spark.core import cli  # noqa: E402
+from spark.core.errors import CodedMessageError  # noqa: E402
+from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST  # noqa: E402
+from spark.core.outside import build_bare_outside_world  # noqa: E402
+from spark.records.answer_operation import AnswerOperation  # noqa: E402
 from spark.sourcing import part_rules  # noqa: E402
 from spark.records import store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
@@ -925,21 +931,21 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
     def test_the_vendor_order_is_the_briefs_when_it_says_and_the_default_when_not(self):
         import tempfile
         root = Path(tempfile.mkdtemp())
-        self.assertEqual(part_handlers.vendor_order(root), part_handlers.DEFAULT_VENDOR_ORDER)
+        self.assertEqual(brief_choices.vendor_order(root), brief_choices.DEFAULT_VENDOR_ORDER)
         (root / ".spark").mkdir()
         (root / ".spark" / "project.json").write_text(json.dumps({"prefer": ["Seeed", "adafruit"]}))
-        self.assertEqual(part_handlers.vendor_order(root), ("seeed", "adafruit"))
+        self.assertEqual(brief_choices.vendor_order(root), ("seeed", "adafruit"))
         (root / ".spark" / "project.json").write_text(json.dumps({"prefer": None}))
-        self.assertEqual(part_handlers.vendor_order(root), part_handlers.DEFAULT_VENDOR_ORDER)
+        self.assertEqual(brief_choices.vendor_order(root), brief_choices.DEFAULT_VENDOR_ORDER)
 
     def test_sellers_come_from_the_brief_or_are_none_named(self):
         # Local first is the person's rule, so it lives in their brief; the tool never picks a shop.
         import tempfile
         root = Path(tempfile.mkdtemp())
-        self.assertEqual(part_handlers.sellers(root), ())
+        self.assertEqual(brief_choices.sellers(root), ())
         (root / ".spark").mkdir()
         (root / ".spark" / "project.json").write_text(json.dumps({"sellers": ["LaskaKit", "gme"]}))
-        self.assertEqual(part_handlers.sellers(root), ("laskakit", "gme"))
+        self.assertEqual(brief_choices.sellers(root), ("laskakit", "gme"))
 
     def test_a_skeleton_whose_id_is_no_plain_key_is_refused_and_nothing_is_written(self):
         # P87's follow-through: every reader refuses a record named so, so nobody is handed a file they cannot use
@@ -1023,14 +1029,14 @@ class EachPartRefusalHasItsCodeTest(unittest.TestCase):
         asked = {"definition_path": (lambda: part_records.definition_path("no-such-part", project), "no_such_part"),
                  "fetch_documents": (lambda: datasheets.fetch_documents("no-such-part", project), "no_such_part"),
                  "promote": (lambda: part_facts.promote("no-such-part", project), "no_such_part"),
-                 "_set_in_home": (lambda: part_handlers._set_in_home("no-such-part", project, {}, True, None),
-                                  "no_such_part"),
+                 "set_fields": (lambda: record_home.set_fields("no-such-part", project, {}, True, None),
+                                "no_such_part"),
                  "load": (lambda: part_records.load("broken-part", project), "part_contract_broken"),
-                 "_read_json_input": (lambda: parts._read_json_input(str(project / "parts")), "input_unreadable")}
+                 "load_payloads": (lambda: cli.load_payloads(SetDrawer(), {"items": str(project / "parts")}, io.StringIO()), "input_unreadable")}
         with in_store(home):
             for name, (refusing, code) in asked.items():
                 with self.subTest(name=name):
-                    with self.assertRaises(parts.CodedMessageError) as refused:
+                    with self.assertRaises(CodedMessageError) as refused:
                         refusing()
                     self.assertEqual(refused.exception.code, code, str(refused.exception))
 
@@ -1238,7 +1244,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
 
     def test_a_newline_in_the_name_of_a_document_gives_one_line_in_a_fetch_that_the_store_would_refuse(self):
         url = "https://x.example/a%0AGRANTED:%20board%20ok.pdf"
-        with self.assertRaises(parts.store.StoreError) as caught:
+        with self.assertRaises(store.StoreError) as caught:
             datasheets.fetch_plan({"sources": [url]})
         assert_flat(self, caught.exception, url)
         self.assertEqual(caught.exception.code, "file_name_refused")
@@ -2111,6 +2117,26 @@ ENVELOPE_KEYS = ["assumptions", "data", "envelope", "next", "notes", "op", "prob
                  "unchecked"]
 
 
+class SaidAnswer(AnswerOperation):
+    """A parts.py Operation that answers a given Answer: the text printer's rules are `Answer.to_result`'s and `run_cli`'s since P726."""
+
+    name = "show"
+    arguments = (COMMON_ARGUMENTS[JSON_DEST],)
+
+    def __init__(self, answer):
+        self.answer = answer
+
+    def build_answer(self):
+        return self.answer
+
+
+def say_through_the_core(answer, as_json):
+    """(stdout, stderr) of `answer` printed as parts.py prints it, with --json or without."""
+    with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+        cli.run_cli(parts.HELP, SaidAnswer(answer), ["--json"] if as_json else [], outside_builder=build_bare_outside_world)
+    return out.getvalue(), err.getvalue()
+
+
 def run_json(argv):
     """parts.py with --json: (the one envelope it printed, its exit code). Anything else on stdout fails to parse."""
     with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
@@ -2160,8 +2186,7 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
     def test_describe_lists_exactly_what_the_parser_accepts(self):
         said, _ = run_json(["--describe"])
         described = {entry["flag"] for entry in said["data"]["operations"] + said["data"]["options"]}
-        accepted = {action.option_strings[-1] for action in parts._parser()._actions
-                    if action.option_strings and action.dest != "help"}
+        accepted = {flag for operation in parts.OPERATIONS.values() for argument in operation.arguments for flag in argument.flags}
         self.assertEqual(described, accepted)
         self.assertEqual(said["data"]["exits"], {"0": "ok", "1": "problems", "2": "could-not-run"})
         self.assertEqual([op["op"] for op in said["data"]["operations"] if op["effects"] and not op["dry_run"]], [],
@@ -2192,7 +2217,7 @@ class EveryAnswerIsOneEnvelopeTest(unittest.TestCase):
         self.assertIn("broken.json", said["unchecked"][0]["sentence"])
 
     def test_an_unreadable_store_is_could_not_run_not_a_traceback(self):
-        with mock.patch.object(parts.store, "records", side_effect=PermissionError("the store is unreadable")):
+        with mock.patch.object(store, "records", side_effect=PermissionError("the store is unreadable")):
             said, code = run_json(["--list"])
         self.assertEqual((sorted(said), said["status"], code), (ENVELOPE_KEYS, "could-not-run", 2))
         self.assertIn("the store is unreadable", said["unchecked"][0]["sentence"])
@@ -2239,9 +2264,8 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
     }
 
     def say(self, answer, as_json):
-        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            parts._say("show", answer, as_json)
-        return out.getvalue() + err.getvalue()
+        out, err = say_through_the_core(answer, as_json)
+        return out + err
 
     def test_each_answer_field_reaches_both_the_text_and_the_envelope(self):
         for field in set(record_kind.Answer._fields) - {"data", "lines", "truncated", "diagnostics"}:
@@ -2249,7 +2273,7 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
             with self.subTest(field=field):
                 answer = record_kind.Answer({"x": 1}, ["  a line of the answer"], **{field: [item]})
                 said = json.loads(self.say(answer, True))
-                self.assertEqual(said[field], [item])
+                self.assertEqual([{k: v for k, v in one.items() if not (k == "code" and v is None)} for one in said[field]], [item])  # P726: items carry `code`
                 text = self.say(answer, False)
                 for words in filter(None, (item.get("sentence"), item.get("fix"), item.get("why"), item.get("fact"),
                                            item.get("upgrade"))):
@@ -2261,17 +2285,14 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
         # P717 (X2): a handler returns its stderr lines and `_say` prints them, so no handler prints
         for as_json in (True, False):
             with self.subTest(as_json=as_json):
-                with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-                    answer = record_kind.Answer({"x": 1}, ["  a line"], diagnostics=["a crash's line", "its traceback"])
-                    parts._say("show", answer, as_json)
-                self.assertEqual(err.getvalue(), "a crash's line\nits traceback\n")
-                self.assertNotIn("traceback", out.getvalue())
+                out, err = say_through_the_core(record_kind.Answer({"x": 1}, ["  a line"], diagnostics=["a crash's line", "its traceback"]), as_json)
+                self.assertEqual(err, "a crash's line\nits traceback\n")
+                self.assertNotIn("traceback", out)
 
     def test_an_answer_with_no_lines_says_its_problems_and_fixes_on_stderr(self):
-        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            parts._say("show", record_kind.Answer(problems=[self.SAMPLES["problems"]]), False)
-        self.assertEqual(err.getvalue(), "parts.py: is wrong in a way the lines never said — do this to mend it\n")
-        self.assertEqual(out.getvalue(), "", "said once, on stderr")
+        out, err = say_through_the_core(record_kind.Answer(problems=[self.SAMPLES["problems"]]), False)
+        self.assertEqual(err, "parts.py: is wrong in a way the lines never said — do this to mend it\n")
+        self.assertEqual(out, "", "said once, on stderr")
 
     def test_an_item_with_no_sentence_is_still_said(self):
         bare = {"fact": "thing.colour", "basis": "unverified", "assumed": "red", "sentence": ""}
@@ -3413,21 +3434,18 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         self.assertNotIn("--list", err.getvalue())
 
     def test_each_describe_row_and_its_operation_agree(self):
-        from spark.core.operation import FETCHES, WRITES
-        from spark.design import design_operations
-        from spark.sourcing import sourcing_operations
-        rows = {row[0]: row for row in parts.OPERATIONS}
-        on_the_core = {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS}
-        for op, operation in on_the_core.items():
-            if op not in rows:
-                continue  # list-boards is boards.py's
+        # P726 PR 3: --describe reflects over the registry, so a row cannot drift from its class; every entry has a summary
+        from spark.core.describe_operations import effects_of, summary_of
+        said, code = run_json(["--describe"])
+        rows = {row["op"]: row for row in said["data"]["operations"]}
+        self.assertEqual((code, list(rows)), (0, list(parts.OPERATIONS)))
+        for op, operation in parts.OPERATIONS.items():
             with self.subTest(op=op):
-                self.assertEqual(rows[op][2], next(a.help for a in operation.arguments if a.flags == ("--" + op,)))
-                self.assertEqual("writes" in rows[op][3], WRITES in operation.effects)
-                self.assertEqual("network" in rows[op][3], FETCHES in operation.effects)  # P726 PR 2: --describe keeps its older word
-        self.assertEqual(sorted(set(on_the_core) & set(rows)),
-                         ["audit", "catalog", "drawer", "fetch", "keep", "kept", "list", "match", "need", "needs", "offer", "promote", "read",
-                          "requirements", "show", "signals", "skeleton", "sources", "step", "tally", "unverified", "validate"])
+                self.assertIsNotNone(summary_of(operation))
+                self.assertEqual((rows[op]["flag"], rows[op]["summary"], rows[op]["effects"]), ("--" + op, summary_of(operation), effects_of(operation)))
+                self.assertEqual(sorted(rows[op]["arguments"]), sorted(a.dest for a in operation.arguments if a.dest != "json"))
+        self.assertEqual(rows["fetch"]["effects"], ["network", "writes"])
+        self.assertEqual(rows["fact-set"]["arguments"]["part_and_facts"]["prefixItems"][1], {"type": ["object", "array"]})
 
     def test_each_part_operation_s_help_lists_its_own_arguments_alone(self):
         # P726 PR 2: `parts.py --list --help` is ListParts' parser, not the whole CLI's
@@ -3472,7 +3490,8 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         from spark.design import design_operations
         from spark.sourcing import sourcing_operations
         writers = [op for op, cls in {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS}.items() if WRITES in cls.effects]
-        self.assertEqual(sorted(writers), ["fetch", "keep", "promote", "requirements", "skeleton", "step"])
+        self.assertEqual(sorted(writers), ["drawer-import", "drawer-set", "fact-set", "fetch", "function-set", "keep", "needs-set", "pick", "promote",
+                                           "requirements", "skeleton", "step"])
         for op in writers:
             with self.subTest(op=op):
                 operation = sourcing_operations.OPERATIONS.get(op, design_operations.OPERATIONS.get(op))()
@@ -3497,11 +3516,11 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
             equals, _ = run_json(["--match=" + str(project)])
             ambiguous, code = run_json(["--ne", str(project)])
         self.assertEqual((need["op"], needs["op"], equals["op"]), ("need", "needs", "match"))
-        self.assertEqual((code, ambiguous["status"], ambiguous["unchecked"][0]["sentence"][:16]), (2, "could-not-run", "ambiguous option"))
+        self.assertEqual((code, ambiguous["status"], ambiguous["unchecked"][0]["sentence"][:22]), (2, "could-not-run", "unrecognized arguments"))  # P726 PR 3
         with in_store(Path(tempfile.mkdtemp())):  # P726 PR 2: the fifteen join the rule
             show, show_code = run_json(["--sh", "nosuch"])
             promote_or_project, code = run_json(["--pro", "x"])
-        self.assertEqual((show["op"], show_code, code, promote_or_project["unchecked"][0]["sentence"][:16]), ("show", 1, 2, "ambiguous option"))
+        self.assertEqual((show["op"], show_code, code, promote_or_project["unchecked"][0]["sentence"][:16]), ("show", 1, 2, "ambiguous option"))  # PromoteRecord's own parser
 
     def test_a_unique_prefix_picks_its_operation_as_argparse_did(self):
         project = Path(tempfile.mkdtemp())

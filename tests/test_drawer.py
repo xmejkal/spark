@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.sourcing import drawer  # noqa: E402
 import parts  # noqa: E402
-from spark.records import record_kind  # noqa: E402
+from spark.records import record_kind, store  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
 
@@ -649,8 +649,8 @@ class TheHandEditedDrawerTest(unittest.TestCase):
     def test_a_projects_list_that_is_not_an_object_of_strings_is_a_store_problem(self):
         for text in ("[]", '{"a": 3}'):
             (self.home / "projects.json").write_text(text)
-            with self.assertRaises(parts.store.StoreError, msg=text):
-                parts.store.projects()
+            with self.assertRaises(store.StoreError, msg=text):
+                store.projects()
 
 
 class TheShelfKeepsOnlyWhatMeetsTheContractTest(unittest.TestCase):
@@ -858,12 +858,10 @@ class TheHoldersTest(unittest.TestCase):
         self.assertIn("held by a?b", self.text(["--drawer"]))
 
     def test_an_answer_with_no_lines_says_its_problems_on_stderr_through_the_guard(self):
-        err = io.StringIO()
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
-            parts._say("drawer", record_kind.Answer(unchecked=[record_kind._cannot("a\u202eb\x1bc", "fix\u202e")]),
-                       False)
-        self.assertNotIn("\u202e", err.getvalue())
-        self.assertIn("a?b?c", err.getvalue())
+        from test_parts import say_through_the_core  # P726 PR 3: the printer is the core's
+        _, err = say_through_the_core(record_kind.Answer(unchecked=[record_kind._cannot("a\u202eb\x1bc", "fix\u202e")]), False)
+        self.assertNotIn("\u202e", err)
+        self.assertIn("a?b?c", err)
 
     def test_every_field_of_the_drawer_text_passes_the_guard_at_the_edge(self):
         # a hand-edited entry skips the scrub that --drawer-set does on the way in (P403 refuter)

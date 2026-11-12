@@ -80,8 +80,8 @@ A scratch store hides three things, so tell the person:
 
 ### What reads and what writes
 
-`parts.py --describe --json` lists every `parts.py` operation with its effects, including which ones write and which
-use the network; read it before calling `parts.py`. `research.py --part <id>` writes the project's `.spark/research-replies.json` (the template of its open questions) and the record in place, and keeps the documents a DFRobot module's wiki page lists in the person's store. It fetches that page once per record, so no command pre-approves it ([replies.md](replies.md), P737).
+`parts.py --describe --json` lists every `parts.py` operation with its effects (`writes`, `network`), its `summary` and the
+JSON Schema of its values under `arguments`; read it before calling `parts.py`. `research.py --part <id>` writes the project's `.spark/research-replies.json` (the template of its open questions) and the record in place, and keeps the documents a DFRobot module's wiki page lists in the person's store. It fetches that page once per record, so no command pre-approves it ([replies.md](replies.md), P737).
 
 Run each `parts.py` write with `--dry-run` first. For example, in a project whose needs are set
 (`parts.py --needs-set`) and with the FireBeetle in the person's drawer,
@@ -147,7 +147,7 @@ These only read:
   board; never change it for the person. When the board record holds `physical.buttons`, a step and a `fix` that name BOOT
   or RESET say where each button is: relay the sentence as printed;
 - `parts.py`: every operation `--describe --json` gives no effect, `--list`, `--show`, `--validate`, `--unverified`, `--need`, `--match`, `--needs`, `--audit`,
-  `--drawer` and `--tally` among them. Every operation but the payload writes (`--drawer-set`, `--drawer-import`, `--function-set`, `--fact-set`, `--needs-set`, `--pick`) and `--describe` runs on the core (P707, P726): `parts.py --match <project> --help` lists that operation's own arguments, and a flag it does not take exits 2. `--sources` writes nothing, but reaches the network. `--need --json` (P743) searches what the person owns and what spark
+  `--drawer` and `--tally` among them. Every operation runs on the core (P707, P726), `--describe` included; `parts.py` alone lists them: `parts.py --match <project> --help` lists that operation's own arguments, and a flag it does not take exits 2. `--sources` writes nothing, but reaches the network. `--need --json` (P743) searches what the person owns and what spark
   knows: a `found` row has `id` or `entry`, `is` (part, board, entry), the record's own `kind`, `name`, `in` (the layer or a project), `owned` (a number, "many" or
   "unknown"), `score`, `why`; `data.more` counts the fits past the cutoff, `data.matcher` names the matcher; an `entry` row has no record. `--match --json` gives each
   candidate `held_by`, and `--drawer --json` gives each entry `held_by`: the other projects that hold any of it, sorted, as they are stored. The text prints each name

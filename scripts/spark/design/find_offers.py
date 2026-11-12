@@ -11,7 +11,7 @@ from spark.records.record_kind import Answer, _cannot
 from spark.sourcing import datasheets, matching
 from spark.sourcing.datasheets import NEED_MATCHER
 from spark.sourcing.part_facts import _row
-from spark.sourcing.part_handlers import sellers, vendor_order
+from spark.sourcing.brief_choices import sellers, vendor_order
 
 # --- MVP ---
 #: `--need`'s closing lines (P743): the fits the cutoff dropped, and nothing found.

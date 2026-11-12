@@ -58,7 +58,7 @@ child of `image_evidence`) still never import `spark.core`: they add no path lin
 
 The core ([P442](https://github.com/xmejkal/spark/issues/587), wave 3 of the refactor) is what every area and every
 frontend shares, so that a CLI, an agent or an MCP tool runs the same code. An Operation (`spark.core.operation`) is a
-class with `name` (the `op` the envelope prints), `arguments` (its `Argument`s, as argparse adds them) and `effects`
+class with `name` (the `op` the envelope prints), `summary` (one sentence for a catalogue or an MCP tool, P726), `arguments` (its `Argument`s, as argparse adds them; an Argument with `payload` names a JSON file the CLI adapter reads and hands in as a value, `cli.load_payloads`) and `effects`
 (the effect words are listed under the table at the top), `input_schema()` and `output_schema()` (JSON Schemas of the values and the envelope, an MCP tool's `inputSchema` and `outputSchema`, P605), and one public method, `run(**values, outside)`, which returns an `OperationResult`
 (`spark.core.result`): `data`, `findings` (a `Finding` per thing found, with its severity, subject, code, sentence and
 fix), `next` (a `NextStep` per step an agent may take), `lines` (the report a person reads), `diagnostics` (lines for

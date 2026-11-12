@@ -24,13 +24,13 @@
   "replace": "    return _scrubbed(value, PROVENANCE_MAX) if key in PROVENANCE_KEYS else _scrubbed(value)\n"
  },
  {
-  "file": "scripts/spark/sourcing/part_handlers.py",
+  "file": "scripts/spark/sourcing/record_home.py",
   "name": "a second legs write drops the legs it does not name",
   "find": "    if isinstance(values.get(\"legs\"), dict):\n        held = record.get(\"legs\") if isinstance(record.get(\"legs\"), dict) else {}\n        after[\"legs\"], was[\"legs\"] = dict(held, **values[\"legs\"]), {pin: held.get(pin) for pin in values[\"legs\"]}\n",
   "replace": ""
  },
  {
-  "file": "scripts/parts.py",
+  "file": "scripts/spark/sourcing/set_facts.py",
   "name": "the sheet keys are accepted but never checked against the record",
   "find": "        + drawer.list_sheet_key_problems(facts, record)\n",
   "replace": ""

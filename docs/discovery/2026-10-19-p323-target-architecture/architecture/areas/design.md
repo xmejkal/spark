@@ -5,8 +5,8 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 
 New names (proposed): `PinAssigner`, `PinMap`, `BoardEmitter`, `NeedsService`, `ImpossibleError`, the modules
 `loader`, `pin_assigner`, `board_emitter`, `board_sections`, `power_rails`, `board_components`, `need_requirements`, `footprint_emitter`, one module per
-Operation of `parts.py` since P726 (`find_offers`, `list_needs`, `match_needs`, `show_offer`, `write_requirements`, `tally_cost`; `goal_handlers`
-keeps the pick's helpers), and the Operation names below.
+Operation of `parts.py` since P726 (`find_offers`, `list_needs`, `match_needs`, `show_offer`, `write_requirements`, `tally_cost`,
+`set_needs`, `pick_parts`), and the Operation names below.
 
 ## Level 2: what design does
 
@@ -18,7 +18,7 @@ the board file that wires them. It writes facts only, the pin map and the board 
 | Operation | CLI | Effects |
 |---|---|---|
 | `need`, `needs`, `match`, `offer`, `requirements`, `tally` | `parts.py` with that flag, on `run_cli` since P726 (`find_offers.FindOffers`, `list_needs.ListNeeds`, `match_needs.MatchNeeds`, `show_offer.ShowOffer`, `write_requirements.WriteRequirements`, `tally_cost.TallyCost`, each on records' `AnswerOperation`) | reads, writes for `requirements` |
-| `needs-set`, `pick` | `parts.py` with that flag: they read a JSON payload, so they stay in the CLI until P726's CLI PR | reads, writes |
+| `needs-set`, `pick` | `parts.py` with that flag, on `run_cli` since P726 PR 3 (`set_needs.SetNeeds`, `pick_parts.PickParts`); the CLI adapter reads the JSON payload and hands it in | reads, writes |
 | `audit` | `parts.py --audit`, on `run_cli` since P707 (`audit_records.AuditRecords`) | reads |
 | `list-boards` | `boards.py --list`, on `run_cli` since P707 (`list_boards.ListBoards`) | reads |
 | `assign-pins` | `assign_pins.py requirements.json` | reads, writes `pins.py` with `--out` |
@@ -34,7 +34,7 @@ down into records and sourcing would be a parameter with one value.
 | Module | Holds |
 |---|---|
 | `design/loader.py` | `load` and the `Design` Value, moved from `design.py` in P702 (the name avoids `design/design.py`) |
-| `design/goal_handlers.py` | the pick's helpers, `_what_a_pick_wrote` and `_names_your_entries` (W6-S3b, P721). Its six goal handlers became the Operation modules below (P726); `--needs-set` and `--pick` read a JSON payload, so they stay in the CLI |
+| `design/set_needs.py`, `design/pick_parts.py` | `SetNeeds` (`needs-set`) and `PickParts` (`pick`, with `what_a_pick_wrote`): the two payload writes of the goal (P726 PR 3); `goal_handlers` is gone |
 | `design/find_offers.py` | `FindOffers` (`need`): what you own and what spark knows for a need, the words against every record and drawer entry (P743, P726) |
 | `design/list_needs.py` | `ListNeeds` (`needs`): a project's needs, one line each (P726) |
 | `design/match_needs.py` | `MatchNeeds` (`match`): each need with the store's candidates, paged from `--from` (P726) |

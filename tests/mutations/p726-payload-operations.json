@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P726 PR 3: the payloads are not loaded, so the Operation gets the file name",
+  "find": "        values = load_payloads(operation, values, sys.stdin)",
+  "replace": "        values = values"
+ },
+ {
+  "file": "scripts/spark/core/describe_operations.py",
+  "name": "P726 PR 3: --describe prints writes before network",
+  "find": "EFFECT_WORDS = ((FETCHES, \"network\"), (WRITES, \"writes\"), (DELETES, \"deletes\"))",
+  "replace": "EFFECT_WORDS = ((WRITES, \"writes\"), (FETCHES, \"network\"), (DELETES, \"deletes\"))"
+ },
+ {
+  "file": "scripts/spark/sourcing/part_operation.py",
+  "name": "P726 PR 3: a loaded payload enters the subject of a part refusal",
+  "find": "\" \".join(token for token in value if isinstance(token, str))",
+  "replace": "\" \".join(map(str, value))"
+ }
+]
