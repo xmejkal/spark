@@ -16,3 +16,6 @@ holds the acted, raised and rejected findings only (rules.md). 2026-11-12.
 | 8 | the count: a command asked the finder `littlefs` twice (one ask per build); the new test was red at two and is green at one | build | closed | `test_a_command_builds_the_image_once` |
 | 9 | the four run-scenario goldens are byte-equal | build | closed | `tests.test_golden_firmware` OK, `git status --short tests/golden-firmware` empty |
 | 10 | no step's status moves: the README's journey table and `tools/journey.py` stay | build | closed | nothing to edit |
+| 11 | `main` unpacks the StartResult positionally where the names page prefers `result.field` | PR refuter | rejected | dropped because the unpack keeps `status, sentence, log` as the names of the print lines three mutation rows anchor on; the module's other tuples unpack the same way |
+| 12 | row 4's last cite is `test_run_scenario.py:864`; main's `.run(FAKE_CLI)` statement starts at 864 and the call sits on 865 | PR refuter | closed | the cite stands |
+| 13 | the refuter planted the three rows in a scratch copy though its brief said anchors only (each caught by exactly one test) | PR refuter | closed | the result is kept here; the learned rules note the brief is not enough to stop a planted run |
