@@ -19,4 +19,4 @@ The plan councils of P291 (#348) and P315 (#393). Plan: [`plan.md`](../../discov
 | 13 | `PRAGUE_SUMMER` sat between imports; `fakes.py` imported inside a function | refuter and reviewer, PR review | acted | moved |
 | 14 | The tests pass under UTC, Europe/Prague and America/New_York, and `pin_time_zone` does not leak | refuter, PR review | closed | whole suite under New York: 2733 OK |
 | 15 | Mutation escapes: microseconds kept; `--check` prints a raw UTC "until"; the issue line prints a raw "until" | mutation tester, PR review | acted | two tests; the issue line prints the time `stamp()` just wrote, so its `say_in_local_zone` is gone |
-| 16 | `run_scenario.py:196` writes a naive time in the simulation log | refuter, PR review | raised | outside this card; a card if the PO wants it |
+| 16 | `run_scenario.py:196` writes a naive time in the simulation log | refuter, PR review | closed | outside this card; a card if the PO wants it — P776: fixed since: scenario_run.py:216 stamps the time through zone_time.stamp |

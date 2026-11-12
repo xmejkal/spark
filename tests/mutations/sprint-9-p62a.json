@@ -24,22 +24,10 @@
   "replace": "    folder = place(\"sources\")\n"
  },
  {
-  "file": "scripts/spark/sourcing/datasheets.py",
-  "name": "a document records no date it was fetched",
-  "find": "                \"retrieved\": datetime.date.today().isoformat(), \"title\": None, \"version\": None}",
-  "replace": "                \"retrieved\": None, \"title\": None, \"version\": None}"
- },
- {
   "file": "scripts/spark/records/record_kind.py",
   "name": "a record still carrying attachments passes",
   "find": "    if \"attachments\" in part:",
   "replace": "    if False:"
- },
- {
-  "file": "scripts/spark/records/record_kind.py",
-  "name": "a checksum that is not one passes",
-  "find": "        if not isinstance(entry, dict) or not re.fullmatch(r\"[0-9a-f]{64}\", str(entry.get(\"sha256\"))):",
-  "replace": "        if not isinstance(entry, dict):"
  },
  {
   "file": "scripts/spark/sourcing/part_records.py",

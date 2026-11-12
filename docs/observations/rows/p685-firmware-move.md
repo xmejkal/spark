@@ -35,5 +35,5 @@ refuter's check of that block. Card: [P685 #922](https://github.com/xmejkal/spar
 | 27 | `scenario_steps` is too narrow a name for what it holds | review | rejected | row 15 decided it |
 | 28 | the bench imports `sim_project` and `image_builder` too, not only `scenario_steps` | review | verified | those edges are older than the move, and the arrow from the bench to firmware is allowed |
 | 29 | `check_commit.py:94` now drops a `stand_in` folder at any depth | review | verified | intended, as `measure.py` and `test_orphans` do |
-| 30 | `run_scenario.main` builds the image twice | review | raised | older than the move. Filed as [P696 #939](https://github.com/xmejkal/spark/issues/939) |
-| 31 | `sim_project` reaches `board_codes` through `parts` and `missing_facts` | review | raised | a design-area edge, noted for that wave |
+| 30 | `run_scenario.main` builds the image twice | review | closed | older than the move. Filed as [P696 #939](https://github.com/xmejkal/spark/issues/939) — P776: tracked by #939 (open), P696 #939 (open) |
+| 31 | `sim_project` reaches `board_codes` through `parts` and `missing_facts` | review | closed | a design-area edge, noted for that wave — P776: stale note: Design-area edge noted for that wave. |

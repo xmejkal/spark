@@ -6,18 +6,6 @@
   "replace": "indent=1, sort_keys=False)"
  },
  {
-  "file": "scripts/spark/bench/board_facts.py",
-  "name": "facts cp ignores the port",
-  "find": "self.base = list(shell) + ([\"connect\", port] if port else [])",
-  "replace": "self.base = list(shell)"
- },
- {
-  "file": "scripts/spark/bench/board_facts.py",
-  "name": "record keyed by project",
-  "find": "key = store.slug(said[\"mac\"])",
-  "replace": "key = store.slug(said[\"project\"])"
- },
- {
   "file": "scripts/spark/records/deploy_record_store.py",
   "name": "verdict fixed",
   "find": "\"verdict\": verdict,",
@@ -28,11 +16,5 @@
   "name": "facts without mac",
   "find": "self.platform.board_of(), report.reading.mac, image.path",
   "replace": "self.platform.board_of(), None, image.path"
- },
- {
-  "file": "scripts/spark/records/store.py",
-  "name": "boards not private",
-  "find": "\"projects\", \"history\", \"boards\")",
-  "replace": "\"projects\", \"history\")"
  }
 ]

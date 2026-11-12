@@ -15,8 +15,8 @@ What the plan claimed, and what its two council rounds changed. Card: #689.
 | 9 | Round 2 (Sonnet): every message names a page by its path from the root | council | acted | `_name`; tests assert the wording |
 | 10 | Round 2: the messages are fixed text, and the tests assert them | council | acted | "has N lines, over its budget of B. Move text out or split the page, never raise the budget." |
 | 11 | Pages with no entry get a default of 400, over-budget only | council | acted | `DEFAULT_BUDGET` |
-| 12 | The gone-page message was not worded in the plan | build | raised | "has a budget but is not there. Remove its entry from BUDGETS." |
-| 13 | Council targets (README 150, index 60, step 200) are not set here | council | raised | they arrive with P501, P502 and P504 |
+| 12 | The gone-page message was not worded in the plan | build | closed | "has a budget but is not there. Remove its entry from BUDGETS." — P776: stale note: message worded in the PR |
+| 13 | Council targets (README 150, index 60, step 200) are not set here | council | closed | they arrive with P501, P502 and P504 — P776: done by P501 #690 (closed), P502 #691 (closed), P504 #693 (closed) |
 | 14 | Mutation table: rglob back to glob; the comparison flipped; the cell limit raised | plan | acted | `tests/mutations/p500-docs-budget.json`; 3 planted, 3 caught; `--anchors` at 119 refused |
 | 15 | A five-line paragraph in developing.md would have raised its 650-line budget | build | acted | the rule is one two-line bullet in the check list; one blank line saved in the section |
 | 16 | T2 forbids `mock.patch.dict` on module tables | build | acted | `over_budget` and `long_cells` take the table as an argument |

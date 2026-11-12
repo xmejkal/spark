@@ -22,6 +22,6 @@ check"). They were checked against main a54f51fd before any code, then the build
 | 13 | `MAY_READ` follows | plan | acted | `part_rules.BUSES`, `part_rules.CAPABILITIES`, `record_kind.LIBRARY` |
 | 14 | the closing checks | plan | acted | `TheSourcingAreaTest`: five modules, `cost.py` with `main` alone, no `matching.py` or `sourcing_codes.py` in `scripts/`. `TheRecordsAreaTest` holds `record_kind`. Each module imports alone |
 | 15 | the docs | plan | acted | `areas/records.md` (the `record_kind` row says what it holds now), `areas/sourcing.md` (`sourcing_codes` moved, a `part_records` row), `patterns-and-names.md` (the ninth area), `how-it-works.md` (`run_cost`), GLOSSARY (`Matcher`, `Offer`, `Fit`), the comments that named `parts.validate`, `parts.load`, `parts.VERBS` and `parts.type_problems`, the two area docstrings. `map.py --write`. No page budget rose. The agent pages name the CLIs alone |
-| 16 | an importer that reads two modules where it read one pays for its import line | build | raised | the plan counted no such line; `needs` and `board_emitter` paid by grouping their records imports. W6-S3b splits the rest of `parts.py`: for the between-cards council |
+| 16 | an importer that reads two modules where it read one pays for its import line | build | closed | the plan counted no such line; `needs` and `board_emitter` paid by grouping their records imports. W6-S3b splits the rest of `parts.py`: for the between-cards council — P776: stale note: Import line count note. |
 </content>
 </invoke>

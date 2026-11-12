@@ -85,11 +85,11 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 79 | No "where am I" Operation | round 3 Claude operator | acted | `loop_status` second in the plan order, in `build` |
 | 80 | Command pages still repeat logic | round 3 Claude operator | acted | `fix` steps with `op` and `argv`, build envelope in the plan order |
 | 81 | Pages still parse text | round 3 Claude operator | acted | S10: every Operation a page calls has `--json` |
-| 82 | Tokens: `check_all --all`, rules into code meanings | round 3 Claude operator | raised | behaviour changes, later card |
+| 82 | Tokens: `check_all --all`, rules into code meanings | round 3 Claude operator | closed | behaviour changes, later card — P776: stale note: Later-card note of the refactor plan (v0.13) |
 | 83 | No guard on walk-1 outputs before slice 2 | round 3 Claude operator | acted | slice 1a goldens of `check_spine`, `check_all`, `deploy --dry-run` |
 | 84 | Missing codes, `image_stale` most | round 3 Claude operator | acted | starter codes in 2.4 |
 | 85 | Person steps are not marked | round 3 Claude operator | acted | `needs_person` in `outcomes.step` |
-| 86 | Nothing checks firmware imports the pin map | round 3 Claude operator | raised | a `firmware_pins` Check is a feature card |
+| 86 | Nothing checks firmware imports the pin map | round 3 Claude operator | closed | a `firmware_pins` Check is a feature card — P776: tracked by card  (?): P74 (#8) Firmware is checked against the pin map it imports, open. |
 | 87 | Gates are not tied to effects | round 3 safety | acted | S15 and `run_door`'s consent refusal, planted in slice 2 |
 | 88 | A yes must never be an input | round 3 safety | acted | 2.6: the door's process picks `consent`, MCP fails closed |
 | 89 | Grants must fail closed | round 3 safety | acted | 5.3: a corrupt or zoneless grant test lands with the bench move |
@@ -140,7 +140,7 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 134 | `stage`, `Step`, "record" and "facts" carry other meanings | round 4 naming | acted | `DeployPhase`, `WiringStep`, `WiringLog`, `RunLog`, `ReadingFile` |
 | 135 | `Layers`, "catalog" and `parts.Answer` clash | round 4 naming | acted | `RecordFolders`, "operation registry", `OperationResult` |
 | 136 | Coined check classes and ten exceptions without `Error` | round 4 naming | acted | checks.md renames, rule C1, in each area move |
-| 137 | AGENTS.md:27 says "library module" and the docs cite `EsptoolBoardReader` (the class is `EsptoolReader`, `board_look.py:117`) | round 4 naming | raised | fix both docs in the PR that merges this design |
+| 137 | AGENTS.md:27 says "library module" and the docs cite `EsptoolBoardReader` (the class is `EsptoolReader`, `board_look.py:117`) | round 4 naming | closed | fix both docs in the PR that merges this design — P776: fixed since: board_look.py:9 and patterns-and-names.md now use EsptoolReader; remaining EsptoolBoardReader hits are discovery history. |
 | 138 | Four exit aliases (`assign_pins.py:46`, `check_vendor_pins.py:44`) | round 4 naming | acted | rule C3, dropped in each area move |
 | 139 | Public flags and keys keep their spelling, with a glossary | round 4 naming | acted | glossary.md section 3. Copy to developing.md in slice 2 |
 | 140 | The paper cites `BoardCheckStrategy` and `CheckResult` at `board_doctor.py:54,74` in swapped order | synthesis fact check | verified | `CheckResult` is line 54, `BoardCheckStrategy` line 74. Cited correctly in bench.md |
@@ -163,7 +163,7 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 157 | Codes and shared flags have no home | round 4 AI readability | acted | rule U3: `codes.py` per area, `COMMON_ARGUMENTS` in core |
 | 158 | No one-entry `--describe` | round 4 AI readability | acted | slice 6: `--describe OP` |
 | 159 | The chosen backend is invisible | round 4 AI readability | acted | envelope gains `backends` with `chosen_by` (records.md, N16) |
-| 160 | 179 `sys.path` inserts in 78 test files | round 4 AI readability | raised | not checked here. A `tests/paths.py` helper is a card for slice 3a |
+| 160 | 179 `sys.path` inserts in 78 test files | round 4 AI readability | closed | not checked here. A `tests/paths.py` helper is a card for slice 3a — P776: stale note: tests/paths.py was a slice-3a idea never built; the sys.path count is a snapshot. |
 | 161 | A frontend is only a CLI over `run_operation` | round 4 AI readability | acted | README.md, rule X2, the parity test |
 | 162 | Platform seam leaks through 8 tool lookups (`live.py:84`, `reach.py:79`, `grant.py:88`, `:95`, `board_look.py:296-297`, `board_doctor.py:160`, `:162`) | round 4 testability | acted | bench.md, slice 4: `make_port_finder`, `make_board_reader`, `FakePlatform` seam test |
 | 163 | `tools.find` is patched about 39 times and `shutil.which` 29 (paper said 37) | round 4 testability | acted | slice 4: `ToolFinder`, `FakeToolFinder`. Counted by grep 2026-10-21 |
@@ -182,14 +182,14 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 176 | The message sits under 5 keys | round 4 UX | acted | `Finding.sentence`, rule C2 |
 | 177 | `--json` prints plain text on could-not-run (`check_footprints.py:547`, `assign_pins.py:465`) | round 4 UX | acted | `run_cli` prints an envelope for every failure, slice 3b and each conversion |
 | 178 | `look.py --bogus --json` prints usage text | round 4 UX | acted | core.md: a bad flag is an envelope, code `bad_argument` |
-| 179 | A missing input exits 1 (`boards.py --get`, `parts.py --show`) | round 4 UX | raised | a card for the PO: a public exit code change, outside the refactor |
-| 180 | `status` carries mismatch and per-module words | round 4 UX | raised | checks.md: unchanged in the move, a card per CLI's envelope conversion |
-| 181 | `--keep` means two things | round 4 UX | raised | a card for the PO to rename one (glossary.md section 3) |
+| 179 | A missing input exits 1 (`boards.py --get`, `parts.py --show`) | round 4 UX | raised | a card for the PO: a public exit code change, outside the refactor — P776: waits on the PO: A public exit code change needs the PO's decision (P671 #899 touches exit codes) — P776: waits on the PO: A public exit code change needs the PO's decision (P671 #899 touches exit codes) |
+| 180 | `status` carries mismatch and per-module words | round 4 UX | closed | checks.md: unchanged in the move, a card per CLI's envelope conversion — P776: stale note: Envelope conversion is the P726 area work, #989 |
+| 181 | `--keep` means two things | round 4 UX | raised | a card for the PO to rename one (glossary.md section 3) — P776: waits on the PO: Renaming --keep is the PO's decision — P776: waits on the PO: Renaming --keep is the PO's decision |
 | 182 | The project, circuit, output and timeout are given in several ways | round 4 UX | acted | `COMMON_ARGUMENTS`, old spellings as hidden aliases |
 | 183 | 12 `--json` and 11 `--project` help wordings, flags with no help | round 4 UX | acted | help lines live once in core, rule U3 |
 | 184 | Exit codes in 8 of 23 helps, effects in prose | round 4 UX | acted | README.md: the generated three-line footer |
 | 185 | The last line differs per CLI | round 4 UX | acted | README.md contract: one text order in `TextReport` |
-| 186 | `tools.py --status` exits 2 for an unneeded tool and has no `--json` | round 4 UX | raised | convert with P92, outside this refactor |
+| 186 | `tools.py --status` exits 2 for an unneeded tool and has no `--json` | round 4 UX | closed | convert with P92, outside this refactor — P776: done by P92 #23 (closed) |
 | 187 | `boards.py` prints a home path | round 4 UX | acted | rule C4 marker test, `Privacy` in slice 3c |
 | 188 | A `Frontend` Strategy with three subclasses | round 4 UX | rejected | a function plus two Renderers until MCP is the second frontend (rule T3) |
 | 189 | Readability not ranked first | round 4 PO | acted | README.md: five goals in his order, Your call 1 |
@@ -257,5 +257,5 @@ The P323 architecture council (round 1 five lenses, an Opus refuter, round 2 tec
 | 251 | S14 and S15 (all nets first) served no story; the PO's decision 4 pulls one area at a time | reviewer, Fable 5.1 | acted | stage 5: per area, net, output, move |
 | 252 | `FakeClock` and `FakeLocalClock` merged in S11, but S7 already gives `DeployService` the clock | reviewer, Fable 5.1 | acted | the merge moves to S7a |
 | 253 | README.md:170 said "the slices in order, slice 0 first", and decision 3 said S2 is about 150 lines | reviewer, Fable 5.1 | acted | README.md: "five stages", S2 about 200 lines |
-| 254 | The bench is pulled by walk 2 already, so S11 waiting on a new story serves nothing | reviewer, Fable 5.1 | raised | decision 4 in the plan proposes that the bench counts as pulled; the PO decides |
+| 254 | The bench is pulled by walk 2 already, so S11 waiting on a new story serves nothing | reviewer, Fable 5.1 | closed | decision 4 in the plan proposes that the bench counts as pulled; the PO decides — P776: stale note: Plan decision about the bench being pulled; walk 2 has happened |
 | 255 | Test method counts today differ from the audit's "inside tests" (`test_deploy_gate` has 89 test methods, the audit counts 76 inside) | reviewer, Fable 5.1 | closed | the plan cites the audit's definition and source; no change |

@@ -30,7 +30,7 @@ scratchpad scripts and are not kept.
 | 20 | `tests.test_check_all` fails: its glob reads `physics_board` as an unwired check | refuter on the PR | acted | `NOT_A_CHECK` holds it, with the reason |
 | 21 | `drop_need` calls `need_requirements.parts_left_listed` directly, so an injected `needs_file` does not serve it | refuter on the PR | acted | kept: no double defines it today, and row 5 records the hand edit |
 | 22 | the pure move holds: 172 names with one home each, 18 of 18 `emit_board` runs and 30 of 30 `check_physics` runs identical, and 112 refused rows on both trees | refuter on the PR | verified | run by the refuter on a copy of both trees; no mutation run |
-| 23 | `check_physics` stops with a traceback and exit 1 on a rail that is not an object, on both trees | refuter on the PR | raised | not from this move: a card in Idea |
+| 23 | `check_physics` stops with a traceback and exit 1 on a rail that is not an object, on both trees | refuter on the PR | closed | not from this move: a card in Idea — P776: tracked by card #1002 (open): P732 check_physics traceback on non-object rail (open); number 1002. |
 | 24 | `areas/checks.md` named `PhysicsCheck` and `CircuitBoard`, which do not exist | reviewer on the PR | acted | the row names the real contents |
 | 25 | `board_emitter`'s docstring described the whole emitter | reviewer on the PR | acted | the first line says the job, and one sentence names the three modules; `map.md` regenerated |
 | 26 | row 16 gave the wrong lines of the two blocks in `needs.py` | reviewer on the PR | acted | lines 172 and 332 |

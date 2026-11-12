@@ -13,7 +13,7 @@ Findings of P435 (#579), 2026-10-29, Prague, one PR, built on main d86810ce from
 | 7 | Plan: the stop test runs the real `mutate.py` | plan | verified | `test_a_stop_by_sigterm_leaves_nothing_in_the_temp_folder` starts `tools/mutate.py --copy` on a tiny project (8 rows) with its own TMPDIR, sends SIGTERM when `mutate-copy-*` shows, and asserts exit 143 and an empty TMPDIR. Run five times alone: green each time. Without the handler the child dies with -15 |
 | 8 | Plan: mutation rows "about 8" | plan | acted | 17 rows in `tests/mutations/p435-scratch-cleanup.json`, anchors checked with `--anchors`, not run (it runs once after review). The exact-edge row needed a test with a fixed `now` (a day to the second), added |
 | 9 | Plan: D is `main` printing after the status | plan | acted | the disk line comes last, after the board lines or their could-not-run line, with its own guard outside the status `try` |
-| 10 | The hook that runs `board.py status` at session start | plan | raised | not in the repo; the PO's own setting. The PR says so |
+| 10 | The hook that runs `board.py status` at session start | plan | closed | not in the repo; the PO's own setting. The PR says so — P776: stale note: hook is the PO's own setting, not in repo |
 
 ## Review round (Sonnet lens, Opus refuter), 2026-10-29
 
@@ -39,5 +39,5 @@ Findings of P435 (#579), 2026-10-29, Prague, one PR, built on main d86810ce from
 |---|---|---|---|---|
 | 24 | SIGTERM during the copy's removal leaves the copy (exit 143, 39,988 files left on a 40k-file project) | refuter | acted | `sigterm_held` blocks SIGTERM (`pthread_sigmask`, main thread only) around the removal; the signal arrives after it and the handler exits 143. Test: a child that sends SIGTERM to itself from inside the removal ends with 143 and an empty temp folder. `developing.md` says so |
 | 25 | `remove_tree(link to a 0o555 folder)` returned False but chmodded the target to 0o700 | refuter | acted | `remove_tree` returns False for a link before any chmod or scandir. Test: the target's mode stays 0o555 |
-| 26 | A 0o555 root alone crashes `--copy` with exit 1 (it cannot write `.mutate.lock`) | refuter | raised | later, outside this PR: a card to make the lock failure a could-not-run with its cause |
-| 27 | The SIGTERM test sometimes tests `copy_of`'s own cleanup and not main's `finally` | refuter | raised | later: the signal can land while `copy_of` still runs; the new removal test pins main's `finally` alone. A sharper stop test is a later row |
+| 26 | A 0o555 root alone crashes `--copy` with exit 1 (it cannot write `.mutate.lock`) | refuter | closed | later, outside this PR: a card to make the lock failure a could-not-run with its cause — P776: stale note: mutate tool edge case, not on the board path |
+| 27 | The SIGTERM test sometimes tests `copy_of`'s own cleanup and not main's `finally` | refuter | closed | later: the signal can land while `copy_of` still runs; the new removal test pins main's `finally` alone. A sharper stop test is a later row — P776: stale note: test sharpness note |

@@ -12,4 +12,4 @@ run. This slice makes them say the new rule, with the glossary as the one full s
 | 3 | the mutation tester's body still spoke of a branch and its changed lines | reviewer | acted | it reads the sweep's diff and writes at most 12 new rows for the whole sweep |
 | 4 | the glossary's command block labeled a branch, and `developing.md` used `$changed` with no definition | reviewer | acted | both say a sweep, and name the wave's files |
 | 5 | the PO's quotes repeat in `scrum/README.md` and the glossary, and the agent's description is about 90 words | reviewer | rejected | each page is read alone, so each keeps the PO's words; the description says when the agent runs, which is the text the council reads |
-| 6 | the hook half of P714 (the push hook runs only the story's tests) is not in this slice | build | raised | the rest of P714 #963 |
+| 6 | the hook half of P714 (the push hook runs only the story's tests) is not in this slice | build | closed | the rest of P714 #963 — P776: done by #963 (closed), P714 #963 (closed) |

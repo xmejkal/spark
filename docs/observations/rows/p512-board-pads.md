@@ -8,7 +8,7 @@ or the PO takes it.
 | --- | --- | --- | --- | --- |
 | 1 | The no-tool board test must go through `emit_board.emit`, on both shipped boards | plan council, lens M1 | acted | `tests/test_emit_board.py` `EveryTraceReachesAFootprintPadTest`; mutation row "emit passes empty pads" |
 | 2 | The rows said to be caught by `test_breadboard.py:216,225` escape: 216 answers MI by the fallback, 225 uses A5 with no alias | plan council, refuter 6 | acted | new tests: the XIAO's SDA gives D4, a board with no header rows gives MO, a requirements signal on MOSI is said as MO |
-| 3 | XIAO + `dfr0664-tft-2in` still exits 1 after the fix, at the simulation: "a diagram with 0 connections" (the display has no Wokwi part) | plan council, refuter | raised | [ran] build `10 trace(s), 0 errors`, then the simulation stage fails. The tests assert the build step only. The coordinator files the card |
+| 3 | XIAO + `dfr0664-tft-2in` still exits 1 after the fix, at the simulation: "a diagram with 0 connections" (the display has no Wokwi part) | plan council, refuter | closed | [ran] build `10 trace(s), 0 errors`, then the simulation stage fails. The tests assert the build step only. The coordinator files the card — P776: card #1076 (display with no Wokwi part) |
 | 4 | Keep the board-level pad check once, through emit; do not repeat the validator at `boards.py:691-701` | plan council, S1 | acted | `BoardPadsTest` holds unit tests only |
 | 5 | Drop `has_alias`; ask `pads.alias_pads()` | plan council, S2 | acted | `has_alias` dropped. The PR's first claim, "an alias key is a pin label", is false: see row 16 |
 | 6 | The grep test names its scope: not `tests/`, not the TypeScript copies | plan council, S3 | acted | `OnlyBoardPadsReadsThePadAliasesTest` docstring |

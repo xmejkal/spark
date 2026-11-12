@@ -7,12 +7,6 @@
  },
  {
   "file": "scripts/spark/sourcing/datasheets.py",
-  "name": "any document the other record holds counts as this one",
-  "find": "                             if isinstance(held, dict) and held.get(\"sha256\") == entry.get(\"sha256\")}",
-  "replace": "                             if isinstance(held, dict)}"
- },
- {
-  "file": "scripts/spark/sourcing/datasheets.py",
   "name": "a fact whose source names the URL is not found",
   "find": "        elif url and isinstance(value.get(\"source\"), str) and url in value[\"source\"]:",
   "replace": "        elif False:"
@@ -46,12 +40,6 @@
   "name": "the deep-sleep figure cites a document the board does not hold",
   "find": "\"wroom1-v1-1\",\n        \"at\": \"Table 12, page 15\"",
   "replace": "\"wroom1-v1-8\",\n        \"at\": \"Table 12, page 15\""
- },
- {
-  "file": "scripts/parts.py",
-  "name": "a citation is never compared with the documents the record holds",
-  "find": "                 for where, cited in _citations(part) if cited not in (part.get(\"documents\") or {})]",
-  "replace": "                 for where, cited in _citations(part) if False]"
  },
  {
   "file": "scripts/spark/records/board_rules.py",

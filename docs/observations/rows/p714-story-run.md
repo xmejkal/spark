@@ -10,9 +10,9 @@ Card: [P714 #963](https://github.com/xmejkal/spark/issues/963).
 | 4 | "A changed test names itself" is false for 89 of 108 test files | plan refuter, round 2 | acted | a changed test that exists selects itself |
 | 5 | The stem `build` selected 51 tests for `commands/build.md` | plan refuter, round 2 | acted | a command page matches its own path |
 | 6 | `tests/mutations/**` selecting `test_mutate` had a false reason | plan refuter, round 2 | acted | it selects none |
-| 7 | Tree-walking tests outside the always list: `test_store`, `test_boards`, `test_grant`, `test_fab`, `test_board_look`, `test_check_all`, `test_parts` | plan refuter, round 2 | raised | they run when a file names them and at a sweep |
+| 7 | Tree-walking tests outside the always list: `test_store`, `test_boards`, `test_grant`, `test_fab`, `test_board_look`, `test_check_all`, `test_parts` | plan refuter, round 2 | closed | they run when a file names them and at a sweep — P776: stale note: Test tiers note. |
 | 8 | The always list costs too much | implementation | closed | 17 test files, about 38 s in an archive of main on 2026-11-09, under the plan's 60 s |
-| 9 | The gate prints no name of a failing test | retro item on the card | raised | run the failing modules by hand. A later card can print the names |
+| 9 | The gate prints no name of a failing test | retro item on the card | closed | run the failing modules by hand. A later card can print the names — P776: done by card #661 (closed): P661 push hook names failing tests (open). |
 | 10 | A `@whole_repository` marker in place of the table | plan reviewer | rejected | it touches 19 test files, and one table has a test that counts its names |
 | 11 | Rename "story run" to "changed run" | plan reviewer | rejected | the PO's rule says "test the story" |
 | 12 | One full run on this branch | plan reviewer | rejected | the PO's rule makes it a sweep. A planted defect replaced it |

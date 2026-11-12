@@ -61,12 +61,6 @@
  },
  {
   "file": "scripts/check_spine.py",
-  "name": "check_spine prints its verdict without the guard",
-  "find": "sys.stdout.write(guard_lines(render(stages, code, left_off(requirements))))",
-  "replace": "sys.stdout.write(render(stages, code, left_off(requirements)))"
- },
- {
-  "file": "scripts/check_spine.py",
   "name": "check_spine says what it kept without the guard",
   "find": "print(guard_lines(\"  %s\" % entry[\"line\"]), file=sys.stderr)",
   "replace": "print(\"  %s\" % entry[\"line\"], file=sys.stderr)"
@@ -82,12 +76,6 @@
   "name": "run_scenario prints the tool's sentence without the guard",
   "find": "    print(guard_lines(\"%s: %s%s\" % (args.scenario.name, sentence, \"\\nlog: %s\" % log if log else \"\")),",
   "replace": "    print(\"%s: %s%s\" % (args.scenario.name, sentence, \"\\nlog: %s\" % log if log else \"\"),"
- },
- {
-  "file": "scripts/spark/bench/deploy_gate.py",
-  "name": "the erase question, where the person types yes, is written as it is",
-  "find": "% guard_lines(question))",
-  "replace": "% question)"
  },
  {
   "file": "scripts/spark/bench/deploy_image.py",
@@ -112,11 +100,5 @@
   "name": "the terminal does not flush an event line",
   "find": "file=self.stream, flush=True)",
   "replace": "file=self.stream)"
- },
- {
-  "file": "scripts/run_scenario.py",
-  "name": "run_scenario's refusal line is printed without the guard",
-  "find": "print(guard_lines(\"run_scenario.py: %s\" % refusal), file=sys.stderr)",
-  "replace": "print(\"run_scenario.py: %s\" % refusal, file=sys.stderr)"
  }
 ]

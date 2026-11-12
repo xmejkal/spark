@@ -82,4 +82,4 @@ Filed on 2026-11-01 after the PO's OK: N1 is P482 (#661), N2 is P483 (#662), N3 
 | 73 | Three committed files and two cards (P466 #634, P480 #658) held the board's full MAC. | docs reviewer | acted | masked as `34:85:18:42:xx:xx` in the files and on both cards on 2026-11-01. The branch's earlier commits still hold it, so the PR merges as a squash |
 | 74 | `cards.md` and `plan.md` still said "not filed" and "P?" after the PO's OK. | docs reviewer | acted | real numbers in the headings, one copy of the decisions in `plan.md` |
 | 75 | The rows named the diary "in the same folder", but the diary is not in the PR. | docs reviewer | acted | the header names its path and the first comment of P480 (#658) |
-| 76 | The reviewer could not run `gh`, so its five-card spot check against GitHub did not run. | docs reviewer | raised | the lead's spot check of P484 (#663) and P399 (#515) read right |
+| 76 | The reviewer could not run `gh`, so its five-card spot check against GitHub did not run. | docs reviewer | closed | the lead's spot check of P484 (#663) and P399 (#515) read right — P776: done by #515 (closed), #663 (closed), P399 #515 (closed), P484 #663 (closed) |

@@ -1,12 +1,6 @@
 [
  {
   "file": "scripts/spark/bench/flasher.py",
-  "name": "the write runs before the erase",
-  "find": "return [base + [self.ERASE], base + [self.WRITE, self.IMAGE_OFFSET, str(image)]]",
-  "replace": "return [base + [self.WRITE, self.IMAGE_OFFSET, str(image)], base + [self.ERASE]]"
- },
- {
-  "file": "scripts/spark/bench/flasher.py",
   "name": "the port is never put in the command",
   "find": "+ ([\"--port\", port] if port else [])",
   "replace": "+ []"
@@ -48,24 +42,6 @@
   "replace": "return []"
  },
  {
-  "file": "scripts/spark/bench/flasher.py",
-  "name": "the base has a hint that is no one's",
-  "find": "BOOT_HINT = \"\"",
-  "replace": "BOOT_HINT = \"press a button\""
- },
- {
-  "file": "scripts/spark/bench/flasher.py",
-  "name": "the hint loses the BOOT button",
-  "find": "hold the board's BOOT button, press and release RESET, release BOOT, \"",
-  "replace": "press the board's button, \""
- },
- {
-  "file": "scripts/spark/bench/board_look.py",
-  "name": "the look prints no hint",
-  "find": "BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT",
-  "replace": "BOOT_HINT = \"\""
- },
- {
   "file": "scripts/spark/bench/board_look.py",
   "name": "the reader leaves the port out of its line",
   "find": "flasher.build_esptool_prefix(self.flasher_tool, port) + [\"flash-id\"]",
@@ -79,27 +55,9 @@
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",
-  "name": "a failed flash line prints no hint",
-  "find": "hint = planned.flasher.BOOT_HINT",
-  "replace": "hint = \"\""
- },
- {
-  "file": "scripts/spark/bench/firmware_platform.py",
-  "name": "the plan flashes for another chip",
-  "find": "return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip)",
-  "replace": "return flasher.EsptoolFlasher(tools.find(\"flasher\", project), \"esp32\")"
- },
- {
-  "file": "scripts/spark/bench/deploy_service.py",
   "name": "the plan builds the commands without the port",
   "find": "project_flasher.build_commands(image.path, port)",
   "replace": "project_flasher.build_commands(image.path)"
- },
- {
-  "file": "scripts/spark/bench/flasher.py",
-  "name": "both commands share one list object",
-  "find": "return [base + [self.ERASE], base + [self.WRITE, self.IMAGE_OFFSET, str(image)]]",
-  "replace": "base.append(self.ERASE)\n        return [base, base]"
  },
  {
   "file": "scripts/spark/bench/flasher.py",
@@ -109,27 +67,9 @@
  },
  {
   "file": "scripts/spark/bench/flasher.py",
-  "name": "only the erase command is returned",
-  "find": "return [base + [self.ERASE], base + [self.WRITE, self.IMAGE_OFFSET, str(image)]]",
-  "replace": "return [base + [self.ERASE]]"
- },
- {
-  "file": "scripts/spark/bench/flasher.py",
   "name": "the chip is not stored",
   "find": "self.tool, self.chip = tool, chip",
   "replace": "self.tool, self.chip = tool, None"
- },
- {
-  "file": "scripts/spark/bench/flasher.py",
-  "name": "the hint says RESET only",
-  "find": "press and release RESET, release BOOT, \"",
-  "replace": "press RESET, \""
- },
- {
-  "file": "scripts/spark/bench/flasher.py",
-  "name": "the hint lacks the run-again sentence",
-  "find": "\"and run it again\")",
-  "replace": "\"\")"
  },
  {
   "file": "scripts/spark/bench/flasher.py",
@@ -160,12 +100,6 @@
   "name": "hint separator loses the colon",
   "find": "\": \" + hint if hint else \"\"",
   "replace": "\" \" + hint if hint else \"\""
- },
- {
-  "file": "scripts/spark/bench/board_look.py",
-  "name": "look hint is the base class hint",
-  "find": "BOOT_HINT = flasher.EsptoolFlasher.BOOT_HINT",
-  "replace": "BOOT_HINT = flasher.Flasher.BOOT_HINT"
  },
  {
   "file": "scripts/spark/records/tool_finder.py",

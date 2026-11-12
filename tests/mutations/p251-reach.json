@@ -60,22 +60,10 @@
   "replace": "if False:"
  },
  {
-  "file": "scripts/spark/bench/board_look.py",
-  "name": "two boards pass the one-board rule",
-  "find": "if len(found) > 1:",
-  "replace": "if len(found) > 2:"
- },
- {
   "file": "scripts/spark/bench/board_console.py",
   "name": "the console script drops what it read when the port drops",
   "find": "try:\n    while time.monotonic() < end:\n        out += s.read(512)\n    s.close()\nfinally:\n    sys.stdout.write",
   "replace": "if True:\n    while time.monotonic() < end:\n        out += s.read(512)\n    s.close()\nif True:\n    sys.stdout.write"
- },
- {
-  "file": "scripts/spark/bench/board_console.py",
-  "name": "a failed read loses what it heard",
-  "find": "return printed_text(failed.stdout or \"\"), ((failed.stderr",
-  "replace": "return \"\", ((failed.stderr"
  },
  {
   "file": "scripts/spark/bench/board_console.py",

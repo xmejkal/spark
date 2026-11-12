@@ -230,7 +230,7 @@ class TheMatchersTest(unittest.TestCase):
             matching.matcher("same-words", "need")
         self.assertIn("same-words, word-overlap", str(refused.exception))
         self.assertEqual(refused.exception.code, "unknown_matcher")  # P717
-        self.assertIsInstance(refused.exception, ValueError)  # tools/match_eval.py catches it as one
+        self.assertIsInstance(refused.exception, ValueError)  # a caller may catch it as one
 
     def test_what_match_shows(self):
         self.assertEqual([matching.shown(r, e, s) for r, e, s in ((7, False, 0.0), (8, False, 0.0), (8, True, 0.0), (8, False, 0.5))],

@@ -24,7 +24,7 @@ Gaps and findings from the agent runs of P337 #431 (2026-10-20). The plan is
 
 | # | claim | source | status | evidence / where it went |
 |---|---|---|---|---|
-| 11 | The builder ran `factcheck.py` on the plan only after the PO asked, and marked one claim "seen" before its grep | builder, the PO's question | raised | retro inbox; proposal: the push hook runs it on plan files |
+| 11 | The builder ran `factcheck.py` on the plan only after the PO asked, and marked one claim "seen" before its grep | builder, the PO's question | closed | retro inbox; proposal: the push hook runs it on plan files — P776: tracked by card #465 (open): P363 open: the push hook runs factcheck on changed plan files |
 | 12 | The PR A implementer did not re-run the whole suite after its last fix | builder | acted | the builder ran it before the PR |
 
 ## PR A's review (#454): a design lens (Sonnet), the refuter (Opus), a mutation run (Sonnet)

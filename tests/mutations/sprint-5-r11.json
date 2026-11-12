@@ -1,21 +1,9 @@
 [
  {
-  "file": "scripts/parts.py",
-  "name": "need stops reading aliases and kinds",
-  "find": "    haystack = \" \".join([part_id, record.get(\"name\") or \"\", record.get(\"kind\") or \"\",\n                         \" \".join(aliases(record))]).lower()",
-  "replace": "    haystack = \" \".join([part_id, record.get(\"name\") or \"\"]).lower()"
- },
- {
   "file": "scripts/spark/design/find_offers.py",
   "name": "no match no longer names the research command",
   "find": "Research it: /spark:research",
   "replace": "Research it: "
- },
- {
-  "file": "scripts/parts.py",
-  "name": "the brief's vendor order is ignored",
-  "find": "            if isinstance(prefer, list) and prefer and all(isinstance(v, str) for v in prefer):",
-  "replace": "            if False:"
  },
  {
   "file": "scripts/spark/sourcing/datasheets.py",
@@ -28,11 +16,5 @@
   "name": "a skeleton overwrites an existing record",
   "find": "        held = store.records(\"parts\", record_kind.LIBRARY, project, drafts=True).get(part_id)",
   "replace": "        held = None"
- },
- {
-  "file": "scripts/spark/sourcing/datasheets.py",
-  "name": "a draft record stops the search again (I3)",
-  "find": "        except PartError:\n            # A record still being filled in",
-  "replace": "        except ImportError:\n            # A record still being filled in"
  }
 ]

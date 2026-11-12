@@ -26,14 +26,14 @@ refuter on Fable), 24 to 27 the implementer, 28 to 31 the PR review (a reviewer 
 | 18 | P260's test scans comparisons only; constants are right anyway | plan refuter | verified | `READS`, `WILL_READ` |
 | 19 | `tools/map.py` lists every module and `test_map` fails on a stale page | plan refuter | acted | `map.py --write` in the PR |
 | 20 | `import_module` on a class path fails | plan refuter | acted | `rpartition` split in the test |
-| 21 | a `physical` block's `write` is `physical`, so the `will read` rows cannot surface in `--unverified` until P734 widens the join or writes per-key proofs | round 2 refuter | raised | a note for P734 (issue comment) |
+| 21 | a `physical` block's `write` is `physical`, so the `will read` rows cannot surface in `--unverified` until P734 widens the join or writes per-key proofs | round 2 refuter | closed | a note for P734 (issue comment) — P776: tracked by P734 #1005 (open) |
 | 22 | `outcomes.envelope` passes `None` and lists through; `parts.py` prints only four keys | round 2 refuter | verified | text unchanged where no row |
 | 23 | `fab.py` lives in `design/`, not `records/` | round 2 refuter | acted | the plan's citation |
-| 24 | the card's proof `--unverified sen0526-i2s-mic` gains no `read_by`: that record's `body_mm` is verified and it has no `physical` | implementer | raised | the proof is the x-joy fixture; a comment on the card |
-| 25 | no library record has `kind: module`; how a record's kind maps to `module` is P737 step 4's question | implementer | raised | a note for step 4 |
+| 24 | the card's proof `--unverified sen0526-i2s-mic` gains no `read_by`: that record's `body_mm` is verified and it has no `physical` | implementer | closed | the proof is the x-joy fixture; a comment on the card — P776: stale note: Comment on the card. |
+| 25 | no library record has `kind: module`; how a record's kind maps to `module` is P737 step 4's question | implementer | closed | a note for step 4 — P776: done by P737 #1013 (closed) |
 | 26 | the architecture lens read the design's `card` as part of `status`; the file now holds both | implementer | closed | rows 6 and 13 |
-| 27 | validators that require `body_mm` (`CHAIN_FACTS`, `part_records`, `matching`) are not consumers | implementer | raised | `CHAIN_FACTS` moves later (design.md:224) |
+| 27 | validators that require `body_mm` (`CHAIN_FACTS`, `part_records`, `matching`) are not consumers | implementer | closed | `CHAIN_FACTS` moves later (design.md:224) — P776: stale note: CHAIN_FACTS moves later. |
 | 28 | mutation row 2 (match on the leaf name) survives: no test's write key ends in a listed leaf | PR reviewer, PR refuter | acted | `of_fact("header") == []` in test_fact_needs |
 | 29 | the `(will read, P734)` text line is unreachable today and had no test | PR reviewer, PR refuter | acted | a test with a patched `FactNeeds` proves the line; the branch stays for P734 |
-| 30 | `of_fact` ignores the record's kind: a sensor record gets the `module` rows | PR refuter | raised | the file's `//` says so; a join on kind when a second kind has rows (P737 step 4 maps kinds) |
+| 30 | `of_fact` ignores the record's kind: a sensor record gets the `module` rows | PR refuter | closed | the file's `//` says so; a join on kind when a second kind has rows (P737 step 4 maps kinds) — P776: done by P737 #1013 (closed) |
 | 31 | the consumer-missing test, the two `read by` lines, the golden, the map and the data loaders all hold | PR refuter | verified | scratch runs, rows 1, 2, 4, 6, 7 of its report |

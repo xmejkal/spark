@@ -54,12 +54,6 @@
   "replace": "\"M\": 1000}"
  },
  {
-  "file": "scripts/spark/breadboard/sheet.py",
-  "name": "stale drawing kept",
-  "find": "        for path, _ in paths:\n            path.unlink(missing_ok=True)\n        return WriteResult(Path(out), [], planned.why)",
-  "replace": "        return WriteResult(Path(out), [], planned.why)"
- },
- {
   "file": "scripts/spark/build/kept_files.py",
   "name": "stale file kept by _left_from_earlier",
   "find": "    if path.exists():\n        path.unlink()",

@@ -24,12 +24,6 @@
   "replace": "    return \"\""
  },
  {
-  "file": "scripts/spark/build/build_service.py",
-  "name": "a version nobody could read is reported as a drift",
-  "find": "    if version in (\"unknown version\", project_setup.PINNED_CORE):",
-  "replace": "    if version == project_setup.PINNED_CORE:"
- },
- {
   "file": "commands/build.md",
   "name": "the documented output stops naming the core it was run on",
   "find": "  [ok  ] build            15 trace(s), 0 errors, tsci 0.0.2600",

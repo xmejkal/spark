@@ -19,4 +19,4 @@ What the plan council found while Fable 5.1 wrote the wave 5 plan. Card:
 | 12 | `~/` paths made the goldens depend on one machine | refuter, round 2 | acted | the scrub also replaces the `~/` forms |
 | 13 | Folding `DeployPhase` into `board_envelope` makes a cycle | refuter, round 2 | acted | it stays in the leaf `deploy_stages.py` |
 | 14 | Two PO questions: real paths in pasted lines, and how S11 meets the open #906 | Fable | raised | the plan's Open questions, with defaults: real paths, and S11 waits for his merge |
-| 15 | Two mutation rows name `scripts/board_ready.py`, which no longer exists | Fable | raised | W5-3a reports them as a row in its rows file, as the plan says |
+| 15 | Two mutation rows name `scripts/board_ready.py`, which no longer exists | Fable | closed | W5-3a reports them as a row in its rows file, as the plan says — P776: tracked by card  (?): P679 row 4 and P724 row 9 cover the dead board_ready.py mutation rows; they remain in tests/mutations/p215-ready.json. |

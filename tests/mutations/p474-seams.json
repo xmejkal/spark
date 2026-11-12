@@ -1,22 +1,110 @@
 [
- {"file": "scripts/spark/bench/firmware_platform.py", "name": "the platform hands the shell to the flasher", "find": "return flasher.EsptoolFlasher(self.find_tool(\"flasher\"),", "replace": "return flasher.EsptoolFlasher(self.find_tool(\"board-shell\"),"},
- {"file": "scripts/spark/bench/firmware_platform.py", "name": "the board reader is built over the shell", "find": "return board_look.EsptoolReader(self.find_tool(\"flasher\"), run, hint)", "replace": "return board_look.EsptoolReader(self.find_tool(\"board-shell\"), run, hint)"},
- {"file": "scripts/spark/bench/firmware_platform.py", "name": "the port finder is built over the flasher", "find": "return board_look.PortFinder(self.find_tool(\"board-shell\"), run)", "replace": "return board_look.PortFinder(self.find_tool(\"flasher\"), run)"},
- {"file": "scripts/spark/bench/firmware_platform.py", "name": "make_board_reader drops the hint", "find": "return board_look.EsptoolReader(self.find_tool(\"flasher\"), run, hint)", "replace": "return board_look.EsptoolReader(self.find_tool(\"flasher\"), run)"},
- {"file": "scripts/spark/bench/board_look.py", "name": "the looker hands the reader no hint", "find": "platform.make_board_reader(run, hint))", "replace": "platform.make_board_reader(run, \"\"))"},
- {"file": "scripts/spark/bench/board_look.py", "name": "the hint names no buttons", "find": "boot_hint_for(board_records.ButtonPlaces.of_project(platform.project))", "replace": "boot_hint_for(board_records.ButtonPlaces.EMPTY)"},
- {"file": "scripts/spark/bench/board_console.py", "name": "now has no zone", "find": "return datetime.datetime.now().astimezone()", "replace": "return datetime.datetime.now()"},
- {"file": "scripts/spark/bench/deploy_gate.py", "name": "the terminal's user_name is ignored", "find": "return TYPED_BY % self.user_name()", "replace": "return TYPED_BY % getpass.getuser()"},
- {"file": "scripts/spark/bench/board_grant.py", "name": "the grant's user_name is ignored", "find": "Grant(mac, token, self.user_name(), stamp", "replace": "Grant(mac, token, getpass.getuser(), stamp"},
- {"file": "scripts/spark/bench/deploy_service.py", "name": "the records seam is ignored", "find": "return self.records.write_deploy(", "replace": "return deploy_record_store.DeployRecordStore().write_deploy("},
- {"file": "scripts/spark/bench/deploy_service.py", "name": "the deploy moment is read from the system clock", "find": "moment = self.clock.now()", "replace": "moment = board_console.SystemClock.now()"},
- {"file": "scripts/spark/bench/deploy_service.py", "name": "the flasher's retry waits on the system clock", "find": "self.clock.sleep(flasher.RETRY_WAIT_S)", "replace": "board_console.SystemClock.sleep(flasher.RETRY_WAIT_S)"},
- {"file": "scripts/spark/bench/deploy_service.py", "name": "the start wait runs on the system clock", "find": "look.reading.mac, self.clock,", "replace": "look.reading.mac, type(self.clock)(),"},
- {"file": "scripts/spark/bench/deploy_service.py", "name": "the look ignores the service's platform", "find": "board_look.looker(self.platform, self.run)", "replace": "board_look.looker(__import__('firmware_platform').MicroPythonPlatform(self.project), self.run)"},
- {"file": "scripts/spark/bench/board_doctor.py", "name": "the doctor reads the shell's silent step, not the flasher's", "find": "platform.find_tool(\"flasher\"), stop.tool_said)", "replace": "platform.find_tool(\"board-shell\"), stop.tool_said)"},
- {"file": "scripts/spark/bench/board_doctor.py", "name": "the doctor's console probe is not from the platform", "find": "platform.make_console_probe(stop.port, run))", "replace": "None)"},
- {"file": "scripts/spark/bench/run_live_code.py", "name": "live uses no console probe from the platform", "find": "probe = platform.make_console_probe(port, outside.run)", "replace": "probe = None"},
- {"file": "scripts/spark/bench/reach_board.py", "name": "reach uses no console probe from the platform", "find": "probe = platform.make_console_probe(port, outside.run)", "replace": "probe = None"},
- {"file": "scripts/spark/bench/issue_grant.py", "name": "grant's doctor uses a platform of its own, not the one it was given", "find": "board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)", "replace": "board_doctor.stop_answer(SCRIPT, stop, __import__('firmware_platform').MicroPythonPlatform(project), outside.run)"},
- {"file": "scripts/spark/bench/issue_grant.py", "name": "grant reads the board without the hint", "find": "platform.make_board_reader(outside.run, flasher.EsptoolFlasher.boot_hint_for(places))", "replace": "platform.make_board_reader(outside.run, \"\")"}
+ {
+  "file": "scripts/spark/bench/firmware_platform.py",
+  "name": "the platform hands the shell to the flasher",
+  "find": "return flasher.EsptoolFlasher(self.find_tool(\"flasher\"),",
+  "replace": "return flasher.EsptoolFlasher(self.find_tool(\"board-shell\"),"
+ },
+ {
+  "file": "scripts/spark/bench/firmware_platform.py",
+  "name": "the board reader is built over the shell",
+  "find": "return board_look.EsptoolReader(self.find_tool(\"flasher\"), run, hint)",
+  "replace": "return board_look.EsptoolReader(self.find_tool(\"board-shell\"), run, hint)"
+ },
+ {
+  "file": "scripts/spark/bench/firmware_platform.py",
+  "name": "the port finder is built over the flasher",
+  "find": "return board_look.PortFinder(self.find_tool(\"board-shell\"), run)",
+  "replace": "return board_look.PortFinder(self.find_tool(\"flasher\"), run)"
+ },
+ {
+  "file": "scripts/spark/bench/firmware_platform.py",
+  "name": "make_board_reader drops the hint",
+  "find": "return board_look.EsptoolReader(self.find_tool(\"flasher\"), run, hint)",
+  "replace": "return board_look.EsptoolReader(self.find_tool(\"flasher\"), run)"
+ },
+ {
+  "file": "scripts/spark/bench/board_look.py",
+  "name": "the looker hands the reader no hint",
+  "find": "platform.make_board_reader(run, hint))",
+  "replace": "platform.make_board_reader(run, \"\"))"
+ },
+ {
+  "file": "scripts/spark/bench/board_look.py",
+  "name": "the hint names no buttons",
+  "find": "boot_hint_for(board_records.ButtonPlaces.of_project(platform.project))",
+  "replace": "boot_hint_for(board_records.ButtonPlaces.EMPTY)"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_gate.py",
+  "name": "the terminal's user_name is ignored",
+  "find": "return TYPED_BY % self.user_name()",
+  "replace": "return TYPED_BY % getpass.getuser()"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_service.py",
+  "name": "the records seam is ignored",
+  "find": "return self.records.write_deploy(",
+  "replace": "return deploy_record_store.DeployRecordStore().write_deploy("
+ },
+ {
+  "file": "scripts/spark/bench/deploy_service.py",
+  "name": "the deploy moment is read from the system clock",
+  "find": "moment = self.clock.now()",
+  "replace": "moment = board_console.SystemClock.now()"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_service.py",
+  "name": "the flasher's retry waits on the system clock",
+  "find": "self.clock.sleep(flasher.RETRY_WAIT_S)",
+  "replace": "board_console.SystemClock.sleep(flasher.RETRY_WAIT_S)"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_service.py",
+  "name": "the start wait runs on the system clock",
+  "find": "look.reading.mac, self.clock,",
+  "replace": "look.reading.mac, type(self.clock)(),"
+ },
+ {
+  "file": "scripts/spark/bench/deploy_service.py",
+  "name": "the look ignores the service's platform",
+  "find": "board_look.looker(self.platform, self.run)",
+  "replace": "board_look.looker(__import__('firmware_platform').MicroPythonPlatform(self.project), self.run)"
+ },
+ {
+  "file": "scripts/spark/bench/board_doctor.py",
+  "name": "the doctor reads the shell's silent step, not the flasher's",
+  "find": "platform.find_tool(\"flasher\"), stop.tool_said)",
+  "replace": "platform.find_tool(\"board-shell\"), stop.tool_said)"
+ },
+ {
+  "file": "scripts/spark/bench/board_doctor.py",
+  "name": "the doctor's console probe is not from the platform",
+  "find": "platform.make_console_probe(stop.port, run))",
+  "replace": "None)"
+ },
+ {
+  "file": "scripts/spark/bench/run_live_code.py",
+  "name": "live uses no console probe from the platform",
+  "find": "probe = platform.make_console_probe(port, outside.run)",
+  "replace": "probe = None"
+ },
+ {
+  "file": "scripts/spark/bench/reach_board.py",
+  "name": "reach uses no console probe from the platform",
+  "find": "probe = platform.make_console_probe(port, outside.run)",
+  "replace": "probe = None"
+ },
+ {
+  "file": "scripts/spark/bench/issue_grant.py",
+  "name": "grant's doctor uses a platform of its own, not the one it was given",
+  "find": "board_doctor.stop_answer(SCRIPT, stop, platform, outside.run)",
+  "replace": "board_doctor.stop_answer(SCRIPT, stop, __import__('firmware_platform').MicroPythonPlatform(project), outside.run)"
+ },
+ {
+  "file": "scripts/spark/bench/issue_grant.py",
+  "name": "grant reads the board without the hint",
+  "find": "platform.make_board_reader(outside.run, flasher.EsptoolFlasher.boot_hint_for(places))",
+  "replace": "platform.make_board_reader(outside.run, \"\")"
+ }
 ]

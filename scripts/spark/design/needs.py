@@ -116,7 +116,7 @@ def write(project, needs):
 #: Where a candidate lives, nearest first (§5.5); anything else is one of the person's other projects, after these.
 LAYERS = (offers.DRAWER, "project", "shelf", "library", "catalog")
 
-#: `--match`'s matcher (P211). A default changes only with the PO's yes, after he reads `tools/match_eval.py`'s numbers.
+#: `--match`'s matcher (P211). A default changes only with the PO's yes, after he reads the matchers' numbers on his needs.
 MATCHER = "same-words"
 
 

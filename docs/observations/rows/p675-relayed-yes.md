@@ -16,7 +16,7 @@ What the plan council and the session found while W4-4 was planned and built. Ca
 | 9 | A live grant lets live.py run any code that names no restricted pin, so the docs must say "the erase", not every change to the board | refuter, plan | acted | never-assume.md section 7 says so |
 | 10 | `FakeConsent` does not inherit from `ConsentStrategy`, so every test would fail on the new attributes | refuter, plan round 2 | acted | `FakeConsent` has both |
 | 11 | The `opens_erase` check trusts the strategy's own attribute, so code in the same process can claim it | refuter, plan | acted | one docstring sentence on `ConsentStrategy`. The guard is the rule, as for the grant file |
-| 12 | The full council that wave4-plan asks for would be today's second, over the PO's one-a-day allowance | session | raised | the lenses, the refuter and the mutation run go first, and the PO decides on a full council |
+| 12 | The full council that wave4-plan asks for would be today's second, over the PO's one-a-day allowance | session | closed | the lenses, the refuter and the mutation run go first, and the PO decides on a full council — P776: stale note: One-day council allowance note. |
 | 13 | `opens_erase = True` on the base class fails open: a new kind that forgets it opens the erase | tech lead, PR | acted | False on the base, True on the terminal and standing kinds |
 | 14 | The "no CLI flag" test only looked for "relay" in flag names | tech lead, PR | acted | the test now finds no script but deploy_gate.py that builds the class |
 | 15 | No test pinned the gate order with a stale token, and the code's list was loose | tech lead, PR | acted | a stale-token test, and the code asserted in `unchecked` |

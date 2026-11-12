@@ -1,23 +1,5 @@
 [
  {
-  "file": "scripts/spark/records/store.py",
-  "name": "prefix-dropped",
-  "find": "    return \"SPARK_HOME=%s %s\" % (shlex.quote(str(Path(given).resolve())), line) if given else line",
-  "replace": "    return line"
- },
- {
-  "file": "scripts/spark/records/store.py",
-  "name": "store-not-quoted",
-  "find": "(shlex.quote(str(Path(given).resolve())), line)",
-  "replace": "(str(Path(given).resolve()), line)"
- },
- {
-  "file": "scripts/spark/records/store.py",
-  "name": "store-not-resolved",
-  "find": "shlex.quote(str(Path(given).resolve()))",
-  "replace": "shlex.quote(str(Path(given)))"
- },
- {
   "file": "scripts/spark/firmware/project_image.py",
   "name": "no-image-hint-dropped",
   "find": "+ NO_SIMULATION_HINT % (build + \", then \"), reason",

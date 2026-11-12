@@ -21,12 +21,12 @@ Card: [P399 #515](https://github.com/xmejkal/spark/issues/515). Rows 1 to 14 com
 | 15 | The plan listed a block-scalar name as a reason for an unread step | implementation | closed | the own-keys reader never reads a name's body, so the reason is gone and the step keeps its id |
 | 16 | `_kind` and the own-keys reader both found the kind | implementation | acted | `_kind` is gone, and the 122 older tests pass |
 | 17 | P396's row 9: an old limits note stays | card comment | closed | `scripts/spark/build/kept_files.py:292` removes it |
-| 18 | What wokwi-cli does with an unknown id | refuter | raised | finding out needs a paid run, and no paid run is allowed. The check is free either way |
+| 18 | What wokwi-cli does with an unknown id | refuter | closed | finding out needs a paid run, and no paid run is allowed. The check is free either way — P776: stale note: Needs paid run, not allowed. |
 | 19 | `part-id: my` with the next line going on is misread: a false exit 2 or a silent wrong id | PR refuter | acted | the step is unread, with a test |
 | 20 | `- name: press [A` stopped counting a step that main counted | PR refuter | acted | a bracket counts only where a value starts it |
 | 21 | `- &boot { wait-serial: "ready" }` got a second wait | PR refuter | acted | anchors and tags before a step are skipped |
 | 22 | Two mutation rows described behaviour no test reached | PR refuter | acted | one row renamed, and tests added for both |
 | 23 | `agents.md` said a line starts with `not checked:`, but it starts with the script's name | PR refuter | acted | it says "holds" |
-| 24 | `free_checks` and `run()` both call `problem()` | PR reviewer | raised | the double call is older than this card; PR 2 moves the only write out of it |
+| 24 | `free_checks` and `run()` both call `problem()` | PR reviewer | closed | the double call is older than this card; PR 2 moves the only write out of it — P776: stale note: Older than card, PR 2 moves the write. |
 | 25 | A `wait-serial` whose text holds `part-id` prints `not checked` | PR reviewer | rejected | the plan chose a harmless note over silence for a step of another kind |
 | 26 | The module docstring had a broken wrap | PR reviewer | acted | reflowed |

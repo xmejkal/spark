@@ -18,4 +18,4 @@ They were checked against main 508798dc before any code, then the build. Card:
 | 9 | `MAY_READ` | plan | verified | no key names `needs` or `kept_reason` |
 | 10 | the closing checks | plan | acted | `TheDesignAreaTest` holds ten modules with `needs`, and no design library module is left in `scripts/` |
 | 11 | 2 agent-facing pages | plan | acted | `how-it-works.md:153` names `spark/design/needs.py`. `developing.md:238` names the file `needs.py`, still right. `areas/design.md`, `areas/core.md` and `areas/sourcing.md` (it said `needs.py` imports `design`, now `loader`) follow. `map.py --write` |
-| 12 | the map of the guard move's commit | build | raised | `map.py --write` ran in the move's commit, so `text_guards`' docstring row is one commit late. The branch's head is green |
+| 12 | the map of the guard move's commit | build | closed | `map.py --write` ran in the move's commit, so `text_guards`' docstring row is one commit late. The branch's head is green — P776: stale note: One commit late map row. |

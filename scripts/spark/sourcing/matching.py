@@ -2,7 +2,7 @@
 Matching a need, or a search word, to what the store offers (P211; docs/2026-10-12-p211-matching-design.md).
 
 A matcher ranks the offers, and a chooser picks one: Claude in the conversation, or the person. This is the one place
-for the rules. `needs.candidates` (`parts.py --match`), `datasheets.need` (`--need`), `--offer` and `tools/match_eval.py`
+for the rules. `needs.candidates` (`parts.py --match`), `datasheets.need` (`--need`), `--offer`
 call it, and it reads no store: callers build the offers (`spark.sourcing.offers`). Part numbers stay in
 `drawer._match`.
 """
@@ -35,7 +35,7 @@ Fit.__doc__ = "One offer as a matcher sees it for one need: a score from 0 to 1,
 
 class UnknownMatcherError(CodedMessageError, ValueError):
     """A matcher name that is no matcher, or one that does not serve the caller; the message lists the names that
-    fit. Its code is `sourcing_codes.UNKNOWN_MATCHER`, and it stays a ValueError, which `tools/match_eval.py`
+    fit. Its code is `sourcing_codes.UNKNOWN_MATCHER`, and it stays a ValueError, which a caller
     catches."""
 
 

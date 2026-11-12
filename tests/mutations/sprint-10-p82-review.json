@@ -1,24 +1,128 @@
 [
- {"file": "scripts/spark/records/tool_finder.py", "name": "C1: a machine with no build of its own gets another platform's", "find": "    build = fetch[\"platforms\"].get(platform_key())", "replace": "    build = next(iter(fetch[\"platforms\"].values()))"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "C1: a downloaded program is left not executable", "find": "    if executable:\n        part.chmod(0o755)", "replace": "    if False:\n        part.chmod(0o755)"},
- {"file": "data/tools.json", "name": "C1: the simulator's install is the npm 404 again", "find": "\"download\": \"/spark:setup — wokwi-cli 0.28.0", "replace": "\"npm\": \"npm install -g wokwi-cli\",\n      \"download\": \"/spark:setup — wokwi-cli 0.28.0"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "I7: a download's file may climb out of the downloads folder", "find": "        if not isinstance(file, str) or Path(file).name != file or file in (\".\", \"..\"):", "replace": "        if not isinstance(file, str):"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "I7: a download lands under its own name before it is checked", "find": "                step[\"argv\"] = [\"curl\", \"-fsSL\", \"-o\", str(DOWNLOADS / (fetch[0] + \".part\")), fetch[1]]", "replace": "                step[\"argv\"] = [\"curl\", \"-fsSL\", \"-o\", str(DOWNLOADS / fetch[0]), fetch[1]]"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "I7: an interrupted download is left behind", "find": "                (DOWNLOADS / (fetch[0] + \".part\")).unlink()\n", "replace": "                pass\n"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "I7: a project's own command is not marked before the yes", "find": "\"from_project\": name in project_file}", "replace": "\"from_project\": False}"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "I2: an entry missing what its kind needs reaches a KeyError", "find": "    problem = entry_problem(entry)\n    if problem:\n        raise ToolError(\"%s: %s\", tool_name, problem, code=records_codes.TOOL_ENTRY_BROKEN)\n", "replace": "    problem = None\n    if problem:\n        raise ToolError(\"%s: %s\", tool_name, problem, code=records_codes.TOOL_ENTRY_BROKEN)\n"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "M5: a loop of needs recurses until Python gives up", "find": "    if tool_name in _seen:", "replace": "    if False:"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "M5: roles that are not an object are a traceback", "find": "        if not isinstance(data.get(\"roles\") or {}, dict):", "replace": "        if False:"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "I3: turned off in the project, the advice writes the person's file", "find": "    if project and setter == Path(project) / PROJECT_FILE:", "replace": "    if False:"},
- {"file": "scripts/tools.py", "name": "I3: --on in the person's file says on while the project keeps it off", "find": "            if merged(project)[\"tools\"].get(args.on, {}).get(\"on\") is False:", "replace": "            if False:"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "I5: --pin can only write the version", "find": "    written = choose([name, field or \"version\"], value, where)", "replace": "    written = choose([name, \"version\"], value, where)"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "I5: a tool at another version than its pin counts as installed", "find": "            if here is not None and not pin_differences(entry, here):", "replace": "            if here is not None:"},
- {"file": "scripts/spark/records/tool_finder.py", "name": "I5: status hides a version other than the pin", "find": "                                for field, here, pinned in pin_differences(found.entry, found.command))", "replace": "                                for field, here, pinned in [])"},
- {"file": "scripts/tools.py", "name": "I2: status exits ok with a row that reads missing", "find": "    return sum(1 for state, _, _ in rows if state == \"missing\")", "replace": "    return len(missing)"},
- {"file": "scripts/spark/build/project_setup.py", "name": "I1: init writes files before it knows the tools list is readable", "find": "        tool_finder.merged(project)\n", "replace": "        pass\n"},
- {"file": "scripts/spark/build/project_setup.py", "name": "I6: what the documents were measured on is the person's pin", "find": "_TSCIRCUIT = tool_finder._read(tool_finder.DEFAULTS)[\"tscircuit\"]", "replace": "_TSCIRCUIT = tool_finder.merged()[\"tools\"][\"tscircuit\"]"},
- {"file": "scripts/spark/build/build_service.py", "name": "I1: a missing engine is looked for from the scratch directory, not the project", "find": "            tool_finder.find(\"board-engine\", project or workdir)", "replace": "            tool_finder.find(\"board-engine\", workdir)"},
- {"file": "scripts/spark/firmware/sim_project.py", "name": "I1: no wokwi-cli prints a fixed hint, not the list's sentence", "find": "% (chip, simulator_problem() or \"wokwi-cli was not found\"))", "replace": "% (chip, \"wokwi-cli was not found\"))"},
- {"file": "scripts/spark/build/board_engine.py", "name": "I4: a converter swapped in by the list is run as if it were the bundle", "find": "    if converter.entry.get(\"kind\") == \"bundled\":", "replace": "    if True:"},
- {"file": "data/tools.json", "name": "a declined item, ruled: the board engine is installed at a caret range that floats", "find": "npm install --save-dev --save-exact @tscircuit", "replace": "npm install --save-dev @tscircuit"}
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "C1: a machine with no build of its own gets another platform's",
+  "find": "    build = fetch[\"platforms\"].get(platform_key())",
+  "replace": "    build = next(iter(fetch[\"platforms\"].values()))"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "C1: a downloaded program is left not executable",
+  "find": "    if executable:\n        part.chmod(0o755)",
+  "replace": "    if False:\n        part.chmod(0o755)"
+ },
+ {
+  "file": "data/tools.json",
+  "name": "C1: the simulator's install is the npm 404 again",
+  "find": "\"download\": \"/spark:setup — wokwi-cli 0.28.0",
+  "replace": "\"npm\": \"npm install -g wokwi-cli\",\n      \"download\": \"/spark:setup — wokwi-cli 0.28.0"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "I7: a download's file may climb out of the downloads folder",
+  "find": "        if not isinstance(file, str) or Path(file).name != file or file in (\".\", \"..\"):",
+  "replace": "        if not isinstance(file, str):"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "I7: a download lands under its own name before it is checked",
+  "find": "                step[\"argv\"] = [\"curl\", \"-fsSL\", \"-o\", str(DOWNLOADS / (fetch[0] + \".part\")), fetch[1]]",
+  "replace": "                step[\"argv\"] = [\"curl\", \"-fsSL\", \"-o\", str(DOWNLOADS / fetch[0]), fetch[1]]"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "I7: an interrupted download is left behind",
+  "find": "                (DOWNLOADS / (fetch[0] + \".part\")).unlink()\n",
+  "replace": "                pass\n"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "I7: a project's own command is not marked before the yes",
+  "find": "\"from_project\": name in project_file}",
+  "replace": "\"from_project\": False}"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "I2: an entry missing what its kind needs reaches a KeyError",
+  "find": "    problem = entry_problem(entry)\n    if problem:\n        raise ToolError(\"%s: %s\", tool_name, problem, code=records_codes.TOOL_ENTRY_BROKEN)\n",
+  "replace": "    problem = None\n    if problem:\n        raise ToolError(\"%s: %s\", tool_name, problem, code=records_codes.TOOL_ENTRY_BROKEN)\n"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "M5: a loop of needs recurses until Python gives up",
+  "find": "    if tool_name in _seen:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "M5: roles that are not an object are a traceback",
+  "find": "        if not isinstance(data.get(\"roles\") or {}, dict):",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "I3: turned off in the project, the advice writes the person's file",
+  "find": "    if project and setter == Path(project) / PROJECT_FILE:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "I3: --on in the person's file says on while the project keeps it off",
+  "find": "            if merged(project)[\"tools\"].get(args.on, {}).get(\"on\") is False:",
+  "replace": "            if False:"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "I5: a tool at another version than its pin counts as installed",
+  "find": "            if here is not None and not pin_differences(entry, here):",
+  "replace": "            if here is not None:"
+ },
+ {
+  "file": "scripts/spark/records/tool_finder.py",
+  "name": "I5: status hides a version other than the pin",
+  "find": "                                for field, here, pinned in pin_differences(found.entry, found.command))",
+  "replace": "                                for field, here, pinned in [])"
+ },
+ {
+  "file": "scripts/tools.py",
+  "name": "I2: status exits ok with a row that reads missing",
+  "find": "    return sum(1 for state, _, _ in rows if state == \"missing\")",
+  "replace": "    return len(missing)"
+ },
+ {
+  "file": "scripts/spark/build/project_setup.py",
+  "name": "I1: init writes files before it knows the tools list is readable",
+  "find": "        tool_finder.merged(project)\n",
+  "replace": "        pass\n"
+ },
+ {
+  "file": "scripts/spark/build/project_setup.py",
+  "name": "I6: what the documents were measured on is the person's pin",
+  "find": "_TSCIRCUIT = tool_finder._read(tool_finder.DEFAULTS)[\"tscircuit\"]",
+  "replace": "_TSCIRCUIT = tool_finder.merged()[\"tools\"][\"tscircuit\"]"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "I1: a missing engine is looked for from the scratch directory, not the project",
+  "find": "            tool_finder.find(\"board-engine\", project or workdir)",
+  "replace": "            tool_finder.find(\"board-engine\", workdir)"
+ },
+ {
+  "file": "scripts/spark/firmware/sim_project.py",
+  "name": "I1: no wokwi-cli prints a fixed hint, not the list's sentence",
+  "find": "% (chip, simulator_problem() or \"wokwi-cli was not found\"))",
+  "replace": "% (chip, \"wokwi-cli was not found\"))"
+ },
+ {
+  "file": "scripts/spark/build/board_engine.py",
+  "name": "I4: a converter swapped in by the list is run as if it were the bundle",
+  "find": "    if converter.entry.get(\"kind\") == \"bundled\":",
+  "replace": "    if True:"
+ },
+ {
+  "file": "data/tools.json",
+  "name": "a declined item, ruled: the board engine is installed at a caret range that floats",
+  "find": "npm install --save-dev --save-exact @tscircuit",
+  "replace": "npm install --save-dev @tscircuit"
+ }
 ]

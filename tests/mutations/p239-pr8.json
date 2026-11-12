@@ -48,12 +48,6 @@
   "replace": "if why:"
  },
  {
-  "file": "scripts/spark/bench/firmware_platform.py",
-  "name": "chip-after-tool",
-  "find": "    chip = chip_of(project)\n    return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip)",
-  "replace": "    return flasher.EsptoolFlasher(tools.find(\"flasher\", project), chip_of(project))"
- },
- {
   "file": "scripts/spark/bench/deploy_image.py",
   "name": "main-dry-run-off",
   "find": "        if not self.asked.dry_run:\n            return None\n",

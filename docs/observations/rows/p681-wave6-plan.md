@@ -15,7 +15,7 @@ What the plan council found while Fable 5.1 wrote the wave 6 plan. Card:
 | 8 | `--json` for run_scenario and flash_image does not serve spark's bar | architecture lens | acted | dropped from W6-F2, a later card |
 | 9 | The batching default was too serial | architecture lens | acted | a later area's net PR may open beside a move PR, one move PR at a time |
 | 10 | Three numbers were wrong (emit_board lines, DeployError codes, imports among the six) | refuter, round 1 | acted | corrected |
-| 11 | One open question for the PO: batching (decision 4) | Fable | raised | the plan's default holds until he answers |
+| 11 | One open question for the PO: batching (decision 4) | Fable | raised | the plan's default holds until he answers — P776: waits on the PO: Open question for the PO. — P776: waits on the PO: Open question for the PO. |
 | 12 | The token check belongs in the temp-folder shim, not in `fake_wokwi_cli.py`, which four places run directly | PR reviewer | acted | W6-F1's guard line and its Files paragraph name the shim and the four places |
 | 13 | One word for one thing: golden net, codes, move; shim versus `fake_wokwi_cli.py` | PR reviewer | acted | the PR titles and the batching text use the three words |
 | 14 | W6-F2's size differed between its section and Review size | PR reviewer | acted | one pair, 80 and 80 |

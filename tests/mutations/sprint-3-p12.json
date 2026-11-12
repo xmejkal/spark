@@ -16,11 +16,5 @@
   "name": "the Node prefix linked as node_modules again",
   "find": "    if toolchain.parent.name == \".bin\" and modules.name == \"node_modules\":",
   "replace": "    if True:"
- },
- {
-  "file": "scripts/spark/build/board_engine.py",
-  "name": "a missing tool raises instead of 'unknown version'",
-  "find": "    except (OSError, subprocess.TimeoutExpired):\n        return \"unknown version\"",
-  "replace": "    except subprocess.TimeoutExpired:\n        return \"unknown version\""
  }
 ]

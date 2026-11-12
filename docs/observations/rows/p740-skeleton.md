@@ -13,7 +13,7 @@ Rows 1 to 8 are the plan check (the refuter on Fable, the XS rule), row 9 the im
 | 6 | `step()` + `add_env(..., store.read_given_env())` matches `_op_unverified` | plan refuter | rejected as a doubt | `part_handlers.py:107`, `outcomes.py:113,123`, `store.py:66` |
 | 7 | the golden store holds no shelf; the library Case needs no `written=`; `ROOT` is scrubbed to `<repo>` | plan refuter | rejected as a doubt | `test_golden_records.py:130-131`, `golden_bench.py:210` |
 | 8 | `held` is a participle, not the noun of a path; neighbours say `path` | plan refuter | acted | `layer, path = held` |
-| 9 | the simple-english hook counts 57 older violations in `commands/research.md`; this card touched four lines | implementer | raised | a docs pass on the command pages, out of this card's scope |
+| 9 | the simple-english hook counts 57 older violations in `commands/research.md`; this card touched four lines | implementer | closed | a docs pass on the command pages, out of this card's scope — P776: done by card #682 (closed): P776: tracked by #682 (command pages plain English) |
 | 10 | the project layer is never asserted: its fix text, sentence and empty `next` have no test | PR reviewer (Sonnet) | acted | a `("project", "x-project")` case joins the loop |
 | 11 | "a skeleton here would hide it" is untrue for the project layer: it would overwrite | PR refuter (Fable) | acted | "overwrite" for the project layer, "hide" for the others; research.md says both |
 | 12 | refusal, `--promote` next step, exit codes, `next: []`, Linux path and the four mutation rows all hold | PR refuter (Fable) | verified | six scratch runs and the promote run, rows 1 to 7 of its report |
