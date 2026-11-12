@@ -842,7 +842,7 @@ def budget_ledger(root, *rows_and_seconds):
                                        ledger.CAUGHT, "test_m", seconds) for row, seconds in rows_and_seconds])
 
 
-@slow("mutation runs of a tiny tree under --budget, 5 tests, 9.4 s on 2026-11-12")
+@slow("mutation runs of a tiny tree under --budget, 5 tests, 5.2 s on 2026-11-12")
 class TheBudgetTest(unittest.TestCase):
     """P787 PR 3: --budget stops before the row whose expected seconds would cross it, counted from the run's start."""
 
@@ -901,8 +901,8 @@ class TheBudgetTest(unittest.TestCase):
         # SIGTERM in the middle of a --copy run, the file's existing way: the project's test blocks while the second row is planted.
         root = tiny_project_that_finds_itself()
         test = root / "tests" / "test_m.py"
-        test.write_text(test.read_text() + "    def test_sub_blocks(self):\n"
-                        "        while m.sub(5, 3) != 2: __import__('time').sleep(0.01)\n")
+        test.write_text(test.read_text() + "    def test_sub_blocks(self):\n"  # for a minute at most: the orphan ends on its own
+                        "        for _ in range(6000):\n            if m.sub(5, 3) == 2: break\n            __import__('time').sleep(0.01)\n")
         mine = Path(tempfile.mkdtemp())
         child = subprocess.Popen([sys.executable, str(ROOT / "tools" / "mutate.py"), str(table(root, BREAK_ADD, BREAK_SUB)), "--root",
                                   str(root), "--copy"], env=dict(os.environ, TMPDIR=str(mine)),

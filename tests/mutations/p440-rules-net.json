@@ -25,7 +25,7 @@
  {"file": "tools/mutate.py", "name": "P440: a copy's after-suite still runs", "find": "restored = copied or bool(suite_is_green(root, tests))", "replace": "restored = bool(suite_is_green(root, tests))"},
  {"file": "tools/mutate.py", "name": "P440: a folder without an __init__.py is a package", "find": "all((Path(root).joinpath(*parts[:i + 1]) / \"__init__.py\").is_file() for i in range(1, len(parts) - 1))", "replace": "True"},
  {"file": "tools/mutate.py", "name": "P440: --retarget that moves no row exits ok", "find": "    if not moved:", "replace": "    if False:"},
- {"file": "tools/mutate.py", "name": "P440: --retarget runs with --anchors", "find": "if args.anchors or args.paths or args.copy or args.tier is not None or args.tier_count:", "replace": "if False:"},
+ {"file": "tools/mutate.py", "name": "P440: --retarget runs with --anchors", "find": "if args.anchors or args.paths or args.copy or args.tier is not None or args.tier_count or args.budget is not None:", "replace": "if False:"},
  {"file": "tools/measure.py", "name": "P440: --accept writes a new or risen breach", "find": "if worse and not args.accept_new:", "replace": "if False:"},
  {"file": "tools/measure.py", "name": "P440: a value that fell fails", "find": "FAILING = (NEW, ROSE, GONE)", "replace": "FAILING = (NEW, ROSE, GONE, FELL)"},
  {"file": "tools/measure.py", "name": "P440: a nested read of sys.modules counts twice", "find": "reads |= {id(n) for n in ast.walk(node.test) if _dotted(n) == \"sys.modules\"}", "replace": "reads |= {(id(node), id(n)) for n in ast.walk(node.test) if _dotted(n) == \"sys.modules\"}"},
