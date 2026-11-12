@@ -29,7 +29,7 @@ line is the token.
 
 With a passed scenario, the look also prints what the run did not test: its caveats, the limits of the simulation, and
 under "no scenario named these must lines, so test them on the board:" each must line of the brief that no passed
-scenario named (`data.unnamed_must` in `--json`). It is a list for the person, never a failure: the exit code stays 0.
+scenario named (`data.unnamed_must` in `--json`). With `--no-simulation` the limits come from the project's records, the same facts the pick and the build read, and every must line is listed (P778). It is a list for the person, never a failure: the exit code stays 0.
 
 ### The gate
 

@@ -1,0 +1,32 @@
+[
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "a skip beside a real part counts as every part skipped (any for all)",
+  "find": "return bool(mapping) and all(\"skip\" in entry for entry in mapping.values())",
+  "replace": "return bool(mapping) and any(\"skip\" in entry for entry in mapping.values())"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "an empty mapping counts as every part skipped (all([]) is True)",
+  "find": "return bool(mapping) and all(\"skip\" in entry for entry in mapping.values())",
+  "replace": "return all(\"skip\" in entry for entry in mapping.values())"
+ },
+ {
+  "file": "scripts/spark/bench/image_evidence.py",
+  "name": "no simulation names every must line again",
+  "find": "        return UnnamedMust(list(must))",
+  "replace": "        return UnnamedMust([])"
+ },
+ {
+  "file": "scripts/spark/bench/image_evidence.py",
+  "name": "no simulation gives no limits again, whatever the records say",
+  "find": "        design, _ = self._design()\n        if design is None:\n            return []",
+  "replace": "        design, _ = self._design()\n        if design is None or design is not None:\n            return []"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "a diagram with no wire is a defect even when every part is skipped",
+  "find": "if wires == 0 and not skipped:",
+  "replace": "if wires == 0:"
+ }
+]
