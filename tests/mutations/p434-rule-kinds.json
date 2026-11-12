@@ -66,9 +66,9 @@
   "replace": "  #"
  },
  {
-  "file": "scripts/check_footprints.py",
+  "file": "scripts/spark/checks/build_check.py",
   "name": "P434: a rules refusal with --json is bare text",
-  "find": "        print(json.dumps({\"tool\": \"check_footprints\", \"status\": COULD_NOT_RUN, \"message\": str(refusal), \"code\": refusal.code}) if args.json else refusal)",
-  "replace": "        print(refusal)"
+  "find": "    return json.dumps({\"tool\": \"check_footprints\", \"status\": COULD_NOT_RUN, \"message\": str(refusal), \"code\": refusal.code}) if as_json else str(refusal)",
+  "replace": "    return str(refusal)"
  }
 ]

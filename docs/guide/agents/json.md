@@ -197,7 +197,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 
 - The answer is a bare list, one entry per board file.
 - A compared board has `board`, `compared`, `not_recorded`, `problems`, `source` and `status`.
-- A could-not-run has `board`, `status`, `reason` and `code` (the word to decide on, P688; a file that is not there is `no_board_file`).
+- A could-not-run has `board`, `status`, `reason` and `code` (the word to decide on, P688; a file that is not there is `board_file_missing`).
 - A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose
   header held no pins. A live run refused before or during the fetch has none.
 - `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`.

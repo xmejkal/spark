@@ -21,8 +21,6 @@ NO_VENDOR_VARIANT, NO_CACHED_HEADER, HEADER_HAS_NO_PINS = "no_vendor_variant", "
 BOARD_HAS_NO_PROJECT, HEADER_NOT_FETCHED, HEADER_NOT_KEPT = "board_has_no_project", "header_not_fetched", "header_not_kept"
 #: check_bom.py.
 NO_PACKAGE, NO_BOM_IN_PACKAGE = "no_package", "no_bom_in_package"
-#: check_vendor_pins.py: a board file that is not there (P688).
-NO_BOARD_FILE = "no_board_file"
 
 #: Each code and the one sentence that says what it means.
 CODES = {
@@ -40,7 +38,6 @@ CODES = {
     BOARD_HAS_NO_PROJECT: "a live check needs a project that owns the board file, to keep the header it fetches",
     HEADER_NOT_FETCHED: "the vendor header could not be fetched with gh",
     HEADER_NOT_KEPT: "the vendor header was fetched but could not be written to the project's cache",
-    NO_BOARD_FILE: "there is no board file at the path given, so there is nothing to check",
     NO_PACKAGE: "there is no fab package at the path given: export it first",
     NO_BOM_IN_PACKAGE: "the fab package holds no bom.csv, so there is no order to check",
 }

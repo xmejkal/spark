@@ -75,6 +75,7 @@ CASES = [
     Case("check-footprints-ok.json", "check_footprints.py", [CIRCUIT, "--json"], 0),
     Case("check-footprints-could-not-run-no-circuit.txt", "check_footprints.py", ["dist/board/missing.json"], 2),
     Case("check-footprints-could-not-run-no-circuit.json", "check_footprints.py", ["dist/board/missing.json", "--json"], 2),
+    Case("check-footprints-could-not-run-no-rules.json", "check_footprints.py", [CIRCUIT, "--rules", ".spark/missing-rules.json", "--json"], 2),
     Case("check-vendor-pins-could-not-run-no-file.txt", "check_vendor_pins.py", ["--offline", "boards/missing.json"], 2),
     Case("compare-design-ok.json", "compare_design.py", [CIRCUIT, "--json"], 0),
     Case("compare-design-problems-floating-input.txt", "compare_design.py", [CIRCUIT, "--rules", FLOATING_RULES], 1),

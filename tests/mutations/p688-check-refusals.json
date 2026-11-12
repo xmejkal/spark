@@ -1,6 +1,14 @@
 [
-  {"file": "scripts/spark/checks/vendor_pins_check.py", "name": "P688: a missing board file is read, so a traceback",
-   "find": "    if not path.is_file():  # P688: a traceback said less than a sentence", "replace": "    if False:  # P688: a traceback said less than a sentence"},
-  {"file": "scripts/check_footprints.py", "name": "P688: the JSON refusal loses its code",
-   "find": "\"message\": str(refusal), \"code\": refusal.code})", "replace": "\"message\": str(refusal)})"}
+ {
+  "file": "scripts/spark/checks/vendor_pins_check.py",
+  "name": "P688: a missing board file is read, so a traceback",
+  "find": "    if not path.is_file():  # P688: a traceback said less than a sentence",
+  "replace": "    if False:  # P688: a traceback said less than a sentence"
+ },
+ {
+  "file": "scripts/spark/checks/build_check.py",
+  "name": "P688: the JSON refusal loses its code",
+  "find": "    return json.dumps({\"tool\": \"check_footprints\", \"status\": COULD_NOT_RUN, \"message\": str(refusal), \"code\": refusal.code}) if as_json else str(refusal)",
+  "replace": "    return json.dumps({\"tool\": \"check_footprints\", \"status\": COULD_NOT_RUN, \"message\": str(refusal)}) if as_json else str(refusal)"
+ }
 ]

@@ -47,6 +47,24 @@ def row(count, pitch):
     return [(index * pitch, 0.0) for index in range(count)]
 
 
+class ACircuitTheCheckCannotReadTest(unittest.TestCase):
+    """P688: a circuit file that is not JSON is a refusal with `circuit_not_json`, as JSON under --json, exit 2."""
+
+    def test_a_circuit_that_is_not_json_is_could_not_run_with_its_code(self):
+        import contextlib
+        import io
+        import json
+        import tempfile
+        from pathlib import Path
+        import check_footprints
+        broken = Path(tempfile.mkdtemp()) / "circuit.json"
+        broken.write_text("{")
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = check_footprints.main([str(broken), "--json"])
+        said = json.loads(out.getvalue())
+        self.assertEqual((code, said["status"], said["code"]), (2, "could-not-run", "circuit_not_json"))
+        self.assertTrue(said["message"].startswith("circuit.json is not JSON: "))
+
 class HeaderDetectionTest(unittest.TestCase):
     """Decided from geometry, because a footprint's name is not always available or honest."""
 

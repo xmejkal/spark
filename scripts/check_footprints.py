@@ -14,8 +14,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from spark.checks.build_check import built_design, problems_in, render, rules_asked, run, unchecked_in  # noqa: E402
-from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, COULD_NOT_RUN, status_of  # noqa: E402
+from spark.checks import check_codes  # noqa: E402
+from spark.checks.build_check import built_design, problems_in, refusal_said, render, rules_asked, run, unchecked_in  # noqa: E402
+from spark.core.result import Refusal  # noqa: E402
+from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, status_of  # noqa: E402
 
 
 def main(argv=None):
@@ -31,12 +33,15 @@ def main(argv=None):
 
     path, missing = built_design(args.circuit)
     rules, why = rules_asked(args.rules) if not missing else (None, None)
-    if missing or why:  # P688: one sentence with its code, as JSON under --json, exit 2
-        refusal = missing or why
-        print(json.dumps({"tool": "check_footprints", "status": COULD_NOT_RUN, "message": str(refusal), "code": refusal.code}) if args.json else refusal)
+    if missing or why:
+        print(refusal_said(missing or why, args.json))
         return EXIT_COULD_NOT_RUN
-
-    findings = run(json.loads(path.read_text()), rules=rules)
+    try:
+        circuit = json.loads(path.read_text())
+    except ValueError as broken:  # P688: a circuit that is not JSON is a refusal, not a traceback
+        print(refusal_said(Refusal("%s is not JSON: %s" % (path.name, broken), check_codes.CIRCUIT_NOT_JSON), args.json))
+        return EXIT_COULD_NOT_RUN
+    findings = run(circuit, rules=rules)
     problems, unchecked = problems_in(findings), unchecked_in(findings)
     status = status_of(problems, unchecked)
     if args.json:
