@@ -40,7 +40,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR  # noqa: E402, F401
 from spark.core.cli import HelpText, run_cli, run_operation  # noqa: E402
-from spark.core.describe_operations import LINE, DescribeOperations, effects_of, summary_of  # noqa: E402
+from spark.core.describe_operations import OPERATION_LINE, DescribeOperations, effect_words_of, options_of, summary_of  # noqa: E402
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
 from spark.core.outside import build_bare_outside_world  # noqa: E402
@@ -60,6 +60,7 @@ class DropNeedFlag(AnswerOperation):
     """
 
     name = "needs-drop"
+    data_keys = ('project', 'need', 'dropped', 'released', 'written')
     arguments = (Argument(("--needs-drop",), "project_and_need", str,
                           "drop a need and its pick from .spark/needs.json and release only the holds of the dropped pick (every other hold stays); --dry-run "
                           "says what it would do; history stays, and requirements.json is not changed: a note says when it still lists the part",
@@ -83,10 +84,8 @@ ORDER = ("list", "show", "validate", "signals", "unverified", "need", "skeleton"
          "pick", "needs-drop", "requirements", "step", "tally", "describe")
 #: Every Operation parts.py offers, by the `op` it prints, in `ORDER`: the ONE registry the route and `--describe` read, so
 #: what an agent reads about an operation cannot drift from what runs (§6.4.3). `list-boards` is boards.py's and stays out.
-OPERATIONS = {}
-for _name in ORDER:
-    OPERATIONS[_name] = {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag}.get(_name)
-OPERATIONS["describe"] = DescribeOperations
+OPERATIONS = {name: {**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag,
+                     DescribeOperations.name: DescribeOperations}[name] for name in ORDER}
 #: The flags, for the prefix rule.
 FLAGS = ["--" + name for name in OPERATIONS]
 #: What parts.py says of itself, and the fix of an argv that names no operation.
@@ -97,8 +96,8 @@ HELP = HelpText("parts.py", "What a part needs, and what is known about it.", ""
 def asked_on_the_core(argv):
     """The Operation `argv` asks for, picked as argparse picks a long option (P726): an item (its text before `=`) that equals
     a flag, else one longer than `--` that is a prefix of exactly one flag (`--need` is a prefix of `--needs`, so the exact
-    match comes first; `--ne` fits several and goes to the describe parser, whose answer names the ambiguity). None when
-    `argv` names no operation."""
+    match comes first; `--ne` fits several and goes to the describe parser, which refuses it as an unrecognized argument).
+    None when `argv` names no operation."""
     for item in argv:
         flag = item.split("=", 1)[0]
         if flag in FLAGS:
@@ -111,15 +110,11 @@ def asked_on_the_core(argv):
 
 def catalog_epilog():
     """The text under `parts.py --help`: every operation with its summary and effects, and the options the operations share,
-    so a reader of the describe route sees what the thirty Operations offer (each Operation's own `--help` lists its arguments)."""
+    so a reader of the describe route sees what the Operations offer (each Operation's own `--help` lists its arguments)."""
     lines = ["operations (each takes --help):"]
-    lines += [LINE % ("--" + op, summary_of(cls), "  [%s]" % ", ".join(effects_of(cls)) if effects_of(cls) else "") for op, cls in OPERATIONS.items()]
-    options = {}
-    for op, cls in OPERATIONS.items():
-        for argument in cls.arguments:
-            if "--" + op not in argument.flags:
-                options.setdefault(argument.flags[0], argument.help)
-    return "\n".join(lines + ["", "options, by the operations that take them:"] + [LINE % (flag, help, "") for flag, help in options.items()])
+    lines += [OPERATION_LINE % ("--" + op, summary_of(cls), "  [%s]" % ", ".join(effect_words_of(cls)) if effect_words_of(cls) else "")
+              for op, cls in OPERATIONS.items()]
+    return "\n".join(lines + ["", "options, by the operations that take them:"] + [OPERATION_LINE % (flag, help, "") for flag, help in options_of(OPERATIONS).items()])
 
 
 def on_the_core(argv):

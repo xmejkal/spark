@@ -26,6 +26,7 @@ class SetFacts(PartOperation):
     was refused; a part nobody has is a problem on its id."""
 
     name = "fact-set"
+    data_keys = ('part', 'path', 'was', 'now', 'written', 'shelf_copy')
     arguments = (Argument(("--fact-set",), "part_and_facts", str,
                           "fill what a record owes — a JSON object of the facts the chain reads, or `facts` entries {value, verified, source} by name (a bench result is verified true and its source says who, when and how; a text in it has its control characters turned into a space and is cut at 1000 characters, and a key with a control character is refused), or its about, description and tags, or a board's onboard LED or button level, `pin_roles` {onboard_led|onboard_button: {active_level: {value, verified, source}}} (a board of the project's own, merged role by role), or what the sheet reads, `legs` {pin of pin_order: how to tell the leg apart} (merged leg by leg) and `host_requirements` [the lines the host board must meet] (replaced as a whole, like tags), in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
                           nargs=2, metavar=("PART", "FILE"), payload=1),

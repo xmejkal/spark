@@ -38,6 +38,7 @@ class FindOffers(AnswerOperation):
     how many more the cutoff dropped; a matcher name that does not fit is a could-not-run item with its code."""
 
     name = "need"
+    data_keys = ('need', 'vendor_order', 'found', 'drafts', 'catalog', 'more', 'matcher')
     arguments = (Argument(("--need",), "words", str, "what you own and what spark knows for a need, before researching: the words against "
                           "what each record (parts and boards, every layer) or drawer entry does, its tags, names and text, owned first (word-overlap); "
                           "--matcher name-contains for the names alone", nargs="+", metavar="WORD"),

@@ -16,6 +16,7 @@ class SetDrawer(PartOperation):
     """Operation: `drawer-set` as parts.py answers it: each change made or refused, the questions, what went on the shelf."""
 
     name = "drawer-set"
+    data_keys = ('changes', 'questions', 'shelved')
     arguments = (Argument(("--drawer-set",), "items", str, "set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds; with --project, an `is` may "
                           "name a record in that project, such as one /spark:research just wrote; an entry may also say its about, description and tags",
                           metavar="FILE", payload=0),

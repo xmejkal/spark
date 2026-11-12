@@ -15,6 +15,7 @@ class FindKept(PartOperation):
     """Operation: `kept` as parts.py answers it: the kept documents every word fits, or that nothing does."""
 
     name = "kept"
+    data_keys = ('found',)
     arguments = (Argument(("--kept",), "words", str, "find a kept document by every word, with no network, and every fact resting on it",
                           nargs="+", metavar="WORD"),
                  ANSWER_ARGUMENTS["project"], COMMON_ARGUMENTS[JSON_DEST])

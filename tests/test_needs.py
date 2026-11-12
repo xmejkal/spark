@@ -1811,7 +1811,7 @@ class TheNeedsDropTest(unittest.TestCase):
     def test_describe_lists_the_drop_as_a_write(self):
         said, _ = run(["--describe"])
         row = next(op for op in said["data"]["operations"] if op["op"] == "needs-drop")
-        self.assertEqual(row["effects"], ["writes"])  # the data keys are json.md's since P726 PR 3
+        self.assertEqual((row["effects"], row["data"]), (["writes"], ["project", "need", "dropped", "released", "written"]))
 # --- end MVP ---
 
 class TheRequirementsFileTest(unittest.TestCase):
@@ -2468,6 +2468,8 @@ class TheRequirementsFileTest(unittest.TestCase):
         self.assertIn("  net SPEAKER_P is one side of a driven pair and nothing listed drives it — pick what drives the pair (the "
                       "amplifier this terminal hangs off), never a supply (speaker-terminal.SPK_P is on it)\n", dry)
         self.assertNotIn("power inlet", dry)
+        listed, _ = run(["--describe"])  # and the answer's keys are the ones --describe names (Operation.data_keys, P726)
+        self.assertEqual(sorted(said["data"]), sorted(next(op["data"] for op in listed["data"]["operations"] if op["op"] == "requirements")))
 
     def test_every_terminal_on_a_side_nothing_drives_is_named(self):
         home, project = self.project([self.BOARD, ("alarm", [{"part": "speaker-terminal"}, {"part": "x-terminal"}])])

@@ -37,6 +37,7 @@ class WriteSkeleton(PartOperation):
     record; an id a layer holds is a problem with the step that promotes it; no project or no kind is a could-not-run item."""
 
     name = "skeleton"
+    data_keys = ('path', 'record', 'written')
     arguments = (Argument(("--skeleton",), "part_id", str, "write a record to fill in, to the project's parts/ (refused when any layer holds the id)",
                           metavar="PART"),
                  Argument(("--kind",), "kind", str, KIND_HELP),

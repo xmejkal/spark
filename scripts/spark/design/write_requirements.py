@@ -36,6 +36,7 @@ class WriteRequirements(AnswerOperation):
     what the picks leave off the board, owe, or shelve; a refusal writes nothing (`needs.match`'s problems)."""
 
     name = "requirements"
+    data_keys = ('path', 'requirements', 'shelved', 'unplaced', 'kept', 'board_was', 'placeholder_outline', 'unserved', 'no_supply', 'no_driver', 'no_receiver', 'written')
     arguments = (Argument(("--requirements",), "project", str,
                           "the picks as the project's requirements.json: the board, and every part pick with a record — one that owes only its outline "
                           "is written with a warning, one that owes more is refused; a catalog one goes onto the shelf; what the file already holds stays; "

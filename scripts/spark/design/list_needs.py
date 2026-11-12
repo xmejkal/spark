@@ -17,6 +17,7 @@ class ListNeeds(AnswerOperation):
     """Operation: `needs` as parts.py answers it: one line per need, or the one line that says there are none yet."""
 
     name = "needs"
+    data_keys = ('needs',)
     arguments = (Argument(("--needs",), "project", str, "a project's needs: what each does, its condition, its mark", metavar="PROJECT"),
                  COMMON_ARGUMENTS[JSON_DEST])
 

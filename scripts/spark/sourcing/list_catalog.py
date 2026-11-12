@@ -18,6 +18,7 @@ class ListCatalog(PartOperation):
     `--from`."""
 
     name = "catalog"
+    data_keys = ('records', 'broken')
     arguments = (Argument(("--catalog",), "catalog", bool, "every record research has kept, chosen or not"),
                  ANSWER_ARGUMENTS["start"], COMMON_ARGUMENTS[JSON_DEST])
 

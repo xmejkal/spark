@@ -554,8 +554,8 @@ class TheSourcingAreaTest(unittest.TestCase):
     helpers, the fifteen part Operations on the core (one module each, on `part_operation.PartOperation`, in
     `sourcing_operations.OPERATIONS`), the matchers, the cost of a run and the leaf `sourcing_codes`. Its `__init__.py`
     imports nothing, and each module imports alone. Checks read the band from there, so no module imports the checks area
-    for it. `scripts/` keeps the CLIs `cost.py`, `main` alone, and `parts.py`, its parser, its printers and the handlers
-    that read a payload."""
+    for it. `scripts/` keeps the CLIs `cost.py`, `main` alone, and `parts.py`, the registry, the route, the help epilog and
+    the one flag shape (P726 PR 3)."""
     SOURCING = ROOT / "scripts" / "spark" / "sourcing"
     #: The modules of the area, by the names of its page (`areas/sourcing.md`).
     MODULES = ["brief_choices", "datasheets", "drawer", "fetch_documents", "find_kept", "import_drawer", "keep_file", "list_catalog",
@@ -563,9 +563,8 @@ class TheSourcingAreaTest(unittest.TestCase):
                "part_operation", "part_records", "part_rules", "promote_record", "read_datasheet", "record_home", "resolve_sources",
                "run_cost", "set_drawer", "set_facts", "set_function", "show_part", "sourcing_codes", "sourcing_operations",
                "validate_parts", "write_answers", "write_skeleton"]
-    #: `parts.py`'s own top-level functions: its parser and printer, `_op_describe`, `_op_needs_drop` on the core, the route
-    #: to the Operations on the core (P707, P726), and the handlers that read a JSON payload, because reading stdin is the
-    #: interface's job (P721 row 6). The text printer's rule is `record_kind.Answer.text_lines` since P726.
+    #: `parts.py`'s own top-level names since P726 PR 3: the CLI's flag shape of `DropNeed`, the route to the Operations on
+    #: the core, the help epilog and `main`. The text printer's rule is `record_kind.Answer.text_lines` and `run_cli`'s.
     PARTS_CLI = ["DropNeedFlag", "asked_on_the_core", "catalog_epilog", "main", "on_the_core"]
 
     def test_the_area_holds_its_modules_and_the_band_is_bound_there_alone(self):

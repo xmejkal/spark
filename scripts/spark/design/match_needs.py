@@ -23,6 +23,7 @@ class MatchNeeds(AnswerOperation):
     problems `needs.match` found; a project with no needs and a matcher name that does not fit are could-not-run items."""
 
     name = "match"
+    data_keys = ('needs',)
     arguments = (Argument(("--match",), "project", str, "each of a project's needs with the store's candidates: owned first, what each owes, "
                           "each with its score and why; --matcher picks the matcher that ranks them; a board that serves a need through its own "
                           "LED, button or display has `limits`, the sentences for what a passed run does not test of it", metavar="PROJECT"),

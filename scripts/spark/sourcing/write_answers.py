@@ -20,7 +20,7 @@ def change_line(change, dry_run):
     One set-only write's change (§5.2), the drawer's and the needs file's alike: '  new soil-probe: soil probe × 8 — is
     part sen0193-soil-moisture' for a new drawer entry (× ? when its count was left out), else '  set soil: mark null →
     "have"', every value from what it was. A new entry's key and label pass `printable` here, because a newline in them
-    would start a line. A set line's values are JSON, which escapes a newline, and `_say` guards the rest.
+    would start a line. A set line's values are JSON, which escapes a newline, and `run_cli` guards the rest.
     """
     if change["new"] and "entry" in change:
         now, linked = change["now"], change["now"].get("is")

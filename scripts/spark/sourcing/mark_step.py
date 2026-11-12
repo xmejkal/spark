@@ -22,6 +22,7 @@ class MarkStep(PartOperation):
     project listed when it was not; a word that is no step is a could-not-run item."""
 
     name = "step"
+    data_keys = ('step', 'written')
     arguments = (Argument(("--step",), "project_and_step", str,
                           "a spine step of a project starts now, in this Claude Code session — the cost line counts its transcript from here",
                           nargs=2, metavar=("PROJECT", "STEP")),

@@ -19,6 +19,7 @@ class ValidateParts(PartOperation):
     that is not JSON is a could-not-run item. The body calls `part_records.validate`, because its own dest is `validate`."""
 
     name = "validate"
+    data_keys = ('checked',)
     arguments = (Argument(("--validate",), "validate", bool, "every record a project can build with, against the contract"),
                  ANSWER_ARGUMENTS["project"], ANSWER_ARGUMENTS["start"], COMMON_ARGUMENTS[JSON_DEST])
 

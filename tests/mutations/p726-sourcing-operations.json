@@ -56,7 +56,7 @@
  {
   "file": "scripts/parts.py",
   "name": "P726 PR 2: the sourcing table is not routed to the core",
-  "find": "{**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag}.get(_name)",
-  "replace": "{**design_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag}.get(_name)"
+  "find": "{**design_operations.OPERATIONS, **sourcing_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag,",
+  "replace": "{**design_operations.OPERATIONS, DropNeedFlag.name: DropNeedFlag,"
  }
 ]

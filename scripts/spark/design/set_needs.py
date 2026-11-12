@@ -15,6 +15,7 @@ class SetNeeds(AnswerOperation):
     """Operation: `needs-set` as parts.py answers it: each change made or refused, and whether the file was written."""
 
     name = "needs-set"
+    data_keys = ('changes', 'written')
     arguments = (Argument(("--needs-set",), "project_and_items", str,
                           "set a project's needs from a JSON list in FILE (- for stdin): every write sets, never adds",
                           nargs=2, metavar=("PROJECT", "FILE"), payload=1),

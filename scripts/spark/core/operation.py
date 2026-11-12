@@ -76,6 +76,9 @@ class Operation:
     summary = None
     arguments = ()
     effects = ()
+    #: The keys of `data` the Operation answers with, for `--describe` and an agent that reads it (P726 PR 3; it was parts.py's
+    #: table column); a test compares them with a real answer, so they cannot drift. Empty for an Operation nobody lists.
+    data_keys = ()
     #: The Renderer of the `--json` line: `JsonEnvelope`, or a class with `render` and `render_bad_argument`, such as
     #: `renderers.FlatJsonLine`. A class attribute, not a flag (P657).
     json_renderer = JsonEnvelope

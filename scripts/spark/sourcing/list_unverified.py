@@ -25,6 +25,7 @@ class ListUnverified(PartOperation):
     assumption, and the `--fact-set` step that writes a result back; a part nobody has is a problem on the ids given."""
 
     name = "unverified"
+    data_keys = ('parts',)
     arguments = (Argument(("--unverified",), "part_ids", str, "what nobody has checked about these parts, one assumption a fact",
                           nargs="+", metavar="PART"),
                  ANSWER_ARGUMENTS["project"], COMMON_ARGUMENTS[JSON_DEST])

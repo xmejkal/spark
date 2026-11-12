@@ -2253,7 +2253,7 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
     """
 
     #: One item per field of an answer that both printers must carry. A field added to `Answer` fails the first test
-    #: until it has an item here, and so until `_say` prints it.
+    #: until it has an item here, and so until the core prints it (`Answer.to_result`, `run_cli`).
     SAMPLES = {
         "problems": record_kind._problem("thing", "is wrong in a way the lines never said", "do this to mend it"),
         "unchecked": record_kind._cannot("could not read the thing's file", "re-save it"),
@@ -2282,7 +2282,7 @@ class EveryFieldReachesBothPrintersTest(unittest.TestCase):
                       self.say(record_kind.Answer({}, ["  a line"], unchecked=[self.SAMPLES["unchecked"]]), False))
 
     def test_the_diagnostics_go_to_stderr_with_json_or_without_and_never_into_the_envelope(self):
-        # P717 (X2): a handler returns its stderr lines and `_say` prints them, so no handler prints
+        # P717 (X2): a handler returns its stderr lines and `run_cli` prints them, so no handler prints
         for as_json in (True, False):
             with self.subTest(as_json=as_json):
                 out, err = say_through_the_core(record_kind.Answer({"x": 1}, ["  a line"], diagnostics=["a crash's line", "its traceback"]), as_json)
@@ -3435,16 +3435,20 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
 
     def test_each_describe_row_and_its_operation_agree(self):
         # P726 PR 3: --describe reflects over the registry, so a row cannot drift from its class; every entry has a summary
-        from spark.core.describe_operations import effects_of, summary_of
+        from spark.core.describe_operations import effect_words_of, summary_of
         said, code = run_json(["--describe"])
         rows = {row["op"]: row for row in said["data"]["operations"]}
         self.assertEqual((code, list(rows)), (0, list(parts.OPERATIONS)))
         for op, operation in parts.OPERATIONS.items():
             with self.subTest(op=op):
                 self.assertIsNotNone(summary_of(operation))
-                self.assertEqual((rows[op]["flag"], rows[op]["summary"], rows[op]["effects"]), ("--" + op, summary_of(operation), effects_of(operation)))
-                self.assertEqual(sorted(rows[op]["arguments"]), sorted(a.dest for a in operation.arguments if a.dest != "json"))
+                self.assertEqual((rows[op]["flag"], rows[op]["summary"], rows[op]["effects"]), ("--" + op, summary_of(operation), effect_words_of(operation)))
+                self.assertEqual(sorted(rows[op]["arguments"]), sorted(a.dest for a in operation.arguments if a.dest != "json" and not (a.kind is bool and "--" + op in a.flags)))
+                self.assertEqual(rows[op]["data"], list(operation.data_keys))
         self.assertEqual(rows["fetch"]["effects"], ["network", "writes"])
+        from spark.design import design_operations
+        from spark.sourcing import sourcing_operations
+        self.assertEqual(set(parts.OPERATIONS), (set(design_operations.OPERATIONS) | set(sourcing_operations.OPERATIONS) | {"needs-drop", "describe"}) - {"list-boards"})
         self.assertEqual(rows["fact-set"]["arguments"]["part_and_facts"]["prefixItems"][1], {"type": ["object", "array"]})
 
     def test_each_part_operation_s_help_lists_its_own_arguments_alone(self):
@@ -3461,6 +3465,13 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         self.assertIn("--step PROJECT STEP", out.getvalue())
         said, code = run_json(["--list", "--dry-run"])
         self.assertEqual((code, said["op"], said["unchecked"][0]["code"]), (2, "list", "bad_argument"))
+
+    def test_a_part_refusal_on_a_payload_flag_names_the_part_alone(self):
+        # P726 PR 3: the loaded payload is a token of the flag's value too, and never enters the subject
+        given = Path(tempfile.mkdtemp()) / "function.json"
+        given.write_text('[{"does": "indicate", "what": "a lamp"}]')
+        said, code = run_json(["--function-set", "led-red-5mm", str(given)])
+        self.assertEqual((code, said["problems"][0]["subject"]), (1, "led-red-5mm"))
 
     def test_a_part_nobody_has_is_a_problem_on_every_id_the_flag_named(self):
         # P726 PR 2: PartOperation.answer_refusal keeps parts._part_problem's rule

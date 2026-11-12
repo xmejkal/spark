@@ -22,7 +22,7 @@ PAIRS_SENTENCE = "--pick takes the project, then NEED=ID for each pick: light=le
 PAIRS_FIX = "parts.py --match <project> lists each need's candidates and their ids"
 #: The default of `--passed-over`: no file given. An object of its own, so a file that holds `null` is still a payload the
 #: planner refuses (a `None` would read as the flag left out).
-NO_REASONS = ()
+NO_PASSED_OVER = ()
 
 
 def what_a_pick_wrote(name, listed, history, events, new_keys, dry_run):
@@ -51,11 +51,12 @@ class PickParts(AnswerOperation):
     beyond the drawer, the notes; a refusal writes nothing."""
 
     name = "pick"
+    data_keys = ('project', 'picks', 'reserved', 'released', 'written')
     arguments = (Argument(("--pick",), "project_and_picks", str,
                           "set what each need picks (NEED=ID: a record, or a drawer entry) and reserve what you own of it — never past what another project holds; "
                           "what it notes is under `notes`: a board given a need that its own part serves says what a run does not test of the part, "
                           "and the other choice", nargs="+", metavar=("PROJECT", "NEED=ID")),
-                 Argument(("--passed-over",), "passed_over", str, PASSED_OVER_HELP, NO_REASONS, metavar="FILE", payload=0),
+                 Argument(("--passed-over",), "passed_over", str, PASSED_OVER_HELP, NO_PASSED_OVER, metavar="FILE", payload=0),
                  ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES)
 
@@ -67,7 +68,7 @@ class PickParts(AnswerOperation):
         pairs = [tuple(one.split("=", 1)) for one in given if "=" in one]
         if not pairs or len(pairs) != len(given):
             return Answer(unchecked=[_cannot(PAIRS_SENTENCE, PAIRS_FIX, code=codes.BAD_ARGUMENT)])
-        reasons = [] if passed_over is NO_REASONS else passed_over
+        reasons = [] if passed_over is NO_PASSED_OVER else passed_over
         history = store.events()  # read whole before the first write: one that cannot be read refuses the pick, with nothing written
         listed, keys_before = store.find_listed_name(target) is not None, needs.entry_keys(needs.read(target))
         after, changes, events, notes, problems = needs.plan_pick(target, pairs, reasons)

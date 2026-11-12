@@ -16,6 +16,7 @@ class SetFunction(PartOperation):
     problem on its id."""
 
     name = "function-set"
+    data_keys = ('part', 'path', 'was', 'now', 'written', 'shelf_copy')
     arguments = (Argument(("--function-set",), "part_and_function", str,
                           "set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library",
                           nargs=2, metavar=("PART", "FILE"), payload=1),

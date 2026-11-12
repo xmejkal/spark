@@ -23,6 +23,7 @@ class TallyCost(AnswerOperation):
     cost was not counted; a folder nobody listed is a could-not-run item with its code."""
 
     name = "tally"
+    data_keys = ('picks', 'from_store', 'owned', 'cost', 'built', 'line', 'needs', 'needs_picked')
     arguments = (Argument(("--tally",), "project", str, "the cost line: the picks, how many came from the store (known to spark before the project: "
                           "its library, your store, your projects) and how many you own, and what the project's steps cost", metavar="PROJECT"),
                  COMMON_ARGUMENTS[JSON_DEST])

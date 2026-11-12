@@ -133,12 +133,11 @@ def load_payloads(operation, values, stdin):
         if argument.nargs is None:
             values[argument.dest] = loaded
         else:
-            values[argument.dest] = list(values[argument.dest])
             values[argument.dest][argument.payload] = loaded
     return values
 
 
-def _reporter_and_privacy(operation, values, as_json):
+def _privacy_and_reporter(operation, values, as_json):
     """The run's Privacy and Reporter: the Operation's `privacy_for(project)` masks the result and each Event (P677), else
     the default passes everything through; the reporter prints events on stdout, on stderr with --json (P507)."""
     privacy, reporter = DEFAULT_RUN.privacy, TerminalReporter.for_json(as_json)
@@ -178,11 +177,11 @@ def run_cli(text, operation, argv=None, *, outside_builder, outside=None):
         refused = OperationResult(findings=[Finding(outcomes.COULD_NOT_RUN, None, codes.BAD_ARGUMENT, str(bad), text.bad_argument_fix or BAD_ARGUMENT_FIX % text.prog)])
         line = renderer.render_bad_argument(refused, tool, operation.name) if JSON_FLAG in argv else None
         if line is None:
-            parser.exit_with_usage(guard_lines(str(bad)))
+            parser.exit_with_usage(guard_lines(str(bad) + (" — " + text.bad_argument_fix if text.bad_argument_fix else "")))
         print(line)
         return outcomes.EXIT_COULD_NOT_RUN
     as_json = values.pop(JSON_DEST, False)
-    privacy, reporter = _reporter_and_privacy(operation, values, as_json)
+    privacy, reporter = _privacy_and_reporter(operation, values, as_json)
     try:
         values = load_payloads(operation, values, sys.stdin)
         result = run_operation(operation, values, outside, lambda effects: outside_builder(values.get("project"), effects, reporter, dict(values, **{JSON_DEST: as_json})),

@@ -17,6 +17,7 @@ class ImportDrawer(PartOperation):
     """Operation: `drawer-import` as parts.py answers it: the changes, the questions, what shrank since the last import."""
 
     name = "drawer-import"
+    data_keys = ('changes', 'questions', 'shelved', 'smaller')
     arguments = (Argument(("--drawer-import",), "source_and_payload", str,
                           "apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule",
                           nargs=2, metavar=("SOURCE", "FILE"), payload=1),

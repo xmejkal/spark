@@ -17,6 +17,7 @@ class ListDrawer(PartOperation):
     """Operation: `drawer` as parts.py answers it: the entries, a count, paged from `--from`."""
 
     name = "drawer"
+    data_keys = ('entries',)
     arguments = (Argument(("--drawer",), "drawer", bool, "what you own: label, count, the record it is, unsure, skip — 20 at a time"),
                  ANSWER_ARGUMENTS["start"], COMMON_ARGUMENTS[JSON_DEST])
 

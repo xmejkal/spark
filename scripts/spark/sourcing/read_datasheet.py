@@ -29,6 +29,7 @@ class ReadDatasheet(PartOperation):
     `--label FACT=WORD|WORD` adds the maker's own words for a fact, once per flag."""
 
     name = "read"
+    data_keys = ('facts', 'pages_read')
     arguments = (Argument(("--read",), "datasheet", str, "read a datasheet page by page and stop where every --want fact is on a table row",
                           metavar="PDF"),
                  Argument(("--want",), "wanted", str, WANT_HELP, nargs="+", metavar="FACT"),
