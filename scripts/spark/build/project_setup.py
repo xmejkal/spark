@@ -381,7 +381,7 @@ def package_file(project):
                   "ts-runtime), so bun must be installed (npm or Homebrew). "
                   "BOTH are pinned: the cli, and the `tscircuit` core it takes as a `*` peer dependency "
                   "and would otherwise fetch newest. Every number in spark's documents was measured on "
-                  "this core; see init_project.PINNED_TSCI and PINNED_CORE."}
+                  "this core; see project_setup.PINNED_TSCI and PINNED_CORE."}
 
 
 def boards_offered(project):
