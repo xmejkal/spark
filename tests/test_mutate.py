@@ -746,6 +746,72 @@ class TheLedgerTest(unittest.TestCase):
         self.assertEqual(mutate.caught_by(False), ledger.SUITE, "a plain bool from a stand-in")
 
 
+@slow("mutation runs of a tiny tree under --tier, 1 test, 2.0 s on 2026-11-12")
+class TheTiersTest(unittest.TestCase):
+    """P787 PR 2: --tier runs only the rows the ledger puts in the named tiers, and --tier-count runs nothing."""
+
+    def proven_ledger(self, root, row, caught=2):
+        """A ledger under `root` whose one line says `row` was caught `caught` times at its file's current content."""
+        blob = ledger.blob_of((root / row["file"]).read_bytes())
+        ledger_of(root).write([ledger.line(row, blob, "2026-11-12T10:00:00+01:00", ledger.CAUGHT, "test_m", 1) | {"caught": caught}])
+
+    def test_tier_count_says_how_many_rows_each_tier_holds_and_runs_nothing(self):
+        import contextlib
+        import io
+        root = tiny_project()
+        rows = table(root, BREAK_ADD, BREAK_SUB, dict(BREAK_ADD, name="critical", find="def add", replace="def add_", tier="critical"))
+        self.proven_ledger(root, BREAK_ADD)
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(mutate.main([str(rows), "--root", str(root), "--tier-count"]), mutate.EXIT_OK)
+        self.assertEqual(out.getvalue(), "  tiers of 3 row(s) in 1 table(s): critical 1, new 1, proving 0, proven 1\n")
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            mutate.main([str(rows), "--root", str(root), "--tier-count", "--json"])
+        self.assertEqual(json.loads(out.getvalue()), {"tool": "mutate", "tables": 1, "rows": 3,
+                                                      "tiers": {"critical": 1, "new": 1, "proving": 0, "proven": 1}})
+        self.assertEqual([entry["caught"] for entry in ledger_of(root).read()], [2], "nothing ran: the ledger is as it was")
+        (root / "m.py").write_text((root / "m.py").read_text() + "# an edit\n")
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            mutate.main([str(rows), "--root", str(root), "--tier-count", "--for", "m.py"])
+        self.assertEqual(out.getvalue(), "  tiers of 3 row(s) in 1 table(s): critical 1, new 2, proving 0, proven 0\n",
+                         "an edit of the file makes its proven row new again, by the blob rule alone")
+
+    def test_a_tier_run_plants_only_the_selected_rows_and_says_so_in_its_header(self):
+        import contextlib
+        import io
+        root = tiny_project()
+        rows = table(root, BREAK_ADD, BREAK_SUB)
+        self.proven_ledger(root, BREAK_ADD)
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(mutate.main([str(rows), "--root", str(root), "--tier", "new"]), mutate.EXIT_OK)
+        said = out.getvalue().splitlines()
+        self.assertEqual(said[0], "  tiers new: 1 row(s) selected (critical 0, new 1, proving 0, proven 1)")
+        self.assertEqual([line for line in said if line.startswith("  [")], ["  [caught near] sub adds"], "add's proven row did not run")
+        self.assertIn("  1 mutation(s) in ", "\n".join(said))
+        lines = {entry["key"]: entry for entry in ledger_of(root).read()}
+        self.assertEqual((lines[ledger.row_key(BREAK_ADD)]["caught"], lines[ledger.row_key(BREAK_SUB)]["caught"]), (2, 1))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            mutate.main([str(rows), "--root", str(root), "--tier", "proven,proving", "--json"])
+        report = json.loads(out.getvalue())
+        self.assertEqual(report["tiers"], {"selected": ["proven", "proving"], "rows": 2, "counts": {"critical": 0, "new": 0, "proving": 1, "proven": 1}})
+        self.assertEqual([r["name"] for r in report["mutations"]], ["sub adds", "add subtracts"], "proving before proven, whatever --tier's order")
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(mutate.main([str(rows), "--root", str(root), "--tier", "critical"]), mutate.EXIT_OK)
+        self.assertEqual(err.getvalue(), "  no row is in the tier(s) critical: nothing to run\n")
+
+    def test_tier_count_runs_alone_and_tier_takes_the_four_words_only(self):
+        import contextlib
+        import io
+        root = tiny_project()
+        rows = table(root, BREAK_ADD)
+        for extra in (["--anchors"], ["--copy"], ["--tier", "new"], ["--ledger"], ["--retarget", "m.py", "n.py"]):
+            with self.subTest(extra=extra), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                mutate.main([str(rows), "--root", str(root), "--tier-count"] + extra)
+        for bad in ("bogus", "new,bogus", ""):
+            with self.subTest(tier=bad), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                mutate.main([str(rows), "--root", str(root), "--tier", bad])
+        self.assertFalse(ledger_of(root).path.exists(), "something ran")
+
+
 DAY = scratch.OLD_AFTER_SECONDS
 
 

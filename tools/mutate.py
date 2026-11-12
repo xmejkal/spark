@@ -573,19 +573,19 @@ def main(argv=None):
     root = Path(args.root).resolve()
     ledger_store = ledger.LedgerStore(root / args.tests / "mutations" / ledger.LEDGER_NAME)
     if args.ledger:
-        if args.table or args.anchors or args.paths or args.copy or args.retarget or args.tier or args.tier_count:
+        if args.table or args.anchors or args.paths or args.copy or args.retarget or args.tier is not None or args.tier_count:
             parser.error("--ledger runs alone: it takes no table, --anchors, --for, --copy, --retarget, --tier or --tier-count")
         return print_ledger(ledger_store, root, args.json)
     if not args.table:
         parser.error("the following arguments are required: table")
     if args.retarget:
-        if args.anchors or args.paths or args.copy or args.tier or args.tier_count:
+        if args.anchors or args.paths or args.copy or args.tier is not None or args.tier_count:
             parser.error("--retarget runs alone: it takes no --anchors, --for, --copy, --tier or --tier-count")
         return retarget_tables(args.table, *args.retarget)
-    if args.tier_count and (args.anchors or args.copy or args.tier):
+    if args.tier_count and (args.anchors or args.copy or args.tier is not None):
         parser.error("--tier-count runs alone: it takes the tables and --for, no --anchors, --copy or --tier")
-    wanted = args.tier.split(",") if args.tier else []
-    if any(tier not in ledger.TIERS for tier in wanted):
+    wanted = args.tier.split(",") if args.tier is not None else []  # `--tier ""` is an error, never every row
+    if args.tier is not None and any(tier not in ledger.TIERS for tier in wanted):
         parser.error("--tier takes a comma list of %s, not %s" % (",".join(ledger.TIERS), args.tier))
     mutations = []
     for table in args.table:

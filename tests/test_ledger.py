@@ -1,6 +1,7 @@
 """
 The mutation ledger's own logic (P787): a row's key holds its file, the blob hash is git's, a merge lets the newer date win
-and adds the catches at one blob, and the store reads an empty or missing file as empty and writes sorted lines.
+and adds the catches at one blob, the store reads an empty or missing file as empty and writes sorted lines, and a row's
+tier is read from its line and its file's blob (PR 2).
 
     python3 -m unittest tests.test_ledger
 """
@@ -68,6 +69,47 @@ class TheMergeTest(unittest.TestCase):
 
     def test_the_merge_is_sorted_by_key_and_keeps_lines_the_run_did_not_touch(self):
         self.assertEqual([entry["key"] for entry in ledger.merged([a_line(key="c"), a_line(key="a")], [a_line(key="b")])], ["a", "b", "c"])
+
+
+class TheTiersTest(unittest.TestCase):
+    """P787 PR 2: a tier is a fact read from the row, its ledger line and its file's current blob; nothing is guessed."""
+
+    def test_the_four_tiers_are_read_from_the_row_the_line_and_the_blob(self):
+        self.assertEqual(ledger.tier_of(ROW, None, "b1"), ledger.NEW, "no line: never run")
+        self.assertEqual(ledger.tier_of(ROW, a_line(blob="b0", caught=5), "b1"), ledger.NEW, "the file changed since: the blob rule alone")
+        self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", caught=1), "b1"), ledger.PROVING)
+        self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", caught=2), "b1"), ledger.PROVEN)
+        self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", caught=3), "b1"), ledger.PROVEN)
+        self.assertEqual(ledger.tier_of(dict(ROW, tier="critical"), a_line(blob="b1", caught=3), "b1"), ledger.CRITICAL,
+                         "the row's own key, whatever the ledger says")
+        self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", caught=5), None), ledger.NEW, "a file that is not there has no blob")
+        self.assertEqual(ledger.TIERS, ("critical", "new", "proving", "proven"))
+
+    def test_an_escaped_or_refused_line_at_the_current_blob_is_new_again(self):
+        # Row 49: a refused line keeps its count from the same blob (`merged` adds 0), so status and count are read together.
+        self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", status=ledger.ESCAPED, by=ledger.ESCAPE, caught=2), "b1"), ledger.NEW)
+        self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", status=ledger.REFUSED, by=None, caught=2), "b1"), ledger.NEW)
+
+    def test_the_selection_runs_critical_then_new_in_the_tables_order_then_proving_then_proven_oldest_first(self):
+        root = Path(tempfile.mkdtemp())
+        (root / "m.py").write_text("x\n")
+        blob = ledger.blob_of(b"x\n")
+        rows = [dict(ROW, name=name, find=name) for name in ("proven-late", "new-1", "proving", "proven-early", "new-2")]
+        critical = dict(ROW, name="critical", find="critical", tier="critical")
+        rows.insert(3, critical)
+        lines = [a_line(key=ledger.row_key(rows[0]), blob=blob, caught=2, date="2026-11-12T10:00:00+01:00"),
+                 a_line(key=ledger.row_key(rows[2]), blob=blob, caught=1),
+                 a_line(key=ledger.row_key(rows[4]), blob=blob, caught=4, date="2026-11-01T10:00:00+01:00"),
+                 a_line(key=ledger.row_key(critical), blob=blob, caught=2)]
+        tiers = ledger.tiers_of(root, rows, lines)
+        self.assertEqual(tiers.counts(), {"critical": 1, "new": 2, "proving": 1, "proven": 2})
+        self.assertEqual([row["name"] for row in tiers.selected(ledger.TIERS)],
+                         ["critical", "new-1", "new-2", "proving", "proven-early", "proven-late"])
+        self.assertEqual([row["name"] for row in tiers.selected(["proven", "new"])], ["new-1", "new-2", "proven-early", "proven-late"],
+                         "the sweep's order, not the caller's")
+        self.assertEqual(tiers.selected([]), [])
+        self.assertEqual(ledger.tiers_of(root, rows, []).counts(), {"critical": 1, "new": 5, "proving": 0, "proven": 0},
+                         "an empty ledger makes every row new but the critical one")
 
 
 class TheLedgerStoreTest(unittest.TestCase):
