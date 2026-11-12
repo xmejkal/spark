@@ -30,8 +30,8 @@ These are the PO's standing rules for work on spark itself. Where a decision is 
   timings, state tables or drivers. The conversation writes the firmware ([the firmware decision](docs/archive/2026-10-01-firmware-and-tests.md)).
 - One core, many interfaces. New code is a small class with one job in a library module, and `main()` only parses
   arguments and prints. The CLI (with `--json`), the agents and MCP call that code. An agent prompt never repeats
-  its logic. When a fix touches a script, take the small refactor toward this shape if it makes the code simpler.
-  The whole-repository change waits for [v0.13, #94](https://github.com/xmejkal/spark/issues/94).
+  its logic. When a fix touches a script, take the small refactor toward this shape if it makes the code simpler
+  ([v0.13, #94](https://github.com/xmejkal/spark/issues/94) moves each area onto the core, one PR per area).
 - Records grow by need. A property enters when a check, a stage or the PO needs it, with its origin. Prefer checks
   that read facts in records to logic written per part ([P94](https://github.com/xmejkal/spark/issues/17)).
 - Free, few and local. Use only free tools, one tool per job, and a local CLI before a web service or an MCP server.
@@ -46,4 +46,4 @@ These are the PO's standing rules for work on spark itself. Where a decision is 
   the PO's words and one sentence that says when it is done.
 - Keep the journey current. A change to a step's status, note or date updates the README's "What works today"
   table and `tools/journey.py`'s picture in the same PR. `tests/test_journey.py` fails on a stale picture. The team
-  also updates its Miro journey board in that PR.
+  queues the Miro journey board's update for its next daily batch ([P645](https://github.com/xmejkal/spark/issues/864)).
