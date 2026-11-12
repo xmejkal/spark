@@ -1,6 +1,8 @@
   light — indicate / status
                  firebeetle2-esp32s3 (library)                  onboard LED light [other words]
                  led-red-5mm (library)                          light [other words]
+          Wokwi's LED: lights on current; its forward voltage and brightness are not this part's
                  xiao-esp32-c6 (library)                        onboard LED light [other words]
   press — sense / button
                  vl6180x-breakout (library)                     distance [other words]
+          answers I2C at 0x29 with a range the `distance` control sets; always reports a good status and a ready sample
