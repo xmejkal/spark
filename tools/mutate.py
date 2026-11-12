@@ -48,6 +48,9 @@ tables and moves no other row; run `--anchors` after it. It exits 2 when no row 
 meets the tests that import it; `scripts/spark/firmware/stand_in/machine.py` stays `machine`. Rows do not run
 in parallel: `--jobs 4` saved 24 s on 8 rows (rows file of P440), under the minute that would pay for the flag.
 
+A red pre-check names its tests (the `FAIL:`, `ERROR:` and `FAILED` lines): on 2026-11-12 a sweep in a copy stopped at 429 s
+on "not green" alone, and the council read it as a bug of `--copy` (P787).
+
 WHAT PASSING MEANS
 
 Every mutation turned the suite red, and the suite is green again with the files restored. A
@@ -65,6 +68,7 @@ import sys
 import tempfile
 import threading
 import time
+from collections import namedtuple
 from pathlib import Path
 
 #: A developer's tool, not the product: it lives in tools/ and reaches the product's modules by path.
@@ -102,10 +106,27 @@ def _from_source(prefix):
         shutil.rmtree(run, ignore_errors=True)
 
 
+class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
+    """
+    Result: one suite run, true when green. `red_lines` are the lines of unittest's verdict that name what went red
+    (`FAIL:`, `ERROR:`, `FAILED (...)`), so a red run can say which tests (P787: a red pre-check in a copy was read as a
+    bug of `--copy`, because the tool hid the tests; they were the tree's). Empty when green.
+    """
+    __slots__ = ()
+
+    def __bool__(self):
+        return self.green
+
+
+#: A line of unittest's verdict that names a red test or sums the red run.
+RED_LINE = re.compile(r"^(?:(?:FAIL|ERROR): .*|FAILED \(.*|Ran \d+ tests? in .*|\w+Error: .*)$", re.M)
+
+
 def suite_is_green(root, tests, only=(), failfast=False):
     """
     Run the suite once — or `only` those test modules — from source alone; the verdict is on stderr,
-    which is why it is captured. `failfast` stops at the first failure: one is all a catch needs.
+    which is why it is captured. `failfast` stops at the first failure: one is all a catch needs. The answer is a
+    `SuiteResult`: true when green, and when red it carries the lines that say which tests.
 
     `-B` writes no bytecode and `_from_source`'s fresh `PYTHONPYCACHEPREFIX` means none pre-existing is read (P172:
     one run of the suite left 87 caches behind, and a sweep left its tests' folders).
@@ -116,7 +137,8 @@ def suite_is_green(root, tests, only=(), failfast=False):
     with _from_source(RUN_PREFIX) as environment:
         result = subprocess.run(command, cwd=str(where), capture_output=True, text=True, env=environment)
     verdict = (result.stderr or "") + (result.stdout or "")
-    return result.returncode == 0 and "\nOK" in verdict
+    green = result.returncode == 0 and "\nOK" in verdict
+    return SuiteResult(green, () if green else tuple(RED_LINE.findall(verdict)) or (verdict.strip().splitlines() or ["no output"])[-1:])
 
 
 # --- MVP ---
@@ -380,7 +402,7 @@ class AnotherRunIsActive(Exception):
 
 
 class RedBeforeMutation(Exception):
-    """The suite is not green before any mutation: a red suite catches nothing."""
+    """The suite is not green before any mutation: a red suite catches nothing. The message names the red tests."""
 
 
 def run(root, tests, mutations, copied=False):
@@ -399,8 +421,10 @@ def run(root, tests, mutations, copied=False):
     try:
         # The pre-check ran BEFORE the lock was taken, so two runs started within its six
         # seconds both passed the lock test and both took the lock (audit C8). Under it now.
-        if not suite_is_green(root, tests):
-            raise RedBeforeMutation("the suite is not green BEFORE any mutation; a red suite catches nothing")
+        before = suite_is_green(root, tests)
+        if not before:
+            raise RedBeforeMutation("the suite is not green BEFORE any mutation; a red suite catches nothing"
+                                    + "".join("\n  " + line for line in getattr(before, "red_lines", ())))
         return _run(root, tests, mutations, near_sets(root, tests, mutations), copied)
     finally:
         lock.unlink(missing_ok=True)
@@ -438,7 +462,7 @@ def _run(root, tests, mutations, near_by_file, copied):
                         "detail": "" if not green else
                         "the suite stayed green — no test notices this defect"})
 
-    return results, copied or suite_is_green(root, tests)
+    return results, copied or bool(suite_is_green(root, tests))
 
 
 def verdict(results, restored):

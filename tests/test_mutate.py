@@ -256,6 +256,17 @@ class TheToolIsHonestAboutItselfTest(unittest.TestCase):
             mutate.main([str(table(root, BREAK_ADD)), "--root", str(root)]),
             mutate.EXIT_COULD_NOT_RUN)
 
+    def test_a_red_pre_check_names_the_tests_that_are_red(self):
+        # P787: a red pre-check inside a --copy was read as a bug of the copy, because the tool said only "not green".
+        root = tiny_project(green=False)
+        with self.assertRaises(mutate.RedBeforeMutation) as red:
+            mutate.run(root, "tests", [BREAK_ADD])
+        said = str(red.exception).splitlines()
+        self.assertEqual(said[0], "the suite is not green BEFORE any mutation; a red suite catches nothing")
+        self.assertEqual([line for line in said if "test_add" in line], ["  FAIL: test_add (test_m.T)"])
+        self.assertIn("  FAILED (failures=1)", said)
+        self.assertEqual(mutate.suite_is_green(tiny_project(), "tests").red_lines, (), "a green run names nothing")
+
     def test_all_caught_is_only_reported_when_the_suite_is_green_afterwards(self):
         # `restored=False` means something is left mutated or broke; nothing can be trusted.
         results = [{"name": "x", "status": mutate.CAUGHT, "detail": ""}]
