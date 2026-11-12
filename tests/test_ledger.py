@@ -1,7 +1,8 @@
 """
 The mutation ledger's own logic (P787): a row's key holds its file, the blob hash is git's, a merge lets the newer date win
 and adds the catches at one blob, the store reads an empty or missing file as empty and writes sorted lines, and a row's
-tier is read from its line and its file's blob (PR 2).
+tier is read from its line and its file's blob (PR 2); the repository's critical marks stay under the PO's cap and name
+files that exist (PR 4).
 
     python3 -m unittest tests.test_ledger
 """
@@ -22,6 +23,10 @@ import ledger  # noqa: E402
 
 ROW = {"file": "m.py", "name": "add subtracts", "find": "return a + b", "replace": "return a - b"}
 FIELDS = ["key", "file", "blob", "date", "status", "by", "caught", "s"]
+#: At most this many rows carry `"tier": "critical"`: the PO's number (P787's plan, approved 2026-11-12), so the rows that
+#: run every sweep stay few, and a mark is a choice, never a default.
+CRITICAL_CAP = 40
+TABLES = sorted((ROOT / "tests" / "mutations").glob("*.json"))
 
 
 def a_line(key="k", blob="b1", date="2026-11-12T10:00:00+01:00", status=ledger.CAUGHT, by="test_m", caught=1, s=5):
@@ -135,6 +140,26 @@ class TheLedgerStoreTest(unittest.TestCase):
         lines = ledger.LedgerStore(path).read()
         self.assertEqual([list(entry) for entry in lines], [FIELDS] * len(lines))
         self.assertEqual([entry["key"] for entry in lines], sorted(entry["key"] for entry in lines))
+
+
+class TheCriticalMarksTest(unittest.TestCase):
+    """The hand-written `"tier": "critical"` marks in the repository's tables (P787 PR 4): few, spelled right, on files that exist."""
+
+    def rows(self):
+        return [(table.name, row) for table in TABLES for row in json.loads(table.read_text())]
+
+    def test_the_critical_rows_stay_under_the_po_s_cap_and_the_tier_key_says_critical_or_nothing(self):
+        rows = self.rows()
+        self.assertTrue(rows, "the tables are read from the repository")
+        misspelt = [(table, row["name"]) for table, row in rows if row.get(ledger.TIER_KEY, ledger.CRITICAL) != ledger.CRITICAL]
+        self.assertEqual(misspelt, [], "a tier key spells %r or is absent: any other word is a mark the tool never reads" % ledger.CRITICAL)
+        marked = [(table, row["name"]) for table, row in rows if ledger.TIER_KEY in row]
+        self.assertLessEqual(len(marked), CRITICAL_CAP, "more than the PO's %d critical rows: drop one before adding one" % CRITICAL_CAP)
+
+    def test_every_critical_row_names_a_file_that_exists(self):
+        gone = [(table, row["name"], row["file"]) for table, row in self.rows()
+                if row.get(ledger.TIER_KEY) == ledger.CRITICAL and not (ROOT / row["file"]).is_file()]
+        self.assertEqual(gone, [], "a critical row on a gone file is a stale mark: retarget or unmark it")
 
 
 if __name__ == "__main__":
