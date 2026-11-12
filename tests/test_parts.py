@@ -3466,6 +3466,16 @@ class TheGoalOperationsRunOnTheCoreTest(unittest.TestCase):
         said, code = run_json(["--list", "--dry-run"])
         self.assertEqual((code, said["op"], said["unchecked"][0]["code"]), (2, "list", "bad_argument"))
 
+    def test_a_cited_url_that_does_not_answer_is_a_problem_on_the_url_and_nothing_is_kept(self):
+        # P722: a failed download said "cites no URL" with exit 0; now the URL is named, with url_unreachable, exit 1
+        home = Path(tempfile.mkdtemp()); project = Path(tempfile.mkdtemp()); (project / "parts").mkdir()
+        (project / "parts" / "x-led.json").write_text(json.dumps(part("x-led", sources=["http://127.0.0.1:9/ds.pdf"], documents={})))
+        with in_store(home):
+            said, code = run_json(["--fetch", "x-led", "--project", str(project)])
+        self.assertEqual((code, said["data"]["failed"], said["problems"][0]["subject"], said["problems"][0]["code"]),
+                         (1, ["http://127.0.0.1:9/ds.pdf"], "http://127.0.0.1:9/ds.pdf", "url_unreachable"))
+        self.assertEqual(said["data"]["documents"], {})
+
     def test_a_part_refusal_on_a_payload_flag_names_the_part_alone(self):
         # P726 PR 3: the loaded payload is a token of the flag's value too, and never enters the subject
         given = Path(tempfile.mkdtemp()) / "function.json"

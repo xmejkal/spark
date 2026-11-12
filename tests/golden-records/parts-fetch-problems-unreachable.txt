@@ -1,4 +1,4 @@
-  golden-led cites no datasheet or image URL to keep
+  NO  http://127.0.0.1:9/datasheet.pdf — the download failed, so nothing was kept for it
 --- parts/golden-led.json ---
 {
   "schema": 1,

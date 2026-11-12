@@ -7,20 +7,26 @@ itself (`datasheets.fetch_documents`), as the handler did, so it declares `fetch
 import json
 
 from spark.core.operation import COMMON_ARGUMENTS, FETCHES, JSON_DEST, READS, WRITES, Argument
+from spark.records import records_codes
 from spark.records.answer_operation import ANSWER_ARGUMENTS
-from spark.records.record_kind import Answer, DEFINITION_SUFFIX, record_home
+from spark.records.record_kind import Answer, DEFINITION_SUFFIX, _problem, record_home
 from spark.sourcing import datasheets, sourcing_codes
 from spark.sourcing.part_operation import PartOperation
 from spark.sourcing.part_records import PartError
 
 
 # --- MVP ---
+#: The sentence of a cited document whose download failed (P722): nothing was kept for it, and the run is problems.
+DOWNLOAD_FAILED = "the download failed, so nothing was kept for it"
+
+
 class FetchDocuments(PartOperation):
     """Operation: `fetch` as parts.py answers it: each kept document with its digest and URL, or what a dry run would
-    fetch; a record that cites no URL says so; a part nobody has is a problem on its id."""
+    fetch; a cited URL that did not answer is a problem on it with `url_unreachable` (P722); a record that cites no URL
+    says so; a part nobody has is a problem on its id."""
 
     name = "fetch"
-    data_keys = ('documents', 'would_fetch')
+    data_keys = ('documents', 'would_fetch', 'failed')
     arguments = (Argument(("--fetch",), "part_id", str, "download the datasheets and images a record cites, into your store", metavar="PART"),
                  ANSWER_ARGUMENTS["project"], ANSWER_ARGUMENTS["dry_run"], COMMON_ARGUMENTS[JSON_DEST])
     effects = (READS, WRITES, FETCHES)
@@ -37,6 +43,10 @@ class FetchDocuments(PartOperation):
             return Answer({"documents": None, "would_fetch": wanted}, ["  would fetch %s" % url for url in wanted]
                           or ["  %s cites no datasheet or image URL to keep" % part_id])
         kept = datasheets.fetch_documents(part_id, project)
+        cited = [url for url, _ in datasheets.fetch_plan(json.loads((record_home(part_id, project) / (part_id + DEFINITION_SUFFIX)).read_text()))]
+        failed = [url for url in cited if url not in {entry["url"] for entry in kept.values()}]
         lines = ["  %s/%s  <-  %s" % (entry["sha256"][:12], entry["file"], entry["url"]) for entry in kept.values()]
-        return Answer({"documents": kept, "would_fetch": []}, lines or ["  %s cites no datasheet or image URL to keep" % part_id])
+        lines += ["  NO  %s — %s" % (url, DOWNLOAD_FAILED) for url in failed]
+        return Answer({"documents": kept, "would_fetch": [], "failed": failed}, lines or ["  %s cites no datasheet or image URL to keep" % part_id],
+                      problems=[_problem(url, DOWNLOAD_FAILED, code=records_codes.URL_UNREACHABLE) for url in failed])
 # --- end MVP ---

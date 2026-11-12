@@ -1,0 +1,6 @@
+[
+  {"file": "scripts/spark/sourcing/fetch_documents.py", "name": "P722: a failed download is read as kept",
+   "find": "        failed = [url for url in cited if url not in {entry[\"url\"] for entry in kept.values()}]", "replace": "        failed = []"},
+  {"file": "scripts/spark/sourcing/fetch_documents.py", "name": "P722: a failed download is a problem with no code",
+   "find": "problems=[_problem(url, DOWNLOAD_FAILED, code=records_codes.URL_UNREACHABLE) for url in failed])", "replace": "problems=[_problem(url, DOWNLOAD_FAILED) for url in failed])"}
+]

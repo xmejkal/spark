@@ -146,7 +146,7 @@ CASES = [
          1),
     Case("parts-sources-problems-unreachable.txt", "parts.py", ["--sources", "golden-led"] + WITH, 1, (LOCAL_LED,)),
     Case("parts-sources-ok-dry-run.txt", "parts.py", ["--sources", "golden-led", "--dry-run"] + WITH, 0, (LOCAL_LED,)),
-    Case("parts-fetch-ok-unreachable.txt", "parts.py", ["--fetch", "golden-led"] + WITH, 0, (SMALL_LED,),
+    Case("parts-fetch-problems-unreachable.txt", "parts.py", ["--fetch", "golden-led"] + WITH, 1, (SMALL_LED,),
          written=("parts/golden-led.json",)),
     Case("parts-fetch-ok-dry-run.txt", "parts.py", ["--fetch", "golden-led", "--dry-run"] + WITH, 0, (SMALL_LED,)),
     Case("parts-fetch-problems-no-record.json", "parts.py", ["--fetch", "no-such-part", "--json"] + WITH, 1),
