@@ -4,7 +4,7 @@ W3-3), `deploy` the second (P655, W4-2), the grant, live and reach Operations (`
 """
 
 from spark.bench import deploy_gate
-from spark.records import tool_finder
+from spark.records.tool_finder import ToolFinder
 from spark.bench.deploy_image import DeployImage
 from spark.bench.check_grant import CheckGrant
 from spark.bench.issue_grant import IssueGrant
@@ -18,11 +18,11 @@ OPERATIONS = {operation.name: operation for operation in (LookAtBoard, DeployIma
 
 
 def build_project_outside_world(project, effects, reporter, values=None):
-    """Core's OutsideWorld for an Operation on `project`: `find_tool` finds a role or a tool as the project's tools list says,
-    and as the shared lists alone say with `project=None`; `report` is the given Reporter's (P507); `clock` the computer's;
+    """Core's OutsideWorld for an Operation on `project`: `find_tool` is `ToolFinder(project).find`, which finds a role or a
+    tool as the project's tools list says (P725); `report` is the given Reporter's (P507); `clock` the computer's;
     `make_consent` asks in the terminal, on the Reporter's stream (P655), the question masked as the Reporter masks (P677).
     `values`, the parsed arguments `run_cli` hands every builder, pick nothing here: no bench Operation asks a Question."""
     return build_outside_world(effects, reporter,
-                               find_tool=lambda name, project=project: tool_finder.find(name, project),
+                               find_tool=ToolFinder(project).find,
                                make_consent=lambda line: deploy_gate.TerminalConsentStrategy(line, stdout=reporter.stream, mask=reporter.mask))
 # --- end MVP ---

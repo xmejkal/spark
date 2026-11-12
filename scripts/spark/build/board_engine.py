@@ -143,21 +143,24 @@ def find_converter(start):
     return None
 
 
-def converter_command(project, own):
+def converter_command(project, own, find_tool=None):
     """The command that converts: a project's own cli.ts under the ts-runtime; else the tools list's
-    diagram-converter — the bundle under the js-runtime, or a swapped converter as it is."""
+    diagram-converter — the bundle under the js-runtime, or a swapped converter as it is. `find_tool` (a name, a project
+    -> Tool) finds them; `tool_finder.find` when None (P725)."""
+    find_tool = find_tool or tool_finder.find
     if own is not None:
-        return tool_finder.find("ts-runtime", project).command + ["run", str(own)]
-    converter = tool_finder.find("diagram-converter", project)
+        return find_tool("ts-runtime", project).command + ["run", str(own)]
+    converter = find_tool("diagram-converter", project)
     if converter.entry.get("kind") == "bundled":
-        return tool_finder.find("js-runtime", project).command + converter.command
+        return find_tool("js-runtime", project).command + converter.command
     return converter.command
 
 
-def converter_stage_problem(project, own=None):
-    """None when the converter and what runs it are here; else the could-not-run Stage saying which and how to install it."""
+def converter_stage_problem(project, own=None, find_tool=None):
+    """None when the converter and what runs it are here; else the could-not-run Stage saying which and how to install it.
+    `find_tool` as `converter_command`'s."""
     try:
-        converter_command(project, own)
+        converter_command(project, own, find_tool)
     except tool_finder.ToolError as missing:
         return Stage("simulation", COULD_NOT_RUN, str(missing), build_codes.TOOL_MISSING)
     return None

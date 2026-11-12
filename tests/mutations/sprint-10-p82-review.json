@@ -104,13 +104,13 @@
  {
   "file": "scripts/spark/build/build_service.py",
   "name": "I1: a missing engine is looked for from the scratch directory, not the project",
-  "find": "                tool_finder.find(\"board-engine\", project)",
-  "replace": "                tool_finder.find(\"board-engine\", inputs.workdir)"
+  "find": "                (self.find_tool or tool_finder.find)(\"board-engine\", project)",
+  "replace": "                (self.find_tool or tool_finder.find)(\"board-engine\", inputs.workdir)"
  },
  {
   "file": "scripts/spark/firmware/sim_project.py",
   "name": "I1: no wokwi-cli prints a fixed hint, not the list's sentence",
-  "find": "% (chip, simulator_problem() or \"wokwi-cli was not found\"))",
+  "find": "% (chip, simulator_problem(find_tool=find_tool) or \"wokwi-cli was not found\"))",
   "replace": "% (chip, \"wokwi-cli was not found\"))"
  },
  {

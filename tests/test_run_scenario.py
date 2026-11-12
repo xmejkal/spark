@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite
 import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed at exit
 from suite_runs import needs_littlefs  # noqa: E402
 from micropython_fakes import fake_interpreter  # noqa: E402
+from fakes import FakeToolFinder  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -397,24 +398,15 @@ class ProjectCase(unittest.TestCase):
             return scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
 
     def command(self, *argv, token="t", tool=FAKE_SIMULATOR, exit_code=0, **fake):
-        real_find = tool_finder.find
-
-        def find(name, *args, **kwargs):
-            if name != "simulator":
-                return real_find(name, *args, **kwargs)
-            if isinstance(tool, Exception):
-                raise tool
-            return tool
-
+        find_tool = FakeToolFinder({"simulator": tool}, fall_back=tool_finder.find).find  # `tool` may be the exception to raise
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_OUT": READY_MATCHED, "FAKE_WOKWI_EXIT": str(exit_code),
                 "FAKE_WOKWI_SEEN": str(self.seen), **fake}
         env = {name: value for name, value in os.environ.items() if name != "WOKWI_CLI_TOKEN"}
         env.update(told, **({"WOKWI_CLI_TOKEN": token} if token else {}))
         argv = list(argv) or [str(self.scenario.relative_to(self.project)), "--project", str(self.project),
                               "--micropython", str(self.micropython)]
-        with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(tool_finder, "find", side_effect=find), \
-                redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
-            code = run_scenario.main(argv)
+        with mock.patch.dict(os.environ, env, clear=True), redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err:
+            code = run_scenario.main(argv, find_tool)
         self.stdout = out.getvalue()
         return code, out.getvalue() + err.getvalue()
 
@@ -541,14 +533,12 @@ class TheLogNamesTheImageTest(ProjectCase):
         (self.project / "requirements.json").write_text(json.dumps({"board": "xiao-esp32-c6"}))
         c6 = self.project / "c6.bin"
         c6.write_bytes(fake_interpreter(head=b"\xe9C6"))
-        real_find = tool_finder.find
         found = tool_finder.Tool("micropython-xiao-esp32c6", None, {}, [str(c6)])
         told = {"FAKE_WOKWI_SERIAL": "ready\n", "FAKE_WOKWI_EXIT": "0", "FAKE_WOKWI_OUT": READY_MATCHED,
                 "FAKE_WOKWI_ERR": "", "FAKE_WOKWI_SEEN": str(self.seen)}
-        with mock.patch.dict(os.environ, told), mock.patch.object(
-                tool_finder, "find", side_effect=lambda name, *rest, **kw:
-                found if name == "micropython-xiao-esp32c6" else real_find(name, *rest, **kw)):
-            scenario_run.ScenarioRun(self.project, self.scenario).run(FAKE_CLI)
+        find_tool = FakeToolFinder({"micropython-xiao-esp32c6": found}, fall_back=tool_finder.find).find
+        with mock.patch.dict(os.environ, told):
+            scenario_run.ScenarioRun(self.project, self.scenario, find_tool=find_tool).run(FAKE_CLI)
         self.assertEqual((self.project / "sim" / "flash-with-firmware.bin").read_bytes()[:3], b"\xe9C6")
 
     def test_a_log_from_an_older_spark_names_no_image(self):

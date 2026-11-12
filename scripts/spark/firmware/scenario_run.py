@@ -111,8 +111,9 @@ class ScenarioRun:
     pass is refused before it spends a Wokwi minute; run() then makes the image, runs wokwi-cli and writes the log.
     """
 
-    def __init__(self, project, scenario, micropython=None, timeout_ms=DEFAULT_TIMEOUT_MS):
+    def __init__(self, project, scenario, micropython=None, timeout_ms=DEFAULT_TIMEOUT_MS, find_tool=None):
         self.project = Path(project)
+        self.find_tool = find_tool or tool_finder.find  # (a name, a project) -> Tool; the real finder when None (P725)
         self.scenario = self.project / scenario  # a relative path is the project's; an absolute one stays as it is
         self.sim = self.project / "sim"
         self.micropython, self.timeout_ms = micropython, timeout_ms
@@ -131,10 +132,11 @@ class ScenarioRun:
             unknown = self.unknown_component_ids()
             if unknown:
                 return unknown
-            tool_finder.find("littlefs", self.project)  # P457: a project's tools file that turns it off is named
+            self.find_tool("littlefs", self.project)  # P457: a project's tools file that turns it off is named
             self.image = image_in(self.sim / "wokwi.toml")
             self.files = image_builder.files_under(self.project / "firmware")
-            self.flash = image_builder.interpreter_for(self.micropython, self.project).image(self.files)
+            self.flash = image_builder.interpreter_for(self.micropython, self.project,
+                                                      lambda name: self.find_tool(name, self.project)).image(self.files)
         except (OSError, ValueError, tool_finder.ToolError) as cannot:  # a missing tool, or image_builder's codes
             code = (TOOL_MISSING if isinstance(cannot, tool_finder.ToolError)
                     else getattr(cannot, "code", RUN_INPUT_UNUSABLE))
@@ -225,7 +227,7 @@ def free_checks(run, project):  # --- MVP --- (P399)
     missing build comes before an account. A refused run has no simulator and one line. A run that goes on has the not_checked lines.
     """
     refusal = run.problem()
-    simulator, refusal = (None, refusal) if refusal else find_simulator(project)
+    simulator, refusal = (None, refusal) if refusal else find_simulator(project, run.find_tool)
     return simulator, [refusal] if refusal else run.not_checked()
 
 

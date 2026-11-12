@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from spark.records import tool_finder  # noqa: E402
-from fakes import FakeOutsideWorld, FakeReporter  # noqa: E402
+from fakes import FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
 from spark.core.cli import DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
 from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
@@ -657,6 +657,28 @@ class FakeOutsideWorldTest(unittest.TestCase):
         self.assertEqual(world.reporter.events, [Event.begin("toy")])
         given = FakeReporter()
         self.assertIs(FakeOutsideWorld(reporter=given).reporter, given)
+
+
+class FakeToolFinderTest(unittest.TestCase):
+    TOOL = tool_finder.Tool("esptool", "flasher", {}, ["/opt/esptool"])
+
+    def test_it_answers_from_its_dict_and_keeps_each_name_and_project_asked(self):
+        finder = FakeToolFinder({"flasher": self.TOOL})
+        self.assertIs(finder.find("flasher", "a-project"), self.TOOL)
+        self.assertIs(finder.find("flasher"), self.TOOL)
+        self.assertEqual(finder.asked, [("flasher", "a-project"), ("flasher", None)])
+
+    def test_an_entry_that_is_an_exception_is_raised(self):
+        with self.assertRaises(KeyError):
+            FakeToolFinder({"flasher": KeyError("the test's own")}).find("flasher")
+
+    def test_a_name_it_lacks_is_a_missing_tool_in_its_own_words_or_the_fall_back_s_answer(self):
+        with self.assertRaises(tool_finder.ToolMissingError) as missing:
+            FakeToolFinder({}).find("littlefs", "p")
+        self.assertEqual((str(missing.exception), missing.exception.code),
+                         ("littlefs is not installed — the test gave no entry for it", tool_finder.records_codes.TOOL_MISSING))
+        finder = FakeToolFinder({}, fall_back=lambda name, project: (name, project))
+        self.assertEqual(finder.find("littlefs", "p"), ("littlefs", "p"))
 
 
 class Reporting(Toy):

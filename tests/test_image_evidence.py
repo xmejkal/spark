@@ -28,6 +28,7 @@ from spark.records import store  # noqa: E402
 import flash_image  # noqa: E402
 from spark.firmware import image_builder  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
+from fakes import FakeToolFinder  # noqa: E402
 from spark.bench.image_evidence import ImageEvidence, NoSimulationEvidence, PassedRunEvidence  # noqa: E402
 from spark.firmware.scenario_steps import ScenarioSteps  # noqa: E402
 from spark.firmware.project_image import DeployError, ProjectImage  # noqa: E402
@@ -427,8 +428,8 @@ class NoSimulationEvidenceTest(unittest.TestCase):
             image_builder.image(fake_interpreter(offset=offset), image_builder.files_under(self.firmware), offset=offset))
         self.image = ProjectImage(self.project)
 
-    def why(self):
-        return NoSimulationEvidence(self.project).why_not_ready(ProjectImage(self.project))
+    def why(self, find_tool=None):
+        return NoSimulationEvidence(self.project, find_tool).why_not_ready(ProjectImage(self.project))
 
     def test_it_is_an_image_evidence(self):
         self.assertIsInstance(NoSimulationEvidence(self.project), ImageEvidence)
@@ -496,13 +497,10 @@ class NoSimulationEvidenceTest(unittest.TestCase):
         self.assertNotIn("\n", said)
 
     def test_a_missing_littlefs_raises_its_tool_problem_with_the_install_line(self):
-        def find(name, *args, **kwargs):
-            raise tool_finder.ToolError("littlefs (littlefs-python) is not installed — install: python3 -m pip "
-                                          "install --user littlefs-python", code="tool_missing")
-
-        with mock.patch.object(tool_finder, "find", side_effect=find):
-            with self.assertRaises(tool_finder.ToolError) as raised:
-                self.why()
+        missing = tool_finder.ToolError("littlefs (littlefs-python) is not installed — install: python3 -m pip "
+                                        "install --user littlefs-python", code="tool_missing")
+        with self.assertRaises(tool_finder.ToolError) as raised:
+            self.why(FakeToolFinder({"littlefs": missing}).find)
         self.assertEqual(str(raised.exception), "cannot check flash-with-firmware.bin against firmware/: littlefs (littlefs-python) "
                          "is not installed — install: python3 -m pip install --user littlefs-python")
 

@@ -33,18 +33,20 @@ WHY_DIAGRAM_PART_NO_ID = "a part in sim/diagram.json has no id"
 MAPPING_FILE = "wokwi-mapping.json"
 
 
-def find_wokwi_cli(project=None):
-    """wokwi-cli, wherever the tools list says to look (PATH, ~/.local/bin, spark's downloads), else None."""
+def find_wokwi_cli(project=None, find_tool=None):
+    """wokwi-cli, wherever the tools list says to look (PATH, ~/.local/bin, spark's downloads), else None. `find_tool`
+    (a name, a project -> tool_finder.Tool) finds it; `tool_finder.find` when None (P725)."""
     try:
-        return tool_finder.find("simulator", project).command[0]
+        return (find_tool or tool_finder.find)("simulator", project).command[0]
     except tool_finder.ToolError:
         return None
 
 
-def simulator_problem(project=None):
-    """Why there is no wokwi-cli, in the tools list's own words with its install line — or None when it is here."""
+def simulator_problem(project=None, find_tool=None):
+    """Why there is no wokwi-cli, in the tools list's own words with its install line — or None when it is here.
+    `find_tool` as `find_wokwi_cli`'s."""
     try:
-        tool_finder.find("simulator", project)
+        (find_tool or tool_finder.find)("simulator", project)
     except tool_finder.ToolError as missing:
         return str(missing)
     return None
@@ -245,13 +247,14 @@ def unmapped_detail(unmapped):
             % ", ".join("%s (%s)" % pair for pair in unmapped))
 
 
-def stage_chips(chips, sim_dir, compiler=None):
+def stage_chips(chips, sim_dir, compiler=None, find_tool=None):
     """
     Copy each chip's sources into `sim_dir/chips/` and see that a binary exists there: a
     binary beside the record no older than its source is reused, anything else is compiled
     with wokwi-cli and the result kept beside the record too. Returns (staged, problems), where
     staged maps each chip to "compiled" or "reused" — the spine printed "2 chip(s) compiled"
-    over two binaries from a week before (audit D5), the shape W1 forbids.
+    over two binaries from a week before (audit D5), the shape W1 forbids. `compiler` is wokwi-cli's path, else
+    `find_tool` (as `find_wokwi_cli`'s) finds it.
     """
     target = sim_dir / "chips"
     staged, problems = {}, []
@@ -264,10 +267,10 @@ def stage_chips(chips, sim_dir, compiler=None):
             shutil.copy2(binary, target / binary.name)
             staged[chip] = "reused"
         else:
-            cli = compiler or find_wokwi_cli()
+            cli = compiler or find_wokwi_cli(find_tool=find_tool)
             if cli is None:
                 problems.append("chip %s has no compiled binary — %s; `chip compile` runs locally and needs no account"
-                                % (chip, simulator_problem() or "wokwi-cli was not found"))
+                                % (chip, simulator_problem(find_tool=find_tool) or "wokwi-cli was not found"))
                 continue
             made = subprocess.run([cli, "chip", "compile", chip + ".chip.c", "-o", chip + ".chip.wasm"],
                                   cwd=str(target), capture_output=True, text=True)

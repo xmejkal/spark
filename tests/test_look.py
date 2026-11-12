@@ -26,11 +26,11 @@ from spark.core.cli import run_operation  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from fakes import FakeConsent, FakeOutsideWorld, FakeReporter  # noqa: E402
+from fakes import FakeConsent, FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event  # noqa: E402
 from suite_runs import needs_littlefs  # noqa: E402
-from test_board_look import LookCase, data, done, found  # noqa: E402
+from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
 from test_deploy import real_littlefs  # noqa: E402
 
 RESTART = "  the board restarts while it is read: a running program stops and starts again. Nothing is erased or written."
@@ -272,7 +272,7 @@ class WhatThePersonSeesTest(LookScriptCase):
         (self.project / ".spark" / "tools.json").write_text(json.dumps({"littlefs-python": {"on": False}}))
         self.image.write_bytes(b"x")
         code, said, _ = self.go_with(FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
-                                                      else done(data("c6-flash-id.txt")), find_tool=real_littlefs), "--no-simulation")
+                                                      else done(data("c6-flash-id.txt")), find_tool=real_littlefs(self.project)), "--no-simulation")
         self.assertEqual(code, 2)
         self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", said[-1])
 
@@ -281,17 +281,14 @@ class WhatThePersonSeesTest(LookScriptCase):
         # installed
         self.image.write_bytes(b"x")  # P452: the finder answers before the image is read, so no littlefs is needed to build one
 
-        asked = []
-
-        def without_littlefs(name, **where):
-            asked.append((name, where))
-            return found(name) if name != "littlefs" else found("not-installed")
+        not_installed = tool_finder.ToolError("not-installed is not installed — install: /spark:setup add not-installed", code="tool_missing")
+        finder = FakeToolFinder({**FOUND, "littlefs": not_installed})
         code, said, _ = self.go_with(FakeOutsideWorld(run=lambda command, **kw: done(data("mpremote-devs-one.txt")) if "devs" in command
-                                                      else done(data("c6-flash-id.txt")), find_tool=without_littlefs), "--no-simulation", "--json")
+                                                      else done(data("c6-flash-id.txt")), find_tool=finder.find), "--no-simulation", "--json")
         self.assertEqual(code, 2)
-        # P457: with the project, so a tools file that turns littlefs off is named (it was project=None, row 23)
-        self.assertEqual([where for name, where in asked if name == "littlefs"], [{"project": self.project}])
-        self.assertEqual([where for name, where in asked if name != "littlefs"], [{}] * (len(asked) - 1))
+        # P457, P725: by name alone; the finder the world holds is the project's, so a tools file that turns littlefs off is named
+        self.assertIn(("littlefs", None), finder.asked)
+        self.assertEqual({project for name, project in finder.asked}, {None})
         no_token = [item for item in json.loads(said[-1])["unchecked"] if item["sentence"].startswith("no token: ")]
         self.assertEqual([item["code"] for item in no_token], ["tool_missing"])
         self.assertIn("not-installed is not installed", no_token[0]["sentence"])

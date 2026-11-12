@@ -31,7 +31,9 @@ from spark.firmware import scenario_steps  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from fakes import FakeOutsideWorld  # noqa: E402
+from fakes import FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
+from spark.bench import build_project_outside_world  # noqa: E402
+from spark.core.operation import READS  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
 from spark.core.events import TerminalReporter  # noqa: E402
 
@@ -52,9 +54,11 @@ FOUND = {"flasher": tool_finder.Tool("esptool", "flasher",
 PORT = "/dev/cu.usbmodem1101"
 
 
-def real_littlefs(name, **where):
-    """The fakes for every role but littlefs, which the real tools lists answer, with the project when given (P457)."""
-    return tool_finder.find(name, **where) if name == "littlefs" else found(name)
+def real_littlefs(project):
+    """The `find_tool` a world built for `project` holds, with the fakes for every role but littlefs, which the real tools
+    lists answer for that project (P457, P725): a tools file of the project that turns it off is named."""
+    return FakeToolFinder({name: tool for name, tool in FOUND.items() if name != "littlefs"},
+                          fall_back=lambda name, _: tool_finder.find(name, project)).find
 
 
 def found(name, *args, **kwargs):
@@ -92,11 +96,10 @@ class ProjectCase(unittest.TestCase):
             scenario_run.ScenarioRun(self.project, scenario or self.scenario, micropython=self.micropython).run(FAKE_CLI)
 
     def plan(self, port=None, ignore_older_runs=False):
-        """The DeployPlan of a DeployService over this project's MicroPython platform. tool_finder.find must be
-        patched."""
+        """The DeployPlan of a DeployService over this project's MicroPython platform, whose tools are FOUND's (P725)."""
         evidence = image_evidence.PassedRunEvidence(ignore_older_runs)  # the default is the refusal
-        return deploy_service.DeployService(
-            self.project, firmware_platform.MicroPythonPlatform(self.project), evidence, FakeOutsideWorld()).plan(port)
+        platform = firmware_platform.MicroPythonPlatform(self.project, FakeToolFinder(FOUND).find)
+        return deploy_service.DeployService(self.project, platform, evidence, FakeOutsideWorld()).plan(port)
 
     def deploy(self, *argv, find=found, run=None):
         """(exit code, stdout, stderr, the commands run) of deploy.py in this project, through a FakeOutsideWorld whose
@@ -171,14 +174,14 @@ class TheNoSimulationDryRunTest(ProjectCase):
     def test_littlefs_turned_off_in_the_project_is_named_by_the_dry_run_and_the_scenario_run_and_on_changes_nothing(self):
         # P457: the three sites ask with the project, so the sentence names the file that turned it off
         self.turn_littlefs(False)
-        code, _, problems, ran = self.deploy("--dry-run", "--no-simulation", find=real_littlefs)
+        code, _, problems, ran = self.deploy("--dry-run", "--no-simulation", find=real_littlefs(self.project))
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
         self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", problems)
         status, sentence, log = scenario_run.ScenarioRun(self.project, self.scenario, micropython=self.micropython).run(FAKE_CLI)
         self.assertEqual((status, log), (scenario_run.COULD_NOT_RUN, None))
         self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", sentence)
         self.turn_littlefs(True)
-        code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=real_littlefs)
+        code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=real_littlefs(self.project))
         self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
 
     def test_the_flag_plans_the_flash_lines_with_no_run_log(self):
@@ -198,16 +201,17 @@ class TheNoSimulationDryRunTest(ProjectCase):
         self.assertEqual((code, ran), (deploy.EXIT_COULD_NOT_RUN, []))
         self.assertIn("firmware/main.py, line", problems)
 
-    def test_the_image_check_asks_for_littlefs_with_the_project(self):
-        # P457: through the outside's finder, with the project, so a project's tools file that turns it off is named
-        asked = []
-
-        def find(name, *args, **kwargs):
-            asked.append((name, args, kwargs))
-            return found(name, *args, **kwargs)
-        code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=find)
+    def test_the_image_check_asks_the_finder_the_world_holds_which_the_bench_builds_for_the_project(self):
+        # P457, P725: the image check asks the world's finder by name alone; the bench builds that finder for the project
+        # (`ToolFinder(project).find`), so a project's tools file that turns littlefs off is named
+        finder = FakeToolFinder(FOUND)
+        code, _, problems, _ = self.deploy("--dry-run", "--no-simulation", find=finder.find)
         self.assertEqual((code, problems), (deploy.EXIT_OK, ""))
-        self.assertIn(("littlefs", (), {"project": self.project}), asked)
+        self.assertIn(("littlefs", None), finder.asked)
+        self.turn_littlefs(False)
+        with self.assertRaises(tool_finder.ToolError) as off:
+            build_project_outside_world(self.project, (READS,), FakeReporter()).find_tool("littlefs")
+        self.assertIn("littlefs-python is turned off in this project's .spark/tools.json", str(off.exception))
 
     def test_the_dry_run_json_names_the_look_step_with_the_flag(self):
         code, said, _, _ = self.deploy("--dry-run", "--no-simulation", "--json")
@@ -324,14 +328,13 @@ class ALogThatTestedAnotherImageTest(ProjectCase):
 
     def test_plan_refuses_by_default(self):
         self.run_two_scenarios()
-        with mock.patch.object(tool_finder, "find", side_effect=found), self.assertRaises(DeployError) as said:
+        with self.assertRaises(DeployError) as said:
             self.plan()
         self.assertIn("--ignore-older-runs", str(said.exception))
 
     def test_plan_returns_a_deploy_plan_read_by_name(self):
         self.run_the_scenario()
-        with mock.patch.object(tool_finder, "find", side_effect=found):
-            plan = self.plan(PORT)
+        plan = self.plan(PORT)
         self.assertIsInstance(plan, deploy_service.DeployPlan)
         self.assertEqual((len(plan.commands), plan.mpremote, plan.notes), (2, [PYTHON, "-m", "mpremote"], []))
         self.assertEqual(plan.commands, plan.flasher.build_commands(self.image, PORT))

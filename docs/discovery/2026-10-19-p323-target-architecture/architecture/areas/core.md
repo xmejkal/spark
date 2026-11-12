@@ -28,7 +28,7 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 
 | Seam | Kind | Who fills it |
 |---|---|---|
-| `OutsideWorld` | Value of callables: `run`, `find_tool` and `report` today; `write`, `fetch`, `clock`, `consent`, `environ` with their first user | `spark.bench.build_project_outside_world` in production, `FakeOutsideWorld` in tests |
+| `OutsideWorld` | Value of callables: `run`, `find_tool` and `report` today; `write`, `fetch`, `clock`, `consent`, `environ` with their first user | `spark.bench.build_project_outside_world` in production, its `find_tool` `ToolFinder(project).find` (P725); `FakeOutsideWorld` in tests |
 | `Privacy` | Value: path replacements and secret values to mask | records, from the record folders and `account_env` rows (`tool_finder.py:314`) |
 | the frontend | a function that calls `run_operation` and renders the result | `run_cli` today, an MCP server later |
 
@@ -127,7 +127,7 @@ sequenceDiagram
     RC-->>CLI: envelope, code bad_argument, exit 2
   end
   RC->>B: build_outside(project, effects), unless a test gave outside
-  B-->>RC: OutsideWorld, Backends, Privacy
+  B-->>RC: OutsideWorld (its find_tool is ToolFinder(project).find, P725), Privacy
   RC->>RO: run_operation(operation, values, outside, backends, trace)
   RO->>OP: run(values as keywords, outside, backends)
   alt a SparkError

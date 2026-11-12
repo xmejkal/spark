@@ -40,7 +40,7 @@ Back to [the architecture](README.md).
 | OutsideWorld | The Value that holds the callables for every effect: `run` and `find_tool` exist (P442), and `report` (P507); write, fetch, clock, consent and the `environ` variables the Operation reads come with their first user. |
 | probe | A read-only look at a board or a port: `ConsoleProbe`, `ReadyProbe`, `DoctorProbe`. It changes nothing on the board. A class that changes the port, such as today's `ConsoleProbe.cure`, is no probe: the names pass (P382) splits it. |
 | backend | A swappable outside thing: a tool, the firmware platform, the store or the simulator. |
-| Backends | The Value that holds every backend choice of one run, built once. Proposed. |
+| Backends | The Value that was to hold every backend choice of one run. Dropped in P725: the choice of tools comes from `outside.find_tool`, built once per run by the area's builder. |
 | registry | A dict in capitals from a name to a class, beside its base class, such as `MATCHERS` (`matching.py:222`). |
 | record | A JSON file of facts with an origin: a part, a board or a chip. Never a log. |
 | fact | One field of a record. |

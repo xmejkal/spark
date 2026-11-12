@@ -188,15 +188,16 @@ class BuildService:
     build ends there. A test swaps either collaborator for a Fake; the CLI takes `for_toolchain`.
     """
 
-    def __init__(self, engine, emitter):
+    def __init__(self, engine, emitter, find_tool=None):
         self.engine = engine
         self.emitter = emitter
+        self.find_tool = find_tool  # (a name, a project) -> Tool, for the build's and the converter's sentences; the real finder when None (P725)
 
     @classmethod
-    def for_toolchain(cls, toolchain):
+    def for_toolchain(cls, toolchain, find_tool=None):
         """The real engine over `toolchain` (None: found from the project at build time) and the emitter that lays out around
-        a guessed size, as the CLI `check_spine.py` builds."""
-        return cls(board_engine.TscircuitEngine(toolchain), board_emitter.BoardEmitter(assume_missing_sizes=True))
+        a guessed size, as the CLI `check_spine.py` builds; `find_tool` as `__init__`'s."""
+        return cls(board_engine.TscircuitEngine(toolchain), board_emitter.BoardEmitter(assume_missing_sizes=True), find_tool)
 
     def build(self, inputs):
         """Every stage, in order, stopping at the first that cannot produce input for the next: the list of `Stage`s."""
@@ -304,7 +305,7 @@ class BuildService:
         engine = self.engine.found_from(project)
         if engine is None:
             try:
-                tool_finder.find("board-engine", project)
+                (self.find_tool or tool_finder.find)("board-engine", project)
                 said = "the board engine was not found"
             except tool_finder.ToolError as missing:
                 said = str(missing)  # the tools list's own sentence, with what installs it (P82)
@@ -374,7 +375,7 @@ class BuildService:
         run from /tmp the converter beside the project was "not found"), the stand-ins from the records (P31), the diagram."""
         workdir = inputs.workdir
         own = find_converter(project)
-        missing = converter_stage_problem(project, own)
+        missing = converter_stage_problem(project, own, self.find_tool)
         if missing:
             stages.append(missing)
             return
@@ -388,7 +389,7 @@ class BuildService:
         sim_dir.mkdir(exist_ok=True)
         (sim_dir / sim_project.MAPPING_FILE).write_text(json.dumps(mapping, indent=2) + "\n")
         (sim_dir / "board.json").write_text(json.dumps(board, indent=2) + "\n")
-        staged, chip_problems = sim_project.stage_chips(chips, sim_dir)
+        staged, chip_problems = sim_project.stage_chips(chips, sim_dir, find_tool=self.find_tool)
         if chip_problems:
             stages.append(Stage("simulation", COULD_NOT_RUN, "\n".join(chip_problems), build_codes.CHIP_NOT_COMPILED))
             return

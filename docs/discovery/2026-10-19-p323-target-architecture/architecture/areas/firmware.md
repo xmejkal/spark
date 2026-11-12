@@ -42,7 +42,7 @@ The build calls the simulation project step (`sim_project.py`) as one of its sta
 
 | Seam | Real adapter | Fake | Chosen by |
 |---|---|---|---|
-| `SimulationEngine`: `prepare(design)`, `run(scenario) -> RunLog` | `WokwiCliEngine` over `wokwi-cli` | `tests/fake_wokwi_cli.py`, a fake process that exists today | `Backends.simulator`, the `simulator` role in the tools layers (`data/tools.json:5`) |
+| `SimulationEngine`: `prepare(design)`, `run(scenario) -> RunLog` | `WokwiCliEngine` over `wokwi-cli` | `tests/fake_wokwi_cli.py`, a fake process that exists today | the `simulator` role in the tools layers (`data/tools.json:5`) through `find_tool` (P725: `ScenarioRun(..., find_tool=None)`, `sim_project.find_wokwi_cli(project, find_tool)`, `make_image(..., find_tool=None)`; the firmware Operations replace `find_tool=None` with `outside.find_tool`) |
 | command runner | `OutsideWorld.run` | a recording `run` | the CLI |
 | file writes | `OutsideWorld.write` | a recording writer | the CLI |
 

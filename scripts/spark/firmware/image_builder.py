@@ -265,15 +265,17 @@ def interpreter_for(given, project=None, find_tool=None):
 
 
 # --- MVP ---
-def make_image(given, project, folder, config_text=None):
+def make_image(given, project, folder, config_text=None, find_tool=None):
     """
     The image of the files under `folder`, with the MicroPython build `given` or the project's (P684): ((the
     interpreter, its bytes, the files, the flash), None), or (None, a Refusal) whose code names why not. `config_text`
     is the JSON written as /config.json. A bad --config is said before a bad build, as when one except caught both.
+    `find_tool` (a name -> tool_finder.Tool) finds littlefs and the build; the project's tools list when None (P725).
     """
+    find_tool = find_tool or (lambda name: tool_finder.find(name, project))
     try:
-        tool_finder.find("littlefs", project)  # P457: a project's tools file that turns it off is named
-        interpreter = interpreter_for(given, project)
+        find_tool("littlefs")  # P457: a project's tools file that turns it off is named
+        interpreter = interpreter_for(given, project, find_tool)
     except tool_finder.ToolError as missing:
         return None, Refusal(str(missing), firmware_codes.TOOL_MISSING)
     if not interpreter.path.is_file():

@@ -137,7 +137,7 @@ Each by its name in check_all's answer:
   needs, writes the picks and the requirements file from them, and marks a project's steps and tallies what they cost
   (`--step`, `--tally`; `cost.py` below does the counting).
 - `init_project.py`: everything a project needs before any check can run, with nothing guessed. Its library is `spark/build/project_setup.py`.
-- `tools.py`: the tools spark depends on, found from one merged list. `/spark:setup` runs it. Its library is `spark/records/tool_finder.py`.
+- `tools.py`: the tools spark depends on, found from one merged list. `/spark:setup` runs it. Its library is `spark/records/tool_finder.py`, whose `ToolFinder(project).find` is the `find_tool` an Operation gets (P725).
 
 ### The libraries
 

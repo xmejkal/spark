@@ -44,6 +44,9 @@ from spark.design import loader  # noqa: E402
 from spark.firmware import scenario_run  # noqa: E402
 from spark.firmware import sim_project  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
+from spark.bench.deploy_image import DeployImage  # noqa: E402
+from spark.core.events import TerminalReporter  # noqa: E402
+from fakes import FakeOutsideWorld, FakeToolFinder  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "data" / "breadboard" / "button-light"
 #: The firmware a person (or the conversation) writes once the pin map exists (P59): main.py over light.py.
@@ -159,9 +162,9 @@ def _deploy(path):
     stand_ins = {role: tool_finder.Tool(name, role, {"kind": "python", "module": name}, [sys.executable])
                  for role, name in (("flasher", "esptool"), ("board-shell", "mpremote"))}
     out, err = io.StringIO(), io.StringIO()
-    with unittest.mock.patch.object(tool_finder, "find", side_effect=lambda role, *args, **kwargs: stand_ins[role]), \
-            contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        code = deploy.main(["--project", str(project), "--dry-run"])
+    outside = FakeOutsideWorld(find_tool=FakeToolFinder(stand_ins).find, reporter=TerminalReporter(out))  # a dry run runs nothing
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = deploy.main(["--project", str(project), "--dry-run"], outside=outside, operation=DeployImage())
     if code != 0:
         return err.getvalue().strip() or "deploy.py exited %d" % code
     return None if "write-flash 0x0 %s" % shlex.quote(str(path)) in out.getvalue() else "its dry run does not write this image"

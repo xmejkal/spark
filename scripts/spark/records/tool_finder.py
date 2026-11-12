@@ -7,9 +7,10 @@ contract it meets: spark's defaults in data/tools.json, the person's in
 ~/.local/share/spark/tools.json, the project's in .spark/tools.json — merged entry by entry and
 field by field, the project winning. Every script asks `find`; nothing else names a tool.
 
-A missing tool is a ToolError whose sentence says what installs it. Only `install` installs, and
+A missing tool is a `ToolMissingError`, a `ToolError` whose sentence says what installs it. Only `install` installs, and
 only for /spark:setup once the person has said yes; it never runs `sudo`. This module is the library, and the CLI
-`scripts/tools.py` is what /spark:setup runs (P719). `ToolFinder` (`areas/records.md`) comes with its card.
+`scripts/tools.py` is what /spark:setup runs (P719). `ToolFinder(project).find` is the Adapter an area's builder hands an
+Operation as `OutsideWorld.find_tool` (P725); the logic stays in the module `find`.
 """
 
 import importlib.util
@@ -51,6 +52,21 @@ Tool = namedtuple("Tool", "name role entry command")
 
 class ToolError(CodedMessageError):
     """Error: a tool spark cannot use — missing, refused, turned off, or a list it cannot read. The message is the whole sentence; its values are flattened (P444), and its `code` is a code of the area that raises it (records_codes, firmware_codes)."""
+
+
+class ToolMissingError(ToolError):
+    """Error: a tool that is not installed; its sentence says what installs it (code `tool_missing`)."""
+
+
+class ToolFinder:
+    """Adapter: `find(name)` gives the `Tool` for a role or a tool's name in `project`, or raises `ToolError`; the thin door an
+    area's builder hands an Operation as `OutsideWorld.find_tool` (P725). The logic stays in the module `find`."""
+
+    def __init__(self, project=None):
+        self.project = project
+
+    def find(self, name):
+        return find(name, self.project)
 
 
 def _read(path):
@@ -269,11 +285,11 @@ def find(name, project=None, personal=None, _seen=()):
         try:
             find(need, project, personal, _seen + (tool_name,))
         except ToolError as inner:
-            raise ToolError("%s needs %s: %s", tool_name, need, inner, code=inner.code)
+            raise type(inner)("%s needs %s: %s", tool_name, need, inner, code=inner.code)
     command = locate(entry, project)
     if command is None:
-        raise ToolError("%s (%s) is not installed — install: %s",
-                          role or tool_name, tool_name, install_hint(entry) or "see its entry in %s" % DEFAULTS, code=records_codes.TOOL_MISSING)
+        raise ToolMissingError("%s (%s) is not installed — install: %s",
+                               role or tool_name, tool_name, install_hint(entry) or "see its entry in %s" % DEFAULTS, code=records_codes.TOOL_MISSING)
     here = versions.too_old(entry)
     if here:
         raise ToolError("%s %s is too old: spark needs %s or newer. Install: %s", tool_name, here,

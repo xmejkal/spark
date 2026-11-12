@@ -68,8 +68,8 @@
  {
   "file": "scripts/spark/bench/image_evidence.py",
   "name": "_why_image_differs ignores the finder it is given",
-  "find": "(self.find_tool or tool_finder.find)(\"littlefs\", project=self.project)",
-  "replace": "tool_finder.find(\"littlefs\", project=self.project)"
+  "find": "find_tool = self.find_tool or (lambda name: tool_finder.find(name, self.project))",
+  "replace": "find_tool = lambda name: tool_finder.find(name, self.project)"
  },
  {
   "file": "scripts/spark/bench/look_at_board.py",
@@ -86,8 +86,8 @@
  {
   "file": "scripts/spark/bench/__init__.py",
   "name": "the project's finder drops the project",
-  "find": "find_tool=lambda name, project=project: tool_finder.find(name, project),",
-  "replace": "find_tool=lambda name, project=None: tool_finder.find(name),"
+  "find": "find_tool=ToolFinder(project).find,",
+  "replace": "find_tool=ToolFinder().find,"
  },
  {
   "file": "scripts/spark/core/cli.py",

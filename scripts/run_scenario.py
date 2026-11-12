@@ -61,13 +61,13 @@ ARGUMENTS = (
 )
 
 
-def main(argv=None):
+def main(argv=None, find_tool=None):  # find_tool: a test's (a name, a project -> Tool), into ScenarioRun (P725)
     parser = argparse.ArgumentParser(prog="run_scenario.py", description=__doc__.strip().split("\n\n")[0],
                                      epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
     for flags, options in ARGUMENTS:
         parser.add_argument(*flags, **options)
     args = parser.parse_args(argv)
-    run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms)
+    run = ScenarioRun(args.project, args.scenario, args.micropython, args.timeout_ms, find_tool)
     if args.dry_run:  # before the unlink: a dry run leaves an older log in place
         status, said = run.dry_run()
         print(guard_lines("\n".join(map(str, said))), file=sys.stdout if status == OK else sys.stderr)
