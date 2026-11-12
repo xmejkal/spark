@@ -50,6 +50,8 @@ MAY_READ = {
     "codes.INPUT_UNREADABLE": "a code's NAME, the word an agent decides on — vocabulary, not a value",
     "parts.HELP": "parts.py's own HelpText, given to run_cli so a test prints as parts.py prints — a fixture, not a value",
     "board_console.READ_CONSOLE": "the script the test runs against a fake serial module: the code under test, not the expectation",
+    "image_evidence.COMPILE_CHILD": "the compile child's script, which the fake run answers for and the world's `ran` must hold, its flags "
+                                   "literals beside it: the code under test, not the expectation (P458)",
     "ready_probe.HASH_FILES": "the board code under test, rendered; the words it must print are literals in the test (P260)",
     "pin_assigner.BUS_LINES": SAMENESS, "part_rules.BUSES": SAMENESS,
     "pin_assigner.CAPABILITIES": SAMENESS, "part_rules.CAPABILITIES": SAMENESS,

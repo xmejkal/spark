@@ -27,7 +27,7 @@ from spark.firmware import sim_project  # noqa: E402
 from spark.records import deploy_record_store  # noqa: E402
 from spark.records import store  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
-from spark.bench import board_codes, image_evidence  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 from fakes import FakeConsent, FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder, RealChildRun  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.core.events import Event  # noqa: E402
@@ -600,14 +600,14 @@ class TheOperationTest(LookScriptCase):
         result = run_operation(look_at_board.LookAtBoard(records=FakeDeployRecordStore()), self.values(no_simulation=True),
                                FakeOutsideWorld(run=self.fake_tools(broken), find_tool=found))
         self.assertEqual([(finding.code, finding.sentence) for finding in result.findings],
-                         [(board_codes.EVIDENCE_REFUSES, "no token: firmware/main.py, line 3 does not compile: invalid syntax")])
+                         [("evidence_refuses", "no token: firmware/main.py, line 3 does not compile: invalid syntax")])
         self.assertIn("  no token: firmware/main.py, line 3 does not compile: invalid syntax", result.lines)
 
     def test_the_last_deploy_line_and_its_fix_come_from_the_store_the_look_was_given(self):
         # P458: the look reads `records`, never a store of its own, and the fix line names the path the LastDeploy carries
         self.image.write_bytes(b"x")
         recorded = deploy_record_store.LastDeploy(outcomes.RECORDED, "p", "ready", "2026-10-17T09:00:00+02:00")
-        unreadable = deploy_record_store.LastDeploy(outcomes.NOT_CHECKED, why=deploy_record_store.WHY_UNREADABLE,
+        unreadable = deploy_record_store.LastDeploy(outcomes.NOT_CHECKED, why="spark's record of it cannot be read",
                                                     record_path=Path("/the/store/boards/record.json"))
         lines = []
         for last in (recorded, unreadable):
