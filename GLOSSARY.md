@@ -151,7 +151,7 @@ the whole suite twice, so put many rows in one call. P130's 25 rows ran 615 s.
 
 **The ledger.** `tests/mutations/ledger.jsonl`, in git: one line per row that a run planted, `{key, file, blob, date,
 status, by, caught, s}`, written after every run that plants rows, with or without `--copy`, in the tree the run was
-given. The key is `sha1(file + find + replace)[:12]`, so a row keeps its line through a rename; the blob is git's hash
+given. The key is `sha1(file + find + replace)[:12]`, so a row keeps its line when its `name` changes and gets a new one when it is retargeted; the blob is git's hash
 of the file as the run read it, so an edit of the file is seen without `.git`; `by` is the test module that caught the
 row, `suite` or `escape`; `caught` counts the catches at that blob; when two lines meet, the newer date wins.
 `python3 tools/mutate.py --ledger` counts the lines by status. The tiers that read it come with
