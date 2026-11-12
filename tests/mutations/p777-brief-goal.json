@@ -1,0 +1,12 @@
+[
+  {"file": "scripts/init_project.py", "name": "the closing list reads nothing from disk again (G5, G21): a second run lists no field",
+   "find": "    unanswered, unread = unanswered_fields(project)", "replace": "    unanswered, unread = [], []"},
+  {"file": "scripts/spark/build/project_setup.py", "name": "the brief wins over the answers: a goal said again is not written",
+   "find": "    payload = merged(merged(answers, existing), PROJECT_TEMPLATE)", "replace": "    payload = merged(merged(existing, answers), PROJECT_TEMPLATE)"},
+  {"file": "scripts/spark/build/project_setup.py", "name": "a key the brief lacks is merged in silently",
+   "find": "    if unknown:\n        return Refusal(\"%s: no field called", "replace": "    if False:\n        return Refusal(\"%s: no field called"},
+  {"file": "scripts/spark/build/project_setup.py", "name": "a rules file that cannot be read is left out of the list without a word",
+   "find": "            notes.append(\"%s could not be read, so its unanswered fields are not listed: %s\" % (name, why))", "replace": "            pass"},
+  {"file": "scripts/spark/records/brief.py", "name": "Brief never reads the goal",
+   "find": "            goal=goal if isinstance(goal, str) else None,", "replace": "            goal=None,"}
+]

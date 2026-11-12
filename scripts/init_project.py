@@ -38,10 +38,9 @@ def main(argv=None):
                         help="work on files that exist too: merge what is derived into rules.json (answers stay), "
                              "rewrite project.json only if it has no answers, set boards/active.json when --board "
                              "names one; package.json is never rewritten")
-    parser.add_argument("--answers", metavar="FILE",
-                        help="a JSON object with the brief's answers in the person's words — goal, must, prefer, sellers, "
-                             "decided — merged into project.json: what it states wins, what it leaves out is kept, and a "
-                             "null un-answers nothing")
+    parser.add_argument("--answers", metavar="FILE", help="a JSON object with the brief's answers in the person's words — "
+                        "goal, must, prefer, sellers, decided — merged into project.json: what it states wins, what it leaves "
+                        "out is kept, and a null un-answers nothing")
     args = parser.parse_args(argv)
 
     project = Path(args.project).resolve()
@@ -63,20 +62,16 @@ def main(argv=None):
     nets = nets_in(circuit)
     part_list, notes = design_in(project)
     notes.append(listed)
-    unstated = []
     if ambiguous:
         notes.append(ambiguous)
-    written = []
+    unstated, written = [], []
 
     for path, payload, brief, merge in ((project / ".spark" / "rules.json", rules_for(nets, part_list), False, True),
                                  (brief_path, PROJECT_TEMPLATE, True, False)):
-        if brief and answers is not None:
-            did, note = write_brief(path, answers, Path(args.answers).name)
-        else:
-            did, note = write(path, payload, args.force, brief=brief, merge=merge, unstated=unstated)
+        did, note = (write_brief(path, answers, Path(args.answers).name) if brief and answers is not None
+                     else write(path, payload, args.force, brief=brief, merge=merge, unstated=unstated))
         notes.append(note)
-        if did:
-            written.append(path)
+        written += [path] if did else []
     notes.append(write(project / "package.json", package_file(project), force=False)[1])
     notes.extend(unstated)
     unanswered, unread = unanswered_fields(project)
@@ -88,19 +83,14 @@ def main(argv=None):
         if (refused := why_board_refused(args.board, project)):
             print(refused, file=sys.stderr)
             return EXIT_COULD_NOT_RUN
-        did, note = write(project / "boards" / "active.json",
-                          {"schema": 1, "board": args.board}, args.force)
+        did, note = write(project / "boards" / "active.json", {"schema": 1, "board": args.board}, args.force)
         notes.append(note)
         stop = footprint_emitter.footprint_stop(args.board, project)  # F12: said where a board is chosen, never refused
         notes += ["board %s: %s" % (args.board, stop)] if stop else []
 
-    print("spark init in %s" % project)
-    for note in notes:
-        print("  %s" % note)
-    if circuit:
-        print("  named %d rail(s) from %s" % (len(nets), Path(circuit).name))
-    else:
-        print("  no built design found, so the rails are empty — build, then re-run with --force")
+    print("\n".join(["spark init in %s" % project] + ["  %s" % note for note in notes]))
+    print("  named %d rail(s) from %s" % (len(nets), Path(circuit).name) if circuit
+          else "  no built design found, so the rails are empty — build, then re-run with --force")
     if not args.board:
         print("  no board chosen. Available: %s" % boards_offered(project))
 

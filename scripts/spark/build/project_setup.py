@@ -335,12 +335,12 @@ def answers_in(file, brief):
     """
     The brief's answers in `file`, a JSON object whose keys are the brief's own fields (PROJECT_TEMPLATE's, the `//` notes
     aside), as a dict; or a Refusal with build_codes.ANSWERS_UNUSABLE when `file` cannot be read as one, names a field the
-    brief lacks, or holds a value of the wrong shape (`goal` a non-empty text; `must`, `prefer`, `sellers` lists of texts;
-    `decided` a list), and when `brief`, the project's own file, exists and cannot be read as a JSON object: then the
-    answers have nothing to merge into, and nothing is written. A null is no answer: `write_brief` keeps the brief's value.
+    brief lacks or holds a value of the wrong shape (`goal` a non-empty text; `must`, `prefer`, `sellers` lists of texts;
+    `decided` a list), or when `brief`, the project's own file, exists and is no JSON object, so nothing could be merged
+    into it. Nothing is written either way. A null is no answer: `write_brief` keeps the brief's value.
     """
     fields = [key for key in PROJECT_TEMPLATE if not key.startswith("//")]
-
+    name = Path(file).name
     def loaded(path):
         data = json.loads(Path(path).read_text())
         if not isinstance(data, dict):
@@ -349,29 +349,27 @@ def answers_in(file, brief):
 
     def texts(value):
         return isinstance(value, list) and all(isinstance(each, str) for each in value)
-
     shapes = {"goal": ("a text", lambda value: isinstance(value, str) and value.strip() != ""),
               "must": ("a list of texts", texts), "prefer": ("a list of texts", texts),
               "sellers": ("a list of texts", texts), "decided": ("a list", lambda value: isinstance(value, list))}
     try:
         answers = loaded(file)
     except (OSError, ValueError) as why:
-        return Refusal("%s could not be read as the brief's answers: %s" % (Path(file).name, why),
-                       build_codes.ANSWERS_UNUSABLE)
+        return Refusal("%s could not be read as the brief's answers: %s" % (name, why), build_codes.ANSWERS_UNUSABLE)
     unknown = [key for key in answers if key not in fields]
     if unknown:
-        return Refusal("%s: no field called %r in the brief. Its fields: %s" % (Path(file).name, unknown[0], ", ".join(fields)),
+        return Refusal("%s: no field called %r in the brief. Its fields: %s" % (name, unknown[0], ", ".join(fields)),
                        build_codes.ANSWERS_UNUSABLE)
     wrong = [(key, shapes[key][0]) for key, value in answers.items() if value is not None and not shapes[key][1](value)]
     if wrong:
         said = ["%s must be %s" % wrong[0]] + ["%s %s" % each for each in wrong[1:]]
-        return Refusal("%s: %s" % (Path(file).name, ", ".join(said)), build_codes.ANSWERS_UNUSABLE)
+        return Refusal("%s: %s" % (name, ", ".join(said)), build_codes.ANSWERS_UNUSABLE)
     if Path(brief).exists():
         try:
             loaded(brief)
         except (OSError, ValueError) as why:
-            return Refusal("%s could not be read as the brief, so %s was not merged into it: %s"
-                           % (Path(brief).name, Path(file).name, why), build_codes.ANSWERS_UNUSABLE)
+            return Refusal("%s could not be read as the brief, so %s was not merged into it: %s" % (Path(brief).name, name, why),
+                           build_codes.ANSWERS_UNUSABLE)
     return answers
 
 
@@ -381,17 +379,16 @@ def write_brief(path, answers, answers_file):
     the answers state wins, one they leave out or state as null is kept from the brief (the template when there is none), an
     empty list in the answers erases nothing, and the template's `//` notes are current. Returns (True, a note naming the
     fields the answers stated and `answers_file`), or (False, a note) when the brief says it already and nothing was written.
-    `answers_in` has read both files, so this reads the brief as `write` reads the rules.
+    `answers_in` has read both files, so this reads the brief as `write` reads the rules, and `write` writes it.
     """
     existing = json.loads(path.read_text()) if path.exists() else PROJECT_TEMPLATE
     payload = merged(merged(answers, existing), PROJECT_TEMPLATE)
     payload = {key: payload[key] for key in [*PROJECT_TEMPLATE, *payload]}
     if path.exists() and payload == existing:
         return False, "%s already says what %s says" % (path.name, answers_file)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2) + "\n")
+    did, note = write(path, payload, force=True)
     stated = ", ".join(key for key, value in answers.items() if value is not None)
-    return True, "wrote %s into %s from %s" % (stated, path.name, answers_file) if stated else "wrote %s" % path.name
+    return did, "wrote %s into %s from %s" % (stated, path.name, answers_file) if stated else note
 
 
 def unanswered_fields(project):

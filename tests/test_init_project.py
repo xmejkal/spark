@@ -639,7 +639,7 @@ class WhatIsStillOpenTest(unittest.TestCase):
         root = Path(tempfile.mkdtemp())
         self._init(root)
         code, text = self._init(root)
-        self.assertEqual(code, init_project.EXIT_NOTHING_TO_DO)
+        self.assertEqual(code, 1, "nothing to do")
         self.assertIn("5 field(s) nobody has answered", text)
         for line in ("rules.json  physics.i2c_hz", "rules.json  physics.i2c_bus_capacitance_pf", "project.json  goal",
                      "project.json  prefer", "project.json  sellers"):
@@ -662,7 +662,7 @@ class WhatIsStillOpenTest(unittest.TestCase):
         self._init(root)
         (root / ".spark" / "rules.json").write_text("{not json")
         code, text = self._init(root)
-        self.assertEqual(code, init_project.EXIT_NOTHING_TO_DO)
+        self.assertEqual(code, 1, "nothing to do")
         self.assertIn("  rules.json could not be read, so its unanswered fields are not listed: ", text)
         self.assertIn("3 field(s) nobody has answered", text)
         self.assertNotIn("rules.json  physics", text)
@@ -728,7 +728,7 @@ class TheBriefAnswersTest(unittest.TestCase):
         self.assertIn("  wrote goal, must into project.json from answers.json\n", text)
         # said a third time, the brief already says it, and nothing else was written: nothing to do
         code, text, _ = self._init(root, "--answers", self._answers(root, {"goal": "the goal said again"}))
-        self.assertEqual(code, init_project.EXIT_NOTHING_TO_DO)
+        self.assertEqual(code, 1, "nothing to do")
         self.assertIn("  project.json already says what answers.json says\n", text)
 
     def test_a_key_the_brief_lacks_is_refused_and_nothing_is_written(self):
