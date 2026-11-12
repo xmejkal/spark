@@ -1,0 +1,2 @@
+--- stderr ---
+flash_image.py: the files were not written into the image's 2 MB file system: LittleFSError -28: LFS_ERR_NOSPC

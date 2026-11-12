@@ -580,7 +580,7 @@ class NoSimulationEvidenceTest(unittest.TestCase):
 
     def test_a_file_too_big_for_the_image_is_a_sentence_not_a_littlefs_error(self):
         (self.firmware / "big.bin").write_bytes(os.urandom(2200 * 1024))
-        self.assertIn("firmware/ does not fit the image's file system", self.why())
+        self.assertIn("against firmware/: the files were not written into the image's 2 MB file system: LittleFSError", self.why())
 
     def test_a_failed_run_of_this_image_refuses_and_names_the_log_and_its_verdict(self):
         write_log(self.project, "bad.log", FAILED, ProjectImage(self.project).sha256)

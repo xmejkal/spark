@@ -25,7 +25,7 @@ BOARD_SILENT, BOARD_NOT_STARTED, NEVER_READY = "board_silent", "board_not_starte
 STEP_TIMEOUT, STEP_FAILED = "step_timeout", "step_failed"
 #: flash_image.py.
 NO_INTERPRETER, INTERPRETER_UNUSABLE = "no_interpreter", "interpreter_unusable"
-FILES_NOT_FOLDER, CONFIG_NOT_JSON = "files_not_folder", "config_not_json"
+FILES_NOT_FOLDER, CONFIG_NOT_JSON, FILES_NOT_WRITTEN = "files_not_folder", "config_not_json", "files_not_written"
 #: import_firmware.py.
 NO_FIRMWARE_FOLDER, NOTHING_TO_IMPORT = "no_firmware_folder", "nothing_to_import"
 IMPORT_FAILED, IMPORT_TIMEOUT = "import_failed", "import_timeout"
@@ -39,8 +39,8 @@ CODES = {
     TOOL_MISSING: "a tool the step needs is missing or cannot be used",
     NO_SIM_PROJECT: "sim/ holds no diagram.json or no wokwi.toml, so there is nothing to simulate",
     NO_MAIN_PY: "firmware/ has no main.py, so the board would boot to a bare prompt and never print ready",
-    RUN_INPUT_UNUSABLE: "the scenario, the firmware line or the firmware's files cannot be read, so the run cannot make "
-                        "its image",
+    RUN_INPUT_UNUSABLE: "the scenario or the firmware's files cannot be read, or sim/wokwi.toml names no image and a run "
+                        "cannot name one there",
     NO_TOKEN: "the simulator's account token is not set, and a run spends Wokwi CI minutes",
     UNKNOWN_COMPONENT_ID: "a step of the scenario names a component id that sim/diagram.json does not hold",
     SIMULATOR_CANNOT_START: "wokwi-cli could not be started",
@@ -55,6 +55,8 @@ CODES = {
     INTERPRETER_UNUSABLE: "the MicroPython build is damaged, too large, or not the build for the board's chip",
     FILES_NOT_FOLDER: "--files names no folder",
     CONFIG_NOT_JSON: "--config is not JSON",
+    FILES_NOT_WRITTEN: "the files were not written into the image's 2 MB file system: littlefs names the error (no space, a "
+                       "name too long)",
     NO_FIRMWARE_FOLDER: "the project has no firmware/ folder to import",
     NOTHING_TO_IMPORT: "firmware/ holds nothing to import but the boot files and the pin map",
     IMPORT_FAILED: "a firmware module raised when it was imported",

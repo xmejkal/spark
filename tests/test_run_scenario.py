@@ -1239,6 +1239,17 @@ class EachRefusalHasItsCodeTest(ProjectCase):
         (self.project / "sim" / "wokwi.toml").write_text(sim_project.wokwi_toml([], "../build/app.bin"))
         self.assertEqual(self.run_with()[1].code, "firmware_line_bad")
 
+    @needs_littlefs
+    def test_files_the_file_system_does_not_take_are_its_code_as_in_flash_image(self):
+        # P689: a LittleFSError escaped problem() as a traceback
+        (self.project / "firmware" / "big.bin").write_bytes(bytes(3 << 20))
+        self.assertEqual(self.run_with()[1].code, "files_not_written")
+
+    def test_a_firmware_line_that_cannot_be_read_is_a_bad_firmware_line_as_in_the_deploy(self):
+        # P689: it was run_input_unusable here and firmware_line_bad in project_image, for the same cause
+        (self.project / "sim" / "wokwi.toml").write_text('[wokwi]\nversion = 1\n  firmware = "x.bin"\n')
+        self.assertEqual(self.run_with()[1].code, "firmware_line_bad")
+
     def test_littlefs_turned_off_is_a_missing_tool_as_in_flash_image(self):
         (self.project / ".spark").mkdir(exist_ok=True)
         (self.project / ".spark" / "tools.json").write_text(json.dumps({"littlefs-python": {"on": False}}))

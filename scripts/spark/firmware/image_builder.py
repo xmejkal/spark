@@ -42,22 +42,32 @@ def files_under(root):
             for path in sorted(root.rglob("*")) if path.is_file() and "__pycache__" not in path.parts]
 
 
+def write_file(fs, destination, content):
+    """`content` at `destination` in the littlefs `fs`, its folders made first."""
+    parent = destination.rsplit("/", 1)[0]
+    if parent and parent not in ("", "/"):
+        try:
+            fs.makedirs(parent, exist_ok=True)
+        except (AttributeError, TypeError):
+            fs.mkdir(parent)
+    with fs.open(destination, "wb") as handle:
+        handle.write(content)
+
+
 def filesystem(files, overrides=None):
-    """A littlefs image holding the files (and /config.json from `overrides`), as bytes."""
+    """A littlefs image holding the files (and /config.json from `overrides`), as bytes; a FilesystemError when they do not go in."""
     from littlefs import LittleFS  # imported here so --help works without it
+    from littlefs.errors import LittleFSError
     block_count = (FLASH_SIZE - FILESYSTEM_OFFSET) // BLOCK_SIZE
     fs = LittleFS(block_count=block_count, **LITTLEFS_SETTINGS)
     if overrides:
         files = list(files) + [("/config.json", json.dumps(overrides).encode())]
-    for destination, content in files:
-        parent = destination.rsplit("/", 1)[0]
-        if parent and parent not in ("", "/"):
-            try:
-                fs.makedirs(parent, exist_ok=True)
-            except (AttributeError, TypeError):
-                fs.mkdir(parent)
-        with fs.open(destination, "wb") as handle:
-            handle.write(content)
+    try:
+        for destination, content in files:
+            write_file(fs, destination, content)
+    except LittleFSError as cannot:
+        raise FilesystemError("the files were not written into the image's %d MB file system: %s"
+                              % ((FLASH_SIZE - FILESYSTEM_OFFSET) >> 20, cannot))
     return bytes(fs.context.buffer)
 
 # --- MVP ---
@@ -65,6 +75,12 @@ class InterpreterError(ValueError):
     """Error: the MicroPython build cannot make an image: it is damaged, too large, or not the build for the board's chip.
     The message is the whole sentence, and `code` names it (P684)."""
     code = firmware_codes.INTERPRETER_UNUSABLE
+
+
+class FilesystemError(ValueError):
+    """Error: the files were not written into the image's file system (P689): littlefs names the error (no space, a name too
+    long) in the sentence, and `code` names it. It used to escape as a LittleFSError traceback."""
+    code = firmware_codes.FILES_NOT_WRITTEN
 
 
 class PartitionTable(namedtuple("PartitionTable", "entries")):
@@ -290,7 +306,7 @@ def make_image(given, project, folder, config_text=None, find_tool=None):
         return None, Refusal(str(broken), firmware_codes.CONFIG_NOT_JSON)
     try:
         return (interpreter, micropython, files, image(micropython, files, config, interpreter.offset)), None
-    except ValueError as broken:  # an InterpreterError; another keeps its text and this code, as one except gave it
-        return None, Refusal(str(broken), firmware_codes.INTERPRETER_UNUSABLE)
+    except ValueError as broken:  # an InterpreterError or a FilesystemError names its code; another keeps the build's, as one except gave it
+        return None, Refusal(str(broken), getattr(broken, "code", firmware_codes.INTERPRETER_UNUSABLE))
 # --- end MVP ---
 

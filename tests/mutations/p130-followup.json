@@ -20,8 +20,8 @@
  {
   "file": "scripts/spark/firmware/scenario_run.py",
   "name": "a wokwi.toml firmware line this cannot read is accepted, and the run writes one image while wokwi-cli simulates another",
-  "find": "    if named.state == outcomes.NOT_CHECKED:\n        raise ValueError(",
-  "replace": "    if False:\n        raise ValueError("
+  "find": "    if named.state == outcomes.NOT_CHECKED:\n        raise FirmwareLineError(",
+  "replace": "    if False:\n        raise FirmwareLineError("
  },
  {
   "file": "scripts/spark/firmware/sim_project.py",

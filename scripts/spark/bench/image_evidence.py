@@ -413,12 +413,8 @@ class NoSimulationEvidence(ImageEvidence):
         except (tool_finder.ToolError, ImportError) as cannot:
             raise cannot_check(image.path.name, cannot, tool_finder.ToolError,
                                code=getattr(cannot, "code", board_codes.TOOL_MISSING))
-        except (OSError, ValueError) as cannot:
+        except (OSError, ValueError) as cannot:  # image_builder's errors, FilesystemError too (P689)
             return str(cannot_check(image.path.name, cannot))
-        except Exception as cannot:  # littlefs.errors.LittleFSError, imported lazily as image_builder does
-            if type(cannot).__name__ != "LittleFSError":
-                raise
-            return "firmware/ does not fit the image's file system: %s" % cannot
         if held != built:
             build, entry = image_builder.build_entry(self.project)
             own = image_builder.own_build_hint_for(self.project, build, entry and entry[0], image.path)
