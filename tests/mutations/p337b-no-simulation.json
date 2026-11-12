@@ -73,12 +73,6 @@
  },
  {
   "file": "scripts/spark/bench/image_evidence.py",
-  "name": "littlefs-uncaught",
-  "find": "if type(cannot).__name__ != \"LittleFSError\":",
-  "replace": "if True:"
- },
- {
-  "file": "scripts/spark/bench/image_evidence.py",
   "name": "failed-run-ignored",
   "find": "if sha256 == image.sha256 and verdict != PASSED:",
   "replace": "if sha256 == image.sha256 and verdict == PASSED and False:"

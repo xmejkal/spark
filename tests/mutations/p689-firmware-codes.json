@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/firmware/image_builder.py",
+  "name": "littlefs-error-escapes",
+  "find": "    except LittleFSError as cannot:\n        raise FilesystemError(",
+  "replace": "    except LittleFSError as cannot:\n        raise\n        raise FilesystemError("
+ },
+ {
+  "file": "scripts/spark/firmware/image_builder.py",
+  "name": "files-refusal-takes-the-build-code",
+  "find": "return None, Refusal(str(broken), getattr(broken, \"code\", firmware_codes.INTERPRETER_UNUSABLE))",
+  "replace": "return None, Refusal(str(broken), firmware_codes.INTERPRETER_UNUSABLE)"
+ },
+ {
+  "file": "scripts/spark/firmware/scenario_run.py",
+  "name": "unreadable-firmware-line-is-the-runs-code",
+  "find": "raise FirmwareLineError(\"wokwi.toml %s%s\" % (named.why, named.fix()))",
+  "replace": "raise ValueError(\"wokwi.toml %s%s\" % (named.why, named.fix()))"
+ }
+]

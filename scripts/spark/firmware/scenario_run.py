@@ -59,14 +59,21 @@ def with_ready_wait(scenario):
     return "\n".join(lines) + "\n"
 
 
+class FirmwareLineError(ValueError):
+    """Error: the firmware line of wokwi.toml cannot be read, the deploy's `firmware_line_bad` for the same cause (P689). The run's
+    own refusals (no line to name the image in, a read-only file) stay plain ValueErrors, `run_input_unusable`."""
+    code = FIRMWARE_LINE_BAD
+
+
 def image_in(toml):
     """
     The flash image wokwi.toml names, or sim_project.DEFAULT_IMAGE when the build named none. It writes nothing, and it raises
-    ValueError for what a real run would fail on: no place to name the image, or a file it cannot change.
+    FirmwareLineError for a line it cannot read, and ValueError for what a real run would fail on: no place to name the image,
+    or a file it cannot change.
     """
     named = sim_project.firmware_in(toml)
     if named.state == outcomes.NOT_CHECKED:
-        raise ValueError("wokwi.toml %s%s" % (named.why, named.fix()))
+        raise FirmwareLineError("wokwi.toml %s%s" % (named.why, named.fix()))
     if named.state == outcomes.NONE_RECORDED and sim_project.UNNAMED_FIRMWARE not in toml.read_text():
         raise ValueError("wokwi.toml names no firmware, and wokwi-cli refuses that. To fix it, write it as firmware = \"name.bin\".")
     if named.state == outcomes.NONE_RECORDED and not os.access(toml, os.W_OK):

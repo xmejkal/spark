@@ -624,6 +624,19 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
     def test_files_that_are_no_folder_are_its_code(self):
         self.assertEqual(self.refusal_of(files="fw/main.py").code, "files_not_folder")
 
+    def test_files_the_file_system_does_not_take_are_its_code_not_a_traceback(self):
+        # P689: a LittleFSError (no space, a name too long) escaped make_image as a traceback with exit 1
+        (self.root / "fw" / "big.bin").write_bytes(bytes(3 << 20))
+        refusal = self.refusal_of()
+        self.assertEqual(refusal.code, "files_not_written")
+        self.assertEqual(refusal, "the files were not written into the image's 2 MB file system: LittleFSError -28: LFS_ERR_NOSPC")
+
+    def test_the_file_system_step_raises_the_value_error_that_carries_the_code(self):
+        with self.assertRaises(image_builder.FilesystemError) as said:
+            image_builder.filesystem([("/" + "n" * 300, b"x")])
+        self.assertEqual(said.exception.code, "files_not_written")
+        self.assertIn("LFS_ERR_NAMETOOLONG", str(said.exception))
+
     def test_an_interpreter_spark_cannot_use_is_its_code(self):
         (self.root / "micropython.bin").write_bytes(fake_interpreter(table=b"\xff" * TABLE_SIZE))
         self.assertEqual(self.refusal_of().code, "interpreter_unusable")

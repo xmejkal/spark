@@ -68,6 +68,9 @@ CASES = [
          ["--project", PROJECT, "--micropython", "micropython.bin", "--files", "firmware", "-o", "flash.bin"], 0),
     Case("flash-image-could-not-run-no-interpreter.txt", "flash_image.py",
          ["--project", PROJECT, "--micropython", "missing.bin", "--files", "firmware", "-o", "flash.bin"], 2),
+    Case("flash-image-could-not-run-files-not-written.txt", "flash_image.py",
+         ["--project", PROJECT, "--micropython", "micropython.bin", "--files", "firmware", "-o", "flash.bin"], 2,
+         (("firmware/big.bin", bytes(3 << 20)),)),
     Case("import-firmware-ok.json", "import_firmware.py", [PROJECT, "--json"], 0, (GOOD_MODULE,)),
     Case("import-firmware-problems.json", "import_firmware.py", [PROJECT, "--json"], 1, (GOOD_MODULE, RAISING_MODULE)),
 ]
