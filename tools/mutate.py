@@ -8,6 +8,8 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py tests/mutations/*.json --for $changed --copy   # a branch's: changed=$(git diff --name-only origin/main...HEAD)
     tools/mutate.py tests/mutations/*.json --retarget scripts/a.py scripts/spark/a.py   # a file moved: its rows follow
     tools/mutate.py --ledger                              # the ledger's lines, counted by status
+    tools/mutate.py tests/mutations/*.json --tier critical,new --copy   # a sweep: only the rows of these tiers
+    tools/mutate.py tests/mutations/*.json --tier-count   # how many rows each tier holds; runs nothing
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -54,11 +56,21 @@ guessed at.
 
 THE LEDGER (P787) is `tests/mutations/ledger.jsonl`, in git: one line per row key, written after every run that plants
 rows, with or without `--copy` (`--anchors` and `--retarget` write none). It says which rows were caught, when, by which
-test, at which content of their file, so a sweep can run rows in tiers (PR 2) instead of all 3000 at once. The run
+test, at which content of their file, so a sweep runs rows in tiers (THE TIERS below) instead of all 3000 at once. The run
 writes it in the tree it was given, never in the copy: the copy is removed, and the real tree's ledger is merged with
 the run's lines, the newer date winning, so a line a person wrote during the run is kept. Only a run whose files are
 restored writes it: a verdict nothing can trust records nothing. `--ledger` prints the counts by status. `tools/ledger.py`
 holds the words and the store.
+
+THE TIERS (P787) put each row of the given tables under one of the plan's words, each a fact the tool reads from the row
+and the ledger (`ledger.tier_of`): *critical*, the row carries `"tier": "critical"`; *new*, no ledger line at the row's
+file's current blob, or a line there that says `escaped` (a missing test, so it runs again) or `refused` (--anchors'
+business); *proving*, caught once at the current blob; *proven*, caught twice or more there. *Retired* is PR 5's and is
+not decided yet. The blob rule alone says what is stale: an edit of a file makes every row on it new again, and a row
+with no line is new, never proven. `--tier critical,new` runs only the rows of the named tiers, in the sweep's order:
+critical, new in the tables' given order (name the oldest table first), proving, proven oldest date first; the header
+line says which tiers and how many rows, and the rest of the output is as without it. Without `--tier` every row runs.
+`--tier-count` prints how many rows each tier holds and runs nothing.
 
 WHAT PASSING MEANS
 
@@ -549,21 +561,32 @@ def main(argv=None):
     parser.add_argument("--ledger", action="store_true",
                         help="instead of a run: count the lines of the ledger (tests/mutations/ledger.jsonl under --root) "
                              "by status; every run that plants rows writes the ledger, --anchors and --retarget do not")
+    parser.add_argument("--tier", metavar="TIERS",
+                        help="only the rows of these tiers, a comma list of %s, in that order (the ledger decides each "
+                             "row's tier: critical is the row's own `\"tier\"` key; new has no line at its file's current "
+                             "blob, or an escaped or refused one; proving was caught once there, proven twice or more)" % ",".join(ledger.TIERS))
+    parser.add_argument("--tier-count", action="store_true",
+                        help="instead of a run: how many rows of the given tables each tier holds; runs nothing")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
     ledger_store = ledger.LedgerStore(root / args.tests / "mutations" / ledger.LEDGER_NAME)
     if args.ledger:
-        if args.table or args.anchors or args.paths or args.copy or args.retarget:
-            parser.error("--ledger runs alone: it takes no table, --anchors, --for, --copy or --retarget")
+        if args.table or args.anchors or args.paths or args.copy or args.retarget or args.tier is not None or args.tier_count:
+            parser.error("--ledger runs alone: it takes no table, --anchors, --for, --copy, --retarget, --tier or --tier-count")
         return print_ledger(ledger_store, root, args.json)
     if not args.table:
         parser.error("the following arguments are required: table")
     if args.retarget:
-        if args.anchors or args.paths or args.copy:
-            parser.error("--retarget runs alone: it takes no --anchors, --for or --copy")
+        if args.anchors or args.paths or args.copy or args.tier is not None or args.tier_count:
+            parser.error("--retarget runs alone: it takes no --anchors, --for, --copy, --tier or --tier-count")
         return retarget_tables(args.table, *args.retarget)
+    if args.tier_count and (args.anchors or args.copy or args.tier is not None):
+        parser.error("--tier-count runs alone: it takes the tables and --for, no --anchors, --copy or --tier")
+    wanted = list(dict.fromkeys(args.tier.split(","))) if args.tier is not None else []  # `--tier ""` is an error; `new,new` is new
+    if args.tier is not None and any(tier not in ledger.TIERS for tier in wanted):
+        parser.error("--tier takes a comma list of %s, not %s" % (",".join(ledger.TIERS), args.tier))
     mutations = []
     for table in args.table:
         try:
@@ -576,6 +599,18 @@ def main(argv=None):
         if not mutations:
             print("  no mutation is about %s: nothing to run" % " ".join(args.paths), file=sys.stderr)
             return EXIT_OK
+    if args.tier_count:
+        return print_tier_counts(ledger.tiers_of(root, mutations, ledger_store.read()), len(args.table), args.json)
+    header = None
+    if wanted:
+        tiers = ledger.tiers_of(root, mutations, ledger_store.read())
+        mutations = tiers.selected(wanted)
+        header = {"selected": wanted, "rows": len(mutations), "counts": tiers.counts()}
+        if not mutations:
+            print("  no row is in the tier(s) %s: nothing to run" % args.tier, file=sys.stderr)
+            return EXIT_OK
+        if not args.json:
+            print(tier_header(header))
 
     if args.anchors:
         wrong = anchors(root, mutations)
@@ -611,12 +646,33 @@ def main(argv=None):
         print(json.dumps({"tool": "mutate", "restored": restored,
                           "status": {EXIT_OK: OK, EXIT_ESCAPED: "escaped",
                                      EXIT_COULD_NOT_RUN: COULD_NOT_RUN}[code],
-                          "seconds": round(time.monotonic() - started), "mutations": results, "ledger": recorded}, indent=2))
+                          "seconds": round(time.monotonic() - started), "mutations": results, "ledger": recorded,
+                          **({"tiers": header} if header else {})}, indent=2))
     else:
         sys.stdout.write(render(results, restored, code))
         print("  %d mutation(s) in %.0f s" % (len(results), time.monotonic() - started))
         print("  %d row(s) recorded in %s (%d in all)" % (recorded["recorded"], recorded["path"], recorded["rows"]))
     return code
+
+
+def tier_header(header):
+    """The header line of a `--tier` run: which tiers it selected, how many rows that is, and every tier's count."""
+    return "  tiers %s: %d row(s) selected (%s)" % (",".join(header["selected"]), header["rows"], tier_counts(header["counts"]))
+
+
+def tier_counts(counts):
+    """`critical 12, new 30, proving 9, proven 10`: every tier's count, in the tiers' order."""
+    return ", ".join("%s %d" % (tier, counts[tier]) for tier in ledger.TIERS)
+
+
+def print_tier_counts(tiers, tables, as_json):
+    """`--tier-count`: how many rows of the tables each tier holds, as one line or as JSON; exit 0, nothing runs."""
+    counts = tiers.counts()
+    if as_json:
+        print(json.dumps({"tool": "mutate", "tables": tables, "rows": sum(counts.values()), "tiers": counts}, indent=2))
+    else:
+        print("  tiers of %d row(s) in %d table(s): %s" % (sum(counts.values()), tables, tier_counts(counts)))
+    return EXIT_OK
 
 
 def print_ledger(ledger_store, root, as_json):

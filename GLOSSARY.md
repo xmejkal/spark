@@ -158,7 +158,17 @@ blob changes anyway); the blob is git's hash of the file as the run read it, so 
 `.git`; `date` is the run's end; `by` is the test module that caught the row, `suite` or `escape`; `caught` counts the
 catches at that blob; when a run's line meets the file's, the newer date wins, and two branches that ran the same key
 conflict on that line in git, for a person to resolve. `python3 tools/mutate.py --ledger` counts the lines by status.
-The tiers that read it come with [P787](https://github.com/xmejkal/spark/issues/1088)'s later pull requests.
+
+**The tiers.** A sweep runs a few hundred rows, not all 3000: each row is in one tier, a fact the tool reads from the row
+and the ledger, never guessed ([P787](https://github.com/xmejkal/spark/issues/1088)). *Critical*: the row carries
+`"tier": "critical"`, a fifth key written by hand, and runs every sweep. *New*: no ledger line at the row's file's
+current blob (never run, or the file changed since), or a line there that says `escaped` (a missing test: it runs
+again) or `refused` (`--anchors`' business). *Proving*: caught once at the current blob. *Proven*: caught twice or more
+there; an edit of the file makes it new again, by the blob rule alone. *Retired*: refused in two sweeps, listed for a
+deleting PR; not yet decided by the tool. `python3 tools/mutate.py tests/mutations/*.json --tier critical,new --copy`
+runs the named tiers in the sweep's order, critical, new in the tables' given order (name the oldest table first),
+proving, proven oldest date first, and its first line says which tiers and how many rows; `--tier-count` counts the
+rows of each tier and runs nothing. A row with no line is new, never proven.
 
 `tools/mutate.py` exists because this rule was once kept by memory: about thirty mutations were run by hand in one
 sprint, and **two escaped**. Each survived a green suite until somebody happened to try it.

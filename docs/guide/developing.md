@@ -108,13 +108,13 @@ PO asks ([the glossary](../../GLOSSARY.md#mutation-and-the-mutation-table), [P71
 
 ```sh
 python3 tools/mutate.py --anchors tests/mutations/*.json                # a pull request: no row refused that main accepts
-python3 tools/mutate.py tests/mutations/*.json --for <the wave's files> --copy   # a sweep
+python3 tools/mutate.py tests/mutations/*.json --for <the wave's files> --tier critical,new --copy   # a sweep; the glob lists the newest tables first, so list the oldest first to run them first
 ```
 
 `--copy` removes its copy in a `finally`, and also when SIGTERM stops it (the signal becomes `SystemExit`, only in the
 main thread and only over the default handler). A SIGTERM that comes during the removal itself waits until the removal
 is done, and then exits 143. At the start of every mutation run, with or without `--copy`, `mutate.py` removes its `mutate-run-*`,
-`mutate-import-*` and `mutate-copy-*` folders older than a day, which covers SIGKILL ([P435](https://github.com/xmejkal/spark/issues/579)). A red pre-check names the tests that are red, in a copy too, and every run that plants rows writes `tests/mutations/ledger.jsonl` in the tree it was given, one line per row (caught when, by which test, at which content of its file; `--ledger` counts them by status), for the tiers to come ([P787](https://github.com/xmejkal/spark/issues/1088)).
+`mutate-import-*` and `mutate-copy-*` folders older than a day, which covers SIGKILL ([P435](https://github.com/xmejkal/spark/issues/579)). A red pre-check names the tests that are red, in a copy too, and every run that plants rows writes `tests/mutations/ledger.jsonl` in the tree it was given, one line per row (caught when, by which test, at which content of its file; `--ledger` counts them by status). `--tier critical,new` runs only the rows the ledger puts in those tiers, `--tier-count` counts them, and the [glossary](../../GLOSSARY.md#mutation-and-the-mutation-table) has the five words ([P787](https://github.com/xmejkal/spark/issues/1088)).
 
 A row reported *refused* is a guard whose code moved, or whose replacement does not compile, import or parse.
 Re-anchor it or fix its `replace`, or delete it and give the reason.
