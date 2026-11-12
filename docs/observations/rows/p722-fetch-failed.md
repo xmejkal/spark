@@ -7,3 +7,5 @@ Card: [P722 #973](https://github.com/xmejkal/spark/issues/973), bug, under #94. 
 | --- | --- | --- | --- | --- |
 | 1 | `fetch_documents` keeps its shape (`documents`, seven tests call it); the Operation computes the failed URLs from the plan and the kept entries, one read of the record more | build | acted | `FetchDocuments.build_answer` |
 | 2 | the W6-R1 golden pinned the wrong text with exit 0; it is renamed `parts-fetch-problems-unreachable` with exit 1 and regenerated after a read | build | acted | tests/golden-records |
+| 3 | the dry run's data had no `failed` key though `data_keys` declares it; a URL already in `documents` is not fetched again and counts as kept, unsaid | PR refuter (Fable) | acted | `"failed": []` on the dry run; the docstring and the PR body say the kept rule |
+| 4 | replies.md:77 said `url_unreachable` comes from `research.py` alone | PR refuter (Fable) | acted | the cell names `parts.py --fetch` too |

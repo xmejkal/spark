@@ -22,8 +22,8 @@ DOWNLOAD_FAILED = "the download failed, so nothing was kept for it"
 
 class FetchDocuments(PartOperation):
     """Operation: `fetch` as parts.py answers it: each kept document with its digest and URL, or what a dry run would
-    fetch; a cited URL that did not answer is a problem on it with `url_unreachable` (P722); a record that cites no URL
-    says so; a part nobody has is a problem on its id."""
+    fetch; a cited URL that did not answer is a problem on it with `url_unreachable` (P722); a URL already in `documents`
+    is not fetched again and counts as kept; a record that cites no URL says so; a part nobody has is a problem on its id."""
 
     name = "fetch"
     data_keys = ('documents', 'would_fetch', 'failed')
@@ -40,7 +40,7 @@ class FetchDocuments(PartOperation):
             if home is None:
                 raise PartError("no record called %r to fetch for", part_id, code=sourcing_codes.NO_SUCH_PART)
             wanted = [url for url, _ in datasheets.fetch_plan(json.loads((home / (part_id + DEFINITION_SUFFIX)).read_text()))]
-            return Answer({"documents": None, "would_fetch": wanted}, ["  would fetch %s" % url for url in wanted]
+            return Answer({"documents": None, "would_fetch": wanted, "failed": []}, ["  would fetch %s" % url for url in wanted]
                           or ["  %s cites no datasheet or image URL to keep" % part_id])
         kept = datasheets.fetch_documents(part_id, project)
         cited = [url for url, _ in datasheets.fetch_plan(json.loads((record_home(part_id, project) / (part_id + DEFINITION_SUFFIX)).read_text()))]
