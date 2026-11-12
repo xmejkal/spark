@@ -56,7 +56,7 @@ guessed at.
 
 THE LEDGER (P787) is `tests/mutations/ledger.jsonl`, in git: one line per row key, written after every run that plants
 rows, with or without `--copy` (`--anchors` and `--retarget` write none). It says which rows were caught, when, by which
-test, at which content of their file, so a sweep can run rows in tiers (PR 2) instead of all 3000 at once. The run
+test, at which content of their file, so a sweep runs rows in tiers (THE TIERS below) instead of all 3000 at once. The run
 writes it in the tree it was given, never in the copy: the copy is removed, and the real tree's ledger is merged with
 the run's lines, the newer date winning, so a line a person wrote during the run is kept. Only a run whose files are
 restored writes it: a verdict nothing can trust records nothing. `--ledger` prints the counts by status. `tools/ledger.py`
@@ -584,7 +584,7 @@ def main(argv=None):
         return retarget_tables(args.table, *args.retarget)
     if args.tier_count and (args.anchors or args.copy or args.tier is not None):
         parser.error("--tier-count runs alone: it takes the tables and --for, no --anchors, --copy or --tier")
-    wanted = args.tier.split(",") if args.tier is not None else []  # `--tier ""` is an error, never every row
+    wanted = list(dict.fromkeys(args.tier.split(","))) if args.tier is not None else []  # `--tier ""` is an error; `new,new` is new
     if args.tier is not None and any(tier not in ledger.TIERS for tier in wanted):
         parser.error("--tier takes a comma list of %s, not %s" % (",".join(ledger.TIERS), args.tier))
     mutations = []

@@ -169,7 +169,6 @@ deleting PR; not yet decided by the tool. `python3 tools/mutate.py tests/mutatio
 runs the named tiers in the sweep's order, critical, new in the tables' given order (name the oldest table first),
 proving, proven oldest date first, and its first line says which tiers and how many rows; `--tier-count` counts the
 rows of each tier and runs nothing. A row with no line is new, never proven.
-The tiers that read it come with [P787](https://github.com/xmejkal/spark/issues/1088)'s later pull requests.
 
 `tools/mutate.py` exists because this rule was once kept by memory: about thirty mutations were run by hand in one
 sprint, and **two escaped**. Each survived a green suite until somebody happened to try it.

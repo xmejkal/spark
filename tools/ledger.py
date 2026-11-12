@@ -50,7 +50,7 @@ CRITICAL, NEW, PROVING, PROVEN = "critical", "new", "proving", "proven"
 TIERS = (CRITICAL, NEW, PROVING, PROVEN)
 #: The row's fifth key, hand-written, that makes it critical.
 TIER_KEY = "tier"
-#: How many catches at one blob make a row proven: two, as the plan says.
+#: Two catches at one blob, as the plan says.
 PROVEN_AT = 2
 
 
@@ -101,13 +101,13 @@ def _when(date):
 def tier_of(row, entry, blob):
     """
     The tier of `row`, whose ledger line is `entry` (None when it has none) and whose file's current blob is `blob`:
-    critical when the row says so; new when no line sits at this blob, or the line there is not a catch (escaped or
-    refused); proving when caught once there; proven when caught `PROVEN_AT` times or more. A guess is never made: no
-    line is new, and a line at another blob is new, whatever it says.
+    critical when the row says so; new when the file is gone (`blob` None), when no line sits at this blob, or when the
+    line there is not a catch (escaped or refused); proving when caught once there; proven when caught `PROVEN_AT`
+    times or more.
     """
     if row.get(TIER_KEY) == CRITICAL:
         return CRITICAL
-    if entry is None or entry["blob"] != blob or entry["status"] != CAUGHT:
+    if blob is None or entry is None or entry["blob"] != blob or entry["status"] != CAUGHT:
         return NEW
     return PROVEN if entry["caught"] >= PROVEN_AT else PROVING
 

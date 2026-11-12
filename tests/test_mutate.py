@@ -797,6 +797,12 @@ class TheTiersTest(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()) as err:
             self.assertEqual(mutate.main([str(rows), "--root", str(root), "--tier", "critical"]), mutate.EXIT_OK)
         self.assertEqual(err.getvalue(), "  no row is in the tier(s) critical: nothing to run\n")
+        (root / "other.py").write_text("x = 1\n")
+        more = table(root, BREAK_ADD, BREAK_SUB, {"file": "other.py", "name": "x moves", "find": "x = 1", "replace": "x = 2"})
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            mutate.main([str(more), "--root", str(root), "--tier", "new,new", "--for", "other.py", "--json"])
+        self.assertEqual(json.loads(out.getvalue())["tiers"], {"selected": ["new"], "rows": 1, "counts": {"critical": 0, "new": 1, "proving": 0, "proven": 0}},
+                         "--for narrows the rows before the tiers count them, and a tier named twice is named once")
 
     def test_tier_count_runs_alone_and_tier_takes_the_four_words_only(self):
         import contextlib

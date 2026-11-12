@@ -83,6 +83,8 @@ class TheTiersTest(unittest.TestCase):
         self.assertEqual(ledger.tier_of(dict(ROW, tier="critical"), a_line(blob="b1", caught=3), "b1"), ledger.CRITICAL,
                          "the row's own key, whatever the ledger says")
         self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", caught=5), None), ledger.NEW, "a file that is not there has no blob")
+        self.assertEqual(ledger.tier_of(ROW, a_line(blob=None, caught=2), None), ledger.NEW,
+                         "a hand-written line with no blob meets a gone file: still new, never proven (the refuter of PR 2)")
         self.assertEqual(ledger.TIERS, ("critical", "new", "proving", "proven"))
 
     def test_an_escaped_or_refused_line_at_the_current_blob_is_new_again(self):

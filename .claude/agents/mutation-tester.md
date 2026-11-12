@@ -37,8 +37,11 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
 3. Run the sweep's rows and your table in one call: `python3 tools/mutate.py tests/mutations/*.json <table> --for
    <the sweep's files> --tier critical,new --copy`. Make one call, because each call also runs the whole suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes; the one file the run writes in the real tree is the ledger (step 5).
    `--tier critical,new` runs the rows the ledger puts in those tiers (P787; the glossary has the five words), and the
-   run's first line says which tiers and how many rows; quote it. `python3 tools/mutate.py tests/mutations/*.json
-   --tier-count` says beforehand how many rows each tier holds, and runs nothing.
+   run's first line says which tiers and how many rows, as `  tiers critical,new: 42 row(s) selected (critical 12,
+   new 30, proving 9, proven 10)`; quote it byte for byte. The new rows run in the tables' given order, and the glob
+   `tests/mutations/*.json` lists the newest tables first (`p…` before `sprint-…`): a sweep that wants the oldest first
+   lists them first. `python3 tools/mutate.py tests/mutations/*.json --tier-count` says beforehand how many rows each
+   tier holds, and runs nothing.
 4. Report `N planted, M caught`. For each escape, give the row and the test that it shows is missing: which input,
    and which assertion.
 5. The run wrote `tests/mutations/ledger.jsonl` in the tree (P787): one line per row it planted, with the test that

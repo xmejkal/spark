@@ -108,7 +108,7 @@ PO asks ([the glossary](../../GLOSSARY.md#mutation-and-the-mutation-table), [P71
 
 ```sh
 python3 tools/mutate.py --anchors tests/mutations/*.json                # a pull request: no row refused that main accepts
-python3 tools/mutate.py tests/mutations/*.json --for <the wave's files> --tier critical,new --copy   # a sweep
+python3 tools/mutate.py tests/mutations/*.json --for <the wave's files> --tier critical,new --copy   # a sweep; the glob lists the newest tables first, so list the oldest first to run them first
 ```
 
 `--copy` removes its copy in a `finally`, and also when SIGTERM stops it (the signal becomes `SystemExit`, only in the
