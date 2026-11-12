@@ -144,7 +144,7 @@ It reports:
   check_commit.py --full)`. If the hook cannot choose, the line is the quick run's, `quick run: Ran N of M tests in S s (K slow tests skipped; ...)`, and the next line starts `no story run:` and gives the reason. The skipped count is only the `@slow` tests, never a real skip such as a missing tool. The
   seconds are the tests alone; the board check (about 18 s) and the size line come on top, and the gate prints its
   whole time. No budget fails the push: the time is printed and not capped, as the size line is
-  ([W15b](../../scrum/WORKING_AGREEMENTS.md#w15b--the-size-is-said-at-every-push-with-its-reason-refactor-before-growing)),
+  ([W15](../../scrum/WORKING_AGREEMENTS.md#w15--an-orphan-fails-the-suite)),
   and the retro decides any cap. The whole push takes the tests' seconds plus about 18 s;
 - what the suite left behind ([P172](https://github.com/xmejkal/spark/issues/112)): the suite runs with an empty temp
   folder of the gate's own, and anything left in it fails the push with one line,

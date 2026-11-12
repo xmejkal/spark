@@ -4,17 +4,16 @@
 
 - [The stages](#the-flow--an-items-stages): Idea → Discovery → Design → Ready → Build → Review → Done. The PO's order
   into Ready is the commitment.
-- The limits: the other working stages 2, at most 4 cards in flight across both boards. Ready and Build are held per session (P730, the PO, 2026-11-09): the spark session takes Ready 4 and Build 2, and the sound session (the slices "pixel-games" and "graphics library") takes 1 and 1.
-- The PO orders Ready and merges; Claude proposes, builds and says "ready to merge".
+- The limits are in [the stage table](#the-flow--an-items-stages).
+- The PO orders Ready. Claude builds and merges when the gates pass; the PO merges the rules, the working agreements, a release, a tag and anything that needs his bench.
 - Where things stand: `python3 tools/board.py status`; the push gate by hand: `python3 tools/check_backlog.py`; the
   day-close, printed and not posted: `python3 tools/board.py close --dry-run "<line>"`.
 - An agent's launch names its card, which stands in its working stage first
   ([W19](WORKING_AGREEMENTS.md#w19--the-item-exists-before-the-work-starts)), and its model:
   `Agent(description="#126 P180: the documentation expert for humans", model="sonnet", …)`.
-- Before every pull request, [a council sized to the change](#the-council-before-every-pull-request): one reviewer
-  asking the six lenses' questions, or the six lenses on Sonnet (the PO assistant, the user's journey, the tech lead,
-  and three documentation experts, for humans, for AI, and for examples and help), or the full council for a design or
-  an epic; then the refuter on Opus. Fable only where the PO names it ([the token budget](#the-token-budget)).
+- Before every pull request, [a review sized to what the change holds](#the-council-before-every-pull-request): no new
+  new code path, one refuter on the strongest model; new logic, one lens and the refuter; a design, an epic or the rules, a council. Fable only
+  where the PO names it ([the token budget](#the-token-budget)).
 
 Every rule the team runs on is a file in this folder, and all its work is a card on a board.
 
@@ -109,12 +108,12 @@ PO's order into Ready commits.
 | **Idea** | — | the PO's words are recorded, or Claude files found work (decision 3); no slice is needed | the PO starts it, or it closes as not planned or as a duplicate | the PO's words are enough. *Needed by*, *Value proven by* and a slice come at Ready: refinement decreases with distance ([versions](VISION.md#versions)) |
 | **Discovery** | 2, epics do not count | the PO says "discover it", or a read runs on the card (D) | its document merges by PR (D) and the PO decides: design, park or drop. A read that only answered a question posts the answer, and the card goes back to Idea (D) | with the PO, through his `product-discovery` skill (P102e): journeys, a story map, his answers in batches. Drawing them in Miro and Canva is P102b. An epic goes deeper (P257): FULL depth with an architecture lens and its diagrams, a frame on the Miro journey board, a cheap test of the riskiest belief, and a plan of its slices before its first story |
 | **Design** | 2, epics do not count | a story the PO chose has no approved spec, before Ready or when it is pulled from Ready | the spec is in `docs/`, its council has run (full by default, light on request (D)), and the PO says yes | superpowers' brainstorming, then the spec in `docs/`. A story from a discovered epic points to its step on the epic's journey and story map. A story with no epic gets a short journey, a few lines in its spec. Chores and bugs skip the journey step (P257) |
-| **Ready** | 5 | the PO orders it. **This is the commitment.** The card has a slice, a *Needed by* that names the design that is blocked (W14), and a *Value proven by*, which is a hypothesis until it is reproduced at Done — nothing closes on an unreproduced criterion (W20, merged into W9 and this row, 2026-10-09). Chores and bugs enter here directly | Claude pulls the top card when Build is free, or into Design if the story has no spec | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
-| **Build** | 3 | pulled from the top of Ready, or an expedite; a story's plan runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes (decision 6, 2026-10-06) | the plan's tasks are done, test-first, and the final review starts | the plan first, in plan mode, with its diagrams. Then a small plan council: one lens on the everyday model and the refuter on the strongest. Its fixes go into the plan, with no second yes from the PO (decision 6). Chores and bugs get a plan and its council too, but no journey. Then executing-plans or subagent-driven-development; the plan's tasks become sub-issues (P257) |
-| **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request), sized to the change, has run and its fixes are in; the DoD green; the proof posted; **then the PO merges** on Claude's "ready to merge" | the PR says `Closes #N` |
+| **Ready** | 4 for spark, 1 for the sound session (P730) | the PO orders it. **This is the commitment.** The card has a slice, a *Needed by* that names the design that is blocked (W14), and a *Value proven by*, which is a hypothesis until it is reproduced at Done — nothing closes on an unreproduced criterion (W20, merged into W9 and this row, 2026-10-09). Chores and bugs enter here directly | Claude pulls the top card when Build is free, or into Design if the story has no spec | the PO's row order is the order (W11); when Ready is full, the PO moves one back to Idea |
+| **Build** | 2 for spark, 1 for the sound session (P730) | pulled from the top of Ready, or an expedite; a story's plan runs with no second yes unless it widens the scope or goes past the allowance, and a chore or bug needs no plan yes (decision 6, 2026-10-06) | the plan's tasks are done, test-first, and the final review starts | the plan first, in plan mode, with its diagrams. Then a small plan council: one lens on the everyday model and the refuter on the strongest. Its fixes go into the plan, with no second yes from the PO (decision 6). Chores and bugs get a plan and its council too, but no journey. Then executing-plans or subagent-driven-development; the plan's tasks become sub-issues (P257) |
+| **Review** | 2 | a fresh final review on Opus ([the token budget](#the-token-budget)) | [the council before the PR](#the-council-before-every-pull-request), sized to the change, has run and its fixes are in; the DoD green; the proof posted; **then Claude merges** when GitHub says mergeable (the PO merges the rules, the working agreements, a release, a tag and a bench change) | the PR says `Closes #N` |
 | **Done** | — | the work is where it is used (merged, or installed when there is no PR), and *Value proven by* has run with its output on the issue | (end) | the proof is posted on the issue |
 
-Ready takes five (D), four of them spark's and one the sound session's (P730); each working stage two, except Build, which takes three, two of them spark's and one the sound session's (P730); at most four cards in flight — Discovery to Review — at once: the
+The sound session is the slices "pixel-games" and "graphics library"; a card with no slice is spark's. At most four cards are in flight — Discovery to Review — at once: the
 PO's call of 2026-10-06 evening, after the first day at the cap of three (*"2 everywhere, cap 4"*). What counts (P146,
 the PO, 2026-10-06):
 
@@ -168,9 +167,8 @@ skipped twice, do epics start and finish? If not, one-day sprints replace it (th
 
 ### The council before every pull request
 
-Every pull request, bigger or smaller, gets a council before the PO merges it, sized to the change (the table below):
-the PO assistant, the user's journey and the tech lead, three documentation experts (for human readers, for AI, and for
-examples and help), then the refuter ([its file](../.claude/agents/refuter.md), an experiment since P261). Its findings are fixed before the merge, not only reported. First run: P158's
+Every pull request gets a review before it merges, sized to what the change holds (the table below):
+the PO assistant, the user's journey and the tech lead, then the refuter ([its file](../.claude/agents/refuter.md), an experiment since P261). Its findings are fixed before the merge, not only reported. First run: P158's
 council on PR #98, 2026-10-08. The PO's words of 2026-10-08, as #80 records them (typos corrected) —
 [the rule](https://github.com/xmejkal/spark/issues/80#issuecomment-6058289117) and
 [the addition](https://github.com/xmejkal/spark/issues/80#issuecomment-6058297081):
@@ -201,7 +199,7 @@ And minutes later:
 > and skills and the whole plugin is well documented, help is good, readme, detail pages, etc.
 
 Asked whether "more experts" means two, one for each reader, the PO answered the same day: *"Add a third: examples
-and help"* ([#126](https://github.com/xmejkal/spark/issues/126)). So three documentation experts sit on the council.
+and help"* ([#126](https://github.com/xmejkal/spark/issues/126)).
 
 | expert | reads | checks |
 | --- | --- | --- |
@@ -212,14 +210,14 @@ and help"* ([#126](https://github.com/xmejkal/spark/issues/126)). So three docum
 A pull request fixes the gaps it makes. Older gaps in the README's shape go to P182
 ([#128](https://github.com/xmejkal/spark/issues/128)): the PO's answer of 2026-10-10, *"Keep P182 as its own card"*.
 
-**The council's size follows the change** (the PO, 2026-10-11: *"Size it to the change"*,
-[#131](https://github.com/xmejkal/spark/issues/131)). Every pull request still gets a council and a refuter:
+**The review follows what the change holds** (the PO, 2026-10-11: *"Size it to the change"*,
+[#131](https://github.com/xmejkal/spark/issues/131); the rule of 2026-11-12, P786):
 
-| the change | the council |
+| the change | the review |
 | --- | --- |
-| docs only, or under about 50 changed lines | **the light council:** one reviewer on Sonnet asking all six lenses' questions, then the refuter on Opus |
-| anything else, 50 or more changed lines | the six lenses on Sonnet, then the refuter on Opus |
-| a design or an epic | the full council, as the Design stage runs it, then the refuter on Opus |
+| no new code path (a docs fix, data, a move the tests pin) | one refuter on the strongest model |
+| new logic | one lens on the everyday model and the refuter |
+| a design, an epic or the rules | a council: the lenses, the refuter last |
 
 For a change that holds logic, the pull request carries its mutation rows, proven with `tools/mutate.py --anchors`,
 and refuses no row that main accepts. The council runs no mutation for a pull request. The mutation tester

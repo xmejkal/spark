@@ -95,4 +95,4 @@ Claude pulls the top card of Ready when Build is free, or into Design if the sto
 - **The agents** read; run read-only commands, and probes in a clone or worktree; write to their own output folder; an
   implementer commits on its task branch, never `main`, when a plan runs subagent-driven.
 
-The main session pushes, and the PO merges.
+The main session pushes. Claude merges when the gates pass; the PO merges the rules, the working agreements, a release, a tag and anything that needs his bench.
