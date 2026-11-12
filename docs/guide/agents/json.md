@@ -130,7 +130,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 | --- | --- |
 | `check_all.py` | `project` (with `--project`), `resolved`, `results`, `status`, `tool`, `unmeasured` |
 | `check_physics.py` | `design`, `findings`, `status`, `tool` |
-| `check_footprints.py` | `findings`, `status`, `tool` |
+| `check_footprints.py` | `findings`, `status`, `tool`; a refusal: `message`, `status`, `tool`, `code` (P688) |
 | `compare_design.py` | `checked`, `design`, `problems`, `status`, `tool`; a rules file naming no rule gives `fix` and `reason` instead of `problems`; a rules file that cannot be read or is refused gives `reason` (its old "not valid JSON" sentence for a broken rules file is now "could not be read") |
 | `assign_pins.py` | `assignments`, `board`, `free`, `tool`, `unverified`. **No `status`:** read its exit code |
 | `check_vendor_pins.py` | **a bare list**, one entry per board file ([its keys](#check_vendor_pinspy)) |
@@ -197,7 +197,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 
 - The answer is a bare list, one entry per board file.
 - A compared board has `board`, `compared`, `not_recorded`, `problems`, `source` and `status`.
-- A could-not-run has `board`, `status` and `reason`.
+- A could-not-run has `board`, `status`, `reason` and `code` (the word to decide on, P688; a file that is not there is `board_file_missing`).
 - A run without `--offline` that kept a header adds `wrote`, the whole path of that file, even on a could-not-run whose
   header held no pins. A live run refused before or during the fetch has none.
 - `source` is `<repo> variants/<variant>/pins_arduino.h` live, and `the project's cache (<name>)` or `spark's cache (<name>)` with `--offline`.

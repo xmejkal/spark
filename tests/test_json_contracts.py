@@ -211,7 +211,7 @@ class EveryJsonPayloadKeepsItsShapeTest(unittest.TestCase):
             with self.subTest(argv=argv), mock.patch.object(vendor_pins_check, "PLUGIN_ROOT", stand_in), \
                     mock.patch.object(vendor_pins_check, "fetch_variant_header", side_effect=AssertionError("fetched")):
                 code, payload = payload_of(lambda: check_vendor_pins.main(argv))
-            self.assertEqual(sorted(payload[0]), ["board", "reason", "status"])
+            self.assertEqual(sorted(payload[0]), ["board", "code", "reason", "status"])  # P688: the code beside the reason
             self.assertEqual(code, outcomes.EXIT_COULD_NOT_RUN)
 
     def test_emit_footprint(self):

@@ -50,6 +50,22 @@ static const uint8_t T2 = 2;
 """
 
 
+class ABoardFileTheCheckCannotReadTest(unittest.TestCase):
+    """P688: a file that is not there, or not JSON, is a could-not-run entry with its code, never a traceback."""
+
+    def test_a_missing_file_and_a_file_that_is_not_json_are_unchecked_with_their_codes(self):
+        import tempfile
+        from pathlib import Path
+        from spark.checks import vendor_pins_check
+        folder = Path(tempfile.mkdtemp())
+        gone, broken = folder / "gone.json", folder / "broken.json"
+        broken.write_text("{")
+        missing = vendor_pins_check.check_board(gone, True, "")
+        not_json = vendor_pins_check.check_board(broken, True, "")
+        self.assertEqual((missing["status"], missing["code"], str(missing["reason"])), ("could-not-run", "board_file_missing", "no board file at %s" % gone))
+        self.assertEqual((not_json["status"], not_json["code"]), ("could-not-run", "record_file_broken"))
+        self.assertTrue(str(not_json["reason"]).startswith("broken.json is not JSON: "))
+
 class ParsingTest(unittest.TestCase):
     def test_it_reads_the_pin_aliases_and_ignores_the_rest(self):
         pins = vendor_pins_check.parse_pins(HEADER)

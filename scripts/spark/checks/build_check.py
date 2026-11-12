@@ -26,6 +26,7 @@ layout tool that already does them. This checks the things a DRC has no opinion 
 they depend on what goes INTO the hole rather than on the copper around it.
 """
 
+import json
 import math
 from collections import defaultdict
 from pathlib import Path
@@ -542,6 +543,12 @@ def rules_asked(argument):
         return fab.read_rules(argument), None
     except fab.RulesError as refused:
         return None, Refusal(str(refused), check_codes.RULES_REFUSED)
+
+
+def refusal_said(refusal, as_json):
+    """The line check_footprints.py prints for a Refusal (P688): JSON with `tool`, `status`, `message` and `code` under --json, the
+    sentence alone without. The CLI prints it and exits could-not-run."""
+    return json.dumps({"tool": "check_footprints", "status": COULD_NOT_RUN, "message": str(refusal), "code": refusal.code}) if as_json else str(refusal)
 
 
 def built_design(argument):

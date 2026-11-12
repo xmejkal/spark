@@ -38,6 +38,7 @@ from pathlib import Path
 
 from spark.records import board_records  # the one project walk the scripts share (project_root), and spark's root
 from spark.checks import check_codes
+from spark.records import records_codes
 from spark.core.result import Refusal
 
 #: Where the vendor's own header lives. Only Espressif's Arduino core is understood today; a
@@ -201,35 +202,41 @@ def keep_live_header(path: Path, variant: str, repo: str):
     return header, target
 
 
+def unchecked_board(path, refusal):
+    """One board the check could not run on (the CLI's word for it is unchecked): the board, the Refusal as `reason`, and its
+    `code` beside it for `--json` (P688)."""
+    return {"board": path.stem, "status": "could-not-run", "reason": refusal, "code": refusal.code}
+
+
 def check_board(path: Path, offline: bool, repo: str):
-    board = json.loads(path.read_text())
+    if not path.is_file():  # P688: a traceback said less than a sentence
+        return unchecked_board(path, Refusal("no board file at %s" % path, records_codes.BOARD_FILE_MISSING))
+    try:
+        board = json.loads(path.read_text())
+    except ValueError as broken:
+        return unchecked_board(path, Refusal("%s is not JSON: %s" % (path.name, broken), records_codes.RECORD_FILE_BROKEN))
     variant = (board.get("vendor") or {}).get("arduino_variant")
     if not variant:
-        return {
-            "board": path.stem, "status": "could-not-run",
-            "reason": Refusal("no vendor.arduino_variant in %s, so there is nothing to check it against. "
-                              "Add it, or say in the file why this board has no vendor header." % path.name,
-                              check_codes.NO_VENDOR_VARIANT),
-        }
+        return unchecked_board(path, Refusal("no vendor.arduino_variant in %s, so there is nothing to check it against. "
+                                           "Add it, or say in the file why this board has no vendor header." % path.name,
+                                           check_codes.NO_VENDOR_VARIANT))
 
     wrote = None  # the file this run wrote, said in the answer so nobody has to guess (P179)
     if offline:
         header_file = header_to_read(path, variant)
         if not header_file.is_file():
-            return {"board": path.stem, "status": "could-not-run", "reason": Refusal(no_cached_header(path, variant),
-                                                                                      check_codes.NO_CACHED_HEADER)}
+            return unchecked_board(path, Refusal(no_cached_header(path, variant), check_codes.NO_CACHED_HEADER))
         header, source = header_file.read_text(), "%s cache (%s)" % (whose(header_file), header_file.name)
     else:
         try:
             header, wrote = keep_live_header(path, variant, repo)
         except CouldNotKeepError as refused:
-            return {"board": path.stem, "status": "could-not-run", "reason": Refusal(str(refused), refused.code)}
+            return unchecked_board(path, Refusal(str(refused), refused.code))
         source = "%s %s" % (repo, VARIANT_PATH % variant)
 
     vendor_pins = parse_pins(header)
     if not vendor_pins:
-        result = {"board": path.stem, "status": "could-not-run",
-                  "reason": Refusal("parsed no pin definitions out of %s" % source, check_codes.HEADER_HAS_NO_PINS)}
+        result = unchecked_board(path, Refusal("parsed no pin definitions out of %s" % source, check_codes.HEADER_HAS_NO_PINS))
     else:
         problems, compared, missing = compare(board, vendor_pins)
         result = {"board": path.stem, "status": "mismatch" if problems else "ok",

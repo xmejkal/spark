@@ -1,0 +1,1 @@
+{"tool": "check_footprints", "status": "could-not-run", "message": "no rules file at .spark/missing-rules.json", "code": "no_rules_file"}

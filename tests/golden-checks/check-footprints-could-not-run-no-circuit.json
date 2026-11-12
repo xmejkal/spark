@@ -1,0 +1,1 @@
+{"tool": "check_footprints", "status": "could-not-run", "message": "no built design at dist/board/missing.json \u2014 build it first", "code": "no_circuit"}
