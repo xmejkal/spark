@@ -68,7 +68,7 @@
  {
   "file": "scripts/check_footprints.py",
   "name": "P434: a rules refusal with --json is bare text",
-  "find": "print(json.dumps({\"tool\": \"check_footprints\", \"status\": COULD_NOT_RUN, \"message\": why}) if args.json else why)",
-  "replace": "print(why)"
+  "find": "        print(json.dumps({\"tool\": \"check_footprints\", \"status\": COULD_NOT_RUN, \"message\": str(refusal), \"code\": refusal.code}) if args.json else refusal)",
+  "replace": "        print(refusal)"
  }
 ]

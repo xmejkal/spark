@@ -32,7 +32,7 @@
  {
   "file": "scripts/spark/checks/vendor_pins_check.py",
   "name": "a live refusal carries a `wrote` key, which the agent guide says it has not (P181, council V-5)",
-  "find": "            return {\"board\": path.stem, \"status\": \"could-not-run\", \"reason\": Refusal(str(refused), refused.code)}",
-  "replace": "            return {\"board\": path.stem, \"status\": \"could-not-run\", \"reason\": Refusal(str(refused), refused.code), \"wrote\": None}"
+  "find": "            return could_not_run(path, Refusal(str(refused), refused.code))",
+  "replace": "            return dict(could_not_run(path, Refusal(str(refused), refused.code)), wrote=\"x\")"
  }
 ]

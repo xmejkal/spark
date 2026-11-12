@@ -201,35 +201,37 @@ def keep_live_header(path: Path, variant: str, repo: str):
     return header, target
 
 
+def could_not_run(path, refusal):
+    """One board's could-not-run result: the board, the Refusal as `reason`, and its `code` beside it for `--json` (P688)."""
+    return {"board": path.stem, "status": "could-not-run", "reason": refusal, "code": refusal.code}
+
+
 def check_board(path: Path, offline: bool, repo: str):
+    if not path.is_file():  # P688: a traceback said less than a sentence
+        return could_not_run(path, Refusal("no board file at %s" % path, check_codes.NO_BOARD_FILE))
     board = json.loads(path.read_text())
     variant = (board.get("vendor") or {}).get("arduino_variant")
     if not variant:
-        return {
-            "board": path.stem, "status": "could-not-run",
-            "reason": Refusal("no vendor.arduino_variant in %s, so there is nothing to check it against. "
-                              "Add it, or say in the file why this board has no vendor header." % path.name,
-                              check_codes.NO_VENDOR_VARIANT),
-        }
+        return could_not_run(path, Refusal("no vendor.arduino_variant in %s, so there is nothing to check it against. "
+                                           "Add it, or say in the file why this board has no vendor header." % path.name,
+                                           check_codes.NO_VENDOR_VARIANT))
 
     wrote = None  # the file this run wrote, said in the answer so nobody has to guess (P179)
     if offline:
         header_file = header_to_read(path, variant)
         if not header_file.is_file():
-            return {"board": path.stem, "status": "could-not-run", "reason": Refusal(no_cached_header(path, variant),
-                                                                                      check_codes.NO_CACHED_HEADER)}
+            return could_not_run(path, Refusal(no_cached_header(path, variant), check_codes.NO_CACHED_HEADER))
         header, source = header_file.read_text(), "%s cache (%s)" % (whose(header_file), header_file.name)
     else:
         try:
             header, wrote = keep_live_header(path, variant, repo)
         except CouldNotKeepError as refused:
-            return {"board": path.stem, "status": "could-not-run", "reason": Refusal(str(refused), refused.code)}
+            return could_not_run(path, Refusal(str(refused), refused.code))
         source = "%s %s" % (repo, VARIANT_PATH % variant)
 
     vendor_pins = parse_pins(header)
     if not vendor_pins:
-        result = {"board": path.stem, "status": "could-not-run",
-                  "reason": Refusal("parsed no pin definitions out of %s" % source, check_codes.HEADER_HAS_NO_PINS)}
+        result = could_not_run(path, Refusal("parsed no pin definitions out of %s" % source, check_codes.HEADER_HAS_NO_PINS))
     else:
         problems, compared, missing = compare(board, vendor_pins)
         result = {"board": path.stem, "status": "mismatch" if problems else "ok",

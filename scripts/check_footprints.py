@@ -30,13 +30,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     path, missing = built_design(args.circuit)
-    if missing:
-        print(missing)
-        return EXIT_COULD_NOT_RUN
-
-    rules, why = rules_asked(args.rules)
-    if why:
-        print(json.dumps({"tool": "check_footprints", "status": COULD_NOT_RUN, "message": why}) if args.json else why)
+    rules, why = rules_asked(args.rules) if not missing else (None, None)
+    if missing or why:  # P688: one sentence with its code, as JSON under --json, exit 2
+        refusal = missing or why
+        print(json.dumps({"tool": "check_footprints", "status": COULD_NOT_RUN, "message": str(refusal), "code": refusal.code}) if args.json else refusal)
         return EXIT_COULD_NOT_RUN
 
     findings = run(json.loads(path.read_text()), rules=rules)
