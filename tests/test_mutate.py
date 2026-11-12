@@ -653,7 +653,7 @@ def ledger_of(root):
     return ledger.LedgerStore(root / "tests" / "mutations" / ledger.LEDGER_NAME)
 
 
-@slow("mutation runs of a tiny tree that write the ledger, 5 tests, 4 s on 2026-11-12")
+@slow("mutation runs of a tiny tree that write the ledger, 6 tests, 6.1 s on 2026-11-12")
 class TheLedgerTest(unittest.TestCase):
     """P787: a run that plants rows writes one ledger line per row, in the tree it was given, also under --copy."""
 
