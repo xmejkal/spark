@@ -6,7 +6,7 @@ text, owned first; a catalog row says how to build with it. It writes nothing.
 
 
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, Argument
-from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation, PROJECT_HELP  # noqa: F401 — parts.py read PROJECT_HELP here until PR 2
+from spark.records.answer_operation import ANSWER_ARGUMENTS, AnswerOperation
 from spark.records.record_kind import Answer, _cannot
 from spark.sourcing import datasheets, matching
 from spark.sourcing.datasheets import NEED_MATCHER

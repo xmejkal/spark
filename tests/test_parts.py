@@ -1284,7 +1284,7 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
                 with self.subTest(what=what, flags=flags):
                     with in_store(home):
                         said, code = run_json(["--keep", str(local)] + flags)
-                    self.assertEqual((said["status"], code), ("could-not-run", 2))
+                    self.assertEqual((said["status"], code, said["unchecked"][0]["code"]), ("could-not-run", 2, "file_name_refused"))  # P726 PR 2: the store's own code
         self.assertFalse((home / "sources").exists(), "nothing was kept")
 
     def test_a_dry_run_of_keep_says_what_the_real_run_would_record_and_keeps_nothing(self):
