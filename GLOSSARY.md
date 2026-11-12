@@ -146,16 +146,19 @@ python3 tools/mutate.py tests/mutations/*.json --for $changed --copy            
 python3 tools/mutate.py tests/mutations/*.json --copy                                      # every row
 ```
 
-`--copy` mutates a temporary copy of the tree, so no file that you or an agent have open changes. Each call also runs
-the whole suite twice, so put many rows in one call. P130's 25 rows ran 615 s.
+`--copy` mutates a temporary copy of the tree, so no file that you or an agent have open changes, but the ledger below,
+which the run writes in the real tree. Each call also runs the whole suite twice, so put many rows in one call. P130's
+25 rows ran 615 s.
 
-**The ledger.** `tests/mutations/ledger.jsonl`, in git: one line per row that a run planted, `{key, file, blob, date,
-status, by, caught, s}`, written after every run that plants rows, with or without `--copy`, in the tree the run was
-given. The key is `sha1(file + find + replace)[:12]`, so a row keeps its line when its `name` changes and gets a new one when it is retargeted; the blob is git's hash
-of the file as the run read it, so an edit of the file is seen without `.git`; `by` is the test module that caught the
-row, `suite` or `escape`; `caught` counts the catches at that blob; when two lines meet, the newer date wins.
-`python3 tools/mutate.py --ledger` counts the lines by status. The tiers that read it come with
-[P787](https://github.com/xmejkal/spark/issues/1088)'s later pull requests.
+**The ledger.** `tests/mutations/ledger.jsonl`, in git: one line per row a run tried (a refused row too), `{key, file,
+blob, date, status, by, caught, s}`, written after every run that plants rows, with or without `--copy`, in the tree
+the run was given. The key is `sha1(file + "\0" + find + "\0" + replace)[:12]`, the three joined by a NUL byte, so a
+row keeps its line when its `name` changes and gets a new one when it is retargeted (every moved row starts as new; its
+blob changes anyway); the blob is git's hash of the file as the run read it, so an edit of the file is seen without
+`.git`; `date` is the run's end; `by` is the test module that caught the row, `suite` or `escape`; `caught` counts the
+catches at that blob; when a run's line meets the file's, the newer date wins, and two branches that ran the same key
+conflict on that line in git, for a person to resolve. `python3 tools/mutate.py --ledger` counts the lines by status.
+The tiers that read it come with [P787](https://github.com/xmejkal/spark/issues/1088)'s later pull requests.
 
 `tools/mutate.py` exists because this rule was once kept by memory: about thirty mutations were run by hand in one
 sprint, and **two escaped**. Each survived a green suite until somebody happened to try it.

@@ -22,6 +22,7 @@ import tempfile
 import time
 import unittest
 import unittest.mock
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tests/ itself: suite_temp, however the suite is run
@@ -662,6 +663,7 @@ class TheLedgerTest(unittest.TestCase):
         content = (root / "m.py").read_bytes()
         refused = dict(BREAK_ADD, name="nowhere", find="return a * b")
         results, restored = mutate.run(root, "tests", [BREAK_ADD, BREAK_SUB, refused], ledger_store=ledger_of(root))
+        ended = datetime.now().astimezone()
         self.assertEqual(([r["status"] for r in results], restored), ([mutate.CAUGHT, mutate.ESCAPED, mutate.REFUSED], True))
         lines = {entry["key"]: entry for entry in ledger_of(root).read()}
         self.assertEqual(set(lines), {ledger.row_key(row) for row in (BREAK_ADD, BREAK_SUB, refused)})
@@ -672,6 +674,10 @@ class TheLedgerTest(unittest.TestCase):
         self.assertEqual({entry["blob"] for entry in lines.values()}, {ledger.blob_of(content)}, "the file as the run read it")
         self.assertEqual({entry["date"] for entry in lines.values()}, {add["date"]}, "one date per run")
         self.assertRegex(add["date"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$")
+        # The run's END, not its start (the review of PR 1): a long night run that ends after a shorter later one must
+        # win the merge. Three rows take seconds, and the stamp is in whole seconds, so it sits within a second of the end.
+        self.assertGreaterEqual(datetime.fromisoformat(add["date"]), ended - timedelta(seconds=1), add["date"])
+        self.assertLessEqual(datetime.fromisoformat(add["date"]), ended)
         self.assertTrue(all(isinstance(entry["s"], int) for entry in lines.values()), lines)
         self.assertEqual([r.get("by") for r in results], [mutate.NEAR, None, None], "the report's own `by` is unchanged")
 

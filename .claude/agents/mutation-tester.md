@@ -35,7 +35,7 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    `python3 tools/mutate.py --anchors <table>` first, and fix each row that it refuses (a `find` that is missing or not unique, or a `replace` that does
    not compile or parse).
 3. Run the sweep's rows and your table in one call: `python3 tools/mutate.py tests/mutations/*.json <table> --for
-   <the sweep's files> --copy`. Make one call, because each call also runs the whole suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes.
+   <the sweep's files> --copy`. Make one call, because each call also runs the whole suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes; the one file the run writes in the real tree is the ledger (step 5).
 4. Report `N planted, M caught`. For each escape, give the row and the test that it shows is missing: which input,
    and which assertion.
 5. The run wrote `tests/mutations/ledger.jsonl` in the tree (P787): one line per row it planted, with the test that

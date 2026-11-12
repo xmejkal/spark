@@ -1,17 +1,20 @@
 """
-The mutation ledger (P787): one line per mutation row that a run planted, so a sweep knows which rows were caught, when,
-and at which content of their file. `mutate.py` writes it after every run that plants rows; the tiers (PR 2) read it.
+The mutation ledger (P787): one line per mutation row a run tried (a refused row too), so a sweep knows which rows were
+caught, when, and at which content of their file. `mutate.py` writes it after every run that plants rows; the tiers
+(PR 2) read it.
 
     tests/mutations/ledger.jsonl
     {"key": "4a1f0c9e2b7d", "file": "tools/mutate.py", "blob": "<40 hex>", "date": "2026-11-12T18:04:11+01:00",
      "status": "caught", "by": "test_mutate", "caught": 1, "s": 7}
 
 `key` is the row's identity (`row_key`); `blob` is git's hash of the file the row was planted in, as the run read it;
-`date` is the run's start, with its zone; `status` is the run's word for the row (`caught`, `escaped`, `refused`); `by`
-is the test module that caught it, `suite` when the whole suite did, `escape` when none did, and null when the row was
-refused and nothing ran; `caught` counts the catches at this `blob` (a changed file starts the count again); `s` is the
-row's seconds. The file is in git and rewritten whole, sorted by key, so two branches merge line by line and the newer
-date wins (`merged`). An empty ledger is empty: nothing seeds it.
+`date` is the run's end, with its zone, the moment the facts are known; `status` is the run's word for the row (`caught`,
+`escaped`, `refused`); `by` is the test module that caught it, `suite` when the whole suite did, `escape` when none did,
+and null when the row was refused and nothing ran; `caught` counts the catches at this `blob` (a changed file starts the
+count again); `s` is the row's seconds. The file is in git and rewritten whole, sorted by key: two branches that ran
+different keys merge line by line in git; two that ran the same key conflict on that line, and a person resolves it by
+hand. `merged` is this tool's rule for one tree (the newer date wins), never git's. An empty ledger is empty: nothing
+seeds it.
 
 Standard library only, as `scratch.py`: `mutate.py` imports it by path.
 """

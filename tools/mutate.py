@@ -459,7 +459,7 @@ def run(root, tests, mutations, copied=False, ledger_store=None):
 
 def _run(root, tests, mutations, near_by_file, copied, ledger_store=None):
     results, imports_before, lines = [], {}, []
-    date = datetime.now().astimezone().isoformat(timespec="seconds")  # the run's start, with its zone (P787)
+    date = None  # the run's end stamps every line at once, when the facts are known (P787; the review of PR 1)
     for mutation in mutations:
         started = time.monotonic()
         path = root / mutation["file"]
@@ -498,7 +498,8 @@ def _run(root, tests, mutations, near_by_file, copied, ledger_store=None):
 
     restored = copied or bool(suite_is_green(root, tests))
     if ledger_store is not None and restored:  # a verdict nothing can trust records nothing
-        ledger_store.record(lines)
+        ended = datetime.now().astimezone().isoformat(timespec="seconds")  # the run's end, with its zone
+        ledger_store.record([dict(entry, date=ended) for entry in lines])
     return results, restored
 
 
