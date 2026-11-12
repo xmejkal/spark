@@ -158,7 +158,8 @@ def board_limits(need, record, functions, definitions=None, key=None):
     (`onboard_limits` returns (component, sentence) pairs; the `limits` key and this keep the sentences). A sentence about a definition spark did not
     compare says "not checked" and then the bench, which the build's own text leaves to the reader. `no_pin` is true when a
     part a scenario could reach has no pin in the definition, or only a stand-in's bare header pin: the only limit that a part on a header pad would lift.
-    `definitions` and `key` are `role_limits`'s: the caller's memo, and the offer's key that names the board in it.
+    `definitions` and `key` are `role_limits`'s: the caller's memo, and the offer's key that names the board in it. A stand-in
+    board's wired sentence is the board-only build's truth; the full build wires nothing until P792 #1100 (P778).
     """
     said = onboard_parts.limits_of_board(record, serving_roles(need, functions), None, definitions, key)
     pairs = [pair for each in said.values() for pair in each]

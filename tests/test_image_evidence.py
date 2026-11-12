@@ -338,6 +338,43 @@ class PassedRunEvidenceTest(unittest.TestCase):
         self.assertEqual((found[0].component, found[0].sentence), self.SKIPPED_DISPLAY)
         self.assertEqual(evidence.caveats(self.image), ["no simulation tested this image"])
 
+    STAND_IN_BUTTON = ("ONBOARD_BUTTON (GPIO47)", "the Wokwi part of firebeetle2-esp32s3 is a stand-in, where GPIO47 is a bare header pin "
+                       "with no onboard LED or button, so spark knows no way for a scenario to press it. Test it on the board.")
+    WIRED_BUTTON = ("ONBOARD_BUTTON (GPIO47)", "the Wokwi stand-in has no button on GPIO47, so spark wires Wokwi's pushbutton to GPIO47 in its "
+                    "place: a scenario presses that part, not the board's own button. Test it on the board.")
+
+    def firebeetle_with_its_definition(self, parts):
+        """The project on the FireBeetle, its Wokwi definition kept in a store of this test's own, with these `parts` in requirements.json."""
+        home = Path(tempfile.mkdtemp())
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        entry = board["documents"]["wokwi-board"]
+        devkit = '{"pins": {"21": {"target": "GPIO21"}, "47": {"target": "GPIO47"}, "GND": {"target": "GND"}}}'
+        board["documents"]["wokwi-board"] = dict(entry, sha256=store.keep(devkit.encode(), entry["file"]))
+        (self.project / "boards").mkdir()
+        (self.project / "boards" / "firebeetle2-esp32s3.json").write_text(json.dumps(board))
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": parts}))
+
+    def test_a_design_with_parts_says_the_full_build_s_truth_and_a_board_only_design_the_board_only_build_s(self):
+        # P778 PR round: the full build wires none of the board's own parts (P792 will), the board-only build wires them
+        self.firebeetle_with_its_definition(["led-red-5mm"])
+        found = NoSimulationEvidence(self.project).find_limits(self.image)
+        self.assertEqual(found[0], ("LedRed5mm", "Wokwi's LED: lights on current; its forward voltage and brightness are not this part's"))
+        self.assertIn(self.STAND_IN_BUTTON, found)
+        self.assertNotIn(self.WIRED_BUTTON, found)
+        (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": [], "board_only": True}))
+        found = NoSimulationEvidence(self.project).find_limits(self.image)
+        self.assertIn(self.WIRED_BUTTON, found)
+        self.assertNotIn(self.STAND_IN_BUTTON, found)
+
+    def test_a_board_that_does_not_load_is_one_clean_not_checked_line(self):
+        (self.project / "requirements.json").write_text(json.dumps({"board": "no-such-board", "parts": []}))
+        self.assertEqual(NoSimulationEvidence(self.project).caveats(self.image),
+                         ["no simulation tested this image",
+                          "not checked: no board definition for 'no-such-board'. available: firebeetle2-esp32s3, xiao-esp32-c6"])
+
     def test_no_simulation_with_no_requirements_file_has_no_limits_and_one_not_checked_caveat(self):
         evidence = NoSimulationEvidence(self.project)
         self.assertEqual(evidence.find_limits(self.image), [])

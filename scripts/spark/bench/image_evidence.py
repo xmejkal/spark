@@ -385,13 +385,15 @@ class NoSimulationEvidence(ImageEvidence):
     # --- MVP ---
     def find_limits(self, image):
         """The sim_project.Limit list of the project from its records (P778): `sim_project.limits_of` of the design its
-        requirements.json loads, then `onboard_parts.limits_of_board` of its board. [] when the file or the board does not
-        load, and then `caveats` says so."""
+        requirements.json loads, then `onboard_parts.limits_of_board` of its board, as the build of that design says them
+        (nothing wired with parts, the board's own parts wired without). [] when the file or the board does not load, and
+        then `caveats` says so."""
         design, _ = self._design()
         if design is None:
             return []
+        wired = {} if design.parts else None  # a full build wires none of the board's own parts; a board-only build wires them (P778)
         return [sim_project.Limit(component, sentence)
-                for component, sentence in sim_project.limits_of(design) + onboard_parts.limits_of_board(design.board, None, None)]
+                for component, sentence in sim_project.limits_of(design) + onboard_parts.limits_of_board(design.board, None, wired)]
 
     def find_unnamed_must(self, image, must):
         """The UnnamedMust of every `must` line: no run, so no scenario named any of them."""
@@ -403,7 +405,7 @@ class NoSimulationEvidence(ImageEvidence):
             try:
                 self._loaded = (loader.load(self.project / "requirements.json", self.project), None)
             except loader.DesignError as broken:
-                self._loaded = (None, text_guards.printable(broken))
+                self._loaded = (None, " ".join(str(broken).split()))
         return self._loaded
     # --- end MVP ---
 

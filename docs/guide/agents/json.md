@@ -142,7 +142,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 
 ### check_spine.py
 
-- `stages` names the stage that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`.
+- `stages` names the stage that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`; so is the simulation stage of a design whose every part's record skips the simulation (P778), and such a build is not noted in the store.
   `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed.
 - `kept`, with `--keep` or `--sim-dir`, lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`,
   `removed`, `not written` or `not kept`) and `why`. When the sheet is written, a drawing's `not written` entry has `code`

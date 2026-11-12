@@ -155,7 +155,7 @@ def a_converter_shim(folder, diagram):
 
 class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
     """P778 (p512 row 3): a diagram with no wire is a defect only while a part that is not skipped exists; a design whose
-    every part is skipped is an ok stage that says so, with the limits."""
+    every part is skipped is a skipped stage that says so, with the limits, and vouches for no build (the PO, 2026-11-12)."""
 
     SKIPPED = "Display: not simulated at all: Wokwi has no ST7789V part for a 240x320 panel"
 
