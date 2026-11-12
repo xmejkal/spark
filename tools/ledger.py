@@ -17,8 +17,8 @@ hand. `merged` is this tool's rule for one tree (the newer date wins), never git
 seeds it.
 
 THE TIERS (the plan's words, each a fact a tool reads): *critical*, the row carries `"tier": "critical"` (a fifth key,
-hand-written); *new*, no line for the row's key at its file's current blob (never run, or the file changed since), and
-also a line whose status is `escaped` (a missing test: it runs again) or `refused` (`--anchors`' business until PR 5
+hand-written); *new*, no line for the row's key at its file's current blob (never run, or the file changed since), or
+a line whose status is `escaped` (a missing test: it runs again) or `refused` (`--anchors`' business until PR 5
 retires it); *proving*, a `caught` line at the current blob with `caught` 1; *proven*, a `caught` line at the current
 blob with `caught` 2 or more. `status` and `caught` are read together: a refused line keeps its count from the same
 blob (`merged` adds 0), so the count alone never makes a row proving or proven. *Retired* (PR 5) is not decided here.

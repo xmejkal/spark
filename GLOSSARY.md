@@ -162,7 +162,7 @@ conflict on that line in git, for a person to resolve. `python3 tools/mutate.py 
 **The tiers.** A sweep runs a few hundred rows, not all 3000: each row is in one tier, a fact the tool reads from the row
 and the ledger, never guessed ([P787](https://github.com/xmejkal/spark/issues/1088)). *Critical*: the row carries
 `"tier": "critical"`, a fifth key written by hand, and runs every sweep. *New*: no ledger line at the row's file's
-current blob (never run, or the file changed since), and a line there that says `escaped` (a missing test: it runs
+current blob (never run, or the file changed since), or a line there that says `escaped` (a missing test: it runs
 again) or `refused` (`--anchors`' business). *Proving*: caught once at the current blob. *Proven*: caught twice or more
 there; an edit of the file makes it new again, by the blob rule alone. *Retired*: refused in two sweeps, listed for a
 deleting PR; not yet decided by the tool. `python3 tools/mutate.py tests/mutations/*.json --tier critical,new --copy`
