@@ -28,7 +28,7 @@ Core runs no Operation of its own. It runs everyone else's: `run_operation` for 
 
 | Seam | Kind | Who fills it |
 |---|---|---|
-| `OutsideWorld` | Value of callables: `run`, `find_tool` and `report` today; `write`, `fetch`, `clock`, `consent`, `environ` with their first user | `spark.bench.build_project_outside_world` in production, its `find_tool` `ToolFinder(project).find` (P725); `FakeOutsideWorld` in tests |
+| `OutsideWorld` | Value of callables: `run` (the board tools and, since P458, the compile child of `--no-simulation`), `find_tool` and `report` today; `write`, `fetch`, `clock`, `consent`, `environ` with their first user. A read of the project folder is no slot: an Operation that reads the project's files declares READS (`look_at_board.py:50`, `deploy_image.py:268`), reads them direct, and no slot refuses it; the `Project` Adapter (`read_text`, `exists`, `glob`, injected into the Operation) is the open option, P788 #1094 | `spark.bench.build_project_outside_world` in production, its `find_tool` `ToolFinder(project).find` (P725); `FakeOutsideWorld` in tests |
 | `Privacy` | Value: path replacements and secret values to mask | records, from the record folders and `account_env` rows (`tool_finder.py:314`) |
 | the frontend | a function that calls `run_operation` and renders the result | `run_cli` today, an MCP server later |
 

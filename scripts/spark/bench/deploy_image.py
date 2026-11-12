@@ -249,7 +249,8 @@ class DeployImage(Operation):
     `board_envelope.deploy_result`. `platform_for(project, find_tool)` is a `_for` builder of the FirmwarePlatform
     (default: MicroPythonPlatform), `grant_service` the board_grant.GrantService that finds a deploy grant and `records`
     the DeployRecordStore (None for the store's own, built per run): the collaborators a test swaps whole. The dry run
-    declares READS alone (RUNS with --no-simulation, whose compile check runs a child), so `outside.run` refuses.
+    declares READS alone, so `outside.run` refuses; with --no-simulation it declares RUNS too, and the compile check's child
+    runs for real through `outside.run`, in a dry run as well (P458).
     """
 
     name = "deploy"
@@ -277,7 +278,7 @@ class DeployImage(Operation):
         return (READS, RUNS) if values["no_simulation"] else (READS,)
 
     def run(self, project, port, token, ignore_older_runs, no_simulation, dry_run, *, outside):
-        evidence = evidence_for(project, no_simulation, ignore_older_runs, outside.find_tool)
+        evidence = evidence_for(project, no_simulation, ignore_older_runs, find_tool=outside.find_tool, run=outside.run)
         platform = self.platform_for(project, outside.find_tool)
         flow = DeployFlowService(lambda world: DeployService(project, platform, evidence, world, self.records), outside,
                                  self.grant_service or board_grant.GrantService(), Asked(port, token, dry_run))

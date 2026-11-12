@@ -18,7 +18,7 @@ it. It never writes or erases without a gate that the person opened, and it says
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `look` | `look.py` | reads, runs, board (the board restarts while esptool reads it) |
+| `look` | `look.py` | reads, runs (mpremote, esptool and the compile child of `--no-simulation`, P458), board (the board restarts while esptool reads it) |
 | `deploy` | `deploy.py` with `--token`, `--dry-run` (`deploy.main`) | reads, runs, board, deletes, writes the board log |
 | `grant`, `grant-check` | `grant.py --minutes`, `--check` (`grant.py:72-73`) | reads, runs, board, writes a grant |
 | `live` | `live.py --code` (`live.py:76`) | reads, runs, board |
@@ -84,16 +84,17 @@ flowchart TB
 | console probe | `ConsoleProbe` (`board_console.py`) | `FakeConsoleProbe` (`tests/fakes.py`) |
 | `ConsentStrategy`: `ask`, `who` | `TerminalConsentStrategy`, `StandingConsentStrategy`, `DeferringConsentStrategy` (proposed, for a graph: its `require_ready` raises `GateClosedError` with the next step, so `ask` is never reached) | `FakeConsent` (`tests/fakes.py`) |
 | clock: `now`, `monotonic`, `sleep` | `SystemClock` (`board_console.py`), the one clock, with `now` in the machine's zone (P475, done: `board_grant.read_local_time` is gone) | one `FakeClock` (`tests/fakes.py`) with `now`, `monotonic`, `sleep` and `advance`; `FakeLocalClock` is gone |
-| `records`: `write_deploy` | `DeployRecordStore` (`deploy_record_store.py`), given to `DeployService(records=)` (P475) | `FakeDeployRecordStore` (`tests/fakes.py`) |
+| `records`: `write_deploy`, `read_last_deploy` | `DeployRecordStore` (`deploy_record_store.py`), given to `LookAtBoard(records=)` and `DeployService(records=)` (P475, P458) | `FakeDeployRecordStore` (`tests/fakes.py`) |
 | `user_name`: who typed the yes | `getpass.getuser`, given to `TerminalConsentStrategy` and `GrantService` as `user_name=` (P475) | a `lambda: "ada"` |
 
-The Operation modules build `MicroPythonPlatform(project, outside.find_tool)`, the one platform today (`look_at_board.py:53`);
+The Operation modules build `MicroPythonPlatform(project, outside.find_tool)`, the one platform today (`look_at_board.py:58`);
 a second platform enters by the name the requirements give. They are the only place that names an Adapter (rule X1). Bench
 imports firmware (`ProjectImage`, and `scenario_steps` for `image_evidence`: the edge `image_evidence ->
 scenario_steps`), design (`restricted_pins`, at `board_live.py:24` and `live.py:19`), records and core. Each is
 reachable along the area map's arrows (rule U1). The look's line of a `LastDeploy` (`board_look.say_last_deploy`) and the deploy question's words
 (`deploy_gate.say_last_deploy_in_question`) sit on the bench side, and the `DeployRecordStore` that reads and records it
-sits in records.
+sits in records: one store, injected, so the look reads the one it was given and deploy's look reads from the store the
+deploy writes to (P458).
 
 ## Level 3: how bench is built
 
@@ -192,6 +193,26 @@ The gate stays inside `DeployService.deploy`, as today: that method is the only 
 that composes the service cannot skip it. `record` needs `verify`'s result, so it comes last. A graph pauses between
 Operations: with `DeferringConsentStrategy`, `require_ready` raises before the question, so nothing records "answered
 no", and the step `needs_yes` names the command for the person's own terminal.
+
+### The look
+
+Everything the look reaches outside the project folder comes through what it was given (P458): the board tools and the
+compile child through `outside.run`, the tools lists through `outside.find_tool`, the last deploy through `records`.
+
+```mermaid
+sequenceDiagram
+  participant OP as LookAtBoard (Operation)
+  participant LS as LookService
+  participant EV as NoSimulationEvidence, CompileCheck
+  participant ST as DeployRecordStore (or the Fake)
+  participant OW as OutsideWorld.run (or the Fake)
+  OP->>LS: looker(platform, outside.run, records).run(project, port, evidence_for(..., outside.find_tool, outside.run))
+  LS->>OW: mpremote devs, esptool flash-id
+  LS->>EV: why_not_ready(image)
+  EV->>OW: [python, -I, -B, -c, COMPILE_CHILD], the files on stdin
+  LS->>ST: read_last_deploy(mac)
+  LS-->>OP: LookReport
+```
 
 ### How bench is tested alone
 

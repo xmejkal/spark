@@ -11,8 +11,8 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from spark.records import tool_finder  # noqa: E402
-from fakes import FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
+from spark.records import deploy_record_store, tool_finder  # noqa: E402
+from fakes import FakeDeployRecordStore, FakeOutsideWorld, FakeReporter, FakeToolFinder  # noqa: E402
 from spark.core import codes, outcomes  # noqa: E402
 from spark.core.cli import DEFAULT_RUN, HelpText, RunOptions, TextReport, run_cli, run_operation  # noqa: E402
 from spark.core.renderers import FlatJsonLine, FullEnvelope, JsonEnvelope  # noqa: E402
@@ -679,6 +679,17 @@ class FakeToolFinderTest(unittest.TestCase):
                          ("littlefs is not installed — the test gave no entry for it", tool_finder.records_codes.TOOL_MISSING))
         finder = FakeToolFinder({}, fall_back=lambda name, project: (name, project))
         self.assertEqual(finder.find("littlefs", "p"), ("littlefs", "p"))
+
+
+class FakeDeployRecordStoreTest(unittest.TestCase):
+    def test_its_read_keeps_each_mac_asked_and_gives_the_last_deploy_given_or_none_recorded(self):
+        # P458: the store the look reads comes through LookAtBoard(records=)
+        records = FakeDeployRecordStore()
+        self.assertEqual((records.read_last_deploy("aa:bb").state, records.asked), (outcomes.NONE_RECORDED, ["aa:bb"]))
+        last = deploy_record_store.LastDeploy(outcomes.RECORDED, "p", "ready", "2026-10-17T09:00:00+02:00")
+        records = FakeDeployRecordStore(path=Path("kept.json"), last=last)
+        self.assertIs(records.read_last_deploy(None), last)
+        self.assertEqual(records.asked, [None])
 
 
 class Reporting(Toy):

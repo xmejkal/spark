@@ -26,8 +26,8 @@
  {
   "file": "scripts/spark/bench/board_look.py",
   "name": "the looker hands the reader no hint",
-  "find": "platform.make_board_reader(run, hint))",
-  "replace": "platform.make_board_reader(run, \"\"))"
+  "find": "platform.make_board_reader(run, hint),",
+  "replace": "platform.make_board_reader(run, \"\"),"
  },
  {
   "file": "scripts/spark/bench/board_look.py",
@@ -68,8 +68,8 @@
  {
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "the look ignores the service's platform",
-  "find": "board_look.looker(self.platform, self.run)",
-  "replace": "board_look.looker(__import__('firmware_platform').MicroPythonPlatform(self.project), self.run)"
+  "find": "board_look.looker(self.platform, self.run, self.records)",
+  "replace": "board_look.looker(__import__('firmware_platform').MicroPythonPlatform(self.project), self.run, self.records)"
  },
  {
   "file": "scripts/spark/bench/board_doctor.py",

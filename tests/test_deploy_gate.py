@@ -39,7 +39,7 @@ from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from fakes import (FakeBoardReader, FakeClock, FakeConsent, FakeConsoleProbe, FakeFirmwarePlatform, FakeReporter,  # noqa: E402
                    FakeOutsideWorld, FakeProbePlatform, Stream,
-                   line_made_at_import, pin_time_zone)
+                   RealChildRun, line_made_at_import, pin_time_zone)
 from spark.bench.firmware_platform import MicroPythonPlatform  # noqa: E402
 from spark.bench import build_project_outside_world, deploy_image  # noqa: E402
 from spark.core.cli import run_operation  # noqa: E402
@@ -151,7 +151,7 @@ class GateCase(LookCase):
             if (first and flash.count(command) <= fails) or (not first and write_fails):
                 raise subprocess.CalledProcessError(fail_code, command) if isinstance(fail_code, int) else fail_code
             return done("")
-        return run
+        return RealChildRun(run)  # P458: --no-simulation's compile child comes through the world's `run`, and runs for real
 
     def token(self, **kw):
         return self.look(**kw).token()

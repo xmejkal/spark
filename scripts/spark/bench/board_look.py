@@ -1,7 +1,8 @@
 """
 Read the board on USB without changing it, and compare it with the project's board record (P219, #201).
 
-A library: look.py only parses arguments, calls `looker(platform).run(project, port, evidence)` and prints `report_lines(report)`.
+A library: `look_at_board.LookAtBoard` calls `looker(platform, outside.run, records).run(project, port, evidence)` and gives
+`report_lines(report)`; `records` is the DeployRecordStore the look reads the last deploy from (None: the store's own, P458).
 deploy.py calls `looker` and `report_lines` too. It reads the image checks from project_image.py and never imports deploy.py.
 The seams are the readers: `BoardReader` is how a board is read, and `EsptoolReader` is the one reader today.
 
@@ -326,9 +327,9 @@ class LookReport:
         return self.last_deploy.state == outcomes.NOT_CHECKED
 
     def last_deploy_fix(self):
-        """What the person does about a last deploy that was not checked."""
+        """What the person does about a last deploy that was not checked: the record's path comes with the LastDeploy (P458)."""
         if self.last_deploy.why == deploy_record_store.WHY_UNREADABLE:
-            return "repair or remove %s, then run look.py again" % deploy_record_store.DeployRecordStore().find_path(self.reading.mac)
+            return "repair or remove %s, then run look.py again" % self.last_deploy.record_path
         return "reconnect the board so that its MAC can be read, then run look.py again"
 
     def exit_code(self):
@@ -420,10 +421,11 @@ def report_lines(report, token=True, indent=INDENT):
 
 
 class LookService:
-    """The look at one project: its record, the port, the reading."""
+    """Service: the look at one project: its record, the port, the reading, and the last deploy of the board from `records`,
+    the deploy_record_store.DeployRecordStore it was given (P458)."""
 
-    def __init__(self, finder, reader):
-        self.finder, self.reader = finder, reader
+    def __init__(self, finder, reader, records):
+        self.finder, self.reader, self.records = finder, reader, records
 
     def run(self, project, port, evidence):
         """A LookReport. LookStopError says why not: no record, no board, two boards without a port, a read that failed."""
@@ -449,7 +451,7 @@ class LookService:
             why, code = str(cannot), board_codes.TOOL_MISSING
         # --- end MVP ---
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
-        return LookReport(port, reading, record, image, why, gaps, deploy_record_store.DeployRecordStore().read_last_deploy(reading.mac),
+        return LookReport(port, reading, record, image, why, gaps, self.records.read_last_deploy(reading.mac),
                           listed.also_on if listed else None, code)
 
     # --- MVP ---
@@ -480,11 +482,12 @@ class LookService:
             raise LookStopError("no board record for %s: P230 will research one.", name, reason=board_codes.NO_BOARD_RECORD)
 
 
-def looker(platform, run=subprocess.run):
-    """A LookService with the platform's port finder and board reader, whose hint names the project's buttons.
-    tool_finder.ToolError becomes a LookStopError."""
+def looker(platform, run=subprocess.run, records=None):
+    """A LookService with the platform's port finder and board reader, whose hint names the project's buttons, over
+    `records` (None: the store's own DeployRecordStore). tool_finder.ToolError becomes a LookStopError."""
     try:
         hint = flasher.EsptoolFlasher.boot_hint_for(board_records.ButtonPlaces.of_project(platform.project))
-        return LookService(platform.make_port_finder(run), platform.make_board_reader(run, hint))
+        return LookService(platform.make_port_finder(run), platform.make_board_reader(run, hint),
+                           records or deploy_record_store.DeployRecordStore())
     except tool_finder.ToolError as cannot:
         raise LookStopError("%s", cannot, reason=board_codes.TOOL_MISSING)

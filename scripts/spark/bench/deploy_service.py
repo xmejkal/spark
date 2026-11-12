@@ -88,8 +88,9 @@ class DeployService:
         return DeployPlan(project_flasher, project_flasher.build_commands(image.path, port), shell_command, notes)
 
     def look(self, port=None):
-        """The LookReport of the board on USB. Raises LookStopError to say why not."""
-        return board_look.looker(self.platform, self.run).run(self.project, port, self.evidence)
+        """The LookReport of the board on USB, its last deploy read from `records`, the store this service writes to (P458).
+        Raises LookStopError to say why not."""
+        return board_look.looker(self.platform, self.run, self.records).run(self.project, port, self.evidence)
 
     def deploy(self, look, token, consent):
         """

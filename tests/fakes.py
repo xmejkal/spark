@@ -12,10 +12,13 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from spark.records import records_codes, store, tool_finder  # noqa: E402
+from spark.records.deploy_record_store import LastDeploy  # noqa: E402
+from spark.core import outcomes  # noqa: E402
 from spark.build.board_engine import BuildResult  # noqa: E402
 from spark.bench.firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
-from spark.core.outside import OutsideWorld  # noqa: E402
+from spark.core.outside import OutsideWorld, ProgramRunner  # noqa: E402
 
 #: The store the suite started with: the constants of board_grant (the grant lines) were made with it, at import (P463).
 IMPORT_HOME = os.environ["SPARK_HOME"]
@@ -262,16 +265,23 @@ class FakeProbePlatform(MicroPythonPlatform):
 
 class FakeDeployRecordStore:
     """A fake deploy_record_store.DeployRecordStore: `write_deploy` keeps each call in `written` and gives `path`, or raises
-    `raises` (for example store.StoreError)."""
+    `raises` (for example store.StoreError); `read_last_deploy(mac)` keeps each `mac` in `asked` and gives `last` (default: a
+    LastDeploy with nothing recorded) (P458). It goes in as `LookAtBoard(records=)`,
+    `DeployImage(records=)` or `DeployService(records=)`."""
 
-    def __init__(self, path=Path("record.json"), raises=None):
+    def __init__(self, path=Path("record.json"), raises=None, last=None):
         self.path, self.raises, self.written = path, raises, []
+        self.last, self.asked = last or LastDeploy(outcomes.NONE_RECORDED), []
 
     def write_deploy(self, facts, verdict, who):
         if self.raises:
             raise self.raises
         self.written.append((facts, verdict, who))
         return self.path
+
+    def read_last_deploy(self, mac):
+        self.asked.append(mac)
+        return self.last
 
 
 class FakePartPictures:
@@ -459,3 +469,19 @@ class FakeToolFinder:
         if self.fall_back:
             return self.fall_back(name, project)
         raise tool_finder.ToolMissingError("%s is not installed — the test gave no entry for it", name, code=records_codes.TOOL_MISSING)
+
+
+class RealChildRun:
+    """Decorator (GoF) of a fake `run`: the compile child of `image_evidence.CompileCheck` (the command that carries its
+    `COMPILE_CHILD` script) goes to the real `ProgramRunner().run`, so it runs isolated as in production, and every other
+    command goes to `run`, the fake: the board doctor's console read is a `-c` child too, in the board shell's Python, and
+    it stays the fake's. A `--no-simulation` test that drives a FakeOutsideWorld wraps its `run` in it (P458); the world's
+    `ran` still keeps the child."""
+
+    def __init__(self, run):
+        self.run = run
+
+    def __call__(self, command, **options):
+        if image_evidence.COMPILE_CHILD in command:
+            return ProgramRunner().run(command, **options)
+        return self.run(command, **options)
