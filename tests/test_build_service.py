@@ -19,13 +19,18 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from fakes import FakeTscircuitEngine  # noqa: E402
+from golden_design import fed_circuit  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS  # noqa: E402
-from spark.build.build_service import verdict  # noqa: E402
+from spark.build.build_service import every_part_skipped, verdict  # noqa: E402
 
 REFERENCE = {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
+#: The display whose record skips the simulation (Wokwi has no ST7789V part), and a diagram of the board alone: no wire but the serial monitor's.
+DISPLAY = json.loads((ROOT / "tests" / "data" / "parts" / "dfr0664-tft-2in.json").read_text())
+BOARD_ALONE_DIAGRAM = {"version": 1, "parts": [{"type": "board-xiao-esp32-c6", "id": "esp"}],
+                       "connections": [["esp:TX", "$serialMonitor:RX", "", []], ["esp:RX", "$serialMonitor:TX", "", []]]}
 
 
 class ARecordingEmitter(board_emitter.BoardEmitter):
@@ -137,3 +142,50 @@ class TheEngineRunsWithTheRunnerItIsGivenTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def a_converter_shim(folder, diagram):
+    """The tools list entry of a diagram converter in `folder` that writes `diagram` to its --out, run by this Python."""
+    shim = Path(folder) / "fake-circuit-to-wokwi"
+    shim.write_text("#!%s\nimport json, sys\nargs = sys.argv[1:]\nwith open(args[args.index('--out') + 1], 'w') as out:\n"
+                    "    json.dump(%s, out)\n" % (sys.executable, json.dumps(diagram)))
+    shim.chmod(0o755)
+    return {"circuit-to-wokwi": {"kind": "path", "exe": str(shim), "also": [], "fetch": None, "needs": []}}
+
+
+class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
+    """P778 (p512 row 3): a diagram with no wire is a defect only while a part that is not skipped exists; a design whose
+    every part is skipped is an ok stage that says so, with the limits."""
+
+    SKIPPED = "Display: not simulated at all: Wokwi has no ST7789V part for a 240x320 panel"
+
+    FEEDS = (("Mcu", "3V3", "V33"), ("Display", "VCC", "V33"))
+
+    def simulation(self, parts, diagram=BOARD_ALONE_DIAGRAM):
+        """The simulation stage of a build on the XIAO whose project holds the display's record and a converter that writes
+        `diagram`; the engine builds a circuit that feeds the board and the display, so the build stage passes."""
+        project = Path(tempfile.mkdtemp()) / "sim project"
+        (project / ".spark").mkdir(parents=True)
+        (project / "parts").mkdir()
+        (project / "parts" / "dfr0664-tft-2in.json").write_text(json.dumps(DISPLAY))
+        (project / ".spark" / "tools.json").write_text(json.dumps(a_converter_shim(project, diagram)))
+        _, stages = a_build({"board": "xiao-esp32-c6", "parts": parts}, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), project=project)
+        self.assertEqual(stages[-1].name, "simulation", [(stage.name, stage.status, stage.detail) for stage in stages])
+        return stages[-1]
+
+    def test_every_part_skipped_is_ok_and_says_so_with_the_limits(self):
+        stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}])
+        self.assertEqual((stage.status, stage.code), (OK, None))
+        self.assertTrue(stage.detail.startswith("every part is skipped from the simulation, so the diagram holds the board alone, 0 wire(s) in the diagram"), stage.detail)
+        self.assertIn("what it cannot show (", stage.detail)
+        self.assertIn(self.SKIPPED, stage.detail)
+
+    def test_a_skipped_part_beside_a_real_one_with_no_wire_is_still_the_unwired_diagram(self):
+        stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}, {"part": "led-red-5mm", "name": "Led"}])
+        self.assertEqual((stage.status, stage.code), (PROBLEMS, "diagram_unwired"))
+        self.assertNotIn("every part is skipped", stage.detail)
+
+    def test_an_empty_mapping_is_not_every_part_skipped_and_a_real_part_is_not_either(self):
+        self.assertFalse(every_part_skipped({}))
+        self.assertFalse(every_part_skipped({"Display": {"skip": "no part"}, "Led": {"wokwiType": "wokwi-led"}}))
+        self.assertTrue(every_part_skipped({"Display": {"skip": "no part"}, "Jack": {"skip": "wiring"}}))
