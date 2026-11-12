@@ -124,6 +124,7 @@ class TheSlowMarkTest(unittest.TestCase):
             ("test_mutate.py", "AnEscapedMutationTest"),
             ("test_mutate.py", "NearTestsFirstTest"),
             ("test_mutate.py", "StaleBytecodeTest"),
+            ("test_mutate.py", "TheBudgetTest"),
             ("test_mutate.py", "TheLedgerTest"),
             ("test_mutate.py", "TheTiersTest"),
             ("test_needs.py", "test_a_catalog_pick_whose_name_would_end_the_board_s_comment_is_built_with_it_inert"),

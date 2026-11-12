@@ -35,17 +35,22 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    `python3 tools/mutate.py --anchors <table>` first, and fix each row that it refuses (a `find` that is missing or not unique, or a `replace` that does
    not compile or parse).
 3. Run the sweep's rows and your table in one call: `python3 tools/mutate.py tests/mutations/*.json <table> --for
-   <the sweep's files> --tier critical,new --copy`. Make one call, because each call also runs the whole suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes; the one file the run writes in the real tree is the ledger (step 5).
+   <the sweep's files> --tier critical,new --budget 20 --copy`. Make one call, because each call also runs the whole suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes; the one file the run writes in the real tree is the ledger (step 5).
    `--tier critical,new` runs the rows the ledger puts in those tiers (P787; the glossary has the five words), and the
    run's first line says which tiers and how many rows, as `  tiers critical,new: 42 row(s) selected (critical 12,
    new 30, proving 9, proven 10)`; quote it byte for byte. The new rows run in the tables' given order, and the glob
    `tests/mutations/*.json` lists the newest tables first (`p…` before `sprint-…`): a sweep that wants the oldest first
    lists them first. `python3 tools/mutate.py tests/mutations/*.json --tier-count` says beforehand how many rows each
-   tier holds, and runs nothing.
-4. Report `N planted, M caught`. For each escape, give the row and the test that it shows is missing: which input,
+   tier holds, and runs nothing. `--budget 20` stops the run before the row whose expected seconds (its ledger line's
+   `s`, else the median of this run's rows, else the pre-check suite's) would cross 20 minutes from the run's start,
+   the PO's budget for a sweep a person waits for (180 for a night slice). Its last line is `  budget 20 min: ran 42 of
+   61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5); 19 left for the next sweep`; quote it byte for
+   byte. A left row is not a pass: it did not run. Quote the left count in your report, never fold it into `caught`. A
+   budget run that ran no row exits 2: report it as could not run, with the line.
+4. Report `N planted, M caught`, and the left count when the budget stopped the run. For each escape, give the row and the test that it shows is missing: which input,
    and which assertion.
 5. The run wrote `tests/mutations/ledger.jsonl` in the tree (P787): one line per row it planted, with the test that
-   caught it. Say so in your report, with `python3 tools/mutate.py --ledger`'s line; Claude, the main thread, commits it
+   caught it, each written as soon as its row was done, so a run that was stopped kept them. Say so in your report, with `python3 tools/mutate.py --ledger`'s line; Claude, the main thread, commits it
    with the sweep's findings. Do not edit it.
 
 ## When a table is kept
