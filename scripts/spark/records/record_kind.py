@@ -300,20 +300,16 @@ def document_problems(part: dict) -> list:
         elif not entry.get("file"):
             problems.append("documents.%s names no file" % key)
     for where, cited in _citations(part):
-        document = cited.get("document") if isinstance(cited, dict) else None
         if cited is None:  # no citation, as `_absent` reads a null
             continue
-        if not isinstance(cited, dict):
-            problems.append(CITATION_FORM % (where, cited))
+        document = cited.get("document") if isinstance(cited, dict) else None
+        if not isinstance(cited, dict):  # the form is `replies.md`'s: `cites` is `{document, at}` (P785)
+            problems.append('%s cites %r, but a citation is an object {"document": "<key in documents>", "at": "<page or table>"}' % (where, cited))
         elif not isinstance(document, str) or document not in documents:
             problems.append("%s cites %r, which documents does not hold — a pointer to nothing" % (where, document))
         elif isinstance(documents[document], dict) and documents[document].get("kept") is False:
             problems.append("%s cites %r, which is not kept, so nobody can read it there" % (where, document))
     return problems
-
-
-#: What `document_problems` says of a `cites` that is no object (P785): the form is `replies.md`'s (`cites` is `{document, at}`).
-CITATION_FORM = '%s cites %r, but a citation is an object {"document": "<key in documents>", "at": "<page or table>"}'
 
 
 def _citations(value, where=""):
