@@ -172,7 +172,8 @@ class FindingAToolTest(unittest.TestCase):
         needs = layer({"a": {"kind": "path", "exe": sys.executable, "needs": ["b"]}, "b": {"kind": "path", "exe": "no-such-program-p725"}})
         with self.assertRaises(tool_finder.ToolMissingError) as missing:
             tool_finder.find("a", None, needs)
-        self.assertEqual((str(missing.exception)[:28], missing.exception.code), ("a needs b: b (b) is not inst", "tool_missing"))
+        self.assertTrue(str(missing.exception).startswith("a needs b: b (b) is not installed"), str(missing.exception))
+        self.assertEqual(missing.exception.code, "tool_missing")
 
     def test_a_tool_that_does_not_meet_the_role_s_contract_is_refused(self):
         personal = layer({"roles": {"pdf-text": "my-reader"},

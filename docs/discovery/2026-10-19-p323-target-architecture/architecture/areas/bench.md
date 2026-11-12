@@ -87,8 +87,8 @@ flowchart TB
 | `records`: `write_deploy` | `DeployRecordStore` (`deploy_record_store.py`), given to `DeployService(records=)` (P475) | `FakeDeployRecordStore` (`tests/fakes.py`) |
 | `user_name`: who typed the yes | `getpass.getuser`, given to `TerminalConsentStrategy` and `GrantService` as `user_name=` (P475) | a `lambda: "ada"` |
 
-The Operation modules pick the platform from `PLATFORMS` by `backends.platform.name`, or `DEFAULT_PLATFORM`
-(`micropython`) when the requirements name none. They are the only place that names an Adapter (rule X1). Bench
+The Operation modules build `MicroPythonPlatform(project, outside.find_tool)`, the one platform today (`look_at_board.py:53`);
+a second platform enters by the name the requirements give. They are the only place that names an Adapter (rule X1). Bench
 imports firmware (`ProjectImage`, and `scenario_steps` for `image_evidence`: the edge `image_evidence ->
 scenario_steps`), design (`restricted_pins`, at `board_live.py:24` and `live.py:19`), records and core. Each is
 reachable along the area map's arrows (rule U1). The look's line of a `LastDeploy` (`board_look.say_last_deploy`) and the deploy question's words

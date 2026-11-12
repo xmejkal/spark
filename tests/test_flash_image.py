@@ -380,7 +380,7 @@ class TheInterpreterComesFromTheToolsListTest(unittest.TestCase):
             image_builder.interpreter_for(None, self.project_on("no-such-board"))
         self.assertIn("no-such-board", str(said.exception))
 
-    def test_the_build_s_tool_is_found_in_the_project_s_lists(self):
+    def test_the_build_is_chosen_from_the_project_s_lists_and_asked_of_the_finder_given(self):
         from spark.records import tool_finder
         project = self.project_on("xiao-esp32-c6")
         finder = FakeToolFinder({"micropython-xiao-esp32c6": tool_finder.Tool("micropython-xiao-esp32c6", None, {}, ["/downloads/c6.bin"])})

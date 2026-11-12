@@ -131,7 +131,7 @@ classDiagram
 attribute `status` is `problems`, because the design asks for something the board cannot do.
 
 The pin map is written as MicroPython's `pins.py` today (`pin_assigner.pin_module`). It stays in design until a second
-platform exists. Then the text form moves behind a Renderer per platform, chosen by `Backends.platform`.
+platform exists. Then the text form moves behind a Renderer per platform, chosen by the platform the requirements name.
 
 ### The main flow: requirements to board file
 

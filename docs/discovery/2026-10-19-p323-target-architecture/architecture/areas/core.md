@@ -128,8 +128,8 @@ sequenceDiagram
   end
   RC->>B: build_outside(project, effects), unless a test gave outside
   B-->>RC: OutsideWorld (its find_tool is ToolFinder(project).find, P725), Privacy
-  RC->>RO: run_operation(operation, values, outside, backends, trace)
-  RO->>OP: run(values as keywords, outside, backends)
+  RC->>RO: run_operation(operation, values, outside, trace)
+  RO->>OP: run(values as keywords, outside)
   alt a SparkError
     RO-->>RC: OperationResult with one Finding from the error
   else a crash
