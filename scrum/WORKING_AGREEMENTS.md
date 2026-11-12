@@ -3,10 +3,13 @@
 The rules the team actually runs on. Each one names **where it came from**, because a rule whose
 origin is forgotten is the first one somebody argues away.
 
-Ten are numbered agreements: W1, W2, W3, W6, W8, W13, W14, W15, W16 and W19. Every other number keeps its heading,
-because other pages cite the numbers, and under it one dated line says where its rule went: onto the PO's role card,
-into `DECISIONS.md` as a product rule, into another agreement, or into [the habits](#habits--no-command-judges-these)
-at the end, which no command can judge. The cut is the process design's §3, accepted by the PO on 2026-10-06
+Ten are numbered agreements: W1, W2, W3, W6, W8, W13, W14, W15, W16 and W19. The other numbers are retired, and
+other pages still cite them; each went on 2026-10-09 (P146) to one place. W4 and W9 to
+[the habits](#habits--no-command-judges-these) at the end, which no command can judge; W20 to W9, and so to the habits, with
+its estimate clause in W13; W5 and W21 to [DECISIONS.md](../DECISIONS.md#product-rules); W10 and W11 to the PO's card in
+[TEAM.md](TEAM.md#the-role-cards); W7 into W14; W12 into W3; W15b into W15; W17 into W13; W18 into the Design and Ready
+rows of [the flow](README.md#the-flow--an-items-stages) and its "one sitting" into the
+[service level](README.md#the-cadences-and-what-each-one-leaves). The cut is the process design's §3, accepted by the PO on 2026-10-06
 ([`docs/2026-10-06-process-design.md`](../docs/2026-10-06-process-design.md)); P146 carried it out on 2026-10-09. How
 a rule changes is [the last section](#how-a-rule-changes).
 
@@ -51,17 +54,12 @@ moved to an offset MicroPython never reads.
 
 ## W3 — Mutation testing is the acceptance bar
 
-Re-introduce the defect; the suite must go red. Each logic change writes the rows before its merge, and a sweep runs
-them at the end of a wave or an epic, or when the PO asks. The PO, 2026-11-09: *"lets try not to overrun the
-mutations, it always takes forever, lets be smart about it"* ([P714](https://github.com/xmejkal/spark/issues/963)).
-
-The council's mutation tester ([`.claude/agents/mutation-tester.md`](../.claude/agents/mutation-tester.md)) plants the
-rows of the files a wave or an epic changed, in a copy of the tree, and names each one the suite does not notice: a missing
-test. A pull request proves its rows with `tools/mutate.py --anchors` only, and the rows about a wave's or an epic's
-files run in one sweep when it is done ([the Definition of Done](README.md#definition-of-done)). When, who and how:
-[the glossary](../GLOSSARY.md#mutation-and-the-mutation-table). This holds since 2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175), the PO: *"lets limit the
-mutations as you say"*). Before it, every logic change wrote a table, and the pre-push gate checked every table's
-anchors. A table of 25 rows ran 615 s, and moved code blocked pushes (the measurement: [P130's council](../docs/observations/2026-10-12-p130-council.md)). The older tables stay as history.
+Re-introduce the defect; the suite must go red. A pull request runs the story run; the full run and the mutation rows
+belong to the sweep at a wave or epic end, or to the PO's ask. `tools/mutate.py --anchors` proves a row's anchor, and a
+sweep runs the rows ([the mutation tester](../.claude/agents/mutation-tester.md); [the Definition of Done](README.md#definition-of-done);
+[the glossary](../GLOSSARY.md#mutation-and-the-mutation-table)). The PO, 2026-11-09: *"lets try not to overrun the
+mutations, it always takes forever, lets be smart about it"* ([P714](https://github.com/xmejkal/spark/issues/963)); since
+2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175)) no pull request runs a table.
 
 **A fixture that cannot see the defect is the defect** (W12, merged here 2026-10-09). When a mutation escapes, the
 first question is whether the fixture could have seen it at all. Four escapes in Sprint 3 were exactly that — three
@@ -72,18 +70,9 @@ cannot see that" is dropping the test.
 **Origin:** repeatedly, a rule was found to have no test at all while its file had many. The fixture clause: R3.1,
 2026-09-29 — the tool reports the escape, and this says what to do with it.
 
-## W4 — Never change a test to make it pass
-
-*Moved 2026-10-09 (P146) to [the habits below](#habits--no-command-judges-these).*
-
-## W5 — State the scope of an assertion
-
-*Moved 2026-10-09 (P146) to [DECISIONS.md](../DECISIONS.md#product-rules) — "Product rules".*
-
 ## W6 — Finish before starting
 
-The board's limits are the rule: two cards in each working stage — Discovery, Design, Review — and Ready and Build per session, by the card's slice (P730, the PO, 2026-11-09): the spark session takes four in Ready and two in Build, and the sound session (the slices "pixel-games" and "graphics library") one in each. A card with no slice is spark's. At most four in flight across the working stages (the PO's call of 2026-10-06 evening, after the first day at the
-cap of three). An epic counts in no stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form. The PO made it standing on 2026-11-05: "Epics do not count"); a plan's task rides on its
+The board's limits are the rule: two cards in each working stage — Discovery, Design, Review — and Ready and Build per session, by the card's slice (P730, the PO, 2026-11-09): the spark session takes four in Ready and two in Build, and the sound session (the slices "pixel-games" and "graphics library") one in each. A card with no slice is spark's. At most four in flight across the working stages. An epic counts in no stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form. The PO made it standing on 2026-11-05: "Epics do not count"); a plan's task rides on its
 open story, and a task with no open parent story counts as a card; every other card counts. The expedite lane opens
 on the PO's word only, for one card at a time across both boards, labelled `expedite`: it may take its working stage,
 and the flight, one over its limit — Ready never. The bin's cards in a working stage fly in the same four, except one labelled
@@ -95,10 +84,6 @@ work runs on it (W19). [The flow](README.md#the-flow--an-items-stages) has each 
 
 **Origin:** Petr, twice: *"make sure you often prioritize your work, finish before moving on to
 too many things at the same time"* and *"go by priority and concentrate on the goal in mind"*.
-
-## W7 — Don't reinvent what KiCad, Wokwi or tscircuit already do
-
-*Merged 2026-10-09 (P146) into [W14](#w14--pull-never-push).*
 
 ## W8 — Commit continuously, push often
 
@@ -113,44 +98,10 @@ Claude merges it once every gate passed (the PO, 2026-11-05: "Always, when gates
 agreements or to the rules, a release, a tag and anything that needs the bench stay the PO's merge, on Claude's "ready
 to merge" ([the flow](README.md#the-flow--an-items-stages), Review).
 
-**Branch protection** on the `main` of both repositories is decision 1 (a), the PO's of 2026-10-06. It has been
-set since 2026-10-09, on his answer *"Ruleset + auto-delete (Recommended)"*
-([Q3 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)):
-
-- **Each repository has a ruleset, "main by PR only",** on its default branch. A change needs a pull request
-  (no approval is required), `main` cannot be deleted or force-pushed, and nobody may bypass it, the PO included.
-  `gh api repos/xmejkal/<repo>/rules/branches/main` (`<repo>` is `spark`, or `sisuo-brain-transplant`, the bin's)
-  shows its three rules: `pull_request`, `deletion` and `non_fast_forward`.
-- **A direct push to `main` is refused.** On spark, the same day, an empty probe commit pushed to `main` got
-  `GH013: Repository rule violations found for refs/heads/main` and *"Changes must be made through a pull
-  request"*, and `main` did not change. So every change to `main` goes through a branch and a pull request. The
-  ruleset asks for no approval, so it does not decide who merges: who merges is this agreement, not a
-  setting.
-- **GitHub deletes a merged pull request's branch** on both repositories ("automatically delete head branches").
-  Nobody has to push a deletion (`git push origin --delete`), which would run the pre-push gate for
-  nothing. The local branch stays until `git branch -d` removes it; removing it automatically is the idea
-  [P171](https://github.com/xmejkal/spark/issues/111), in Idea.
-
-Before that answer the rule held by practice only: earlier on 2026-10-09, `gh api` showed no ruleset or branch
-protection on either `main`.
+**Branch protection:** a GitHub ruleset keeps `main` by pull request only, and
+`gh api repos/xmejkal/spark/rulesets` shows it. It asks for no approval, so who merges is this agreement, not a setting.
 
 **Origin:** Petr, and `git checkout` is not an undo.
-
-## W9 — An observer's claim is a hypothesis until reproduced
-
-*Moved 2026-10-09 (P146) to [the habits below](#habits--no-command-judges-these).*
-
-## W10 — Simulation minutes are a budget, not a resource
-
-*Moved 2026-10-09 (P146) to [scrum/TEAM.md](TEAM.md#the-role-cards) — the PO's card.*
-
-## W11 — Nobody but the Product Owner reorders the backlog
-
-*Moved 2026-10-09 (P146) to [scrum/TEAM.md](TEAM.md#the-role-cards) — the PO's card.*
-
-## W12 — A fixture that cannot see the defect is the defect
-
-*Merged 2026-10-09 (P146) into [W3](#w3--mutation-testing-is-the-acceptance-bar).*
 
 ## W13 — A number enters a message only after its output is read
 
@@ -158,8 +109,7 @@ A count, a hash, a verdict ("the chain runs end to end") goes into a commit mess
 update only in a later call than the command that produced it, copied from output that is on the screen — **and
 measured on the tree being committed**: `check_commit.py` archives `HEAD` and runs the suite there
 before every push. The push runs the story run, the tests chosen from what the branch changed (P714), or the quick run when a file gives a doubt. Both skip the `@slow` tests and say how many; a count that a
-commit, a card or a PR quotes as the suite's is the full run's, `check_commit.py --full`, which runs at a sweep: the end of a wave or an epic, or when the PO asks (P425, P714). A commit's message said 589 OK while the tree it held ran 562 FAILED, because the run was on the
-working tree and the file it imported was staged one commit later (close audit C3). The gate measures `HEAD` even when
+commit, a card or a PR quotes as the suite's is the full run's, `check_commit.py --full`, which runs at a sweep: the end of a wave or an epic, or when the PO asks (P425, P714). The gate measures `HEAD` even when
 another branch is pushed; measuring the ref being pushed is [P106](https://github.com/xmejkal/spark/issues/39), not
 built yet. And a commit is made only when every step before it exited 0 — a chain that commits after a failed edit
 writes a message about edits that never happened (`cdc7c81`). A value proof in a gated chain asserts the verdict
@@ -223,25 +173,12 @@ been measured, and it prompted one refactor of two lines — what caught bloat t
 tests above. When a card grows a lot, the first question is still whether the same behaviour fits in less code: the
 three-outcome verdict was written out in six scripts and one copy was wrong (P34 found it; P42 gave it one home).
 
-## W15b — The size is said at every push, with its reason; refactor before growing
-
-*Merged 2026-10-09 (P146) into [W15](#w15--an-orphan-fails-the-suite).*
-
 ## W16 — A replacement deletes what it replaces, in the same commit
 
 When a new path replaces an old one — a file format, a check, a command — the old one goes in the
 same commit. Two formats for one thing is a bug, not a transition: `design.json` and `check_design`
 lived beside the requirements chain for four days, and the item "the two tools disagree" existed
 only because both did.
-
-## W17 — A summary claims no more than what it summarises
-
-*Merged 2026-10-09 (P146) into [W13](#w13--a-number-enters-a-message-only-after-its-output-is-read).*
-
-## W20 — An item's own acceptance line is a hypothesis until reproduced
-
-*Merged 2026-10-09 (P146) into W9, now [a habit below](#habits--no-command-judges-these); its estimate clause into
-[W13](#w13--a-number-enters-a-message-only-after-its-output-is-read).*
 
 ## W19 — The item exists before the work starts
 
@@ -256,28 +193,12 @@ Discovery, the spec council runs on a card in Design, the plan's agents on one i
 Review — one run per card at a time ([runs](README.md#runs-reads-councils-reviews)). A run on a card in Idea is work
 the limits cannot see.
 
-**The launch hook** is decision 1 (a), the PO's of 2026-10-06: a hook that refuses an agent launch unless its
-description names a card standing in a working stage. The PO answered *"Not yet"* on 2026-10-09
-([Q2 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)), so there is no hook:
-nothing refuses a launch, and this agreement holds by practice. Part C of
-[P146's plan](../docs/archive/2026-10-09-p146-process-plan.md#part-c--the-three-guards-and-the-board-field-the-pos-settings-nothing-changes-without-his-yes)
-describes the hook as it was proposed: a script, not written, that would look only for a card's name in the launch
-(`#N`, or `P` or `B` and a number), not at the card's stage. Even set, a hook cannot see the agents a workflow
-launches.
+**No hook refuses an agent launch** (the PO answered *"Not yet"* on 2026-10-09, [Q2 on #80](https://github.com/xmejkal/spark/issues/80#issuecomment-6081214370)); this agreement holds by practice.
 
 Written 2026-09-30, at the PO's word — "whenever we want to do something, let's first make sure
 the PBI is created, so we can keep track, really just like scrum" — after an architecture review
 was set going with no item behind it. The stage clause came with P146: reads had run on Idea cards despite this rule
 (the process design's §2).
-
-## W18 — Refinement is the team's, and the PO has the last word before the order is fixed
-
-*Merged 2026-10-09 (P146) into the Design and Ready rows of [the flow](README.md#the-flow--an-items-stages); its "one
-sitting" is now the [service level](README.md#the-cadences-and-what-each-one-leaves).*
-
-## W21 — Keep a datum only if a decision rests on it
-
-*Moved 2026-10-09 (P146) to [DECISIONS.md](../DECISIONS.md#product-rules) — "Product rules".*
 
 ## Habits — no command judges these
 
@@ -335,8 +256,8 @@ an unreproduced criterion; it may not be *closed* on one.
 
 **A plan is claims, and the builder checks them** (2026-10-19, P324, an experiment). A plan or a design will hold
 some wrong claims, however many rounds review it. So a plan marks each claim as measured (with the command that
-measures it), an estimate, or a proposal, and `tools/factcheck.py` runs on it before its PR. Its output goes in the
-PR. One refuter per plan, then the build. Every implementer's brief carries this rule: the plan can be wrong, so
+measures it), an estimate, or a proposal, and the implementer checks each claim of a plan in the code before building it (nobody has run
+factcheck since PR #577). One refuter per plan, then the build. Every implementer's brief carries this rule: the plan can be wrong, so
 check each file, line, name and number in the code before you use it. If the code disagrees, follow the code and
 write the mismatch as a row. Stop and ask only if the mismatch changes what the slice does. Each slice starts with
 tests that pin today's behaviour. A retro judges the experiment with those rows.

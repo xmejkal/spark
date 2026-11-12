@@ -238,7 +238,7 @@ suite's count. The **full run**, `tools/check_commit.py [commit] --full`, runs e
 
 The size of `scripts/`, counted in **code** lines — docstrings, comments and blanks do not count,
 because in this repository the prose is the product. It is a number, not a cap (W15b, P99; the PO,
-2026-10-04; [W15b](scrum/WORKING_AGREEMENTS.md#w15b--the-size-is-said-at-every-push-with-its-reason-refactor-before-growing)). There was a cap, and it failed the way a ceiling does: P95 raised it six times in one
+2026-10-04; [W15](scrum/WORKING_AGREEMENTS.md#w15--an-orphan-fails-the-suite)). There was a cap, and it failed the way a ceiling does: P95 raised it six times in one
 item, each time to whatever had been measured, and it prompted one refactor of two lines. Now the
 pre-push gate prints the size with its growth since `origin/main` (`scripts/: N code lines (+M since
 origin/main)`), and a card's closing comment (DoD 7) says how many lines it added and why. When an item grows a
