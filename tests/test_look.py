@@ -575,11 +575,11 @@ class TheOperationTest(LookScriptCase):
     def test_no_simulation_starts_the_compile_child_through_the_world_and_reads_the_store_it_was_given(self):
         # P458, the card's done-when: no child process and no store read bypasses what the Operation was given
         self.build_from_firmware()
-        asked = []
+        child_options = []
 
         def run(command, **options):
             if image_evidence.COMPILE_CHILD in command:
-                asked.append(options)
+                child_options.append(options)
             return self.fake_tools('{"ok": true}\n')(command, **options)
         records = FakeDeployRecordStore()
         outside = FakeOutsideWorld(run=run, find_tool=found)
@@ -589,7 +589,7 @@ class TheOperationTest(LookScriptCase):
         self.assertIn("devs", outside.ran[0])
         self.assertIn("flash-id", outside.ran[1])
         self.assertEqual(outside.ran[2], [sys.executable, "-I", "-B", "-c", image_evidence.COMPILE_CHILD])
-        self.assertEqual([json.loads(options["input"]) for options in asked],
+        self.assertEqual([json.loads(options["input"]) for options in child_options],
                          [[["firmware/main.py", str(self.project / "firmware" / "main.py")]]])
         self.assertEqual(records.asked, [MAC])
 

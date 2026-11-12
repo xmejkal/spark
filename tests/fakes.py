@@ -16,7 +16,7 @@ from spark.records.deploy_record_store import LastDeploy  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.build.board_engine import BuildResult  # noqa: E402
 from spark.bench.firmware_platform import FirmwarePlatform, MicroPythonPlatform  # noqa: E402
-from spark.bench.image_evidence import COMPILE_CHILD  # noqa: E402
+from spark.bench import image_evidence  # noqa: E402
 from spark.core.events import Reporter  # noqa: E402
 from spark.core.outside import OutsideWorld, ProgramRunner  # noqa: E402
 
@@ -266,7 +266,7 @@ class FakeProbePlatform(MicroPythonPlatform):
 class FakeDeployRecordStore:
     """A fake deploy_record_store.DeployRecordStore: `write_deploy` keeps each call in `written` and gives `path`, or raises
     `raises` (for example store.StoreError); `read_last_deploy(mac)` keeps each `mac` in `asked` and gives `last` (default: a
-    LastDeploy with nothing recorded), and `find_path` gives `path` (P458). It goes in as `LookAtBoard(records=)`,
+    LastDeploy with nothing recorded) (P458). It goes in as `LookAtBoard(records=)`,
     `DeployImage(records=)` or `DeployService(records=)`."""
 
     def __init__(self, path=Path("record.json"), raises=None, last=None):
@@ -282,9 +282,6 @@ class FakeDeployRecordStore:
     def read_last_deploy(self, mac):
         self.asked.append(mac)
         return self.last
-
-    def find_path(self, mac):
-        return self.path
 
 
 class FakePartPictures:
@@ -485,6 +482,6 @@ class RealChildRun:
         self.run = run
 
     def __call__(self, command, **options):
-        if COMPILE_CHILD in command:
+        if image_evidence.COMPILE_CHILD in command:
             return ProgramRunner().run(command, **options)
         return self.run(command, **options)

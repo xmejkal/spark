@@ -689,7 +689,7 @@ class FakeDeployRecordStoreTest(unittest.TestCase):
         last = deploy_record_store.LastDeploy(outcomes.RECORDED, "p", "ready", "2026-10-17T09:00:00+02:00")
         records = FakeDeployRecordStore(path=Path("kept.json"), last=last)
         self.assertIs(records.read_last_deploy(None), last)
-        self.assertEqual((records.asked, records.find_path("aa:bb")), ([None], Path("kept.json")))
+        self.assertEqual(records.asked, [None])
 
 
 class Reporting(Toy):
