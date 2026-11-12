@@ -994,6 +994,8 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertIsNone(written["name"])
         self.assertIsNone(written["footprint"])
         self.assertFalse(written["body_mm"]["verified"])
+        self.assertIn('A pin is a wiring name of letters, digits and _; what the silkscreen prints goes in printed ("pin": "VCC", '
+                      '"printed": "+5V").', written["//"], "the way out of a refused +5V, where the author looks (P785)")
         self.assertNotIn("sourcing", written, "the rules keep no seller listing and no price (W21, P740)")
         problems = part_records.validate(written, root / "parts" / "sg90-servo.json")
         self.assertTrue(problems, "a skeleton full of nulls must not pass the contract")
@@ -1062,6 +1064,14 @@ class EachPartRefusalHasItsCodeTest(unittest.TestCase):
                     with self.assertRaises(CodedMessageError) as refused:
                         refusing()
                     self.assertEqual(refused.exception.code, code, str(refused.exception))
+
+    def test_validate_s_items_carry_the_contract_s_code(self):
+        # P785 (P366 row 13): the item had `code: null`, so an agent could decide on the sentence alone
+        project = Path(tempfile.mkdtemp()); (project / "parts").mkdir()
+        (project / "parts" / "plus5v.json").write_text(json.dumps(part("plus5v", power=[{"pin": "+5V", "rail": "logic", "direction": "in"}])))
+        said, code = run_json(["--validate", "--project", str(project)])
+        self.assertEqual((code, said["status"], said["problems"][0]["code"], said["problems"][0]["fix"]), (1, "problems", "part_contract_broken", None))
+        self.assertIn("power[0] pin '+5V' cannot be a selector", said["problems"][0]["sentence"])
 
 
 class EverythingFoundIsKeptTest(unittest.TestCase):

@@ -5,7 +5,7 @@
   "id": "golden-sensor",
   "name": null,
   "kind": "sensor",
-  "//": "Written by /spark:research. A null is a fact nobody has recorded. verified: true = the vendor's own text at the cited URL; read off an image, inferred or computed = false.",
+  "//": "Written by /spark:research. A null is a fact nobody has recorded. verified: true = the vendor's own text at the cited URL; read off an image, inferred or computed = false. A pin is a wiring name of letters, digits and _; what the silkscreen prints goes in printed (\"pin\": \"VCC\", \"printed\": \"+5V\").",
   "vendor": "nobody",
   "sku": null,
   "sources": [],

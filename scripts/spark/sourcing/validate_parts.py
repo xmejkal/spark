@@ -9,7 +9,7 @@ from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, Argument
 from spark.records import records_codes, store
 from spark.records.answer_operation import ANSWER_ARGUMENTS
 from spark.records.record_kind import Answer, _cannot, _problem, _with_project
-from spark.sourcing import part_records
+from spark.sourcing import part_records, sourcing_codes
 from spark.sourcing.part_operation import PartOperation
 
 
@@ -38,5 +38,5 @@ class ValidateParts(PartOperation):
             lines.append("  %-28s %s" % (one["part"], "ok" if not one["problems"] else "%d problem(s)" % len(one["problems"])))
             lines += ["      - %s" % problem for problem in one["problems"]]
         return Answer({"checked": shown}, lines, truncated=truncated,
-                      problems=[_problem(one["part"], problem) for one in checked for problem in one["problems"]])
+                      problems=[_problem(one["part"], problem, code=sourcing_codes.PART_CONTRACT_BROKEN) for one in checked for problem in one["problems"]])
 # --- end MVP ---
