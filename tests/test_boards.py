@@ -944,6 +944,22 @@ class ABoardPointsAtItsDatasheetsLikeAPartTest(unittest.TestCase):
         board["documents"]["wroom1-v1-1"]["sha256"] = "bc430d66"
         self.assertTrue(any("documents.wroom1-v1-1" in p for p in self.problems(board)))
 
+    def test_a_citation_that_is_no_object_is_refused_by_validate_with_the_sentence_that_states_the_form(self):
+        # P785: the board contract shares `record_kind.document_problems`, so a string `cites` is refused by the same sentence
+        board = dict(self.board(), id="x-cite")
+        board["power"]["deep_sleep_ua"]["cites"] = "wroom1-v1-1"
+        root = Path(tempfile.mkdtemp()); (root / "boards").mkdir()
+        (root / "boards" / "x-cite.json").write_text(json.dumps(board))
+        (root / "boards" / "active.json").write_text(json.dumps({"schema": 1, "board": "x-cite"}))
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = boards.main(["--validate", "--project", str(root)])
+        self.assertEqual(code, 1, out.getvalue())
+        self.assertIn('      - power.deep_sleep_ua cites \'wroom1-v1-1\', but a citation is an object {"document": "<key in documents>", '
+                      '"at": "<page or table>"}\n', out.getvalue())
+
 
 # --- MVP ---
 #: A hand-made Wokwi definition (P396), not Wokwi's file: a comment, as Wokwi's own files have, and one virtual pin.

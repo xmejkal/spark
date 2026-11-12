@@ -300,22 +300,34 @@ def document_problems(part: dict) -> list:
         elif not entry.get("file"):
             problems.append("documents.%s names no file" % key)
     for where, cited in _citations(part):
-        if not isinstance(cited, str) or cited not in documents:
-            problems.append("%s cites %r, which documents does not hold — a pointer to nothing" % (where, cited))
-        elif isinstance(documents[cited], dict) and documents[cited].get("kept") is False:
-            problems.append("%s cites %r, which is not kept, so nobody can read it there" % (where, cited))
+        document = cited.get("document") if isinstance(cited, dict) else None
+        if cited is None:  # no citation, as `_absent` reads a null
+            continue
+        if not isinstance(cited, dict):
+            problems.append(CITATION_FORM % (where, cited))
+        elif not isinstance(document, str) or document not in documents:
+            problems.append("%s cites %r, which documents does not hold — a pointer to nothing" % (where, document))
+        elif isinstance(documents[document], dict) and documents[document].get("kept") is False:
+            problems.append("%s cites %r, which is not kept, so nobody can read it there" % (where, document))
     return problems
 
 
+#: What `document_problems` says of a `cites` that is no object (P785): the form is `replies.md`'s (`cites` is `{document, at}`).
+CITATION_FORM = '%s cites %r, but a citation is an object {"document": "<key in documents>", "at": "<page or table>"}'
+
+
 def _citations(value, where=""):
-    """(field, document key) for every `cites` in a record, at any depth."""
+    """(field, citation) for every `cites` in a record, at any depth, inside objects and lists, as written: a list item's
+    field is `power[0]`."""
     found = []
-    for name, inner in (value.items() if isinstance(value, dict) else []):
-        here = "%s.%s" % (where, name) if where else name
-        if name == "cites" and isinstance(inner, dict):
-            found.append((where, inner.get("document")))
-        elif isinstance(inner, dict):
-            found += _citations(inner, here)
+    if isinstance(value, dict):
+        for name, inner in value.items():
+            if name == "cites":
+                found.append((where, inner))
+            else:
+                found += _citations(inner, "%s.%s" % (where, name) if where else name)
+    for index, item in (enumerate(value) if isinstance(value, list) else ()):
+        found += _citations(item, "%s[%d]" % (where, index))
     return found
 
 

@@ -302,6 +302,29 @@ class TheContractTest(unittest.TestCase):
         self.assertEqual(self._problems(facts={"idle_ma": {
             "value": None, "verified": False, "source": "not measured"}}), [])
 
+    #: A document the record keeps, so a citation of it has nothing to be refused for but its own form (P785).
+    KEPT_P1 = {"url": "https://v.example/p1.pdf", "sha256": "a" * 64, "file": "p1.pdf", "retrieved": "2026-11-12",
+               "title": "P1", "version": None}
+
+    def test_a_cites_that_is_a_string_is_one_problem_that_states_the_form(self):
+        # P785 (P737 row 74): `cites: "p1"` passed every rule, because only an object was read as a citation
+        problems = self._problems(documents={"p1": self.KEPT_P1},
+                                  facts={"io_volts": {"value": 3.3, "verified": True, "source": "the datasheet", "cites": "p1"}})
+        self.assertEqual(problems, ['facts.io_volts cites \'p1\', but a citation is an object {"document": "<key in documents>", '
+                                    '"at": "<page or table>"}'])
+
+    def test_a_cites_that_is_a_list_and_a_cites_inside_a_list_item_are_named_by_their_path(self):
+        problems = self._problems(documents={"p1": self.KEPT_P1},
+                                  body_mm={"width": 10, "height": 5, "verified": True, "source": "the drawing", "cites": ["p1"]},
+                                  power=[{"pin": "VCC", "rail": "logic", "direction": "in", "cites": "p1"}])
+        self.assertEqual([p.split(" cites ")[0] for p in problems if "a citation is an object" in p], ["body_mm", "power[0]"])
+
+    def test_a_cites_that_is_null_or_an_object_naming_a_kept_document_is_no_problem(self):
+        for cites in (None, {"document": "p1", "at": "page 3"}):
+            with self.subTest(cites=cites):
+                self.assertEqual(self._problems(documents={"p1": self.KEPT_P1},
+                                                facts={"io_volts": {"value": 3.3, "verified": True, "source": "the datasheet", "cites": cites}}), [])
+
 
 class WhatAPartAsksForTest(unittest.TestCase):
     def test_signals_come_out_ready_for_the_assigner(self):
@@ -1320,8 +1343,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         self.assertEqual([p for p in part_records.validate(cited, written(definition)) if "cad" in p],
                          ["facts.rating_a cites 'cad', which is not kept, so nobody can read it there"])
 
-    def _kept_world(self, stored=True):
-        """A catalog record and a project board that both point at one datasheet, the board citing a page."""
+    def _kept_world(self, stored=True, cites=None):
+        """A catalog record and a project board that both point at one datasheet, the board citing a page; `cites` goes on
+        the catalog record's one fact as written."""
         import tempfile
         home = self._home(); catalog, project, store = home / "catalog", Path(tempfile.mkdtemp()), home / "sources"
         (project / ".spark").mkdir()
@@ -1329,7 +1353,8 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         document = {"url": "https://v.example/wroom.pdf", "sha256": digest, "file": "wroom_v1.1.pdf",
                     "retrieved": "2026-09-24", "title": "ESP32-S3-WROOM-1 Datasheet", "version": "v1.1"}
         self._catalog_record(catalog, "x-rtc", documents={"wroom": document, "cad": {"url": "https://v.example/rtc_cad.zip", "kept": False, "title": "CAD files"}},
-                             facts={"idle_ua": {"value": 8, "verified": True, "source": "https://v.example/wroom.pdf"}})
+                             facts={"idle_ua": dict({"value": 8, "verified": True, "source": "https://v.example/wroom.pdf"},
+                                                    **({"cites": cites} if cites else {}))})
         # A record with a document of its own and nothing resting on the WROOM: it must not be named.
         self._catalog_record(catalog, "x-jack", body_mm={"value": [9, 14], "verified": True, "source": "drawing"},
                              documents={"drawing": dict(document, url="https://v.example/jack.pdf",
@@ -1346,9 +1371,9 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
             (store / digest / "wroom_v1.1.pdf").write_bytes(b"pdf")
         return home, project, store
 
-    def _kept(self, words, stored=True):
+    def _kept(self, words, stored=True, cites=None):
         from unittest import mock
-        home, project, store = self._kept_world(stored)
+        home, project, store = self._kept_world(stored, cites)
         def no_network(url):
             raise AssertionError("--kept must never reach the network, asked for %s" % url)
         from spark.records import board_records
@@ -1370,6 +1395,12 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
         cited = sorted(set(line.strip() for line in said.splitlines() if "cited by" in line))
         self.assertEqual(cited, ["cited by x-board power.deep_sleep_ua — Table 12, page 15",
                                  "cited by x-rtc facts.idle_ua — cites its URL"])
+
+    def test_kept_reads_a_cites_that_is_no_object_as_no_citation_and_the_fact_still_cites_its_url(self):
+        # P785: `--kept` crashed with an AttributeError on `cites: "wroom"`; the record is read raw, so the guard is here too
+        code, said, _ = self._kept(["wroom"], cites="wroom")
+        self.assertEqual(code, 0, said)
+        self.assertIn("cited by x-rtc facts.idle_ua — cites its URL", said)
 
     def test_kept_says_missing_when_the_store_does_not_hold_it(self):
         _, said, _ = self._kept(["wroom"], stored=False)
