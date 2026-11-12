@@ -1,9 +1,8 @@
 """Record the wiring guide of a wiring page as the animated GIF the README shows (P791).
 
 The page's "All at once" playback runs on the Web Animations API. The recorder pauses every
-animation and moves it to each frame's time before the screenshot, so the frames are exact and
-the run needs no real clock. It needs Playwright with its Chromium and Pillow, neither of which
-spark installs: `pip install playwright pillow` and `playwright install chromium`, in a virtual
+animation and moves it to each frame's time before the screenshot, so the frames are exact. It
+needs Playwright with its Chromium and Pillow 9.1 or later, neither of which spark installs: `pip install playwright pillow` and `playwright install chromium`, in a virtual
 environment of your own.
 
     python3 tools/record_wiring_guide.py path/to/wiring.html docs/guide/wiring-guide.gif
@@ -26,13 +25,13 @@ GUIDE, REPLAY, MODE_BAR = "#guide", "#g-replay", "#guide .gbar"
 
 
 def record(page_path, out_path):
-    """Write the GIF and return (frame count, byte size)."""
+    """Write the GIF and return (the frames in the file, its byte size)."""
     from PIL import Image
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
-        page = browser.new_page(viewport={"width": RENDER_WIDTH, "height": 1400}, device_scale_factor=1)
+        page = browser.new_page(viewport={"width": RENDER_WIDTH, "height": 1400})
         page.goto(Path(page_path).resolve().as_uri())
         page.wait_for_load_state("networkidle")
         page.click(REPLAY)
@@ -54,11 +53,13 @@ def record(page_path, out_path):
             at += step_ms
         browser.close()
 
-    palette = frames[0].quantize(colors=255, method=Image.Quantize.MEDIANCUT)
+    # The last frame holds every wire, so every colour of the run is in the palette.
+    palette = frames[-1].quantize(colors=255, method=Image.Quantize.MEDIANCUT)
     quantized = [frame.quantize(palette=palette, dither=Image.Dither.NONE) for frame in frames]
     quantized[0].save(out_path, save_all=True, append_images=quantized[1:], duration=int(step_ms), loop=0,
                       optimize=True, disposal=1)
-    return len(frames), Path(out_path).stat().st_size
+    # Pillow merges the identical frames of the rest at the end, so the file holds fewer frames than shots.
+    return Image.open(out_path).n_frames, Path(out_path).stat().st_size
 
 
 def main(argv=None):

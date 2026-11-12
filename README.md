@@ -3,11 +3,11 @@
 **spark is a Claude Code plugin for gadgets built from an ESP32 dev board and off-the-shelf modules. It turns your idea
 into a breadboard you can wire and firmware you can test.**
 
-[![Twenty wires draw themselves, one after another, onto a breadboard that holds a FireBeetle 2 ESP32-S3, an amplifier, a microphone and a rotary encoder](docs/guide/wiring-guide.gif)](https://github.com/xmejkal/pixel-games/blob/master/docs/wiring.html)
+[![Twenty wires draw themselves, one after another, onto a breadboard that holds a FireBeetle 2 ESP32-S3, a display, a speaker, an amplifier, a microphone and a rotary encoder](docs/guide/wiring-guide.gif)](https://github.com/xmejkal/pixel-games)
 
-*The wiring guide of [pixel-games](https://github.com/xmejkal/pixel-games), drawn from spark's records: the board's dimension drawing, the part records, the pins spark assigned and its breadboard sheet. Every part is to one scale. The page plays the twenty wires one after another or one step at a time.*
+*The wiring guide of [pixel-games](https://github.com/xmejkal/pixel-games), small arcade games on an ESP32-S3 with a display, a speaker and a knob. spark's records and the bench photos drew it: the board's record (from DFRobot's dimension drawing), the part records, the pins spark assigned and, for the encoder's wires, its breadboard sheet. Every part is drawn to one scale, and the encoder's size is estimated from a photo. On [the page](https://github.com/xmejkal/pixel-games/blob/master/docs/wiring.html) (shown as its source on GitHub) the twenty wires play one after another or one step at a time. The buttons in the picture work only there.*
 
-[What it is](#what-it-is) says who spark is for, and [what works today](#what-works-today) says how far each step runs.
+[What it is](#what-it-is) says who spark is for, and [What works today](#what-works-today) says how far each step runs.
 
 From a list of parts, spark builds and checks the design. It writes a *breadboard sheet*: the parts and the wires, one
 step each. It writes a *pin map*: a file that tells your firmware which board pin each part uses. It also makes a
@@ -163,7 +163,7 @@ button, a connector), `parts-researcher` for a module, and `design-reviewer`, on
   2026-10-15, and a FireBeetle 2 ESP32-S3 on 2026-10-31 and 2026-11-01. No breadboard wired from a sheet has run yet.
 - **Not run for these docs.** The runs here used the scripts, so these parts were not run:
   - the conversations of `/spark:drawer`, `/spark:idea`, `/spark:research` and `/spark:identify`, and the DFRobot order import
-  - the agents of `spark-review`, the `spark-design` and `spark-reverse-engineer` skills, and `check_all.py` on a board written by hand in tscircuit
+  - the agents of `spark-review`, and the `spark-design` and `spark-reverse-engineer` skills, and `check_all.py` on a board written by hand in tscircuit
   - the plugin install above, a tscircuit install that `/spark:setup` made, and any run on Linux or Windows
 
 ## More
