@@ -114,7 +114,7 @@ python3 tools/mutate.py tests/mutations/*.json --for <the wave's files> --copy  
 `--copy` removes its copy in a `finally`, and also when SIGTERM stops it (the signal becomes `SystemExit`, only in the
 main thread and only over the default handler). A SIGTERM that comes during the removal itself waits until the removal
 is done, and then exits 143. At the start of every mutation run, with or without `--copy`, `mutate.py` removes its `mutate-run-*`,
-`mutate-import-*` and `mutate-copy-*` folders older than a day, which covers SIGKILL ([P435](https://github.com/xmejkal/spark/issues/579)). A red pre-check names the tests that are red, in a copy too ([P787](https://github.com/xmejkal/spark/issues/1088)).
+`mutate-import-*` and `mutate-copy-*` folders older than a day, which covers SIGKILL ([P435](https://github.com/xmejkal/spark/issues/579)). A red pre-check names the tests that are red, in a copy too, and every run that plants rows writes `tests/mutations/ledger.jsonl` in the tree it was given, one line per row (caught when, by which test, at which content of its file; `--ledger` counts them by status), for the tiers to come ([P787](https://github.com/xmejkal/spark/issues/1088)).
 
 A row reported *refused* is a guard whose code moved, or whose replacement does not compile, import or parse.
 Re-anchor it or fix its `replace`, or delete it and give the reason.

@@ -1,6 +1,6 @@
 ---
 name: mutation-tester
-description: Run a sweep of mutation rows: at the end of a wave or an epic, or when the PO asks, never for one pull request. Plant the rows of the files the wave or epic changed in a copy of the tree, and name each one that the suite does not notice. It returns "N planted, M caught" and each escape. It calls tools/mutate.py and writes nothing in the tree. A pull request writes its rows and proves them with tools/mutate.py --anchors, with no run.
+description: Run a sweep of mutation rows: at the end of a wave or an epic, or when the PO asks, never for one pull request. Plant the rows of the files the wave or epic changed in a copy of the tree, and name each one that the suite does not notice. It returns "N planted, M caught" and each escape. It calls tools/mutate.py, whose run writes one file in the tree, the ledger tests/mutations/ledger.jsonl; the agent itself writes nothing there. A pull request writes its rows and proves them with tools/mutate.py --anchors, with no run.
 tools: Read, Grep, Bash, Write
 model: sonnet
 ---
@@ -38,6 +38,9 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    <the sweep's files> --copy`. Make one call, because each call also runs the whole suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes.
 4. Report `N planted, M caught`. For each escape, give the row and the test that it shows is missing: which input,
    and which assertion.
+5. The run wrote `tests/mutations/ledger.jsonl` in the tree (P787): one line per row it planted, with the test that
+   caught it. Say so in your report, with `python3 tools/mutate.py --ledger`'s line; Claude, the main thread, commits it
+   with the sweep's findings. Do not edit it.
 
 ## When a table is kept
 

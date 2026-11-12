@@ -31,6 +31,7 @@ from suite_runs import slow, planted_folder  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
+import ledger  # noqa: E402
 import mutate  # noqa: E402
 import scratch  # noqa: E402
 
@@ -645,6 +646,98 @@ class AMutationRunInACopyTest(unittest.TestCase):
                 self.assertEqual(borrowed.resolve(), (root / folder / "node_modules").resolve())
         finally:
             __import__("shutil").rmtree(copy.parent)
+
+
+def ledger_of(root):
+    """The ledger a run on `root` writes, where `main` puts it: tests/mutations/ledger.jsonl under the root."""
+    return ledger.LedgerStore(root / "tests" / "mutations" / ledger.LEDGER_NAME)
+
+
+@slow("mutation runs of a tiny tree that write the ledger, 5 tests, 4 s on 2026-11-12")
+class TheLedgerTest(unittest.TestCase):
+    """P787: a run that plants rows writes one ledger line per row, in the tree it was given, also under --copy."""
+
+    def test_a_run_records_each_row_in_the_ledger_it_was_given(self):
+        root = tiny_project(tested=False)  # add is tested, sub is not
+        content = (root / "m.py").read_bytes()
+        refused = dict(BREAK_ADD, name="nowhere", find="return a * b")
+        results, restored = mutate.run(root, "tests", [BREAK_ADD, BREAK_SUB, refused], ledger_store=ledger_of(root))
+        self.assertEqual(([r["status"] for r in results], restored), ([mutate.CAUGHT, mutate.ESCAPED, mutate.REFUSED], True))
+        lines = {entry["key"]: entry for entry in ledger_of(root).read()}
+        self.assertEqual(set(lines), {ledger.row_key(row) for row in (BREAK_ADD, BREAK_SUB, refused)})
+        add, sub, nowhere = (lines[ledger.row_key(row)] for row in (BREAK_ADD, BREAK_SUB, refused))
+        self.assertEqual((add["status"], add["by"], add["caught"]), (ledger.CAUGHT, "test_m", 1), "the near test that caught it")
+        self.assertEqual((sub["status"], sub["by"], sub["caught"]), (ledger.ESCAPED, ledger.ESCAPE, 0))
+        self.assertEqual((nowhere["status"], nowhere["by"], nowhere["caught"]), (ledger.REFUSED, None, 0))
+        self.assertEqual({entry["blob"] for entry in lines.values()}, {ledger.blob_of(content)}, "the file as the run read it")
+        self.assertEqual({entry["date"] for entry in lines.values()}, {add["date"]}, "one date per run")
+        self.assertRegex(add["date"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$")
+        self.assertTrue(all(isinstance(entry["s"], int) for entry in lines.values()), lines)
+        self.assertEqual([r.get("by") for r in results], [mutate.NEAR, None, None], "the report's own `by` is unchanged")
+
+    def test_a_second_run_at_the_same_content_adds_the_catch(self):
+        root = tiny_project()
+        for _ in range(2):
+            mutate.run(root, "tests", [BREAK_ADD], ledger_store=ledger_of(root))
+        self.assertEqual([entry["caught"] for entry in ledger_of(root).read()], [2])
+
+    def test_main_writes_the_ledger_in_the_tree_it_was_given_also_with_copy(self):
+        import contextlib
+        import io
+        for flags in ((), ("--copy",)):
+            with self.subTest(flags=flags):
+                root = tiny_project_that_finds_itself()
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    code = mutate.main([str(table(root, BREAK_ADD)), "--root", str(root), *flags])
+                self.assertEqual(code, mutate.EXIT_OK)
+                self.assertEqual([(entry["status"], entry["by"]) for entry in ledger_of(root).read()], [(ledger.CAUGHT, "test_m")])
+                self.assertIn("\n  1 row(s) recorded in tests/mutations/ledger.jsonl (1 in all)\n", out.getvalue())
+        root = tiny_project_that_finds_itself()
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            mutate.main([str(table(root, BREAK_ADD)), "--root", str(root), "--copy", "--json"])
+        self.assertEqual(json.loads(out.getvalue())["ledger"], {"path": "tests/mutations/ledger.jsonl", "recorded": 1, "rows": 1})
+
+    def test_a_run_whose_files_are_not_restored_records_nothing(self):
+        # The after-suite goes red on its own: the project's test fails at its second run, which is the restore check.
+        root = tiny_project()
+        count = root / "count"
+        write_test(root, "test_m.py", "import m", "from pathlib import Path", "class T(unittest.TestCase):",
+                   "    def test_add(self):",
+                   "        runs = Path(%r); runs.write_text(runs.read_text() + 'x' if runs.exists() else 'x')" % str(count),
+                   "        self.assertEqual((m.add(2, 3), len(runs.read_text()) < 2), (5, True))")
+        results, restored = mutate._run(root, "tests", [BREAK_ADD], {}, False, ledger_store=ledger_of(root))
+        self.assertEqual((results[0]["status"], restored), (mutate.CAUGHT, False))
+        self.assertEqual(ledger_of(root).read(), [], "a verdict nothing can trust recorded a line")
+
+    def test_the_ledger_command_counts_by_status_and_anchors_writes_none(self):
+        import contextlib
+        import io
+        root = tiny_project()
+        self.assertEqual(mutate.main(["--anchors", str(table(root, BREAK_ADD)), "--root", str(root)]), mutate.EXIT_OK)
+        self.assertFalse(ledger_of(root).path.exists(), "--anchors wrote the ledger")
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(mutate.main(["--ledger", "--root", str(root)]), mutate.EXIT_OK)
+        self.assertEqual(out.getvalue(), "  ledger tests/mutations/ledger.jsonl: 0 row(s)\n")
+        mutate.run(tiny_project(), "tests", [BREAK_ADD], ledger_store=ledger_of(root))
+        mutate.run(tiny_project(tested=False), "tests", [BREAK_SUB], ledger_store=ledger_of(root))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            mutate.main(["--ledger", "--root", str(root)])
+        self.assertEqual(out.getvalue(), "  ledger tests/mutations/ledger.jsonl: 2 row(s): 1 caught, 1 escaped\n")
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            mutate.main(["--ledger", "--root", str(root), "--json"])
+        self.assertEqual(json.loads(out.getvalue()), {"tool": "mutate", "ledger": "tests/mutations/ledger.jsonl", "rows": 2,
+                                                      "statuses": {"caught": 1, "escaped": 1}})
+        for extra in ([str(table(root, BREAK_ADD))], ["--anchors"], ["--copy"]):
+            with self.subTest(extra=extra), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                mutate.main(["--ledger", "--root", str(root)] + extra)
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            mutate.main(["--root", str(root)])  # no table and no --ledger: the usage, as before
+
+    def test_caught_by_names_the_module_of_the_first_red_test(self):
+        self.assertEqual(mutate.caught_by(mutate.SuiteResult(False, ("FAIL: test_add (test_m.T)", "FAILED (failures=1)"))), "test_m")
+        self.assertEqual(mutate.caught_by(mutate.SuiteResult(False, ("ERROR: test_x (test_other.T.test_x)",))), "test_other", "3.11's id")
+        self.assertEqual(mutate.caught_by(mutate.SuiteResult(False, ("ValueError: boom",))), ledger.SUITE, "no test named")
+        self.assertEqual(mutate.caught_by(False), ledger.SUITE, "a plain bool from a stand-in")
 
 
 DAY = scratch.OLD_AFTER_SECONDS
