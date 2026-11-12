@@ -3,6 +3,12 @@
 **spark is a Claude Code plugin for gadgets built from an ESP32 dev board and off-the-shelf modules. It turns your idea
 into a breadboard you can wire and firmware you can test.**
 
+[![Twenty wires draw themselves, one after another, onto a breadboard that holds a FireBeetle 2 ESP32-S3, an amplifier, a microphone and a rotary encoder](docs/guide/wiring-guide.gif)](https://github.com/xmejkal/pixel-games/blob/master/docs/wiring.html)
+
+*The wiring guide of [pixel-games](https://github.com/xmejkal/pixel-games), drawn from spark's records: the board's dimension drawing, the part records, the pins spark assigned and its breadboard sheet. Every part is to one scale. The page plays the twenty wires one after another or one step at a time.*
+
+[What it is](#what-it-is) says who spark is for, and [what works today](#what-works-today) says how far each step runs.
+
 From a list of parts, spark builds and checks the design. It writes a *breadboard sheet*: the parts and the wires, one
 step each. It writes a *pin map*: a file that tells your firmware which board pin each part uses. It also makes a
 *simulation* for [Wokwi](https://wokwi.com), an online ESP32 simulator that runs your firmware before you flash it.
@@ -102,12 +108,8 @@ After either road, type `/spark:init` again. It names the rails from the built b
 
 [![The spark journey in eight steps, and how far each works today](docs/guide/journey.svg)](docs/guide/journey.md)
 
-The same journey is on Miro, beside the plans:
-
-- [the journey frame](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687016851094)
-- [the story map by release](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687094797318)
-- [the roadmap](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764688467218869)
-- [the code architecture](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687681319899)
+The same journey is on Miro, beside the plans: [the journey frame](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687016851094),
+[the story map by release](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687094797318), [the roadmap](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764688467218869) and [the code architecture](https://miro.com/app/board/uXjVEavQ4JQ=/?moveToWidget=3458764687681319899).
 
 Each status comes from runs made for these docs, up to 2026-11-01. [The journey guide](docs/guide/journey.md) shows the
 output of each step and gives each status in full. **works**: it ran end to end for these docs. **partly**: it stops
@@ -160,12 +162,9 @@ button, a connector), `parts-researcher` for a module, and `design-reviewer`, on
 - **The bench proved little so far.** The author ran `deploy.py` on two boards: a XIAO ESP32-C6 on 2026-10-14 and
   2026-10-15, and a FireBeetle 2 ESP32-S3 on 2026-10-31 and 2026-11-01. No breadboard wired from a sheet has run yet.
 - **Not run for these docs.** The runs here used the scripts, so these parts were not run:
-  - the conversations of `/spark:drawer`, `/spark:idea`, `/spark:research` and `/spark:identify`
-  - the DFRobot order import
-  - the agents of `spark-review`, and the `spark-design` and `spark-reverse-engineer` skills
-  - the plugin install above, and a tscircuit install that `/spark:setup` made
-  - any run on Linux or Windows
-  - `check_all.py` on a board written by hand in tscircuit
+  - the conversations of `/spark:drawer`, `/spark:idea`, `/spark:research` and `/spark:identify`, and the DFRobot order import
+  - the agents of `spark-review`, the `spark-design` and `spark-reverse-engineer` skills, and `check_all.py` on a board written by hand in tscircuit
+  - the plugin install above, a tscircuit install that `/spark:setup` made, and any run on Linux or Windows
 
 ## More
 
