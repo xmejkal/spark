@@ -124,7 +124,7 @@ reaches the network, so no command's `allowed-tools` lists `research.py`. Claude
 answer is the yes. Run 1 keeps each PDF and image in the person's store and writes them into `documents`. A zip or a
 STEP file is listed with `kept: false`. If the page lists no dimension drawing, the thickness, the holes and the header
 go into `physical_proof.not_published`. Then run 1 asks one question per remaining gap, and each cites the drawing at
-page 1. It writes the template `.spark/research-replies.json` and exits 2 with `needs_reply`. A page that does not
+page 1. A skeleton's `body_mm` is a gap: the outline question is asked first. It writes the template `.spark/research-replies.json` and exits 2 with `needs_reply`. A page that does not
 answer is one unchecked item, `url_unreachable`, and the run goes on with the documents that the record keeps.
 
 Read the cited drawing and fill each value. A value that the drawing does not give stays null, and its question stays

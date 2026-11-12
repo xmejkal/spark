@@ -26,8 +26,8 @@
  {
   "file": "scripts/spark/records/record_kind.py",
   "name": "a cited list is looked up",
-  "find": "if not isinstance(cited, str) or cited not in",
-  "replace": "if cited not in"
+  "find": "if not isinstance(document, str) or document not in",
+  "replace": "if document not in"
  },
  {
   "file": "scripts/spark/sourcing/part_records.py",

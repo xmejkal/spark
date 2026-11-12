@@ -91,6 +91,8 @@ under a name is worse than no record.
   unit (`_a`, `_ma`, `_ua`); a dotted name reads one key of a table (`active_supply_current_ua.active_max`).
   A pin whose figure nobody publishes still names its fact, with `value: null` — the check then
   names the part instead of summing a zero.
+- `needs`, `power`, `unused_pins` — each pin's `pin` is a wiring name of letters, digits and _ (`VCC`, `GND2`, `3V3`);
+  what the silkscreen prints goes in `printed` (`"pin": "VCC", "printed": "+5V"`). The validator refuses the rest.
 - `pin_order` — pad 1..N by name, unused pads `null`. **Pads, not pins**: a record saying `pinrow5`
   beside seven names shipped boards with no routing. With it, `pin_order_proof` `{verified, source}`
   — how and where the order was read; a pin order read wrong reverses a supply (P81). Optionally `legs`,
