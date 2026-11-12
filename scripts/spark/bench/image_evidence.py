@@ -380,7 +380,7 @@ class NoSimulationEvidence(ImageEvidence):
 
     def caveats(self, image):
         design, why = self._design()
-        return [NO_SIMULATION_CAVEAT] + ([] if why is None else ["%s; %s" % (outcomes.NOT_CHECKED_MESSAGE % why, LIMITS_HINT)])
+        return [NO_SIMULATION_CAVEAT] + ([] if why is None else [outcomes.NOT_CHECKED_MESSAGE % why])
 
     # --- MVP ---
     def find_limits(self, image):

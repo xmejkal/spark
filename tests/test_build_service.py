@@ -23,8 +23,8 @@ from golden_design import fed_circuit  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
-from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS  # noqa: E402
-from spark.build.build_service import every_part_skipped, verdict  # noqa: E402
+from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS, SKIPPED  # noqa: E402
+from spark.build.build_service import every_part_skipped, verdict, vouches_for_a_build  # noqa: E402
 
 REFERENCE = {"board": "firebeetle2-esp32s3", "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
 #: The display whose record skips the simulation (Wokwi has no ST7789V part), and a diagram of the board alone: no wire but the serial monitor's.
@@ -162,7 +162,11 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
     FEEDS = (("Mcu", "3V3", "V33"), ("Display", "VCC", "V33"))
 
     def simulation(self, parts, diagram=BOARD_ALONE_DIAGRAM):
-        """The simulation stage of a build on the XIAO whose project holds the display's record and a converter that writes
+        """The simulation stage of `stages`."""
+        return self.stages(parts, diagram)[-1]
+
+    def stages(self, parts, diagram=BOARD_ALONE_DIAGRAM):
+        """The stages of a build on the XIAO whose project holds the display's record and a converter that writes
         `diagram`; the engine builds a circuit that feeds the board and the display, so the build stage passes."""
         project = Path(tempfile.mkdtemp()) / "sim project"
         (project / ".spark").mkdir(parents=True)
@@ -171,14 +175,17 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         (project / ".spark" / "tools.json").write_text(json.dumps(a_converter_shim(project, diagram)))
         _, stages = a_build({"board": "xiao-esp32-c6", "parts": parts}, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), project=project)
         self.assertEqual(stages[-1].name, "simulation", [(stage.name, stage.status, stage.detail) for stage in stages])
-        return stages[-1]
+        return stages
 
-    def test_every_part_skipped_is_ok_and_says_so_with_the_limits(self):
-        stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}])
-        self.assertEqual((stage.status, stage.code), (OK, None))
+    def test_every_part_skipped_is_a_skipped_stage_that_says_so_with_the_limits_and_vouches_for_no_build(self):
+        # the PO, 2026-11-12: skipped, not ok, so the store notes no build
+        stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}])
+        stage = stages[-1]
+        self.assertEqual((stage.status, stage.code), (SKIPPED, None))
         self.assertTrue(stage.detail.startswith("every part is skipped from the simulation, so the diagram holds the board alone, 0 wire(s) in the diagram"), stage.detail)
         self.assertIn("what it cannot show (", stage.detail)
         self.assertIn(self.SKIPPED, stage.detail)
+        self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (0, False))
 
     def test_a_skipped_part_beside_a_real_one_with_no_wire_is_still_the_unwired_diagram(self):
         stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}, {"part": "led-red-5mm", "name": "Led"}])

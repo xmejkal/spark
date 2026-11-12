@@ -345,7 +345,7 @@ class PassedRunEvidenceTest(unittest.TestCase):
         self.assertEqual(caveats[0], "no simulation tested this image")
         self.assertEqual(len(caveats), 2)
         self.assertTrue(caveats[1].startswith("not checked: no requirements at "), caveats[1])
-        self.assertTrue(caveats[1].endswith("; fix `sim/WHAT-THIS-CANNOT-SHOW.md`, or run the scenario again"), caveats[1])
+        self.assertTrue(caveats[1].endswith("requirements.json"), "the why alone, no hint about a note or a scenario (the PO, 2026-11-12): " + caveats[1])
         self.assertTrue(caveats[1].isprintable(), caveats[1])
 
     def test_a_section_with_no_limit_line_is_a_caveat_with_the_hint(self):

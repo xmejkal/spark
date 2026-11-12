@@ -52,7 +52,7 @@ written with it as code`.
 
 A project that runs on the board alone, such as a blink of the board's own LED, says `"board_only": true` with an empty
 `parts` list. `parts.py --requirements` writes it when the board serves every need, and removes it when a part comes. The parts, schematic, footprint and build stages are then `skipped`, never `ok`, and the simulation holds
-the board's Wokwi part. When that part is a stand-in (`wokwi_is_stand_in`, as the S3 devkit is for the FireBeetle 2 ESP32-S3),
+the board's Wokwi part. A design whose every part's record skips the simulation (`simulation.skip`) makes the simulation stage `skipped` too, with the records' reasons under what it cannot show, and the store notes no build (P778). When that part is a stand-in (`wokwi_is_stand_in`, as the S3 devkit is for the FireBeetle 2 ESP32-S3),
 the build wires Wokwi's LED as `onboard_led` and Wokwi's pushbutton as `onboard_button` in place of the board's own, each to its
 pin and to ground, through the converter, and merges into your kept `sim/diagram.json` as a full build does
 ([P484](https://github.com/xmejkal/spark/issues/663)). It wires a part only when the record names it on one header pin, and only

@@ -37,6 +37,18 @@
  },
  {
   "file": "scripts/spark/build/build_service.py",
+  "name": "every part skipped is an ok stage again, so the store notes a build nothing simulated",
+  "find": "lead, status = (EVERY_PART_SKIPPED_MESSAGE, SKIPPED) if skipped else (\"\", OK)",
+  "replace": "lead, status = (EVERY_PART_SKIPPED_MESSAGE, OK) if skipped else (\"\", OK)"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "the full build wires the stand-in board's parts in its limits, which its diagram does not hold",
+  "find": "limits = sim_project.write_limits(sim_dir, loaded, board, {})",
+  "replace": "limits = sim_project.write_limits(sim_dir, loaded, board)"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
   "name": "a diagram with no wire is a defect even when every part is skipped",
   "find": "if wires == 0 and not skipped:",
   "replace": "if wires == 0:"

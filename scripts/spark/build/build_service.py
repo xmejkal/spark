@@ -56,7 +56,7 @@ def serial_wired(diagram):
 
 def every_part_skipped(mapping):
     """Whether every component in `sim_project.mapping_for`'s mapping is skipped (`simulation.skip`), so the diagram holds the
-    board alone and a diagram with no wire is no defect (P778). False for an empty mapping: nothing skipped is nothing proven."""
+    board alone, a diagram with no wire is no defect and the stage is SKIPPED (P778). False for an empty mapping: nothing skipped is nothing proven."""
     return bool(mapping) and all("skip" in entry for entry in mapping.values())
 
 
@@ -416,10 +416,10 @@ class BuildService:
                                 build_codes.DIAGRAM_UNWIRED))
             return
         compiled = sum(1 for how in staged.values() if how == "compiled")
-        # What the simulation cannot show, in the records' own words, said and kept beside the diagram (P37).
-        limits = sim_project.write_limits(sim_dir, loaded, board)
-        lead = EVERY_PART_SKIPPED_MESSAGE if skipped else ""
-        stages.append(Stage("simulation", OK, lead + simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes))
+        # What the simulation cannot show, in the records' own words, said and kept beside the diagram (P37); nothing is wired.
+        limits = sim_project.write_limits(sim_dir, loaded, board, {})
+        lead, status = (EVERY_PART_SKIPPED_MESSAGE, SKIPPED) if skipped else ("", OK)
+        stages.append(Stage("simulation", status, lead + simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes))
 
 
 def board_alone(board, workdir, firmware=None, project=None):
