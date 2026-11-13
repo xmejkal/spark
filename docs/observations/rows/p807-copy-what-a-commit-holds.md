@@ -1,0 +1,12 @@
+# P807: a --copy holds only what a commit could hold: rows
+
+Card: [P807 #1143](https://github.com/xmejkal/spark/issues/1143). Plan check: one refuter (Opus), 2026-11-13. This file
+holds the acted, raised and rejected findings only (rules.md), with the build's own rows. 2026-11-13.
+
+| # | claim | source | status | evidence / where it went |
+| --- | --- | --- | --- | --- |
+| 1 | `copy_of` copied every file git ignores (`.superpowers/` 124 MB, `.ruff_cache/`, the ignored `node_modules` of a tool) into each `--copy` run | card | acted | `ignored_by_git(root)` lists them with `git ls-files -z --others --ignored --exclude-standard --directory`, and `copy_of` leaves them out beside its `ignore_patterns` (same text, the p208 anchor); `test_the_copy_holds_what_a_commit_could_hold_and_leaves_out_what_git_ignores`; mutation rows 1 and 2 |
+| 2 | a tree with no `.git` of its own inside an outer repository must not take the outer one's ignore rules, nor a hook's `GIT_DIR` (P105) | card | acted | `GIT_CEILING_DIRECTORIES` is the root's parent and every `GIT_*` variable is dropped; `test_only_a_repository_at_the_root_decides_what_is_ignored`; mutation row 4 |
+| 3 | the `.rstrip("/")` row would escape: the tiny repository listed no wholly ignored folder | plan check, refuter | acted | the test's repository gains `build/` in `.gitignore` and `build/out.txt`, and asserts `build` is absent from the copy; mutation row 3 caught by hand |
+| 4 | three texts said a mutation copy holds ignored files or folders: `tools/mutate.py:177`'s comment, `tests/suite_runs.py:27`, `tests/test_no_board_address.py:7`, and `docs/guide/developing.md:153` | build | acted | each now says the copy holds untracked files; the module docstring says what a copy holds |
+| 5 | the build check: the real tree's copy | build | acted | 21 MB, 1,560 files, as many as `git ls-files` lists with no untracked file, made in 0.60 s; the `--copy` run of one row is quoted in the PR |
