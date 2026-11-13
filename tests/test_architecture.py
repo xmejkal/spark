@@ -500,7 +500,7 @@ class TheRecordsAreaTest(unittest.TestCase):
     RECORDS = ROOT / "scripts" / "spark" / "records"
     #: The modules of the area so far, by the names of its page (`areas/records.md`).
     MODULES = ["answer_operation", "board_pads", "board_records", "board_rules", "brief", "deploy_record_store", "fact_needs", "missing_facts",
-               "onboard_parts", "provenance", "record_kind", "records_codes", "store", "tool_finder", "versions"]
+               "onboard_parts", "provenance", "record_kind", "records_codes", "store", "tool_choices", "tool_finder", "versions"]
     #: Each CLI's own top-level functions: `main` and what only it uses to print (`_validate_all` and `print_status`).
     #: `boards.py --list` runs design's `ListBoards`, imported inside `main` (P707). A library function back in a CLI,
     #: under any name, fails the check.
