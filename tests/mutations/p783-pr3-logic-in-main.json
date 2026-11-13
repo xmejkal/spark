@@ -1,0 +1,26 @@
+[
+ {
+  "file": "scripts/spark/checks/physics_check.py",
+  "name": "P783 PR 3: the default rules file is looked for two folders up from the netlist, not three",
+  "find": "circuit_path.parent.parent.parent / \".spark/rules.json\"",
+  "replace": "circuit_path.parent.parent / \".spark/rules.json\""
+ },
+ {
+  "file": "scripts/spark/checks/check.py",
+  "name": "P783 PR 3: check_all's refusal is rendered as a run of the checks",
+  "find": "    if \"reason\" in result:\n        return \"  [????] check_all",
+  "replace": "    if False:\n        return \"  [????] check_all"
+ },
+ {
+  "file": "scripts/spark/build/requirements_build.py",
+  "name": "P783 PR 3: a build past its limit is called a crash",
+  "find": "timed_out_sentence(late), build_codes.STAGE_TIMED_OUT)]",
+  "replace": "timed_out_sentence(late), build_codes.STAGE_CRASHED)]"
+ },
+ {
+  "file": "scripts/spark/build/requirements_build.py",
+  "name": "P783 PR 3: a refused requirements file loses its code",
+  "find": "str(broken), broken.code)]",
+  "replace": "str(broken))]"
+ }
+]

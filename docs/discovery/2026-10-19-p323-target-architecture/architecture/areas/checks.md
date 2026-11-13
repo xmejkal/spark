@@ -28,9 +28,9 @@ libraries live in `scripts/spark/checks/`.
 
 | Module | Holds |
 |---|---|
-| `checks/check.py` | `Check`, `CHECKS`, `CheckedFolder` and the five checks (`RulesVsNetlist`, `Physics`, `Buildability`, `VendorTruth`, `TheOrder`), the library of `check_all.py` (P695) |
+| `checks/check.py` | `Check`, `CHECKS`, `CheckedFolder` and the five checks (`RulesVsNetlist`, `Physics`, `Buildability`, `VendorTruth`, `TheOrder`), the library of `check_all.py` (P695): `run_every_check(args)` is the dict it prints and `render_every_check` its text (P783 PR 3); `run` is the loop over the checks |
 | `checks/rules_check.py` | `RulesCheck` and `compare_design`'s logic |
-| `checks/physics_check.py` | `Finding`, the `check_*` rules, `run`, `render`, `rules_or_reason`. The netlist `Board` is in `physics_board` |
+| `checks/physics_check.py` | `Finding`, the `check_*` rules, `run`, `render`, `rules_or_reason`, and `run_on_files`, the dict `check_physics.py` prints (P783 PR 3). The netlist `Board` is in `physics_board` |
 | `checks/physics_board.py` | `Board`, the built netlist with the questions physics asks, and `measured_route` (P708) |
 | `checks/build_check.py` | `BuildCheck` and `check_footprints`'s logic |
 | `checks/vendor_pins_check.py` | `VendorPinsCheck`, `check_vendor_pins`'s logic, the Adapter `GhVendorHeaders` |

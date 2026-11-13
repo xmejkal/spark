@@ -48,10 +48,10 @@
   "replace": "    except ZeroDivisionError as refused:"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/requirements_build.py",
   "name": "P196 refuter: a rebuild drops the flash image the kept wokwi.toml names again",
-  "find": "        firmware = kept.name\n",
-  "replace": "        firmware = None\n"
+  "find": "            firmware = kept.name\n",
+  "replace": "            firmware = None\n"
  },
  {
   "file": "scripts/spark/design/loader.py",

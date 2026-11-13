@@ -560,6 +560,25 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
         self.assertEqual(check.CheckedFolder.named(None), (None, None))
 
 
+class TheRunAndItsTextAreInTheLibraryTest(unittest.TestCase):
+    """P783 PR 3: `check.run_every_check` is the dict check_all prints and `check.render_every_check` its text, so the
+    CLI only parses and prints."""
+
+    def test_a_folder_that_is_not_there_is_project_unusable_and_one_line(self):
+        missing = Path(tempfile.mkdtemp()) / "nowhere"
+        args = argparse.Namespace(project=str(missing), boards=[], circuit=None, rules=None, package=None, json=False)
+        result = check.run_every_check(args)
+        self.assertEqual((result["tool"], result["status"], result["reason"].code), ("check_all", "could-not-run", "project_unusable"))
+        self.assertEqual(check.render_every_check(result, str(missing)), "  [????] check_all          %s" % result["reason"])
+
+    def test_nothing_named_is_every_check_skipped_with_no_project_key_and_no_resolved_block(self):
+        args = argparse.Namespace(project=None, boards=[], circuit=None, rules=None, package=None, json=False)
+        result = check.run_every_check(args)
+        self.assertEqual((result["status"], result["resolved"]), ("could-not-run", []))
+        self.assertNotIn("project", result)
+        self.assertEqual(check.render_every_check(result, None), check.render(result["results"]))
+
+
 class AnAdvisoryIsSaidAndDoesNotFailTest(unittest.TestCase):
     """P57: a ring the board house makes but does not recommend reaches the answer as a `?`."""
 

@@ -63,8 +63,8 @@
  {
   "file": "scripts/check_spine.py",
   "name": "check_spine says the history was not written without the guard",
-  "find": "print(guard_lines(\"  the build was not recorded in your history: %s\" % unrecorded), file=sys.stderr)",
-  "replace": "print(\"  the build was not recorded in your history: %s\" % unrecorded, file=sys.stderr)"
+  "find": "print(guard_lines(line), file=sys.stderr)",
+  "replace": "print(line, file=sys.stderr)"
  },
  {
   "file": "scripts/run_scenario.py",

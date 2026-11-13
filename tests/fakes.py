@@ -349,7 +349,7 @@ class FakeTscircuitEngine:
 
 
 class FakeBuildService:
-    """Fake: stands in for `check_spine.BuildService` (P706): `for_toolchain` gives itself, and `build(inputs)` hands the
+    """Fake: stands in for `build_service.BuildService` in `requirements_build` (P706, P783): `for_toolchain` gives itself, and `build(inputs)` hands the
     requirements, the work folder and the firmware to the callable the test gave."""
 
     def __init__(self, build):

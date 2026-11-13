@@ -14,10 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from spark.design import loader  # noqa: E402
-from spark.checks.check import CheckedFolder, inputs_for, render, run, unmeasured_in, verdict  # noqa: E402
+from spark.checks.check import render_every_check, run_every_check  # noqa: E402
 from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN  # noqa: E402
-from spark.core.outcomes import COULD_NOT_RUN, EXIT_FOR  # noqa: E402
+from spark.core.outcomes import EXIT_FOR  # noqa: E402
 
 
 def main(argv=None):
@@ -38,35 +37,9 @@ def main(argv=None):
                              "`unmeasured` (how many ? lines the answer rests on) and each check's result")
     args = parser.parse_args(argv)
 
-    checked, refusal = CheckedFolder.named(args.project)
-    if refusal:
-        if args.json:
-            print(json.dumps({"tool": "check_all", "status": COULD_NOT_RUN, "reason": refusal}, indent=2))
-        else:
-            print("  [????] check_all          %s" % refusal)
-        return EXIT_FOR[COULD_NOT_RUN]
-    inputs, resolved, ambiguous = inputs_for(args, checked)
-    results = run(inputs, ambiguous)
-    overall = verdict(results)
-
-    if args.json:
-        answer_json = {"tool": "check_all", "status": overall, "unmeasured": unmeasured_in(results),
-                       "resolved": resolved, "results": results}
-        if checked:
-            # the project the build reads (P319), resolved as `loader.project_for` resolves it; null for none, never
-            # the plugin's own folder
-            answer_json["project"] = None if loader.is_library(checked.project) else str(checked.project.resolve())
-        print(json.dumps(answer_json, indent=2))
-    else:
-        if resolved:
-            # Printed every time, not on a flag. Silently picking up a stale artifact is the one
-            # way discovery is worse than the five paths it replaces.
-            print("  resolved from %s:" % args.project)
-            for note in resolved:
-                print("    %s" % note)
-            print()
-        print(render(results))
-    return EXIT_FOR[overall]
+    result = run_every_check(args)
+    print(json.dumps(result, indent=2) if args.json else render_every_check(result, args.project))
+    return EXIT_FOR[result["status"]]
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 [
  {
-  "file": "scripts/check_physics.py",
+  "file": "scripts/spark/checks/physics_check.py",
   "name": "a payload key is renamed and nothing notices",
   "find": "        \"tool\": \"check_physics\",",
   "replace": "        \"toolname\": \"check_physics\","

@@ -682,8 +682,8 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
         import contextlib
         import io
         import json as json_module
-        original = check_physics.run
-        check_physics.run = lambda circuit, rules, loads=None: [self._misspelt()]
+        original = physics_check.run
+        physics_check.run = lambda circuit, rules, loads=None: [self._misspelt()]
         try:
             import tempfile
             root = Path(tempfile.mkdtemp())
@@ -694,7 +694,7 @@ class AMisspeltSeverityIsNotASilentPassTest(unittest.TestCase):
                 code = check_physics.main([str(root / "circuit.json"), "--rules",
                                            str(root / "rules.json"), "--json"])
         finally:
-            check_physics.run = original
+            physics_check.run = original
         self.assertEqual(json_module.loads(out.getvalue())["status"], "could-not-run")
         self.assertEqual(code, check_physics.EXIT_COULD_NOT_RUN)
 
@@ -773,6 +773,26 @@ class EachRefusalHasItsCodeTest(unittest.TestCase):
         rules.write_text("[]")
         _, refused = physics_check.rules_or_reason(circuit, rules)
         self.assertEqual((refused, refused.code), ("%s: (top level) is not an object" % rules, "rules_refused"))
+
+
+class TheFilesRunInTheLibraryTest(unittest.TestCase):
+    """P783 PR 3: `physics_check.run_on_files` is the run the CLI prints. With no rules named it reads the project's
+    `.spark/rules.json`, three folders up from `dist/board/circuit.json`; with none there it refuses with its code."""
+
+    def test_no_rules_file_is_a_refusal_with_its_code_and_the_projects_file_is_found(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        circuit = root / "dist" / "board" / "circuit.json"
+        circuit.parent.mkdir(parents=True)
+        circuit.write_text("[]")
+        refused = physics_check.run_on_files(circuit)
+        self.assertEqual((refused["status"], refused["reason"].code), ("could-not-run", "no_rules_file"))
+        self.assertEqual(str(refused["reason"]), "no rules at %s" % (root / ".spark" / "rules.json"))
+        (root / ".spark").mkdir()
+        (root / ".spark" / "rules.json").write_text("{}")
+        ran = physics_check.run_on_files(circuit)
+        self.assertEqual((ran["tool"], ran["design"]), ("check_physics", "circuit.json"))
+        self.assertNotIn("reason", ran)
 
 
 if __name__ == "__main__":

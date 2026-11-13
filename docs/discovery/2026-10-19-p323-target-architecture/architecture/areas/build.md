@@ -4,7 +4,7 @@ Back to [level 1](../README.md). Words are in the [glossary](../glossary.md). Th
 [refactor plan](../refactor-plan.md#appendix-what-moves-where-by-name).
 
 Names real since P706: `BuildService`, `BuildInputs`, `TscircuitEngine`, `BuildResult` (and design's `BoardEmitter`, which
-the build calls in process). Still proposed: `DiagramConverter` (the renames card), `ProjectSetupService`,
+the build calls in process); since P783 PR 3, `RequirementsBuildService` and `RequirementsBuildResult`. Still proposed: `DiagramConverter` (the renames card), `ProjectSetupService`,
 `build/__init__.py` with `OPERATIONS`, and the Operation names `build` and `init`. The `BuildStage` family (six subclasses,
 `BUILD_STAGES`, `goes_on`) was dropped as YAGNI at P706: six methods on one Service are the small version, and a base class
 with one implementation per stage waits for a second implementation of a stage.
@@ -19,7 +19,7 @@ a new project with the files every check and reviewer needs.
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `build` | `check_spine.py requirements.json`, `--keep DIR`, `--sim-dir`, `--firmware` (`check_spine.main`) | reads, runs `tsci` and the diagram converter, writes the kept build and, with `--keep`, the breadboard sheet |
+| `build` | `check_spine.py requirements.json`, `--keep DIR`, `--sim-dir`, `--firmware` (`check_spine.main` over `RequirementsBuildService`) | reads, runs `tsci` and the diagram converter, writes the kept build and, with `--keep`, the breadboard sheet |
 | `init` | `init_project.py --project --board --circuit --force` (`init_project.main`) | reads, writes the project's files |
 
 ### Its components
@@ -27,6 +27,7 @@ a new project with the files every check and reviewer needs.
 | Module | Holds |
 |---|---|
 | `build/build_service.py` | `BuildService(engine, emitter, find_tool=None)` (P706, P725): `build(inputs)` runs the six stage methods over the engine and the emitter it is given, with `BuildInputs`, `board_alone`, `islands_in`, `verdict` and the stage sentences |
+| `build/requirements_build.py` | `RequirementsBuildService(build_service=None)` (P783 PR 3; `build_service` is an object with `for_toolchain`, BuildService or a fake): `build(requirements_path, firmware, simulation)` is `check_spine.py`'s whole run of the chain: the requirements read (a refusal is one `requirements` stage), the work folder, a `BuildService`'s stages (a `TimeoutExpired` is one `stage_timed_out` stage and any other exception one `stage_crashed` stage), and the history note; a `RequirementsBuildResult` of `stages`, `workdir`, `requirements`, `toolchain` and `diagnostics`. `REFERENCE` and `timed_out_sentence` are here. `check_spine.main` prints the diagnostics and its `report` renders the stages |
 | `build/stages.py` | `Stage` (one link's result) and `NO_FOOTPRINT_HINT`, imported by name (P705) |
 | `build/board_engine.py` | the Adapter `TscircuitEngine` with `BuildResult` (P706: `found_from`, `build`, `version`, `probe`, the runner resolved at each call), `find_toolchain`, and the converter functions to `convert`, of which `converter_command` and `converter_stage_problem` take a `find_tool` keyword (P725: a test gives `FakeToolFinder(...).find`; `BuildService`, the converter functions and `stage_chips` take the module `find`'s shape, a name and a project, so the build Operations bind the project when they hand them `outside.find_tool`, a later step); later the Adapter `DiagramConverter` |
 | `build/kept_files.py` | the files `--keep` writes into DIR and what an earlier build left there (P705). `kept_` means what a run keeps between runs, as breadboard's `kept_moves.py` |
@@ -107,7 +108,7 @@ the build ends: `_board`, `_parts` (a board-only project ends through `board_alo
 OC2), `_build_circuit` (`found_from`, `build`, `version`, and `probe` when nothing came out, so a broken tool reads as
 `could-not-run` with code `tool_cannot_build`, never as a design problem; `_circuit_verdict` reads the circuit) and
 `_simulation`. The stage names and order stay: `board`, `parts`, `schematic`, `schematic-notes`, `footprint`, `build`,
-`simulation`. A `TimeoutExpired` from the engine propagates to `check_spine.main`, which keeps `timed_out_sentence`.
+`simulation`. A `TimeoutExpired` from the engine propagates to `RequirementsBuildService`, which keeps `timed_out_sentence`.
 `BuildInputs` holds no design and no engine: the design is read by a stage, and the engine is a collaborator.
 
 ### The main flow: one build
@@ -115,10 +116,13 @@ OC2), `_build_circuit` (`found_from`, `build`, `version`, and `probe` when nothi
 ```mermaid
 sequenceDiagram
   participant M as check_spine.main
+  participant R as RequirementsBuildService
   participant S as BuildService
   participant E as BoardEmitter
   participant T as TscircuitEngine
-  M->>S: for_toolchain(toolchain).build(BuildInputs)
+  M->>R: build(requirements, firmware, simulation)
+  R->>R: read the requirements (a refusal: one stage, no work folder); the work folder; the kept diagram and firmware
+  R->>S: for_toolchain(toolchain).build(BuildInputs)
   S->>S: _board, _parts (board_alone ends a board-only build)
   S->>E: read(requirements.json, project)
   E-->>S: BoardInputs, or RefusedInputError (a stage), or a crash (F5: could-not-run)
@@ -126,9 +130,11 @@ sequenceDiagram
   S->>S: board.tsx written; schematic ok; schematic-notes when notes
   S->>S: _footprint (footprint_emitter, pure)
   S->>T: found_from(project).build(workdir); version(); probe(workdir)
-  T-->>S: BuildResult (TimeoutExpired propagates to main)
+  T-->>S: BuildResult (TimeoutExpired propagates to R)
   S->>S: _simulation (converter functions, loader.load as today)
-  S-->>M: stages; main reports
+  S-->>R: stages (R turns a TimeoutExpired or a crash into one stage)
+  R->>R: the P429 line; the history note, or its line
+  R-->>M: RequirementsBuildResult; main prints the diagnostics and reports
 ```
 
 ### How build is tested alone

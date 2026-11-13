@@ -14,9 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from spark.checks.physics_check import PROBLEM, render, rules_or_reason, run  # noqa: E402
-from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR, status_of  # noqa: E402
-from spark.core.outcomes import COULD_NOT_RUN  # noqa: E402
+from spark.checks.physics_check import render, run_on_files  # noqa: E402
+from spark.core.outcomes import EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN as EXIT_COULD_NOT_RUN, EXIT_FOR  # noqa: E402
 
 
 def main(argv=None):
@@ -30,27 +29,9 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true", help="the result as data")
     args = parser.parse_args(argv)
 
-    circuit_path = Path(args.circuit)
-    rules_path = Path(args.rules or circuit_path.parent.parent.parent / ".spark/rules.json")
-    rules, reason = rules_or_reason(circuit_path, rules_path)
-    if reason:
-        result = {"tool": "check_physics", "status": COULD_NOT_RUN, "reason": reason}
-        print(json.dumps(result, indent=2) if args.json else render(result))
-        return EXIT_COULD_NOT_RUN
-
-    findings = run(json.loads(circuit_path.read_text()), rules)
-    problems = [f for f in findings if f.severity == PROBLEM]
-    # A rule that could not look has approved nothing: its could-not-run findings count, so the status and exit code are not `ok`.
-    unchecked = [f for f in findings if f.severity == COULD_NOT_RUN]
-    status = status_of(problems, unchecked)
-    result = {
-        "tool": "check_physics",
-        "status": status,
-        "design": circuit_path.name,
-        "findings": [f.as_data() for f in findings],
-    }
+    result = run_on_files(args.circuit, args.rules)
     print(json.dumps(result, indent=2) if args.json else render(result))
-    return EXIT_FOR[status]
+    return EXIT_FOR[result["status"]]
 
 
 if __name__ == "__main__":

@@ -24,9 +24,9 @@
   "replace": "    if True:\n        return \"\"\n    positions"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/requirements_build.py",
   "name": "main never copies the person's diagram into the work folder",
-  "find": "        shutil.copy(simulation / \"diagram.json\", workdir / sim_project.KEPT_DIAGRAM)",
-  "replace": "        pass"
+  "find": "            shutil.copy(simulation / \"diagram.json\", workdir / sim_project.KEPT_DIAGRAM)",
+  "replace": "            pass"
  }
 ]
