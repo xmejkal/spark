@@ -19,6 +19,9 @@ epic, or when the PO asks.
 The suite runs with a temp folder of its own, and whatever it leaves there fails the push (P172): one run
 left 2,291 entries, 26 MB, and nothing counted them. The archive itself goes when the gate ends.
 
+The archive has no `.git`, so the suite runs with `SPARK_GATE_TREE=archive` (`suite_runs.GATE_TREE`): the test that no
+tracked file holds a board's address walks the archive's files, which are exactly the tracked ones (P797). Without it
+that test asked `git grep`, which found no repository and so nothing, and the check never ran at the gate.
 A red run names its red tests under the verdict line, each `FAIL:`, `ERROR:` and `...Error:` line (P797).
 """
 
@@ -38,7 +41,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.append(str(ROOT / "tests"))  # after the rest: only suite_runs is wanted, and no test helper may shadow a module
 
 from spark.core.outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
-from suite_runs import SLOW_PREFIX  # noqa: E402
+from suite_runs import GATE_ARCHIVE, GATE_TREE, SLOW_PREFIX  # noqa: E402
 import story_tests  # noqa: E402  (beside this file)
 from suite_lines import red_tests  # noqa: E402  (beside this file, P797)
 
@@ -204,7 +207,7 @@ def measure(tree, full=False, story=None):
     temp = tempfile.mkdtemp(prefix="spark-commit-temp-")
     try:
         env = {name: value for name, value in without_git_variables().items() if name != "SPARK_SUITE"}
-        env.update(TMPDIR=temp)
+        env.update({"TMPDIR": temp, GATE_TREE: GATE_ARCHIVE})
         if not full:
             env["SPARK_SUITE"] = "quick"
         suite = subprocess.run([sys.executable, "-m", "unittest"] + what + ([] if full else ["-v"]),

@@ -238,10 +238,11 @@ class TheFullRunIsAskedForTest(unittest.TestCase):
 
 class AMutationRunNeverRunsTheQuickRunTest(unittest.TestCase):
     def test_the_environment_of_a_mutation_run_has_no_suite_variable(self):
-        with mock.patch.dict(os.environ, {"SPARK_SUITE": "quick", "SPARK_KEPT": "kept"}):
+        with mock.patch.dict(os.environ, {"SPARK_SUITE": "quick", "SPARK_KEPT": "kept", suite_runs.GATE_TREE: suite_runs.GATE_ARCHIVE}):
             with mutate._from_source("mutate-test-") as environment:
                 self.assertNotIn("SPARK_SUITE", environment)
-                self.assertEqual(environment["SPARK_KEPT"], "kept", "only the one variable goes")
+                self.assertNotIn(suite_runs.GATE_TREE, environment, "a mutation copy is never the gate's archive (P797)")
+                self.assertEqual(environment["SPARK_KEPT"], "kept", "only those two variables go")
                 self.assertEqual(environment["PYTHONDONTWRITEBYTECODE"], "1")
 
 
