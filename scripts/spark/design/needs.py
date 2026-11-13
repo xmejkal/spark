@@ -174,13 +174,14 @@ def board_limits(need, record, functions, definitions=None, key=None):
 
 
 def _candidate(need, fit, context, mine=None):
-    """One candidate (§6.2): where it lives and what it owes, what its verb's functions say, its counts and its fit."""
+    """One candidate (§6.2): where it lives and what it owes, what its verb's functions say, its counts and its fit. The
+    keys `--need` says too (`id` or `entry`, `in`, `owned`, `score`, `why`) are `offers.row`'s."""
     offer, record = fit.offer, context["record"]
-    owned, free, unsure = offers.counts(context["holding"], mine)
+    _, free, unsure = offers.counts(context["holding"], mine)
     if record is None:
-        said = {"entry": offer.key, "in": offers.DRAWER, "label": context["holding"][0].get("label")}
+        said = {"label": context["holding"][0].get("label")}
     else:
-        said = {"id": offer.key, "kind": offer.kind, "in": context["in"], "label": record.get("name"),
+        said = {"kind": offer.kind, "label": record.get("name"),
                 "owes": [] if offer.kind == "board" else owes(record),
                 "broken": bool(_shape_problems(board_records.validate, record, context["path"],
                 "board definition")) if offer.kind == "board" else bool(broken_problems(record, context["path"]))}
@@ -189,10 +190,10 @@ def _candidate(need, fit, context, mine=None):
             if said["stops_at"]:  # P411: a board that builds gains no key
                 said["stops_why"] = footprint_emitter.why_no_footprint(record)  # the list, for Claude
                 said["stop_line"] = footprint_emitter.footprint_stop_line(record)  # the text shows it; `--match` drops it from the JSON
-    return dict({"id": None, "kind": None, "entry": None, "owes": [], "broken": False, "proof": [], "limits": []}, **said,
+    said = dict({"kind": None, "owes": [], "broken": False, "proof": [], "limits": []}, **said,
                 what=sorted({f["what"] for f in offer.functions if f.get("does") == need["does"]}),
-                what_matches=fit.exact, score=fit.score, why=fit.why, about=offer.about,
-                held_by=drawer.holders_of(context["holding"], mine), owned=owned, free=free, unsure=unsure)
+                what_matches=fit.exact, about=offer.about, held_by=drawer.holders_of(context["holding"], mine))
+    return dict(offers.row(fit, context, said, mine), free=free, unsure=unsure)
 
 
 def _rank(need, built, mine=None, matcher=None):
@@ -200,8 +201,8 @@ def _rank(need, built, mine=None, matcher=None):
     context = {(offer.kind, offer.key): said for offer, said in built}
     ranked = (matcher or matching.matcher(MATCHER, "match")).rank(need, [offer for offer, _ in built])
     found = [_candidate(need, fit, context[(fit.offer.kind, fit.offer.key)], mine) for fit in ranked]
-    return sorted(found, key=lambda c: (c["owned"] == 0, -c["score"],
-                                        LAYERS.index(c["in"]) if c["in"] in LAYERS else len(LAYERS), c["id"] or c["entry"]))
+    return sorted(found, key=lambda c: offers.rank_key(c) + (LAYERS.index(c["in"]) if c["in"] in LAYERS else len(LAYERS),
+                                                             c["id"] or c["entry"]))
 
 
 def candidates(need, known, entries, mine=None, matcher=None, definitions=None):
