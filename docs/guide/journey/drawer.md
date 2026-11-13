@@ -31,10 +31,10 @@ Without `--dry-run` it writes them. Then the drawer lists them:
 python3 "$CLAUDE_PLUGIN_ROOT/scripts/parts.py" --drawer
 ```
 
-<!-- output: run 2026-10-08, spark 0.7.0 -->
+<!-- output: run 2026-11-13, spark 0.9.0 -->
 ```text
-  FireBeetle 2 ESP32-S3                             1  board firebeetle2-esp32s3
-  red LEDs, pack of 10                             10  —
+  firebeetle-2-esp32-s3        FireBeetle 2 ESP32-S3                             1  board firebeetle2-esp32s3
+  red-leds-pack-of-10          red LEDs, pack of 10                             10  —
   2 entries
 ```
 

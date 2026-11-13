@@ -13,6 +13,7 @@ from collections import namedtuple
 
 from spark.core.errors import CodedMessageError
 from spark.core.text_guards import TAGS_MAX, TEXT_MAX, clean
+from spark.records import provenance
 from spark.sourcing import part_records
 from spark.sourcing import sourcing_codes
 
@@ -26,6 +27,9 @@ MIN_SHOWN = 0.5
 SHOWN_FIRST = 8
 #: What a record says that places it, kept on its offer for `describe` and for NameContains (`kind`).
 FACTS = ("kind", "power", "body_mm")
+#: The notes of a fact that say where it was read and why it matters: an offer leaves them out, the record keeps them (P782).
+#: `verified` stays, because a value shown without it reads as checked.
+SOURCE_NOTES = tuple(note for note in provenance.BLOCK_NOTES if note != "verified")
 #: The plural endings whose -es goes in the fold: after ch, sh, x and ss (switches, brushes, boxes, glasses) (P772).
 HISSING_ES = ("ches", "shes", "xes", "sses")
 
@@ -78,16 +82,41 @@ def _list(value):
     return value if isinstance(value, list) else []
 
 
+def _only_notes(value):
+    """A dict or a list that holds nothing but SOURCE_NOTES, at any depth (a `corroborated_by` of `cites` alone): bare, it says nothing."""
+    if isinstance(value, dict):
+        return bool(value) and all(key in SOURCE_NOTES or _only_notes(one) for key, one in value.items())
+    if isinstance(value, list):
+        return bool(value) and all(_only_notes(one) for one in value)
+    return False
+
+
+def _without_sources(value):
+    """
+    A fact's value with no SOURCE_NOTES at any depth, in its dicts and its lists, and no part that held only them: the rest
+    (`value`, `verified`, `note`) stays. The names are reserved for provenance notes, so a fact named `source` or `cites` is dropped too.
+    """
+    if isinstance(value, dict):
+        return {key: _without_sources(one) for key, one in value.items() if key not in SOURCE_NOTES and not _only_notes(one)}
+    if isinstance(value, list):
+        return [_without_sources(one) for one in value if not _only_notes(one)]
+    return value
+
+
 class Offer:
     """One thing a need can be matched to (P211): a record with the drawer entries that say they are it, or an entry with no record."""
 
     def __init__(self, key, kind, functions=(), names=(), about=None, description=None, tags=(), facts=None):
         self.key, self.kind = key, kind
-        self.functions = [f for f in functions if isinstance(f, dict)]
+        doing = {}  # each (does, what) once, the first wins: a record's own function comes first and keeps its `role` (P782)
+        for function in functions:
+            if isinstance(function, dict):
+                doing.setdefault((clean(function.get("does")), clean(function.get("what"))), function)
+        self.functions = list(doing.values())
         self.names = [clean(name) for name in names if isinstance(name, str) and name.strip()]
         self.about, self.description = _text(about, "about"), _text(description, "description")
         self.tags = [clean(tag).lower() for tag in tags if isinstance(tag, str) and tag.strip()][:TAGS_MAX]
-        self.facts = dict(facts or {})
+        self.facts = {key: value for key, value in dict(facts or {}).items() if not _only_notes(value)}  # a fact of notes alone says nothing
 
     @classmethod
     def from_record(cls, record_id, kind, record, holding=()):
@@ -115,9 +144,14 @@ class Offer:
         return [{"does": clean(f.get("does")), "what": clean(f.get("what"))} for f in self.functions]
 
     def _fact_text(self, key):
-        """One fact as a chooser reads it: text, cleaned and capped (a power note runs to kilobytes). `describe` and `as_dict` share it."""
+        """
+        One fact as a chooser reads it: text, cleaned, with no SOURCE_NOTES (the record holds them, P782), and capped (a power
+        note runs to kilobytes); a text the cap cuts ends in `…`. `describe` and `as_dict` share it.
+        """
         value = self.facts[key]
-        return clean(value if isinstance(value, str) else json.dumps(value, ensure_ascii=False), TEXT_MAX["description"])
+        text = clean(value if isinstance(value, str) else json.dumps(_without_sources(value), ensure_ascii=False), None)
+        cap = TEXT_MAX["description"]
+        return text if len(text) <= cap else text[:cap - 1] + "…"
 
     def describe(self):
         """The text a chooser reads (P211): what the offer says of itself, what it does, its names, its power and size.

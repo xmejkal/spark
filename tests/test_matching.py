@@ -127,6 +127,51 @@ class TheOfferJsonTest(unittest.TestCase):
         self.assertIn("does: sense ran ge", offer.describe())
 
 
+# --- MVP --- P782: an offer says each function once, and a fact as the chooser reads it
+class TheOfferOnceTest(unittest.TestCase):
+    def test_a_function_the_record_and_an_entry_both_say_is_kept_once(self):
+        offer = matching.Offer.from_record("tactile-button", "part", {"name": "Button", "function": [{"does": "input", "what": "button"}]},
+                                           [{"label": "6x6 buttons", "function": [{"does": "input", "what": "button"}]}])
+        self.assertEqual(offer.functions, [{"does": "input", "what": "button"}])
+        self.assertIn("  does: input button\n", offer.describe() + "\n")
+
+    def test_the_board_s_own_function_wins_and_keeps_its_role(self):
+        board = {"name": "B", "pin_roles": {"onboard_led": {"gpio": [15], "active_level": 0}}}
+        offer = matching.Offer.from_record("b", "board", board, [{"label": "b", "function": [{"does": "indicate", "what": "onboard LED light"}]}])
+        led = [f for f in offer.functions if f["what"] == "onboard LED light"]
+        self.assertEqual([f.get("role") for f in led], ["onboard_led"])
+
+    def test_a_dict_fact_shows_its_values_and_not_its_sources(self):
+        power = {"charger": {"value": "X", "verified": True, "source": "s", "cites": {"document": "d"}, "why_it_matters": "w", "note": "n"}}
+        text = matching.Offer.from_record("p", "part", {"name": "P", "power": power}).as_dict()["facts"]["power"]
+        self.assertEqual(json.loads(text), {"charger": {"value": "X", "verified": True, "note": "n"}})
+
+    def test_a_list_fact_shows_its_rows_and_not_their_sources(self):
+        text = matching.Offer.from_record("p", "part", {"name": "P", "power": [{"pin": "VCC", "source": "s"}]}).as_dict()["facts"]["power"]
+        self.assertEqual(json.loads(text), [{"pin": "VCC"}])
+
+    def test_a_part_of_a_fact_that_held_only_sources_is_left_out(self):
+        power = {"charge_current_a": {"value": 1.0, "verified": True, "corroborated_by": {"cites": {"document": "eta6003-datasheet"}}}}
+        text = matching.Offer.from_record("p", "part", {"name": "P", "power": power}).as_dict()["facts"]["power"]
+        self.assertEqual(json.loads(text), {"charge_current_a": {"value": 1.0, "verified": True}})
+
+    def test_a_fact_that_held_only_sources_is_no_fact_of_the_offer(self):
+        offer = matching.Offer.from_record("p", "part", {"name": "P", "body_mm": {"source": "x"}})
+        self.assertNotIn("body_mm", offer.as_dict()["facts"])
+        self.assertNotIn("body_mm", offer.describe())
+
+    def test_a_text_fact_the_cap_cuts_ends_in_an_ellipsis(self):
+        text = matching.Offer.from_record("p", "part", {"name": "P", "power": "3V3 only " + "x" * 1500}).as_dict()["facts"]["power"]
+        self.assertEqual((len(text), text[-1]), (1000, "…"))
+
+    def test_a_fact_the_cap_cuts_ends_in_an_ellipsis_and_one_it_does_not_cut_does_not(self):
+        cut = matching.Offer.from_record("p", "part", {"name": "P", "power": {"note": "x" * 5000}}).as_dict()["facts"]["power"]
+        whole = matching.Offer.from_record("p", "part", {"name": "P", "power": {"note": "x" * 500}}).as_dict()["facts"]["power"]
+        self.assertEqual((len(cut), cut[-1]), (1000, "…"))
+        self.assertNotIn("…", whole)
+# --- end MVP ---
+
+
 class TheMatchersTest(unittest.TestCase):
     #: The score of named pairs: a change of weights shows here (the spec, "How WordOverlap scores", step 5).
     SCORES = (

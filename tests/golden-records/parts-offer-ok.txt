@@ -2,4 +2,4 @@ tactile-button (part)
   does: input button
   names: 6x6 mm tactile push button
   power: [{"pin": "B", "rail": "ground", "direction": "in", "note": "Pressed pulls the GPIO to ground, so the pin idles HIGH on a pull-up and reads 0 when pressed. THIS IS A DESIGN DECISION WITH A CONSEQUENCE: see host_requirements."}]
-  body_mm: {"width": 6.0, "height": 6.0, "verified": true, "source": "the 6x6 form factor's defining dimension; the variable is CAP HEIGHT, not footprint", "note": "Height is 4.3, 5, 8 or 12 mm depending on variant and is the only thing to check against an enclosure."}
+  body_mm: {"width": 6.0, "height": 6.0, "verified": true, "note": "Height is 4.3, 5, 8 or 12 mm depending on variant and is the only thing to check against an enclosure."}

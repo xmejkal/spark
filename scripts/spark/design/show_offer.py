@@ -21,7 +21,8 @@ class ShowOffer(AnswerOperation):
     name = "offer"
     data_keys = ('offer',)
     arguments = (Argument(("--offer",), "key", str, "what one offer says of itself, for the chooser to read: a record's id or a drawer entry's "
-                          "key — about, description, tags, what it does, its names, power and size. --project reads the project's own records",
+                          "key — about, description, tags, what it does, its names, power and size, each fact without its sources (the "
+                          "record's file holds them). --project reads the project's own records",
                           metavar="KEY"),
                  ANSWER_ARGUMENTS["project"],
                  COMMON_ARGUMENTS[JSON_DEST])

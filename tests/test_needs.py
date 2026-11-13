@@ -623,6 +623,15 @@ class TheMatcherTest(unittest.TestCase):
                 self.assertNotIn("\u202e", out.getvalue())
                 self.assertEqual(json.loads(out.getvalue())["data"]["offer"]["key"], key)
 
+    # --- MVP --- P782: the onboard parts' facts are in the board's offer, the power text whole (p389 row 4, G9)
+    def test_the_xiao_s_offer_holds_its_onboard_power_facts_whole(self):
+        record = json.loads((ROOT / "boards" / "xiao-esp32-c6.json").read_text())["power"]
+        said, _ = run(["--offer", "xiao-esp32-c6"])
+        power = json.loads(said["data"]["offer"]["facts"]["power"])
+        self.assertEqual({key: power[key]["value"] for key in ("charger", "regulator", "battery_input")},
+                         {key: record[key]["value"] for key in ("charger", "regulator", "battery_input")})
+    # --- end MVP ---
+
     def test_an_entry_that_is_a_record_offers_the_record(self):
         (self.home / "drawer" / "my-probe.json").write_text(json.dumps({"schema": 1, "label": "my probe", "count": 1,
                                                                         "is": {"part": "x-soil"}, "tags": ["garden"]}))

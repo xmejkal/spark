@@ -96,7 +96,7 @@ class TheDrawerTest(unittest.TestCase):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             parts.main(["--drawer"])
-        self.assertEqual(next(line for line in out.getvalue().splitlines() if "some resistors" in line).split()[2], "?")
+        self.assertEqual(next(line for line in out.getvalue().splitlines() if "some resistors" in line).split()[3], "?")
 
     def test_the_write_of_an_entry_with_no_count_says_a_question_mark_for_it(self):
         write = a_file([{"label": "some resistors"}])
@@ -114,7 +114,7 @@ class TheDrawerTest(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             parts.main(["--drawer"])
         lines = out.getvalue().splitlines()
-        self.assertEqual([next(line for line in lines if label in line).split()[2] for label in ("burnt buzzers", "some resistors")],
+        self.assertEqual([next(line for line in lines if label in line).split()[3] for label in ("burnt buzzers", "some resistors")],
                          ["0", "?"])
 
     def test_a_record_in_the_project_given_is_linked_though_the_project_is_on_no_list(self):
@@ -831,6 +831,23 @@ class TheHoldersTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             parts.main(argv)
         return out.getvalue()
+
+    # --- MVP --- P782: the key `--drawer-set` takes is on each line of the text
+    def test_each_line_of_the_drawer_starts_with_the_entry_s_key(self):
+        self.keep("dfrobot-dfr0975", "FireBeetle 2 Board")
+        line = next(line for line in self.text(["--drawer"]).splitlines() if "FireBeetle 2 Board" in line)
+        self.assertTrue(line.startswith("  dfrobot-dfr0975 "), line)
+
+    def test_the_key_read_from_the_drawer_s_text_changes_that_entry(self):
+        self.keep("dfrobot-dfr0975", "FireBeetle 2 Board")
+        key = next(line for line in self.text(["--drawer"]).splitlines() if "FireBeetle 2 Board" in line).split()[0]
+        said, code = run(["--drawer-set", a_file([{"entry": key, "count": 3}])])
+        self.assertEqual((code, json.loads((self.home / "drawer" / "dfrobot-dfr0975.json").read_text())["count"]), (0, 3), said)
+
+    def test_a_key_or_a_label_with_a_newline_cannot_fake_a_line_of_the_drawer(self):
+        self.keep("evil\n  fake-key", "a\n  fake label")
+        self.assertEqual(len(self.text(["--drawer"]).splitlines()), 2, "the entry's one line and the count")
+    # --- end MVP ---
 
     def test_two_holders_come_sorted(self):
         held = [{"used_in": {"reaction-game": 1, "alarm": 1}}, {"used_in": {"alarm": 1, "zebra": 1}}]
