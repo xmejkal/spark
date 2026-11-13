@@ -67,6 +67,13 @@ class ArchitectureRules(unittest.TestCase):
     def test_v1_has_no_baseline_entry_so_a_new_raw_site_cannot_be_hidden_in_it(self):
         self.assertEqual([key for key in self.baseline if key.startswith("V1:")], [])
 
+    def test_u1_every_module_that_calls_itself_a_leaf_is_one_of_the_leaves(self):
+        # P802: idea_codes said "A leaf:" and U1 never checked it, because LEAVES did not list it
+        said = {path.stem for path in (ROOT / "scripts" / "spark").rglob("*.py")
+                if "A leaf:" in (ast.get_docstring(ast.parse(path.read_text())) or "")}
+        self.assertIn("idea_codes", said)
+        self.assertEqual(sorted(said - set(measure.LEAVES)), [])
+
     def test_every_rule_in_the_table_has_a_test_method_and_no_method_has_none(self):
         held = {method.rule for method in vars(type(self)).values() if hasattr(method, "rule")}
         self.assertEqual(held, set(measure.RULES))
