@@ -18,6 +18,8 @@ epic, or when the PO asks.
 
 The suite runs with a temp folder of its own, and whatever it leaves there fails the push (P172): one run
 left 2,291 entries, 26 MB, and nothing counted them. The archive itself goes when the gate ends.
+
+A red run names its red tests under the verdict line, each `FAIL:`, `ERROR:` and `...Error:` line (P797).
 """
 
 import argparse
@@ -38,6 +40,7 @@ sys.path.append(str(ROOT / "tests"))  # after the rest: only suite_runs is wante
 from spark.core.outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
 from suite_runs import SLOW_PREFIX  # noqa: E402
 import story_tests  # noqa: E402  (beside this file)
+from suite_lines import red_tests  # noqa: E402  (beside this file, P797)
 
 #: How many of the names left behind the gate's line shows; the count says the rest.
 NAMES_SHOWN = 3
@@ -188,8 +191,9 @@ def suite_line(said, run, slow_skipped, scope=None):
 
 def measure(tree, full=False, story=None):
     """
-    (suite verdict line, ok, left) for the tree at `tree`. `left` is what the suite left in
+    (suite verdict line, ok, left, red) for the tree at `tree`. `left` is what the suite left in
     the empty temp folder it was given (P172), None when that could not be listed; the folder goes once counted.
+    `red` are the lines that name each red test and its error (P797), empty when the run is green.
     The quick run (P425) sets SPARK_SUITE=quick, so the tests marked slow skip; `full` runs every test.
     A `story` in the state CHOSEN runs only its modules (P714), as a quick run does; any other runs the whole suite.
     """
@@ -215,7 +219,8 @@ def measure(tree, full=False, story=None):
     slow_skipped = min(skipped_in_all, sum(1 for line in suite.stderr.splitlines() if " ... skipped '%s" % SLOW_PREFIX in line))
     # The mutation tables' anchors are no longer checked here (P208): the tables are history, and a moved line no
     # longer blocks a push.
-    return suite_line(suite_said or last_line_said, run, slow_skipped, scope), suite.returncode == 0, left
+    ok = suite.returncode == 0
+    return suite_line(suite_said or last_line_said, run, slow_skipped, scope), ok, left, [] if ok else red_tests(suite.stderr + suite.stdout)
 
 
 def main(argv=None):
@@ -240,10 +245,12 @@ def gate(root, commit, scratch, full=False):
         print("could not archive %s: %s" % (commit, broken), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     story = None if full else story_tests_in(scratch, changed_files(root, commit))
-    suite, ok, left = measure(scratch, full=full, story=story)
+    suite, ok, left, red = measure(scratch, full=full, story=story)
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
     print("%s as committed, %s" % (short, suite))
+    for line in red:  # a red push names its tests (P797)
+        print("    " + line)
     if story is not None and story.state == story_tests.QUICK_RUN:
         print("  no story run: " + story.why)
     if left != []:

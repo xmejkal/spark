@@ -53,7 +53,7 @@ class TheCommittedTreeIsMeasuredTest(unittest.TestCase):
                                              "class T(unittest.TestCase):\n    def test_add(self): self.assertEqual(m.add(1, 2), 3)\n"})
         scratch = Path(tempfile.mkdtemp())
         check_commit.archive(root, "HEAD", scratch)
-        suite, ok, left = check_commit.measure(scratch)
+        suite, ok, left, _ = check_commit.measure(scratch)
         self.assertTrue(ok, suite)
         self.assertIn("OK", suite)
         self.assertEqual(left, [], "a suite that leaves nothing behind leaves nothing to name")
@@ -70,7 +70,7 @@ class TheCommittedTreeIsMeasuredTest(unittest.TestCase):
         self.assertEqual(working.returncode, 0, "the working tree passes — that is the trap")
         scratch = Path(tempfile.mkdtemp())
         check_commit.archive(root, "HEAD", scratch)
-        suite, ok, left = check_commit.measure(scratch)
+        suite, ok, left, _ = check_commit.measure(scratch)
         self.assertFalse(ok, suite)
 
     def test_a_commit_that_does_not_exist_is_could_not_run(self):
@@ -124,7 +124,7 @@ class TheHooksGitIsNotTheSuitesTest(unittest.TestCase):
         scratch = Path(tempfile.mkdtemp())
         check_commit.archive(root, "HEAD", scratch)
         with mock.patch.dict(os.environ, {"GIT_DIR": str(root / ".git"), "GIT_INDEX_FILE": str(root / ".git" / "index")}):
-            suite, ok, left = check_commit.measure(scratch)
+            suite, ok, left, _ = check_commit.measure(scratch)
         self.assertTrue(ok, suite)
 
     def test_a_throwaway_repository_leaves_the_hook_s_repository_alone(self):
@@ -141,7 +141,7 @@ class TheGateEnforcesTheBoardTest(unittest.TestCase):
     def test_a_board_problem_fails_the_gate(self):
         board = mock.Mock(main=mock.Mock(return_value=1))
         with mock.patch.object(check_commit, "archive"), \
-                mock.patch.object(check_commit, "measure", return_value=("OK", True, [])), \
+                mock.patch.object(check_commit, "measure", return_value=("OK", True, [], [])), \
                 mock.patch.object(check_commit, "size_line", return_value="size"), \
                 mock.patch.dict(sys.modules, {"check_backlog": board}), \
                 contextlib.redirect_stdout(io.StringIO()):
@@ -162,7 +162,7 @@ def gate(left, ok=True, board=0):
     """`main` with everything but the temp verdict stubbed: (exit code, what it printed)."""
     said = io.StringIO()
     with mock.patch.object(check_commit, "archive"), \
-            mock.patch.object(check_commit, "measure", return_value=("Ran 1 test / OK", ok, left)), \
+            mock.patch.object(check_commit, "measure", return_value=("Ran 1 test / OK", ok, left, [])), \
             mock.patch.object(check_commit, "size_line", return_value="size"), \
             mock.patch.dict(sys.modules, {"check_backlog": mock.Mock(main=mock.Mock(return_value=board))}), \
             contextlib.redirect_stdout(said):
@@ -188,7 +188,7 @@ class TheSuiteLeavesNoTempBehindTest(unittest.TestCase):
         return scratch
 
     def test_what_a_passing_suite_leaves_is_counted_and_named(self):
-        suite, ok, left = check_commit.measure(self.tree(("tests/test_l.py", LEAKING_TEST)))
+        suite, ok, left, _ = check_commit.measure(self.tree(("tests/test_l.py", LEAKING_TEST)))
         self.assertTrue(ok, suite)
         self.assertEqual(len(left), 1, left)
         self.assertTrue(left[0].startswith("left-behind-"), left)
@@ -253,7 +253,7 @@ class TheGateRemovesItsOwnArchiveTest(unittest.TestCase):
         def measured(tree, full=False, story=None):
             check_commit.lend_node_modules(tree)
             self.assertTrue((tree / "tools" / "circuit-to-wokwi" / "node_modules").is_symlink())
-            return "OK", True, []
+            return "OK", True, [], []
 
         with mock.patch.object(check_commit, "ROOT", checkout), \
                 mock.patch.object(check_commit, "archive", side_effect=archived), \
@@ -292,11 +292,13 @@ class TheStoryRunTest(unittest.TestCase):
         self.assertRegex(said, r"story run: Ran 1 tests in [\d.]+ s \(0 slow tests skipped; 1 of 2 test files; "
                                r"the full run is check_commit.py --full\) / OK\n")
         self.assertRegex(said, r"story run: the seconds above")
+        self.assertNotIn("FAIL:", said, "a green push names no red test")
 
     def test_a_failing_test_of_the_changed_file_fails_the_gate_and_the_line_says_so(self):
         code, said = self.branch_changes({"a.py": "def one(): return 11\n"})
         self.assertEqual(code, check_commit.EXIT_PROBLEMS, said)
         self.assertRegex(said, r"story run: Ran 1 tests .* / FAILED \(failures=1\)\n")
+        self.assertRegex(said, r"/ FAILED \(failures=1\)\n    FAIL: test_one \([\w.]+\)\n    AssertionError: 11 != 1\n")
 
     def test_no_origin_main_is_the_quick_run_and_says_why(self):
         code, said = self.branch_changes({"a.py": "def one(): return 1  # a comment\n"}, origin=False)

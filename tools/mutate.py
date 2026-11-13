@@ -148,6 +148,7 @@ sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scratch  # noqa: E402  (P435) stdlib only: removes the old folders a killed run left
 import ledger  # noqa: E402  (P787) stdlib only: the ledger's lines and their store
+from suite_lines import RED_LINE  # noqa: E402  (P797) stdlib only: shared with check_commit
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK  # noqa: E402
 
@@ -191,8 +192,6 @@ class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
         return self.green
 
 
-#: A line of unittest's verdict that names a red test or sums the red run.
-RED_LINE = re.compile(r"^(?:(?:FAIL|ERROR): .*|FAILED \(.*|Ran \d+ tests? in .*|[\w.]+Error: .*)$", re.M)
 #: The test module in a `FAIL:` or `ERROR:` line: `FAIL: test_add (test_m.T)` names `test_m` (3.11+: `(test_m.T.test_add)`).
 RED_TEST = re.compile(r"^(?:FAIL|ERROR): \S+ \((\w+)")
 
