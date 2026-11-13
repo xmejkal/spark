@@ -11,6 +11,8 @@ import re
 RED_LINE = re.compile(r"^(?:(?:FAIL|ERROR): .*|FAILED \(.*|Ran \d+ tests? in .*|[\w.]+Error: .*)$", re.M)
 #: The sums among them: the gate's verdict line already says these.
 SUMS = ("Ran ", "FAILED")
+#: The start of the line that names one red test; its error lines follow it.
+TEST_NAMED = ("FAIL: ", "ERROR: ")
 
 
 # --- MVP ---

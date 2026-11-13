@@ -181,6 +181,21 @@ class TheQuickRunAndTheFullRunSayWhatTheyRanTest(unittest.TestCase):
         self.assertEqual(named, ["AssertionError: x", "ERROR: test_e", "FAIL: test_f", "KeyError: 'k'"], red)
         self.assertEqual(check_commit.measure(tiny_tree())[3], [], "a green run names nothing")
 
+    def test_the_suite_runs_with_the_gate_s_archive_marker(self):
+        # P797: without it the address test finds no repository in the archive and skips at every push.
+        tree = tiny_tree({"tests/test_g.py": ("import os, unittest\nfrom suite_runs import GATE_ARCHIVE, GATE_TREE\n\n\n"
+                                              "class G(unittest.TestCase):\n"
+                                              "    def test_g(self): self.assertEqual(os.environ.get(GATE_TREE), GATE_ARCHIVE)\n")})
+        line, ok, left, red = check_commit.measure(tree)
+        self.assertTrue(ok, red)
+
+    def test_a_red_push_names_the_first_red_tests_and_counts_the_rest(self):
+        red = [line for number in range(7) for line in ("FAIL: test_%d (m.T)" % number, "AssertionError: %d" % number)]
+        shown = check_commit.red_shown(red)
+        self.assertEqual(shown, red[:2 * check_commit.RED_TESTS_SHOWN] + ["… and 2 more red tests"])
+        self.assertEqual(check_commit.red_shown(red[:2 * check_commit.RED_TESTS_SHOWN]), red[:2 * check_commit.RED_TESTS_SHOWN])
+        self.assertEqual(check_commit.red_shown(red[:12])[-1], "… and 1 more red test")
+
     def test_a_failure_that_quotes_a_slow_skip_does_not_raise_the_count(self):
         # A traceback can hold a child run's -v lines. The verdict's own skipped=N says there was no skip at all.
         tree = tiny_tree({"tests/test_t.py": (

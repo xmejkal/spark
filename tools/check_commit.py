@@ -43,10 +43,12 @@ sys.path.append(str(ROOT / "tests"))  # after the rest: only suite_runs is wante
 from spark.core.outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
 from suite_runs import GATE_ARCHIVE, GATE_TREE, SLOW_PREFIX  # noqa: E402
 import story_tests  # noqa: E402  (beside this file)
-from suite_lines import red_tests  # noqa: E402  (beside this file, P797)
+from suite_lines import TEST_NAMED, red_tests  # noqa: E402  (beside this file, P797)
 
 #: How many of the names left behind the gate's line shows; the count says the rest.
 NAMES_SHOWN = 3
+#: How many red tests a red push names, each with its error lines; a line counts the rest (P797).
+RED_TESTS_SHOWN = 5
 
 #: The word for the run of every test; story_tests holds the other two.
 RUN_FULL = "full"
@@ -169,6 +171,15 @@ def temp_line(left):
     return "temp: the suite left {:,} {} behind ({}) — P172".format(len(left), "entry" if len(left) == 1 else "entries", shown)
 
 
+def red_shown(red):
+    """The red lines the gate prints: those of the first RED_TESTS_SHOWN red tests, then one line that counts the rest."""
+    starts = [at for at, line in enumerate(red) if line.startswith(TEST_NAMED)]
+    if len(starts) <= RED_TESTS_SHOWN:
+        return list(red)
+    rest = len(starts) - RED_TESTS_SHOWN
+    return list(red[:starts[RED_TESTS_SHOWN]]) + ["… and {:,} more red {}".format(rest, "test" if rest == 1 else "tests")]
+
+
 def suite_line(said, run, slow_skipped, scope=None):
     """
     The suite's verdict line from the lines the runner said: "quick run: Ran N of M tests in S s (K slow tests skipped;
@@ -252,7 +263,7 @@ def gate(root, commit, scratch, full=False):
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
     print("%s as committed, %s" % (short, suite))
-    for line in red:  # a red push names its tests (P797)
+    for line in red_shown(red):  # a red push names its tests (P797)
         print("    " + line)
     if story is not None and story.state == story_tests.QUICK_RUN:
         print("  no story run: " + story.why)
