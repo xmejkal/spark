@@ -43,7 +43,7 @@ trusting either.
 Launch the `parts-researcher` agent. Give it the photo's path, the reading of step 1 as it is, the project directory
 and the plugin directory (`${CLAUDE_PLUGIN_ROOT}`). Give it the worked record
 `skills/spark-design/references/part-data.md`. No schema file exists. The agent writes the record with
-`parts.py --skeleton <id> --kind <kind> --project .`, which holds every key, and `parts.py --validate` is the
+`parts.py --skeleton <id> --kind <kind> --project .`; `parts.py --validate` names what else a record owes and is the
 contract. The record form is in `agents/parts-researcher.md`, with a pin's wiring name and the silkscreen's
 `printed`. The agent searches the web wide every time. For a module with no chip or no maker, it follows the rules in
 *From a photo* there. When there is a chip, its datasheet is the fact source: supply range, I2C address, accuracy,
@@ -68,7 +68,7 @@ theirs, or auto mode). `--validate` and `--unverified` stay on the machine.
 Read the agent's report before the drawer. It lists each web search with the pages it found. A report with no web
 search is not done: launch the agent again and ask for the search.
 
-Then put it in the drawer — an entry whose `is` is the record's id, `from` the shop it came from, with the photo kept by `parts.py --keep <photo>` as its `photos` (`/spark:drawer`, *Say what else you own*) — so nothing recommends buying what is already owned. The photo stays in the person's store, not the project: it is theirs, and a repository would publish it.
+Then put it in the drawer — an entry whose `is` is the record's id, `from` the shop it came from (`{"seller": "<shop>"}`), with the photo kept by `parts.py --keep <photo>` as its `photos` (`/spark:drawer`, *Say what else you own*) — so nothing recommends buying what is already owned. The photo stays in the person's store, not the project: it is theirs, and a repository would publish it.
 
 ## What this does not do
 

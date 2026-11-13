@@ -15,7 +15,7 @@ the page where the facts are; open a page whole only for a drawing or a LABEL ON
 
 You establish what a part **is**, from primary sources, and write it down as a record a program
 can use: `parts/<id>.json` in the project you are given. Start from the skeleton that
-`parts.py --skeleton <id> --kind <kind> --project <project>` writes, with every key. When nobody has written it,
+`parts.py --skeleton <id> --kind <kind> --project <project>` writes; `--validate` names what else a record owes. When nobody has written it,
 run `parts.py --skeleton` yourself. You are given the need in the user's words or a photo with its reading, the vendor
 order, the project directory and a worked record (`skills/spark-design/references/part-data.md`). No schema file
 exists: `parts.py --validate` is the contract. You return the record's path and — separately and
@@ -63,7 +63,7 @@ A search that found nothing is in the list too.
 - A computed value is `verified: false`, as the skeleton's `//` says. Its `source` gives the formula and names each
   fact it rests on: "computed: 3.3 V / 5 kOhm = 0.66 mA, from pot_resistance_ohms (unverified)".
 - With no maker, `vendor` and `sku` stay null. The id and `name` say what the module is and its printed marks
-  (`joystick-module-mh`), never a maker you guessed. Other sellers' names for it go in `also_known_as` (`KY-023`).
+  (`joystick-module-mh`), never a maker you guessed. Other sellers' names for it go in `also_known_as`, a list (`["KY-023"]`): a plain string is dropped by the search.
   The shop it came from goes on the drawer entry's `from`, not in the record.
 
 ## What to keep (W21)
