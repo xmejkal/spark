@@ -94,8 +94,6 @@ classDiagram
     <<Value>>
     assignments
     leftover
-    render() str
-    pin_module() str
   }
   class BoardEmitter {
     <<Facade>>
@@ -127,7 +125,10 @@ classDiagram
   NeedsService ..> Design
 ```
 
-`Design` exists as a namedtuple (`loader.Design`). `ImpossibleError` is in `pin_assigner.py` (P709 renamed it from `Impossible`), and its class
+`Design` exists as a namedtuple (`loader.Design`). `PinMap` exists as a namedtuple too (`pin_assigner.PinMap`, P783):
+`assign` returns it, and it unpacks as `assignments, leftover`. It has no `render()` or `pin_module()`: the board is not
+the map's, and `source` and `pulled_up` are the module's, so methods would only forward the call. They stay functions,
+`render(board, assignments, leftover)` and `pin_module(board, assignments, source, pulled_up)`. `ImpossibleError` is in `pin_assigner.py` (P709 renamed it from `Impossible`), and its class
 attribute `status` is `problems`, because the design asks for something the board cannot do.
 
 The pin map is written as MicroPython's `pins.py` today (`pin_assigner.pin_module`). It stays in design until a second
