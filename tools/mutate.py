@@ -102,13 +102,18 @@ In a copy each row's ledger line is written as soon as the row is done, dated th
 stops keeps every line it recorded (PR 1's review, row 50: a 180-minute slice killed at minute 179 lost everything). In the
 real tree the lines wait for the after-suite, which says whether anything can be trusted, and carry the run's end.
 
-THE BUDGET (P787) `--budget MINUTES` counts from the run's start, the fixed overhead inside it: the copy, the pre-check
-suite, the near sets. The rows run in the tiers' order also without `--tier` (every tier is selected then), so the
+THE BUDGET (P787) `--budget MINUTES` counts from the run's start, the fixed overhead inside it: the copy and the pre-check
+suite. The rows run in the tiers' order also without `--tier` (every tier is selected then), so the
 budget goes to the critical and new rows first. Before each row the run asks whether the row's expected seconds would
 cross what is left, and stops there: every row from that one on is left for the next sweep. The expected seconds are a
 fact, never a guess (`expected_seconds`): the row's ledger line's `s` (its last duration, at whatever blob), else the
 median of the caught and escaped rows of this run (a refused row ran nothing and took no time), else the pre-check
-suite's measured seconds (a row with no near test costs a whole suite). The
+suite's measured seconds (a row with no near test costs a whole suite). A file's near set is checked on the clean tree
+just before the file's first row (`NearSets`), so the first row of a file that has near tests asks for its near check
+too: the largest near check this run measured, else, before the first, the pre-check suite's seconds, which bound a near
+check (a near set is a part of the suite); the row's `s` leaves the check out. The run stops at the first row that does
+not fit, and the rest are left in order, though a later row might fit: the tiers' order is the contract.
+Checked up front, the near sets of 172 files spent the first night's 180 minutes before any row (2026-11-13, PR 7). The
 closing line says what ran, as `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5);
 19 left for the next sweep`, and `--json` gains `budget` with the same facts (`minutes, ran, selected, left, by_tier`).
 A left row is not a pass: it was not run, and the exit code speaks for the rows that were; a budget run that ran no row
@@ -263,16 +268,46 @@ def near_tests(root, tests, mutated_file):
                   if said.search(path.read_text(errors="replace")))
 
 
-def near_sets(root, tests, mutations):
+class NearSets:
     """
-    Each mutated file's near tests, kept only where they pass on the clean tree on their own: a set that
-    fails alone (a test leaning on another module's import) would make every mutation near it look caught.
+    No role of the names table fits: a memo, for one run, of the near-set checks it runs itself. Each mutated file's near
+    tests, kept only where they pass on the clean tree on their own: a set that fails alone (a test leaning on another
+    module's import) would make every mutation near it look caught. A file's set is checked the first time a row of the
+    file runs, on the clean tree, and kept for its next rows (P787 PR 7): checked up front for every file, the 172 near
+    sets of a night's tables spent the whole 180-minute budget before the first row. `seconds` are the checks' measured
+    durations, which `check_seconds` reads.
     """
-    found = {}
-    for file in sorted({mutation["file"] for mutation in mutations}):
-        near = tuple(near_tests(root, tests, file))
-        found[file] = near if near and suite_is_green(root, tests, only=near) else ()
-    return found
+
+    def __init__(self, root, tests):
+        self.root, self.tests, self.found, self.checked, self.seconds = root, tests, {}, {}, []
+
+    def pending(self, file):
+        """The near tests of `file` still to be run on the clean tree: none once its set is checked, or when it has none."""
+        if file in self.checked:
+            return ()
+        if file not in self.found:
+            self.found[file] = tuple(near_tests(self.root, self.tests, file))
+        return self.found[file]
+
+    def check_seconds(self, file, suite_seconds):
+        """
+        The seconds `file`'s near check is expected to take, a fact: none once its set is checked or when it has no near
+        test; else the largest near check this run measured, a ceiling from the run's own facts; else, before the first,
+        `suite_seconds`, the pre-check suite's measured seconds, which bound a near set (a part of the suite).
+        """
+        if not self.pending(file):
+            return 0
+        return max(self.seconds) if self.seconds else suite_seconds
+
+    def of(self, file):
+        """`file`'s near set, checked on the clean tree the first time it is asked, so ask while the tree is clean."""
+        if file not in self.checked:
+            near, began = self.pending(file), time.monotonic()
+            green = bool(near) and suite_is_green(self.root, self.tests, only=near)
+            if near:
+                self.seconds.append(time.monotonic() - began)
+            self.checked[file] = near if green else ()
+        return self.checked[file]
 
 
 def apply(root, mutation):
@@ -482,9 +517,10 @@ def sigterm_held():
 class Budget:
     """
     Value: the minutes a run may take, counted from `started` (a monotonic second taken at the run's start, so the copy
-    and the pre-check suite count inside), as `--budget` gives them (P787). `left(now)` is what remains; `allows(now,
-    seconds)` says whether a row expected to take `seconds` ends within it. Not a clock: the run reads `time.monotonic`
-    as the rest of this tool does, and a test fakes the durations through the ledger's `s` and through `started`.
+    and the pre-check suite count inside, and each file's near check in its first row's ask), as `--budget` gives them
+    (P787). `left(now)` is what remains; `allows(now, seconds)` says whether a row expected to take `seconds` ends
+    within it. Not a clock: the run reads `time.monotonic` as the rest of this tool does, and a test fakes the durations
+    through the ledger's `s` and through `started`.
     """
 
     def __init__(self, minutes, started):
@@ -547,20 +583,24 @@ def run(root, tests, mutations, copied=False, ledger_store=None, budget=None):
             raise RedBeforeMutation("the suite is not green BEFORE any mutation; a red suite catches nothing"
                                     + "".join("\n  " + line for line in getattr(before, "red_lines", ())))
         suite_seconds = time.monotonic() - checked  # what a row with no near test costs: the budget's last fact
-        return _run(root, tests, mutations, near_sets(root, tests, mutations), copied, ledger_store, budget, suite_seconds)
+        return _run(root, tests, mutations, copied, ledger_store, budget, suite_seconds)
     finally:
         lock.unlink(missing_ok=True)
 
 
-def _run(root, tests, mutations, near_by_file, copied, ledger_store=None, budget=None, suite_seconds=None):
-    results, imports_before, lines = [], {}, []
+def _run(root, tests, mutations, copied, ledger_store=None, budget=None, suite_seconds=None):
+    if budget is not None and suite_seconds is None:
+        raise ValueError("a budget needs the pre-check suite's measured seconds, its last fact for a row and a near check")
+    results, imports_before, lines, near = [], {}, [], NearSets(root, tests)
     known = {entry["key"]: entry["s"] for entry in ledger_store.read()} if budget is not None and ledger_store is not None else {}
     for mutation in mutations:
-        if budget is not None and not budget.allows(time.monotonic(), expected_seconds(mutation, known, lines, suite_seconds)):
-            break  # this row and every one after it are left for the next sweep
-        started = time.monotonic()
-        path = root / mutation["file"]
         file = mutation["file"]
+        near_check = near.check_seconds(file, suite_seconds)  # a file's first row asks for its near check too
+        if budget is not None and not budget.allows(time.monotonic(), expected_seconds(mutation, known, lines, suite_seconds) + near_check):
+            break  # the run stops at the first row that does not fit: the rest are left in order (the tiers' order is the contract)
+        near_set = near.of(file)  # the tree is clean here: the row before restored its file in its `finally`
+        started = time.monotonic()  # the row's `s` leaves its file's near check out: the next sweep asks for that apart
+        path = root / file
         blob = ledger.blob_of(path.read_bytes()) if path.is_file() else None  # the file as the run read it, before the row
 
         def noted(status, which_run=None, who=None, detail=""):
@@ -584,9 +624,8 @@ def _run(root, tests, mutations, near_by_file, copied, ledger_store=None, budget
             if refusal:
                 noted(REFUSED, detail=refusal)
                 continue
-            near = near_by_file.get(mutation["file"], ())
-            near_run = suite_is_green(root, tests, only=near, failfast=True) if near else None
-            caught_near = bool(near) and not near_run
+            near_run = suite_is_green(root, tests, only=near_set, failfast=True) if near_set else None
+            caught_near = bool(near_set) and not near_run
             green = False if caught_near else suite_is_green(root, tests, failfast=True)
         finally:
             path.write_text(original)
@@ -676,7 +715,9 @@ def main(argv=None):
     parser.add_argument("--budget", type=int, metavar="MINUTES",
                         help="stop before the row that would cross this many minutes, counted from the run's start (the copy "
                              "and the pre-check suite inside); a row's expected seconds are its ledger line's `s`, else the "
-                             "median of this run's caught and escaped rows, else the pre-check suite's; the rows run in the tiers' order "
+                             "median of this run's caught and escaped rows, else the pre-check suite's, and a file's first row adds "
+                             "its near check, run just before it (the largest near check this run measured, else the pre-check suite's "
+                             "seconds); the run stops at the first row that does not fit, and the rest are left in order; the rows run in the tiers' order "
                              "also without --tier; the closing line says how many rows ran and how many are left, per tier. A left "
                              "row is not a pass, and a run that ran no row exits 2. The PO's defaults: 20 for a sweep, 180 for a night")
     parser.add_argument("--json", action="store_true")
