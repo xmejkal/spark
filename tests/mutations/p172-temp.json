@@ -3,7 +3,7 @@
  {"file": "tools/check_commit.py", "name": "P172: a count not taken reads as nothing left", "find": "unchecked=left is None)", "replace": "unchecked=False)"},
  {"file": "tools/check_commit.py", "name": "P172: a folder that cannot be listed counts as empty", "find": "    except OSError:\n        return None\n", "replace": "    except OSError:\n        return []\n"},
  {"file": "tools/check_commit.py", "name": "P172: the gate's line about what was left is never said", "find": "    if left != []:\n        print(\"  \" + temp_line(left))\n", "replace": "    if False:\n        print(\"  \" + temp_line(left))\n"},
- {"file": "tools/check_commit.py", "name": "P172: the suite writes to the hook's temp folder, not the gate's", "find": "        env.update(TMPDIR=temp)\n", "replace": ""},
+ {"file": "tools/check_commit.py", "name": "P172: the suite writes to the hook's temp folder, not the gate's", "find": "        env.update({\"TMPDIR\": temp, GATE_TREE: GATE_ARCHIVE})\n", "replace": "        env.update({GATE_TREE: GATE_ARCHIVE})\n"},
  {"file": "tools/check_commit.py", "name": "P172: the gate keeps the suite's temp folder", "find": "        shutil.rmtree(temp, ignore_errors=True)", "replace": "        None"},
  {"file": "tools/check_commit.py", "name": "P172: the gate keeps its archive", "find": "        shutil.rmtree(scratch, ignore_errors=True)", "replace": "        None"},
  {"file": "tests/suite_temp.py", "name": "P172: the helper's atexit is not registered", "find": "atexit.register(remove, ROOT)", "replace": "None"},
