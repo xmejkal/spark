@@ -8,13 +8,12 @@ The tools spark depends on: what is here, what is missing, and the choices. This
     tools.py --use ROLE=TOOL | --pin NAME=VERSION      point a job at another tool; pin a version
 
 A choice is written to the person's file, or to the project's with --project (--personal overrides). The library is
-`spark/records/tool_finder.py` (P719): one merged list of the tools, `find`, `status`, `plan` and `install`.
+`spark/records/tool_finder.py` (P719): one merged list of the tools, `find`, `status`, `plan` and `install`; and
+`spark/records/tool_choices.py` (P783): the choice's file, a tool turned on or off, a tool of the person's own written.
 (Not to be confused with the repository's `tools/` folder, which holds the developers' own tools.)
 """
 
 import argparse
-import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -22,10 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN  # noqa: E402
 from spark.core.text_guards import flat_line  # noqa: E402
-from spark.records import records_codes  # noqa: E402
-from spark.records.tool_finder import (DOWNLOADS, PERSONAL, PROJECT_FILE, ToolError, choose, install,  # noqa: E402
-                                       merged, new_entry_problem, off_sentence, pin, plan, run_checked, status,
-                                       to_install, use)
+from spark.records.tool_choices import choice_file, is_mcp_server, turn_off, turn_on, write_new_tool  # noqa: E402
+from spark.records.tool_finder import (DOWNLOADS, PERSONAL, PROJECT_FILE, ToolError, install, pin, plan,  # noqa: E402
+                                       status, to_install, use)
 
 
 MARKS = {"ok": "[ok  ]", "missing": "[????]", "off": "[off ]", "person": "[!   ]"}
@@ -60,8 +58,7 @@ def main(argv=None, run=None):
     parser.add_argument("--dry-run", action="store_true", help="with --install: print each command and run nothing")
     args = parser.parse_args(argv)
     project = args.project
-    where = PERSONAL if (args.personal or not project) else Path(project) / PROJECT_FILE
-    scope = "user" if where == PERSONAL else "project"
+    where, scope = choice_file(project, args.personal)
     try:
         if args.status:
             return EXIT_COULD_NOT_RUN if print_status(project, None) else EXIT_OK
@@ -82,36 +79,20 @@ def main(argv=None, run=None):
             for argv_ran in install(args.install, project, None, run):
                 print(flat_line("  ran: %s", " ".join(argv_ran)))
         elif args.on:
-            choose([args.on, "on"], True, where)
-            if merged(project)["tools"].get(args.on, {}).get("on") is False:
-                raise ToolError("%s is still off: %s", args.on, off_sentence(args.on, project), code=records_codes.TOOL_OFF)
-            for argv_ran in install([args.on], project if scope == "project" else None, None, run):
+            for argv_ran in turn_on(args.on, project, where, scope, run):
                 print(flat_line("  ran: %s", " ".join(argv_ran)))
             print(flat_line("  %s is on (%s)", args.on, where))
         elif args.off:
-            entry = merged(project)["tools"].get(args.off, {})
-            choose([args.off, "on"], False, where)
-            if entry.get("kind") == "mcp" and entry.get("mcp"):
-                try:
-                    (run or run_checked)(["claude", "mcp", "remove", "--scope", scope, args.off])
-                except (OSError, subprocess.CalledProcessError):
-                    print(flat_line("  %s was not registered with Claude Code at %s scope — nothing to remove", args.off, scope))
-            elif entry.get("owner") == "spark":
-                print(flat_line("  %s is spark's own server and stays loaded with the plugin — disable it in /mcp", args.off))
+            note = turn_off(args.off, project, where, scope, run)
+            if note:
+                print("  %s" % note)
             print(flat_line("  %s is off (%s)", args.off, where))
         elif args.use:
             role, _, tool_name = args.use.partition("=")
             print(flat_line("  %s → %s (%s)", role, tool_name, use(role, tool_name, project if scope == "project" else None, None)))
         elif args.new:
-            name, _, text = args.new.partition("=")
-            try:
-                entry = json.loads(text)
-            except ValueError as broken:
-                raise ToolError("%s: the entry is not JSON (%s)", name, broken, code=records_codes.TOOL_ENTRY_BROKEN)
-            problem = new_entry_problem(entry)
-            if problem:
-                raise ToolError("%s: %s — nothing written", name, problem, code=records_codes.TOOL_ENTRY_BROKEN)
-            print(flat_line("  %s written (%s); point a job at it: /spark:setup use <role>=%s", name, choose([name], entry, where), name))
+            name, written = write_new_tool(args.new, where)
+            print(flat_line("  %s written (%s); point a job at it: /spark:setup use <role>=%s", name, written, name))
         elif args.pin:
             target, _, value = args.pin.partition("=")
             name, field, written = pin(target, value, project, where)
@@ -120,7 +101,7 @@ def main(argv=None, run=None):
     except ToolError as problem:
         print("tools.py: %s" % problem, file=sys.stderr)
         return EXIT_COULD_NOT_RUN
-    if (args.on or args.off) and merged(project)["tools"].get(args.on or args.off, {}).get("kind") == "mcp":
+    if (args.on or args.off) and is_mcp_server(args.on or args.off, project):
         print("  Claude Code loads MCP servers when a session starts: restart it for this to take effect.")
     return EXIT_OK
 
