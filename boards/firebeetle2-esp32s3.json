@@ -277,7 +277,7 @@
         17,
         10
       ],
-      "note": "MOSI, MISO, SCK and SS: the hardware SPI bus, silkscreened MO, MI, SCK and A4. A design with no SPI may use them — but they are taken LAST, because the assigner spent the whole bus on two LEDs and a button when nothing marked it, and a later SPI part then had nowhere to go. Recorded 2026-09-29 (backlog P3)."
+      "note": "MOSI, MISO, SCK and SS: the hardware SPI bus, silkscreened MO, MI, SCK and A4. A design with no SPI may use them: among pins that waste the same abilities a plain signal takes them last (a tie-breaker), because the assigner spent the whole bus on two LEDs and a button when nothing marked it, and a later SPI part then had nowhere to go. Recorded 2026-09-29 (backlog P3); the order said as it is, P780."
     },
     "i2c": {
       "gpio": [
