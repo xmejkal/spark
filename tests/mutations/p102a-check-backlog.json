@@ -46,5 +46,17 @@
   "name": "Ready is told to finish one",
   "find": "\"the PO moves one back to Idea\" if stage == \"Ready\" else ",
   "replace": ""
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "offline hides why",
+  "find": "could not be reached (%s); the limits were not checked\"\n                   % unreachable]",
+  "replace": "could not be reached; the limits were not checked\"]"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "offline fails the gate",
+  "find": "        return 0, [\"  backlog: could-not-run — gh or the network",
+  "replace": "        return 1, [\"  backlog: could-not-run — gh or the network"
  }
 ]

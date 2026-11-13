@@ -76,5 +76,29 @@
   "name": "P167: the status counts a bin board with no Status on any card",
   "find": "            if bin_why is None and check_backlog.no_status_on(items):\n",
   "replace": "            if False:\n"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "P167: the gate drops the no-stage line",
+  "find": "    if unstaged:\n        lines.append(",
+  "replace": "    if False:\n        lines.append("
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "P167: an unknown stage fails the push",
+  "find": "        return 0, [\"  backlog: could-not-run — %s; the limits were not checked\" % unplaced], False, spent\n",
+  "replace": "        return 1, [\"  backlog: could-not-run — %s; the limits were not checked\" % unplaced], False, spent\n"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "P168: a spark board read in part fails the push",
+  "find": "        return 0, [\"  backlog: could-not-run — %s; the limits were not checked\" % short], False, spent\n",
+  "replace": "        return 1, [\"  backlog: could-not-run — %s; the limits were not checked\" % short], False, spent\n"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "P167: the gate counts a bin board with no Status on any card",
+  "find": "    if no_status_on(bin_items):  # read whole, but a shape the gate cannot place: set aside like one read in part\n",
+  "replace": "    if False:\n"
  }
 ]

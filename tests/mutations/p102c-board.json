@@ -9,5 +9,6 @@
  {"file": "tools/board.py", "name": "a stalled network holds the session start", "find": "gather(STATUS_TIMEOUT)", "replace": "gather()"},
  {"file": "tools/board.py", "name": "only the checked-out branch is a working day", "find": "\"log\", \"--all\", ", "replace": "\"log\", "},
  {"file": "tools/board.py", "name": "a hook's GIT_DIR steers the read", "find": "timeout=STATUS_TIMEOUT, env=own)", "replace": "timeout=STATUS_TIMEOUT)"},
- {"file": "tools/board.py", "name": "a broken status shows a traceback", "find": "except Exception as broken:", "replace": "except ZeroDivisionError as broken:"}
+ {"file": "tools/board.py", "name": "a broken status shows a traceback", "find": "except Exception as broken:", "replace": "except ZeroDivisionError as broken:"},
+ {"file": "tools/board_read.py", "name": "a short read is silent", "find": "    if held > read:\n        return \"%s %s\" % (subject, SHORT % (held, read))\n", "replace": "    if False:\n        return \"%s %s\" % (subject, SHORT % (held, read))\n"}
 ]
