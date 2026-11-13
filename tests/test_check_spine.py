@@ -474,14 +474,14 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         from spark.breadboard import drawing, sheet
         for renderer in sheet.DRAWING_RENDERERS:
             with self.subTest(drawing=renderer.FILE_NAME):
-                one = drawing.NotWritten(Path(renderer.FILE_NAME), renderer, drawing.NOT_DRAWN_YET, "VBAT",
+                one = drawing.NotWritten(Path(renderer.FILE_NAME), renderer, "not_drawn_yet", "VBAT",
                                          "VBAT is not drawn yet")
                 entry = kept_files.not_written_entry(one)
                 self.assertEqual((entry["file"], entry["did"], entry["code"], entry["subject"], entry["expected"]),
                                  (renderer.FILE_NAME, "not written", "not_drawn_yet", "VBAT", True))
         self.assertEqual(sorted(renderer.FILE_NAME for renderer in sheet.DRAWING_RENDERERS),
                          ["breadboard.json", "breadboard.svg"])
-        for code in (drawing.ROW_FULL, drawing.PLANNER_FAULT):  # a fault to report stays unexpected
+        for code in ("row_full", "planner_fault"):  # a fault to report stays unexpected
             with self.subTest(code=code):
                 one = drawing.NotWritten(Path("breadboard.svg"), sheet.DRAWING_RENDERERS[0], code, "x", "why")
                 self.assertFalse(kept_files.not_written_entry(one)["expected"])

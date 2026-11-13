@@ -26,3 +26,5 @@ and closed findings only (rules.md). 2026-11-13.
 | 17 | `refactor-plan.md:69` still says "nine areas and three leaves" | build | rejected | dropped because the refactor plan records the map as planned on its date; the README is the live map |
 | 18 | a `--boards` flag with no `boards` note from `discover` would leave no `(given)` line | build | closed | `discover_boards` always writes one: with no board, `board_records.definition_path` raises (`board_records.py:177`) and the note is "not resolved" |
 | 19 | the json.md:149 bullet could keep its line count only with one longer line | build | acted | the bullet's last line is longer; no line added (427) |
+| 20 | the full run: the new kept-entry test read `drawing.NOT_DRAWN_YET`, `ROW_FULL` and `PLANNER_FAULT` as its expectations (`test_self_confirmation`) | build | acted | the test names the codes as written, `"not_drawn_yet"`, `"row_full"` and `"planner_fault"`; mutation row 1 still caught by hand |
+| 21 | the full run: `docs/guide/map.md` was stale, as `test_check_spine` now imports `drawing` | build | acted | `python3 tools/map.py --write`: drawing.py's test list counts one more |
