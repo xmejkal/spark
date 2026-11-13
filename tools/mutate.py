@@ -8,7 +8,7 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py tests/mutations/*.json --for $changed --copy   # a branch's: changed=$(git diff --name-only origin/main...HEAD)
     tools/mutate.py tests/mutations/*.json --retarget scripts/a.py scripts/spark/a.py   # a file moved: its rows follow
     tools/mutate.py --ledger                              # the ledger's lines, counted by status
-    tools/mutate.py tests/mutations/*.json --tier critical,new --budget 20 --copy   # a sweep: these tiers, within 20 minutes
+    tools/mutate.py tests/mutations/*.json --tier critical,new,proving --budget 20 --copy   # a sweep: these tiers, within 20 minutes
     tools/mutate.py tests/mutations/*.json --tier-count   # how many rows each tier holds; runs nothing
     tools/mutate.py --retire                              # the rows refused in two sweeps, for a deleting PR; runs nothing
 
