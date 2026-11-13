@@ -179,6 +179,45 @@ class TheRetiredRowsTest(unittest.TestCase):
         self.assertEqual([row["name"] for row in tiers.rows[ledger.RETIRED]], ["retired"])
 
 
+class TheSameLineGroupsTest(unittest.TestCase):
+    """P787 PR 6: two rows on one file and one find with different replaces are a same-line group, and the ledger gives its verdict."""
+
+    def test_two_replaces_of_one_line_are_a_group_and_one_row_or_one_replace_twice_is_not(self):
+        twin = dict(ROW, name="add multiplies", replace="return a * b")
+        alone = dict(ROW, name="sub adds", find="return a - b", replace="return a + b")
+        self.assertEqual(ledger.same_line_groups([ROW, alone, twin]), [[ROW, twin]], "in the rows' order; a row alone on its line is in no group")
+        self.assertEqual(ledger.same_line_groups([ROW, dict(ROW, name="the same again")]), [], "one replace twice is one row twice (PR 0's duplicate), no group")
+        self.assertEqual(ledger.same_line_groups([ROW, dict(ROW, file="n.py", replace="return a * b")]), [],
+                         "the same find on two files is two lines: the key holds the file")
+
+    def test_finds_that_differ_in_indentation_or_a_trailing_line_break_only_are_one_line(self):
+        # The review of PR 6: 15 pairs on main's tables were not reported because their finds differed only so.
+        indented = dict(ROW, name="indented", find="    return a + b\n", replace="    return a * b\n")
+        two_lines = dict(ROW, name="two lines", find="def add(a, b):\n    return a + b", replace="def add(a, b):\n    return 0")
+        two_lines_too = dict(ROW, name="two lines, flush", find="def add(a, b):\nreturn a + b\n", replace="def add(a, b):\nreturn 1")
+        self.assertEqual(ledger.same_line_groups([ROW, indented, two_lines, two_lines_too]), [[ROW, indented], [two_lines, two_lines_too]])
+        self.assertEqual(ledger.same_line_key("  a\n    b\n"), ("a", "b"))
+        self.assertEqual(ledger.same_line_groups([ROW, dict(ROW, find="a + b", replace="a * b")]), [], "a shorter find on the same line is another key: not claimed")
+
+    def test_the_verdict_is_a_merge_candidate_only_when_every_row_is_caught_by_one_test_module_at_the_current_blob(self):
+        caught_by_m = a_line(blob="b1", by="test_m")
+        self.assertEqual(ledger.group_verdict([caught_by_m, a_line(key="k2", blob="b1", by="test_m")]), ledger.MERGE_CANDIDATE,
+                         "one module caught both: a candidate to read, since two of its functions may still tell the mutants apart")
+        self.assertEqual(ledger.group_verdict([caught_by_m, a_line(key="k2", blob="b1", by="test_n")]), ledger.DISTINCT, "two modules tell the mutants apart")
+        self.assertEqual(ledger.group_verdict([caught_by_m, a_line(key="k2", blob="b1", status=ledger.ESCAPED, by=ledger.ESCAPE, caught=0)]),
+                         ledger.DISTINCT, "a status differs")
+        self.assertEqual(ledger.group_verdict([a_line(blob="b1", status=ledger.REFUSED, by=None, caught=0, refused=1)] * 2), ledger.DISTINCT,
+                         "two refusals share a by of None and are no catch: never a merge candidate")
+        self.assertEqual(ledger.group_verdict([a_line(blob="b1", by=ledger.SUITE)] * 2), ledger.DISTINCT,
+                         "the whole suite caught both and named no module: nothing says one module sees both mutants (the review of PR 6)")
+        self.assertEqual(ledger.group_verdict([caught_by_m, None]), ledger.NOT_YET_RUN, "a row with no line at the current blob")
+        self.assertEqual(ledger.group_verdict([caught_by_m, a_line(key="k2", blob="b1", by="test_n"), None]), ledger.DISTINCT,
+                         "the known lines disagree already: no later line can make the group a merge candidate (the refuter)")
+        self.assertEqual(ledger.lines_now([caught_by_m, a_line(key="k2", blob="b0", by="test_m"), None], "b1"), [caught_by_m, None, None],
+                         "a line at an older blob says nothing of the line as it is now: the blob rule")
+        self.assertEqual(ledger.lines_now([a_line(blob=None)], None), [a_line(blob=None)], "a gone file's lines sit at None, as is_retired reads them")
+
+
 class TheLedgerStoreTest(unittest.TestCase):
     def test_a_missing_or_empty_file_is_no_lines_and_the_store_writes_sorted_lines(self):
         path = Path(tempfile.mkdtemp()) / "mutations" / ledger.LEDGER_NAME

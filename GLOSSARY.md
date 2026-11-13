@@ -173,7 +173,18 @@ current blob (the ledger's `refused` count, kept beside `caught`), decided by th
 name`, then `N row(s) to retire: refused in two sweeps; delete each with its reason in a PR, or re-anchor it`; the
 tool deletes nothing, a PR does, with the row's reason in its rows file. A critical row refused twice stays critical and
 runs every sweep, and `--retire` lists it all the same, so its count can be above `--tier-count`'s `retired`. An escape
-never retires: it is a missing test (W3). `python3 tools/mutate.py tests/mutations/*.json --tier critical,new,proving --budget 20 --copy`
+never retires: it is a missing test (W3). A *same-line group* is two rows or more on one `file` and one line, their finds
+the same once stripped of indentation and a trailing line break, with different replaces (two mutants of one line, each
+its own row; a *duplicate* is the same replace too, one row twice, which PR 0 dropped): `python3 tools/mutate.py
+tests/mutations/*.json --duplicates` lists each group with the ledger's verdict, `merge candidate` when every row was
+caught at the file's current content by the same test module (`by`), `distinct` when a module or a status differs or the
+whole suite caught a row (no module named), decided as soon as the known lines say so, `not yet run` when nothing
+disagrees and a row has no line there, then `N same-line group(s) over M row(s): K merge candidate(s), D distinct, U not
+yet run; a merge candidate is dropped in a PR with its reason, the others stay` (and `; run a sweep to fill the ledger`
+when every group is not yet run). A merge candidate is a candidate to read, not a proof: `by` is the module, and two of
+its functions may tell the mutants apart, so the deleting PR opens the module and checks that one test fails for every
+mutant of the line before it drops a row, because dropping a mutation is dropping its test (W3).
+`python3 tools/mutate.py tests/mutations/*.json --tier critical,new,proving --budget 20 --copy`
 runs the named tiers in the sweep's order, critical, new in the tables' given order (name the oldest table first),
 proving (so a row can become proven), proven oldest date first, and its first line says which tiers and how many rows;
 `--tier-count` counts the rows of each of the five tiers and runs nothing. A row with no line is new, never proven.

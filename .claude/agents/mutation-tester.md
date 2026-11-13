@@ -62,6 +62,15 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    delete each with its reason in a PR, or re-anchor it`. Quote the list in your report. It runs nothing and
    deletes nothing: the deleting PR, with each row's reason, is the main thread's. An escape is never retired: it is a
    missing test.
+7. Then `python3 tools/mutate.py tests/mutations/*.json --duplicates` lists the same-line groups (two rows or more on
+   one file and one line, their finds the same once stripped of indentation and a trailing line break, with different
+   replaces) with the ledger's verdict on each: `merge candidate` when every row was caught at the file's current
+   content by the same test module (`by`), `distinct` when a module or a status differs or the whole suite caught a row,
+   `not yet run` when nothing disagrees and a row has no line there. Quote its count line byte for byte, `  N same-line
+   group(s) over M row(s): K merge candidate(s), D distinct, U not yet run; a merge candidate is dropped in a PR with its
+   reason, the others stay`, which ends `; run a sweep to fill the ledger` when every group is not yet run. It runs
+   nothing and deletes nothing. A merge candidate is a candidate to read, not a proof: the deleting PR, the main
+   thread's, opens the module and checks that one test fails for every mutant of the line before it drops a row.
 
 ## When a table is kept
 
