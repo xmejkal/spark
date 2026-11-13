@@ -4,7 +4,7 @@
   "unmeasured": 0,
   "resolved": [
     "circuit      dist/board/circuit.json",
-    "rules        .spark/rules.json",
+    "rules        floating-rules.json (given)",
     "package      not found (looked for *-gerbers.zip, fab/*.zip)",
     "boards       2 definition(s): firebeetle2-esp32s3, xiao-esp32-c6"
   ],

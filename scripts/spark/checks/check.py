@@ -443,7 +443,29 @@ def inputs_for(args, checked=None):
     discovered, resolved, ambiguous = discover(checked or CheckedFolder.at(args.project))
     # An explicit flag settles an ambiguity: that is what naming one is for.
     ambiguous = {name: matches for name, matches in ambiguous.items() if name not in explicit}
-    return dict(discovered, **explicit), resolved, ambiguous
+    return dict(discovered, **explicit), given_notes(resolved, explicit), ambiguous
+
+
+#: The inputs whose `discover` note an explicit flag replaces: the conventions and the boards, never `project` or `json`.
+GIVEN = tuple(CONVENTIONS) + ("boards",)
+
+
+def given_notes(notes, explicit):
+    """
+    `discover`'s notes with the line of each input an explicit flag names replaced in place, so the order stays, by
+    the value as typed and `(given)`: the file checked, not the convention's (P783). A list is joined with ", ". A later
+    note of that name is dropped (`discover_boards` can write two `boards` notes).
+    """
+    shown, done = [], set()
+    for note in notes:
+        name = note.split(" ", 1)[0]
+        if name not in GIVEN or name not in explicit:
+            shown.append(note)
+        elif name not in done:
+            value = explicit[name]
+            shown.append("%-12s %s (given)" % (name, ", ".join(map(str, value)) if isinstance(value, list) else value))
+            done.add(name)
+    return shown
 
 
 def run(inputs, ambiguous=None):

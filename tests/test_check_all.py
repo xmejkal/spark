@@ -327,6 +327,37 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
         self.assertEqual(inputs["rules"], str(root / ".spark/rules.json"),
                          "an input nobody named should still come from the project")
 
+    def _resolved(self, folder, **flags):
+        args = argparse.Namespace(**dict(dict(project=str(folder), circuit=None, rules=None, boards=[], package=None,
+                                              json=False), **flags))
+        return check.inputs_for(args)[1]
+
+    def test_an_explicit_flag_is_resolved_as_given_and_the_others_as_found(self):
+        # P783 (p687 row 9): `--rules X` printed `rules  .spark/rules.json` while it checked X
+        root = self._project("dist/board/circuit.json", ".spark/rules.json")
+        resolved = self._resolved(root, rules="floating-rules.json")
+        names = [note.split(" ", 1)[0] for note in resolved]
+        self.assertEqual(resolved[names.index("rules")], "rules        floating-rules.json (given)")
+        self.assertFalse(any(".spark/rules.json" in note for note in resolved), resolved)
+        self.assertEqual(resolved[names.index("circuit")], "circuit      dist/board/circuit.json")
+        self.assertEqual(names.count("rules"), 1)
+        self.assertEqual(resolved, [note if not note.startswith("rules ") else "rules        floating-rules.json (given)"
+                                    for note in self._resolved(root)], "the order stays")
+
+    def test_the_project_note_of_a_sub_folder_stays_and_boards_given_are_one_line(self):
+        root = self._project(".spark/rules.json", "car/dist/board/circuit.json")
+        resolved = self._resolved(root / "car", boards=["b1.json", "b2.json"])
+        project_notes = [note for note in resolved if note.startswith("project ")]
+        self.assertEqual(len(project_notes), 1, resolved)
+        self.assertIn("the project up from here", project_notes[0])
+        self.assertEqual([note for note in resolved if note.startswith("boards ")], ["boards       b1.json, b2.json (given)"])
+
+    def test_a_second_note_of_a_given_input_is_dropped(self):
+        notes = ["project      /p (the project up from here, the one the build reads)",
+                 "boards       1 definition(s): x", "boards       not resolved (no board chosen)", "rules        r.json"]
+        self.assertEqual(check.given_notes(notes, {"boards": ["b.json"], "project": "/elsewhere", "json": True}),
+                         [notes[0], "boards       b.json (given)", "rules        r.json"])
+
     def test_without_a_project_nothing_is_discovered(self):
         args = argparse.Namespace(project=None, circuit="given.json", json=False)
         inputs, resolved, ambiguous = check.inputs_for(args)
