@@ -70,9 +70,9 @@ BY_DESIGN = (NO_WOKWI_PART, NOT_DRAWN_YET)
 
 class NotDrawnError(Exception):
     """The steps cannot be drawn: a fact the drawing needs is missing, or the breadboard has no room. `code` (one of
-    CODES) and `subject` say which, so a caller never reads the message."""
+    CODES, required) and `subject` say which, so a caller never reads the message."""
 
-    def __init__(self, message, code=None, subject=None):
+    def __init__(self, message, code, subject=None):
         super().__init__(message)
         self.code = code
         self.subject = subject

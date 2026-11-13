@@ -11,5 +11,5 @@
  {"file": "scripts/spark/breadboard/drawing.py", "name": "a part with no drawing is told as no Wokwi pin", "find": "in Wokwi\" % component, NO_DRAWING_FACT, component)", "replace": "in Wokwi\" % component, NO_WOKWI_PIN, component)"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "an end with no Wokwi pin drops its code", "find": "% end.name, NO_WOKWI_PIN, end.name)", "replace": "% end.name, None, end.name)"},
  {"file": "scripts/spark/breadboard/drawing.py", "name": "an end joined before it is placed is told as no Wokwi pin", "find": "placed\" % end.name, PLANNER_FAULT, end.name)", "replace": "placed\" % end.name, NO_WOKWI_PIN, end.name)"},
- {"file": "scripts/spark/breadboard/part_shape.py", "name": "a board no source describes drops its code", "find": "board.get(\"id\"), drawing.NO_DRAWING_FACT, board.get(\"id\"))", "replace": "board.get(\"id\"))"}
+ {"file": "scripts/spark/breadboard/part_shape.py", "name": "a board no source describes drops its code", "find": "board.get(\"id\"), drawing.NO_DRAWING_FACT, board.get(\"id\"))", "replace": "board.get(\"id\"), None, board.get(\"id\"))"}
 ]

@@ -211,6 +211,11 @@ class ABoardThatCannotBeDrawnIsRefusedWithACodeTest(unittest.TestCase):
                     uncoded.append("%s:%d" % (module.relative_to(ROOT), node.lineno))
         self.assertEqual(uncoded, [])
 
+    def test_a_refusal_made_without_a_code_is_a_type_error(self):
+        """P783: `code` is required, so a NotDrawnError made with its message alone fails where it is made."""
+        with self.assertRaises(TypeError):
+            drawing.NotDrawnError("no room")
+
     def test_a_board_no_source_describes_has_a_code(self):
         with self.assertRaises(drawing.NotDrawnError) as refused:
             part_shape.find_source({"id": "board-x"}, ())
