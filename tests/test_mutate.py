@@ -1293,6 +1293,32 @@ class TheScratchOfAStoppedRunTest(unittest.TestCase):
         self.assertEqual(os.listdir(mine), [])
         shutil.rmtree(mine, ignore_errors=True)
 
+    @slow("five copy runs of a tiny tree, each stopped by a SIGTERM beside one scratch folder, SECONDS on 2026-11-13")
+    def test_a_sigterm_right_after_a_scratch_folder_is_made_or_right_before_it_is_removed_leaves_nothing(self):
+        # P805: the child sends SIGTERM to itself once, right after a folder of the prefix is made, or right before one is
+        # removed; a window between the two lines or inside the removal leaves the folder.
+        wrapper = ("import os, shutil, signal, sys, tempfile\nsys.path.insert(0, %r)\nimport mutate\n"
+                   "when, prefix = sys.argv.pop(1), sys.argv.pop(1)\nfired = []\n"
+                   "def fire(folder):\n"
+                   "    if not fired and os.path.basename(str(folder)).startswith(prefix):\n"
+                   "        fired.append(folder)\n        os.kill(os.getpid(), signal.SIGTERM)\n"
+                   "real_made, real_removed = tempfile.mkdtemp, shutil.rmtree\n"
+                   "def made(*args, **kwargs):\n    folder = real_made(*args, **kwargs)\n"
+                   "    if when == 'made': fire(folder)\n    return folder\n"
+                   "def removed(folder, *args, **kwargs):\n    if when == 'removed': fire(folder)\n"
+                   "    return real_removed(folder, *args, **kwargs)\n"
+                   "tempfile.mkdtemp, shutil.rmtree = made, removed\nsys.exit(mutate.main(sys.argv[1:]))\n" % str(ROOT / "tools"))
+        for when, prefix in (("made", mutate.COPY_PREFIX), ("made", mutate.RUN_PREFIX), ("made", mutate.IMPORT_PREFIX),
+                             ("removed", mutate.RUN_PREFIX), ("removed", mutate.IMPORT_PREFIX)):
+            with self.subTest(when=when, prefix=prefix):
+                root = tiny_project_that_finds_itself()
+                mine = Path(tempfile.mkdtemp())
+                done = subprocess.run([sys.executable, "-c", wrapper, when, prefix, str(table(root, BREAK_ADD)), "--root", str(root),
+                                       "--copy"], env=dict(os.environ, TMPDIR=str(mine)), capture_output=True, text=True, timeout=120)
+                self.assertEqual(done.returncode, 128 + signal.SIGTERM, done.stderr[-300:])
+                self.assertEqual(os.listdir(mine), [])
+                shutil.rmtree(mine, ignore_errors=True)
+
     @unittest.skipIf(signal.getsignal(signal.SIGTERM) != signal.SIG_DFL, "the runner set its own SIGTERM handler")
     def test_the_handler_is_put_back(self):
         with mutate.sigterm_as_exit():
