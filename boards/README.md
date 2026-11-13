@@ -4,8 +4,8 @@
 > which a spark project does not have. With spark's own scripts, see [Your own dev board](../docs/guide/how-it-works.md#your-own-dev-board).
 
 One file per board, holding everything the rest of the project needs to know about which
-microcontroller this is: the silkscreen-to-GPIO map, which pins can wake it, which have an ADC,
-which have a second job, which MicroPython build it runs, and what it is physically — its
+microcontroller this is: the silkscreen-to-GPIO map, which pins can wake it, which can read a voltage
+(and which of those stop while the radio is on), which have a second job, which MicroPython build it runs, and what it is physically — its
 footprint in the PCB design and its size on screen.
 
 It exists because that knowledge was in six places — the firmware, the PCB design, the
@@ -59,7 +59,8 @@ re-implementing a lookup.
 2. **Get the pin map from the vendor's Arduino variant header**, not from a pinout picture:
    `espressif/arduino-esp32` → `variants/<board>/pins_arduino.h`. Pinout diagrams are drawn by
    marketing; the header is what the toolchain compiles against. Cross-check it against the
-   vendor wiki and record both under `sources`.
+   vendor wiki and record both under `sources`. A variant's A0-A19 list names no ADC unit: take the units from the
+   chip's datasheet or technical reference manual ([ADC pins](#adc-pins)).
 3. **Get the chip's capabilities from `soc_caps.h`** in `espressif/esp-idf`:
    `SOC_RTCIO_PIN_COUNT` gives the wake-capable range, `SOC_PM_SUPPORT_EXT0_WAKEUP` says whether
    `esp32.wake_on_ext0` exists, `SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN` whether wake pins may
@@ -103,6 +104,18 @@ board without it keeps the warning.
 `flash_mb` is the flash in MB: one number, or a list when one record covers SKUs with different flash (the FireBeetle
 2: `[16, 4]`). Write its `//flash_mb` source beside it. `board_look.py` compares what esptool reads from a board with it. A record without `flash_mb` makes the flash field
 unknown, and that is a warning.
+
+## ADC pins
+
+`adc_gpio` lists the pins with an ADC. On a chip with two ADCs (the ESP32, the ESP32-S3), the
+`adc2_unusable_with_wifi` role in `pin_roles` names the pins on ADC2, which cannot be read while the radio is on. The pin
+assigner reads both: a pin in the role offers no ADC, so a signal that needs `adc` never lands on it, a plain signal
+spends it before an ADC1 pin, and a signal that names one and needs `adc` is refused with the reason
+([P798](https://github.com/xmejkal/spark/issues/1120)). So an ADC2 pin may stay in `adc_gpio` (the T-Display test
+fixture keeps both lists) or live in the role alone (the FireBeetle 2 lists ADC1 only). A record with no such role is
+read as its `adc_gpio` says: nothing is guessed from `chip`. Cite each list's source beside it, by its `documents` key,
+table and page: the ESP32's units are in its Technical Reference Manual (Table 6.11-1), the S3's in its datasheet
+(Table 2-8).
 
 ## Button places
 
