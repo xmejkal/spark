@@ -36,7 +36,8 @@ from spark.design import copper
 from spark.design import fab
 from spark.design.power_rails import GROUND_NETS
 from spark.checks import check_codes
-from spark.checks.build_check import package_of
+# PACKAGE_POWER_W and PROBLEM are build_check's: one table of chip resistor ratings, one severity word (P783)
+from spark.checks.build_check import package_of, PACKAGE_POWER_W, PROBLEM
 from spark.core.outcomes import COULD_NOT_RUN, status_of
 from spark.core.result import Refusal
 from spark.checks.physics_board import Board
@@ -62,18 +63,12 @@ I2C_MAX_RISE_NS = {100_000: 1000, 400_000: 300, 1_000_000: 120}
 #: derated hard because a tantalum above its rating fails short rather than open.
 VOLTAGE_DERATING = {"tantalum": 2.0, "electrolytic": 1.5, "ceramic": 1.5, "unknown": 2.0}
 
-#: What a chip resistor of each size can dissipate. THE SAME table `build_check` judges by:
-#: it was a second copy here, so a package added to one checker was missing from the other and
-#: nothing said so.
-PACKAGE_POWER_W = fab.part("package_power_w")
-
 #: The resistor bound (P197) clears a resistor only at half its package rating: the usual derating, and room for a
 #: supply above its typical voltage. VDD33 is 3.6 V at most against 3.3 V typical, which is 19% more power.
 RESISTOR_POWER_DERATING = 2.0
 
 #: The only severities a finding may carry. Free text let "problems" vanish: nothing rendered,
 #: counted or filtered it (P143). `could-not-run` is the outcome word of the same name.
-PROBLEM = "problem"
 NEEDS_MEASUREMENT = "needs-measurement"
 SEVERITIES = (PROBLEM, NEEDS_MEASUREMENT, COULD_NOT_RUN)
 

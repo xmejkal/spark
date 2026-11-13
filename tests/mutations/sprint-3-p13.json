@@ -14,7 +14,7 @@
  {
   "file": "scripts/spark/checks/physics_check.py",
   "name": "package_of taken from a second copy of check_footprints",
-  "find": "from spark.checks.build_check import package_of\n",
-  "replace": "import importlib.util as _u; _s = _u.spec_from_file_location(\"build_check\", __file__.replace(\"physics_check.py\", \"build_check.py\")); _m = _u.module_from_spec(_s); _s.loader.exec_module(_m); package_of = _m.package_of\n"
+  "find": "from spark.checks.build_check import package_of, PACKAGE_POWER_W, PROBLEM\n",
+  "replace": "from spark.checks.build_check import PACKAGE_POWER_W, PROBLEM\nimport importlib.util as _u; _s = _u.spec_from_file_location(\"build_check\", __file__.replace(\"physics_check.py\", \"build_check.py\")); _m = _u.module_from_spec(_s); _s.loader.exec_module(_m); package_of = _m.package_of\n"
  }
 ]
