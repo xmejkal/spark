@@ -176,7 +176,7 @@ sequenceDiagram
 ## Pages
 
 - Level 2 and 3, one page per area: [core](areas/core.md), [records](areas/records.md),
-  [sourcing](areas/sourcing.md), [design](areas/design.md), [firmware](areas/firmware.md),
+  [sourcing](areas/sourcing.md), [design](areas/design.md), [idea](areas/idea.md), [firmware](areas/firmware.md),
   [breadboard](areas/breadboard.md), [checks](areas/checks.md), [bench](areas/bench.md), [build](areas/build.md).
 - [refactor-plan.md](refactor-plan.md): six waves, twenty-three slices, in order. The bench net came first (done).
 - [notes.md](notes.md): decisions, conflicts between the papers, the rule reference, what was cut.

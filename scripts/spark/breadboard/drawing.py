@@ -64,7 +64,7 @@ CODES = {
 #: (None when it has none), and the sentence a person reads.
 NotWritten = collections.namedtuple("NotWritten", "path renderer code subject why")
 #: The codes of a refusal a retry gives again: by design, or a drawing spark does not make yet. No failure the person can
-#: fix; the sheet's steps say how to wire it by hand.
+#: fix; for NOT_DRAWN_YET, the sheet's steps say how to wire it by hand.
 BY_DESIGN = (NO_WOKWI_PART, NOT_DRAWN_YET)
 
 

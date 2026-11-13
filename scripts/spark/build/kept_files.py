@@ -157,7 +157,8 @@ def keep_breadboard(requirements, destination, stages=()):
 
 def not_written_entry(one):
     """The kept entry of a drawing a build did not write (a `drawing.NotWritten`): `expected` is true for a code a retry
-    gives again (`drawing.BY_DESIGN`), so the agent tells the person to wire it from the sheet's steps (P691, P783)."""
+    gives again (`drawing.BY_DESIGN`): the agent does not retry, and for `not_drawn_yet` tells the person to wire it by
+    hand from the sheet's steps (P691, P783)."""
     return {"file": str(one.path), "did": "not written", "code": one.code, "subject": one.subject,
             "expected": one.code in drawing.BY_DESIGN, "why": one.why,
             "line": "no %s: %s" % (one.renderer.NOUN, one.why)}

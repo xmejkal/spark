@@ -29,5 +29,5 @@ idea but its CLI, `parts.py`.
 ### How idea is tested alone
 
 `tests/test_needs.py` runs `DropNeed` through `run_operation`, with a fake drawer or needs file where a test swaps one.
-Idea has no golden net: `tools/story_tests.py` maps no golden to it (`GOLDEN_NET_ELSEWHERE` names build and sourcing
-alone, and there is no `test_golden_idea`).
+Idea has no golden net yet: for a changed idea module the story run names `test_golden_idea`
+(`tools/story_tests.py:110`, as `GOLDEN_NET_ELSEWHERE` maps build and sourcing alone), a module that does not exist yet.
