@@ -50,7 +50,7 @@ are sold under one chip's name with different pinouts; be true of the one in the
 unverified facts, five of them wrong once the back was seen; if you have one side only, say so in
 `//` and list what the other side would settle — a cell holder, resistor packs, a charging diode.
 
-**Search the web wide, every time.** Also when the chip is known, search for the module itself: its board name, its
+**Search the web wide, every time.** Also with a known chip, search for the module itself: its board name, its
 silkscreen labels in their order (`GND +5V VRX VRY SW`) and what it is by its look (`5-pin analog joystick module`).
 Search on any maker's site and any shop, not only the vendor order. Search each chip marking for its maker's
 datasheet. Stay in the budget. The report lists each search: the words, and the pages it found, used or passed over.
