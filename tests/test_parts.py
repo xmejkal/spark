@@ -1516,13 +1516,46 @@ class EverythingFoundIsKeptTest(unittest.TestCase):
 
     def test_the_same_bytes_kept_twice_for_a_part_are_listed_once_and_the_line_names_the_entry(self):
         _, project, local = self._keep_for_a_part()
-        run_json(["--keep", str(local), "--url", self.MANUAL, "--part", "ky023", "--project", str(project)])
+        first, code = run_json(["--keep", str(local), "--url", self.MANUAL, "--part", "ky023", "--project", str(project)])
+        self.assertEqual((code, first["data"]["key"], first["data"]["document"]["url"]), (0, "manual", self.MANUAL))
         again = local.with_name("joystick-manual.pdf")
         again.write_bytes(local.read_bytes())
         code, _, err = self._said(["--keep", str(again), "--part", "ky023", "--project", str(project)])
         self.assertEqual(code, 0, err)
         self.assertEqual(list(json.loads((project / "parts" / "ky023.json").read_text())["documents"]), ["manual"])
         self.assertIn("already listed in ky023 as manual (manual.pdf, from %s)" % self.MANUAL, err)
+
+    def test_keep_for_a_part_replaces_the_not_kept_entry_of_its_url_under_its_key_and_title(self):
+        # the PR refuter: research writes {url, kept: false, title} for a file the store could not fetch (research_source.py),
+        # exactly the file a person then downloads and keeps; listed beside it, the URL would be there twice
+        home, project, local = self._keep_for_a_part(documents={"joystick-manual": {"url": self.MANUAL, "kept": False, "title": "Joystick manual"}})
+        code, out, err = self._said(["--keep", str(local), "--url", self.MANUAL, "--part", "ky023", "--project", str(project)])
+        self.assertEqual(code, 0, err)
+        entry = json.loads(out)
+        record = json.loads((project / "parts" / "ky023.json").read_text())
+        self.assertEqual(record["documents"], {"joystick-manual": dict(entry, title="Joystick manual")}, "the shape a fetched entry has")
+        self.assertEqual([p for p in part_records.validate(record, project / "parts" / "ky023.json") if "documents" in p], [])
+        self.assertIn("listed in ky023 as joystick-manual (it was not kept before)", err)
+        _, found, _ = self._said(["--kept", "joystick", "--project", str(project)])
+        self.assertIn(str(home / "sources" / entry["sha256"] / "manual.pdf") + "  present", found)
+
+    def test_keep_for_a_part_with_no_record_names_project_only_when_none_was_given(self):
+        # the PR review: inside a project folder without --project, the walk's row 9a again
+        _, project, local = self._keep_for_a_part()
+        for flags, hinted in (([], True), (["--project", str(project)], False)):
+            with self.subTest(flags=flags):
+                said, code = run_json(["--keep", str(local), "--part", "nobody"] + flags)
+                self.assertEqual((code, said["problems"][0]["code"]), (1, "no_such_part"))
+                self.assertEqual(said["problems"][0]["sentence"].endswith("(a project's records need --project)"), hinted, said)
+
+    def test_keep_for_a_part_whose_record_is_not_json_is_a_problem_naming_the_record(self):
+        home, project, local = self._keep_for_a_part()
+        (project / "parts" / "ky023.json").write_text("{not json")
+        said, code = run_json(["--keep", str(local), "--part", "ky023", "--project", str(project)])
+        self.assertEqual((said["status"], code, said["problems"][0]["subject"], said["problems"][0]["code"]),
+                         ("problems", 1, "ky023", "part_contract_broken"))
+        self.assertIn(str(project / "parts" / "ky023.json"), said["problems"][0]["sentence"])
+        self.assertFalse((home / "sources").exists(), "nothing was kept")
 
     def test_keep_for_a_part_keeps_the_documents_the_record_already_lists(self):
         held = {name: {"url": "https://v.example/%s.pdf" % name, "sha256": letter * 64, "file": name + ".pdf",

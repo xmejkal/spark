@@ -7,6 +7,7 @@ record: the record is checked before the file is kept, so a refusal keeps nothin
 """
 
 import json
+from collections import namedtuple
 from pathlib import Path
 
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, READS, WRITES, Argument
@@ -14,7 +15,7 @@ from spark.core.text_guards import printable
 from spark.records import records_codes, store
 from spark.records.answer_operation import ANSWER_ARGUMENTS
 from spark.records.record_kind import Answer, _cannot, _parse, _problem
-from spark.sourcing import datasheets, record_home
+from spark.sourcing import datasheets, record_home, sourcing_codes
 from spark.sourcing.part_operation import PartOperation
 from spark.sourcing.part_records import PartError
 
@@ -26,6 +27,13 @@ PART_HELP = ("with --keep: the part record this file is a document of; its docum
              "project's record; never spark's library), once per file's bytes: the same bytes listed already are not listed again")
 #: The line of a file kept without `--part`: no record lists it, so `--kept` finds it by its name alone (P784).
 NOT_LISTED = "  %s, but listed in no record: add --part <id> --project . to list it (a drawer photo needs none)"
+#: What a refusal adds when no project was given: `parts.py` reads a project's records only with `--project` (P784).
+NEEDS_PROJECT = " (a project's records need --project)"
+
+
+class ListingResult(namedtuple("ListingResult", "answer key held replaced")):
+    """Result: what `list_document` did: `set_fields`' Answer, the documents key, the entry that already listed the same
+    bytes (else None) and the not-kept entry of the same URL that the kept one replaced (else None)."""
 
 
 class KeepFile(PartOperation):
@@ -58,8 +66,8 @@ class KeepFile(PartOperation):
         try:  # P423: a store that refuses the file, or cannot be written, refuses it after the line was said
             if part_id:  # P784: the record first, from the dry keep's entry, so a refusal keeps nothing
                 listed = list_document(part_id, project, datasheets.keep_local(path, url, dry_run=True), dry_run=True)
-                if listed[0].problems:
-                    return Answer(problems=listed[0].problems, diagnostics=said)
+                if listed.answer.problems:
+                    return Answer(problems=listed.answer.problems, diagnostics=said)
             entry = datasheets.keep_local(path, url, dry_run=dry_run)
         except store.StoreError as refused:
             return Answer(unchecked=[_cannot(str(refused), code=refused.code)], diagnostics=said)
@@ -67,34 +75,44 @@ class KeepFile(PartOperation):
             return Answer(unchecked=[_cannot("--keep: %s" % unwritable, code=records_codes.FILE_REFUSED)], diagnostics=said)
         if part_id and not dry_run:  # the written entry is the real keep's
             listed = list_document(part_id, project, entry, dry_run=False)
-            if listed[0].problems:  # a record changed between the check and the write: the file is kept, and said so
-                return Answer(problems=listed[0].problems, diagnostics=list(said) + [NOT_LISTED % "kept"])
+            if listed.answer.problems:  # a record changed between the check and the write: the file is kept, and said so
+                return Answer(problems=listed.answer.problems, diagnostics=list(said) + [NOT_LISTED % "kept"])
         return Answer({"document": entry, "location_removed": located, "written": not dry_run,
-                       "record": part_id if listed else None, "key": listed[1] if listed else None},
+                       "record": part_id if listed else None, "key": listed.key if listed else None},
                       [json.dumps(entry, indent=2, ensure_ascii=False)],
                       diagnostics=list(said) + listed_lines(part_id, listed, dry_run))
 
 
 def list_document(part_id, project, entry, dry_run):
     """
-    (Answer, key, held): `entry` listed in the `documents` of `part_id`'s own record (P784), through `record_home.set_fields`,
-    so a shelf copy's write goes to its project's record and spark's library is refused. `documents` is replaced whole, so
-    what it holds is read from the file `set_fields` writes (`record_path`). The same bytes listed already (by sha256) are
-    not listed again: `held` is that entry and `key` its key; else `held` is None and `key` a fresh one. A part with no
-    record is a problem on its id, as the other refusals are.
+    The `ListingResult` of `entry` listed in the `documents` of `part_id`'s own record (P784), through
+    `record_home.set_fields`, so a shelf copy's write goes to its project's record and spark's library is refused.
+    `documents` is replaced whole, so what it holds is read from the file `set_fields` writes (`record_path`). The same
+    bytes listed already (by sha256) are not listed again. An entry of the same URL that is not kept (`kept: false`, what
+    research writes for a file the store could not fetch) is replaced under its own key, its title kept, in the shape a
+    fetched entry has. A part with no record, or a record that is not JSON, is a problem on its id.
     """
     path, _ = record_home.record_path(part_id, project)
     record = _parse(path) if path is not None else None
+    if path is not None and record is None:
+        return ListingResult(Answer(problems=[_problem(part_id, "%s is not JSON (%s) — repair the file by hand first" % (part_id, path),
+                                                       code=sourcing_codes.PART_CONTRACT_BROKEN)]), None, None, None)
     documents = record.get("documents") if isinstance(record, dict) else None
     documents = documents if isinstance(documents, dict) else {}
     key, held = next(((name, one) for name, one in documents.items() if isinstance(one, dict) and one.get("sha256") == entry["sha256"]),
-                     (datasheets.document_key(entry["file"], documents), None))
+                     (None, None))
+    key, replaced = (key, None) if held else next(
+        ((name, one) for name, one in documents.items() if isinstance(one, dict) and one.get("kept") is False and entry["url"]
+         and one.get("url") == entry["url"]),
+        (datasheets.document_key(entry["file"], documents), None))
+    listed = dict(entry, title=replaced.get("title")) if replaced else entry
     try:
-        answer = record_home.set_fields(part_id, project, {"documents": documents if held else dict(documents, **{key: entry})},
+        answer = record_home.set_fields(part_id, project, {"documents": documents if held else dict(documents, **{key: listed})},
                                         dry_run, _documents_problems)
     except PartError as missing:
-        return Answer(problems=[_problem(part_id, str(missing), code=missing.code)]), key, held
-    return answer, key, held
+        return ListingResult(Answer(problems=[_problem(part_id, str(missing) + ("" if project else NEEDS_PROJECT), code=missing.code)]),
+                             key, held, replaced)
+    return ListingResult(answer, key, held, replaced)
 
 
 def _documents_problems(record, after, path):
@@ -108,9 +126,10 @@ def listed_lines(part_id, listed, dry_run):
     bytes, or that no record lists it; and the shelf copy's sentence when there is one to say."""
     if listed is None:
         return [NOT_LISTED % ("would be kept" if dry_run else "kept")]
-    answer, key, held = listed
+    answer, key, held, replaced = listed
     lines = (["  already listed in %s as %s (%s, from %s)" % (part_id, key, printable(str(held.get("file"))), printable(str(held.get("url") or "no URL")))]
-             if held else ['  %s %s as %s: cite it as {"document": "%s", "at": "p<N>"}' % ("would list it in" if dry_run else "listed in", part_id, key, key)])
+             if held else ['  %s %s as %s%s: cite it as {"document": "%s", "at": "p<N>"}' % (
+                 "would list it in" if dry_run else "listed in", part_id, key, " (it was not kept before)" if replaced else "", key)])
     shelf_copy = (answer.data or {}).get("shelf_copy")
     return lines + (["  " + shelf_copy] if shelf_copy not in (None, "current") else [])
 # --- end MVP ---
