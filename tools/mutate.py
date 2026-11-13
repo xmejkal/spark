@@ -535,8 +535,10 @@ def sigterm_as_exit():
 @contextlib.contextmanager
 def sigterm_held():
     """
-    Inside, a SIGTERM waits (main thread only): the copy's removal finishes, and the signal arrives after, to the handler
-    of sigterm_as_exit, which exits 143. Without it the handler's SystemExit would stop the removal half way.
+    Inside, a SIGTERM waits (main thread only), and arrives after, to the handler of sigterm_as_exit, which exits 143.
+    Held: a scratch folder's removal, which the handler's SystemExit would stop half way; a folder made and its name
+    stored, so the `finally` finds it (the copy, each run's and import check's folder); the lock's removal (P805). A child
+    started inside (copy_of's `git ls-files`, about 0.6 s with the copy) inherits the blocked SIGTERM for its few ms.
     """
     if threading.current_thread() is not threading.main_thread():
         yield
@@ -720,7 +722,7 @@ def main(argv=None):
                         help="only the rows for these files, or for everything under these folders")
     parser.add_argument("--copy", action="store_true",
                         help="mutate a temporary copy of the tree, never the files you or an agent have open; "
-                             "the copy is removed also when SIGTERM stops the run")
+                             "the copy and every scratch folder are removed also when SIGTERM stops the run")
     parser.add_argument("--retarget", nargs=2, metavar=("OLD", "NEW"),
                         help="instead of a run: in these tables, move every row whose `file` is OLD to NEW (the text is "
                              "edited, so the tables keep their alignment); then prove them with --anchors")
