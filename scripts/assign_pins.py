@@ -48,14 +48,14 @@ def main(argv=None):
         print(loader.LIBRARY_NOTE)
 
     try:
-        assignments, leftover = assign(board, loaded.signals)
+        pin_map = assign(board, loaded.signals)
     except ImpossibleError as refused:
         print("cannot place every signal on this board:\n\n  %s" % refused)
         return EXIT_IMPOSSIBLE
 
     if args.emit_pins:
         try:
-            module = pin_module(board, assignments, Path(args.requirements).name, pulled_up(loaded.parts))
+            module = pin_module(board, pin_map.assignments, Path(args.requirements).name, pulled_up(loaded.parts))
         except ImpossibleError as refused:
             print("cannot write the pin map:\n\n  %s" % refused)
             return EXIT_IMPOSSIBLE
@@ -71,11 +71,11 @@ def main(argv=None):
     if args.json:
         print(json.dumps({"tool": "assign_pins", "board": board["id"],
                           "unverified": open_questions,
-                          "assignments": assignments,
+                          "assignments": pin_map.assignments,
                           "free": [{"pin": label, **pin} | {"can": sorted(pin["can"])}
-                                   for label, pin in leftover.items()]}, indent=2))
+                                   for label, pin in pin_map.leftover.items()]}, indent=2))
     else:
-        print(render(board, assignments, leftover))
+        print(render(board, pin_map.assignments, pin_map.leftover))
         if open_questions:
             print("\n  still unverified about these parts:")
             for question in open_questions:
