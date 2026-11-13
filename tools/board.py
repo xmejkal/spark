@@ -266,8 +266,8 @@ def disk_status(folder=None):
     """
     try:
         return disk_line(shutil.disk_usage(folder or tempfile.gettempdir()).free)
-    except OSError as failed:
-        return "disk: %s — %s" % (COULD_NOT_RUN, failed.strerror or type(failed).__name__)
+    except OSError as unread:
+        return "disk: %s — %s" % (COULD_NOT_RUN, unread.strerror or type(unread).__name__)
 
 
 #: What each verb's --help says it does, each claim read off the code below (P146 council, C3): status_lines() for what

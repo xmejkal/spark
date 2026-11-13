@@ -40,7 +40,11 @@ call. main() called with no arguments (check_commit's way) reads none of its cal
 
 P146 council (C2): a look that could not run named the exception's class ("CalledProcessError") where gh had said why
 ("please run: gh auth login"). The cause is now the first line gh wrote on stderr — at every place a look can fail: the
-project list, spark's items, the bin's items, the tasks' parents — and the exception's name only when gh wrote nothing.
+project list, spark's items, the bin's items — and the exception's name only when gh wrote nothing.
+
+P811 (#1153): the boards are read by board_read.py, one GraphQL query per 100 items that asks each field by its name and
+each task's parent story in the same answer, so a push costs about 9 points, not 1,300. The fake gh here (gh_pages)
+answers that query from cards in the gate's shape, keyed on its variables (number=, after=) and on board_read.PROJECTS.
 """
 
 import json
@@ -58,10 +62,14 @@ import suite_temp  # noqa: E402,F401  (P172) this process's temp folder, removed
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
+import board_read  # noqa: E402
 import check_backlog  # noqa: E402
 
 BODY = "### Needed by\n\n%s\n\n### Value proven by\n\nx\n\n### Proof\n\n_No response_\n"
 IN_FLIGHT_SAYS = "at most 4: finish one before starting another"
+#: A draft on a board, as board_read.QUERY answers it: no issue content, a Status all the same.
+DRAFT = {"content": {}, "status": {"name": "Build", "updatedAt": "2026-11-13T10:00:00Z"}, "slice": None, "waitingOn": None,
+         "waitingSince": None}
 
 
 def item(number, status="Ready", slice_="10 The store", needed="the PO's walking skeleton", labels=("story",), parent=None,
@@ -69,6 +77,61 @@ def item(number, status="Ready", slice_="10 The store", needed="the PO's walking
     return {"status": status, "slice": slice_, "labels": list(labels), "parent": parent,
             "waiting on": waiting, "waiting since": since,
             "content": {"number": number, "title": "P%d — x" % number, "body": BODY % needed, "repository": repository}}
+
+
+def as_node(entry):
+    """A card of the gate's shape (item()) as board_read.QUERY answers it; a node already (it has "waitingOn") as it is."""
+    if "waitingOn" in entry:
+        return entry
+    content, parent = entry["content"], entry.get("parent")
+
+    def named(value, key="name"):
+        return {key: value} if value else None
+    return {"content": {"number": content["number"], "title": content["title"], "body": content["body"],
+                        "repository": {"name": content["repository"].split("/")[-1]},
+                        "labels": {"nodes": [{"name": label} for label in entry.get("labels") or []]},
+                        "parent": {"number": parent, "closed": False} if parent else None},
+            "status": dict(named(entry.get("status")) or {}, updatedAt="2026-11-13T10:00:00Z") if entry.get("status") else None,
+            "slice": named(entry.get("slice")), "waitingOn": named(entry.get("waiting on")),
+            "waitingSince": named(entry.get("waiting since"), "date")}
+
+
+def gh_pages(spark=(), bin_cards=(), says=None, titles=("spark", "the bin"), cost=1, endless=False):
+    """
+    A gh answering board_read's queries: the project list (board_read.PROJECTS) with the projects titled `titles` —
+    spark's numbered 2, the bin's 1 — and each board's pages, 100 cards a page after the cursor asked, from `spark` and
+    `bin_cards` (cards of item()'s shape or nodes; an exception is raised). `says` {number: totalCount} makes a board claim
+    more than it holds; `endless` keeps hasNextPage true on spark's board. Every answer costs `cost` and leaves 4,000 less
+    the calls asked. Returns it with the arguments of every call.
+    """
+    asked = []
+
+    def run(args, **kwargs):
+        asked.append(args)
+        if "query=" + board_read.PROJECTS in args:
+            answer = {"user": {"projectsV2": {"nodes": [{"number": number, "title": title} for number, title
+                                                        in ((2, "spark"), (1, "the bin")) if title in titles]}}}
+        else:
+            number = int(next(a for a in args if a.startswith("number=")).split("=")[1])
+            after = int(next((a.split("=", 1)[1] for a in args if a.startswith("after=")), "0"))
+            cards = spark if number == 2 else bin_cards
+            if isinstance(cards, Exception):
+                raise cards
+            held = (says or {}).get(number, len(cards))
+            items = {"totalCount": held, "nodes": [as_node(e) for e in list(cards)[after:after + 100]],
+                     "pageInfo": {"hasNextPage": after + 100 < len(cards) or (endless and number == 2),
+                                  "endCursor": str(after + 100)}}
+            answer = {"user": {"projectV2": {"id": "P", "items": items, "statusUpdates": {"nodes": []}}}}
+        answer["rateLimit"] = {"cost": cost, "remaining": 4000 - len(asked), "limit": 5000}
+        return mock.Mock(stdout=json.dumps({"data": answer}))
+    return run, asked
+
+
+def boards_asked(asked):
+    """(project number, after) of each board page asked, in order; the project list is not one."""
+    return [(int(next(a for a in args if a.startswith("number=")).split("=")[1]),
+             next((a.split("=", 1)[1] for a in args if a.startswith("after=")), None))
+            for args in asked if "query=" + board_read.PROJECTS not in args]
 
 
 class TheBacklogCheckTest(unittest.TestCase):
@@ -463,216 +526,71 @@ class TheBacklogCheckTest(unittest.TestCase):
                 self.assertEqual(check_backlog.problems([item(1, "Idea"), item(3, status, waiting="the PO")]),
                                  ["#3 P3 — x: waits on the PO since nobody knows — set Waiting since"])
 
-    def test_parents_asks_each_task_s_own_repository_in_one_call(self):
-        asked = []
-        def run(args, **kwargs):
-            asked.append(args)
-            return mock.Mock(stdout=json.dumps({"data": {"r0": {"t9": {"parent": {"number": 1}}},
-                                                         "r1": {"t9": {"parent": None}, "t4": {"parent": {"number": 2}}}}}))
-        tasks = [("xmejkal/spark", 9), ("xmejkal/sisuo-brain-transplant", 9), ("xmejkal/sisuo-brain-transplant", 4)]
-        with mock.patch.object(check_backlog.subprocess, "run", run):
-            found, why = check_backlog.parents(tasks)
-        self.assertEqual((found, why), ({("xmejkal/spark", 9): 1, ("xmejkal/sisuo-brain-transplant", 9): None,
-                                         ("xmejkal/sisuo-brain-transplant", 4): 2}, None))
-        self.assertEqual(len(asked), 1)
-        query = " ".join(asked[0])
-        self.assertIn('r0: repository(owner: "xmejkal", name: "spark") { t9: issue(number: 9) { parent { number closed } } }', query)
-        self.assertIn('r1: repository(owner: "xmejkal", name: "sisuo-brain-transplant") { t9: issue(number: 9) { parent { number closed } } '
-                      't4: issue(number: 4) { parent { number closed } } }', query)
-
-    def test_a_closed_parent_reads_as_none_and_an_open_one_as_its_number(self):
-        # A finished story holds no place in a limit, so a task under it is a card of its own — not "ridden" and counted nowhere.
-        def run(args, **kwargs):
-            return mock.Mock(stdout=json.dumps({"data": {"r0": {"t9": {"parent": {"number": 1, "closed": True}},
-                                                                "t4": {"parent": {"number": 2, "closed": False}}}}}))
-        with mock.patch.object(check_backlog.subprocess, "run", run):
-            found, why = check_backlog.parents([("xmejkal/spark", 9), ("xmejkal/spark", 4)])
-        self.assertEqual((found, why), ({("xmejkal/spark", 9): None, ("xmejkal/spark", 4): 2}, None))
-
-    def test_parents_asks_nobody_when_there_are_no_tasks(self):
-        def run(args, **kwargs):
-            raise AssertionError("gh was asked about no tasks at all")
-        with mock.patch.object(check_backlog.subprocess, "run", run):
-            self.assertEqual(check_backlog.parents([]), ({}, None))
-
-    def test_parents_offline_says_why(self):
-        def run(args, **kwargs):
-            raise FileNotFoundError("gh")
-        with mock.patch.object(check_backlog.subprocess, "run", run):
-            self.assertEqual(check_backlog.parents([("xmejkal/spark", 9)]), ({}, "FileNotFoundError"))
-
-    def test_parents_that_gh_printed_as_non_json_says_why(self):
-        def run(args, **kwargs):
-            return mock.Mock(stdout="gh: HTTP 502 Bad Gateway")
-        with mock.patch.object(check_backlog.subprocess, "run", run):
-            self.assertEqual(check_backlog.parents([("xmejkal/spark", 9)]), ({}, "JSONDecodeError"))
-
-    def test_parents_answered_with_errors_and_no_data_says_why(self):
-        def run(args, **kwargs):
-            return mock.Mock(stdout=json.dumps({"data": None, "errors": [{"message": "Could not resolve to an Issue"}]}))
-        with mock.patch.object(check_backlog.subprocess, "run", run):
-            self.assertEqual(check_backlog.parents([("xmejkal/spark", 9)]), ({}, "TypeError"))
-
-    def test_parents_with_no_answer_for_a_task_is_not_read_as_parentless(self):
-        # A task GitHub did not answer for has an unknown parent, not none: reading it as none would count it as a card.
-        for answer, named in (({"r0": {}}, "KeyError"), ({"r0": {"t9": None}}, "TypeError")):
-            with self.subTest(answer=answer):
-                def run(args, **kwargs):
-                    return mock.Mock(stdout=json.dumps({"data": answer}))
-                with mock.patch.object(check_backlog.subprocess, "run", run):
-                    self.assertEqual(check_backlog.parents([("xmejkal/spark", 9)]), ({}, named))
-
     def said(self, run):
         """main()'s exit code and what it printed, with gh answered by `run`."""
         with mock.patch.object(check_backlog.subprocess, "run", side_effect=run), mock.patch("sys.stdout") as out:
             code = check_backlog.main()
         return code, "".join(call.args[0] for call in out.write.call_args_list)
 
-    def board_answering(self, items, parents, bin_cards=()):
-        """
-        A gh that lists the spark project (number 2) holding `items` and the bin's (number 1) holding `bin_cards` — as gh
-        prints them, with no `parent` — and answers the parents query with `parents`. Each of the three is raised when it
-        is an exception. Returns it with the commands it was asked, as text.
-        """
-        asked = []
-
-        def run(args, **kwargs):
-            asked.append(" ".join(args))
-            if "graphql" in args:
-                answer = parents
-            elif "item-list" in args:
-                cards = items if args[args.index("item-list") + 1] == "2" else bin_cards
-                answer = cards if isinstance(cards, Exception) else {"items": [{k: v for k, v in e.items() if k != "parent"}
-                                                                               for e in cards], "totalCount": len(cards)}
-            else:
-                answer = {"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}
-            if isinstance(answer, Exception):
-                raise answer
-            return mock.Mock(stdout=json.dumps(answer))
-        return run, asked
-
-    def test_main_asks_for_each_open_task_s_parent_and_a_task_under_its_story_rides_on_it(self):
-        items = [item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",)), item(8, "Done", labels=("task",))]
-        run, asked = self.board_answering(items, {"data": {"r0": {"t9": {"parent": {"number": 1}}}}})
+    def test_main_reads_each_task_s_parent_story_from_its_card_in_three_calls(self):
+        # P811: the parent comes with the card, so the look is the project list and one page of each board — no
+        # parents query after it.
+        items = [item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",), parent=1), item(8, "Done", labels=("task",))]
+        run, asked = gh_pages(items)
         code, printed = self.said(run)
-        self.assertEqual(code, 0)
-        self.assertIn("  backlog: 3 open, the limits hold; the bin: 0 open", printed)
-        self.assertNotIn("could not be read", printed)
-        questions = [command for command in asked if "graphql" in command]
-        self.assertEqual(len(questions), 1)
-        self.assertIn('r0: repository(owner: "xmejkal", name: "spark") { t9: issue(number: 9)', questions[0])
-        self.assertNotIn("t8:", questions[0])
+        self.assertEqual((code, printed), (0, "  backlog: 3 open, the limits hold; the bin: 0 open\n"))
+        self.assertEqual(len(asked), 3)
+        self.assertEqual(boards_asked(asked), [(2, None), (1, None)])
 
-    def test_main_counts_a_task_the_answer_gives_no_parent_as_a_card(self):
+    def test_main_counts_a_task_with_no_parent_story_as_a_card(self):
         items = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(9, "Build", labels=("task",))]
-        run, _ = self.board_answering(items, {"data": {"r0": {"t9": {"parent": None}}}})
-        code, printed = self.said(run)
+        code, printed = self.said(gh_pages(items)[0])
         self.assertEqual(code, 1)
         self.assertIn("    Build (spark) holds 4 (#1, #2, #3, #9) — its limit is 2: finish one before starting another", printed)
 
     def test_main_counts_a_task_under_a_closed_story_as_a_card(self):
         # The story was finished: its task is the work still open, and it counts where it stands — Build holds three.
-        items = [item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",))]
-        run, _ = self.board_answering(items, {"data": {"r0": {"t9": {"parent": {"number": 1, "closed": True}}}}})
-        code, printed = self.said(run)
+        task = as_node(item(9, "Build", labels=("task",), parent=1))
+        task["content"]["parent"]["closed"] = True
+        code, printed = self.said(gh_pages([item(1, "Build"), item(2, "Build"), task])[0])
         self.assertEqual(code, 1)
         self.assertIn("    Build (spark) holds 3 (#1, #2, #9) — its limit is 2: finish one before starting another", printed)
-        run, _ = self.board_answering(items, {"data": {"r0": {"t9": {"parent": {"number": 1, "closed": False}}}}})
-        self.assertEqual(self.said(run)[0], 0)
+        task["content"]["parent"]["closed"] = False
+        self.assertEqual(self.said(gh_pages([item(1, "Build"), item(2, "Build"), task])[0])[0], 0)
 
-    def test_main_asks_each_task_s_own_repository_and_keeps_one_number_in_two_apart(self):
-        # Issue numbers are per repository: #9 of spark has a parent and rides, #9 of the bin has none and is a card.
-        items = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(9, "Build", labels=("task",)),
-                 item(9, "Build", labels=("task",), repository="xmejkal/sisuo-brain-transplant")]
-        run, asked = self.board_answering(items, {"data": {"r0": {"t9": {"parent": {"number": 1}}}, "r1": {"t9": {"parent": None}}}})
-        code, printed = self.said(run)
-        self.assertEqual(code, 1)
-        self.assertIn("    Build (spark) holds 4 (#1, #2, #3, #9) — its limit is 2: finish one before starting another", printed)
-        question = next(command for command in asked if "graphql" in command)
-        self.assertIn('r0: repository(owner: "xmejkal", name: "spark")', question)
-        self.assertIn('r1: repository(owner: "xmejkal", name: "sisuo-brain-transplant")', question)
-
-    def test_parents_unread_counts_tasks_as_riding_and_says_so(self):
-        # The list was read and the parents were not (the GraphQL call fails): a could-not-look, said with its cause, and
-        # the push is let through — the task counted as riding, or Build would hold four.
-        items = [item(1, "Build"), item(2, "Build"), item(9, "Build", labels=("task",))]
-        run, _ = self.board_answering(items, subprocess.TimeoutExpired("gh", 60))
-        code, printed = self.said(run)
-        self.assertEqual(code, 0)
-        self.assertIn("  backlog: 3 open, the limits hold; the bin: 0 open", printed)
-        self.assertIn("  backlog: tasks' parent stories could not be read (TimeoutExpired) — every task counted as riding on a story",
-                      printed)
-
-    def test_a_task_item_missing_its_repository_or_number_is_unread_not_a_traceback(self):
-        # The gate must never stop a push by failing itself: data it cannot use is a could-not-look, said with its cause.
-        cases = (("no repository", lambda content: content.pop("repository"), "AttributeError"),
-                 ("a None repository", lambda content: content.update(repository=None), "AttributeError"),
-                 ("a repository with no owner", lambda content: content.update(repository="spark"), "ValueError"),
-                 ("no number", lambda content: content.pop("number"), "TypeError"))
-        for name, damage, cause in cases:
-            with self.subTest(name):
-                task = item(9, "Build", labels=("task",))
-                damage(task["content"])
-                run, _ = self.board_answering([item(1, "Build"), item(2, "Build"), task], {"data": {}})
-                code, printed = self.said(run)
-                self.assertEqual(code, 0)
-                self.assertIn("  backlog: 3 open, the limits hold; the bin: 0 open", printed)
-                self.assertIn("tasks' parent stories could not be read (%s) — every task counted as riding on a story" % cause, printed)
-
-    def test_unread_parents_do_not_hide_a_broken_limit(self):
-        items = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build"), item(9, "Build", labels=("task",))]
-        run, _ = self.board_answering(items, subprocess.TimeoutExpired("gh", 60))
-        code, printed = self.said(run)
-        self.assertEqual(code, 1)
-        self.assertIn("    Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another", printed)
-        self.assertIn("tasks' parent stories could not be read (TimeoutExpired)", printed)
-
-    def test_fetch_reads_both_boards_and_asks_every_open_task_s_parent_in_one_call(self):
+    def test_fetch_reads_both_boards_with_each_task_s_parent_from_its_card(self):
         bin_repository = "xmejkal/sisuo-brain-transplant"
-        spark_cards = [item(1, "Build"), item(2, "Build", labels=("task",))]
-        bin_cards = [item(19, "Build", repository=bin_repository), item(20, "Build", labels=("task",), repository=bin_repository)]
-        answer = {"data": {"r0": {"t2": {"parent": {"number": 1}}}, "r1": {"t20": {"parent": {"number": 19}}}}}
-        run, asked = self.board_answering(spark_cards, answer, bin_cards)
+        spark_cards = [item(1, "Build"), item(2, "Build", labels=("task",), parent=1)]
+        bin_cards = [item(19, "Build", repository=bin_repository), item(20, "Build", labels=("task",), parent=19, repository=bin_repository)]
+        run, asked = gh_pages(spark_cards, bin_cards)
         with mock.patch.object(check_backlog.subprocess, "run", side_effect=run):
-            items, bin_items, why, bin_why = check_backlog.fetch()
-        self.assertEqual((why, bin_why), (None, None))
+            items, bin_items, bin_why = check_backlog.fetch()
+        self.assertIsNone(bin_why)
         self.assertEqual([(e["content"]["number"], e["parent"]) for e in items], [(1, None), (2, 1)])
-        self.assertEqual([(e["content"]["number"], e["parent"]) for e in bin_items], [(19, None), (20, 19)])
-        questions = [command for command in asked if "graphql" in command]
-        self.assertEqual(len(questions), 1)
-        self.assertIn('r0: repository(owner: "xmejkal", name: "spark") { t2: issue(number: 2)', questions[0])
-        self.assertIn('r1: repository(owner: "xmejkal", name: "sisuo-brain-transplant") { t20: issue(number: 20)', questions[0])
+        self.assertEqual([(e["content"]["number"], e["parent"], e["content"]["repo"]) for e in bin_items],
+                         [(19, None, "sisuo-brain-transplant"), (20, 19, "sisuo-brain-transplant")])
 
     def test_fetch_keeps_spark_s_items_when_the_bin_s_board_cannot_be_listed(self):
-        run, _ = self.board_answering([item(1, "Build")], {"data": {}}, subprocess.TimeoutExpired("gh", 60))
+        run, _ = gh_pages([item(1, "Build")], subprocess.TimeoutExpired("gh", 60))
         with mock.patch.object(check_backlog.subprocess, "run", side_effect=run):
-            items, bin_items, why, bin_why = check_backlog.fetch()
-        self.assertEqual(([e["content"]["number"] for e in items], bin_items, why, bin_why), ([1], None, None, "TimeoutExpired"))
-
-    def listing_only_spark(self):
-        """A gh whose project list holds spark's project and not the bin's."""
-        def run(args, **kwargs):
-            if "item-list" in args:
-                return mock.Mock(stdout=json.dumps({"items": [item(1, "Build")], "totalCount": 1}))
-            return mock.Mock(stdout=json.dumps({"projects": [{"number": 2, "title": "spark"}]}))
-        return run
+            items, bin_items, bin_why = check_backlog.fetch()
+        self.assertEqual(([e["content"]["number"] for e in items], bin_items, bin_why), ([1], None, "TimeoutExpired"))
 
     def test_fetch_says_when_the_project_list_has_no_bin_project(self):
-        with mock.patch.object(check_backlog.subprocess, "run", side_effect=self.listing_only_spark()):
-            items, bin_items, why, bin_why = check_backlog.fetch()
-        self.assertEqual(([e["content"]["number"] for e in items], bin_items, why, bin_why),
-                         ([1], None, None, "no project titled 'the bin' under xmejkal"))
+        with mock.patch.object(check_backlog.subprocess, "run", side_effect=gh_pages([item(1, "Build")], titles=("spark",))[0]):
+            items, bin_items, bin_why = check_backlog.fetch()
+        self.assertEqual(([e["content"]["number"] for e in items], bin_items, bin_why),
+                         ([1], None, "no project titled 'the bin' under xmejkal"))
 
     def test_main_says_when_the_bin_s_board_was_not_read(self):
-        run, _ = self.board_answering([item(1, "Build")], {"data": {}}, subprocess.TimeoutExpired("gh", 60))
-        code, printed = self.said(run)
+        code, printed = self.said(gh_pages([item(1, "Build")], subprocess.TimeoutExpired("gh", 60))[0])
         self.assertEqual(code, 0)
         self.assertIn("  backlog: 1 open, the limits hold\n", printed)
         self.assertIn("  backlog: the bin's board could not be read (TimeoutExpired) — its cards were not counted or checked",
                       printed)
 
     def test_main_says_when_the_project_list_has_no_bin_project(self):
-        code, printed = self.said(self.listing_only_spark())
+        code, printed = self.said(gh_pages([item(1, "Build")], titles=("spark",))[0])
         self.assertEqual(code, 0)
         self.assertIn("  backlog: 1 open, the limits hold\n", printed)
         self.assertIn("  backlog: the bin's board could not be read (no project titled 'the bin' under xmejkal) — "
@@ -680,22 +598,19 @@ class TheBacklogCheckTest(unittest.TestCase):
 
     def test_the_summary_says_how_many_of_the_bin_s_cards_are_open(self):
         # Said when the bin was read, as the note is said when it was not: a Done card is no open card.
-        run, _ = self.board_answering([item(1, "Build")], {"data": {}}, [item(19, "Build"), item(20, "Idea"), item(21, "Done")])
-        code, printed = self.said(run)
+        code, printed = self.said(gh_pages([item(1, "Build")], [item(19, "Build"), item(20, "Idea"), item(21, "Done")])[0])
         self.assertEqual(code, 0)
         self.assertIn("  backlog: 1 open, the limits hold; the bin: 2 open\n", printed)
 
     def test_main_says_nothing_of_the_bin_when_its_board_was_read(self):
-        run, _ = self.board_answering([item(1, "Build")], {"data": {}}, [item(19, "Build")])
-        code, printed = self.said(run)
+        code, printed = self.said(gh_pages([item(1, "Build")], [item(19, "Build")])[0])
         self.assertEqual(code, 0)
         self.assertIn("  backlog: 1 open, the limits hold; the bin: 1 open", printed)
         self.assertNotIn("could not be read", printed)
 
     def test_an_unread_bin_board_does_not_hide_a_broken_limit(self):
-        run, _ = self.board_answering([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")], {"data": {}},
-                                      subprocess.TimeoutExpired("gh", 60))
-        code, printed = self.said(run)
+        code, printed = self.said(gh_pages([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")],
+                                           subprocess.TimeoutExpired("gh", 60))[0])
         self.assertEqual(code, 1)
         self.assertIn("    Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another", printed)
         self.assertIn("the bin's board could not be read (TimeoutExpired)", printed)
@@ -703,26 +618,15 @@ class TheBacklogCheckTest(unittest.TestCase):
     def test_main_counts_the_bin_s_cards_in_flight_and_a_bin_task_under_its_story_rides_on_it(self):
         bin_repository = "xmejkal/sisuo-brain-transplant"
         spark_cards = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
-        bin_cards = [item(19, "Build", repository=bin_repository), item(20, "Build", labels=("task",), repository=bin_repository)]
-        run, _ = self.board_answering(spark_cards, {"data": {"r0": {"t20": {"parent": {"number": 19}}}}}, bin_cards)
-        code, printed = self.said(run)
+        bin_cards = [item(19, "Build", repository=bin_repository), item(20, "Build", labels=("task",), parent=19, repository=bin_repository)]
+        code, printed = self.said(gh_pages(spark_cards, bin_cards)[0])
         self.assertEqual(code, 1)
         self.assertIn("  backlog: 4 open, 1 problem(s); the bin: 2 open", printed)
         self.assertIn("    5 in flight (#1, #2, #3, #4, bin #19) — at most 4: finish one before starting another", printed)
         self.assertNotIn("could not be read", printed)
 
-    def test_unread_parents_leave_the_bin_s_tasks_riding_too(self):
-        spark_cards = [item(1, "Discovery"), item(2, "Design"), item(3, "Build"), item(4, "Review")]
-        bin_cards = [item(20, "Build", labels=("task",), repository="xmejkal/sisuo-brain-transplant")]
-        run, _ = self.board_answering(spark_cards, subprocess.TimeoutExpired("gh", 60), bin_cards)
-        code, printed = self.said(run)
-        self.assertEqual(code, 0)
-        self.assertIn("  backlog: 4 open, the limits hold; the bin: 1 open", printed)
-        self.assertIn("tasks' parent stories could not be read (TimeoutExpired)", printed)
-
     def test_a_spark_board_that_cannot_be_listed_skips_the_look_and_passes(self):
-        run, _ = self.board_answering(subprocess.TimeoutExpired("gh", 60), {"data": {}})
-        code, printed = self.said(run)
+        code, printed = self.said(gh_pages(subprocess.TimeoutExpired("gh", 60))[0])
         self.assertEqual(code, 0)
         self.assertIn("  backlog: could-not-run — gh or the network could not be reached (TimeoutExpired); the limits were not checked", printed)
         self.assertNotIn("skipped", printed)
@@ -736,9 +640,7 @@ class TheBacklogCheckTest(unittest.TestCase):
         self.assertNotIn("skipped", printed)
 
     def test_a_missing_project_fails_the_gate_and_says_so(self):
-        def run(*args, **kwargs):
-            return mock.Mock(stdout=json.dumps({"projects": [{"number": 1, "title": "the bin"}]}))
-        code, printed = self.said(run)
+        code, printed = self.said(gh_pages(titles=("the bin",))[0])
         self.assertEqual(code, 1)
         self.assertIn("no project titled 'spark'", printed)
 
@@ -764,20 +666,18 @@ class TheBacklogCheckTest(unittest.TestCase):
 
         def refuse_everything(*args, **kwargs):
             raise self.refused(self.NOT_LOGGED_IN)
-        listing_refused, _ = self.board_answering(self.refused(self.NOT_LOGGED_IN), {"data": {}})
+        listing_refused, _ = gh_pages(self.refused(self.NOT_LOGGED_IN))
         for where, run in (("the project list", refuse_everything), ("spark's items", listing_refused)):
             with self.subTest(where=where):
                 code, printed = self.said(run)
                 self.assertEqual(code, 0)
                 self.assertIn(unread, printed)
 
-    def test_the_bin_s_board_and_the_parents_unread_say_gh_s_own_first_line(self):
-        run, _ = self.board_answering([item(1, "Build"), item(9, "Build", labels=("task",))],
-                                      self.refused("GraphQL: API rate limit exceeded for user\n"),
-                                      self.refused("\nHTTP 502: Bad Gateway (https://api.github.com/graphql)\n"))
+    def test_the_bin_s_board_unread_says_gh_s_own_first_line(self):
+        run, _ = gh_pages([item(1, "Build"), item(9, "Build", labels=("task",))],
+                          self.refused("\nHTTP 502: Bad Gateway (https://api.github.com/graphql)\n"))
         code, printed = self.said(run)
         self.assertEqual(code, 0)
-        self.assertIn("  backlog: tasks' parent stories could not be read (GraphQL: API rate limit exceeded for user)", printed)
         self.assertIn("  backlog: the bin's board could not be read (HTTP 502: Bad Gateway (https://api.github.com/graphql))",
                       printed)
 
@@ -787,131 +687,109 @@ class TheBacklogCheckTest(unittest.TestCase):
                              (self.refused(" \n\n"), "CalledProcessError"), (self.refused(None), "CalledProcessError"),
                              (ValueError("Expecting value"), "ValueError")):
             with self.subTest(named=named):
-                self.assertEqual(check_backlog._cause(error), named)
+                self.assertEqual(board_read.cause(error), named)
 
     def test_a_timeout_s_stderr_in_bytes_is_read_as_text(self):
         # subprocess hands a timed-out run's output back as bytes whatever text= said.
-        self.assertEqual(check_backlog._cause(subprocess.TimeoutExpired("gh", 60, stderr=b"gh: slow network\n")), "gh: slow network")
+        self.assertEqual(board_read.cause(subprocess.TimeoutExpired("gh", 60, stderr=b"gh: slow network\n")), "gh: slow network")
 
 
 class TheWholeBoardTest(unittest.TestCase):
     """
-    P168 (#106): the gate reads the whole board, or says it could not. gh's item-list answers `--limit N` with at most N
-    items and the board's totalCount; the gate asks for 500 first, asks again with the board's own count when that was
-    short (5000 at most), and a board still short after that is a partial read: could-not-run, said with both numbers,
-    never "the limits hold". The bin's board the same way, as the bin's unread line (its cards not counted or checked).
-    The numbers here are written out, never read from the module (W2).
+    P168 (#106), P811 (#1153): the gate reads the whole board, or says it could not. board_read asks 100 items a page,
+    `after` the last page's cursor, until hasNextPage is false — 50 pages at most — and a board whose pages held fewer
+    items than its totalCount, or whose items held no issue, is a partial read: could-not-run, said with the numbers,
+    never "the limits hold". The bin's board the same way, as the bin's unread line. A draft or a pull request is no
+    card. What the read cost is said when it was more than 50 points or the look was not whole. The numbers here are
+    written out, never read from the module (W2).
     """
-
-    def listing(self, spark_cards, bin_cards=(), says=None, serves=None):
-        """
-        A gh whose spark board (number 2) holds `spark_cards` and the bin's (number 1) `bin_cards`, answering each
-        `--limit N` with the first N of them — or the first `serves` when that is fewer, and a totalCount of `says` when
-        given, so a board can be made to look larger than what gh hands over. Returns it with the commands it was asked.
-        """
-        asked = []
-
-        def run(args, **kwargs):
-            asked.append(" ".join(args))
-            if "graphql" in args:
-                answer = {"data": {}}
-            elif "item-list" in args:
-                cards = list(spark_cards if args[args.index("item-list") + 1] == "2" else bin_cards)
-                limit = int(args[args.index("--limit") + 1])
-                answer = {"items": cards[:min(limit, serves if serves is not None else limit)],
-                          "totalCount": len(cards) if says is None else says}
-            else:
-                answer = {"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}
-            return mock.Mock(stdout=json.dumps(answer))
-        return run, asked
 
     def said(self, run):
         with mock.patch.object(check_backlog.subprocess, "run", side_effect=run), mock.patch("sys.stdout") as out:
             code = check_backlog.main()
         return code, "".join(call.args[0] for call in out.write.call_args_list)
 
-    def listings_of(self, asked, number):
-        """The `--limit` of each item-list call made for project `number`, in order."""
-        return [int(command.split("--limit ")[1].split()[0]) for command in asked
-                if "item-list %d " % number in command]
-
-    def test_a_board_of_101_items_is_read_whole_in_one_ask(self):
-        run, asked = self.listing([item(n, "Idea") for n in range(1, 102)])
+    def test_a_board_of_101_items_is_read_whole_in_two_pages(self):
+        run, asked = gh_pages([item(n, "Idea") for n in range(1, 102)])
         code, printed = self.said(run)
-        self.assertEqual(code, 0)
-        self.assertIn("  backlog: 101 open, the limits hold; the bin: 0 open\n", printed)
-        self.assertEqual(self.listings_of(asked, 2), [500])
+        self.assertEqual((code, printed), (0, "  backlog: 101 open, the limits hold; the bin: 0 open\n"))
+        self.assertEqual(boards_asked(asked), [(2, None), (2, "100"), (1, None)])
 
-    def test_a_board_of_501_items_is_asked_again_with_its_own_count_and_read_whole(self):
-        run, asked = self.listing([item(n, "Idea") for n in range(1, 502)])
+    def test_a_board_of_692_items_is_read_whole_in_seven_pages_and_the_bin_s_of_101_in_two(self):
+        run, asked = gh_pages([item(n, "Idea") for n in range(1, 693)], [item(n, "Idea") for n in range(1, 102)])
         code, printed = self.said(run)
-        self.assertEqual(code, 0)
-        self.assertIn("  backlog: 501 open, the limits hold; the bin: 0 open\n", printed)
-        self.assertEqual(self.listings_of(asked, 2), [500, 501])
-        self.assertNotIn("could-not-run", printed)
+        self.assertEqual((code, printed), (0, "  backlog: 692 open, the limits hold; the bin: 101 open\n"))
+        self.assertEqual(boards_asked(asked), [(2, None), (2, "100"), (2, "200"), (2, "300"), (2, "400"), (2, "500"),
+                                               (2, "600"), (1, None), (1, "100")])
 
-    def test_the_bin_s_board_of_501_items_is_read_whole_too(self):
-        run, asked = self.listing([item(1, "Idea")], [item(n, "Idea") for n in range(1, 502)])
-        code, printed = self.said(run)
-        self.assertEqual(code, 0)
-        self.assertIn("  backlog: 1 open, the limits hold; the bin: 501 open\n", printed)
-        self.assertEqual(self.listings_of(asked, 1), [500, 501])
-
-    def test_a_spark_board_still_short_after_the_second_ask_is_could_not_run_and_judges_nothing(self):
+    def test_a_spark_board_read_short_is_could_not_run_naming_both_numbers_and_its_cost(self):
         # Four cards in Build would be named — but the gate never saw the whole board, so it says that instead (W1).
         cards = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")] + [item(n, "Idea") for n in range(5, 11)]
-        run, asked = self.listing(cards, says=12)
-        code, printed = self.said(run)
-        self.assertEqual(code, 0)
-        self.assertEqual(printed, "  backlog: could-not-run — the spark board holds 12 items, 10 were read; the limits were not checked\n")
-        self.assertEqual(self.listings_of(asked, 2), [500, 12])
+        code, printed = self.said(gh_pages(cards, says={2: 12})[0])
+        self.assertEqual((code, printed), (0, "  backlog: could-not-run — the spark board holds 12 items, 10 were read; the "
+                                              "limits were not checked\n  backlog: the board read cost 2 GraphQL points in 2 "
+                                              "calls; 3,998 of 5,000 left this hour\n"))
 
-    def test_a_board_larger_than_the_cap_is_asked_for_the_cap_and_said_short(self):
-        run, asked = self.listing([item(n, "Idea") for n in range(1, 11)], says=6000)
+    def test_a_next_page_that_never_ends_stops_at_fifty_pages_and_is_said_short(self):
+        run, asked = gh_pages([item(n, "Idea") for n in range(1, 11)], says={2: 130}, endless=True)
         code, printed = self.said(run)
         self.assertEqual(code, 0)
-        self.assertIn("  backlog: could-not-run — the spark board holds 6000 items, 10 were read; the limits were not checked", printed)
-        self.assertEqual(self.listings_of(asked, 2), [500, 5000])
+        self.assertIn("  backlog: could-not-run — the spark board holds 130 items, 10 were read; the limits were not checked\n",
+                      printed)
+        self.assertEqual(len([number for number, _ in boards_asked(asked) if number == 2]), 50)
 
     def test_a_bin_board_read_in_part_is_the_bin_s_unread_line_and_spark_is_judged_alone(self):
         spark = [item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Build")]
-        run, asked = self.bin_short(spark, [item(19, "Build"), item(20, "Build")], bin_says=25)
-        code, printed = self.said(run)
+        code, printed = self.said(gh_pages(spark, [item(19, "Build"), item(20, "Build")], says={1: 25})[0])
         self.assertEqual(code, 1)
-        self.assertIn("  backlog: 4 open, 1 problem(s)\n", printed)
-        self.assertIn("    Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another\n", printed)
-        self.assertIn("  backlog: the bin's board could not be read (it holds 25 items, 2 were read) — its cards were not "
-                      "counted or checked\n", printed)
-        self.assertEqual(self.listings_of(asked, 1), [500, 25])
-        self.assertNotIn("the limits hold", printed)
+        self.assertEqual(printed, "  backlog: 4 open, 1 problem(s)\n"
+                                  "    Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another\n"
+                                  "  backlog: the bin's board could not be read (it holds 25 items, 2 were read) — its cards were "
+                                  "not counted or checked\n"
+                                  "  backlog: the board read cost 3 GraphQL points in 3 calls; 3,997 of 5,000 left this hour\n")
 
-    def bin_short(self, spark_cards, bin_cards, bin_says):
-        """A gh that lists spark's board whole and the bin's with a totalCount of `bin_says`, handing over all of `bin_cards`."""
-        asked = []
+    def test_a_draft_or_a_pull_request_is_no_card_and_no_short_read(self):
+        # A draft in Build would make Build hold three; it is no backlog item, so the limits hold (P811).
+        code, printed = self.said(gh_pages([item(1, "Build"), item(2, "Build"), DRAFT])[0])
+        self.assertEqual((code, printed), (0, "  backlog: 2 open, the limits hold; the bin: 0 open\n"))
 
-        def run(args, **kwargs):
-            asked.append(" ".join(args))
-            if "graphql" in args:
-                answer = {"data": {}}
-            elif "item-list" in args:
-                if args[args.index("item-list") + 1] == "2":
-                    answer = {"items": list(spark_cards), "totalCount": len(spark_cards)}
-                else:
-                    answer = {"items": list(bin_cards), "totalCount": bin_says}
-            else:
-                answer = {"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}
-            return mock.Mock(stdout=json.dumps(answer))
-        return run, asked
-
-    def test_a_listing_with_no_total_count_is_could_not_run_with_its_cause(self):
-        # An answer the gate cannot size is a look it could not make, said with the key it missed — never a traceback.
-        def run(args, **kwargs):
-            if "item-list" in args:
-                return mock.Mock(stdout=json.dumps({"items": [item(1, "Build")]}))
-            return mock.Mock(stdout=json.dumps({"projects": [{"number": 2, "title": "spark"}]}))
-        code, printed = self.said(run)
+    def test_a_board_whose_items_hold_no_issue_is_could_not_run_not_zero_open(self):
+        # Else "0 open, the limits hold" would pass over a board nobody read (W1).
+        code, printed = self.said(gh_pages([DRAFT, DRAFT])[0])
         self.assertEqual(code, 0)
-        self.assertIn("  backlog: could-not-run — gh or the network could not be reached (KeyError); the limits were not checked", printed)
+        self.assertIn("  backlog: could-not-run — the spark board holds 2 items and none of them was read as an issue; the "
+                      "limits were not checked\n", printed)
+
+    def test_a_null_project_is_could_not_run_with_its_cause(self):
+        # An answer the gate cannot read is a look it could not make, said with its kind — never a traceback.
+        def run(args, **kwargs):
+            if "query=" + board_read.PROJECTS in args:
+                return mock.Mock(stdout=json.dumps({"data": {"user": {"projectsV2": {"nodes": [{"number": 2, "title": "spark"}]}}}}))
+            return mock.Mock(stdout=json.dumps({"data": {"user": {"projectV2": None}}}))
+        code, printed = self.said(run)
+        self.assertEqual((code, printed), (0, "  backlog: could-not-run — gh or the network could not be reached (TypeError); the "
+                                              "limits were not checked\n"))
+
+    def test_the_cost_line_sums_every_call_and_gives_the_last_remaining_above_fifty_points(self):
+        code, printed = self.said(gh_pages([item(1, "Idea")], cost=20)[0])
+        self.assertEqual((code, printed), (0, "  backlog: 1 open, the limits hold; the bin: 0 open\n"
+                                              "  backlog: the board read cost 60 GraphQL points in 3 calls; 3,997 of 5,000 left "
+                                              "this hour\n"))
+        code, printed = self.said(gh_pages([item(1, "Idea")], cost=17)[0])  # 51: one over the floor
+        self.assertIn("the board read cost 51 GraphQL points in 3 calls", printed)
+        code, printed = self.said(gh_pages([item(1, "Idea")], cost=16)[0])  # 48: a whole look under the floor is quiet
+        self.assertNotIn("GraphQL points", printed)
+
+    def test_no_cost_line_when_no_call_answered(self):
+        def run(*args, **kwargs):
+            raise FileNotFoundError("gh")
+        code, printed = self.said(run)
+        self.assertEqual((code, printed), (0, "  backlog: could-not-run — gh or the network could not be reached "
+                                              "(FileNotFoundError); the limits were not checked\n"))
+
+
+#: The cost line of a look of three calls at 1 point each that was not whole (P811: said under the floor too).
+COST = "  backlog: the board read cost 3 GraphQL points in 3 calls; 3,997 of 5,000 left this hour\n"
 
 
 class TheStageTest(unittest.TestCase):
@@ -974,18 +852,12 @@ class TheStageTest(unittest.TestCase):
         self.assertEqual(printed, "  backlog: 4 open, 1 problem(s)\n"
                                   "    Build (spark) holds 4 (#1, #2, #3, #4) — its limit is 2: finish one before starting another\n"
                                   "  backlog: the bin's board could not be read (no card of its 2 has a Status) — its cards were "
-                                  "not counted or checked\n")
+                                  "not counted or checked\n" + COST)
 
     def gate(self, spark_cards, bin_cards=()):
-        """main()'s exit code and what it printed over a gh listing both boards whole, with no task on either."""
-        def run(args, **kwargs):
-            if "item-list" in args:
-                cards = spark_cards if args[args.index("item-list") + 1] == "2" else bin_cards
-                return mock.Mock(stdout=json.dumps({"items": list(cards), "totalCount": len(cards)}))
-            if "graphql" in args:
-                return mock.Mock(stdout=json.dumps({"data": {}}))
-            return mock.Mock(stdout=json.dumps({"projects": [{"number": 2, "title": "spark"}, {"number": 1, "title": "the bin"}]}))
-        with mock.patch.object(check_backlog.subprocess, "run", side_effect=run), mock.patch("sys.stdout") as out:
+        """main()'s exit code and what it printed over a gh reading both boards whole, each call costing 1 point."""
+        with mock.patch.object(check_backlog.subprocess, "run", side_effect=gh_pages(spark_cards, bin_cards)[0]), \
+                mock.patch("sys.stdout") as out:
             code = check_backlog.main()
         return code, "".join(call.args[0] for call in out.write.call_args_list)
 
@@ -993,11 +865,11 @@ class TheStageTest(unittest.TestCase):
         code, printed = self.gate([item(1, "Build"), item(2, "Build"), item(3, "Build"), item(4, "Doing")])
         self.assertEqual(code, 0)
         self.assertEqual(printed, '  backlog: could-not-run — #4 P4 — x is in a stage the gate does not know: "Doing"; '
-                                  "the limits were not checked\n")
+                                  "the limits were not checked\n" + COST)
         code, printed = self.gate([item(1, "Idea")], [item(19, "Doing")])
         self.assertEqual(code, 0)
         self.assertEqual(printed, '  backlog: could-not-run — bin #19 P19 — x is in a stage the gate does not know: "Doing"; '
-                                  "the limits were not checked\n")
+                                  "the limits were not checked\n" + COST)
 
     def test_the_gate_says_which_cards_have_no_stage_and_counts_them_open_as_idea(self):
         # Two in Build and two with no stage: the limits hold (a card with no stage is in no stage), and the two are named.
@@ -1010,7 +882,7 @@ class TheStageTest(unittest.TestCase):
         code, printed = self.gate([item(1, None), item(2, None), item(3, None)])
         self.assertEqual(code, 0)
         self.assertEqual(printed, "  backlog: could-not-run — no card of the 3 on the spark board has a Status — the field's keys "
-                                  "may have changed, or every card is new; the limits were not checked\n")
+                                  "may have changed, or every card is new; the limits were not checked\n" + COST)
 
     def test_a_board_with_every_card_staged_says_nothing_of_stages(self):
         code, printed = self.gate([item(1, "Build"), item(2, "Idea")], [item(19, "Ready")])

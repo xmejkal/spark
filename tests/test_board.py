@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
 import board  # noqa: E402
+import board_read  # noqa: E402
 
 TODAY = dt.date(2026, 10, 7)
 BODY = "### Needed by\n\nthe PO\n\n### Value proven by\n\nx\n"
@@ -31,16 +32,12 @@ def without_disk(text):
 
 def node(number, title, status, changed="2026-10-05T10:00:00Z", labels=("story",), waiting=None, since=None, slice_="team tools",
          parent=None, parent_closed=False):
-    values = [{"name": status, "updatedAt": changed, "field": {"name": "Status"}},
-              {"name": slice_, "updatedAt": changed, "field": {"name": "Slice"}}, {}]
-    if waiting:
-        values.append({"name": waiting, "updatedAt": changed, "field": {"name": "Waiting on"}})
-    if since:
-        values.append({"date": since, "field": {"name": "Waiting since"}})
+    """A board item as board_read.QUERY answers it: each field asked by its name, null when the card has none (P811)."""
     return {"content": {"number": number, "title": title, "body": BODY, "repository": {"name": "spark"},
                         "labels": {"nodes": [{"name": label} for label in labels]},
                         "parent": {"number": parent, "closed": parent_closed} if parent else None},
-            "fieldValues": {"nodes": values}}
+            "status": {"name": status, "updatedAt": changed}, "slice": {"name": slice_},
+            "waitingOn": {"name": waiting} if waiting else None, "waitingSince": {"date": since} if since else None}
 
 
 def project(*nodes):
@@ -56,7 +53,7 @@ SPARK = board.to_items(project(
     node(32, "P103 — The process documented", "Ready"),
     node(18, "P97 — Store 1c", "Ready"),
     node(15, "R2.6 — A fourth cold test", "Idea", waiting="the PO", since="2026-10-05"),
-    {"content": {}, "fieldValues": {"nodes": []}}))
+    {"content": {}, "status": None}))
 BIN = board.to_items(project(node(1, "B1 — Identify the audio module", "Idea", waiting="the PO", since="2026-09-25")))
 # Spark's four cards in flight are the cap (P146); a fifth, flying on the bin's board, breaks it.
 SPARK_AT_THE_CAP = board.to_items(project(node(1, "P1 — a", "Discovery"), node(2, "P2 — b", "Design"),
@@ -206,7 +203,7 @@ class TheCoreTest(unittest.TestCase):
     def epic_with_an_appetite(self, changed):
         """A card in Discovery that carries an Appetite of 3 — a number field the board holds as process data."""
         epic = node(5, "E — x", "Discovery", changed=changed)
-        epic["fieldValues"]["nodes"].append({"number": 3, "field": {"name": "Appetite"}})
+        epic["appetite"] = {"number": 3}
         return board.to_items(project(epic))
 
     def test_the_status_says_nothing_of_an_appetite(self):
@@ -386,11 +383,11 @@ class TheFinalReviewTest(unittest.TestCase):
 
     def test_the_query_reads_the_newest_status_updates(self):
         # GitHub lists status updates newest first, so last:N would read the oldest N (C1).
-        self.assertIn("statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC})", board.QUERY)
+        self.assertIn("statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC})", board_read.QUERY)
 
     def test_the_query_reads_each_issue_s_parent_story(self):
         # A task with no parent story is a card of its own (P146): the status must be told whose sub-issue each one is.
-        self.assertIn("parent{number closed}", board.QUERY)
+        self.assertIn("parent{number closed}", board_read.QUERY)
 
     def test_a_board_read_short_says_how_many_it_holds(self):
         held = project(node(1, "P1 — x", "Ready"))
@@ -505,8 +502,8 @@ class TheWholeBoardTest(unittest.TestCase):
             "  in flight: nothing"])
 
     def test_the_query_pages_the_items(self):
-        self.assertIn("items(first:100,after:$after){totalCount pageInfo{hasNextPage endCursor}", board.QUERY)
-        self.assertIn("$after:String", board.QUERY)
+        self.assertIn("items(first:100,after:$after){totalCount pageInfo{hasNextPage endCursor}", board_read.QUERY)
+        self.assertIn("$after:String", board_read.QUERY)
 
     def test_a_board_of_101_items_is_read_whole_in_two_pages(self):
         gh, asked = self.paged_gh(101)
@@ -551,7 +548,7 @@ class TheWholeBoardTest(unittest.TestCase):
 def unstaged(number, title):
     """A board item in GitHub's "No status" column: a new item, whose field values carry no Status at all."""
     card = node(number, title, "Idea")
-    card["fieldValues"]["nodes"] = [value for value in card["fieldValues"]["nodes"] if (value.get("field") or {}).get("name") != "Status"]
+    card["status"] = None
     return card
 
 
