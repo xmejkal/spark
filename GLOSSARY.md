@@ -41,6 +41,12 @@ the board's MAC, one half from the flash image. It shows that a look was made on
 the person's yes, and it is not a secret. The failure behind them: `deploy.py` erased whatever board was on USB, so
 a wrong board lost its flash (P219).
 
+The **banner** is MicroPython's own words in the image, the part of the line its REPL starts with before the `;`:
+`MicroPython v1.29.0 on 2026-08-24`. The deploy reads it from the image file into the facts file and the store record, and
+the look says the image's on its `micropython` line and the record's in its last-deploy line. It names what spark put on the
+board, never what the board holds now. A **build** is the download the tools list names by `micropython_port`, a claim
+about the image; the banner is what the file holds (P779).
+
 ### gate and the yes — `deploy_gate.py`
 
 The **gate** is the part of `deploy.py` that refuses to erase until its own look finds no stop and the token matches
