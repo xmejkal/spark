@@ -117,12 +117,16 @@ class GateCase(LookCase):
             code = deploy.main(["--project", str(self.project), *argv], outside=outside, operation=operation)
         return code, out.getvalue(), err.getvalue()
 
+    def find_tool(self, name, **where):
+        """The deploy's tools: `find_fake_tool`; a case that needs another tool answers it here."""
+        return find_fake_tool(name, **where)
+
     def outside_world(self, run, consent, reporter, clock=None):
         """The FakeOutsideWorld of a deploy: `run`, the fake tools, `reporter`, a clock whose waits self.slept keeps, and
         `consent` as the yes (None: the terminal, which the tests' stdout is not)."""
         self.deploy_clock = clock or FakeClock()
         self.slept = self.deploy_clock.slept  # every wait: the flasher's retry, the facts file's and the start wait's polls
-        return FakeOutsideWorld(run, find_tool=find_fake_tool, reporter=reporter, clock=self.deploy_clock,
+        return FakeOutsideWorld(run, find_tool=self.find_tool, reporter=reporter, clock=self.deploy_clock,
                                 make_consent=lambda line: consent or deploy_gate.TerminalConsentStrategy(line))
 
     def fake_tools_run(self, esptool="c6-flash-id.txt", text=None, devs="mpremote-devs-one.txt", devs_text=None, fails=0, fail_code=2, write_fails=False, look_fails=False):
@@ -1343,17 +1347,20 @@ class TheNoSimulationDeployTest(GateCase):
         patcher = mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()})
         patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch.object(image_builder, "interpreter_for",
-                                    side_effect=lambda given, project=None, find_tool=None: image_builder.Interpreter(self.micropython, 0))
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        self.build_tool = image_builder.build_entry(self.project)[1][0]  # the tools list's entry for the board's build
         self.build_image()
+
+    def find_tool(self, name, **where):
+        """The board's MicroPython build is the test's interpreter file; every other tool is the deploy's fake."""
+        if name == self.build_tool:
+            return tool_finder.Tool(name, None, {}, [str(self.micropython)])
+        return super().find_tool(name, **where)
 
     def build_image(self):
         self.image.write_bytes(image_builder.image(self.micropython.read_bytes(), image_builder.files_under(self.project / "firmware")))
 
     def evidence(self):
-        return image_evidence.NoSimulationEvidence(self.project)
+        return image_evidence.NoSimulationEvidence(self.project, self.find_tool)
 
     def flash(self, *argv, **kw):
         return self.deploy("--no-simulation", "--token", self.token(evidence=self.evidence()), *argv, **kw)

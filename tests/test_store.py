@@ -689,8 +689,10 @@ class TheOneDoorTest(unittest.TestCase):
 
     def test_a_kept_file_is_checked_before_it_takes_its_name(self):
         real = Path.write_bytes
-        with mock.patch.object(Path, "write_bytes", lambda self, data: real(self, data[:3])), self.assertRaises(store.StoreError):
+        with mock.patch.object(Path, "write_bytes", lambda self, data: real(self, data[:3])), \
+                self.assertRaises(store.StoreError) as refused:
             store.keep(b"%PDF drawing", "drawing.pdf")
+        self.assertEqual(refused.exception.code, "document_not_kept")
         self.assertEqual([found.name for found in (self.home / "sources").rglob("*") if found.is_file()], [])
 
     def test_a_name_that_would_leave_the_sources_is_refused(self):
@@ -764,6 +766,7 @@ class TheOneDoorTest(unittest.TestCase):
                         store.fetch("https://v.example/a.pdf", method=method)
                     self.assertEqual(str(refused.exception), "https://v.example/a.pdf was redirected to a URL whose scheme is ftp, "
                                                              "and spark follows a redirect only to http or https")
+                    self.assertEqual(refused.exception.code, "url_refused")
         self.assertEqual([answer.reads for answer in answers], [0, 0], "nothing was read")
 
     def test_a_real_run_refuses_a_file_url_though_the_suite_may_fetch_one(self):

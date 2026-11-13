@@ -1,0 +1,38 @@
+[
+ {
+  "file": "scripts/spark/build/kept_files.py",
+  "name": "P783: a ValueError from the sheet is no longer caught, so the keep crashes",
+  "find": "except sheet.REFUSALS + (ValueError,) as stopped:",
+  "replace": "except sheet.REFUSALS as stopped:"
+ },
+ {
+  "file": "scripts/spark/build/kept_files.py",
+  "name": "P783: a sheet that crashed on a ValueError carries no code",
+  "find": "if isinstance(stopped, sheet.REFUSALS) else build_codes.STAGE_CRASHED,",
+  "replace": "if isinstance(stopped, sheet.REFUSALS) else None,"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "P783: a redirect off the web is said as a URL that does not answer",
+  "find": "redirected_from, scheme or \"missing\", code=records_codes.URL_REFUSED)",
+  "replace": "redirected_from, scheme or \"missing\", code=records_codes.URL_UNREACHABLE)"
+ },
+ {
+  "file": "scripts/spark/records/store.py",
+  "name": "P783: a kept file that differs from the fetch is said as a refused file name",
+  "find": "code=records_codes.DOCUMENT_NOT_KEPT)",
+  "replace": "code=records_codes.FILE_NAME_REFUSED)"
+ },
+ {
+  "file": "scripts/spark/design/loader.py",
+  "name": "P783: a pinning entry may also give from",
+  "find": "extra = sorted(set(entry) - {\"name\", \"pin\"})",
+  "replace": "extra = sorted(set(entry) - {\"name\", \"pin\", \"from\"})"
+ },
+ {
+  "file": "scripts/spark/bench/image_evidence.py",
+  "name": "P783: the image check builds with the project's tools list, not the deploy's finder",
+  "find": "image_builder.interpreter_for(None, self.project, find_tool)",
+  "replace": "image_builder.interpreter_for(None, self.project)"
+ }
+]

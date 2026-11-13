@@ -2600,6 +2600,18 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
         entry = kept_files.keep_breadboard(project / "requirements.json", project, built)[0]
         self.assertEqual((entry["did"], entry["code"]), ("not written", "not_built"))
         self.assertTrue(entry["line"].startswith("no breadboard sheet: nothing is built at "), entry["line"])
+
+    def test_a_sheet_that_crashed_on_a_value_error_carries_stage_crashed(self):
+        project = Path(tempfile.mkdtemp())
+        (project / "requirements.json").write_text("{not json")  # record_built_from reads it: a ValueError, no refusal
+        (project / "dist" / "board").mkdir(parents=True)
+        entries = kept_files.keep_breadboard(project / "requirements.json", project, [Stage("build", check_spine.OK)])
+        self.assertEqual((entries[0]["did"], entries[0]["code"]), ("not written", "stage_crashed"))
+        self.assertTrue(entries[0]["line"].startswith("no breadboard sheet: "), entries[0]["line"])
+        self.assertEqual(len(entries), 3)
+        for drawn in entries[1:]:
+            self.assertEqual(drawn["did"], "not written")
+            self.assertTrue(drawn["line"].endswith(": the sheet was not written"), drawn["line"])
 # --- end MVP ---
 
 

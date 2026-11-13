@@ -150,7 +150,6 @@
 "T2:tests/test_check_vendor_pins.py:mock.patch": 4,
 "T2:tests/test_cost.py:mock.patch": 3,
 "T2:tests/test_deploy.py:mock.patch": 2,
-"T2:tests/test_deploy_gate.py:mock.patch": 1,
 "T2:tests/test_deploy_json.py:mock.patch": 5,
 "T2:tests/test_deploy_record_store.py:mock.patch": 1,
 "T2:tests/test_deploy_service.py:mock.patch": 4,
