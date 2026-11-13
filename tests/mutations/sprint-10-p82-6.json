@@ -66,9 +66,9 @@
   "replace": "            return print_status(project, None) and EXIT_OK"
  },
  {
-  "file": "scripts/tools.py",
+  "file": "scripts/spark/records/tool_choices.py",
   "name": "a new entry spark cannot find is written",
-  "find": "            if problem:\n                raise ToolError(\"%s: %s — nothing written\", name, problem, code=records_codes.TOOL_ENTRY_BROKEN)\n",
+  "find": "    if problem:\n        raise ToolError(\"%s: %s — nothing written\", name, problem, code=records_codes.TOOL_ENTRY_BROKEN)\n",
   "replace": ""
  },
  {

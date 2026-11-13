@@ -1,16 +1,16 @@
 """
 The tool finder: the tools spark depends on, found from one merged list (P82, docs/2026-10-03-tools-design.md).
 
-spark's dependencies were decided in seven places, each with its own lookup and its own error
-message. Now one list says what each tool is for, how to find it, how to install it and which
-contract it meets: spark's defaults in data/tools.json, the person's in
-~/.local/share/spark/tools.json, the project's in .spark/tools.json — merged entry by entry and
-field by field, the project winning. Every script asks `find`; nothing else names a tool.
+spark's dependencies were decided in seven places, each with its own lookup and its own error message. Now one list says
+what each tool is for, how to find it, how to install it and which contract it meets: spark's defaults in
+data/tools.json, the person's in ~/.local/share/spark/tools.json, the project's in .spark/tools.json — merged entry by
+entry and field by field, the project winning. Every script asks `find`; nothing else names a tool.
 
 A missing tool is a `ToolMissingError`, a `ToolError` whose sentence says what installs it. Only `install` installs, and
-only for /spark:setup once the person has said yes; it never runs `sudo`. This module is the library, and the CLI
-`scripts/tools.py` is what /spark:setup runs (P719). `ToolFinder(project).find` is the Adapter an area's builder hands an
-Operation as `OutsideWorld.find_tool` (P725); the logic stays in the module `find`.
+only for /spark:setup once the person has said yes; it never runs `sudo`. This module is the library, the choices a
+person makes on it are in `tool_choices`, and the CLI `scripts/tools.py` is what /spark:setup runs (P719).
+`ToolFinder(project).find` is the Adapter an area's builder hands an Operation as `OutsideWorld.find_tool` (P725); the
+logic stays in the module `find`.
 """
 
 import importlib.util
