@@ -529,6 +529,52 @@ class ANamedPinIsStillCheckedTest(unittest.TestCase):
         self.assertEqual(placed[0]["pin"], "D12")
         self.assertIn("by name", placed[0]["why"])
 
+class AnAdc2PinReadsNoVoltageTest(unittest.TestCase):
+    """
+    P798: a pin the record puts on ADC2 (`adc2_unusable_with_wifi`) cannot be read while the radio is on, so the
+    assigner gives it no adc ability, keeps an adc signal off it, and says why when a signal names one.
+    """
+
+    def adc2_board(self, gpio=(4,)):
+        roles = dict(board()["pin_roles"], adc2_unusable_with_wifi={"gpio": list(gpio) if gpio is not None else None,
+                                                                    "note": "on ADC2"})
+        return board(pins=dict(board()["pins"], A1=8), adc_gpio=[4, 8], pin_roles=roles)
+
+    def test_a_pin_on_adc2_offers_no_adc_and_an_adc1_pin_does(self):
+        self.assertEqual((pin_assigner.capability_of(self.adc2_board(), 4), pin_assigner.capability_of(self.adc2_board(), 8)),
+                         ({"wake", "pwm"}, {"adc", "pwm"}))
+
+    def test_a_record_with_no_adc2_role_or_a_null_list_is_read_as_its_adc_gpio_says(self):
+        self.assertIn("adc", pin_assigner.capability_of(board(), 4))
+        self.assertIn("adc", pin_assigner.capability_of(self.adc2_board(gpio=None), 4))
+
+    def test_an_adc_signal_takes_the_adc1_pin_and_none_is_refused(self):
+        placed_pins, _ = pin_assigner.assign(self.adc2_board(), [{"name": "SENSE", "needs": ["adc"]}])
+        self.assertEqual(placed(placed_pins), {"SENSE": "A1"})
+        with self.assertRaises(pin_assigner.ImpossibleError):
+            pin_assigner.assign(self.adc2_board(gpio=(4, 8)), [{"name": "SENSE", "needs": ["adc"]}])
+
+    def test_a_named_adc2_pin_with_needs_adc_is_refused_in_the_role_s_words(self):
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(self.adc2_board(), [{"name": "SENSE", "pin": "A0", "needs": ["adc"]}])
+        self.assertEqual(refused.exception.code, "named_pin_unsuitable")
+        self.assertEqual(str(refused.exception),
+                         "SENSE asks for A0 by name and needs adc, which GPIO4 cannot do: it is on ADC2, which cannot be "
+                         "read while the radio is on, so spark keeps an adc signal off it; pick an ADC1 pin")
+
+    def test_a_named_pin_that_lacks_adc_for_another_reason_says_no_adc2(self):
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(self.adc2_board(), [{"name": "SENSE", "pin": "P0", "needs": ["adc"]}])
+        self.assertEqual(str(refused.exception), "SENSE asks for P0 by name and needs adc, which GPIO0 cannot do")
+
+    def test_on_the_firebeetle_a_named_a5_with_needs_adc_says_adc2(self):
+        import json
+        firebeetle = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        with self.assertRaises(pin_assigner.ImpossibleError) as refused:
+            pin_assigner.assign(firebeetle, [{"name": "SENSE", "pin": "A5", "needs": ["adc"]}])
+        self.assertIn("GPIO11 cannot do: it is on ADC2", str(refused.exception))
+
+
 class ThePinMapIsAFileTheFirmwareImportsTest(unittest.TestCase):
     """
     P36. The irrigation firmware typed twelve GPIO numbers by hand and its scenario a thirteenth,

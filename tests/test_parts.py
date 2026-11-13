@@ -737,6 +737,14 @@ class TheWalksBoardTest(unittest.TestCase):
         self.assertEqual({a["signal"]: a["pin"] for a in placed}, {"BUTTON": "IO17", "STATUS_LED": "IO21"})
         self.assertFalse({a["gpio"] for a in placed} & {13, 25, 32})
 
+    def test_with_an_i2c_part_a_plain_signal_takes_an_adc2_pin_and_leaves_the_adc1_pins_free(self):
+        """P798: the walk's three parts. An ADC2 pin reads no voltage with the radio on, so it is spent before ADC1."""
+        board = json.loads((ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json").read_text())
+        placed, _ = pin_assigner.assign(board, part_facts.signals_for(["tactile-button", "led-red-5mm", "vl6180x-breakout"]))
+        self.assertEqual({a["signal"]: a["pin"] for a in placed},
+                         {"SDA": "SDA", "SCL": "SCL", "TOF_INT": "IO13", "BUTTON": "IO17", "STATUS_LED": "IO25"})
+        self.assertFalse({a["gpio"] for a in placed} & {32, 33, 36, 37, 38, 39})
+
 
 class TheShippedLibraryTest(unittest.TestCase):
     def test_every_part_shipped_satisfies_the_contract(self):

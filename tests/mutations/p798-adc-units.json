@@ -1,0 +1,10 @@
+[
+  {"file": "scripts/spark/design/pin_assigner.py", "name": "P798: capability_of gives adc to a pin on ADC2 again, so a plain signal spends ADC1 first and an adc signal lands on ADC2 (test_assign_pins.AnAdc2PinReadsNoVoltageTest.test_a_pin_on_adc2_offers_no_adc_and_an_adc1_pin_does)",
+   "find": "    if gpio in board.get(\"adc_gpio\", []) and gpio not in _adc2_gpio(board):", "replace": "    if gpio in board.get(\"adc_gpio\", []):"},
+  {"file": "scripts/spark/design/pin_assigner.py", "name": "P798: _adc2_gpio reads another role's name, so no pin is on ADC2 (test_assign_pins.AnAdc2PinReadsNoVoltageTest.test_a_pin_on_adc2_offers_no_adc_and_an_adc1_pin_does)",
+   "find": "    role = (board.get(\"pin_roles\") or {}).get(board_records.ADC2_UNUSABLE_WITH_WIFI) or {}", "replace": "    role = (board.get(\"pin_roles\") or {}).get(board_records.ONBOARD_LED) or {}"},
+  {"file": "scripts/spark/design/pin_assigner.py", "name": "P798: a null ADC2 list is not read as none, so capability_of raises (test_assign_pins.AnAdc2PinReadsNoVoltageTest.test_a_record_with_no_adc2_role_or_a_null_list_is_read_as_its_adc_gpio_says)",
+   "find": "    return role.get(\"gpio\") or []", "replace": "    return role.get(\"gpio\")"},
+  {"file": "scripts/spark/design/pin_assigner.py", "name": "P798: the refusal of a named ADC2 pin with needs adc no longer says ADC2 (test_assign_pins.AnAdc2PinReadsNoVoltageTest.test_a_named_adc2_pin_with_needs_adc_is_refused_in_the_role_s_words)",
+   "find": "    if \"adc\" in cannot and board_records.ADC2_UNUSABLE_WITH_WIFI in roles:", "replace": "    if False:"}
+]

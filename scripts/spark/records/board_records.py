@@ -67,6 +67,9 @@ ONBOARD_LED = "onboard_led"
 ONBOARD_BUTTON = "onboard_button"
 ONBOARD_DISPLAY = "onboard_display"
 ONBOARD_BATTERY_SENSE = "onboard_battery_sense"
+#: The pins on ADC2, which cannot be read while the radio is on: `pin_assigner` gives them no "adc" ability, and
+#: its refusal of a named one says why (P798).
+ADC2_UNUSABLE_WITH_WIFI = "adc2_unusable_with_wifi"
 
 from spark.core import errors, outcomes  # noqa: E402
 

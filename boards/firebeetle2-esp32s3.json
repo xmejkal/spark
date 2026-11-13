@@ -203,7 +203,7 @@
     20,
     21
   ],
-  "//adc_gpio": "ADC1 only - GPIO1-10. The S3 has a second ADC on GPIO11-20, but ADC2 shares hardware with the radio and cannot be read while WiFi is on, so it is deliberately not listed as usable. That is why A5 appears under pin_roles as a caveat rather than here: it is silkscreened as an analogue pin and is one, on the ADC you cannot use.",
+  "//adc_gpio": "ADC1 only - GPIO1-10. The S3 has a second ADC on GPIO11-20, but ADC2 shares hardware with the radio and cannot be read while WiFi is on, so it is deliberately not listed as usable. That is why A5 appears under pin_roles as a caveat rather than here: it is silkscreened as an analogue pin and is one, on the ADC you cannot use. Source: documents.esp32-s3-datasheet-v2-2, Table 2-8 Analog Functions (page 24), pins 6-15 ADC1_CH0-9 and pins 16-19 and 21-26 ADC2_CH0-9, which its Table 2-4 IO MUX Functions (page 21) names GPIO1-10 and GPIO11-20; section 4.2.2.1 Note (page 59), 'the ADC2_CH… analog functions (see Table 2-8 Analog Functions) cannot be used with Wi-Fi simultaneously'.",
   "adc_gpio": [
     1,
     2,
@@ -238,7 +238,7 @@
         19,
         20
       ],
-      "note": "on ADC2, which shares hardware with the radio. A5 (GPIO11) is the one that matters here: it is labelled analogue but cannot be read with WiFi active. Use A0-A4 or D5/D7 for analogue instead."
+      "note": "on ADC2, which shares hardware with the radio. A5 (GPIO11) is the one that matters here: it is labelled analogue but cannot be read with WiFi active. Use A0-A4 or D5/D7 for analogue instead. Source: documents.esp32-s3-datasheet-v2-2, section 4.2.2.1 Note (page 59) and Table 2-8 (page 24)."
     },
     "onboard_led": {
       "gpio": [
@@ -325,6 +325,14 @@
   },
   "//documents": "P62b: the documents this record's facts rest on, kept in the person's store (~/.local/share/spark/sources/<sha256>/<file>), never in the plugin. The WROOM-1 v1.1 is the version the facts were read from - its URL now serves a later version, so the checksum, not the URL, says which document this is. title and version are as printed (page 1, and the footer of page 15); retrieved is the day the bin first kept it.",
   "documents": {
+    "esp32-s3-datasheet-v2-2": {
+      "url": "https://documentation.espressif.com/esp32-s3_datasheet_en.pdf",
+      "sha256": "2d5a7cb7fd559d8d972bd88db32669c0196d23f22d7afaafb0f63d099b589a3f",
+      "file": "esp32-s3_datasheet_en.pdf",
+      "retrieved": "2026-10-02",
+      "title": "ESP32-S3 Series Datasheet",
+      "version": "2.2"
+    },
     "wroom1-v1-1": {
       "url": "https://www.espressif.com/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf",
       "sha256": "bc430d667d7bde6676cbdbc9053429c79c0c43a27ebd7dd06834f605b878b76b",
