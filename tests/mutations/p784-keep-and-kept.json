@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/sourcing/keep_file.py",
   "name": "P784: the record's refusal does not stop the keep, so a part with no record or spark's library still gets the file kept (test_parts.EverythingFoundIsKeptTest.test_keep_for_a_part_with_no_record_is_a_problem_on_its_id_and_keeps_nothing)",
-  "find": "                if listed[0].problems:\n                    return Answer(problems=listed[0].problems, diagnostics=said)",
-  "replace": "                if False:\n                    return Answer(problems=listed[0].problems, diagnostics=said)"
+  "find": "                if listed.answer.problems:\n                    return Answer(problems=listed.answer.problems, diagnostics=said)",
+  "replace": "                if False:\n                    return Answer(problems=listed.answer.problems, diagnostics=said)"
  },
  {
   "file": "scripts/spark/sourcing/keep_file.py",
