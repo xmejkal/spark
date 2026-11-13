@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import tools  # noqa: E402
+from spark.records import tool_choices  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from flat_message import NASTY  # noqa: E402
 
@@ -482,6 +483,55 @@ class SetupCommandTest(unittest.TestCase):
         self.cli("--pin", "pdftotext=26.09.0", "--project", str(project))
         self.assertEqual(json.loads((project / ".spark" / "tools.json").read_text()), {"pdftotext": {"version": "26.09.0"}})
         self.assertFalse(self.personal.exists())
+
+
+class TheChoicesRefuseWithTheirCodeTest(unittest.TestCase):
+    """P783 PR 3c: `tool_choices` holds what tools.py's main did with a choice, and each refusal carries its records code."""
+
+    def setUp(self):
+        defaults = dict(DEFAULTS, **{"sigrok": {"kind": "mcp", "on": False, "mcp": {"command": "sigrok-mcp-server"}},
+                                     "spark-docs": {"kind": "mcp", "owner": "spark"}})
+        self.personal = Path(tempfile.mkdtemp()) / "spark" / "tools.json"
+        for name, value in (("DEFAULTS", layer(defaults)), ("PERSONAL", self.personal)):
+            patch_where_looked_up(self, name, value)
+        self.ran = []
+
+    def test_the_choice_file_is_the_person_s_unless_a_project_is_named_without_personal(self):
+        project = project_with({})
+        self.assertEqual(tool_choices.choice_file(None, False), (self.personal, "user"))
+        self.assertEqual(tool_choices.choice_file(project, True), (self.personal, "user"))
+        self.assertEqual(tool_choices.choice_file(project, False), (project / ".spark" / "tools.json", "project"))
+
+    def test_turning_on_a_tool_the_project_turns_off_is_tool_off_and_installs_nothing(self):
+        project = project_with({"pdftotext": {"on": False}})
+        with self.assertRaises(tool_finder.ToolError) as off:
+            tool_choices.turn_on("pdftotext", project, self.personal, "user", run=lambda argv, **kw: self.ran.append(argv))
+        self.assertEqual(off.exception.code, "tool_off")
+        self.assertIn("still off", str(off.exception))
+        self.assertEqual(self.ran, [])
+
+    def test_an_entry_that_is_not_json_is_tool_entry_broken_and_nothing_is_written(self):
+        with self.assertRaises(tool_finder.ToolError) as broken:
+            tool_choices.write_new_tool("my-reader={not json", self.personal)
+        self.assertEqual(broken.exception.code, "tool_entry_broken")
+        self.assertIn("not JSON", str(broken.exception))
+        self.assertFalse(self.personal.exists(), "nothing written")
+
+    def test_an_entry_spark_could_not_find_is_tool_entry_broken_and_nothing_is_written(self):
+        with self.assertRaises(tool_finder.ToolError) as broken:
+            tool_choices.write_new_tool('broken={"kind": "path"}', self.personal)
+        self.assertEqual(broken.exception.code, "tool_entry_broken")
+        self.assertTrue(str(broken.exception).endswith("— nothing written"), str(broken.exception))
+        self.assertFalse(self.personal.exists(), "nothing written")
+
+    def test_turning_off_returns_the_sentence_main_prints_before_the_tool_is_said_off(self):
+        def unregistered(argv, **kw):
+            raise OSError("claude is not here")
+        said = tool_choices.turn_off("sigrok", None, self.personal, "user", run=unregistered)
+        self.assertEqual(said, "sigrok was not registered with Claude Code at user scope — nothing to remove")
+        self.assertIn("spark's own server", tool_choices.turn_off("spark-docs", None, self.personal, "user"))
+        self.assertIsNone(tool_choices.turn_off("pdftotext", None, self.personal, "user"))
+        self.assertEqual(json.loads(self.personal.read_text())["sigrok"], {"on": False})
 
 
 class AProjectNamedRelativelyTest(unittest.TestCase):
