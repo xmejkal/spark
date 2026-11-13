@@ -55,12 +55,22 @@ class TheChangedFilesChooseTheTestsTest(unittest.TestCase):
     def test_a_module_of_an_area_also_runs_the_area_s_net(self):
         self.assert_runs(chosen("scripts/spark/firmware/widget.py"), "test_widget", "test_golden_firmware")
 
-    def test_build_uses_the_design_net_and_sourcing_the_records_net(self):
+    def test_build_uses_the_design_net_and_idea_and_sourcing_the_records_net(self):
         self.assert_runs(chosen("scripts/spark/build/widget.py"), "test_widget", "test_golden_design")
+        self.assert_runs(chosen("scripts/spark/idea/widget.py"), "test_widget", "test_golden_records")
         self.assert_runs(chosen("scripts/spark/sourcing/widget.py"), "test_widget", "test_golden_records")
 
     def test_an_area_with_no_net_runs_only_its_named_tests(self):
-        self.assert_runs(chosen("scripts/spark/idea/widget.py"), "test_widget")
+        # a made-up area: every real one has a net (the test below)
+        self.assert_runs(chosen("scripts/spark/gadget/widget.py"), "test_widget")
+
+    def test_every_area_of_the_tree_has_a_golden_net_that_exists(self):
+        # P802: idea named test_golden_idea, which does not exist, and the story run dropped it without a word
+        areas = sorted(folder.name for folder in (ROOT / "scripts" / "spark").iterdir()
+                       if (folder / "__init__.py").is_file() and folder.name != "core")
+        self.assertIn("idea", areas)
+        nets = {area: story_tests.GOLDEN_NET % story_tests.GOLDEN_NET_ELSEWHERE.get(area, area) for area in areas}
+        self.assertEqual({area: net for area, net in nets.items() if not (ROOT / "tests" / (net + ".py")).is_file()}, {})
 
     def test_a_command_page_runs_the_tests_that_name_the_page_and_not_the_word(self):
         tests = dict(TESTS, test_the_word="a build of the board\n")

@@ -14,6 +14,7 @@ Fake per Strategy) and enters with the slice that first needs it.
 """
 
 import ast
+import re
 import subprocess
 import sys
 import unittest
@@ -66,6 +67,13 @@ class ArchitectureRules(unittest.TestCase):
 
     def test_v1_has_no_baseline_entry_so_a_new_raw_site_cannot_be_hidden_in_it(self):
         self.assertEqual([key for key in self.baseline if key.startswith("V1:")], [])
+
+    def test_u1_every_module_that_calls_itself_a_leaf_is_one_of_the_leaves(self):
+        # P802: idea_codes said "A leaf:" and U1 never checked it, because LEAVES did not list it
+        said = {path.stem for path in (ROOT / "scripts" / "spark").rglob("*.py")
+                if re.search(r"(?i)\ba leaf\b", ast.get_docstring(ast.parse(path.read_text())) or "")}
+        self.assertIn("idea_codes", said)
+        self.assertEqual(sorted(said - set(measure.LEAVES)), [])
 
     def test_every_rule_in_the_table_has_a_test_method_and_no_method_has_none(self):
         held = {method.rule for method in vars(type(self)).values() if hasattr(method, "rule")}
@@ -615,6 +623,23 @@ class TheSourcingAreaTest(unittest.TestCase):
                 "print([op for op, cls in {**d.OPERATIONS, **s.OPERATIONS}.items() if cls.arguments[0].flags != ('--' + op,) and op != 'list-boards'])")
         run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
         self.assertEqual(run.stdout.strip(), "[]", run.stderr)
+# --- end MVP ---
+
+
+# --- MVP ---
+class TheIdeaAreaTest(unittest.TestCase):
+    """P802: the idea area's modules live in `scripts/spark/idea/`, and each one imports alone. Its `__init__.py` imports
+    `DropNeed` for `OPERATIONS`, as bench's does."""
+    IDEA = ROOT / "scripts" / "spark" / "idea"
+    #: The modules of the area, by the names of its page (`areas/idea.md`).
+    MODULES = ["drop_need", "idea_codes"]
+
+    def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):
+        self.assertEqual(sorted(path.stem for path in self.IDEA.glob("*.py") if path.name != "__init__.py"), self.MODULES)
+        self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in (ROOT / "scripts").glob("*.py")}), [])
+
+    def test_each_idea_module_imports_alone(self):
+        each_module_imports_alone(self, "idea")
 # --- end MVP ---
 
 

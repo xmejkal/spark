@@ -28,8 +28,9 @@ ALWAYS_RUN_TESTS = ("test_architecture", "test_self_confirmation", "test_docs", 
                     "test_python_floor", "test_scripts_isolated", "test_routes", "test_json_contracts", "test_part_shape",
                     "test_suite_temp", "test_suite_runs")
 
-#: An area whose golden net has another area's name. Every other area's net is test_golden_<area>, if it has one.
-GOLDEN_NET_ELSEWHERE = {"build": "design", "sourcing": "records"}
+#: An area whose golden net has another area's name. Every other area's net is test_golden_<area>. Idea's operation runs in
+#: the records net (`parts.py --needs-drop`, P802).
+GOLDEN_NET_ELSEWHERE = {"build": "design", "idea": "records", "sourcing": "records"}
 
 CORE_FOLDER = "scripts/spark/core/"
 PACKAGE_FILE = "__init__.py"

@@ -8,12 +8,13 @@ import tempfile
 from pathlib import Path
 
 #: The modules that import nothing of spark. A planted tree holds them, or rule U1 reports each one as missing.
-LEAF_NAMES = ("board_codes", "breadboard_codes", "build_codes", "check_codes", "design_codes", "firmware_codes",
-              "outcomes", "provenance", "records_codes", "sourcing_codes", "text_guards", "zone_time")
+LEAF_NAMES = ("board_codes", "breadboard_codes", "build_codes", "check_codes", "codes", "deploy_stages", "design_codes",
+              "firmware_codes", "idea_codes", "outcomes", "provenance", "records_codes", "sourcing_codes", "text_guards",
+              "zone_time")
 
 
 def planted(files, leaves=True):
-    """A temp root holding `files` ({path under the root: source}) and, unless `leaves` is False, the five leaf modules."""
+    """A temp root holding `files` ({path under the root: source}) and, unless `leaves` is False, the leaf modules."""
     root = Path(tempfile.mkdtemp())
     if leaves:
         files = dict({"scripts/%s.py" % name: '"""A leaf."""\n' for name in LEAF_NAMES}, **files)
