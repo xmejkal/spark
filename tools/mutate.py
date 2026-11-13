@@ -74,9 +74,11 @@ critical, new in the tables' given order (name the oldest table first), proving,
 line says which tiers and how many rows, and the rest of the output is as without it. Without `--tier` every row but
 the retired ones runs. `--tier-count` prints how many rows each of the five tiers holds and runs nothing. `--retire`
 runs alone and lists the retired rows of every table beside the ledger, one line each as `table:index name`, then
-`N row(s) to retire: refused by --anchors in two sweeps; delete each with its reason in a PR, or re-anchor it`; the
-tool deletes nothing, and the sweep's refusal is the same check `--anchors` makes (an anchor that is not there once, a
-mutant that does not compile, parse or import), recorded by the run, since `--anchors` itself writes no ledger line.
+`N row(s) to retire: refused in two sweeps; delete each with its reason in a PR, or re-anchor it`; the tool deletes
+nothing, and the sweep's refusal is the same check `--anchors` makes (an anchor that is not there once, a mutant that
+does not compile, parse or import), recorded by the run, since `--anchors` itself writes no ledger line. A critical row
+refused twice stays critical (it runs every sweep) and is listed all the same, so `--retire`'s count can be above
+`--tier-count`'s `retired`.
 
 In a copy each row's ledger line is written as soon as the row is done, dated then, so a run that SIGTERM or a crash
 stops keeps every line it recorded (PR 1's review, row 50: a 180-minute slice killed at minute 179 lost everything). In the
@@ -643,7 +645,8 @@ def main(argv=None):
     parser.add_argument("--retire", action="store_true",
                         help="instead of a run: list the rows of every table beside the ledger (tests/mutations/*.json under --root) "
                              "that the ledger shows refused in two sweeps or more at their file's current content, one line each as "
-                             "table:index name, for a deleting PR; deletes nothing, runs nothing, exits 0")
+                             "table:index name, for a deleting PR; a critical row refused twice is listed too, though it stays "
+                             "critical and runs every sweep; deletes nothing, runs nothing, exits 0")
     parser.add_argument("--budget", type=int, metavar="MINUTES",
                         help="stop before the row that would cross this many minutes, counted from the run's start (the copy "
                              "and the pre-check suite inside); a row's expected seconds are its ledger line's `s`, else the "
@@ -820,7 +823,7 @@ def print_retired(ledger_store, root, as_json):
     else:
         for row in found:
             print("  %s:%d %s" % (row["table"], row["index"], row["name"]))
-        print("  %d row(s) to retire: refused by --anchors in two sweeps; delete each with its reason in a PR, or re-anchor it" % len(found))
+        print("  %d row(s) to retire: refused in two sweeps; delete each with its reason in a PR, or re-anchor it" % len(found))
     return EXIT_OK
 
 

@@ -83,6 +83,15 @@ class TheMergeTest(unittest.TestCase):
         self.assertEqual((merged["status"], merged["caught"], merged["refused"]), (ledger.REFUSED, 1, 2), "the catch count is kept too (row 49)")
         self.assertEqual(ledger.merged([kept], [dict(same, blob="b2")])[0]["refused"], 1, "the file changed: the count starts again")
 
+    def test_an_eight_field_line_from_before_the_refused_count_merges_and_tiers_without_a_crash(self):
+        # The refuter of PR 5: a sweep on main writes eight-field lines until this merges; they read as no refusal.
+        old = a_line(blob="b1", status=ledger.REFUSED, by=None, caught=0)
+        del old["refused"]
+        fresh = a_line(blob="b1", status=ledger.REFUSED, by=None, caught=0, refused=1, date="2026-11-12T11:00:00+01:00")
+        self.assertEqual(ledger.merged([old], [fresh])[0]["refused"], 1, "the old line counts no refusal")
+        self.assertFalse(ledger.is_retired(old, "b1"))
+        self.assertEqual(ledger.tier_of(ROW, old, "b1"), ledger.NEW)
+
     def test_the_merge_is_sorted_by_key_and_keeps_lines_the_run_did_not_touch(self):
         self.assertEqual([entry["key"] for entry in ledger.merged([a_line(key="c"), a_line(key="a")], [a_line(key="b")])], ["a", "b", "c"])
 

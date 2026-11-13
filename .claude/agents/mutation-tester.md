@@ -40,7 +40,8 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    the critical rows run every sweep, whatever the ledger says of them, because each carries `"tier": "critical"`, a
    mark written by hand on a row that guards a store write, a deploy, an erase or a refusal that protects the person (at
    most 40; you never write one); the proving rows run again so they can become proven. A retired row (refused in two
-   sweeps at its file's current content) is in no tier you name: no sweep plants it again. The run's first line says
+   sweeps at its file's current content) is planted no more, unless it is critical: then it runs, and is refused, every
+   sweep until a PR deletes or re-anchors it. The run's first line says
    which tiers and how many rows, as `  tiers critical,new,proving: 51 row(s) selected (critical 12, new 30, proving 9,
    proven 10, retired 3)`; quote it byte for byte. The new rows run in the tables' given order, and the glob
    `tests/mutations/*.json` lists the newest tables first (`p…` before `sprint-…`): a sweep that wants the oldest first
@@ -57,8 +58,8 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    caught it, each written as soon as its row was done, so a run that was stopped kept them. Say so in your report, with `python3 tools/mutate.py --ledger`'s line; Claude, the main thread, commits it
    with the sweep's findings. Do not edit it.
 6. After the run, `python3 tools/mutate.py --retire` lists the rows the ledger shows refused in two sweeps at their
-   file's current content, one line each as `table:index name`, then `  N row(s) to retire: refused by --anchors in two
-   sweeps; delete each with its reason in a PR, or re-anchor it`. Quote the list in your report. It runs nothing and
+   file's current content, one line each as `table:index name`, then `  N row(s) to retire: refused in two sweeps;
+   delete each with its reason in a PR, or re-anchor it`. Quote the list in your report. It runs nothing and
    deletes nothing: the deleting PR, with each row's reason, is the main thread's. An escape is never retired: it is a
    missing test.
 

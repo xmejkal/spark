@@ -170,9 +170,10 @@ again) or `refused` once (`--anchors`' business). *Proving*: caught once at the 
 more there; an edit of the file makes it new again, by the blob rule alone. *Retired*: refused in two sweeps at the
 current blob (the ledger's `refused` count, kept beside `caught`), decided by the tool: no sweep plants it again, and
 `python3 tools/mutate.py --retire` lists every such row of the tables beside the ledger, one line each as `table:index
-name`, then `N row(s) to retire: refused by --anchors in two sweeps; delete each with its reason in a PR, or re-anchor
-it`; the tool deletes nothing, a PR does, with the row's reason in its rows file. An escape never retires: it is a
-missing test (W3). `python3 tools/mutate.py tests/mutations/*.json --tier critical,new,proving --budget 20 --copy`
+name`, then `N row(s) to retire: refused in two sweeps; delete each with its reason in a PR, or re-anchor it`; the
+tool deletes nothing, a PR does, with the row's reason in its rows file. A critical row refused twice stays critical and
+runs every sweep, and `--retire` lists it all the same, so its count can be above `--tier-count`'s `retired`. An escape
+never retires: it is a missing test (W3). `python3 tools/mutate.py tests/mutations/*.json --tier critical,new,proving --budget 20 --copy`
 runs the named tiers in the sweep's order, critical, new in the tables' given order (name the oldest table first),
 proving (so a row can become proven), proven oldest date first, and its first line says which tiers and how many rows;
 `--tier-count` counts the rows of each of the five tiers and runs nothing. A row with no line is new, never proven.

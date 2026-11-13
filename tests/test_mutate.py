@@ -821,7 +821,7 @@ class TheTiersTest(unittest.TestCase):
 class TheRetireTest(unittest.TestCase):
     """P787 PR 5: --retire lists the rows the ledger shows refused in two sweeps at their file's current blob, and runs nothing."""
 
-    RETIRE_LINE = "  %d row(s) to retire: refused by --anchors in two sweeps; delete each with its reason in a PR, or re-anchor it\n"
+    RETIRE_LINE = "  %d row(s) to retire: refused in two sweeps; delete each with its reason in a PR, or re-anchor it\n"
 
     def project(self, *rows):
         """A tiny project whose one table sits beside the ledger, as the repository's do, with no `name` on the last row."""
@@ -844,14 +844,19 @@ class TheRetireTest(unittest.TestCase):
     def test_a_row_refused_twice_at_the_current_blob_is_listed_by_table_index_and_name(self):
         gone = dict(BREAK_ADD, name="nowhere", find="return a * b")
         nameless = {"file": "m.py", "find": "return a / b", "replace": "return a // b"}
-        root = self.project(BREAK_ADD, gone, nameless)
-        ledger_of(root).write([self.refused_line(root, gone, 2), self.refused_line(root, nameless, 3)])
-        self.assertEqual(self.retire(root), (mutate.EXIT_OK, "  p1-topic.json:1 nowhere\n  p1-topic.json:2 return a / b\n" + self.RETIRE_LINE % 2))
+        critical = dict(BREAK_ADD, name="critical and gone", find="return a % b", tier="critical")
+        root = self.project(BREAK_ADD, gone, nameless, critical)
+        ledger_of(root).write([self.refused_line(root, row, count) for row, count in ((gone, 2), (nameless, 3), (critical, 2))])
+        self.assertEqual(self.retire(root), (mutate.EXIT_OK, "  p1-topic.json:1 nowhere\n  p1-topic.json:2 return a / b\n"
+                                             "  p1-topic.json:3 critical and gone\n" + self.RETIRE_LINE % 3))
         code, said = self.retire(root, "--json")
-        self.assertEqual(json.loads(said), {"tool": "mutate", "rows": 2, "retired": [
+        self.assertEqual(json.loads(said), {"tool": "mutate", "rows": 3, "retired": [
             {"table": "p1-topic.json", "index": 1, "name": "nowhere", "key": ledger.row_key(gone), "file": "m.py"},
-            {"table": "p1-topic.json", "index": 2, "name": "return a / b", "key": ledger.row_key(nameless), "file": "m.py"}]})
-        self.assertEqual(json.loads((root / "tests" / "mutations" / "p1-topic.json").read_text()), [BREAK_ADD, gone, nameless], "the tool deleted a row")
+            {"table": "p1-topic.json", "index": 2, "name": "return a / b", "key": ledger.row_key(nameless), "file": "m.py"},
+            {"table": "p1-topic.json", "index": 3, "name": "critical and gone", "key": ledger.row_key(critical), "file": "m.py"}]})
+        self.assertEqual(json.loads((root / "tests" / "mutations" / "p1-topic.json").read_text()), [BREAK_ADD, gone, nameless, critical], "the tool deleted a row")
+        self.assertEqual(ledger.tiers_of(root, [gone, critical], ledger_of(root).read()).counts()["retired"], 1,
+                         "the critical row stays critical and runs every sweep: --retire's count is above --tier-count's retired")
 
     def test_a_row_refused_once_or_at_an_older_blob_is_not_listed(self):
         gone = dict(BREAK_ADD, name="nowhere", find="return a * b")
