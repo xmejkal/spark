@@ -64,7 +64,7 @@ no Operation.
 
 ## The area map
 
-Nine areas and three leaves. A leaf is a module that imports nothing of spark. It sits at the bottom of its area, so
+Ten areas and three leaves. A leaf is a module that imports nothing of spark. It sits at the bottom of its area, so
 any module reaches it without a cycle. An area imports only the areas it reaches along the arrows (rule U1), so bench imports design through
 firmware. Nothing imports upward, and every area imports `core`. Each area page names its direct imports.
 
@@ -77,6 +77,8 @@ flowchart TB
   CHK["checks"] --> DES
   FW --> DES
   DES --> SRC["sourcing"]
+  IDEA["idea"] --> DES
+  IDEA --> SRC
   SRC --> REC["records<br/>+ provenance (leaf)"]
   BENCH --> REC
   REC --> CORE["core<br/>+ zone_time, text_guards (leaves)"]
@@ -88,6 +90,7 @@ flowchart TB
 | records | reads and writes records, the store and tool rows, hands each run `ToolFinder(project).find` as `outside.find_tool` (P725) | [records](areas/records.md) |
 | sourcing | the drawer, matching needs to parts, cost, datasheets | [sourcing](areas/sourcing.md) |
 | design | the pin map, the netlist and the board file from the requirements | [design](areas/design.md) |
+| idea | the Operations on a project's needs and what they hold: dropping a need | [idea](areas/idea.md) |
 | firmware | the flash image and the simulation | [firmware](areas/firmware.md) |
 | breadboard | the breadboard sheet and drawing | [breadboard](areas/breadboard.md) |
 | checks | grades a design | [checks](areas/checks.md) |
