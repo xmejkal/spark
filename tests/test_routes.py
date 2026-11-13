@@ -307,6 +307,34 @@ class TextIsDataTest(unittest.TestCase):
         self.assertNotIn("WebFetch", allowed)
 
 
+class TheIdentifyPageTest(unittest.TestCase):
+    """P781: /spark:identify writes its reading, searches the web wide and has rules for a module with no chip."""
+
+    def test_no_page_hands_an_agent_a_record_schema(self):
+        # no schema file exists: part-data.md is a worked record and parts.py --validate is the contract
+        pages = [path for folder in ("commands", "agents", "skills") for path in sorted((ROOT / folder).rglob("*.md"))]
+        said = []
+        for path in pages:
+            text = " ".join(path.read_text().split())
+            if "record schema" in text or re.search(r"part-data\.md[^.]{0,40}\bthe schema\b", text):
+                said.append(str(path.relative_to(ROOT)))
+        self.assertEqual(said, [])
+
+    def test_identify_asks_for_the_reading_the_search_and_the_chipless_rules(self):
+        # the p366 photo walk, rows 4 and 6: the reading, the wide search, the look-alike, the computed value, the name
+        wanted = {
+            "commands/identify.md": ["**Not read**", "searches the web wide every time",
+                                     "A report with no web search is not done"],
+            "agents/parts-researcher.md": ["Search the web wide, every time", "a look-alike:",
+                                           "A computed value is `verified: false`", "never a maker you guessed"],
+        }
+        gone = []
+        for name, phrases in wanted.items():
+            text = " ".join((ROOT / name).read_text().split())
+            gone += ["%s: %s" % (name, phrase) for phrase in phrases if phrase not in text]
+        self.assertEqual(gone, [])
+
+
 class TheNetworkIsThePersonsYesTest(unittest.TestCase):
     """
     §6.4.5, C-5 (the council on PR #98): spark's network operations are left out of every command's and skill's
