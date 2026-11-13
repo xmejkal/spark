@@ -76,7 +76,7 @@ ROLE_PENALTY = {
     "onboard_battery_sense": 20,      # a divider from the battery is wired to it, so a signal here corrupts the reading
     "spi": 5,                         # a bus: a tie-breaker among pins that waste the same abilities (below)
     "i2c": 5,
-    "adc2_unusable_with_wifi": 1,     # only a loss if you wanted the ADC, which `can` covers
+    "adc2_unusable_with_wifi": 1,     # orders an ADC2 pin after an equal plain pin; capability_of gives it no ADC (P798)
 }
 #: THE BUS PENALTY IS A TIE-BREAKER, SMALLER THAN ONE ABILITY ON PURPOSE. Nothing marked SCK,
 #: MI and MO as a bus, so the assigner spent all three on two LEDs and a button — the cheapest
@@ -130,15 +130,25 @@ def capability_of(board, gpio):
     a PWM. A board where that is NOT true — most STM32 parts, where PWM comes from a fixed timer
     map — says so by listing `pwm_gpio`, and then a servo signal will not land on a pin that
     cannot drive it.
+
+    `adc` is a pin in `adc_gpio` that the record does not put on ADC2 (its `adc2_unusable_with_wifi` role): a pin on
+    ADC2 reads no voltage while the radio is on, so a signal that needs adc never lands there, and a plain signal
+    spends it before an ADC1 pin (P798). A record with no such role is read as its `adc_gpio` says.
     """
     can = set()
     if gpio in board.get("wake_capable_gpio", []):
         can.add("wake")
-    if gpio in board.get("adc_gpio", []):
+    if gpio in board.get("adc_gpio", []) and gpio not in _adc2_gpio(board):
         can.add("adc")
     if "pwm_gpio" not in board or gpio in board.get("pwm_gpio", []):
         can.add("pwm")
     return can
+
+
+def _adc2_gpio(board):
+    """The GPIOs the record's ADC2 role names, [] when it names none (a `"gpio": null` too)."""
+    role = (board.get("pin_roles") or {}).get(board_records.ADC2_UNUSABLE_WITH_WIFI) or {}
+    return role.get("gpio") or []
 
 
 def roles_of(board, gpio):
@@ -265,8 +275,9 @@ def assign(board, signals):
                              design_codes.NAMED_PIN_UNSUITABLE)
         cannot = needs - capability_of(board, gpio)
         if cannot:
-            raise ImpossibleError("%s asks for %s by name and needs %s, which GPIO%d cannot do"
-                             % (signal["name"], label, ", ".join(sorted(cannot)), gpio), design_codes.NAMED_PIN_UNSUITABLE)
+            raise ImpossibleError("%s asks for %s by name and needs %s, which GPIO%d cannot do%s"
+                             % (signal["name"], label, ", ".join(sorted(cannot)), gpio, _why_not_adc(cannot, roles)),
+                             design_codes.NAMED_PIN_UNSUITABLE)
         line = signal.get("line") if signal.get("bus") else None
         if gpio in taken_gpio:
             if line in SHARED_LINES and bus_holders.get(gpio) == (signal["bus"], line):
@@ -325,6 +336,14 @@ def assign(board, signals):
     leftover = {label: pin for label, pin in available.items()
                 if pin["gpio"] not in taken_gpio}
     return PinMap(assignments, leftover)
+
+
+def _why_not_adc(cannot, roles):
+    """The refusal's reason when the pin lacks adc for being on ADC2, in the role's own words, or "" (P798)."""
+    if "adc" in cannot and board_records.ADC2_UNUSABLE_WITH_WIFI in roles:
+        return ": it is %s, so spark keeps an adc signal off it; pick an ADC1 pin" % (
+            board_records.PIN_ROLES[board_records.ADC2_UNUSABLE_WITH_WIFI])
+    return ""
 
 
 def _penalty(roles):
