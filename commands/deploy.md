@@ -47,7 +47,7 @@ it happens. With `--json` these lines go to stderr. Relay them.
    board restarts), names every warning in its question and erases only after they type `yes`.
    The question starts with the look's caveats (P345), such as a passed run whose scenario has no `set-control` step, and the look above it lists the limits: what no simulation can show of the project. Relay the limits once; they are not in the question. Relay the caveats too. Both are facts about the run and the project, not a stop.
    The erase sentence then names the last deploy in spark's store record, for example `spark's store record names blink-c6 as its last deploy here,
-   2026-10-19T09:24:50+02:00, ready seen, MicroPython v1.29.0 on 2026-08-24`. Relay it. The banner names the MicroPython the image spark put there held (P779); a deploy before P779 kept none. It says what spark's store record names as its last deploy here. It does not say what is on the board now.
+   2026-10-19T09:24:50+02:00, ready seen, MicroPython v1.29.0 on 2026-08-24`. Relay it. It names the banner of the image spark put there (P779); a deploy before P779 kept none. It says what spark's store record names as its last deploy here. It does not say what is on the board now.
    A flash made outside spark leaves no trace, and a flash that failed after the erase writes no record. `none in its store record` is not an empty board.
    `not checked` means spark did not read its record: the MAC was not read, or the record cannot be read. It never
    means that no deploy happened. The look then exits 2 (`could-not-run`) and names what to repair.

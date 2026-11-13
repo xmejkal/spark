@@ -19,6 +19,7 @@ A board restarts when esptool reads it. Nothing is erased or written.
 import functools
 import hashlib
 import json
+import os
 import re
 import subprocess
 from collections import namedtuple
@@ -348,9 +349,13 @@ class LookReport:
 
     @functools.cached_property
     def micropython_banner(self):
-        """The MicroPython banner the image file holds (image_builder.banner_in), None when it holds none or there is no
-        image (P779). It is read from the file as the token is, so an image the evidence refuses still says it."""
-        return image_builder.banner_in(self.image.read_bytes()) if self.image else None
+        """The MicroPython banner the image file holds (image_builder.banner_in), None when it holds none, there is no image,
+        or the file cannot be read now (P779). It is read even when the evidence refused the image, which may not have read
+        the file (NoSimulationEvidence), so a file gone or unreadable since the look found it is None, never a crash."""
+        try:
+            return image_builder.banner_in(self.image.read_bytes()) if self.image else None
+        except OSError:
+            return None
 
     def token(self):
         """4 hex of sha256(MAC), a dash, 4 hex of sha256(image): this board, this image. None when there is no_token_reason."""
@@ -378,8 +383,8 @@ def say_last_deploy(last):
     """The look's line for `last`, a deploy_record_store.LastDeploy. `deploy_gate.say_last_deploy_in_question` says the same
     deploy in the deploy question's words."""
     if last.state == outcomes.RECORDED:
-        banner = ", " + last.micropython_banner if last.micropython_banner else ""  # P779: a deploy before it kept none
-        said = printable("%s, %s, %s%s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said(), banner))
+        said = printable("%s, %s, %s%s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said(),
+                                                                                       last.banner_said()))
     elif last.state == outcomes.NONE_RECORDED:
         said = "none in its store record (it keeps only its own deploys)"
     else:
@@ -391,7 +396,7 @@ def say_last_deploy(last):
 def say_image_banner(report):
     """The look's line for the MicroPython banner of the image it would flash, a LookReport's (P779): read from the file, never
     from the board. `say_last_deploy` says the banner the store's record kept; an equal one is not the same image."""
-    if report.image is None:
+    if report.image is None or not os.access(report.image, os.R_OK):  # none, or gone or unreadable since the look found it
         return "micropython  no image"
     if report.micropython_banner:
         return "micropython  %s (in the image)" % report.micropython_banner

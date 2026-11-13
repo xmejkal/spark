@@ -172,6 +172,14 @@ class TheBannerTest(unittest.TestCase):
         data = b"\xe9head\x00" + self.BANNER + b"\x00; a machine with a chip\x00tail"
         self.assertEqual(image_builder.banner_in(data), "MicroPython v1.0.0-test on 2026-01-01")
 
+    def test_a_build_before_v1_19_that_prints_banner_and_board_in_one_string_gives_the_part_before_the_semicolon(self):
+        # shared/runtime/pyexec.c before v1.19: the banner and "; " MICROPY_HW_BOARD_NAME are one C string
+        data = b"\x00MicroPython v1.18 on 2022-01-17; ESP32 module with ESP32\x00"
+        self.assertEqual(image_builder.banner_in(data), "MicroPython v1.18 on 2022-01-17")
+
+    def test_a_banner_of_more_than_80_characters_after_the_v_is_cut_there(self):
+        self.assertEqual(image_builder.banner_in(b"MicroPython v" + b"1" * 100 + b"\x00"), "MicroPython v" + "1" * 80)
+
     def test_bytes_with_no_banner_give_none(self):
         self.assertIsNone(image_builder.banner_in(fake_interpreter()))
         self.assertIsNone(image_builder.banner_in(b"MicroPythonv1.0.0 MicroPython 1.0.0\x00"))

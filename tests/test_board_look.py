@@ -884,6 +884,15 @@ class ReportLinesTest(LookCase):
         report = self.look(evidence=mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value="no")))
         self.assertEqual((report.image_why, report.micropython_banner), ("no", BANNER))
 
+    def test_an_image_gone_after_the_look_found_it_is_no_image_and_null_never_a_crash(self):
+        # NoSimulationEvidence can refuse before it reads the image, so the banner may be the image's first read
+        self.run_the_scenario()
+        report = self.look(evidence=mock.Mock(simulation="none", why_not_ready=mock.Mock(return_value="no")))
+        self.image.unlink()
+        lines = board_look.report_lines(report, token=False)
+        self.assertEqual(lines[lines.index("  mac    " + C6_MAC) + 2], "  micropython  no image")
+        self.assertIsNone(report.to_dict()["micropython_banner"])
+
     def test_a_record_written_before_p779_reads_with_the_line_as_before(self):
         self.run_the_scenario()
         folder = deploy_record_store.DeployRecordStore().find_path(C6_MAC)

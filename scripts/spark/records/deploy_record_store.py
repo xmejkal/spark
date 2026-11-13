@@ -44,6 +44,11 @@ class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict dep
         except (ValueError, OverflowError):  # a time that does not parse, or one the machine's zone cannot hold
             return self.deployed
 
+    def banner_said(self):
+        """The banner as the last-deploy line and the deploy question add it after their words: `, <banner>`, or nothing
+        when the store kept none (P779)."""
+        return ", " + self.micropython_banner if self.micropython_banner else ""
+
     def to_dict(self):
         return {"state": self.state, "why": self.why, "project": self.project, "verdict": self.verdict,
                 "deployed": self.deployed, "micropython_banner": self.micropython_banner}

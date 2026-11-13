@@ -171,9 +171,10 @@ def image(interpreter, files, overrides=None, offset=0):
     return bytes(flash)
 
 
-#: MicroPython's banner, the words its REPL starts with ("MicroPython v1.29.0 on 2026-08-24"): printable ASCII up to the NUL
-#: that ends the C string, so the machine part ("; Generic ESP32S3 module with ESP32-S3"), a string of its own, is not in it (P779).
-BANNER = re.compile(rb"MicroPython v[\x20-\x7e]{1,80}")
+#: MicroPython's banner, the words its REPL starts with ("MicroPython v1.29.0 on 2026-08-24"): printable ASCII but `;`, so it
+#: ends at the NUL of its C string or at the `;` before the machine part ("; Generic ESP32S3 module with ESP32-S3"), which
+#: builds before v1.19 put in the same string (shared/runtime/pyexec.c) (P779).
+BANNER = re.compile(rb"MicroPython v[\x20-\x3a\x3c-\x7e]{1,80}")
 
 
 def banner_in(data):

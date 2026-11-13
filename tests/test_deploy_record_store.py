@@ -54,6 +54,11 @@ class LastDeployCase(unittest.TestCase):
             with self.subTest(stored=stored):
                 self.assertEqual(deploy_record_store.LastDeploy("recorded", "p", "ready seen", stored).time_said(), stored)
 
+    def test_the_banner_said_follows_a_comma_or_is_nothing(self):
+        last = deploy_record_store.LastDeploy("recorded", "p", "ready seen", "d")
+        self.assertEqual((last.banner_said(), last._replace(micropython_banner="MicroPython v1.29.0 on 2026-08-24").banner_said()),
+                         ("", ", MicroPython v1.29.0 on 2026-08-24"))
+
     def test_a_utc_z_time_is_said_in_the_machine_zone(self):
         last = deploy_record_store.LastDeploy("recorded", "p", "ready seen", "2026-10-23T04:55:29Z")
         self.assertEqual(last.time_said(), "2026-10-23T06:55:29+02:00")
