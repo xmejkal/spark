@@ -29,7 +29,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import assign_pins  # noqa: E402
 from spark.design import pin_assigner  # noqa: E402
-from spark.design import design_codes  # noqa: E402
 
 
 def board(**overrides):
@@ -558,7 +557,7 @@ class AnAdc2PinReadsNoVoltageTest(unittest.TestCase):
     def test_a_named_adc2_pin_with_needs_adc_is_refused_in_the_role_s_words(self):
         with self.assertRaises(pin_assigner.ImpossibleError) as refused:
             pin_assigner.assign(self.adc2_board(), [{"name": "SENSE", "pin": "A0", "needs": ["adc"]}])
-        self.assertEqual(refused.exception.code, design_codes.NAMED_PIN_UNSUITABLE)
+        self.assertEqual(refused.exception.code, "named_pin_unsuitable")
         self.assertEqual(str(refused.exception),
                          "SENSE asks for A0 by name and needs adc, which GPIO4 cannot do: it is on ADC2, which cannot be "
                          "read while the radio is on, so spark keeps an adc signal off it; pick an ADC1 pin")
