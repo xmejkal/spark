@@ -122,7 +122,7 @@
     6,
     7
   ],
-  "//adc_gpio": "GPIO0-6: documents.esp32-c6-datasheet-v1-5, Table 2-9 Analog Functions (page 23), ADC1_CH0-6, and documents.esp-idf-soc-caps-v5-5-1 SOC_ADC_PERIPH_NUM 1. The chip has no ADC2, so no ADC pin is lost to the radio. On the header: D0, D1, D2 (A0-A2).",
+  "//adc_gpio": "GPIO0-6: documents.esp32-c6-datasheet-v1-5, Table 2-9 Analog Functions (page 23), ADC1_CH0-6, and documents.esp-idf-soc-caps-v5-5-1 SOC_ADC_PERIPH_NUM 1. The chip has no ADC2, so no ADC pin is lost to the radio. No kept page says whether the ADC reads with Wi-Fi on: the datasheet v1.5 (section 4.2.2.1, page 57) and ESP-IDF v5.5.1's esp32c6 adc_oneshot page print no Wi-Fi limit, and ESP-IDF v5.5.1's own test runs 'ADC1 work with WiFi' on the C6 (components/esp_adc/test_apps/adc/main/test_adc_wifi.c, lines 218-224, https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/esp_adc/test_apps/adc/main/test_adc_wifi.c, sha256 09e8aeefc2144616fb0b073b387c17c264a8a61d29e3a0922d83e591e24a8055). On the header: D0, D1, D2 (A0-A2).",
   "adc_gpio": [
     0,
     1,
