@@ -139,9 +139,7 @@ def keep_breadboard(requirements, destination, stages=()):
     kept = [{"file": str(written.sheet), "did": "wrote", "why": why, "line": "wrote %s — %s" % (written.sheet, why)}]
     kept += [{"file": str(path), "did": "wrote", "why": renderer.PURPOSE_MESSAGE, "line": "wrote %s — %s" % (path, renderer.PURPOSE_MESSAGE),
               **({"drawn_from": written.drawn_from} if written.drawn_from else {})} for path, renderer in written.drawings]
-    kept += [{"file": str(one.path), "did": "not written", "code": one.code, "subject": one.subject,
-              "expected": one.code in drawing.BY_DESIGN, "why": one.why,
-              "line": "no %s: %s" % (one.renderer.NOUN, one.why)} for one in written.not_written]
+    kept += [not_written_entry(one) for one in written.not_written]
     # what the person changes on the bench since the last sheet (P300)
     kept += [{"file": str(written.sheet), "did": CHANGED, "code": change.code, "subject": change.name,
               "color": change.color, "why": sheet.CHANGE_LIST.line(change),
@@ -155,6 +153,15 @@ def keep_breadboard(requirements, destination, stages=()):
               "subject": differs.subject, "code": differs.code, "why": differs.why,
               "line": "%s: %s" % (DRAWING_DIFFERS, differs.why)} for differs in written.differs]
     return kept
+
+
+def not_written_entry(one):
+    """The kept entry of a drawing a build did not write (a `drawing.NotWritten`): `expected` is true for a code a retry
+    gives again (`drawing.BY_DESIGN`): the agent does not retry, and for `not_drawn_yet` tells the person to wire it by
+    hand from the sheet's steps (P691, P783)."""
+    return {"file": str(one.path), "did": "not written", "code": one.code, "subject": one.subject,
+            "expected": one.code in drawing.BY_DESIGN, "why": one.why,
+            "line": "no %s: %s" % (one.renderer.NOUN, one.why)}
 
 
 def why_not_built(stages, board_only_why):

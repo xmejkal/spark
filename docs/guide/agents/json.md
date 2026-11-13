@@ -99,7 +99,7 @@ The fields:
 | `tool` | the script that answered |
 | `status` | the overall outcome |
 | `unmeasured` | how many `?` lines the answer rests on: values nobody has measured or verified, and advisories. An `ok` with a count above 0 is an `ok` on those lines. Added after the runs shown here ([P108](https://github.com/xmejkal/spark/issues/42)) |
-| `resolved` | display lines: what `--project` found by convention for the circuit, rules, package and boards, or where it looked. A file named by an explicit flag overrides it, yet the convention's line stays, so `resolved` can name a file that was not checked. With no `--project`, it is empty |
+| `resolved` | display lines: what `--project` found by convention for the circuit, rules, package and boards, or where it looked. A file named by an explicit flag replaces its line, shown as typed with `(given)`. With no `--project`, it is empty |
 | `results[].check` | the check's name; [how it works](../how-it-works.md#the-checks) names its script |
 | `results[].what` | what the check claims |
 | `results[].status` | `ok`, `problems`, `could-not-run` or `skipped` |
@@ -146,8 +146,8 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
   `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed.
 - `kept`, with `--keep` or `--sim-dir`, lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`,
   `removed`, `not written` or `not kept`) and `why`. When the sheet is written, a drawing's `not written` entry has `code`
-  (P691: never `null`), `subject` and `expected` (`true`: by design, do not retry). When the build finished and
-  the sheet was not written, its entry has `code` (P701). A `wrote` entry for `breadboard.svg` may have `drawn_from` (`record`).
+  (P691: never `null`), `subject` and `expected` (`true`: by design or not drawn yet; do not retry; for
+  `not_drawn_yet`, tell the person to wire it by hand from the sheet's steps). When the build finished and the sheet was not written, its entry has `code` (P701). A `wrote` entry for `breadboard.svg` may have `drawn_from` (`record`).
 - `next`: one look step, only for `ok` in a project; its `why` is `first write firmware/main.py from pins.py` (P517), the pin map that `--keep` writes.
 - `unserved` is there when the requirements file carries the note `parts.py --requirements` writes for the needs it leaves off the board.
 - `missing_facts` is a top-level list, with `--keep` only, when spark writes `firmware/pins.py` and the board record

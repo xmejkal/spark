@@ -468,6 +468,24 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertTrue(wrote)
         self.assertTrue(all("drawn_from" not in entry for entry in wrote))
 
+    def test_a_drawing_spark_does_not_make_yet_is_expected_in_both_kept_entries(self):
+        # P783: a rail, an off-board supply or a resistor with both legs joined is a refusal a retry gives again, so
+        # both drawings' entries say `expected`, and the agent tells the person to wire it from the sheet's steps
+        from spark.breadboard import drawing, sheet
+        for renderer in sheet.DRAWING_RENDERERS:
+            with self.subTest(drawing=renderer.FILE_NAME):
+                one = drawing.NotWritten(Path(renderer.FILE_NAME), renderer, "not_drawn_yet", "VBAT",
+                                         "VBAT is not drawn yet")
+                entry = kept_files.not_written_entry(one)
+                self.assertEqual((entry["file"], entry["did"], entry["code"], entry["subject"], entry["expected"]),
+                                 (renderer.FILE_NAME, "not written", "not_drawn_yet", "VBAT", True))
+        self.assertEqual(sorted(renderer.FILE_NAME for renderer in sheet.DRAWING_RENDERERS),
+                         ["breadboard.json", "breadboard.svg"])
+        for code in ("row_full", "planner_fault"):  # a fault to report stays unexpected
+            with self.subTest(code=code):
+                one = drawing.NotWritten(Path("breadboard.svg"), sheet.DRAWING_RENDERERS[0], code, "x", "why")
+                self.assertFalse(kept_files.not_written_entry(one)["expected"])
+
     def test_a_drawing_from_an_earlier_build_is_removed_when_a_build_does_not_finish(self):
         import argparse
         import contextlib

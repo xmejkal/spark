@@ -63,8 +63,9 @@ CODES = {
 #: Value: a drawing a build did not write: where it would be, its renderer, why as a code from CODES with its subject
 #: (None when it has none), and the sentence a person reads.
 NotWritten = collections.namedtuple("NotWritten", "path renderer code subject why")
-#: The codes of a refusal that is no failure: the drawing is not written by design, and a retry gives the same.
-BY_DESIGN = (NO_WOKWI_PART,)
+#: The codes of a refusal a retry gives again: by design, or a drawing spark does not make yet. No failure the person can
+#: fix; for NOT_DRAWN_YET, the sheet's steps say how to wire it by hand.
+BY_DESIGN = (NO_WOKWI_PART, NOT_DRAWN_YET)
 
 
 class NotDrawnError(Exception):
