@@ -1,30 +1,32 @@
 """
 The mutation ledger (P787): one line per mutation row a run tried (a refused row too), so a sweep knows which rows were
-caught, when, and at which content of their file. `mutate.py` writes it after every run that plants rows, and reads
-it to put each row in its tier (`tier_of`, `Tiers`), so a sweep runs a few hundred rows and not all 3000.
+caught or refused, when, and at which content of their file. `mutate.py` writes it after every run that plants rows,
+and reads it to put each row in its tier (`tier_of`, `Tiers`), so a sweep runs a few hundred rows and not all 3000, and
+to list the retired rows (`is_retired`) for a deleting PR.
 
     tests/mutations/ledger.jsonl
     {"key": "4a1f0c9e2b7d", "file": "tools/mutate.py", "blob": "<40 hex>", "date": "2026-11-12T18:04:11+01:00",
-     "status": "caught", "by": "test_mutate", "caught": 1, "s": 7}
+     "status": "caught", "by": "test_mutate", "caught": 1, "refused": 0, "s": 7}
 
 `key` is the row's identity (`row_key`); `blob` is git's hash of the file the row was planted in, as the run read it;
 `date` is the run's end, with its zone, the moment the facts are known; `status` is the run's word for the row (`caught`,
 `escaped`, `refused`); `by` is the test module that caught it, `suite` when the whole suite did, `escape` when none did,
-and null when the row was refused and nothing ran; `caught` counts the catches at this `blob` (a changed file starts the
-count again); `s` is the row's seconds. The file is in git and rewritten whole, sorted by key: two branches that ran
+and null when the row was refused and nothing ran; `caught` counts the catches at this `blob` and `refused` the refusals
+there (a changed file starts both counts again); `s` is the row's seconds. The file is in git and rewritten whole, sorted by key: two branches that ran
 different keys merge line by line in git; two that ran the same key conflict on that line, and a person resolves it by
 hand. `merged` is this tool's rule for one tree (the newer date wins), never git's. An empty ledger is empty: nothing
 seeds it.
 
 THE TIERS (the plan's words, each a fact a tool reads): *critical*, the row carries `"tier": "critical"` (a fifth key,
-hand-written); *new*, no line for the row's key at its file's current blob (never run, or the file changed since), or
-a line whose status is `escaped` (a missing test: it runs again) or `refused` (`--anchors`' business until PR 5
-retires it); *proving*, a `caught` line at the current blob with `caught` 1; *proven*, a `caught` line at the current
-blob with `caught` 2 or more. `status` and `caught` are read together: a refused line keeps its count from the same
-blob (`merged` adds 0), so the count alone never makes a row proving or proven. *Retired* (PR 5) is not decided here.
+hand-written); *retired*, a `refused` line at the file's current blob with `refused` 2 or more (`is_retired`: refused in
+two sweeps, so a sweep plants it no more and `--retire` lists it for a deleting PR); *new*, no line for the row's key at
+its file's current blob (never run, or the file changed since), or a line whose status is `escaped` (a missing test: it
+runs again, never retires) or `refused` once; *proving*, a `caught` line at the current blob with `caught` 1; *proven*,
+a `caught` line at the current blob with `caught` 2 or more. `status` and the counts are read together: a refused line
+keeps its `caught` from the same blob (`merged` adds 0), so a count alone never makes a row proving, proven or retired.
 The blob rule alone decides staleness: no git history is read, and a row with no line is new, never proven. The order a
 sweep runs them: critical, new in the tables' given order (the caller names the oldest table first: no table carries
-a date), proving, proven oldest date first.
+a date), proving, proven oldest date first; a retired row runs in no tier.
 
 Standard library only, as `scratch.py`: `mutate.py` imports it by path.
 """
@@ -45,13 +47,16 @@ SEPARATOR = "\0"
 CAUGHT, ESCAPED, REFUSED = "caught", "escaped", "refused"
 #: `by` when the whole suite caught the row, and when no test did.
 SUITE, ESCAPE = "suite", "escape"
-#: The tiers a row can be in, in the order a sweep runs them (P787 PR 2); `retired` is PR 5's.
-CRITICAL, NEW, PROVING, PROVEN = "critical", "new", "proving", "proven"
+#: The five tier words (P787): the four a sweep runs, in its order, and `retired`, which it runs no more (PR 5).
+CRITICAL, NEW, PROVING, PROVEN, RETIRED = "critical", "new", "proving", "proven", "retired"
 TIERS = (CRITICAL, NEW, PROVING, PROVEN)
+TIER_WORDS = TIERS + (RETIRED,)
 #: The row's fifth key, hand-written, that makes it critical.
 TIER_KEY = "tier"
 #: Two catches at one blob, as the plan says.
 PROVEN_AT = 2
+#: Two refusals at one blob, as the plan says: "refused by --anchors in two sweeps".
+RETIRED_AT = 2
 
 
 def row_key(row):
@@ -72,16 +77,17 @@ def blob_of(content):
 
 
 def line(row, blob, date, status, by, seconds):
-    """One ledger line for `row`, in the order the file keeps; `caught` is 1 or 0 for this run, `merged` adds the past."""
+    """One ledger line for `row`, in the order the file keeps; `caught` and `refused` are 1 or 0 for this run, `merged` adds the past."""
     return {"key": row_key(row), "file": row["file"], "blob": blob, "date": date, "status": status, "by": by,
-            "caught": 1 if status == CAUGHT else 0, "s": seconds}
+            "caught": 1 if status == CAUGHT else 0, "refused": 1 if status == REFUSED else 0, "s": seconds}
 
 
 def merged(kept, fresh):
     """
     The lines of `kept` with those of `fresh` over them, by key: the newer `date` wins, and on the same date the fresh one.
-    When the fresh line wins and sits on the same `blob` as the kept one, its `caught` adds the kept count: "caught twice
-    at the current blob" is a count across runs. A changed blob starts the count at the fresh line's own.
+    When the fresh line wins and sits on the same `blob` as the kept one, its `caught` and `refused` add the kept counts:
+    "caught twice at the current blob" and "refused in two sweeps" are counts across runs. A changed blob starts both
+    counts at the fresh line's own.
     """
     result = {entry["key"]: entry for entry in kept}
     for entry in fresh:
@@ -89,7 +95,7 @@ def merged(kept, fresh):
         if old is not None and _when(old["date"]) > _when(entry["date"]):
             continue
         if old is not None and old["blob"] == entry["blob"]:
-            entry = dict(entry, caught=old["caught"] + entry["caught"])
+            entry = dict(entry, caught=old["caught"] + entry["caught"], refused=old["refused"] + entry["refused"])
         result[entry["key"]] = entry
     return [result[key] for key in sorted(result)]
 
@@ -98,15 +104,28 @@ def _when(date):
     return datetime.fromisoformat(date)
 
 
+def is_retired(entry, blob):
+    """
+    Whether a row whose ledger line is `entry` (None when it has none) is retired at its file's current blob `blob`: the
+    line sits at this blob, its last word is `refused`, and it was refused `RETIRED_AT` times or more there (two sweeps).
+    An escaped line never retires, whatever it counts: an escape is a missing test. A gone file hashes to None in the
+    line and now, so a row on it retires too: the deleting PR deletes or retargets it.
+    """
+    return entry is not None and entry["blob"] == blob and entry["status"] == REFUSED and entry["refused"] >= RETIRED_AT
+
+
 def tier_of(row, entry, blob):
     """
     The tier of `row`, whose ledger line is `entry` (None when it has none) and whose file's current blob is `blob`:
-    critical when the row says so; new when the file is gone (`blob` None), when no line sits at this blob, or when the
-    line there is not a catch (escaped or refused); proving when caught once there; proven when caught `PROVEN_AT`
-    times or more.
+    critical when the row says so; retired when `is_retired` (refused twice at this blob: it is not new again, so a sweep
+    plants it no more, and `--retire` lists it); new when the file is gone (`blob` None), when no line sits at this blob,
+    or when the line there is not a catch (escaped, or refused once); proving when caught once there; proven when caught
+    `PROVEN_AT` times or more.
     """
     if row.get(TIER_KEY) == CRITICAL:
         return CRITICAL
+    if is_retired(entry, blob):
+        return RETIRED
     if blob is None or entry is None or entry["blob"] != blob or entry["status"] != CAUGHT:
         return NEW
     return PROVEN if entry["caught"] >= PROVEN_AT else PROVING
@@ -114,20 +133,21 @@ def tier_of(row, entry, blob):
 
 class Tiers:
     """
-    Value: the rows of a run's tables under their tiers, each tier's rows in the order a sweep runs them (`TIERS`):
-    the critical rows, the new ones and the proving ones in the tables' given order, the proven ones oldest date first.
-    `counts` says how many rows each tier holds; `selected` gives the rows of the named tiers, in that order.
+    Value: the rows of a run's tables under their tiers (`TIER_WORDS`), each tier's rows in the order a sweep runs them
+    (`TIERS`): the critical rows, the new ones and the proving ones in the tables' given order, the proven ones oldest
+    date first; the retired rows in the tables' order, run by no sweep. `counts` says how many rows each of the five
+    tiers holds; `selected` gives the rows of the named tiers, in the sweep's order, and never a retired row.
     """
 
     def __init__(self, rows_by_tier):
-        self.rows = {tier: list(rows_by_tier.get(tier, ())) for tier in TIERS}
+        self.rows = {tier: list(rows_by_tier.get(tier, ())) for tier in TIER_WORDS}
 
     def counts(self):
-        """How many rows each tier holds, in the tiers' order."""
-        return {tier: len(self.rows[tier]) for tier in TIERS}
+        """How many rows each tier holds, in the tiers' order, the retired ones last."""
+        return {tier: len(self.rows[tier]) for tier in TIER_WORDS}
 
     def selected(self, tiers):
-        """The rows of the tiers named in `tiers`, in the sweep's order; a tier not named gives none."""
+        """The rows of the tiers named in `tiers`, in the sweep's order; a tier not named gives none, and `retired` is never run."""
         return [row for tier in TIERS if tier in tiers for row in self.rows[tier]]
 
 
@@ -137,17 +157,22 @@ def tiers_of(root, mutations, lines):
     (a missing file hashes to None, so its rows are new and the run refuses them), and each row meets its line by key.
     """
     by_key = {entry["key"]: entry for entry in lines}
-    blobs = {}
-    found = {tier: [] for tier in TIERS}
+    blobs = blobs_now(root, mutations)
+    found = {tier: [] for tier in TIER_WORDS}
     for row in mutations:
-        file = row["file"]
-        if file not in blobs:
-            path = Path(root) / file
-            blobs[file] = blob_of(path.read_bytes()) if path.is_file() else None
         entry = by_key.get(row_key(row))
-        found[tier_of(row, entry, blobs[file])].append((entry, row))
+        found[tier_of(row, entry, blobs[row["file"]])].append((entry, row))
     found[PROVEN].sort(key=lambda pair: _when(pair[0]["date"]))  # a stable sort: the same date keeps the tables' order
     return Tiers({tier: [row for _, row in pairs] for tier, pairs in found.items()})
+
+
+def blobs_now(root, mutations):
+    """The current blob of each file the rows of `mutations` name, by file, read once each; a missing file is None."""
+    blobs = {}
+    for file in {row["file"] for row in mutations}:
+        path = Path(root) / file
+        blobs[file] = blob_of(path.read_bytes()) if path.is_file() else None
+    return blobs
 
 
 class LedgerStore:

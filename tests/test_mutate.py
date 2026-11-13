@@ -763,16 +763,16 @@ class TheTiersTest(unittest.TestCase):
         self.proven_ledger(root, BREAK_ADD)
         with contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(mutate.main([str(rows), "--root", str(root), "--tier-count"]), mutate.EXIT_OK)
-        self.assertEqual(out.getvalue(), "  tiers of 3 row(s) in 1 table(s): critical 1, new 1, proving 0, proven 1\n")
+        self.assertEqual(out.getvalue(), "  tiers of 3 row(s) in 1 table(s): critical 1, new 1, proving 0, proven 1, retired 0\n")
         with contextlib.redirect_stdout(io.StringIO()) as out:
             mutate.main([str(rows), "--root", str(root), "--tier-count", "--json"])
         self.assertEqual(json.loads(out.getvalue()), {"tool": "mutate", "tables": 1, "rows": 3,
-                                                      "tiers": {"critical": 1, "new": 1, "proving": 0, "proven": 1}})
+                                                      "tiers": {"critical": 1, "new": 1, "proving": 0, "proven": 1, "retired": 0}})
         self.assertEqual([entry["caught"] for entry in ledger_of(root).read()], [2], "nothing ran: the ledger is as it was")
         (root / "m.py").write_text((root / "m.py").read_text() + "# an edit\n")
         with contextlib.redirect_stdout(io.StringIO()) as out:
             mutate.main([str(rows), "--root", str(root), "--tier-count", "--for", "m.py"])
-        self.assertEqual(out.getvalue(), "  tiers of 3 row(s) in 1 table(s): critical 1, new 2, proving 0, proven 0\n",
+        self.assertEqual(out.getvalue(), "  tiers of 3 row(s) in 1 table(s): critical 1, new 2, proving 0, proven 0, retired 0\n",
                          "an edit of the file makes its proven row new again, by the blob rule alone")
 
     def test_a_tier_run_plants_only_the_selected_rows_and_says_so_in_its_header(self):
@@ -784,7 +784,7 @@ class TheTiersTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(mutate.main([str(rows), "--root", str(root), "--tier", "new"]), mutate.EXIT_OK)
         said = out.getvalue().splitlines()
-        self.assertEqual(said[0], "  tiers new: 1 row(s) selected (critical 0, new 1, proving 0, proven 1)")
+        self.assertEqual(said[0], "  tiers new: 1 row(s) selected (critical 0, new 1, proving 0, proven 1, retired 0)")
         self.assertEqual([line for line in said if line.startswith("  [")], ["  [caught near] sub adds"], "add's proven row did not run")
         self.assertIn("  1 mutation(s) in ", "\n".join(said))
         lines = {entry["key"]: entry for entry in ledger_of(root).read()}
@@ -792,7 +792,7 @@ class TheTiersTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             mutate.main([str(rows), "--root", str(root), "--tier", "proven,proving", "--json"])
         report = json.loads(out.getvalue())
-        self.assertEqual(report["tiers"], {"selected": ["proven", "proving"], "rows": 2, "counts": {"critical": 0, "new": 0, "proving": 1, "proven": 1}})
+        self.assertEqual(report["tiers"], {"selected": ["proven", "proving"], "rows": 2, "counts": {"critical": 0, "new": 0, "proving": 1, "proven": 1, "retired": 0}})
         self.assertEqual([r["name"] for r in report["mutations"]], ["sub adds", "add subtracts"], "proving before proven, whatever --tier's order")
         with contextlib.redirect_stderr(io.StringIO()) as err:
             self.assertEqual(mutate.main([str(rows), "--root", str(root), "--tier", "critical"]), mutate.EXIT_OK)
@@ -801,7 +801,7 @@ class TheTiersTest(unittest.TestCase):
         more = table(root, BREAK_ADD, BREAK_SUB, {"file": "other.py", "name": "x moves", "find": "x = 1", "replace": "x = 2"})
         with contextlib.redirect_stdout(io.StringIO()) as out:
             mutate.main([str(more), "--root", str(root), "--tier", "new,new", "--for", "other.py", "--json"])
-        self.assertEqual(json.loads(out.getvalue())["tiers"], {"selected": ["new"], "rows": 1, "counts": {"critical": 0, "new": 1, "proving": 0, "proven": 0}},
+        self.assertEqual(json.loads(out.getvalue())["tiers"], {"selected": ["new"], "rows": 1, "counts": {"critical": 0, "new": 1, "proving": 0, "proven": 0, "retired": 0}},
                          "--for narrows the rows before the tiers count them, and a tier named twice is named once")
 
     def test_tier_count_runs_alone_and_tier_takes_the_four_words_only(self):
@@ -812,9 +812,64 @@ class TheTiersTest(unittest.TestCase):
         for extra in (["--anchors"], ["--copy"], ["--tier", "new"], ["--ledger"], ["--retarget", "m.py", "n.py"]):
             with self.subTest(extra=extra), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 mutate.main([str(rows), "--root", str(root), "--tier-count"] + extra)
-        for bad in ("bogus", "new,bogus", ""):
+        for bad in ("bogus", "new,bogus", "", "retired"):  # retired is a tier word, not one a sweep runs: --retire lists it
             with self.subTest(tier=bad), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 mutate.main([str(rows), "--root", str(root), "--tier", bad])
+        self.assertFalse(ledger_of(root).path.exists(), "something ran")
+
+
+class TheRetireTest(unittest.TestCase):
+    """P787 PR 5: --retire lists the rows the ledger shows refused in two sweeps at their file's current blob, and runs nothing."""
+
+    RETIRE_LINE = "  %d row(s) to retire: refused by --anchors in two sweeps; delete each with its reason in a PR, or re-anchor it\n"
+
+    def project(self, *rows):
+        """A tiny project whose one table sits beside the ledger, as the repository's do, with no `name` on the last row."""
+        root = tiny_project()
+        (root / "tests" / "mutations").mkdir()
+        (root / "tests" / "mutations" / "p1-topic.json").write_text(json.dumps(list(rows)))
+        return root
+
+    def refused_line(self, root, row, refused, blob=None):
+        return ledger.line(row, blob or ledger.blob_of((root / row["file"]).read_bytes()), "2026-11-12T10:00:00+01:00",
+                           ledger.REFUSED, None, 0) | {"refused": refused}
+
+    def retire(self, root, *flags):
+        import contextlib
+        import io
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = mutate.main(["--retire", "--root", str(root), *flags])
+        return code, out.getvalue()
+
+    def test_a_row_refused_twice_at_the_current_blob_is_listed_by_table_index_and_name(self):
+        gone = dict(BREAK_ADD, name="nowhere", find="return a * b")
+        nameless = {"file": "m.py", "find": "return a / b", "replace": "return a // b"}
+        root = self.project(BREAK_ADD, gone, nameless)
+        ledger_of(root).write([self.refused_line(root, gone, 2), self.refused_line(root, nameless, 3)])
+        self.assertEqual(self.retire(root), (mutate.EXIT_OK, "  p1-topic.json:1 nowhere\n  p1-topic.json:2 return a / b\n" + self.RETIRE_LINE % 2))
+        code, said = self.retire(root, "--json")
+        self.assertEqual(json.loads(said), {"tool": "mutate", "rows": 2, "retired": [
+            {"table": "p1-topic.json", "index": 1, "name": "nowhere", "key": ledger.row_key(gone), "file": "m.py"},
+            {"table": "p1-topic.json", "index": 2, "name": "return a / b", "key": ledger.row_key(nameless), "file": "m.py"}]})
+        self.assertEqual(json.loads((root / "tests" / "mutations" / "p1-topic.json").read_text()), [BREAK_ADD, gone, nameless], "the tool deleted a row")
+
+    def test_a_row_refused_once_or_at_an_older_blob_is_not_listed(self):
+        gone = dict(BREAK_ADD, name="nowhere", find="return a * b")
+        root = self.project(gone)
+        ledger_of(root).write([self.refused_line(root, gone, 1)])
+        self.assertEqual(self.retire(root), (mutate.EXIT_OK, self.RETIRE_LINE % 0), "one refusal is --anchors' business")
+        ledger_of(root).write([self.refused_line(root, gone, 2, blob=ledger.blob_of(b"an older content\n"))])
+        self.assertEqual(self.retire(root), (mutate.EXIT_OK, self.RETIRE_LINE % 0), "the file changed since: the blob rule")
+        self.assertEqual(self.retire(tiny_project()), (mutate.EXIT_OK, self.RETIRE_LINE % 0), "no table and no ledger: nothing to retire")
+
+    def test_retire_runs_alone(self):
+        import contextlib
+        import io
+        root = tiny_project()
+        for extra in ([str(table(root, BREAK_ADD))], ["--ledger"], ["--anchors"], ["--copy"], ["--tier-count"], ["--tier", "new"],
+                      ["--budget", "1"], ["--for", "m.py"], ["--retarget", "m.py", "n.py"]):
+            with self.subTest(extra=extra), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                mutate.main(["--retire", "--root", str(root)] + extra)
         self.assertFalse(ledger_of(root).path.exists(), "something ran")
 
 

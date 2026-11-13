@@ -10,6 +10,7 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py --ledger                              # the ledger's lines, counted by status
     tools/mutate.py tests/mutations/*.json --tier critical,new --budget 20 --copy   # a sweep: these tiers, within 20 minutes
     tools/mutate.py tests/mutations/*.json --tier-count   # how many rows each tier holds; runs nothing
+    tools/mutate.py --retire                              # the rows refused in two sweeps, for a deleting PR; runs nothing
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -63,14 +64,19 @@ files are restored writes it (a verdict nothing can trust records nothing); a co
 holds the words and the store.
 
 THE TIERS (P787) put each row of the given tables under one of the plan's words, each a fact the tool reads from the row
-and the ledger (`ledger.tier_of`): *critical*, the row carries `"tier": "critical"`; *new*, no ledger line at the row's
-file's current blob, or a line there that says `escaped` (a missing test, so it runs again) or `refused` (--anchors'
-business); *proving*, caught once at the current blob; *proven*, caught twice or more there. *Retired* is PR 5's and is
-not decided yet. The blob rule alone says what is stale: an edit of a file makes every row on it new again, and a row
-with no line is new, never proven. `--tier critical,new` runs only the rows of the named tiers, in the sweep's order:
+and the ledger (`ledger.tier_of`): *critical*, the row carries `"tier": "critical"`; *retired*, refused in two sweeps at
+the row's file's current blob (the ledger's `refused` count), so no sweep plants it again; *new*, no ledger line at the
+current blob, or a line there that says `escaped` (a missing test, so it runs again: an escape never retires) or
+`refused` once; *proving*, caught once at the current blob; *proven*, caught twice or more there. The blob rule alone
+says what is stale: an edit of a file makes every row on it new again (a retired one too: its anchor may be back), and a
+row with no line is new, never proven. `--tier critical,new` runs only the rows of the named tiers, in the sweep's order:
 critical, new in the tables' given order (name the oldest table first), proving, proven oldest date first; the header
-line says which tiers and how many rows, and the rest of the output is as without it. Without `--tier` every row runs.
-`--tier-count` prints how many rows each tier holds and runs nothing.
+line says which tiers and how many rows, and the rest of the output is as without it. Without `--tier` every row but
+the retired ones runs. `--tier-count` prints how many rows each of the five tiers holds and runs nothing. `--retire`
+runs alone and lists the retired rows of every table beside the ledger, one line each as `table:index name`, then
+`N row(s) to retire: refused by --anchors in two sweeps; delete each with its reason in a PR, or re-anchor it`; the
+tool deletes nothing, and the sweep's refusal is the same check `--anchors` makes (an anchor that is not there once, a
+mutant that does not compile, parse or import), recorded by the run, since `--anchors` itself writes no ledger line.
 
 In a copy each row's ledger line is written as soon as the row is done, dated then, so a run that SIGTERM or a crash
 stops keeps every line it recorded (PR 1's review, row 50: a 180-minute slice killed at minute 179 lost everything). In the
@@ -630,9 +636,14 @@ def main(argv=None):
     parser.add_argument("--tier", metavar="TIERS",
                         help="only the rows of these tiers, a comma list of %s, in that order (the ledger decides each "
                              "row's tier: critical is the row's own `\"tier\"` key; new has no line at its file's current "
-                             "blob, or an escaped or refused one; proving was caught once there, proven twice or more)" % ",".join(ledger.TIERS))
+                             "blob, or an escaped or once-refused one; proving was caught once there, proven twice or more; "
+                             "a row refused twice there is retired and runs in no tier: --retire lists them)" % ",".join(ledger.TIERS))
     parser.add_argument("--tier-count", action="store_true",
-                        help="instead of a run: how many rows of the given tables each tier holds; runs nothing")
+                        help="instead of a run: how many rows of the given tables each tier holds, the retired ones too; runs nothing")
+    parser.add_argument("--retire", action="store_true",
+                        help="instead of a run: list the rows of every table beside the ledger (tests/mutations/*.json under --root) "
+                             "that the ledger shows refused in two sweeps or more at their file's current content, one line each as "
+                             "table:index name, for a deleting PR; deletes nothing, runs nothing, exits 0")
     parser.add_argument("--budget", type=int, metavar="MINUTES",
                         help="stop before the row that would cross this many minutes, counted from the run's start (the copy "
                              "and the pre-check suite inside); a row's expected seconds are its ledger line's `s`, else the "
@@ -644,10 +655,13 @@ def main(argv=None):
 
     root = Path(args.root).resolve()
     ledger_store = ledger.LedgerStore(root / args.tests / "mutations" / ledger.LEDGER_NAME)
+    if (args.ledger or args.retire) and (args.table or args.anchors or args.paths or args.copy or args.retarget or args.tier is not None
+                                         or args.tier_count or args.budget is not None or (args.ledger and args.retire)):
+        parser.error("%s runs alone: it takes no table and no flag but --root, --tests and --json" % ("--ledger" if args.ledger else "--retire"))
     if args.ledger:
-        if args.table or args.anchors or args.paths or args.copy or args.retarget or args.tier is not None or args.tier_count or args.budget is not None:
-            parser.error("--ledger runs alone: it takes no table, --anchors, --for, --copy, --retarget, --tier, --tier-count or --budget")
         return print_ledger(ledger_store, root, args.json)
+    if args.retire:
+        return print_retired(ledger_store, root, args.json)
     if not args.table:
         parser.error("the following arguments are required: table")
     if args.retarget:
@@ -766,8 +780,8 @@ def tier_header(header):
 
 
 def tier_counts(counts):
-    """`critical 12, new 30, proving 9, proven 10`: every tier's count, in the tiers' order."""
-    return ", ".join("%s %d" % (tier, counts[tier]) for tier in ledger.TIERS)
+    """`critical 12, new 30, proving 9, proven 10, retired 0`: every tier's count, in the tiers' order, the retired last."""
+    return ", ".join("%s %d" % (tier, counts[tier]) for tier in ledger.TIER_WORDS)
 
 
 def print_tier_counts(tiers, tables, as_json):
@@ -777,6 +791,36 @@ def print_tier_counts(tiers, tables, as_json):
         print(json.dumps({"tool": "mutate", "tables": tables, "rows": sum(counts.values()), "tiers": counts}, indent=2))
     else:
         print("  tiers of %d row(s) in %d table(s): %s" % (sum(counts.values()), tables, tier_counts(counts)))
+    return EXIT_OK
+
+
+def retired_rows(ledger_store, root):
+    """
+    `--retire`'s list: every row of the tables beside the ledger (`*.json` in its folder, by name) that the ledger shows
+    refused in two sweeps or more at its file's current content (`ledger.is_retired`), as `{table, index, name, key, file}`
+    in the tables' order. The tool reads; the deleting PR deletes each with its reason, or re-anchors it.
+    """
+    by_key = {entry["key"]: entry for entry in ledger_store.read()}
+    found = []
+    for table in sorted(ledger_store.path.parent.glob("*.json")):
+        rows = json.loads(table.read_text())
+        blobs = ledger.blobs_now(root, rows)
+        for index, row in enumerate(rows):
+            key = ledger.row_key(row)
+            if ledger.is_retired(by_key.get(key), blobs[row["file"]]):
+                found.append({"table": table.name, "index": index, "name": row.get("name", row["find"]), "key": key, "file": row["file"]})
+    return found
+
+
+def print_retired(ledger_store, root, as_json):
+    """`--retire`: one line per retired row as `table:index name`, then the count line; or the JSON; exit 0, nothing runs."""
+    found = retired_rows(ledger_store, root)
+    if as_json:
+        print(json.dumps({"tool": "mutate", "retired": found, "rows": len(found)}, indent=2))
+    else:
+        for row in found:
+            print("  %s:%d %s" % (row["table"], row["index"], row["name"]))
+        print("  %d row(s) to retire: refused by --anchors in two sweeps; delete each with its reason in a PR, or re-anchor it" % len(found))
     return EXIT_OK
 
 
