@@ -114,8 +114,7 @@
   "file": "scripts/spark/bench/board_grant.py",
   "name": "standing-yes-never-ready-check",
   "find": "        if self.grant.why_not_valid(self.now()):\n            raise GateClosedError(",
-  "replace": "        if False:\n            raise GateClosedError(",
-  "tier": "critical"
+  "replace": "        if False:\n            raise GateClosedError("
  },
  {
   "file": "scripts/spark/bench/board_grant.py",
@@ -133,7 +132,8 @@
   "file": "scripts/spark/bench/board_grant.py",
   "name": "ignore-older-runs-covered",
   "find": "        if evidence.grant_refusal:\n            return DeployConsentResult(fallback, evidence.grant_refusal)",
-  "replace": "        if False:\n            return DeployConsentResult(fallback, evidence.grant_refusal)"
+  "replace": "        if False:\n            return DeployConsentResult(fallback, evidence.grant_refusal)",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_grant.py",

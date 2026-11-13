@@ -57,8 +57,7 @@
   "file": "scripts/spark/bench/deploy_gate.py",
   "name": "a no is told as a missing token",
   "find": "reason=board_codes.ANSWERED_NO)",
-  "replace": "reason=board_codes.TOKEN_MISSING)",
-  "tier": "critical"
+  "replace": "reason=board_codes.TOKEN_MISSING)"
  },
  {
   "file": "scripts/spark/bench/deploy_gate.py",

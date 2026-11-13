@@ -151,13 +151,13 @@ class TheCriticalMarksTest(unittest.TestCase):
     def test_the_critical_rows_stay_under_the_po_s_cap_and_the_tier_key_says_critical_or_nothing(self):
         rows = self.rows()
         self.assertTrue(rows, "the tables are read from the repository")
-        misspelt = [(table, row["name"]) for table, row in rows if row.get(ledger.TIER_KEY, ledger.CRITICAL) != ledger.CRITICAL]
+        misspelt = [(table, row.get("name", "?")) for table, row in rows if row.get(ledger.TIER_KEY, ledger.CRITICAL) != ledger.CRITICAL]
         self.assertEqual(misspelt, [], "a tier key spells %r or is absent: any other word is a mark the tool never reads" % ledger.CRITICAL)
-        marked = [(table, row["name"]) for table, row in rows if ledger.TIER_KEY in row]
+        marked = [(table, row.get("name", "?")) for table, row in rows if ledger.TIER_KEY in row]
         self.assertLessEqual(len(marked), CRITICAL_CAP, "more than the PO's %d critical rows: drop one before adding one" % CRITICAL_CAP)
 
     def test_every_critical_row_names_a_file_that_exists(self):
-        gone = [(table, row["name"], row["file"]) for table, row in self.rows()
+        gone = [(table, row.get("name", "?"), row["file"]) for table, row in self.rows()
                 if row.get(ledger.TIER_KEY) == ledger.CRITICAL and not (ROOT / row["file"]).is_file()]
         self.assertEqual(gone, [], "a critical row on a gone file is a stale mark: retarget or unmark it")
 
