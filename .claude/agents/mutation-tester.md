@@ -32,9 +32,10 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    most 12 new rows for the whole sweep, beside the rows the pull requests wrote. Choose the defects whose escape would hurt most.
 2. Put every row in one table: a JSON list of `{"file", "name", "find", "replace"}`, in the output folder that your
    brief names, never in `tests/mutations/`. A `find` must occur exactly once in its file. Run
-   `python3 tools/mutate.py --anchors <table>` first, and fix each row that it refuses (a `find` that is missing or not unique, or a `replace` that does
-   not compile or parse).
-3. Run the sweep's rows and your table in one call: `python3 tools/mutate.py tests/mutations/*.json <table> --for
+   `SPARK_HOME=<scratch> python3 tools/mutate.py --anchors <table>` first, and fix each row that it refuses (a `find` that is missing or not unique, or a `replace` that does
+   not compile or parse). `<scratch>` is an empty folder of your own, never the store: the import check runs a mutated
+   module with `python -c` and no suite around it, so only the inline `SPARK_HOME` keeps it off the store (P797).
+3. Run the sweep's rows and your table in one call: `SPARK_HOME=<scratch> python3 tools/mutate.py tests/mutations/*.json <table> --for
    <the sweep's files> --tier critical,new,proving --budget 20 --copy`. Make one call, because each call also runs the whole suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes; the one file the run writes in the real tree is the ledger (step 5).
    `--tier critical,new,proving` runs the rows the ledger puts in those tiers (P787; the glossary has the five words):
    the critical rows run every sweep, whatever the ledger says of them, because each carries `"tier": "critical"`, a
@@ -45,7 +46,7 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    which tiers and how many rows, as `  tiers critical,new,proving: 51 row(s) selected (critical 12, new 30, proving 9,
    proven 10, retired 3)`; quote it byte for byte. The new rows run in the tables' given order, and the glob
    `tests/mutations/*.json` lists the newest tables first (`p…` before `sprint-…`): a sweep that wants the oldest first
-   lists them first. `python3 tools/mutate.py tests/mutations/*.json --tier-count` says beforehand how many rows each
+   lists them first. `SPARK_HOME=<scratch> python3 tools/mutate.py tests/mutations/*.json --tier-count` says beforehand how many rows each
    tier holds, and runs nothing. `--budget 20` stops the run before the row whose expected seconds (its ledger line's
    `s`, else the median of this run's rows, else the pre-check suite's; a file's first row adds its near check: the largest
    this run measured, else the pre-check suite's seconds) would cross 20 minutes from the run's start,
@@ -56,14 +57,14 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
 4. Report `N planted, M caught`, and the left count when the budget stopped the run. For each escape, give the row and the test that it shows is missing: which input,
    and which assertion.
 5. The run wrote `tests/mutations/ledger.jsonl` in the tree (P787): one line per row it planted, with the test that
-   caught it, each written as soon as its row was done, so a run that was stopped kept them. Say so in your report, with `python3 tools/mutate.py --ledger`'s line; Claude, the main thread, commits it
+   caught it, each written as soon as its row was done, so a run that was stopped kept them. Say so in your report, with `SPARK_HOME=<scratch> python3 tools/mutate.py --ledger`'s line; Claude, the main thread, commits it
    with the sweep's findings. Do not edit it.
-6. After the run, `python3 tools/mutate.py --retire` lists the rows the ledger shows refused in two sweeps at their
+6. After the run, `SPARK_HOME=<scratch> python3 tools/mutate.py --retire` lists the rows the ledger shows refused in two sweeps at their
    file's current content, one line each as `table:index name`, then `  N row(s) to retire: refused in two sweeps;
    delete each with its reason in a PR, or re-anchor it`. Quote the list in your report. It runs nothing and
    deletes nothing: the deleting PR, with each row's reason, is the main thread's. An escape is never retired: it is a
    missing test.
-7. Then `python3 tools/mutate.py tests/mutations/*.json --duplicates` lists the same-line groups (two rows or more on
+7. Then `SPARK_HOME=<scratch> python3 tools/mutate.py tests/mutations/*.json --duplicates` lists the same-line groups (two rows or more on
    one file and one line, their finds the same once stripped of indentation and a trailing line break, with different
    replaces) with the ledger's verdict on each: `merge candidate` when every row was caught at the file's current
    content by the same test module (`by`), `distinct` when a module or a status differs or the whole suite caught a row,
