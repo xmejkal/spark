@@ -7,7 +7,7 @@
   --skeleton         write a record to fill in, to the project's parts/ (refused when any layer holds the id)  [writes]
   --sources          ask every URL a record cites whether it answers  [network]
   --fetch            download the datasheets and images a record cites, into your store  [network, writes]
-  --keep             put a file you already have into your store; answers its documents entry  [writes]
+  --keep             put a file you already have into your store; answers its documents entry, and with --part lists it in that record  [writes]
   --read             read a datasheet page by page and stop where every --want fact is on a table row
   --kept             find a kept document by every word, with no network, and every fact resting on it
   --promote          catalog → the project's parts/, or the project's parts/ → the plugin's library  [writes]
