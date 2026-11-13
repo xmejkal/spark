@@ -275,9 +275,8 @@ def assign(board, signals):
                              design_codes.NAMED_PIN_UNSUITABLE)
         cannot = needs - capability_of(board, gpio)
         if cannot:
-            raise ImpossibleError("%s asks for %s by name and needs %s, which GPIO%d cannot do%s"
-                             % (signal["name"], label, ", ".join(sorted(cannot)), gpio, _why_not_adc(cannot, roles)),
-                             design_codes.NAMED_PIN_UNSUITABLE)
+            raise ImpossibleError("%s asks for %s by name and needs %s, which GPIO%d cannot do%s" % (signal["name"], label, ", ".join(
+                sorted(cannot)), gpio, _why_not_adc(cannot, roles)), design_codes.NAMED_PIN_UNSUITABLE)
         line = signal.get("line") if signal.get("bus") else None
         if gpio in taken_gpio:
             if line in SHARED_LINES and bus_holders.get(gpio) == (signal["bus"], line):
