@@ -226,7 +226,7 @@ The board file imports `./FireBeetle2Esp32S3` — the footprint `emit_footprint.
 the board file's measured geometry; without that step `tsci build` stops at the import. The
 one command writes it for you.
 
-`assign_pins` spends plain pins first, then the SPI and I2C pins, then the scarce ones (wake-capable, ADC1), and prints why
+`assign_pins` gives each signal the pin that wastes the fewest abilities it does not need (wake, ADC1), and among pins that waste the same, an SPI or I2C pin last; it prints why
 each signal landed where it did. **Firmware never types a GPIO number:** `--emit-pins` and the one command write the
 map as plain constants (`VALVE1_VALVE_CTRL = 38`), each commented with its silkscreen pad, why it
 was chosen and what the board record says about that pin (`adc2_unusable_with_wifi: on ADC2, which

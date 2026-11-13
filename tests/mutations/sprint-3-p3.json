@@ -26,13 +26,13 @@
  {
   "file": "scripts/spark/records/board_rules.py",
   "name": "SPI dropped from the role vocabulary",
-  "find": "    \"spi\": \"the hardware SPI bus; a plain signal takes it after the plain pins and before a scarce one\",\n",
+  "find": "    \"spi\": \"the hardware SPI bus; among pins that waste the same abilities, a plain signal takes it last\",\n",
   "replace": ""
  },
  {
   "file": "scripts/spark/records/board_rules.py",
   "name": "I2C dropped from the role vocabulary",
-  "find": "    \"i2c\": \"the hardware I2C bus; a plain signal takes it after the plain pins and before a scarce one\",\n",
+  "find": "    \"i2c\": \"the hardware I2C bus; among pins that waste the same abilities, a plain signal takes it last\",\n",
   "replace": ""
  },
  {

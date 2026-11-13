@@ -74,7 +74,7 @@ ROLE_PENALTY = {
     "onboard_led": 10,                # it will blink whatever you put on it
     "onboard_display": 30,            # a signal here drives the screen's bus, and the screen shows the noise
     "onboard_battery_sense": 20,      # a divider from the battery is wired to it, so a signal here corrupts the reading
-    "spi": 5,                         # a bus, spent after plain pins and before scarce ones
+    "spi": 5,                         # a bus: a tie-breaker among pins that waste the same abilities (below)
     "i2c": 5,
     "adc2_unusable_with_wifi": 1,     # only a loss if you wanted the ADC, which `can` covers
 }

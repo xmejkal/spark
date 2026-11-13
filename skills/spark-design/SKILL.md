@@ -59,7 +59,7 @@ a rule checklist in the loop. Follow it.
 
    Then, in this order — each says what it decided and why:
    - `${CLAUDE_PLUGIN_ROOT}/scripts/assign_pins.py requirements.json` — a pin per signal, scarce
-     pins spent in order: plain, then the buses, then the scarce ones (wake, ADC1), with the reason beside each.
+     pins spent by what they waste (a wake or ADC1 pin costs more; among equals the buses go last), with the reason beside each.
    - `${CLAUDE_PLUGIN_ROOT}/scripts/emit_board.py requirements.json > board.tsx` — the board file.
      It REFUSES rather than guess: no footprint, no pin order, no measured outline
      (`--assume-missing-sizes` proceeds with the guess declared in the file), two components of one

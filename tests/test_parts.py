@@ -475,8 +475,9 @@ class ABusPinComesAfterThePlainPinsTest(unittest.TestCase):
     Found by a cold rebuild of the bin and left open as backlog P3 until 2026-09-29.
 
     A bus signal still lands on its own named pin: that path runs first and ignores penalties.
-    This is only about PLAIN signals: they take every plain pin before a bus pin, and a bus pin
-    before a scarce one (wake, ADC1). The order is the design's (P3); P780 made the docs say it.
+    This is only about PLAIN signals: among pins that waste the same abilities a bus pin comes last,
+    and a pin that wastes one more (wake, ADC1) costs more than a bus pin. The order is the design's
+    (P3); P780 made the docs say it.
     """
 
     def setUp(self):
@@ -727,8 +728,8 @@ class CountingPadsFromAFootprintNameTest(unittest.TestCase):
 
 class TheWalksBoardTest(unittest.TestCase):
     """P780, the T-Display walk's row 27: with a button and an LED, the LED took GPIO21 (I2C) while GPIO13, 25 and 32
-    were free. That is the order, as the PO chose on 2026-11-13: a bus pin before a pin that can wake the chip or read a
-    voltage."""
+    were free. That is the order the PO kept on 2026-11-13: IO21 wastes no wake or ADC ability, IO13, 25 and 32 waste
+    more, and the bus penalty only breaks ties among equals."""
 
     def test_the_led_takes_the_i2c_pin_and_leaves_the_wake_and_adc_pins_free(self):
         board = json.loads((ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json").read_text())
