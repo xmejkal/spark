@@ -74,7 +74,7 @@
     38,
     39
   ],
-  "//adc_gpio": "From the variant's A0-A19 (pins_arduino.h): ADC1 is 32-39, ADC2 is 0, 2, 4, 12-15, 25-27.",
+  "//adc_gpio": "Every ADC pin, both units: documents.esp32-trm-v5-9, Table 6.11-1 RTC IO MUX Pin Summary (page 134), ADC1_CH0-7 on GPIO32-39 and ADC2_CH0-9 on GPIO0, 2, 4, 12-15, 25-27. The ADC2 ones are named again in pin_roles.adc2_unusable_with_wifi, and the pin assigner gives them no adc ability (P798). The variant's A0-A19 (documents.arduino-variant-lilygo-t-display-3-3-12) lists the same pins and names no unit.",
   "adc_gpio": [
     0,
     2,
@@ -189,7 +189,7 @@
         26,
         27
       ],
-      "note": "ADC2, which cannot be read while Wi-Fi is on."
+      "note": "ADC2, which cannot be read while Wi-Fi is on. Source: documents.esp32-trm-v5-9, section 31.3.1 Note (page 748), 'If Wi-Fi module is using the SAR ADC2, users can not measure the analog signal from the pins using SAR ADC2'; the pins are its Table 6.11-1 (page 134)."
     },
     "i2c": {
       "gpio": [
@@ -272,6 +272,14 @@
       "retrieved": "2026-10-19",
       "title": "pins_arduino.h, lilygo_t_display",
       "version": "arduino-esp32 3.3.12"
+    },
+    "esp32-trm-v5-9": {
+      "url": "https://documentation.espressif.com/esp32_technical_reference_manual_en.pdf",
+      "sha256": "1007b90e6fafc16541d693d7444b63e1c5b01e46e60cce9b6810e02340a64b82",
+      "file": "esp32_technical_reference_manual_en.pdf",
+      "retrieved": "2026-11-13",
+      "title": "ESP32 Technical Reference Manual",
+      "version": "5.9"
     }
   }
 }

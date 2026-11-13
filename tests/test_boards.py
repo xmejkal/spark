@@ -1332,6 +1332,23 @@ class TheFireBeetleCitesItsStandInsDefinitionTest(unittest.TestCase):
 # --- end MVP ---
 
 
+class EachAdcListCitesAKeptSourceTest(unittest.TestCase):
+    """P798: each record's `//adc_gpio` and its ADC2 role note (where it has one) name a `documents.<key>` it holds."""
+
+    RECORDS = (ROOT / "boards" / "firebeetle2-esp32s3.json", ROOT / "boards" / "xiao-esp32-c6.json",
+               ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json")
+
+    def test_each_cite_names_a_document_the_record_holds(self):
+        for path in self.RECORDS:
+            record = json.loads(path.read_text())
+            role = record.get("pin_roles", {}).get(board_records.ADC2_UNUSABLE_WITH_WIFI)
+            for text in [record["//adc_gpio"]] + ([role["note"]] if role else []):
+                with self.subTest(record=path.name, text=text[:40]):
+                    cited = re.findall(r"documents\.([a-z0-9-]+[a-z0-9])", text)
+                    self.assertTrue(cited, "no documents.<key> in %r" % text)
+                    self.assertLessEqual(set(cited), set(record["documents"]))
+
+
 class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
     """P707 (N19): `boards.py --list` runs design's `ListBoards` through `run_cli`: the text is as it was, and `--json` is one
     envelope whose rows carry the board's layer, the active mark and why it stops at the footprint, or null."""

@@ -79,6 +79,7 @@ MAY_READ = {
     "board_records.ONBOARD_BUTTON": "a role's NAME, used to build a fixture — vocabulary, not a value",
     "board_records.ONBOARD_DISPLAY": "a role's NAME, used to build a fixture — vocabulary, not a value",
     "board_records.ONBOARD_BATTERY_SENSE": "a role's NAME, used to build a fixture — vocabulary, not a value",
+    "board_records.ADC2_UNUSABLE_WITH_WIFI": "a role's NAME, used to read a record's ADC2 role (P798) — vocabulary, not a value",
     "board_records.ONBOARD_ROLES":
         "the table of onboard roles, checked against the vocabulary of roles a board may declare",
     "board_records.WOKWI_DEFINITION": "a documents key's NAME, used to build a fixture — vocabulary, not a value",
