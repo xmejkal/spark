@@ -66,10 +66,10 @@
   "replace": "    if False:"
  },
  {
-  "file": "scripts/tools.py",
+  "file": "scripts/spark/records/tool_choices.py",
   "name": "I3: --on in the person's file says on while the project keeps it off",
-  "find": "            if merged(project)[\"tools\"].get(args.on, {}).get(\"on\") is False:",
-  "replace": "            if False:"
+  "find": "    if merged(project)[\"tools\"].get(name, {}).get(\"on\") is False:",
+  "replace": "    if False:"
  },
  {
   "file": "scripts/spark/records/tool_finder.py",

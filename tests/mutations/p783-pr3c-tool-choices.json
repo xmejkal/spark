@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/records/tool_choices.py",
+  "name": "P783 PR 3c: a tool another file keeps off is refused as a broken entry",
+  "find": "off_sentence(name, project), code=records_codes.TOOL_OFF)",
+  "replace": "off_sentence(name, project), code=records_codes.TOOL_ENTRY_BROKEN)"
+ },
+ {
+  "file": "scripts/spark/records/tool_choices.py",
+  "name": "P783 PR 3c: an entry that is not JSON is called a broken tools list",
+  "find": "name, broken, code=records_codes.TOOL_ENTRY_BROKEN)",
+  "replace": "name, broken, code=records_codes.TOOLS_LIST_BROKEN)"
+ },
+ {
+  "file": "scripts/spark/records/tool_choices.py",
+  "name": "P783 PR 3c: an entry spark could not find is called a tool turned off",
+  "find": "name, problem, code=records_codes.TOOL_ENTRY_BROKEN)",
+  "replace": "name, problem, code=records_codes.TOOL_OFF)"
+ }
+]
