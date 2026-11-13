@@ -199,7 +199,9 @@ proving (so a row can become proven), proven oldest date first, and its first li
 suite). Before each row the tool asks whether the row's expected seconds would cross what is left, and stops there:
 that row and every one after it are *left* for the next sweep. The expected seconds are a fact, never a guess: the
 row's ledger line's `s` (its last duration), else the median of the caught and escaped rows of this run, else the
-pre-check suite's measured seconds. Under a budget the rows run in the tiers' order also without `--tier`. The closing line is `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35,
+pre-check suite's measured seconds. A file's near tests are checked on the clean tree just before its first row, so
+that row asks for the pre-check suite's seconds more, which bound a near check (checked up front for every file, they
+spent the first night's 180 minutes before any row, 2026-11-13). Under a budget the rows run in the tiers' order also without `--tier`. The closing line is `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35,
 proving 0/9, proven 0/5); 19 left for the next sweep`, and `--json` has the same facts under `budget` (`minutes`,
 `ran`, `selected`, `left`, `by_tier`). A left row is not a pass: it did not run, and the exit code speaks for the rows
 that did; a budget run that ran no row exits 2. The mutation tester quotes the left count. The PO's defaults (2026-11-12): 20 minutes for a wave-end sweep a
