@@ -22,7 +22,7 @@ a rule checklist in the loop. Follow it.
    to the person and follow its fix; a `?` CONFLICT rests on facts nobody has verified.
    A part that is not there is **researched**: `parts.py --need <words>` says what exists, and
    `/spark:research` runs the `parts-researcher` agent, vendor by vendor in the project's order,
-   to write the record — `references/part-data.md` has the schema and `parts.py --validate
+   to write the record — `references/part-data.md` has a worked record and `parts.py --validate
    --project .` says what is missing. NEVER invent a pinout — a pin map comes from the vendor (`references/vendor-knowledge.md`:
    Espressif's `pins_arduino.h` variant header, the DFRobot wiki `/<sku>/docs/` pinout and the
    `DFRobot_<Part>` GitHub `examples/`, otherwise a datasheet or a JLCPCB/LCSC lookup), recorded

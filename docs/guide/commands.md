@@ -178,8 +178,8 @@ Nobody has measured today's route end to end: `datasheet-reader` has not yet run
 
 ### `/spark:identify`
 
-A photo of a module you own becomes a part record. The chip markings, the silkscreen and the connector are read
-before anything is searched. Every fact the photo alone supports is marked unverified.
+A photo of a module you own becomes a part record. The markings, the labels and the module's look are written down,
+then the web is searched wide. A fact read off the photo or a look-alike's document, or computed, is unverified.
 
 It does not measure. What the photo cannot show is named in `--unverified`, with how a person checks it: a meter,
 the other face, or the chip's datasheet against a pin number. On 2026-09-29 one photo through an anti-static bag gave a
