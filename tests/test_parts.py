@@ -468,14 +468,15 @@ class APwmPinTest(unittest.TestCase):
         self.assertNotIn("pwm", pin_assigner.capability_of(limited, limited["pins"]["D5"]))
 
 
-class ABusIsSpentLastTest(unittest.TestCase):
+class ABusPinComesAfterThePlainPinsTest(unittest.TestCase):
     """
     Nothing marked SCK, MI and MO as a bus, so the assigner spent all three on two LEDs and a
     button — the cheapest pins left, by its lights — and a later SPI part had nowhere to go.
     Found by a cold rebuild of the bin and left open as backlog P3 until 2026-09-29.
 
     A bus signal still lands on its own named pin: that path runs first and ignores penalties.
-    This is only about PLAIN signals preferring any other pin while one is free.
+    This is only about PLAIN signals: they take every plain pin before a bus pin, and a bus pin
+    before a scarce one (wake, ADC1). The order is the design's (P3); P780 made the docs say it.
     """
 
     def setUp(self):
@@ -722,6 +723,18 @@ class CountingPadsFromAFootprintNameTest(unittest.TestCase):
     def test_a_footprint_from_a_supplier_or_a_file_says_nothing(self):
         self.assertIsNone(part_rules.footprint_pad_count("jlcpcb:C12345"))
         self.assertIsNone(part_rules.footprint_pad_count(None))
+
+
+class TheWalksBoardTest(unittest.TestCase):
+    """P780, the T-Display walk's row 27: with a button and an LED, the LED took GPIO21 (I2C) while GPIO13, 25 and 32
+    were free. That is the order, as the PO chose on 2026-11-13: a bus pin before a pin that can wake the chip or read a
+    voltage."""
+
+    def test_the_led_takes_the_i2c_pin_and_leaves_the_wake_and_adc_pins_free(self):
+        board = json.loads((ROOT / "tests" / "data" / "boards" / "lilygo-t-display.json").read_text())
+        placed, _ = pin_assigner.assign(board, [{"name": "BUTTON", "needs": []}, {"name": "STATUS_LED", "needs": []}])
+        self.assertEqual({a["signal"]: a["pin"] for a in placed}, {"BUTTON": "IO17", "STATUS_LED": "IO21"})
+        self.assertFalse({a["gpio"] for a in placed} & {13, 25, 32})
 
 
 class TheShippedLibraryTest(unittest.TestCase):

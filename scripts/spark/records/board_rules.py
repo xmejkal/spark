@@ -54,11 +54,11 @@ PIN_ROLES = {
     "strapping": "sampled at reset; the level here decides how the chip boots",
     "adc2_unusable_with_wifi": "on ADC2, which cannot be read while the radio is on",
     "not_wake_capable": "cannot bring the chip out of deep sleep",
-    # Bus roles, read by `assign_pins`: a plain signal takes these last, so a later bus part is
-    # not left with nowhere to go. Added 2026-09-29 (backlog P3) after the assigner spent SCK,
+    # Bus roles, read by `assign_pins`: a plain signal takes these after every plain pin and before a
+    # scarce one (wake, ADC), so a later bus part usually finds its pins free (P780). Added 2026-09-29 (backlog P3) after the assigner spent SCK,
     # MI and MO on two LEDs and a button because nothing said they were a bus.
-    "spi": "the hardware SPI bus; spent last by signals that could use any pin",
-    "i2c": "the hardware I2C bus; spent last by signals that could use any pin",
+    "spi": "the hardware SPI bus; a plain signal takes it after the plain pins and before a scarce one",
+    "i2c": "the hardware I2C bus; a plain signal takes it after the plain pins and before a scarce one",
     # Read by `restricted_pins` (P254, D14): code for a live try that writes one of these numbers is refused.
     "usb": "the chip's own USB D- and D+: driving one drops the USB port the session talks through",
     "flash": "wired to the flash that holds the firmware: driving one can stop the chip",

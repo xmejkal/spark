@@ -171,7 +171,7 @@
         19,
         21
       ],
-      "note": "MOSI, MISO, SCK, SS — D10, D9, D8, D3. The hardware SPI bus, taken last by plain signals so a later SPI part is not left with nowhere to go. Backlog P3."
+      "note": "MOSI, MISO, SCK, SS — D10, D9, D8, D3. The hardware SPI bus, taken by plain signals after the plain pins and before a scarce one, so a later SPI part usually finds it free. Backlog P3, P780."
     },
     "i2c": {
       "gpio": [
