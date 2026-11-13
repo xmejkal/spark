@@ -141,7 +141,7 @@ It reports:
 
 - the story run of the suite, as committed: `story run: Ran N tests in S s (K slow tests skipped; F of T test files; the full run is
   check_commit.py --full)`. If the hook cannot choose, the line is the quick run's, `quick run: Ran N of M tests in S s (K slow tests skipped; ...)`, and a line that starts `no story run:` gives the reason. A red run names its red tests right under the verdict line, before that reason: each `FAIL:`, `ERROR:` and `...Error:` line indented, for the first five red tests, then `… and K more red tests` ([P797](https://github.com/xmejkal/spark/issues/1110)). The skipped count is only the `@slow` tests, never a real skip such as a missing tool. The
-  seconds are the tests alone; the board check (about 18 s) and the size line come on top, and the gate prints its
+  seconds are the tests alone; the board check (a few seconds since [P811](https://github.com/xmejkal/spark/issues/1153)) and the size line come on top, and the gate prints its
   whole time. No budget fails the push: the time is printed and not capped, as the size line is
   ([W15](../../scrum/WORKING_AGREEMENTS.md#w15--an-orphan-fails-the-suite)),
   and the retro decides any cap. The whole push takes the tests' seconds plus about 18 s;
@@ -162,9 +162,11 @@ It reports:
 
   With no `gh` login or no network, the board part says could-not-run, with `gh`'s own reason, and passes. Three more
   looks it will not make ([P168](https://github.com/xmejkal/spark/issues/106), [P167](https://github.com/xmejkal/spark/issues/105)),
-  each could-not-run that passes, never "the limits hold": it reads a board whole or judges nothing — `gh` stops at its
-  `--limit`, so a board past the first ask's 500 is asked again with its own count, and one still short is, for example,
-  `backlog: could-not-run — the spark board holds 12 items, 10 were read; the limits were not checked` — it knows
+  each could-not-run that passes, never "the limits hold": it reads a board whole or judges nothing — `tools/board_read.py`,
+  the reader `tools/board.py` shares, asks 100 items a page until the last page, and a board whose pages held fewer
+  items than it holds is, for example,
+  `backlog: could-not-run — the spark board holds 12 items, 10 were read; the limits were not checked`, as is one whose
+  items held no issue (a draft or a pull request on a board is no card) — it knows
   seven stages, Idea, Discovery, Design, Ready, Build, Review and Done, so a card in any other is
   `backlog: could-not-run — #4 P4 — x is in a stage the gate does not know: "Doing"; the limits were not checked`: a
   renamed stage is a decision, not a silent skip — and the spark board with no *Status* on any card is a changed field,
@@ -175,6 +177,12 @@ It reports:
   spark's cards are judged alone, with the bin's unread line saying why —
   `backlog: the bin's board could not be read (it holds 25 items, 2 were read) — its cards were not counted or checked`,
   or `(no card of its 2 has a Status)`.
+
+  The read asks only the fields the limits need, each by its name, with each task's parent story in the same answer:
+  1 GraphQL point a page, about 9 a push for 692 cards, where `gh project item-list` cost about 1,300 of the account's
+  5,000 an hour ([P811](https://github.com/xmejkal/spark/issues/1153)). Above 50 points, or when the look was not whole,
+  a last line says what it cost, from GitHub's own count:
+  `backlog: the board read cost 9 GraphQL points in 9 calls; 4,203 of 5,000 left this hour`.
 
 The full run, `SPARK_HOME=<scratch> python3 tools/check_commit.py --full` (or `SPARK_HOME=<scratch> python3 tools/check_commit.py <commit> --full`), is the same
 gate with every test, the slow ones too. It prints `<commit> as committed, full run: Ran M tests in S s / OK`. It runs
