@@ -4,7 +4,7 @@ bytes `xx`) or made up for a test (`8c:bf:ea:00:00:0N`, `aa:bb:cc:...`, `11:22:3
 In a repository `git grep` reads the tracked files. The push hook runs the suite in a `git archive` of the commit, with no
 `.git` and with `SPARK_GATE_TREE=archive` (`suite_runs.GATE_TREE`): there the archive's files ARE the tracked files, and
 the test walks them (P797: `git grep` found no repository there, said nothing, and the test passed blind at every push).
-Anywhere else with no repository, such as a mutation copy holding ignored folders, it skips and says why."""
+Anywhere else with no repository, such as a mutation copy holding untracked files, it skips and says why."""
 
 import os
 import re

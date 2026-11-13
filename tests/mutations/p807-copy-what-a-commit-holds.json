@@ -1,0 +1,6 @@
+[
+ {"file": "tools/mutate.py", "name": "P807: copy_of drops the git-ignored names, so every ignored folder is copied again (test_the_copy_holds_what_a_commit_could_hold_and_leaves_out_what_git_ignores)", "find": "        return skipped(folder, names) | {name for name in names if (here / name).as_posix() in ignored}", "replace": "        return skipped(folder, names)"},
+ {"file": "tools/mutate.py", "name": "P807: the listing drops --ignored, so it names untracked files and they stay out (test_the_copy_holds_what_a_commit_could_hold_and_leaves_out_what_git_ignores)", "find": "\"--others\", \"--ignored\", ", "replace": "\"--others\", "},
+ {"file": "tools/mutate.py", "name": "P807: a wholly ignored folder keeps its trailing slash, matches no name and is copied (test_the_copy_holds_what_a_commit_could_hold_and_leaves_out_what_git_ignores)", "find": "{entry.rstrip(\"/\") for entry", "replace": "{entry for entry"},
+ {"file": "tools/mutate.py", "name": "P807: no ceiling, so an outer repository decides what a tree with no .git of its own leaves out (test_only_a_repository_at_the_root_decides_what_is_ignored)", "find": "\n                       GIT_CEILING_DIRECTORIES=str(Path(root).resolve().parent))", "replace": ")"}
+]
