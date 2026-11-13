@@ -82,12 +82,24 @@ def _list(value):
     return value if isinstance(value, list) else []
 
 
-def _without_sources(value):
-    """A fact's value with no SOURCE_NOTES at any depth, in its dicts and its lists: the rest (`value`, `verified`, `note`) stays."""
+def _only_notes(value):
+    """A dict or a list that holds nothing but SOURCE_NOTES, at any depth (a `corroborated_by` of `cites` alone): bare, it says nothing."""
     if isinstance(value, dict):
-        return {key: _without_sources(one) for key, one in value.items() if key not in SOURCE_NOTES}
+        return bool(value) and all(key in SOURCE_NOTES or _only_notes(one) for key, one in value.items())
     if isinstance(value, list):
-        return [_without_sources(one) for one in value]
+        return bool(value) and all(_only_notes(one) for one in value)
+    return False
+
+
+def _without_sources(value):
+    """
+    A fact's value with no SOURCE_NOTES at any depth, in its dicts and its lists, and no part that held only them: the rest
+    (`value`, `verified`, `note`) stays. The names are reserved for provenance notes, so a fact named `source` or `cites` is dropped too.
+    """
+    if isinstance(value, dict):
+        return {key: _without_sources(one) for key, one in value.items() if key not in SOURCE_NOTES and not _only_notes(one)}
+    if isinstance(value, list):
+        return [_without_sources(one) for one in value if not _only_notes(one)]
     return value
 
 
@@ -104,7 +116,7 @@ class Offer:
         self.names = [clean(name) for name in names if isinstance(name, str) and name.strip()]
         self.about, self.description = _text(about, "about"), _text(description, "description")
         self.tags = [clean(tag).lower() for tag in tags if isinstance(tag, str) and tag.strip()][:TAGS_MAX]
-        self.facts = dict(facts or {})
+        self.facts = {key: value for key, value in dict(facts or {}).items() if not _only_notes(value)}  # a fact of notes alone says nothing
 
     @classmethod
     def from_record(cls, record_id, kind, record, holding=()):

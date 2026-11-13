@@ -150,6 +150,20 @@ class TheOfferOnceTest(unittest.TestCase):
         text = matching.Offer.from_record("p", "part", {"name": "P", "power": [{"pin": "VCC", "source": "s"}]}).as_dict()["facts"]["power"]
         self.assertEqual(json.loads(text), [{"pin": "VCC"}])
 
+    def test_a_part_of_a_fact_that_held_only_sources_is_left_out(self):
+        power = {"charge_current_a": {"value": 1.0, "verified": True, "corroborated_by": {"cites": {"document": "eta6003-datasheet"}}}}
+        text = matching.Offer.from_record("p", "part", {"name": "P", "power": power}).as_dict()["facts"]["power"]
+        self.assertEqual(json.loads(text), {"charge_current_a": {"value": 1.0, "verified": True}})
+
+    def test_a_fact_that_held_only_sources_is_no_fact_of_the_offer(self):
+        offer = matching.Offer.from_record("p", "part", {"name": "P", "body_mm": {"source": "x"}})
+        self.assertNotIn("body_mm", offer.as_dict()["facts"])
+        self.assertNotIn("body_mm", offer.describe())
+
+    def test_a_text_fact_the_cap_cuts_ends_in_an_ellipsis(self):
+        text = matching.Offer.from_record("p", "part", {"name": "P", "power": "3V3 only " + "x" * 1500}).as_dict()["facts"]["power"]
+        self.assertEqual((len(text), text[-1]), (1000, "…"))
+
     def test_a_fact_the_cap_cuts_ends_in_an_ellipsis_and_one_it_does_not_cut_does_not(self):
         cut = matching.Offer.from_record("p", "part", {"name": "P", "power": {"note": "x" * 5000}}).as_dict()["facts"]["power"]
         whole = matching.Offer.from_record("p", "part", {"name": "P", "power": {"note": "x" * 500}}).as_dict()["facts"]["power"]

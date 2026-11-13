@@ -843,6 +843,10 @@ class TheHoldersTest(unittest.TestCase):
         key = next(line for line in self.text(["--drawer"]).splitlines() if "FireBeetle 2 Board" in line).split()[0]
         said, code = run(["--drawer-set", a_file([{"entry": key, "count": 3}])])
         self.assertEqual((code, json.loads((self.home / "drawer" / "dfrobot-dfr0975.json").read_text())["count"]), (0, 3), said)
+
+    def test_a_key_or_a_label_with_a_newline_cannot_fake_a_line_of_the_drawer(self):
+        self.keep("evil\n  fake-key", "a\n  fake label")
+        self.assertEqual(len(self.text(["--drawer"]).splitlines()), 2, "the entry's one line and the count")
     # --- end MVP ---
 
     def test_two_holders_come_sorted(self):

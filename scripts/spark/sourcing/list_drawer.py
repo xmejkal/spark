@@ -24,7 +24,7 @@ class ListDrawer(PartOperation):
     def build_answer(self, start, drawer=True):
         entries = drawer_listing()
         shown, truncated = store.page_with_store(entries, start, "drawer", ["--drawer"])
-        lines = ["  %-28s %-44s %6s  %-38s %s" % (e["entry"], str(e["label"])[:44], "?" if e["count"] is None else e["count"],
+        lines = ["  %-28s %-44s %6s  %-38s %s" % (printable(e["entry"]), printable(e["label"])[:44], "?" if e["count"] is None else e["count"],
                                              "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
                                              "  ".join(filter(None, ["maybe owned — check the drawer" if e["unsure"] else ("skip: %s" % e["skip"] if e["skip"] else ""),
                                                                    "held by " + ", ".join(map(printable, e["held_by"])) if e["held_by"] else ""])))
