@@ -15,12 +15,14 @@ it sits outside them"). They fill none of spark's stages and are asked for no Ne
 Ready and Build are judged per session, by the card's slice: spark's cards and the sound slices' each have their own
 places (P730, the PO, 2026-11-09).
 Run by tools/check_commit.py at every push. With no network or no gh it says it could not look, and passes: the gate
-must work offline. So does a look that was only partial — the board read, but not its tasks' parent stories (every task
-is counted as riding on its story) or not the bin's board (spark's cards are counted alone): a line says so with the
-cause, and the push goes through (W1: said, never read as checked). A bin board that was read is said too: the summary
-line carries its open count. The whole board is read, or nothing is judged (P168): gh's item-list stops at its --limit,
-so a board that holds more than the first ask is asked again with its own count, and one still short after that is
-could-not-run with both numbers — spark's as the gate's one line, the bin's as its unread line. Where a card stands is one
+must work offline. So does a look that was only partial — not the bin's board (spark's cards are counted alone): a line
+says so with the cause, and the push goes through (W1: said, never read as checked). A bin board that was read is said
+too: the summary line carries its open count. The boards are read by board_read.py, the reader board.py shares (P811):
+one GraphQL query per 100 items, 1 point a page, each task's parent story in the same answer. The whole board is read,
+or nothing is judged (P168): a board whose pages held fewer items than it holds, or whose items held no issue, is
+could-not-run with the numbers — spark's as the gate's one line, the bin's as its unread line. A draft or a pull
+request on a board is no card. What the read cost is said in one line (COST_LINE) when it cost more than COST_FLOOR or
+the look was not whole, so a normal push stays quiet. Where a card stands is one
 rule for both readers, stage_of() (P167): a Status among KNOWN is its stage, a card with no Status is in Idea and said in
 one line, a Status the gate does not know is could-not-run naming the card and the stage, and a board with no Status on
 any card is could-not-run naming the shape — spark's; the bin's in that shape is set aside like one read in part.
@@ -31,6 +33,10 @@ import json
 import re
 import subprocess
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import board_read  # noqa: E402
 
 OWNER, TITLE = "xmejkal", "spark"
 #: The bin's project. Its cards in a working stage fly in the same total as spark's, and the expedite lane is one lane
@@ -72,8 +78,6 @@ NO_STATUS = "no card of the %d on the spark board has a Status — the field's k
 #: The bin's why in BIN_UNREAD for the same shape: the bin's board is set aside with its cause and spark's cards are
 #: counted alone, as when it was read in part — one convention for the bin's failing, in fetch() and board.gather().
 BIN_NO_STATUS = "no card of its %d has a Status"
-#: How both readers say a board read in part (PartialRead, board.unread): "holds 12 items, 10 were read".
-SHORT = "holds %d items, %d were read"
 #: The most cards the four working stages may hold together: the PO's call of 2026-10-06 evening, after the first day
 #: at the cap of 3 (P146). Four stages of two would hold eight, so this is the limit that binds first.
 MOST_IN_FLIGHT = 4
@@ -83,15 +87,11 @@ EXPEDITE = "expedite"
 #: The bin's label for a bench session — the PO's own hands at the bench, which sits outside the limits (the spec, §1: "A
 #: bench session is your hands, so it sits outside them"). A bin card labelled so does not fly in the total (P146).
 BENCH = "bench"
-#: How many items one `gh project item-list` is asked for first (P168); a board whose totalCount says more is asked again
-#: with its own count as the limit, MOST_ITEMS at most — gh pages internally, so the limit is the one knob there is.
-FIRST_LIMIT = 500
-MOST_ITEMS = 5000
-#: What fetch() puts in a task's "parent" when GitHub could not be asked who it is. It is not None, so counts() and
-#: problems() let the task ride on a story they cannot name — a check must not count a card whose parent it could not see
-#: — and main() says so, with the cause (P146).
-PARENT_UNREAD = "unread"
-
+#: Under this many GraphQL points a whole look stays quiet about its cost (P811): a normal push reads about 9 (a page per
+#: 100 items, the project list); more than this says the cost, as does a look that was not whole.
+COST_FLOOR = 50
+#: The cost line: GitHub's own rateLimit.cost summed over the calls that answered, and what the last answer left.
+COST_LINE = "  backlog: the board read cost %d GraphQL points in %d calls; %s of %s left this hour"
 
 def _section(body, name):
     body = (body or "").replace("\r\n", "\n")  # GitHub keeps a body's line endings as they were typed
@@ -159,7 +159,7 @@ def no_stage(items, bin_items=()):
 
 def rides(entry):
     """
-    Whether a card is a task riding on its story (or on a parent nobody could ask, PARENT_UNREAD): it is counted nowhere
+    Whether a card is a task riding on its open story: it is counted nowhere
     itself, asked for no Needed by or slice, and not the lane's holder — but its wait is asked, like every open card's.
     """
     return "task" in (entry.get("labels") or []) and entry.get("parent") is not None
@@ -168,8 +168,7 @@ def rides(entry):
 def counts(entry):
     """
     Whether an open card counts against the limits: a task rides on its story, so it does not count — unless it has no
-    parent story at all or only a closed one (open_parent), when it is a card of its own (P146), and one whose parent
-    could not be asked (PARENT_UNREAD) rides; an epic counts in no stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form, to 2026-11-02).
+    parent story at all or only a closed one (board_read.open_parent), when it is a card of its own (P146); an epic counts in no stage, and its stories carry the limit (R9, the PO, 2026-10-18: WIP experiment A, broad form, to 2026-11-02).
     board.py reads the same rule.
     """
     labels = entry.get("labels") or []
@@ -253,139 +252,60 @@ def problems(items, bin_items=()):
     return said
 
 
-def open_parent(parent):
-    """
-    The number of the story a task rides on, from GitHub's `parent { number closed }` (None when it has none), else None
-    for a closed parent too: a finished story holds no place in a limit, so its task is the open work and counts as a card
-    of its own (P146). board.py reads the same rule, so the status and the gate cannot disagree about who rides.
-    """
-    if not parent or parent.get("closed"):
-        return None
-    return parent.get("number")
-
-
 def _gh(*args):
     return json.loads(subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60, check=True).stdout)
 
 
-def _cause(error):
-    """
-    Why gh could not be asked, as a could-not-run line says it: the first line gh wrote on stderr that says anything
-    ("To get started with GitHub CLI, please run:  gh auth login" — gh's own line, as it prints it), else the exception's name — a missing gh, a timeout
-    with nothing said, an answer that was no JSON. board.py's _gh says gh's first line the same way (P146 council, C2).
-    """
-    said = getattr(error, "stderr", None) or ""
-    if isinstance(said, bytes):  # a timed-out run's output comes back as bytes whatever text= said
-        said = said.decode(errors="replace")
-    return next((line.strip() for line in said.splitlines() if line.strip()), type(error).__name__)
-
-
-def parents(tasks):
-    """
-    ({(repository, number): its parent issue's number or None, a closed parent being none (open_parent)}, None), or
-    ({}, why) when it could not be asked: gh failed
-    or printed no JSON, the answer has nothing for a task, or a task has no usable repository or number to be asked by.
-    `tasks` are (repository "owner/name", issue number) pairs: a project may hold issues of several repositories, and a
-    number means nothing without its repository. One call for all of them — a selection per repository (aliased r0, r1,
-    … in the order they first appear), a field per issue (t<number>) inside it.
-    """
-    if not tasks:
-        return {}, None
-    asked = {}
-    for repository, number in tasks:
-        asked.setdefault(repository, []).append(number)
-    groups = [("r%d" % index, repository, numbers) for index, (repository, numbers) in enumerate(asked.items())]
-    try:
-        selections = []
-        for alias, repository, numbers in groups:
-            owner, name = repository.split("/", 1)
-            fields = " ".join("t%d: issue(number: %d) { parent { number closed } }" % (n, n) for n in numbers)
-            selections.append("%s: repository(owner: %s, name: %s) { %s }" % (alias, json.dumps(owner), json.dumps(name), fields))
-        found = _gh("api", "graphql", "-f", "query=query { %s }" % " ".join(selections))["data"]
-        return {(repository, number): open_parent(found[alias]["t%d" % number]["parent"])
-                for alias, repository, numbers in groups for number in numbers}, None
-    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError) as unreachable:
-        return {}, _cause(unreachable)
-
-
 class PartialRead(Exception):
     """
-    A board gh listed in part (P168): it holds `held` items and `read` came back, after the second ask. The gate never
-    judges part of a board — W1: a look that was only partial says so, and is not read as "the limits hold".
+    A board read in part (P168): its pages held fewer items than it holds, or its items held no issue (board_read.unread
+    says which). The gate never judges part of a board — W1: a look that was only partial says so, and is not read as
+    "the limits hold".
     """
 
-    def __init__(self, held, read):
-        super().__init__(SHORT % (held, read))
-        self.held, self.read = held, read
+
+def _cards(number, subject, spent):
+    """The cards of the project numbered `number`, read whole (board_read), or PartialRead naming `subject`."""
+    project = board_read.read_board(number, _gh, spent)
+    short = board_read.unread(subject, project)
+    if short:
+        raise PartialRead(short)
+    return board_read.to_items(project)
 
 
-def _listing(number, limit):
-    """One `gh project item-list` of the project numbered `number` under OWNER: {"items": [...], "totalCount": N}."""
-    return _gh("project", "item-list", str(number), "--owner", OWNER, "--format", "json", "--limit", str(limit))
-
-
-def _items(number):
+def fetch(spent=None):
     """
-    Every item of the project numbered `number` under OWNER, as gh prints them — or PartialRead when gh handed over
-    fewer than the board holds. gh pages internally and stops at `--limit`, so the board is asked for FIRST_LIMIT, and
-    when its totalCount says more, asked again with that count as the limit (MOST_ITEMS at most). The spark board held
-    97 items on 2026-10-09 and the first ask covers it; the second ask is for the day it does not.
+    (the spark project's cards, the bin project's cards, the bin's why). The projects are found by title in one call,
+    and each board read whole by board_read, its tasks' parent stories in the same answer (open_parent); each answer's
+    cost is added to `spent` when given. Raised for main(): board_read.Unreadable when gh or the network could not be
+    reached or answered no board; LookupError for a spark project gh cannot find — the check must never quietly stop
+    looking; PartialRead for a spark board read in part, of which nothing is judged (P168). The bin's board is read for
+    the flight total, the lane and its waits alone, so its failing — no project titled BIN_TITLE, a read that errors,
+    one read in part, or one with no Status on any card (no_status_on) — costs nothing else: its cards are None and the
+    bin's why says what went wrong, for main() to say. board.gather() sets it aside the same way, so the two readers
+    cannot disagree over the bin.
     """
-    listed = _listing(number, FIRST_LIMIT)
-    items, held = listed["items"], listed["totalCount"]
-    if len(items) < held:
-        listed = _listing(number, min(held, MOST_ITEMS))
-        items, held = listed["items"], listed["totalCount"]
-    if len(items) < held:
-        raise PartialRead(held, len(items))
-    return items
-
-
-def fetch():
-    """
-    (the spark project's items, the bin project's items, why, the bin's why), or (None, None, why, None) when gh or the
-    network could not be reached. A spark project that gh can list but cannot find is a LookupError: the check must never
-    quietly stop looking. A spark board gh listed only in part is a PartialRead, left to main(): nothing of it is judged
-    (P168). The bin's board is read for the flight total, the lane and its waits alone, so its failing — no project
-    titled BIN_TITLE, a listing that errors, one read in part, or one with no Status on any card (no_status_on) — costs
-    nothing else: bin_items is None and the bin's why says what went wrong, for main() to say. board.gather() sets it
-    aside the same way, so the two readers cannot disagree over the bin. An open task of either board carries "parent", the number of the story it is a sub-issue of
-    (None when it has none or it is closed, open_parent()), asked in ONE call for both boards. The gate asks for no other item's parent — a parent
-    changes how a task counts and nothing else — so theirs is None here, unlike board.to_items(), which gives every issue
-    its parent. When only that question fails the items still come back, with every open task's parent PARENT_UNREAD:
-    the why that comes with items is the parents', one that comes without is the whole look's.
-    """
-    try:
-        projects = _gh("project", "list", "--owner", OWNER, "--format", "json")["projects"]
-    except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
-        return None, None, _cause(unreachable), None
-    number = next((p["number"] for p in projects if p["title"] == TITLE), None)
-    if number is None:
+    numbers = board_read.projects(_gh, spent)
+    if TITLE not in numbers:
         raise LookupError("no project titled %r under %s — the board cannot be checked" % (TITLE, OWNER))
+    items = _cards(numbers[TITLE], "the spark board", spent)
+    if BIN_TITLE not in numbers:
+        return items, None, "no project titled %r under %s" % (BIN_TITLE, OWNER)
     try:
-        items = _items(number)
-    except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
-        return None, None, _cause(unreachable), None
-    bin_items, bin_why = None, "no project titled %r under %s" % (BIN_TITLE, OWNER)
-    bin_number = next((p["number"] for p in projects if p["title"] == BIN_TITLE), None)
-    if bin_number is not None:
-        try:
-            bin_items, bin_why = _items(bin_number), None
-        except PartialRead as short:
-            bin_why = "it " + str(short)
-        except (OSError, subprocess.SubprocessError, ValueError, KeyError) as unreachable:
-            bin_why = _cause(unreachable)
-        if no_status_on(bin_items):  # read whole, but a shape the gate cannot place: set aside like one read in part
-            bin_items, bin_why = None, BIN_NO_STATUS % len(bin_items)
-    cards = items + (bin_items or [])
-    open_tasks = [(e["content"].get("repository"), e["content"].get("number")) for e in cards
-                  if "task" in (e.get("labels") or []) and e.get("status") != "Done"]
-    found, why = parents(open_tasks)
-    if why:
-        found = {task: PARENT_UNREAD for task in open_tasks}
-    for entry in cards:
-        entry["parent"] = found.get((entry["content"].get("repository"), entry["content"].get("number")))
-    return items, bin_items, why, bin_why
+        bin_items = _cards(numbers[BIN_TITLE], "it", spent)
+    except (PartialRead, board_read.Unreadable) as unread:
+        return items, None, str(unread)
+    if no_status_on(bin_items):  # read whole, but a shape the gate cannot place: set aside like one read in part
+        return items, None, BIN_NO_STATUS % len(bin_items)
+    return items, bin_items, None
+
+
+def cost_line(spent):
+    """COST_LINE over `spent`, the rateLimit of each answer: their costs summed, the last one's remaining; None for none."""
+    if not spent:
+        return None
+    return COST_LINE % (sum(each["cost"] for each in spent), len(spent), "{:,}".format(spent[-1]["remaining"]),
+                        "{:,}".format(spent[-1]["limit"]))
 
 
 #: What `--help` says the gate checks; the limits are filled in from LIMITS and MOST_IN_FLIGHT, and the stages from
@@ -409,7 +329,7 @@ It fails on:
 The stages it knows: %(known)s. A card in any other stage
 is could-not-run naming it, and nothing is judged; a card with no Status is in Idea, and said. The
 bin's board read in part, or with no Status on any card, is set aside and said, and spark's cards
-are counted alone.
+are counted alone. A draft or a pull request on a board is no card.
 
 How cards count: an epic counts in no stage, and its stories carry the
 limit (R9's experiment A, to 2026-11-02). A task under an open story rides on it and counts nowhere;
@@ -420,10 +340,11 @@ fill none of spark's stages.
 #: The exit codes `--help` names (W1: a look that could not run says so, and is never read as checked).
 EXIT_CODES = """\
 exit codes:
-  0  the limits hold — or could-not-run: gh or the network could not be reached, gh handed over part
-     of the spark board, a card is in a stage the gate does not know, or no card has a Status — said
-     with its cause, and the limits were not checked. A partial look (the tasks' parent stories or the
-     bin's board unread, or read in part) is said with its cause too, and so are cards with no Status.
+  0  the limits hold — or could-not-run: gh or the network could not be reached, the spark board was
+     read in part or its items held no issue, a card is in a stage the gate does not know, or no card
+     has a Status — said with its cause, and the limits were not checked. A partial look (the bin's
+     board unread, or read in part) is said with its cause too, and so are cards with no Status. What
+     the read cost is said when it was more than %(floor)d GraphQL points or the look was not whole.
   1  a problem, each named on a line of its own — or no project titled "spark" under %(owner)s.
   2  an argument the gate does not take.
 """
@@ -437,46 +358,53 @@ def _parser():
                               "sessions": "; ".join("%s: %s" % (session, ", ".join("%s %d" % limit for limit in limits.items()))
                                                     for session, limits in SESSION_LIMITS.items()),
                               "known": ", ".join(KNOWN)},
-        epilog=EXIT_CODES % {"owner": OWNER})
+        epilog=EXIT_CODES % {"owner": OWNER, "floor": COST_FLOOR})
+
+
+def _gate():
+    """
+    (exit code, lines to print, whether the look was whole, what each answer cost) — the gate, unprinted. A look that
+    was not whole is could-not-run, or spark's board judged without the bin's.
+    """
+    spent = []
+    try:
+        items, bin_items, bin_why = fetch(spent)
+    except LookupError as gone:
+        return 1, ["  backlog: %s" % gone], False, spent
+    except PartialRead as short:
+        return 0, ["  backlog: could-not-run — %s; the limits were not checked" % short], False, spent
+    except board_read.Unreadable as unreachable:
+        return 0, ["  backlog: could-not-run — gh or the network could not be reached (%s); the limits were not checked"
+                   % unreachable], False, spent
+    try:
+        unstaged = no_stage(items, bin_items)
+        said = problems(items, bin_items)
+    except UnknownStage as unplaced:
+        return 0, ["  backlog: could-not-run — %s; the limits were not checked" % unplaced], False, spent
+    summary = "  backlog: %d open, %s" % (sum(1 for e in items if e.get("status") != "Done"),
+                                         "the limits hold" if not said else "%d problem(s)" % len(said))
+    if bin_items is not None:
+        summary += "; the bin: %d open" % sum(1 for e in bin_items if e.get("status") != "Done")
+    lines = [summary, *("    " + sentence for sentence in said)]
+    if unstaged:
+        lines.append("  backlog: " + unstaged)
+    if bin_items is None:
+        lines.append("  backlog: " + BIN_UNREAD % bin_why)
+    return (1 if said else 0), lines, bin_items is not None, spent
 
 
 def main(argv=()):
     """
     The gate, printed; its exit code. `argv` is the command line's arguments — none by default, so check_commit.py, which
-    imports this and calls main() with a commit in its own sys.argv, is never read as asking the gate anything.
+    imports this and calls main() with a commit in its own sys.argv, is never read as asking the gate anything. The cost
+    line comes last, when the read cost more than COST_FLOOR or the look was not whole (P811).
     """
     _parser().parse_args(list(argv))
-    try:
-        items, bin_items, why, bin_why = fetch()
-    except LookupError as gone:
-        print("  backlog: %s" % gone)
-        return 1
-    except PartialRead as short:
-        print("  backlog: could-not-run — the spark board %s; the limits were not checked" % short)
-        return 0
-    if items is None:
-        print("  backlog: could-not-run — gh or the network could not be reached (%s); the limits were not checked" % why)
-        return 0
-    try:
-        unstaged = no_stage(items, bin_items)
-        said = problems(items, bin_items)
-    except UnknownStage as unplaced:
-        print("  backlog: could-not-run — %s; the limits were not checked" % unplaced)
-        return 0
-    summary = "  backlog: %d open, %s" % (sum(1 for e in items if e.get("status") != "Done"),
-                                         "the limits hold" if not said else "%d problem(s)" % len(said))
-    if bin_items is not None:
-        summary += "; the bin: %d open" % sum(1 for e in bin_items if e.get("status") != "Done")
-    print(summary)
-    for sentence in said:
-        print("    " + sentence)
-    if unstaged:
-        print("  backlog: " + unstaged)
-    if why:
-        print("  backlog: tasks' parent stories could not be read (%s) — every task counted as riding on a story" % why)
-    if bin_items is None:
-        print("  backlog: " + BIN_UNREAD % bin_why)
-    return 1 if said else 0
+    code, lines, whole, spent = _gate()
+    if spent and (not whole or sum(each["cost"] for each in spent) > COST_FLOOR):
+        lines.append(cost_line(spent))
+    print("\n".join(lines))
+    return code
 
 
 if __name__ == "__main__":

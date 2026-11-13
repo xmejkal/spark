@@ -5,9 +5,9 @@ The state of the work at every session start, and the day-close (P102c; docs/202
     board.py status [--when-in DIR ...]          # both boards in a dozen lines; nothing outside the named folders
     board.py close [--date D] [--dry-run] LINE|- # the day-close, as a status update on the spark board
 
-It reads the boards through the PO's own gh login and stores nothing: one GraphQL query per 100 items of a board, page
-after page until the whole board is read (GitHub allows 5,000 GraphQL points an hour, shared with everything else),
-REST for pull requests. The working days come from local git, so
+It reads the boards through the PO's own gh login and stores nothing: board_read.py's one GraphQL query per 100 items
+of a board, page after page until the whole board is read, 1 point a page (GitHub allows 5,000 GraphQL points an hour,
+shared with everything else), REST for pull requests. The working days come from local git, so
 being offline costs the status, never the session: every call gives up after STATUS_TIMEOUT seconds.
 """
 
@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import check_backlog  # noqa: E402
+from board_read import read_board, to_items, unread  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN  # noqa: E402
 
 OWNER = "xmejkal"
@@ -37,31 +38,6 @@ TRIAL_CHECK = "2026-11-02"
 #: Seconds each gh call may take at a session start before the status is skipped; a close may wait longer.
 STATUS_TIMEOUT = 8
 CLOSE_TIMEOUT = 60
-
-
-def to_items(project):
-    """
-    The board's issues in the shape check_backlog reads, with when each card's Status last changed and the number of the
-    story each is a sub-issue of (None for an issue with no parent story, or whose parent story is closed:
-    check_backlog.open_parent).
-    """
-    items = []
-    for node in project["items"]["nodes"]:
-        content = node.get("content") or {}
-        if "number" not in content or "repository" not in content:
-            continue  # a draft or a pull request on the board is no backlog item
-        item = {"labels": [label["name"] for label in content["labels"]["nodes"]],
-                "parent": check_backlog.open_parent(content.get("parent")),
-                "content": {"number": content["number"], "title": content["title"], "body": content.get("body") or "",
-                            "repo": content["repository"]["name"]}}
-        for value in node["fieldValues"]["nodes"]:
-            name = ((value or {}).get("field") or {}).get("name", "").lower()
-            if name:
-                item[name] = value.get("name", value.get("date"))
-                if name == "status":
-                    item["status_changed"] = value.get("updatedAt")
-        items.append(item)
-    return items
 
 
 def age(iso, today):
@@ -131,16 +107,6 @@ def missing_close(work_days, close_days, today):
     return None
 
 
-def unread(subject, project):
-    """
-    How the board was read only in part — `subject` and the gate's words (check_backlog.SHORT): "the spark board holds
-    130 items, 1 were read", "it holds 25 items, 2 were read" — or None when every item came. gather() raises it over
-    spark's board, could-not-run (W1), and sets the bin's aside with it as the bin's unread line's cause.
-    """
-    held, read = project["items"]["totalCount"], len(project["items"]["nodes"])
-    return "%s %s" % (subject, check_backlog.SHORT % (held, read)) if held > read else None
-
-
 def work_days(dirs, since):
     """
     The days since `since` with a commit on any branch in the git folders among dirs — a branch-only day is a working
@@ -207,15 +173,6 @@ def status_lines(boards, prs, closes, worked, today, bin_why="no bin board was g
     return lines + ([disk] if disk else [])
 
 
-#: One page of a board: GitHub hands a project's items over 100 at a time, so read_board() asks page after page with
-#: `after` set to the last page's endCursor until hasNextPage is false (P168). The id and status updates come with every
-#: page; the first page's are kept.
-QUERY = """query($login:String!,$number:Int!,$after:String){user(login:$login){projectV2(number:$number){id
- items(first:100,after:$after){totalCount pageInfo{hasNextPage endCursor} nodes{content{... on Issue{number title body repository{name} labels(first:10){nodes{name}} parent{number closed}}}
-  fieldValues(first:20){nodes{
-   ... on ProjectV2ItemFieldSingleSelectValue{name updatedAt field{... on ProjectV2FieldCommon{name}}}
-   ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}}}}}
- statusUpdates(first:20,orderBy:{field:CREATED_AT,direction:DESC}){nodes{startDate status body}}}}}"""
 POST = ("mutation($p:ID!,$d:Date!,$s:ProjectV2StatusUpdateStatus!,$b:String!){createProjectV2StatusUpdate("
         "input:{projectId:$p,startDate:$d,status:$s,body:$b}){statusUpdate{id}}}")
 
@@ -252,37 +209,6 @@ def _gh(*args, timeout=CLOSE_TIMEOUT):
     return json.loads(done.stdout) if done.stdout.strip() else None
 
 
-#: The most pages read_board() turns, counted as pages asked, not items read: 50 pages of QUERY's 100 is the gate's
-#: MOST_ITEMS, and a hasNextPage that never falls — an empty page with a cursor — cannot hold a session start forever.
-#: The board is then read in part, and gather() says so (unread()). Each page may take STATUS_TIMEOUT, so a session
-#: start waits at most MOST_PAGES times that over one board before it gives up.
-MOST_PAGES = 50
-
-
-def read_board(number, timeout):
-    """
-    The project numbered `number` under OWNER, whole: its first page's id and status updates, and every page's items
-    joined under "items" (P168). Each page is one QUERY, asked `after` the cursor the last one ended on, MOST_PAGES at
-    most. A board whose pages held fewer items than its totalCount — MOST_PAGES turned, or a page GitHub cut — comes back
-    short, and gather() raises unread()'s line over spark's board or sets the bin's aside with it.
-    """
-    first = page = _page(number, None, timeout)
-    nodes, pages = list(page["items"]["nodes"]), 1
-    while page["items"]["pageInfo"]["hasNextPage"] and pages < MOST_PAGES:
-        page = _page(number, page["items"]["pageInfo"]["endCursor"], timeout)
-        nodes += page["items"]["nodes"]
-        pages += 1
-    first["items"]["nodes"] = nodes
-    return first
-
-
-def _page(number, after, timeout):
-    """One page of the project numbered `number`: the first when `after` is None, else the one after that cursor."""
-    cursor = ["-f", "after=" + after] if after else []
-    return _gh("api", "graphql", "-f", "query=" + QUERY, "-F", "login=" + OWNER, "-F", "number=%d" % number, *cursor,
-               timeout=timeout)["data"]["user"]["projectV2"]
-
-
 def gather(timeout=CLOSE_TIMEOUT):
     """
     (both boards, their open PRs, the spark board's closes, its id, why the bin's board was set aside or None). The spark
@@ -294,7 +220,7 @@ def gather(timeout=CLOSE_TIMEOUT):
     """
     boards, prs, closes, project_id, bin_why = [], [], [], None, None
     for name, number, repo in BOARDS:
-        project = read_board(number, timeout)
+        project = read_board(number, lambda *args: _gh(*args, timeout=timeout))
         items = to_items(project)
         if name == "spark":
             short = unread("the spark board", project)
@@ -340,8 +266,8 @@ def disk_status(folder=None):
     """
     try:
         return disk_line(shutil.disk_usage(folder or tempfile.gettempdir()).free)
-    except OSError as unread:
-        return "disk: %s — %s" % (COULD_NOT_RUN, unread.strerror or type(unread).__name__)
+    except OSError as failed:
+        return "disk: %s — %s" % (COULD_NOT_RUN, failed.strerror or type(failed).__name__)
 
 
 #: What each verb's --help says it does, each claim read off the code below (P146 council, C3): status_lines() for what
