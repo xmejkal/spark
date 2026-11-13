@@ -171,8 +171,10 @@ def _from_source(prefix):
     """
     import os
     import shutil
-    run = Path(tempfile.mkdtemp(prefix=prefix))
+    run = None
     try:
+        with sigterm_held():  # made and bound together: a SIGTERM between the two would leave the folder (P805)
+            run = Path(tempfile.mkdtemp(prefix=prefix))
         (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
         # A mutation run never runs the quick run (P425): a defect only a slow test catches would escape it. Nor is its
         # tree the gate's archive (P797): a copy holds untracked files, which no address check may walk.
@@ -180,7 +182,9 @@ def _from_source(prefix):
                            PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=str(run / "pycache"), TMPDIR=str(run / "tmp"))
         yield environment
     finally:
-        shutil.rmtree(run, ignore_errors=True)
+        if run is not None:
+            with sigterm_held():  # a SIGTERM waits for the whole removal, as for the copy's
+                shutil.rmtree(run, ignore_errors=True)
 
 
 class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
@@ -531,8 +535,10 @@ def sigterm_as_exit():
 @contextlib.contextmanager
 def sigterm_held():
     """
-    Inside, a SIGTERM waits (main thread only): the copy's removal finishes, and the signal arrives after, to the handler
-    of sigterm_as_exit, which exits 143. Without it the handler's SystemExit would stop the removal half way.
+    Inside, a SIGTERM waits (main thread only), and arrives after, to the handler of sigterm_as_exit, which exits 143.
+    Held: a scratch folder's removal, which the handler's SystemExit would stop half way; a folder made and its name
+    stored, so the `finally` finds it (the copy, each run's and import check's folder); the lock's removal (P805). A child
+    started inside (copy_of's `git ls-files`, during a copy of well under a second) inherits the blocked SIGTERM for its few ms.
     """
     if threading.current_thread() is not threading.main_thread():
         yield
@@ -603,8 +609,8 @@ def run(root, tests, mutations, copied=False, ledger_store=None, budget=None):
         raise AnotherRunIsActive("%s exists: another run is rewriting these files, or a killed "
                                  "one left its lock. Wait for it, or remove the lock once you "
                                  "are sure and check `git status` for a mutated file" % lock)
-    lock.write_text(str(__import__("os").getpid()))
     try:
+        lock.write_text(str(__import__("os").getpid()))  # inside the try: a SIGTERM right after it still removes it (P805)
         # The pre-check ran BEFORE the lock was taken, so two runs started within its six
         # seconds both passed the lock test and both took the lock (audit C8). Under it now.
         checked = time.monotonic()
@@ -615,7 +621,8 @@ def run(root, tests, mutations, copied=False, ledger_store=None, budget=None):
         suite_seconds = time.monotonic() - checked  # what a row with no near test costs: the budget's last fact
         return _run(root, tests, mutations, copied, ledger_store, budget, suite_seconds)
     finally:
-        lock.unlink(missing_ok=True)
+        with sigterm_held():  # a SIGTERM here would leave a lock that refuses every later run
+            lock.unlink(missing_ok=True)
 
 
 def _run(root, tests, mutations, copied, ledger_store=None, budget=None, suite_seconds=None):
@@ -715,7 +722,7 @@ def main(argv=None):
                         help="only the rows for these files, or for everything under these folders")
     parser.add_argument("--copy", action="store_true",
                         help="mutate a temporary copy of the tree, never the files you or an agent have open; "
-                             "the copy is removed also when SIGTERM stops the run")
+                             "the copy and every scratch folder are removed also when SIGTERM stops the run")
     parser.add_argument("--retarget", nargs=2, metavar=("OLD", "NEW"),
                         help="instead of a run: in these tables, move every row whose `file` is OLD to NEW (the text is "
                              "edited, so the tables keep their alignment); then prove them with --anchors")
@@ -826,7 +833,8 @@ def main(argv=None):
     where = None
     with sigterm_as_exit():  # also around the copy's removal: no window back at the default handler
         try:
-            where = copy_of(root) if args.copy else root
+            with sigterm_held():  # the copy made and `where` stored together, so the `finally` finds it (P805)
+                where = copy_of(root) if args.copy else root
             results, restored = run(where, args.tests, mutations, copied=where is not root, ledger_store=ledger_store, budget=budget)
         except (AnotherRunIsActive, RedBeforeMutation) as stopped:
             print(str(stopped), file=sys.stderr)
