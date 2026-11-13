@@ -20,7 +20,7 @@ tool comes from one place (P725).
 | Operation | CLI | Effects |
 |---|---|---|
 | `board-get`, `board-validate`, `board-resolve`, and `--path`, `--id`, `--paths` | `boards.py` (`main`) | reads |
-| `tool-status`, `tool-install`, `tool-on`, `tool-off`, `tool-use`, `tool-pin`, `tool-new` | `tools.py --status` and the rest (`main`) | reads, writes, network and runs for install |
+| `tool-status`, `tool-install`, `tool-on`, `tool-off`, `tool-use`, `tool-pin`, `tool-new` | `tools.py --status` and the rest (`main`, over `tool_finder` and `tool_choices`) | reads, writes, network and runs for install |
 
 The flags stay as they are. `boards.py --list` is design's `list-boards` Operation on `run_cli` (P707), because it says
 which board stops at the footprint (`footprint_emitter`, a design fact). `main` imports `ListBoards` inside the `--list`
@@ -45,6 +45,7 @@ branch alone, so the other flags load no design module.
 | `records/missing_facts.py` | the facts a board record owes a stage, as Findings, and what refuses a write of them (P464) |
 | `records/records_codes.py` | the leaf `records_codes` (P716, moved in W6-R3a): a code and its sentence for each refusal of `BoardError`, `ToolError` and `StoreError`, `errors.CodedMessageError`s |
 | `records/tool_finder.py` | the three `tools.json` layers merged, `find`, `status`, `plan`, `install` and the install lines, moved from `tools.py` in W6-R3b (P719). The CLI `tools.py` keeps `main` and `print_status`, which prints. Since P725 `ToolFinder(project).find` is the Adapter an area's builder hands an Operation as `outside.find_tool`, and `ToolMissingError` the `ToolError` of a tool not installed |
+| `records/tool_choices.py` | the choices a person makes on the tools lists, moved from `tools.py`'s `main` in P783 PR 3c: `choice_file(project, personal)` (the file a choice is written to and Claude Code's scope, reading `tool_finder.PERSONAL` when called), `turn_on` (`tool_off` before any install), `turn_off` (returns the sentence `main` prints, or None), `write_new_tool` (`tool_entry_broken` for an entry that is not JSON or one spark could not find, nothing written) and `is_mcp_server`. `main` prints what they return |
 | `records/versions.py` | version numbers compared: a pin against the release installed, and a release against the oldest one spark runs, moved from `scripts/versions.py` in W6-R3b (P719) |
 
 ### Its seams and adapters
