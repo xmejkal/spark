@@ -1,2 +1,2 @@
-  red leds                                          5  part led-red-5mm                       
+  red-leds                     red leds                                          5  part led-red-5mm                       
   1 entry

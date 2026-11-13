@@ -12,7 +12,7 @@
   --kept             find a kept document by every word, with no network, and every fact resting on it
   --promote          catalog → the project's parts/, or the project's parts/ → the plugin's library  [writes]
   --catalog          every record research has kept, chosen or not
-  --drawer           what you own: label, count, the record it is, unsure, skip — 20 at a time
+  --drawer           what you own: each entry's key, label, count, the record it is, unsure, skip — 20 at a time
   --drawer-set       set drawer entries from a JSON list in FILE (- for stdin): every write sets, never adds; with --project, an `is` may name a record in that project, such as one /spark:research just wrote; an entry may also say its about, description and tags  [writes]
   --drawer-import    apply an importer's payload (FILE, or - for stdin) to the drawer: new entries, and counts by the re-import rule  [writes]
   --function-set     set what a part does — a JSON [{does, what}] in FILE (- for stdin) — in the record's own home (--project picks the project's copy); never spark's library  [writes]
