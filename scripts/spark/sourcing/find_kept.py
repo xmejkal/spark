@@ -22,5 +22,6 @@ class FindKept(PartOperation):
 
     def build_answer(self, words, project):
         found = datasheets.find_kept(words, project)
-        return Answer({"found": found}, found or ["nothing kept matches %s — fetch it, or --keep a file you have" % " ".join(words)])
+        return Answer({"found": found}, found or ["nothing kept matches %s — fetch it, or --keep a file you have%s" % (
+            " ".join(words), "" if project else ", or name the project with --project")])
 # --- end MVP ---

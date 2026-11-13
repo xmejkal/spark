@@ -227,8 +227,7 @@ def keep_local(path, url=None, dry_run=False):
     fetching can never bring it in; an import can. `url` is where it came from, if anyone knows.
     """
     path = Path(path)
-    return {"url": url, "sha256": keep_in_store(path.read_bytes(), path.name, dry_run), "file": path.name,
-            "retrieved": datetime.date.today().isoformat(), "title": None, "version": None}
+    return document_entry(url, keep_in_store(path.read_bytes(), path.name, dry_run), path.name, datetime.date.today().isoformat())
 
 
 def records_with_documents(project=None):
@@ -295,7 +294,7 @@ def find_kept(words, project=None):
              for entry in record["documents"].values() if isinstance(entry, dict)}
     for path in sorted(kept.glob("*/*")) if kept.is_dir() else []:
         if path.parent.name not in cited and all(word in path.name.lower() for word in wanted):
-            lines.append("%s: kept; no record here cites it" % path.name)
+            lines.append("%s: kept; no record here cites it%s" % (path.name, "" if project else " (a project's records need --project)"))
             lines.append("    %s  present" % path)
     return lines
 
@@ -328,7 +327,7 @@ def document_name(url):
 def document_entry(url, sha256, name, retrieved, title=None):
     """A record's `documents` entry for a kept file: its URL, checksum, file name and the date it was fetched. `title`
     is what the page that listed it calls it, else null, and `version` stays null until someone reads what the document
-    PRINTS (P61). `--fetch` and the research sources write every entry through this one function."""
+    PRINTS (P61). `--fetch`, `--keep` (P784) and the research sources write every entry through this one function."""
     return {"url": url, "sha256": sha256, "file": name, "retrieved": retrieved, "title": title, "version": None}
 
 

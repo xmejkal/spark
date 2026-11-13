@@ -26,14 +26,14 @@
  {
   "file": "scripts/spark/sourcing/find_kept.py",
   "name": "finding nothing says nothing",
-  "find": "found or [\"nothing kept matches %s — fetch it, or --keep a file you have\" % \" \".join(words)])",
+  "find": "found or [\"nothing kept matches %s — fetch it, or --keep a file you have%s\" % (\n            \" \".join(words), \"\" if project else \", or name the project with --project\")])",
   "replace": "found or [])"
  },
  {
   "file": "scripts/spark/sourcing/datasheets.py",
   "name": "an imported file forgets where it came from",
-  "find": "    return {\"url\": url, \"sha256\": keep_in_store(path.read_bytes(), path.name, dry_run)",
-  "replace": "    return {\"url\": None, \"sha256\": keep_in_store(path.read_bytes(), path.name, dry_run)"
+  "find": "    return document_entry(url, keep_in_store(path.read_bytes(), path.name, dry_run)",
+  "replace": "    return document_entry(None, keep_in_store(path.read_bytes(), path.name, dry_run)"
  },
  {
   "file": "boards/firebeetle2-esp32s3.json",

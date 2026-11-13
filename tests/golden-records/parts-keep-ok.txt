@@ -6,5 +6,7 @@
   "title": null,
   "version": null
 }
+--- stderr ---
+  kept, but listed in no record: add --part <id> --project . to list it (a drawer photo needs none)
 --- {store}/sources/52d4d0818e899676cc5d6b002096ebd21d4108b2df2bb7d7cc4717d38325a0b3/sheet.pdf ---
 %PDF-1.4 golden
