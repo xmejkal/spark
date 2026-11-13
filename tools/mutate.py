@@ -607,8 +607,8 @@ def run(root, tests, mutations, copied=False, ledger_store=None, budget=None):
         raise AnotherRunIsActive("%s exists: another run is rewriting these files, or a killed "
                                  "one left its lock. Wait for it, or remove the lock once you "
                                  "are sure and check `git status` for a mutated file" % lock)
-    lock.write_text(str(__import__("os").getpid()))
     try:
+        lock.write_text(str(__import__("os").getpid()))  # inside the try: a SIGTERM right after it still removes it (P805)
         # The pre-check ran BEFORE the lock was taken, so two runs started within its six
         # seconds both passed the lock test and both took the lock (audit C8). Under it now.
         checked = time.monotonic()
@@ -619,7 +619,8 @@ def run(root, tests, mutations, copied=False, ledger_store=None, budget=None):
         suite_seconds = time.monotonic() - checked  # what a row with no near test costs: the budget's last fact
         return _run(root, tests, mutations, copied, ledger_store, budget, suite_seconds)
     finally:
-        lock.unlink(missing_ok=True)
+        with sigterm_held():  # a SIGTERM here would leave a lock that refuses every later run
+            lock.unlink(missing_ok=True)
 
 
 def _run(root, tests, mutations, copied, ledger_store=None, budget=None, suite_seconds=None):
