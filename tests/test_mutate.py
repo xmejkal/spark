@@ -931,7 +931,8 @@ class TheDuplicatesTest(unittest.TestCase):
         root = tiny_project()
         rows = table(root, BREAK_ADD, self.MULTIPLY, {"file": "other.py", "find": "x = 1", "replace": "x = 2"},
                      {"file": "other.py", "find": "x = 1", "replace": "x = 3"})
-        self.assertEqual(self.duplicates(root, str(rows), "--for", "m.py")[1].splitlines()[-1], self.COUNT_LINE.rstrip("\n") % (1, 2, 0, 0, 1))
+        self.assertEqual(self.duplicates(root, str(rows), "--for", "m.py")[1].splitlines()[-1],
+                         self.COUNT_LINE.rstrip("\n") % (1, 2, 0, 0, 1) + "; run a sweep to fill the ledger", "every group not yet run: the line says what fills the ledger")
         self.assertEqual(self.duplicates(root, str(table(root, BREAK_ADD, BREAK_SUB)))[1], self.COUNT_LINE % (0, 0, 0, 0, 0), "no group: the count line alone")
         for extra in ([], ["--ledger"], ["--retire"], [str(rows), "--anchors"], [str(rows), "--copy"], [str(rows), "--tier-count"],
                       [str(rows), "--tier", "new"], [str(rows), "--budget", "1"], [str(rows), "--retarget", "m.py", "n.py"]):

@@ -84,15 +84,19 @@ refused twice stays critical (it runs every sweep) and is listed all the same, s
 THE SAME-LINE GROUPS (P787 PR 6): the plan counted about 250 rows that are "a second replace of a line another row already
 mutates". Two replaces on one line are two mutants, and dropping a mutation is dropping its test (W3), so the tool deletes
 none of them: `--duplicates` reports. It takes the tables (`--for` narrows them) and runs alone, as `--tier-count` does,
-and prints each group of rows on one `file` and one `find` with different replaces (`ledger.same_line_groups`) under a
-header `file  find` (the find's first 60 characters, a line break shown as `\\n`), one line per row as `table:index name`,
-then the group's verdict from the ledger (`ledger.group_verdict`): `merge candidate: every row caught by <test>` when
-every row has a line at the file's current blob, caught, with the same `by` (one test sees every mutant of the line);
-`distinct: caught by <a>, <b>` when a `by` or a status differs (a refused row says `refused`, an escaped one `escape`);
-`not yet run` when a row has no line at the current blob. The count line is `N same-line group(s) over M row(s): K merge
-candidate(s), D distinct, U not yet run; a merge candidate is dropped in a PR with its reason, the others stay`; exit 0
-(a report is not a verdict). Until a sweep has run, every group is not yet run. The deleting PR is the main thread's,
-after the seed nights, and each drop names its reason.
+and prints each group of rows on one `file` and one line with different replaces (`ledger.same_line_groups`: the line is
+the find with its lines stripped of indentation and the trailing line break dropped, so two finds that differ only so are
+one line) under a header `file  find` (the first row's find, its first 60 characters, a line break shown as `\\n`), one
+line per row as `table:index name`, then the group's verdict from the ledger (`ledger.group_verdict`): `merge candidate:
+every row caught by <module>` when every row has a line at the file's current blob, caught, with the same `by`, the test
+MODULE that caught it: a candidate to read, not a proof, because two functions of one module may tell the mutants apart,
+so the deleting PR opens the module and checks that one test fails for every mutant of the line before it drops a row;
+`distinct: caught by <a>, <b>` when a `by` or a status differs or a `by` is `suite` (the whole suite caught the row and
+named no module; a refused row says `refused`, an escaped one `escape`), decided as soon as the known lines say so, whatever
+is still to run; `not yet run` when nothing disagrees and a row has no line at the current blob. The count line is `N
+same-line group(s) over M row(s): K merge candidate(s), D distinct, U not yet run; a merge candidate is dropped in a PR with
+its reason, the others stay`, and when every group is not yet run it ends `; run a sweep to fill the ledger`; exit 0 (a
+report is not a verdict). The deleting PR is the main thread's, after the seed nights, and each drop names its reason.
 
 In a copy each row's ledger line is written as soon as the row is done, dated then, so a run that SIGTERM or a crash
 stops keeps every line it recorded (PR 1's review, row 50: a 180-minute slice killed at minute 179 lost everything). In the
@@ -663,10 +667,12 @@ def main(argv=None):
                              "critical and runs every sweep; deletes nothing, runs nothing, exits 0")
     parser.add_argument("--duplicates", action="store_true",
                         help="instead of a run: list the same-line groups of the given tables (two rows or more on one file and one "
-                             "`find` with different replaces, each listed as table:index name) and what the ledger says of each: "
-                             "`merge candidate` when every row was caught at the file's current content by the same test, `distinct` "
-                             "when a test or a status differs, `not yet run` when a row has no line there; deletes nothing, runs "
-                             "nothing, exits 0. A merge candidate is dropped in a PR with its reason; --for narrows the tables")
+                             "line, their finds the same once stripped of indentation and a trailing line break, with different replaces, "
+                             "each listed as table:index name) and what the ledger says of each: `merge candidate` when every row was "
+                             "caught at the file's current content by the same test module (`by`; a candidate to read, not a proof: the "
+                             "deleting PR checks that one test fails for every mutant before it drops a row), `distinct` when a module or "
+                             "a status differs or the whole suite caught a row, `not yet run` when nothing disagrees and a row has no line "
+                             "there; deletes nothing, runs nothing, exits 0. A merge candidate is dropped in a PR with its reason; --for narrows the tables")
     parser.add_argument("--budget", type=int, metavar="MINUTES",
                         help="stop before the row that would cross this many minutes, counted from the run's start (the copy "
                              "and the pre-check suite inside); a row's expected seconds are its ledger line's `s`, else the "
@@ -858,17 +864,16 @@ FIND_SHOWN = 60
 def same_line_report(ledger_store, root, mutations):
     """
     `--duplicates`' facts: each same-line group of `mutations` (rows read with their `table` and `index`) as `{file, find,
-    rows, verdict}`, each row as `{table, index, name, key, by, status}` with `by` and `status` from its ledger line at the
-    file's current blob and None when it has none, and `counts`: the groups, their rows and how many hold each verdict.
+    rows, verdict}` (`find` the first row's, as written), each row as `{table, index, name, key, by, status}` with `by` and
+    `status` from its ledger line at the file's current blob and None when it has none, and `counts`: the groups, their
+    rows and how many hold each verdict.
     """
     by_key = {entry["key"]: entry for entry in ledger_store.read()}
     blobs = ledger.blobs_now(root, mutations)
     groups = []
     for group in ledger.same_line_groups(mutations):
-        blob = blobs[group[0]["file"]]
-        entries = [by_key.get(ledger.row_key(row)) for row in group]
-        current = [entry if entry is not None and entry["blob"] == blob else None for entry in entries]
-        groups.append({"file": group[0]["file"], "find": group[0]["find"], "verdict": ledger.group_verdict(entries, blob),
+        current = ledger.lines_now([by_key.get(ledger.row_key(row)) for row in group], blobs[group[0]["file"]])
+        groups.append({"file": group[0]["file"], "find": group[0]["find"], "verdict": ledger.group_verdict(current),
                        "rows": [{"table": row["table"], "index": row["index"], "name": row.get("name", row["find"]), "key": ledger.row_key(row),
                                  "by": entry["by"] if entry else None, "status": entry["status"] if entry else None}
                                 for row, entry in zip(group, current)]})
@@ -898,8 +903,9 @@ def print_duplicates(report, as_json):
             print("    %s:%d %s" % (row["table"], row["index"], row["name"]))
         print("    " + verdict_line(group))
     print("  %d same-line group(s) over %d row(s): %d merge candidate(s), %d distinct, %d not yet run; "
-          "a merge candidate is dropped in a PR with its reason, the others stay"
-          % (counts["groups"], counts["rows"], counts[ledger.MERGE_CANDIDATE], counts[ledger.DISTINCT], counts[ledger.NOT_YET_RUN]))
+          "a merge candidate is dropped in a PR with its reason, the others stay%s"
+          % (counts["groups"], counts["rows"], counts[ledger.MERGE_CANDIDATE], counts[ledger.DISTINCT], counts[ledger.NOT_YET_RUN],
+             "; run a sweep to fill the ledger" if counts["groups"] and counts[ledger.NOT_YET_RUN] == counts["groups"] else ""))
     return EXIT_OK
 
 

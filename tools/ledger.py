@@ -30,11 +30,14 @@ a date), proving, proven oldest date first; a retired row runs in no tier.
 
 A SAME-LINE GROUP (PR 6) is two or more rows on one `file` and one `find` with different replaces: two mutants of one
 line, each its own row and key (a *duplicate* is PR 0's kind, the same replace too, one key). `same_line_groups` finds
-them and `group_verdict` reads the ledger for each: *merge candidate* when every row of the group has a line at the
-file's current blob, caught, by the same test (one test sees every mutant of the line: the group guards one fact twice);
-*distinct* when a status or a `by` differs; *not yet run* when a row has no line at the current blob. The tool reports
-(`mutate.py --duplicates`) and deletes nothing: a merge candidate is dropped in a PR with its reason (W3: dropping a
-mutation is dropping the test, so only a group one test catches whole may lose a row), the others stay.
+them (the line is `same_line_key` of the find: its lines stripped of indentation, the trailing line break dropped) and
+`group_verdict` reads the ledger for each: *merge candidate* when every row of the group has a line at the file's current
+blob, caught, by the same test module (`by`): a candidate to read, not a proof, because two functions of one module may
+tell the mutants apart, so the deleting PR opens the module and checks that one test fails for every mutant of the line
+before it drops a row; *distinct* when a status is not a catch, a `by` differs or a `by` is `suite` (no module named),
+decided as soon as the known lines say so; *not yet run* when nothing disagrees and a row has no line at the current
+blob. The tool reports (`mutate.py --duplicates`) and deletes nothing: a merge candidate is dropped in a PR with its
+reason (W3: dropping a mutation is dropping the test), the others stay.
 
 Standard library only, as `scratch.py`: `mutate.py` imports it by path.
 """
@@ -180,31 +183,49 @@ def tiers_of(root, mutations, lines):
     return Tiers({tier: [row for _, row in pairs] for tier, pairs in found.items()})
 
 
+def same_line_key(find):
+    """
+    The line a `find` anchors on, for `same_line_groups`: its lines with their indentation stripped and the trailing line
+    break dropped (the review of PR 6: 15 pairs of rows mutated one line with finds that differed only so). Two finds on
+    one file with one key sit on one place, because each occurs exactly once and one contains the other's text.
+    """
+    return tuple(line.strip() for line in find.strip().splitlines())
+
+
 def same_line_groups(rows):
     """
-    The same-line groups of `rows`, in the rows' order: each is the rows on one `file` and one `find` whose replaces are
-    not all the same, two rows or more. A row alone on its line is in no group, and rows with one replace too are one
-    row twice (PR 0 dropped those), so they make no group on their own. A row keeps whatever keys the caller gave it.
+    The same-line groups of `rows`, in the rows' order: each is the rows on one `file` and one line (`same_line_key` of
+    their `find`) whose replaces are not all the same, two rows or more. A row alone on its line is in no group, and rows
+    with one replace too are one row twice (PR 0 dropped those), so they make no group on their own. A row keeps whatever
+    keys the caller gave it.
     """
     found = {}
     for row in rows:
-        found.setdefault((row["file"], row["find"]), []).append(row)
+        found.setdefault((row["file"], same_line_key(row["find"])), []).append(row)
     return [group for group in found.values() if len({row["replace"] for row in group}) > 1]
 
 
-def group_verdict(entries, blob):
+def lines_now(entries, blob):
+    """The ledger lines `entries` (None for a row with none) that sit at the file's current blob `blob`; None for one that does not."""
+    return [entry if entry is not None and entry["blob"] == blob else None for entry in entries]
+
+
+def group_verdict(current):
     """
-    A same-line group's verdict from its rows' ledger lines `entries` (None for a row with none) at the file's current
-    blob `blob`: `NOT_YET_RUN` when a row has no line at this blob (never run, or the file changed since: nothing is
-    known of it now); `MERGE_CANDIDATE` when every line is a catch by one and the same `by`; `DISTINCT` otherwise (a
-    `by` or a status differs: the mutants are told apart, so each row guards its own fact). A gone file (`blob` None) is
-    judged by its lines at None, as `is_retired` judges it.
+    A same-line group's verdict from `current`, its rows' ledger lines at the file's current blob (`lines_now`; None for a
+    row with none there). `DISTINCT` when the lines there disagree already, whatever is still to run: a status is not a
+    catch, a `by` differs, or a `by` is `suite` (the whole suite caught the row and named no test module, so nothing says
+    one module sees both mutants); `NOT_YET_RUN` when no line disagrees and a row has none at this blob (never run, or
+    the file changed since); `MERGE_CANDIDATE` when every row has a line there, caught, by one and the same test module.
+    A candidate to read, not a proof: `by` is the module, and two mutants of one line may be told apart by two functions
+    in it; the deleting PR opens the module before it drops a row.
     """
-    if any(entry is None or entry["blob"] != blob for entry in entries):
+    known = [entry for entry in current if entry is not None]
+    if any(entry["status"] != CAUGHT or entry["by"] == SUITE for entry in known) or len({entry["by"] for entry in known}) > 1:
+        return DISTINCT
+    if len(known) < len(current):
         return NOT_YET_RUN
-    if all(entry["status"] == CAUGHT for entry in entries) and len({entry["by"] for entry in entries}) == 1:
-        return MERGE_CANDIDATE
-    return DISTINCT
+    return MERGE_CANDIDATE
 
 
 def blobs_now(root, mutations):
