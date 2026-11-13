@@ -1,5 +1,5 @@
 """
-The whole run of the chain for `check_spine.py` (P783 PR 3): the requirements file read, the work folder made, the
+The whole run of the chain for `check_spine.py`: the requirements file read, the work folder made, the
 build's stages run (`build_service.BuildService`), and the lines that the history and a kept wokwi.toml need said.
 `check_spine.main` calls it, prints those lines and hands the stages to its `report`, which removes the work folder.
 """
@@ -56,13 +56,14 @@ class RequirementsBuildService:
     """
     Service: the CLI's whole run of the chain for one requirements file, or the reference design: it reads the file,
     makes the work folder `spark-spine-*`, runs the stages of a `BuildService` and notes a build that ran end to end in
-    the person's history. It is given the BuildService class, or None for the real one; a test hands a fake with
-    `for_toolchain`. It raises nothing: a refused file, a build past its limit and any crash are each one stage that
-    could not run. It never removes the work folder: the caller's report does.
+    the person's history. It is given `build_service`, an object with `for_toolchain` (BuildService, or a fake), or None
+    for the real one. A refused file, a build past its limit and any crash of the stages are each one stage that could
+    not run; an OSError from making the work folder or reading the toolchain and the kept files propagates, as it did
+    from check_spine's main. It never removes the work folder: the caller's report does.
     """
 
-    def __init__(self, build_service_class=None):
-        self.build_service_class = build_service_class
+    def __init__(self, build_service=None):
+        self.build_service = build_service
 
     def build(self, requirements_path=None, firmware=None, simulation=None):
         """A RequirementsBuildResult for the file at `requirements_path` (None: the reference design), the flash image
@@ -117,7 +118,7 @@ class RequirementsBuildService:
     def _stages(self, toolchain, inputs):
         """The build's stages; a build past its limit is one timed-out stage, and any other exception one crashed stage."""
         # BuildService is looked up at call time, so a test's patch of `requirements_build.BuildService` still reaches it.
-        service = self.build_service_class or BuildService
+        service = self.build_service or BuildService
         try:
             return service.for_toolchain(toolchain).build(inputs)
         except subprocess.TimeoutExpired as late:

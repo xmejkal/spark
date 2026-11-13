@@ -2293,7 +2293,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 
 
 class ARequirementsBuildServiceTest(unittest.TestCase):
-    """P783 PR 3: `requirements_build.RequirementsBuildService` is check_spine's whole run, given a fake BuildService class
+    """P783 PR 3: `requirements_build.RequirementsBuildService` is check_spine's whole run, given a fake BuildService
     (no patch): a refused file is one requirements stage and makes no work folder, a build past its limit and a crash
     are each one stage that could not run with its code, and a history it cannot keep is one diagnostics line."""
 
