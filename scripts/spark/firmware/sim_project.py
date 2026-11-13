@@ -116,7 +116,7 @@ def limits_of(design):
 
 # --- MVP ---
 #: The note's file name, in the simulation project's folder: `write_limits` writes it, run_scenario.py copies it into a log and
-#: `check_spine.keep_simulation` removes an older one.
+#: `kept_files.keep_simulation` removes an older one.
 LIMITS_NOTE = "WHAT-THIS-CANNOT-SHOW.md"
 #: How a limit line of the note begins, how its component is marked and what comes between the component and the sentence:
 #: `limits_note` writes `- **component** — sentence`, and `limits_in` reads it back.
@@ -357,7 +357,7 @@ def firmware_in(toml):
 
 
 # --- MVP ---
-#: The copy of the person's kept `sim/diagram.json` that `check_spine.main` puts in the build's work folder (P482).
+#: The copy of the person's kept `sim/diagram.json` that `requirements_build.RequirementsBuildService` puts in the build's work folder (P482).
 KEPT_DIAGRAM = "kept-diagram.json"
 
 

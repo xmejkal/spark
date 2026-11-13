@@ -1,8 +1,8 @@
 """
 The build's two tools (P705, P706): the board engine, tscircuit's `tsci`, as the Adapter `TscircuitEngine` (found where
 the tools list says, run on `board.tsx`, asked its version and whether it builds a trivial board); and the diagram
-converter, found and run as functions until its own Adapter. `BuildService` and `check_spine.main` read `find_toolchain`
-through this module, so one patch reaches both.
+converter, found and run as functions until its own Adapter. `BuildService` and `requirements_build.RequirementsBuildService` read
+`find_toolchain` through this module, so one patch reaches both.
 """
 
 import collections
