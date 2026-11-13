@@ -2,7 +2,7 @@
 The mutation ledger (P787): one line per mutation row a run tried (a refused row too), so a sweep knows which rows were
 caught or refused, when, and at which content of their file. `mutate.py` writes it after every run that plants rows,
 and reads it to put each row in its tier (`tier_of`, `Tiers`), so a sweep runs a few hundred rows and not all 3000, and
-to list the retired rows (`is_retired`) for a deleting PR.
+to list the retired rows (`is_retired`) and the same-line groups (`same_line_groups`, `group_verdict`) for a deleting PR.
 
     tests/mutations/ledger.jsonl
     {"key": "4a1f0c9e2b7d", "file": "tools/mutate.py", "blob": "<40 hex>", "date": "2026-11-12T18:04:11+01:00",
@@ -27,6 +27,14 @@ keeps its `caught` from the same blob (`merged` adds 0), so a count alone never 
 The blob rule alone decides staleness: no git history is read, and a row with no line is new, never proven. The order a
 sweep runs them: critical, new in the tables' given order (the caller names the oldest table first: no table carries
 a date), proving, proven oldest date first; a retired row runs in no tier.
+
+A SAME-LINE GROUP (PR 6) is two or more rows on one `file` and one `find` with different replaces: two mutants of one
+line, each its own row and key (a *duplicate* is PR 0's kind, the same replace too, one key). `same_line_groups` finds
+them and `group_verdict` reads the ledger for each: *merge candidate* when every row of the group has a line at the
+file's current blob, caught, by the same test (one test sees every mutant of the line: the group guards one fact twice);
+*distinct* when a status or a `by` differs; *not yet run* when a row has no line at the current blob. The tool reports
+(`mutate.py --duplicates`) and deletes nothing: a merge candidate is dropped in a PR with its reason (W3: dropping a
+mutation is dropping the test, so only a group one test catches whole may lose a row), the others stay.
 
 Standard library only, as `scratch.py`: `mutate.py` imports it by path.
 """
@@ -57,6 +65,9 @@ TIER_KEY = "tier"
 PROVEN_AT = 2
 #: Two refusals at one blob, as the plan says: "refused by --anchors in two sweeps".
 RETIRED_AT = 2
+#: The three verdicts of a same-line group (PR 6), as `--duplicates` prints them.
+MERGE_CANDIDATE, DISTINCT, NOT_YET_RUN = "merge candidate", "distinct", "not yet run"
+VERDICTS = (MERGE_CANDIDATE, DISTINCT, NOT_YET_RUN)
 
 
 def row_key(row):
@@ -167,6 +178,33 @@ def tiers_of(root, mutations, lines):
         found[tier_of(row, entry, blobs[row["file"]])].append((entry, row))
     found[PROVEN].sort(key=lambda pair: _when(pair[0]["date"]))  # a stable sort: the same date keeps the tables' order
     return Tiers({tier: [row for _, row in pairs] for tier, pairs in found.items()})
+
+
+def same_line_groups(rows):
+    """
+    The same-line groups of `rows`, in the rows' order: each is the rows on one `file` and one `find` whose replaces are
+    not all the same, two rows or more. A row alone on its line is in no group, and rows with one replace too are one
+    row twice (PR 0 dropped those), so they make no group on their own. A row keeps whatever keys the caller gave it.
+    """
+    found = {}
+    for row in rows:
+        found.setdefault((row["file"], row["find"]), []).append(row)
+    return [group for group in found.values() if len({row["replace"] for row in group}) > 1]
+
+
+def group_verdict(entries, blob):
+    """
+    A same-line group's verdict from its rows' ledger lines `entries` (None for a row with none) at the file's current
+    blob `blob`: `NOT_YET_RUN` when a row has no line at this blob (never run, or the file changed since: nothing is
+    known of it now); `MERGE_CANDIDATE` when every line is a catch by one and the same `by`; `DISTINCT` otherwise (a
+    `by` or a status differs: the mutants are told apart, so each row guards its own fact). A gone file (`blob` None) is
+    judged by its lines at None, as `is_retired` judges it.
+    """
+    if any(entry is None or entry["blob"] != blob for entry in entries):
+        return NOT_YET_RUN
+    if all(entry["status"] == CAUGHT for entry in entries) and len({entry["by"] for entry in entries}) == 1:
+        return MERGE_CANDIDATE
+    return DISTINCT
 
 
 def blobs_now(root, mutations):

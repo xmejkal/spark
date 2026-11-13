@@ -878,6 +878,68 @@ class TheRetireTest(unittest.TestCase):
         self.assertFalse(ledger_of(root).path.exists(), "something ran")
 
 
+class TheDuplicatesTest(unittest.TestCase):
+    """P787 PR 6: --duplicates lists the same-line groups of the given tables with the ledger's verdict on each, and runs nothing."""
+
+    COUNT_LINE = ("  %d same-line group(s) over %d row(s): %d merge candidate(s), %d distinct, %d not yet run; "
+                  "a merge candidate is dropped in a PR with its reason, the others stay\n")
+    MULTIPLY = dict(BREAK_ADD, name="add multiplies", replace="return a * b")
+    REVERSE = dict(BREAK_SUB, name="sub reversed", replace="return b - a")
+    RENAME = {"file": "m.py", "name": "add renamed", "find": "def add", "replace": "def add_"}
+    RENAME_TOO = {"file": "m.py", "find": "def add", "replace": "def plus"}
+
+    def duplicates(self, root, *flags):
+        import contextlib
+        import io
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = mutate.main([*flags, "--root", str(root), "--duplicates"])
+        return code, out.getvalue()
+
+    def caught_line(self, root, row, by):
+        return ledger.line(row, ledger.blob_of((root / row["file"]).read_bytes()), "2026-11-12T10:00:00+01:00", ledger.CAUGHT, by, 5)
+
+    def test_each_group_is_listed_with_its_rows_and_the_ledger_s_verdict(self):
+        root = tiny_project()
+        rows = table(root, BREAK_ADD, self.MULTIPLY, BREAK_SUB, self.REVERSE, self.RENAME, self.RENAME_TOO)
+        ledger_of(root).write([self.caught_line(root, BREAK_ADD, "test_m"), self.caught_line(root, self.MULTIPLY, "test_m"),
+                               self.caught_line(root, BREAK_SUB, "test_m"), self.caught_line(root, self.REVERSE, "test_other")])
+        self.assertEqual(self.duplicates(root, str(rows)), (mutate.EXIT_OK, (
+            "  m.py  return a + b\n    mutations.json:0 add subtracts\n    mutations.json:1 add multiplies\n    merge candidate: every row caught by test_m\n"
+            "  m.py  return a - b\n    mutations.json:2 sub adds\n    mutations.json:3 sub reversed\n    distinct: caught by test_m, test_other\n"
+            "  m.py  def add\n    mutations.json:4 add renamed\n    mutations.json:5 def add\n    not yet run\n") + self.COUNT_LINE % (3, 6, 1, 1, 1)))
+        code, said = self.duplicates(root, str(rows), "--json")
+        report = json.loads(said)
+        self.assertEqual((report["tool"], report["counts"]), ("mutate", {"groups": 3, "rows": 6, "merge candidate": 1, "distinct": 1, "not yet run": 1}))
+        self.assertEqual(report["groups"][0], {"file": "m.py", "find": "return a + b", "verdict": "merge candidate", "rows": [
+            {"table": "mutations.json", "index": 0, "name": "add subtracts", "key": ledger.row_key(BREAK_ADD), "by": "test_m", "status": "caught"},
+            {"table": "mutations.json", "index": 1, "name": "add multiplies", "key": ledger.row_key(self.MULTIPLY), "by": "test_m", "status": "caught"}]})
+        self.assertEqual([row["by"] for row in report["groups"][2]["rows"]], [None, None], "no line at the current blob: nothing is known, nothing filled in")
+        self.assertEqual(json.loads(rows.read_text()), [BREAK_ADD, self.MULTIPLY, BREAK_SUB, self.REVERSE, self.RENAME, self.RENAME_TOO], "the tool deleted a row")
+        (root / "m.py").write_text((root / "m.py").read_text() + "# an edit\n")
+        self.assertEqual(self.duplicates(root, str(rows))[1].count("not yet run"), 4, "an edit of the file makes every group not yet run, by the blob rule")
+
+    def test_a_find_with_a_line_break_is_shown_on_one_line_and_cut_at_sixty_characters(self):
+        root = tiny_project()
+        long_find = "return a + b\n\ndef sub(a, b):\n    return a - b\n" + "x" * 40  # the report reads no anchor: a group is listed as written
+        rows = table(root, {"file": "m.py", "find": long_find, "replace": "A"}, {"file": "m.py", "find": long_find, "replace": "B"})
+        code, said = self.duplicates(root, str(rows))
+        self.assertEqual(said.splitlines()[0], "  m.py  return a + b\\n\\ndef sub(a, b):\\n    return a - b\\n" + "x" * 15)
+
+    def test_duplicates_takes_the_tables_and_for_and_runs_alone(self):
+        import contextlib
+        import io
+        root = tiny_project()
+        rows = table(root, BREAK_ADD, self.MULTIPLY, {"file": "other.py", "find": "x = 1", "replace": "x = 2"},
+                     {"file": "other.py", "find": "x = 1", "replace": "x = 3"})
+        self.assertEqual(self.duplicates(root, str(rows), "--for", "m.py")[1].splitlines()[-1], self.COUNT_LINE.rstrip("\n") % (1, 2, 0, 0, 1))
+        self.assertEqual(self.duplicates(root, str(table(root, BREAK_ADD, BREAK_SUB)))[1], self.COUNT_LINE % (0, 0, 0, 0, 0), "no group: the count line alone")
+        for extra in ([], ["--ledger"], ["--retire"], [str(rows), "--anchors"], [str(rows), "--copy"], [str(rows), "--tier-count"],
+                      [str(rows), "--tier", "new"], [str(rows), "--budget", "1"], [str(rows), "--retarget", "m.py", "n.py"]):
+            with self.subTest(extra=extra), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                mutate.main(["--duplicates", "--root", str(root)] + extra)
+        self.assertFalse(ledger_of(root).path.exists(), "something ran")
+
+
 class TheBudgetValueTest(unittest.TestCase):
     """P787 PR 3: the budget's arithmetic and the duration facts it reads, with plain numbers and no run."""
 

@@ -11,6 +11,7 @@ Re-introduce each defect and prove the suite goes red.
     tools/mutate.py tests/mutations/*.json --tier critical,new,proving --budget 20 --copy   # a sweep: these tiers, within 20 minutes
     tools/mutate.py tests/mutations/*.json --tier-count   # how many rows each tier holds; runs nothing
     tools/mutate.py --retire                              # the rows refused in two sweeps, for a deleting PR; runs nothing
+    tools/mutate.py tests/mutations/*.json --duplicates   # the same-line groups and what the ledger says of each; runs nothing
 
 Mutation testing is this project's acceptance bar and for two sprints it was enforced by memory.
 That failed the way memory fails: ~30 mutations were run by hand in one sprint and two ESCAPED —
@@ -79,6 +80,19 @@ nothing, and the sweep's refusal is the same check `--anchors` makes (an anchor 
 does not compile, parse or import), recorded by the run, since `--anchors` itself writes no ledger line. A critical row
 refused twice stays critical (it runs every sweep) and is listed all the same, so `--retire`'s count can be above
 `--tier-count`'s `retired`.
+
+THE SAME-LINE GROUPS (P787 PR 6): the plan counted about 250 rows that are "a second replace of a line another row already
+mutates". Two replaces on one line are two mutants, and dropping a mutation is dropping its test (W3), so the tool deletes
+none of them: `--duplicates` reports. It takes the tables (`--for` narrows them) and runs alone, as `--tier-count` does,
+and prints each group of rows on one `file` and one `find` with different replaces (`ledger.same_line_groups`) under a
+header `file  find` (the find's first 60 characters, a line break shown as `\\n`), one line per row as `table:index name`,
+then the group's verdict from the ledger (`ledger.group_verdict`): `merge candidate: every row caught by <test>` when
+every row has a line at the file's current blob, caught, with the same `by` (one test sees every mutant of the line);
+`distinct: caught by <a>, <b>` when a `by` or a status differs (a refused row says `refused`, an escaped one `escape`);
+`not yet run` when a row has no line at the current blob. The count line is `N same-line group(s) over M row(s): K merge
+candidate(s), D distinct, U not yet run; a merge candidate is dropped in a PR with its reason, the others stay`; exit 0
+(a report is not a verdict). Until a sweep has run, every group is not yet run. The deleting PR is the main thread's,
+after the seed nights, and each drop names its reason.
 
 In a copy each row's ledger line is written as soon as the row is done, dated then, so a run that SIGTERM or a crash
 stops keeps every line it recorded (PR 1's review, row 50: a 180-minute slice killed at minute 179 lost everything). In the
@@ -647,6 +661,12 @@ def main(argv=None):
                              "that the ledger shows refused in two sweeps or more at their file's current content, one line each as "
                              "table:index name, for a deleting PR; a critical row refused twice is listed too, though it stays "
                              "critical and runs every sweep; deletes nothing, runs nothing, exits 0")
+    parser.add_argument("--duplicates", action="store_true",
+                        help="instead of a run: list the same-line groups of the given tables (two rows or more on one file and one "
+                             "`find` with different replaces, each listed as table:index name) and what the ledger says of each: "
+                             "`merge candidate` when every row was caught at the file's current content by the same test, `distinct` "
+                             "when a test or a status differs, `not yet run` when a row has no line there; deletes nothing, runs "
+                             "nothing, exits 0. A merge candidate is dropped in a PR with its reason; --for narrows the tables")
     parser.add_argument("--budget", type=int, metavar="MINUTES",
                         help="stop before the row that would cross this many minutes, counted from the run's start (the copy "
                              "and the pre-check suite inside); a row's expected seconds are its ledger line's `s`, else the "
@@ -659,7 +679,7 @@ def main(argv=None):
     root = Path(args.root).resolve()
     ledger_store = ledger.LedgerStore(root / args.tests / "mutations" / ledger.LEDGER_NAME)
     if (args.ledger or args.retire) and (args.table or args.anchors or args.paths or args.copy or args.retarget or args.tier is not None
-                                         or args.tier_count or args.budget is not None or (args.ledger and args.retire)):
+                                         or args.tier_count or args.budget is not None or args.duplicates or (args.ledger and args.retire)):
         parser.error("%s runs alone: it takes no table and no flag but --root, --tests and --json" % ("--ledger" if args.ledger else "--retire"))
     if args.ledger:
         return print_ledger(ledger_store, root, args.json)
@@ -668,11 +688,13 @@ def main(argv=None):
     if not args.table:
         parser.error("the following arguments are required: table")
     if args.retarget:
-        if args.anchors or args.paths or args.copy or args.tier is not None or args.tier_count or args.budget is not None:
-            parser.error("--retarget runs alone: it takes no --anchors, --for, --copy, --tier, --tier-count or --budget")
+        if args.anchors or args.paths or args.copy or args.tier is not None or args.tier_count or args.budget is not None or args.duplicates:
+            parser.error("--retarget runs alone: it takes no --anchors, --for, --copy, --tier, --tier-count, --duplicates or --budget")
         return retarget_tables(args.table, *args.retarget)
-    if args.tier_count and (args.anchors or args.copy or args.tier is not None or args.budget is not None):
-        parser.error("--tier-count runs alone: it takes the tables and --for, no --anchors, --copy, --tier or --budget")
+    if args.tier_count and (args.anchors or args.copy or args.tier is not None or args.budget is not None or args.duplicates):
+        parser.error("--tier-count runs alone: it takes the tables and --for, no --anchors, --copy, --tier, --duplicates or --budget")
+    if args.duplicates and (args.anchors or args.copy or args.tier is not None or args.budget is not None):
+        parser.error("--duplicates runs alone: it takes the tables and --for, no --anchors, --copy, --tier or --budget")
     if args.budget is not None and args.budget <= 0:
         parser.error("--budget takes a whole number of minutes above 0, not %d" % args.budget)
     if args.budget is not None and args.anchors:
@@ -683,7 +705,7 @@ def main(argv=None):
     mutations = []
     for table in args.table:
         try:
-            mutations += json.loads(Path(table).read_text())
+            mutations += [dict(row, table=Path(table).name, index=index) for index, row in enumerate(json.loads(Path(table).read_text()))]
         except (OSError, ValueError) as broken:
             print("could not read the table %s: %s" % (table, broken), file=sys.stderr)
             return EXIT_COULD_NOT_RUN
@@ -692,6 +714,8 @@ def main(argv=None):
         if not mutations:
             print("  no mutation is about %s: nothing to run" % " ".join(args.paths), file=sys.stderr)
             return EXIT_OK
+    if args.duplicates:
+        return print_duplicates(same_line_report(ledger_store, root, mutations), args.json)
     if args.tier_count:
         return print_tier_counts(ledger.tiers_of(root, mutations, ledger_store.read()), len(args.table), args.json)
     header = tiers = None
@@ -824,6 +848,58 @@ def print_retired(ledger_store, root, as_json):
         for row in found:
             print("  %s:%d %s" % (row["table"], row["index"], row["name"]))
         print("  %d row(s) to retire: refused in two sweeps; delete each with its reason in a PR, or re-anchor it" % len(found))
+    return EXIT_OK
+
+
+#: The characters of a group's `find` the header shows.
+FIND_SHOWN = 60
+
+
+def same_line_report(ledger_store, root, mutations):
+    """
+    `--duplicates`' facts: each same-line group of `mutations` (rows read with their `table` and `index`) as `{file, find,
+    rows, verdict}`, each row as `{table, index, name, key, by, status}` with `by` and `status` from its ledger line at the
+    file's current blob and None when it has none, and `counts`: the groups, their rows and how many hold each verdict.
+    """
+    by_key = {entry["key"]: entry for entry in ledger_store.read()}
+    blobs = ledger.blobs_now(root, mutations)
+    groups = []
+    for group in ledger.same_line_groups(mutations):
+        blob = blobs[group[0]["file"]]
+        entries = [by_key.get(ledger.row_key(row)) for row in group]
+        current = [entry if entry is not None and entry["blob"] == blob else None for entry in entries]
+        groups.append({"file": group[0]["file"], "find": group[0]["find"], "verdict": ledger.group_verdict(entries, blob),
+                       "rows": [{"table": row["table"], "index": row["index"], "name": row.get("name", row["find"]), "key": ledger.row_key(row),
+                                 "by": entry["by"] if entry else None, "status": entry["status"] if entry else None}
+                                for row, entry in zip(group, current)]})
+    counts = {"groups": len(groups), "rows": sum(len(group["rows"]) for group in groups)}
+    counts.update({verdict: sum(1 for group in groups if group["verdict"] == verdict) for verdict in ledger.VERDICTS})
+    return {"groups": groups, "counts": counts}
+
+
+def verdict_line(group):
+    """A group's verdict as `--duplicates` prints it: the test for a merge candidate, each row's word for a distinct group."""
+    if group["verdict"] == ledger.MERGE_CANDIDATE:
+        return "%s: every row caught by %s" % (group["verdict"], group["rows"][0]["by"])
+    if group["verdict"] == ledger.DISTINCT:
+        return "%s: caught by %s" % (group["verdict"], ", ".join(row["by"] or row["status"] for row in group["rows"]))
+    return group["verdict"]
+
+
+def print_duplicates(report, as_json):
+    """`--duplicates`: each group under its `file  find` header, its rows, its verdict, then the count line; or the JSON; exit 0."""
+    counts = report["counts"]
+    if as_json:
+        print(json.dumps({"tool": "mutate", **report}, indent=2))
+        return EXIT_OK
+    for group in report["groups"]:
+        print("  %s  %s" % (group["file"], group["find"][:FIND_SHOWN].replace("\n", "\\n")))
+        for row in group["rows"]:
+            print("    %s:%d %s" % (row["table"], row["index"], row["name"]))
+        print("    " + verdict_line(group))
+    print("  %d same-line group(s) over %d row(s): %d merge candidate(s), %d distinct, %d not yet run; "
+          "a merge candidate is dropped in a PR with its reason, the others stay"
+          % (counts["groups"], counts["rows"], counts[ledger.MERGE_CANDIDATE], counts[ledger.DISTINCT], counts[ledger.NOT_YET_RUN]))
     return EXIT_OK
 
 
