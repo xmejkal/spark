@@ -1,10 +1,10 @@
 [
  {"file": "tools/mutate.py", "name": "the near tests are never run",
-  "find": "near_run = suite_is_green(root, tests, only=near, failfast=True) if near else None", "replace": "near_run = True if near else None"},
+  "find": "near_run = suite_is_green(root, tests, only=near_set, failfast=True) if near_set else None", "replace": "near_run = True if near_set else None"},
  {"file": "tools/mutate.py", "name": "what the near tests miss is called escaped without the whole suite",
   "find": "green = False if caught_near else suite_is_green(root, tests, failfast=True)", "replace": "green = not caught_near"},
  {"file": "tools/mutate.py", "name": "a near set that fails on clean code alone is trusted",
-  "find": "self.checked[file] = near if near and suite_is_green(self.root, self.tests, only=near) else ()", "replace": "self.checked[file] = near"},
+  "find": "self.checked[file] = near if green else ()", "replace": "self.checked[file] = near"},
  {"file": "tools/mutate.py", "name": "a Python file is near only the tests that name it",
   "find": "if target.suffix != \".py\":", "replace": "if True:"}
 ]

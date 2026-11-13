@@ -991,7 +991,7 @@ def three_file_project():
     return root, rows
 
 
-@slow("mutation runs of a tiny tree under --budget, 9 tests, 7.6 s on 2026-11-13")
+@slow("mutation runs of a tiny tree under --budget, 10 tests, 7.0 s on 2026-11-13")
 class TheBudgetTest(unittest.TestCase):
     """P787 PR 3: --budget stops before the row whose expected seconds would cross it, counted from the run's start."""
 
@@ -1005,22 +1005,31 @@ class TheBudgetTest(unittest.TestCase):
         self.assertEqual(calls, [None, ("test_ma",), ("test_ma",), None],
                          "the pre-check, ma's set on the clean tree, ma's row, the after-suite; mb's and mc's sets never ran: %s" % calls)
 
-    def test_a_file_s_first_row_asks_for_its_near_check_too_bounded_by_the_suite_s_seconds(self):
+    def test_a_file_s_first_row_asks_for_its_near_check_too_and_a_file_no_test_names_asks_for_none(self):
         root = tiny_project()
         (root / "notes.txt").write_text("x\n")
         notes = {"file": "notes.txt", "name": "notes", "find": "x", "replace": "y"}  # no test names it: no near set to check
 
-        def ran(suite_seconds, *rows):
-            """The names of the rows a run with 40 s left plants, the pre-check suite's seconds faked as `suite_seconds`."""
-            results, _ = mutate._run(root, "tests", list(rows), False, ledger_store=ledger_of(root),
-                                     budget=mutate.Budget(1, time.monotonic() - 20), suite_seconds=suite_seconds)
+        def ran(row):
+            """The names of the rows a run with 40 s left plants, the pre-check suite's seconds faked as 35."""
+            results, _ = mutate._run(root, "tests", [row], False, ledger_store=ledger_of(root),
+                                     budget=mutate.Budget(1, time.monotonic() - 20), suite_seconds=35)
             return [r["name"] for r in results]
-        budget_ledger(root, (BREAK_ADD, 10), (BREAK_SUB, 30), (notes, 10))
-        self.assertEqual(ran(35, BREAK_ADD), [], "add's 10 s and the near check's 35 cross the 40 left")
-        self.assertEqual(ran(25, BREAK_ADD, BREAK_SUB), ["add subtracts", "sub adds"],
-                         "10 + 25 fit; then sub's 30 alone, m.py's set known (30 + 25 would cross the 39 or so left)")
-        budget_ledger(root, (notes, 10))
-        self.assertEqual(ran(35, notes), ["notes"], "a file no test names has no near check to ask for")
+        budget_ledger(root, (BREAK_ADD, 10), (notes, 10))
+        self.assertEqual(ran(BREAK_ADD), [], "add's 10 s and the near check's 35 cross the 40 left; 10 alone fits by 30")
+        self.assertEqual(ran(notes), ["notes"], "a file no test names has no near check to ask for: 10 fits by 30")
+        with self.assertRaises(ValueError):
+            mutate._run(root, "tests", [BREAK_ADD], False, budget=mutate.Budget(1, time.monotonic()))  # no suite's seconds: no fact
+
+    def test_a_near_check_is_expected_to_take_the_suite_s_seconds_then_the_largest_this_run_measured(self):
+        root, rows = three_file_project()
+        near = mutate.NearSets(root, "tests")
+        self.assertEqual(near.check_seconds("ma.py", 35), 35, "nothing measured yet: the pre-check suite's seconds bound it")
+        near.of("ma.py")
+        self.assertEqual(near.check_seconds("ma.py", 35), 0, "ma's set is checked: its next rows ask for no check")
+        self.assertEqual(len(near.seconds), 1)
+        self.assertEqual(near.check_seconds("mb.py", 35), near.seconds[0], "mb's first row asks for ma's measured check, not the suite's")
+        self.assertLess(near.seconds[0], 35)
 
     def test_a_run_stops_before_the_row_whose_last_duration_would_cross_the_budget(self):
         root = tiny_project()

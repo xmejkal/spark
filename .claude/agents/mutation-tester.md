@@ -47,8 +47,8 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    `tests/mutations/*.json` lists the newest tables first (`p…` before `sprint-…`): a sweep that wants the oldest first
    lists them first. `python3 tools/mutate.py tests/mutations/*.json --tier-count` says beforehand how many rows each
    tier holds, and runs nothing. `--budget 20` stops the run before the row whose expected seconds (its ledger line's
-   `s`, else the median of this run's rows, else the pre-check suite's; a file's first row adds the pre-check suite's
-   seconds for its near check) would cross 20 minutes from the run's start,
+   `s`, else the median of this run's rows, else the pre-check suite's; a file's first row adds its near check: the largest
+   this run measured, else the pre-check suite's seconds) would cross 20 minutes from the run's start,
    the PO's budget for a sweep a person waits for (180 for a night slice). Its last line is `  budget 20 min: ran 42 of
    61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5); 19 left for the next sweep`; quote it byte for
    byte. A left row is not a pass: it did not run. Quote the left count in your report, never fold it into `caught`. A
