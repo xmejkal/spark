@@ -61,6 +61,17 @@ sweep runs the rows ([the mutation tester](../.claude/agents/mutation-tester.md)
 mutations, it always takes forever, lets be smart about it"* ([P714](https://github.com/xmejkal/spark/issues/963)); since
 2026-10-12 ([P208](https://github.com/xmejkal/spark/issues/175)) no pull request runs a table.
 
+**The sweep runs in tiers, within a budget** ([P787](https://github.com/xmejkal/spark/issues/1088), the plan the PO
+approved on 2026-11-12). The tiers (critical, new, proving, proven, retired) are facts `tools/mutate.py` reads from the row
+and the ledger `tests/mutations/ledger.jsonl`, which every run that plants rows writes; [the glossary](../GLOSSARY.md#mutation-and-the-mutation-table)
+defines them. A critical mark is written by hand on a row that guards a store write, a deploy, an erase or a refusal that
+protects the person, at most 40 in all (`tests/test_ledger.py` caps it). The sweep's command is `SPARK_HOME=... python3
+tools/mutate.py tests/mutations/*.json --for <the wave's files> --tier critical,new,proving --budget 20 --copy`; a night
+slice takes `--budget 180`; the proven rows run once per major release (`--tier proven`): the PO's rule, not a tool fact.
+A row the budget left is not a pass: the report quotes the left count. A row refused by `--anchors` in two sweeps is
+deleted in a pull request with its reason (`--retire` will list them, P787 PR 5); an escape never retires, it is a missing
+test.
+
 **A fixture that cannot see the defect is the defect** (W12, merged here 2026-10-09). When a mutation escapes, the
 first question is whether the fixture could have seen it at all. Four escapes in Sprint 3 were exactly that — three
 LEDs never reached the tie a penalty breaks; a fixture with no placeholder made two swapped sections invisible — and
