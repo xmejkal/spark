@@ -1,7 +1,7 @@
 """
-The choices a person makes on the tools lists, the operations /spark:setup runs on them: the file a choice is written
-to, a tool turned on (and installed) or off, and a tool of the person's own described. `tool_finder` holds the lists and
-the finding; this module writes the choices through its `choose` and `install`. Each function returns what the CLI
+The choices a person makes on the tools lists, the steps /spark:setup runs on them: the file a choice is written to, a
+tool turned on (and installed) or off, and a tool of the person's own described. `tool_finder` holds the lists and the
+finding; this module writes the choices through its `choose` and `install`. Each function returns what the CLI
 `scripts/tools.py` prints, and a refusal is a `ToolError` with its records code.
 """
 
@@ -16,9 +16,9 @@ from spark.records.tool_finder import ToolError, choose, install, merged, new_en
 
 
 def choice_file(project, personal):
-    """-> (the file a choice is written to, Claude Code's scope for it): the person's file and `user` with no project or
-    with `personal`, else the project's .spark/tools.json and `project`. It reads `tool_finder.PERSONAL` when called, so a
-    test that points it elsewhere is obeyed."""
+    """-> (the file a choice is written to, Claude Code's scope for it): the person's file and `user` with no project
+    or with `personal`, else the project's .spark/tools.json and `project`. It reads `tool_finder.PERSONAL` when called,
+    so a test that points it elsewhere is obeyed."""
     if personal or not project:
         return tool_finder.PERSONAL, "user"
     return Path(project) / tool_finder.PROJECT_FILE, "project"
@@ -34,8 +34,8 @@ def turn_on(name, project, where, scope, run=None):
 
 
 def turn_off(name, project, where, scope, run=None):
-    """Write `off` for the tool into `where`, and remove an MCP server from Claude Code at `scope`. Returns the sentence
-    to print before the tool is said off (a server that was not registered, or spark's own), or None."""
+    """-> the sentence to print before the tool is said off, or None. Writes `off` for the tool into `where` and removes
+    an MCP server from Claude Code at `scope`; the sentence says a server was not registered, or is spark's own."""
     entry = merged(project)["tools"].get(name, {})
     choose([name, "on"], False, where)
     if entry.get("kind") == "mcp" and entry.get("mcp"):
