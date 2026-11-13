@@ -1,0 +1,6 @@
+[
+  {"file": "tools/measure.py", "name": "P802: LEAVES drops idea_codes again, so U1 never checks the module that calls itself a leaf (test_architecture.ArchitectureRules.test_u1_every_module_that_calls_itself_a_leaf_is_one_of_the_leaves)",
+   "find": "\"firmware_codes\", \"idea_codes\", \"outcomes\"", "replace": "\"firmware_codes\", \"outcomes\""},
+  {"file": "tools/story_tests.py", "name": "P802: GOLDEN_NET_ELSEWHERE drops idea, so a changed idea module names test_golden_idea, which does not exist (test_story_tests.TheChangedFilesChooseTheTestsTest.test_every_area_of_the_tree_has_a_golden_net_that_exists)",
+   "find": "\"idea\": \"records\", ", "replace": ""}
+]
