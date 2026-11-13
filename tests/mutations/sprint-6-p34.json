@@ -8,8 +8,8 @@
  {
   "file": "scripts/check_physics.py",
   "name": "the physics exit code stops following its status",
-  "find": "    return EXIT_FOR[status]",
-  "replace": "    return EXIT_PROBLEMS if problems else EXIT_OK"
+  "find": "    return EXIT_FOR[result[\"status\"]]",
+  "replace": "    return EXIT_OK if result[\"status\"] == \"ok\" else EXIT_PROBLEMS"
  },
  {
   "file": "scripts/spark/checks/physics_check.py",

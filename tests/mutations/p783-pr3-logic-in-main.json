@@ -1,0 +1,8 @@
+[
+ {
+  "file": "scripts/spark/checks/physics_check.py",
+  "name": "P783 PR 3: the default rules file is looked for two folders up from the netlist, not three",
+  "find": "circuit_path.parent.parent.parent / \".spark/rules.json\"",
+  "replace": "circuit_path.parent.parent / \".spark/rules.json\""
+ }
+]

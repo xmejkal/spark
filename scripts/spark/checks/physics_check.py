@@ -28,14 +28,16 @@ depends on it is reported as `needs-measurement`, not as a pass and not as a fai
 whose worst risk is an unmeasured number should be told that, not given a green tick.
 """
 
+import json
 import math
+from pathlib import Path
 
 from spark.design import copper
 from spark.design import fab
 from spark.design.power_rails import GROUND_NETS
 from spark.checks import check_codes
 from spark.checks.build_check import package_of
-from spark.core.outcomes import COULD_NOT_RUN
+from spark.core.outcomes import COULD_NOT_RUN, status_of
 from spark.core.result import Refusal
 from spark.checks.physics_board import Board
 
@@ -512,3 +514,25 @@ def rules_or_reason(circuit_path, rules_path):
         return fab.read_rules(rules_path), None
     except fab.RulesError as refused:
         return None, Refusal(str(refused), check_codes.RULES_REFUSED)
+
+
+def run_on_files(circuit_path, rules_path=None):
+    """The dict `check_physics.py --json` prints, for a built netlist and a rules file: a refusal (`tool`, `status`
+    could-not-run, `reason`) when one is missing or refused, else `tool`, `status`, `design` and `findings`. `rules_path`
+    None is the project's `.spark/rules.json`, three folders up from the netlist. Reads the two files; writes nothing."""
+    circuit_path = Path(circuit_path)
+    rules_path = Path(rules_path or circuit_path.parent.parent.parent / ".spark/rules.json")
+    rules, reason = rules_or_reason(circuit_path, rules_path)
+    if reason:
+        return {"tool": "check_physics", "status": COULD_NOT_RUN, "reason": reason}
+
+    findings = run(json.loads(circuit_path.read_text()), rules)
+    problems = [f for f in findings if f.severity == PROBLEM]
+    # A rule that could not look has approved nothing: its could-not-run findings count, so the status and exit code are not `ok`.
+    unchecked = [f for f in findings if f.severity == COULD_NOT_RUN]
+    return {
+        "tool": "check_physics",
+        "status": status_of(problems, unchecked),
+        "design": circuit_path.name,
+        "findings": [f.as_data() for f in findings],
+    }
