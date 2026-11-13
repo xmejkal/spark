@@ -35,12 +35,15 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
    `python3 tools/mutate.py --anchors <table>` first, and fix each row that it refuses (a `find` that is missing or not unique, or a `replace` that does
    not compile or parse).
 3. Run the sweep's rows and your table in one call: `python3 tools/mutate.py tests/mutations/*.json <table> --for
-   <the sweep's files> --tier critical,new --budget 20 --copy`. Make one call, because each call also runs the whole suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes; the one file the run writes in the real tree is the ledger (step 5).
-   `--tier critical,new` runs the rows the ledger puts in those tiers (P787; the glossary has the five words): the
-   critical rows run every sweep, whatever the ledger says of them, because each carries `"tier": "critical"`, a mark
-   written by hand on a row that guards a store write, a deploy, an erase or a refusal that protects the person (at most
-   40; you never write one). The run's first line says which tiers and how many rows, as `  tiers critical,new: 42
-   row(s) selected (critical 12, new 30, proving 9, proven 10)`; quote it byte for byte. The new rows run in the tables' given order, and the glob
+   <the sweep's files> --tier critical,new,proving --budget 20 --copy`. Make one call, because each call also runs the whole suite twice. `--copy` mutates a temporary copy, so no file that a person or another agent has open changes; the one file the run writes in the real tree is the ledger (step 5).
+   `--tier critical,new,proving` runs the rows the ledger puts in those tiers (P787; the glossary has the five words):
+   the critical rows run every sweep, whatever the ledger says of them, because each carries `"tier": "critical"`, a
+   mark written by hand on a row that guards a store write, a deploy, an erase or a refusal that protects the person (at
+   most 40; you never write one); the proving rows run again so they can become proven. A retired row (refused in two
+   sweeps at its file's current content) is planted no more, unless it is critical: then it runs, and is refused, every
+   sweep until a PR deletes or re-anchors it. The run's first line says
+   which tiers and how many rows, as `  tiers critical,new,proving: 51 row(s) selected (critical 12, new 30, proving 9,
+   proven 10, retired 3)`; quote it byte for byte. The new rows run in the tables' given order, and the glob
    `tests/mutations/*.json` lists the newest tables first (`p…` before `sprint-…`): a sweep that wants the oldest first
    lists them first. `python3 tools/mutate.py tests/mutations/*.json --tier-count` says beforehand how many rows each
    tier holds, and runs nothing. `--budget 20` stops the run before the row whose expected seconds (its ledger line's
@@ -54,6 +57,11 @@ If the sweep's diff changes no logic, report `nothing to mutate` with one senten
 5. The run wrote `tests/mutations/ledger.jsonl` in the tree (P787): one line per row it planted, with the test that
    caught it, each written as soon as its row was done, so a run that was stopped kept them. Say so in your report, with `python3 tools/mutate.py --ledger`'s line; Claude, the main thread, commits it
    with the sweep's findings. Do not edit it.
+6. After the run, `python3 tools/mutate.py --retire` lists the rows the ledger shows refused in two sweeps at their
+   file's current content, one line each as `table:index name`, then `  N row(s) to retire: refused in two sweeps;
+   delete each with its reason in a PR, or re-anchor it`. Quote the list in your report. It runs nothing and
+   deletes nothing: the deleting PR, with each row's reason, is the main thread's. An escape is never retired: it is a
+   missing test.
 
 ## When a table is kept
 

@@ -1,8 +1,9 @@
 """
 The mutation ledger's own logic (P787): a row's key holds its file, the blob hash is git's, a merge lets the newer date win
-and adds the catches at one blob, the store reads an empty or missing file as empty and writes sorted lines, and a row's
-tier is read from its line and its file's blob (PR 2); the repository's critical marks stay under the PO's cap and name
-files that exist (PR 4).
+and adds the catches and the refusals at one blob, the store reads an empty or missing file as empty and writes sorted
+lines, and a row's tier is read from its line and its file's blob (PR 2); the repository's critical marks stay under the
+PO's cap and name files that exist (PR 4); a row refused twice at its file's current blob is retired, listed and never
+new again (PR 5).
 
     python3 -m unittest tests.test_ledger
 """
@@ -22,15 +23,15 @@ sys.path.insert(0, str(ROOT / "tools"))
 import ledger  # noqa: E402
 
 ROW = {"file": "m.py", "name": "add subtracts", "find": "return a + b", "replace": "return a - b"}
-FIELDS = ["key", "file", "blob", "date", "status", "by", "caught", "s"]
+FIELDS = ["key", "file", "blob", "date", "status", "by", "caught", "refused", "s"]
 #: At most this many rows carry `"tier": "critical"`: the PO's number (P787's plan, approved 2026-11-12), so the rows that
 #: run every sweep stay few, and a mark is a choice, never a default.
 CRITICAL_CAP = 40
 TABLES = sorted((ROOT / "tests" / "mutations").glob("*.json"))
 
 
-def a_line(key="k", blob="b1", date="2026-11-12T10:00:00+01:00", status=ledger.CAUGHT, by="test_m", caught=1, s=5):
-    return {"key": key, "file": "m.py", "blob": blob, "date": date, "status": status, "by": by, "caught": caught, "s": s}
+def a_line(key="k", blob="b1", date="2026-11-12T10:00:00+01:00", status=ledger.CAUGHT, by="test_m", caught=1, refused=0, s=5):
+    return {"key": key, "file": "m.py", "blob": blob, "date": date, "status": status, "by": by, "caught": caught, "refused": refused, "s": s}
 
 
 class TheRowKeyTest(unittest.TestCase):
@@ -51,8 +52,10 @@ class TheRowKeyTest(unittest.TestCase):
     def test_a_line_keeps_the_plan_s_order_and_counts_this_run_s_catch(self):
         line = ledger.line(ROW, "b1", "2026-11-12T10:00:00+01:00", ledger.CAUGHT, "test_m", 7)
         self.assertEqual(list(line), FIELDS)
-        self.assertEqual((line["key"], line["caught"], line["s"]), (ledger.row_key(ROW), 1, 7))
+        self.assertEqual((line["key"], line["caught"], line["refused"], line["s"]), (ledger.row_key(ROW), 1, 0, 7))
         self.assertEqual(ledger.line(ROW, "b1", "d", ledger.ESCAPED, ledger.ESCAPE, 1)["caught"], 0)
+        refused = ledger.line(ROW, "b1", "d", ledger.REFUSED, None, 0)
+        self.assertEqual((refused["caught"], refused["refused"]), (0, 1), "a refusal counts as one, as a catch does")
 
 
 class TheMergeTest(unittest.TestCase):
@@ -72,6 +75,23 @@ class TheMergeTest(unittest.TestCase):
         self.assertEqual(ledger.merged([kept], [dict(same, status=ledger.ESCAPED, by=ledger.ESCAPE, caught=0)])[0]["caught"], 2,
                          "an escape adds no catch, and the line says escaped")
 
+    def test_refusals_at_the_same_blob_add_up_as_catches_do_and_a_changed_blob_starts_again(self):
+        # PR 5: "refused in two sweeps" is a count across runs, kept by the ledger as `caught` is.
+        kept = a_line(blob="b1", status=ledger.REFUSED, by=None, caught=1, refused=1, date="2026-11-12T10:00:00+01:00")
+        same = a_line(blob="b1", status=ledger.REFUSED, by=None, caught=0, refused=1, date="2026-11-12T11:00:00+01:00")
+        merged = ledger.merged([kept], [same])[0]
+        self.assertEqual((merged["status"], merged["caught"], merged["refused"]), (ledger.REFUSED, 1, 2), "the catch count is kept too (row 49)")
+        self.assertEqual(ledger.merged([kept], [dict(same, blob="b2")])[0]["refused"], 1, "the file changed: the count starts again")
+
+    def test_an_eight_field_line_from_before_the_refused_count_merges_and_tiers_without_a_crash(self):
+        # The refuter of PR 5: a sweep on main writes eight-field lines until this merges; they read as no refusal.
+        old = a_line(blob="b1", status=ledger.REFUSED, by=None, caught=0)
+        del old["refused"]
+        fresh = a_line(blob="b1", status=ledger.REFUSED, by=None, caught=0, refused=1, date="2026-11-12T11:00:00+01:00")
+        self.assertEqual(ledger.merged([old], [fresh])[0]["refused"], 1, "the old line counts no refusal")
+        self.assertFalse(ledger.is_retired(old, "b1"))
+        self.assertEqual(ledger.tier_of(ROW, old, "b1"), ledger.NEW)
+
     def test_the_merge_is_sorted_by_key_and_keeps_lines_the_run_did_not_touch(self):
         self.assertEqual([entry["key"] for entry in ledger.merged([a_line(key="c"), a_line(key="a")], [a_line(key="b")])], ["a", "b", "c"])
 
@@ -90,12 +110,13 @@ class TheTiersTest(unittest.TestCase):
         self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", caught=5), None), ledger.NEW, "a file that is not there has no blob")
         self.assertEqual(ledger.tier_of(ROW, a_line(blob=None, caught=2), None), ledger.NEW,
                          "a hand-written line with no blob meets a gone file: still new, never proven (the refuter of PR 2)")
-        self.assertEqual(ledger.TIERS, ("critical", "new", "proving", "proven"))
+        self.assertEqual(ledger.TIERS, ("critical", "new", "proving", "proven"), "the tiers a sweep runs, in its order")
+        self.assertEqual(ledger.TIER_WORDS, ("critical", "new", "proving", "proven", "retired"))
 
-    def test_an_escaped_or_refused_line_at_the_current_blob_is_new_again(self):
+    def test_an_escaped_or_once_refused_line_at_the_current_blob_is_new_again(self):
         # Row 49: a refused line keeps its count from the same blob (`merged` adds 0), so status and count are read together.
         self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", status=ledger.ESCAPED, by=ledger.ESCAPE, caught=2), "b1"), ledger.NEW)
-        self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", status=ledger.REFUSED, by=None, caught=2), "b1"), ledger.NEW)
+        self.assertEqual(ledger.tier_of(ROW, a_line(blob="b1", status=ledger.REFUSED, by=None, caught=2, refused=1), "b1"), ledger.NEW)
 
     def test_the_selection_runs_critical_then_new_in_the_tables_order_then_proving_then_proven_oldest_first(self):
         root = Path(tempfile.mkdtemp())
@@ -109,14 +130,53 @@ class TheTiersTest(unittest.TestCase):
                  a_line(key=ledger.row_key(rows[4]), blob=blob, caught=4, date="2026-11-01T10:00:00+01:00"),
                  a_line(key=ledger.row_key(critical), blob=blob, caught=2)]
         tiers = ledger.tiers_of(root, rows, lines)
-        self.assertEqual(tiers.counts(), {"critical": 1, "new": 2, "proving": 1, "proven": 2})
+        self.assertEqual(tiers.counts(), {"critical": 1, "new": 2, "proving": 1, "proven": 2, "retired": 0})
         self.assertEqual([row["name"] for row in tiers.selected(ledger.TIERS)],
                          ["critical", "new-1", "new-2", "proving", "proven-early", "proven-late"])
         self.assertEqual([row["name"] for row in tiers.selected(["proven", "new"])], ["new-1", "new-2", "proven-early", "proven-late"],
                          "the sweep's order, not the caller's")
         self.assertEqual(tiers.selected([]), [])
-        self.assertEqual(ledger.tiers_of(root, rows, []).counts(), {"critical": 1, "new": 5, "proving": 0, "proven": 0},
+        self.assertEqual(ledger.tiers_of(root, rows, []).counts(), {"critical": 1, "new": 5, "proving": 0, "proven": 0, "retired": 0},
                          "an empty ledger makes every row new but the critical one")
+
+
+class TheRetiredRowsTest(unittest.TestCase):
+    """P787 PR 5: a row refused in two sweeps at its file's current blob is retired: listed for a deleting PR, never new again."""
+
+    def refused(self, blob="b1", refused=2, **more):
+        return a_line(blob=blob, status=ledger.REFUSED, by=None, caught=0, refused=refused, **more)
+
+    def test_a_row_refused_twice_at_the_current_blob_is_retired_and_once_is_not(self):
+        self.assertTrue(ledger.is_retired(self.refused(refused=2), "b1"))
+        self.assertTrue(ledger.is_retired(self.refused(refused=3), "b1"))
+        self.assertFalse(ledger.is_retired(self.refused(refused=1), "b1"), "one refusal: --anchors' business, the row is new")
+        self.assertFalse(ledger.is_retired(None, "b1"), "no line: never run")
+        self.assertEqual(ledger.RETIRED_AT, 2, "the plan: refused in two sweeps")
+
+    def test_a_row_refused_twice_at_an_older_blob_is_not_retired(self):
+        # The blob rule: the file changed since, and the anchor may be back; the next sweep refuses it again, or not.
+        self.assertFalse(ledger.is_retired(self.refused(blob="b0", refused=2), "b1"))
+        self.assertFalse(ledger.is_retired(self.refused(blob="b1", refused=5), None), "the file is gone since the refusals")
+        self.assertTrue(ledger.is_retired(self.refused(blob=None, refused=2), None), "gone then and gone now: the same content, none")
+
+    def test_an_escape_or_a_catch_never_retires_whatever_the_refusal_count_says(self):
+        # W3: an escape is a missing test. A catch at this blob says the row works now: the last word decides.
+        self.assertFalse(ledger.is_retired(a_line(blob="b1", status=ledger.ESCAPED, by=ledger.ESCAPE, caught=0, refused=2), "b1"))
+        self.assertFalse(ledger.is_retired(a_line(blob="b1", status=ledger.CAUGHT, caught=1, refused=2), "b1"))
+
+    def test_a_retired_row_is_in_the_retired_tier_and_no_sweep_selects_it(self):
+        self.assertEqual(ledger.tier_of(ROW, self.refused(), "b1"), ledger.RETIRED)
+        self.assertEqual(ledger.tier_of(dict(ROW, tier="critical"), self.refused(), "b1"), ledger.CRITICAL,
+                         "the row's own key first: a critical row runs every sweep until the PR deletes or re-anchors it")
+        root = Path(tempfile.mkdtemp())
+        (root / "m.py").write_text("x\n")
+        blob = ledger.blob_of(b"x\n")
+        retired, fresh = dict(ROW, name="retired", find="gone"), dict(ROW, name="fresh", find="x")
+        tiers = ledger.tiers_of(root, [retired, fresh], [self.refused(key=ledger.row_key(retired), blob=blob)])
+        self.assertEqual(tiers.counts(), {"critical": 0, "new": 1, "proving": 0, "proven": 0, "retired": 1})
+        self.assertEqual([row["name"] for row in tiers.selected(ledger.TIERS)], ["fresh"], "a retired row is not new: not planted again")
+        self.assertEqual(tiers.selected([ledger.RETIRED]), [], "and naming the word selects nothing: --retire lists, a PR deletes")
+        self.assertEqual([row["name"] for row in tiers.rows[ledger.RETIRED]], ["retired"])
 
 
 class TheLedgerStoreTest(unittest.TestCase):
@@ -134,7 +194,7 @@ class TheLedgerStoreTest(unittest.TestCase):
         store.record([a_line(key="a", date="2026-11-13T10:00:00+01:00", status=ledger.REFUSED, by=None, caught=0)])
         self.assertEqual([(entry["key"], entry["status"]) for entry in store.read()], [("a", ledger.REFUSED), ("b", ledger.ESCAPED)])
 
-    def test_the_repository_s_ledger_is_sorted_json_lines_with_the_eight_fields(self):
+    def test_the_repository_s_ledger_is_sorted_json_lines_with_the_nine_fields(self):
         path = ROOT / "tests" / "mutations" / ledger.LEDGER_NAME
         self.assertTrue(path.is_file(), "%s is in git, empty until the first run" % path)
         lines = ledger.LedgerStore(path).read()

@@ -166,12 +166,17 @@ guards a store write, a deploy, an erase or a refusal that protects the person (
 rule; at most 40 rows carry it (the PO's cap, 2026-11-12; `tests/test_ledger.py` fails above it and on a mark whose file
 is gone), so adding one means dropping one. *New*: no ledger line at the row's file's
 current blob (never run, or the file changed since), or a line there that says `escaped` (a missing test: it runs
-again) or `refused` (`--anchors`' business). *Proving*: caught once at the current blob. *Proven*: caught twice or more
-there; an edit of the file makes it new again, by the blob rule alone. *Retired*: refused in two sweeps, listed for a
-deleting PR; not yet decided by the tool. `python3 tools/mutate.py tests/mutations/*.json --tier critical,new --budget 20 --copy`
+again) or `refused` once (`--anchors`' business). *Proving*: caught once at the current blob. *Proven*: caught twice or
+more there; an edit of the file makes it new again, by the blob rule alone. *Retired*: refused in two sweeps at the
+current blob (the ledger's `refused` count, kept beside `caught`), decided by the tool: no sweep plants it again, and
+`python3 tools/mutate.py --retire` lists every such row of the tables beside the ledger, one line each as `table:index
+name`, then `N row(s) to retire: refused in two sweeps; delete each with its reason in a PR, or re-anchor it`; the
+tool deletes nothing, a PR does, with the row's reason in its rows file. A critical row refused twice stays critical and
+runs every sweep, and `--retire` lists it all the same, so its count can be above `--tier-count`'s `retired`. An escape
+never retires: it is a missing test (W3). `python3 tools/mutate.py tests/mutations/*.json --tier critical,new,proving --budget 20 --copy`
 runs the named tiers in the sweep's order, critical, new in the tables' given order (name the oldest table first),
-proving, proven oldest date first, and its first line says which tiers and how many rows; `--tier-count` counts the
-rows of each tier and runs nothing. A row with no line is new, never proven.
+proving (so a row can become proven), proven oldest date first, and its first line says which tiers and how many rows;
+`--tier-count` counts the rows of each of the five tiers and runs nothing. A row with no line is new, never proven.
 
 **The budget.** `--budget MINUTES` counts from the run's start, the fixed overhead inside it (the copy, the pre-check
 suite). Before each row the tool asks whether the row's expected seconds would cross what is left, and stops there:
