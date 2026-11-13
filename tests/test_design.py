@@ -569,6 +569,14 @@ class APartSignalIsPinnedByNameTest(unittest.TestCase):
             loader.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D13", "bus": "spi"}]))
         self.assertIn("signals[0] pins dfr0664-tft-2in's TFT_BL and also gives bus;", str(caught.exception))
 
+    def test_a_pinning_entry_that_says_where_it_is_from_is_refused_too(self):
+        # a resolved signal carries `from`: copied back into `signals`, it is refused by name
+        with self.assertRaises(loader.DesignError) as caught:
+            loader.load(self.load(["dfr0664-tft-2in"], [{"name": "TFT_BL", "pin": "D13", "from": "dfr0664-tft-2in"}]))
+        self.assertEqual(str(caught.exception), "signals[0] pins dfr0664-tft-2in's TFT_BL and also gives from; an entry "
+                                                 "that pins a part's signal holds only `name` and `pin`, and the part's "
+                                                 "record says the rest")
+
     def test_a_pin_on_a_bus_line_is_refused_by_name(self):
         # Review of #727: MOSI pinned to D13 landed on GPIO21, and a second SPI part then took GPIO15 — a split bus, exit 0.
         for parts in (["dfr0664-tft-2in"], ["dfr0664-tft-2in", {"part": "dfr0664-tft-2in", "name": "Two"}]):
