@@ -96,13 +96,13 @@ def as_node(entry):
             "waitingSince": named(entry.get("waiting since"), "date")}
 
 
-def gh_pages(spark=(), bin_cards=(), says=None, titles=("spark", "the bin"), cost=1, endless=False):
+def gh_pages(spark=(), bin_cards=(), says=None, titles=("spark", "the bin"), cost=1, endless=False, remaining=None):
     """
     A gh answering board_read's queries: the project list (board_read.PROJECTS) with the projects titled `titles` —
     spark's numbered 2, the bin's 1 — and each board's pages, 100 cards a page after the cursor asked, from `spark` and
     `bin_cards` (cards of item()'s shape or nodes; an exception is raised). `says` {number: totalCount} makes a board claim
     more than it holds; `endless` keeps hasNextPage true on spark's board. Every answer costs `cost` and leaves 4,000 less
-    the calls asked. Returns it with the arguments of every call.
+    the calls asked, or `remaining(n)` for the nth call. Returns it with the arguments of every call.
     """
     asked = []
 
@@ -122,7 +122,8 @@ def gh_pages(spark=(), bin_cards=(), says=None, titles=("spark", "the bin"), cos
                      "pageInfo": {"hasNextPage": after + 100 < len(cards) or (endless and number == 2),
                                   "endCursor": str(after + 100)}}
             answer = {"user": {"projectV2": {"id": "P", "items": items, "statusUpdates": {"nodes": []}}}}
-        answer["rateLimit"] = {"cost": cost, "remaining": 4000 - len(asked), "limit": 5000}
+        left = remaining(len(asked)) if remaining else 4000 - len(asked)
+        answer["rateLimit"] = {"cost": cost, "remaining": left, "limit": 5000}
         return mock.Mock(stdout=json.dumps({"data": answer}))
     return run, asked
 
@@ -760,12 +761,19 @@ class TheWholeBoardTest(unittest.TestCase):
         self.assertIn("  backlog: could-not-run — the spark board holds 2 items and none of them was read as an issue; the "
                       "limits were not checked\n", printed)
 
-    def test_a_null_project_is_could_not_run_with_its_cause(self):
-        # An answer the gate cannot read is a look it could not make, said with its kind — never a traceback.
+    def test_a_null_project_is_could_not_run_naming_its_number(self):
+        # GitHub answers a number with no project as null: a look it could not make, named — never a traceback.
         def run(args, **kwargs):
             if "query=" + board_read.PROJECTS in args:
                 return mock.Mock(stdout=json.dumps({"data": {"user": {"projectsV2": {"nodes": [{"number": 2, "title": "spark"}]}}}}))
             return mock.Mock(stdout=json.dumps({"data": {"user": {"projectV2": None}}}))
+        code, printed = self.said(run)
+        self.assertEqual((code, printed), (0, "  backlog: could-not-run — gh or the network could not be reached (no project "
+                                              "numbered 2 under xmejkal); the limits were not checked\n"))
+
+    def test_a_project_list_answering_no_user_is_could_not_run_not_a_traceback(self):
+        def run(args, **kwargs):
+            return mock.Mock(stdout=json.dumps({"data": {"user": None}}))
         code, printed = self.said(run)
         self.assertEqual((code, printed), (0, "  backlog: could-not-run — gh or the network could not be reached (TypeError); the "
                                               "limits were not checked\n"))
@@ -779,6 +787,12 @@ class TheWholeBoardTest(unittest.TestCase):
         self.assertIn("the board read cost 51 GraphQL points in 3 calls", printed)
         code, printed = self.said(gh_pages([item(1, "Idea")], cost=16)[0])  # 48: a whole look under the floor is quiet
         self.assertNotIn("GraphQL points", printed)
+
+    def test_the_cost_line_gives_the_lowest_remaining_when_the_answers_come_out_of_order(self):
+        # Seen on 2026-11-13: GitHub's answers carried 4377, 4284, 4376 — the last one is not the latest.
+        left = {1: 4377, 2: 4284, 3: 4376}
+        code, printed = self.said(gh_pages([item(1, "Idea")], cost=20, remaining=left.get)[0])
+        self.assertIn("  backlog: the board read cost 60 GraphQL points in 3 calls; 4,284 of 5,000 left this hour\n", printed)
 
     def test_no_cost_line_when_no_call_answered(self):
         def run(*args, **kwargs):

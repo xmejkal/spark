@@ -105,6 +105,8 @@ def _page(number, after, ask, spent):
     data = _asked(ask, spent, "-f", "query=" + QUERY, "-F", "login=" + OWNER, "-F", "number=%d" % number, *cursor)
     try:
         project = data["user"]["projectV2"]
+        if project is None:  # GitHub answers a number with no project as null: say which, not a TypeError
+            raise Unreadable("no project numbered %d under %s" % (number, OWNER))
         project["items"]["totalCount"], project["items"]["pageInfo"]["hasNextPage"]  # the shape, or Unreadable here
         return project
     except FAILURES as error:

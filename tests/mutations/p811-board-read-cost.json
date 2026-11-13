@@ -14,5 +14,8 @@
   {"file": "tools/check_backlog.py", "name": "P811: the floor is ten points higher", "find": "sum(each[\"cost\"] for each in spent) > COST_FLOOR):", "replace": "sum(each[\"cost\"] for each in spent) > COST_FLOOR + 10):"},
   {"file": "tools/check_backlog.py", "name": "P811: a look without the bin's board is whole", "find": "    return (1 if said else 0), lines, bin_items is not None, spent\n", "replace": "    return (1 if said else 0), lines, True, spent\n"},
   {"file": "tools/check_backlog.py", "name": "P811: the gate judges a spark board read in part", "find": "    if short:\n        raise PartialRead(short)\n", "replace": "    if False:\n        raise PartialRead(short)\n"},
-  {"file": "tools/check_backlog.py", "name": "P811: a bin board read in part fails the whole look", "find": "    except (PartialRead, board_read.Unreadable) as unread:\n", "replace": "    except board_read.Unreadable as unread:\n"}
+  {"file": "tools/check_backlog.py", "name": "P811: a bin board read in part fails the whole look", "find": "    except (PartialRead, board_read.Unreadable) as unread:\n", "replace": "    except board_read.Unreadable as unread:\n"},
+  {"file": "tools/board_read.py", "name": "P811 review: the project list catches only a missing key", "find": "[\"nodes\"]}\n    except FAILURES as error:\n", "replace": "[\"nodes\"]}\n    except KeyError as error:\n"},
+  {"file": "tools/check_backlog.py", "name": "P811 review: the cost line gives the last answer's remaining", "find": "\"{:,}\".format(min(each[\"remaining\"] for each in spent))", "replace": "\"{:,}\".format(spent[-1][\"remaining\"])"},
+  {"file": "tools/board_read.py", "name": "P811 review: a null project is named by its kind, not its number", "find": "        if project is None:  # GitHub answers", "replace": "        if False:  # GitHub answers"}
 ]

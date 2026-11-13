@@ -90,7 +90,7 @@ BENCH = "bench"
 #: Under this many GraphQL points a whole look stays quiet about its cost (P811): a normal push reads about 9 (a page per
 #: 100 items, the project list); more than this says the cost, as does a look that was not whole.
 COST_FLOOR = 50
-#: The cost line: GitHub's own rateLimit.cost summed over the calls that answered, and what the last answer left.
+#: The cost line: GitHub's own rateLimit.cost summed over the calls that answered, and the lowest remaining they gave.
 COST_LINE = "  backlog: the board read cost %d GraphQL points in %d calls; %s of %s left this hour"
 
 def _section(body, name):
@@ -301,10 +301,13 @@ def fetch(spent=None):
 
 
 def cost_line(spent):
-    """COST_LINE over `spent`, the rateLimit of each answer: their costs summed, the last one's remaining; None for none."""
+    """
+    COST_LINE over `spent`, the rateLimit of each answer: their costs summed, and the lowest remaining of them — GitHub's
+    answers come back out of order, so the last one's may not be the latest; None for none.
+    """
     if not spent:
         return None
-    return COST_LINE % (sum(each["cost"] for each in spent), len(spent), "{:,}".format(spent[-1]["remaining"]),
+    return COST_LINE % (sum(each["cost"] for each in spent), len(spent), "{:,}".format(min(each["remaining"] for each in spent)),
                         "{:,}".format(spent[-1]["limit"]))
 
 

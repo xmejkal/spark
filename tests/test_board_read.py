@@ -65,8 +65,13 @@ class TheReaderTest(unittest.TestCase):
 
         def null(*args):
             return {"data": {"user": {"projectV2": None}}}
-        with self.assertRaisesRegex(board_read.Unreadable, "^TypeError$"):
+        with self.assertRaisesRegex(board_read.Unreadable, "^no project numbered 2 under xmejkal$"):
             board_read.read_board(2, null)
+
+        def no_user(*args):
+            return {"data": {"user": None}}
+        with self.assertRaisesRegex(board_read.Unreadable, "^TypeError$"):
+            board_read.projects(no_user)
 
         def refused(*args):
             raise RuntimeError("HTTP 502: Bad Gateway")

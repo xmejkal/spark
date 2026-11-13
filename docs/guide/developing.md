@@ -141,10 +141,10 @@ It reports:
 
 - the story run of the suite, as committed: `story run: Ran N tests in S s (K slow tests skipped; F of T test files; the full run is
   check_commit.py --full)`. If the hook cannot choose, the line is the quick run's, `quick run: Ran N of M tests in S s (K slow tests skipped; ...)`, and a line that starts `no story run:` gives the reason. A red run names its red tests right under the verdict line, before that reason: each `FAIL:`, `ERROR:` and `...Error:` line indented, for the first five red tests, then `… and K more red tests` ([P797](https://github.com/xmejkal/spark/issues/1110)). The skipped count is only the `@slow` tests, never a real skip such as a missing tool. The
-  seconds are the tests alone; the board check (a few seconds since [P811](https://github.com/xmejkal/spark/issues/1153)) and the size line come on top, and the gate prints its
-  whole time. No budget fails the push: the time is printed and not capped, as the size line is
-  ([W15](../../scrum/WORKING_AGREEMENTS.md#w15--an-orphan-fails-the-suite)),
-  and the retro decides any cap. The whole push takes the tests' seconds plus about 18 s;
+  seconds are the tests alone, and the board check and the size line come on top: the gate prints its whole time. The
+  board check reads both boards at about 1 GraphQL point per 100 cards ([P811](https://github.com/xmejkal/spark/issues/1153)).
+  No budget fails the push: the time is printed and not capped, as the size line is
+  ([W15](../../scrum/WORKING_AGREEMENTS.md#w15--an-orphan-fails-the-suite)), and the retro decides any cap;
 - what the suite left behind ([P172](https://github.com/xmejkal/spark/issues/112)): the suite runs with an empty temp
   folder of the gate's own, and anything left in it fails the push with one line,
   `temp: the suite left N entries behind (…) — P172`. A folder the gate cannot list is could-not-run, which exits 2
