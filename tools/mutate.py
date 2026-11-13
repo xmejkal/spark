@@ -538,7 +538,7 @@ def sigterm_held():
     Inside, a SIGTERM waits (main thread only), and arrives after, to the handler of sigterm_as_exit, which exits 143.
     Held: a scratch folder's removal, which the handler's SystemExit would stop half way; a folder made and its name
     stored, so the `finally` finds it (the copy, each run's and import check's folder); the lock's removal (P805). A child
-    started inside (copy_of's `git ls-files`, about 0.6 s with the copy) inherits the blocked SIGTERM for its few ms.
+    started inside (copy_of's `git ls-files`, during a copy of well under a second) inherits the blocked SIGTERM for its few ms.
     """
     if threading.current_thread() is not threading.main_thread():
         yield
