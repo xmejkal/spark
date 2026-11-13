@@ -1,0 +1,50 @@
+[
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784: the record's refusal does not stop the keep, so a part with no record or spark's library still gets the file kept (test_parts.EverythingFoundIsKeptTest.test_keep_for_a_part_with_no_record_is_a_problem_on_its_id_and_keeps_nothing)",
+  "find": "                if listed[0].problems:\n                    return Answer(problems=listed[0].problems, diagnostics=said)",
+  "replace": "                if False:\n                    return Answer(problems=listed[0].problems, diagnostics=said)"
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784: the real keep is never listed, so --kept finds the file by its name alone (test_parts.EverythingFoundIsKeptTest.test_keep_for_a_part_lists_the_file_in_its_record_and_kept_finds_it_by_its_url_and_its_record)",
+  "find": "        if part_id and not dry_run:  # the written entry is the real keep's",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784: the same bytes kept again are listed again under a second key (test_parts.EverythingFoundIsKeptTest.test_the_same_bytes_kept_twice_for_a_part_are_listed_once_and_the_line_names_the_entry)",
+  "find": "isinstance(one, dict) and one.get(\"sha256\") == entry[\"sha256\"]),",
+  "replace": "isinstance(one, dict) and False),"
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784: the documents the record lists are not read, so the whole-dict write drops them (test_parts.EverythingFoundIsKeptTest.test_keep_for_a_part_keeps_the_documents_the_record_already_lists)",
+  "find": "    documents = documents if isinstance(documents, dict) else {}",
+  "replace": "    documents = {}"
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784: a documents that is no object is written over (test_parts.EverythingFoundIsKeptTest.test_keep_for_a_part_whose_documents_is_no_object_is_refused_and_keeps_nothing)",
+  "find": "    return [] if held is None or isinstance(held, dict) else [",
+  "replace": "    return [] if True else ["
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784: a file kept for no record says nothing of it (test_parts.EverythingFoundIsKeptTest.test_keep_without_a_part_says_no_record_lists_it)",
+  "find": "        return [NOT_LISTED % (\"would be kept\" if dry_run else \"kept\")]",
+  "replace": "        return []"
+ },
+ {
+  "file": "scripts/spark/sourcing/datasheets.py",
+  "name": "P784: the store scan names --project when one was given and not when none was (test_parts.EverythingFoundIsKeptTest.test_kept_names_project_only_when_none_was_given)",
+  "find": "\"\" if project else \" (a project's records need --project)\"",
+  "replace": "\" (a project's records need --project)\" if project else \"\""
+ },
+ {
+  "file": "scripts/spark/sourcing/find_kept.py",
+  "name": "P784: finding nothing names --project when one was given and not when none was (test_parts.EverythingFoundIsKeptTest.test_kept_names_project_only_when_none_was_given)",
+  "find": "\"\" if project else \", or name the project with --project\"",
+  "replace": "\", or name the project with --project\" if project else \"\""
+ }
+]
