@@ -12,7 +12,8 @@ from spark.core.cli import HelpText, run_cli
 EPILOG = """It reads the board with `mpremote devs` (the list of boards on USB) and `esptool flash-id`. It writes nothing,
 erases nothing and changes no flash. The board restarts while esptool reads it: a running program stops and starts again.
 Nothing else on the board is touched. The board's record is the one requirements.json names. The look compares the chip
-and the flash size, and prints each as same, differs or unknown. It also prints the board's MAC.
+and the flash size, and prints each as same, differs or unknown. It also prints the board's MAC, and on its micropython
+line the MicroPython banner of the image it would flash, read from the file, never from the board (P779).
 
 The verdict: another chip, or a flash smaller than the image, is a stop (deploy.py will refuse). A flash that differs
 but holds the image, or a field that is unknown, is a warning that the person must accept. The token is two halves of 4

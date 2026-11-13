@@ -133,7 +133,8 @@ class LiveScriptTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("does not read its console", said)
         self.assertEqual([command for command in ran if "reset" in command], [])
-        self.assertIn("  check   console: the console was silent for 2 s\n", said)
+        self.assertIn("  check   console: the console was silent for 2 s (a firmware that prints nothing and a board that does "
+                      "not answer sound the same here)\n", said)
         self.assertTrue(said.rstrip().endswith("if not  unplug the board, plug it in again, and run it again"))
 
     def test_a_silent_board_s_json_carries_the_doctor_s_codes(self):

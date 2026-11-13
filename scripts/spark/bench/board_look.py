@@ -11,13 +11,15 @@ The seams are the readers: `BoardReader` is how a board is read, and `EsptoolRea
     compare        each field of the reading against the record: same, differs or unknown.
     LookService    the project's record, the port, the reading, the LookReport.
     LookReport     the verdict (match, warning or stop), the exit status and the token, as a dict too.
-    report_lines   the lines a person reads, for a LookReport.
+    report_lines   the lines a person reads, for a LookReport, with the MicroPython banner of the image (P779).
 
 A board restarts when esptool reads it. Nothing is erased or written.
 """
 
+import functools
 import hashlib
 import json
+import os
 import re
 import subprocess
 from collections import namedtuple
@@ -29,6 +31,7 @@ from spark.records import brief
 from spark.records import deploy_record_store
 from spark.bench import flasher
 from spark.core import outcomes
+from spark.firmware import image_builder
 from spark.firmware import project_image
 from spark.firmware import sim_project
 from spark.records import tool_finder
@@ -344,6 +347,16 @@ class LookReport:
             return NoToken(board_codes.NO_MAC, "the board's MAC could not be read")
         return NoToken(self.image_code, self.image_why) if self.image_why else None
 
+    @functools.cached_property
+    def micropython_banner(self):
+        """The MicroPython banner the image file holds (image_builder.banner_in), None when it holds none, there is no image,
+        or the file cannot be read now (P779). It is read even when the evidence refused the image, which may not have read
+        the file (NoSimulationEvidence), so a file gone or unreadable since the look found it is None, never a crash."""
+        try:
+            return image_builder.banner_in(self.image.read_bytes()) if self.image else None
+        except OSError:
+            return None
+
     def token(self):
         """4 hex of sha256(MAC), a dash, 4 hex of sha256(image): this board, this image. None when there is no_token_reason."""
         if self.no_token_reason():
@@ -351,9 +364,11 @@ class LookReport:
         return "%s-%s" % (board_token(self.reading.mac), hashlib.sha256(self.image.read_bytes()).hexdigest()[:4])
 
     def to_dict(self):
-        """The facts of the look as plain JSON values, for `--json` (P213). `board` is the record's id; the image is not in it."""
+        """The facts of the look as plain JSON values, for `--json` (P213). `board` is the record's id. Of the image it holds
+        the token and `micropython_banner`, the banner read from the image file (null when it holds none or there is no
+        image), never its path; `last_deploy` holds the banner the store's record kept (P779)."""
         return {"port": self.port, "also_on": None if self.also_on is None else list(self.also_on), "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
-                "board": self.record["id"], "fields": dict(self.fields), "stops": [stop.sentence for stop in self.stops],
+                "micropython_banner": self.micropython_banner, "board": self.record["id"], "fields": dict(self.fields), "stops": [stop.sentence for stop in self.stops],
                 "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
                 "status": self.status, "token": self.token(),
                 "no_token_reason": self.no_token_reason() and self.no_token_reason().sentence,
@@ -368,13 +383,24 @@ def say_last_deploy(last):
     """The look's line for `last`, a deploy_record_store.LastDeploy. `deploy_gate.say_last_deploy_in_question` says the same
     deploy in the deploy question's words."""
     if last.state == outcomes.RECORDED:
-        said = printable("%s, %s, %s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said()))
+        said = printable("%s, %s, %s%s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said(),
+                                                                                       last.banner_said()))
     elif last.state == outcomes.NONE_RECORDED:
         said = "none in its store record (it keeps only its own deploys)"
     else:
         said = outcomes.NOT_CHECKED_MESSAGE % last.why
     return "spark's last deploy here: " + said
 # --- end MVP ---
+
+
+def say_image_banner(report):
+    """The look's line for the MicroPython banner of the image it would flash, a LookReport's (P779): read from the file, never
+    from the board. `say_last_deploy` says the banner the store's record kept; an equal one is not the same image."""
+    if report.image is None or not os.access(report.image, os.R_OK):  # none, or gone or unreadable since the look found it
+        return "micropython  no image"
+    if report.micropython_banner:
+        return "micropython  %s (in the image)" % report.micropython_banner
+    return "micropython  no banner in the image"
 
 
 # --- MVP ---
@@ -391,7 +417,7 @@ def report_lines(report, token=True, indent=INDENT):
     reading, name = report.reading, report.record["id"]
     shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
     out = [RESTART_NOTICE, "port   %s%s" % (report.port, ALSO_ON % ", ".join(report.also_on) if report.also_on else ""), "mac    %s" % (reading.mac or "not read"),
-           say_last_deploy(report.last_deploy)]
+           say_last_deploy(report.last_deploy), say_image_banner(report)]
     out += ["%-6s %-9s %s" % (field, report.fields[field], shown[field] or "not read") for field in shown]
     out += ["%s: deploy.py will refuse." % stop.sentence for stop in report.stops]
     out += ["%s. deploy.py will ask you to accept it." % warning for warning in report.warnings]

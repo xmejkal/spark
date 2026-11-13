@@ -147,7 +147,8 @@ def say_last_deploy_in_question(last):
     """The words the deploy question puts in its erase sentence, for `last`, a deploy_record_store.LastDeploy.
     `board_look.say_last_deploy` says the same deploy in the look's words."""
     if last.state == outcomes.RECORDED:
-        return printable("spark's store record names %s as its last deploy here, %s, %s" % (last.project, last.time_said(), last.verdict))
+        return printable("spark's store record names %s as its last deploy here, %s, %s%s" % (last.project, last.time_said(), last.verdict,
+                                                                                         last.banner_said()))
     if last.state == outcomes.NONE_RECORDED:
         return "spark's store record names no deploy here"
     return "spark did not read its record of this board: %s" % last.why

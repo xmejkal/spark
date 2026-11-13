@@ -54,6 +54,11 @@ class LastDeployCase(unittest.TestCase):
             with self.subTest(stored=stored):
                 self.assertEqual(deploy_record_store.LastDeploy("recorded", "p", "ready seen", stored).time_said(), stored)
 
+    def test_the_banner_said_follows_a_comma_or_is_nothing(self):
+        last = deploy_record_store.LastDeploy("recorded", "p", "ready seen", "d")
+        self.assertEqual((last.banner_said(), last._replace(micropython_banner="MicroPython v1.29.0 on 2026-08-24").banner_said()),
+                         ("", ", MicroPython v1.29.0 on 2026-08-24"))
+
     def test_a_utc_z_time_is_said_in_the_machine_zone(self):
         last = deploy_record_store.LastDeploy("recorded", "p", "ready seen", "2026-10-23T04:55:29Z")
         self.assertEqual(last.time_said(), "2026-10-23T06:55:29+02:00")
@@ -110,10 +115,11 @@ class ReadLastDeployTest(LastDeployCase):
         record = json.loads(path.read_text())
         self.assertEqual((record["mac"], record["board"]), (MAC, "xiao-esp32-c6"))
         self.assertEqual(record["deploys"], [{"project": "blink-c6", "image_sha256": "0", "deployed": "2026-10-19T09:24:50+02:00",
-                                              "verdict": "ready seen", "simulation": "passed", "yes": "a test"}])
+                                              "verdict": "ready seen", "simulation": "passed", "yes": "a test",
+                                              "micropython_banner": None}])
         last = STORE.read_last_deploy(MAC)
         self.assertEqual(last.to_dict(), {"state": "recorded", "why": None, "project": "blink-c6", "verdict": "ready seen",
-                                          "deployed": "2026-10-19T09:24:50+02:00"})
+                                          "deployed": "2026-10-19T09:24:50+02:00", "micropython_banner": None})
 
     def test_a_record_that_is_no_board_record_is_left_as_it_is(self):
         self.write("[1, 2]")
@@ -123,9 +129,32 @@ class ReadLastDeployTest(LastDeployCase):
 
     def test_none_recorded_and_not_checked_give_their_dicts(self):
         self.assertEqual(STORE.read_last_deploy(MAC).to_dict(), {"state": "none-recorded", "why": None, "project": None,
-                                                                 "verdict": None, "deployed": None})
+                                                                 "verdict": None, "deployed": None, "micropython_banner": None})
         self.assertEqual(STORE.read_last_deploy(None).to_dict(), {"state": "not-checked", "why": "the board's MAC was not read",
-                                                                  "project": None, "verdict": None, "deployed": None})
+                                                                  "project": None, "verdict": None, "deployed": None,
+                                                                  "micropython_banner": None})
+
+    def test_the_banner_in_the_facts_is_stored_and_read_back(self):
+        STORE.write_deploy(dict(said(), micropython_banner="MicroPython v1.29.0 on 2026-08-24"), "ready seen", "a test")
+        self.assertEqual(json.loads(STORE.find_path(MAC).read_text())["deploys"][-1]["micropython_banner"],
+                         "MicroPython v1.29.0 on 2026-08-24")
+        last = STORE.read_last_deploy(MAC)
+        self.assertEqual((last.state, last.micropython_banner, last.to_dict()["micropython_banner"]),
+                         ("recorded", "MicroPython v1.29.0 on 2026-08-24", "MicroPython v1.29.0 on 2026-08-24"))
+
+    def test_facts_with_no_banner_store_null_and_the_deploy_stays_recorded(self):
+        STORE.write_deploy(said(), "ready seen", "a test")
+        self.assertIsNone(json.loads(STORE.find_path(MAC).read_text())["deploys"][-1]["micropython_banner"])
+        last = STORE.read_last_deploy(MAC)
+        self.assertEqual((last.state, last.micropython_banner), ("recorded", None))
+
+    def test_a_record_from_before_p779_or_with_a_banner_that_is_no_text_is_recorded_with_none(self):
+        kept = {"project": "p", "verdict": "ready seen", "deployed": "2026-10-19T09:24:50+02:00"}
+        for banner in ("absent", None, "", " ", 5, ["MicroPython v1"]):
+            with self.subTest(banner=banner):
+                self.write_deploys([kept if banner == "absent" else dict(kept, micropython_banner=banner)])
+                last = STORE.read_last_deploy(MAC)
+                self.assertEqual((last.state, last.project, last.micropython_banner), ("recorded", "p", None))
 
     def test_two_deploys_the_last_one_wins(self):
         STORE.write_deploy(said("blink-c6"), "ready seen", "a test")

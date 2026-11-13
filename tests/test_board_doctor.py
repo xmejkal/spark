@@ -152,7 +152,8 @@ class OutputTest(unittest.TestCase):
         self.assertEqual(board_doctor.describe(result), [
             "said    could not enter raw repl",
             "check   port-listed: mpremote devs lists /dev/cu.usbmodem1101, USB serial 8C:BF:EA:00:00:02",
-            "check   console: the console was silent for 2 s",
+            "check   console: the console was silent for 2 s (a firmware that prints nothing and a board that does not answer "
+            "sound the same here)",
             "next    press the board's RESET once and run it again",
             "if not  unplug the board, plug it in again, and run it again"])
 

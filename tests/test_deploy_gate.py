@@ -49,7 +49,7 @@ from spark.core.outside import build_outside_world  # noqa: E402
 from spark.core.privacy import MaskingReporter, Privacy  # noqa: E402
 from spark.core.replies import AGENT, EITHER, PERSON, VALUE, YES_NO, Question, Reply, ReplyStrategy  # noqa: E402
 from spark.bench.deploy_image import DeployImage  # noqa: E402
-from test_board_look import FOUND, LookCase, data, done, found  # noqa: E402
+from test_board_look import BANNER, FOUND, INTERPRETER_WITH_BANNER, LookCase, data, done, found  # noqa: E402
 
 
 def find_fake_tool(name, **where):
@@ -499,6 +499,7 @@ class TheBoardAfterTheFlashTest(GateCase):
             "  port   %s" % port,
             "  mac    8c:bf:ea:xx:xx:xx",
             "  spark's last deploy here: none in its store record (it keeps only its own deploys)",
+            "  micropython  no banner in the image",
             "  chip   same      esp32c6",
             "  flash  same      4 MB",
             "  simulation: passed",
@@ -848,6 +849,25 @@ class TheFactsAfterTheFlashTest(GateCase):
         said = board_facts.facts(self.project, "xiao-esp32-c6", "aa:bb", self.image, {}, moment, "passed")
         self.assertEqual(said["deployed"], "2026-01-02T03:04:05")
 
+    @needs_littlefs
+    def test_the_facts_and_the_store_record_hold_the_image_s_banner_and_the_next_question_names_it(self):
+        self.micropython.write_bytes(INTERPRETER_WITH_BANNER)
+        _, said, _ = self.flash()
+        self.assertEqual(json.loads(self.copied["spark.json"])["micropython_banner"], BANNER)
+        record = Path(said.split("store record: ")[1].strip())
+        self.assertEqual(json.loads(record.read_text())["deploys"][-1]["micropython_banner"], BANNER)
+        consent = FakeConsent(True)
+        self.flash(consent)
+        self.assertIn(", ready seen, %s) and write " % BANNER, consent.asked[0])
+
+    @needs_littlefs
+    def test_the_facts_name_the_banner_the_image_file_holds_or_none(self):
+        moment = datetime.datetime(2026, 1, 2, 3, 4, 5)
+        self.run_the_scenario()  # the fake interpreter holds no banner
+        self.assertIsNone(board_facts.facts(self.project, "b", "aa:bb", self.image, {}, moment, "passed")["micropython_banner"])
+        self.image.write_bytes(INTERPRETER_WITH_BANNER)
+        self.assertEqual(board_facts.facts(self.project, "b", "aa:bb", self.image, {}, moment, "passed")["micropython_banner"], BANNER)
+
     def test_the_record_writes_the_who_it_is_given(self):
         said = {"mac": "aa:bb:test-who", "project": "p", "board": "b", "image_sha256": "0", "simulation": "passed", "deployed": "d"}
         path = deploy_record_store.DeployRecordStore().write_deploy(said, "ready seen", "a test")
@@ -932,6 +952,12 @@ class SayLastDeployInQuestionTest(unittest.TestCase):
         self.assertEqual(deploy_gate.say_last_deploy_in_question(self.recorded("2026-10-19T09:24:50+02:00")),
                          "spark's store record names blink-c6 as its last deploy here, 2026-10-19T09:24:50+02:00, ready seen")
 
+    def test_a_recorded_banner_follows_the_verdict(self):
+        last = self.recorded("2026-10-19T09:24:50+02:00")._replace(micropython_banner=BANNER)
+        self.assertEqual(deploy_gate.say_last_deploy_in_question(last),
+                         "spark's store record names blink-c6 as its last deploy here, 2026-10-19T09:24:50+02:00, ready seen, "
+                         "MicroPython v1.29.0 on 2026-08-24")
+
     def test_a_time_with_no_zone_or_no_parse_is_as_stored(self):
         self.assertIn("last deploy here, 2026-10-19T09:24:50 (zone not stored), ready seen",
                       deploy_gate.say_last_deploy_in_question(self.recorded("2026-10-19T09:24:50")))
@@ -962,8 +988,8 @@ class SayLastDeployInQuestionTest(unittest.TestCase):
         # The look's line and the deploy question hold the words of one Value in two modules (P431): one drift test.
         # Each state has the words that tell it from the others, one for the line and one for the question.
         states = {
-            "recorded": (self.recorded("2026-10-19T09:24:50+02:00"),
-                         ["blink-c6", "ready seen", "2026-10-19T09:24:50+02:00"], "its store record, not read", "as its last deploy here"),
+            "recorded": (self.recorded("2026-10-19T09:24:50+02:00")._replace(micropython_banner=BANNER),
+                         ["blink-c6", "ready seen", "2026-10-19T09:24:50+02:00", BANNER], "its store record, not read", "as its last deploy here"),
             "none-recorded": (deploy_record_store.LastDeploy("none-recorded"), [], "none in its store record", "names no deploy here"),
             "not-checked": (deploy_record_store.LastDeploy("not-checked", why="the board's MAC was not read"),
                             ["the board's MAC was not read"], "not checked:", "did not read its record"),

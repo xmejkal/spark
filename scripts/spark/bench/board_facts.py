@@ -2,9 +2,9 @@
 What spark put on a board (P215 step 3, D22, D23, D44).
 
 A library. `ReadingFile` copies a small facts file, FACTS_FILE, with mpremote after the flash and reads it back, so the image
-stays the one that passed. It names spark's version, the project, the board type, the MAC, the image's sha256, each file's
-sha256 and what tested the image (`simulation`). The person's store keeps its own record of each board:
-`deploy_record_store.py`.
+stays the one that passed. It names spark's version, the project, the board type, the MAC, the image's sha256, the MicroPython
+banner the image holds (P779), each file's sha256 and what tested the image (`simulation`). The person's store keeps its own
+record of each board: `deploy_record_store.py`.
 """
 
 import hashlib
@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 from spark.bench.board_connection import RAW_REPL_REFUSED, BoardUnreachableError, BoardCodeError
+from spark.firmware import image_builder
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).
 FACTS_FILE = "spark.json"
@@ -22,9 +23,12 @@ PLUGIN_JSON = Path(__file__).resolve().parents[3] / ".claude-plugin" / "plugin.j
 
 def facts(project, board, mac, image, files, moment, simulation):
     """The facts file's content: what spark put on this board, from records it holds, at `moment` (a datetime). `simulation` is
-    "passed" or "none": what tested the image (ImageEvidence.simulation)."""
+    "passed" or "none": what tested the image (ImageEvidence.simulation). The image's sha256 and its MicroPython banner
+    (image_builder.banner_in, None when it holds none, P779) are read from one read of the image file."""
+    data = Path(image).read_bytes()
     return {"spark": json.loads(PLUGIN_JSON.read_text())["version"], "project": Path(project).resolve().name,
-            "board": board, "mac": mac, "image_sha256": hashlib.sha256(Path(image).read_bytes()).hexdigest(),
+            "board": board, "mac": mac, "image_sha256": hashlib.sha256(data).hexdigest(),
+            "micropython_banner": image_builder.banner_in(data),
             "files": files, "simulation": simulation, "deployed": moment.isoformat(timespec="seconds")}
 
 

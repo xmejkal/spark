@@ -47,7 +47,7 @@ it happens. With `--json` these lines go to stderr. Relay them.
    board restarts), names every warning in its question and erases only after they type `yes`.
    The question starts with the look's caveats (P345), such as a passed run whose scenario has no `set-control` step, and the look above it lists the limits: what no simulation can show of the project. Relay the limits once; they are not in the question. Relay the caveats too. Both are facts about the run and the project, not a stop.
    The erase sentence then names the last deploy in spark's store record, for example `spark's store record names blink-c6 as its last deploy here,
-   2026-10-19T09:24:50+02:00, ready seen`. Relay it. It says what spark's store record names as its last deploy here. It does not say what is on the board now.
+   2026-10-19T09:24:50+02:00, ready seen, MicroPython v1.29.0 on 2026-08-24`. Relay it. It names the banner of the image spark put there (P779); a deploy before P779 kept none. It says what spark's store record names as its last deploy here. It does not say what is on the board now.
    A flash made outside spark leaves no trace, and a flash that failed after the erase writes no record. `none in its store record` is not an empty board.
    `not checked` means spark did not read its record: the MAC was not read, or the record cannot be read. It never
    means that no deploy happened. The look then exits 2 (`could-not-run`) and names what to repair.
@@ -97,9 +97,9 @@ deploy.py makes one retry of an erase that stopped with exit 2, after 5 s, and p
 
 After the flash, deploy.py copies a facts file, `spark.json`, to the board and reads it back. When the board refuses mpremote's
 raw REPL for that copy, deploy.py tries it once more after 2 s, and the board's log says so ([P420](https://github.com/xmejkal/spark/issues/550)). It names spark's
-version, the project, the board type, the MAC, the image's sha256 and each file's sha256 and `simulation` (`passed` or `none`). The board's log names the
+version, the project, the board type, the MAC, the image's sha256, the MicroPython banner it holds (`micropython_banner`, null when none) and each file's sha256 and `simulation` (`passed` or `none`). The board's log names the
 facts file's sha256, and your store keeps one record for each board by its MAC, `boards/<MAC>.json`, with each
-deploy, its verdict and whose yes it was. Then deploy.py reads the board with mpremote. It hashes each file that the evidence names (the passed run's log, or `firmware/` with `--no-simulation`), on the
+deploy, its verdict, whose yes it was and `micropython_banner`, read from the image file at the deploy (P779). Then deploy.py reads the board with mpremote. It hashes each file that the evidence names (the passed run's log, or `firmware/` with `--no-simulation`), on the
 board, and then starts the firmware and reads its output. `ready seen` (exit 0) means the files match and the firmware
 printed `ready`. `ready not seen` (exit 1) names the file that differs, or says that no `ready` came or that the
 firmware stopped with an error. `ready unknown` (exit 2) means mpremote could not reach the board, or the passed run's

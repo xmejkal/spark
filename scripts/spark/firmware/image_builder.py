@@ -17,6 +17,7 @@ list's entry with that build is the interpreter (P229).
 
 import hashlib
 import json
+import re
 import struct
 from collections import namedtuple
 from pathlib import Path
@@ -168,6 +169,19 @@ def image(interpreter, files, overrides=None, offset=0):
     fs = filesystem(files, overrides)
     flash[FILESYSTEM_OFFSET:FILESYSTEM_OFFSET + len(fs)] = fs
     return bytes(flash)
+
+
+#: MicroPython's banner, the words its REPL starts with ("MicroPython v1.29.0 on 2026-08-24"): printable ASCII but `;`, so it
+#: ends at the NUL of its C string or at the `;` before the machine part ("; Generic ESP32S3 module with ESP32-S3"), which
+#: builds before v1.19 put in the same string (shared/runtime/pyexec.c) (P779).
+BANNER = re.compile(rb"MicroPython v[\x20-\x3a\x3c-\x7e]{1,80}")
+
+
+def banner_in(data):
+    """The banner the interpreter in the image `data` holds, or None when it holds none: the first match before
+    FILESYSTEM_OFFSET, so a file's text is never taken for it. A banner of 80 characters or more after `MicroPython v` is cut there."""
+    found = BANNER.search(data, 0, FILESYSTEM_OFFSET)
+    return found.group().decode("ascii") if found else None
 
 
 def board_build(project):

@@ -4,6 +4,7 @@
   port   /dev/cu.usbmodem101
   mac    dc:da:0c:xx:xx:xx
   spark's last deploy here: none in its store record (it keeps only its own deploys)
+  micropython  no banner in the image
   chip   same      esp32s3
   flash  same      16 MB
   simulation: passed

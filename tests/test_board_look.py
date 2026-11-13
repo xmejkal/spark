@@ -28,6 +28,7 @@ from spark.bench import image_evidence  # noqa: E402
 from spark.records import tool_finder  # noqa: E402
 from test_deploy import FOUND, ProjectCase, found  # noqa: E402,F401  (test_deploy_gate, test_look and test_reach take `found` from here)
 from fakes import FakeToolFinder  # noqa: E402
+from micropython_fakes import fake_interpreter  # noqa: E402
 
 #: The C6 and the mpremote lines are P228's bench outputs, trimmed. The S3, classic ESP32, KB and CH340 files are
 #: written by hand, as tests/data/board_look/README.md says: no such board was on the bench.
@@ -42,6 +43,11 @@ NO_CONTROL_NO_PIN = ("the passed run's scenario has no set-control step (the ste
 #: A scenario that presses a button and reads a pin: its passed run has no caveat.
 CONTROLLED_SCENARIO = ("name: s\nversion: 1\nsteps:\n  - set-control: { part-id: b, name: pressed, value: 1 }\n"
                        "  - expect-pin: { part-id: led, pin: A, value: 1 }\n")
+
+
+#: P779: a MicroPython banner as an interpreter holds it, and as spark reads it.
+BANNER = "MicroPython v1.29.0 on 2026-08-24"
+INTERPRETER_WITH_BANNER = fake_interpreter(head=b"\xe9\x00" + BANNER.encode() + b"\x00; Generic ESP32C6 module with ESP32C6\x00")
 
 
 def data(name):
@@ -66,10 +72,10 @@ class LookCase(ProjectCase):
         self.board("xiao-esp32-c6")
         self.ran = []
 
-    def record_a_deploy(self, project="blink-c6", verdict="ready seen"):
-        """A deploy of this look's board in the store, as write_deploy writes it."""
+    def record_a_deploy(self, project="blink-c6", verdict="ready seen", **banner):
+        """A deploy of this look's board in the store, as write_deploy writes it; `micropython_banner=` adds the image's (P779)."""
         deploy_record_store.DeployRecordStore().write_deploy({"mac": C6_MAC, "project": project, "board": "xiao-esp32-c6", "image_sha256": "0",
-                                   "simulation": "passed", "deployed": "2026-10-19T09:24:50+02:00"}, verdict, "a test")
+                                   "simulation": "passed", "deployed": "2026-10-19T09:24:50+02:00", **banner}, verdict, "a test")
 
     def board(self, name):
         (self.project / "requirements.json").write_text(json.dumps({"board": name, "parts": []}))
@@ -512,12 +518,14 @@ class LookReportToDictTest(LookCase):
         report = self.look()
         as_dict = report.to_dict()
         self.assertEqual(as_dict, {
-            "port": C6_PORT, "also_on": [], "chip": "esp32c6", "flash_mb": 4, "mac": C6_MAC, "board": "xiao-esp32-c6",
+            "port": C6_PORT, "also_on": [], "chip": "esp32c6", "flash_mb": 4, "mac": C6_MAC, "micropython_banner": None,
+            "board": "xiao-esp32-c6",
             "fields": {"chip": "same", "flash": "same"}, "stops": [], "warnings": [], "unknown": {},
             "verdict": "match", "status": outcomes.OK, "token": report.token(), "no_token_reason": None,
             # LookCase's scenario only waits for text (the P345 caveat), so the passed run did not press anything
             "simulation": "passed", "caveats": [NO_CONTROL_NO_PIN], "limits": [], "unnamed_must": [],
-            "last_deploy": {"state": "none-recorded", "why": None, "project": None, "verdict": None, "deployed": None}})
+            "last_deploy": {"state": "none-recorded", "why": None, "project": None, "verdict": None, "deployed": None,
+                            "micropython_banner": None}})
         self.assertIsNotNone(as_dict["token"])
         json.dumps(as_dict)
 
@@ -787,7 +795,15 @@ class TheLookStatesTheSimulationTest(LookCase):
     def test_the_json_carries_the_last_deploy(self):
         self.record_a_deploy()
         self.assertEqual(self.look().to_dict()["last_deploy"], {"state": "recorded", "why": None, "project": "blink-c6",
-                         "verdict": "ready seen", "deployed": "2026-10-19T09:24:50+02:00"})
+                         "verdict": "ready seen", "deployed": "2026-10-19T09:24:50+02:00", "micropython_banner": None})
+
+    def test_the_json_carries_the_image_s_banner_and_the_record_s(self):
+        self.micropython.write_bytes(INTERPRETER_WITH_BANNER)
+        self.run_the_scenario()
+        self.record_a_deploy(micropython_banner="MicroPython v1.22.2-dirty on 2024-02-21")
+        as_dict = self.look().to_dict()
+        self.assertEqual((as_dict["micropython_banner"], as_dict["last_deploy"]["micropython_banner"]),
+                         (BANNER, "MicroPython v1.22.2-dirty on 2024-02-21"))
 
     @needs_littlefs
     def test_the_json_carries_both(self):
@@ -842,6 +858,53 @@ class ReportLinesTest(LookCase):
         lines = board_look.report_lines(self.look(), token=False)
         self.assertEqual(lines[lines.index("  mac    " + C6_MAC) + 1], "  spark's last deploy here: blink-c6, ready seen, "
                          "2026-10-19T09:24:50+02:00 (its store record, not read from the board)")
+
+    def test_the_image_s_banner_is_the_line_right_after_the_last_deploy_and_both_are_said(self):
+        self.micropython.write_bytes(INTERPRETER_WITH_BANNER)
+        self.run_the_scenario()
+        self.record_a_deploy(micropython_banner=BANNER)  # an equal banner is not the same image: both lines stay
+        lines = board_look.report_lines(self.look(), token=False)
+        after = lines.index("  mac    " + C6_MAC) + 1
+        self.assertEqual(lines[after:after + 2], [
+            "  spark's last deploy here: blink-c6, ready seen, 2026-10-19T09:24:50+02:00, MicroPython v1.29.0 on 2026-08-24 "
+            "(its store record, not read from the board)",
+            "  micropython  MicroPython v1.29.0 on 2026-08-24 (in the image)"])
+
+    def test_an_image_with_no_banner_and_no_image_say_so(self):
+        self.run_the_scenario()  # the fake interpreter holds no banner
+        lines = board_look.report_lines(self.look(), token=False)
+        self.assertEqual(lines[lines.index("  mac    " + C6_MAC) + 2], "  micropython  no banner in the image")
+        self.image.unlink()
+        lines = board_look.report_lines(self.look(), token=False)
+        self.assertEqual(lines[lines.index("  mac    " + C6_MAC) + 2], "  micropython  no image")
+
+    def test_the_banner_shows_also_when_the_evidence_refuses_the_image(self):
+        self.micropython.write_bytes(INTERPRETER_WITH_BANNER)
+        self.run_the_scenario()
+        report = self.look(evidence=mock.Mock(simulation="passed", why_not_ready=mock.Mock(return_value="no")))
+        self.assertEqual((report.image_why, report.micropython_banner), ("no", BANNER))
+
+    def test_an_image_gone_after_the_look_found_it_is_no_image_and_null_never_a_crash(self):
+        # NoSimulationEvidence can refuse before it reads the image, so the banner may be the image's first read
+        self.run_the_scenario()
+        report = self.look(evidence=mock.Mock(simulation="none", why_not_ready=mock.Mock(return_value="no")))
+        self.image.unlink()
+        lines = board_look.report_lines(report, token=False)
+        self.assertEqual(lines[lines.index("  mac    " + C6_MAC) + 2], "  micropython  no image")
+        self.assertIsNone(report.to_dict()["micropython_banner"])
+
+    def test_a_record_written_before_p779_reads_with_the_line_as_before(self):
+        self.run_the_scenario()
+        folder = deploy_record_store.DeployRecordStore().find_path(C6_MAC)
+        folder.parent.mkdir(parents=True, exist_ok=True)
+        folder.write_text(json.dumps({"mac": C6_MAC, "board": "xiao-esp32-c6", "deploys": [
+            {"project": "blink-c6", "image_sha256": "0", "deployed": "2026-10-19T09:24:50+02:00", "verdict": "ready seen",
+             "simulation": "passed", "yes": "a test"}]}))
+        report = self.look()
+        lines = board_look.report_lines(report, token=False)
+        self.assertEqual(lines[lines.index("  mac    " + C6_MAC) + 1], "  spark's last deploy here: blink-c6, ready seen, "
+                         "2026-10-19T09:24:50+02:00 (its store record, not read from the board)")
+        self.assertEqual((report.last_deploy.state, report.last_deploy.micropython_banner), ("recorded", None))
 
     def test_a_last_deploy_that_cannot_be_read_says_so_and_what_to_do(self):
         self.run_the_scenario()
@@ -930,6 +993,12 @@ class SayLastDeployTest(unittest.TestCase):
         self.assertEqual(board_look.say_last_deploy(self.recorded("2026-10-19T09:24:50+02:00")),
                          "spark's last deploy here: blink-c6, ready seen, 2026-10-19T09:24:50+02:00 "
                          "(its store record, not read from the board)")
+
+    def test_a_recorded_banner_follows_the_time(self):
+        last = self.recorded("2026-10-19T09:24:50+02:00")._replace(micropython_banner=BANNER)
+        self.assertEqual(board_look.say_last_deploy(last),
+                         "spark's last deploy here: blink-c6, ready seen, 2026-10-19T09:24:50+02:00, MicroPython v1.29.0 on "
+                         "2026-08-24 (its store record, not read from the board)")
 
     def test_a_time_in_another_zone_is_said_in_the_machine_s_zone(self):
         self.assertIn(", 2026-10-19T09:24:50+02:00 (", board_look.say_last_deploy(self.recorded("2026-10-19T07:24:50+00:00")))
