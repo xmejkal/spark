@@ -1319,6 +1319,29 @@ class TheScratchOfAStoppedRunTest(unittest.TestCase):
                 self.assertEqual(os.listdir(mine), [])
                 shutil.rmtree(mine, ignore_errors=True)
 
+    @slow("two mutation runs of a tiny tree, each stopped by a SIGTERM beside its lock, SECONDS on 2026-11-13")
+    def test_a_sigterm_right_after_the_lock_is_written_or_right_before_it_is_removed_leaves_no_lock(self):
+        # P805: a lock left behind refuses every later run in that tree until a person removes it by hand.
+        wrapper = ("import os, pathlib, signal, sys\nsys.path.insert(0, %r)\nimport mutate\n"
+                   "when = sys.argv.pop(1)\nfired = []\n"
+                   "def fire(file):\n"
+                   "    if not fired and file.name == mutate.LOCK_NAME:\n"
+                   "        fired.append(file)\n        os.kill(os.getpid(), signal.SIGTERM)\n"
+                   "real_written, real_removed = pathlib.Path.write_text, pathlib.Path.unlink\n"
+                   "def written(self, *args, **kwargs):\n    done = real_written(self, *args, **kwargs)\n"
+                   "    if when == 'written': fire(self)\n    return done\n"
+                   "def removed(self, *args, **kwargs):\n    if when == 'removed': fire(self)\n"
+                   "    return real_removed(self, *args, **kwargs)\n"
+                   "pathlib.Path.write_text, pathlib.Path.unlink = written, removed\nsys.exit(mutate.main(sys.argv[1:]))\n"
+                   % str(ROOT / "tools"))
+        for when in ("written", "removed"):
+            with self.subTest(when=when):
+                root = tiny_project_that_finds_itself()
+                done = subprocess.run([sys.executable, "-c", wrapper, when, str(table(root, BREAK_ADD)), "--root", str(root)],
+                                      capture_output=True, text=True, timeout=120)
+                self.assertEqual(done.returncode, 128 + signal.SIGTERM, done.stderr[-300:])
+                self.assertFalse((root / mutate.LOCK_NAME).exists())
+
     @unittest.skipIf(signal.getsignal(signal.SIGTERM) != signal.SIG_DFL, "the runner set its own SIGTERM handler")
     def test_the_handler_is_put_back(self):
         with mutate.sigterm_as_exit():
