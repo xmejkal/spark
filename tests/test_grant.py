@@ -130,7 +130,8 @@ class DoctorTest(GrantCase):
         self.assertEqual(lines[0], "grant.py: could not read the board on /dev/cu.usbmodem101")
         self.assertIn("  said    ERROR: A fatal error occurred: Failed to connect to Espressif device: No serial data "
                       "received.", lines)
-        self.assertIn("  check   console: the console was silent for 2 s", lines)
+        self.assertIn("  check   console: the console was silent for 2 s (a firmware that prints nothing and a board that does "
+                      "not answer sound the same here)", lines)
         self.assertTrue(lines[-1].startswith("  next    hold the board's BOOT button"))
         self.assertFalse((self.home / "grants").exists())
 

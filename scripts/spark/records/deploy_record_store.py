@@ -2,8 +2,8 @@
 What spark's store keeps of each physical board, by its MAC (P215 step 3, D22, D23, D44; P431, OC5).
 
 A library, for `deploy_service.DeployService` (it writes the record after a deploy) and `board_look` (it reads the last
-deploy). `DeployRecordStore` keeps one record per board, with each deploy, its verdict, its simulation and whose yes it
-was. `LastDeploy` is what the store says of the board on USB. It holds the reasons (`WHY_NO_MAC`, `WHY_UNREADABLE`) and the
+deploy). `DeployRecordStore` keeps one record per board, with each deploy, its verdict, its simulation, whose yes it
+was and the MicroPython banner of its image (P779). `LastDeploy` is what the store says of the board on USB. It holds the reasons (`WHY_NO_MAC`, `WHY_UNREADABLE`) and the
 zone note of a time, and no line or question words: `board_look.say_last_deploy` is the look's line and
 `deploy_gate.say_last_deploy_in_question` is the deploy question's. What is on the board itself, the facts file, is
 `board_facts`.
@@ -25,11 +25,13 @@ WHY_UNREADABLE = "spark's record of it cannot be read"
 ZONE_NOT_STORED = "(zone not stored)"
 
 
-class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict deployed why record_path", defaults=(None,) * 5)):
+class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict deployed why record_path micropython_banner",
+                                         defaults=(None,) * 6)):
     """Value. What spark's store says of the board on USB. `state` is one of the three words of `outcomes` (the reader rule is
     there). `project`, `verdict` and `deployed` are as `write_deploy` stored them, with outcomes.RECORDED. `why` is the reason,
     with outcomes.NOT_CHECKED. The rest are None. `record_path` is the path of the record the store read (None when no MAC
-    named one); it is not in `to_dict` (P458)."""
+    named one); it is not in `to_dict` (P458). `micropython_banner` is the MicroPython banner of the image that deploy put
+    there, as the store kept it, or None: a deploy before P779 kept none, and an image may hold none."""
 
     def time_said(self):
         """The stored time. With a zone it is said in the machine's zone. With none it is as stored, and says so,
@@ -44,7 +46,7 @@ class LastDeploy(collections.namedtuple("LastDeploy", "state project verdict dep
 
     def to_dict(self):
         return {"state": self.state, "why": self.why, "project": self.project, "verdict": self.verdict,
-                "deployed": self.deployed}
+                "deployed": self.deployed, "micropython_banner": self.micropython_banner}
 
 
 class DeployRecordStore:
@@ -80,15 +82,19 @@ class DeployRecordStore:
         kept = [newest.get(key) for key in ("project", "verdict", "deployed")] if isinstance(newest, dict) else []
         if not kept or not all(isinstance(each, str) and each.strip() for each in kept):
             return LastDeploy(outcomes.NOT_CHECKED, why=WHY_UNREADABLE, record_path=path)
-        return LastDeploy(outcomes.RECORDED, *kept, record_path=path)
+        banner = newest.get("micropython_banner")  # P779: a deploy before it kept none, and that is no unreadable record
+        return LastDeploy(outcomes.RECORDED, *kept, record_path=path,
+                          micropython_banner=banner if isinstance(banner, str) and banner.strip() else None)
 
     def write_deploy(self, facts, verdict, who):
         """
         The store's record of this board, by its MAC, with this deploy added: the project, the image's sha256, the date,
-        the verdict and `who`, the phrase for whose yes it was (ConsentStrategy.who). Returns the record's path.
+        the verdict, `who`, the phrase for whose yes it was (ConsentStrategy.who), and the image's MicroPython banner, read
+        from the image file at the deploy (null when the facts hold none, P779). Returns the record's path.
         """
         deploy = {"project": facts["project"], "image_sha256": facts["image_sha256"], "deployed": facts["deployed"],
-                  "verdict": verdict, "simulation": facts["simulation"], "yes": who}
+                  "verdict": verdict, "simulation": facts["simulation"], "yes": who,
+                  "micropython_banner": facts.get("micropython_banner")}
         with store.locked():
             path = self.find_path(facts["mac"])
             try:

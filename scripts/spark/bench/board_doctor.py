@@ -103,6 +103,10 @@ class PortListedDoctorProbe(DoctorProbe):
         return CheckResult(self.name, True, "mpremote devs lists %s, USB serial %s" % (port, listed[0].serial), None)
 
 
+#: The console check's fact when nothing came: silence is a fact about the 2 s read, never a verdict on the board (P779).
+SILENT_FOR_2_S = "the console was silent for 2 s (a firmware that prints nothing and a board that does not answer sound the same here)"
+
+
 class ConsoleDoctorProbe(DoctorProbe):
     """Strategy: two seconds of the console, with the port's lock. `probe` is a board_console.ConsoleProbe, or None when
     mpremote is not a Python package here: then the console is not read, and the step is the tool's silent step."""
@@ -127,7 +131,7 @@ class ConsoleDoctorProbe(DoctorProbe):
         if shows_boot(read.printed):
             return CheckResult(self.name, False, "the board booted when the doctor opened its port", NEXT_RUN_AGAIN)
         heard = read.printed.strip()
-        fact = "the console printed: %s" % heard.splitlines()[-1] if heard else "the console was silent for 2 s"
+        fact = "the console printed: %s" % heard.splitlines()[-1] if heard else SILENT_FOR_2_S
         return CheckResult(self.name, False, fact, silent_step)
 
 

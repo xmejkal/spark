@@ -11,7 +11,7 @@ The seams are the readers: `BoardReader` is how a board is read, and `EsptoolRea
     compare        each field of the reading against the record: same, differs or unknown.
     LookService    the project's record, the port, the reading, the LookReport.
     LookReport     the verdict (match, warning or stop), the exit status and the token, as a dict too.
-    report_lines   the lines a person reads, for a LookReport.
+    report_lines   the lines a person reads, for a LookReport, with the MicroPython banner of the image (P779).
 
 A board restarts when esptool reads it. Nothing is erased or written.
 """
@@ -266,11 +266,13 @@ class RunGaps:
 class LookReport:
     """Value. What the look found. `stops` are Stops (a code and a sentence), `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
     warning or stop. `gaps` is the RunGaps of the image; `simulation`, `caveats`, `limits` and `unnamed_must` read it as they were (None and lists when the evidence refused the image).
-    `last_deploy` is the deploy_record_store.LastDeploy of the board's MAC, whatever the evidence said."""
+    `last_deploy` is the deploy_record_store.LastDeploy of the board's MAC, whatever the evidence said. `micropython_banner` is
+    the banner the image file holds (ProjectImage.banner), None when it holds none or there is no image (P779)."""
 
     def __init__(self, port, reading, record, image, image_why, gaps, last_deploy, also_on=None,
-                 image_code=board_codes.EVIDENCE_REFUSES):
+                 image_code=board_codes.EVIDENCE_REFUSES, micropython_banner=None):
         self.port, self.reading, self.record = port, reading, record
+        self.micropython_banner = micropython_banner
         self.also_on = None if also_on is None else tuple(also_on)  # None: a --port was named, so no node list was read
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
         self.image_code = image_code  # the board_codes code of image_why
@@ -351,9 +353,11 @@ class LookReport:
         return "%s-%s" % (board_token(self.reading.mac), hashlib.sha256(self.image.read_bytes()).hexdigest()[:4])
 
     def to_dict(self):
-        """The facts of the look as plain JSON values, for `--json` (P213). `board` is the record's id; the image is not in it."""
+        """The facts of the look as plain JSON values, for `--json` (P213). `board` is the record's id. Of the image it holds
+        the token and `micropython_banner`, the banner read from the image file (null when it holds none or there is no
+        image), never its path; `last_deploy` holds the banner the store's record kept (P779)."""
         return {"port": self.port, "also_on": None if self.also_on is None else list(self.also_on), "chip": self.reading.chip, "flash_mb": self.reading.flash_mb, "mac": self.reading.mac,
-                "board": self.record["id"], "fields": dict(self.fields), "stops": [stop.sentence for stop in self.stops],
+                "micropython_banner": self.micropython_banner, "board": self.record["id"], "fields": dict(self.fields), "stops": [stop.sentence for stop in self.stops],
                 "warnings": list(self.warnings), "unknown": dict(self.unknown), "verdict": self.verdict,
                 "status": self.status, "token": self.token(),
                 "no_token_reason": self.no_token_reason() and self.no_token_reason().sentence,
@@ -368,13 +372,24 @@ def say_last_deploy(last):
     """The look's line for `last`, a deploy_record_store.LastDeploy. `deploy_gate.say_last_deploy_in_question` says the same
     deploy in the deploy question's words."""
     if last.state == outcomes.RECORDED:
-        said = printable("%s, %s, %s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said()))
+        banner = ", " + last.micropython_banner if last.micropython_banner else ""  # P779: a deploy before it kept none
+        said = printable("%s, %s, %s%s (its store record, not read from the board)" % (last.project, last.verdict, last.time_said(), banner))
     elif last.state == outcomes.NONE_RECORDED:
         said = "none in its store record (it keeps only its own deploys)"
     else:
         said = outcomes.NOT_CHECKED_MESSAGE % last.why
     return "spark's last deploy here: " + said
 # --- end MVP ---
+
+
+def say_image_banner(report):
+    """The look's line for the MicroPython banner of the image it would flash, a LookReport's (P779): read from the file, never
+    from the board. `say_last_deploy` says the banner the store's record kept; an equal one is not the same image."""
+    if report.image is None:
+        return "micropython  no image"
+    if report.micropython_banner:
+        return "micropython  %s (in the image)" % report.micropython_banner
+    return "micropython  no banner in the image"
 
 
 # --- MVP ---
@@ -391,7 +406,7 @@ def report_lines(report, token=True, indent=INDENT):
     reading, name = report.reading, report.record["id"]
     shown = {"chip": reading.chip, "flash": "%s MB" % reading.flash_mb if reading.flash_mb is not None else None}
     out = [RESTART_NOTICE, "port   %s%s" % (report.port, ALSO_ON % ", ".join(report.also_on) if report.also_on else ""), "mac    %s" % (reading.mac or "not read"),
-           say_last_deploy(report.last_deploy)]
+           say_last_deploy(report.last_deploy), say_image_banner(report)]
     out += ["%-6s %-9s %s" % (field, report.fields[field], shown[field] or "not read") for field in shown]
     out += ["%s: deploy.py will refuse." % stop.sentence for stop in report.stops]
     out += ["%s. deploy.py will ask you to accept it." % warning for warning in report.warnings]
@@ -433,10 +448,10 @@ class LookService:
         listed = None if port else self.finder.require_one_board("look.py")
         port = port or listed.device
         reading = self.reader.read(port)
-        image, why, code, gaps = None, None, board_codes.EVIDENCE_REFUSES, RunGaps()
+        image, banner, why, code, gaps = None, None, None, board_codes.EVIDENCE_REFUSES, RunGaps()
         try:
             found = project_image.ProjectImage(project)
-            image = found.path
+            image, banner = found.path, found.banner  # P779: read before the evidence, so a refused image still says it
             why = evidence.why_not_ready(found)
             # --- MVP ---
             if why is None:  # what tested an image is stated only for one the evidence passes
@@ -452,7 +467,7 @@ class LookService:
         # --- end MVP ---
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
         return LookReport(port, reading, record, image, why, gaps, self.records.read_last_deploy(reading.mac),
-                          listed.also_on if listed else None, code)
+                          listed.also_on if listed else None, code, micropython_banner=banner)
 
     # --- MVP ---
     @staticmethod

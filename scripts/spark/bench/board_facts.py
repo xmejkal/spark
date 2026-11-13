@@ -2,8 +2,8 @@
 What spark put on a board (P215 step 3, D22, D23, D44).
 
 A library. `ReadingFile` copies a small facts file, FACTS_FILE, with mpremote after the flash and reads it back, so the image
-stays the one that passed. It names spark's version, the project, the board type, the MAC, the image's sha256, each file's
-sha256 and what tested the image (`simulation`). The person's store keeps its own record of each board:
+stays the one that passed. It names spark's version, the project, the board type, the MAC, the image's sha256, the MicroPython
+banner the image holds (P779), each file's sha256 and what tested the image (`simulation`). The person's store keeps its own record of each board:
 `deploy_record_store.py`.
 """
 
@@ -20,11 +20,13 @@ FACTS_FILE = "spark.json"
 PLUGIN_JSON = Path(__file__).resolve().parents[3] / ".claude-plugin" / "plugin.json"
 
 
-def facts(project, board, mac, image, files, moment, simulation):
+def facts(project, board, mac, image, files, moment, simulation, *, micropython_banner=None):
     """The facts file's content: what spark put on this board, from records it holds, at `moment` (a datetime). `simulation` is
-    "passed" or "none": what tested the image (ImageEvidence.simulation)."""
+    "passed" or "none": what tested the image (ImageEvidence.simulation). `micropython_banner` is the banner the image file
+    holds (ProjectImage.banner), or None when it holds none (P779)."""
     return {"spark": json.loads(PLUGIN_JSON.read_text())["version"], "project": Path(project).resolve().name,
             "board": board, "mac": mac, "image_sha256": hashlib.sha256(Path(image).read_bytes()).hexdigest(),
+            "micropython_banner": micropython_banner,
             "files": files, "simulation": simulation, "deployed": moment.isoformat(timespec="seconds")}
 
 
