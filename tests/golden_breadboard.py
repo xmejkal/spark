@@ -13,7 +13,6 @@ breadboard.py runs no tool and opens no URL, so nothing is faked. The child carr
 """
 
 import shutil
-import subprocess
 import sys
 from collections import namedtuple
 from pathlib import Path
@@ -72,21 +71,16 @@ def rebuild_as(project, fixture):
     shutil.copytree(DATA / fixture / "dist", project / "dist")
 
 
-def run_child(case, project, store):
-    return subprocess.run([sys.executable, str(golden_bench.ROOT / "scripts" / case.script), *case.argv],
-                          cwd=str(project), env=child_env(store), stdin=subprocess.DEVNULL, capture_output=True,
-                          text=True, timeout=golden_bench.RUN_TIMEOUT_S)
-
-
 def run_script(case, project, store):
     """The text of `case`'s script run as a child in `project` with `store` as its SPARK_HOME, and its exit code: stdout,
     then stderr after STDERR_MARK, then each file of WRITTEN after LOG_MARK. A Case with `then` runs twice, and the text
     is the second run's. stdin is closed."""
     Path(store).mkdir(parents=True, exist_ok=True)
+    env = child_env(store)
     if case.then:
-        run_child(case, project, store)
+        golden_bench.run_child(case.script, case.argv, project, env)
         rebuild_as(project, case.then)
-    done = run_child(case, project, store)
+    done = golden_bench.run_child(case.script, case.argv, project, env)
     text = done.stdout + (STDERR_MARK + done.stderr if done.stderr else "")
     for name in WRITTEN:
         if (Path(project) / name).is_file():

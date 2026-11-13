@@ -26,7 +26,7 @@
  {
   "file": "tests/golden_breadboard.py",
   "name": "the rebuild's first run skipped, so no change lines",
-  "find": "run_child(case, project, store)\n        rebuild_as(project, case.then)",
+  "find": "golden_bench.run_child(case.script, case.argv, project, env)\n        rebuild_as(project, case.then)",
   "replace": "rebuild_as(project, case.then)"
  },
  {

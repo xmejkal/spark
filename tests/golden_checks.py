@@ -15,7 +15,6 @@ import io
 import json
 import shlex
 import shutil
-import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -125,10 +124,9 @@ def build_project(folder, shim_folder):
     store, and FLOATING_RULES beside its rules. Returns the project's Path."""
     project = Path(folder) / "button light"
     shutil.copytree(FIXTURE, project)
-    done = subprocess.run([sys.executable, str(ROOT / "scripts" / "init_project.py"), "--project", str(project),
-                           "--board", BOARD_ID, "--circuit", str(project / CIRCUIT)], cwd=str(project),
-                          env=child_env(Path(folder) / "init-store", shim_folder), stdin=subprocess.DEVNULL,
-                          capture_output=True, text=True, timeout=golden_bench.RUN_TIMEOUT_S)
+    done = golden_bench.run_child("init_project.py", ["--project", str(project), "--board", BOARD_ID,
+                                                      "--circuit", str(project / CIRCUIT)],
+                                  project, child_env(Path(folder) / "init-store", shim_folder))
     if done.returncode != 0:
         raise RuntimeError("init_project.py failed: %s%s" % (done.stdout, done.stderr))
     rules = json.loads((project / ".spark" / "rules.json").read_text())

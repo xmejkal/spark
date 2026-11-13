@@ -90,8 +90,7 @@ class ThePrintedDeployLineTest(unittest.TestCase):
 
     def child(self, script, *argv, env=None):
         env = env or golden_bench.child_env(self.store, "s3-flash-id-16mb.txt", "mpremote-devs-one.txt")
-        return subprocess.run([sys.executable, str(golden_bench.ROOT / "scripts" / script), *argv], cwd=str(self.project),
-                              env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=golden_bench.RUN_TIMEOUT_S)
+        return golden_bench.run_child(script, argv, self.project, env)
 
     def printed_line(self):
         self.assertEqual(self.child("flash_image.py", "--project", str(self.project), "--files", "firmware", "-o",

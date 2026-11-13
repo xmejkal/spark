@@ -14,7 +14,6 @@ other place to look, every child carries FAKE_TOKEN, and the shim runs tests/fak
 
 import json
 import shlex
-import subprocess
 import sys
 from collections import namedtuple
 from pathlib import Path
@@ -120,9 +119,7 @@ def run_script(case, project, store, env=None):
         log.unlink()
     env = dict(child_env(store) if env is None else env, **case.env)
     argv = [str(project) if arg == PROJECT else arg for arg in case.argv]
-    done = subprocess.run([sys.executable, str(golden_bench.ROOT / "scripts" / case.script), *argv], cwd=str(project),
-                          env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                          timeout=golden_bench.RUN_TIMEOUT_S)
+    done = golden_bench.run_child(case.script, argv, project, env)
     text = done.stdout + (STDERR_MARK + done.stderr if done.stderr else "")
     for log in sorted(Path(project).glob("sim/runs/*.log")):
         text += LOG_MARK % log.relative_to(project) + log.read_text()

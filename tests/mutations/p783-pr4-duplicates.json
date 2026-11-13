@@ -1,0 +1,3 @@
+[
+  {"file": "tests/golden_bench.py", "name": "P783 PR 4: a golden's child runs in the project's parent folder (test_golden_firmware, flash-image-ok)", "find": "cwd=str(project), env=env, stdin=subprocess.DEVNULL", "replace": "cwd=str(Path(project).parent), env=env, stdin=subprocess.DEVNULL"}
+]
