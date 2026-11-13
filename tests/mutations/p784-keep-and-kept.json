@@ -46,5 +46,29 @@
   "name": "P784: finding nothing names --project when one was given and not when none was (test_parts.EverythingFoundIsKeptTest.test_kept_names_project_only_when_none_was_given)",
   "find": "\"\" if project else \", or name the project with --project\"",
   "replace": "\", or name the project with --project\" if project else \"\""
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784 review: a keep beside the not-kept entry of its URL lists the URL twice (test_parts.EverythingFoundIsKeptTest.test_keep_for_a_part_replaces_the_not_kept_entry_of_its_url_under_its_key_and_title)",
+  "find": "isinstance(one, dict) and one.get(\"kept\") is False and entry[\"url\"]",
+  "replace": "isinstance(one, dict) and False and entry[\"url\"]"
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784 review: the kept entry that replaces a not-kept one loses its title (test_parts.EverythingFoundIsKeptTest.test_keep_for_a_part_replaces_the_not_kept_entry_of_its_url_under_its_key_and_title)",
+  "find": "    listed = dict(entry, title=replaced.get(\"title\")) if replaced else entry",
+  "replace": "    listed = entry"
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784 review: the no-record refusal names --project when one was given and not when none was (test_parts.EverythingFoundIsKeptTest.test_keep_for_a_part_with_no_record_names_project_only_when_none_was_given)",
+  "find": "str(missing) + (\"\" if project else NEEDS_PROJECT)",
+  "replace": "str(missing) + (NEEDS_PROJECT if project else \"\")"
+ },
+ {
+  "file": "scripts/spark/sourcing/keep_file.py",
+  "name": "P784 review: a record that is not JSON is a could-not-run naming no record (test_parts.EverythingFoundIsKeptTest.test_keep_for_a_part_whose_record_is_not_json_is_a_problem_naming_the_record)",
+  "find": "    if path is not None and record is None:",
+  "replace": "    if False:"
  }
 ]
