@@ -181,15 +181,15 @@ class TheBannerTest(unittest.TestCase):
         self.assertEqual(image_builder.banner_in(data), "MicroPython v1.0.0-test on 2026-01-01")
 
     def test_a_banner_only_in_the_files_is_none(self):
-        data = bytearray(b"\xff" * (image_builder.FILESYSTEM_OFFSET + 0x1000))
-        data[image_builder.FILESYSTEM_OFFSET + 0x10:image_builder.FILESYSTEM_OFFSET + 0x10 + len(self.BANNER)] = self.BANNER
+        data = bytearray(b"\xff" * (MICROPYTHON_VFS_OFFSET + 0x1000))
+        data[MICROPYTHON_VFS_OFFSET + 0x10:MICROPYTHON_VFS_OFFSET + 0x10 + len(self.BANNER)] = self.BANNER
         self.assertIsNone(image_builder.banner_in(bytes(data)))
 
     def test_a_banner_in_the_interpreter_and_another_in_the_files_is_the_interpreter_s(self):
-        data = bytearray(b"\xff" * (image_builder.FILESYSTEM_OFFSET + 0x1000))
+        data = bytearray(b"\xff" * (MICROPYTHON_VFS_OFFSET + 0x1000))
         data[0x100:0x100 + len(self.BANNER)] = self.BANNER
         files = b"MicroPython v1.18 (string constants)."  # the t-display walk's image held such a user string in its littlefs
-        data[image_builder.FILESYSTEM_OFFSET + 0x10:image_builder.FILESYSTEM_OFFSET + 0x10 + len(files)] = files
+        data[MICROPYTHON_VFS_OFFSET + 0x10:MICROPYTHON_VFS_OFFSET + 0x10 + len(files)] = files
         self.assertEqual(image_builder.banner_in(bytes(data)), "MicroPython v1.0.0-test on 2026-01-01")
 
 

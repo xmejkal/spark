@@ -14,19 +14,21 @@ import time
 from pathlib import Path
 
 from spark.bench.board_connection import RAW_REPL_REFUSED, BoardUnreachableError, BoardCodeError
+from spark.firmware import image_builder
 
 #: The facts file's path on the board. No passed run names it, so the board's log names its sha256 (D45).
 FACTS_FILE = "spark.json"
 PLUGIN_JSON = Path(__file__).resolve().parents[3] / ".claude-plugin" / "plugin.json"
 
 
-def facts(project, board, mac, image, files, moment, simulation, *, micropython_banner=None):
+def facts(project, board, mac, image, files, moment, simulation):
     """The facts file's content: what spark put on this board, from records it holds, at `moment` (a datetime). `simulation` is
-    "passed" or "none": what tested the image (ImageEvidence.simulation). `micropython_banner` is the banner the image file
-    holds (ProjectImage.banner), or None when it holds none (P779)."""
+    "passed" or "none": what tested the image (ImageEvidence.simulation). The image's sha256 and its MicroPython banner
+    (image_builder.banner_in, None when it holds none, P779) are read from one read of the image file."""
+    data = Path(image).read_bytes()
     return {"spark": json.loads(PLUGIN_JSON.read_text())["version"], "project": Path(project).resolve().name,
-            "board": board, "mac": mac, "image_sha256": hashlib.sha256(Path(image).read_bytes()).hexdigest(),
-            "micropython_banner": micropython_banner,
+            "board": board, "mac": mac, "image_sha256": hashlib.sha256(data).hexdigest(),
+            "micropython_banner": image_builder.banner_in(data),
             "files": files, "simulation": simulation, "deployed": moment.isoformat(timespec="seconds")}
 
 

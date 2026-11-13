@@ -16,6 +16,7 @@ The seams are the readers: `BoardReader` is how a board is read, and `EsptoolRea
 A board restarts when esptool reads it. Nothing is erased or written.
 """
 
+import functools
 import hashlib
 import json
 import re
@@ -29,6 +30,7 @@ from spark.records import brief
 from spark.records import deploy_record_store
 from spark.bench import flasher
 from spark.core import outcomes
+from spark.firmware import image_builder
 from spark.firmware import project_image
 from spark.firmware import sim_project
 from spark.records import tool_finder
@@ -266,13 +268,11 @@ class RunGaps:
 class LookReport:
     """Value. What the look found. `stops` are Stops (a code and a sentence), `warnings` are sentences, `unknown` maps a field to why; the verdict is match,
     warning or stop. `gaps` is the RunGaps of the image; `simulation`, `caveats`, `limits` and `unnamed_must` read it as they were (None and lists when the evidence refused the image).
-    `last_deploy` is the deploy_record_store.LastDeploy of the board's MAC, whatever the evidence said. `micropython_banner` is
-    the banner the image file holds (ProjectImage.banner), None when it holds none or there is no image (P779)."""
+    `last_deploy` is the deploy_record_store.LastDeploy of the board's MAC, whatever the evidence said."""
 
     def __init__(self, port, reading, record, image, image_why, gaps, last_deploy, also_on=None,
-                 image_code=board_codes.EVIDENCE_REFUSES, micropython_banner=None):
+                 image_code=board_codes.EVIDENCE_REFUSES):
         self.port, self.reading, self.record = port, reading, record
-        self.micropython_banner = micropython_banner
         self.also_on = None if also_on is None else tuple(also_on)  # None: a --port was named, so no node list was read
         self.image, self.image_why = image, image_why  # the image Path or None; why the evidence refuses it, or None
         self.image_code = image_code  # the board_codes code of image_why
@@ -345,6 +345,12 @@ class LookReport:
         if not self.reading.mac:
             return NoToken(board_codes.NO_MAC, "the board's MAC could not be read")
         return NoToken(self.image_code, self.image_why) if self.image_why else None
+
+    @functools.cached_property
+    def micropython_banner(self):
+        """The MicroPython banner the image file holds (image_builder.banner_in), None when it holds none or there is no
+        image (P779). It is read from the file as the token is, so an image the evidence refuses still says it."""
+        return image_builder.banner_in(self.image.read_bytes()) if self.image else None
 
     def token(self):
         """4 hex of sha256(MAC), a dash, 4 hex of sha256(image): this board, this image. None when there is no_token_reason."""
@@ -448,10 +454,10 @@ class LookService:
         listed = None if port else self.finder.require_one_board("look.py")
         port = port or listed.device
         reading = self.reader.read(port)
-        image, banner, why, code, gaps = None, None, None, board_codes.EVIDENCE_REFUSES, RunGaps()
+        image, why, code, gaps = None, None, board_codes.EVIDENCE_REFUSES, RunGaps()
         try:
             found = project_image.ProjectImage(project)
-            image, banner = found.path, found.banner  # P779: read before the evidence, so a refused image still says it
+            image = found.path
             why = evidence.why_not_ready(found)
             # --- MVP ---
             if why is None:  # what tested an image is stated only for one the evidence passes
@@ -467,7 +473,7 @@ class LookService:
         # --- end MVP ---
         # --- MVP --- an erase follows any evidence, so the last deploy is read whatever the evidence said
         return LookReport(port, reading, record, image, why, gaps, self.records.read_last_deploy(reading.mac),
-                          listed.also_on if listed else None, code, micropython_banner=banner)
+                          listed.also_on if listed else None, code)
 
     # --- MVP ---
     @staticmethod

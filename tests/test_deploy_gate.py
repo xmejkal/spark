@@ -861,12 +861,12 @@ class TheFactsAfterTheFlashTest(GateCase):
         self.assertIn(", ready seen, %s) and write " % BANNER, consent.asked[0])
 
     @needs_littlefs
-    def test_the_facts_name_the_banner_given_and_none_by_default(self):
+    def test_the_facts_name_the_banner_the_image_file_holds_or_none(self):
         moment = datetime.datetime(2026, 1, 2, 3, 4, 5)
-        self.run_the_scenario()
-        given = board_facts.facts(self.project, "b", "aa:bb", self.image, {}, moment, "passed", micropython_banner=BANNER)
-        self.assertEqual(given["micropython_banner"], BANNER)
+        self.run_the_scenario()  # the fake interpreter holds no banner
         self.assertIsNone(board_facts.facts(self.project, "b", "aa:bb", self.image, {}, moment, "passed")["micropython_banner"])
+        self.image.write_bytes(INTERPRETER_WITH_BANNER)
+        self.assertEqual(board_facts.facts(self.project, "b", "aa:bb", self.image, {}, moment, "passed")["micropython_banner"], BANNER)
 
     def test_the_record_writes_the_who_it_is_given(self):
         said = {"mac": "aa:bb:test-who", "project": "p", "board": "b", "image_sha256": "0", "simulation": "passed", "deployed": "d"}

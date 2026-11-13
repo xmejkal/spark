@@ -209,7 +209,7 @@ class DeployService:
     def _facts_of(self, image, report, expected, moment):
         """The facts that spark puts on the board (D22)."""
         return board_facts.facts(self.project, self.platform.board_of(), report.reading.mac, image.path, expected, moment,
-                                 self.evidence.simulation, micropython_banner=image.banner)
+                                 self.evidence.simulation)
 
     def _put_facts(self, image, report, connection, expected, moment):
         """(the facts, the board log's line about the facts file): copied to the board and read back (D22)."""
