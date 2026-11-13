@@ -9,7 +9,8 @@
   "file": "scripts/spark/records/store.py",
   "name": "the history is left readable by others",
   "find": "    os.chmod(target, 0o600)\n    return True",
-  "replace": "    return True"
+  "replace": "    return True",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/records/store.py",

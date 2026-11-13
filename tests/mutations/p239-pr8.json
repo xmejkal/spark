@@ -33,7 +33,8 @@
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "deploy-token-recheck-off",
   "find": "if look.token() != token:",
-  "replace": "if False:"
+  "replace": "if False:",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/deploy_service.py",

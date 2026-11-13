@@ -93,7 +93,8 @@
   "file": "scripts/spark/records/store.py",
   "name": "a dry run lists the project",
   "find": "number + 1\n    return name\n",
-  "replace": "number + 1\n    write_json(\"projects\", None, dict(listed, **{name: str(folder)}))\n    return name\n"
+  "replace": "number + 1\n    write_json(\"projects\", None, dict(listed, **{name: str(folder)}))\n    return name\n",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/design/needs.py",

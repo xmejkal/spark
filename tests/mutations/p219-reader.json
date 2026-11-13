@@ -33,7 +33,8 @@
   "file": "scripts/spark/bench/board_look.py",
   "name": "chip differs not a stop",
   "find": "if self.fields[\"chip\"] == \"differs\":\n            self.stops.append",
-  "replace": "if False:\n            self.stops.append"
+  "replace": "if False:\n            self.stops.append",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_look.py",
@@ -63,7 +64,8 @@
   "file": "scripts/spark/bench/board_look.py",
   "name": "smaller flash never a stop",
   "find": "if image and reading.flash_mb is not None and reading.flash_mb * MB < image.stat().st_size:",
-  "replace": "if False:"
+  "replace": "if False:",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_look.py",

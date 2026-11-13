@@ -9,7 +9,8 @@
   "file": "scripts/spark/firmware/project_image.py",
   "name": "why_untested accepts a failed run",
   "find": "failed = [(log, verdict) for log, verdict in named if verdict != scenario_steps.PASSED]",
-  "replace": "failed = []"
+  "replace": "failed = []",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/firmware/project_image.py",

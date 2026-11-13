@@ -3,7 +3,8 @@
   "file": "scripts/spark/records/deploy_record_store.py",
   "name": "the record ignores who",
   "find": "\"yes\": who}",
-  "replace": "\"yes\": \"typed in a terminal\"}"
+  "replace": "\"yes\": \"typed in a terminal\"}",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_facts.py",

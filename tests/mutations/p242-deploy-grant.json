@@ -9,7 +9,8 @@
   "file": "scripts/spark/bench/board_grant.py",
   "name": "find-ignores-scope",
   "find": "grant.scope != scope or mac_key(grant.mac) != mac_key(mac) \\\n",
-  "replace": "mac_key(grant.mac) != mac_key(mac) \\\n"
+  "replace": "mac_key(grant.mac) != mac_key(mac) \\\n",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_grant.py",
@@ -63,7 +64,8 @@
   "file": "scripts/spark/bench/board_grant.py",
   "name": "long-grant-trusted",
   "find": "if since > now or until - since > datetime.timedelta(minutes=MAX_MINUTES):",
-  "replace": "if since > now:"
+  "replace": "if since > now:",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_grant.py",
@@ -81,7 +83,8 @@
   "file": "scripts/spark/bench/board_grant.py",
   "name": "grant-never-ends",
   "find": "return WHY_EXPIRED if now >= until else None",
-  "replace": "return None"
+  "replace": "return None",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_grant.py",
@@ -129,7 +132,8 @@
   "file": "scripts/spark/bench/board_grant.py",
   "name": "ignore-older-runs-covered",
   "find": "        if evidence.grant_refusal:\n            return DeployConsentResult(fallback, evidence.grant_refusal)",
-  "replace": "        if False:\n            return DeployConsentResult(fallback, evidence.grant_refusal)"
+  "replace": "        if False:\n            return DeployConsentResult(fallback, evidence.grant_refusal)",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_grant.py",
@@ -207,7 +211,8 @@
   "file": "scripts/spark/bench/deploy_service.py",
   "name": "no-ready-check-before-erase",
   "find": "        consent.require_ready()  # a deploy grant can end while the plan reads the image",
-  "replace": "        pass"
+  "replace": "        pass",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/deploy_image.py",
@@ -261,7 +266,8 @@
   "file": "scripts/spark/bench/board_grant.py",
   "name": "look-not-match-first-dropped",
   "find": "        if report.verdict != board_look.VERDICT_MATCH:\n            return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)",
-  "replace": "        if False:\n            return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)"
+  "replace": "        if False:\n            return DeployConsentResult(fallback, WHY_LOOK_NOT_MATCH)",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/board_grant.py",

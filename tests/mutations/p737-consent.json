@@ -21,7 +21,8 @@
   "file": "scripts/spark/bench/deploy_gate.py",
   "name": "the value is always yes, whatever the person answered",
   "find": "        return Reply(question.key, bool(self.ask(question.text)), self.who)\n",
-  "replace": "        return Reply(question.key, True, self.who)\n"
+  "replace": "        return Reply(question.key, True, self.who)\n",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/deploy_gate.py",

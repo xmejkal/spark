@@ -21,7 +21,8 @@
   "file": "scripts/spark/bench/flasher.py",
   "name": "the image goes to another offset",
   "find": "IMAGE_OFFSET = \"0x0\"",
-  "replace": "IMAGE_OFFSET = \"0x1000\""
+  "replace": "IMAGE_OFFSET = \"0x1000\"",
+  "tier": "critical"
  },
  {
   "file": "scripts/spark/bench/flasher.py",
