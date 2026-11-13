@@ -42,6 +42,12 @@ class TheImageTest(unittest.TestCase):
         self.assertEqual(image.path, project / "sim" / "flash-with-firmware.bin")
         self.assertEqual(image.sha256, DIGEST)
 
+    def test_the_banner_is_the_one_in_the_image_file_or_none(self):
+        project = project_with_image()
+        self.assertIsNone(ProjectImage(project).banner)
+        (project / "sim" / "flash-with-firmware.bin").write_bytes(b"\xe9\x00MicroPython v1.29.0 on 2026-08-24\x00; Generic\x00")
+        self.assertEqual(ProjectImage(project).banner, "MicroPython v1.29.0 on 2026-08-24")
+
     def test_a_project_with_no_wokwi_toml_is_a_deploy_error_that_says_to_build(self):
         with self.assertRaises(DeployError) as said:
             ProjectImage(Path(tempfile.mkdtemp()))

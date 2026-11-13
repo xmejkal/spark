@@ -35,7 +35,7 @@ class ProjectImage:
     """
     Value: the flash image of one project and the run logs about it. Its methods read the project's files and never
     write. `ProjectImage(project)` raises DeployError when sim/wokwi.toml or the image it names is missing; it reads no
-    log. `sha256` is read once, so build a new ProjectImage to see a changed file.
+    log. `sha256` and `banner` are read once, so build a new ProjectImage to see a changed file.
     """
 
     def __init__(self, project):
@@ -62,6 +62,11 @@ class ProjectImage:
     def sha256(self):
         """The image file's sha256, as hex."""
         return hashlib.sha256(self.path.read_bytes()).hexdigest()
+
+    @functools.cached_property
+    def banner(self):
+        """The MicroPython banner the image file holds (image_builder.banner_in), or None when it holds none (P779)."""
+        return image_builder.banner_in(self.path.read_bytes())
 
     def read_run_logs(self):
         """
