@@ -1,48 +1,18 @@
 [
  {
-  "file": "tools/check_backlog.py",
-  "name": "P168: the gate ignores totalCount and never asks again",
-  "find": "    if len(items) < held:\n        listed = _listing(number, min(held, MOST_ITEMS))\n",
-  "replace": "    if False:\n        listed = _listing(number, min(held, MOST_ITEMS))\n"
- },
- {
-  "file": "tools/check_backlog.py",
-  "name": "P168: the gate judges a board read in part and says nothing",
-  "find": "    if len(items) < held:\n        raise PartialRead(held, len(items))\n",
-  "replace": "    if False:\n        raise PartialRead(held, len(items))\n"
- },
- {
-  "file": "tools/check_backlog.py",
-  "name": "P168: the second ask has no cap",
-  "find": "min(held, MOST_ITEMS)",
-  "replace": "held"
- },
- {
-  "file": "tools/check_backlog.py",
-  "name": "P168: a bin board read in part counts as read",
-  "find": "        except PartialRead as short:\n            bin_why = \"it \" + str(short)\n",
-  "replace": "        except PartialRead as short:\n            bin_items, bin_why = [], None\n"
- },
- {
-  "file": "tools/check_backlog.py",
-  "name": "P168: a spark board read in part fails the push",
-  "find": "        print(\"  backlog: could-not-run — the spark board %s; the limits were not checked\" % short)\n        return 0\n",
-  "replace": "        print(\"  backlog: could-not-run — the spark board %s; the limits were not checked\" % short)\n        return 1\n"
- },
- {
-  "file": "tools/board.py",
+  "file": "tools/board_read.py",
   "name": "P168: the status drops the page loop",
   "find": "    while page[\"items\"][\"pageInfo\"][\"hasNextPage\"] and pages < MOST_PAGES:\n",
   "replace": "    while False:\n"
  },
  {
-  "file": "tools/board.py",
+  "file": "tools/board_read.py",
   "name": "P168: the status keeps the last page only",
   "find": "    first[\"items\"][\"nodes\"] = nodes\n",
   "replace": "    first[\"items\"][\"nodes\"] = page[\"items\"][\"nodes\"]\n"
  },
  {
-  "file": "tools/board.py",
+  "file": "tools/board_read.py",
   "name": "P168: the next page is asked without its cursor",
   "find": "    cursor = [\"-f\", \"after=\" + after] if after else []\n",
   "replace": "    cursor = []\n"
@@ -54,7 +24,7 @@
   "replace": "            if False:\n                raise RuntimeError(short)\n"
  },
  {
-  "file": "tools/board.py",
+  "file": "tools/board_read.py",
   "name": "P168: the page count never grows, so an endless page is turned forever",
   "find": "        pages += 1\n",
   "replace": "        pass\n"
@@ -90,18 +60,6 @@
   "replace": "    pass\n"
  },
  {
-  "file": "tools/check_backlog.py",
-  "name": "P167: the gate drops the no-stage line",
-  "find": "    if unstaged:\n        print(\"  backlog: \" + unstaged)\n",
-  "replace": "    if False:\n        print(\"  backlog: \" + unstaged)\n"
- },
- {
-  "file": "tools/check_backlog.py",
-  "name": "P167: an unknown stage fails the push",
-  "find": "        print(\"  backlog: could-not-run — %s; the limits were not checked\" % unplaced)\n        return 0\n",
-  "replace": "        print(\"  backlog: could-not-run — %s; the limits were not checked\" % unplaced)\n        return 1\n"
- },
- {
   "file": "tools/board.py",
   "name": "P167: the status drops the no-stage line",
   "find": "*([unstaged] if unstaged else [])",
@@ -114,15 +72,33 @@
   "replace": "    except check_backlog.UnknownStage as unplaced:\n        state, body = \"ON_TRACK\", str(unplaced)\n"
  },
  {
-  "file": "tools/check_backlog.py",
-  "name": "P167: the gate counts a bin board with no Status on any card",
-  "find": "        if no_status_on(bin_items):  # read whole, but a shape the gate cannot place: set aside like one read in part\n",
-  "replace": "        if False:\n"
- },
- {
   "file": "tools/board.py",
   "name": "P167: the status counts a bin board with no Status on any card",
   "find": "            if bin_why is None and check_backlog.no_status_on(items):\n",
   "replace": "            if False:\n"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "P167: the gate drops the no-stage line",
+  "find": "    if unstaged:\n        lines.append(",
+  "replace": "    if False:\n        lines.append("
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "P167: an unknown stage fails the push",
+  "find": "        return 0, [\"  backlog: could-not-run — %s; the limits were not checked\" % unplaced], False, spent\n",
+  "replace": "        return 1, [\"  backlog: could-not-run — %s; the limits were not checked\" % unplaced], False, spent\n"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "P168: a spark board read in part fails the push",
+  "find": "        return 0, [\"  backlog: could-not-run — %s; the limits were not checked\" % short], False, spent\n",
+  "replace": "        return 1, [\"  backlog: could-not-run — %s; the limits were not checked\" % short], False, spent\n"
+ },
+ {
+  "file": "tools/check_backlog.py",
+  "name": "P167: the gate counts a bin board with no Status on any card",
+  "find": "    if no_status_on(bin_items):  # read whole, but a shape the gate cannot place: set aside like one read in part\n",
+  "replace": "    if False:\n"
  }
 ]

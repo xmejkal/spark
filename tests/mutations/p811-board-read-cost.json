@@ -1,0 +1,21 @@
+[
+  {"file": "tools/board_read.py", "name": "P811: a page asks 50 items", "find": "items(first:100,after:$after)", "replace": "items(first:50,after:$after)"},
+  {"file": "tools/board_read.py", "name": "P811: the query asks every field value again", "find": "  status:fieldValueByName(", "replace": "  fieldValues(first:100){nodes{... on ProjectV2ItemFieldTextValue{text}}}\n  status:fieldValueByName("},
+  {"file": "tools/board_read.py", "name": "P811: the query drops the repository, so every issue reads as a draft", "find": " body repository{name} labels(", "replace": " body labels("},
+  {"file": "tools/board_read.py", "name": "P811: shortness counts cards, not raw items", "find": "    held, read = project[\"items\"][\"totalCount\"], len(nodes)\n", "replace": "    held, read = project[\"items\"][\"totalCount\"], len(to_items(project))\n"},
+  {"file": "tools/board_read.py", "name": "P811: a board of drafts alone reads as 0 open", "find": "    if nodes and not to_items(project):\n", "replace": "    if False:\n"},
+  {"file": "tools/board_read.py", "name": "P811: the page loop turns 51 pages", "find": "and pages < MOST_PAGES:", "replace": "and pages <= MOST_PAGES:"},
+  {"file": "tools/board_read.py", "name": "P811: a draft is read as a card", "find": "            if \"number\" not in content or \"repository\" not in content:\n", "replace": "            if False:\n"},
+  {"file": "tools/board_read.py", "name": "P811: waiting since is read from Waiting on", "find": "(\"waitingSince\", \"waiting since\", \"date\")", "replace": "(\"waitingOn\", \"waiting since\", \"name\")"},
+  {"file": "tools/board_read.py", "name": "P811: a refused call escapes as gh's own error", "find": "        data = ask(\"api\", \"graphql\", *args)[\"data\"]\n    except FAILURES as error:\n", "replace": "        data = ask(\"api\", \"graphql\", *args)[\"data\"]\n    except KeyError as error:\n"},
+  {"file": "tools/board_read.py", "name": "P811: a page's cost is not kept", "find": "        spent.append(data[\"rateLimit\"])\n", "replace": "        pass\n"},
+  {"file": "tools/check_backlog.py", "name": "P811: the cost line takes only the last cost", "find": "COST_LINE % (sum(each[\"cost\"] for each in spent), len(spent),", "replace": "COST_LINE % (spent[-1][\"cost\"], len(spent),"},
+  {"file": "tools/check_backlog.py", "name": "P811: the cost line is never printed", "find": "        lines.append(cost_line(spent))\n", "replace": "        pass\n"},
+  {"file": "tools/check_backlog.py", "name": "P811: the floor is ten points higher", "find": "sum(each[\"cost\"] for each in spent) > COST_FLOOR):", "replace": "sum(each[\"cost\"] for each in spent) > COST_FLOOR + 10):"},
+  {"file": "tools/check_backlog.py", "name": "P811: a look without the bin's board is whole", "find": "    return (1 if said else 0), lines, bin_items is not None, spent\n", "replace": "    return (1 if said else 0), lines, True, spent\n"},
+  {"file": "tools/check_backlog.py", "name": "P811: the gate judges a spark board read in part", "find": "    if short:\n        raise PartialRead(short)\n", "replace": "    if False:\n        raise PartialRead(short)\n"},
+  {"file": "tools/check_backlog.py", "name": "P811: a bin board read in part fails the whole look", "find": "    except (PartialRead, board_read.Unreadable) as unread:\n", "replace": "    except board_read.Unreadable as unread:\n"},
+  {"file": "tools/board_read.py", "name": "P811 review: the project list catches only a missing key", "find": "[\"nodes\"]}\n    except FAILURES as error:\n", "replace": "[\"nodes\"]}\n    except KeyError as error:\n"},
+  {"file": "tools/check_backlog.py", "name": "P811 review: the cost line gives the last answer's remaining", "find": "\"{:,}\".format(min(each[\"remaining\"] for each in spent))", "replace": "\"{:,}\".format(spent[-1][\"remaining\"])"},
+  {"file": "tools/board_read.py", "name": "P811 review: a null project is named by its kind, not its number", "find": "        if project is None:  # GitHub answers", "replace": "        if False:  # GitHub answers"}
+]

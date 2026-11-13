@@ -143,7 +143,7 @@
 "T2:tests/test_breadboard_match.py:mock.patch": 3,
 "T2:tests/test_breadboard_record.py:mock.patch": 2,
 "T2:tests/test_check_all.py:mock.patch": 2,
-"T2:tests/test_check_backlog.py:mock.patch": 17,
+"T2:tests/test_check_backlog.py:mock.patch": 10,
 "T2:tests/test_check_commit.py:mock.patch": 16,
 "T2:tests/test_check_spine.py:mock.patch": 32,
 "T2:tests/test_check_vendor_pins.py:mock.patch": 4,
