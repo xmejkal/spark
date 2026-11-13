@@ -3,9 +3,9 @@
 **spark is a Claude Code plugin for gadgets built from an ESP32 dev board and off-the-shelf modules. It turns your idea
 into a breadboard you can wire and firmware you can test.**
 
-[![Twenty wires draw themselves, one after another, onto a breadboard that holds a FireBeetle 2 ESP32-S3, a display, a speaker, an amplifier, a microphone and a rotary encoder](docs/guide/wiring-guide.gif)](https://github.com/xmejkal/pixel-games)
+[![Twenty wires draw themselves, one after another, onto a breadboard that holds a FireBeetle 2 ESP32-S3, a display, a speaker, an amplifier, a microphone and a rotary encoder](docs/guide/wiring-guide.gif)](https://xmejkal.github.io/pixel-games/docs/wiring.html)
 
-*The wiring guide of [pixel-games](https://github.com/xmejkal/pixel-games), small arcade games on an ESP32-S3 with a display, a speaker and a knob. spark's records and the bench photos drew it: the board's record (from DFRobot's dimension drawing), the part records, the pins spark assigned and, for the encoder's wires, its breadboard sheet. Every part is drawn to one scale, and the encoder's size is estimated from a photo. On [the page](https://github.com/xmejkal/pixel-games/blob/master/docs/wiring.html) (shown as its source on GitHub) the twenty wires play one after another or one step at a time. The buttons in the picture work only there.*
+*The wiring guide of [pixel-games](https://github.com/xmejkal/pixel-games), small arcade games on an ESP32-S3 with a display, a speaker and a knob. spark's records and the bench photos drew it: the board's record (from DFRobot's dimension drawing), the part records, the pins spark assigned and, for the encoder's wires, its breadboard sheet. Every part is drawn to one scale, and the encoder's size is estimated from a photo. On [the page](https://xmejkal.github.io/pixel-games/docs/wiring.html) the twenty wires play one after another or one step at a time. The buttons in the picture work only there.*
 
 [What it is](#what-it-is) says who spark is for, and [What works today](#what-works-today) says how far each step runs.
 
