@@ -4,5 +4,11 @@
   "name": "P783 PR 3: the default rules file is looked for two folders up from the netlist, not three",
   "find": "circuit_path.parent.parent.parent / \".spark/rules.json\"",
   "replace": "circuit_path.parent.parent / \".spark/rules.json\""
+ },
+ {
+  "file": "scripts/spark/checks/check.py",
+  "name": "P783 PR 3: check_all's refusal is rendered as a run of the checks",
+  "find": "    if \"reason\" in result:\n        return \"  [????] check_all",
+  "replace": "    if False:\n        return \"  [????] check_all"
  }
 ]

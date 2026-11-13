@@ -472,6 +472,40 @@ def run(inputs, ambiguous=None):
     return [check.run(inputs, ambiguous) for check in CHECKS]
 
 
+def run_every_check(args):
+    """
+    The dict `check_all.py --json` prints, for argparse's Namespace of check_all (`project`, `boards`, `circuit`, `rules`,
+    `package`, `json`): a refusal (`tool`, `status` could-not-run, `reason`) when `--project` names no usable folder,
+    else `tool`, `status`, `unmeasured`, `resolved`, `results` and, when a folder was checked, `project`. `run` is the
+    loop over the checks; this finds their inputs first. Writes nothing.
+    """
+    checked, refusal = CheckedFolder.named(args.project)
+    if refusal:
+        return {"tool": "check_all", "status": COULD_NOT_RUN, "reason": refusal}
+    inputs, resolved, ambiguous = inputs_for(args, checked)
+    results = run(inputs, ambiguous)
+    result = {"tool": "check_all", "status": verdict(results), "unmeasured": unmeasured_in(results),
+              "resolved": resolved, "results": results}
+    if checked:
+        # the project the build reads (P319), resolved as `loader.project_for` resolves it; null for none, never
+        # the plugin's own folder
+        result["project"] = None if loader.is_library(checked.project) else str(checked.project.resolve())
+    return result
+
+
+def render_every_check(result, project):
+    """
+    Renderer: the text `check_all.py` prints for `run_every_check`'s dict: the `[????] check_all` line for a refusal, else
+    the inputs resolved from the folder `project`, when any, and `render` of the results.
+    """
+    if "reason" in result:
+        return "  [????] check_all          %s" % result["reason"]
+    # Printed every time, not on a flag. Silently picking up a stale artifact is the one
+    # way discovery is worse than the five paths it replaces.
+    resolved = ["  resolved from %s:" % project] + ["    %s" % note for note in result["resolved"]] + [""] if result["resolved"] else []
+    return "\n".join(resolved + [render(result["results"])])
+
+
 def result_lines(result):
     """Value: the lines a person reads for one check's result: its marker line, then its reason and items, unless skipped."""
     marker = {OK: "ok  ", PROBLEMS: "FAIL", COULD_NOT_RUN: "????",

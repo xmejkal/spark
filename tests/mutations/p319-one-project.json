@@ -66,15 +66,15 @@
   "replace": "made = loader.load(requirements, Path(project))  #"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "main omits the project key",
-  "find": "            answer_json[\"project\"] = None if loader.is_library(checked.project) else str(checked.project.resolve())",
-  "replace": "            pass"
+  "find": "        result[\"project\"] = None if loader.is_library(checked.project) else str(checked.project.resolve())",
+  "replace": "        pass"
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "a missing folder is not could-not-run",
-  "find": "        return EXIT_FOR[COULD_NOT_RUN]\n    inputs, resolved, ambiguous = inputs_for(args, checked)",
-  "replace": "        pass\n    inputs, resolved, ambiguous = inputs_for(args, checked)"
+  "find": "        return {\"tool\": \"check_all\", \"status\": COULD_NOT_RUN, \"reason\": refusal}",
+  "replace": "        pass"
  }
 ]

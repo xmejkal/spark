@@ -78,7 +78,7 @@
   "replace": "    resting = \"\""
  },
  {
-  "file": "scripts/check_all.py",
+  "file": "scripts/spark/checks/check.py",
   "name": "the JSON drops the count",
   "find": "\"unmeasured\": unmeasured_in(results),",
   "replace": "\"unmeasured\": 0,"
