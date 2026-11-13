@@ -3,10 +3,10 @@ What spark's store keeps of each physical board, by its MAC (P215 step 3, D22, D
 
 A library, for `deploy_service.DeployService` (it writes the record after a deploy) and `board_look` (it reads the last
 deploy). `DeployRecordStore` keeps one record per board, with each deploy, its verdict, its simulation, whose yes it
-was and the MicroPython banner of its image (P779). `LastDeploy` is what the store says of the board on USB. It holds the reasons (`WHY_NO_MAC`, `WHY_UNREADABLE`) and the
-zone note of a time, and no line or question words: `board_look.say_last_deploy` is the look's line and
-`deploy_gate.say_last_deploy_in_question` is the deploy question's. What is on the board itself, the facts file, is
-`board_facts`.
+was and the MicroPython banner of its image (P779). `LastDeploy` is what the store says of the board on USB. It holds the
+reasons (`WHY_NO_MAC`, `WHY_UNREADABLE`) and the zone note of a time, and no line or question words:
+`board_look.say_last_deploy` is the look's line and `deploy_gate.say_last_deploy_in_question` is the deploy question's.
+What is on the board itself, the facts file, is `board_facts`.
 """
 
 import collections

@@ -3,8 +3,8 @@ What spark put on a board (P215 step 3, D22, D23, D44).
 
 A library. `ReadingFile` copies a small facts file, FACTS_FILE, with mpremote after the flash and reads it back, so the image
 stays the one that passed. It names spark's version, the project, the board type, the MAC, the image's sha256, the MicroPython
-banner the image holds (P779), each file's sha256 and what tested the image (`simulation`). The person's store keeps its own record of each board:
-`deploy_record_store.py`.
+banner the image holds (P779), each file's sha256 and what tested the image (`simulation`). The person's store keeps its own
+record of each board: `deploy_record_store.py`.
 """
 
 import hashlib
