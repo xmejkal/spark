@@ -150,7 +150,7 @@ It reports:
   `temp: the suite left N entries behind (…) — P172`. A folder the gate cannot list is could-not-run, which exits 2
   and stops the push, unlike the board's could-not-run below. One run of the suite had left 2,291 entries, 26 MB, and
   the hook ran it at every push. The gate also removes its own archive of the commit, 6.2 MB, when it ends;
-- no board address in a tracked file ([P797](https://github.com/xmejkal/spark/issues/1110)): the archive has no `.git`, so the gate runs the suite with `SPARK_GATE_TREE=archive` and `tests/test_no_board_address.py` walks the archive's files, exactly the tracked ones (never a linked folder, `.git`, `__pycache__`, `node_modules` or a binary file). With no repository and no marker, as in a mutation copy that holds ignored folders, the test skips and says why; `mutate.py` removes the marker from its runs;
+- no board address in a tracked file ([P797](https://github.com/xmejkal/spark/issues/1110)): the archive has no `.git`, so the gate runs the suite with `SPARK_GATE_TREE=archive` and `tests/test_no_board_address.py` walks the archive's files, exactly the tracked ones (never a linked folder, `.git`, `__pycache__`, `node_modules` or a binary file). With no repository and no marker, as in a mutation copy, which holds untracked files and no ignored one ([P807](https://github.com/xmejkal/spark/issues/1143)), the test skips and says why; `mutate.py` removes the marker from its runs;
 - the size of `scripts/`;
 - the work board — spark's and the bin's, through your `gh` login ([the board](../../GLOSSARY.md#the-board)). It fails
   the push on:

@@ -24,7 +24,7 @@ QUICK = os.environ.get("SPARK_SUITE") == "quick"
 
 #: The variable `tools/check_commit.py` sets in its suite's environment, and its one value: the tree is the gate's
 #: `git archive` of a commit, with no `.git`, so a test that asks git about the tracked files reads the files instead
-#: (P797). `tools/mutate.py` removes it from its runs: a mutation copy holds untracked and ignored files too.
+#: (P797). `tools/mutate.py` removes it from its runs: a mutation copy holds untracked files too.
 GATE_TREE, GATE_ARCHIVE = "SPARK_GATE_TREE", "archive"
 
 

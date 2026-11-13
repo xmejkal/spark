@@ -656,6 +656,45 @@ class AMutationRunInACopyTest(unittest.TestCase):
         finally:
             __import__("shutil").rmtree(copy.parent)
 
+    @unittest.skipUnless(shutil.which("git"), "git is not installed")
+    def test_the_copy_holds_what_a_commit_could_hold_and_leaves_out_what_git_ignores(self):
+        # P807: an ignored folder (124 MB of .superpowers/ once) was copied for every run; an untracked file still goes.
+        root = Path(tempfile.mkdtemp()) / "tree"
+        files = {".gitignore": "ignored/\n*.log\nbuild/\n", "kept.py": "x", "new/untracked.py": "x",
+                 "ignored/big.txt": "x", "ignored/forced.txt": "x", "deep/run.log": "x", "deep/kept.txt": "x",
+                 "build/out.txt": "x"}
+        for name, text in files.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(text)
+        environment = {name: value for name, value in os.environ.items() if not name.startswith("GIT_")}
+        for command in (["init", "-q"], ["add", ".gitignore", "kept.py", "deep/kept.txt"], ["add", "-f", "ignored/forced.txt"]):
+            subprocess.run(["git", *command], cwd=root, env=environment, check=True, capture_output=True)
+        copy = mutate.copy_of(root)
+        try:
+            held = sorted(p.relative_to(copy).as_posix() for p in copy.rglob("*") if p.is_file())
+            self.assertEqual(held, [".gitignore", "deep/kept.txt", "ignored/forced.txt", "kept.py", "new/untracked.py"])
+            self.assertFalse((copy / "build").exists(), "a wholly ignored folder is left out as one")
+        finally:
+            shutil.rmtree(copy.parent)
+            shutil.rmtree(root.parent)
+
+    @unittest.skipUnless(shutil.which("git"), "git is not installed")
+    def test_only_a_repository_at_the_root_decides_what_is_ignored(self):
+        # P807: a tree with no .git of its own inside an outer repository is copied whole, whatever the outer one ignores.
+        outer = Path(tempfile.mkdtemp()) / "outer"
+        root = outer / "tree"
+        (root / "ignored").mkdir(parents=True)
+        (root / "ignored" / "f").write_text("x")
+        (outer / ".gitignore").write_text("ignored/\n")
+        environment = {name: value for name, value in os.environ.items() if not name.startswith("GIT_")}
+        subprocess.run(["git", "init", "-q"], cwd=outer, env=environment, check=True, capture_output=True)
+        copy = mutate.copy_of(root)
+        try:
+            self.assertTrue((copy / "ignored" / "f").is_file())
+        finally:
+            shutil.rmtree(copy.parent)
+            shutil.rmtree(outer.parent)
+
 
 def ledger_of(root):
     """The ledger a run on `root` writes, where `main` puts it: tests/mutations/ledger.jsonl under the root."""

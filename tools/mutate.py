@@ -46,8 +46,9 @@ THE FOUR RULES BUILT IN (the first three learned from the hand-rolled harnesses)
     and reported red, which this tool's own tests caught on their first full run. So every suite
     run is `-B` with a fresh, empty cache prefix — pure source, every time.
 
-A COPY (--copy) is deleted after the run, so the run does not run the whole suite again to prove the files restored: that
-check cost 207 s on 2026-10-28 (P424), and a copy has nothing to restore. `--retarget OLD NEW` edits the text of the
+A COPY (--copy) holds what a commit could hold: the files git ignores stay out, as .git and the caches do, and an
+untracked file git does not ignore goes in (P807). It is deleted after the run, so the run does not run the whole suite
+again to prove the files restored: that check cost 207 s on 2026-10-28 (P424), and a copy has nothing to restore. `--retarget OLD NEW` edits the text of the
 tables and moves no other row; run `--anchors` after it. It exits 2 when no row names OLD, and runs alone. Both `near_tests` and the import check name a module under
 `scripts/` by its dotted name when every folder on the way has an `__init__.py`, so a package module (`spark.core.outcomes`)
 meets the tests that import it; `scripts/spark/firmware/stand_in/machine.py` stays `machine`. Rows do not run
@@ -174,7 +175,7 @@ def _from_source(prefix):
     try:
         (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
         # A mutation run never runs the quick run (P425): a defect only a slow test catches would escape it. Nor is its
-        # tree the gate's archive (P797): a copy holds untracked and ignored files, which no address check may walk.
+        # tree the gate's archive (P797): a copy holds untracked files, which no address check may walk.
         environment = dict({name: value for name, value in os.environ.items() if name not in ("SPARK_SUITE", GATE_TREE)},
                            PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=str(run / "pycache"), TMPDIR=str(run / "tmp"))
         yield environment
@@ -446,19 +447,46 @@ def retarget_tables(tables, old, new):
     return EXIT_OK
 
 
+# --- MVP --- (P807)
+def ignored_by_git(root):
+    """
+    The paths under `root`, relative and with "/", that git ignores, a wholly ignored folder as one path (P807). Only a
+    repository AT `root` decides: the search stops at its parent, and no GIT_* variable of a hook leads it elsewhere (P105).
+    No git, no repository or a failed listing: an empty set, and the copy holds every file, as before P807.
+    """
+    import os
+    environment = dict({name: value for name, value in os.environ.items() if not name.startswith("GIT_")},
+                       GIT_CEILING_DIRECTORIES=str(Path(root).resolve().parent))
+    try:
+        listed = subprocess.run(["git", "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"],
+                                cwd=root, env=environment, capture_output=True, text=True)
+    except OSError:
+        return set()
+    if listed.returncode != 0:
+        return set()
+    return {entry.rstrip("/") for entry in listed.stdout.split("\0") if entry}
+
+
 # --- MVP ---
 def copy_of(root):
     """
-    The tree at `root` in a temporary folder, without .git, worktrees or caches (P208). A run that mutates the copy never
+    The tree at `root` in a temporary folder, holding what a commit could hold: no .git, worktrees, caches or file git
+    ignores (P208, P807); an untracked file that git does not ignore is copied. A run that mutates the copy never
     rewrites a file that a person or another agent has open: two council agents once mutated inside one worktree. The
     JavaScript dependencies are borrowed, not copied, as the push gate does.
     """
     import shutil
+    ignored = ignored_by_git(root)
+    skipped = shutil.ignore_patterns(".git", ".worktrees", "node_modules", "__pycache__", LOCK_NAME)
+
+    def left_out(folder, names):
+        here = Path(folder).relative_to(root)
+        return skipped(folder, names) | {name for name in names if (here / name).as_posix() in ignored}
+
     made = Path(tempfile.mkdtemp(prefix=COPY_PREFIX))
     copy = made / root.name
     try:
-        shutil.copytree(root, copy, symlinks=True,
-                        ignore=shutil.ignore_patterns(".git", ".worktrees", "node_modules", "__pycache__", LOCK_NAME))
+        shutil.copytree(root, copy, symlinks=True, ignore=left_out)
         for folder in (Path("."), Path("tools") / "circuit-to-wokwi"):
             if (root / folder / "node_modules").is_dir() and (copy / folder).is_dir():
                 (copy / folder / "node_modules").symlink_to(root / folder / "node_modules")
