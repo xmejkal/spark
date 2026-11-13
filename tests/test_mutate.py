@@ -923,7 +923,7 @@ class TheDuplicatesTest(unittest.TestCase):
         long_find = "return a + b\n\ndef sub(a, b):\n    return a - b\n" + "x" * 40  # the report reads no anchor: a group is listed as written
         rows = table(root, {"file": "m.py", "find": long_find, "replace": "A"}, {"file": "m.py", "find": long_find, "replace": "B"})
         code, said = self.duplicates(root, str(rows))
-        self.assertEqual(said.splitlines()[0], "  m.py  return a + b\\n\\ndef sub(a, b):\\n    return a - b\\n" + "x" * 15)
+        self.assertEqual(said.splitlines()[0], "  m.py  return a + b\\n\\ndef sub(a, b):\\n    return a - b\\n" + "x" * 14)  # 46 characters of find, then 14 of the 40 x
 
     def test_duplicates_takes_the_tables_and_for_and_runs_alone(self):
         import contextlib
