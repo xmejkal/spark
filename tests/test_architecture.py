@@ -625,5 +625,22 @@ class TheSourcingAreaTest(unittest.TestCase):
 # --- end MVP ---
 
 
+# --- MVP ---
+class TheIdeaAreaTest(unittest.TestCase):
+    """P802: the idea area's modules live in `scripts/spark/idea/`, and each one imports alone. Its `__init__.py` imports
+    `DropNeed` for `OPERATIONS`, as bench's does."""
+    IDEA = ROOT / "scripts" / "spark" / "idea"
+    #: The modules of the area, by the names of its page (`areas/idea.md`).
+    MODULES = ["drop_need", "idea_codes"]
+
+    def test_the_area_holds_its_modules_and_scripts_holds_no_copy(self):
+        self.assertEqual(sorted(path.stem for path in self.IDEA.glob("*.py") if path.name != "__init__.py"), self.MODULES)
+        self.assertEqual(sorted(set(self.MODULES) & {path.stem for path in (ROOT / "scripts").glob("*.py")}), [])
+
+    def test_each_idea_module_imports_alone(self):
+        each_module_imports_alone(self, "idea")
+# --- end MVP ---
+
+
 if __name__ == "__main__":
     unittest.main()
