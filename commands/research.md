@@ -24,7 +24,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --kept <part number or words> --project .
 catalog, the other projects) with the drawer entries that say they are it, and the record-less entries, by what each does, its tags,
 names and text; what is owned comes first. A match is the answer. `--kept` searches the
 person's store, which includes a datasheet that another project kept or that an interrupted run left. A kept document
-is never fetched again. If you already have a file, put it in with `parts.py --keep <file> --url <url>`.
+is never fetched again. If you already have a file, put it in with `parts.py --keep <file> --url <url> --part <id> --project .`:
+`--part` lists it in that record's `documents`, so `--kept` finds it by its URL and its record (without `--part` no record
+lists it, and `--kept` finds it by its file name alone). A project's records are read only with `--project`.
 
 Before you research, ask whether the person already has one: in the thing they rebuild, in the drawer, in the kit. The
 first run of the finder looked for a 4×AA holder that the bin's own lid already had (2026-10-03). Put what they have in
@@ -41,7 +43,7 @@ small agents work on it, in turn:
 2. Write the skeleton and keep the datasheet:
    ```
    ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --skeleton <id> --kind <kind> --vendor <maker> --project .
-   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fetch <id> --project .        # or --keep <file> --url <url>
+   ${CLAUDE_PLUGIN_ROOT}/scripts/parts.py --fetch <id> --project .        # or --keep <file> --url <url> --part <id> --project .
    ```
    The id is a plain key of lower-case letters, digits and `-`, like `led-red-5mm`. Files are named by it, and the
    board names the part after it in code. `--skeleton` refuses any other id, dry run or not, and writes nothing:
@@ -54,7 +56,8 @@ small agents work on it, in turn:
    `--fetch` downloads the datasheet, so it reaches the network. No command's `allowed-tools` lets it run unasked, so
    Claude Code asks before it does. The exception is the person's own settings: an allow rule of theirs, or auto mode.
    The person's answer to that question is the yes. `--keep` puts a file you already have into the store and does not
-   reach the network.
+   reach the network. With `--part <id> --project .` it lists the file in the record's `documents` too, once per file's
+   bytes, and says the key to cite it by; it refuses spark's own library and a part with no record, and keeps nothing then.
 3. Launch `datasheet-reader` with the record's path, the kept datasheet and the facts for its kind (below). It reads
    with `parts.py --read`, page by page, and stops where the facts are.
    If a line says `… is not installed — install: …`, ask the person once, run
