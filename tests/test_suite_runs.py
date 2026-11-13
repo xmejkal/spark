@@ -137,20 +137,20 @@ class TheSlowMarkTest(unittest.TestCase):
 
 class TheQuickRunAndTheFullRunSayWhatTheyRanTest(unittest.TestCase):
     def test_the_quick_line_counts_the_slow_skip_and_not_the_real_one(self):
-        line, ok, left = check_commit.measure(tiny_tree())
+        line, ok, left, _ = check_commit.measure(tiny_tree())
         self.assertTrue(ok, line)
         self.assertEqual(left, [])
         self.assertEqual(seconds_hidden(line), "quick run: Ran 3 of 4 tests in S s "
                          "(1 slow test skipped; the full run is check_commit.py --full) / OK (skipped=2)")
 
     def test_the_full_line_names_every_test_it_ran(self):
-        line, ok, left = check_commit.measure(tiny_tree(), full=True)
+        line, ok, left, _ = check_commit.measure(tiny_tree(), full=True)
         self.assertTrue(ok, line)
         self.assertEqual(seconds_hidden(line), "full run: Ran 4 tests in S s / OK (skipped=1)")
 
     def test_the_full_run_runs_the_slow_tests_even_when_the_gate_s_own_environment_says_quick(self):
         with mock.patch.dict(os.environ, {"SPARK_SUITE": "quick"}):
-            line, ok, left = check_commit.measure(tiny_tree(), full=True)
+            line, ok, left, _ = check_commit.measure(tiny_tree(), full=True)
         self.assertEqual(seconds_hidden(line), "full run: Ran 4 tests in S s / OK (skipped=1)")
 
     def test_two_slow_tests_are_said_in_the_plural(self):
@@ -159,16 +159,42 @@ class TheQuickRunAndTheFullRunSayWhatTheyRanTest(unittest.TestCase):
             "class U(unittest.TestCase):\n"
             "    @slow('another pretend build, 3 s on 2026-10-26')\n"
             "    def test_slow_two(self): pass\n")})
-        line, ok, left = check_commit.measure(tree)
+        line, ok, left, _ = check_commit.measure(tree)
         self.assertEqual(seconds_hidden(line), "quick run: Ran 3 of 5 tests in S s "
                          "(2 slow tests skipped; the full run is check_commit.py --full) / OK (skipped=3)")
 
     def test_a_failure_is_said_after_the_counts(self):
         tree = tiny_tree({"tests/test_f.py": "import unittest\n\n\nclass F(unittest.TestCase):\n    def test_f(self): self.fail('x')\n"})
-        line, ok, left = check_commit.measure(tree)
+        line, ok, left, _ = check_commit.measure(tree)
         self.assertFalse(ok)
         self.assertTrue(line.startswith("quick run: Ran 4 of 5 tests in "), line)
         self.assertTrue(line.endswith("/ FAILED (failures=1, skipped=2)"), line)
+
+    def test_a_red_run_names_each_red_test_and_its_error_and_a_green_one_names_none(self):
+        # P797: a red push said only "FAILED (failures=1)", and the red test had to be found by hand.
+        tree = tiny_tree({"tests/test_f.py": ("import unittest\n\n\nclass F(unittest.TestCase):\n"
+                                              "    def test_f(self): self.fail('x')\n"
+                                              "    def test_e(self): raise KeyError('k')\n")})
+        line, ok, left, red = check_commit.measure(tree)
+        self.assertFalse(ok)
+        named = sorted(each.split(" (")[0] for each in red)  # 3.11+ adds the method to the brackets
+        self.assertEqual(named, ["AssertionError: x", "ERROR: test_e", "FAIL: test_f", "KeyError: 'k'"], red)
+        self.assertEqual(check_commit.measure(tiny_tree())[3], [], "a green run names nothing")
+
+    def test_the_suite_runs_with_the_gate_s_archive_marker(self):
+        # P797: without it the address test finds no repository in the archive and skips at every push.
+        tree = tiny_tree({"tests/test_g.py": ("import os, unittest\nfrom suite_runs import GATE_ARCHIVE, GATE_TREE\n\n\n"
+                                              "class G(unittest.TestCase):\n"
+                                              "    def test_g(self): self.assertEqual(os.environ.get(GATE_TREE), GATE_ARCHIVE)\n")})
+        line, ok, left, red = check_commit.measure(tree)
+        self.assertTrue(ok, red)
+
+    def test_a_red_push_names_the_first_red_tests_and_counts_the_rest(self):
+        red = [line for number in range(7) for line in ("FAIL: test_%d (m.T)" % number, "AssertionError: %d" % number)]
+        shown = check_commit.red_shown(red)
+        self.assertEqual(shown, red[:2 * check_commit.RED_TESTS_SHOWN] + ["… and 2 more red tests"])
+        self.assertEqual(check_commit.red_shown(red[:2 * check_commit.RED_TESTS_SHOWN]), red[:2 * check_commit.RED_TESTS_SHOWN])
+        self.assertEqual(check_commit.red_shown(red[:12])[-1], "… and 1 more red test")
 
     def test_a_failure_that_quotes_a_slow_skip_does_not_raise_the_count(self):
         # A traceback can hold a child run's -v lines. The verdict's own skipped=N says there was no skip at all.
@@ -176,7 +202,7 @@ class TheQuickRunAndTheFullRunSayWhatTheyRanTest(unittest.TestCase):
             "import unittest\n\n\nclass T(unittest.TestCase):\n"
             "    def test_a(self): pass\n"
             "    def test_quotes(self): self.fail(\"a child said ... skipped 'slow: a pretend build\")\n")})
-        line, ok, left = check_commit.measure(tree)
+        line, ok, left, _ = check_commit.measure(tree)
         self.assertFalse(ok)
         self.assertEqual(seconds_hidden(line), "quick run: Ran 2 of 2 tests in S s "
                          "(0 slow tests skipped; the full run is check_commit.py --full) / FAILED (failures=1)")
@@ -188,7 +214,7 @@ def gate_said(argv, left=()):
 
     def measured(tree, full=False, story=None):
         asked.append(full and story is None)  # a full run is given no story (P714)
-        return "quick run: Ran 1 of 2 tests in 1.0 s (1 slow test skipped) / OK", True, list(left)
+        return "quick run: Ran 1 of 2 tests in 1.0 s (1 slow test skipped) / OK", True, list(left), []
 
     archived = []
     with mock.patch.object(check_commit, "archive", side_effect=lambda root, commit, into: archived.append(commit)), \
@@ -227,10 +253,11 @@ class TheFullRunIsAskedForTest(unittest.TestCase):
 
 class AMutationRunNeverRunsTheQuickRunTest(unittest.TestCase):
     def test_the_environment_of_a_mutation_run_has_no_suite_variable(self):
-        with mock.patch.dict(os.environ, {"SPARK_SUITE": "quick", "SPARK_KEPT": "kept"}):
+        with mock.patch.dict(os.environ, {"SPARK_SUITE": "quick", "SPARK_KEPT": "kept", suite_runs.GATE_TREE: suite_runs.GATE_ARCHIVE}):
             with mutate._from_source("mutate-test-") as environment:
                 self.assertNotIn("SPARK_SUITE", environment)
-                self.assertEqual(environment["SPARK_KEPT"], "kept", "only the one variable goes")
+                self.assertNotIn(suite_runs.GATE_TREE, environment, "a mutation copy is never the gate's archive (P797)")
+                self.assertEqual(environment["SPARK_KEPT"], "kept", "only those two variables go")
                 self.assertEqual(environment["PYTHONDONTWRITEBYTECODE"], "1")
 
 

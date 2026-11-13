@@ -56,8 +56,8 @@
  {
   "file": "tools/check_commit.py",
   "name": "the measured verdict is ok whatever the suite returned",
-  "find": "run, slow_skipped, scope), suite.returncode == 0, left",
-  "replace": "run, slow_skipped, scope), True, left"
+  "find": "    ok = suite.returncode == 0\n",
+  "replace": "    ok = True\n"
  },
  {
   "file": "tools/check_commit.py",

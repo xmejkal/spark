@@ -1,0 +1,8 @@
+[
+ {"file": "tools/check_commit.py", "name": "P797: measure drops the red lines, so a red push names no test (test_a_red_run_names_each_red_test_and_its_error_and_a_green_one_names_none)", "find": "[] if ok else red_tests(suite.stderr + suite.stdout)", "replace": "[]"},
+ {"file": "tools/check_commit.py", "name": "P797: the hook stops printing the red lines it measured (test_a_failing_test_of_the_changed_file_fails_the_gate_and_the_line_says_so)", "find": "        print(\"    \" + line)", "replace": "        pass"},
+ {"file": "tests/test_no_board_address.py", "name": "P797: the walk's marker check is inverted, so the gate's archive is skipped and any other tree walked (test_an_address_in_the_archive_is_found_and_a_masked_one_is_not)", "find": "    if environ.get(GATE_TREE) != GATE_ARCHIVE:", "replace": "    if environ.get(GATE_TREE) == GATE_ARCHIVE:"},
+ {"file": "tests/test_no_board_address.py", "name": "P797: with no repository and no marker the test passes silently instead of skipping (test_with_no_repository_and_no_marker_the_test_skips_and_says_why)", "find": "        return None", "replace": "        return []"},
+ {"file": "tools/check_commit.py", "name": "P797: the suite runs without the gate's archive marker, so the address test skips at every push (test_the_suite_runs_with_the_gate_s_archive_marker)", "find": "        env.update({\"TMPDIR\": temp, GATE_TREE: GATE_ARCHIVE})\n", "replace": "        env.update({\"TMPDIR\": temp})\n"},
+ {"file": "tools/check_commit.py", "name": "P797: the red lines are never capped, so 80 failures print about 160 lines (test_a_red_push_names_the_first_red_tests_and_counts_the_rest)", "find": "    if len(starts) <= RED_TESTS_SHOWN:\n", "replace": "    if True:\n"}
+]

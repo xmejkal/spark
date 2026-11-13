@@ -148,6 +148,9 @@ sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import scratch  # noqa: E402  (P435) stdlib only: removes the old folders a killed run left
 import ledger  # noqa: E402  (P787) stdlib only: the ledger's lines and their store
+from suite_lines import RED_LINE  # noqa: E402  (P797) stdlib only: shared with check_commit
+sys.path.append(str(SCRIPTS.parent / "tests"))  # after the rest, as check_commit does: only suite_runs is wanted
+from suite_runs import GATE_TREE  # noqa: E402  (P797) the gate's archive marker, never passed to a mutation run
 
 from spark.core.outcomes import EXIT_OK, EXIT_COULD_NOT_RUN, EXIT_PROBLEMS as EXIT_ESCAPED, COULD_NOT_RUN, OK  # noqa: E402
 
@@ -170,8 +173,9 @@ def _from_source(prefix):
     run = Path(tempfile.mkdtemp(prefix=prefix))
     try:
         (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
-        # A mutation run never runs the quick run (P425): a defect only a slow test catches would escape it.
-        environment = dict({name: value for name, value in os.environ.items() if name != "SPARK_SUITE"},
+        # A mutation run never runs the quick run (P425): a defect only a slow test catches would escape it. Nor is its
+        # tree the gate's archive (P797): a copy holds untracked and ignored files, which no address check may walk.
+        environment = dict({name: value for name, value in os.environ.items() if name not in ("SPARK_SUITE", GATE_TREE)},
                            PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=str(run / "pycache"), TMPDIR=str(run / "tmp"))
         yield environment
     finally:
@@ -191,8 +195,6 @@ class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
         return self.green
 
 
-#: A line of unittest's verdict that names a red test or sums the red run.
-RED_LINE = re.compile(r"^(?:(?:FAIL|ERROR): .*|FAILED \(.*|Ran \d+ tests? in .*|[\w.]+Error: .*)$", re.M)
 #: The test module in a `FAIL:` or `ERROR:` line: `FAIL: test_add (test_m.T)` names `test_m` (3.11+: `(test_m.T.test_add)`).
 RED_TEST = re.compile(r"^(?:FAIL|ERROR): \S+ \((\w+)")
 

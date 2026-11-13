@@ -18,6 +18,11 @@ epic, or when the PO asks.
 
 The suite runs with a temp folder of its own, and whatever it leaves there fails the push (P172): one run
 left 2,291 entries, 26 MB, and nothing counted them. The archive itself goes when the gate ends.
+
+The archive has no `.git`, so the suite runs with `SPARK_GATE_TREE=archive` (`suite_runs.GATE_TREE`): the test that no
+tracked file holds a board's address walks the archive's files, which are exactly the tracked ones (P797). Without it
+that test asked `git grep`, which found no repository and so nothing, and the check never ran at the gate.
+A red run names its red tests under the verdict line, each `FAIL:`, `ERROR:` and `...Error:` line (P797).
 """
 
 import argparse
@@ -36,11 +41,14 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.append(str(ROOT / "tests"))  # after the rest: only suite_runs is wanted, and no test helper may shadow a module
 
 from spark.core.outcomes import EXIT_FOR, EXIT_OK as EXIT_OK, EXIT_PROBLEMS as EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, status_of  # noqa: E402
-from suite_runs import SLOW_PREFIX  # noqa: E402
+from suite_runs import GATE_ARCHIVE, GATE_TREE, SLOW_PREFIX  # noqa: E402
 import story_tests  # noqa: E402  (beside this file)
+from suite_lines import TEST_NAMED, red_tests  # noqa: E402  (beside this file, P797)
 
 #: How many of the names left behind the gate's line shows; the count says the rest.
 NAMES_SHOWN = 3
+#: How many red tests a red push names, each with its error lines; a line counts the rest (P797).
+RED_TESTS_SHOWN = 5
 
 #: The word for the run of every test; story_tests holds the other two.
 RUN_FULL = "full"
@@ -163,6 +171,15 @@ def temp_line(left):
     return "temp: the suite left {:,} {} behind ({}) — P172".format(len(left), "entry" if len(left) == 1 else "entries", shown)
 
 
+def red_shown(red):
+    """The red lines the gate prints: those of the first RED_TESTS_SHOWN red tests, then one line that counts the rest."""
+    starts = [at for at, line in enumerate(red) if line.startswith(TEST_NAMED)]
+    if len(starts) <= RED_TESTS_SHOWN:
+        return list(red)
+    rest = len(starts) - RED_TESTS_SHOWN
+    return list(red[:starts[RED_TESTS_SHOWN]]) + ["… and {:,} more red {}".format(rest, "test" if rest == 1 else "tests")]
+
+
 def suite_line(said, run, slow_skipped, scope=None):
     """
     The suite's verdict line from the lines the runner said: "quick run: Ran N of M tests in S s (K slow tests skipped;
@@ -188,8 +205,9 @@ def suite_line(said, run, slow_skipped, scope=None):
 
 def measure(tree, full=False, story=None):
     """
-    (suite verdict line, ok, left) for the tree at `tree`. `left` is what the suite left in
+    (suite verdict line, ok, left, red) for the tree at `tree`. `left` is what the suite left in
     the empty temp folder it was given (P172), None when that could not be listed; the folder goes once counted.
+    `red` are the lines that name each red test and its error (P797), empty when the run is green.
     The quick run (P425) sets SPARK_SUITE=quick, so the tests marked slow skip; `full` runs every test.
     A `story` in the state CHOSEN runs only its modules (P714), as a quick run does; any other runs the whole suite.
     """
@@ -200,7 +218,7 @@ def measure(tree, full=False, story=None):
     temp = tempfile.mkdtemp(prefix="spark-commit-temp-")
     try:
         env = {name: value for name, value in without_git_variables().items() if name != "SPARK_SUITE"}
-        env.update(TMPDIR=temp)
+        env.update({"TMPDIR": temp, GATE_TREE: GATE_ARCHIVE})
         if not full:
             env["SPARK_SUITE"] = "quick"
         suite = subprocess.run([sys.executable, "-m", "unittest"] + what + ([] if full else ["-v"]),
@@ -215,7 +233,8 @@ def measure(tree, full=False, story=None):
     slow_skipped = min(skipped_in_all, sum(1 for line in suite.stderr.splitlines() if " ... skipped '%s" % SLOW_PREFIX in line))
     # The mutation tables' anchors are no longer checked here (P208): the tables are history, and a moved line no
     # longer blocks a push.
-    return suite_line(suite_said or last_line_said, run, slow_skipped, scope), suite.returncode == 0, left
+    ok = suite.returncode == 0
+    return suite_line(suite_said or last_line_said, run, slow_skipped, scope), ok, left, [] if ok else red_tests(suite.stderr + suite.stdout)
 
 
 def main(argv=None):
@@ -240,10 +259,12 @@ def gate(root, commit, scratch, full=False):
         print("could not archive %s: %s" % (commit, broken), file=sys.stderr)
         return EXIT_COULD_NOT_RUN
     story = None if full else story_tests_in(scratch, changed_files(root, commit))
-    suite, ok, left = measure(scratch, full=full, story=story)
+    suite, ok, left, red = measure(scratch, full=full, story=story)
     short = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", commit],
                            capture_output=True, text=True).stdout.strip()
     print("%s as committed, %s" % (short, suite))
+    for line in red_shown(red):  # a red push names its tests (P797)
+        print("    " + line)
     if story is not None and story.state == story_tests.QUICK_RUN:
         print("  no story run: " + story.why)
     if left != []:
