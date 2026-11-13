@@ -1,0 +1,7 @@
+[
+  {"file": "tests/golden_bench.py", "name": "P783 PR 4: a golden's child runs in the project's parent folder (test_golden_firmware, flash-image-ok)", "find": "cwd=str(project), env=env, stdin=subprocess.DEVNULL", "replace": "cwd=str(Path(project).parent), env=env, stdin=subprocess.DEVNULL"},
+  {"file": "scripts/spark/sourcing/offers.py", "name": "P783 PR 4: a drawer entry's row loses its entry key (test_parts.ResearchStartsFromWhatExistsTest)", "find": "\"entry\": fit.offer.key if record_less else None, **said,", "replace": "\"entry\": None, **said,"},
+  {"file": "scripts/spark/sourcing/offers.py", "name": "P783 PR 4: every row says it is in the drawer (test_parts.ResearchStartsFromWhatExistsTest)", "find": "\"in\": context[\"in\"], \"owned\"", "replace": "\"in\": DRAWER, \"owned\""},
+  {"file": "scripts/spark/sourcing/offers.py", "name": "P783 PR 4: what the caller said leaves the row (test_parts.ResearchStartsFromWhatExistsTest)", "find": "else None, **said,", "replace": "else None,"},
+  {"file": "scripts/spark/sourcing/datasheets.py", "name": "P783 PR 4: --need sorts by the score alone, what is owned no longer first (test_parts.ResearchStartsFromWhatExistsTest.test_need_puts_an_owned_row_with_a_lower_score_before_a_better_one_not_owned)", "find": "key=lambda pair: offers.rank_key(pair[1]))", "replace": "key=lambda pair: -pair[0].score)"}
+]

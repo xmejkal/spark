@@ -175,6 +175,15 @@ def child_env(store, flash_id_file, devs_file):
     return env
 
 
+def run_child(script, argv, project, env):
+    """The finished run of `script` (under scripts/, or an absolute path) with `argv`, as a child in `project` with
+    `env`: stdin closed, stdout and stderr pipes of text, stopped after RUN_TIMEOUT_S. The one way the goldens start a
+    script (P783)."""
+    return subprocess.run([sys.executable, str(ROOT / "scripts" / script), *argv],
+                          cwd=str(project), env=env, stdin=subprocess.DEVNULL,
+                          capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
+
+
 def run_script(case, project, store, token=None):
     """(exit code, stdout, stderr) of `case`'s script run as a child in `project`, with `store` as its SPARK_HOME. stdin is
     closed and stdout is a pipe, so the script sees no terminal. `token` replaces LOOK_TOKEN in the arguments."""
@@ -186,9 +195,7 @@ def run_script(case, project, store, token=None):
     if case.fake_board:
         env["FAKE_BOARD"] = str(Path(store) / "fake-board")
         (Path(store) / "fake-board").mkdir(parents=True, exist_ok=True)
-    done = subprocess.run([sys.executable, str(ROOT / "scripts" / case.script), "--project", str(project), *argv],
-                          cwd=str(project), env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                          timeout=RUN_TIMEOUT_S)
+    done = run_child(case.script, ["--project", str(project), *argv], project, env)
     return done.returncode, done.stdout, done.stderr
 
 

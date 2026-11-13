@@ -388,7 +388,7 @@ def need(words, project=None, matcher=None):
     context = {(offer.kind, offer.key): said for offer, said in built}
     fits = _found(words, [offer for offer, _ in built], matcher)
     ranked = sorted(((fit, _need_row(fit, context[(fit.offer.kind, fit.offer.key)])) for fit in fits),
-                    key=lambda pair: (pair[1]["owned"] == 0, -pair[0].score))
+                    key=lambda pair: offers.rank_key(pair[1]))
     kept = [row for rank, (fit, row) in enumerate(ranked) if matching.shown(rank, fit.exact, fit.score)]
     drafts = [row["id"] for row in kept if _is_draft(row, project)]
     return [row for row in kept if row["id"] not in drafts], drafts, len(ranked) - len(kept)
@@ -398,11 +398,10 @@ def _need_row(fit, context):
     """One `--need` row (P743): `id` or `entry`, `in` (the layer), `owned` (the drawer count: a number, "many" or "unknown"), `score`
     and `why` as `--match`'s candidates say them; `is` (part, board or entry) and the record's own `kind` and `name`, kept as `--need`
     always said them (`kind` is the record's here, where `--match` says part or board; on purpose, for the agents that read `found`)."""
-    offer, record, holding = fit.offer, context["record"], context["holding"]
-    return {"id": None if record is None else offer.key, "entry": offer.key if record is None else None,
-            "is": "entry" if record is None else offer.kind, "kind": None if record is None else record.get("kind"),
-            "name": holding[0].get("label") if record is None else record.get("name"), "in": context["in"],
-            "owned": offers.counts(holding)[0], "score": fit.score, "why": fit.why}
+    record, holding = context["record"], context["holding"]
+    return offers.row(fit, context, {"is": "entry" if record is None else fit.offer.kind,
+                                     "kind": None if record is None else record.get("kind"),
+                                     "name": holding[0].get("label") if record is None else record.get("name")})
 
 
 def _is_draft(row, project):

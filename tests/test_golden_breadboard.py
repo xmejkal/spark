@@ -20,11 +20,11 @@ class BreadboardChildTest(unittest.TestCase):
 
     def test_a_child_run_carries_no_wokwi_token(self):
         folder = Path(tempfile.mkdtemp())
-        probe = folder / "probe.py"  # an absolute script: run_child runs it in place of one in scripts/
+        probe = folder / "probe.py"  # an absolute script: golden_bench.run_child runs it in place of one in scripts/
         probe.write_text("import os\nprint(os.environ.get('WOKWI_CLI_TOKEN'))\n")
         case = golden_breadboard.CASES[0]._replace(script=str(probe), argv=[])
         with mock.patch.dict(os.environ, {"WOKWI_CLI_TOKEN": "a-pretend-token"}):
-            done = golden_breadboard.run_child(case, folder, folder / "store")
+            done = golden_bench.run_child(case.script, case.argv, folder, golden_breadboard.child_env(folder / "store"))
         self.assertEqual(done.stdout, "None\n", done.stderr)
 
     def test_the_op_of_every_case_is_breadboard(self):

@@ -916,6 +916,13 @@ class ResearchStartsFromWhatExistsTest(unittest.TestCase):
         self.assertEqual([(r["id"], r["entry"], r["is"], r["kind"], r["name"], r["in"], r["owned"]) for r in reed],
                          [(None, "a-bag-of-reed-switches", "entry", None, "Reed switch, a bag", "drawer", "many")])
 
+    def test_need_puts_an_owned_row_with_a_lower_score_before_a_better_one_not_owned(self):
+        # P783 PR 4's review: `--need` sorts by `offers.rank_key` itself, owned first and the score after it
+        self.entry("rangefinder-bits", {"label": "Rangefinder bits", "count": 2})
+        rows = datasheets.need(["vl6180x", "rangefinder"])[0]
+        self.assertEqual([(r["id"] or r["entry"], r["owned"]) for r in rows], [("rangefinder-bits", 2), ("vl6180x-breakout", 0)])
+        self.assertLess(rows[0]["score"], rows[1]["score"])
+
     def test_need_finds_a_board_by_its_name(self):
         rows = datasheets.need(["ESP32-C6"])[0]
         self.assertEqual([(r["id"], r["is"], r["in"], r["owned"]) for r in rows if r["id"] == "xiao-esp32-c6"], [("xiao-esp32-c6", "board", "library", 0)])

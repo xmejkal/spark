@@ -3,7 +3,8 @@ The offers of the store (P211, P743): what a need, or a search by words, can be 
 one `matching.Offer` per readable record (a part or a board, of any layer) with the live drawer entries that say they are
 it, then one per live record-less entry; `from_store(project)` builds them for everything the person's store and spark's
 library hold. `pointing_at` and `counts` are the drawer arithmetic both `--match` (`spark.design.needs`) and `--need`
-(`spark.sourcing.datasheets`) share. It reads records through `record_kind._parse` and the drawer through `drawer`, and
+(`spark.sourcing.datasheets`) share, and `row` and `rank_key` the keys of a Fit's row and its order that both say the same
+way (P783). It reads records through `record_kind._parse` and the drawer through `drawer`, and
 imports nothing of the design layer. Moved here from `needs.py` by P743, so that `--need` could use it.
 """
 
@@ -29,6 +30,22 @@ def counts(holding, mine=None):
     owned = sum(entry["count"] for entry in holding)
     held = sum(n for entry in holding for who, n in (entry.get("used_in") or {}).items() if who != mine)
     return owned, max(owned - held, 0), unsure
+
+
+def row(fit, context, said, mine=None):
+    """
+    One row of a Fit for `--match`'s candidates and `--need`'s rows: `id` (a record's) or `entry` (a drawer entry with no
+    record), then what the caller `said`, then `in` (the layer), `owned` (the drawer count: a number, "many" or "unknown"),
+    `score` and `why`. `context` is `build`'s for the Fit's offer; `mine` is `counts`'.
+    """
+    record_less = context["record"] is None
+    return {"id": None if record_less else fit.offer.key, "entry": fit.offer.key if record_less else None, **said,
+            "in": context["in"], "owned": counts(context["holding"], mine)[0], "score": fit.score, "why": fit.why}
+
+
+def rank_key(row):
+    """The order of rows: what is owned first, then the best score. A caller adds its own tie-breaks after it."""
+    return (row["owned"] == 0, -row["score"])
 
 
 def pointing_at(entries):
