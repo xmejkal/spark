@@ -32,7 +32,6 @@ def counts(holding, mine=None):
     return owned, max(owned - held, 0), unsure
 
 
-
 def row(fit, context, said, mine=None):
     """
     One row of a Fit for `--match`'s candidates and `--need`'s rows: `id` (a record's) or `entry` (a drawer entry with no
@@ -47,6 +46,7 @@ def row(fit, context, said, mine=None):
 def rank_key(row):
     """The order of rows: what is owned first, then the best score. A caller adds its own tie-breaks after it."""
     return (row["owned"] == 0, -row["score"])
+
 
 def pointing_at(entries):
     """{(kind, id): [(entry key, entry)]} for every live drawer entry that says what it is — one said to be dead holds nothing."""
