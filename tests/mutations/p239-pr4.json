@@ -2,8 +2,8 @@
  {
   "file": "scripts/spark/records/deploy_record_store.py",
   "name": "the record ignores who",
-  "find": "\"yes\": who}",
-  "replace": "\"yes\": \"typed in a terminal\"}",
+  "find": "\"yes\": who,",
+  "replace": "\"yes\": \"typed in a terminal\",",
   "tier": "critical"
  },
  {
