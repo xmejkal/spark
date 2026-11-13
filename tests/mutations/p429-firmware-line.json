@@ -54,16 +54,10 @@
   "replace": "        if False:\n"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/requirements_build.py",
   "name": "P429: the rebuild drops a firmware line it cannot read without a word",
-  "find": "    if kept is not None and kept.state == NOT_CHECKED and",
-  "replace": "    if False and"
- },
- {
-  "file": "scripts/check_spine.py",
-  "name": "P429: the rebuild's line about the dropped firmware line is printed unguarded",
-  "find": "print(guard_lines(\"  sim/wokwi.toml %s The rebuild",
-  "replace": "print((\"  sim/wokwi.toml %s The rebuild"
+  "find": "        if kept is not None and kept.state == NOT_CHECKED and",
+  "replace": "        if False and"
  },
  {
   "file": "scripts/spark/firmware/sim_project.py",
@@ -90,7 +84,7 @@
   "replace": "except RuntimeError:"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/requirements_build.py",
   "name": "P429: the rebuild says the line goes when the build stopped before it wrote wokwi.toml",
   "find": " and (workdir / \"sim\" / \"wokwi.toml\").is_file():",
   "replace": ":"

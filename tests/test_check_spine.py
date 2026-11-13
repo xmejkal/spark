@@ -44,6 +44,7 @@ from spark.build import build_codes  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build import board_engine  # noqa: E402
 from spark.build import build_service  # noqa: E402
+from spark.build import requirements_build  # noqa: E402
 from spark.build import kept_files  # noqa: E402
 from spark.build.stages import Stage  # noqa: E402
 from suite_runs import slow  # noqa: E402
@@ -627,7 +628,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             return [Stage("build", check_spine.OK, "fine")]
 
         into, elsewhere = Path(tempfile.mkdtemp()) / "project", Path(tempfile.mkdtemp()) / "sim"
-        with mock.patch.object(check_spine, "BuildService", FakeBuildService(a_build_that_simulated)), \
+        with mock.patch.object(requirements_build, "BuildService", FakeBuildService(a_build_that_simulated)), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(fixture / "requirements.json"), "--keep", str(into)])
             self.assertTrue((into / "sim" / "diagram.json").is_file())
@@ -688,7 +689,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
             (workdir / "sim" / "diagram.json").write_text('{"parts": []}')
             return [Stage("build", check_spine.OK, "fine")]
 
-        with mock.patch.object(check_spine, "BuildService", FakeBuildService(a_build_that_simulated)), \
+        with mock.patch.object(requirements_build, "BuildService", FakeBuildService(a_build_that_simulated)), \
                 contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(requirements or fixture / "requirements.json"), "--json"] + [str(a) for a in argv])
         return json.loads(out.getvalue()), handed.get("firmware")
@@ -768,7 +769,7 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
                 (workdir / "sim" / "wokwi.toml").write_text("[wokwi]\n")
             return [Stage("build", check_spine.OK, "fine")]
 
-        with mock.patch.object(check_spine, "BuildService", FakeBuildService(a_build_that_simulated)), \
+        with mock.patch.object(requirements_build, "BuildService", FakeBuildService(a_build_that_simulated)), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
             check_spine.main([str(fixture / "requirements.json"), "--keep", str(into)] + list(argv))
         return handed["firmware"], err.getvalue()
@@ -787,14 +788,14 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertNotIn("The rebuild wrote it again", self.rebuild_over("firmware = 3\n", writes=False)[1])
 
     def test_a_file_spark_cannot_read_has_its_own_sentence_in_the_rebuild_line(self):
-        with mock.patch.object(check_spine.sim_project, "firmware_in", return_value=check_spine.sim_project.FirmwareLine(
+        with mock.patch.object(requirements_build.sim_project, "firmware_in", return_value=requirements_build.sim_project.FirmwareLine(
                 "not-checked", None, "cannot be read: Permission denied.")):
             handed, said = self.rebuild_over("anything")
         self.assertIn("  sim/wokwi.toml cannot be read: Permission denied. The rebuild wrote it again", said)
 
     def test_that_line_is_one_the_terminal_prints_as_itself(self):
         # a reason that holds a character a terminal does not print: the line goes through guard_lines like the others
-        with mock.patch.object(check_spine.sim_project, "firmware_in", return_value=check_spine.sim_project.FirmwareLine(
+        with mock.patch.object(requirements_build.sim_project, "firmware_in", return_value=requirements_build.sim_project.FirmwareLine(
                 "not-checked", None, "a\u202eb")):
             handed, said = self.rebuild_over("anything")
         self.assertIn("  sim/wokwi.toml a?b The rebuild wrote it again", said)
@@ -874,10 +875,10 @@ class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
             limits.append(named.get("timeout"))
             raise subprocess.TimeoutExpired(cmd, named.get("timeout"), stderr=b"routing net 3\nrouting net 4\n")
 
-        patches = [mock.patch.object(check_spine.subprocess, "run", a_child_that_ran_late),
+        patches = [mock.patch.object(requirements_build.subprocess, "run", a_child_that_ran_late),
                    mock.patch.object(board_engine, "find_toolchain", lambda start: Path("/x/node_modules/.bin/tsci"))]
         if build:
-            patches.append(mock.patch.object(check_spine, "BuildService", FakeBuildService(build)))
+            patches.append(mock.patch.object(requirements_build, "BuildService", FakeBuildService(build)))
         with contextlib.ExitStack() as stack:
             for patch in patches:
                 stack.enter_context(patch)
@@ -922,14 +923,14 @@ class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
     def test_the_sentence_reads_text_a_string_command_a_runtime_and_no_words(self):
         late = subprocess.TimeoutExpired
         self.assertEqual("`tsci build` did not finish in 900s; its last words: routing net 4",
-                         check_spine.timed_out_sentence(late("/opt/spark/x/tsci build board.tsx", 900, stderr="routing net 4\n")))
+                         requirements_build.timed_out_sentence(late("/opt/spark/x/tsci build board.tsx", 900, stderr="routing net 4\n")))
         self.assertEqual("`bun run cli.ts` did not finish in 120s",
-                         check_spine.timed_out_sentence(late(["/opt/bun", "run", "/opt/spark/tools/cli.ts"], 120)))
+                         requirements_build.timed_out_sentence(late(["/opt/bun", "run", "/opt/spark/tools/cli.ts"], 120)))
         self.assertEqual("`convert-wokwi --circuit` did not finish in 120s; its last words: wrote 3 parts",
-                         check_spine.timed_out_sentence(late(["convert-wokwi", "--circuit"], 120, output=b"wrote 3 parts\n", stderr=b"")))
+                         requirements_build.timed_out_sentence(late(["convert-wokwi", "--circuit"], 120, output=b"wrote 3 parts\n", stderr=b"")))
 
     def test_the_last_words_keep_their_end_and_no_more_than_800_characters(self):
-        said = check_spine.timed_out_sentence(subprocess.TimeoutExpired(["tsci", "build"], 900, stderr="x" * 5000 + "END"))
+        said = requirements_build.timed_out_sentence(subprocess.TimeoutExpired(["tsci", "build"], 900, stderr="x" * 5000 + "END"))
         self.assertTrue(said.endswith("END"))
         self.assertLessEqual(len(said), 900)
 
@@ -1069,7 +1070,7 @@ class TheReferenceDesignTest(unittest.TestCase):
         # somebody switches it off.
         from spark.records import record_kind
         available = set(record_kind.available())
-        for part_id in check_spine.REFERENCE["parts"]:
+        for part_id in requirements_build.REFERENCE["parts"]:
             with self.subTest(part=part_id):
                 self.assertIn(part_id, available)
 
@@ -1077,7 +1078,7 @@ class TheReferenceDesignTest(unittest.TestCase):
         # Without it the design has a net with one member, the autorouter skips routing, and the
         # gate's own reference design demonstrates the defect the gate exists to catch.
         from spark.sourcing import part_records
-        sources = [part_id for part_id in check_spine.REFERENCE["parts"]
+        sources = [part_id for part_id in requirements_build.REFERENCE["parts"]
                    if any(supply.get("direction") == "out"
                           for supply in part_records.load(part_id).get("power") or [])]
         self.assertTrue(sources, "no part in the reference design supplies a rail")
@@ -1391,8 +1392,8 @@ class AToolchainFaultIsNotADesignFaultTest(unittest.TestCase):
         binary = fake_tsci(root, builds_when)
         # `main` writes the requirements into the working directory before the build; this drives
         # the service directly, so it does the same.
-        (workdir / "requirements.json").write_text(json.dumps(check_spine.REFERENCE))
-        stages = build_stages(dict(check_spine.REFERENCE), workdir, toolchain=binary)
+        (workdir / "requirements.json").write_text(json.dumps(requirements_build.REFERENCE))
+        stages = build_stages(dict(requirements_build.REFERENCE), workdir, toolchain=binary)
         build = next((stage for stage in stages if stage.name == "build"), None)
         if build is None:
             self.fail("the chain stopped before the build stage: %s" % stages)
@@ -1999,7 +2000,7 @@ class AFileInNoProjectIsSaidToBeTest(unittest.TestCase):
         # The reference design, which sources its own rails: a driver alone would earn a real
         # `!!` note about an unsourced motor rail, which is the design's and not this test's.
         workdir = Path(tempfile.mkdtemp())
-        requirements = dict(check_spine.REFERENCE)
+        requirements = dict(requirements_build.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         with mock.patch.object(board_engine, "find_toolchain", return_value=None):
             stages = build_stages(requirements, workdir, from_library=True)
@@ -2015,7 +2016,7 @@ class AMissingBoardEngineSaysWhatTheToolsListSaysTest(unittest.TestCase):
     def test_the_build_stage_carries_the_tools_list_s_sentence(self):
         from spark.records import tool_finder
         workdir = Path(tempfile.mkdtemp())
-        requirements = dict(check_spine.REFERENCE)
+        requirements = dict(requirements_build.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         said = "tscircuit needs bun: bun (bun) is not installed — install: npm install -g bun"
         missing = FakeToolFinder({"board-engine": tool_finder.ToolError(said, code="tool_missing")}).find
@@ -2039,7 +2040,7 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
     def test_a_broken_personal_file_is_named_by_the_build_stage(self):
         from spark.records import tool_finder
         workdir = Path(tempfile.mkdtemp())
-        requirements = dict(check_spine.REFERENCE)
+        requirements = dict(requirements_build.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         with mock.patch.object(tool_finder, "PERSONAL",
                                self.broken_home() / ".local" / "share" / "spark" / "tools.json"):
@@ -2053,7 +2054,7 @@ class TheFinalReviewAtTheEntryPointsTest(unittest.TestCase):
         (project / ".spark").mkdir()
         (project / ".spark" / "tools.json").write_text('{"tscircuit": {"core": "0.0.1",}}')
         workdir = Path(tempfile.mkdtemp())
-        requirements = dict(check_spine.REFERENCE)
+        requirements = dict(requirements_build.REFERENCE)
         (workdir / "requirements.json").write_text(json.dumps(requirements))
         with mock.patch.object(board_engine, "find_toolchain", return_value=None):
             stages = build_stages(requirements, workdir, project=project, from_library=True)
@@ -2162,7 +2163,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 
     def spine(self, last):
         stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build")] + [stage("simulation", last)]
-        with mock.patch.object(check_spine, "BuildService", FakeBuildService(lambda *_, **__: stages)), \
+        with mock.patch.object(requirements_build, "BuildService", FakeBuildService(lambda *_, **__: stages)), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(self.project / "requirements.json")])
         path = self.home / "history.jsonl"
@@ -2172,7 +2173,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         """What `check_spine.main` returned and said, stdout then stderr, for a chain whose every stage ended ok."""
         stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
         out, err = io.StringIO(), io.StringIO()
-        with mock.patch.object(check_spine, "BuildService", FakeBuildService(lambda *_, **__: stages)), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        with mock.patch.object(requirements_build, "BuildService", FakeBuildService(lambda *_, **__: stages)), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = check_spine.main([str(self.project / "requirements.json")] if argv is None else argv)
         return code, out.getvalue(), err.getvalue()
 
@@ -2183,7 +2184,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         def build(*_, **__):
             happens()
             return stages
-        with mock.patch.object(check_spine, "BuildService", FakeBuildService(build)), \
+        with mock.patch.object(requirements_build, "BuildService", FakeBuildService(build)), \
                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             check_spine.main([str(self.project / "requirements.json")])
         path = self.home / "history.jsonl"
@@ -2238,7 +2239,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
         code, said, _ = self.answer()
         self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
         (self.project / "requirements.json").write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
-        with mock.patch.object(check_spine.loader, "load", side_effect=TypeError("a record of a shape nobody foresaw")):
+        with mock.patch.object(requirements_build.loader, "load", side_effect=TypeError("a record of a shape nobody foresaw")):
             code, said, _ = self.answer()
         self.assertEqual((code, "the chain runs end to end" in said, (self.home / "history.jsonl").exists()), (0, True, False))
 
@@ -2278,7 +2279,7 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 
     def test_whatever_stops_the_recording_the_verdict_stands_and_the_reason_is_said(self):
         for refusal in (store.StoreError("the projects list is not JSON", code="record_file_broken"), OSError("the disk is full")):
-            with self.subTest(refusal=refusal), mock.patch.object(check_spine.part_facts, "note_built", side_effect=refusal):
+            with self.subTest(refusal=refusal), mock.patch.object(requirements_build.part_facts, "note_built", side_effect=refusal):
                 code, said, complained = self.answer()
                 self.assertEqual((code, "the chain runs end to end" in said), (0, True))
                 self.assertIn(str(refusal), complained)
@@ -2286,9 +2287,65 @@ class ABuildThatRunsEndToEndIsRecordedTest(unittest.TestCase):
 
     def test_a_reason_with_a_carriage_return_and_an_override_shows_as_question_marks_on_stderr(self):
         # P423: every text print of the script goes through guard_lines
-        with mock.patch.object(check_spine.part_facts, "note_built", side_effect=OSError("full\u202e\rdisk")):
+        with mock.patch.object(requirements_build.part_facts, "note_built", side_effect=OSError("full\u202e\rdisk")):
             _, _, complained = self.answer()
         self.assertIn("  the build was not recorded in your history: full??disk\n", complained)
+
+
+class ARequirementsBuildServiceTest(unittest.TestCase):
+    """P783 PR 3: `requirements_build.RequirementsBuildService` is check_spine's whole run, given a fake BuildService class
+    (no patch): a refused file is one requirements stage and makes no work folder, a build past its limit and a crash
+    are each one stage that could not run with its code, and a history it cannot keep is one diagnostics line."""
+
+    def setUp(self):
+        self.home, self.project = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp()) / "plant-alarm"
+        (self.project / ".spark").mkdir(parents=True)
+        self.requirements = self.project / "requirements.json"
+        self.requirements.write_text(json.dumps({"board": "firebeetle2-esp32s3", "parts": ["tactile-button"]}))
+        (self.home / "projects.json").write_text(json.dumps({"plant-alarm": str(self.project.resolve())}))
+        patcher = mock.patch.dict(os.environ, {"SPARK_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def run_with(self, build):
+        """The RequirementsBuildResult of the person's file over a fake BuildService whose build is `build`; its work folder removed after."""
+        run = requirements_build.RequirementsBuildService(FakeBuildService(build)).build(self.requirements)
+        if run.workdir is not None:
+            self.addCleanup(shutil.rmtree, run.workdir, True)
+        return run
+
+    def test_a_refused_file_is_one_requirements_stage_with_its_code_and_no_work_folder(self):
+        self.requirements.write_text("{not json")
+        folders = set(Path(tempfile.gettempdir()).glob("spark-spine-*"))
+        run = self.run_with(lambda *_, **__: self.fail("the build ran on a refused file"))
+        self.assertEqual([(stage.name, stage.status) for stage in run.stages], [("requirements", "could-not-run")])
+        self.assertTrue(run.stages[0].code)
+        self.assertEqual((run.workdir, run.requirements, run.toolchain, run.diagnostics), (None, None, None, []))
+        self.assertEqual(set(Path(tempfile.gettempdir()).glob("spark-spine-*")), folders)
+
+    def test_a_build_past_its_limit_is_stage_timed_out(self):
+        def late(*_, **__):
+            raise subprocess.TimeoutExpired(["/x/node_modules/.bin/tsci", "build"], 900)
+        run = self.run_with(late)
+        self.assertEqual([(stage.name, stage.status, stage.code) for stage in run.stages], [("build", "could-not-run", "stage_timed_out")])
+        self.assertIn("`tsci build` did not finish in 900s", run.stages[0].detail)
+        self.assertTrue(run.workdir.is_dir())
+
+    def test_any_other_exception_is_stage_crashed(self):
+        def broken(*_, **__):
+            raise ValueError("a fault of its own")
+        run = self.run_with(broken)
+        self.assertEqual([(stage.name, stage.status, stage.code, stage.detail) for stage in run.stages],
+                         [("check_spine", "could-not-run", "stage_crashed", "ValueError: a fault of its own")])
+
+    def test_a_history_it_cannot_keep_is_one_diagnostics_line(self):
+        (self.home / "history.jsonl").write_text("this is not an event\n")
+        stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
+        run = self.run_with(lambda *_, **__: stages)
+        self.assertEqual(run.stages, stages)
+        self.assertEqual(len(run.diagnostics), 1)
+        self.assertTrue(run.diagnostics[0].startswith("  the build was not recorded in your history: "), run.diagnostics)
+        self.assertIn("history.jsonl line 1 is not a history event", run.diagnostics[0])
 
 
 class ALoadAcrossAPairNeedsNoGroundTest(unittest.TestCase):
@@ -2348,7 +2405,7 @@ class TheVerdictSaysWhatIsNotOnTheBoardTest(unittest.TestCase):
         path.write_text(json.dumps(requirements))
         stages = [stage(name, check_spine.OK) for name in ("board", "schematic", "footprint", "build", "simulation")]
         out = io.StringIO()
-        with mock.patch.object(check_spine, "BuildService", FakeBuildService(lambda *_, **__: stages)), contextlib.redirect_stdout(out), \
+        with mock.patch.object(requirements_build, "BuildService", FakeBuildService(lambda *_, **__: stages)), contextlib.redirect_stdout(out), \
                 contextlib.redirect_stderr(io.StringIO()):
             code = check_spine.main([str(path)] + list(flags))
         return code, out.getvalue()
@@ -2525,8 +2582,8 @@ class ARebuildMergesIntoTheKeptDiagramTest(unittest.TestCase):
         (workdir / "kept-diagram.json").write_text('{"parts": [], "connections": []}')
         broken = subprocess.CompletedProcess([], 1, "", "converter exploded")
         real = subprocess.run
-        self.addCleanup(setattr, check_spine.subprocess, "run", real)
-        check_spine.subprocess.run = lambda command, *rest, **named: broken if "--circuit" in command else real(command, *rest, **named)
+        self.addCleanup(setattr, requirements_build.subprocess, "run", real)
+        requirements_build.subprocess.run = lambda command, *rest, **named: broken if "--circuit" in command else real(command, *rest, **named)
         # P723: a fake engine, so no real tsci runs on a machine that has one; its circuit passes the build stage (one
         # trace, the MCU grounded and its 3V3 on the net the design feeds it from), and the faked converter is what fails
         circuit = [{"type": "source_net", "source_net_id": "n_gnd", "name": "GND"},
@@ -2549,7 +2606,7 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
     `not written` entry carries its code into --json's `kept`. The codes are literals here."""
 
     #: Each Stage that is not ok, in the order the build area builds them (P705): board_engine's converter_stage_problem
-    #: and convert, build_service's BuildService and board_alone, check_spine's main. A code a design error carries is named by the
+    #: and convert, build_service's BuildService and board_alone, requirements_build's RequirementsBuildService. A code a design error carries is named by the
     #: expression that passes it on.
     CODES_IN_ORDER = [
         "tool_missing",
@@ -2564,7 +2621,7 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
 
     def test_each_stage_that_is_not_ok_names_its_code(self):
         stops = []
-        for source in ("spark/build/board_engine.py", "spark/build/build_service.py", "check_spine.py"):
+        for source in ("spark/build/board_engine.py", "spark/build/build_service.py", "spark/build/requirements_build.py"):
             tree = ast.parse((ROOT / "scripts" / source).read_text())
             stops += sorted((node.lineno, node.col_offset, node) for node in ast.walk(tree)
                             if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "Stage" and len(node.args) > 1

@@ -162,27 +162,27 @@
   "replace": "shown = {key: record[key] for key in BUILD_FACTS if key in record}"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/requirements_build.py",
   "name": "a design built from the plugin's library is recorded as a project's",
-  "find": "    handed = design_handed_to(workdir, project) if source and not from_library else None",
-  "replace": "    handed = design_handed_to(workdir, project) if source else None"
+  "find": "        handed = design_handed_to(workdir, project) if source and not from_library else None",
+  "replace": "        handed = design_handed_to(workdir, project) if source else None"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/requirements_build.py",
   "name": "the reference design is recorded",
-  "find": "    handed = design_handed_to(workdir, project) if source and not from_library else None",
-  "replace": "    handed = design_handed_to(workdir, project) if not from_library else None"
+  "find": "        handed = design_handed_to(workdir, project) if source and not from_library else None",
+  "replace": "        handed = design_handed_to(workdir, project) if not from_library else None"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/requirements_build.py",
   "name": "a history that cannot be kept hides the verdict",
-  "find": "        except (store.StoreError, OSError) as unrecorded:",
-  "replace": "        except OSError as unrecorded:"
+  "find": "            except (store.StoreError, OSError) as unrecorded:",
+  "replace": "            except OSError as unrecorded:"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/requirements_build.py",
   "name": "a history that cannot be written is a traceback",
-  "find": "        except (store.StoreError, OSError) as unrecorded:",
-  "replace": "        except store.StoreError as unrecorded:"
+  "find": "            except (store.StoreError, OSError) as unrecorded:",
+  "replace": "            except store.StoreError as unrecorded:"
  }
 ]

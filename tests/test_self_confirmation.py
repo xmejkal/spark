@@ -83,7 +83,7 @@ MAY_READ = {
     "sheet.BOARD_COMPONENT": AGREEMENT + ": the board's component name, checked against the converter's mapping.ts (P484)",
     "onboard_parts.ONBOARD_PARTS": "the table of roles spark wires (P484), checked against the roles a scenario reaches",
     "check.CHECKS": STRUCTURE, "board_records.LIBRARY": STRUCTURE, "record_kind.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE,
-    "fab.DATA": STRUCTURE, "check_spine.REFERENCE": STRUCTURE,
+    "fab.DATA": STRUCTURE, "requirements_build.REFERENCE": STRUCTURE,
     "board_engine.CONVERTER_PATHS": STRUCTURE,
     "project_setup.PROJECT_TEMPLATE": STRUCTURE,
     "project_setup.NOTHING_TO_DO": "the Refusal under test: its code is compared with a literal, never read as the expectation (P701)",

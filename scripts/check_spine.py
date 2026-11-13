@@ -44,18 +44,15 @@ tool sends somebody to debug a design nobody examined — the mirror image of a 
 misleading. Every build verdict names the tsci that produced it, because "exit 0" once depended
 on which one PATH found first, and nothing said so.
 
-The build is `spark/build/build_service.BuildService` over `board_engine.TscircuitEngine` and
-`spark/design/board_emitter.BoardEmitter`, all in process (P706); this CLI parses, runs it and reports.
+The run is `spark/build/requirements_build.RequirementsBuildService`: it reads the file, makes the work folder and runs
+`build_service.BuildService` over `board_engine.TscircuitEngine` and `spark/design/board_emitter.BoardEmitter`, all in
+process (P706); this CLI parses, runs it and reports.
 """
 
 import argparse
 import json
-import os
-import shlex
 import shutil
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -63,27 +60,14 @@ sys.path.insert(0, str(SCRIPTS))
 
 from spark.bench import board_envelope  # noqa: E402
 from spark.breadboard import tabbed_page  # noqa: E402
-from spark.build import board_engine  # noqa: E402
-from spark.build import build_codes  # noqa: E402
-from spark.build.board_engine import modules_for  # noqa: E402
-from spark.build.build_service import BuildInputs, BuildService, verdict, vouches_for_a_build  # noqa: E402
-from spark.build.kept_files import (REQUIREMENTS_STAGE, _kept, _kept_pins, design_handed_to, drop_an_older_build,  # noqa: E402
-                                    keep_breadboard, keep_simulation, keep_tabbed_page, left_off, simulation_dir)
-from spark.build.stages import Stage, skipped_the_build  # noqa: E402
-from spark.design import loader  # noqa: E402
-from spark.sourcing import part_facts  # noqa: E402
-from spark.firmware import sim_project  # noqa: E402
-from spark.records import store  # noqa: E402
+from spark.build.build_service import verdict  # noqa: E402
+from spark.build.kept_files import (_kept, _kept_pins, drop_an_older_build, keep_breadboard, keep_simulation,  # noqa: E402
+                                    keep_tabbed_page, left_off, simulation_dir)
+from spark.build.requirements_build import RequirementsBuildService  # noqa: E402
+from spark.build.stages import skipped_the_build  # noqa: E402
 
-from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, NOT_CHECKED, OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, STATUS_FOR  # noqa: E402
+from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS, EXIT_COULD_NOT_RUN, OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, STATUS_FOR  # noqa: E402
 from spark.core.text_guards import guard_lines  # noqa: E402
-
-#: The design the chain is proven against when nobody names one. A motor driver, a sensor on a
-#: bus, and the power inlet that supplies the rail the modules only consume — the smallest set
-#: that exercises pin assignment, a bus, a rail with an external source, and two footprint kinds.
-REFERENCE = {"board": "firebeetle2-esp32s3",
-             "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
-
 
 #: What the closing line adds when a full build's simulation stage is skipped: every part's record skips the simulation (P778).
 EVERY_PART_SKIPPED_LINE = "; every part is skipped from the simulation, so the diagram holds the board alone"
@@ -102,22 +86,6 @@ def render(stages, code, unserved=()):
         EXIT_COULD_NOT_RUN: "  the chain was NOT exercised — this is not a pass",
     }[code] + (" — but not every need is on the board: %s" % ", ".join(unserved) if unserved and code == EXIT_OK else ""))
     return "\n".join(lines) + "\n"
-
-
-#: How much of a late command's own output the sentence keeps, as the other last-words sites cap theirs.
-LAST_WORDS_CAP = 800
-
-
-def timed_out_sentence(late):
-    """What a command that ran past its limit said (P659): the command by its file names (two words, three when the
-    second is `run`, as a converter run as `<runtime> run cli.ts`), the limit it had, and its last three lines of stderr, or of stdout when stderr is empty, capped."""
-    words = shlex.split(late.cmd) if isinstance(late.cmd, str) else list(late.cmd)
-    names = [Path(str(word)).name for word in words]
-    cmd = names[:3] if names[1:2] == ["run"] else names[:2]
-    out = late.stderr or late.stdout or ""
-    said = out.decode(errors="replace") if isinstance(out, bytes) else out
-    last = " | ".join(said.strip()[-LAST_WORDS_CAP:].splitlines()[-3:])
-    return "`%s` did not finish in %ss%s" % (" ".join(cmd), late.timeout, "; its last words: " + last if last else "")
 
 
 def main(argv=None):
@@ -145,62 +113,10 @@ def main(argv=None):
                              "without it, the image a kept wokwi.toml names is kept")
     args = parser.parse_args(argv)
 
-    # The input is read before anything runs, and read AS input: a malformed file is a stage that could not run, not a
-    # traceback with exit 1 (which says "the chain is broken"). The project is the file's, up from its own directory, so a
-    # design belongs to its parts wherever it is typed; a file in no project is built from the plugin's library.
-    source = Path(args.requirements).resolve() if args.requirements else None
-    try:
-        requirements = loader.read(source) if source else dict(REFERENCE)
-    except loader.DesignError as broken:
-        return report([Stage(REQUIREMENTS_STAGE, COULD_NOT_RUN, str(broken), broken.code)], args)
-    # A file in no project is built from the plugin's library, and the board stage says so.
-    project = loader.project_for(source) if source else None
-    from_library = bool(source) and loader.is_library(project)
-
-    workdir = Path(tempfile.mkdtemp(prefix="spark-spine-"))
-    (workdir / "requirements.json").write_text(json.dumps(requirements))
-    # tsci needs its toolchain reachable from the build directory.
-    toolchain = board_engine.find_toolchain(source.parent if source else Path.cwd())
-    modules = modules_for(toolchain) if toolchain is not None else None
-    if modules is not None and not (workdir / "node_modules").exists():
-        os.symlink(modules, workdir / "node_modules")
-
-    # What `built` will name is loaded now, once, before anything can change under it.
-    handed = design_handed_to(workdir, project) if source and not from_library else None
-
-    # A rebuild runs the flash image the kept wokwi.toml already names, unless --firmware names another.
-    simulation = simulation_dir(args)
-    if simulation and (simulation / "diagram.json").is_file():  # P482: the build merges into a copy, never the person's file
-        shutil.copy(simulation / "diagram.json", workdir / sim_project.KEPT_DIAGRAM)
-    firmware, kept = args.firmware, None
-    if not firmware and simulation:
-        kept = sim_project.firmware_in(simulation / "wokwi.toml")
-        firmware = kept.name
-    try:
-        stages = BuildService.for_toolchain(toolchain).build(BuildInputs(requirements, workdir, project, from_library, firmware))
-    except subprocess.TimeoutExpired as late:
-        stages = [Stage("build", COULD_NOT_RUN, timed_out_sentence(late), build_codes.STAGE_TIMED_OUT)]
-    except Exception as exc:  # noqa: BLE001
-        # Anything unforeseen is could-not-run, never problems. An exception says this tool
-        # failed, which is not the same as the chain failing, and reporting one as the other
-        # sends somebody to debug a design that was never examined.
-        stages = [Stage("check_spine", COULD_NOT_RUN,
-                        "%s: %s" % (type(exc).__name__, exc), build_codes.STAGE_CRASHED)]
-
-    # P429: a line this could not read goes with the file the build writes again, so that is said, but only when it did.
-    if kept is not None and kept.state == NOT_CHECKED and (workdir / "sim" / "wokwi.toml").is_file():
-        print(guard_lines("  sim/wokwi.toml %s The rebuild wrote it again with no image named, and a scenario run then names "
-                          "the default one." % kept.why), file=sys.stderr)
-
-    # The history says a build ran end to end (§5.7) — written here, by the chain itself, never on anyone's say-so.
-    # A history that cannot be kept is said, and the verdict stands: the chain ran, whatever the store thinks of it.
-    if handed is not None and vouches_for_a_build(stages):
-        try:
-            part_facts.note_built(handed)
-        except (store.StoreError, OSError) as unrecorded:
-            print(guard_lines("  the build was not recorded in your history: %s" % unrecorded), file=sys.stderr)
-
-    return report(stages, args, workdir, requirements, tabbed_page.TscircuitExport(toolchain))
+    run = RequirementsBuildService().build(args.requirements, args.firmware, simulation_dir(args))
+    for line in run.diagnostics:
+        print(guard_lines(line), file=sys.stderr)
+    return report(run.stages, args, run.workdir, run.requirements, tabbed_page.TscircuitExport(run.toolchain))
 
 
 def report(stages, args, workdir=None, requirements=None, exporter=None):
