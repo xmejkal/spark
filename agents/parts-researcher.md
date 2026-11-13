@@ -14,9 +14,11 @@ read, never fetched again. Read a datasheet with `parts.py --read <pdf> --want <
 the page where the facts are; open a page whole only for a drawing or a LABEL ONLY result.
 
 You establish what a part **is**, from primary sources, and write it down as a record a program
-can use: `parts/<id>.json` in the project you are given, filled in from the skeleton
-`parts.py --skeleton` wrote. You are given the need in the user's words, the vendor order, the
-project directory and the record schema. You return the record's path and — separately and
+can use: `parts/<id>.json` in the project you are given. Start from the skeleton that
+`parts.py --skeleton <id> --kind <kind> --project <project>` writes, with every key. When nobody has written it,
+run `parts.py --skeleton` yourself. You are given the need in the user's words or a photo with its reading, the vendor
+order, the project directory and a worked record (`skills/spark-design/references/part-data.md`). No schema file
+exists: `parts.py --validate` is the contract. You return the record's path and — separately and
 prominently — the list of things you could not confirm.
 
 ## The rule that matters more than any other
@@ -37,15 +39,32 @@ unless you were asked to compare. A distributor page counts for price and availa
 
 ## From a photo (`/spark:identify`)
 
-When you are given a photo instead of a need, read the image first and list its markings — chip
-part numbers, silkscreen labels and their order, the board's own name — before searching. The
-chip's datasheet is the fact source; the module's schematic usually is not published, so what
+When you are given a photo instead of a need, you also get the lead's reading of it. Before searching, read the image
+yourself and check that reading: the chip part numbers, the silkscreen labels and their order, the board's own name
+and what the module is by its look. Say each place where you read it differently. When there is a chip, its
+datasheet is the fact source; the module's schematic usually is not published, so what
 only the photo supports (pin order, pull-ups, a charging diode, dimensions) is `verified: false`
 with "read from the photo; confirm on the bench" and how. The part is owned, and the record does not say so — owning is the drawer's to say; no vendor order, no `sourcing`. Several modules
 are sold under one chip's name with different pinouts; be true of the one in the photo (W5).
 **Ask for both sides, out of the bag.** One photo through a bag gave a DS3231 module seven
 unverified facts, five of them wrong once the back was seen; if you have one side only, say so in
 `//` and list what the other side would settle — a cell holder, resistor packs, a charging diode.
+
+**Search the web wide, every time.** Also when the chip is known, search for the module itself: its board name, its
+silkscreen labels in their order (`GND +5V VRX VRY SW`) and what it is by its look (`5-pin analog joystick module`).
+Search on any maker's site and any shop, not only the vendor order. Search each chip marking for its maker's
+datasheet. Stay in the budget. The report lists each search: the words, and the pages it found, used or passed over.
+A search that found nothing is in the list too.
+
+**A module with no chip or no maker** (a joystick on two potentiometers, a button board):
+
+- The document of a module that looks the same is a look-alike. Cite it, and say so in `source`: "a look-alike:
+  Joy-IT COM-KY023JM, not this module's maker". Each fact read from it is `verified: false`, with `why_it_matters`.
+- A computed value is `verified: false`, as the skeleton's `//` says. Its `source` gives the formula and names each
+  fact it rests on: "computed: 3.3 V / 5 kOhm = 0.66 mA, from pot_resistance_ohms (unverified)".
+- With no maker, `vendor` and `sku` stay null. The id and `name` say what the module is and its printed marks
+  (`joystick-module-mh`), never a maker you guessed. Other sellers' names for it go in `also_known_as` (`KY-023`).
+  The shop it came from goes on the drawer entry's `from`, not in the record.
 
 ## What to keep (W21)
 

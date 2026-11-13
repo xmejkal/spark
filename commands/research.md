@@ -67,7 +67,7 @@ A module, or a part identified from a photo with `/spark:identify`, has variants
 read. For a DFRobot module, write the skeleton with its part number and run `research.py` first (section 5). It keeps
 the wiki's documents and asks the geometry questions. Then launch `parts-researcher` for the rest: the needs, the power
 pins, the pin order and the facts. Give it the need and the vendor order (the brief's `prefer`, default DFRobot then
-Seeed). Give it the project directory, the plugin directory (`${CLAUDE_PLUGIN_ROOT}`) and the record schema
+Seeed). Give it the project directory, the plugin directory (`${CLAUDE_PLUGIN_ROOT}`) and the worked record
 (`skills/spark-design/references/part-data.md`).
 
 ## 3. The facts each kind needs, and nothing else
