@@ -1,0 +1,20 @@
+[
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "P783: assign returns a plain tuple again, not a PinMap",
+  "find": "    return PinMap(assignments, leftover)",
+  "replace": "    return assignments, leftover"
+ },
+ {
+  "file": "scripts/spark/design/pin_assigner.py",
+  "name": "P783: the PinMap's fields name the other value",
+  "find": "PinMap = namedtuple(\"PinMap\", \"assignments leftover\")",
+  "replace": "PinMap = namedtuple(\"PinMap\", \"leftover assignments\")"
+ },
+ {
+  "file": "scripts/spark/breadboard/drawing.py",
+  "name": "P783: a NotDrawnError may be made without a code again",
+  "find": "    def __init__(self, message, code, subject=None):",
+  "replace": "    def __init__(self, message, code=None, subject=None):"
+ }
+]

@@ -2,8 +2,8 @@
  {
   "file": "scripts/assign_pins.py",
   "name": "assign_pins ignores the parts' signals again",
-  "find": "        assignments, leftover = assign(board, loaded.signals)",
-  "replace": "        assignments, leftover = assign(board, list(loaded.requirements.get(\"signals\") or []))"
+  "find": "        pin_map = assign(board, loaded.signals)",
+  "replace": "        pin_map = assign(board, list(loaded.requirements.get(\"signals\") or []))"
  },
  {
   "file": "scripts/spark/design/board_emitter.py",

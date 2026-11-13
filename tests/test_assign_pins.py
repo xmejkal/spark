@@ -59,6 +59,17 @@ def placed(assignments):
     return {entry["signal"]: entry["pin"] for entry in assignments}
 
 
+class PinMapTest(unittest.TestCase):
+    def test_assign_returns_a_pin_map_whose_fields_are_what_it_unpacks_to(self):
+        """P783: `assign` returns a PinMap Value; its named fields are the two values a caller unpacks."""
+        pin_map = pin_assigner.assign(board(), [{"name": "LED", "needs": []}])
+        assignments, leftover = pin_map
+        self.assertIsInstance(pin_map, pin_assigner.PinMap)
+        self.assertEqual((pin_map.assignments, pin_map.leftover), (assignments, leftover))
+        self.assertEqual([entry["signal"] for entry in pin_map.assignments], ["LED"])
+        self.assertNotIn(pin_map.assignments[0]["pin"], pin_map.leftover)
+
+
 class ScarceLastTest(unittest.TestCase):
     def test_a_plain_signal_takes_a_plain_pin(self):
         assignments, _ = pin_assigner.assign(board(), [{"name": "LED", "needs": []}])

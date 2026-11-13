@@ -203,11 +203,17 @@ def board_dedicates_pins_to(board, bus):
     return bus in (board.get("pin_roles") or {})
 
 
+#: Value: the pin map `assign` works out. `assignments` holds one dict per placed signal (signal, pin, gpio, why, roles), and
+#: `leftover` the free pins by label. It unpacks as `assignments, leftover`. The pin map as a module the firmware imports is
+#: another thing: `pin_module`'s text, in a PinModuleResult. The board is not the map's, so `render` and `pin_module` take it.
+PinMap = namedtuple("PinMap", "assignments leftover")
+
+
 def assign(board, signals):
     """
     Place every signal, most-constrained first, on the least capable pin that will do.
 
-    Returns (assignments, leftover). Raises `ImpossibleError` rather than returning a partial map.
+    Returns a PinMap (assignments, leftover). Raises `ImpossibleError` rather than returning a partial map.
     """
     available = candidates(board)
     for signal in signals:
@@ -318,7 +324,7 @@ def assign(board, signals):
 
     leftover = {label: pin for label, pin in available.items()
                 if pin["gpio"] not in taken_gpio}
-    return assignments, leftover
+    return PinMap(assignments, leftover)
 
 
 def _penalty(roles):

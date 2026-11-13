@@ -270,7 +270,7 @@ class OtherEditsTest(unittest.TestCase):
         moved = place_of(project, "TactileButton")
         change_requirements(project, FULL)
         with mock.patch.object(kept_moves.KeepMovesFirstFitPartPlacement, "place",
-                               side_effect=drawing.NotDrawnError("no room")):
+                               side_effect=drawing.NotDrawnError("no room", drawing.NO_HOLE_LEFT)):
             written = build(project)
         self.assertEqual(codes(written), {"TactileButton": "no-room"})
         self.assertNotEqual(place_of(project, "TactileButton"), moved)

@@ -44,6 +44,8 @@ MAY_READ = {
     "outcomes.RECORDED": PINNED, "outcomes.NONE_RECORDED": PINNED, "outcomes.NOT_CHECKED": PINNED,
     "outcomes.NOT_CHECKED_MESSAGE": PINNED,
     "drawing.CODES": PINNED,
+    "drawing.NO_HOLE_LEFT": "the code a faked \"no room\" refusal must carry (P783: the code is required); it is carried, but no "
+                            "assertion compares it: a fixture, not the expectation",
     "board_live.EXIT_FOR_ANSWER": STRUCTURE, "board_live.RAN": STRUCTURE,
     "design_operations.OPERATIONS": STRUCTURE + " (P726: the ops on the core, each checked against its parts.OPERATIONS row)",
     "sourcing_operations.OPERATIONS": STRUCTURE + " (P726 PR 2: the fifteen part ops on the core, each checked against its parts.OPERATIONS row)",
