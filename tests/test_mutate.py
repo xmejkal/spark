@@ -1293,7 +1293,7 @@ class TheScratchOfAStoppedRunTest(unittest.TestCase):
         self.assertEqual(os.listdir(mine), [])
         shutil.rmtree(mine, ignore_errors=True)
 
-    @slow("five copy runs of a tiny tree, each stopped by a SIGTERM beside one scratch folder, SECONDS on 2026-11-13")
+    @slow("five copy runs of a tiny tree, each stopped by a SIGTERM beside one scratch folder, 1.0 s on 2026-11-13")
     def test_a_sigterm_right_after_a_scratch_folder_is_made_or_right_before_it_is_removed_leaves_nothing(self):
         # P805: the child sends SIGTERM to itself once, right after a folder of the prefix is made, or right before one is
         # removed; a window between the two lines or inside the removal leaves the folder.

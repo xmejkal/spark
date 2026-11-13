@@ -171,8 +171,10 @@ def _from_source(prefix):
     """
     import os
     import shutil
-    run = Path(tempfile.mkdtemp(prefix=prefix))
+    run = None
     try:
+        with sigterm_held():  # made and bound together: a SIGTERM between the two would leave the folder (P805)
+            run = Path(tempfile.mkdtemp(prefix=prefix))
         (run / "tmp").mkdir()  # it must exist: a TMPDIR that does not is skipped, and the temp files go elsewhere
         # A mutation run never runs the quick run (P425): a defect only a slow test catches would escape it. Nor is its
         # tree the gate's archive (P797): a copy holds untracked files, which no address check may walk.
@@ -180,7 +182,9 @@ def _from_source(prefix):
                            PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=str(run / "pycache"), TMPDIR=str(run / "tmp"))
         yield environment
     finally:
-        shutil.rmtree(run, ignore_errors=True)
+        if run is not None:
+            with sigterm_held():  # a SIGTERM waits for the whole removal, as for the copy's
+                shutil.rmtree(run, ignore_errors=True)
 
 
 class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
@@ -826,7 +830,8 @@ def main(argv=None):
     where = None
     with sigterm_as_exit():  # also around the copy's removal: no window back at the default handler
         try:
-            where = copy_of(root) if args.copy else root
+            with sigterm_held():  # the copy made and `where` stored together, so the `finally` finds it (P805)
+                where = copy_of(root) if args.copy else root
             results, restored = run(where, args.tests, mutations, copied=where is not root, ledger_store=ledger_store, budget=budget)
         except (AnotherRunIsActive, RedBeforeMutation) as stopped:
             print(str(stopped), file=sys.stderr)
