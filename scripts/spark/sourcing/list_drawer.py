@@ -1,6 +1,6 @@
 """
 `parts.py --drawer`: what you own, as an Operation on the core (P726 PR 2). It was `part_handlers._op_drawer`. One line per
-entry: label, count, the record it is, unsure, skip, who holds it; 20 at a time. It writes nothing.
+entry: its key (the `entry` `--drawer-set` takes), label, count, the record it is, unsure, skip, who holds it; 20 at a time. It writes nothing.
 """
 
 from spark.core.operation import COMMON_ARGUMENTS, JSON_DEST, Argument
@@ -18,13 +18,13 @@ class ListDrawer(PartOperation):
 
     name = "drawer"
     data_keys = ('entries',)
-    arguments = (Argument(("--drawer",), "drawer", bool, "what you own: label, count, the record it is, unsure, skip — 20 at a time"),
+    arguments = (Argument(("--drawer",), "drawer", bool, "what you own: each entry's key, label, count, the record it is, unsure, skip — 20 at a time"),
                  ANSWER_ARGUMENTS["start"], COMMON_ARGUMENTS[JSON_DEST])
 
     def build_answer(self, start, drawer=True):
         entries = drawer_listing()
         shown, truncated = store.page_with_store(entries, start, "drawer", ["--drawer"])
-        lines = ["  %-44s %6s  %-38s %s" % (str(e["label"])[:44], "?" if e["count"] is None else e["count"],
+        lines = ["  %-28s %-44s %6s  %-38s %s" % (e["entry"], str(e["label"])[:44], "?" if e["count"] is None else e["count"],
                                              "%s %s" % next(iter(e["is"].items())) if e["is"] else "—",
                                              "  ".join(filter(None, ["maybe owned — check the drawer" if e["unsure"] else ("skip: %s" % e["skip"] if e["skip"] else ""),
                                                                    "held by " + ", ".join(map(printable, e["held_by"])) if e["held_by"] else ""])))
