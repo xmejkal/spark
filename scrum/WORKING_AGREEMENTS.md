@@ -25,8 +25,8 @@ cause, and never reports a pass over what it did not see.
 `tools/check_backlog.py` prints `could-not-run` with its cause and lets the push through, because the gate must work
 offline — and so when `gh` handed over part of spark's board, or a card stands in a stage the gate does not know, or no
 card of spark's has a Status (P168, P167): the gate judges nothing it could not read whole or place, and says which. A
-partial look — the board read, but not its tasks' parent stories, or not the bin's board, or the bin's only in part or
-with no Status on any card — is said in a line with its cause, and does
+partial look — the board read, but not the bin's board, or the bin's only in part or with no Status on any card — is
+said in a line with its cause, and does
 not stop the push either. All are said, never read as checked (P146).
 
 **Origin:** the runner reported `ok` for a flagship check that called a function which had never
@@ -67,7 +67,7 @@ and the ledger `tests/mutations/ledger.jsonl`, which every run that plants rows 
 defines them. A critical mark is written by hand on a row that guards a store write, a deploy, an erase or a refusal that
 protects the person, at most 40 in all (`tests/test_ledger.py` caps it). The sweep's command is `SPARK_HOME=... python3
 tools/mutate.py tests/mutations/*.json --for <the wave's files> --tier critical,new,proving --budget 20 --copy`; a night
-slice takes `--budget 180`; the proven rows run once per major release (`--tier proven`): the PO's rule, not a tool fact.
+slice takes `--budget 180`; the proven rows run once per release, each 0.x release until 1.0 (`--tier proven`): the PO's rule, not a tool fact.
 A row the budget left is not a pass: the report quotes the left count. A row refused by `--anchors` in two sweeps is
 deleted in a pull request with its reason (`--retire` will list them, P787 PR 5); an escape never retires, it is a missing
 test.
