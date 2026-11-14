@@ -125,6 +125,10 @@ A left row is not a pass: it was not run, and the exit code speaks for the rows 
 exits 2 (could not run), because a 0 says a pass about nothing. The PO's defaults (2026-11-12):
 20 minutes for a wave-end sweep a person waits for, 180 for an unattended night slice.
 
+One run at a time rewrites a tree: `.mutate.lock` at its root (`RunLock`). A lock whose process is gone, in a tree
+git shows clean, is stale: the next run takes it over, says so in one line on stderr, and `--json` gains `stale_lock`,
+the gone process id (P810). A tree git shows changed keeps the lock: a killed run may have left its mutant there.
+
 WHAT PASSING MEANS
 
 Every mutation turned the suite red, and the suite is green again with the files restored. A
@@ -483,18 +487,22 @@ def retarget_tables(tables, old, new):
 
 
 # --- MVP --- (P807)
+def git_environment(root):
+    """The environment of a git call that only a repository AT `root` answers: no GIT_* variable of a hook (P105)."""
+    import os
+    return dict({name: value for name, value in os.environ.items() if not name.startswith("GIT_")},
+                GIT_CEILING_DIRECTORIES=str(Path(root).resolve().parent))
+
+
 def ignored_by_git(root):
     """
     The paths under `root`, relative and with "/", that git ignores, a wholly ignored folder as one path (P807). Only a
     repository AT `root` decides: the search stops at its parent, and no GIT_* variable of a hook leads it elsewhere (P105).
     No git, no repository or a failed listing: an empty set, and the copy holds every file, as before P807.
     """
-    import os
-    environment = dict({name: value for name, value in os.environ.items() if not name.startswith("GIT_")},
-                       GIT_CEILING_DIRECTORIES=str(Path(root).resolve().parent))
     try:
         listed = subprocess.run(["git", "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"],
-                                cwd=root, env=environment, capture_output=True, text=True)
+                                cwd=root, env=git_environment(root), capture_output=True, text=True)
     except OSError:
         return set()
     if listed.returncode != 0:
@@ -622,26 +630,128 @@ class AnotherRunIsActive(Exception):
     """A lock is held: some other mutate run is rewriting these files right now."""
 
 
+def git_changes(root):
+    """
+    The paths git shows changed or new (not ignored) in the repository AT `root` (P810), or None when git gives no answer
+    (no git, no repository there, a failed call): a stale lock is taken over only in a tree git shows clean.
+    """
+    try:
+        listed = subprocess.run(["git", "status", "--porcelain", "--untracked-files=normal"], cwd=root,
+                                env=git_environment(root), capture_output=True, text=True)
+    except OSError:
+        return None
+    if listed.returncode != 0:
+        return None
+    paths = [line[3:] for line in listed.stdout.splitlines() if line.strip()]
+    return [path for path in paths if path != LOCK_NAME and not path.startswith(LOCK_NAME + ".")]  # the lock is no change
+
+
+def lock_holder(path):
+    """The process id a lock holds, or None when it holds no integer or cannot be read."""
+    try:
+        return int(Path(path).read_text().strip())
+    except (OSError, ValueError):
+        return None
+
+
+def holder_gone(pid):
+    """True only for a process id above 0 whose process no longer runs; a live, foreign or impossible one is not gone."""
+    import os
+    if pid is None or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    except (PermissionError, OverflowError):
+        return False
+    return False
+
+
+class RunLock:
+    """
+    The lock of a run that rewrites files in a tree, `LOCK_NAME` at its root: taken by creating it, never by writing over
+    it (O_EXCL), and released only by the run that holds it (P810). A lock whose process is gone, in a tree git shows
+    clean, is stale: `take` renames it to a name of its own, checks that it still holds the gone process, and takes the
+    lock (`took_over` keeps that process id). A lock killed with its run (SIGKILL, P805's refuter) blocked every later
+    run in the tree until a person removed it. A killed run may also leave its mutant in a file, so a tree git shows
+    changed, or no git answer, keeps the lock.
+    """
+
+    def __init__(self, root):
+        self.path, self.held, self.took_over = Path(root) / LOCK_NAME, False, None
+
+    def take(self):
+        if self._create():
+            return
+        pid = lock_holder(self.path)
+        if not holder_gone(pid):
+            raise AnotherRunIsActive("%s exists: another run is rewriting these files (pid %s), or a killed one left its "
+                                     "lock. Wait for it, or remove the lock once you are sure and check `git status` "
+                                     "for a mutated file" % (self.path, pid))
+        changed = git_changes(self.path.parent)
+        if changed != []:
+            raise AnotherRunIsActive("%s was left by pid %d, which is gone, but %s: a killed run may have left its mutant "
+                                     "there. Check `git diff`, restore a file that holds a mutant, then remove the lock"
+                                     % (self.path, pid, "git gives no answer here" if changed is None
+                                        else "git shows changes in " + ", ".join(changed[:3])))
+        self._take_over(pid)
+
+    def _take_over(self, pid):
+        """Take the stale lock of the gone `pid`, unless another run took it first; a live run's lock is put back."""
+        import os
+        moved = self.path.with_name("%s.%d" % (LOCK_NAME, os.getpid()))
+        try:
+            os.rename(self.path, moved)
+        except FileNotFoundError:
+            raise AnotherRunIsActive("%s: another run took the stale lock first" % self.path) from None
+        if lock_holder(moved) != pid:  # a live run's lock, taken between the read and the rename
+            with contextlib.suppress(FileExistsError):
+                os.link(moved, self.path)
+            moved.unlink()
+            raise AnotherRunIsActive("%s: another run took the stale lock first" % self.path)
+        moved.unlink()
+        if not self._create():
+            raise AnotherRunIsActive("%s: another run took the stale lock first" % self.path)
+        self.took_over = pid
+
+    def _create(self):
+        """Create the lock with this process's id; False when it exists."""
+        import os
+        try:
+            os.close(os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        except FileExistsError:
+            return False
+        self.held = True  # before the pid is written: a SIGTERM in between still removes it (P805)
+        self.path.write_text(str(os.getpid()))  # an empty lock meanwhile reads as no process id: kept, never stale
+        return True
+
+    def release(self):
+        """Remove the lock, only when this run holds it and it still holds this run's id (or none yet)."""
+        import os
+        if self.held and lock_holder(self.path) in (os.getpid(), None):
+            self.path.unlink(missing_ok=True)
+            self.held = False
+
+
 class RedBeforeMutation(Exception):
     """The suite is not green before any mutation: a red suite catches nothing. The message names the red tests."""
 
 
-def run(root, tests, mutations, copied=False, ledger_store=None, budget=None):
+def run(root, tests, mutations, copied=False, ledger_store=None, budget=None, lock=None):
     """
     Every mutation, each restored before the next, and the suite confirmed green at the end.
 
     `copied` says `root` is a copy that is deleted after the run, so there is nothing to restore and the end check is
     skipped (P424: it cost a whole suite, 207 s on 2026-10-28). `ledger_store`, a `ledger.LedgerStore`, gets one line per
     row when the run's files are restored (P787); None records nothing. `budget`, a `Budget`, stops the run before the
-    row that would cross it; None runs every row.
+    row that would cross it; None runs every row. `lock`, a `RunLock` of `root` (one is made when None), says after the
+    run whether it took over a stale lock (P810).
     """
-    lock = root / LOCK_NAME
-    if lock.exists():
-        raise AnotherRunIsActive("%s exists: another run is rewriting these files, or a killed "
-                                 "one left its lock. Wait for it, or remove the lock once you "
-                                 "are sure and check `git status` for a mutated file" % lock)
+    lock = lock or RunLock(root)
     try:
-        lock.write_text(str(__import__("os").getpid()))  # inside the try: a SIGTERM right after it still removes it (P805)
+        with sigterm_held():  # inside the try, and whole: a SIGTERM waits until the lock is made, or taken over (P805, P810)
+            lock.take()  # a refusal removes nothing: `release` removes only a lock this run holds
         # The pre-check ran BEFORE the lock was taken, so two runs started within its six
         # seconds both passed the lock test and both took the lock (audit C8). Under it now.
         checked = time.monotonic()
@@ -653,7 +763,7 @@ def run(root, tests, mutations, copied=False, ledger_store=None, budget=None):
         return _run(root, tests, mutations, copied, ledger_store, budget, suite_seconds)
     finally:
         with sigterm_held():  # a SIGTERM here would leave a lock that refuses every later run
-            lock.unlink(missing_ok=True)
+            lock.release()
 
 
 def _run(root, tests, mutations, copied, ledger_store=None, budget=None, suite_seconds=None):
@@ -867,7 +977,12 @@ def main(argv=None):
         try:
             with sigterm_held():  # the copy made and `where` stored together, so the `finally` finds it (P805)
                 where = copy_of(root) if args.copy else root
-            results, restored = run(where, args.tests, mutations, copied=where is not root, ledger_store=ledger_store, budget=budget)
+            lock = RunLock(where)
+            results, restored = run(where, args.tests, mutations, copied=where is not root, ledger_store=ledger_store,
+                                    budget=budget, lock=lock)
+            if lock.took_over:
+                print("a stale lock of pid %d (no such process) was taken over; git shows no change in the tree"
+                      % lock.took_over, file=sys.stderr)
         except (AnotherRunIsActive, RedBeforeMutation) as stopped:
             print(str(stopped), file=sys.stderr)
             return EXIT_COULD_NOT_RUN
@@ -886,7 +1001,8 @@ def main(argv=None):
                           "status": {EXIT_OK: OK, EXIT_ESCAPED: "escaped",
                                      EXIT_COULD_NOT_RUN: COULD_NOT_RUN}[code],
                           "seconds": round(time.monotonic() - started), "mutations": results, "ledger": recorded,
-                          **({"tiers": header} if header else {}), **({"budget": spent} if spent else {})}, indent=2))
+                          **({"tiers": header} if header else {}), **({"budget": spent} if spent else {}),
+                          **({"stale_lock": lock.took_over} if lock.took_over else {})}, indent=2))
     else:
         sys.stdout.write(render(results, restored, code))
         print("  %d mutation(s) in %.0f s" % (len(results), time.monotonic() - started))

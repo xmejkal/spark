@@ -12,6 +12,8 @@ about the tool and not about this repository's real suite.
     python3 -m unittest discover -s tests
 """
 
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -326,6 +328,15 @@ class OneRunAtATimeTest(unittest.TestCase):
                          mutate.EXIT_COULD_NOT_RUN)
         with self.assertRaises(mutate.AnotherRunIsActive):
             mutate.run(root, "tests", [BREAK_ADD])
+
+    def test_a_live_holder_or_a_lock_that_holds_no_process_id_keeps_the_lock(self):
+        root = committed(tiny_project())
+        for text in (str(os.getpid()), "-5", "0", "99999999999999999999", "", "not a pid"):
+            with self.subTest(lock=text):
+                (root / mutate.LOCK_NAME).write_text(text)
+                with self.assertRaises(mutate.AnotherRunIsActive):
+                    mutate.run(root, "tests", [BREAK_ADD])
+                self.assertEqual((root / mutate.LOCK_NAME).read_text(), text, "a refusal removes no lock")
 
     def test_the_lock_is_held_while_the_suite_is_pre_checked(self):
         # Audit C8: the pre-check took six seconds before the lock existed, and two runs started
@@ -845,6 +856,94 @@ class TheLedgerCatchersJoinTheSetTest(unittest.TestCase):
         results, _ = mutate._run(root, "tests", [BREAK_SUB], False, ledger_store=store)
         self.assertEqual((results[0]["status"], results[0]["by"]), (mutate.CAUGHT, "full"))
         self.assertEqual(store.recorded[0]["by"], "test_other", "the whole suite named its module")
+
+
+def committed(root):
+    """`root` as a git repository with every file committed, so git shows it clean (P810)."""
+    environment = mutate.git_environment(root)
+    for command in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "all"]):
+        subprocess.run(["git"] + command, cwd=root, env=environment, check=True, capture_output=True)
+    return root
+
+
+def gone_pid():
+    """The process id of a child that ran and ended, so no process holds it now."""
+    child = subprocess.Popen([sys.executable, "-c", "pass"])
+    child.wait()
+    return child.pid
+
+
+@slow("mutation runs of a tiny git tree with a lock its run left, 7 tests, 1.8 s on 2026-11-14")
+class AStaleLockTest(unittest.TestCase):
+    """P810: a lock whose process is gone, in a tree git shows clean, is taken over; anything else keeps it."""
+
+    def test_a_gone_holder_s_lock_in_a_clean_tree_is_taken_over_and_removed_at_the_end(self):
+        root = committed(tiny_project())
+        pid = gone_pid()
+        (root / mutate.LOCK_NAME).write_text(str(pid))
+        lock = mutate.RunLock(root)
+        results, restored = mutate.run(root, "tests", [BREAK_ADD], lock=lock)
+        self.assertEqual((results[0]["status"], restored, lock.took_over), (mutate.CAUGHT, True, pid))
+        self.assertFalse((root / mutate.LOCK_NAME).exists())
+
+    def test_a_gone_holder_s_lock_beside_a_changed_file_is_kept_and_the_file_named(self):
+        root = committed(tiny_project())
+        (root / "m.py").write_text((root / "m.py").read_text().replace("a + b", "a - b"))  # the mutant a killed run left
+        (root / mutate.LOCK_NAME).write_text(str(gone_pid()))
+        with self.assertRaises(mutate.AnotherRunIsActive) as refused:
+            mutate.run(root, "tests", [BREAK_SUB])
+        self.assertIn("m.py", str(refused.exception))
+        self.assertIn("git diff", str(refused.exception))
+        self.assertTrue((root / mutate.LOCK_NAME).exists())
+
+    def test_a_gone_holder_s_lock_beside_a_new_file_is_kept(self):
+        root = committed(tiny_project())
+        (root / "n.py").write_text("x = 1\n")  # a new module a run without --copy may have mutated
+        (root / mutate.LOCK_NAME).write_text(str(gone_pid()))
+        with self.assertRaises(mutate.AnotherRunIsActive) as refused:
+            mutate.run(root, "tests", [BREAK_ADD])
+        self.assertIn("n.py", str(refused.exception))
+
+    def test_a_run_removes_no_lock_that_holds_another_run_s_id(self):
+        root = tiny_project()
+        lock = mutate.RunLock(root)
+        lock.take()
+        (root / mutate.LOCK_NAME).write_text("1")  # a third run's lock, put in between (the refuter's race of three)
+        lock.release()
+        self.assertEqual((root / mutate.LOCK_NAME).read_text(), "1")
+
+    def test_a_gone_holder_s_lock_where_git_gives_no_answer_is_kept(self):
+        root = tiny_project()  # no repository: the hook's archive is such a tree
+        (root / mutate.LOCK_NAME).write_text(str(gone_pid()))
+        with self.assertRaises(mutate.AnotherRunIsActive) as refused:
+            mutate.run(root, "tests", [BREAK_ADD])
+        self.assertIn("git gives no answer", str(refused.exception))
+
+    def test_a_lock_another_run_took_while_this_one_checked_git_is_put_back(self):
+        root = committed(tiny_project())
+        (root / mutate.LOCK_NAME).write_text(str(gone_pid()))
+
+        class LateForTheStaleLock(mutate.RunLock):
+            def _take_over(self, pid):
+                self.path.write_text(str(os.getpid()))  # a live run took the stale lock while this one asked git
+                return super()._take_over(pid)
+        with self.assertRaises(mutate.AnotherRunIsActive) as refused:
+            mutate.run(root, "tests", [BREAK_ADD], lock=LateForTheStaleLock(root))
+        self.assertIn("took the stale lock first", str(refused.exception))
+        self.assertEqual((root / mutate.LOCK_NAME).read_text(), str(os.getpid()), "the live run's lock is back")
+        self.assertEqual([path.name for path in root.iterdir() if path.name.startswith(mutate.LOCK_NAME + ".")], [])
+
+    def test_main_says_the_takeover_in_one_line_and_in_its_json(self):
+        root = tiny_project()
+        rows = table(root, BREAK_ADD)  # committed with the tree: a new file would keep the lock
+        committed(root)
+        pid = gone_pid()
+        (root / mutate.LOCK_NAME).write_text(str(pid))
+        out, said = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(said):
+            mutate.main([str(rows), "--root", str(root), "--json"])
+        self.assertEqual(json.loads(out.getvalue())["stale_lock"], pid)
+        self.assertIn("a stale lock of pid %d (no such process) was taken over" % pid, said.getvalue())
 
 
 @slow("mutation runs of a tiny tree that write the ledger, 6 tests, 6.1 s on 2026-11-12")

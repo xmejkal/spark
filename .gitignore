@@ -1,6 +1,7 @@
 node_modules/
 __pycache__/
 .mutate.lock
+.mutate.lock.*
 
 # git worktrees for work in progress (superpowers:using-git-worktrees)
 .worktrees/
