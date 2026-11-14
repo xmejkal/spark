@@ -122,8 +122,8 @@ and the ESP32-S3 ("ADC2 is also used by Wi-Fi"). A record of one of these chips 
 so `--validate` names it and the build stops at loading it. If the board breaks out no ADC2 pin, write the role with
 `"gpio": []` and a note. The fact is false for the chips with one ADC and for the ESP32-P4, which has no Wi-Fi. It is
 null for the ESP32-C3, whose ADC2 ESP-IDF calls not supported at all
-([P813](https://github.com/xmejkal/spark/issues/1164)). For a null or a chip the table lacks, `--validate` prints
-"ADC2 role not checked" under the board and passes it. The check does not read which pins the role lists.
+([P813](https://github.com/xmejkal/spark/issues/1164)). For a board without the role whose chip is null or not in the
+table, `--validate` prints "ADC2 role not checked" under the board and passes it. The check does not read which pins the role lists.
 
 ## Button places
 

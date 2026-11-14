@@ -33,12 +33,21 @@ class TheShippedTableTest(unittest.TestCase):
                 self.assertIn(fact["cites"]["document"], self.held["documents"])
                 self.assertTrue(fact["cites"]["at"])
 
+    def test_the_shipped_values_are_the_sources(self):
+        values = {chip: facts["adc2_used_by_wifi"]["value"] for chip, facts in self.held["chips"].items()}
+        self.assertEqual(values, {"esp32": True, "esp32s2": True, "esp32s3": True, "esp32c3": None, "esp32p4": False,
+                                  "esp32c2": False, "esp32c5": False, "esp32c6": False, "esp32c61": False,
+                                  "esp32h2": False})
+
+    def test_load_reads_the_shipped_table(self):
+        self.assertEqual(chip_table.load().adc2_used_by_wifi("esp32s3"), chip_table.ChipFact(outcomes.RECORDED, True))
+
     def test_the_documents_and_citations_meet_the_records_rule(self):
         self.assertEqual(record_kind.document_problems(self.held), [])
 
 
 class TheLookupTest(unittest.TestCase):
-    """A fact read is RECORDED with its value; a chip the table lacks, a null or a chip that is no string, NOT_CHECKED."""
+    """A fact read is RECORDED with its value; a chip the table lacks, a null or a chip that is no string, NONE_RECORDED."""
 
     TABLE = chip_table.ChipTable.from_dict({
         "yes": {"adc2_used_by_wifi": {"value": True}},
@@ -50,12 +59,10 @@ class TheLookupTest(unittest.TestCase):
         self.assertEqual(self.TABLE.adc2_used_by_wifi("yes"), chip_table.ChipFact(outcomes.RECORDED, True))
         self.assertEqual(self.TABLE.adc2_used_by_wifi("no"), chip_table.ChipFact(outcomes.RECORDED, False))
 
-    def test_no_fact_is_not_checked_with_its_why(self):
+    def test_no_fact_is_none_recorded(self):
         for chip in ("open", "absent", 5, None):
             with self.subTest(chip=chip):
-                fact = self.TABLE.adc2_used_by_wifi(chip)
-                self.assertEqual((fact.state, fact.value), (outcomes.NOT_CHECKED, None))
-                self.assertIn(repr(chip), fact.why)
+                self.assertEqual(self.TABLE.adc2_used_by_wifi(chip), chip_table.ChipFact(outcomes.NONE_RECORDED))
 
     def test_the_table_cannot_be_changed(self):
         with self.assertRaises(TypeError):

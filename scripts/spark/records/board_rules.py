@@ -2,14 +2,15 @@
 The rules a board record is held to (P724), as `part_records` holds a part's: one named rule per function, each
 `(board, validation) -> list` of problems, in the order of `RULES`, which `board_records.BOARD` runs, and the names only
 they read (the forbidden keys, the fab keys, the shape of a label and a fact). The names `board_records` code and other
-modules read too (`PIN_ROLES`, `ADC2_UNUSABLE_WITH_WIFI`, `POWER_FUNCTIONS`, `GPIO_MIN`, `GPIO_MAX`, `is_gpio`, `is_pin_map_constant`) live here,
-and `board_records` imports them, so `board_records.PIN_ROLES` still works. It imports the records area below it, never
-`board_records`.
+modules read too (`PIN_ROLES`, `ADC2_UNUSABLE_WITH_WIFI`, `POWER_FUNCTIONS`, `GPIO_MIN`, `GPIO_MAX`, `is_gpio`,
+`is_pin_map_constant`) live here, and `board_records` imports them, so `board_records.PIN_ROLES` still works. It
+imports the records area below it, never `board_records`.
 """
 
 import math
 import re
 
+from spark.core import outcomes
 from spark.records import board_pads
 from spark.records import chip_table
 from spark.records import provenance
@@ -67,7 +68,8 @@ PIN_ROLES = {
 }
 
 #: The pins on ADC2, which cannot be read while the radio is on: `pin_assigner` gives them no "adc" ability, and
-#: its refusal of a named one says why (P798); `adc2_role_problems` asks for it on a chip that shares ADC2 with Wi-Fi (P809).
+#: its refusal of a named one says why (P798); `adc2_role_problems` asks for it on a chip that shares ADC2 with
+#: Wi-Fi (P809).
 ADC2_UNUSABLE_WITH_WIFI = "adc2_unusable_with_wifi"
 
 #: Ranges a GPIO number must fall in to be a number at all. Deliberately generous — this catches
@@ -281,20 +283,36 @@ def pin_role_problems(board, validation):
     return problems
 
 
-def adc2_role_problems(board, validation):
-    """
-    No `adc2_unusable_with_wifi` role on a board whose chip shares ADC2 with Wi-Fi, by `data/chips.json` (P809): the pin
-    assigner would read every pin in `adc_gpio` as one that reads with Wi-Fi on. A chip the table holds no fact for is
-    no problem here; `boards.py --validate` says it is not checked.
-    """
+def _adc2_fact(board):
+    """The board's chip's `adc2_used_by_wifi` (a chip_table.ChipFact), or None when the record needs no fact: its
+    `pin_roles` is no object, or it names the ADC2 role already."""
     pin_roles = board.get("pin_roles") or {}
     if not isinstance(pin_roles, dict) or ADC2_UNUSABLE_WITH_WIFI in pin_roles:
-        return []
-    if chip_table.load().adc2_used_by_wifi(board.get("chip")).value is not True:
+        return None
+    return chip_table.load().adc2_used_by_wifi(board.get("chip"))
+
+
+def adc2_role_problems(board, validation):
+    """
+    No `adc2_unusable_with_wifi` role on a board whose chip shares ADC2 with Wi-Fi, by `data/chips.json` (P809): the
+    pin assigner would read every pin in `adc_gpio` as one that reads with Wi-Fi on. A chip the table holds no fact
+    for is no problem here; `adc2_role_unchecked` says so.
+    """
+    fact = _adc2_fact(board)
+    if fact is None or fact.value is not True:
         return []
     return ["chip %r shares ADC2 with Wi-Fi (data/chips.json, from ESP-IDF v5.5.1 adc_oneshot), so pin_roles needs "
-            "'adc2_unusable_with_wifi': a 'gpio' list of the ADC2 pins this board breaks out (boards/README.md, ADC "
-            "pins, says where each chip's units are listed), or [] when it breaks out none, and a 'note'" % board["chip"]]
+            "'adc2_unusable_with_wifi': a 'gpio' list of the ADC2 pins this board breaks out (boards/README.md, "
+            "ADC pins), or [] when it breaks out none, and a 'note'" % board["chip"]]
+
+
+def adc2_role_unchecked(board):
+    """Why the ADC2 role rule could not judge this board, as `outcomes.NOT_CHECKED_MESSAGE`'s `why`, or None: the
+    table holds no fact for its chip and the record names no ADC2 role. `boards.py --validate` prints it (P809)."""
+    fact = _adc2_fact(board)
+    if fact is None or fact.state != outcomes.NONE_RECORDED:
+        return None
+    return "data/chips.json holds no ADC2 fact for chip %r" % (board.get("chip"),)
 
 
 def forbidden_key_problems(node, validation, path=""):
@@ -396,5 +414,5 @@ def board_document_problems(board, validation):
 
 #: The board's rules, in the order `board_records.BOARD` runs them after the shared schema and required-key checks.
 RULES = (id_problems, wokwi_power_pin_problems, pin_problems, gpio_list_problems, pad_problems, pin_role_problems,
-         adc2_role_problems, power_problems, forbidden_key_problems, fab_key_problems, power_pad_rail_problems, selector_name_problems,
-         drill_problems, footprint_export_problems, plain_id_problems, board_document_problems)
+         adc2_role_problems, power_problems, forbidden_key_problems, fab_key_problems, power_pad_rail_problems,
+         selector_name_problems, drill_problems, footprint_export_problems, plain_id_problems, board_document_problems)

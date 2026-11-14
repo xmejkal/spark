@@ -26,8 +26,8 @@ from spark.records import record_kind
 from spark.records import records_codes
 from spark.records import store
 # Read here and, as board_records' own names, by pin_assigner, restricted_pins, onboard_parts and the tests (P724).
-from spark.records.board_rules import (ADC2_UNUSABLE_WITH_WIFI, GPIO_MAX, GPIO_MIN, is_gpio, is_pin_map_constant, PIN_ROLES,  # noqa: F401
-                                       POWER_FUNCTIONS)
+from spark.records.board_rules import (ADC2_UNUSABLE_WITH_WIFI, GPIO_MAX, GPIO_MIN, is_gpio,  # noqa: F401
+                                       is_pin_map_constant, PIN_ROLES, POWER_FUNCTIONS)
 
 #: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one
 #: without copying a file it would then have to maintain. A project may still keep its own in

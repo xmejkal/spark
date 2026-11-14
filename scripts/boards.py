@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from spark.core.outcomes import EXIT_OK, EXIT_PROBLEMS as EXIT_INVALID  # noqa: E402
 from spark.core import outcomes  # noqa: E402
 from spark.records import board_records  # noqa: E402
-from spark.records import chip_table  # noqa: E402
+from spark.records import board_rules  # noqa: E402
 from spark.records.board_records import (BoardError, _read_json, active_id, available, definition_path,  # noqa: E402
                                          get, project_or_library, project_root, resolve, validate)
 
@@ -50,9 +50,9 @@ def _validate_all(project: Path, for_fab: bool) -> int:
             failed = True
         else:
             print(f"  {marker}  {board_id} ({where}): ok")
-        adc2 = chip_table.load().adc2_used_by_wifi(board.get("chip"))
-        if adc2.state == outcomes.NOT_CHECKED:  # P809: a chip with no ADC2 fact is said, and fails nothing
-            print(f"           - ADC2 role {outcomes.NOT_CHECKED_MESSAGE % adc2.why}")
+        unchecked = board_rules.adc2_role_unchecked(board)  # P809: said, and fails nothing
+        if unchecked:
+            print(f"           - ADC2 role {outcomes.NOT_CHECKED_MESSAGE % unchecked}")
     return EXIT_INVALID if failed else EXIT_OK
 
 
@@ -83,7 +83,8 @@ def main(argv=None, outside=None) -> int:
     what.add_argument(LIST_FLAG, action="store_true", help="every board available to switch to (--json: one envelope)")
     what.add_argument("--paths", action="store_true",
                       help="every board definition file, for tools that take a list")
-    what.add_argument("--validate", action="store_true", help="check every board file; a check it could not make is said under the board")
+    what.add_argument("--validate", action="store_true",
+                      help="check every board file; a check it could not make is said under the board")
     what.add_argument("--get", metavar="KEY.PATH",
                       help="one field from the active board, e.g. chip or physical.width_mm")
     what.add_argument("--resolve", action="store_true",
