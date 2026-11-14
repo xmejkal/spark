@@ -116,8 +116,8 @@ check (a near set is a part of the suite); the row's `s` leaves the check out. T
 not fit, and the rest are left in order, though a later row might fit: the tiers' order is the contract.
 Checked up front, the near sets of 172 files spent the first night's 180 minutes before any row (2026-11-13, PR 7). A
 near set runs the modules that caught most of the file's ledger lines first, the rest in name order (PR 8): seed night 3
-ran 27 green modules before `test_tools` caught each `tool_finder.py` row (2026-11-14). The
-closing line says what ran, as `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5);
+ran up to 27 green modules before `test_tools`, last by name, caught 23 of the 35 `tool_finder.py` rows (2026-11-14).
+The closing line says what ran, as `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5);
 19 left for the next sweep`, and `--json` gains `budget` with the same facts (`minutes, ran, selected, left, by_tier`).
 A left row is not a pass: it was not run, and the exit code speaks for the rows that were; a budget run that ran no row
 exits 2 (could not run), because a 0 says a pass about nothing. The PO's defaults (2026-11-12):
@@ -296,8 +296,8 @@ class NearSets:
     durations, which `check_seconds` reads.
 
     A set runs the modules that caught most of the file's rows first (`catch_counts`, from the ledger), the rest in name
-    order (P787 PR 8): the run stops at the first red module, and seed night 3 ran 27 green modules before `test_tools`
-    caught each `tool_finder.py` row. The order is fixed before the clean check, which runs the same tuple as the rows.
+    order (P787 PR 8): the run stops at the first red module, and seed night 3 ran up to 27 green modules before
+    `test_tools`, last by name, caught 23 of the 35 `tool_finder.py` rows. The order is fixed before the clean check, which runs the same tuple as the rows.
     """
 
     def __init__(self, root, tests, catch_counts=None):

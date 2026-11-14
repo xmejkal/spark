@@ -741,7 +741,7 @@ class TheCatchersRunFirstTest(unittest.TestCase):
         counts = {"m.py": Counter(test_zz=2, test_m=1, suite=3, test_gone=5)}  # suite and a removed module are no members
         self.assertEqual(mutate.NearSets(root, "tests", counts).pending("m.py"), ("test_zz", "test_m", "test_alias"))
         self.assertEqual(mutate.NearSets(root, "tests", {"m.py": Counter(test_zz=1)}).pending("m.py"),
-                         ("test_zz", "test_alias", "test_m"), "a tie of none keeps name order")
+                         ("test_zz", "test_alias", "test_m"), "one catcher first, the rest keep name order")
         self.assertEqual(mutate.NearSets(root, "tests", {"n.py": Counter(test_zz=1)}).pending("m.py"),
                          ("test_alias", "test_m", "test_zz"), "a file with no ledger line keeps name order")
         self.assertEqual(mutate.NearSets(root, "tests").pending("m.py"), ("test_alias", "test_m", "test_zz"))
