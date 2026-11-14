@@ -632,17 +632,18 @@ class AnotherRunIsActive(Exception):
 
 def git_changes(root):
     """
-    The paths git shows changed among the tracked files of the repository AT `root` (P810), or None when git gives no
-    answer (no git, no repository there, a failed call): a stale lock is taken over only in a tree git shows clean.
+    The paths git shows changed or new (not ignored) in the repository AT `root` (P810), or None when git gives no answer
+    (no git, no repository there, a failed call): a stale lock is taken over only in a tree git shows clean.
     """
     try:
-        listed = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=root,
+        listed = subprocess.run(["git", "status", "--porcelain", "--untracked-files=normal"], cwd=root,
                                 env=git_environment(root), capture_output=True, text=True)
     except OSError:
         return None
     if listed.returncode != 0:
         return None
-    return [line[3:] for line in listed.stdout.splitlines() if line.strip()]
+    paths = [line[3:] for line in listed.stdout.splitlines() if line.strip()]
+    return [path for path in paths if path != LOCK_NAME and not path.startswith(LOCK_NAME + ".")]  # the lock is no change
 
 
 def lock_holder(path):
@@ -726,8 +727,9 @@ class RunLock:
         return True
 
     def release(self):
-        """Remove the lock, only when this run holds it."""
-        if self.held:
+        """Remove the lock, only when this run holds it and it still holds this run's id (or none yet)."""
+        import os
+        if self.held and lock_holder(self.path) in (os.getpid(), None):
             self.path.unlink(missing_ok=True)
             self.held = False
 
@@ -748,7 +750,8 @@ def run(root, tests, mutations, copied=False, ledger_store=None, budget=None, lo
     """
     lock = lock or RunLock(root)
     try:
-        lock.take()  # inside the try: a SIGTERM right after it still removes it (P805); a refusal removes nothing
+        with sigterm_held():  # inside the try, and whole: a SIGTERM waits until the lock is made, or taken over (P805, P810)
+            lock.take()  # a refusal removes nothing: `release` removes only a lock this run holds
         # The pre-check ran BEFORE the lock was taken, so two runs started within its six
         # seconds both passed the lock test and both took the lock (audit C8). Under it now.
         checked = time.monotonic()

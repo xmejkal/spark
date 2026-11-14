@@ -873,7 +873,7 @@ def gone_pid():
     return child.pid
 
 
-@slow("mutation runs of a tiny git tree with a lock its run left, 5 tests, 1.7 s on 2026-11-14")
+@slow("mutation runs of a tiny git tree with a lock its run left, 7 tests, 1.8 s on 2026-11-14")
 class AStaleLockTest(unittest.TestCase):
     """P810: a lock whose process is gone, in a tree git shows clean, is taken over; anything else keeps it."""
 
@@ -895,6 +895,22 @@ class AStaleLockTest(unittest.TestCase):
         self.assertIn("m.py", str(refused.exception))
         self.assertIn("git diff", str(refused.exception))
         self.assertTrue((root / mutate.LOCK_NAME).exists())
+
+    def test_a_gone_holder_s_lock_beside_a_new_file_is_kept(self):
+        root = committed(tiny_project())
+        (root / "n.py").write_text("x = 1\n")  # a new module a run without --copy may have mutated
+        (root / mutate.LOCK_NAME).write_text(str(gone_pid()))
+        with self.assertRaises(mutate.AnotherRunIsActive) as refused:
+            mutate.run(root, "tests", [BREAK_ADD])
+        self.assertIn("n.py", str(refused.exception))
+
+    def test_a_run_removes_no_lock_that_holds_another_run_s_id(self):
+        root = tiny_project()
+        lock = mutate.RunLock(root)
+        lock.take()
+        (root / mutate.LOCK_NAME).write_text("1")  # a third run's lock, put in between (the refuter's race of three)
+        lock.release()
+        self.assertEqual((root / mutate.LOCK_NAME).read_text(), "1")
 
     def test_a_gone_holder_s_lock_where_git_gives_no_answer_is_kept(self):
         root = tiny_project()  # no repository: the hook's archive is such a tree
@@ -918,12 +934,14 @@ class AStaleLockTest(unittest.TestCase):
         self.assertEqual([path.name for path in root.iterdir() if path.name.startswith(mutate.LOCK_NAME + ".")], [])
 
     def test_main_says_the_takeover_in_one_line_and_in_its_json(self):
-        root = committed(tiny_project())
+        root = tiny_project()
+        rows = table(root, BREAK_ADD)  # committed with the tree: a new file would keep the lock
+        committed(root)
         pid = gone_pid()
         (root / mutate.LOCK_NAME).write_text(str(pid))
         out, said = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(said):
-            mutate.main([str(table(root, BREAK_ADD)), "--root", str(root), "--json"])
+            mutate.main([str(rows), "--root", str(root), "--json"])
         self.assertEqual(json.loads(out.getvalue())["stale_lock"], pid)
         self.assertIn("a stale lock of pid %d (no such process) was taken over" % pid, said.getvalue())
 
