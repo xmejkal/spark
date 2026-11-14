@@ -92,8 +92,8 @@ line per row as `table:index name`, then the group's verdict from the ledger (`l
 every row caught by <module>` when every row has a line at the file's current blob, caught, with the same `by`, the test
 MODULE that caught it: a candidate to read, not a proof, because two functions of one module may tell the mutants apart,
 so the deleting PR opens the module and checks that one test fails for every mutant of the line before it drops a row;
-`distinct: caught by <a>, <b>` when a `by` or a status differs or a `by` is `suite` (the whole suite caught the row and
-named no module; a refused row says `refused`, an escaped one `escape`), decided as soon as the known lines say so, whatever
+`distinct: caught by <a>, <b>` when a `by` or a status differs or a `by` is `suite` (no red line named a
+module; a refused row says `refused`, an escaped one `escape`), decided as soon as the known lines say so, whatever
 is still to run; `not yet run` when nothing disagrees and a row has no line at the current blob. The count line is `N
 same-line group(s) over M row(s): K merge candidate(s), D distinct, U not yet run; a merge candidate is dropped in a PR with
 its reason, the others stay`, and when every group is not yet run it ends `; run a sweep to fill the ledger`; exit 0 (a
@@ -117,8 +117,10 @@ not fit, and the rest are left in order, though a later row might fit: the tiers
 Checked up front, the near sets of 172 files spent the first night's 180 minutes before any row (2026-11-13, PR 7). A
 near set runs the modules that caught most of the file's ledger lines first, the rest in name order (PR 8): seed night 3
 ran up to 27 green modules before `test_tools`, last by name, caught 23 of the 35 `tool_finder.py` rows (2026-11-14).
-The closing line says what ran, as `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5);
-19 left for the next sweep`, and `--json` gains `budget` with the same facts (`minutes, ran, selected, left, by_tier`).
+A full catch names its module too, and a near set also holds the ledger's catchers of the file's rows that do not
+import it (PR 9): seed night 4 sent 26 rows to the whole suite for 9656 s, 17 of them on files no test imports. The
+closing line says what ran, as `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35, proving 0/9, proven
+0/5); 19 left for the next sweep`, and `--json` gains `budget` with the same facts (`minutes, ran, selected, left, by_tier`).
 A left row is not a pass: it was not run, and the exit code speaks for the rows that were; a budget run that ran no row
 exits 2 (could not run), because a 0 says a pass about nothing. The PO's defaults (2026-11-12):
 20 minutes for a wave-end sweep a person waits for, 180 for an unattended night slice.
@@ -203,27 +205,28 @@ class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
 
 
 #: The test module in a `FAIL:` or `ERROR:` line: `FAIL: test_add (test_m.T)` names `test_m` (3.11+: `(test_m.T.test_add)`).
-RED_TEST = re.compile(r"^(?:FAIL|ERROR): \S+ \((\w+)")
+RED_TEST = re.compile(r"^(?:FAIL|ERROR): (\S+) \((\w+)")
 
 
 def catch_counts(entries):
     """The ledger lines `entries` as each file's `Counter` of the `by` that caught its rows (`NearSets` puts those first)."""
     counts = {}
     for entry in entries:
-        counts.setdefault(entry["file"], Counter())[entry["by"]] += 1
+        if entry["by"]:  # a refused row's line names no catcher
+            counts.setdefault(entry["file"], Counter())[entry["by"]] += 1
     return counts
 
 
 def caught_by(result):
     """
-    The ledger's `by` for a near run that went red: the module of the first test the verdict names (the first red one in
-    the set's order, `NearSets`), or `suite` when no line names one (a crash before any test). A plain `False` (a test's
+    The ledger's `by` for a run that went red, near or full: the module of the first test the verdict names (the first
+    red one in the run's order), or `suite` when no line names one (a crash before any test). A plain `False` (a test's
     stand-in for the run) names none either.
     """
     for red in getattr(result, "red_lines", ()):
         found = RED_TEST.match(red)
-        if found:
-            return found.group(1)
+        if found:  # a test module that did not import is `test_c (unittest.loader._FailedTest)`: its name is the module
+            return found.group(1) if found.group(2) == "unittest" else found.group(2)
     return ledger.SUITE
 
 
@@ -297,11 +300,15 @@ class NearSets:
 
     A set runs the modules that caught most of the file's rows first (`catch_counts`, from the ledger), the rest in name
     order (P787 PR 8): the run stops at the first red module, and seed night 3 ran up to 27 green modules before
-    `test_tools`, last by name, caught 23 of the 35 `tool_finder.py` rows. The order is fixed before the clean check, which runs the same tuple as the rows.
+    `test_tools`, last by name, caught 23 of the 35 `tool_finder.py` rows. The order is fixed before the clean check,
+    which runs the same tuple as the rows. A set also holds the ledger's catchers of the file's rows that do not import
+    it, each a test module of this tree (PR 9): seed night 4 sent 17 rows of files no test imports to the whole suite,
+    9656 s with the 9 the near tests missed. A catcher red alone on the clean tree leaves the importers alone.
     """
 
     def __init__(self, root, tests, catch_counts=None):
         self.root, self.tests, self.found, self.checked, self.seconds = root, tests, {}, {}, []
+        self.imported = {}  # each file's modules that import or name it, in the set's order: the set a red catcher leaves
         self.catch_counts = catch_counts or {}
 
     def pending(self, file):
@@ -310,7 +317,11 @@ class NearSets:
             return ()
         if file not in self.found:
             counts = self.catch_counts.get(file, Counter())  # a file with no ledger line keeps name order
-            self.found[file] = tuple(sorted(near_tests(self.root, self.tests, file), key=lambda module: -counts[module]))
+            imported = near_tests(self.root, self.tests, file)
+            tests = Path(self.root) / self.tests
+            caught = [module for module in counts if module not in imported and (tests / ("%s.py" % module)).is_file()]
+            self.found[file], self.imported[file] = (tuple(sorted(sorted(modules), key=lambda module: -counts[module]))
+                                                     for modules in (imported + caught, imported))
         return self.found[file]
 
     def check_seconds(self, file, suite_seconds):
@@ -328,7 +339,10 @@ class NearSets:
         if file not in self.checked:
             near, began = self.pending(file), time.monotonic()
             green = bool(near) and suite_is_green(self.root, self.tests, only=near)
-            if near:
+            if not green and self.imported[file] and near != self.imported[file]:  # a catcher red alone: the importers alone
+                near = self.imported[file]
+                green = suite_is_green(self.root, self.tests, only=near)
+            if near:  # one entry for one file's checks, both when it took two
                 self.seconds.append(time.monotonic() - began)
             self.checked[file] = near if green else ()
         return self.checked[file]
@@ -687,7 +701,7 @@ def _run(root, tests, mutations, copied, ledger_store=None, budget=None, suite_s
         if green:
             noted(ESCAPED, who=ledger.ESCAPE, detail="the suite stayed green — no test notices this defect")
         else:
-            noted(CAUGHT, NEAR if caught_near else FULL, caught_by(near_run) if caught_near else ledger.SUITE)
+            noted(CAUGHT, NEAR if caught_near else FULL, caught_by(near_run if caught_near else green))  # `green` is the red full run here
 
     restored = copied or bool(suite_is_green(root, tests))
     if ledger_store is not None and restored and not copied:  # a verdict nothing can trust records nothing
@@ -765,7 +779,7 @@ def main(argv=None):
                              "each listed as table:index name) and what the ledger says of each: `merge candidate` when every row was "
                              "caught at the file's current content by the same test module (`by`; a candidate to read, not a proof: the "
                              "deleting PR checks that one test fails for every mutant before it drops a row), `distinct` when a module or "
-                             "a status differs or the whole suite caught a row, `not yet run` when nothing disagrees and a row has no line "
+                             "a status differs or a catch named no module, `not yet run` when nothing disagrees and a row has no line "
                              "there; deletes nothing, runs nothing, exits 0. A merge candidate is dropped in a PR with its reason; --for narrows the tables")
     parser.add_argument("--budget", type=int, metavar="MINUTES",
                         help="stop before the row that would cross this many minutes, counted from the run's start (the copy "
