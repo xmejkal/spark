@@ -1,0 +1,153 @@
+{
+ "//": "Facts about each ESP-IDF v5.5.1 chip that a board rule reads (P809), cited to the kept ESP-IDF files. adc2_used_by_wifi: true means a board of that chip names the adc2_unusable_with_wifi role in pin_roles (board_rules.adc2_role_problems); false means it has no ADC2 that Wi-Fi uses; null means the source says something else, and boards.py --validate says the role is not checked. The chip keys are the board records' `chip` values.",
+ "documents": {
+  "esp-idf-adc-oneshot-v5-5-1": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/docs/en/api-reference/peripherals/adc_oneshot.rst",
+   "sha256": "66db4d85166e760c8300839b709eaa818d2541740c14d03bcb3dc3e5fc1d1dcf",
+   "file": "esp-idf-v5.5.1-adc_oneshot.rst",
+   "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
+  },
+  "esp-idf-soc-caps-v5-5-1-esp32c2": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32c2/include/soc/soc_caps.h",
+   "sha256": "33b00c0eb75933432e8dcd77dbee3d1f20fee94aaade9442dad0e77940fe9909",
+   "file": "esp-idf-v5.5.1-esp32c2-soc_caps.h",
+   "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
+  },
+  "esp-idf-soc-caps-v5-5-1-esp32c5": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32c5/include/soc/soc_caps.h",
+   "sha256": "cb56a5305c7fc01fd84acd591dcaa45a6fb37bc5dd1cf6b09b35994b15c330d1",
+   "file": "esp-idf-v5.5.1-esp32c5-soc_caps.h",
+   "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
+  },
+  "esp-idf-soc-caps-v5-5-1-esp32c6": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32c6/include/soc/soc_caps.h",
+   "sha256": "43e1668e045daf9b419fff29c4c647d8f48b065b744a48a2ffebfaf8bb358169",
+   "file": "esp-idf-v5.5.1-esp32c6-soc_caps.h",
+   "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
+  },
+  "esp-idf-soc-caps-v5-5-1-esp32c61": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32c61/include/soc/soc_caps.h",
+   "sha256": "cee43e64dd99e91652962fa2d8b4fe527afad870a3ffb1abeed71913cc8ac084",
+   "file": "esp-idf-v5.5.1-esp32c61-soc_caps.h",
+   "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
+  },
+  "esp-idf-soc-caps-v5-5-1-esp32h2": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32h2/include/soc/soc_caps.h",
+   "sha256": "53d8502c98f7667822d2d0a4197b15ae4d5a16eae2f72580ef26be4e6a0c1b80",
+   "file": "esp-idf-v5.5.1-esp32h2-soc_caps.h",
+   "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
+  },
+  "esp-idf-soc-caps-v5-5-1-esp32p4": {
+   "url": "https://raw.githubusercontent.com/espressif/esp-idf/v5.5.1/components/soc/esp32p4/include/soc/soc_caps.h",
+   "sha256": "d38d816ecf765f69080b02b2da7865874652347f29f56006dad3520df4e3eecc",
+   "file": "esp-idf-v5.5.1-esp32p4-soc_caps.h",
+   "retrieved": "2026-11-14",
+   "title": null,
+   "version": "tag v5.5.1"
+  }
+ },
+ "chips": {
+  "esp32": {
+   "adc2_used_by_wifi": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-adc-oneshot-v5-5-1",
+     "at": "Hardware Limitations, line 168: \"ADC2 is also used by Wi-Fi.\""
+    }
+   }
+  },
+  "esp32c2": {
+   "adc2_used_by_wifi": {
+    "value": false,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32c2",
+     "at": "line 64: SOC_ADC_PERIPH_NUM (1U): one ADC, no ADC2"
+    }
+   }
+  },
+  "esp32c3": {
+   "adc2_used_by_wifi": {
+    "value": null,
+    "cites": {
+     "document": "esp-idf-adc-oneshot-v5-5-1",
+     "at": "Hardware Limitations, line 169: \"ADC2 oneshot mode is no longer supported, due to hardware limitations.\" A different fact (P813)"
+    }
+   }
+  },
+  "esp32c5": {
+   "adc2_used_by_wifi": {
+    "value": false,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32c5",
+     "at": "line 115: SOC_ADC_PERIPH_NUM (1U): one ADC, no ADC2"
+    }
+   }
+  },
+  "esp32c6": {
+   "adc2_used_by_wifi": {
+    "value": false,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32c6",
+     "at": "line 102: SOC_ADC_PERIPH_NUM (1U): one ADC, no ADC2"
+    }
+   }
+  },
+  "esp32c61": {
+   "adc2_used_by_wifi": {
+    "value": false,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32c61",
+     "at": "line 79: SOC_ADC_PERIPH_NUM (1U): one ADC, no ADC2"
+    }
+   }
+  },
+  "esp32h2": {
+   "adc2_used_by_wifi": {
+    "value": false,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32h2",
+     "at": "line 119: SOC_ADC_PERIPH_NUM (1U): one ADC, no ADC2"
+    }
+   }
+  },
+  "esp32p4": {
+   "adc2_used_by_wifi": {
+    "value": false,
+    "cites": {
+     "document": "esp-idf-soc-caps-v5-5-1-esp32p4",
+     "at": "line 130: SOC_ADC_PERIPH_NUM (2), and the file has no SOC_WIFI_SUPPORTED: two ADCs, no Wi-Fi"
+    }
+   }
+  },
+  "esp32s2": {
+   "adc2_used_by_wifi": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-adc-oneshot-v5-5-1",
+     "at": "Hardware Limitations, line 168: \"ADC2 is also used by Wi-Fi.\""
+    }
+   }
+  },
+  "esp32s3": {
+   "adc2_used_by_wifi": {
+    "value": true,
+    "cites": {
+     "document": "esp-idf-adc-oneshot-v5-5-1",
+     "at": "Hardware Limitations, line 168: \"ADC2 is also used by Wi-Fi.\""
+    }
+   }
+  }
+ }
+}

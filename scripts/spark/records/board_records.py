@@ -26,7 +26,7 @@ from spark.records import record_kind
 from spark.records import records_codes
 from spark.records import store
 # Read here and, as board_records' own names, by pin_assigner, restricted_pins, onboard_parts and the tests (P724).
-from spark.records.board_rules import (GPIO_MAX, GPIO_MIN, is_gpio, is_pin_map_constant, PIN_ROLES,  # noqa: F401
+from spark.records.board_rules import (ADC2_UNUSABLE_WITH_WIFI, GPIO_MAX, GPIO_MIN, is_gpio, is_pin_map_constant, PIN_ROLES,  # noqa: F401
                                        POWER_FUNCTIONS)
 
 #: Board definitions ship with this plugin as a LIBRARY, so a project can adopt a verified one
@@ -67,9 +67,6 @@ ONBOARD_LED = "onboard_led"
 ONBOARD_BUTTON = "onboard_button"
 ONBOARD_DISPLAY = "onboard_display"
 ONBOARD_BATTERY_SENSE = "onboard_battery_sense"
-#: The pins on ADC2, which cannot be read while the radio is on: `pin_assigner` gives them no "adc" ability, and
-#: its refusal of a named one says why (P798).
-ADC2_UNUSABLE_WITH_WIFI = "adc2_unusable_with_wifi"
 
 from spark.core import errors, outcomes  # noqa: E402
 

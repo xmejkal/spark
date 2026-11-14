@@ -2,7 +2,7 @@
 The rules a board record is held to (P724), as `part_records` holds a part's: one named rule per function, each
 `(board, validation) -> list` of problems, in the order of `RULES`, which `board_records.BOARD` runs, and the names only
 they read (the forbidden keys, the fab keys, the shape of a label and a fact). The names `board_records` code and other
-modules read too (`PIN_ROLES`, `POWER_FUNCTIONS`, `GPIO_MIN`, `GPIO_MAX`, `is_gpio`, `is_pin_map_constant`) live here,
+modules read too (`PIN_ROLES`, `ADC2_UNUSABLE_WITH_WIFI`, `POWER_FUNCTIONS`, `GPIO_MIN`, `GPIO_MAX`, `is_gpio`, `is_pin_map_constant`) live here,
 and `board_records` imports them, so `board_records.PIN_ROLES` still works. It imports the records area below it, never
 `board_records`.
 """
@@ -11,6 +11,7 @@ import math
 import re
 
 from spark.records import board_pads
+from spark.records import chip_table
 from spark.records import provenance
 from spark.records import record_kind
 from spark.records import store
@@ -64,6 +65,10 @@ PIN_ROLES = {
     "usb": "the chip's own USB D- and D+: driving one drops the USB port the session talks through",
     "flash": "wired to the flash that holds the firmware: driving one can stop the chip",
 }
+
+#: The pins on ADC2, which cannot be read while the radio is on: `pin_assigner` gives them no "adc" ability, and
+#: its refusal of a named one says why (P798); `adc2_role_problems` asks for it on a chip that shares ADC2 with Wi-Fi (P809).
+ADC2_UNUSABLE_WITH_WIFI = "adc2_unusable_with_wifi"
 
 #: Ranges a GPIO number must fall in to be a number at all. Deliberately generous — this catches
 #: a typo or a silkscreen label parsed as a pin, not a chip-specific mistake.
@@ -276,6 +281,22 @@ def pin_role_problems(board, validation):
     return problems
 
 
+def adc2_role_problems(board, validation):
+    """
+    No `adc2_unusable_with_wifi` role on a board whose chip shares ADC2 with Wi-Fi, by `data/chips.json` (P809): the pin
+    assigner would read every pin in `adc_gpio` as one that reads with Wi-Fi on. A chip the table holds no fact for is
+    no problem here; `boards.py --validate` says it is not checked.
+    """
+    pin_roles = board.get("pin_roles") or {}
+    if not isinstance(pin_roles, dict) or ADC2_UNUSABLE_WITH_WIFI in pin_roles:
+        return []
+    if chip_table.load().adc2_used_by_wifi(board.get("chip")).value is not True:
+        return []
+    return ["chip %r shares ADC2 with Wi-Fi (data/chips.json, from ESP-IDF v5.5.1 adc_oneshot), so pin_roles needs "
+            "'adc2_unusable_with_wifi': a 'gpio' list of the ADC2 pins this board breaks out (boards/README.md, ADC "
+            "pins, says where each chip's units are listed), or [] when it breaks out none, and a 'note'" % board["chip"]]
+
+
 def forbidden_key_problems(node, validation, path=""):
     """Each key of FORBIDDEN_KEYS in the record or an object inside it, depth first, named by its `path` of keys."""
     # Decisions must not leak into a facts file, at any depth.
@@ -375,5 +396,5 @@ def board_document_problems(board, validation):
 
 #: The board's rules, in the order `board_records.BOARD` runs them after the shared schema and required-key checks.
 RULES = (id_problems, wokwi_power_pin_problems, pin_problems, gpio_list_problems, pad_problems, pin_role_problems,
-         power_problems, forbidden_key_problems, fab_key_problems, power_pad_rail_problems, selector_name_problems,
+         adc2_role_problems, power_problems, forbidden_key_problems, fab_key_problems, power_pad_rail_problems, selector_name_problems,
          drill_problems, footprint_export_problems, plain_id_problems, board_document_problems)

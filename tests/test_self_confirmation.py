@@ -85,7 +85,7 @@ MAY_READ = {
     "board_records.WOKWI_DEFINITION": "a documents key's NAME, used to build a fixture — vocabulary, not a value",
     "sheet.BOARD_COMPONENT": AGREEMENT + ": the board's component name, checked against the converter's mapping.ts (P484)",
     "onboard_parts.ONBOARD_PARTS": "the table of roles spark wires (P484), checked against the roles a scenario reaches",
-    "check.CHECKS": STRUCTURE, "board_records.LIBRARY": STRUCTURE, "record_kind.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE,
+    "check.CHECKS": STRUCTURE, "board_records.LIBRARY": STRUCTURE, "record_kind.LIBRARY": STRUCTURE, "fab.FILE": STRUCTURE, "chip_table.FILE": STRUCTURE,
     "fab.DATA": STRUCTURE, "requirements_build.REFERENCE": STRUCTURE,
     "board_engine.CONVERTER_PATHS": STRUCTURE,
     "project_setup.PROJECT_TEMPLATE": STRUCTURE,
