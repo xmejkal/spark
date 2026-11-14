@@ -10,7 +10,7 @@ to list the retired rows (`is_retired`) and the same-line groups (`same_line_gro
 
 `key` is the row's identity (`row_key`); `blob` is git's hash of the file the row was planted in, as the run read it;
 `date` is the run's end, with its zone, the moment the facts are known; `status` is the run's word for the row (`caught`,
-`escaped`, `refused`); `by` is the test module that caught it, `suite` when the whole suite did, `escape` when none did,
+`escaped`, `refused`); `by` is the test module that caught it, `suite` when no red line named one, `escape` when none did,
 and null when the row was refused and nothing ran; `caught` counts the catches at this `blob` and `refused` the refusals
 there (a changed file starts both counts again); `s` is the row's seconds. The file is in git and rewritten whole,
 sorted by key: two branches that ran different keys merge line by line in git; two that ran the same key conflict on
@@ -56,7 +56,7 @@ KEY_LENGTH = 12
 SEPARATOR = "\0"
 #: The run's words for a row, as `mutate.py` reports them; the ledger adds none.
 CAUGHT, ESCAPED, REFUSED = "caught", "escaped", "refused"
-#: `by` when the whole suite caught the row, and when no test did.
+#: `by` when a catch named no test module (a crash before any test), and when no test caught the row.
 SUITE, ESCAPE = "suite", "escape"
 #: The five tier words (P787): the four a sweep runs, in its order, and `retired`, which it runs no more (PR 5).
 CRITICAL, NEW, PROVING, PROVEN, RETIRED = "critical", "new", "proving", "proven", "retired"
@@ -214,7 +214,7 @@ def group_verdict(current):
     """
     A same-line group's verdict from `current`, its rows' ledger lines at the file's current blob (`lines_now`; None for a
     row with none there). `DISTINCT` when the lines there disagree already, whatever is still to run: a status is not a
-    catch, a `by` differs, or a `by` is `suite` (the whole suite caught the row and named no test module, so nothing says
+    catch, a `by` differs, or a `by` is `suite` (no red line named a test module, so nothing says
     one module sees both mutants); `NOT_YET_RUN` when no line disagrees and a row has none at this blob (never run, or
     the file changed since); `MERGE_CANDIDATE` when every row has a line there, caught, by one and the same test module.
     A candidate to read, not a proof: `by` is the module, and two mutants of one line may be told apart by two functions

@@ -772,6 +772,74 @@ class TheCatchersRunFirstTest(unittest.TestCase):
         self.assertEqual(calls[0], ("test_alias", "test_m", "test_zz"))
 
 
+def red_alone(root, name):
+    """A test module `name` that is red on the clean tree: a catcher the ledger names that fails when run alone."""
+    write_test(root, name, "class T(unittest.TestCase):", "    def test_x(self): self.fail('leans on another module')")
+
+
+@slow("mutation runs of a tiny tree whose ledger names catchers, 7 tests, 1.1 s on 2026-11-14")
+class TheLedgerCatchersJoinTheSetTest(unittest.TestCase):
+    """P787 PR 9: a full catch names its module, and a file's near set holds the ledger's catchers of its rows."""
+
+    def test_a_red_line_names_its_module_and_a_module_that_did_not_import_by_its_own_name(self):
+        def by(*lines):
+            return mutate.caught_by(mutate.SuiteResult(False, lines))
+        self.assertEqual(by("FAIL: test_x (test_a.T)"), "test_a", "Python 3.10")
+        self.assertEqual(by("FAIL: test_x (test_a.T.test_x)"), "test_a", "Python 3.11")
+        self.assertEqual(by("ERROR: test_c (unittest.loader._FailedTest)"), "test_c", "3.10: test_c did not import")
+        self.assertEqual(by("ERROR: test_c (unittest.loader._FailedTest.test_c)"), "test_c", "3.11")
+        self.assertEqual(by("Ran 3 tests in 0.1s"), ledger.SUITE, "a crash before any test names no module")
+        self.assertEqual(mutate.caught_by(False), ledger.SUITE)
+
+    def test_a_refused_row_s_line_names_no_catcher(self):
+        self.assertEqual(mutate.catch_counts([{"file": "m.py", "by": None}, {"file": "m.py", "by": "test_m"}]),
+                         {"m.py": Counter(test_m=1)})
+
+    def test_a_catcher_that_does_not_import_the_file_joins_its_set_first_by_count(self):
+        root = project_with_three_near_tests()
+        write_test(root, "test_other.py", "SAID = 'reaches m through a script'")
+        counts = {"m.py": Counter(test_other=3, test_zz=1, suite=5, escape=1, test_gone=4)}
+        self.assertEqual(mutate.NearSets(root, "tests", counts).pending("m.py"), ("test_other", "test_zz", "test_alias", "test_m"))
+        self.assertEqual(mutate.NearSets(root, "tests", {"m.py": Counter(suite=2)}).pending("m.py"),
+                         ("test_alias", "test_m", "test_zz"), "a ledger of suite lines gives the importers alone")
+
+    def test_a_file_no_test_names_runs_its_catcher_as_its_set(self):
+        root = tiny_project()
+        (root / "d.txt").write_text("5\n")
+        write_test(root, "test_d.py", "from pathlib import Path", "class T(unittest.TestCase):",
+                   "    def test_d(self): self.assertEqual(Path(%r, 'd' + '.txt').read_text(), '5\\n')" % str(root))
+        self.assertEqual(mutate.near_tests(root, "tests", "d.txt"), [])
+        calls = counting(self)
+        self.assertEqual(mutate.NearSets(root, "tests", {"d.txt": Counter(test_d=1)}).of("d.txt"), ("test_d",))
+        self.assertEqual(calls, [("test_d",)])
+
+    def test_a_catcher_red_alone_leaves_the_importers_in_one_timed_check(self):
+        root = tiny_project()
+        red_alone(root, "test_leaning.py")
+        calls = counting(self)
+        near = mutate.NearSets(root, "tests", {"m.py": Counter(test_leaning=1)})
+        self.assertEqual(near.of("m.py"), ("test_m",))
+        self.assertEqual(calls, [("test_leaning", "test_m"), ("test_m",)], "the set, then the importers alone: %s" % calls)
+        self.assertEqual(len(near.seconds), 1, "two checks of one file are one entry: %s" % near.seconds)
+
+    def test_a_red_catcher_of_a_file_no_test_imports_drops_the_set_without_a_second_check(self):
+        root = tiny_project()
+        (root / "d.txt").write_text("5\n")
+        red_alone(root, "test_leaning.py")
+        calls = counting(self)
+        self.assertEqual(mutate.NearSets(root, "tests", {"d.txt": Counter(test_leaning=1)}).of("d.txt"), ())
+        self.assertEqual(calls, [("test_leaning",)], "only=() would run the whole suite: %s" % calls)
+
+    def test_a_full_catch_records_the_module_that_caught_it(self):
+        root = tiny_project(tested=False)
+        write_test(root, "test_other.py", "import importlib", "class T(unittest.TestCase):",
+                   "    def test_sub(self): self.assertEqual(importlib.import_module('m').sub(5, 3), 2)")
+        store = LedgerOfTheRun([])
+        results, _ = mutate._run(root, "tests", [BREAK_SUB], False, ledger_store=store)
+        self.assertEqual((results[0]["status"], results[0]["by"]), (mutate.CAUGHT, "full"))
+        self.assertEqual(store.recorded[0]["by"], "test_other", "the whole suite named its module")
+
+
 @slow("mutation runs of a tiny tree that write the ledger, 6 tests, 6.1 s on 2026-11-12")
 class TheLedgerTest(unittest.TestCase):
     """P787: a run that plants rows writes one ledger line per row, in the tree it was given, also under --copy."""
@@ -1083,9 +1151,12 @@ class TheBudgetValueTest(unittest.TestCase):
 
 
 def budget_ledger(root, *rows_and_seconds):
-    """A ledger under `root` with one caught line per (row, seconds) at the row's file's current content: a faked last duration."""
+    """
+    A ledger under `root` with one caught line per (row, seconds) at the row's file's current content: a faked last
+    duration. Each line's `by` is `suite`, which names no catcher: a module there would join the file's near set (PR 9).
+    """
     ledger_of(root).write([ledger.line(row, ledger.blob_of((root / row["file"]).read_bytes()), "2026-11-12T10:00:00+01:00",
-                                       ledger.CAUGHT, "test_m", seconds) for row, seconds in rows_and_seconds])
+                                       ledger.CAUGHT, ledger.SUITE, seconds) for row, seconds in rows_and_seconds])
 
 
 def three_file_project():
