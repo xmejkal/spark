@@ -184,7 +184,7 @@ the same once stripped of indentation and a trailing line break, with different 
 its own row; a *duplicate* is the same replace too, one row twice, which PR 0 dropped): `python3 tools/mutate.py
 tests/mutations/*.json --duplicates` lists each group with the ledger's verdict, `merge candidate` when every row was
 caught at the file's current content by the same test module (`by`), `distinct` when a module or a status differs or the
-whole suite caught a row (no module named), decided as soon as the known lines say so, `not yet run` when nothing
+catch named no module, decided as soon as the known lines say so, `not yet run` when nothing
 disagrees and a row has no line there, then `N same-line group(s) over M row(s): K merge candidate(s), D distinct, U not
 yet run; a merge candidate is dropped in a PR with its reason, the others stay` (and `; run a sweep to fill the ledger`
 when every group is not yet run). A merge candidate is a candidate to read, not a proof: `by` is the module, and two of

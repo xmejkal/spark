@@ -219,8 +219,8 @@ def catch_counts(entries):
 
 def caught_by(result):
     """
-    The ledger's `by` for a near run that went red: the module of the first test the verdict names (the first red one in
-    the set's order, `NearSets`), or `suite` when no line names one (a crash before any test). A plain `False` (a test's
+    The ledger's `by` for a run that went red, near or full: the module of the first test the verdict names (the first
+    red one in the run's order), or `suite` when no line names one (a crash before any test). A plain `False` (a test's
     stand-in for the run) names none either.
     """
     for red in getattr(result, "red_lines", ()):
@@ -701,7 +701,7 @@ def _run(root, tests, mutations, copied, ledger_store=None, budget=None, suite_s
         if green:
             noted(ESCAPED, who=ledger.ESCAPE, detail="the suite stayed green — no test notices this defect")
         else:
-            noted(CAUGHT, NEAR if caught_near else FULL, caught_by(near_run if caught_near else green))
+            noted(CAUGHT, NEAR if caught_near else FULL, caught_by(near_run if caught_near else green))  # `green` is the red full run here
 
     restored = copied or bool(suite_is_green(root, tests))
     if ledger_store is not None and restored and not copied:  # a verdict nothing can trust records nothing

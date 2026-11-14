@@ -777,7 +777,7 @@ def red_alone(root, name):
     write_test(root, name, "class T(unittest.TestCase):", "    def test_x(self): self.fail('leans on another module')")
 
 
-@slow("mutation runs of a tiny tree whose ledger names catchers, 7 tests, 1.1 s on 2026-11-14")
+@slow("mutation runs of a tiny tree whose ledger names catchers, 8 tests, 1.2 s on 2026-11-14")
 class TheLedgerCatchersJoinTheSetTest(unittest.TestCase):
     """P787 PR 9: a full catch names its module, and a file's near set holds the ledger's catchers of its rows."""
 
@@ -821,6 +821,13 @@ class TheLedgerCatchersJoinTheSetTest(unittest.TestCase):
         self.assertEqual(near.of("m.py"), ("test_m",))
         self.assertEqual(calls, [("test_leaning", "test_m"), ("test_m",)], "the set, then the importers alone: %s" % calls)
         self.assertEqual(len(near.seconds), 1, "two checks of one file are one entry: %s" % near.seconds)
+
+    def test_a_set_of_importers_alone_red_on_the_clean_tree_is_checked_once(self):
+        root = tiny_project()
+        write_test(root, "test_red.py", "import m", "class T(unittest.TestCase):", "    def test_x(self): self.fail('red alone')")
+        calls = counting(self)
+        self.assertEqual(mutate.NearSets(root, "tests").of("m.py"), ())
+        self.assertEqual(calls, [("test_m", "test_red")], "no catchers: the same tuple is not checked twice: %s" % calls)
 
     def test_a_red_catcher_of_a_file_no_test_imports_drops_the_set_without_a_second_check(self):
         root = tiny_project()
