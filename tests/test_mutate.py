@@ -12,6 +12,7 @@ about the tool and not about this repository's real suite.
     python3 -m unittest discover -s tests
 """
 
+import contextlib
 import io
 import json
 import os
@@ -905,14 +906,13 @@ class AStaleLockTest(unittest.TestCase):
     def test_a_lock_another_run_took_while_this_one_checked_git_is_put_back(self):
         root = committed(tiny_project())
         (root / mutate.LOCK_NAME).write_text(str(gone_pid()))
-        real = mutate.git_changes
 
-        def another_run_takes_it(where):
-            (root / mutate.LOCK_NAME).write_text(str(os.getpid()))  # a live run took the stale lock meanwhile
-            return real(where)
-        with unittest.mock.patch.object(mutate, "git_changes", another_run_takes_it):
-            with self.assertRaises(mutate.AnotherRunIsActive) as refused:
-                mutate.run(root, "tests", [BREAK_ADD])
+        class LateForTheStaleLock(mutate.RunLock):
+            def _take_over(self, pid):
+                self.path.write_text(str(os.getpid()))  # a live run took the stale lock while this one asked git
+                return super()._take_over(pid)
+        with self.assertRaises(mutate.AnotherRunIsActive) as refused:
+            mutate.run(root, "tests", [BREAK_ADD], lock=LateForTheStaleLock(root))
         self.assertIn("took the stale lock first", str(refused.exception))
         self.assertEqual((root / mutate.LOCK_NAME).read_text(), str(os.getpid()), "the live run's lock is back")
         self.assertEqual([path.name for path in root.iterdir() if path.name.startswith(mutate.LOCK_NAME + ".")], [])
@@ -921,8 +921,8 @@ class AStaleLockTest(unittest.TestCase):
         root = committed(tiny_project())
         pid = gone_pid()
         (root / mutate.LOCK_NAME).write_text(str(pid))
-        with unittest.mock.patch("sys.stdout", new_callable=io.StringIO) as out, \
-                unittest.mock.patch("sys.stderr", new_callable=io.StringIO) as said:
+        out, said = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(said):
             mutate.main([str(table(root, BREAK_ADD)), "--root", str(root), "--json"])
         self.assertEqual(json.loads(out.getvalue())["stale_lock"], pid)
         self.assertIn("a stale lock of pid %d (no such process) was taken over" % pid, said.getvalue())
