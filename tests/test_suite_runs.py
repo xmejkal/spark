@@ -121,6 +121,7 @@ class TheSlowMarkTest(unittest.TestCase):
             ("test_journey_basic.py", "TheBasicJourneyTest"),
             ("test_json_contracts.py", "test_every_reason_raised_is_in_the_table"),
             ("test_mutate.py", "AMutantThatCannotLoadIsRefusedTest"),
+            ("test_mutate.py", "AStaleLockTest"),
             ("test_mutate.py", "AnEscapedMutationTest"),
             ("test_mutate.py", "NearTestsFirstTest"),
             ("test_mutate.py", "StaleBytecodeTest"),
