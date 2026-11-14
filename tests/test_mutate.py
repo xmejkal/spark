@@ -22,6 +22,7 @@ import tempfile
 import time
 import unittest
 import unittest.mock
+from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -699,6 +700,76 @@ class AMutationRunInACopyTest(unittest.TestCase):
 def ledger_of(root):
     """The ledger a run on `root` writes, where `main` puts it: tests/mutations/ledger.jsonl under the root."""
     return ledger.LedgerStore(root / "tests" / "mutations" / ledger.LEDGER_NAME)
+
+
+def project_with_three_near_tests():
+    """`tiny_project` with two more tests that import `m`: `test_alias` (no test in it) and `test_zz`, which also covers `add`."""
+    root = tiny_project()
+    write_test(root, "test_alias.py", "import m as other")
+    write_test(root, "test_zz.py", "import m", "class T(unittest.TestCase):",
+               "    def test_add(self): self.assertEqual(m.add(2, 3), 5)")
+    return root
+
+
+class LedgerOfTheRun:
+    """A ledger store that counts its reads and keeps what a run records, without reading itself (the real `record` does)."""
+
+    def __init__(self, entries):
+        self.entries, self.reads, self.recorded = entries, 0, []
+
+    def read(self):
+        self.reads += 1
+        return list(self.entries)
+
+    def record(self, lines):
+        self.recorded.extend(lines)
+        return lines
+
+
+@slow("mutation runs of a tiny tree with a ledger's catchers, 5 tests, 1.1 s on 2026-11-14")
+class TheCatchersRunFirstTest(unittest.TestCase):
+    """P787 PR 8: a file's near tests run the modules that caught most of its rows first, the rest in name order."""
+
+    def test_the_ledger_counts_each_file_s_catchers(self):
+        entries = [{"file": "m.py", "by": "test_zz"}, {"file": "m.py", "by": "test_zz"}, {"file": "m.py", "by": "suite"},
+                   {"file": "n.py", "by": "test_n"}]
+        self.assertEqual(mutate.catch_counts(entries), {"m.py": Counter(test_zz=2, suite=1), "n.py": Counter(test_n=1)})
+        self.assertEqual(mutate.catch_counts([]), {})
+
+    def test_a_set_runs_its_catchers_first_by_count_and_the_rest_in_name_order(self):
+        root = project_with_three_near_tests()
+        counts = {"m.py": Counter(test_zz=2, test_m=1, suite=3, test_gone=5)}  # suite and a removed module are no members
+        self.assertEqual(mutate.NearSets(root, "tests", counts).pending("m.py"), ("test_zz", "test_m", "test_alias"))
+        self.assertEqual(mutate.NearSets(root, "tests", {"m.py": Counter(test_zz=1)}).pending("m.py"),
+                         ("test_zz", "test_alias", "test_m"), "a tie of none keeps name order")
+        self.assertEqual(mutate.NearSets(root, "tests", {"n.py": Counter(test_zz=1)}).pending("m.py"),
+                         ("test_alias", "test_m", "test_zz"), "a file with no ledger line keeps name order")
+        self.assertEqual(mutate.NearSets(root, "tests").pending("m.py"), ("test_alias", "test_m", "test_zz"))
+
+    def test_the_clean_check_runs_the_same_tuple_the_rows_get(self):
+        root = project_with_three_near_tests()
+        calls = counting(self)
+        near = mutate.NearSets(root, "tests", {"m.py": Counter(test_zz=2)})
+        self.assertEqual(near.of("m.py"), ("test_zz", "test_alias", "test_m"))
+        self.assertEqual(calls, [("test_zz", "test_alias", "test_m")], "the clean check ran another order: %s" % calls)
+
+    def test_a_run_reads_the_ledger_once_and_runs_the_file_s_catcher_first(self):
+        root = project_with_three_near_tests()
+        store = LedgerOfTheRun([{"file": "m.py", "by": "test_zz", "key": "k1", "s": 1},
+                                {"file": "m.py", "by": "test_zz", "key": "k2", "s": 1},
+                                {"file": "m.py", "by": "test_m", "key": "k3", "s": 1}])
+        calls = counting(self)
+        results, restored = mutate._run(root, "tests", [BREAK_ADD], False, ledger_store=store)
+        self.assertEqual((results[0]["status"], restored, store.reads), (mutate.CAUGHT, True, 1))
+        self.assertEqual(calls[:2], [("test_zz", "test_m", "test_alias")] * 2, "the clean check, then the row: %s" % calls)
+        self.assertEqual(store.recorded[0]["by"], "test_zz", "the first red module in the set's order is the row's catcher")
+
+    def test_a_run_with_no_ledger_keeps_name_order(self):
+        root = project_with_three_near_tests()
+        calls = counting(self)
+        results, _ = mutate._run(root, "tests", [BREAK_ADD], False)
+        self.assertEqual(results[0]["status"], mutate.CAUGHT)
+        self.assertEqual(calls[0], ("test_alias", "test_m", "test_zz"))
 
 
 @slow("mutation runs of a tiny tree that write the ledger, 6 tests, 6.1 s on 2026-11-12")

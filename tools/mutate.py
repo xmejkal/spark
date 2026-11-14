@@ -114,7 +114,9 @@ just before the file's first row (`NearSets`), so the first row of a file that h
 too: the largest near check this run measured, else, before the first, the pre-check suite's seconds, which bound a near
 check (a near set is a part of the suite); the row's `s` leaves the check out. The run stops at the first row that does
 not fit, and the rest are left in order, though a later row might fit: the tiers' order is the contract.
-Checked up front, the near sets of 172 files spent the first night's 180 minutes before any row (2026-11-13, PR 7). The
+Checked up front, the near sets of 172 files spent the first night's 180 minutes before any row (2026-11-13, PR 7). A
+near set runs the modules that caught most of the file's ledger lines first, the rest in name order (PR 8): seed night 3
+ran 27 green modules before `test_tools` caught each `tool_finder.py` row (2026-11-14). The
 closing line says what ran, as `budget 20 min: ran 42 of 61 selected (critical 12/12, new 30/35, proving 0/9, proven 0/5);
 19 left for the next sweep`, and `--json` gains `budget` with the same facts (`minutes, ran, selected, left, by_tier`).
 A left row is not a pass: it was not run, and the exit code speaks for the rows that were; a budget run that ran no row
@@ -139,7 +141,7 @@ import sys
 import tempfile
 import threading
 import time
-from collections import namedtuple
+from collections import Counter, namedtuple
 from datetime import datetime
 from pathlib import Path
 
@@ -204,10 +206,19 @@ class SuiteResult(namedtuple("SuiteResult", "green red_lines")):
 RED_TEST = re.compile(r"^(?:FAIL|ERROR): \S+ \((\w+)")
 
 
+def catch_counts(entries):
+    """The ledger lines `entries` as each file's `Counter` of the `by` that caught its rows (`NearSets` puts those first)."""
+    counts = {}
+    for entry in entries:
+        counts.setdefault(entry["file"], Counter())[entry["by"]] += 1
+    return counts
+
+
 def caught_by(result):
     """
-    The ledger's `by` for a near run that went red: the module of the first test the verdict names, or `suite` when no
-    line names one (a crash before any test). A plain `False` (a test's stand-in for the run) names none either.
+    The ledger's `by` for a near run that went red: the module of the first test the verdict names (the first red one in
+    the set's order, `NearSets`), or `suite` when no line names one (a crash before any test). A plain `False` (a test's
+    stand-in for the run) names none either.
     """
     for red in getattr(result, "red_lines", ()):
         found = RED_TEST.match(red)
@@ -283,17 +294,23 @@ class NearSets:
     file runs, on the clean tree, and kept for its next rows (P787 PR 7): checked up front for every file, the 172 near
     sets of a night's tables spent the whole 180-minute budget before the first row. `seconds` are the checks' measured
     durations, which `check_seconds` reads.
+
+    A set runs the modules that caught most of the file's rows first (`catch_counts`, from the ledger), the rest in name
+    order (P787 PR 8): the run stops at the first red module, and seed night 3 ran 27 green modules before `test_tools`
+    caught each `tool_finder.py` row. The order is fixed before the clean check, which runs the same tuple as the rows.
     """
 
-    def __init__(self, root, tests):
+    def __init__(self, root, tests, catch_counts=None):
         self.root, self.tests, self.found, self.checked, self.seconds = root, tests, {}, {}, []
+        self.catch_counts = catch_counts or {}
 
     def pending(self, file):
         """The near tests of `file` still to be run on the clean tree: none once its set is checked, or when it has none."""
         if file in self.checked:
             return ()
         if file not in self.found:
-            self.found[file] = tuple(near_tests(self.root, self.tests, file))
+            counts = self.catch_counts.get(file, Counter())  # a file with no ledger line keeps name order
+            self.found[file] = tuple(sorted(near_tests(self.root, self.tests, file), key=lambda module: -counts[module]))
         return self.found[file]
 
     def check_seconds(self, file, suite_seconds):
@@ -628,8 +645,9 @@ def run(root, tests, mutations, copied=False, ledger_store=None, budget=None):
 def _run(root, tests, mutations, copied, ledger_store=None, budget=None, suite_seconds=None):
     if budget is not None and suite_seconds is None:
         raise ValueError("a budget needs the pre-check suite's measured seconds, its last fact for a row and a near check")
-    results, imports_before, lines, near = [], {}, [], NearSets(root, tests)
-    known = {entry["key"]: entry["s"] for entry in ledger_store.read()} if budget is not None and ledger_store is not None else {}
+    entries = ledger_store.read() if ledger_store is not None else []  # read once: `record` below writes the store
+    results, imports_before, lines, near = [], {}, [], NearSets(root, tests, catch_counts(entries))
+    known = {entry["key"]: entry["s"] for entry in entries} if budget is not None else {}
     for mutation in mutations:
         file = mutation["file"]
         near_check = near.check_seconds(file, suite_seconds)  # a file's first row asks for its near check too
