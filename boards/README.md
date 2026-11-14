@@ -112,10 +112,18 @@ unknown, and that is a warning.
 assigner reads both: a pin in the role offers no ADC, so a signal that needs `adc` never lands on it, a plain signal
 spends it before an ADC1 pin, and a signal that names one and needs `adc` is refused with the reason
 ([P798](https://github.com/xmejkal/spark/issues/1120)). So an ADC2 pin may stay in `adc_gpio` (the T-Display test
-fixture keeps both lists) or live in the role alone (the FireBeetle 2 lists ADC1 only). A record with no such role is
-read as its `adc_gpio` says: nothing is guessed from `chip`. Cite each list's source beside it, by its `documents` key,
-table and page: the ESP32's units are in its Technical Reference Manual (Table 6.11-1), the S3's in its datasheet
-(Table 2-8).
+fixture keeps both lists) or live in the role alone (the FireBeetle 2 lists ADC1 only). Cite each list's source beside
+it, by its `documents` key, table and page: the ESP32's units are in its Technical Reference Manual (Table 6.11-1), the
+S3's in its datasheet (Table 2-8).
+
+Whether a chip needs the role is a fact in `data/chips.json`, cited to ESP-IDF v5.5.1
+([P809](https://github.com/xmejkal/spark/issues/1145)). Its `adc2_used_by_wifi` is true for the ESP32, the ESP32-S2
+and the ESP32-S3 ("ADC2 is also used by Wi-Fi"). A record of one of these chips without the role breaks the contract,
+so `--validate` names it and the build stops at loading it. If the board breaks out no ADC2 pin, write the role with
+`"gpio": []` and a note. The fact is false for the chips with one ADC and for the ESP32-P4, which has no Wi-Fi. It is
+null for the ESP32-C3, whose ADC2 ESP-IDF calls not supported at all
+([P813](https://github.com/xmejkal/spark/issues/1164)). For a board without the role whose chip is null or not in the
+table, `--validate` prints "ADC2 role not checked" under the board and passes it. The check does not read which pins the role lists.
 
 ## Button places
 

@@ -50,9 +50,10 @@ def project(active=LIBRARY_BOARD, own=None):
 
 
 def definition(board_id, **overrides):
-    """A definition that satisfies the contract, so tests can break one thing at a time."""
+    """A definition that satisfies the contract, so tests can break one thing at a time. Its chip has no ADC2 that Wi-Fi
+    uses (data/chips.json), so the ADC2 role rule (P809) stays out of the tests that replace `pin_roles` whole."""
     return dict({
-        "schema": 1, "id": board_id, "name": "Test Board", "chip": "esp32",
+        "schema": 1, "id": board_id, "name": "Test Board", "chip": "esp32c6",
         "micropython_port": "ESP32_GENERIC", "wokwi_part_type": "board-test",
         "wokwi_pin_naming": "gpio",
         "pins": {"D0": 0, "D1": 1},
@@ -1347,6 +1348,71 @@ class EachAdcListCitesAKeptSourceTest(unittest.TestCase):
                     cited = re.findall(r"documents\.([a-z0-9-]+[a-z0-9])", text)
                     self.assertTrue(cited, "no documents.<key> in %r" % text)
                     self.assertLessEqual(set(cited), set(record["documents"]))
+
+
+class AChipThatSharesAdc2WithWifiNeedsTheRoleTest(unittest.TestCase):
+    """P809: a board whose chip shares ADC2 with Wi-Fi by data/chips.json names the ADC2 role, or the contract says so;
+    a chip the table holds no fact for is said by --validate and fails nothing."""
+
+    ROLE = {board_records.ADC2_UNUSABLE_WITH_WIFI: {"gpio": [], "note": "no ADC2 pin is broken out"}}
+
+    def _problems(self, board):
+        return [each for each in board_records.validate(board, Path("b.json")) if "ADC2" in each]
+
+    def test_each_chip_that_shares_adc2_without_the_role_is_named_with_the_fix(self):
+        for chip in ("esp32", "esp32s2", "esp32s3"):
+            with self.subTest(chip=chip):
+                problems = self._problems(definition("b", chip=chip))
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn(repr(chip), problems[0])
+                self.assertIn(repr(board_records.ADC2_UNUSABLE_WITH_WIFI), problems[0])
+
+    def test_the_role_even_with_no_pins_meets_it(self):
+        self.assertEqual(self._problems(definition("b", chip="esp32s3", pin_roles=self.ROLE)), [])
+
+    def test_chips_with_no_adc2_for_wifi_or_no_fact_need_no_role(self):
+        for chip in ("esp32p4", "esp32c6", "esp32c3", "not-a-chip"):
+            with self.subTest(chip=chip):
+                self.assertEqual(self._problems(definition("b", chip=chip)), [])
+
+    def test_odd_chips_and_roles_give_no_adc2_problem_and_no_crash(self):
+        chipless = definition("b")
+        del chipless["chip"]
+        for board in (chipless, definition("b", chip=["esp32"]), definition("b", chip={"esp32": 1}),
+                      definition("b", chip="esp32c6", pin_roles=None),
+                      definition("b", chip="esp32", pin_roles=5)):
+            with self.subTest(board={k: board.get(k) for k in ("chip", "pin_roles")}):
+                self.assertEqual(self._problems(board), [])
+        self.assertEqual(len(self._problems(definition("b", chip="esp32", pin_roles=None))), 1)  # null is no role
+
+    def test_loading_a_board_that_lacks_the_role_is_refused(self):
+        root = project(active="b", own={"b": definition("b", chip="esp32")})
+        with self.assertRaises(board_records.BoardError) as refused:
+            board_records.load(root)
+        self.assertIn(board_records.ADC2_UNUSABLE_WITH_WIFI, str(refused.exception))
+
+    def _validate(self, board):
+        import contextlib
+        import io
+        root = project(active="b", own={"b": board})
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = boards.main(["--validate", "--project", str(root)])
+        return code, [line.strip() for line in out.getvalue().splitlines() if "ADC2" in line]
+
+    def test_validate_fails_a_board_that_lacks_the_role(self):
+        code, lines = self._validate(definition("b", chip="esp32"))
+        self.assertEqual(code, 1)
+        self.assertEqual(len(lines), 1, lines)
+        self.assertIn("'esp32' shares ADC2 with Wi-Fi", lines[0])
+
+    def test_validate_says_a_chip_with_no_fact_is_not_checked_and_still_passes(self):
+        self.assertEqual(self._validate(definition("b", chip="esp32c3")),
+                         (0, ["- ADC2 role not checked: data/chips.json holds no ADC2 fact for chip 'esp32c3'"]))
+
+    def test_validate_says_nothing_more_when_the_role_is_named_or_the_chip_has_a_fact(self):
+        self.assertEqual(self._validate(definition("b", chip="esp32c3", pin_roles=self.ROLE)), (0, []))
+        self.assertEqual(self._validate(definition("b", chip="esp32c6")), (0, []))
 
 
 class TheListIsAnOperationOnTheCoreTest(unittest.TestCase):
