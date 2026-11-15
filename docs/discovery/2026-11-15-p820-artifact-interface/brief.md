@@ -7,7 +7,7 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** collecting evidence: Q1 is answered (D2); the spike ran (D6, Results): steps 1 to 3 pass, and A11 (a click with no session open) is still open; D5 sets the MVP's scope, and its plan comes next <!-- REQUIRED:ready -->
+**Ready for:** filing: the spike ran (D6, Results), steps 1 to 3 pass and A11 is still open; the MVP plan ([mvp-plan.md](mvp-plan.md)) passed two council rounds and the PO approved it with items.md (D7 to D11) <!-- REQUIRED:ready -->
 **Stands on:** 11 H, 6 of which would change the decision (A1, A2, A11, A4, A5, A7 high by D2) <!-- REQUIRED:debt -->
 **Decision needed:** the PO's yes to publish the throwaway spike page (Q4); then a direction per open question 1 to 7 from Options; before the wiring page (P826), Q29 (the kept page's no-script guarantee), Q20 (P306 #372) and Q33 (P804 first) <!-- REQUIRED:decision-needed -->
 
@@ -162,7 +162,7 @@ The spike ran on 2026-11-15, 15:23 to 15:28 Prague time, on a throwaway Artifact
 - Step 3, rows survive a republish: pass, 3 of 3 republishes (`edit_version` to versions 2, 3 and 4). All 6 clicks and 3 replies stay in the store, and the PO's reload after the first republish showed them · E `db_list` after version 4; D the PO, 2026-11-15.
 - Step 4, the built-in Artifact tool and `publish_files` reach the same artifact: not checked, because this session has only the claude-artifacts server's tools.
 - Step 5, `files` reads a local project: not run.
-- Step 6, a click with no session open waits and is read later (A11, rated high): not run yet. Every publish answered `wake: not_armed`, reason `no_address`, for this session: a comment sent to Claude on the page wakes a cloud session, not this local one. Proposed: the PO clicks after a restart, before the next session's first message, and that session reads the row.
+- Step 6, a click with no session open waits and is read later (A11, rated high): not run yet. Every publish answered `wake: not_armed`, reason `no_address`, for this session: a comment sent to Claude on the page wakes a cloud session, not this local one. Proposed: the PO clicks after a restart, before the next session's first message, and that session reads the row. On 2026-11-15 no click came between the restart and the first message (6 rows at about 15:25). The PO clicked at 15:41:45 Prague time while the session was open and idle; the next turn read it as the seventh row (`db_query`). So a click made between turns waits unlost, but `/clear` keeps the session, and A11 needs Claude Code quit: still open, 0 of 3.
 - Step 7, MCP through `host:`: not run (Q9 open).
 
 So A1 and A2 (both rated high) hold within this test: one person, one owner-only page, one session, about 5 minutes. A11 is still open.
@@ -177,6 +177,11 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D4 · the spike's throwaway page is not published now (Q4: "Not now"); the spike waits, and the lane goes on with P792 and P459 · the PO · 2026-11-15 · AskUserQuestion, Q4
 - D5 · the MVP is the whole flow in one page (idea to deploy) with the schematic and breadboard views, PCB and 3D model later, controlled by both the PO and Claude: "what we want is to not only have the breadboard on the artifact, byut actually the whole spark screens and the whole flow, including the schema and breadboard and pcb, the 3d model etc, the pcb and 3d model we can add later, start with an mvp with the flow, so both claude and I as a human can control it" · the PO · 2026-11-15 · this session; issue comment on #1173
 - D6 · publish the spike's throwaway page (Q4 asked again: "yes") · the PO · 2026-11-15 · this session
+- D7 · Q29 and Q8: `page.html` carries one inline script and still loads nothing from the web; only the `<script` test line is retired; with the script off the page still shows every phase · the PO · 2026-11-15 · AskUserQuestion, "Yes, one script" · options: one script, two files
+- D8 · Q5: a click waits for the PO's next chat message, and the page says so with Copy beside it · the PO · 2026-11-15 · AskUserQuestion, "Yes, it may wait" · options: it may wait, it must act at once
+- D9 · Q12: a click the PO confirms on the page, after its effect line, is his yes for pick, drop a need, the requirements and the build; never for the board or a simulation · the PO · 2026-11-15 · AskUserQuestion, "Yes, for those four" · options: yes for those four, Claude asks again
+- D10 · Q15 and Q16: "store options" means the PO's drawer and spark's records; the page shows "you have" counts and holds, which go with any share; `db` rows hold no drawer facts; shops with prices after the MVP · the PO · 2026-11-15 · AskUserQuestion, "Drawer and records" · options: drawer and records, shops with prices too, no drawer facts
+- D11 · approves the MVP plan (mvp-plan.md, two council rounds: an architecture lens and a UX and AI-UX lens on Sonnet, the refuter on Opus because Fable's limit was reached) and items.md's cards 1 to 4 for filing · the PO · 2026-11-15 · ExitPlanMode in this session
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
