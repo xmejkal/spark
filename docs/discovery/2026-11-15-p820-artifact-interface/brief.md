@@ -7,7 +7,7 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** collecting evidence: Q1 is answered (D2); the spike waits on the PO's yes to publish its throwaway page (Q4), and no D chooses a direction yet <!-- REQUIRED:ready -->
+**Ready for:** collecting evidence: Q1 is answered (D2); the spike waits: the PO said "Not now" to publishing its throwaway page (D4), and no D chooses a direction yet <!-- REQUIRED:ready -->
 **Stands on:** 11 H, 6 of which would change the decision (A1, A2, A11, A4, A5, A7 high by D2) <!-- REQUIRED:debt -->
 **Decision needed:** the PO's yes to publish the throwaway spike page (Q4); then a direction per open question 1 to 7 from Options; before the wiring page (P826), Q29 (the kept page's no-script guarantee), Q20 (P306 #372) and Q33 (P804 first) <!-- REQUIRED:decision-needed -->
 
@@ -160,6 +160,7 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D1 · confirms the frame (the decision, scope, start and reach, extensions) and the depth FULL · the PO · 2026-11-15 · AskUserQuestion in this session, Q0: "Yes, FULL council" · options: TRIO, FULL, LIGHT
 - D2 · rates A1, A2, A11, A4, A5 and A7 high and the rest medium, and accepts the spike's pass line (steps 1 to 3, 3 of 3 tries each, Claude's row on the page within 10 s with no reload) · the PO · 2026-11-15 · AskUserQuestion, Q1
 - D3 · the files outside this folder that changed since init are P664's merged PR #1176 (dc0fb6c9), (docs/discovery/2026-10-19-p323-target-architecture/architecture/areas/build.md, docs/guide/map.md, docs/observations/rows/p664-timeout-keeps-stages.md, scripts/spark/build/board_engine.py, scripts/spark/build/build_service.py, scripts/spark/build/requirements_build.py, tests/architecture_baseline.json, tests/mutations/p482-diagram-merge.json, tests/mutations/p484-onboard-parts.json, tests/mutations/p659-build-timeout.json, tests/mutations/p664-timeout-keeps-stages.json, tests/mutations/p706-build-service.json, tests/mutations/p783-pr3-logic-in-main.json, tests/test_build_service.py, tests/test_check_spine.py), work of the spark lane under the PO's standing rule to merge when the gates pass (rules.md), not this discovery's · the PO · 2026-11-05 · memory: merge when gates pass
+- D4 · the spike's throwaway page is not published now (Q4: "Not now"); the spike waits, and the lane goes on with P792 and P459 · the PO · 2026-11-15 · AskUserQuestion, Q4
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
