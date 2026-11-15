@@ -13,4 +13,4 @@ the PR. This file holds the acted, raised and rejected findings only (rules.md),
 | 5 | moving `timed_out_sentence` left five P659 mutation rows without their anchor | plan check (refuter) | acted | re-pointed to `board_engine.py`; `--anchors` passes |
 | 6 | the build area page said the timeout propagates to `RequirementsBuildService` | plan check (refuter) | acted | areas/build.md says the late stage is named and the stages before stand |
 | 7 | `convert` took six parameters (R3) | build (hook rules) | acted | `workdir` dropped: the kept diagram is `sim_dir.parent / KEPT_DIAGRAM`, as both callers pass the work folder's `sim/` |
-| 8 | `sim_project.stage_chips` runs `chip compile` with no limit, so it can hang | plan check (refuter) | raised | — (note only; a hang is not this card's timeout) |
+| 8 | `sim_project.stage_chips` runs `chip compile` with no limit, so it can hang | plan check (refuter) | rejected | dropped because no walk saw a hang there; a card when one does |
