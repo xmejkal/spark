@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from fakes import FakeTscircuitEngine  # noqa: E402
 from golden_design import fed_circuit  # noqa: E402
-from spark.build import board_engine  # noqa: E402
+from spark.build import board_engine, kept_files  # noqa: E402
 from spark.build.build_service import BuildInputs, BuildService  # noqa: E402
 from spark.design import board_emitter  # noqa: E402
 from spark.core.outcomes import COULD_NOT_RUN, EXIT_COULD_NOT_RUN, OK, PROBLEMS, SKIPPED  # noqa: E402
@@ -52,11 +52,12 @@ class ARecordingEmitter(board_emitter.BoardEmitter):
         return super().emit(inputs)
 
 
-def a_build(requirements=REFERENCE, engine=None, emitter=None, **inputs):
-    """The stages of one build in a fresh work folder, with the requirements file written as `main` writes it."""
+def a_build(requirements=REFERENCE, engine=None, emitter=None, runner=None, **inputs):
+    """The stages of one build in a fresh work folder, with the requirements file written as `main` writes it; `runner`
+    runs the converter's command, as BuildService's."""
     workdir = Path(tempfile.mkdtemp())
     (workdir / "requirements.json").write_text(json.dumps(requirements))
-    service = BuildService(engine or FakeTscircuitEngine(), emitter or board_emitter.BoardEmitter(assume_missing_sizes=True))
+    service = BuildService(engine or FakeTscircuitEngine(), emitter or board_emitter.BoardEmitter(assume_missing_sizes=True), runner=runner)
     return workdir, service.build(BuildInputs(requirements, workdir, **inputs))
 
 
@@ -140,6 +141,29 @@ class TheEngineRunsWithTheRunnerItIsGivenTest(unittest.TestCase):
         self.assertIs(board_engine.TscircuitEngine(None, runner=runner)._runner, runner)
 
 
+
+class AnEngineBuildPastItsLimitKeepsTheStagesBeforeItTest(unittest.TestCase):
+    """P664: a `tsci build` past its limit was one `build` stage that replaced every other; the stages that ran stand."""
+
+    class LateEngine(FakeTscircuitEngine):
+        def build(self, workdir):
+            raise board_engine.TimedOutError("`tsci build` did not finish in 900s")
+
+    def test_the_stages_before_the_build_stand_and_the_build_names_the_limit(self):
+        _, stages = a_build(engine=self.LateEngine())
+        self.assertEqual([stage.status for stage in stages[:-1]], [OK] * (len(stages) - 1))
+        self.assertGreater(len(stages), 1)
+        self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].code, stages[-1].detail),
+                         ("build", COULD_NOT_RUN, "stage_timed_out", "`tsci build` did not finish in 900s"))
+        self.assertEqual(kept_files.why_not_built(stages, "board only"), "the build did not finish in this run")
+
+    def test_the_engine_turns_its_own_timeout_into_the_sentence(self):
+        def late(command, **named):
+            raise subprocess.TimeoutExpired(command, named["timeout"], stderr="routing\n")
+        with self.assertRaises(board_engine.TimedOutError) as raised:
+            board_engine.TscircuitEngine(Path("/x/tsci"), runner=late).build(Path(tempfile.mkdtemp()))
+        self.assertEqual(str(raised.exception), "`tsci build` did not finish in 900s; its last words: routing")
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -165,15 +189,16 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         """The simulation stage of `stages`."""
         return self.stages(parts, diagram)[-1]
 
-    def stages(self, parts, diagram=BOARD_ALONE_DIAGRAM):
+    def stages(self, parts, diagram=BOARD_ALONE_DIAGRAM, runner=None):
         """The stages of a build on the XIAO whose project holds the display's record and a converter that writes
-        `diagram`; the engine builds a circuit that feeds the board and the display, so the build stage passes."""
+        `diagram` (run by `runner` when given); the engine builds a circuit that feeds the board and the display, so the
+        build stage passes."""
         project = Path(tempfile.mkdtemp()) / "sim project"
         (project / ".spark").mkdir(parents=True)
         (project / "parts").mkdir()
         (project / "parts" / "dfr0664-tft-2in.json").write_text(json.dumps(DISPLAY))
         (project / ".spark" / "tools.json").write_text(json.dumps(a_converter_shim(project, diagram)))
-        _, stages = a_build({"board": "xiao-esp32-c6", "parts": parts}, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), project=project)
+        _, stages = a_build({"board": "xiao-esp32-c6", "parts": parts}, engine=FakeTscircuitEngine(fed_circuit(self.FEEDS)), runner=runner, project=project)
         self.assertEqual(stages[-1].name, "simulation", [(stage.name, stage.status, stage.detail) for stage in stages])
         return stages
 
@@ -186,6 +211,17 @@ class TheSimulationStageOfASkippedDesignTest(unittest.TestCase):
         self.assertIn("what it cannot show (", stage.detail)
         self.assertIn(self.SKIPPED, stage.detail)
         self.assertEqual((verdict(stages), vouches_for_a_build(stages)), (0, False))
+
+    def test_a_converter_past_its_limit_after_a_passed_build_keeps_the_build_and_names_the_simulation(self):
+        # P664: the stages before the late one stand, so the build is said to have built and the sheet and page are kept
+        def late(command, **named):
+            raise subprocess.TimeoutExpired(command, named["timeout"], stderr="placing parts\n")
+        stages = self.stages([{"part": "dfr0664-tft-2in", "name": "Display"}], runner=late)
+        self.assertEqual([(stage.name, stage.status) for stage in stages][-2:], [("build", OK), ("simulation", COULD_NOT_RUN)])
+        self.assertEqual(stages[-1].code, "stage_timed_out")
+        self.assertIn("did not finish in 120s; its last words: placing parts", stages[-1].detail)
+        self.assertIsNone(kept_files.why_not_built(stages, "board only"))
+        self.assertEqual(verdict(stages), EXIT_COULD_NOT_RUN)
 
     def test_a_skipped_part_beside_a_real_one_with_no_wire_is_still_the_unwired_diagram(self):
         stage = self.simulation([{"part": "dfr0664-tft-2in", "name": "Display"}, {"part": "led-red-5mm", "name": "Led"}])

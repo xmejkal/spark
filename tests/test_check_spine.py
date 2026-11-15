@@ -1025,10 +1025,13 @@ class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
         self.assertEqual([120], limits)
 
     def test_the_converter_that_runs_past_its_limit_names_120_seconds(self):
+        # P664: convert returns the timed-out simulation stage, so the stages before it stand
         def a_build_that_converted(requirements, workdir, **named):
             (workdir / "sim").mkdir()
             with mock.patch.object(board_engine, "converter_command", lambda project, own: ["/x/convert-wokwi", "--circuit"]):
-                board_engine.convert(None, None, ["--circuit", "c.json"], workdir / "sim", workdir)
+                _, stopped, _ = board_engine.convert(None, None, ["--circuit", "c.json"], workdir / "sim")
+            self.assertEqual((stopped.name, stopped.code), ("simulation", "stage_timed_out"))
+            return [stopped]
         said, code, limits = self.main_with(build=a_build_that_converted)
         self.assertIn("`convert-wokwi --circuit` did not finish in 120s", said["stages"][0]["detail"])
         self.assertEqual(2, code)
@@ -1653,6 +1656,17 @@ class TheBoardAloneTest(unittest.TestCase):
         self.assertIn("ONBOARD_BUTTON (GPIO9): the Wokwi definition of xiao-esp32-c6 has no pin on GPIO9", stages[-1].detail)
         self.assertIn("ONBOARD_BUTTON (GPIO9)", (workdir / "sim" / "WHAT-THIS-CANNOT-SHOW.md").read_text())
         self.assertEqual(build_service.verdict(stages), check_spine.EXIT_OK)
+
+    def test_a_board_alone_whose_converter_runs_past_its_limit_says_so_in_its_simulation_stage(self):
+        # P664: board_alone calls the converter outside BuildService's build; the late run is its simulation stage, and
+        # the skipped stages before it stand. The FireBeetle's own LED and button give the converter wires to make (P484).
+        def late(command, **named):
+            raise subprocess.TimeoutExpired(command, named["timeout"])
+        board = json.loads((ROOT / "boards" / "firebeetle2-esp32s3.json").read_text())
+        stages = build_service.board_alone(board, Path(tempfile.mkdtemp()), runner=late)
+        self.assertEqual([stage.status for stage in stages[:-1]], [check_spine.SKIPPED] * 4)
+        self.assertEqual((stages[-1].name, stages[-1].status, stages[-1].code), ("simulation", check_spine.COULD_NOT_RUN, "stage_timed_out"))
+        self.assertIn("did not finish in 120s", stages[-1].detail)
 
     def test_the_board_alone_warns_of_no_serial_monitor_unless_the_record_says_it_needs_no_wires(self):
         # P468: the XIAO's USB serial needs no wires, so only a record without the fact keeps the warning
@@ -2725,10 +2739,10 @@ class EachStopOfTheBuildCarriesItsCodeTest(unittest.TestCase):
     #: expression that passes it on.
     CODES_IN_ORDER = [
         "tool_missing",
-        "converter_lacks_part", "no_diagram",
+        "stage_timed_out", "converter_lacks_part", "no_diagram",
         "board_unusable", "board_only_with_parts", "no_parts", "broken.code", "refused.code", "stage_crashed",
         "schematic_refused", "schematic_noted", "disagreement.code", "stage_crashed", "tool_missing",
-        "tool_cannot_build", "design_not_built", "part_stranded", "design_not_built", "not_routed",
+        "tool_cannot_build", "design_not_built", "stage_timed_out", "part_stranded", "design_not_built", "not_routed",
         "simulation_fact_missing", "chip_not_compiled", "diagram_unwired",
         "simulation_fact_missing", "simulation_fact_missing",
         "broken.code", "stage_timed_out", "stage_crashed",

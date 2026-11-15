@@ -6,7 +6,6 @@ build's stages run (`build_service.BuildService`), and the lines that the histor
 
 import json
 import os
-import shlex
 import shutil
 import subprocess
 import tempfile
@@ -15,7 +14,7 @@ from pathlib import Path
 
 from spark.build import board_engine
 from spark.build import build_codes
-from spark.build.board_engine import modules_for
+from spark.build.board_engine import modules_for, timed_out_sentence  # noqa: F401 — the CLI's handler, and tests read it here
 from spark.build.build_service import BuildInputs, BuildService, vouches_for_a_build
 from spark.build.kept_files import REQUIREMENTS_STAGE, design_handed_to
 from spark.build.stages import Stage
@@ -30,21 +29,6 @@ from spark.sourcing import part_facts
 #: that exercises pin assignment, a bus, a rail with an external source, and two footprint kinds.
 REFERENCE = {"board": "firebeetle2-esp32s3",
              "parts": ["l9110s-module", "vl6180x-breakout", "jst-ph-2-power-inlet"]}
-
-#: How much of a late command's own output the sentence keeps, as the other last-words sites cap theirs.
-LAST_WORDS_CAP = 800
-
-
-def timed_out_sentence(late):
-    """What a command that ran past its limit said (P659): the command by its file names (two words, three when the
-    second is `run`, as a converter run as `<runtime> run cli.ts`), the limit it had, and its last three lines of stderr, or of stdout when stderr is empty, capped."""
-    words = shlex.split(late.cmd) if isinstance(late.cmd, str) else list(late.cmd)
-    names = [Path(str(word)).name for word in words]
-    cmd = names[:3] if names[1:2] == ["run"] else names[:2]
-    out = late.stderr or late.stdout or ""
-    said = out.decode(errors="replace") if isinstance(out, bytes) else out
-    last = " | ".join(said.strip()[-LAST_WORDS_CAP:].splitlines()[-3:])
-    return "`%s` did not finish in %ss%s" % (" ".join(cmd), late.timeout, "; its last words: " + last if last else "")
 
 
 #: Result: the stages, the work folder (None when the requirements were refused), the requirements read, the toolchain
@@ -121,8 +105,9 @@ class RequirementsBuildService:
         service = self.build_service or BuildService
         try:
             return service.for_toolchain(toolchain).build(inputs)
-        except subprocess.TimeoutExpired as late:
-            return [Stage("build", COULD_NOT_RUN, timed_out_sentence(late), build_codes.STAGE_TIMED_OUT)]
+        except (subprocess.TimeoutExpired, board_engine.TimedOutError) as late:  # the guard: BuildService keeps the stages for its own tools (P664)
+            said = str(late) if isinstance(late, board_engine.TimedOutError) else timed_out_sentence(late)
+            return [Stage("build", COULD_NOT_RUN, said, build_codes.STAGE_TIMED_OUT)]
         except Exception as exc:  # noqa: BLE001
             # Anything unforeseen is could-not-run, never problems. An exception says this tool
             # failed, which is not the same as the chain failing, and reporting one as the other
