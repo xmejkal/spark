@@ -196,8 +196,7 @@ XIAO ESP32-C6 today),
 `firmware/pins.py` (the pins the firmware imports) and `sim/` (the Wokwi project) into the project. An existing `board.tsx` is left
 alone, edited or not, and `dist/` is then built from the requirements file, not from your `board.tsx`
 ([P110](https://github.com/xmejkal/spark/issues/44)). To check an edited `board.tsx`, build it with
-`npx --no tsci build board.tsx`; to regenerate it, delete it. When its traces join other pins than this build's, a
-`traces differ` line names each one (P660). `--sim-dir DIR` keeps the Wokwi project in DIR instead
+`npx --no tsci build board.tsx`; to regenerate it, delete it. When its traces join other pins than this build's, a `traces differ` line names each one (P660). `--sim-dir DIR` keeps the Wokwi project in DIR instead
 of `sim/` ([P116](https://github.com/xmejkal/spark/issues/50)).
 
 It refuses rather than guess, and says what to record

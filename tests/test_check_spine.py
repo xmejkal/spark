@@ -877,7 +877,7 @@ class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
         return board, kept_files.kept_into(work, into)
 
     def differs(self, kept):
-        return [entry for entry in kept if entry["did"] in (kept_files.TRACES_DIFFER, kept_files.TRACES_NOT_COMPARED)]
+        return [entry for entry in kept if entry["did"] in ("traces differ", "traces not compared")]
 
     def test_a_moved_pin_is_named_on_each_side_and_the_file_is_left_alone(self):
         old = self.BUILT.replace(".D6", ".D12")
@@ -886,7 +886,7 @@ class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
         self.assertIn("left alone", [entry["did"] for entry in kept])
         entry, = self.differs(kept)
         self.assertEqual((entry["did"], entry["only_in_kept"], entry["only_in_build"]),
-                         (kept_files.TRACES_DIFFER, [".Mcu > .D12 to .Amp > .BCLK"], [".Mcu > .D6 to .Amp > .BCLK"]))
+                         ("traces differ", [".Mcu > .D12 to .Amp > .BCLK"], [".Mcu > .D6 to .Amp > .BCLK"]))
         self.assertIn("\n  only in yours: .Mcu > .D12 to .Amp > .BCLK\n  only in this build: .Mcu > .D6 to .Amp > .BCLK",
                       entry["line"])
 
@@ -912,7 +912,7 @@ class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
         hand_kept = self.BUILT + "    <trace from={`.Mcu > .${MCU.GND}`} to=\"net.GND\" />\n"
         entry, = self.differs(self.kept(hand_kept)[1])
         self.assertEqual((entry["did"], entry["why"]),
-                         (kept_files.TRACES_NOT_COMPARED, "1 of its traces are in a form spark does not read"))
+                         ("traces not compared", "1 of its traces are in a form spark does not read"))
 
     def test_a_file_that_is_not_text_or_not_a_file_is_no_crash(self):
         _, kept = self.kept(b"\xff\xfe" + self.BUILT.encode())
@@ -923,15 +923,17 @@ class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
 
     def test_a_kept_file_that_cannot_be_read_is_not_compared_and_the_rest_is_kept(self):
         # a read error must not reach `_kept`, which would turn the whole run into one "not kept" and copy no dist/
-        board = Path(tempfile.mkdtemp()) / "board.tsx"; board.write_text(self.BUILT)
+        if os.geteuid() == 0:
+            self.skipTest("root reads a file whatever its mode")
+        board = Path(tempfile.mkdtemp()) / "board.tsx"; board.write_text(self.BUILT); board.chmod(0)
         work = Path(tempfile.mkdtemp()); (work / "board.tsx").write_text(self.BUILT)
         (work / "dist").mkdir()
-        real = Path.read_text
-        with mock.patch.object(Path, "read_text", lambda path, *a, **k: (_ for _ in ()).throw(PermissionError("denied"))
-                               if path == board else real(path, *a, **k)):
+        try:
             kept = kept_files.kept_into(work, board.parent)
-        self.assertEqual([entry["did"] for entry in kept], ["left alone", kept_files.TRACES_NOT_COMPARED, "wrote"])
-        self.assertEqual(kept[1]["why"], "it cannot be read: denied")
+        finally:
+            board.chmod(0o644)
+        self.assertEqual([entry["did"] for entry in kept], ["left alone", "traces not compared", "wrote"])
+        self.assertTrue(kept[1]["why"].startswith("it cannot be read: [Errno 13]"), kept[1]["why"])
 
     def test_a_footprint_with_no_traces_gets_no_entry(self):
         work, into = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())

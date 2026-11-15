@@ -96,10 +96,8 @@ def main(argv=None):
                         help="the verdict as one JSON object: check, status, stages, next (the firmware step, when ok in a project), and kept with --keep or --sim-dir")
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
-                             "dist/, where every check already looks. Existing .tsx files are "
-                             "left alone and named, and one whose traces join other pins than this build's is a `traces differ` entry "
-                             "naming each (`traces not compared` when it holds a trace spark does not read); with --json, "
-                             "each file is listed under kept. With a requirements "
+                             "dist/, where every check already looks. Existing .tsx files are left alone and named, and "
+                             "`traces differ` names each trace that joins other pins than this build's; with --json, each file is listed under kept. With a requirements "
                              "file it also writes breadboard.md, the parts and how to wire them on a breadboard, "
                              "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
                              "you moved in it, a resistor or a jumper too, stays where you put it, or the build names it as "
