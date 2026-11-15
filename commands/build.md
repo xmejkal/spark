@@ -130,7 +130,10 @@ which is right for a check and wrong for the command someone is told to run firs
 would hold only `requirements.json`, and `check_all --project .` would answer "not asked for" about
 a board that built perfectly (backlog P51). If the folder has no `.spark/`, the build and `check_all --project` both
 read the rules and the parts of the nearest project up from it (P319). An existing `.tsx` is left alone and named, edited or
-not; delete it to have it regenerated. With `--json`, each file is listed under `kept`, with what was done to it and
+not; delete it to have it regenerated. If its traces join other pins than this build's board, a `traces differ` line
+follows and names each trace on each side (P660). Tell the person: the status is unchanged, but they must not wire or
+build from that file until they delete it or carry this build's pins into it. A `traces not compared` line means the
+file holds a trace that spark does not read, or it cannot be read. With `--json`, each file is listed under `kept`, with what was done to it and
 why. After a build that finished, it also writes `breadboard.md`, new each time: the parts, the resistors they ask
 for, numbered wiring steps (one connection each) and a mermaid diagram of them, by the board's printed labels and the parts' legs, and what each record says to check before power
 ([P191](https://github.com/xmejkal/spark/issues/143)). Hand it to the person who wires the breadboard. Beside it,
@@ -162,7 +165,7 @@ the tool again with the same `file_path` and no `icon`. If the tool is not there
 the host blocks the pictures), say so and stop; do not retry in a loop. A tab that could not be drawn, for example when `tsci export`
 fails, says why. `dist/` is still replaced with a build of the freshly generated board, not of
 your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)); to check an edited `board.tsx`, build it with
-`npx --no tsci build board.tsx`.
+`npx --no tsci build board.tsx`. After a `traces differ` line, that command builds the old pins into `dist/`.
 
 The one command also writes `firmware/pins.py`, the pin map that the firmware imports. It is the file that
 `assign_pins.py requirements.json --emit-pins firmware/pins.py` writes. It comes from the requirements alone, so it

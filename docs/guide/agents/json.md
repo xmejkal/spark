@@ -145,7 +145,7 @@ Each script's top-level keys, as `tests/test_json_contracts.py` pins them (the t
 - `stages` names the stage that stopped it. A stage of a `"board_only": true` design is `skipped`, which is never `ok`; so is the simulation stage of a design whose every part's record skips the simulation (P778), and such a build is not noted in the store.
   `parts.py --requirements` writes `board_only` when the board serves every need and no part is listed, and removes it when a part is listed.
 - `kept`, with `--keep` or `--sim-dir`, lists each file: `file` as typed to `--keep`, `did` (`wrote`, `left alone`,
-  `removed`, `not written` or `not kept`) and `why`. When the sheet is written, a drawing's `not written` entry has `code`
+  `removed`, `not written`, `not kept`, `traces differ` or `traces not compared`, for a file that cannot be read or holds a trace spark does not read) and `why`. A `traces differ` entry follows the `left alone` entry of a `.tsx` whose traces join other pins than this build's board (P660). Its `only_in_kept` and `only_in_build` list each trace as `A to B`. It never changes `status`: tell the person not to wire or build from that file. When the sheet is written, a drawing's `not written` entry has `code`
   (P691: never `null`), `subject` and `expected` (`true`: by design or not drawn yet; do not retry; for
   `not_drawn_yet`, tell the person to wire it by hand from the sheet's steps). When the build finished and the sheet was not written, its entry has `code` (P701). A `wrote` entry for `breadboard.svg` may have `drawn_from` (`record`).
 - `next`: one look step, only for `ok` in a project; its `why` is `first write firmware/main.py from pins.py` (P517), the pin map that `--keep` writes.
