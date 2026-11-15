@@ -7,7 +7,7 @@ the remaining risk (D rows). An extension may tighten these. Next: design, or a 
 → the design skill the facts name, with this file; otherwise none, and the collection plan says who runs it.
 Stands on: the assumptions not retired in risks-and-tests.md; of which those the decider rated high, or — while any
 is unrated. check computes both. -->
-**Ready for:** collecting evidence: Q1 is answered (D2); the spike waits: the PO said "Not now" to publishing its throwaway page (D4), and no D chooses a direction yet <!-- REQUIRED:ready -->
+**Ready for:** collecting evidence: Q1 is answered (D2); the spike ran (D6, Results): steps 1 to 3 pass, and A11 (a click with no session open) is still open; D5 sets the MVP's scope, and its plan comes next <!-- REQUIRED:ready -->
 **Stands on:** 11 H, 6 of which would change the decision (A1, A2, A11, A4, A5, A7 high by D2) <!-- REQUIRED:debt -->
 **Decision needed:** the PO's yes to publish the throwaway spike page (Q4); then a direction per open question 1 to 7 from Options; before the wiring page (P826), Q29 (the kept page's no-script guarantee), Q20 (P306 #372) and Q33 (P804 first) <!-- REQUIRED:decision-needed -->
 
@@ -153,6 +153,20 @@ If the decider cannot be asked, the queue stays here, and whatever rests on it s
 - Q32 · Should the spike also check whether `room` admits the Claude Code session that published the page, a live channel the runtime names but nobody tested? · decides: whether OQ2 gains a fourth route; the spike's steps · from: verification.md split (UX-24 and FE-4 against EX-22, ★C6, not tested; room unread by any test) · kind: decision · status: queued
 - Q33 · P826 writes `page.html` in scripts/spark/build/kept_files.py:259-272, the keep step that P804 #1138 moves: does P804 come before P826, or does P826 change the file first and P804 move it after? · decides: the order of P804 and P826 · from: verification.md split (refuter.md part 0, item 5) · kind: decision · status: queued
 
+## Results
+
+The spike ran on 2026-11-15, 15:23 to 15:28 Prague time, on a throwaway Artifact page with no spark data ("Click spike", private to the PO, published with `publish_files`, `db` declared with the rule read view, write owner). The PO clicked. This Claude Code session read and wrote with the claude-artifacts tools `db_query`, `db_list` and `db_write`.
+
+- Step 1, a click's row reaches Claude Code: pass, 3 of 3 reads. The first read found 4 rows, and the next two found each new click (15:25:07 and 15:26:08) · E `db_query` results in this session, 2026-11-15.
+- Step 2, Claude's row shows on the open page with no reload: pass, 3 of 3 rows shown. The page printed 2.7 s and 3.8 s for two of them, measured from a stamp 2 to 3 s before the store's own write time (`updatedAt` 15:26:20.7 and 15:26:35.7). So each row showed less than 1 s after the store saved it. The first row showed too, with no number reported · D the PO's messages, 2026-11-15; E `db_list` `updatedAt`.
+- Step 3, rows survive a republish: pass, 3 of 3 republishes (`edit_version` to versions 2, 3 and 4). All 6 clicks and 3 replies stay in the store, and the PO's reload after the first republish showed them · E `db_list` after version 4; D the PO, 2026-11-15.
+- Step 4, the built-in Artifact tool and `publish_files` reach the same artifact: not checked, because this session has only the claude-artifacts server's tools.
+- Step 5, `files` reads a local project: not run.
+- Step 6, a click with no session open waits and is read later (A11, rated high): not run yet. Every publish answered `wake: not_armed`, reason `no_address`, for this session: a comment sent to Claude on the page wakes a cloud session, not this local one. Proposed: the PO clicks after a restart, before the next session's first message, and that session reads the row.
+- Step 7, MCP through `host:`: not run (Q9 open).
+
+So A1 and A2 (both rated high) hold within this test: one person, one owner-only page, one session, about 5 minutes. A11 is still open.
+
 ## Decisions
 <!-- D<n> · what · who · when · where recorded · options considered.
 A yes covers only the actions and choices it names. A standing yes names its kind of action and its source.
@@ -161,6 +175,8 @@ Name what a D confirms in its words: the frame, the jobs, a direction, the remai
 - D2 · rates A1, A2, A11, A4, A5 and A7 high and the rest medium, and accepts the spike's pass line (steps 1 to 3, 3 of 3 tries each, Claude's row on the page within 10 s with no reload) · the PO · 2026-11-15 · AskUserQuestion, Q1
 - D3 · the files outside this folder that changed since init are P664's merged PR #1176 (dc0fb6c9), (docs/discovery/2026-10-19-p323-target-architecture/architecture/areas/build.md, docs/guide/map.md, docs/observations/rows/p664-timeout-keeps-stages.md, scripts/spark/build/board_engine.py, scripts/spark/build/build_service.py, scripts/spark/build/requirements_build.py, tests/architecture_baseline.json, tests/mutations/p482-diagram-merge.json, tests/mutations/p484-onboard-parts.json, tests/mutations/p659-build-timeout.json, tests/mutations/p664-timeout-keeps-stages.json, tests/mutations/p706-build-service.json, tests/mutations/p783-pr3-logic-in-main.json, tests/test_build_service.py, tests/test_check_spine.py), work of the spark lane under the PO's standing rule to merge when the gates pass (rules.md), not this discovery's · the PO · 2026-11-05 · memory: merge when gates pass
 - D4 · the spike's throwaway page is not published now (Q4: "Not now"); the spike waits, and the lane goes on with P792 and P459 · the PO · 2026-11-15 · AskUserQuestion, Q4
+- D5 · the MVP is the whole flow in one page (idea to deploy) with the schematic and breadboard views, PCB and 3D model later, controlled by both the PO and Claude: "what we want is to not only have the breadboard on the artifact, byut actually the whole spark screens and the whole flow, including the schema and breadboard and pcb, the 3d model etc, the pcb and 3d model we can add later, start with an mvp with the flow, so both claude and I as a human can control it" · the PO · 2026-11-15 · this session; issue comment on #1173
+- D6 · publish the spike's throwaway page (Q4 asked again: "yes") · the PO · 2026-11-15 · this session
 
 ## Found on the way <!-- CLAIMS -->
 <!-- Outside this item's scope. Each is a separate proposal, never folded in. Same line format as What we found. -->
