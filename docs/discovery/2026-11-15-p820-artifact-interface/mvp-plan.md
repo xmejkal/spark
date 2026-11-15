@@ -188,7 +188,7 @@ After the MVP (one line each): the prompt reminder, with A11's test; P804 #1138 
 
 ## After approval (a docs PR, then the board)
 
-1. A branch `p820-mvp-plan`: brief.md gets D7 to D10, the plan's Council, and the 15:41:45 click under Results (read
+1. A branch `p820-mvp-plan`: brief.md gets D7 to D11, a link to this plan's Council section, and the 15:41:45 click under Results (read
    at the next turn while the session was open; A11 itself still open). items.md's MVP blocks are replaced by cards 1
    to 4 above; story-map.md's MVP row follows. The plan is copied to the discovery folder. A refuter on the PR, then
    merge when the gates pass.
