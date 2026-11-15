@@ -96,7 +96,7 @@ def kept_into(workdir, destination):
         if target.exists():
             kept.append({"file": str(target), "did": "left alone", "why": "delete it to have it regenerated",
                          "line": "left alone: %s (delete it to have it regenerated)" % target})
-            kept += _traces_compared(target, source)
+            kept += _compare_traces(target, source)
         else:
             shutil.copy2(source, target)
             kept.append({"file": str(target), "did": "wrote", "why": None, "line": "wrote %s" % target})
@@ -116,7 +116,7 @@ def _traces(text):
     return read, len(_TRACE_TAG.findall(text)) - len(read)
 
 
-def _traces_compared(kept_file, built_file):
+def _compare_traces(kept_file, built_file):
     """
     The kept entry for a .tsx left alone whose traces are not this build's (P660), none when they are the same. A
     pin map that changed after the file was kept leaves it joining the old pins, and a person who wires from it or
@@ -127,7 +127,7 @@ def _traces_compared(kept_file, built_file):
         return []
     try:
         kept, unread = _traces(kept_file.read_text(encoding="utf-8", errors="replace"))
-        why = "%d of its traces are in a form spark does not read" % unread if unread else None
+        why = "%d trace(s) in it are in a form spark does not read" % unread if unread else None
     except OSError as unreadable:  # the file is left alone either way; what this run copies must not hang on it
         why = "it cannot be read: %s" % unreadable
     if why:
@@ -143,15 +143,15 @@ def _traces_compared(kept_file, built_file):
            "from it: if you did not edit it, delete it to have it regenerated; if you did, carry this build's pins into it")
     return [{"file": str(kept_file), "did": TRACES_DIFFER, "why": why, "only_in_kept": only_in_kept,
              "only_in_build": only_in_build, "line": "%s: %s (%s)%s%s" % (
-                 TRACES_DIFFER, kept_file, why, _shown("only in yours", only_in_kept),
-                 _shown("only in this build", only_in_build))}]
+                 TRACES_DIFFER, kept_file, why, _show_traces("only in yours", only_in_kept),
+                 _show_traces("only in this build", only_in_build))}]
 
 
-def _shown(side, traces):
+def _show_traces(side, traces):
     """The indented lines that name one side's traces, TRACES_SHOWN of them and how many more."""
     lines = "".join("\n  %s: %s" % (side, trace) for trace in traces[:TRACES_SHOWN])
     more = len(traces) - TRACES_SHOWN
-    return lines + ("\n  %s: and %d more" % (side, more) if more > 0 else "")
+    return lines + ("\n  %s: %d more not shown" % (side, more) if more > 0 else "")
 
 
 def _kept(workdir, destination):

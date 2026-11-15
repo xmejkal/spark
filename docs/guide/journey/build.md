@@ -177,7 +177,7 @@ wrote <temp>/FireBeetle2Esp32S3.tsx (32 pads, 1.00 mm holes)
 
 `--keep .` writes the board into the project: `board.tsx`, the board's footprint and `dist/`, where every
 check looks. An existing `board.tsx` is left alone, edited or not, and `dist/` is then built from the requirements file, not
-from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). When their traces differ, a `traces differ` line names each one (P660). It also writes `firmware/pins.py`, the pins
+from your `board.tsx` ([P110](https://github.com/xmejkal/spark/issues/44)). When the traces of your `board.tsx` differ from the board this build made, a `traces differ` line names each one (P660). It also writes `firmware/pins.py`, the pins
 that the firmware imports ([P196](https://github.com/xmejkal/spark/issues/155)). Without `--keep`, the chain builds in a temporary
 folder and deletes it.
 

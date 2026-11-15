@@ -97,7 +97,7 @@ def main(argv=None):
     parser.add_argument("--keep", metavar="DIR", type=Path,
                         help="write the built board into DIR: board.tsx, its footprint and "
                              "dist/, where every check already looks. Existing .tsx files are left alone and named, and "
-                             "`traces differ` names each trace that joins other pins than this build's; with --json, each file is listed under kept. With a requirements "
+                             "`traces differ` names the traces that differ from this build's; with --json, each file is listed under kept. With a requirements "
                              "file it also writes breadboard.md, the parts and how to wire them on a breadboard, "
                              "breadboard.json, the same wiring drawn on a Wokwi breadboard (the XIAO ESP32-C6 today; a part "
                              "you moved in it, a resistor or a jumper too, stays where you put it, or the build names it as "

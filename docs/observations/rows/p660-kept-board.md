@@ -24,3 +24,14 @@ in two rounds, then one lens and the refuter on the PR. This file holds the acte
 | 15 | "delete it" contradicts the docs that let a person edit board.tsx | plan council round 2 (refuter) | acted | the why: "if you did not edit it, delete it to have it regenerated; if you did, carry this build's pins into it" |
 | 16 | `//` stripped before `/* */` would swallow a trace after a note that says "see //sources" | plan council round 2 (refuter) | rejected | the code strips with one alternation, leftmost first; a test pins the DS3231 note's case |
 | 17 | the tag count with a space and the regex with `\s` disagree on a multi-line trace | plan council round 2 (refuter) | rejected | the count uses the same `<trace\s` pattern as the regex; a multi-line trace is in the no-difference test |
+| 18 | "their traces" in never-assume.md and journey/build.md has no clear referent, and never-assume pointed at dist/, which P816 shows can be an earlier build | PR review (lens, refuter) | acted | both say "the traces of your board.tsx differ from the board this build made" |
+| 19 | commands/build.md said "the build is still ok" and "carry the changes in" | PR review (lens) | acted | "the status is unchanged", "carry this build's pins into it" |
+| 20 | `traces not compared` is also given for a file that cannot be read, and json.md did not say what it means | PR review (refuter) | acted | commands/build.md and json.md name both causes |
+| 21 | "1 of its traces are" is ungrammatical, and "and 2 more" reads like a trace line | PR review (lens) | acted | "1 trace(s) in it are …", "2 more not shown" |
+| 22 | untested: exactly ten a side, and a trace only the kept board has | PR review (lens) | acted | two tests and a mutation row (`more >= 0`) |
+| 23 | names: `_traces_compared` and `_shown` are not verb-first | PR review (lens) | acted | `_compare_traces`, `_show_traces` |
+| 24 | row 8's name said the folder case crashes, but the `OSError` branch catches it | PR review (refuter) | acted | renamed: "a folder named board.tsx gets a traces not compared entry" |
+| 25 | one unread trace hides the readable ones that moved | PR review (lens) | rejected | a file with a trace spark does not read is a hand-kept board (the smart bin); a partial list would claim more than spark read |
+| 26 | the built side's unread count is dropped | PR review (lens) | rejected | the built side is spark's own emitter; the refuter checked every trace writer (board_sections.py:62, 216-234, 289) |
+| 27 | `//` inside a string strips the rest of its line | PR review (lens) | rejected | no pin selector holds `//`, and the emitter writes one trace per line; a note's `*/` is made inert (board_sections.py:41) |
+| 28 | a trace added on purpose, or the smart bin, is named on every build | PR review (lens, refuter) | rejected | true, and wanted: the why says to carry this build's pins in or delete the file |

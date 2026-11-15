@@ -912,7 +912,7 @@ class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
         hand_kept = self.BUILT + "    <trace from={`.Mcu > .${MCU.GND}`} to=\"net.GND\" />\n"
         entry, = self.differs(self.kept(hand_kept)[1])
         self.assertEqual((entry["did"], entry["why"]),
-                         ("traces not compared", "1 of its traces are in a form spark does not read"))
+                         ("traces not compared", "1 trace(s) in it are in a form spark does not read"))
 
     def test_a_file_that_is_not_text_or_not_a_file_is_no_crash(self):
         _, kept = self.kept(b"\xff\xfe" + self.BUILT.encode())
@@ -947,8 +947,18 @@ class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
         entry, = self.differs(self.kept(kept, built)[1])
         self.assertEqual((len(entry["only_in_kept"]), len(entry["only_in_build"])), (12, 12))
         self.assertEqual(entry["line"].count("\n  only in yours: .Mcu"), 10)
-        self.assertIn("\n  only in yours: and 2 more", entry["line"])
-        self.assertIn("\n  only in this build: and 2 more", entry["line"])
+        self.assertIn("\n  only in yours: 2 more not shown", entry["line"])
+        self.assertIn("\n  only in this build: 2 more not shown", entry["line"])
+        ten = lambda pin: "".join('<trace from=".Mcu > .%s%d" to=".Amp > .P%d" />\n' % (pin, n, n) for n in range(10))  # noqa: E731
+        entry, = self.differs(self.kept(ten("A"), ten("D"))[1])
+        self.assertEqual(entry["line"].count("\n  only in yours: "), 10)
+        self.assertNotIn("more not shown", entry["line"])
+
+    def test_a_trace_only_the_kept_board_has_is_named_on_its_side_alone(self):
+        added = self.BUILT + '    <trace from=".Mcu > .D9" to=".Amp > .SD" />\n'
+        entry, = self.differs(self.kept(added)[1])
+        self.assertEqual((entry["only_in_kept"], entry["only_in_build"]), ([".Mcu > .D9 to .Amp > .SD"], []))
+        self.assertNotIn("only in this build", entry["line"])
 
     def test_the_envelope_carries_it_without_its_line_and_the_exit_stays(self):
         work, into = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
