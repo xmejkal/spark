@@ -37,7 +37,7 @@ e.g. `- Split: Feasibility says a day, Risks says a week · Q4` -->
 - Split: feasibility (FE-21) and P297 say the files are the truth; the refuter and US-11 say a pick also writes the store (★C16) · Q30
 - Split: feasibility and UX call a click a relayed yes; the refuter says it never reaches the gate as one (`NO_TERMINAL`), while a relayed yes can still open a live grant (★C11) · Q31
 - Split: UX-24 and FE-4 say nothing pushes a click into the chat; EX-22 says `room` may admit the publishing session (★C6) · Q32
-- Split: items.md maps no P306 #372 and files P826; the refuter says P306 already holds P826's job (★C17) · Q20 (widened)
-- Split: P826 writes `page.html` in kept_files.py:259-272, the keep step P804 #1138 moves; items.md gives P826 no tie to P804 · Q33
-- Split: the UX lens's legend has eleven marks (UX-21, Q22); A7 and P827 test "6 of 6" · Q22 (widened)
+- Split: items.md maps no P306 #372 and files the old wiring-page block; the refuter says P306 already holds the old wiring-page block's job (★C17) · Q20 (widened)
+- Split: the old wiring-page block writes `page.html` in kept_files.py:259-272, the keep step P804 #1138 moves; items.md gives the old wiring-page block no tie to P804 · Q33
+- Split: the UX lens's legend has eleven marks (UX-21, Q22); A7 and the old legend block test "6 of 6" · Q22 (widened)
 - Split: UX-1 and FE-16 lean to the encoder page; the refuter says the amplifier page is the long shape that passes "complete at rest" for its wires · Q2
