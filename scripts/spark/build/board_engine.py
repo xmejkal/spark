@@ -152,8 +152,11 @@ class TscircuitEngine:
         probe = workdir / "spark-probe"
         probe.mkdir(exist_ok=True)
         (probe / "board.tsx").write_text(TRIVIAL_BOARD)
-        result = LimitedRun(self._runner)([str(self.toolchain), "build", "board.tsx"], cwd=str(probe),
-                                          capture_output=True, text=True, timeout=PROBE_TIMEOUT_S)
+        try:
+            result = LimitedRun(self._runner)([str(self.toolchain), "build", "board.tsx"], cwd=str(probe),
+                                              capture_output=True, text=True, timeout=PROBE_TIMEOUT_S)
+        except TimedOutError as late:  # said apart from the build's own run, which has the same command
+            raise TimedOutError("the probe on a trivial board: %s" % late) from late
         return (probe / "dist" / "board" / "circuit.json").is_file(), result.stderr.strip()[-400:]
 
 

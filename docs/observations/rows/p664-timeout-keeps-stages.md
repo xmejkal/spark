@@ -14,3 +14,7 @@ the PR. This file holds the acted, raised and rejected findings only (rules.md),
 | 6 | the build area page said the timeout propagates to `RequirementsBuildService` | plan check (refuter) | acted | areas/build.md says the late stage is named and the stages before stand |
 | 7 | `convert` took six parameters (R3) | build (hook rules) | acted | `workdir` dropped: the kept diagram is `sim_dir.parent / KEPT_DIAGRAM`, as both callers pass the work folder's `sim/` |
 | 8 | `sim_project.stage_chips` runs `chip compile` with no limit, so it can hang | plan check (refuter) | rejected | dropped because no walk saw a hang there; a card when one does |
+| 9 | the signature change left four rows in older tables without their anchor (p482, p484, p706, p783 PR 3) | PR review (refuter) | acted | each `find` and `replace` re-pointed at the new text; `--anchors` passes on all 292 tables; each planted by hand is red (p484's in test_onboard_parts) |
+| 10 | the build area page named `TimedOut` and its sequence diagram still said the timeout propagates | PR review (refuter) | acted | `TimedOutError`, `LimitedRun`, and the diagram's two lines |
+| 11 | a late probe reads like the build's own 900 s run | PR review (refuter) | acted | the probe's error leads with "the probe on a trivial board:"; a test and a row |
+| 12 | the map commit's message overstated its diff | PR review (refuter) | rejected | the map names classes per module row; its one changed row is what `tools/map.py --write` gives, and the message is history |

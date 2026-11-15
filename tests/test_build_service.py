@@ -164,6 +164,13 @@ class AnEngineBuildPastItsLimitKeepsTheStagesBeforeItTest(unittest.TestCase):
             board_engine.TscircuitEngine(Path("/x/tsci"), runner=late).build(Path(tempfile.mkdtemp()))
         self.assertEqual(str(raised.exception), "`tsci build` did not finish in 900s; its last words: routing")
 
+    def test_a_probe_past_its_limit_is_said_apart_from_the_build(self):
+        def late(command, **named):
+            raise subprocess.TimeoutExpired(command, named["timeout"])
+        with self.assertRaises(board_engine.TimedOutError) as raised:
+            board_engine.TscircuitEngine(Path("/x/tsci"), runner=late).probe(Path(tempfile.mkdtemp()))
+        self.assertEqual(str(raised.exception), "the probe on a trivial board: `tsci build` did not finish in 120s")
+
 if __name__ == "__main__":
     unittest.main()
 
