@@ -859,6 +859,85 @@ class TheBuiltBoardLandsWhereTheChecksLookTest(unittest.TestCase):
         self.assertIn("expected one argument", out.getvalue())
 
 
+class AKeptBoardWithOtherPinsIsNamedTest(unittest.TestCase):
+    """
+    P660 (#886): on the P581 bench a kept board.tsx still joined the amplifier to the screen's pins after the pin map
+    changed, and the only line was "left alone". The build never reads it, but a person who wires from it or builds
+    it by hand does. Its traces are compared with this build's, and each that differs is named; the exit stays.
+    """
+
+    BUILT = ('    <trace from=".Mcu > .D6" to=".Amp > .BCLK" />  {/* I2S_BCLK */}\n'
+             '    <trace from=".Mcu > .GND1" to="net.GND" thickness="0.5mm" />\n')
+
+    def kept(self, kept_text, built_text=BUILT):
+        work, into = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (work / "board.tsx").write_text(built_text)
+        board = into / "board.tsx"
+        board.write_bytes(kept_text) if isinstance(kept_text, bytes) else board.write_text(kept_text)
+        return board, kept_files.kept_into(work, into)
+
+    def differs(self, kept):
+        return [entry for entry in kept if entry["did"] in (kept_files.TRACES_DIFFER, kept_files.TRACES_NOT_COMPARED)]
+
+    def test_a_moved_pin_is_named_on_each_side_and_the_file_is_left_alone(self):
+        old = self.BUILT.replace(".D6", ".D12")
+        board, kept = self.kept(old)
+        self.assertEqual(board.read_text(), old)
+        self.assertIn("left alone", [entry["did"] for entry in kept])
+        entry, = self.differs(kept)
+        self.assertEqual((entry["did"], entry["only_in_kept"], entry["only_in_build"]),
+                         (kept_files.TRACES_DIFFER, [".Mcu > .D12 to .Amp > .BCLK"], [".Mcu > .D6 to .Amp > .BCLK"]))
+        self.assertIn("\n  only in yours: .Mcu > .D12 to .Amp > .BCLK\n  only in this build: .Mcu > .D6 to .Amp > .BCLK",
+                      entry["line"])
+
+    def test_placement_comments_a_swapped_trace_and_the_same_board_are_no_difference(self):
+        moved = ('<chip name="Amp" pcbX={3} />\n    {/* mine */}\n'
+                 '    <trace from=".Amp > .BCLK" to=".Mcu > .D6" />  // swapped\n'
+                 '    <trace\n      from=".Mcu > .GND1"\n      to="net.GND" />\n')
+        for kept_text in (self.BUILT, moved):
+            with self.subTest(kept_text=kept_text):
+                self.assertEqual(self.differs(self.kept(kept_text)[1]), [])
+
+    def test_a_commented_out_trace_is_not_a_trace(self):
+        commented = self.BUILT + '    {/* <trace from=".Mcu > .D9" to=".Amp > .SD" /> */}\n    // <trace from="a" to="b" />\n'
+        self.assertEqual(self.differs(self.kept(commented)[1]), [])
+
+    def test_a_trace_in_a_form_spark_does_not_read_is_not_compared_and_said(self):
+        hand_kept = self.BUILT + "    <trace from={`.Mcu > .${MCU.GND}`} to=\"net.GND\" />\n"
+        entry, = self.differs(self.kept(hand_kept)[1])
+        self.assertEqual((entry["did"], entry["why"]),
+                         (kept_files.TRACES_NOT_COMPARED, "1 of its traces are in a form spark does not read"))
+
+    def test_a_file_that_is_not_text_or_not_a_file_is_no_crash(self):
+        _, kept = self.kept(b"\xff\xfe" + self.BUILT.encode())
+        self.assertEqual(self.differs(kept), [])
+        work, into = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (work / "board.tsx").write_text(self.BUILT); (into / "board.tsx").mkdir()
+        self.assertEqual(self.differs(kept_files.kept_into(work, into)), [])
+
+    def test_the_line_names_ten_a_side_and_the_json_names_all(self):
+        built = "".join('<trace from=".Mcu > .D%d" to=".Amp > .P%d" />\n' % (n, n) for n in range(12))
+        kept = "".join('<trace from=".Mcu > .A%d" to=".Amp > .P%d" />\n' % (n, n) for n in range(12))
+        entry, = self.differs(self.kept(kept, built)[1])
+        self.assertEqual((len(entry["only_in_kept"]), len(entry["only_in_build"])), (12, 12))
+        self.assertEqual(entry["line"].count("\n  only in yours: .Mcu"), 10)
+        self.assertIn("\n  only in yours: and 2 more", entry["line"])
+        self.assertIn("\n  only in this build: and 2 more", entry["line"])
+
+    def test_the_envelope_carries_it_without_its_line_and_the_exit_stays(self):
+        work, into = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        (work / "board.tsx").write_text(self.BUILT)
+        (into / "board.tsx").write_text(self.BUILT.replace(".D6", ".D12"))
+        args = argparse.Namespace(json=True, keep=into)
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            code = check_spine.report([Stage("build", check_spine.OK, "fine")], args, work)
+        said = json.loads(out.getvalue())
+        entry, = self.differs(said["kept"])
+        self.assertNotIn("line", entry)
+        self.assertEqual((code, said["status"]), (check_spine.EXIT_OK, "ok"))
+        self.assertIn("traces differ: %s" % (into / "board.tsx"), err.getvalue())
+
+
 class ACommandThatRunsPastItsLimitIsCouldNotRunTest(unittest.TestCase):
     """P659: the build's limit fits a real build (496 s on the bench), and a late command is named with its own limit."""
 

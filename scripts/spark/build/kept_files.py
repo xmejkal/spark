@@ -4,13 +4,14 @@ the breadboard sheet and its drawings, the page, the pin map and the simulation 
 why, line}. One meaning of `kept_`: what a run keeps between runs, as `kept_moves`' moves are.
 """
 
+import re
 import shutil
 from pathlib import Path
 
 from spark.build import build_codes
 from spark.build.stages import skipped_the_build
 from spark.breadboard import drawing, sheet, tabbed_page
-from spark.design import loader
+from spark.design import board_sections, loader
 from spark.design import pin_assigner
 from spark.firmware import sim_project
 from spark.records import store
@@ -31,6 +32,18 @@ MOVE_NOT_KEPT = "move not kept"
 CHANGED = "changed"
 #: The `did` of a kept entry for one end the drawn breadboard joins differently from circuit.json's points (P279).
 DRAWING_DIFFERS = "drawing differs"
+#: The `did` of a kept entry for a .tsx left alone whose traces join other pins than this build's board (P660).
+TRACES_DIFFER = "traces differ"
+#: The `did` of a kept entry for a .tsx left alone with a trace in a form spark does not read, so it was not compared.
+TRACES_NOT_COMPARED = "traces not compared"
+#: How many traces of each side the stderr line names; --json lists them all.
+TRACES_SHOWN = 10
+#: A comment in a board file: JSX's `{/* … */}` and a line's `// …`. A trace in one is not a trace.
+_COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.S)
+#: The tag that opens a trace, with any whitespace after it, and a trace as the board emitter writes it:
+#: `<trace from="A" to="B"`, any attribute after.
+_TRACE_TAG = re.compile(r"%s\s" % re.escape(board_sections.TRACE_TAG.strip()))
+_TRACE = re.compile(_TRACE_TAG.pattern + r'\s*from="([^"]*)"\s+to="([^"]*)"')
 
 
 def left_off(requirements):
@@ -71,7 +84,8 @@ def kept_into(workdir, destination):
     person edits — the smart bin's is hand-maintained — so an existing one is left alone and
     named. Delete it to have it regenerated. One behaviour, no flag to get it wrong with.
 
-    Each file is {file, did, why, line}: `did` is `wrote` or `left alone`, and `line` what stderr says. With --json the
+    Each file is {file, did, why, line}: `did` is `wrote` or `left alone`, and `line` what stderr says. A .tsx left
+    alone whose traces are not this build's is followed by a `traces differ` entry (P660). With --json the
     report carries the rest under `kept` (P124, #58), so an agent reads what a person reads.
     """
     destination = Path(destination)
@@ -82,6 +96,7 @@ def kept_into(workdir, destination):
         if target.exists():
             kept.append({"file": str(target), "did": "left alone", "why": "delete it to have it regenerated",
                          "line": "left alone: %s (delete it to have it regenerated)" % target})
+            kept += _traces_compared(target, source)
         else:
             shutil.copy2(source, target)
             kept.append({"file": str(target), "did": "wrote", "why": None, "line": "wrote %s" % target})
@@ -91,6 +106,49 @@ def kept_into(workdir, destination):
         kept.append({"file": str(destination / "dist"), "did": "wrote", "why": "this is what every check reads",
                      "line": "wrote %s — this is what every check reads" % (destination / "dist")})
     return kept
+
+
+def _traces(text):
+    """The traces of a board file as (from, to) in the order written, and how many it holds in a form spark does not
+    read: a `<trace ` that is not `from="…" to="…"`, as a hand-kept board's ``from={`.Mcu > .${MCU.GND}`}``."""
+    text = _COMMENT.sub("", text)
+    read = _TRACE.findall(text)
+    return read, len(_TRACE_TAG.findall(text)) - len(read)
+
+
+def _traces_compared(kept_file, built_file):
+    """
+    The kept entry for a .tsx left alone whose traces are not this build's (P660), none when they are the same. A
+    pin map that changed after the file was kept leaves it joining the old pins, and a person who wires from it or
+    builds it by hand uses pins the firmware does not. A trace is its two ends, either way round; placement, comments
+    and other attributes are not compared.
+    """
+    if not kept_file.is_file():
+        return []
+    kept, unread = _traces(kept_file.read_text(encoding="utf-8", errors="replace"))
+    if unread:
+        why = "%d of its traces are in a form spark does not read" % unread
+        return [{"file": str(kept_file), "did": TRACES_NOT_COMPARED, "why": why,
+                 "line": "%s: %s (%s)" % (TRACES_NOT_COMPARED, kept_file, why)}]
+    built, _ = _traces(built_file.read_text(encoding="utf-8", errors="replace"))
+    kept_ends, built_ends = {frozenset(trace) for trace in kept}, {frozenset(trace) for trace in built}
+    only_in_kept = ["%s to %s" % trace for trace in kept if frozenset(trace) not in built_ends]
+    only_in_build = ["%s to %s" % trace for trace in built if frozenset(trace) not in kept_ends]
+    if not only_in_kept and not only_in_build:
+        return []
+    why = ("it joins pins differently from the board this build made from the requirements, so do not wire or build "
+           "from it; delete it to have it regenerated")
+    return [{"file": str(kept_file), "did": TRACES_DIFFER, "why": why, "only_in_kept": only_in_kept,
+             "only_in_build": only_in_build, "line": "%s: %s (%s)%s%s" % (
+                 TRACES_DIFFER, kept_file, why, _shown("only in yours", only_in_kept),
+                 _shown("only in this build", only_in_build))}]
+
+
+def _shown(side, traces):
+    """The indented lines that name one side's traces, TRACES_SHOWN of them and how many more."""
+    lines = "".join("\n  %s: %s" % (side, trace) for trace in traces[:TRACES_SHOWN])
+    more = len(traces) - TRACES_SHOWN
+    return lines + ("\n  %s: and %d more" % (side, more) if more > 0 else "")
 
 
 def _kept(workdir, destination):
