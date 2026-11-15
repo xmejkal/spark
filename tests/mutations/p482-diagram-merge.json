@@ -2,7 +2,7 @@
  {
   "file": "scripts/spark/build/board_engine.py",
   "name": "the build never copies the kept diagram in, so the converter overwrites it",
-  "find": "    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)",
+  "find": "    bad_kept = sim_project.copy_kept_diagram(sim_dir.parent / sim_project.KEPT_DIAGRAM, sim_dir)",
   "replace": "    bad_kept = \"\""
  },
  {

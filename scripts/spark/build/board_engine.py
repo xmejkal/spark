@@ -8,6 +8,7 @@ converter, found and run as functions until its own Adapter. `BuildService` and 
 import collections
 import json
 import os
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -57,6 +58,40 @@ def modules_for(toolchain):
     return None
 
 
+#: How much of a late command's own output the sentence keeps, as the other last-words sites cap theirs.
+LAST_WORDS_CAP = 800
+
+
+def timed_out_sentence(late):
+    """What a command that ran past its limit said (P659): the command by its file names (two words, three when the
+    second is `run`, as a converter run as `<runtime> run cli.ts`), the limit it had, and its last three lines of stderr, or of stdout when stderr is empty, capped."""
+    words = shlex.split(late.cmd) if isinstance(late.cmd, str) else list(late.cmd)
+    names = [Path(str(word)).name for word in words]
+    cmd = names[:3] if names[1:2] == ["run"] else names[:2]
+    out = late.stderr or late.stdout or ""
+    said = out.decode(errors="replace") if isinstance(out, bytes) else out
+    last = " | ".join(said.strip()[-LAST_WORDS_CAP:].splitlines()[-3:])
+    return "`%s` did not finish in %ss%s" % (" ".join(cmd), late.timeout, "; its last words: " + last if last else "")
+
+class TimedOutError(Exception):
+    """Error: a tool the build ran did not finish in its limit (P664), with the sentence `timed_out_sentence` made of it,
+    so the build names the late stage and keeps the stages before it, and no module above this one names `subprocess`."""
+
+
+class LimitedRun:
+    """Adapter: runs one command under its limit with `runner` (`subprocess.run` when None, resolved at each call, so a
+    test's patch of `subprocess.run` reaches it); a run past the limit raises `TimedOutError` (P664)."""
+
+    def __init__(self, runner=None):
+        self._runner = runner
+
+    def __call__(self, command, **named):
+        try:
+            return (self._runner or subprocess.run)(command, **named)
+        except subprocess.TimeoutExpired as late:
+            raise TimedOutError(timed_out_sentence(late)) from late
+
+
 #: The smallest board that should build anywhere: what the preflight asks of a toolchain that
 #: produced nothing, to tell "the design is broken" from "the tool is".
 TRIVIAL_BOARD = """export default () => (
@@ -92,9 +127,9 @@ class TscircuitEngine:
         return None if toolchain is None else TscircuitEngine(toolchain, self._runner)
 
     def build(self, workdir):
-        """`tsci build board.tsx` in `workdir`; a run past BUILD_TIMEOUT_S raises `subprocess.TimeoutExpired` to the CLI."""
-        built = (self._runner or subprocess.run)([str(self.toolchain), "build", "board.tsx"], cwd=str(workdir), capture_output=True,
-                                                 text=True, timeout=BUILD_TIMEOUT_S)
+        """`tsci build board.tsx` in `workdir`; a run past BUILD_TIMEOUT_S raises `TimedOutError`."""
+        built = LimitedRun(self._runner)([str(self.toolchain), "build", "board.tsx"], cwd=str(workdir), capture_output=True,
+                                         text=True, timeout=BUILD_TIMEOUT_S)
         return BuildResult(workdir / "dist" / "board" / "circuit.json", built.stderr)
 
     def version(self):
@@ -117,8 +152,11 @@ class TscircuitEngine:
         probe = workdir / "spark-probe"
         probe.mkdir(exist_ok=True)
         (probe / "board.tsx").write_text(TRIVIAL_BOARD)
-        result = (self._runner or subprocess.run)([str(self.toolchain), "build", "board.tsx"], cwd=str(probe),
-                                                  capture_output=True, text=True, timeout=PROBE_TIMEOUT_S)
+        try:
+            result = LimitedRun(self._runner)([str(self.toolchain), "build", "board.tsx"], cwd=str(probe),
+                                              capture_output=True, text=True, timeout=PROBE_TIMEOUT_S)
+        except TimedOutError as late:  # said apart from the build's own run, which has the same command
+            raise TimedOutError("the probe on a trivial board: %s" % late) from late
         return (probe / "dist" / "board" / "circuit.json").is_file(), result.stderr.strip()[-400:]
 
 
@@ -178,16 +216,20 @@ def simulation_could_not_look(said):
     return CONVERTER_HAS_NO_PART in (said or "")
 
 
-def convert(project, own, source, sim_dir, workdir):
+def convert(project, own, source, sim_dir, runner=None):
     """
     The converter run on `source` (["--circuit", path] or ["--netlist", path]) and what `sim_dir` holds, merging into the
-    person's kept diagram (P482): (the diagram, None, the merge notes), or (None, the Stage that stopped it, "").
+    person's kept diagram (P482): (the diagram, None, the merge notes), or (None, the Stage that stopped it, ""), a run past
+    CONVERTER_TIMEOUT_S among them (P664). `sim_dir` is the work folder's `sim/`; `runner` runs the command, as `LimitedRun`'s.
     """
     diagram_path = sim_dir / "diagram.json"
-    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)
-    made = subprocess.run(converter_command(project, own) + source + ["--out", str(diagram_path), "--mapping", str(sim_dir / sim_project.MAPPING_FILE),
-                                                                      "--chips", str(sim_dir / "chips")], cwd=str(own.parent if own else sim_dir),
-                          capture_output=True, text=True, timeout=CONVERTER_TIMEOUT_S, env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
+    bad_kept = sim_project.copy_kept_diagram(sim_dir.parent / sim_project.KEPT_DIAGRAM, sim_dir)
+    try:
+        made = LimitedRun(runner)(converter_command(project, own) + source + ["--out", str(diagram_path), "--mapping", str(sim_dir / sim_project.MAPPING_FILE),
+                                                                                     "--chips", str(sim_dir / "chips")], cwd=str(own.parent if own else sim_dir),
+                                          capture_output=True, text=True, timeout=CONVERTER_TIMEOUT_S, env=dict(os.environ, SPARK_BOARD_JSON=str(sim_dir / "board.json")))
+    except TimedOutError as late:
+        return None, Stage("simulation", COULD_NOT_RUN, str(late), build_codes.STAGE_TIMED_OUT), ""
     if made.returncode or not diagram_path.is_file():
         said = (made.stderr or made.stdout)[-800:]
         if simulation_could_not_look(said):

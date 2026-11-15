@@ -26,10 +26,10 @@ a new project with the files every check and reviewer needs.
 
 | Module | Holds |
 |---|---|
-| `build/build_service.py` | `BuildService(engine, emitter, find_tool=None)` (P706, P725): `build(inputs)` runs the six stage methods over the engine and the emitter it is given, with `BuildInputs`, `board_alone`, `islands_in`, `verdict` and the stage sentences |
-| `build/requirements_build.py` | `RequirementsBuildService(build_service=None)` (P783 PR 3; `build_service` is an object with `for_toolchain`, BuildService or a fake): `build(requirements_path, firmware, simulation)` is `check_spine.py`'s whole run of the chain: the requirements read (a refusal is one `requirements` stage), the work folder, a `BuildService`'s stages (a `TimeoutExpired` is one `stage_timed_out` stage and any other exception one `stage_crashed` stage), and the history note; a `RequirementsBuildResult` of `stages`, `workdir`, `requirements`, `toolchain` and `diagnostics`. `REFERENCE` and `timed_out_sentence` are here. `check_spine.main` prints the diagnostics and its `report` renders the stages |
+| `build/build_service.py` | `BuildService(engine, emitter, find_tool=None, runner=None)` (P706, P725, P664: `runner` runs the converter's command): `build(inputs)` runs the six stage methods over the engine and the emitter it is given, with `BuildInputs`, `board_alone`, `islands_in`, `verdict` and the stage sentences |
+| `build/requirements_build.py` | `RequirementsBuildService(build_service=None)` (P783 PR 3; `build_service` is an object with `for_toolchain`, BuildService or a fake): `build(requirements_path, firmware, simulation)` is `check_spine.py`'s whole run of the chain: the requirements read (a refusal is one `requirements` stage), the work folder, a `BuildService`'s stages (a timeout that reaches it is one `stage_timed_out` stage, its guard since P664, and any other exception one `stage_crashed` stage), and the history note; a `RequirementsBuildResult` of `stages`, `workdir`, `requirements`, `toolchain` and `diagnostics`. `REFERENCE` is here. `check_spine.main` prints the diagnostics and its `report` renders the stages |
 | `build/stages.py` | `Stage` (one link's result) and `NO_FOOTPRINT_HINT`, imported by name (P705) |
-| `build/board_engine.py` | the Adapter `TscircuitEngine` with `BuildResult` (P706: `found_from`, `build`, `version`, `probe`, the runner resolved at each call), `find_toolchain`, and the converter functions to `convert`, of which `converter_command` and `converter_stage_problem` take a `find_tool` keyword (P725: a test gives `FakeToolFinder(...).find`; `BuildService`, the converter functions and `stage_chips` take the module `find`'s shape, a name and a project, so the build Operations bind the project when they hand them `outside.find_tool`, a later step); later the Adapter `DiagramConverter` |
+| `build/board_engine.py` | the Adapter `TscircuitEngine` with `BuildResult` (P706: `found_from`, `build`, `version`, `probe`, the runner resolved at each call; P664: `build` and `probe` run through the Adapter `LimitedRun` and raise `TimedOutError` with `timed_out_sentence`, and `convert` returns a timed-out `simulation` stage), `find_toolchain`, and the converter functions to `convert`, of which `converter_command` and `converter_stage_problem` take a `find_tool` keyword (P725: a test gives `FakeToolFinder(...).find`; `BuildService`, the converter functions and `stage_chips` take the module `find`'s shape, a name and a project, so the build Operations bind the project when they hand them `outside.find_tool`, a later step); later the Adapter `DiagramConverter` |
 | `build/kept_files.py` | the files `--keep` writes into DIR and what an earlier build left there (P705). `kept_` means what a run keeps between runs, as breadboard's `kept_moves.py` |
 | `build/project_setup.py` | `init_project.py`'s library (P705); later `ProjectSetupService` |
 | `build/build_codes.py` | the leaf of codes (P701): one per stage that stops the build and per refusal of init. A `Stage` carries a `code` (a design error's own when one stopped it), and `project_setup`'s `why_project_refused`, `why_board_refused` and `find_circuit` return a `Refusal`. Only the sheet's `not written` entry in `kept` writes its code |
@@ -108,7 +108,7 @@ the build ends: `_board`, `_parts` (a board-only project ends through `board_alo
 OC2), `_build_circuit` (`found_from`, `build`, `version`, and `probe` when nothing came out, so a broken tool reads as
 `could-not-run` with code `tool_cannot_build`, never as a design problem; `_circuit_verdict` reads the circuit) and
 `_simulation`. The stage names and order stay: `board`, `parts`, `schematic`, `schematic-notes`, `footprint`, `build`,
-`simulation`. A `TimeoutExpired` from the engine propagates to `RequirementsBuildService`, which keeps `timed_out_sentence`.
+`simulation`. A tool past its limit is the late stage, `could-not-run` with code `stage_timed_out`, and the stages before it stand (P664).
 `BuildInputs` holds no design and no engine: the design is read by a stage, and the engine is a collaborator.
 
 ### The main flow: one build
@@ -130,9 +130,9 @@ sequenceDiagram
   S->>S: board.tsx written; schematic ok; schematic-notes when notes
   S->>S: _footprint (footprint_emitter, pure)
   S->>T: found_from(project).build(workdir); version(); probe(workdir)
-  T-->>S: BuildResult (TimeoutExpired propagates to R)
-  S->>S: _simulation (converter functions, loader.load as today)
-  S-->>R: stages (R turns a TimeoutExpired or a crash into one stage)
+  T-->>S: BuildResult, or TimedOutError: the build stage names the late command, the stages before stand (P664)
+  S->>S: _simulation (converter functions, loader.load as today; a late converter is a timed-out simulation stage)
+  S-->>R: stages (R turns a crash, or a timeout outside the two tools, into one stage)
   R->>R: the P429 line; the history note, or its line
   R-->>M: RequirementsBuildResult; main prints the diagnostics and reports
 ```

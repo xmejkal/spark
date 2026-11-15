@@ -198,10 +198,11 @@ class BuildService:
     build ends there. A test swaps either collaborator for a Fake; the CLI takes `for_toolchain`.
     """
 
-    def __init__(self, engine, emitter, find_tool=None):
+    def __init__(self, engine, emitter, find_tool=None, runner=None):
         self.engine = engine
         self.emitter = emitter
         self.find_tool = find_tool  # (a name, a project) -> Tool, for the build's and the converter's sentences; the real finder when None (P725)
+        self.runner = runner  # what runs the converter's command, subprocess.run when None (P664)
 
     @classmethod
     def for_toolchain(cls, toolchain, find_tool=None):
@@ -249,7 +250,7 @@ class BuildService:
             if requirements.get("parts"):
                 stages.append(Stage("parts", COULD_NOT_RUN, "the requirements say board_only and name parts: say one", build_codes.BOARD_ONLY_WITH_PARTS))
             else:
-                stages.extend(board_alone(board, inputs.workdir, inputs.firmware, project))
+                stages.extend(board_alone(board, inputs.workdir, inputs.firmware, project, self.runner))
             return None
         if not requirements.get("parts"):
             stages.append(Stage("parts", COULD_NOT_RUN,
@@ -322,12 +323,12 @@ class BuildService:
             stages.append(Stage("build", COULD_NOT_RUN,
                                 "%s — so the chain was not exercised; /spark:setup installs it" % said, build_codes.TOOL_MISSING))
             return None
-        built = engine.build(inputs.workdir)
+        ran = self._run_engine(engine, inputs.workdir, stages)
+        if ran is None:
+            return None
+        built, can, last_words = ran
         version = engine.version()
         if not built.circuit_path.is_file():
-            # Nothing came out. Before blaming the design, ask the same tool for a resistor on a
-            # board: a tool that cannot build that is not reporting on the design at all.
-            can, last_words = engine.probe(inputs.workdir)
             if not can:
                 stages.append(Stage("build", COULD_NOT_RUN,
                                     "%s (%s) cannot build even a trivial board from here, so this "
@@ -344,6 +345,21 @@ class BuildService:
             return None
         stages.append(Stage("build", OK, "%d trace(s), 0 errors, tsci %s%s" % (traces, version, core_note(version))))
         return built
+
+    @staticmethod
+    def _run_engine(engine, workdir, stages):
+        """
+        (the BuildResult, whether the engine builds a trivial board, its last words), or None when a run passed its limit:
+        the build stage then names the late command, and the stages before it stand (P664). A build that left nothing is
+        probed on a trivial board: a tool that cannot build that is not reporting on the design at all.
+        """
+        try:
+            built = engine.build(workdir)
+            can, last_words = (True, "") if built.circuit_path.is_file() else engine.probe(workdir)
+        except board_engine.TimedOutError as late:
+            stages.append(Stage("build", COULD_NOT_RUN, str(late), build_codes.STAGE_TIMED_OUT))
+            return None
+        return built, can, last_words
 
     def _circuit_verdict(self, circuit_path, board, part_list, stages):
         """What the built circuit says of the design: its trace count when it passed, else None after the stage that stops it."""
@@ -404,7 +420,7 @@ class BuildService:
             stages.append(Stage("simulation", COULD_NOT_RUN, "\n".join(chip_problems), build_codes.CHIP_NOT_COMPILED))
             return
         (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml(staged, inputs.firmware))
-        diagram, stopped, notes = convert(project, own, ["--circuit", str(built.circuit_path)], sim_dir, workdir)
+        diagram, stopped, notes = convert(project, own, ["--circuit", str(built.circuit_path)], sim_dir, self.runner)
         if stopped:
             stages.append(stopped)
             return
@@ -422,7 +438,7 @@ class BuildService:
         stages.append(Stage("simulation", status, lead + simulation_detail(wires, staged, compiled, limits, serial_heard(diagram, board)) + notes))
 
 
-def board_alone(board, workdir, firmware=None, project=None):
+def board_alone(board, workdir, firmware=None, project=None, runner=None):
     """
     The stages after `board` for a project that runs on the board alone (P236): parts, schematic, footprint and build are
     SKIPPED, never ok. The converter wires the board's own LED and button that `onboard_parts` gives (P484), as `BuildService` does;
@@ -440,7 +456,7 @@ def board_alone(board, workdir, firmware=None, project=None):
     (sim_dir / "wokwi.toml").write_text(sim_project.wokwi_toml((), firmware))
     for name, data in dict(given.files, **{"board.json": board}).items():
         (sim_dir / name).write_text(json.dumps(data, indent=2) + "\n")
-    diagram, stopped, notes = (convert(project, own, ["--netlist", str(sim_dir / board_alone_input.NETLIST)], sim_dir, workdir) if given.wired
+    diagram, stopped, notes = (convert(project, own, ["--netlist", str(sim_dir / board_alone_input.NETLIST)], sim_dir, runner) if given.wired
                                else (given.files["diagram.json"], None, ""))
     if stopped:
         return skipped + [stopped]

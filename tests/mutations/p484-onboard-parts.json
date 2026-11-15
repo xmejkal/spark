@@ -38,8 +38,8 @@
  {
   "file": "scripts/spark/build/board_engine.py",
   "name": "a board-only build drops the person's kept diagram",
-  "find": "    bad_kept = sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)\n    made = subprocess.run(converter_command(project, own) + source",
-  "replace": "    bad_kept = \"\" if \"--netlist\" in source else sim_project.copy_kept_diagram(workdir / sim_project.KEPT_DIAGRAM, sim_dir)\n    made = subprocess.run(converter_command(project, own) + source"
+  "find": "    bad_kept = sim_project.copy_kept_diagram(sim_dir.parent / sim_project.KEPT_DIAGRAM, sim_dir)\n    try:\n        made = LimitedRun(runner)(converter_command(project, own) + source",
+  "replace": "    bad_kept = \"\" if \"--netlist\" in source else sim_project.copy_kept_diagram(sim_dir.parent / sim_project.KEPT_DIAGRAM, sim_dir)\n    try:\n        made = LimitedRun(runner)(converter_command(project, own) + source"
  },
  {
   "file": "tools/circuit-to-wokwi/cli.ts",
