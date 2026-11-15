@@ -125,9 +125,12 @@ def _traces_compared(kept_file, built_file):
     """
     if not kept_file.is_file():
         return []
-    kept, unread = _traces(kept_file.read_text(encoding="utf-8", errors="replace"))
-    if unread:
-        why = "%d of its traces are in a form spark does not read" % unread
+    try:
+        kept, unread = _traces(kept_file.read_text(encoding="utf-8", errors="replace"))
+        why = "%d of its traces are in a form spark does not read" % unread if unread else None
+    except OSError as unreadable:  # the file is left alone either way; what this run copies must not hang on it
+        why = "it cannot be read: %s" % unreadable
+    if why:
         return [{"file": str(kept_file), "did": TRACES_NOT_COMPARED, "why": why,
                  "line": "%s: %s (%s)" % (TRACES_NOT_COMPARED, kept_file, why)}]
     built, _ = _traces(built_file.read_text(encoding="utf-8", errors="replace"))
@@ -137,7 +140,7 @@ def _traces_compared(kept_file, built_file):
     if not only_in_kept and not only_in_build:
         return []
     why = ("it joins pins differently from the board this build made from the requirements, so do not wire or build "
-           "from it; delete it to have it regenerated")
+           "from it: if you did not edit it, delete it to have it regenerated; if you did, carry this build's pins into it")
     return [{"file": str(kept_file), "did": TRACES_DIFFER, "why": why, "only_in_kept": only_in_kept,
              "only_in_build": only_in_build, "line": "%s: %s (%s)%s%s" % (
                  TRACES_DIFFER, kept_file, why, _shown("only in yours", only_in_kept),
