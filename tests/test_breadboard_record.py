@@ -28,6 +28,7 @@ from spark.breadboard import sheet  # noqa: E402
 from spark.breadboard import bench_changes  # noqa: E402
 import check_spine  # noqa: E402
 from spark.build.stages import Stage  # noqa: E402
+from fakes import run_build_board  # noqa: E402
 from test_breadboard_keep import BUTTON_ONLY, FULL, LED_ONLY, build, change_requirements, new_project  # noqa: E402
 
 SECTION = "### Changes since the last build"
@@ -170,7 +171,7 @@ class CheckSpineTest(unittest.TestCase):
         stages = stages or [Stage("build", check_spine.OK, "fine")]
         with mock.patch.dict(os.environ, {"SPARK_HOME": tempfile.mkdtemp()}), contextlib.redirect_stdout(
                 io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            check_spine.report(stages, args, work)
+            run_build_board(stages, args, work)
         return (json.loads(out.getvalue())["kept"] if as_json else None), err.getvalue()
 
     def rebuilt(self):

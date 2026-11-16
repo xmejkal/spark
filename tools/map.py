@@ -29,6 +29,8 @@ REGISTRIES = (
     Registry("spark.bench.OPERATIONS", "spark.bench", "OPERATIONS", str),
     Registry("spark.idea.OPERATIONS", "spark.idea", "OPERATIONS", str),
     Registry("spark.flow.flow_operations.OPERATIONS", "spark.flow.flow_operations", "OPERATIONS", str),
+    Registry("spark.checks.checks_operations.OPERATIONS", "spark.checks.checks_operations", "OPERATIONS", str),
+    Registry("spark.build.build_operations.OPERATIONS", "spark.build.build_operations", "OPERATIONS", str),
     Registry("spark.design.design_operations.OPERATIONS", "spark.design.design_operations", "OPERATIONS", str),
     Registry("spark.sourcing.sourcing_operations.OPERATIONS", "spark.sourcing.sourcing_operations", "OPERATIONS", str),
     Registry("parts.OPERATIONS", "parts", "OPERATIONS", str),

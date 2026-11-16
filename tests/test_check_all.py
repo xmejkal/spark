@@ -13,7 +13,6 @@ they render differently, and only one of them can sink the exit code.
     python3 -m unittest discover -s tests
 """
 
-import argparse
 import contextlib
 import io
 import json
@@ -33,6 +32,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_all  # noqa: E402
 from spark.checks import build_check, check  # noqa: E402
+from spark.checks.check_design import CheckDesign  # noqa: E402
+from spark.core import outcomes  # noqa: E402
+from spark.core.cli import run_operation  # noqa: E402
+from spark.core.result import OperationResult  # noqa: E402
+from fakes import FakeOutsideWorld  # noqa: E402
 from spark.design import loader  # noqa: E402
 from flat_message import NASTY, assert_flat  # noqa: E402
 
@@ -319,17 +323,15 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
     def test_an_explicit_flag_beats_the_convention(self):
         root = self._project("dist/board/circuit.json", ".spark/rules.json")
         chosen = written("chosen.json", [])
-        args = argparse.Namespace(project=str(root), circuit=chosen, rules=None,
-                                  boards=None,
-                                  package=None, json=False)
+        args = dict(project=str(root), circuit=chosen, rules=None, boards=None, package=None, json=False)
         inputs, _, _ = check.inputs_for(args)
         self.assertEqual(inputs["circuit"], chosen, "the convention overrode an explicit path")
         self.assertEqual(inputs["rules"], str(root / ".spark/rules.json"),
                          "an input nobody named should still come from the project")
 
     def _resolved(self, folder, **flags):
-        args = argparse.Namespace(**dict(dict(project=str(folder), circuit=None, rules=None, boards=[], package=None,
-                                              json=False), **flags))
+        args = dict(dict(project=str(folder), circuit=None, rules=None, boards=[], package=None,
+                         json=False), **flags)
         return check.inputs_for(args)[1]
 
     def test_an_explicit_flag_is_resolved_as_given_and_the_others_as_found(self):
@@ -359,7 +361,7 @@ class OneArgumentFindsTheInputsTest(unittest.TestCase):
                          [notes[0], "boards       b.json (given)", "rules        r.json"])
 
     def test_without_a_project_nothing_is_discovered(self):
-        args = argparse.Namespace(project=None, circuit="given.json", json=False)
+        args = dict(project=None, circuit="given.json", json=False)
         inputs, resolved, ambiguous = check.inputs_for(args)
         self.assertEqual(resolved, [])
         self.assertEqual(ambiguous, {})
@@ -566,14 +568,12 @@ class TheRunAndItsTextAreInTheLibraryTest(unittest.TestCase):
 
     def test_a_folder_that_is_not_there_is_project_unusable_and_one_line(self):
         missing = Path(tempfile.mkdtemp()) / "nowhere"
-        args = argparse.Namespace(project=str(missing), boards=[], circuit=None, rules=None, package=None, json=False)
-        result = check.run_every_check(args)
+        result = check.run_every_check(project=str(missing), boards=[], circuit=None, rules=None, package=None)
         self.assertEqual((result["tool"], result["status"], result["reason"].code), ("check_all", "could-not-run", "project_unusable"))
         self.assertEqual(check.render_every_check(result, str(missing)), "  [????] check_all          %s" % result["reason"])
 
     def test_nothing_named_is_every_check_skipped_with_no_project_key_and_no_resolved_block(self):
-        args = argparse.Namespace(project=None, boards=[], circuit=None, rules=None, package=None, json=False)
-        result = check.run_every_check(args)
+        result = check.run_every_check(project=None, boards=[], circuit=None, rules=None, package=None)
         self.assertEqual((result["status"], result["resolved"]), ("could-not-run", []))
         self.assertNotIn("project", result)
         self.assertEqual(check.render_every_check(result, None), check.render(result["results"]))
@@ -648,6 +648,57 @@ class TheRecordsReachPhysicsTest(unittest.TestCase):
         self.assertIn("Soil1.VCC", json.dumps(result), result)
 
 
+class CheckDesignIsAnOperationTest(unittest.TestCase):
+    """P804: check_all is the Operation `check-design`. It takes plain values, its data is the --json document, and its
+    Findings answer by the rule `verdict` answers by, so the exit stays."""
+
+    @staticmethod
+    def result(check_name, status, **found):
+        return dict({"check": check_name, "what": "the %s check" % check_name, "status": status}, **found)
+
+    def test_the_findings_answer_what_verdict_answers(self):
+        ok, skipped = self.result("rules", "ok"), self.result("bom", "skipped")
+        cases = {"problems": [ok, self.result("physics", "problems", problems=["a short"])],
+                 "could not run": [ok, self.result("physics", "could-not-run", reason="no circuit")],
+                 "unchecked only": [self.result("physics", "could-not-run", unchecked=["no rail"])],
+                 "ok holding unchecked": [ok, self.result("physics", "ok", unchecked=["no rail"])],
+                 "every check skipped": [skipped, self.result("rules", "skipped")],
+                 "ok": [ok, skipped]}
+        for name, results in cases.items():
+            with self.subTest(case=name):
+                self.assertEqual(OperationResult(findings=check.findings_of(results)).status(), check.verdict(results))
+
+    def test_a_could_not_run_finding_is_could_not_run_whatever_the_check_s_status(self):
+        found, = check.findings_of([self.result("physics", "ok", unchecked=["no rail"])])
+        self.assertEqual((found.severity, found.subject, found.code, found.sentence),
+                         (outcomes.COULD_NOT_RUN, "physics", "check_could_not_look", "no rail"))
+
+    def test_run_operation_with_plain_values_gives_the_json_document_and_the_exit(self):
+        folder = Path(tempfile.mkdtemp())
+        (folder / "dist" / "board").mkdir(parents=True)
+        (folder / "dist" / "board" / "circuit.json").write_text("[]")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = check_all.main(["--project", str(folder), "--json"])
+        values = {"project": str(folder), "boards": [], "circuit": None, "rules": None, "package": None}
+        result = run_operation(CheckDesign(), values, FakeOutsideWorld())
+        self.assertEqual(result.data, json.loads(out.getvalue()))
+        self.assertEqual(outcomes.EXIT_FOR[result.status()], code)
+        self.assertEqual(sorted(CheckDesign.data_keys), sorted(result.data))
+
+    def test_boards_given_as_one_string_is_one_board_not_its_characters(self):
+        # the review of P804: `list("b.json")` was six boards of one character each
+        folder = Path(tempfile.mkdtemp())
+        one = check.run_every_check(project=str(folder), boards="b1.json")
+        self.assertEqual([note for note in one["resolved"] if note.startswith("boards ")], ["boards       b1.json (given)"])
+
+    def test_a_folder_that_is_not_there_is_one_could_not_run_finding(self):
+        missing = str(Path(tempfile.mkdtemp()) / "nowhere")
+        result = run_operation(CheckDesign(), {"project": missing}, FakeOutsideWorld())
+        self.assertEqual([(found.severity, found.code) for found in result.findings], [(outcomes.COULD_NOT_RUN, "project_unusable")])
+        self.assertEqual(result.lines, ["  [????] check_all          %s" % result.data["reason"]])
+
+
 class TheBuildsProjectIsCheckedTest(unittest.TestCase):
     """
     P319: a board folder with no `.spark/` builds with its parent's records (`loader.project_for` walks up), and
@@ -684,8 +735,8 @@ class TheBuildsProjectIsCheckedTest(unittest.TestCase):
         return code, json.loads(out.getvalue())
 
     def _inputs(self, **flags):
-        args = argparse.Namespace(**dict(dict(project=str(self.car), circuit=None, rules=None, boards=None,
-                                              package=None, json=False), **flags))
+        args = dict(dict(project=str(self.car), circuit=None, rules=None, boards=None,
+                         package=None, json=False), **flags)
         return check.inputs_for(args)[0]
 
     def test_the_checks_read_the_project_the_build_reads(self):
@@ -783,9 +834,8 @@ class TwoOfSomethingIsNotNothingTest(unittest.TestCase):
         # `--circuit` exists precisely to resolve this, so it must clear the ambiguity rather than
         # be overruled by it.
         root = self._project("dist/car/circuit.json", "dist/remote/circuit.json")
-        args = argparse.Namespace(project=str(root), circuit="dist/car/circuit.json", rules=None,
-                                  firmware=None,
-                                  boards=None, package=None, json=False)
+        args = dict(project=str(root), circuit="dist/car/circuit.json", rules=None, firmware=None, boards=None,
+                    package=None, json=False)
         _, _, ambiguous = check.inputs_for(args)
         self.assertNotIn("circuit", ambiguous)
 
@@ -952,8 +1002,9 @@ class TheCheckListItselfTest(unittest.TestCase):
         #   check       — the runner itself.
         #   check_codes — the leaf of the checks' refusal codes (P693): a table, not a check.
         #   physics_board — the netlist that `physics_check` reads (P708): a Value, not a check.
+        #   check_design, checks_operations — check_all as an Operation on the core and its table (P804): the runner's frontend.
         # `check_spine` (it BUILDS a design) and `check_commit` (it measures a commit) are not in the area.
-        NOT_A_CHECK = {"__init__", "check", "check_codes", "physics_board"}
+        NOT_A_CHECK = {"__init__", "check", "check_codes", "check_design", "checks_operations", "physics_board"}
         on_disk = {path.stem for path in (ROOT / "scripts" / "spark" / "checks").glob("*.py")} - NOT_A_CHECK
 
         wired = set()

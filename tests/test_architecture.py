@@ -401,7 +401,7 @@ class TheChecksAreaTest(unittest.TestCase):
     module imports alone. `scripts/` keeps the six CLIs and `check_spine.py`, and each CLI defines `main` only."""
     CHECKS = ROOT / "scripts" / "spark" / "checks"
     #: The modules of the area, by the names of its page (`areas/checks.md`).
-    MODULES = ["build_check", "check", "check_codes", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
+    MODULES = ["build_check", "check", "check_codes", "check_design", "checks_operations", "order_check", "physics_board", "physics_check", "rules_check", "vendor_pins_check"]
     CLIS = ["check_all.py", "check_bom.py", "check_footprints.py", "check_physics.py", "check_vendor_pins.py",
             "compare_design.py"]
 
@@ -424,6 +424,13 @@ class TheChecksAreaTest(unittest.TestCase):
 
     def test_each_checks_module_imports_alone(self):
         each_module_imports_alone(self, "checks")
+
+    def test_the_operations_table_maps_each_op_to_its_operation_class(self):
+        # P804: check_all as the Operation `check-design`; the table is a module, because the area's __init__ imports nothing
+        code = ("from spark.core.operation import Operation; from spark.checks import checks_operations as c; "
+                "print(sorted(c.OPERATIONS)); print([op for op, cls in c.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['check-design']", "[]"], run.stderr)
 # --- end MVP ---
 
 
@@ -479,11 +486,11 @@ class TheBuildAreaTest(unittest.TestCase):
     `board_engine.TscircuitEngine` and `board_emitter.BoardEmitter` in process, so no build module starts a child."""
     BUILD = ROOT / "scripts" / "spark" / "build"
     #: The modules of the area, by the names of its page (`areas/build.md`).
-    MODULES = ["ai_files", "board_alone_input", "board_engine", "build_codes", "build_record", "build_service", "kept_files",
-               "project_setup", "requirements_build", "stages"]
-    #: Each CLI's own top-level functions: `main` and what only it uses to parse and print (`report` prints). A library
-    #: function back in a CLI, under any name, fails the check.
-    CLIS = {"check_spine.py": ["main", "render", "report"], "init_project.py": ["main"]}
+    MODULES = ["ai_files", "board_alone_input", "board_engine", "build_board", "build_codes", "build_operations", "build_record",
+               "build_service", "kept_files", "project_setup", "requirements_build", "stages"]
+    #: Each CLI's own top-level functions: `main` alone, since P804 `check_spine.py`'s too (`render` and the keep step moved to
+    #: `build_board`). A library function back in a CLI, under any name, fails the check.
+    CLIS = {"check_spine.py": ["main"], "init_project.py": ["main"]}
 
     def test_scripts_holds_the_two_clis_and_no_build_library_module(self):
         self.assertEqual(sorted(path.stem for path in self.BUILD.glob("*.py") if path.name != "__init__.py"), self.MODULES)
@@ -504,6 +511,13 @@ class TheBuildAreaTest(unittest.TestCase):
 
     def test_each_build_module_imports_alone(self):
         each_module_imports_alone(self, "build")
+
+    def test_the_operations_table_maps_each_op_to_its_operation_class(self):
+        # P804: the build as the Operation `build-board`; the table is a module, because the area's __init__ imports nothing
+        code = ("from spark.core.operation import Operation; from spark.build import build_operations as b; "
+                "print(sorted(b.OPERATIONS)); print([op for op, cls in b.OPERATIONS.items() if cls.name != op or not issubclass(cls, Operation)])")
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT / "scripts", capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(run.stdout.split("\n")[:2], ["['build-board']", "[]"], run.stderr)
 
     def test_the_build_service_imports_no_subprocess_and_the_plugin_root_is_the_plugin_folder(self):
         # P706: the board file is written in process and `tsci` runs through the engine Adapter, so build_service starts nothing

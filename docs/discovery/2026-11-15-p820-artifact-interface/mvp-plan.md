@@ -34,8 +34,8 @@ their titles.
 
 What exists (read 2026-11-15, checked by the lenses and the refuter):
 - The page: `TabbedHtmlPage` (scripts/spark/breadboard/tabbed_page.py:66) writes `page.html`, three CSS-only tabs
-  (breadboard, schematic, PCB SVGs as data URIs), from `keep_tabbed_page`, which `check_spine.report` calls in the keep
-  step (scripts/check_spine.py:133-139) after a build with `--keep .` (commands/build.md:124). tests/test_tabbed_page.py:53-56
+  (breadboard, schematic, PCB SVGs as data URIs), from `keep_tabbed_page`, which the keep step calls
+  (`kept_files.keep_all`, which was `check_spine.report` before P804) after a build with `--keep .` (commands/build.md:124). tests/test_tabbed_page.py:53-56
   pins "no `<script`".
 - The keep step also gathers `missing_facts` (`_kept_pins`, scripts/spark/build/kept_files.py:329); the build's
   service writes only a history note to the store (scripts/spark/build/requirements_build.py:75).
@@ -118,7 +118,7 @@ form of commands/build.md:124, never a resolved path or `SPARK_HOME`. The parts 
 reads only; 0.27 s on plant-alarm); a pick
 whose part is held refuses itself, as `--pick` does today, so the drawer stays out of the revision.
 
-The build record: the keep step writes `.spark/build.json` beside `page.html` (`check_spine.report`, one more kept
+The build record: the keep step writes `.spark/build.json` beside `page.html` (`kept_files.keep_all` since P804, one more kept
 entry, through a small `BuildRecordStore`): the stages, the status, `missing_facts`, requirements.json's sha256 and the
 Prague time. A library build (`loader.is_library`) writes none.
 

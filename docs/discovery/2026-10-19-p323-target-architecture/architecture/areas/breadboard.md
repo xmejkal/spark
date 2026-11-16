@@ -14,7 +14,7 @@ with three tabs. It keeps the person's own moves across a rebuild and says what 
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `breadboard` | `breadboard.py` with `--out` (`breadboard.py:54`, its `main`) | reads the built circuit, writes the sheet, `breadboard.json`, `breadboard.svg` and `wiring-record.json`. It runs no tool. `page.html` is the build's (`check_spine.keep_tabbed_page`) |
+| `breadboard` | `breadboard.py` with `--out` (`breadboard.py:54`, its `main`) | reads the built circuit, writes the sheet, `breadboard.json`, `breadboard.svg` and `wiring-record.json`. It runs no tool. `page.html` is the build's (`kept_files.keep_tabbed_page`) |
 
 The build runs the same Service as its breadboard stage.
 

@@ -372,6 +372,33 @@ class FakeBuildService:
         return self._build(inputs.requirements, inputs.workdir, firmware=inputs.firmware)
 
 
+class FakeRequirementsBuild:
+    """Fake: stands in for `requirements_build.RequirementsBuildService` in `build_board.BuildBoard` (P804): `build` answers
+    with the stages, the work folder and the requirements the test gave, no toolchain and no diagnostics."""
+
+    def __init__(self, stages, workdir=None, requirements=None):
+        self.stages, self.workdir, self.requirements = list(stages), workdir, requirements
+
+    def build(self, requirements_path=None, firmware=None, simulation=None):
+        from spark.build.requirements_build import RequirementsBuildResult
+        return RequirementsBuildResult(self.stages, self.workdir, self.requirements, None, [])
+
+
+def run_build_board(stages, args, workdir=None):
+    """`check_spine.py` run through the core with a FakeRequirementsBuild of `stages` in `workdir` (P804): `args` holds
+    `json`, `keep`, `sim_dir` and `requirements`, each as the CLI's flag would. It prints what check_spine prints and returns the
+    exit code, so a test of the old `report(stages, args, workdir)` keeps its assertions."""
+    from spark.build.build_board import BuildBoard
+    from spark.core.cli import HelpText, run_cli
+    from spark.core.outside import build_bare_outside_world
+    argv = [str(args.requirements)] if getattr(args, "requirements", None) else []
+    argv += ["--keep", str(args.keep)] if getattr(args, "keep", None) else []
+    argv += ["--sim-dir", str(args.sim_dir)] if getattr(args, "sim_dir", None) else []
+    argv += ["--json"] if args.json else []
+    return run_cli(HelpText("check_spine.py", "the build", None), BuildBoard(FakeRequirementsBuild(stages, workdir)), argv,
+                   outside_builder=build_bare_outside_world)
+
+
 #: The fake pdf-text tool: one canned page for `-f 1`, and exit 1 for any other page, so a read stops after page 1.
 PDFTOTEXT = """#!/bin/sh
 # A fake pdftotext (P715): page 1 is a canned table, every other page is past the end.

@@ -14,7 +14,7 @@ header and the order list. Each check says what it found and what it did not loo
 
 | Operation | CLI | Effects |
 |---|---|---|
-| `check-all` | `check_all.py` | reads |
+| `check-design` | `check_all.py` (since P804 the Operation `CheckDesign`) | reads |
 | `check-physics` | `check_physics.py` | reads |
 | `check-footprints` | `check_footprints.py` | reads |
 | `check-bom` | `check_bom.py` | reads |
@@ -28,7 +28,9 @@ libraries live in `scripts/spark/checks/`.
 
 | Module | Holds |
 |---|---|
-| `checks/check.py` | `Check`, `CHECKS`, `CheckedFolder` and the five checks (`RulesVsNetlist`, `Physics`, `Buildability`, `VendorTruth`, `TheOrder`), the library of `check_all.py` (P695): `run_every_check(args)` is the dict it prints and `render_every_check` its text (P783 PR 3); `run` is the loop over the checks |
+| `checks/check.py` | `Check`, `CHECKS`, `CheckedFolder` and the five checks (`RulesVsNetlist`, `Physics`, `Buildability`, `VendorTruth`, `TheOrder`), the library of `check_all.py` (P695): `run_every_check(project, boards, circuit, rules, package)` is the dict it prints, from plain values since P804, `render_every_check` its text (P783 PR 3) and `findings_of` the Findings by `verdict`'s rule (P804); `run` is the loop over the checks |
+| `checks/check_design.py` | the Operation `CheckDesign` (op `check-design`, P804): `check_all.py`'s arguments, `run_every_check`'s dict as its data, the text as its lines and the Findings; its `--json` renderer is `JsonDocument` |
+| `checks/checks_operations.py` | `OPERATIONS`, which maps each printed `op` to its class, for the frontends (P804) |
 | `checks/rules_check.py` | `RulesCheck` and `compare_design`'s logic |
 | `checks/physics_check.py` | `Finding`, the `check_*` rules, `run`, `render`, `rules_or_reason`, and `run_on_files`, the dict `check_physics.py` prints (P783 PR 3). The netlist `Board` is in `physics_board` |
 | `checks/physics_board.py` | `Board`, the built netlist with the questions physics asks, and `measured_route` (P708) |
@@ -36,7 +38,7 @@ libraries live in `scripts/spark/checks/`.
 | `checks/vendor_pins_check.py` | `VendorPinsCheck`, `check_vendor_pins`'s logic, the Adapter `GhVendorHeaders` |
 | `checks/order_check.py` | `OrderCheck` and `check_bom`'s logic |
 | `checks/check_codes.py` | the codes of the checks' refusals, with one sentence each (a leaf, P693). A finding keeps its `rule` |
-| `checks/__init__.py` | the index docstring alone, and it imports nothing. `OPERATIONS` and one module per Operation, named after it, come with the Operation card |
+| `checks/__init__.py` | the index docstring alone, and it imports nothing. The table is `checks_operations.py` (P804) |
 
 ### Its seams and adapters
 

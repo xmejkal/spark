@@ -560,6 +560,19 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual(vars(parser.parse_args(["--need", "a", "b"]))["words"], ["a", "b"])
         self.assertIn("--need WORD [WORD ...]", parser.format_usage())
 
+    def test_a_positional_argument_parses_with_and_without_its_value_and_is_one_optional_string(self):
+        # P804: `check_spine.py [requirements]`, the first Operation with a positional; argparse refuses `dest` and `required` for it
+        class File(Toy):
+            arguments = (Argument(("requirements",), "requirements", str, "a requirements.json", nargs="?"), COMMON_ARGUMENTS["json"])
+        from spark.core.cli import parser_for
+        parser = parser_for(TEXT, File())
+        self.assertEqual(vars(parser.parse_args(["r.json", "--json"])), {"requirements": "r.json", "json": True})
+        self.assertEqual(vars(parser.parse_args([])), {"requirements": None, "json": False})
+        self.assertIn("requirements  a requirements.json", parser.format_help())
+        self.assertIn("usage: toy.py [-h] [--json] [requirements]", parser.format_usage())
+        self.assertEqual(File().input_schema(), {"type": "object", "additionalProperties": False,
+                                                 "properties": {"requirements": {"type": "string", "description": "a requirements.json"}}})
+
     def test_an_argument_that_repeats_keeps_every_value_and_is_an_array(self):
         # P726 PR 2: `parts.py --read --label a=x --label b=y`, argparse's append; nargs="+" would keep the last flag alone
         class Labels(Toy):

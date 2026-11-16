@@ -6,16 +6,16 @@
   "replace": "    if False:\n        return refused\n"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "a missing requirements file removes an earlier build",
   "find": "bool(requirements_file) and Path(requirements_file).is_file()",
   "replace": "bool(requirements_file)"
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/kept_files.py",
   "name": "a refused file keeps and cleans nothing",
-  "find": "keeps = args.keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())",
-  "replace": "keeps = args.keep and workdir is not None"
+  "find": "keeps = keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())",
+  "replace": "keeps = keep and workdir is not None"
  },
  {
   "file": "scripts/spark/build/kept_files.py",

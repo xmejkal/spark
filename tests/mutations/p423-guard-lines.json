@@ -55,18 +55,6 @@
   "replace": "        print(\"  \" + text, flush=True)"
  },
  {
-  "file": "scripts/check_spine.py",
-  "name": "check_spine says what it kept without the guard",
-  "find": "print(guard_lines(\"  %s\" % entry[\"line\"]), file=sys.stderr)",
-  "replace": "print(\"  %s\" % entry[\"line\"], file=sys.stderr)"
- },
- {
-  "file": "scripts/check_spine.py",
-  "name": "check_spine says the history was not written without the guard",
-  "find": "print(guard_lines(line), file=sys.stderr)",
-  "replace": "print(line, file=sys.stderr)"
- },
- {
   "file": "scripts/run_scenario.py",
   "name": "run_scenario prints the tool's sentence without the guard",
   "find": "    print(guard_lines(\"%s: %s%s\" % (args.scenario.name, sentence, \"\\nlog: %s\" % log if log else \"\")),",

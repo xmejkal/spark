@@ -6,6 +6,7 @@ why, line}. One meaning of `kept_`: what a run keeps between runs, as `kept_move
 
 import re
 import shutil
+from collections import namedtuple
 from pathlib import Path
 
 from spark.build import build_codes
@@ -383,11 +384,41 @@ def _named_from(requirements, project):
 # --- end MVP ---
 
 
-def simulation_dir(args):
-    """Where the simulation project is kept: --sim-dir, else DIR/sim under --keep DIR (JB1, P116), else nowhere."""
-    if getattr(args, "sim_dir", None):
-        return Path(args.sim_dir)
-    return Path(args.keep) / "sim" if getattr(args, "keep", None) else None
+def simulation_dir(sim_dir, keep):
+    """Where the simulation project is kept: `sim_dir` (--sim-dir), else DIR/sim under `keep` (--keep DIR; JB1, P116), else
+    nowhere."""
+    if sim_dir:
+        return Path(sim_dir)
+    return Path(keep) / "sim" if keep else None
+
+
+# --- MVP ---
+#: Value: what a build run asks to keep (P804): the requirements file as given (None for the reference design), the
+#: folder --keep names and the folder --sim-dir names, each None when not given.
+KeepAsked = namedtuple("KeepAsked", "requirements_file keep sim_dir")
+
+
+def keep_all(stages, workdir, asked, exporter):
+    """
+    What a build run keeps (P804), as kept entries {file, did, why, line}: the built board in `asked.keep` (`_kept`); with
+    a requirements file also the breadboard sheet, the pin map, the page (its tabs drawn by `exporter`) and the build
+    record; and the simulation project in `simulation_dir`. None when --keep was not given, or was given with no work
+    folder and no requirements file that is there. Even then, a kept simulation project is one entry. With no work folder, a refused
+    requirements file that is there still removes what an earlier build left (P280); a missing one, which can be a typo,
+    removes nothing. It removes no work folder: the caller does.
+    """
+    requirements_file, keep = asked.requirements_file, asked.keep
+    keeps = keep and (workdir is not None or bool(requirements_file) and Path(requirements_file).is_file())
+    kept = (_kept(workdir, keep) if workdir is not None else []) if keeps else None
+    if kept is not None and requirements_file:
+        kept += keep_breadboard(Path(requirements_file), Path(keep), stages) + drop_an_older_build(Path(keep), stages)
+        kept.append(_kept_pins(Path(requirements_file), Path(keep)))
+        kept.append(keep_tabbed_page(Path(keep), stages, kept, exporter or tabbed_page.TscircuitExport(None)))
+        kept += keep_build_record(Path(keep), Path(requirements_file), stages, kept)  # P825: what flow.py reads
+    simulation_folder = simulation_dir(asked.sim_dir, keep)
+    simulation = keep_simulation(workdir, simulation_folder, stages) if workdir is not None and simulation_folder else None
+    return (kept or []) + [simulation] if simulation is not None else kept
+# --- end MVP ---
 
 
 def keep_simulation(workdir, destination, stages):

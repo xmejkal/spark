@@ -1,7 +1,7 @@
 """
 The whole run of the chain for `check_spine.py`: the requirements file read, the work folder made, the
 build's stages run (`build_service.BuildService`), and the lines that the history and a kept wokwi.toml need said.
-`check_spine.main` calls it, prints those lines and hands the stages to its `report`, which removes the work folder.
+The Operation `build_board.BuildBoard` calls it, keeps what --keep asks for, removes the work folder and answers (P804).
 """
 
 import json
@@ -43,7 +43,7 @@ class RequirementsBuildService:
     the person's history. It is given `build_service`, an object with `for_toolchain` (BuildService, or a fake), or None
     for the real one. A refused file, a build past its limit and any crash of the stages are each one stage that could
     not run; an OSError from making the work folder or reading the toolchain and the kept files propagates, as it did
-    from check_spine's main. It never removes the work folder: the caller's report does.
+    from check_spine's main. It never removes the work folder: the caller (`BuildBoard`) does.
     """
 
     def __init__(self, build_service=None):

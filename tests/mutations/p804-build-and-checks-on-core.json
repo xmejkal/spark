@@ -1,0 +1,62 @@
+[
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P804: a positional is added with dest and required, which argparse refuses",
+  "find": "            named = {} if not argument.flags[0].startswith(\"-\") else {\"dest\": argument.dest, \"required\": argument.required}",
+  "replace": "            named = {\"dest\": argument.dest, \"required\": argument.required}"
+ },
+ {
+  "file": "scripts/spark/core/operation.py",
+  "name": "P804: an argument with nargs \"?\" is an array in the input schema",
+  "find": "    many = argument.nargs not in (None, \"?\") or argument.repeats",
+  "replace": "    many = argument.nargs is not None or argument.repeats"
+ },
+ {
+  "file": "scripts/spark/checks/check.py",
+  "name": "P804: a run whose every check was skipped has no Finding, so check_all answers ok",
+  "find": "    return findings + (nothing if all(r[\"status\"] == SKIPPED for r in results) else [])",
+  "replace": "    return findings"
+ },
+ {
+  "file": "scripts/spark/checks/check.py",
+  "name": "P804: an ok check that holds unchecked notes has no could-not-run Finding",
+  "find": "for r in results if r.get(\"unchecked\") or r[\"status\"] == COULD_NOT_RUN]",
+  "replace": "for r in results if r[\"status\"] == COULD_NOT_RUN]"
+ },
+ {
+  "file": "scripts/spark/checks/check_design.py",
+  "name": "P804: check-design reads a refusal as a run of the checks",
+  "find": "        if \"reason\" in said:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "scripts/spark/build/build_service.py",
+  "name": "P804: a stage that could not run has no Finding, so the build answers ok",
+  "find": "for stage in stages if stage.status in (PROBLEMS, COULD_NOT_RUN)]",
+  "replace": "for stage in stages if stage.status == PROBLEMS]"
+ },
+ {
+  "file": "scripts/spark/build/build_board.py",
+  "name": "P804: a crash in the keep step leaves the work folder behind",
+  "find": "        finally:\n            if built.workdir is not None:\n",
+  "replace": "        except RuntimeError:\n            raise\n        if built.workdir is not None:\n"
+ },
+ {
+  "file": "scripts/spark/build/build_board.py",
+  "name": "P804: the verdict's text ends with a second newline",
+  "find": "lines=text[:-1].split(\"\\n\")",
+  "replace": "lines=text.split(\"\\n\")"
+ },
+ {
+  "file": "scripts/spark/build/build_board.py",
+  "name": "P804: the kept entries' lines never reach stderr",
+  "find": "diagnostics=list(built.diagnostics) + [\"  %s\" % entry[\"line\"] for entry in kept or []]",
+  "replace": "diagnostics=list(built.diagnostics)"
+ },
+ {
+  "file": "scripts/spark/checks/check.py",
+  "name": "P804: a --boards given as one string becomes a list of its characters",
+  "find": "\"boards\": [boards] if isinstance(boards, str) else list(boards or ()), \"circuit\"",
+  "replace": "\"boards\": list(boards or ()), \"circuit\""
+ }
+]

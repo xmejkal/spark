@@ -48,7 +48,7 @@ from spark.design import design_codes
 from spark.design import fab
 from spark.checks import check_codes
 from spark.core.outcomes import OK, PROBLEMS, COULD_NOT_RUN, SKIPPED, answer
-from spark.core.result import Refusal
+from spark.core.result import Finding, Refusal
 
 
 class Check:
@@ -429,18 +429,18 @@ def discover_boards(project, found, notes):
         notes.append("%-12s not resolved (%s)" % ("boards", broken))
 
 
-def inputs_for(args, checked=None):
+def inputs_for(values, checked=None):
     """
-    What each check will be given, and the record of where it came from.
+    What each check will be given for `values` (the five `INPUTS` by name, plain values), and where each came from.
 
     An explicit flag always beats a convention, so `--project` is a starting point rather than a
     straitjacket: discover the usual layout, then let the caller correct any one of them. `checked` is the
     `CheckedFolder` of `--project`, found here when the caller has not found it.
     """
-    explicit = {key: value for key, value in vars(args).items() if value}
-    if not args.project:
-        return vars(args), [], {}
-    discovered, resolved, ambiguous = discover(checked or CheckedFolder.at(args.project))
+    explicit = {key: values[key] for key in INPUTS if values.get(key)}
+    if not values.get("project"):
+        return dict(values), [], {}
+    discovered, resolved, ambiguous = discover(checked or CheckedFolder.at(values["project"]))
     # An explicit flag settles an ambiguity: that is what naming one is for.
     ambiguous = {name: matches for name, matches in ambiguous.items() if name not in explicit}
     return dict(discovered, **explicit), given_notes(resolved, explicit), ambiguous
@@ -448,6 +448,8 @@ def inputs_for(args, checked=None):
 
 #: The inputs whose `discover` note an explicit flag replaces: the conventions and the boards, never `project` or `json`.
 GIVEN = tuple(CONVENTIONS) + ("boards",)
+#: The five inputs of check_all, by name: the folder, then each input a flag can name. `json` is the frontend's.
+INPUTS = ("project",) + GIVEN
 
 
 def given_notes(notes, explicit):
@@ -472,17 +474,18 @@ def run(inputs, ambiguous=None):
     return [check.run(inputs, ambiguous) for check in CHECKS]
 
 
-def run_every_check(args):
+def run_every_check(project=None, boards=(), circuit=None, rules=None, package=None):
     """
-    The dict `check_all.py --json` prints, for argparse's Namespace of check_all (`project`, `boards`, `circuit`, `rules`,
-    `package`, `json`): a refusal (`tool`, `status` could-not-run, `reason`) when `--project` names no usable folder,
-    else `tool`, `status`, `unmeasured`, `resolved`, `results` and, when a folder was checked, `project`. `run` is the
-    loop over the checks; this finds their inputs first. Writes nothing.
+    The dict `check_all.py --json` prints, for the five inputs as plain values (P804): a refusal (`tool`, `status`
+    could-not-run, `reason`) when `project` names no usable folder, else `tool`, `status`, `unmeasured`, `resolved`,
+    `results` and, when a folder was checked, `project`. `run` is the loop over the checks; this finds their inputs
+    first. Writes nothing.
     """
-    checked, refusal = CheckedFolder.named(args.project)
+    checked, refusal = CheckedFolder.named(project)
     if refusal:
         return {"tool": "check_all", "status": COULD_NOT_RUN, "reason": refusal}
-    inputs, resolved, ambiguous = inputs_for(args, checked)
+    values = {"project": project, "boards": [boards] if isinstance(boards, str) else list(boards or ()), "circuit": circuit, "rules": rules, "package": package}
+    inputs, resolved, ambiguous = inputs_for(values, checked)
     results = run(inputs, ambiguous)
     result = {"tool": "check_all", "status": verdict(results), "unmeasured": unmeasured_in(results),
               "resolved": resolved, "results": results}
@@ -582,3 +585,15 @@ def verdict(results):
         # whole file exists to prevent.
         return COULD_NOT_RUN
     return OK
+
+
+def findings_of(results):
+    """The Findings by `verdict`'s rule (P804): problems for each check with problems, could-not-run for each that could not
+    look or holds `unchecked`, whatever its own status, and could-not-run for the run when every check was skipped. The
+    subject is the check's name, the sentence its reason or its first unchecked note."""
+    findings = [Finding(PROBLEMS, r["check"], check_codes.CHECK_FOUND_PROBLEMS, "%d problem(s)" % len(r["problems"]), None)
+                for r in results if r.get("problems")]
+    findings += [Finding(COULD_NOT_RUN, r["check"], check_codes.CHECK_COULD_NOT_LOOK, str(r.get("reason") or (r.get("unchecked") or [r["what"]])[0]),
+                         None) for r in results if r.get("unchecked") or r["status"] == COULD_NOT_RUN]
+    nothing = [Finding(COULD_NOT_RUN, None, check_codes.NOTHING_ASKED, check_codes.CODES[check_codes.NOTHING_ASKED], None)]
+    return findings + (nothing if all(r["status"] == SKIPPED for r in results) else [])

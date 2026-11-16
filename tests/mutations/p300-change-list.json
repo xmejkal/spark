@@ -55,7 +55,7 @@
 "find": "if code is None or drawn is None and code in",
 "replace": "if code is None or code in"},
 {
-"file": "scripts/check_spine.py",
+"file": "scripts/spark/build/build_board.py",
 "name": "json-keeps-line",
 "find": "if key != \"line\"}",
 "replace": "if True}"},

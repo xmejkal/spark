@@ -78,7 +78,7 @@
   "replace": "\"\\n  %s. %s\""
  },
  {
-  "file": "scripts/check_spine.py",
+  "file": "scripts/spark/build/build_board.py",
   "name": "the top-level missing_facts key is never written",
   "find": "entry.get(\"missing_facts\", [])]) else {})}",
   "replace": "entry.get(\"missing_facts\", [])]) and False else {})}"
