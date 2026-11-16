@@ -21693,6 +21693,35 @@ function readNetlist(json) {
   }
   return { components: json.components, nets: json.nets };
 }
+function addNetlist(base, added) {
+  const problems = [];
+  const idOf = new Map;
+  const components = [...base.components];
+  for (const component of added.components) {
+    if (component.type === "board") {
+      const same = base.components.find((each) => each.name === component.name);
+      if (same)
+        idOf.set(component.id, same.id);
+      else
+        problems.push({ message: "the added netlist names a board that the design does not hold", context: { component: component.name } });
+      continue;
+    }
+    const clash = base.components.find((each) => each.id === component.id || each.name.toLowerCase() === component.name.toLowerCase());
+    if (clash) {
+      problems.push({ message: "the added netlist names a component the design already holds", context: { component: component.name } });
+      continue;
+    }
+    idOf.set(component.id, component.id);
+    components.push(component);
+  }
+  if (problems.length)
+    throw new ConversionFailed(problems);
+  const nets = added.nets.map((net) => ({
+    ...net,
+    members: net.members.map((member) => ({ ...member, componentId: idOf.get(member.componentId) ?? member.componentId }))
+  }));
+  return { components, nets: [...base.nets, ...nets] };
+}
 function readComponents(db, problems) {
   return db.source_component.list().map((sourceComponent) => {
     const pins = db.source_port.list({ source_component_id: sourceComponent.source_component_id }).map((port) => ({
@@ -21825,6 +21854,8 @@ function parseArguments(argv) {
       options.circuit = argv[++index] ?? options.circuit;
     else if (argument === "--netlist")
       options.netlist = argv[++index] ?? options.netlist;
+    else if (argument === "--add-netlist")
+      options.addNetlist = argv[++index] ?? options.addNetlist;
     else if (argument === "--out")
       options.out = argv[++index] ?? options.out;
     else if (argument === "--mapping")
@@ -21852,7 +21883,7 @@ function parseArguments(argv) {
   return options;
 }
 function __doc__() {
-  return `Usage: bun run cli.ts (--circuit <circuit.json> | --netlist <netlist.json>) --out <diagram.json> --chips <dir> [--mapping <wokwi-mapping.json>] [--check]
+  return `Usage: bun run cli.ts (--circuit <circuit.json> | --netlist <netlist.json>) [--add-netlist <netlist.json>] --out <diagram.json> --chips <dir> [--mapping <wokwi-mapping.json>] [--check]
 
 Exactly one of --circuit and --netlist, and --out and --chips, are required, and SPARK_BOARD_JSON must name the design's board file.`;
 }
@@ -21862,7 +21893,8 @@ async function main() {
     const spokenFor = loadMappingFile(options.mapping);
     console.log(`mapping from the part records: ${spokenFor} component(s)`);
   }
-  const { netlist, problems: designProblems } = options.netlist ? { netlist: readNetlist(JSON.parse(await readFile(options.netlist, "utf8"))), problems: [] } : buildNetlist(JSON.parse(await readFile(options.circuit, "utf8")));
+  const { netlist: designed, problems: designProblems } = options.netlist ? { netlist: readNetlist(JSON.parse(await readFile(options.netlist, "utf8"))), problems: [] } : buildNetlist(JSON.parse(await readFile(options.circuit, "utf8")));
+  const netlist = options.addNetlist ? addNetlist(designed, readNetlist(JSON.parse(await readFile(options.addNetlist, "utf8")))) : designed;
   const author = options.netlist ? `generated from ${basename(options.netlist)}` : undefined;
   const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips, author });
   const existing = await readExisting(options.out);

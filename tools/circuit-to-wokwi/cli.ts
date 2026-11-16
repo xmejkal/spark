@@ -6,6 +6,8 @@
  *   bun run cli.ts --circuit x --out y   somewhere other than the defaults
  *   bun run cli.ts --netlist n --out y   a netlist already written as JSON, in place of a circuit.json (P484: the
  *                                        spine's board-only build, the board and its own LED and button)
+ *   bun run cli.ts --circuit x --add-netlist n --out y   also the parts and nets of a second netlist, joined to the
+ *                                        design's board by its name (P792: a full build's stand-in LED and button)
  *   bun run cli.ts --mapping m.json --chips dir   the spark spine's mapping from the part records,
  *                                        and the chips it staged (SPARK_BOARD_JSON names the board)
  *
@@ -20,7 +22,7 @@ import { basename } from "node:path";
 import { emitWokwiDiagram } from "./lib/emitters/wokwi";
 import { loadMappingFile } from "./lib/mapping";
 import { mergeWithExisting } from "./lib/merge";
-import { buildNetlist, readNetlist } from "./lib/netlist";
+import { addNetlist, buildNetlist, readNetlist } from "./lib/netlist";
 import { ConversionFailed } from "./lib/types";
 import { validate } from "./lib/validate";
 
@@ -37,6 +39,8 @@ interface Options {
   /** Exactly one of `circuit` and `netlist` is given. */
   circuit?: string;
   netlist?: string;
+  /** Parts and nets to add to the design, beside either source (P792). */
+  addNetlist?: string;
   out: string;
   check: boolean;
   /** A mapping from the part records, written by the spark spine; the hand table is the fallback. */
@@ -52,6 +56,7 @@ function parseArguments(argv: string[]): Options {
     if (argument === "--check") options.check = true;
     else if (argument === "--circuit") options.circuit = argv[++index] ?? options.circuit;
     else if (argument === "--netlist") options.netlist = argv[++index] ?? options.netlist;
+    else if (argument === "--add-netlist") options.addNetlist = argv[++index] ?? options.addNetlist;
     else if (argument === "--out") options.out = argv[++index] ?? options.out;
     else if (argument === "--mapping") options.mapping = argv[++index];
     else if (argument === "--chips") options.chips = argv[++index] ?? options.chips;
@@ -80,7 +85,7 @@ function parseArguments(argv: string[]): Options {
 }
 
 function __doc__() {
-  return `Usage: bun run cli.ts (--circuit <circuit.json> | --netlist <netlist.json>) --out <diagram.json> --chips <dir> [--mapping <wokwi-mapping.json>] [--check]\n\nExactly one of --circuit and --netlist, and --out and --chips, are required, and SPARK_BOARD_JSON must name the design's board file.`;
+  return `Usage: bun run cli.ts (--circuit <circuit.json> | --netlist <netlist.json>) [--add-netlist <netlist.json>] --out <diagram.json> --chips <dir> [--mapping <wokwi-mapping.json>] [--check]\n\nExactly one of --circuit and --netlist, and --out and --chips, are required, and SPARK_BOARD_JSON must name the design's board file.`;
 }
 
 async function main() {
@@ -90,9 +95,12 @@ async function main() {
     const spokenFor = loadMappingFile(options.mapping);
     console.log(`mapping from the part records: ${spokenFor} component(s)`);
   }
-  const { netlist, problems: designProblems } = options.netlist
+  const { netlist: designed, problems: designProblems } = options.netlist
     ? { netlist: readNetlist(JSON.parse(await readFile(options.netlist, "utf8"))), problems: [] }
     : buildNetlist(JSON.parse(await readFile(options.circuit!, "utf8")));
+  const netlist = options.addNetlist
+    ? addNetlist(designed, readNetlist(JSON.parse(await readFile(options.addNetlist, "utf8"))))
+    : designed;
   // The emitter's own author names board.tsx, which a netlist written as JSON has none of (P484).
   const author = options.netlist ? `generated from ${basename(options.netlist)}` : undefined;
   const emitted = emitWokwiDiagram(netlist, { chipsDirectory: options.chips, author });

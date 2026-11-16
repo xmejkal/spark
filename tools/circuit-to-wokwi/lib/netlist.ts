@@ -43,6 +43,39 @@ export function readNetlist(json: any): Netlist {
   return { components: json.components, nets: json.nets };
 }
 
+/**
+ * `base` with `added`'s parts and nets (P792): the spark spine adds a stand-in board's own LED and button to a full
+ * build's circuit. An added component of type "board" is the base component of the same name, so its nets reach the
+ * circuit's board; any other added component must be new, because the emitter names a Wokwi part by the component's
+ * name lowercased, and two of one name would wire one part as the other.
+ */
+export function addNetlist(base: Netlist, added: Netlist): Netlist {
+  const problems: Problem[] = [];
+  const idOf = new Map<string, string>();
+  const components = [...base.components];
+  for (const component of added.components) {
+    if (component.type === "board") {
+      const same = base.components.find((each) => each.name === component.name);
+      if (same) idOf.set(component.id, same.id);
+      else problems.push({ message: "the added netlist names a board that the design does not hold", context: { component: component.name } });
+      continue;
+    }
+    const clash = base.components.find((each) => each.id === component.id || each.name.toLowerCase() === component.name.toLowerCase());
+    if (clash) {
+      problems.push({ message: "the added netlist names a component the design already holds", context: { component: component.name } });
+      continue;
+    }
+    idOf.set(component.id, component.id);
+    components.push(component);
+  }
+  if (problems.length) throw new ConversionFailed(problems);
+  const nets = added.nets.map((net) => ({
+    ...net,
+    members: net.members.map((member) => ({ ...member, componentId: idOf.get(member.componentId) ?? member.componentId })),
+  }));
+  return { components, nets: [...base.nets, ...nets] };
+}
+
 function readComponents(db: any, problems: Problem[]): Component[] {
   return db.source_component.list().map((sourceComponent: any) => {
     const pins: Pin[] = db.source_port
