@@ -1,0 +1,62 @@
+[
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: a CLI with no description of its own shows no sentence in --help",
+  "find": "    description = operation.summary if text.description is None else text.description",
+  "replace": "    description = text.description"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: --help leaves out the Operation's details",
+  "find": "    said = [part for part in (operation.details, text.epilog) if part is not None]",
+  "replace": "    said = [part for part in (text.epilog,) if part is not None]"
+ },
+ {
+  "file": "scripts/spark/core/cli.py",
+  "name": "P481: no blank line stands between the details and the CLI's text",
+  "find": "epilog=\"\\n\\n\".join(said) if said else None,",
+  "replace": "epilog=\"\\n\".join(said) if said else None,"
+ },
+ {
+  "file": "scripts/spark/core/operation_help_table.py",
+  "name": "P481: a | in a help breaks the page's table",
+  "find": "argument.help.replace(\"|\", \"\\\\|\"))",
+  "replace": "argument.help)"
+ },
+ {
+  "file": "scripts/spark/core/operation_help_table.py",
+  "name": "P481: the page block lists --json, which is the frontend's",
+  "find": "for argument in operation.arguments if argument.dest != JSON_DEST]",
+  "replace": "for argument in operation.arguments]"
+ },
+ {
+  "file": "scripts/spark/core/operation_help_table.py",
+  "name": "P481: a bool flag shows a value it does not take",
+  "find": "    if argument.kind is bool:",
+  "replace": "    if False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a start without its end crashes, unnamed",
+  "find": "            raise BlockError(NO_END_MESSAGE % (page, name))",
+  "replace": "            pass"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a second start before the end is written as one block",
+  "find": "        if end is None or START.search(text, start.end(), end.start()):",
+  "replace": "        if end is None:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: an end that names another Operation closes the block",
+  "find": "        if end.group(1) != name:",
+  "replace": "        if False:"
+ },
+ {
+  "file": "tools/doc_blocks.py",
+  "name": "P481: a name no table holds crashes, unnamed",
+  "find": "        if name not in operations:",
+  "replace": "        if False:"
+ }
+]
